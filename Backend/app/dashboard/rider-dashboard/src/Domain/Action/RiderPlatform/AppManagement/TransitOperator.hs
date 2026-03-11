@@ -23,8 +23,8 @@ module Domain.Action.RiderPlatform.AppManagement.TransitOperator
     transitOperatorUpdateWaybillStatus,
     transitOperatorUpdateWaybillFleet,
     transitOperatorUpdateWaybillTablet,
-    transitOperatorGetWaybills,
     transitOperatorQueryRows,
+    transitOperatorStationEtaUpsert,
   )
 where
 
@@ -170,3 +170,10 @@ transitOperatorQueryRows merchantShortId opCity apiTokenInfo table vehicleCatego
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.transitOperatorDSL.transitOperatorQueryRows) table vehicleCategory req)
+
+
+transitOperatorStationEtaUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.StationEtaUpsertReq -> Environment.Flow Data.Aeson.Value)
+transitOperatorStationEtaUpsert merchantShortId opCity apiTokenInfo vehicleCategory req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.transitOperatorDSL.transitOperatorStationEtaUpsert) vehicleCategory req)

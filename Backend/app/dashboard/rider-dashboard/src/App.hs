@@ -18,6 +18,7 @@ module App
 where
 
 import API
+import qualified Control.Exception as E
 import qualified Data.HashMap.Strict as HMS
 import "lib-dashboard" Environment
 import EulerHS.Language as L
@@ -28,6 +29,7 @@ import Kernel.Beam.Types (KafkaConn (..), Tables (..))
 import Kernel.Exit
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
+import qualified Kernel.Tools.Metrics.Init as Metrics
 import Kernel.Types.Beckn.City (initCityMaps)
 import Kernel.Types.Flow
 import Kernel.Types.Logging (LogLevel (..))
@@ -36,8 +38,6 @@ import qualified Kernel.Utils.Common as KUC
 import Kernel.Utils.Dhall (readDhallConfigDefault)
 import Kernel.Utils.IOLogging (logOutputIO)
 import Kernel.Utils.Servant.Server (runServerWithHealthCheckAndSlackNotification)
-import qualified Control.Exception as E
-import qualified Kernel.Tools.Metrics.Init as Metrics
 import Network.HTTP.Types (status408)
 import qualified Network.Wai as Wai
 import qualified Prometheus as P

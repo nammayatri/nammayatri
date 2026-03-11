@@ -1154,6 +1154,16 @@ data UpdateWaybillTabletReq = UpdateWaybillTabletReq
 instance HideSecrets UpdateWaybillTabletReq where
   hideSecrets = identity
 
+data StationEtaUpsertReq = StationEtaUpsertReq
+  { sourceStationCode :: Text,
+    destinationStationCode :: Text,
+    etaInSeconds :: Int64
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+instance HideSecrets StationEtaUpsertReq where
+  hideSecrets = identity
+
 data GimsTripAction
   = GimsTripActionStart
   | GimsTripActionEnd

@@ -13,9 +13,9 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, logInfo, logWarning)
+import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.FRFSSeatBooking.Lua as Lua
 import qualified Storage.Queries.Seat as QSeat
-import qualified Lib.JourneyModule.Utils as JMU
 
 data SeatHoldMeta = SeatHoldMeta
   { tripId :: Text,

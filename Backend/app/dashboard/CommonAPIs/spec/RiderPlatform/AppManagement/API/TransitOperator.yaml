@@ -10,6 +10,7 @@ imports:
   UpdateWaybillStatusReq: SharedLogic.External.Nandi.Types
   UpdateWaybillFleetReq: SharedLogic.External.Nandi.Types
   UpdateWaybillTabletReq: SharedLogic.External.Nandi.Types
+  StationEtaUpsertReq: SharedLogic.External.Nandi.Types
   RowsAffectedResp: SharedLogic.External.Nandi.Types
   NandiTable: SharedLogic.External.Nandi.Types
   WaybillStatus: SharedLogic.External.Nandi.Types
@@ -277,6 +278,17 @@ apis:
         offset: Int
       response:
         type: "[NandiWaybillRow]"
+
+  - POST:
+      endpoint: /station-eta/upsert
+      name: TransitOperatorStationEtaUpsert
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: StationEtaUpsertReq
+      response:
+        type: Value
 
 types: {}
 

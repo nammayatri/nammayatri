@@ -276,6 +276,8 @@ type OperatorWaybillTabletAPI = "internal" :> "operator" :> Capture "gtfs_id" Te
 
 type OperatorWaybillsAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "waybills" :> QueryParam "limit" Int :> QueryParam "offset" Int :> Get '[JSON] [Value]
 
+type OperatorStationEtaUpsertAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "station-eta" :> "upsert" :> ReqBody '[JSON] StationEtaUpsertReq :> Post '[JSON] Value
+
 type OperatorQueryRowsAPI =
   "internal" :> "operator" :> Capture "gtfs_id" Text :> "crud" :> Capture "table" Text :> "query"
     :> ReqBody '[JSON] QueryBody
@@ -350,6 +352,9 @@ operatorWaybillTabletAPI = Proxy
 operatorWaybillsAPI :: Proxy OperatorWaybillsAPI
 operatorWaybillsAPI = Proxy
 
+operatorStationEtaUpsertAPI :: Proxy OperatorStationEtaUpsertAPI
+operatorStationEtaUpsertAPI = Proxy
+
 operatorQueryRowsAPI :: Proxy OperatorQueryRowsAPI
 operatorQueryRowsAPI = Proxy
 
@@ -422,6 +427,9 @@ postOperatorWaybillTablet = ET.client operatorWaybillTabletAPI
 
 getOperatorWaybills :: Text -> Maybe Int -> Maybe Int -> ET.EulerClient [Value]
 getOperatorWaybills = ET.client operatorWaybillsAPI
+
+postOperatorStationEtaUpsert :: Text -> StationEtaUpsertReq -> ET.EulerClient Value
+postOperatorStationEtaUpsert = ET.client operatorStationEtaUpsertAPI
 
 postOperatorQueryRows :: Text -> Text -> QueryBody -> ET.EulerClient [Value]
 postOperatorQueryRows = ET.client operatorQueryRowsAPI

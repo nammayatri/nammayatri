@@ -25,6 +25,7 @@ module Domain.Action.Dashboard.AppManagement.TransitOperator
     transitOperatorUpdateWaybillFleet,
     transitOperatorUpdateWaybillTablet,
     transitOperatorGetWaybills,
+    transitOperatorStationEtaUpsert,
   )
 where
 
@@ -137,3 +138,7 @@ transitOperatorUpdateWaybillTablet merchantShortId opCity vehicleCategory req =
 transitOperatorGetWaybills :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.NandiWaybillRow])
 transitOperatorGetWaybills merchantShortId opCity limit offset vehicleCategory =
   DTOp.transitOperatorGetWaybillsUtil merchantShortId opCity vehicleCategory limit offset
+
+transitOperatorStationEtaUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.StationEtaUpsertReq -> Environment.Flow Data.Aeson.Value)
+transitOperatorStationEtaUpsert merchantShortId opCity vehicleCategory req =
+  DTOp.transitOperatorStationEtaUpsertUtil merchantShortId opCity vehicleCategory req

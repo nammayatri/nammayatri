@@ -154,3 +154,8 @@ transitOperatorQueryRowsUtil :: ShortId Merchant -> Context.City -> BecknSpec.Ve
 transitOperatorQueryRowsUtil merchantShortId city vehicleCategory table body = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorQueryRows baseUrl gtfsId table body
+
+transitOperatorStationEtaUpsertUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> StationEtaUpsertReq -> Flow Value
+transitOperatorStationEtaUpsertUtil merchantShortId city vehicleCategory req = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorStationEtaUpsert baseUrl gtfsId req

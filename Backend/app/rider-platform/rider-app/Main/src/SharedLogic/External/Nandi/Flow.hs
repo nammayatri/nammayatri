@@ -281,6 +281,10 @@ operatorQueryRows baseUrl gtfsId table body = do
   vals <- withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorQueryRows gtfsId (nandiTableToText table) body) "operatorQueryRows" NandiAPI.operatorQueryRowsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_QUERY_ROWS_API") baseUrl)
   either (throwError . InternalError . T.pack) pure (mapM (decodeNandiRow table) vals)
 
+operatorStationEtaUpsert :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> StationEtaUpsertReq -> m Value
+operatorStationEtaUpsert baseUrl gtfsId req =
+  withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorStationEtaUpsert gtfsId req) "operatorStationEtaUpsert" NandiAPI.operatorStationEtaUpsertAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_STATION_ETA_UPSERT_API") baseUrl)
+
 getRoutesServedToday :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> m [RoutesServedTodayItem]
 getRoutesServedToday baseUrl =
   withShortRetry $ callAPI baseUrl NandiAPI.getNandiRoutesServedToday "getRoutesServedToday" NandiAPI.nandiRoutesServedTodayAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ROUTES_SERVED_TODAY_API") baseUrl)
