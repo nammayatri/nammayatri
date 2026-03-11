@@ -30,7 +30,7 @@ Person:
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
     IdentifierType:
-      enum: "MOBILENUMBER, AADHAAR, EMAIL"
+      enum: "MOBILENUMBER, AADHAAR, EMAIL, CONDUCTORTOKEN"
       derive': "Show, Eq, Read, Ord, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
     Gender:
@@ -128,6 +128,7 @@ Person:
     liveActivityToken : Maybe Text
     comments: "Maybe [Text]"
     paymentMode: Maybe PaymentMode
+    operatorBadgeToken: Maybe Text
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
@@ -232,6 +233,10 @@ Person:
     referralCode: SecondaryKey
     deviceToken: SecondaryKey
     customerReferralCode: SecondaryKey
+
+  extraIndexes:
+    - columns: [operatorBadgeToken, merchantId]
+      unique: true
 
   sqlType:
     firstName: character varying(255)
@@ -419,8 +424,18 @@ Person:
       params: [passwordHash]
       where: id
 
+    findByOperatorBadgeTokenAndMerchantId:
+      kvFunction: findOneWithKV
+      where:
+        and: [operatorBadgeToken, merchantId]
+
+    updateOperatorBadgeTokenAndDeviceSerialNumber:
+      kvFunction: updateWithKV
+      params: [operatorBadgeToken, updatedAt]
+      where: id
+
   extraOperations:
+    - GENERATE_INDEXES
     - EXTRA_QUERY_FILE
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
-
