@@ -40,6 +40,7 @@ data StartRideReq = StartRideReq
 data EndRideReq = EndRideReq
   { lat :: Double,
     lon :: Double,
+    ts :: Maybe Int64,
     merchantId :: Id DM.Merchant,
     driverId :: Id DP.Person,
     nextRideId :: Maybe (Id DRide.Ride),
@@ -65,10 +66,17 @@ data LocationTrackingeServiceConfig = LocationTrackingeServiceConfig
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq, FromDhall)
 
+data LocationUpdate = LocationUpdate
+  { lat :: Double,
+    lon :: Double,
+    ts :: Maybe Int64
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
 data EndRideRes = EndRideRes
   { rideId :: Id DRide.Ride,
     driverId :: Id DP.Person,
-    loc :: NonEmpty LatLong
+    loc :: NonEmpty LocationUpdate
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -102,7 +110,7 @@ data DriverLocationReq = DriverLocationReq
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 newtype DriverLocationResp = DriverLocationResp
-  { loc :: [LatLong]
+  { loc :: [LocationUpdate]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
