@@ -52,7 +52,8 @@ data PersonAPIEntity = PersonAPIEntity
     clientVersion :: Maybe Version,
     followsRide :: Bool,
     isSafetyCenterDisabled :: Bool,
-    customerTags :: DA.Value
+    customerTags :: DA.Value,
+    operatorBadgeToken :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
