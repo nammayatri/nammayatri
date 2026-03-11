@@ -260,6 +260,10 @@ data LogicDomain
   | USER_CANCELLATION_DUES_WAIVE_OFF
   | FRFS_TICKET_CATEGORIES
   | GPS_TOLL_BEHAVIOR
+  | BEHAVIOR_THRESHOLD_CHECK
+  | BEHAVIOR_CONSEQUENCE_CALC
+  | BEHAVIOR_COMMUNICATION
+  | BEHAVIOR_RESOLUTION
   | CONFIG ConfigType
   | RIDER_CONFIG ConfigType
   | DRIVER_CONFIG ConfigType
@@ -280,7 +284,11 @@ instance Enumerable LogicDomain where
       FRFS_TICKET_CATEGORIES,
       CANCELLATION_COIN_POLICY,
       CUMULATIVE_OFFER_POLICY,
-      GPS_TOLL_BEHAVIOR
+      GPS_TOLL_BEHAVIOR,
+      BEHAVIOR_THRESHOLD_CHECK,
+      BEHAVIOR_CONSEQUENCE_CALC,
+      BEHAVIOR_COMMUNICATION,
+      BEHAVIOR_RESOLUTION
     ]
       ++ map CONFIG [minBound .. maxBound]
       ++ map RIDER_CONFIG [minBound .. maxBound]
@@ -311,6 +319,10 @@ generateLogicDomainShowInstances =
     ++ [show CANCELLATION_COIN_POLICY]
     ++ [show CUMULATIVE_OFFER_POLICY]
     ++ [show GPS_TOLL_BEHAVIOR]
+    ++ [show BEHAVIOR_THRESHOLD_CHECK]
+    ++ [show BEHAVIOR_CONSEQUENCE_CALC]
+    ++ [show BEHAVIOR_COMMUNICATION]
+    ++ [show BEHAVIOR_RESOLUTION]
   where
     configTypes = [minBound .. maxBound]
     a' = [minBound .. maxBound]
@@ -342,6 +354,10 @@ instance Show LogicDomain where
   show CANCELLATION_COIN_POLICY = "CANCELLATION-COIN-POLICY"
   show CUMULATIVE_OFFER_POLICY = "CUMULATIVE-OFFER-POLICY"
   show GPS_TOLL_BEHAVIOR = "GPS-TOLL-BEHAVIOR"
+  show BEHAVIOR_THRESHOLD_CHECK = "BEHAVIOR-THRESHOLD-CHECK"
+  show BEHAVIOR_CONSEQUENCE_CALC = "BEHAVIOR-CONSEQUENCE-CALC"
+  show BEHAVIOR_COMMUNICATION = "BEHAVIOR-COMMUNICATION"
+  show BEHAVIOR_RESOLUTION = "BEHAVIOR-RESOLUTION"
 
 instance Read LogicDomain where
   readsPrec :: Int -> ReadS LogicDomain
@@ -370,6 +386,14 @@ instance Read LogicDomain where
             [(CUMULATIVE_OFFER_POLICY, drop 1 rest)]
           "GPS-TOLL-BEHAVIOR" ->
             [(GPS_TOLL_BEHAVIOR, drop 1 rest)]
+          "BEHAVIOR-THRESHOLD-CHECK" ->
+            [(BEHAVIOR_THRESHOLD_CHECK, drop 1 rest)]
+          "BEHAVIOR-CONSEQUENCE-CALC" ->
+            [(BEHAVIOR_CONSEQUENCE_CALC, drop 1 rest)]
+          "BEHAVIOR-COMMUNICATION" ->
+            [(BEHAVIOR_COMMUNICATION, drop 1 rest)]
+          "BEHAVIOR-RESOLUTION" ->
+            [(BEHAVIOR_RESOLUTION, drop 1 rest)]
           "CONFIG" ->
             let (configType', rest1) = break (== '_') (drop 1 rest)
              in case readMaybe configType' of
