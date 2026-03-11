@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
-module Domain.Action.RiderPlatform.Management.Sos (getSosTracking, getSosDetails, postSosCallExternalSOS) where
+module Domain.Action.RiderPlatform.Management.Sos (getSosTracking, getSosDetails, postSosCallExternalSOS, postSosErssStatusUpdate) where
 
 import qualified API.Client.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.Sos
@@ -34,3 +34,9 @@ getSosDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kern
 getSosDetails merchantShortId opCity sosId = do
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.sosDSL.getSosDetails) sosId
+
+postSosErssStatusUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Sos.ErssStatusUpdateReq -> Environment.Flow API.Types.RiderPlatform.Management.Sos.ErssStatusUpdateRes)
+postSosErssStatusUpdate merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
+  SharedLogic.Transaction.withTransactionStoring transaction $ do API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.sosDSL.postSosErssStatusUpdate) req
