@@ -70,7 +70,7 @@ postSocialLogin req = do
             (,True) <$> do
               let authReq = buildAuthReq info.email
               cloudType <- asks (.cloudType)
-              PR.createPerson authReq SP.EMAIL Nothing Nothing Nothing Nothing Nothing Nothing cloudType merchant Nothing Nothing
+              PR.createPerson authReq SP.EMAIL Nothing Nothing Nothing Nothing Nothing Nothing cloudType merchant Nothing
       QR.deleteByPersonId person.id
       token <- makeSession person.id.getId merchant.id.getId
       _ <- QR.create token
@@ -99,11 +99,7 @@ postSocialLogin req = do
           enableOtpLessRide = req.enableOtpLessRide,
           allowBlockedUserLogin = Nothing,
           isOperatorReq = Nothing,
-          reuseToken = Nothing,
-          operatorBadgeToken = Nothing,
-          deviceSerialNumber = Nothing,
-          cityShortId = Nothing,
-          vehicleType = Nothing
+          reuseToken = Nothing
         }
 
 makeSession ::

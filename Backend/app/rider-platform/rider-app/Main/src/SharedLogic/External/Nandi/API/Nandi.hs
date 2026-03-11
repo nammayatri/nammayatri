@@ -458,14 +458,3 @@ postOperatorTripAction = ET.client operatorTripActionAPI
 
 postOperatorCurrentTripDetails :: Text -> GimsCurrentTripDetailsReq -> ET.EulerClient GimsCurrentTripDetailsResp
 postOperatorCurrentTripDetails = ET.client operatorCurrentTripDetailsAPI
-
-type OperatorVerifyAPI =
-  "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "verify"
-    :> ReqBody '[JSON] GimsVerifyReq
-    :> Post '[JSON] GimsVerifyResp
-
-operatorVerifyAPI :: Proxy OperatorVerifyAPI
-operatorVerifyAPI = Proxy
-
-postOperatorVerify :: Text -> GimsVerifyReq -> ET.EulerClient GimsVerifyResp
-postOperatorVerify = ET.client operatorVerifyAPI

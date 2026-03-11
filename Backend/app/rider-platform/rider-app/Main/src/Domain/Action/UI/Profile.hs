@@ -817,7 +817,7 @@ triggerUpdateAuthDataOtp (personId, _merchantId) req = do
   let otpChannel = case identifierType of
         SP.MOBILENUMBER -> SOTP.SMS
         SP.EMAIL -> SOTP.EMAIL
-        _ -> SOTP.SMS
+        SP.AADHAAR -> SOTP.SMS
 
   case identifierType of
     SP.MOBILENUMBER -> do
@@ -836,7 +836,7 @@ triggerUpdateAuthDataOtp (personId, _merchantId) req = do
       whenJust existingPerson $ \existing ->
         when (existing.id /= personId) $ throwError $ InvalidRequest "Email already registered"
       storeAndSendOTP generatedOtpCode identifierType personId person smsCfg useFakeOtpM otpChannel riderConfig req Nothing Nothing (Just receiverEmail)
-    _ -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
+    SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
 
   pure APISuccess.Success
   where
@@ -931,7 +931,6 @@ verifyUpdateAuthDataOtp (personId, _merchantId) req = do
       encryptedValue <- encrypt storedEmail
       QPersonExtra.updateEmailByPersonId personId encryptedValue
     SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
-    SP.CONDUCTORTOKEN -> throwError $ InvalidRequest "Conductor identifier is not supported"
 
   void $ Redis.del redisKey
 
