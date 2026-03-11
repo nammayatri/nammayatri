@@ -87,9 +87,10 @@ ON CONFLICT (merchant_operating_city_id, message_key) DO NOTHING;
 -- Merchant push notifications for reminder FCM notifications
 
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
+    atlas_driver_offer_bpp.uuid_generate_v4(),
     'DOCUMENT_EXPIRY_REMINDER',
     'DOCUMENT_EXPIRY_REMINDER',
     null,
@@ -106,9 +107,10 @@ AND moc.city = 'Delhi'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
+    atlas_driver_offer_bpp.uuid_generate_v4(),
     'VEHICLE_INSPECTION',
     'VEHICLE_INSPECTION',
     null,
@@ -125,9 +127,10 @@ AND moc.city = 'Delhi'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
+    atlas_driver_offer_bpp.uuid_generate_v4(),
     'DRIVER_INSPECTION',
     'DRIVER_INSPECTION',
     null,
@@ -144,9 +147,10 @@ AND moc.city = 'Delhi'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
+    atlas_driver_offer_bpp.uuid_generate_v4(),
     'TRAINING_VIDEO',
     'TRAINING_VIDEO',
     null,
