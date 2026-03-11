@@ -5,15 +5,35 @@ imports:
   Person: Domain.Types.Person
   DeletedPersonReq: API.Types.UI.DeletedPerson
   APISuccess: Kernel.Types.APISuccess
+  SavedReqLocationAPIEntity: Domain.Types.SavedReqLocation
 
 importPackageOverrides:
   API.Types.UI.Sos: "rider-app"
   Domain.Types.Person: "rider-app"
   API.Types.UI.DeletedPerson: "rider-app"
+  Domain.Types.SavedReqLocation: "rider-app"
 
 module: Customer
 
-types: {}
+types:
+  SavedReqLocationsListRes:
+    list: "[SavedReqLocationAPIEntity]"
+  CreateSavedReqLocationReq:
+    lat: Double
+    lon: Double
+    street: Maybe Text
+    door: Maybe Text
+    city: Maybe Text
+    state: Maybe Text
+    country: Maybe Text
+    building: Maybe Text
+    areaCode: Maybe Text
+    area: Maybe Text
+    tag: Text
+    placeId: Maybe Text
+    ward: Maybe Text
+    isMoved: Maybe Bool
+    locationName: Maybe Text
 
 apis:
   - POST:
@@ -40,3 +60,27 @@ apis:
       migrate:
         endpoint: DeletedPersonAPI CreateDeletedPersonEndpoint
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CREATE_DELETED_PERSON
+  - GET:
+      endpoint: /{customerId}/savedLocations
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      response:
+        type: SavedReqLocationsListRes
+  - POST:
+      endpoint: /{customerId}/savedLocations
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      request:
+        type: CreateSavedReqLocationReq
+      response:
+        type: APISuccess
+  - DELETE:
+      endpoint: /{customerId}/savedLocations/{tag}
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        tag: Text
+      response:
+        type: APISuccess

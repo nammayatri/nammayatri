@@ -1,6 +1,7 @@
-module Domain.Action.RiderPlatform.AppManagement.Customer (postCustomerSosCreate, postCustomerDeletedPerson) where
+module Domain.Action.RiderPlatform.AppManagement.Customer (postCustomerSosCreate, postCustomerDeletedPerson, getCustomerSavedLocations, postCustomerSavedLocations, deleteCustomerSavedLocations) where
 
 import qualified API.Client.RiderPlatform.AppManagement
+import qualified API.Types.Dashboard.AppManagement.Customer
 import qualified "rider-app" API.Types.UI.DeletedPerson
 import qualified "rider-app" API.Types.UI.Sos
 import qualified "lib-dashboard" Domain.Types.Merchant
@@ -28,3 +29,22 @@ postCustomerDeletedPerson merchantShortId opCity apiTokenInfo customerId req = d
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.customerDSL.postCustomerDeletedPerson) customerId req)
+
+
+
+getCustomerSavedLocations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow API.Types.Dashboard.AppManagement.Customer.SavedReqLocationsListRes)
+getCustomerSavedLocations merchantShortId opCity apiTokenInfo customerId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.customerDSL.getCustomerSavedLocations) customerId
+
+postCustomerSavedLocations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.Dashboard.AppManagement.Customer.CreateSavedReqLocationReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postCustomerSavedLocations merchantShortId opCity apiTokenInfo customerId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.customerDSL.postCustomerSavedLocations) customerId req)
+
+deleteCustomerSavedLocations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+deleteCustomerSavedLocations merchantShortId opCity apiTokenInfo customerId tag = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.customerDSL.deleteCustomerSavedLocations) customerId tag)
