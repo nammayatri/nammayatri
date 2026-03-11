@@ -47,6 +47,7 @@ packages:
   lib/dashcam
   lib/behavior-tracker
   lib/rule-orchestrator
+  lib/consequence-engine
   hunit-tests
 -- ## 6 parallel jobs by default.
 --
