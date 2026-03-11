@@ -96,7 +96,7 @@ mkItemTags pricing isValueAddNP fareParametersInRateCard = do
   let rateCardTag = CUtils.mkRateCardTag pricing.estimatedDistance (pricing.fareParams >>= (.customerCancellationDues)) (pricing.fareParams >>= (.tollCharges)) pricing.pricingMaxFare (pricing.fareParams >>= (.congestionChargeViaDp)) pricing.farePolicy fareParametersInRateCard pricing.fareParams Nothing
   let vehicleIconTag = CUtils.mkVehicleIconTag pricing.vehicleIconUrl
   let featureListTag = mkFeatureListTags pricing.isAirConditioned
-  vehicleIconTag <> rateCardTag <> (List.singleton <$> CUtils.mkGeneralInfoTagGroup pricing isValueAddNP) <> featureListTag
+  vehicleIconTag <> rateCardTag <> CUtils.mkGeneralInfoTagGroup pricing isValueAddNP <> featureListTag
 
 -- | Map TripCategory to ONDC 2.1.0 category descriptor code
 -- Re-exports from Common for backward compatibility

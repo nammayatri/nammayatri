@@ -963,29 +963,24 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       ..
     }
 
-mkGeneralInfoTagGroup :: Pricing -> Bool -> Maybe Spec.TagGroup
+mkGeneralInfoTagGroup :: Pricing -> Bool -> Maybe [Spec.TagGroup]
 mkGeneralInfoTagGroup pricing isValueAddNP =
   let guardVNP val = if isValueAddNP then val else Nothing
-      mkOptTag tag val = Tags.getFullTag tag val <$ val
-      tags =
-        catMaybes
-          [ mkOptTag Tags.SPECIAL_LOCATION_TAG pricing.specialLocationTag,
-            mkOptTag Tags.SPECIAL_LOCATION_NAME pricing.specialLocationName,
-            mkOptTag Tags.BUSINESS_DISCOUNT (guardVNP (show <$> pricing.businessDiscount)),
-            mkOptTag Tags.PERSONAL_DISCOUNT (guardVNP (show <$> pricing.personalDiscount)),
-            mkOptTag Tags.DISTANCE_TO_NEAREST_DRIVER_METER (show . double2Int . realToFrac <$> pricing.distanceToNearestDriver),
-            mkOptTag Tags.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE (guardVNP (show <$> pricing.isCustomerPrefferedSearchRoute)),
-            mkOptTag Tags.IS_BLOCKED_SEARCH_ROUTE (guardVNP (show <$> pricing.isBlockedRoute)),
-            mkOptTag Tags.TOLL_NAMES (guardVNP (show <$> pricing.tollNames)),
-            mkOptTag Tags.TIP_OPTIONS (guardVNP (show <$> pricing.tipOptions)),
-            mkOptTag Tags.DURATION_TO_NEAREST_DRIVER_MINUTES (guardVNP (getDuration pricing.distanceToNearestDriver 25)),
-            mkOptTag Tags.SMART_TIP_SUGGESTION (guardVNP (show <$> pricing.smartTipSuggestion)),
-            mkOptTag Tags.SMART_TIP_REASON (guardVNP pricing.smartTipReason),
-            mkOptTag Tags.QAR (guardVNP (show <$> pricing.qar))
-          ]
-   in case tags of
-        [] -> Nothing
-        _ -> Just $ Tags.getFullTagGroup Tags.GENERAL_INFO tags
+   in Tags.buildTagGroups
+        [ Tags.SPECIAL_LOCATION_TAG Tags.~=? pricing.specialLocationTag,
+          Tags.SPECIAL_LOCATION_NAME Tags.~=? pricing.specialLocationName,
+          Tags.BUSINESS_DISCOUNT Tags.~=? (guardVNP (show <$> pricing.businessDiscount)),
+          Tags.PERSONAL_DISCOUNT Tags.~=? (guardVNP (show <$> pricing.personalDiscount)),
+          Tags.DISTANCE_TO_NEAREST_DRIVER_METER Tags.~=? (show . double2Int . realToFrac <$> pricing.distanceToNearestDriver),
+          Tags.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE Tags.~=? (guardVNP (show <$> pricing.isCustomerPrefferedSearchRoute)),
+          Tags.IS_BLOCKED_SEARCH_ROUTE Tags.~=? (guardVNP (show <$> pricing.isBlockedRoute)),
+          Tags.TOLL_NAMES Tags.~=? (guardVNP (show <$> pricing.tollNames)),
+          Tags.TIP_OPTIONS Tags.~=? (guardVNP (show <$> pricing.tipOptions)),
+          Tags.DURATION_TO_NEAREST_DRIVER_MINUTES Tags.~=? (guardVNP (getDuration pricing.distanceToNearestDriver 25)),
+          Tags.SMART_TIP_SUGGESTION Tags.~=? (guardVNP (show <$> pricing.smartTipSuggestion)),
+          Tags.SMART_TIP_REASON Tags.~=? (guardVNP pricing.smartTipReason),
+          Tags.QAR Tags.~=? (guardVNP (show <$> pricing.qar))
+        ]
   where
     getDuration :: Maybe Meters -> Int -> Maybe Text
     getDuration distance avgSpeed

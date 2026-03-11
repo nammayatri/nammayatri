@@ -97,7 +97,7 @@ buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
   let billingCategory = getBillingCategoryTag item.itemTags
   let serviceTierType = Utils.getServiceTierType item
   vehicleVariant <- mbVariant & fromMaybeM (InvalidRequest $ "Unable to parse vehicleCategory:-" <> show vehicle.vehicleCategory <> ",vehicleVariant:-" <> show vehicle.vehicleVariant)
-  let specialLocationTag = Utils.getTagV2 Tag.GENERAL_INFO Tag.SPECIAL_LOCATION_TAG =<< (Just item.itemTags)
+  let specialLocationTag = Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_TAG =<< (Just item.itemTags)
   case parsedData order of
     Left err -> do
       logTagError "on_select req" $ "on_select error: " <> show err
