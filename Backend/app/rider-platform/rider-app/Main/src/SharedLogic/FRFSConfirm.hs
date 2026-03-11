@@ -111,7 +111,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
 
                   success <- SeatBooking.holdSeats tripId allSeatIds fromIdx toIdx holdId ttl'
                   unless success $
-                    throwError (InvalidRequest "Selected seat is no longer available.")
+                    throwError (SeatsNotFound (map (.getId) allSeatIds))
                   pure $ Just (holdId, fromIdx, toIdx)
                 Nothing -> do
                   logWarning $ "FRFSConfirm:confirmAndUpsertBooking skipping hold, stop indices not found for routeCode=" <> routeCode <> " from=" <> quote.fromStationCode <> " to=" <> quote.toStationCode
