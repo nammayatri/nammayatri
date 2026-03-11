@@ -16,6 +16,20 @@
 module Storage.Beam.Payment where
 
 import qualified Data.Text as T
+-- Finance-kernel beam imports
+import qualified Lib.Finance.Storage.Beam.Account as BeamAccount
+import qualified Lib.Finance.Storage.Beam.AuditEntry as BeamAudit
+import qualified Lib.Finance.Storage.Beam.CurrentState as BeamCurrentState
+import qualified Lib.Finance.Storage.Beam.DirectTaxTransaction as BeamDirectTax
+import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamIndirectTax
+import qualified Lib.Finance.Storage.Beam.Invoice as BeamInvoice
+import qualified Lib.Finance.Storage.Beam.InvoiceLedgerLink as BeamInvoiceLedger
+import qualified Lib.Finance.Storage.Beam.LedgerEntry as BeamLedger
+import qualified Lib.Finance.Storage.Beam.PgPaymentSettlementReport as BeamPgPayment
+import qualified Lib.Finance.Storage.Beam.PgPayoutSettlementReport as BeamPgPayout
+import qualified Lib.Finance.Storage.Beam.ReconciliationEntry as BeamReconciliationEntry
+import qualified Lib.Finance.Storage.Beam.ReconciliationSummary as BeamReconciliationSummary
+import qualified Lib.Finance.Storage.Beam.StateTransition as BeamStateTransition
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
 import qualified Lib.Payment.Storage.Beam.PaymentOrderOffer as BeamOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrderSplit as BeamSplit
@@ -56,4 +70,44 @@ instance HasSchemaName BeamWRP.WalletRewardPostingT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamPW.PersonWalletT where
+  schemaName _ = T.pack currentSchemaName
+
+-- Finance-kernel beam orphan instances
+instance HasSchemaName BeamAccount.AccountT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamAudit.AuditEntryT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamCurrentState.CurrentStateT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamDirectTax.DirectTaxTransactionT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamIndirectTax.IndirectTaxTransactionT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamInvoice.InvoiceT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamInvoiceLedger.InvoiceLedgerLinkT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamLedger.LedgerEntryT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamPgPayment.PgPaymentSettlementReportT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamPgPayout.PgPayoutSettlementReportT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamReconciliationEntry.ReconciliationEntryT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamReconciliationSummary.ReconciliationSummaryT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamStateTransition.StateTransitionT where
   schemaName _ = T.pack currentSchemaName

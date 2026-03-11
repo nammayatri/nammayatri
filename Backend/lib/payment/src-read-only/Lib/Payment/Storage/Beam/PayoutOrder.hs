@@ -31,6 +31,8 @@ data PayoutOrderT f = PayoutOrderT
     mobileNoEncrypted :: (B.C f Kernel.Prelude.Text),
     mobileNoHash :: (B.C f Kernel.External.Encryption.DbHash),
     orderId :: (B.C f Kernel.Prelude.Text),
+    pgBaseFee :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    pgGst :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     responseCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     responseMessage :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     retriedOrderId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),

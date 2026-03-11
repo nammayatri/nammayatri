@@ -259,7 +259,7 @@ executePayoutRequestInternal payoutRequest payoutCall = do
 
       logDebug $ "Executing payout for PayoutRequest " <> payoutRequest.id.getId <> " | orderId: " <> orderId <> " | amount: " <> show (fromMaybe 0 payoutRequest.amount)
 
-      result <- try $ DPayment.createPayoutService merchantId mbMocId personId (Just [payoutRequest.id.getId]) (Just entityName) city createPayoutOrderReq payoutCall
+      result <- try $ DPayment.createPayoutService merchantId mbMocId personId (Just [payoutRequest.id.getId]) (Just entityName) city createPayoutOrderReq payoutCall Nothing
       case result of
         Left (err :: SomeException) -> do
           logError $ "Payout service call failed for PayoutRequest " <> payoutRequest.id.getId <> ": " <> show err

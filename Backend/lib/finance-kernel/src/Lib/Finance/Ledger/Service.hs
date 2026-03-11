@@ -133,13 +133,13 @@ createEntryWithBalanceUpdate input = do
       let amount = input.amount
           fromStartBal = fromAccount.balance
           toStartBal = toAccount.balance
-          isAssetAccount acc = acc.accountType == Account.Asset
+          isAssetOrExpenseAccount acc = acc.accountType == Account.Asset || acc.accountType == Account.Expense
           fromEndBal =
-            if isAssetAccount fromAccount
+            if isAssetOrExpenseAccount fromAccount
               then fromStartBal + amount
               else fromStartBal - amount
           toEndBal =
-            if isAssetAccount toAccount
+            if isAssetOrExpenseAccount toAccount
               then toStartBal - amount
               else toStartBal + amount
       let entry =

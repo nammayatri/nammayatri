@@ -320,7 +320,7 @@ handler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {..} = do
             let createPayoutOrderReq = DPayment.mkCreatePayoutOrderReq uid calculatedAmount phoneNo driver.email driverId.getId "converted from coins" (Just driver.firstName) vpa payoutConfig.orderType False
                 entityName = DPayment.COINS_REDEMPTION
                 createPayoutOrderCall = Payout.createPayoutOrder driver.merchantId merchantOpCityId payoutServiceName (Just driver.id.getId)
-            void $ DPayment.createPayoutService (cast merchantId_) (Just $ cast merchantOpCityId) (cast driverId) (Just [driverId.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+            void $ DPayment.createPayoutService (cast merchantId_) (Just $ cast merchantOpCityId) (cast driverId) (Just [driverId.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
             void $ QDS.updateCoinsFieldsForDirectPayout driverId calculatedAmount
             return $ Just $ Id uid
           _ -> do

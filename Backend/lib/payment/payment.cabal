@@ -39,6 +39,7 @@ library
       Lib.Payment.Payout.Registration
       Lib.Payment.Payout.Request
       Lib.Payment.Payout.Status
+      Lib.Payment.PGFee
       Lib.Payment.Storage.Beam.BeamFlow
       Lib.Payment.Storage.Beam.PaymentOrder
       Lib.Payment.Storage.Beam.PaymentTransaction

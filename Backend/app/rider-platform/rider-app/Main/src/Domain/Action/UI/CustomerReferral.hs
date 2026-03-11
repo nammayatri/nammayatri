@@ -140,7 +140,7 @@ processBacklogReferralPayout personId vpa merchantOpCityId = do
           payoutServiceName <- TPayout.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion
           let createPayoutOrderCall = TPayout.createPayoutOrder person.merchantId merchantOpCityId payoutServiceName (Just person.id.getId)
           merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-          mbPayoutOrderResp <- withTryCatch "createPayoutService:processBacklogReferralPayout" $ Payout.createPayoutService (cast person.merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just []) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+          mbPayoutOrderResp <- withTryCatch "createPayoutService:processBacklogReferralPayout" $ Payout.createPayoutService (cast person.merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just []) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
           case mbPayoutOrderResp of
             Left err -> logError $ "Error in calling create order for backlog payout for riderId: " <> show person.id.getId <> " and orderId: " <> show uid <> "with error " <> show err
             _ -> pure ()

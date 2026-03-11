@@ -3297,7 +3297,7 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
       when (createPayoutOrderReq.amount < 0.0) $ throwError (InternalError "refund amount is less than 0")
       (_, mbPayoutOrder) <- do
         if createPayoutOrderReq.amount > 0.0
-          then DPayment.createPayoutService (cast person.merchantId) (Just $ cast person.merchantOperatingCityId) (cast personId) (Just $ map ((.getId) . (.id)) driverFeeToPayout) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+          then DPayment.createPayoutService (cast person.merchantId) (Just $ cast person.merchantOperatingCityId) (cast personId) (Just $ map ((.getId) . (.id)) driverFeeToPayout) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
           else pure (Nothing, Nothing)
       whenJust mbPayoutOrder $ \payoutOrder -> do
         let refundAmountSegregation = fromMaybe "NA" refundByPayoutReq.refundAmountSegregation

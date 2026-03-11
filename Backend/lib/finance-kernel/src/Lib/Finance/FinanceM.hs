@@ -136,6 +136,12 @@ data AccountRole
   | SellerRevenue
   | GovtDirectAsset
   | GovtDirectExpense
+  | -- PG fee accounts
+    PGPaymentExpense
+  | PGPaymentLiability
+  | PGPayoutExpense
+  | PGPayoutLiability
+  | PGGstAsset
   deriving (Eq, Show, Generic)
 
 -- | The FinanceM monad transformer.
@@ -323,6 +329,51 @@ roleToInput ctx = \case
     AccountInput
       { accountType = Expense,
         counterpartyType = Just GOVERNMENT_DIRECT,
+        counterpartyId = Just ctx.merchantId,
+        currency = ctx.currency,
+        merchantId = ctx.merchantId,
+        merchantOperatingCityId = ctx.merchantOpCityId
+      }
+  PGPaymentExpense ->
+    AccountInput
+      { accountType = Expense,
+        counterpartyType = Just PG_PAYMENT_JUSPAY,
+        counterpartyId = Just ctx.merchantId,
+        currency = ctx.currency,
+        merchantId = ctx.merchantId,
+        merchantOperatingCityId = ctx.merchantOpCityId
+      }
+  PGPaymentLiability ->
+    AccountInput
+      { accountType = Liability,
+        counterpartyType = Just PG_PAYMENT_JUSPAY,
+        counterpartyId = Just ctx.merchantId,
+        currency = ctx.currency,
+        merchantId = ctx.merchantId,
+        merchantOperatingCityId = ctx.merchantOpCityId
+      }
+  PGPayoutExpense ->
+    AccountInput
+      { accountType = Expense,
+        counterpartyType = Just PG_PAYOUT_JUSPAY,
+        counterpartyId = Just ctx.merchantId,
+        currency = ctx.currency,
+        merchantId = ctx.merchantId,
+        merchantOperatingCityId = ctx.merchantOpCityId
+      }
+  PGPayoutLiability ->
+    AccountInput
+      { accountType = Liability,
+        counterpartyType = Just PG_PAYOUT_JUSPAY,
+        counterpartyId = Just ctx.merchantId,
+        currency = ctx.currency,
+        merchantId = ctx.merchantId,
+        merchantOperatingCityId = ctx.merchantOpCityId
+      }
+  PGGstAsset ->
+    AccountInput
+      { accountType = Asset,
+        counterpartyType = Just GOVERNMENT_INDIRECT,
         counterpartyId = Just ctx.merchantId,
         currency = ctx.currency,
         merchantId = ctx.merchantId,

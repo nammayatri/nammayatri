@@ -70,7 +70,9 @@ data PaymentOrderE e = PaymentOrder
     isMockPayment :: Maybe Bool,
     paytmTid :: Maybe Text,
     groupId :: Maybe Text,
-    vpa :: Maybe Text
+    vpa :: Maybe Text,
+    pgBaseFee :: Maybe HighPrecMoney,
+    pgGst :: Maybe HighPrecMoney
   }
   deriving (Generic)
 

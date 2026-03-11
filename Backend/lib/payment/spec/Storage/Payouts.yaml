@@ -35,6 +35,8 @@ PayoutOrder:
     responseCode : Maybe Text
     responseMessage : Maybe Text
     retriedOrderId : Maybe Text
+    pgBaseFee : Maybe HighPrecMoney
+    pgGst : Maybe HighPrecMoney
   beamFields:
     amount:
       currency: Maybe Currency

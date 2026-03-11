@@ -78,6 +78,7 @@ import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
@@ -832,6 +833,7 @@ createPaymentOrder ::
     BeamFlow m r,
     EncFlow m r,
     ServiceFlow m r,
+    FinanceBeamFlow.BeamFlow m r,
     HasField "isMetroTestTransaction" r Bool
   ) =>
   [FTBooking.FRFSTicketBooking] ->
@@ -892,7 +894,7 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
   let createWalletCall = TWallet.createWallet merchantId merchantOperatingCityId
       groupId = listToMaybe $ sort (bookings <&> (.id.getId))
   orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) isMockPayment groupId
-  mapM (\resp -> DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq resp isMockPayment groupId) orderResp
+  mapM (\resp -> DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq resp isMockPayment groupId Nothing) orderResp
   where
     getPaymentIds = do
       orderShortId <- generateShortId

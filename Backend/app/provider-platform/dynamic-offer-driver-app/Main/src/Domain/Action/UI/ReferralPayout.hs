@@ -159,7 +159,7 @@ postPayoutCreateOrder (mbPersonId, merchantId, merchantOpCityId) req = do
   let entityName = DLP.MANUAL
       createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOpCityId payoutServiceName (Just person.id.getId)
   merchantOperatingCity <- CQMOC.findById (Kernel.Types.Id.cast merchantOpCityId) >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  void $ Payout.createPayoutService (Kernel.Types.Id.cast merchantId) (Just $ Kernel.Types.Id.cast merchantOpCityId) (Kernel.Types.Id.cast personId) (Just [personId.getId]) (Just entityName) (show merchantOperatingCity.city) req createPayoutOrderCall
+  void $ Payout.createPayoutService (Kernel.Types.Id.cast merchantId) (Just $ Kernel.Types.Id.cast merchantOpCityId) (Kernel.Types.Id.cast personId) (Just [personId.getId]) (Just entityName) (show merchantOperatingCity.city) req createPayoutOrderCall Nothing
   pure Kernel.Types.APISuccess.Success
 
 getPayoutOrderStatus ::

@@ -82,3 +82,10 @@ ALTER TABLE atlas_app.payout_order ADD COLUMN payout_service_type text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payout_order ADD COLUMN pg_gst double precision ;
+ALTER TABLE atlas_app.payout_order ADD COLUMN pg_base_fee double precision ;

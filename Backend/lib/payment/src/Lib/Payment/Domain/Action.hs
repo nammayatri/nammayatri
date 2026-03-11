@@ -82,6 +82,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
+import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import Lib.Payment.Domain.Types.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentOrderOffer as DPaymentOrderOffer
@@ -92,6 +93,7 @@ import qualified Lib.Payment.Domain.Types.PayoutTransaction as PT
 import qualified Lib.Payment.Domain.Types.PersonWallet as DPersonWallet
 import Lib.Payment.Domain.Types.Refunds (Refunds (..))
 import qualified Lib.Payment.Domain.Types.WalletRewardPosting as DWalletRewardPosting
+import Lib.Payment.PGFee (PGFeeConfig (..), PGFeeType (..), recordPGFeeLedgerEntries)
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrderOffer as QPaymentOrderOffer
@@ -337,7 +339,9 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId mbExistingOrde
             isMockPayment = Just False,
             paytmTid = Nothing,
             groupId = Nothing,
-            vpa = Nothing
+            vpa = Nothing,
+            pgBaseFee = Nothing,
+            pgGst = Nothing
           }
 
     buildTransaction ::
@@ -488,7 +492,8 @@ chargePaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIn
 
 createOrderService ::
   ( EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    FinanceBeamFlow.BeamFlow m r
   ) =>
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
@@ -519,7 +524,7 @@ createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity
   case mbExistingOrder of
     Nothing -> do
       createOrderResp <- createOrderCall createOrderReq -- api call
-      paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType createOrderReq createOrderResp _isMockPayment mbGroupId
+      paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType createOrderReq createOrderResp _isMockPayment mbGroupId Nothing
       QOrder.create paymentOrder
       return $ Just createOrderResp
     Just existingOrder -> do
@@ -643,7 +648,8 @@ buildSDKPayloadDetails req order = do
 
 buildPaymentOrder ::
   ( EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    FinanceBeamFlow.BeamFlow m r
   ) =>
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
@@ -655,10 +661,20 @@ buildPaymentOrder ::
   Payment.CreateOrderResp ->
   Bool ->
   Maybe Text ->
+  Maybe PGFeeConfig -> -- fee config from JuspayConfig (if configured)
   m DOrder.PaymentOrder
-buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType req resp isMockPayment mbGroupId = do
+buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType req resp isMockPayment mbGroupId mbPGFeeConfig = do
   now <- getCurrentTime
   clientAuthToken <- encrypt resp.sdk_payload.payload.clientAuthToken
+  -- Record PG fee ledger entries if configured
+  mbFeeResult <- case mbPGFeeConfig of
+    Just feeConfig -> do
+      let merchantOpCityId = maybe (merchantId.getId) getId mbMerchantOpCityId
+      result <- recordPGFeeLedgerEntries PGPayment feeConfig merchantId.getId merchantOpCityId req.orderId
+      case result of
+        Right feeResult -> pure $ Just feeResult
+        Left _err -> pure Nothing
+    Nothing -> pure Nothing
   let paymentOrderValidTill = mbPaymentOrderValidity <&> (\validity -> addUTCTime (intToNominalDiffTime validity.getSeconds) now)
       mkPaymentOrder =
         DOrder.PaymentOrder
@@ -706,7 +722,9 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity 
             isMockPayment = Just isMockPayment,
             paytmTid = Nothing,
             groupId = mbGroupId,
-            vpa = Nothing
+            vpa = Nothing,
+            pgBaseFee = (.pgBaseFee) <$> mbFeeResult,
+            pgGst = (.pgGst) <$> mbFeeResult
           }
   buildPaymentSplit req.orderId mkPaymentOrder req.splitSettlementDetails merchantId mbMerchantOpCityId
   pure mkPaymentOrder
@@ -1421,7 +1439,9 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
             isMockPayment = Just False,
             paytmTid = Nothing,
             groupId = Nothing,
-            vpa = Nothing
+            vpa = Nothing,
+            pgBaseFee = Nothing,
+            pgGst = Nothing
           }
 
 --- refunds api ----
@@ -1732,7 +1752,8 @@ refreshStripeRefundService req getRefundsCall = do
 
 createPayoutService ::
   ( EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    FinanceBeamFlow.BeamFlow m r
   ) =>
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
@@ -1742,18 +1763,28 @@ createPayoutService ::
   Text ->
   PT.CreatePayoutOrderReq ->
   (PT.CreatePayoutOrderReq -> m PT.CreatePayoutOrderResp) ->
+  Maybe PGFeeConfig -> -- fee config from JuspayConfig (if configured)
   m (Maybe PT.CreatePayoutOrderResp, Maybe Payment.PayoutOrder)
-createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntityName city createPayoutOrderReq createPayoutOrderCall = do
+createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntityName city createPayoutOrderReq createPayoutOrderCall mbPGFeeConfig = do
   mbExistingPayoutOrder <- QPayoutOrder.findByOrderId createPayoutOrderReq.orderId
   case mbExistingPayoutOrder of
     Nothing -> do
       createPayoutOrderResp <- createPayoutOrderCall createPayoutOrderReq -- api call
-      payoutOrder <- buildPayoutOrder createPayoutOrderReq createPayoutOrderResp
+      -- Record PG fee ledger entries if configured
+      mbFeeResult <- case mbPGFeeConfig of
+        Just feeConfig -> do
+          let merchantOpCityId = maybe merchantId.getId getId mbMerchantOpCityId
+          result <- recordPGFeeLedgerEntries PGPayout feeConfig merchantId.getId merchantOpCityId createPayoutOrderReq.orderId
+          case result of
+            Right feeResult -> pure $ Just feeResult
+            Left _err -> pure Nothing
+        Nothing -> pure Nothing
+      payoutOrder <- buildPayoutOrder createPayoutOrderReq createPayoutOrderResp mbFeeResult
       QPayoutOrder.create payoutOrder
       return (Just createPayoutOrderResp, Just payoutOrder)
     Just existingPayoutOrder -> throwError $ PayoutOrderAlreadyExists (existingPayoutOrder.id.getId)
   where
-    buildPayoutOrder req resp = do
+    buildPayoutOrder req resp mbFeeResult = do
       now <- getCurrentTime
       uuid <- generateGUID
       shortId <- generateShortId
@@ -1780,6 +1811,8 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
             vpa = Just req.customerVpa,
             customerEmail = customerEmail,
             lastStatusCheckedAt = Nothing,
+            pgBaseFee = (.pgBaseFee) <$> mbFeeResult,
+            pgGst = (.pgGst) <$> mbFeeResult,
             createdAt = now,
             updatedAt = now,
             merchantOperatingCityId = getId <$> mbMerchantOpCityId
