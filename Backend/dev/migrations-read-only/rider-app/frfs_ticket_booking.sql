@@ -162,3 +162,11 @@ CREATE INDEX frfs_ticket_booking_idx_bpp_order_id ON atlas_app.frfs_ticket_booki
 CREATE INDEX frfs_ticket_booking_idx_quote_id ON atlas_app.frfs_ticket_booking USING btree (quote_id);
 CREATE INDEX frfs_ticket_booking_idx_search_id ON atlas_app.frfs_ticket_booking USING btree (search_id);
 CREATE INDEX frfs_ticket_booking_idx_trip_id ON atlas_app.frfs_ticket_booking USING btree (trip_id);
+
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN cloud_type text ;
+
+
+
+------- SQL updates -------
+

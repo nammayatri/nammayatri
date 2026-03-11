@@ -60,3 +60,5 @@ ALTER TABLE atlas_app.frfs_ticket ADD COLUMN is_return_ticket boolean ;
 ------- SQL updates -------
 
 CREATE INDEX frfs_ticket_idx_frfs_ticket_booking_id ON atlas_app.frfs_ticket USING btree (frfs_ticket_booking_id);
+
+ALTER TABLE atlas_app.frfs_ticket ADD COLUMN cloud_type text ;

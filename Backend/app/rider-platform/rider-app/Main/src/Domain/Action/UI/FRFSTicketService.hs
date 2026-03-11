@@ -64,6 +64,7 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
+import Kernel.Types.Version (CloudType)
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common hiding (mkPrice)
 import qualified Lib.JourneyModule.RouteServiceability as JMRouteServiceability
@@ -111,6 +112,7 @@ import qualified Tools.MultiModal as MM
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
 import qualified UrlShortner.Common as UrlShortner
+
 
 getFrfsRoutes ::
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
@@ -545,7 +547,7 @@ postFrfsDiscoverySearch (_, merchantId) mbIntegratedBPPConfigId req = do
   return Kernel.Types.APISuccess.Success
 
 postFrfsSearchHandler ::
-  (CallExternalBPP.FRFSSearchFlow m r, HasShortDurationRetryCfg r c) =>
+  (CallExternalBPP.FRFSSearchFlow m r, HasShortDurationRetryCfg r c, HasField "cloudType" r (Maybe CloudType)) =>
   (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
   DMOC.MerchantOperatingCity ->
   DIBC.IntegratedBPPConfig ->
@@ -564,6 +566,7 @@ postFrfsSearchHandler ::
 postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ FRFSSearchAPIReq {..} frfsRouteDetails mbPOrgTxnId mbPOrgId mbFare multimodalSearchRequestId upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) >>= fromMaybeM (InternalError $ "Beckn Config not found " <> show merchantOperatingCity.id <> " " <> show merchant.id <> " " <> show vehicleType_)
+  cloudType <- asks (.cloudType)
   (fromStation, toStation) <- do
     fromStationInfo <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode integratedBPPConfig >>= fromMaybeM (InvalidRequest $ "Invalid from station id: " <> fromStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
     toStationInfo <- OTPRest.getStationByGtfsIdAndStopCode toStationCode integratedBPPConfig >>= fromMaybeM (InvalidRequest $ "Invalid to station id: " <> toStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
@@ -603,6 +606,7 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
             onSearchFailed = Nothing,
             validTill = Just validTill,
             searchAsParentStops = searchAsParentStops,
+            cloudType = cloudType,
             busLocationData = fromMaybe [] busLocationData,
             isSingleMode = Just isSingleMode,
             ..
@@ -677,7 +681,7 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
     )
     sortedQuotesWithCategories
 
-postFrfsQuoteV2Confirm :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text]) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Maybe Bool -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsQuoteV2Confirm :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType)) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Maybe Bool -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2Confirm (mbPersonId, merchantId) quoteId mbIsMockPayment req = do
   personId <- fromMaybeM (InvalidRequest "personId not found") mbPersonId
   selectedQuoteCategories <-
@@ -721,7 +725,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId) quoteId mbIsMockPayment req = do
     _ -> do
       postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer mbIsMockPayment integratedBppConfig req.tripId
 
-postFrfsQuoteConfirm :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text]) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Maybe Bool -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsQuoteConfirm :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType)) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Maybe Bool -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId mbIsMockPayment = do
   postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId mbIsMockPayment (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {offered = Nothing, ticketQuantity = Nothing, childTicketQuantity = Nothing, crisSdkResponse = Nothing, enableOffer = Nothing, tripId = Nothing})
 
@@ -729,7 +733,7 @@ postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Ty
 postFrfsQuotePaymentRetry = error "Logic yet to be decided"
 
 frfsOrderStatusHandler ::
-  (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text]) =>
+  (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType)) =>
   Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
   DPayment.PaymentStatusResp ->
   (DJL.JourneyLeg -> Id DFRFSQuote.FRFSQuote -> m ()) ->
@@ -803,7 +807,7 @@ frfsOrderStatusHandler merchantId paymentStatusResponse switchFRFSQuoteTier = do
     withPaymentStatusResponseHandler paymentBooking paymentOrder action = action (paymentBooking, paymentOrder, Just paymentStatusResponse)
 
 getFrfsBookingStatus ::
-  (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text]) =>
+  (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType)) =>
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
   Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking ->
   m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
@@ -1183,7 +1187,7 @@ postFrfsStationsPossibleStops (_personId, mId) mbCity _platformType vehicleType_
               possibleEndStops
       return endStops
 
-select :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text]) => Merchant -> MerchantOperatingCity -> BecknConfig -> DFRFSQuote.FRFSQuote -> [FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> m ()
+select :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType)) => Merchant -> MerchantOperatingCity -> BecknConfig -> DFRFSQuote.FRFSQuote -> [FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> m ()
 select merchant merchantOperatingCity bapConfig quote selectedQuoteCategories crisSdkResponse isSingleMode mbEnableOffer = do
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
   updatedQuoteCategories <-
