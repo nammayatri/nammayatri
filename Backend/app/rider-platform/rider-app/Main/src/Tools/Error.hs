@@ -236,6 +236,7 @@ data TicketBookingError
   | TicketBookingServiceNotFound Text
   | TicketPlaceNotFound Text
   | BusinessHourNotFound Text
+  | SeatsNotFound [Text]
   | ServiceCategoryNotFound Text
   | TicketSeatManagementNotFound Text Text
   | PeopleCategoryNotFound Text
@@ -253,6 +254,7 @@ instance IsBaseError TicketBookingError where
   toMessage (TicketBookingServiceNotConfirmed bookingServiceId) = Just $ "Ticket booking service not confirmed: " <> show bookingServiceId
   toMessage (TicketPlaceNotFound placeId) = Just $ "Ticket place not found: " <> show placeId
   toMessage (BusinessHourNotFound businessHourId) = Just $ "Business hour not found: " <> show businessHourId
+  toMessage (SeatsNotFound s) = Just $ "Selected seats: " <> show s <> " not found."
   toMessage (ServiceCategoryNotFound sCategoryId) = Just $ "Service category not found: " <> show sCategoryId
   toMessage (TicketSeatManagementNotFound seatMId curDate) = Just $ "Seat management details not found for seat management id: " <> show seatMId <> " and date: " <> show curDate
   toMessage (PeopleCategoryNotFound pCatId) = Just $ "People category not found: " <> show pCatId
@@ -269,6 +271,7 @@ instance IsHTTPError TicketBookingError where
     ServiceCategoryNotFound _ -> "SERVICE_CATEGORY_NOT_FOUND"
     TicketSeatManagementNotFound _ _ -> "TICKET_SEAT_MANAGEMENT_NOT_FOUND"
     PeopleCategoryNotFound _ -> "PEOPLE_CATEGORY_NOT_FOUND"
+    SeatsNotFound _ -> "SEATS_NOT_FOUND"
   toHttpCode = \case
     TicketServiceNotFound _ -> E500
     TicketBookingNotFound _ -> E500
@@ -280,6 +283,7 @@ instance IsHTTPError TicketBookingError where
     ServiceCategoryNotFound _ -> E500
     TicketSeatManagementNotFound _ _ -> E500
     PeopleCategoryNotFound _ -> E500
+    SeatsNotFound _ -> E400
 
 instance IsAPIError TicketBookingError
 
