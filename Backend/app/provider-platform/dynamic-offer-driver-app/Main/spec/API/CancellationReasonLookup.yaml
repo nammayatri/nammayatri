@@ -1,0 +1,20 @@
+imports:
+  Ride: Domain.Types.Ride
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+module: CancellationReasonLookup
+
+types:
+  CancellationReasonResp:
+    reasonCode: Text
+    reasonMessage: Text
+
+apis:
+  - GET:
+      endpoint: /ride/{rideId}/getCancellationReasons
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        rideId: Id Ride
+      response:
+        type: "[API.Types.UI.CancellationReasonLookup.CancellationReasonResp]"
