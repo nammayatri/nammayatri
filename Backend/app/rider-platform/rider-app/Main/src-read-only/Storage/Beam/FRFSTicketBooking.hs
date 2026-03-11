@@ -15,6 +15,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.Version
 import Tools.Beam.UtilsTH
 
 data FRFSTicketBookingT f = FRFSTicketBookingT
@@ -31,6 +32,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     cancellationCharges :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     cashbackPayoutOrderId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     cashbackStatus :: (B.C f (Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.CashbackStatus)),
+    cloudType :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.CloudType)),
     conductorId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     customerCancelled :: (B.C f Kernel.Prelude.Bool),
     discountedTickets :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),

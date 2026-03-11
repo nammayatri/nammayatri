@@ -20,6 +20,7 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
       Just
         Domain.Types.FRFSSearch.FRFSSearch
           { busLocationData = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData),
+            cloudType = cloudType,
             fromStationAddress = fromStationAddress,
             fromStationCode = fromStationId,
             fromStationName = fromStationName,
@@ -54,6 +55,7 @@ instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
   toTType' (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
     Beam.FRFSSearchT
       { Beam.busLocationData = Just $ toJSON busLocationData,
+        Beam.cloudType = cloudType,
         Beam.fromStationAddress = fromStationAddress,
         Beam.fromStationId = fromStationCode,
         Beam.fromStationName = fromStationName,

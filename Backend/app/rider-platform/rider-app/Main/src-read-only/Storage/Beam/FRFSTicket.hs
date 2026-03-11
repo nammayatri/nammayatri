@@ -9,10 +9,12 @@ import qualified Domain.Types.FRFSTicketStatus
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Version
 import Tools.Beam.UtilsTH
 
 data FRFSTicketT f = FRFSTicketT
-  { commencingHours :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+  { cloudType :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.CloudType)),
+    commencingHours :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     description :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     frfsTicketBookingId :: (B.C f Kernel.Prelude.Text),
     id :: (B.C f Kernel.Prelude.Text),
