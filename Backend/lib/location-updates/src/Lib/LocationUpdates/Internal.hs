@@ -119,14 +119,15 @@ processWaypoints ::
   Bool ->
   Bool ->
   Bool ->
-  NonEmpty LatLong ->
+  NonEmpty (LatLong, Int64) ->
   m ()
-processWaypoints ih@RideInterpolationHandler {..} driverId ending estDist estTollCharges estTollNames estTollIds pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications passedThroughDrop isMeterRide waypoints = do
+processWaypoints ih@RideInterpolationHandler {..} driverId ending estDist estTollCharges estTollNames estTollIds pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications passedThroughDrop isMeterRide waypointsWithTime = do
+  let waypoints = fmap fst waypointsWithTime
   calculationFailed <- isDistanceCalculationFailed driverId
   when calculationFailed do
     logWarning "Failed to calculate actual distance for this ride, ignoring"
   wrapDistanceCalculation driverId $ do
-    addEditDestinationPoints driverId waypoints
+    addEditDestinationPoints driverId waypointsWithTime
     addPoints driverId waypoints
     recalcDistanceBatches ih ending driverId estDist estTollCharges estTollNames estTollIds pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications waypoints calculationFailed passedThroughDrop isMeterRide
 
@@ -388,7 +389,7 @@ deleteAndPushEditDestinationSnappedWayPoints driverId waypoints = do
   rPush key waypoints
   Hedis.expire key 86400 -- 24 hours
 
-getEditDestinationSnappedWaypoints :: (HedisFlow m env) => Id person -> m [(LatLong, Bool)]
+getEditDestinationSnappedWaypoints :: (HedisFlow m env, MonadTime m, Log m) => Id person -> m [(LatLong, Bool)]
 getEditDestinationSnappedWaypoints driverId = lRange (makeEditDestinationSnappedWaypointsRedisKey driverId) 0 (-1)
 
 deleteEditDestinationSnappedWaypoints :: (HedisFlow m env) => Id person -> m ()
@@ -396,10 +397,10 @@ deleteEditDestinationSnappedWaypoints driverId = do
   let key = makeEditDestinationSnappedWaypointsRedisKey driverId
   Hedis.del key
 
-addEditDestinationPoints :: (HedisFlow m env) => Id person -> NonEmpty LatLong -> m ()
-addEditDestinationPoints driverId waypoints = do
+addEditDestinationPoints :: (HedisFlow m env) => Id person -> NonEmpty (LatLong, Int64) -> m ()
+addEditDestinationPoints driverId waypointsWithTime = do
   let key = makeEditDestinationWaypointsRedisKey driverId
-  rPush key waypoints
+  rPush key waypointsWithTime
   Hedis.expire key 86400 -- 24 hours
 
 deleteEditDestinationWaypoints :: (HedisFlow m env) => Id person -> m ()
@@ -407,7 +408,7 @@ deleteEditDestinationWaypoints driverId = do
   let key = makeEditDestinationWaypointsRedisKey driverId
   Hedis.del key
 
-getEditDestinationWaypoints :: (HedisFlow m env) => Id person -> m [LatLong]
+getEditDestinationWaypoints :: (HedisFlow m env, MonadTime m, Log m) => Id person -> m [(LatLong, Int64)]
 getEditDestinationWaypoints driverId = lRange (makeEditDestinationWaypointsRedisKey driverId) 0 (-1)
 
 clearLocationUpdatesImplementation :: (HedisFlow m env) => Id person -> m ()

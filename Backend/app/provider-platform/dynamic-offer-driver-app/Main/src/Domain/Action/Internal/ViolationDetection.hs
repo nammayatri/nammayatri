@@ -1,7 +1,16 @@
-module Domain.Action.Internal.ViolationDetection where
+module Domain.Action.Internal.ViolationDetection
+  ( ViolationDetectionReq (..),
+    mkReachedStopKey,
+    lastPair,
+    isNearPoint,
+    isNearLastStop,
+    violationDetection,
+  )
+where
 
 import Data.Aeson hiding (Success)
 import Data.OpenApi (ToSchema)
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Domain.Types.Alert
 import Domain.Types.Alert.DetectionData as DTD
 import qualified Domain.Types.Person as DP
@@ -9,9 +18,11 @@ import qualified Domain.Types.Ride as DRide
 import Environment
 import EulerHS.Prelude
 import Kernel.External.Encryption
+import Kernel.External.Maps.Types (LatLong)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import SharedLogic.WMB
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
@@ -38,14 +49,16 @@ violationDetection ViolationDetectionReq {..} = do
   case detectionData of
     RideStopReachedDetection RideStopReachedDetectionData {..} -> do
       when isViolated $ do
+        now <- getCurrentTime
+        let nowTs = floor $ utcTimeToPOSIXSeconds now
         existingStops <- Redis.safeGet (mkReachedStopKey rideId)
         case existingStops of
-          Just existingList -> do
-            unless (location `elem` existingList) $ do
-              let updatedList = existingList ++ [location]
-              Redis.setExp (mkReachedStopKey rideId) updatedList 86400
-          Nothing -> do
-            Redis.setExp (mkReachedStopKey rideId) [location] 86400
+          Just stops -> do
+            unless (isNearLastStop location stops) $
+              Redis.setExp (mkReachedStopKey rideId) (stops ++ [(location, nowTs)]) 86400
+
+          Nothing ->
+            Redis.setExp (mkReachedStopKey rideId) [(location, nowTs)] 86400
     RouteDeviationDetection _ -> when isViolated $ notifyDriver driver "DRIVER_ROUTE_DEVIATION"
     StoppedDetection _ -> when isViolated $ notifyDriver driver "DRIVER_RIDE_STOPPAGE"
     _ -> pure ()
@@ -111,3 +124,14 @@ violationDetection ViolationDetectionReq {..} = do
 
 mkReachedStopKey :: Id DRide.Ride -> Text
 mkReachedStopKey rideId = "add_stop_ride_reached_stop:" <> rideId.getId
+
+lastPair :: [(a, b)] -> Maybe (a, b)
+lastPair = foldl' (\_ x -> Just x) Nothing
+
+isNearPoint :: LatLong -> LatLong -> Bool
+isNearPoint a b = highPrecMetersToMeters (distanceBetweenInMeters a b) <= 10
+
+isNearLastStop :: LatLong -> [(LatLong, Int64)] -> Bool
+isNearLastStop pt stops = case lastPair stops of
+  Just (prevLL, _) -> isNearPoint pt prevLL
+  Nothing          -> False
