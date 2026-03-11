@@ -1,7 +1,6 @@
-module Domain.Action.UI.Insurance (getInsurance, getDriverInsurance, todayUTCWindow) where
+module Domain.Action.UI.Insurance (getInsurance, getDriverInsurance) where
 
 import Data.Time (UTCTime (..), utctDay)
-import Data.Time.Calendar (addDays)
 import qualified Domain.Types.Extra.MerchantServiceConfig as ExtraMSC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -14,6 +13,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBAPInternal
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.IffcoTokioInsurance as QIffco
 import qualified Storage.Queries.Ride as QRide
@@ -48,7 +48,12 @@ getDriverInsurance (personId, _merchantId, merchantOpCityId) = do
   _ <-
     CQMSC.findByServiceAndCity (ExtraMSC.InsuranceDeclarationService ExtraMSC.IffcoTokio) merchantOpCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "InsuranceDeclaration_IffcoTokio" (show ExtraMSC.IffcoTokio))
-  (startOfToday, startOfTomorrow) <- todayUTCWindow
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let todayLocal = utctDay localTime
+      timeOffset = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
+      startOfToday = addUTCTime (-timeOffset) (UTCTime todayLocal 0)
+      startOfTomorrow = addUTCTime 86400 startOfToday
   mbInsurance <- QIffco.findLatestByDriverId personId
   case mbInsurance of
     Just ins
@@ -56,16 +61,9 @@ getDriverInsurance (personId, _merchantId, merchantOpCityId) = do
         pure $
           SharedLogic.CallBAPInternal.InsuranceAPIEntity
             { certificateUrl = Nothing,
-              message = "IffcoTokio insurance: " <> show ins.insuranceStatus,
+              message = fromMaybe "" ins.iffcoStatus,
               plan = Just "IffcoTokio",
               policyId = ins.declarationId,
               policyNumber = ins.certificateNumber
             }
     _ -> throwError $ InvalidRequest "No active insurance found for today"
-
--- | Returns (startOfToday, startOfTomorrow) as UTC midnight boundaries.
-todayUTCWindow :: MonadFlow m => m (UTCTime, UTCTime)
-todayUTCWindow = do
-  now <- getCurrentTime
-  let today = utctDay now
-  pure (UTCTime today 0, UTCTime (addDays 1 today) 0)
