@@ -1,7 +1,7 @@
 imports:
   Text: Data.Text
   Booking: Domain.Types.Booking
-  PersonDefaultEmergencyNumber: Domain.Types.Person.PersonDefaultEmergencyNumber
+  PersonDefaultEmergencyNumber: Domain.Action.UI.PersonDefaultEmergencyNumber
   UTCTime: Kernel.Prelude
   Person: Domain.Types.Person
   Ride: Domain.Types.Ride

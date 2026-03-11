@@ -26,6 +26,7 @@ imports:
   DbHash: Kernel.External.Encryption
   BillingCategory: SharedLogic.Type
   RefundRequestStatus: Domain.Types.RefundRequest
+  Sos: Safety.Domain.Types.Sos
 
 Ride:
   tableName: ride
@@ -130,6 +131,7 @@ Ride:
     insuredAmount: Maybe Text
     pickupEtaLogicVersion: Maybe Int
     commission: Maybe HighPrecMoney
+    sosId: Maybe (Id Sos)
 
   sqlType:
     allowedEditLocationAttempts: int
@@ -352,6 +354,10 @@ Ride:
     updateRefundRequestStatus:
       kvFunction: updateOneWithKV
       params: [refundRequestStatus]
+      where: id
+    updateSosId:
+      kvFunction: updateOneWithKV
+      params: [sosId]
       where: id
 
   excludedDefaultQueries:

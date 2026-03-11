@@ -93,6 +93,7 @@ data RideT f = RideT
     rideTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     safetyAlertTriggered :: B.C f Kernel.Prelude.Bool,
     shortId :: B.C f Kernel.Prelude.Text,
+    sosId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     startOdometerReadingFileId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     startOdometerReadingValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     status :: B.C f Domain.Types.Ride.RideStatus,

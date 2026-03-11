@@ -48,6 +48,7 @@ buildDInitReq subscriber req isValueAddNP = do
   let bppSubscriberId_ = req.initReqContext.contextBppId
   riderPhoneNumber <- req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentCustomer) >>= (.customerContact) >>= (.contactPhone) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Customer Phone not found.")
   let mbRiderName = req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personName)
+  let riderGender = req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personGender)
   estimateId <- req.initReqMessage.confirmReqMessageOrder.orderItems >>= Kernel.Prelude.listToMaybe >>= (.itemId) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Item Id not found.")
   orderItem <- req.initReqMessage.confirmReqMessageOrder.orderItems >>= Kernel.Prelude.listToMaybe & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Order Item not found.")
   let initReqDetails = case tripCategory of
@@ -56,7 +57,7 @@ buildDInitReq subscriber req isValueAddNP = do
   let isAdvanceBookingEnabled = Just $ getAdvancedBookingEnabled orderItem.itemTags
   let (isInsured, insuredAmount) = getIsInsured orderItem.itemTags
   let displayBookingId = getDisplayBookingId orderItem.itemTags
-  pure $ Domain.Action.Beckn.Init.InitReq {bapCity = bapCity_, bapCountry = bapCountry_, bapId = bapId_, bapUri = bapUri_, fulfillmentId = fulfillmentId_, maxEstimatedDistance = maxEstimatedDistance_, paymentMethodInfo = paymentMethodInfo_, vehicleVariant = vehicleVariant_, bppSubscriberId = bppSubscriberId_, estimateId = estimateId, ..}
+  pure $ Domain.Action.Beckn.Init.InitReq {bapCity = bapCity_, bapCountry = bapCountry_, bapId = bapId_, bapUri = bapUri_, fulfillmentId = fulfillmentId_, maxEstimatedDistance = maxEstimatedDistance_, paymentMethodInfo = paymentMethodInfo_, vehicleVariant = vehicleVariant_, bppSubscriberId = bppSubscriberId_, estimateId = estimateId, riderGender = riderGender, ..}
 
 getDeliveryDetails :: Maybe [Spec.TagGroup] -> Maybe Domain.Action.Beckn.Init.InitReqDetails
 getDeliveryDetails tagGroups = do

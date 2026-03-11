@@ -94,6 +94,10 @@ parseEventV2 transactionId messageId order = do
         "RIDE_ASSIGNED" -> do
           assignedReq <- Common.parseRideAssignedEvent order messageId transactionId
           return $ DOnUpdate.OURideAssignedReq assignedReq
+        "RIDE_CONFIRMED" -> do
+          -- ONDC v2.1.0: handle phased confirmation
+          assignedReq <- Common.parseRideAssignedEvent order messageId transactionId
+          return $ DOnUpdate.OURideAssignedReq assignedReq
         "RIDE_ARRIVED_PICKUP" -> do
           arrivedReq <- Common.parseDriverArrivedEvent order messageId transactionId
           return $ DOnUpdate.OUDriverArrivedReq arrivedReq

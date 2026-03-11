@@ -343,6 +343,15 @@ types:
     - onboardingAs: Maybe OnboardingAs
     - activeFleetInfo: Maybe DriverAssociationInfo
     - operatorInfo: Maybe DriverAssociationInfo
+    - panAadhaarLinkedFlag: Maybe Bool
+    - gstinApplicableFlag: Maybe Bool
+    - tdsApplicableFlag: Maybe Bool
+    - walletId: Maybe Text
+    - bankAccountNumber: Maybe Text
+    - bankIfsc: Maybe Text
+    - bankVerificationStatus: Maybe Text
+    - upiId: Maybe Text
+    - fleetOwnerId: Maybe Text
   DriverAssociationInfo:
     - personId: Id Person
     - name: Maybe Text

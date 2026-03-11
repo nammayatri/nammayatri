@@ -15,10 +15,10 @@ Invoice:
   types:
     InvoiceStatus:
       enum: "Draft,Issued,Paid,PartiallyPaid,Cancelled,Voided"
-      derive: "ToParamSchema"
+      derive: "ToParamSchema,HttpInstance"
     InvoiceType:
       enum: "SubscriptionPurchase,Ride,RideCancellation"
-      derive: "ToParamSchema"
+      derive: "ToParamSchema,HttpInstance"
 
   fields:
     id: Id Invoice

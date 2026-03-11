@@ -32,11 +32,14 @@ library
       App
       Domain.Action.RiderPlatform.AppManagement.Customer
       Domain.Action.RiderPlatform.AppManagement.EventManagement
+      Domain.Action.RiderPlatform.AppManagement.FRFSTicketService
       Domain.Action.RiderPlatform.AppManagement.MerchantOnboarding
       Domain.Action.RiderPlatform.AppManagement.Pass
       Domain.Action.RiderPlatform.AppManagement.Payment
       Domain.Action.RiderPlatform.AppManagement.TicketDashboard
       Domain.Action.RiderPlatform.AppManagement.Tickets
+      Domain.Action.RiderPlatform.AppManagement.TransitOperator
+      Domain.Action.RiderPlatform.AppManagement.VehicleSeatLayoutMapping
       Domain.Action.RiderPlatform.IssueManagement.Issue
       Domain.Action.RiderPlatform.IssueManagement.IssueList
       Domain.Action.RiderPlatform.Management.AlertIncident
@@ -68,11 +71,14 @@ library
       API.Action.RiderPlatform.AppManagement
       API.Action.RiderPlatform.AppManagement.Customer
       API.Action.RiderPlatform.AppManagement.EventManagement
+      API.Action.RiderPlatform.AppManagement.FRFSTicketService
       API.Action.RiderPlatform.AppManagement.MerchantOnboarding
       API.Action.RiderPlatform.AppManagement.Pass
       API.Action.RiderPlatform.AppManagement.Payment
       API.Action.RiderPlatform.AppManagement.TicketDashboard
       API.Action.RiderPlatform.AppManagement.Tickets
+      API.Action.RiderPlatform.AppManagement.TransitOperator
+      API.Action.RiderPlatform.AppManagement.VehicleSeatLayoutMapping
       API.Action.RiderPlatform.IssueManagement
       API.Action.RiderPlatform.IssueManagement.Issue
       API.Action.RiderPlatform.IssueManagement.IssueList
@@ -157,12 +163,14 @@ library
     , dashboard-helper-api
     , esqueleto
     , euler-hs
+    , http-types
     , lib-dashboard
     , mobility-core
     , openapi3
     , payment
     , persistent
     , persistent-postgresql
+    , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
     , rider-app
@@ -234,10 +242,12 @@ executable rider-dashboard-exe
     , dashboard-helper-api
     , esqueleto
     , euler-hs
+    , http-types
     , mobility-core
     , openapi3
     , persistent
     , persistent-postgresql
+    , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
     , rider-dashboard

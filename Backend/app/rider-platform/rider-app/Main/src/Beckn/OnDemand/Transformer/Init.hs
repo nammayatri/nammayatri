@@ -42,7 +42,7 @@ tfFulfillmentVehicle uiConfirm = do
   let vehicleRegistration_ = Nothing
   let vehicleVariant_ = Just variant
   let vehicleCapacity_ = Nothing
-  BecknV2.OnDemand.Types.Vehicle {vehicleCategory = vehicleCategory_, vehicleColor = vehicleColor_, vehicleMake = vehicleMake_, vehicleModel = vehicleModel_, vehicleRegistration = vehicleRegistration_, vehicleVariant = vehicleVariant_, vehicleCapacity = vehicleCapacity_}
+  BecknV2.OnDemand.Types.Vehicle {vehicleCategory = vehicleCategory_, vehicleColor = vehicleColor_, vehicleEnergyType = Nothing, vehicleMake = vehicleMake_, vehicleModel = vehicleModel_, vehicleRegistration = vehicleRegistration_, vehicleVariant = vehicleVariant_, vehicleCapacity = vehicleCapacity_}
 
 tfOrder :: SharedLogic.Confirm.DConfirmRes -> Bool -> DBC.BecknConfig -> DRC.RiderConfig -> BecknV2.OnDemand.Types.Order
 tfOrder uiConfirm isValueAddNP bapConfig riderConfig = do
@@ -56,7 +56,7 @@ tfOrder uiConfirm isValueAddNP bapConfig riderConfig = do
   let orderBilling_ = tfOrderBilling uiConfirm.riderPhone uiConfirm.riderName & Just
   let orderFulfillments_ = Just $ Data.List.singleton $ tfOrderFulfillments uiConfirm isValueAddNP
   let orderItems_ = Just $ Data.List.singleton $ tfOrderItems uiConfirm
-  BecknV2.OnDemand.Types.Order {orderBilling = orderBilling_, orderCancellation = orderCancellation_, orderCancellationTerms = orderCancellationTerms_, orderFulfillments = orderFulfillments_, orderId = orderId_, orderItems = orderItems_, orderPayments = orderPayments_, orderProvider = orderProvider_, orderQuote = orderQuote_, orderStatus = orderStatus_, orderCreatedAt = Just uiConfirm.booking.createdAt, orderUpdatedAt = Just uiConfirm.booking.updatedAt}
+  BecknV2.OnDemand.Types.Order {orderBilling = orderBilling_, orderCancellation = orderCancellation_, orderCancellationTerms = orderCancellationTerms_, orderFulfillments = orderFulfillments_, orderId = orderId_, orderItems = orderItems_, orderPayments = orderPayments_, orderProvider = orderProvider_, orderQuote = orderQuote_, orderTags = Nothing, orderStatus = orderStatus_, orderCreatedAt = Just uiConfirm.booking.createdAt, orderUpdatedAt = Just uiConfirm.booking.updatedAt}
 
 tfOrderBilling :: Maybe Data.Text.Text -> Maybe Data.Text.Text -> BecknV2.OnDemand.Types.Billing
 tfOrderBilling mbPhoneNumber mbRiderName = do
@@ -69,7 +69,9 @@ tfOrderFulfillments uiConfirm isValueAddNP = do
   let fulfillmentCustomer_ = tfCustomer uiConfirm
   let fulfillmentId_ = Just uiConfirm.bppQuoteId
   let fulfillmentState_ = Nothing
-  let fulfillmentStops_ = Beckn.OnDemand.Utils.Init.mkStops uiConfirm.fromLoc uiConfirm.toLoc Nothing uiConfirm.stops
+  -- ONDC v2.1.0: Include scheduled pickup time window for scheduled bookings
+  let mbScheduledPickupDuration = Beckn.OnDemand.Utils.Common.mkScheduledPickupDuration uiConfirm.booking.isScheduled
+  let fulfillmentStops_ = Beckn.OnDemand.Utils.Init.mkStops uiConfirm.fromLoc uiConfirm.toLoc Nothing Nothing uiConfirm.stops uiConfirm.booking.startTime mbScheduledPickupDuration
   let fulfillmentTags_ = if isValueAddNP then Beckn.OnDemand.Utils.Init.mkFulfillmentTags uiConfirm.maxEstimatedDistance else Nothing
   let fulfillmentType_ = Utils.tripCategoryToFulfillmentType <$> uiConfirm.booking.tripCategory
   let fulfillmentVehicle_ = tfFulfillmentVehicle uiConfirm & Just
@@ -84,7 +86,11 @@ tfOrderItems uiConfirm = do
   let itemPaymentIds_ = Nothing
   let itemPrice_ = Nothing
   let itemTags_ = Just $ mkItemTags uiConfirm
-  BecknV2.OnDemand.Types.Item {itemCategoryIds = Nothing, itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_}
+  -- TODO: ONDC v2.1.0 Rental Add-ons - When DConfirmRes includes customer-selected add-ons
+  -- (e.g., extra km/time packages), populate itemAddOns here instead of Nothing.
+  -- Currently DConfirmRes has no field for selected add-ons, so this requires extending
+  -- the DConfirmRes type and the confirm flow to pass through add-on selections.
+  BecknV2.OnDemand.Types.Item {itemAddOns = Nothing, itemCategoryIds = Nothing, itemCancellationTerms = Nothing, itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_}
 
 tfPrice :: SharedLogic.Confirm.DConfirmRes -> BecknV2.OnDemand.Types.Price
 tfPrice uiConfirm = do
@@ -98,13 +104,13 @@ tfPrice uiConfirm = do
 
 tfProvider :: SharedLogic.Confirm.DConfirmRes -> BecknV2.OnDemand.Types.Provider
 tfProvider uiConfirm = do
-  let providerId = Just uiConfirm.providerId
+  let providerCategories = Nothing
+      providerId = Just uiConfirm.providerId
       providerItems = Nothing
       providerLocations = Nothing
       providerPayments = Nothing
       providerDescriptor = Nothing
       providerFulfillments = Nothing
-      providerCategories = Nothing
 
   BecknV2.OnDemand.Types.Provider {..}
 
@@ -128,7 +134,8 @@ tfCustomer res =
       riderName <- res.riderName
       return $
         BecknV2.OnDemand.Types.Person
-          { personId = Nothing,
+          { personGender = res.riderGender, -- ONDC v2.1.0: rider gender from DConfirmRes
+            personId = Nothing,
             personImage = Nothing,
             personName = Just riderName,
             personTags = Nothing

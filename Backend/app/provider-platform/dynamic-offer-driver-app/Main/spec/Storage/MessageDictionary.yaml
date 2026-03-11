@@ -1,0 +1,32 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+MessageDictionary:
+  tableName: message_dictionary
+
+  types:
+    MessageType:
+      enum: "CancellationReason"
+
+  fields:
+    id: Id MessageDictionary
+    messageKey: Text
+    messageType: MessageType
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+
+  constraints:
+    id: PrimaryKey
+    messageKey: "!SecondaryKey"
+    messageType: "!SecondaryKey"
+
+  queries:
+    findAllByMessageTypeAndMerchantOpCityIdAndMerchantId:
+      kvFunction: findAllWithKV
+      where:
+        and: [messageType, merchantOperatingCityId, merchantId]
+
+  excludedDefaultQueries:
+    - createMany
+    - updateByPrimaryKey

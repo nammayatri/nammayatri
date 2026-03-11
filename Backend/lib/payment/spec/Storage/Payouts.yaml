@@ -99,6 +99,9 @@ PayoutTransaction:
     status : Text
     merchantId: Text
     merchantOperatingCityId : Maybe Text
+    beneficiaryName : Maybe Text
+    beneficiaryAccount : Maybe Text
+    beneficiaryIfsc : Maybe Text
     createdAt : UTCTime
     updatedAt : UTCTime
   sqlType:
@@ -139,6 +142,10 @@ PayoutRequest:
     PayoutRequestStatus:
       enum: "INITIATED,PROCESSING,CREDITED,AUTO_PAY_FAILED,RETRYING,FAILED,CANCELLED,CASH_PAID,CASH_PENDING"
       derive: "ToParamSchema"
+
+    PayoutType:
+      enum: "INSTANT,SCHEDULED"
+      derive: "ToParamSchema"
   fields:
     id: Id PayoutRequest
     entityName: Maybe EntityName
@@ -165,10 +172,15 @@ PayoutRequest:
     orderType: Maybe Text
     city: Maybe Text
     payoutFee: Maybe HighPrecMoney
+    payoutType: Maybe PayoutType
+    coverageFrom: Maybe UTCTime
+    coverageTo: Maybe UTCTime
     createdAt: UTCTime
     updatedAt: UTCTime
   domainInstance:
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <PayoutRequestStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PayoutType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <PayoutType>
   sqlType:
     id: character varying(36)
     createdAt: timestamp with time zone

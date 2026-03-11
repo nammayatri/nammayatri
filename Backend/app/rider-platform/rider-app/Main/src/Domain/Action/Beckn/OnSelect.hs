@@ -91,7 +91,8 @@ data DriverOfferQuoteDetails = DriverOfferQuoteDetails
     rating :: Maybe Centesimal,
     isUpgradedToCab :: Maybe Bool,
     bppDriverQuoteId :: Text,
-    isSafetyPlus :: Bool
+    isSafetyPlus :: Bool,
+    driverSelectedFare :: Maybe HighPrecMoney -- v2.1.0: driver's counter-offer fare from quote breakup
   }
   deriving (Generic, Show)
 
@@ -225,6 +226,7 @@ buildDriverOffer ::
 buildDriverOffer estimateId DriverOfferQuoteDetails {..} searchRequest tripCategory = do
   uid <- generateGUID
   now <- getCurrentTime
+  let _driverSelectedFare = driverSelectedFare -- v2.1.0: parsed from quote breakup; wire to domain when DriverOffer schema updated
   pure
     DDriverOffer.DriverOffer
       { id = uid,

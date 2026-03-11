@@ -171,6 +171,7 @@ cacheMerchantServiceConfig merchantServiceConfig = do
         MultiModal.OTPTransitConfig _ -> MultiModalStaticDataService MultiModal.OTPTransit
       InsuranceServiceConfig insuranceCfg -> case insuranceCfg of
         Insurance.AckoInsuranceConfig _ -> InsuranceService Insurance.Acko
+        Insurance.IffcoTokioInsuranceConfig _ -> InsuranceService Insurance.IffcoTokio
       SOSServiceConfig sosCfg -> case sosCfg of
         SOSInterface.ERSSConfig _ -> SOSService SOS.ERSS
         SOSInterface.GJ112Config _ -> SOSService SOS.GJ112

@@ -31,6 +31,7 @@ in
               zbar
               wkhtmltopdf-bin
               openssh # For SFTP CLI support
+              sshpass # For password-based SFTP authentication
             ];
             name = "beckn-root";
             pathsToLink = [

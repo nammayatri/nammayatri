@@ -38,6 +38,7 @@ type GeometryResp = [GeometryAPIEntity]
 
 data JobName
   = NyRegularMasterTrigger
+  | PartnerInvoiceDataExportTrigger
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

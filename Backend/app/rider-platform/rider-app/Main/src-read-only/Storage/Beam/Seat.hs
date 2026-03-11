@@ -12,18 +12,20 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data SeatT f = SeatT
-  { colNo :: (B.C f Kernel.Prelude.Int),
-    id :: (B.C f Kernel.Prelude.Text),
-    isBookable :: (B.C f Kernel.Prelude.Bool),
-    isLadiesOnly :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    rowNo :: (B.C f Kernel.Prelude.Int),
-    seatLabel :: (B.C f Kernel.Prelude.Text),
-    seatLayoutId :: (B.C f Kernel.Prelude.Text),
-    seatType :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Seat.SeatType)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { colNo :: B.C f Kernel.Prelude.Int,
+    directionDegrees :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    id :: B.C f Kernel.Prelude.Text,
+    isBookable :: B.C f Kernel.Prelude.Bool,
+    isLadiesOnly :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    minStopsRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    rowNo :: B.C f Kernel.Prelude.Int,
+    seatLabel :: B.C f Kernel.Prelude.Text,
+    seatLayoutId :: B.C f Kernel.Prelude.Text,
+    seatType :: B.C f (Kernel.Prelude.Maybe Domain.Types.Seat.SeatType),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -33,6 +35,6 @@ instance B.Table SeatT where
 
 type Seat = SeatT Identity
 
-$(enableKVPG (''SeatT) [('id)] [[('seatLayoutId)]])
+$(enableKVPG ''SeatT ['id] [['seatLayoutId]])
 
-$(mkTableInstances (''SeatT) "seat")
+$(mkTableInstances ''SeatT "seat")

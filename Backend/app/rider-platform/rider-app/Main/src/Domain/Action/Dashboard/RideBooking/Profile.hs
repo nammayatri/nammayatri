@@ -13,6 +13,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
+import Kernel.Utils.Common (logInfo)
 import SharedLogic.Merchant (findMerchantByShortId)
 
 getProfileDetail ::
@@ -21,8 +22,12 @@ getProfileDetail ::
   Kernel.Types.Id.Id Domain.Types.Person.Person ->
   Environment.Flow Domain.Action.UI.Profile.ProfileRes
 getProfileDetail merchantShortId _opCity personId = do
+  logInfo $ "[RiderApp.Dashboard.Profile.getProfileDetail] START | personId: " <> show personId
   m <- findMerchantByShortId merchantShortId
-  API.UI.Profile.getPersonDetails' (personId, m.id) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing --CACTODO: this is a temporary implementation need to discuss and implement toss part if required or change response type all together for this api to stop sending cfg version forever.
+  logInfo "[RiderApp.Dashboard.Profile.getProfileDetail] findMerchantByShortId done, calling getPersonDetails'"
+  result <- API.UI.Profile.getPersonDetails' (personId, m.id) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+  logInfo "[RiderApp.Dashboard.Profile.getProfileDetail] getPersonDetails' done"
+  pure result
 
 postProfileUpdate ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

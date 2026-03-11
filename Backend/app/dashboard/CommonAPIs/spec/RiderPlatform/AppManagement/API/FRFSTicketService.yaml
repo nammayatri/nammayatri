@@ -1,0 +1,235 @@
+imports:
+  Person: Domain.Types.Person
+  FRFSConfigAPIRes: API.Types.UI.FRFSTicketService
+  AutocompleteRes: API.Types.UI.FRFSTicketService
+  FRFSRouteAPI: API.Types.UI.FRFSTicketService
+  FRFSStationAPI: API.Types.UI.FRFSTicketService
+  FRFSPossibleStopsReq: API.Types.UI.FRFSTicketService
+  FRFSSearchAPIReq: API.Types.UI.FRFSTicketService
+  FRFSSearchAPIRes: API.Types.UI.FRFSTicketService
+  FRFSQuoteAPIRes: API.Types.UI.FRFSTicketService
+  FRFSQuoteConfirmReq: API.Types.UI.FRFSTicketService
+  FRFSTicketBookingStatusAPIRes: API.Types.UI.FRFSTicketService
+  SeatLayoutDetailsResp: API.Types.UI.FRFSTicketService
+  SeatLayoutResp: API.Types.UI.FRFSTicketService
+  FRFSRouteServiceabilityReq: API.Types.UI.FRFSTicketService
+  RouteWithLiveVehicle: API.Types.UI.MultimodalConfirm
+  FleetOperatorTripActionReq: API.Types.UI.FRFSTicketService
+  FleetOperatorTripActionResp: API.Types.UI.FRFSTicketService
+  FleetOperatorCurrentOperationReq: API.Types.UI.FRFSTicketService
+  FleetOperatorCurrentOperationResp: API.Types.UI.FRFSTicketService
+  FRFSSearch: Domain.Types.FRFSSearch
+  FRFSQuote: Domain.Types.FRFSQuote
+  FRFSTicketBooking: Domain.Types.FRFSTicketBooking
+  VehicleCategory: BecknV2.FRFS.Enums
+  ServiceTierType: BecknV2.FRFS.Enums
+  City: Kernel.Types.Beckn.Context
+  LatLong: Kernel.External.Maps.Types
+  PlatformType: Domain.Types.IntegratedBPPConfig
+  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
+
+importPackageOverrides:
+  Domain.Types.Person: "rider-app"
+  Domain.Types.FRFSSearch: "rider-app"
+  Domain.Types.FRFSQuote: "rider-app"
+  Domain.Types.FRFSTicketBooking: "rider-app"
+  Domain.Types.IntegratedBPPConfig: "rider-app"
+  API.Types.UI.FRFSTicketService: "rider-app"
+  API.Types.UI.MultimodalConfirm: "rider-app"
+
+module: FRFSTicketService
+
+types: {}
+
+apis:
+  - GET:
+      endpoint: /customer/{customerId}/frfs/config
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      mandatoryQuery:
+        city: City
+      response:
+        type: FRFSConfigAPIRes
+
+  - GET:
+      endpoint: /customer/{customerId}/frfs/autocomplete
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      mandatoryQuery:
+        city: City
+        location: LatLong
+        vehicleType: VehicleCategory
+      query:
+        input: Text
+        limit: Int
+        offset: Int
+        platformType: PlatformType
+      response:
+        type: AutocompleteRes
+
+  - GET:
+      endpoint: /customer/{customerId}/frfs/routes
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+        city: City
+      query:
+        startStationCode: Text
+        endStationCode: Text
+      response:
+        type: "[FRFSRouteAPI]"
+
+  - GET:
+      endpoint: /customer/{customerId}/frfs/stations
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+      query:
+        city: City
+        routeCode: Text
+        startStationCode: Text
+        endStationCode: Text
+        location: LatLong
+        platformType: PlatformType
+        minimalData: Bool
+      response:
+        type: "[FRFSStationAPI]"
+
+  - POST:
+      endpoint: /customer/{customerId}/frfs/stations/possibleStops
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+      query:
+        city: City
+        platformType: PlatformType
+      request:
+        type: FRFSPossibleStopsReq
+      response:
+        type: "[FRFSStationAPI]"
+
+  - GET:
+      endpoint: /customer/{customerId}/frfs/route/{routeCode}
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        routeCode: Text
+      mandatoryQuery:
+        city: City
+        vehicleType: VehicleCategory
+      query:
+        platformType: PlatformType
+        integratedBppConfigId: Id IntegratedBPPConfig
+      response:
+        type: FRFSRouteAPI
+
+  - POST:
+      endpoint: /customer/{customerId}/frfs/search
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+      query:
+        city: City
+        integratedBppConfigId: Id IntegratedBPPConfig
+        newServiceTiers: "[ServiceTierType]"
+      request:
+        type: FRFSSearchAPIReq
+      response:
+        type: FRFSSearchAPIRes
+
+  - GET:
+      endpoint: /customer/{customerId}/frfs/search/{searchId}/quote
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        searchId: Id FRFSSearch
+      response:
+        type: "[FRFSQuoteAPIRes]"
+
+  - POST:
+      endpoint: /customer/{customerId}/frfs/quote/v2/{quoteId}/confirm
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        quoteId: Id FRFSQuote
+      query:
+        isMockPayment: Bool
+      request:
+        type: FRFSQuoteConfirmReq
+      response:
+        type: FRFSTicketBookingStatusAPIRes
+
+  - GET:
+      endpoint: /customer/{customerId}/frfs/booking/{bookingId}/status
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        bookingId: Id FRFSTicketBooking
+      response:
+        type: FRFSTicketBookingStatusAPIRes
+
+  - GET:
+      endpoint: /customer/{customerId}/frfs/route/{routeId}/seatLayout
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        routeId: Text
+      query:
+        vehicleNumber: Text
+      response:
+        type: SeatLayoutDetailsResp
+
+  - GET:
+      endpoint: /customer/{customerId}/frfs/trip/{tripId}/route/{routeId}/seats
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        tripId: Text
+        routeId: Text
+      query:
+        vehicleNumber: Text
+        fromStopCode: Text
+        toStopCode: Text
+      response:
+        type: SeatLayoutResp
+
+  - POST:
+      endpoint: /customer/{customerId}/frfs/route/{routeId}/serviceability
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        routeId: Text
+      request:
+        type: FRFSRouteServiceabilityReq
+      response:
+        type: "API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle"
+
+  - POST:
+      endpoint: /customer/{customerId}/frfs/fleetOperator/tripAction
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      request:
+        type: FleetOperatorTripActionReq
+      response:
+        type: FleetOperatorTripActionResp
+
+  - POST:
+      endpoint: /customer/{customerId}/frfs/fleetOperator/currentOperation
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      request:
+        type: FleetOperatorCurrentOperationReq
+      response:
+        type: FleetOperatorCurrentOperationResp

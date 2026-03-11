@@ -376,6 +376,7 @@ types:
     routeCodes: Maybe [RouteCodesWithLeg]
     sourceStopCode: Maybe Text
     destinationStopCode: Maybe Text
+    vehicleNumber: Maybe Text
     derive: "Show"
 
   AvailableRoute:

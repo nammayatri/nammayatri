@@ -92,7 +92,8 @@ data SFTPConfig = SFTPConfig
   { host :: Text,
     port :: Int,
     username :: Text,
-    privateKeyPath :: Text,
+    privateKeyPath :: Maybe Text,
+    password :: Maybe Text,
     remotePath :: Text
   }
   deriving (Generic, FromDhall, Show)

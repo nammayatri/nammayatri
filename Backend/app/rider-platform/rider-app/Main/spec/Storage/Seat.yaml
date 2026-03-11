@@ -19,6 +19,11 @@ Seat:
     seatLayoutId: Id SeatLayout
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    directionDegrees: Maybe Int
+    minStopsRequired: Maybe Int
+
+  default:
+    directionDegrees: "0"
 
   types:
     SeatType:
@@ -35,6 +40,10 @@ Seat:
     findAllByLayoutId:
       kvFunction: findAllWithKV
       where: seatLayoutId
+    findAllByIds:
+      kvFunction: findAllWithKV
+      where:
+         in: [id]
 
 SeatLayout:
   tableName: seat_layout
@@ -56,3 +65,57 @@ SeatLayout:
     findById:
       kvFunction: findOneWithKV
       where: id
+
+VehicleSeatLayoutMapping:
+  tableName: vehicle_seat_layout_mapping
+
+  derives: "Show, Generic, ToJSON, FromJSON, Eq, ToSchema"
+
+  fields:
+    id: Id VehicleSeatLayoutMapping
+    vehicleNo: Text
+    gtfsId: Text
+    seatLayoutId: Id SeatLayout
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  constraints:
+    id: PrimaryKey
+
+  extraIndexes:
+    - columns: [vehicleNo, gtfsId]
+      unique: true
+
+  queries:
+
+    findByVehicleNoAndGtfsId:
+      kvFunction: findOneWithKV
+      where:
+        and: [vehicleNo, gtfsId]
+
+    updateSeatLayoutIdByVehicleNoAndGtfsId:
+      kvFunction: updateOneWithKV
+      params: [seatLayoutId]
+      where:
+        and: [vehicleNo, gtfsId]
+
+    deleteByVehicleNoAndGtfsId:
+      kvFunction: deleteWithKV
+      where:
+        and: [vehicleNo, gtfsId]
+
+    findAllByGtfsId:
+      kvFunction: findAllWithOptionsKV
+      where: gtfsId
+      limit: limit
+      offset: offset
+
+    findAllBySeatLayoutId:
+      kvFunction: findAllWithOptionsKV
+      where: seatLayoutId
+      limit: limit
+      offset: offset
+
+  extraOperations:
+    - GENERATE_INDEXES
+    - EXTRA_CACHED_QUERY_FILE

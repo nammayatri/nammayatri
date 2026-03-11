@@ -25,6 +25,7 @@ import qualified API.Types.ProviderPlatform.Management.Payout
 import qualified API.Types.ProviderPlatform.Management.PlanManagement
 import qualified API.Types.ProviderPlatform.Management.Revenue
 import qualified API.Types.ProviderPlatform.Management.Ride
+import qualified API.Types.ProviderPlatform.Management.SosMedia
 import qualified API.Types.ProviderPlatform.Management.System
 import qualified API.Types.ProviderPlatform.Management.VehicleInfo
 import qualified API.Types.ProviderPlatform.Management.Volunteer
@@ -58,6 +59,7 @@ data ManagementUserActionType
   | PLAN_MANAGEMENT API.Types.ProviderPlatform.Management.PlanManagement.PlanManagementUserActionType
   | REVENUE API.Types.ProviderPlatform.Management.Revenue.RevenueUserActionType
   | RIDE API.Types.ProviderPlatform.Management.Ride.RideUserActionType
+  | SOS_MEDIA API.Types.ProviderPlatform.Management.SosMedia.SosMediaUserActionType
   | SYSTEM API.Types.ProviderPlatform.Management.System.SystemUserActionType
   | VEHICLE_INFO API.Types.ProviderPlatform.Management.VehicleInfo.VehicleInfoUserActionType
   | VOLUNTEER API.Types.ProviderPlatform.Management.Volunteer.VolunteerUserActionType
@@ -88,6 +90,7 @@ instance Text.Show.Show ManagementUserActionType where
     PLAN_MANAGEMENT e -> "PLAN_MANAGEMENT/" <> show e
     REVENUE e -> "REVENUE/" <> show e
     RIDE e -> "RIDE/" <> show e
+    SOS_MEDIA e -> "SOS_MEDIA/" <> show e
     SYSTEM e -> "SYSTEM/" <> show e
     VEHICLE_INFO e -> "VEHICLE_INFO/" <> show e
     VOLUNTEER e -> "VOLUNTEER/" <> show e
@@ -279,6 +282,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "RIDE/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( SOS_MEDIA v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "SOS_MEDIA/" r,
                    ( v1,
                      r2
                      ) <-

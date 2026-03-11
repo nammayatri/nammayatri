@@ -23,6 +23,7 @@ import qualified Kernel.Types.Id
 import qualified Kernel.Types.Time
 import qualified Kernel.Types.Version
 import qualified Kernel.Utils.TH
+import qualified Safety.Domain.Types.Sos
 import qualified SharedLogic.Type
 import qualified Tools.Beam.UtilsTH
 
@@ -89,6 +90,7 @@ data RideE e = Ride
     safetyJourneyStatus :: Kernel.Prelude.Maybe Domain.Types.Ride.SosJourneyStatus,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
     showDriversPreviousRideDropLoc :: Kernel.Prelude.Bool,
+    sosId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos),
     startOdometerReading :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     status :: Domain.Types.RideStatus.RideStatus,
     stops :: [Domain.Types.Location.Location],
@@ -183,6 +185,7 @@ instance EncryptedItem Ride where
           safetyJourneyStatus = safetyJourneyStatus entity,
           shortId = shortId entity,
           showDriversPreviousRideDropLoc = showDriversPreviousRideDropLoc entity,
+          sosId = sosId entity,
           startOdometerReading = startOdometerReading entity,
           status = status entity,
           stops = stops entity,
@@ -269,6 +272,7 @@ instance EncryptedItem Ride where
             safetyJourneyStatus = safetyJourneyStatus entity,
             shortId = shortId entity,
             showDriversPreviousRideDropLoc = showDriversPreviousRideDropLoc entity,
+            sosId = sosId entity,
             startOdometerReading = startOdometerReading entity,
             status = status entity,
             stops = stops entity,

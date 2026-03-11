@@ -57,6 +57,7 @@ import "rider-app" SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper
 import "rider-app" SharedLogic.Scheduler.Jobs.MetroBusinessHour
 import "rider-app" SharedLogic.Scheduler.Jobs.NyRegularInstance
 import "rider-app" SharedLogic.Scheduler.Jobs.NyRegularMaster
+import "rider-app" SharedLogic.Scheduler.Jobs.PartnerInvoiceDataExport
 import "rider-app" SharedLogic.Scheduler.Jobs.PaymentOrderStatusCheck
 import "rider-app" SharedLogic.Scheduler.Jobs.Payout.MetroIncentivePayout
 import "rider-app" SharedLogic.Scheduler.Jobs.PostRideSafetyNotification
@@ -121,6 +122,7 @@ schedulerHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockCustomer)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . updateCRISRDSBalanceJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . frfsSeatHoldReaper)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . partnerInvoiceDataExportJob)
     }
 
 runRiderAppScheduler ::

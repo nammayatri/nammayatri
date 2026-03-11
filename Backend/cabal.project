@@ -45,6 +45,7 @@ packages:
   lib/external
   lib/webhook
   lib/dashcam
+  lib/behavior-tracker
   hunit-tests
 -- ## 6 parallel jobs by default.
 --

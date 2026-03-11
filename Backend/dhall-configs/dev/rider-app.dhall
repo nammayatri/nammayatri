@@ -465,7 +465,7 @@ in  { esqDBCfg
     , internalEndPointMap = common.internalEndPointMap
     , schedulerSetName = "Scheduled_Jobs_Rider"
     , schedulerType = common.schedulerType.RedisBased
-    , _version = "2.0.0"
+    , _version = "2.1.0"
     , hotSpotExpiry = +604800
     , cacConfig
     , cacTenants
@@ -503,7 +503,8 @@ in  { esqDBCfg
       { host = "localhost"
       , port = +22
       , username = "dev"
-      , privateKeyPath = "/tmp/private_key"
+      , privateKeyPath = None Text
+      , password = Some "dev_password"
       , remotePath = "/tmp/remote_path"
       }
     , blackListedJobs = [] : List Text

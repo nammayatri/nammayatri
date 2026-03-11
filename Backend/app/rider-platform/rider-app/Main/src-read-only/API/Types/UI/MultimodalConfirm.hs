@@ -328,7 +328,8 @@ data RouteCodesWithLeg = RouteCodesWithLeg {legOrder :: Kernel.Prelude.Int, rout
 data RouteServiceabilityReq = RouteServiceabilityReq
   { destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeCodes :: Kernel.Prelude.Maybe [RouteCodesWithLeg],
-    sourceStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    sourceStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

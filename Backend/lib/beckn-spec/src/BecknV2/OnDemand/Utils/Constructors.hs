@@ -29,6 +29,7 @@ emptyVehicle =
   Vehicle
     { vehicleCategory = Nothing,
       vehicleColor = Nothing,
+      vehicleEnergyType = Nothing,
       vehicleMake = Nothing,
       vehicleModel = Nothing,
       vehicleRegistration = Nothing,
@@ -40,7 +41,8 @@ emptyVehicle =
 emptyPerson :: Person
 emptyPerson =
   Person
-    { personId = Nothing,
+    { personGender = Nothing,
+      personId = Nothing,
       personImage = Nothing,
       personName = Nothing,
       personTags = Nothing
@@ -73,6 +75,7 @@ emptyDescriptor :: Descriptor
 emptyDescriptor =
   Descriptor
     { descriptorCode = Nothing,
+      descriptorLongDesc = Nothing,
       descriptorName = Nothing,
       descriptorShortDesc = Nothing
     }
@@ -82,6 +85,7 @@ emptyStop :: Stop
 emptyStop =
   Stop
     { stopAuthorization = Nothing,
+      stopInstructions = Nothing,
       stopLocation = Nothing,
       stopId = Nothing,
       stopParentStopId = Nothing,
@@ -104,6 +108,7 @@ emptyOrder =
       orderProvider = Nothing,
       orderQuote = Nothing,
       orderStatus = Nothing,
+      orderTags = Nothing,
       orderUpdatedAt = Nothing
     }
 
@@ -170,7 +175,9 @@ emptyAgent =
 emptyItem :: Item
 emptyItem =
   Item
-    { itemCategoryIds = Nothing,
+    { itemAddOns = Nothing,
+      itemCancellationTerms = Nothing,
+      itemCategoryIds = Nothing,
       itemDescriptor = Nothing,
       itemFulfillmentIds = Nothing,
       itemId = Nothing,

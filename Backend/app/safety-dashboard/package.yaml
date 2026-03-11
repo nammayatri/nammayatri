@@ -88,6 +88,7 @@ dependencies:
   - sequelize
   - string-conversions
   - http-types
+  - wai
   - lens
   - case-insensitive
   - singletons-th

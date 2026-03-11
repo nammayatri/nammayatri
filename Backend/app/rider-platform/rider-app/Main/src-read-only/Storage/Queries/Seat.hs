@@ -21,7 +21,10 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Seat.Seat] -> m ())
 createMany = traverse_ create
 
-findAllByLayoutId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout -> m ([Domain.Types.Seat.Seat]))
+findAllByIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id Domain.Types.Seat.Seat] -> m [Domain.Types.Seat.Seat])
+findAllByIds id = do findAllWithKV [Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> id)]
+
+findAllByLayoutId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout -> m [Domain.Types.Seat.Seat])
 findAllByLayoutId seatLayoutId = do findAllWithKV [Se.Is Beam.seatLayoutId $ Se.Eq (Kernel.Types.Id.getId seatLayoutId)]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Seat.Seat -> m (Maybe Domain.Types.Seat.Seat))
@@ -35,10 +38,12 @@ updateByPrimaryKey (Domain.Types.Seat.Seat {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.colNo colNo,
+      Se.Set Beam.directionDegrees directionDegrees,
       Se.Set Beam.isBookable isBookable,
       Se.Set Beam.isLadiesOnly isLadiesOnly,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.minStopsRequired minStopsRequired,
       Se.Set Beam.rowNo rowNo,
       Se.Set Beam.seatLabel seatLabel,
       Se.Set Beam.seatLayoutId (Kernel.Types.Id.getId seatLayoutId),
@@ -53,11 +58,13 @@ instance FromTType' Beam.Seat Domain.Types.Seat.Seat where
       Just
         Domain.Types.Seat.Seat
           { colNo = colNo,
+            directionDegrees = directionDegrees,
             id = Kernel.Types.Id.Id id,
             isBookable = isBookable,
             isLadiesOnly = isLadiesOnly,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            minStopsRequired = minStopsRequired,
             rowNo = rowNo,
             seatLabel = seatLabel,
             seatLayoutId = Kernel.Types.Id.Id seatLayoutId,
@@ -70,11 +77,13 @@ instance ToTType' Beam.Seat Domain.Types.Seat.Seat where
   toTType' (Domain.Types.Seat.Seat {..}) = do
     Beam.SeatT
       { Beam.colNo = colNo,
+        Beam.directionDegrees = directionDegrees,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isBookable = isBookable,
         Beam.isLadiesOnly = isLadiesOnly,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.minStopsRequired = minStopsRequired,
         Beam.rowNo = rowNo,
         Beam.seatLabel = seatLabel,
         Beam.seatLayoutId = Kernel.Types.Id.getId seatLayoutId,

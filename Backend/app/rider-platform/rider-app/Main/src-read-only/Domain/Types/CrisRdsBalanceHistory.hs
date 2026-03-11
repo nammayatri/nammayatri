@@ -4,6 +4,7 @@
 module Domain.Types.CrisRdsBalanceHistory where
 
 import Data.Aeson
+import qualified Data.Time.Calendar
 import qualified Domain.Types.IntegratedBPPConfig
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -13,7 +14,7 @@ import qualified Tools.Beam.UtilsTH
 data CrisRdsBalanceHistory = CrisRdsBalanceHistory
   { balance :: Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,
-    dateIst :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dateIst :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
     executionTime :: Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.CrisRdsBalanceHistory.CrisRdsBalanceHistory,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,

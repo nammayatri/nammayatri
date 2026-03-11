@@ -5,12 +5,12 @@ module API.Types.UI.Sos where
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.Ride
-import qualified Domain.Types.Sos
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Prelude
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified Safety.Domain.Types.Sos
 import Servant
 import Tools.Auth
 
@@ -52,7 +52,7 @@ data MockSosReq = MockSosReq {onRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SosDetailsRes = SosDetailsRes {sos :: Kernel.Prelude.Maybe Domain.Types.Sos.Sos}
+data SosDetailsRes = SosDetailsRes {sos :: Kernel.Prelude.Maybe Safety.Domain.Types.Sos.Sos}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -66,7 +66,7 @@ data SosLocationUpdateReq = SosLocationUpdateReq {accuracy :: Kernel.Prelude.May
 
 data SosReq = SosReq
   { customerLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
-    flow :: Domain.Types.Sos.SosType,
+    flow :: Safety.Domain.Types.Sos.SosType,
     isRideEnded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     notifyAllContacts :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
@@ -75,7 +75,7 @@ data SosReq = SosReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SosRes = SosRes {externalSOSSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, sosId :: Kernel.Types.Id.Id Domain.Types.Sos.Sos}
+data SosRes = SosRes {externalSOSSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, sosId :: Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -83,11 +83,11 @@ data SosTrackingDetailsRes = SosTrackingDetailsRes {mobileNumber :: Data.Text.Te
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SosTrackingRes = SosTrackingRes {currentLocation :: Kernel.Prelude.Maybe SosLocationRes, sosState :: Kernel.Prelude.Maybe Domain.Types.Sos.SosState, status :: Domain.Types.Sos.SosStatus}
+data SosTrackingRes = SosTrackingRes {currentLocation :: Kernel.Prelude.Maybe SosLocationRes, sosState :: Kernel.Prelude.Maybe Safety.Domain.Types.Sos.SosState, status :: Safety.Domain.Types.Sos.SosStatus}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SosUpdateReq = SosUpdateReq {comment :: Kernel.Prelude.Maybe Data.Text.Text, status :: Domain.Types.Sos.SosStatus}
+data SosUpdateReq = SosUpdateReq {comment :: Kernel.Prelude.Maybe Data.Text.Text, status :: Safety.Domain.Types.Sos.SosStatus}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -95,15 +95,20 @@ data StartTrackingReq = StartTrackingReq
   { contacts :: [Data.Text.Text],
     customerLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     durationInMinutes :: Kernel.Prelude.Int,
-    sosId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Sos.Sos)
+    externalReferenceId :: Kernel.Prelude.Maybe Data.Text.Text,
+    sosId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos)
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data StartTrackingRes = StartTrackingRes {sosId :: Kernel.Types.Id.Id Domain.Types.Sos.Sos, trackingUrl :: Data.Text.Text}
+data StartTrackingRes = StartTrackingRes {sosId :: Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos, trackingUrl :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data UpdateStateReq = UpdateStateReq {sosState :: Domain.Types.Sos.SosState}
+data UpdateStateReq = UpdateStateReq {sosState :: Safety.Domain.Types.Sos.SosState}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UpdateToRideReq = UpdateToRideReq {rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

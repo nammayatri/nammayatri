@@ -59,7 +59,10 @@ data PayoutSubmission = PayoutSubmission
     customerEmail :: Maybe Text,
     remark :: Text,
     orderType :: Text,
-    scheduledAt :: Maybe UTCTime
+    scheduledAt :: Maybe UTCTime,
+    payoutType :: Maybe PayoutType,
+    coverageFrom :: Maybe UTCTime,
+    coverageTo :: Maybe UTCTime
   }
   deriving (Show, Generic)
 
@@ -321,6 +324,9 @@ buildPayoutRequest submission = do
         merchantId = submission.merchantId,
         merchantOperatingCityId = submission.merchantOpCityId,
         payoutFee = submission.payoutFee,
+        payoutType = submission.payoutType,
+        coverageFrom = submission.coverageFrom,
+        coverageTo = submission.coverageTo,
         createdAt = now,
         updatedAt = now
       }

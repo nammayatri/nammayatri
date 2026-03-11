@@ -451,6 +451,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         distance = shortestRouteDistance,
         duration = shortestRouteDuration,
         taggings = getTags tag searchRequest reservePricingTag updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide phoneNumber numberOfLuggages (searchRequest.fromSpecialLocationId) (searchRequest.toSpecialLocationId) emailDomain businessEmailDomain,
+        riderGender = Just (show person.gender),
         ..
       }
   where

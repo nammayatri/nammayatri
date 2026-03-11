@@ -83,7 +83,7 @@ mkFulfillmentV2 :: DOnSelectReq -> DQuote.DriverQuote -> Bool -> Spec.Fulfillmen
 mkFulfillmentV2 dReq quote isValueAddNP = do
   emptyFulfillment
     { Spec.fulfillmentId = Just quote.id.getId,
-      Spec.fulfillmentStops = Utils.mkStops' dReq.searchRequest.fromLocation dReq.searchRequest.toLocation dReq.searchRequest.stops Nothing,
+      Spec.fulfillmentStops = Utils.mkStops' dReq.searchRequest.fromLocation dReq.searchRequest.toLocation dReq.searchRequest.stops Nothing Nothing (Just dReq.searchRequest.startTime) (Utils.mkScheduledPickupDuration dReq.searchRequest.isScheduled),
       Spec.fulfillmentVehicle = Just $ mkVehicleV2 quote,
       Spec.fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType quote.tripCategory,
       Spec.fulfillmentAgent = Just $ mkAgentV2 quote isValueAddNP
@@ -138,16 +138,21 @@ mkItemDescriptor :: DVST.VehicleServiceTier -> Maybe Spec.Descriptor
 mkItemDescriptor vehicleServiceTierItem =
   Just
     Spec.Descriptor
-      { descriptorCode = Just $ show vehicleServiceTierItem.serviceTierType,
+      { descriptorLongDesc = Nothing,
+        descriptorCode = Just $ show vehicleServiceTierItem.serviceTierType,
         descriptorShortDesc = vehicleServiceTierItem.shortDescription,
         descriptorName = Just vehicleServiceTierItem.name
       }
 
+-- | Build item price for on_select. In v2.1.0 bidding flow, priceOfferedValue
+--   carries the driver's counter-offer fare (driverSelectedFare from fareParams)
+--   so the BAP can distinguish the base fare from the driver's offered fare.
 mkPriceV2 :: DQuote.DriverQuote -> Spec.Price
 mkPriceV2 quote =
   emptyPrice
     { Spec.priceCurrency = Just $ show quote.currency,
-      Spec.priceValue = Just $ show $ quote.estimatedFare
+      Spec.priceValue = Just $ show $ quote.estimatedFare,
+      Spec.priceOfferedValue = show <$> quote.fareParams.driverSelectedFare
     }
 
 mkItemTagsV2 :: HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FullFarePolicy -> Tags.Taggings -> Maybe [Spec.TagGroup]

@@ -319,8 +319,7 @@ mkDRouteStations fulfillment stops price fulfillmentId = do
           routeSequenceNum = Nothing,
           routeServiceTier,
           routePrice = price,
-          routeColor = Just routeId,
-          routeFarePolicyId = Nothing
+          routeColor = Just routeId
         }
     ]
 

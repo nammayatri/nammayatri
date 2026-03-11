@@ -58,8 +58,8 @@ tfOrder quote mSettlementType categories =
       orderPayments = tfPayments quote categories mSettlementType,
       orderProvider = tfProvider quote,
       orderQuote = Nothing,
-      orderStatus = Nothing,
       orderTags = Nothing,
+      orderStatus = Nothing,
       orderUpdatedAt = Nothing
     }
 

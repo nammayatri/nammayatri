@@ -11,6 +11,7 @@ import BecknV2.OnDemand.Utils.Payment
 import Data.Text as T
 import Domain.Types
 import Domain.Types.BecknConfig
+import qualified Domain.Types.RiderPreferredOption as DRPO
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
@@ -26,10 +27,10 @@ buildBecknSearchReqV2 res@SLS.SearchRes {..} bapConfig bapUri messageId = do
 buildSearchMessageV2 :: SLS.SearchRes -> BecknConfig -> BecknV2.OnDemand.Types.SearchReqMessage
 buildSearchMessageV2 res bapConfig = BecknV2.OnDemand.Types.SearchReqMessage {searchReqMessageIntent = tfIntent res bapConfig}
 
-tfCustomer :: Maybe Tags.Taggings -> Maybe BecknV2.OnDemand.Types.Customer
-tfCustomer taggings = do
+tfCustomer :: Maybe Tags.Taggings -> Maybe Text -> Maybe BecknV2.OnDemand.Types.Customer
+tfCustomer taggings riderGender = do
   let customerContact_ = Nothing
-      customerPerson_ = tfPerson taggings
+      customerPerson_ = tfPerson taggings riderGender
       returnData = BecknV2.OnDemand.Types.Customer {customerContact = customerContact_, customerPerson = customerPerson_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
@@ -41,11 +42,14 @@ tfFulfillment SLS.SearchRes {..} = do
   let fulfillmentAgent_ = Nothing
       fulfillmentId_ = Nothing
       fulfillmentState_ = Nothing
-      fulfillmentStops_ = Beckn.OnDemand.Utils.Common.mkStops origin stops startTime
+      -- ONDC v2.1.0: For scheduled rides (startTime > now), include pickup time window duration
+      isScheduled = startTime > now
+      mbScheduledPickupDuration = Beckn.OnDemand.Utils.Common.mkScheduledPickupDuration isScheduled
+      fulfillmentStops_ = Beckn.OnDemand.Utils.Common.mkStops origin stops startTime mbScheduledPickupDuration
       fulfillmentTags_ = Tags.convertToTagGroup . (.fulfillmentTags) =<< taggings
       fulfillmentType_ = Nothing
       fulfillmentVehicle_ = Nothing
-      fulfillmentCustomer_ = tfCustomer taggings
+      fulfillmentCustomer_ = tfCustomer taggings riderGender
       returnData = BecknV2.OnDemand.Types.Fulfillment {fulfillmentAgent = fulfillmentAgent_, fulfillmentCustomer = fulfillmentCustomer_, fulfillmentId = fulfillmentId_, fulfillmentState = fulfillmentState_, fulfillmentStops = fulfillmentStops_, fulfillmentTags = fulfillmentTags_, fulfillmentType = fulfillmentType_, fulfillmentVehicle = fulfillmentVehicle_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
@@ -57,7 +61,8 @@ tfIntent res bapConfig = do
   let intentTags_ = Nothing
       intentFulfillment_ = tfFulfillment res
       intentPayment_ = tfPayment res bapConfig
-      returnData = BecknV2.OnDemand.Types.Intent {intentCategory = Nothing, intentFulfillment = intentFulfillment_, intentPayment = intentPayment_, intentTags = intentTags_}
+      intentCategory_ = riderPreferredOptionToCategory res.riderPreferredOption
+      returnData = BecknV2.OnDemand.Types.Intent {intentCategory = intentCategory_, intentFulfillment = intentFulfillment_, intentPayment = intentPayment_, intentTags = intentTags_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
     then Nothing
@@ -80,14 +85,47 @@ tfPayment res bapConfig = do
   let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bapConfig.paymentParamsJson
   Just $ mkPayment' updatedPaymentTags (show bapConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams
 
-tfPerson :: Maybe Tags.Taggings -> Maybe BecknV2.OnDemand.Types.Person
-tfPerson taggings = do
+tfPerson :: Maybe Tags.Taggings -> Maybe Text -> Maybe BecknV2.OnDemand.Types.Person
+tfPerson taggings riderGender = do
   let personId_ = Nothing
       personImage_ = Nothing
       personName_ = Nothing
-      personTags_ = Tags.convertToTagGroup . (.personTags) =<< taggings
-      returnData = BecknV2.OnDemand.Types.Person {personId = personId_, personImage = personImage_, personName = personName_, personTags = personTags_}
+      basePersonTags = Tags.convertToTagGroup . (.personTags) =<< taggings
+      -- ONDC v2.1.0: build per-type disability tag groups alongside backward-compat CUSTOMER_DISABILITY tag
+      disabilityTag = do
+        t <- taggings
+        mbVal <- Kernel.Prelude.lookup Tags.CUSTOMER_DISABILITY (Tags.personTags t)
+        mbVal
+      disabilityTagGroups = Tags.mkDisabilityTagGroups disabilityTag
+      personTags_ = case (basePersonTags, disabilityTagGroups) of
+        (Just base, _ : _) -> Just (base <> disabilityTagGroups)
+        (Nothing, _ : _) -> Just disabilityTagGroups
+        _ -> basePersonTags
+      returnData = BecknV2.OnDemand.Types.Person {personGender = riderGender, personId = personId_, personImage = personImage_, personName = personName_, personTags = personTags_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
     then Nothing
     else Just returnData
+
+riderPreferredOptionToCategory :: DRPO.RiderPreferredOption -> Maybe BecknV2.OnDemand.Types.Category
+riderPreferredOptionToCategory rpo = do
+  let code = case rpo of
+        DRPO.OneWay -> "ON_DEMAND_TRIP"
+        DRPO.Rental -> "ON_DEMAND_RENTAL"
+        DRPO.InterCity -> "INTERCITY_TRIP"
+        DRPO.Ambulance -> "ON_DEMAND_TRIP"
+        DRPO.Delivery -> "ON_DEMAND_TRIP"
+        DRPO.PublicTransport -> "ON_DEMAND_TRIP"
+        DRPO.FixedRoute -> "ON_DEMAND_TRIP"
+  Just $
+    BecknV2.OnDemand.Types.Category
+      { categoryDescriptor =
+          Just $
+            BecknV2.OnDemand.Types.Descriptor
+              { descriptorLongDesc = Nothing,
+                descriptorCode = Just code,
+                descriptorName = Just code,
+                descriptorShortDesc = Nothing
+              },
+        categoryId = Just code
+      }

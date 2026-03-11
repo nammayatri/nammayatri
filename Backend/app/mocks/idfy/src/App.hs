@@ -20,14 +20,14 @@ import qualified EulerHS.Runtime as R
 import Kernel.Prelude
 import Kernel.Types.Logging
 import Kernel.Utils.Servant.Client
-import Kernel.Utils.Servant.Server
+import Kernel.Utils.Servant.Server (runServer)
 import Servant
 import Servant.Client.Core
 
 runMockIdfy :: (AppCfg -> AppCfg) -> IO ()
 runMockIdfy configModifier = do
   appEnv <- buildAppEnv $ configModifier defaultConfig
-  runServerWithHealthCheck appEnv mockIdfyAPI mockIdfyServer identity identity EmptyContext releaseAppEnv \flowRt -> do
+  runServer appEnv mockIdfyAPI mockIdfyServer identity identity EmptyContext (const identity) releaseAppEnv \flowRt -> do
     managers <- createManagers mempty -- default manager is created
     pure $ flowRt {R._httpClientManagers = managers}
 

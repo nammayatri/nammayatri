@@ -21,10 +21,10 @@ module Domain.Action.UI.DriverWallet
     PayoutContext (..),
     loadPayoutContext,
     counterpartyFromRole,
-    computePayoutableBalance,
     computePayoutFee,
     resolvePayoutVpa,
     initiateWalletPayout,
+    makePayoutEntryIdsKey,
   )
 where
 
@@ -145,17 +145,8 @@ classifyEntries ::
   UTCTime -> -- payout cutoff time
   m (DriverWallet.WalletItemGroup, DriverWallet.WalletItemGroup, HighPrecMoney)
 classifyEntries accountId fromDate toDate cutoff = do
-  let allRefs =
-        [ walletReferenceBaseRide,
-          walletReferenceGSTOnline,
-          walletReferenceGSTCash,
-          walletReferenceTollCharges,
-          walletReferenceParkingCharges,
-          walletReferenceTDSDeductionOnline,
-          walletReferenceTDSDeductionCash,
-          walletReferenceTopup,
-          walletReferencePayout
-        ]
+  -- Use walletCreditRefs (single source of truth) + debit-only refs for full picture
+  let allRefs = walletCreditRefs ++ [walletReferencePayout]
   entries <- findByAccountWithFilters accountId (Just fromDate) (Just toDate) Nothing Nothing Nothing (Just allRefs)
   let (addEntries, dedEntries) = partition (\e -> e.toAccountId == accountId) entries
 
@@ -313,22 +304,6 @@ ensurePayoutLimitNotReached ctx mbAccountId now = do
     when (length payoutsToday >= maxPayoutsPerDay) $
       throwError $ InvalidRequest "Maximum payouts per day reached"
 
--- | Compute the payoutable balance (wallet balance minus non-redeemable recent earnings).
-computePayoutableBalance ::
-  (BeamFlow m r) =>
-  PayoutContext ->
-  Maybe (Id Account) ->
-  HighPrecMoney -> -- wallet balance
-  UTCTime ->
-  m HighPrecMoney
-computePayoutableBalance ctx mbAccountId walletBalance now = do
-  let timeDiff = secondsToNominalDiffTime ctx.transporterConfig.timeDiffFromUtc
-      cutOffDays = ctx.transporterConfig.driverWalletConfig.payoutCutOffDays
-  nonRedeemable <- case mbAccountId of
-    Nothing -> pure 0
-    Just accountId -> getNonRedeemableBalance accountId timeDiff cutOffDays now
-  pure $ walletBalance - nonRedeemable
-
 -- | Validate that the payoutable balance meets the minimum threshold.
 ensureMinimumPayoutAmount :: (MonadFlow m) => PayoutContext -> HighPrecMoney -> m ()
 ensureMinimumPayoutAmount ctx payoutableBalance = do
@@ -358,10 +333,17 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
     let mbAccountId = (.id) <$> mbAccount
     walletBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty ctx.driverId.getId
     ensurePayoutLimitNotReached ctx mbAccountId now
-    payoutableBalance <- computePayoutableBalance ctx mbAccountId walletBalance now
+    -- Single query: get both non-redeemable balance and redeemable entry IDs
+    let timeDiff = secondsToNominalDiffTime ctx.transporterConfig.timeDiffFromUtc
+        cutOffDays = ctx.transporterConfig.driverWalletConfig.payoutCutOffDays
+        cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
+    (nonRedeemable, redeemableIds) <- case mbAccountId of
+      Nothing -> pure (0, [])
+      Just accountId -> getPayoutEligibilityData accountId cutoff now
+    let payoutableBalance = walletBalance - nonRedeemable
     ensureMinimumPayoutAmount ctx payoutableBalance
     vpa <- resolvePayoutVpa ctx
-    initiateWalletPayout ctx vpa payoutableBalance
+    initiateWalletPayout ctx vpa payoutableBalance PR.INSTANT Nothing (Just cutoff) (map (.getId) redeemableIds)
   pure APISuccess.Success
 
 -- | Compute the payout fee based on the PayoutFeeConfig.
@@ -387,8 +369,12 @@ initiateWalletPayout ::
   PayoutContext ->
   Text -> -- VPA
   HighPrecMoney -> -- payoutable balance
+  PR.PayoutType -> -- INSTANT or SCHEDULED
+  Maybe UTCTime -> -- coverageFrom
+  Maybe UTCTime -> -- coverageTo
+  [Text] -> -- redeemable entry IDs for settlement
   m ()
-initiateWalletPayout ctx vpa payoutableBalance = do
+initiateWalletPayout ctx vpa payoutableBalance payoutType coverageFrom coverageTo redeemableEntryIds = do
   phoneNo <- mapM decrypt ctx.person.mobileNumber
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName ctx.person.merchantOperatingCityId Nothing PREPAID_SUBSCRIPTION
@@ -415,17 +401,27 @@ initiateWalletPayout ctx vpa payoutableBalance = do
             customerEmail = ctx.person.email,
             remark = "Settlement for wallet",
             orderType = "FULFILL_ONLY",
-            scheduledAt = Nothing
+            scheduledAt = Nothing,
+            payoutType = Just payoutType,
+            coverageFrom = coverageFrom,
+            coverageTo = coverageTo
           }
       payoutCall = Payout.createPayoutOrder ctx.person.merchantId ctx.person.merchantOperatingCityId payoutServiceName (Just ctx.person.id.getId)
 
   when (netAmount > 0.0) $ do
     result <- PayoutRequest.submitPayoutRequest submission payoutCall
     case result of
-      PayoutRequest.PayoutInitiated _ _ ->
+      PayoutRequest.PayoutInitiated pr _ -> do
+        -- Stash redeemable entry IDs in Redis for the webhook handler to settle
+        unless (null redeemableEntryIds) $
+          Redis.setExp (makePayoutEntryIdsKey pr.id.getId) redeemableEntryIds 86400 -- 24h TTL
         Notify.sendNotificationToDriver ctx.person.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYOUT_INITIATED "Payout Initiated" ("Your payout of " <> show netAmount <> " has been initiated." <> if fee > 0 then " (Fee: " <> show fee <> ")" else "") ctx.person ctx.person.deviceToken
       PayoutRequest.PayoutFailed _ err ->
         logError $ "Wallet payout failed for driver " <> ctx.driverId.getId <> ": " <> err
+
+-- | Redis key for stashing redeemable entry IDs during payout.
+makePayoutEntryIdsKey :: Text -> Text
+makePayoutEntryIdsKey payoutRequestId = "payout-entry-ids:" <> payoutRequestId
 
 --------------------------------------------------------------------------------
 -- postWalletTopup

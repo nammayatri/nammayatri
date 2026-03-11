@@ -155,13 +155,14 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as DebugLog
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
-import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, SupplyDemandRequestJobData)
+import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, ReconciliationJobData, SupplyDemandRequestJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import qualified SharedLogic.DriverFee as SDF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.SpecialLocationUpsert as SLU
+import qualified SharedLogic.VehicleServiceTierAreaRestriction as VSTAR
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIPC
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CQDIPC
@@ -426,6 +427,13 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
               let mbMerchantOpCityId = mbMerchantOperatingCity <&> (.id)
               let mbMerchantId = mbMerchantOperatingCity <&> (.merchantId)
               createJobIn @_ @'CongestionCharge mbMerchantId mbMerchantOpCityId diffTimeS (jobData :: CongestionChargeCalculationRequestJobData)
+              pure Success
+            Nothing -> throwError $ InternalError "invalid job data"
+        Just Common.ReconciliationTrigger -> do
+          let jobData' = decodeFromText jobDataRaw :: Maybe ReconciliationJobData
+          case jobData' of
+            Just jobData -> do
+              createJobIn @_ @'Reconciliation (Just jobData.merchantId) (Just jobData.merchantOperatingCityId) diffTimeS (jobData :: ReconciliationJobData)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         _ -> throwError $ InternalError "invalid job name"
@@ -3805,6 +3813,8 @@ postMerchantConfigVehicleServiceTierUpdate merchantShortId opCity serviceTierTyp
   whenJust updatedConfig.vehicleCategory $ \cat ->
     CQVST.clearCacheByVehicleCategory merchantOpCityId (Just cat)
 
+  VSTAR.clearVSTAreasCache updatedConfig
+
   logTagInfo "dashboard -> postMerchantConfigVehicleServiceTierUpdate : " $
     show merchant.id <> " serviceTierType: " <> show serviceTierType
 
@@ -3891,7 +3901,8 @@ applyVehicleServiceTierUpdate existing req =
       DVST.stopFcmSuppressCount = req.stopFcmSuppressCount <|> existing.stopFcmSuppressCount,
       DVST.scheduleBookingListEligibilityTags = req.scheduleBookingListEligibilityTags <|> existing.scheduleBookingListEligibilityTags,
       DVST.vehicleCategory = req.vehicleCategory <|> existing.vehicleCategory,
-      DVST.isEnabled = req.isEnabled <|> existing.isEnabled
+      DVST.isEnabled = req.isEnabled <|> existing.isEnabled,
+      DVST.allowedAreas = req.allowedAreas <|> existing.allowedAreas
     }
 
 getMerchantConfigGeometryList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow Common.GeometryResp
@@ -3987,6 +3998,7 @@ buildVehicleServiceTierFromRequest merchantId merchantOpCityId serviceTierType r
         scheduleBookingListEligibilityTags = req.scheduleBookingListEligibilityTags,
         vehicleCategory = Just req.vehicleCategory,
         isEnabled = Just req.isEnabled,
+        allowedAreas = req.allowedAreas,
         createdAt = now,
         updatedAt = now
       }

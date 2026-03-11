@@ -1,0 +1,54 @@
+imports:
+  Person: Safety.Domain.Types.Common
+  EncryptedHashedField: Kernel.External.Encryption
+  Merchant: Safety.Domain.Types.Common
+  RideShareOptions: Safety.Domain.Types.Common
+
+PersonDefaultEmergencyNumber:
+  derives: Generic
+  fields:
+    personId: Id Person
+    name: Text
+    mobileNumber: EncryptedHashedField e Text
+    mobileCountryCode: Text
+    createdAt: UTCTime
+    contactPersonId: Maybe (Id Person)
+    enableForFollowing: Bool
+    enableForShareRide: Bool
+    merchantId: Maybe (Id Merchant)
+    priority: Int
+    shareTripWithEmergencyContactOption : Maybe RideShareOptions
+
+  excludedFields:
+    - merchantOperatingCityId
+    - updatedAt
+
+  excludedDefaultQueries:
+    - updateByPrimaryKey
+    - findByPrimaryKey
+    - create
+    - createMany
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  sqlType:
+    contactPersonId: text
+    enableForFollowing: boolean
+    priority: int
+    merchantId: text
+    name: character varying(255)
+    mobileCountryCode: character varying(255)
+
+  default:
+    enableForFollowing: "false"
+    priority: "0"
+    enableForShareRide: "false"
+
+  constraints:
+    personId: PrimaryKey|!SecondaryKey
+    mobileNumberHash: PrimaryKey|!SecondaryKey
+    contactPersonId: "!SecondaryKey"
+
+  defaultQueryTypeConstraint: "(Safety.Storage.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema

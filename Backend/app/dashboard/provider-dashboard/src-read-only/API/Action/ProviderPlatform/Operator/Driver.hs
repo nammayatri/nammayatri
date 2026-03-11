@@ -7,6 +7,7 @@ module API.Action.ProviderPlatform.Operator.Driver
   )
 where
 
+import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Driver
 import qualified API.Types.ProviderPlatform.Operator
 import qualified API.Types.ProviderPlatform.Operator.Driver
 import qualified Dashboard.ProviderPlatform.Management.DriverRegistration
@@ -113,8 +114,8 @@ postDriverOperatorRespondHubRequest merchantShortId opCity apiTokenInfo req = wi
 postDriverOperatorCreateRequest :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.Driver.DriverOperationHubRequest -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverOperatorCreateRequest merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Operator.Driver.postDriverOperatorCreateRequest merchantShortId opCity apiTokenInfo req
 
-getDriverOperatorList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp)
-getDriverOperatorList merchantShortId opCity apiTokenInfo isActive limit offset vehicleNo mbSearchString includeDocuments onlyMandatoryDocs = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Operator.Driver.getDriverOperatorList merchantShortId opCity apiTokenInfo isActive limit offset vehicleNo mbSearchString includeDocuments onlyMandatoryDocs
+getDriverOperatorList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.Driver.DriverMode -> Environment.FlowHandler API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp)
+getDriverOperatorList merchantShortId opCity apiTokenInfo isActive limit offset vehicleNo mbSearchString includeDocuments onlyMandatoryDocs mbStatus = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Operator.Driver.getDriverOperatorList merchantShortId opCity apiTokenInfo isActive limit offset vehicleNo mbSearchString includeDocuments onlyMandatoryDocs mbStatus
 
 postDriverOperatorSendJoiningOtp :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.ProviderPlatform.Management.DriverRegistration.AuthReq -> Environment.FlowHandler Dashboard.ProviderPlatform.Management.DriverRegistration.AuthRes)
 postDriverOperatorSendJoiningOtp merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Operator.Driver.postDriverOperatorSendJoiningOtp merchantShortId opCity apiTokenInfo req

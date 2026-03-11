@@ -18,13 +18,13 @@ import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
 import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.MerchantOperatingCity as MerchantOperatingCity
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Sos as DSos
 import Environment
 import Kernel.Beam.Functions
 import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.NotificationSoundsConfig as SQNSC
 import qualified Storage.Queries.Person as QPerson
@@ -38,7 +38,7 @@ data SosNotificationEntityData = SosNotificationEntityData
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
-notifyEmergencyContactsInternal :: Person.Person -> Notification.Category -> Maybe Text -> Maybe (Text -> Sms.SendSMSReq) -> Bool -> [DPDEN.PersonDefaultEmergencyNumberAPIEntity] -> Maybe (Id DSos.Sos) -> (Person.Person -> Flow (Maybe (Text, Text))) -> Flow ()
+notifyEmergencyContactsInternal :: Person.Person -> Notification.Category -> Maybe Text -> Maybe (Text -> Sms.SendSMSReq) -> Bool -> [DPDEN.PersonDefaultEmergencyNumberAPIEntity] -> Maybe (Id SafetyDSos.Sos) -> (Person.Person -> Flow (Maybe (Text, Text))) -> Flow ()
 notifyEmergencyContactsInternal person notificationType mbNotificationKey mbBuildSmsReq useSmsAsBackup emergencyContacts mbSosId getBodyAndTitle = do
   void $
     mapM
@@ -63,11 +63,11 @@ notifyEmergencyContactsInternal person notificationType mbNotificationKey mbBuil
       Just buildSmsReq -> sendMessageToEmergencyContact person emergencyContact buildSmsReq
       Nothing -> pure ()
 
-notifyEmergencyContacts :: Person.Person -> Text -> Text -> Notification.Category -> Maybe (Text -> Sms.SendSMSReq) -> Bool -> [DPDEN.PersonDefaultEmergencyNumberAPIEntity] -> Maybe (Id DSos.Sos) -> Flow ()
+notifyEmergencyContacts :: Person.Person -> Text -> Text -> Notification.Category -> Maybe (Text -> Sms.SendSMSReq) -> Bool -> [DPDEN.PersonDefaultEmergencyNumberAPIEntity] -> Maybe (Id SafetyDSos.Sos) -> Flow ()
 notifyEmergencyContacts person body title notificationType mbBuildSmsReq useSmsAsBackup emergencyContacts mbSosId =
   notifyEmergencyContactsInternal person notificationType Nothing mbBuildSmsReq useSmsAsBackup emergencyContacts mbSosId $ \_ -> return $ Just (body, title)
 
-sendNotificationToEmergencyContact :: Id Person.Person -> Person.Person -> Text -> Text -> Notification.Category -> Maybe Text -> Maybe (Id DSos.Sos) -> Flow ()
+sendNotificationToEmergencyContact :: Id Person.Person -> Person.Person -> Text -> Text -> Notification.Category -> Maybe Text -> Maybe (Id SafetyDSos.Sos) -> Flow ()
 sendNotificationToEmergencyContact senderPersonId recipientPerson body title notificationType mbNotificationKey mbSosId = do
   notificationSoundFromConfig <- SQNSC.findByNotificationType notificationType recipientPerson.merchantOperatingCityId
   disabilityTag <- getDisabilityTag recipientPerson.hasDisability recipientPerson.id
@@ -107,7 +107,7 @@ fetchNotificationTemplate merchantOperatingCityId notificationKey recipientPerso
       logError $ "MISSED_FCM - " <> notificationKey <> " for person " <> recipientPerson.id.getId
       return Nothing
 
-notifyEmergencyContactsWithKey :: Person.Person -> Text -> Notification.Category -> [(Text, Text)] -> Maybe (Text -> Sms.SendSMSReq) -> Bool -> [DPDEN.PersonDefaultEmergencyNumberAPIEntity] -> Maybe (Id DSos.Sos) -> Flow ()
+notifyEmergencyContactsWithKey :: Person.Person -> Text -> Notification.Category -> [(Text, Text)] -> Maybe (Text -> Sms.SendSMSReq) -> Bool -> [DPDEN.PersonDefaultEmergencyNumberAPIEntity] -> Maybe (Id SafetyDSos.Sos) -> Flow ()
 notifyEmergencyContactsWithKey person notificationKey notificationType templateVariables mbBuildSmsReq useSmsAsBackup emergencyContacts mbSosId =
   notifyEmergencyContactsInternal person notificationType (Just notificationKey) mbBuildSmsReq useSmsAsBackup emergencyContacts mbSosId $ \contactPersonEntity ->
     fetchNotificationTemplate person.merchantOperatingCityId notificationKey contactPersonEntity templateVariables

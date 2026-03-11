@@ -23,12 +23,12 @@ import Environment
 import qualified EulerHS.Runtime as R
 import Kernel.Prelude
 import Kernel.Utils.Dhall (readDhallConfigDefault)
-import Kernel.Utils.Servant.Server (runServerWithHealthCheck)
+import Kernel.Utils.Servant.Server (runServer)
 import Servant (Context (..))
 
 runService :: (AppCfg -> AppCfg) -> IO ()
 runService cfgModifier = do
   appCfg <- cfgModifier <$> readDhallConfigDefault "mock-google" :: IO AppCfg
   appEnv <- buildAppEnv appCfg
-  runServerWithHealthCheck appEnv (Proxy @API) handler identity identity EmptyContext releaseAppEnv \flowRt -> do
+  runServer appEnv (Proxy @API) handler identity identity EmptyContext (const identity) releaseAppEnv \flowRt -> do
     pure flowRt {R._httpClientManagers = HMS.singleton "default" (R._defaultHttpClientManager flowRt)}

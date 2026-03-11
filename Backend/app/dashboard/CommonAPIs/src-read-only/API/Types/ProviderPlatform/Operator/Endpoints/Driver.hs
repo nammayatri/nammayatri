@@ -196,6 +196,9 @@ type GetDriverOperatorList =
       :> QueryParam
            "onlyMandatoryDocs"
            Kernel.Prelude.Bool
+      :> QueryParam
+           "mbStatus"
+           API.Types.ProviderPlatform.Fleet.Endpoints.Driver.DriverMode
       :> Get
            '[JSON]
            DriverInfoResp
@@ -216,6 +219,9 @@ type GetDriverOperatorListHelper =
       :> QueryParam
            "onlyMandatoryDocs"
            Kernel.Prelude.Bool
+      :> QueryParam
+           "mbStatus"
+           API.Types.ProviderPlatform.Fleet.Endpoints.Driver.DriverMode
       :> MandatoryQueryParam
            "requestorId"
            Kernel.Prelude.Text
@@ -286,7 +292,7 @@ data DriverAPIs = DriverAPIs
     getDriverOperationGetAllHubs :: EulerHS.Types.EulerClient [OperationHub],
     postDriverOperatorRespondHubRequest :: RespondHubRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverOperatorCreateRequest :: DriverOperationHubRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverOperatorList :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverInfoResp,
+    getDriverOperatorList :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.Driver.DriverMode -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverInfoResp,
     postDriverOperatorSendJoiningOtp :: Kernel.Prelude.Text -> Dashboard.ProviderPlatform.Management.DriverRegistration.AuthReq -> EulerHS.Types.EulerClient Dashboard.ProviderPlatform.Management.DriverRegistration.AuthRes,
     postDriverOperatorVerifyJoiningOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> VerifyOperatorJoiningOtpReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverOperatorDashboardAnalyticsAllTime :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient AllTimeOperatorAnalyticsRes,

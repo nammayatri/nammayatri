@@ -5,6 +5,8 @@ import qualified API.Types.UI.DriverOnboardingV2 as APITypes
 import qualified AWS.S3 as S3
 import qualified Control.Monad.Extra as CME
 import Crypto.Random (getRandomBytes)
+import qualified Data.Aeson as A
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.List as DL
 import Data.Maybe
 import qualified Data.Text as T
@@ -56,6 +58,8 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
+import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.DriverOnboarding.Digilocker
@@ -983,6 +987,78 @@ getDriverRegisterBankAccountStatus (mbPersonId, _, _) = do
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   SPBA.getPersonRegisterBankAccountStatus person
 
+-- TDS Certificate validation functions
+
+parseTDSCertificateData :: Text -> Flow API.Types.UI.DriverOnboardingV2.TDSCertificateData
+parseTDSCertificateData jsonText =
+  case A.eitherDecode (BSL.fromStrict $ encodeUtf8 jsonText) of
+    Left err -> throwError $ InvalidRequest $ "Invalid TDS certificate data JSON: " <> show err
+    Right data_ -> pure data_
+
+validateTDSCertificate :: API.Types.UI.DriverOnboardingV2.TDSCertificateData -> Flow [API.Types.UI.DriverOnboardingV2.TDSCertificateValidationError]
+validateTDSCertificate tdsData = do
+  -- Validate each invoice entry
+  invoiceErrors <- fmap concat $ mapM validateInvoiceEntry tdsData.tdsCertificates
+
+  -- Check overall amount
+  let sumOfTds = sum $ map (.tdsAmountAgainstInvoice) tdsData.tdsCertificates
+  let overallError =
+        if sumOfTds == tdsData.overallTdsAmount
+          then []
+          else
+            [ API.Types.UI.DriverOnboardingV2.TDSCertificateValidationError
+                { field = "overallTdsAmount",
+                  invoiceId = "N/A",
+                  errorMessage = "Sum of invoice TDS amounts " <> show sumOfTds <> " does not match overall TDS amount " <> show tdsData.overallTdsAmount
+                }
+            ]
+
+  pure $ overallError <> invoiceErrors
+
+validateInvoiceEntry :: API.Types.UI.DriverOnboardingV2.TDSInvoiceEntry -> Flow [API.Types.UI.DriverOnboardingV2.TDSCertificateValidationError]
+validateInvoiceEntry entry = do
+  let mkError field errorMessage =
+        API.Types.UI.DriverOnboardingV2.TDSCertificateValidationError
+          { field,
+            invoiceId = entry.invoiceId,
+            errorMessage
+          }
+
+  -- Validate invoice exists in finance_invoice and basic invoice fields
+  mbInvoice <- QFinanceInvoice.findById (Id entry.invoiceId)
+  let invoiceErrors =
+        case mbInvoice of
+          Nothing -> [mkError "invoiceId" "Invoice ID not found in records"]
+          Just invoice ->
+            catMaybes
+              [ if invoice.issuedAt /= entry.invoiceDate
+                  then Just (mkError "invoiceDate" "Invoice date does not match records")
+                  else Nothing,
+                if invoice.invoiceNumber /= entry.invoiceNumber
+                  then Just (mkError "invoiceNumber" "Invoice number does not match records")
+                  else Nothing,
+                if invoice.totalAmount /= entry.invoiceValue
+                  then Just (mkError "invoiceValue" "Invoice value does not match records")
+                  else Nothing
+              ]
+
+  -- Validate GST/tax details
+  taxTxns <- QIndirectTaxExtra.findByReferenceId entry.invoiceId
+  let totalTaxableValue = sum $ map (.taxableValue) taxTxns
+      totalGstAmount = sum $ map (.totalGstAmount) taxTxns
+
+  let taxErrors =
+        catMaybes
+          [ if totalTaxableValue /= entry.baseValue
+              then Just (mkError "baseValue" "Base value does not match records")
+              else Nothing,
+            if totalGstAmount /= entry.gst
+              then Just (mkError "gst" "GST amount does not match records")
+              else Nothing
+          ]
+
+  pure (invoiceErrors <> taxErrors)
+
 postDriverRegisterLogHvSdkCall ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
@@ -1020,6 +1096,14 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
   whenJust imageId $ \imgId -> do
     mbImage <- ImageQuery.findById imgId
     whenNothing_ mbImage $ throwError (InvalidRequest "Image not found")
+
+  -- Validate TDSCertificate document data
+  when (documentType == DTO.TDSCertificate) $ do
+    tdsData <- parseTDSCertificateData documentData
+    validationErrors <- validateTDSCertificate tdsData
+    unless (null validationErrors) $ do
+      let errorJson = decodeUtf8 $ BSL.toStrict $ A.encode validationErrors
+      throwError $ InvalidRequest $ "TDS Certificate validation failed: " <> errorJson
 
   -- Create the common document entry
   documentEntry <- buildCommonDocument driverId

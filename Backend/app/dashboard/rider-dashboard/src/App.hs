@@ -18,9 +18,7 @@ module App
 where
 
 import API
-import Data.Aeson (object, (.=))
-import qualified Data.Aeson as A
-import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Control.Exception as E
 import qualified Data.HashMap.Strict as HMS
 import "lib-dashboard" Environment
 import EulerHS.Language as L
@@ -31,38 +29,29 @@ import Kernel.Beam.Types (KafkaConn (..), Tables (..))
 import Kernel.Exit
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
+import qualified Kernel.Tools.Metrics.Init as Metrics
 import Kernel.Types.Beckn.City (initCityMaps)
 import Kernel.Types.Flow
-import Kernel.Types.Time (getCurrentTime)
+import Kernel.Types.Logging (LogLevel (..))
 import Kernel.Utils.App
 import qualified Kernel.Utils.Common as KUC
 import Kernel.Utils.Dhall (readDhallConfigDefault)
+import Kernel.Utils.IOLogging (logOutputIO)
 import Kernel.Utils.Servant.Server (runServerWithHealthCheckAndSlackNotification)
-import Servant (Context (..))
-import qualified "lib-dashboard" Tools.Auth as Auth
+import Network.HTTP.Types (status408)
 import qualified Network.Wai as Wai
-
-requestArrivalLoggingMiddleware :: Wai.Middleware
-requestArrivalLoggingMiddleware nextApp req respond = do
-  arrivalTime <- getCurrentTime
-  let requestIdText = (maybe "NO-REQUEST-ID" decodeUtf8 $ lookup "x-request-id" (Wai.requestHeaders req)) :: Text
-      path = decodeUtf8 (Wai.rawPathInfo req) :: Text
-      method = decodeUtf8 (Wai.requestMethod req) :: Text
-      logMessage = ("[REQUEST-ARRIVAL] method=" <> method <> " path=" <> path <> " event=request_received_from_sidecar") :: Text
-      logJson = object
-        [ "timestamp" .= (show arrivalTime :: String)
-        , "requestId" .= requestIdText
-        , "log" .= logMessage
-        ]
-  LBS.putStrLn $ A.encode logJson
-  nextApp req respond
+import qualified Prometheus as P
+import Servant (Context (..))
+import System.Timeout (timeout)
+import qualified "lib-dashboard" Tools.Auth as Auth
 
 runService :: (AppCfg -> AppCfg) -> IO ()
 runService configModifier = do
   appCfg <- readDhallConfigDefault "rider-dashboard" <&> configModifier
   appEnv <- buildAppEnv authTokenCacheKeyPrefix appCfg
-  -- Metrics.serve (appCfg.metricsPort) --  do we need it?
-  runServerWithHealthCheckAndSlackNotification appEnv (Proxy @API) handler requestArrivalLoggingMiddleware identity context releaseAppEnv \flowRt -> do
+  activeRequestsGauge <- P.register $ P.gauge (P.Info "http_requests_active" "Number of currently active/inflight HTTP requests")
+  Metrics.serve (appCfg.metricsPort)
+  runServerWithHealthCheckAndSlackNotification appEnv (Proxy @API) handler (trackActiveRequests activeRequestsGauge . dashboardTimeoutMiddleware appEnv appCfg.incomingAPIResponseTimeout . logIncomingRequest appEnv) identity context releaseAppEnv \flowRt -> do
     prepareConnectionDashboard
       ( ConnectionConfigDashboard
           { esqDBCfg = appCfg.esqDBCfg,
@@ -84,6 +73,30 @@ runService configModifier = do
       Auth.verifyApiAction @(FlowR AppEnv)
         :. Auth.verifyDashboardAction @(FlowR AppEnv)
         :. EmptyContext
+
+    trackActiveRequests :: P.Gauge -> Wai.Middleware
+    trackActiveRequests gauge waiApp req respond =
+      E.bracket_ (P.incGauge gauge) (P.decGauge gauge) (waiApp req respond)
+
+    logIncomingRequest :: AppEnv -> Wai.Middleware
+    logIncomingRequest env waiApp req respond = do
+      let reqId = maybe "N/A" decodeUtf8 $ lookup "x-request-id" (Wai.requestHeaders req)
+          path = decodeUtf8 $ Wai.rawPathInfo req
+          method = decodeUtf8 $ Wai.requestMethod req
+      logOutputIO env.loggerEnv INFO ("Incoming dashboard request | requestId: " <> reqId <> " | " <> method <> " " <> path) (Just reqId) Nothing
+      waiApp req respond
+
+    dashboardTimeoutMiddleware :: AppEnv -> Int -> Wai.Middleware
+    dashboardTimeoutMiddleware env seconds waiApp req respond = do
+      result <- timeout (seconds * 1000000) (waiApp req respond)
+      case result of
+        Just response -> pure response
+        Nothing -> do
+          let reqId = maybe "N/A" decodeUtf8 $ lookup "x-request-id" (Wai.requestHeaders req)
+              path = decodeUtf8 $ Wai.rawPathInfo req
+              query = decodeUtf8 $ Wai.rawQueryString req
+          logOutputIO env.loggerEnv ERROR ("Request timed out! requestId: " <> reqId <> " | Path: " <> path <> " | Query: " <> query <> " | Timeout: " <> show seconds <> " seconds") (Just reqId) Nothing
+          respond $ Wai.responseLBS status408 [] ""
 
     authTokenCacheKeyPrefix :: Text
     authTokenCacheKeyPrefix = "rider-dashboard:authTokenCacheKey:"

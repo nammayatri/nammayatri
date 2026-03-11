@@ -239,7 +239,7 @@ types:
     - paymentMode: Maybe Text
     - paymentStatus: Maybe Text
     - paymentReferenceInternal: Maybe Text
-    - walletTransactionIds: [Text]
+    - walletTransactions: [WalletTransactionItem]
     - invoiceIds: [Text]
     - bookingStatus: BookingStatus
   RideListItemV2:
@@ -282,8 +282,13 @@ types:
     - paymentMode: Maybe Text
     - paymentStatus: Maybe Text
     - paymentReferenceInternal: Maybe Text
-    - walletTransactionIds: [Text]
+    - walletTransactions: [WalletTransactionItem]
     - invoiceIds: [Text]
+  WalletTransactionItem:
+    - transactionId: Text
+    - referenceType: Text
+    - amount: HighPrecMoney
+    - createdAt: UTCTime
   WaiverRideCancellationPenaltyReq:
     - reason: Text
 

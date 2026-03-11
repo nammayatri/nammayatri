@@ -217,12 +217,18 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                               QJourney.findByPrimaryKey journeyLeg.journeyId
                             Nothing -> pure Nothing
                           let mbIsSingleMode = mbJourney >>= (.isSingleMode)
+                          void $ addPaymentoffersTags quoteUpdatedBooking.totalPrice person
                           -- Use payment categories if available, otherwise fall back to quote categories
                           paymentCategories <- QFRFSTicketBookingPaymentCategory.findAllByPaymentId paymentBooking.id
                           let categoriesToUse = if null paymentCategories then quoteCategories else map paymentCategoryToQuoteCategory paymentCategories
-                          void $ CallExternalBPP.confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) quoteUpdatedBooking categoriesToUse mbIsSingleMode
-                          void $ addPaymentoffersTags quoteUpdatedBooking.totalPrice person
-                          let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
+                          confirmResp <- CallExternalBPP.confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) quoteUpdatedBooking categoriesToUse mbIsSingleMode
+                          updatedBooking <-
+                            case confirmResp of
+                              Left err -> do
+                                void $ QFRFSTicketBooking.updateFailureReasonById (Just err) booking.id
+                                void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
+                                return $ makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
+                              Right _ -> return $ makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
                           buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
                         else buildFRFSTicketBookingStatusAPIRes booking quoteCategories (buildPaymentObject booking paymentBooking paymentBookingStatus)
                     else do

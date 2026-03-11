@@ -48,6 +48,7 @@ library
       API.Conductor
       API.Dashboard
       API.Dashboard.Exotel
+      API.Depot
       API.FRFS
       API.FRFSMetrics
       API.IGM
@@ -169,6 +170,7 @@ library
       Domain.Action.Dashboard.AppManagement.Customer
       Domain.Action.Dashboard.AppManagement.EventManagement
       Domain.Action.Dashboard.AppManagement.EventManagement.Utils
+      Domain.Action.Dashboard.AppManagement.FRFSTicketService
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.Handlers
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.TicketHandlers
@@ -176,6 +178,8 @@ library
       Domain.Action.Dashboard.AppManagement.Payment
       Domain.Action.Dashboard.AppManagement.TicketDashboard
       Domain.Action.Dashboard.AppManagement.Tickets
+      Domain.Action.Dashboard.AppManagement.TransitOperator
+      Domain.Action.Dashboard.AppManagement.VehicleSeatLayoutMapping
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Customer
       Domain.Action.Dashboard.Exotel
@@ -232,6 +236,7 @@ library
       Domain.Action.UI.CRIS
       Domain.Action.UI.CustomerReferral
       Domain.Action.UI.DeletedPerson
+      Domain.Action.UI.Depot.Stats
       Domain.Action.UI.Disability
       Domain.Action.UI.Dispatcher
       Domain.Action.UI.DriverOffer
@@ -296,6 +301,7 @@ library
       Domain.Action.UI.TicketKapture
       Domain.Action.UI.TicketService
       Domain.Action.UI.TrackRoute
+      Domain.Action.UI.TransitOperator
       Domain.Action.UI.TriggerFCM
       Domain.Action.UI.Whatsapp
       Domain.Action.UnifiedDashboard.Management.HealthCheck
@@ -414,6 +420,7 @@ library
       Lib.JourneyLeg.Walk
       Lib.JourneyModule.Base
       Lib.JourneyModule.Location
+      Lib.JourneyModule.RouteServiceability
       Lib.JourneyModule.State.Types
       Lib.JourneyModule.State.Utils
       Lib.JourneyModule.Types
@@ -512,6 +519,7 @@ library
       Storage.Beam.IssueManagement
       Storage.Beam.Payment
       Storage.Beam.SchedulerJob
+      Storage.Beam.Sos
       Storage.Beam.SystemConfigs
       Storage.Beam.Yudhishthira
       Storage.CachedQueries.BecknConfig
@@ -559,6 +567,7 @@ library
       Storage.CachedQueries.UiRiderConfig
       Storage.CachedQueries.ValueAddNP
       Storage.CachedQueries.VehicleConfig
+      Storage.CachedQueries.VehicleSeatLayoutMappingExtra
       Storage.CachedQueries.WhiteListOrg
       Storage.Clickhouse.AlertIncident
       Storage.Clickhouse.Booking
@@ -619,7 +628,6 @@ library
       Storage.Queries.PassTypeExtra
       Storage.Queries.PassVerifyTransactionExtra
       Storage.Queries.PaymentInvoiceExtra
-      Storage.Queries.PersonDefaultEmergencyNumberExtra
       Storage.Queries.PersonExtra
       Storage.Queries.PersonStatsExtra
       Storage.Queries.PlaceBasedServiceConfigExtra
@@ -635,7 +643,6 @@ library
       Storage.Queries.RideExtra
       Storage.Queries.RouteDetailsExtra
       Storage.Queries.RoutePolylinesExtra
-      Storage.Queries.SafetySettingsExtra
       Storage.Queries.SavedReqLocationExtra
       Storage.Queries.SearchRequestExtra
       Storage.Queries.ServiceCategoryExtra
@@ -707,11 +714,14 @@ library
       API.Action.Dashboard.AppManagement
       API.Action.Dashboard.AppManagement.Customer
       API.Action.Dashboard.AppManagement.EventManagement
+      API.Action.Dashboard.AppManagement.FRFSTicketService
       API.Action.Dashboard.AppManagement.MerchantOnboarding
       API.Action.Dashboard.AppManagement.Pass
       API.Action.Dashboard.AppManagement.Payment
       API.Action.Dashboard.AppManagement.TicketDashboard
       API.Action.Dashboard.AppManagement.Tickets
+      API.Action.Dashboard.AppManagement.TransitOperator
+      API.Action.Dashboard.AppManagement.VehicleSeatLayoutMapping
       API.Action.Dashboard.IssueManagement
       API.Action.Dashboard.IssueManagement.Issue
       API.Action.Dashboard.IssueManagement.IssueList
@@ -787,17 +797,23 @@ library
       API.Types.Dashboard.AppManagement.Customer
       API.Types.Dashboard.AppManagement.Endpoints.Customer
       API.Types.Dashboard.AppManagement.Endpoints.EventManagement
+      API.Types.Dashboard.AppManagement.Endpoints.FRFSTicketService
       API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Endpoints.Pass
       API.Types.Dashboard.AppManagement.Endpoints.Payment
       API.Types.Dashboard.AppManagement.Endpoints.TicketDashboard
       API.Types.Dashboard.AppManagement.Endpoints.Tickets
+      API.Types.Dashboard.AppManagement.Endpoints.TransitOperator
+      API.Types.Dashboard.AppManagement.Endpoints.VehicleSeatLayoutMapping
       API.Types.Dashboard.AppManagement.EventManagement
+      API.Types.Dashboard.AppManagement.FRFSTicketService
       API.Types.Dashboard.AppManagement.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Pass
       API.Types.Dashboard.AppManagement.Payment
       API.Types.Dashboard.AppManagement.TicketDashboard
       API.Types.Dashboard.AppManagement.Tickets
+      API.Types.Dashboard.AppManagement.TransitOperator
+      API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping
       API.Types.Dashboard.RideBooking
       API.Types.Dashboard.RideBooking.Booking
       API.Types.Dashboard.RideBooking.Cancel
@@ -968,7 +984,6 @@ library
       Domain.Types.PaymentTransactionOfferPayout
       Domain.Types.PayoutConfig
       Domain.Types.Person
-      Domain.Types.PersonDefaultEmergencyNumber
       Domain.Types.PersonDisability
       Domain.Types.PersonFlowStatus
       Domain.Types.PersonStats
@@ -993,7 +1008,6 @@ library
       Domain.Types.RoutePolylines
       Domain.Types.RouteStopCalender
       Domain.Types.RouteTripMapping
-      Domain.Types.SafetySettings
       Domain.Types.SavedReqLocation
       Domain.Types.SearchReqLocation
       Domain.Types.SearchRequest
@@ -1003,7 +1017,6 @@ library
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
-      Domain.Types.Sos
       Domain.Types.SpecialOccasion
       Domain.Types.SpecialZoneQuote
       Domain.Types.StationsExtraInformation
@@ -1023,6 +1036,7 @@ library
       Domain.Types.ValueAddNP
       Domain.Types.VehicleConfig
       Domain.Types.VehicleRouteMapping
+      Domain.Types.VehicleSeatLayoutMapping
       Domain.Types.VendorSplitDetails
       Domain.Types.WhiteListOrg
       Storage.Beam.AadhaarOtpReq
@@ -1130,7 +1144,6 @@ library
       Storage.Beam.PaymentTransactionOfferPayout
       Storage.Beam.PayoutConfig
       Storage.Beam.Person
-      Storage.Beam.PersonDefaultEmergencyNumber
       Storage.Beam.PersonDisability
       Storage.Beam.PersonStats
       Storage.Beam.PickupInstructions
@@ -1154,7 +1167,6 @@ library
       Storage.Beam.RoutePolylines
       Storage.Beam.RouteStopCalender
       Storage.Beam.RouteTripMapping
-      Storage.Beam.SafetySettings
       Storage.Beam.SavedReqLocation
       Storage.Beam.SearchReqLocation
       Storage.Beam.SearchRequest
@@ -1164,7 +1176,6 @@ library
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
-      Storage.Beam.Sos
       Storage.Beam.SpecialOccasion
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.StationsExtraInformation
@@ -1184,6 +1195,7 @@ library
       Storage.Beam.ValueAddNP
       Storage.Beam.VehicleConfig
       Storage.Beam.VehicleRouteMapping
+      Storage.Beam.VehicleSeatLayoutMapping
       Storage.Beam.VendorSplitDetails
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.DeviceVehicleMapping
@@ -1191,6 +1203,7 @@ library
       Storage.CachedQueries.FRFSVehicleServiceTier
       Storage.CachedQueries.InsuranceConfig
       Storage.CachedQueries.SavedReqLocation
+      Storage.CachedQueries.VehicleSeatLayoutMapping
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify
       Storage.Queries.AadhaarVerification
@@ -1319,7 +1332,6 @@ library
       Storage.Queries.OrphanInstances.PassType
       Storage.Queries.OrphanInstances.PassVerifyTransaction
       Storage.Queries.OrphanInstances.Person
-      Storage.Queries.OrphanInstances.PersonDefaultEmergencyNumber
       Storage.Queries.OrphanInstances.PersonStats
       Storage.Queries.OrphanInstances.PlaceBasedServiceConfig
       Storage.Queries.OrphanInstances.PopularLocation
@@ -1333,7 +1345,6 @@ library
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.RouteDetails
       Storage.Queries.OrphanInstances.RoutePolylines
-      Storage.Queries.OrphanInstances.SafetySettings
       Storage.Queries.OrphanInstances.SavedReqLocation
       Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.OrphanInstances.ServiceCategory
@@ -1363,7 +1374,6 @@ library
       Storage.Queries.PaymentTransactionOfferPayout
       Storage.Queries.PayoutConfig
       Storage.Queries.Person
-      Storage.Queries.PersonDefaultEmergencyNumber
       Storage.Queries.PersonDisability
       Storage.Queries.PersonStats
       Storage.Queries.PickupInstructions
@@ -1387,7 +1397,6 @@ library
       Storage.Queries.RoutePolylines
       Storage.Queries.RouteStopCalender
       Storage.Queries.RouteTripMapping
-      Storage.Queries.SafetySettings
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchReqLocation
       Storage.Queries.SearchRequest
@@ -1397,7 +1406,6 @@ library
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory
-      Storage.Queries.Sos
       Storage.Queries.SpecialOccasion
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.StationsExtraInformation
@@ -1417,6 +1425,7 @@ library
       Storage.Queries.ValueAddNP
       Storage.Queries.VehicleConfig
       Storage.Queries.VehicleRouteMapping
+      Storage.Queries.VehicleSeatLayoutMapping
       Storage.Queries.VendorSplitDetails
       Storage.Queries.WhiteListOrg
   other-modules:

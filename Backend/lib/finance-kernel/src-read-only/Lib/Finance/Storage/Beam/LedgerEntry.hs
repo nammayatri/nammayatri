@@ -29,6 +29,9 @@ data LedgerEntryT f = LedgerEntryT
     referenceType :: (B.C f Kernel.Prelude.Text),
     reversalOf :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
     settledAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
+    settlementId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    settlementStatus :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.SettlementStatus)),
+    settlementTimestamp :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     status :: (B.C f Lib.Finance.Domain.Types.LedgerEntry.EntryStatus),
     timestamp :: (B.C f Kernel.Prelude.UTCTime),
     toAccountId :: (B.C f Kernel.Prelude.Text),
@@ -45,6 +48,6 @@ instance B.Table LedgerEntryT where
 
 type LedgerEntry = LedgerEntryT Identity
 
-$(enableKVPG (''LedgerEntryT) [('id)] [[('fromAccountId)], [('referenceId)], [('toAccountId)]])
+$(enableKVPG (''LedgerEntryT) [('id)] [[('fromAccountId)], [('referenceId)], [('settlementId)], [('toAccountId)]])
 
 $(mkTableInstancesGenericSchema (''LedgerEntryT) "finance_ledger_entry")

@@ -31,9 +31,11 @@ imports:
   QuoteCategoryMetadata: Domain.Types.FRFSQuoteCategory
   BusLocation: API.Types.UI.RiderLocation
   CrisSdkResponse: API.Types.UI.MultimodalConfirm
+  RouteWithLiveVehicle: API.Types.UI.MultimodalConfirm
   Seat: Domain.Types.Seat
   SeatLayout: Domain.Types.SeatLayout
   SeatType: Domain.Types.Seat
+  Person: Domain.Types.Person
 
 module: FRFSTicketService
 types:
@@ -303,6 +305,67 @@ types:
     seatLayout: SeatLayout
     seats: [Seat]
 
+  FRFSRouteServiceabilityReq:
+    startStopCode: Text
+    endStopCode: Text
+
+  ActiveRouteRes:
+    routeId: Text
+    lastScheduleTime: Text
+  PassengerInfo:
+    personId: Id Person
+    name: Text
+    phone: Text
+    bookingId: Id FRFSTicketBooking
+    checkedIn: Bool
+    derive: "Show"
+
+  PassengerStopManifest:
+    stopCode: Text
+    boardingPassengers: "[PassengerInfo]"
+    alightingPassengers: "[PassengerInfo]"
+    derive: "Show"
+
+  FRFSTripPassengerManifestResp:
+    manifest: "[PassengerStopManifest]"
+    derive: "Show"
+
+  FleetOperatorTripActionReq:
+    action: Text
+    conductorToken: Maybe Text
+    driverToken: Maybe Text
+    vehicleNumber: Maybe Text
+    derive: "Show"
+
+  FleetOperatorTripActionResp:
+    currentTripNumber: Int
+    hasUpcomingTrips: Bool
+    derive: "Show"
+
+  FleetOperatorCurrentOperationReq:
+    conductorToken: Maybe Text
+    driverToken: Maybe Text
+    vehicleNumber: Maybe Text
+    derive: "Show"
+
+  OperatorTripInfo:
+    tripNumber: Int
+    routeId: Text
+    routeNumber: Text
+    routeName: Text
+    isActiveTrip: Bool
+    derive: "Show"
+
+  FleetOperatorCurrentOperationResp:
+    waybillNo: Text
+    vehicleNumber: Text
+    conductorToken: Text
+    driverToken: Text
+    history: "[OperatorTripInfo]"
+    current: Maybe OperatorTripInfo
+    upcoming: "[OperatorTripInfo]"
+    derive: "Show"
+
 apis:
   # Get FRFS Config
   - GET:
@@ -540,8 +603,10 @@ apis:
         type: API.Types.UI.FRFSTicketService.FRFSBookingFeedbackReq
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
   - GET:
       endpoint: /frfs/trip/{tripId}/route/{routeId}/seats
+      auth: TokenAuth
       params:
         tripId: Text
         routeId: Text
@@ -554,9 +619,54 @@ apis:
 
   - GET:
       endpoint: /frfs/route/{routeId}/seatLayout
+      auth: TokenAuth
       params:
         routeId: Text
       query:
         vehicleNumber: Text
       response:
         type: SeatLayoutDetailsResp
+
+  - POST:
+      endpoint: /frfs/route/{routeId}/serviceability
+      auth: TokenAuth
+      params:
+        routeId: Text
+      request:
+        type: FRFSRouteServiceabilityReq
+      response:
+        type: "API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle"
+
+  # GET active routes served today
+  - GET:
+      endpoint: /frfs/activeRoutes
+      auth: TokenAuth
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+      response:
+        type: "[API.Types.UI.FRFSTicketService.ActiveRouteRes]"
+
+  - GET:
+      endpoint: /frfs/trip/{tripId}/route/{routeId}/manifest
+      auth: TokenAuth
+      params:
+        tripId: Text
+        routeId: Text
+      response:
+        type: FRFSTripPassengerManifestResp
+
+  - POST:
+      endpoint: /frfs/fleetOperator/tripAction
+      auth: TokenAuth
+      request:
+        type: FleetOperatorTripActionReq
+      response:
+        type: FleetOperatorTripActionResp
+
+  - POST:
+      endpoint: /frfs/fleetOperator/currentOperation
+      auth: TokenAuth
+      request:
+        type: FleetOperatorCurrentOperationReq
+      response:
+        type: FleetOperatorCurrentOperationResp

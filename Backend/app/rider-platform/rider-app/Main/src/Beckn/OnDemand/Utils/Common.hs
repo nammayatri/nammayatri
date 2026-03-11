@@ -20,6 +20,7 @@ import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import BecknV2.OnDemand.Utils.Constructors
+import qualified BecknV2.Utils as BUtils
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
 import qualified Data.Text as T
@@ -49,8 +50,8 @@ import Tools.Error
 mkBapUri :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Id DM.Merchant -> m KP.BaseUrl
 mkBapUri merchantId = asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId.getId)
 
-mkStops :: SLS.SearchReqLocation -> [SLS.SearchReqLocation] -> UTCTime -> Maybe [Spec.Stop]
-mkStops origin stops startTime =
+mkStops :: SLS.SearchReqLocation -> [SLS.SearchReqLocation] -> UTCTime -> Maybe T.Text -> Maybe [Spec.Stop]
+mkStops origin stops startTime mbScheduledPickupDuration =
   let originGps = Gps.Gps {lat = origin.gps.lat, lon = origin.gps.lon}
       destinationGps dest = Gps.Gps {lat = dest.gps.lat, lon = dest.gps.lon}
       destination = [KP.last stops | not (null stops)]
@@ -69,7 +70,8 @@ mkStops origin stops startTime =
                       },
                 Spec.stopType = Just $ show Enums.START,
                 Spec.stopId = Just "0",
-                Spec.stopTime = Just Spec.Time {timeTimestamp = Just startTime, timeDuration = Nothing}
+                Spec.stopInstructions = mkStopInstructions origin.address.instructions,
+                Spec.stopTime = Just Spec.Time {timeTimestamp = Just startTime, timeDuration = mbScheduledPickupDuration}
               }
           ]
             <> ( ( \stop ->
@@ -85,6 +87,7 @@ mkStops origin stops startTime =
                                  Spec.locationState = Just $ Spec.State stop.address.state
                                },
                          Spec.stopType = Just $ show Enums.END,
+                         Spec.stopInstructions = mkStopInstructions stop.address.instructions,
                          Spec.stopId = Just $ show (length intermediateStops + 1),
                          Spec.stopParentStopId = Just $ show (length intermediateStops)
                        }
@@ -99,8 +102,16 @@ mkAddress DLoc.LocationAddress {..} =
   let res = map replaceEmpty [door, building, street, area, city, state, country]
    in T.intercalate ", " $ catMaybes res
 
+-- | Re-export from shared library for backward compatibility
+mkStopInstructions :: Maybe Text -> Maybe Spec.Descriptor
+mkStopInstructions = BUtils.mkStopInstructions
+
 replaceEmpty :: Maybe Text -> Maybe Text
 replaceEmpty string = if string == Just "" then Nothing else string
+
+-- | Re-export from shared library for backward compatibility
+mkScheduledPickupDuration :: Bool -> Maybe T.Text
+mkScheduledPickupDuration = BUtils.mkScheduledPickupDuration
 
 mkPaymentTags :: Maybe [Spec.TagGroup]
 mkPaymentTags =
@@ -152,7 +163,7 @@ castVehicleVariant = \case
   VehVar.VIP_OFFICER -> (show Enums.CAB, "VIP_OFFICER")
   VehVar.AC_PRIORITY -> (show Enums.CAB, "AC_PRIORITY")
   VehVar.BIKE_PLUS -> (show Enums.TWO_WHEELER, "BIKE_PLUS")
-  VehVar.E_RICKSHAW -> (show Enums.AUTO_RICKSHAW, "E_RICKSHAW")
+  VehVar.E_RICKSHAW -> (show Enums.TOTO, "E_RICKSHAW")
   VehVar.AUTO_LITE -> (show Enums.AUTO_RICKSHAW, "AUTO_LITE")
   VehVar.PINK_AUTO -> (show Enums.AUTO_RICKSHAW, "PINK_AUTO")
 
@@ -192,7 +203,7 @@ parseVehicleVariant mbCategory mbVariant =
     (Just "CAB", Just "AC_PRIORITY") -> Just VehVar.AC_PRIORITY
     (Just "TWO_WHEELER", Just "BIKE_PLUS") -> Just VehVar.BIKE_PLUS
     (Just "MOTORCYCLE", Just "BIKE_PLUS") -> Just VehVar.BIKE_PLUS
-    (Just "AUTO_RICKSHAW", Just "E_RICKSHAW") -> Just VehVar.E_RICKSHAW
+    (Just "TOTO", Just "E_RICKSHAW") -> Just VehVar.E_RICKSHAW
     (Just "AUTO_RICKSHAW", Just "AUTO_LITE") -> Just VehVar.AUTO_LITE
     (Just "AUTO_RICKSHAW", Just "PINK_AUTO") -> Just VehVar.PINK_AUTO
     _ -> Nothing
@@ -262,7 +273,8 @@ mkStops' mbOrigin intermediateStops mDestination = do
                               Spec.locationState = Just $ Spec.State origin.address.state
                             },
                       Spec.stopType = Just $ show Enums.START,
-                      Spec.stopId = Just "0"
+                      Spec.stopId = Just "0",
+                      Spec.stopInstructions = mkStopInstructions origin.address.instructions
                     },
               mDestination >>= \destination -> do
                 let destinationGps = Gps.Gps {lat = destination.lat, lon = destination.lon}
@@ -280,6 +292,7 @@ mkStops' mbOrigin intermediateStops mDestination = do
                             },
                       Spec.stopType = Just $ show Enums.END,
                       Spec.stopId = Just $ show (length intermediateStops + 1),
+                      Spec.stopInstructions = mkStopInstructions destination.address.instructions,
                       Spec.stopParentStopId = Just $ show (length intermediateStops)
                     }
             ]
@@ -305,6 +318,7 @@ makeStop stop =
                   Spec.locationId = Just stop.id.getId
                 },
           Spec.stopType = Just $ show Enums.INTERMEDIATE_STOP,
+          Spec.stopInstructions = mkStopInstructions stop.address.instructions,
           Spec.stopId = Just "0"
         }
 
@@ -325,6 +339,7 @@ mkIntermediateStop stop id parentStopId =
                 },
           Spec.stopType = Just $ show Enums.INTERMEDIATE_STOP,
           Spec.stopId = Just $ show id,
+          Spec.stopInstructions = mkStopInstructions stop.address.instructions,
           Spec.stopParentStopId = Just $ show parentStopId
         }
 
@@ -344,6 +359,7 @@ mkIntermediateStopSearch stop id parentStopId =
                 },
           Spec.stopType = Just $ show Enums.INTERMEDIATE_STOP,
           Spec.stopId = Just $ show id,
+          Spec.stopInstructions = mkStopInstructions stop.address.instructions,
           Spec.stopParentStopId = Just $ show parentStopId
         }
 

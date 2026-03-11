@@ -40,6 +40,7 @@ import Kernel.Beam.Functions as BF
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
+import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
@@ -272,7 +273,8 @@ processReminderByType reminder driver config merchantId merchantOpCityId =
             merchantId
             merchantOpCityId
             "Vehicle Inspection"
-            "VEHICLE_INSPECTION"
+            FCM.VEHICLE_INSPECTION
+            DMM.VEHICLE_INSPECTION_SMS
             $ do
               -- Invalidate RC, deactivate association and remove vehicle (only when not on ride)
               let rcId = Id @DVRC.VehicleRegistrationCertificate reminder.entityId
@@ -286,7 +288,8 @@ processReminderByType reminder driver config merchantId merchantOpCityId =
           merchantId
           merchantOpCityId
           "Driver Inspection"
-          "DRIVER_INSPECTION"
+          FCM.DRIVER_INSPECTION
+          DMM.DRIVER_INSPECTION_SMS
           $ do
             -- Set approved flag to False for DriverInformation
             QDIExtra.updateApproved (Just False) reminder.driverId
@@ -315,7 +318,8 @@ processReminderByType reminder driver config merchantId merchantOpCityId =
               merchantId
               merchantOpCityId
               "Training Video"
-              "TRAINING_VIDEO"
+              FCM.TRAINING_VIDEO
+              DMM.TRAINING_VIDEO_SMS
               $ do
                 logInfo $ "Disabled driver " <> reminder.driverId.getId <> " due to expired mandatory training reminder"
       _ -> logError $ "Unknown documentType: " <> show reminder.documentType
@@ -341,10 +345,11 @@ processInspectionReminder ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Text ->
-  Text ->
+  FCM.FCMNotificationType ->
+  DMM.MessageKey ->
   m () ->
   m ()
-processInspectionReminder reminder driver config merchantId merchantOpCityId displayName notificationKey setApprovedAction = do
+processInspectionReminder reminder driver config merchantId merchantOpCityId displayName notificationType messageKey setApprovedAction = do
   now <- getCurrentTime
   let isOverdue = reminder.dueDate <= now
       isMandatory = config.isMandatory
@@ -362,7 +367,7 @@ processInspectionReminder reminder driver config merchantId merchantOpCityId dis
   case mbCurrentReminder of
     Just currentReminder | currentReminder.status == DR.PENDING -> do
       -- Reminder is still PENDING, send notification
-      sendInspectionOrTrainingNotification currentReminder driver merchantOpCityId notificationKey displayName config
+      sendInspectionOrTrainingNotification currentReminder driver merchantOpCityId notificationType messageKey displayName config
       -- Only reschedule if driver was NOT disabled (i.e., not overdue and mandatory)
       -- If driver was disabled, don't reschedule to avoid unnecessary job execution
       unless shouldDisable $ do
@@ -514,50 +519,53 @@ sendDriverNotifications ::
   DR.Reminder ->
   DP.Person ->
   Id DMOC.MerchantOperatingCity ->
-  Text ->
-  Text ->
+  FCM.FCMNotificationType ->
+  DMM.MessageKey ->
   m ()
-sendDriverNotifications reminder driver merchantOpCityId notificationKey smsKey = do
+sendDriverNotifications reminder driver merchantOpCityId notificationType messageKey = do
   -- Send FCM notification to driver
+  let notificationKey = show notificationType
+      documentTypeName = show reminder.documentType
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId notificationKey Nothing Nothing driver.language Nothing
   case mbMerchantPN of
     Just merchantPN -> do
-      let entityData = NotifReq {entityId = reminder.entityId, title = merchantPN.title, message = merchantPN.body}
+      let (title, body) = case notificationType of
+            FCM.DOCUMENT_EXPIRY_REMINDER ->
+              ( Text.replace "{#documentType#}" documentTypeName merchantPN.title,
+                Text.replace "{#documentType#}" documentTypeName merchantPN.body
+              )
+            _ -> (merchantPN.title, merchantPN.body)
+      let entityData = NotifReq {entityId = reminder.entityId, title, message = body}
       notifyDriverOnEvents merchantOpCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType
     Nothing -> logInfo $ "MerchantPushNotification not found for " <> notificationKey <> ", skipping FCM notification"
 
   -- Send SMS to driver
-  let mbMessageKey = readMaybe (Text.unpack smsKey) :: Maybe DMM.MessageKey
-  case mbMessageKey of
-    Just messageKey -> do
-      -- For DOCUMENT_EXPIRY_REMINDER_SMS, use MessageBuilder to replace template variables
-      mbSmsInfo <-
-        if messageKey == DMM.DOCUMENT_EXPIRY_REMINDER_SMS
-          then do
-            let documentTypeName = show reminder.documentType
-            (mbSender, msg, templateId, messageType) <-
-              MessageBuilder.buildDocumentExpiryReminderMessage
-                merchantOpCityId
-                (MessageBuilder.BuildDocumentExpiryReminderMessageReq {documentType = documentTypeName})
+  -- For DOCUMENT_EXPIRY_REMINDER_SMS, use MessageBuilder to replace template variables
+  mbSmsInfo <-
+    if messageKey == DMM.DOCUMENT_EXPIRY_REMINDER_SMS
+      then do
+        (mbSender, msg, templateId, messageType) <-
+          MessageBuilder.buildDocumentExpiryReminderMessage
+            merchantOpCityId
+            (MessageBuilder.BuildDocumentExpiryReminderMessageReq {documentType = documentTypeName})
+        smsCfg <- asks (.smsCfg)
+        let sender = fromMaybe smsCfg.sender mbSender
+        pure $ Just (msg, sender, templateId, messageType)
+      else do
+        CMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId messageKey Nothing Nothing >>= \case
+          Just merchantMsg -> do
             smsCfg <- asks (.smsCfg)
-            let sender = fromMaybe smsCfg.sender mbSender
-            pure $ Just (msg, sender, templateId, messageType)
-          else do
-            CMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId messageKey Nothing Nothing >>= \case
-              Just merchantMsg -> do
-                smsCfg <- asks (.smsCfg)
-                let sender = fromMaybe smsCfg.sender merchantMsg.senderHeader
-                pure $ Just (merchantMsg.message, sender, merchantMsg.templateId, merchantMsg.messageType)
-              Nothing -> do
-                logInfo $ "MerchantMessage not found for " <> smsKey <> ", skipping SMS"
-                pure Nothing
-      whenJust mbSmsInfo $ \(smsMessage, smsSender, smsTemplateId, messageType) -> do
-        mbPhoneNumber <- mapM decrypt driver.mobileNumber
-        case mbPhoneNumber of
-          Just phoneNumber -> do
-            Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq smsMessage phoneNumber smsSender smsTemplateId messageType) >>= Sms.checkSmsResult
-          Nothing -> logInfo "Driver mobile number not available, skipping SMS"
-    Nothing -> logInfo $ "Invalid MessageKey: " <> smsKey <> ", skipping SMS"
+            let sender = fromMaybe smsCfg.sender merchantMsg.senderHeader
+            pure $ Just (merchantMsg.message, sender, merchantMsg.templateId, merchantMsg.messageType)
+          Nothing -> do
+            logInfo $ "MerchantMessage not found for " <> show messageKey <> ", skipping SMS"
+            pure Nothing
+  whenJust mbSmsInfo $ \(smsMessage, smsSender, smsTemplateId, messageType) -> do
+    mbPhoneNumber <- mapM decrypt driver.mobileNumber
+    case mbPhoneNumber of
+      Just phoneNumber -> do
+        Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq smsMessage phoneNumber smsSender smsTemplateId messageType) >>= Sms.checkSmsResult
+      Nothing -> logInfo "Driver mobile number not available, skipping SMS"
 
 -- Helper function to send GRPC notifications to fleet owners and operators
 sendFleetAndOperatorNotifications ::
@@ -611,7 +619,7 @@ sendDocumentExpiryNotification reminder driver merchantOpCityId isExpiredParam m
       entityData = Aeson.object ["driverId" Aeson..= driver.id.getId, "documentType" Aeson..= documentTypeName, "isExpired" Aeson..= isExpiredParam]
 
   -- Send FCM and SMS to driver
-  sendDriverNotifications reminder driver merchantOpCityId "DOCUMENT_EXPIRY_REMINDER" "DOCUMENT_EXPIRY_REMINDER_SMS"
+  sendDriverNotifications reminder driver merchantOpCityId FCM.DOCUMENT_EXPIRY_REMINDER DMM.DOCUMENT_EXPIRY_REMINDER_SMS
 
   -- Send GRPC notifications to fleet and operators
   sendFleetAndOperatorNotifications driver merchantOpCityId fleetOperatorTitle fleetOperatorMessage entityData
@@ -666,11 +674,12 @@ sendInspectionOrTrainingNotification ::
   DR.Reminder ->
   DP.Person ->
   Id DMOC.MerchantOperatingCity ->
-  Text ->
+  FCM.FCMNotificationType ->
+  DMM.MessageKey ->
   Text ->
   DRC.ReminderConfig ->
   m ()
-sendInspectionOrTrainingNotification reminder driver merchantOpCityId notificationKey displayName reminderConfig = do
+sendInspectionOrTrainingNotification reminder driver merchantOpCityId notificationType messageKey displayName reminderConfig = do
   now <- getCurrentTime
   let intervals = reminderConfig.reminderIntervals
       -- currentIntervalIndex: Index in the reminderIntervals array (0 = first interval, 1 = second, etc.)
@@ -689,10 +698,10 @@ sendInspectionOrTrainingNotification reminder driver merchantOpCityId notificati
             if isOverdue
               then "Driver " <> driver.firstName <> "'s " <> displayName <> " is overdue. Please ensure they complete this requirement."
               else "Driver " <> driver.firstName <> "'s " <> displayName <> " is due in " <> show daysBeforeDue <> " days. Please ensure they complete this requirement."
-          entityData = Aeson.object ["driverId" Aeson..= driver.id.getId, "documentType" Aeson..= notificationKey, "isOverdue" Aeson..= isOverdue, "daysBeforeDue" Aeson..= daysBeforeDue]
+          entityData = Aeson.object ["driverId" Aeson..= driver.id.getId, "documentType" Aeson..= show @Text notificationType, "isOverdue" Aeson..= isOverdue, "daysBeforeDue" Aeson..= daysBeforeDue]
 
       -- Send FCM and SMS to driver
-      sendDriverNotifications reminder driver merchantOpCityId notificationKey (notificationKey <> "_SMS")
+      sendDriverNotifications reminder driver merchantOpCityId notificationType messageKey
 
       -- Send GRPC notifications to fleet and operators
       sendFleetAndOperatorNotifications driver merchantOpCityId fleetOperatorTitle fleetOperatorMessage entityData

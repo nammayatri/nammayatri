@@ -121,6 +121,7 @@ IntegratedBPPConfig:
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <PlatformType>
+    - Custom Kernel.Utils.TH.mkToHttpInstanceForEnum <PlatformType>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PlatformType>
 
   fromTType:
@@ -145,6 +146,7 @@ IntegratedBPPConfig:
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
     - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
 
   default:
     vehicleCategory: "'BUS'"

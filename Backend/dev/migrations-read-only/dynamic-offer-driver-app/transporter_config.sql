@@ -747,12 +747,10 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN reconciliation_
 
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-
-
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN video_file_size_upper_limit integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN tracking_short_url_pattern text  default 'nammayatri.in/t/';
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_support_for_safety boolean  default false;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dashboard_media_file_url_pattern text  default 'https://nammayatri.in/t/<FILE_PATH>';
 
 
 ------- SQL updates -------
@@ -781,16 +779,11 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_pan_aadha
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_coins_to_direct_payout boolean ;
 
 
-
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN tax_config json;
 
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN tax_config TYPE text;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_number_of_luggages integer ;

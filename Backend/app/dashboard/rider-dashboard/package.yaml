@@ -82,6 +82,9 @@ dependencies:
   - unordered-containers
   - yudhishthira
   - wai
+  - prometheus-client
+  - http-types
+  - wai
 
 ghc-options:
   - -Wall

@@ -17,15 +17,21 @@ module App
   )
 where
 
+import qualified Control.Concurrent as CC
 import Environment
 import Kernel.Exit
 import Kernel.Prelude
 import Kernel.Types.Flow (runFlowR)
 import Kernel.Utils.App
 import Kernel.Utils.Dhall (readDhallConfigDefault)
-import Kernel.Utils.Servant.Server (runHealthCheckServerWithService)
+import Kernel.Utils.Servant.Server (runServer)
 import Servant
 import qualified Service.Runner as Runner
+
+type HealthCheckAPI = Get '[JSON] Text
+
+healthCheckServer :: FlowServer HealthCheckAPI
+healthCheckServer = pure "App is up"
 
 runSearchResultAggregator :: (AppCfg -> AppCfg) -> IO ()
 runSearchResultAggregator configModifier = do
@@ -34,7 +40,8 @@ runSearchResultAggregator configModifier = do
     try (buildAppEnv appCfg)
       >>= handleLeftIO @SomeException exitBuildingAppEnvFailure "Couldn't build AppEnv: "
 
-  runHealthCheckServerWithService appEnv identity identity EmptyContext (runService appEnv) releaseAppEnv pure
+  runServer appEnv (Proxy @HealthCheckAPI) healthCheckServer identity identity EmptyContext (startService appEnv) releaseAppEnv pure
   where
-    runService appEnv flowRt =
+    startService appEnv flowRt serverStartAction = do
+      _ <- CC.forkIO serverStartAction
       runFlowR flowRt appEnv Runner.run

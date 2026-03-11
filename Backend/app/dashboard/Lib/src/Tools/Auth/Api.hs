@@ -85,7 +85,9 @@ verifyApi ::
   RegToken ->
   m ApiTokenInfo
 verifyApi requiredAccessLevel token = do
+  logInfo "[Auth.verifyApi] START - Servant parsed request, beginning auth"
   (personId, merchantId, city) <- Common.verifyPerson token
+  logInfo "[Auth.verifyApi] verifyPerson done"
   verifiedPerson <- verifyAccessLevel requiredAccessLevel personId
   verifiedMerchant <- verifyServer requiredAccessLevel.serverName merchantId
   _ <- verifyCity verifiedMerchant city

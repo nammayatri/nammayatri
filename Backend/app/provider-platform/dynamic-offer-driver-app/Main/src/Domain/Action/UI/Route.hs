@@ -57,15 +57,16 @@ getTripRoutes (personId, merchantId, merchantOpCityId) entityId req = do
       booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
       let entityId' = Just $ fromMaybe (getId ride.id) entityId
       let key = searchRequestKey booking.transactionId
+      let rideHasStops = fromMaybe False ride.hasStops
       mbRouteInfo :: Maybe RI.RouteInfo <- Redis.runInMultiCloudRedisMaybeResult $ Redis.withMasterRedis $ Redis.get key
       case mbRouteInfo of
         Just routeInfo -> do
           let src = (NE.head req.waypoints) :: Maps.LatLong
           let points = fromMaybe [] routeInfo.points
-          selectedWaypoints <- getSelectedWaypoints src points
+          selectedWaypoints <- if rideHasStops then pure [] else getSelectedWaypoints src points -- picks 5 points from the sreq ride route, skip if ride has stops
           let req' :: Maps.GetRoutesReq =
                 Maps.GetRoutesReq
-                  { waypoints = NE.fromList ([src] ++ selectedWaypoints ++ [NE.last req.waypoints]),
+                  { waypoints = NE.fromList ([src] ++ selectedWaypoints ++ [NE.last req.waypoints]), -- this is done to ensure same route is shown to driver as was in sreq
                     mode = req.mode,
                     calcPoints = req.calcPoints
                   }

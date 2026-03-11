@@ -34,8 +34,10 @@ import Domain.Types.SearchTry
 import qualified Domain.Types.ServiceTierType as DST
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Domain.Utils
 import Environment
+import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps (LatLong (..))
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
@@ -61,6 +63,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
+import qualified Storage.Queries.DriverRidePayoutBankAccount as QDRPB
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideD
@@ -208,6 +211,38 @@ releaseLien booking ride = do
 
 makeSubscriptionRunningBalanceLockKey :: Text -> Text
 makeSubscriptionRunningBalanceLockKey personId = "SubscriptionRunningBalanceLockKey:" <> personId
+
+-- | Get rcId for a ride: prefer RideDetails.rcId, otherwise fall back to RC by vehicleNumber.
+getRcIdForRide ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) =>
+  Id DRide.Ride ->
+  m (Maybe Text)
+getRcIdForRide rideId = do
+  mbRideDetails <- QRideD.findById rideId
+  case mbRideDetails of
+    Nothing -> pure Nothing
+    Just rideDetails ->
+      case rideDetails.rcId of
+        Just t -> pure (Just t)
+        Nothing -> fmap (fmap (.id.getId)) (QVRC.findLastVehicleRCWrapper rideDetails.vehicleNumber)
+
+-- | Get payout VPA for a ride using rcId -> driver_ride_payout_bank_account.
+getPayoutVpaForRide ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) =>
+  Id DRide.Ride ->
+  m (Maybe Text)
+getPayoutVpaForRide rideId = do
+  mbRcIdText <- getRcIdForRide rideId
+  case mbRcIdText of
+    Nothing -> pure Nothing
+    Just rcIdText -> do
+      mbBankAccount <- QDRPB.findByRcId (Id rcIdText :: Id DVRC.VehicleRegistrationCertificate)
+      case mbBankAccount of
+        Nothing -> pure Nothing
+        Just rcAccount -> do
+          accountNumber <- decrypt `mapM` rcAccount.bankAccountNumber
+          ifscCode <- decrypt `mapM` rcAccount.bankIfscCode
+          pure $ (\a i -> a <> "@" <> i <> ".ifsc.npci") <$> accountNumber <*> ifscCode
 
 buildRideDetails ::
   DBooking.Booking ->
@@ -357,7 +392,8 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         driverCancellationPenaltyWaivedReason = Nothing,
         finalFarePolicyId = Nothing,
         subscriptionPurchaseIds = Nothing,
-        cloudType = cloudType
+        cloudType = cloudType,
+        sosId = Nothing
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl

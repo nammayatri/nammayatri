@@ -16,6 +16,8 @@ type RoutesByRouteIdsAPI = "getRoutesByIds" :> Capture "gtfs_id" Text :> ReqBody
 
 type BusRouteScheduleAPI = "bus-route-schedule" :> Capture "gtfs_id" Text :> Capture "route_id" Text :> Get '[JSON] BusScheduleDetails
 
+type BusTripScheduleAPI = "bus-trip-schedule" :> Capture "gtfs_id" Text :> Capture "waybill_no" Text :> Capture "trip_number" Int :> Capture "route_id" Text :> Get '[JSON] BusScheduleDetails
+
 type RouteFuzzySearchAPI = "routes" :> Capture "gtfs_id" Text :> "fuzzy" :> Capture "query" Text :> Get '[JSON] [RouteInfoNandi]
 
 type RoutesByGtfsIdAPI = "routes" :> Capture "gtfs_id" Text :> Get '[JSON] [RouteInfoNandi]
@@ -58,6 +60,8 @@ type DepotNameByIdAPI = "getDepotNameById" :> Capture "depotId" Text :> Get '[JS
 
 type AlternateStopsByGtfsIdAndStopCodeAPI = "alternateStops" :> Capture "gtfs_id" Text :> Capture "stop_code" Text :> Get '[JSON] [RouteStopMappingInMemoryServer]
 
+type RoutesServedTodayAPI = "routes-served-today" :> Get '[JSON] [RoutesServedTodayItem]
+
 nandiGetRouteStopMappingByRouteIdAPI :: Proxy RouteStopMappingByRouteIdAPI
 nandiGetRouteStopMappingByRouteIdAPI = Proxy
 
@@ -72,6 +76,9 @@ nandiRoutesByRouteIdsAPI = Proxy
 
 nandiBusRouteScheduleAPI :: Proxy BusRouteScheduleAPI
 nandiBusRouteScheduleAPI = Proxy
+
+nandiBusTripScheduleAPI :: Proxy BusTripScheduleAPI
+nandiBusTripScheduleAPI = Proxy
 
 nandiRouteFuzzySearchAPI :: Proxy RouteFuzzySearchAPI
 nandiRouteFuzzySearchAPI = Proxy
@@ -136,6 +143,9 @@ nandiDepotNameByIdAPI = Proxy
 nandiAlternateStopsByGtfsIdAndStopCodeAPI :: Proxy AlternateStopsByGtfsIdAndStopCodeAPI
 nandiAlternateStopsByGtfsIdAndStopCodeAPI = Proxy
 
+nandiRoutesServedTodayAPI :: Proxy RoutesServedTodayAPI
+nandiRoutesServedTodayAPI = Proxy
+
 getNandiGetRouteStopMappingByRouteId :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
 getNandiGetRouteStopMappingByRouteId = ET.client nandiGetRouteStopMappingByRouteIdAPI
 
@@ -150,6 +160,9 @@ getNandiRoutesByRouteIds = ET.client nandiRoutesByRouteIdsAPI
 
 getNandiBusRouteSchedule :: Text -> Text -> ET.EulerClient BusScheduleDetails
 getNandiBusRouteSchedule = ET.client nandiBusRouteScheduleAPI
+
+getNandiBusTripSchedule :: Text -> Text -> Int -> Text -> ET.EulerClient BusScheduleDetails
+getNandiBusTripSchedule = ET.client nandiBusTripScheduleAPI
 
 getNandiRouteFuzzySearch :: Text -> Text -> ET.EulerClient [RouteInfoNandi]
 getNandiRouteFuzzySearch = ET.client nandiRouteFuzzySearchAPI
@@ -213,3 +226,235 @@ getNandiDepotNameById = ET.client nandiDepotNameByIdAPI
 
 getNandiAlternateStopsByGtfsIdAndStopCode :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
 getNandiAlternateStopsByGtfsIdAndStopCode = ET.client nandiAlternateStopsByGtfsIdAndStopCodeAPI
+
+getNandiRoutesServedToday :: ET.EulerClient [RoutesServedTodayItem]
+getNandiRoutesServedToday = ET.client nandiRoutesServedTodayAPI
+
+type OperatorGetRowAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "crud" :> Capture "table" Text :> QueryParam "column" Text :> Get '[JSON] Value
+
+type OperatorGetAllRowsAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "crud" :> Capture "table" Text :> "all" :> QueryParam "limit" Int :> QueryParam "offset" Int :> Get '[JSON] [Value]
+
+type OperatorDeleteRowAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "crud" :> Capture "table" Text :> "delete" :> ReqBody '[JSON] Value :> Post '[JSON] RowsAffectedResp
+
+type OperatorUpsertRowAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "crud" :> Capture "table" Text :> "upsert" :> ReqBody '[JSON] Value :> Post '[JSON] Value
+
+type OperatorServiceTypesAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "service-types" :> Get '[JSON] [ServiceType]
+
+type OperatorRoutesAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "routes" :> Get '[JSON] [NandiRoute]
+
+type OperatorDepotsAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "depots" :> Get '[JSON] [Depot]
+
+type OperatorShiftTypesAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "shift-types" :> Get '[JSON] [ShiftType]
+
+type OperatorScheduleNumbersAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "schedule-numbers" :> Get '[JSON] [ScheduleNumber]
+
+type OperatorDayTypesAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "day-types" :> Get '[JSON] [DayType]
+
+type OperatorTripTypesAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "trip-types" :> Get '[JSON] [TripType]
+
+type OperatorBreakTypesAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "break-types" :> Get '[JSON] [BreakType]
+
+type OperatorTripDetailsAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "trip-details" :> QueryParam "scheduleNumber" Text :> Get '[JSON] [NandiTripDetail]
+
+type OperatorFleetsAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "fleets" :> Get '[JSON] [Fleet]
+
+type OperatorConductorsAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "conductors" :> QueryParam "token" Text :> Get '[JSON] Employee
+
+type OperatorDriversAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "drivers" :> QueryParam "token" Text :> Get '[JSON] Employee
+
+type OperatorDeviceIdsAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "device-ids" :> Get '[JSON] [Text]
+
+type OperatorTabletIdsAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "tablet-ids" :> Get '[JSON] [Text]
+
+type OperatorOperatorsAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "operators" :> QueryParam "role" Text :> Get '[JSON] [Employee]
+
+type OperatorWaybillStatusAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "waybill" :> "status" :> ReqBody '[JSON] UpdateWaybillStatusReq :> Post '[JSON] RowsAffectedResp
+
+type OperatorWaybillFleetAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "waybill" :> "fleet" :> ReqBody '[JSON] UpdateWaybillFleetReq :> Post '[JSON] RowsAffectedResp
+
+type OperatorWaybillTabletAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "waybill" :> "tablet" :> ReqBody '[JSON] UpdateWaybillTabletReq :> Post '[JSON] RowsAffectedResp
+
+type OperatorWaybillsAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "waybills" :> QueryParam "limit" Int :> QueryParam "offset" Int :> Get '[JSON] [Value]
+
+type OperatorQueryRowsAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "crud" :> Capture "table" Text :> "query"
+    :> ReqBody '[JSON] QueryBody
+    :> Post '[JSON] [Value]
+
+operatorGetRowAPI :: Proxy OperatorGetRowAPI
+operatorGetRowAPI = Proxy
+
+operatorGetAllRowsAPI :: Proxy OperatorGetAllRowsAPI
+operatorGetAllRowsAPI = Proxy
+
+operatorDeleteRowAPI :: Proxy OperatorDeleteRowAPI
+operatorDeleteRowAPI = Proxy
+
+operatorUpsertRowAPI :: Proxy OperatorUpsertRowAPI
+operatorUpsertRowAPI = Proxy
+
+operatorServiceTypesAPI :: Proxy OperatorServiceTypesAPI
+operatorServiceTypesAPI = Proxy
+
+operatorRoutesAPI :: Proxy OperatorRoutesAPI
+operatorRoutesAPI = Proxy
+
+operatorDepotsAPI :: Proxy OperatorDepotsAPI
+operatorDepotsAPI = Proxy
+
+operatorShiftTypesAPI :: Proxy OperatorShiftTypesAPI
+operatorShiftTypesAPI = Proxy
+
+operatorScheduleNumbersAPI :: Proxy OperatorScheduleNumbersAPI
+operatorScheduleNumbersAPI = Proxy
+
+operatorDayTypesAPI :: Proxy OperatorDayTypesAPI
+operatorDayTypesAPI = Proxy
+
+operatorTripTypesAPI :: Proxy OperatorTripTypesAPI
+operatorTripTypesAPI = Proxy
+
+operatorBreakTypesAPI :: Proxy OperatorBreakTypesAPI
+operatorBreakTypesAPI = Proxy
+
+operatorTripDetailsAPI :: Proxy OperatorTripDetailsAPI
+operatorTripDetailsAPI = Proxy
+
+operatorFleetsAPI :: Proxy OperatorFleetsAPI
+operatorFleetsAPI = Proxy
+
+operatorConductorsAPI :: Proxy OperatorConductorsAPI
+operatorConductorsAPI = Proxy
+
+operatorDriversAPI :: Proxy OperatorDriversAPI
+operatorDriversAPI = Proxy
+
+operatorDeviceIdsAPI :: Proxy OperatorDeviceIdsAPI
+operatorDeviceIdsAPI = Proxy
+
+operatorTabletIdsAPI :: Proxy OperatorTabletIdsAPI
+operatorTabletIdsAPI = Proxy
+
+operatorOperatorsAPI :: Proxy OperatorOperatorsAPI
+operatorOperatorsAPI = Proxy
+
+operatorWaybillStatusAPI :: Proxy OperatorWaybillStatusAPI
+operatorWaybillStatusAPI = Proxy
+
+operatorWaybillFleetAPI :: Proxy OperatorWaybillFleetAPI
+operatorWaybillFleetAPI = Proxy
+
+operatorWaybillTabletAPI :: Proxy OperatorWaybillTabletAPI
+operatorWaybillTabletAPI = Proxy
+
+operatorWaybillsAPI :: Proxy OperatorWaybillsAPI
+operatorWaybillsAPI = Proxy
+
+operatorQueryRowsAPI :: Proxy OperatorQueryRowsAPI
+operatorQueryRowsAPI = Proxy
+
+-- Client functions
+getOperatorRow :: Text -> Text -> Maybe Text -> ET.EulerClient Value
+getOperatorRow = ET.client operatorGetRowAPI
+
+getOperatorAllRows :: Text -> Text -> Maybe Int -> Maybe Int -> ET.EulerClient [Value]
+getOperatorAllRows = ET.client operatorGetAllRowsAPI
+
+postOperatorDeleteRow :: Text -> Text -> Value -> ET.EulerClient RowsAffectedResp
+postOperatorDeleteRow = ET.client operatorDeleteRowAPI
+
+postOperatorUpsertRow :: Text -> Text -> Value -> ET.EulerClient Value
+postOperatorUpsertRow = ET.client operatorUpsertRowAPI
+
+getOperatorServiceTypes :: Text -> ET.EulerClient [ServiceType]
+getOperatorServiceTypes = ET.client operatorServiceTypesAPI
+
+getOperatorRoutes :: Text -> ET.EulerClient [NandiRoute]
+getOperatorRoutes = ET.client operatorRoutesAPI
+
+getOperatorDepots :: Text -> ET.EulerClient [Depot]
+getOperatorDepots = ET.client operatorDepotsAPI
+
+getOperatorShiftTypes :: Text -> ET.EulerClient [ShiftType]
+getOperatorShiftTypes = ET.client operatorShiftTypesAPI
+
+getOperatorScheduleNumbers :: Text -> ET.EulerClient [ScheduleNumber]
+getOperatorScheduleNumbers = ET.client operatorScheduleNumbersAPI
+
+getOperatorDayTypes :: Text -> ET.EulerClient [DayType]
+getOperatorDayTypes = ET.client operatorDayTypesAPI
+
+getOperatorTripTypes :: Text -> ET.EulerClient [TripType]
+getOperatorTripTypes = ET.client operatorTripTypesAPI
+
+getOperatorBreakTypes :: Text -> ET.EulerClient [BreakType]
+getOperatorBreakTypes = ET.client operatorBreakTypesAPI
+
+getOperatorTripDetails :: Text -> Maybe Text -> ET.EulerClient [NandiTripDetail]
+getOperatorTripDetails = ET.client operatorTripDetailsAPI
+
+getOperatorFleets :: Text -> ET.EulerClient [Fleet]
+getOperatorFleets = ET.client operatorFleetsAPI
+
+getOperatorConductors :: Text -> Maybe Text -> ET.EulerClient Employee
+getOperatorConductors = ET.client operatorConductorsAPI
+
+getOperatorDrivers :: Text -> Maybe Text -> ET.EulerClient Employee
+getOperatorDrivers = ET.client operatorDriversAPI
+
+getOperatorDeviceIds :: Text -> ET.EulerClient [Text]
+getOperatorDeviceIds = ET.client operatorDeviceIdsAPI
+
+getOperatorTabletIds :: Text -> ET.EulerClient [Text]
+getOperatorTabletIds = ET.client operatorTabletIdsAPI
+
+getOperatorOperators :: Text -> Maybe Text -> ET.EulerClient [Employee]
+getOperatorOperators = ET.client operatorOperatorsAPI
+
+postOperatorWaybillStatus :: Text -> UpdateWaybillStatusReq -> ET.EulerClient RowsAffectedResp
+postOperatorWaybillStatus = ET.client operatorWaybillStatusAPI
+
+postOperatorWaybillFleet :: Text -> UpdateWaybillFleetReq -> ET.EulerClient RowsAffectedResp
+postOperatorWaybillFleet = ET.client operatorWaybillFleetAPI
+
+postOperatorWaybillTablet :: Text -> UpdateWaybillTabletReq -> ET.EulerClient RowsAffectedResp
+postOperatorWaybillTablet = ET.client operatorWaybillTabletAPI
+
+getOperatorWaybills :: Text -> Maybe Int -> Maybe Int -> ET.EulerClient [Value]
+getOperatorWaybills = ET.client operatorWaybillsAPI
+
+postOperatorQueryRows :: Text -> Text -> QueryBody -> ET.EulerClient [Value]
+postOperatorQueryRows = ET.client operatorQueryRowsAPI
+
+type OperatorCurrentOperationAPI =
+  "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "currentOperation"
+    :> ReqBody '[JSON] GimsOperationAnchor
+    :> Post '[JSON] GimsCurrentOperationResp
+
+type OperatorTripActionAPI =
+  "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "tripAction"
+    :> ReqBody '[JSON] GimsTripActionReq
+    :> Post '[JSON] Value
+
+type OperatorCurrentTripDetailsAPI =
+  "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "currentTripDetails"
+    :> ReqBody '[JSON] GimsCurrentTripDetailsReq
+    :> Post '[JSON] GimsCurrentTripDetailsResp
+
+operatorCurrentOperationAPI :: Proxy OperatorCurrentOperationAPI
+operatorCurrentOperationAPI = Proxy
+
+operatorTripActionAPI :: Proxy OperatorTripActionAPI
+operatorTripActionAPI = Proxy
+
+operatorCurrentTripDetailsAPI :: Proxy OperatorCurrentTripDetailsAPI
+operatorCurrentTripDetailsAPI = Proxy
+
+postOperatorCurrentOperation :: Text -> GimsOperationAnchor -> ET.EulerClient GimsCurrentOperationResp
+postOperatorCurrentOperation = ET.client operatorCurrentOperationAPI
+
+postOperatorTripAction :: Text -> GimsTripActionReq -> ET.EulerClient Value
+postOperatorTripAction = ET.client operatorTripActionAPI
+
+postOperatorCurrentTripDetails :: Text -> GimsCurrentTripDetailsReq -> ET.EulerClient GimsCurrentTripDetailsResp
+postOperatorCurrentTripDetails = ET.client operatorCurrentTripDetailsAPI

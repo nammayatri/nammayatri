@@ -15,6 +15,7 @@
 module BecknV2.OnDemand.Utils.Payment
   ( mkPayment,
     mkPayment',
+    mkPaymentTags,
   )
 where
 
@@ -65,7 +66,7 @@ mkPayment txnCity collectedBy paymentStatus mPrice mTxnId mPaymentParams mSettle
           then Just $ mkPaymentParams mPaymentParams mTxnId mAmount mCurrency
           else Nothing,
       paymentStatus = encodeToText' paymentStatus,
-      paymentTags = Just $ mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff mPaymentMode mPaymentInstrument,
+      paymentTags = Just $ mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff mPaymentParams mPaymentMode mPaymentInstrument,
       paymentTlMethod = mkTlMethod isStripe >>= encodeToText',
       paymentType = encodeToText' Spec.ON_FULFILLMENT
     }
@@ -112,11 +113,11 @@ mkPaymentParams mPaymentParams _mTxnId mAmount mCurrency = do
       paymentParamsVirtualPaymentAddress = mPaymentParams >>= (.vpa)
     }
 
-mkPaymentTags :: City -> Maybe SettlementType -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Maybe BuyerFinderFee -> Maybe DPM.PaymentMode -> Maybe Text -> [Spec.TagGroup]
-mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff mPaymentMode mPaymentInstrument =
+mkPaymentTags :: City -> Maybe SettlementType -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Maybe BuyerFinderFee -> Maybe BknPaymentParams -> Maybe DPM.PaymentMode -> Maybe Text -> [Spec.TagGroup]
+mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff mPaymentParams mPaymentMode mPaymentInstrument =
   catMaybes
     [ Just $ mkBuyerFinderFeeTagGroup mbff,
-      Just $ mkSettlementTagGroup txnCity mAmount mSettlementWindow mSettlementTermsUrl mPaymentMode mPaymentInstrument,
+      Just $ mkSettlementTagGroup txnCity mAmount mSettlementWindow mSettlementTermsUrl mPaymentParams mPaymentMode mPaymentInstrument,
       mkSettlementDetailsTagGroup mSettlementType
     ]
 
@@ -127,8 +128,8 @@ mkBuyerFinderFeeTagGroup mbff =
     [ Tag.mkTag Tag.BUYER_FINDER_FEES_PERCENTAGE (Just $ fromMaybe "0" mbff)
     ]
 
-mkSettlementTagGroup :: City -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Maybe DPM.PaymentMode -> Maybe Text -> Spec.TagGroup
-mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTermsUrl mPaymentMode mPaymentInstrument =
+mkSettlementTagGroup :: City -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Maybe BknPaymentParams -> Maybe DPM.PaymentMode -> Maybe Text -> Spec.TagGroup
+mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTermsUrl mPaymentParams mPaymentMode mPaymentInstrument =
   Tag.getFullTagGroup Tag.SETTLEMENT_TERMS $
     catMaybes
       [ Tag.mkOptionalTag Tag.STRIPE_TEST (if mPaymentMode == Just DPM.TEST then Just (show True) else Nothing),
@@ -142,6 +143,11 @@ mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTerm
           Just $ Tag.mkTag Tag.MANDATORY_ARBITRATION (Just "TRUE"),
           Just $ Tag.mkTag Tag.COURT_JURISDICTION (Just txnCity),
           Just $ Tag.mkTag Tag.STATIC_TERMS (Just $ maybe "https://api.example-bap.com/booking/terms" showBaseUrl mSettlementTermsUrl)
+        ]
+      <> catMaybes
+        [ mPaymentParams >>= (.bankCode) >>= \bc -> Tag.mkOptionalTag Tag.SETTLEMENT_BANK_CODE (Just bc),
+          mPaymentParams >>= (.bankAccNumber) >>= \ba -> Tag.mkOptionalTag Tag.SETTLEMENT_BANK_ACCOUNT_NUMBER (Just ba),
+          mPaymentParams >>= (.vpa) >>= \v -> Tag.mkOptionalTag Tag.SETTLEMENT_VIRTUAL_PAYMENT_ADDRESS (Just v)
         ]
 
 mkSettlementDetailsTagGroup :: Maybe SettlementType -> Maybe Spec.TagGroup

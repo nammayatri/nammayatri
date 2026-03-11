@@ -227,6 +227,30 @@ data SSNReq = SSNReq {ssn :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data TDSCertificateData = TDSCertificateData {overallTdsAmount :: Kernel.Types.Common.HighPrecMoney, tdsCertificates :: [TDSInvoiceEntry]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TDSCertificateValidationError = TDSCertificateValidationError {errorMessage :: Kernel.Prelude.Text, field :: Kernel.Prelude.Text, invoiceId :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TDSInvoiceEntry = TDSInvoiceEntry
+  { assessmentYear :: Kernel.Prelude.Text,
+    baseValue :: Kernel.Types.Common.HighPrecMoney,
+    gst :: Kernel.Types.Common.HighPrecMoney,
+    invoiceDate :: Kernel.Prelude.UTCTime,
+    invoiceId :: Kernel.Prelude.Text,
+    invoiceNumber :: Kernel.Prelude.Text,
+    invoiceValue :: Kernel.Types.Common.HighPrecMoney,
+    quarter :: Kernel.Prelude.Text,
+    tanNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    tdsAmountAgainstInvoice :: Kernel.Types.Common.HighPrecMoney,
+    tdsCertificateNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 newtype UpdateAirConditionUpdateRequest = UpdateAirConditionUpdateRequest {isAirConditioned :: Kernel.Prelude.Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

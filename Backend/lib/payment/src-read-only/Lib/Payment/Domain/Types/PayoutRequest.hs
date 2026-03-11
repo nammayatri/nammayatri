@@ -23,6 +23,8 @@ data PayoutRequest = PayoutRequest
     cashMarkedById :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cashMarkedByName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     city :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    coverageFrom :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    coverageTo :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     createdAt :: Kernel.Prelude.UTCTime,
     customerEmail :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     customerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -39,6 +41,7 @@ data PayoutRequest = PayoutRequest
     orderType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payoutFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     payoutTransactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    payoutType :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.PayoutRequest.PayoutType,
     remark :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     retryCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     scheduledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -59,6 +62,8 @@ data PayoutRequestStatus
   | CASH_PENDING
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
+data PayoutType = INSTANT | SCHEDULED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutRequestStatus)
 
 $(Kernel.Utils.TH.mkHttpInstancesForEnum ''PayoutRequestStatus)
@@ -72,3 +77,7 @@ instance ToHttpApiData [PayoutRequestStatus] where
   toUrlPiece = DT.decodeUtf8 . toHeader
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutType)
+
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''PayoutType)

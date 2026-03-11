@@ -301,7 +301,8 @@ createPrepaidHold counterpartyType ownerId amount currency merchantId merchantOp
                     referenceId = referenceId,
                     metadata = metadata,
                     merchantId = merchantId,
-                    merchantOperatingCityId = merchantOperatingCityId
+                    merchantOperatingCityId = merchantOperatingCityId,
+                    settlementStatus = Nothing
                   }
           entryRes <- createEntry entryInput
           case entryRes of
@@ -455,7 +456,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                           referenceId = referenceId,
                           metadata = Nothing,
                           merchantId = merchantId,
-                          merchantOperatingCityId = merchantOperatingCityId
+                          merchantOperatingCityId = merchantOperatingCityId,
+                          settlementStatus = Nothing
                         }
                 result <- createEntryWithBalanceUpdate gstEntry
                 pure $ either (const Nothing) (Just . (.id)) result
@@ -481,7 +483,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                               referenceId = referenceId,
                               metadata = Nothing,
                               merchantId = merchantId,
-                              merchantOperatingCityId = merchantOperatingCityId
+                              merchantOperatingCityId = merchantOperatingCityId,
+                              settlementStatus = Nothing
                             }
                     result <- createEntryWithBalanceUpdate liabilityEntry
                     pure $ either (const Nothing) (Just . (.id)) result
@@ -509,7 +512,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                               referenceId = referenceId,
                               metadata = Nothing,
                               merchantId = merchantId,
-                              merchantOperatingCityId = merchantOperatingCityId
+                              merchantOperatingCityId = merchantOperatingCityId,
+                              settlementStatus = Nothing
                             }
                     result <- createEntryWithBalanceUpdate tdsEntry
                     pure $ either (const Nothing) (Just . (.id)) result
@@ -534,7 +538,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                           referenceId = referenceId,
                           metadata = metadata,
                           merchantId = merchantId,
-                          merchantOperatingCityId = merchantOperatingCityId
+                          merchantOperatingCityId = merchantOperatingCityId,
+                          settlementStatus = Nothing
                         }
                 result <- createEntryWithBalanceUpdate creditEntry
                 pure $ either (const Nothing) (Just . (.id)) result
@@ -647,7 +652,8 @@ debitPrepaidBalance counterpartyType ownerId finalFare revenueAmount currency me
                       referenceId = referenceId,
                       metadata = Nothing,
                       merchantId = merchantId,
-                      merchantOperatingCityId = merchantOperatingCityId
+                      merchantOperatingCityId = merchantOperatingCityId,
+                      settlementStatus = Nothing
                     }
             _ <- createEntryWithBalanceUpdate revenueEntry
             pure ()
@@ -716,7 +722,8 @@ handleSubscriptionExpiry purchase = do
                       referenceId = referenceId,
                       metadata = Nothing,
                       merchantId = merchantId,
-                      merchantOperatingCityId = merchantOperatingCityId
+                      merchantOperatingCityId = merchantOperatingCityId,
+                      settlementStatus = Nothing
                     }
             _ <- createEntryWithBalanceUpdate revenueEntry
             pure ()
@@ -734,7 +741,8 @@ handleSubscriptionExpiry purchase = do
                     referenceId = referenceId,
                     metadata = Nothing,
                     merchantId = merchantId,
-                    merchantOperatingCityId = merchantOperatingCityId
+                    merchantOperatingCityId = merchantOperatingCityId,
+                    settlementStatus = Nothing
                   }
           _ <- createEntryWithBalanceUpdate creditTransferEntry
           pure ()

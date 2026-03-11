@@ -23,7 +23,6 @@
         "mock-idfy"
         "mock-payment"
         "mock-google"
-        "kafka-consumers"
         "mock-rider-platform"
         "sdk-event-pipeline"
         "special-zone"
@@ -54,7 +53,6 @@
         "mock-idfy-exe"
         "mock-payment-exe"
         "mock-google-exe"
-        "kafka-consumers-exe"
         "mock-rider-platform-exe"
         "sdk-event-pipeline-exe"
         "special-zone-exe"
@@ -250,6 +248,7 @@
         packages = with pkgs; [
           redis # redis-cli is used in scripts.nix
           openssh # sftp binary for SFTP upload support
+          sshpass # For password-based SFTP authentication
           jq
           gdal
           postgis

@@ -22,6 +22,7 @@ where
 
 import qualified Data.Aeson as A
 import Data.Time (utctDay)
+import Domain.Action.UI.DriverWallet (makePayoutEntryIdsKey)
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.DriverFee as DDF
@@ -220,6 +221,15 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                         payoutOrder.id.getId
                         (Just metadata)
                         >>= fromEitherM (\err -> InternalError ("Failed to create wallet payout entry: " <> show err))
+
+                    -- Settle the covered ledger entries (mark as PAID_OUT)
+                    whenJust mbPayoutReq $ \payoutReq -> do
+                      mbEntryIds <- Redis.get (makePayoutEntryIdsKey payoutReq.id.getId)
+                      case mbEntryIds of
+                        Just entryIds -> do
+                          settleWalletEntries (map Id entryIds) payoutReq.id.getId
+                          Redis.del (makePayoutEntryIdsKey payoutReq.id.getId)
+                        Nothing -> logInfo $ "No stashed entry IDs found for payoutRequest " <> payoutReq.id.getId
 
                   -- Update PayoutRequest status
                   whenJust mbPayoutReq $ \payoutReq -> do

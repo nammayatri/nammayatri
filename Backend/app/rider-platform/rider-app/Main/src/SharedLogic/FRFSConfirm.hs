@@ -23,6 +23,7 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person
 import qualified Domain.Types.RouteDetails as DRD
+import qualified Domain.Types.Seat as Seat
 import qualified Domain.Types.Trip as DTrip
 import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, null, readMaybe, toList, whenJust)
 import qualified ExternalBPP.CallAPI.Init as CallExternalBPP
@@ -101,6 +102,13 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 Just (fromIdx, toIdx) -> do
                   holdId <- generateGUID
                   let ttl' = 300
+
+                  -- validate seat quota
+                  seats <- mapM QSeat.findById allSeatIds
+                  case mapM_ (validateQuota fromIdx toIdx) seats of
+                    Left err -> throwError err
+                    Right () -> pure ()
+
                   success <- SeatBooking.holdSeats tripId allSeatIds fromIdx toIdx holdId ttl'
                   unless success $
                     throwError (InvalidRequest "Selected seat is no longer available.")
@@ -169,6 +177,16 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
             pure (rider, updatedBooking)
         )
         (pure mbBooking)
+
+    validateQuota :: Int -> Int -> Maybe Seat.Seat -> Either GenericError ()
+    validateQuota fromIdx toIdx mbSeat =
+      case mbSeat of
+        Nothing ->
+          Left (InvalidRequest "Selected seat not found.")
+        Just seat ->
+          if JourneyUtils.meetsSeatQuota fromIdx toIdx seat
+            then Right ()
+            else Left (InvalidRequest "One or more selected seats are reserved for longer journeys.")
 
     buildAndCreateBooking :: CallExternalBPP.FRFSConfirmFlow m r c => Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> FRFSUtils.FRFSFareParameters -> Maybe Bool -> Maybe (Text, Int, Int) -> Maybe Text -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
     buildAndCreateBooking rider quote'@DFRFSQuote.FRFSQuote {..} fareParameters mbMockPayment mbHoldCtxForAll firstTripId = do

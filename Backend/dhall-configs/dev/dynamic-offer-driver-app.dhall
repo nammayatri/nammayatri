@@ -292,6 +292,7 @@ let AllocatorJobType =
       | ProcessReminder
       | ExpireSubscriptionPurchase
       | Reconciliation
+      | ScheduledBatchPayout
       >
 
 let jobInfoMapx =
@@ -350,6 +351,7 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.Reconciliation, mapValue = True }
+      , { mapKey = AllocatorJobType.ScheduledBatchPayout, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig =
@@ -497,7 +499,7 @@ in  { esqDBCfg
     , modelNamesMap
     , incomingAPIResponseTimeout = +15
     , internalEndPointMap = common.internalEndPointMap
-    , _version = "2.0.0"
+    , _version = "2.1.0"
     , cacConfig
     , tsServiceConfig
     , cacTenants

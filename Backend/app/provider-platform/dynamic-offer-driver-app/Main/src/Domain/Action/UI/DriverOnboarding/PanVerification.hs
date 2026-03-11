@@ -84,7 +84,6 @@ data DriverPanReq = DriverPanReq
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-
 type DriverPanRes = APISuccess
 
 verifyPan ::

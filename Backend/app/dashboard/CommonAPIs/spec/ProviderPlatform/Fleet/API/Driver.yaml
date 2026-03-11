@@ -586,14 +586,14 @@ apis:
         type: FleetDriverStatsListRes
       helperApi:
         - GET:
-            endpoint: /{fleetOwnerId}/fleet/driver/list/stats
+            endpoint: /{requestorId}/fleet/driver/list/stats
             auth: ApiAuthV2
             params:
-              fleetOwnerId: Text
+              requestorId: Text
             query:
               - from: Day
               - to: Day
-              - requestorId: Text
+              - fleetOwnerId: Text
               - search: Text
               - limit: Int
               - offset: Int
