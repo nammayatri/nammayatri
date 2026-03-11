@@ -7,6 +7,7 @@ import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
+import qualified EulerHS.Prelude
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
@@ -14,6 +15,27 @@ import Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
+
+data ErssStatusUpdateReq = ErssStatusUpdateReq
+  { idSource :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    idErss :: Kernel.Prelude.Text,
+    currentStatus :: Kernel.Prelude.Text,
+    statusDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    comments :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    lastUpdatedTime :: Kernel.Prelude.Maybe EulerHS.Prelude.Integer
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ErssStatusUpdateRes = ErssStatusUpdateRes
+  { resultCode :: Kernel.Prelude.Text,
+    resultString :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    errorMsg :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    message :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    payLoad :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data ExternalSOSTriggerSource
   = FRONTEND
@@ -90,7 +112,7 @@ data SosType
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("sos" :> (GetSosTracking :<|> GetSosDetails :<|> PostSosCallExternalSOS))
+type API = ("sos" :> (GetSosTracking :<|> GetSosDetails :<|> PostSosCallExternalSOS :<|> PostSosErssStatusUpdate))
 
 type GetSosTracking = (Capture "sosId" (Kernel.Types.Id.Id Dashboard.Common.Sos) :> "tracking" :> Get '[JSON] SosTrackingRes)
 
@@ -98,21 +120,25 @@ type GetSosDetails = (Capture "sosId" (Kernel.Types.Id.Id Dashboard.Common.Sos) 
 
 type PostSosCallExternalSOS = (Capture "sosId" (Kernel.Types.Id.Id Dashboard.Common.Sos) :> "callExternalSOS" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
+type PostSosErssStatusUpdate = ("erss" :> "statusUpdate" :> ReqBody '[JSON] ErssStatusUpdateReq :> Post '[JSON] ErssStatusUpdateRes)
+
 data SosAPIs = SosAPIs
   { getSosTracking :: Kernel.Types.Id.Id Dashboard.Common.Sos -> EulerHS.Types.EulerClient SosTrackingRes,
     getSosDetails :: Kernel.Types.Id.Id Dashboard.Common.Sos -> EulerHS.Types.EulerClient SosDetailsMaybeRes,
-    postSosCallExternalSOS :: Kernel.Types.Id.Id Dashboard.Common.Sos -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postSosCallExternalSOS :: Kernel.Types.Id.Id Dashboard.Common.Sos -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postSosErssStatusUpdate :: ErssStatusUpdateReq -> EulerHS.Types.EulerClient ErssStatusUpdateRes
   }
 
 mkSosAPIs :: (Client EulerHS.Types.EulerClient API -> SosAPIs)
 mkSosAPIs sosClient = (SosAPIs {..})
   where
-    getSosTracking :<|> getSosDetails :<|> postSosCallExternalSOS = sosClient
+    getSosTracking :<|> getSosDetails :<|> postSosCallExternalSOS :<|> postSosErssStatusUpdate = sosClient
 
 data SosUserActionType
   = GET_SOS_TRACKING
   | GET_SOS_DETAILS
   | POST_SOS_CALL_EXTERNAL_SOS
+  | POST_SOS_ERSS_STATUS_UPDATE
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

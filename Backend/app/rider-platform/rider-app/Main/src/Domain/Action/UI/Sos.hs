@@ -9,12 +9,10 @@ import AWS.S3 as S3
 import Control.Applicative
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Foldable as Foldable
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as List
 import Data.Text as T hiding (map)
-import qualified Data.Text.Encoding as TE
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.Time.Format
 import qualified Domain.Action.UI.Call as DUCall
@@ -61,7 +59,6 @@ import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Safety.Storage.Queries.SafetySettingsExtra as QSafetyExtra
-import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Person as SLP
@@ -128,7 +125,7 @@ newtype AddSosVideoRes = AddSosVideoRes
 
 data ExternalStatusEntry = ExternalStatusEntry
   { status :: Text,
-    idErss :: Maybe Text,
+    idErss :: Text,
     lastUpdatedTime :: Maybe Integer
   }
   deriving stock (Eq, Show, Generic)
@@ -1075,38 +1072,6 @@ resolveLocation mbCustomerLoc person mbRide =
 extractStateCode :: SOSInterface.SOSServiceConfig -> Maybe Text
 extractStateCode (SOSInterface.ERSSConfig cfg) = cfg.stateCode
 extractStateCode _ = Nothing
-
-postSosErssStatusUpdate :: API.Types.UI.Sos.ErssStatusUpdateReq -> Flow API.Types.UI.Sos.ErssStatusUpdateRes
-postSosErssStatusUpdate req = do
-  erssStatusUpdateRateLimitOptions <- asks (.erssStatusUpdateRateLimitOptions)
-  checkSlidingWindowLimitWithOptions erssStatusUpdateHitsCountKey erssStatusUpdateRateLimitOptions
-  trackingId <- req.idErss & fromMaybeM (InvalidRequest "idErss is required")
-  sosDetails <-
-    SafetyQSos.findByExternalReferenceId (Just trackingId)
-      >>= fromMaybeM (InvalidRequest $ "No SOS found for tracking ID: " <> trackingId)
-
-  let previousStatus = sosDetails.externalReferenceStatus
-      newStatus = req.currentStatus
-      newEntry = ExternalStatusEntry {status = newStatus, idErss = req.idErss, lastUpdatedTime = req.lastUpdatedTime}
-      existingHistory = maybe [] (\h -> fromMaybe [] (A.decode (LBS.fromStrict $ TE.encodeUtf8 h))) sosDetails.externalStatusHistory :: [ExternalStatusEntry]
-      updatedHistory = existingHistory <> [newEntry]
-      updatedHistoryJson = Just $ TE.decodeUtf8 $ LBS.toStrict $ A.encode updatedHistory
-
-  SafetyQSos.updateExternalReferenceStatus (Just newStatus) updatedHistoryJson sosDetails.id
-
-  when (newStatus == "RESOLVED") $ do
-    SafetyQSos.updateStatus SafetyDSos.Resolved sosDetails.id
-
-  logInfo $ "ERSS status update received for SOS " <> sosDetails.id.getId <> ": " <> fromMaybe "none" previousStatus <> " -> " <> newStatus
-
-  pure $
-    API.Types.UI.Sos.ErssStatusUpdateRes
-      { resultCode = "OPERATION_SUCCESS",
-        resultString = Just "Status update received successfully",
-        errorMsg = Nothing,
-        message = Nothing,
-        payLoad = Nothing
-      }
 
 flowToSOSService :: DRC.ExternalSOSFlow -> SOS.SOSService
 flowToSOSService DRC.ERSS = SOS.ERSS
