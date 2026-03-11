@@ -1224,6 +1224,24 @@ data GimsOperationAnchor = GimsOperationAnchor
 instance HideSecrets GimsOperationAnchor where
   hideSecrets = identity
 
+-- | Request body for the fleet-operator verify endpoint.
+-- Used to validate conductor badge token and device serial number.
+data GimsVerifyReq = GimsVerifyReq
+  { operator_badge_token :: Text,
+    device_serial_number :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+instance HideSecrets GimsVerifyReq where
+  hideSecrets = identity
+
+-- | Response body from the fleet-operator verify endpoint.
+-- A 200 OK response with this body indicates successful validation.
+newtype GimsVerifyResp = GimsVerifyResp
+  { verified :: Bool
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
 -- Filter operators for query endpoint
 data FilterOperator = Eq | NotEq | Gt | Lt | Like
   deriving (Show, Eq, Ord, Generic, ToSchema)

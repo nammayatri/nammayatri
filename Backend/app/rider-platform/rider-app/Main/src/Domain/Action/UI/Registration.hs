@@ -48,6 +48,9 @@ module Domain.Action.UI.Registration
   )
 where
 
+-- import qualified Lib.Yudhishthira.Event as Yudhishthira
+
+import qualified BecknV2.OnDemand.Enums as BecknSpec
 import qualified Data.Aeson as A
 import Data.Aeson.Types ((.:), (.:?))
 import Data.Either.Extra (eitherToMaybe)
@@ -58,6 +61,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Domain.Action.UI.Person as SP
 import qualified Domain.Types.Depot as DDepot
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -79,8 +83,6 @@ import qualified Kernel.External.Types as Language
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
 import Kernel.Storage.Clickhouse.Config
--- import qualified Lib.Yudhishthira.Event as Yudhishthira
-
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
@@ -103,6 +105,9 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
+import qualified SharedLogic.External.Nandi.Flow as NandiFlow
+import SharedLogic.External.Nandi.Types (GimsVerifyReq (..))
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.OTP as SOTP
 import qualified SharedLogic.Person as SLP
@@ -121,6 +126,7 @@ import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
+import qualified Tools.MultiModal as MM
 import qualified Tools.Notifications as Notify
 import Tools.SignatureResponseBody (SignatureResponseConfig (..), SignedResponse, wrapWithSignature)
 import Tools.Whatsapp
@@ -146,7 +152,12 @@ data AuthReq = AuthReq
     enableOtpLessRide :: Maybe Bool,
     allowBlockedUserLogin :: Maybe Bool,
     isOperatorReq :: Maybe Bool,
-    reuseToken :: Maybe Bool
+    reuseToken :: Maybe Bool,
+    -- | Conductor tablet authentication fields
+    operatorBadgeToken :: Maybe Text,
+    deviceSerialNumber :: Maybe Text,
+    -- | The vehicle type (e.g. "BUS") used to resolve the IBC config
+    vehicleType :: Maybe BecknSpec.VehicleCategory
   }
   deriving (Generic, ToJSON, Show, ToSchema)
 
@@ -174,6 +185,9 @@ instance A.FromJSON AuthReq where
         <*> obj .:? "allowBlockedUserLogin"
         <*> obj .:? "isOperatorReq"
         <*> obj .:? "reuseToken"
+        <*> obj .:? "operatorBadgeToken"
+        <*> obj .:? "deviceSerialNumber"
+        <*> obj .:? "vehicleType"
     A.String s ->
       case A.eitherDecodeStrict (TE.encodeUtf8 s) of
         Left err -> fail err
@@ -325,15 +339,16 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
         mobileNumberHash <- getDbHash mobileNumber
         person <-
           Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
-            >>= maybe (createPerson req SP.MOBILENUMBER notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) cloudType merchant Nothing) return
+            >>= maybe (createPerson req SP.MOBILENUMBER notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) cloudType merchant Nothing Nothing) return
         return (person, otpChannel)
       SP.EMAIL -> do
         email <- req.email & fromMaybeM (InvalidRequest "Email is required for email auth")
         person <-
           Person.findByEmailAndMerchantId merchant.id email
-            >>= maybe (createPerson req SP.EMAIL Nothing mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) cloudType merchant Nothing) return
+            >>= maybe (createPerson req SP.EMAIL Nothing mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) cloudType merchant Nothing Nothing) return
         return (person, SOTP.EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar auth is not supported"
+      _ -> throwError $ InvalidRequest "Conductor token auth is not supported"
 
   when (fromMaybe False person.authBlocked && maybe False (now <) person.blockedUntil) $ throwError IpHitsLimitExceeded
   void $ cachePersonOTPChannel person.id otpChannel
@@ -431,7 +446,8 @@ signatureAuth ::
     EsqDBFlow m r,
     EncFlow m r,
     HasKafkaProducer r,
-    ClickhouseFlow m r
+    ClickhouseFlow m r,
+    HasShortDurationRetryCfg r c
   ) =>
   AuthReq ->
   Maybe Version ->
@@ -442,6 +458,92 @@ signatureAuth ::
   m AuthRes
 signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice = do
   let req = if req'.merchantId.getShortId == "YATRI" then req' {merchantId = ShortId "NAMMA_YATRI"} else req'
+  let identifierType = fromMaybe SP.MOBILENUMBER req.identifierType
+  case identifierType of
+    SP.CONDUCTORTOKEN -> conductorTokenAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
+    _ -> mobileSignatureAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
+
+-- | Handle conductor tablet authentication via GIMS badge-token verification.
+conductorTokenAuth ::
+  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType],
+    CacheFlow m r,
+    DB.EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasKafkaProducer r,
+    ClickhouseFlow m r,
+    HasShortDurationRetryCfg r c
+  ) =>
+  AuthReq ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
+  Maybe Text ->
+  m AuthRes
+conductorTokenAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice = do
+  badgeToken <- req.operatorBadgeToken & fromMaybeM (InvalidRequest "operatorBadgeToken is required for ConductorToken auth")
+  serialNo <- req.deviceSerialNumber & fromMaybeM (InvalidRequest "deviceSerialNumber is required for ConductorToken auth")
+  mbCloudType <- asks (.cloudType)
+  smsCfg <- asks (.smsCfg)
+  merchant <-
+    QMerchant.findByShortId req.merchantId
+      >>= fromMaybeM (MerchantNotFound $ getShortId req.merchantId)
+  let city = merchant.defaultCity
+  merchantOpCity <-
+    CQMOC.findByMerchantShortIdAndCity req.merchantId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> req.merchantId.getShortId <> " ,city: " <> show city)
+  bppConfig <- SIBC.findIntegratedBPPConfig Nothing merchantOpCity.id (fromMaybe BecknSpec.BUS req.vehicleType) DIBC.MULTIMODAL
+  baseUrl <- MM.getOTPRestServiceReq bppConfig.merchantId merchantOpCity.id
+  let gtfsId = bppConfig.feedKey
+  -- Call GIMS verify endpoint
+  verifyResp <-
+    NandiFlow.gimsVerifyConductor
+      baseUrl
+      gtfsId
+      GimsVerifyReq
+        { operator_badge_token = badgeToken,
+          device_serial_number = serialNo
+        }
+  unless verifyResp.verified $
+    throwError $ InvalidRequest "GIMS verification failed"
+  person <-
+    Person.findByOperatorBadgeTokenAndMerchantId (Just badgeToken) merchant.id
+      >>= maybe (do createPerson req SP.CONDUCTORTOKEN Nothing mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) mbCloudType merchant Nothing (Just badgeToken))
+        pure
+  let entityId = getId $ person.id
+      useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
+      scfg = sessionConfig smsCfg
+      mkId = getId $ merchant.id
+  regToken <- makeSession SR.SIGNATURE scfg entityId mkId useFakeOtpM False
+  if not person.blocked
+    then do
+      deploymentVersion <- asks (.version)
+      void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion mbRnVersion mbCloudType
+      _ <- RegistrationToken.create regToken
+      _ <- RegistrationToken.setDirectAuth regToken.id SR.SIGNATURE
+      personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll req.deviceToken
+      return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) person.blocked Nothing Nothing
+    else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked Nothing Nothing
+
+-- | Original mobile-number based signature auth flow.
+mobileSignatureAuth ::
+  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType],
+    CacheFlow m r,
+    DB.EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasKafkaProducer r,
+    ClickhouseFlow m r
+  ) =>
+  AuthReq ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
+  Maybe Text ->
+  m AuthRes
+mobileSignatureAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice = do
   runRequestValidation validateSignatureAuthReq req
   smsCfg <- asks (.smsCfg)
   mbCloudType <- asks (.cloudType)
@@ -457,7 +559,7 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVer
   mobileNumberHash <- getDbHash mobileNumberDecrypted
   person <-
     Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
-      >>= maybe (createPerson reqWithMobileNumebr SP.MOBILENUMBER notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) mbCloudType merchant Nothing) return
+      >>= maybe (createPerson reqWithMobileNumebr SP.MOBILENUMBER notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) mbCloudType merchant Nothing Nothing) return
   let entityId = getId $ person.id
       useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
       scfg = sessionConfig smsCfg
@@ -630,8 +732,9 @@ buildPerson ::
   Context.City ->
   Id DMOC.MerchantOperatingCity ->
   Maybe (Id DPO.PartnerOrganization) ->
+  Maybe Text ->
   m SP.Person
-buildPerson req identifierType notificationToken clientBundleVersion clientSdkVersion clientConfigVersion mbRnVersion clientDevice mbCloudType merchant currentCity merchantOperatingCityId mbPartnerOrgId = do
+buildPerson req identifierType notificationToken clientBundleVersion clientSdkVersion clientConfigVersion mbRnVersion clientDevice mbCloudType merchant currentCity merchantOperatingCityId mbPartnerOrgId mbOperatorBadgeToken = do
   pid <- BC.generateGUID
   now <- getCurrentTime
   let useFakeOtp =
@@ -736,7 +839,8 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         businessProfileVerified = Nothing,
         businessEmail = encBusinessEmail,
         paymentMode = Nothing,
-        cloudType = mbCloudType
+        cloudType = mbCloudType,
+        operatorBadgeToken = mbOperatorBadgeToken
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
@@ -890,8 +994,9 @@ createPerson ::
   Maybe CloudType ->
   DMerchant.Merchant ->
   Maybe (Id DPO.PartnerOrganization) ->
+  Maybe Text ->
   m SP.Person
-createPerson req identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbCloudType merchant mbPartnerOrgId = do
+createPerson req identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbCloudType merchant mbPartnerOrgId mbOperatorBadgeToken = do
   let currentCity = merchant.defaultCity
   merchantOperatingCityId <-
     CQMOC.findByMerchantIdAndCity merchant.id currentCity
@@ -900,7 +1005,7 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
           ( MerchantOperatingCityNotFound $
               "merchantId: " <> merchant.id.getId <> " ,city: " <> show currentCity
           )
-  person <- buildPerson req identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbCloudType merchant currentCity merchantOperatingCityId mbPartnerOrgId
+  person <- buildPerson req identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbCloudType merchant currentCity merchantOperatingCityId mbPartnerOrgId mbOperatorBadgeToken
   createPersonStats <- makePersonStats person
   Person.create person
   QPS.create createPersonStats
@@ -1081,11 +1186,14 @@ createPersonWithPhoneNumber merchantId phoneNumber countryCode' = do
                 enableOtpLessRide = Nothing,
                 allowBlockedUserLogin = Nothing,
                 isOperatorReq = Nothing,
-                reuseToken = Nothing
+                reuseToken = Nothing,
+                operatorBadgeToken = Nothing,
+                deviceSerialNumber = Nothing,
+                vehicleType = Nothing
               }
       cloudType <- asks (.cloudType)
       createdPerson <-
-        createPerson authReq SP.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing cloudType merchant Nothing
+        createPerson authReq SP.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing cloudType merchant Nothing Nothing
       pure $ createdPerson.id
 
 ---------- Business Email Verification --------

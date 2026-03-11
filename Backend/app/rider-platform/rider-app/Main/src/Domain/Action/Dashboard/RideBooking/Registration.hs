@@ -75,5 +75,8 @@ buildAuthReq merchantShortId req =
       enableOtpLessRide = Nothing,
       allowBlockedUserLogin = Nothing,
       isOperatorReq = Nothing,
-      reuseToken = Nothing
+      reuseToken = Nothing,
+      operatorBadgeToken = Nothing,
+      deviceSerialNumber = Nothing,
+      vehicleType = Nothing
     }

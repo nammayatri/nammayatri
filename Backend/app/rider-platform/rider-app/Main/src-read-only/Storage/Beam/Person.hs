@@ -93,6 +93,7 @@ data PersonT f = PersonT
     mobileNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     nightSafetyChecks :: B.C f Kernel.Prelude.Bool,
     notificationToken :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    operatorBadgeToken :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     passwordHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     paymentMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode),
     payoutVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

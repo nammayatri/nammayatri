@@ -90,6 +90,7 @@ data PersonE e = Person
     mobileNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     nightSafetyChecks :: Kernel.Prelude.Bool,
     notificationToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    operatorBadgeToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     passwordHash :: Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash,
     paymentMode :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,
     payoutVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -192,6 +193,7 @@ instance EncryptedItem Person where
           mobileNumber = mobileNumber_,
           nightSafetyChecks = nightSafetyChecks entity,
           notificationToken = notificationToken entity,
+          operatorBadgeToken = operatorBadgeToken entity,
           passwordHash = passwordHash entity,
           paymentMode = paymentMode entity,
           payoutVpa = payoutVpa entity,
@@ -286,6 +288,7 @@ instance EncryptedItem Person where
             mobileNumber = mobileNumber_,
             nightSafetyChecks = nightSafetyChecks entity,
             notificationToken = notificationToken entity,
+            operatorBadgeToken = operatorBadgeToken entity,
             passwordHash = passwordHash entity,
             paymentMode = paymentMode entity,
             payoutVpa = payoutVpa entity,
@@ -319,7 +322,7 @@ instance EncryptedItem' Person where
 
 data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL deriving (Show, Eq, Read, Ord, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL | CONDUCTORTOKEN deriving (Show, Eq, Read, Ord, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data RideShareOptions = ALWAYS_SHARE | SHARE_WITH_TIME_CONSTRAINTS | NEVER_SHARE deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
