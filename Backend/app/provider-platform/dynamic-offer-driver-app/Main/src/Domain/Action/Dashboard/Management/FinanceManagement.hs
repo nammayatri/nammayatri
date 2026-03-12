@@ -9,6 +9,7 @@ module Domain.Action.Dashboard.Management.FinanceManagement
     getFinanceManagementFinanceReconciliation,
     postFinanceManagementReconciliationTrigger,
     getFinanceManagementFinancePayoutList,
+    getFinanceManagementFinancePaymentSettlementList,
     getFinanceManagementFinanceWalletLedger,
     getFinanceManagementFinanceEarningSummary,
   )
@@ -16,6 +17,7 @@ where
 
 import qualified API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement as API
 import Control.Monad (forM)
+import Data.List (nub)
 import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
@@ -44,6 +46,7 @@ import qualified Lib.Finance.Domain.Types.Account as Account
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerEntry
+import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as PgPaymentSettlementReport
 import qualified Lib.Finance.Domain.Types.ReconciliationEntry as ReconciliationEntry
 import qualified Lib.Finance.Domain.Types.ReconciliationSummary as ReconSummary
 import qualified Lib.Finance.Ledger.Service as LedgerService
@@ -54,7 +57,9 @@ import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtr
 import qualified Lib.Finance.Storage.Queries.InvoiceLedgerLink as QInvoiceLedgerLink
 import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedgerEntry
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntryExtra
+import qualified Lib.Finance.Storage.Queries.PgPaymentSettlementReportExtra as QPgPaymentSettlementReport
 import qualified Lib.Finance.Storage.Queries.ReconciliationEntry as QReconEntry
+import qualified Lib.Finance.Storage.Queries.ReconciliationEntryExtra as QReconEntryExtra
 import qualified Lib.Finance.Storage.Queries.ReconciliationSummary as QReconSummary
 import qualified Lib.Payment.Domain.Types.PayoutOrder as PayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutOrderExtra as QPayoutOrder
@@ -73,6 +78,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SubscriptionPurchase as QSubscriptionPurchase
+import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
 import Tools.Encryption (decryptWithDefault)
 import Tools.Error
 
@@ -624,6 +630,181 @@ getFinanceManagementFinancePayoutList merchantShortId opCity mbDriverId mbFleetO
           payoutDate = Just po.createdAt,
           payoutStatus = Just (show po.status)
         }
+
+getFinanceManagementFinancePaymentSettlementList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Flow API.PaymentSettlementListRes
+getFinanceManagementFinancePaymentSettlementList merchantShortId opCity mbDriverId mbFleetOwnerId mbFrom mbLimit mbOffset mbOrderId mbSettlementId mbSubscriptionPurchaseId mbTo = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+
+  let limit = fromMaybe 20 mbLimit
+      offset = fromMaybe 0 mbOffset
+
+  reports <- case (mbDriverId, mbFleetOwnerId) of
+    (Nothing, Nothing) ->
+      QPgPaymentSettlementReport.findAllByMerchantOpCityIdWithFilters
+        merchant.id.getId
+        merchantOpCityId.getId
+        mbFrom
+        mbTo
+        mbSubscriptionPurchaseId
+        mbOrderId
+        mbSettlementId
+        (Just limit)
+        (Just offset)
+    (Just driverId, Nothing) -> fetchReportsForOwner merchantOpCityId driverId DSP.DRIVER
+    (Nothing, Just fleetOwnerId) -> fetchReportsForOwner merchantOpCityId fleetOwnerId DSP.FLEET_OWNER
+    (Just _, Just _) -> throwError $ InvalidRequest "Provide either driverId or fleetOwnerId, not both"
+
+  let selectedSubscriptionIds = reports <&> (.referenceId) & catMaybes & nub
+  latestReconEntries <- getLatestReconEntries merchant.id.getId selectedSubscriptionIds
+  settlements <- catMaybes <$> mapM (buildPaymentSettlementItem latestReconEntries mbDriverId mbFleetOwnerId) reports
+
+  let totalItems = length settlements
+      summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems}
+
+  pure API.PaymentSettlementListRes {totalItems, summary, settlements}
+  where
+    getLatestReconEntries :: Text -> [Text] -> Flow [(Text, ReconciliationEntry.ReconciliationEntry)]
+    getLatestReconEntries _ [] = pure []
+    getLatestReconEntries _ subscriptionIds = do
+      entries <- QReconEntryExtra.findBySourceIdsAndType subscriptionIds ReconciliationEntry.PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION
+      pure $ foldl' upsertLatest [] entries
+
+    pageLimit :: Int
+    pageLimit = fromMaybe 20 mbLimit
+
+    pageOffset :: Int
+    pageOffset = fromMaybe 0 mbOffset
+
+    fetchReportsForOwner :: Id DMOC.MerchantOperatingCity -> Text -> DSP.SubscriptionOwnerType -> Flow [PgPaymentSettlementReport.PgPaymentSettlementReport]
+    fetchReportsForOwner merchantOpCityId ownerId ownerType = do
+      subscriptions <- QSubscriptionPurchaseExtra.findAllByOwnerWithFilters merchantOpCityId ownerId ownerType Nothing mbFrom mbTo Nothing Nothing
+      let subscriptionIds =
+            subscriptions
+              & filter (\subscription -> maybe True (== subscription.id.getId) mbSubscriptionPurchaseId)
+              & map (.id.getId)
+
+      if null subscriptionIds
+        then pure []
+        else do
+          reportsBySubscription <- QPgPaymentSettlementReport.findByReferenceIds subscriptionIds
+          pure $
+            reportsBySubscription
+              & filter (\report -> maybe True (== report.orderId) mbOrderId)
+              & filter (\report -> maybe True (\settlementId -> report.settlementId == Just settlementId) mbSettlementId)
+              & sortOn (Down . (.createdAt))
+              & drop pageOffset
+              & take pageLimit
+
+    upsertLatest ::
+      [(Text, ReconciliationEntry.ReconciliationEntry)] ->
+      ReconciliationEntry.ReconciliationEntry ->
+      [(Text, ReconciliationEntry.ReconciliationEntry)]
+    upsertLatest acc entry = case entry.sourceId of
+      Nothing -> acc
+      Just sourceId ->
+        let shouldReplace existing =
+              entry.reconciliationDate > existing.reconciliationDate
+                || ( entry.reconciliationDate == existing.reconciliationDate
+                       && entry.updatedAt > existing.updatedAt
+                   )
+            merge [] = [(sourceId, entry)]
+            merge ((key, existing) : rest)
+              | key /= sourceId = (key, existing) : merge rest
+              | shouldReplace existing = (sourceId, entry) : rest
+              | otherwise = (key, existing) : rest
+         in merge acc
+
+    buildPaymentSettlementItem ::
+      [(Text, ReconciliationEntry.ReconciliationEntry)] ->
+      Maybe Text ->
+      Maybe Text ->
+      PgPaymentSettlementReport.PgPaymentSettlementReport ->
+      Flow (Maybe API.PaymentSettlementListItem)
+    buildPaymentSettlementItem latestReconEntries mbDriverID mbFleetOwnerID report = do
+      mbSubscription <- case report.referenceId of
+        Just subscriptionPurchaseId -> QSubscriptionPurchase.findByPrimaryKey (Id subscriptionPurchaseId)
+        Nothing -> pure Nothing
+
+      let ownerMatches = case (mbDriverID, mbFleetOwnerID, mbSubscription) of
+            (Nothing, Nothing, _) -> True
+            (Just driverId, _, Just subscription) -> subscription.ownerType == DSP.DRIVER && subscription.ownerId == driverId
+            (_, Just fleetOwnerId, Just subscription) -> subscription.ownerType == DSP.FLEET_OWNER && subscription.ownerId == fleetOwnerId
+            _ -> False
+
+      mbDriver <- case mbSubscription of
+        Just subscription -> QPerson.findById (Id subscription.ownerId)
+        Nothing -> pure Nothing
+
+      driverMobileNo <- case mbDriver of
+        Just driver -> decryptWithDefault driver.mobileNumber Nothing
+        Nothing -> pure Nothing
+
+      let driverName = mkFullName <$> mbDriver
+          driverEmailId = mbDriver >>= (.email)
+          netAmount = Just $ report.txnAmount - report.pgBaseFee - report.pgTax
+          reconciliationEntry = report.referenceId >>= (`Kernel.Prelude.lookup` latestReconEntries)
+
+      pure $
+        if ownerMatches
+          then
+            Just
+              API.PaymentSettlementListItem
+                { subscriptionPurchaseId = report.referenceId,
+                  merchantRefNo = Just report.merchantId,
+                  merchantOperatingCityId = Just report.merchantOperatingCityId,
+                  pgApprovalCode = report.pgApprovalCode,
+                  pgOrderId = Just report.orderId,
+                  transactionDateAndTime = report.txnDate,
+                  transactionType =
+                    Just
+                      ( case report.txnType of
+                          PgPaymentSettlementReport.ORDER -> "Payment"
+                          PgPaymentSettlementReport.REFUND -> "Refund"
+                      ),
+                  chargedAmount = Just report.txnAmount,
+                  paymentStatus = Just $ show report.txnStatus,
+                  pgFees = Just report.pgBaseFee,
+                  gstOnPgFees = Just report.pgTax,
+                  netAmount = netAmount,
+                  merchantId = Just report.merchantId,
+                  paymentMode = show <$> report.paymentMethod,
+                  driverName = driverName,
+                  driverMobileNo = driverMobileNo,
+                  driverEmailId = driverEmailId,
+                  pgName = report.paymentGateway,
+                  chargebackAmount = Nothing,
+                  chargebackId = report.chargebackId,
+                  chargebackReasonCode = report.chargebackReasonCode,
+                  chargebackStatus = report.chargebackStatus,
+                  representmentStatus = Nothing,
+                  settlementId = report.settlementId,
+                  settlementDate = report.settlementDate,
+                  settlementCycle = Nothing,
+                  settlementAmount = Just report.settlementAmount,
+                  utr = report.utr,
+                  settlementStatus = Nothing,
+                  rrnNo = report.rrn,
+                  reconciliationStatus = show . (.reconStatus) <$> reconciliationEntry,
+                  reconciliationDate = (.reconciliationDate) <$> reconciliationEntry,
+                  differenceAmount = (.variance) <$> reconciliationEntry
+                }
+          else Nothing
+
+    mkFullName :: DP.Person -> Text
+    mkFullName person = T.intercalate " " $ catMaybes [Just person.firstName, person.middleName, person.lastName]
 
 -- | Get wallet ledger with filters.
 -- API/spec order is: limit, offset, driverId, fleetOperatorId, from, to, sourceType.

@@ -74,6 +74,23 @@ apis:
       response:
         type: PayoutListRes
 
+  # ----- Payment settlement list -----
+  - GET: # PaymentSettlementListAPI
+      endpoint: /finance/payment/settlement/list
+      query:
+        limit: Int
+        offset: Int
+        from: UTCTime
+        to: UTCTime
+        subscriptionPurchaseId: Text
+        orderId: Text
+        settlementId: Text
+        driverId: Text
+        fleetOwnerId: Text
+      auth: ApiAuthV2
+      response:
+        type: PaymentSettlementListRes
+
   # ----- Wallet ledger (balance + ledger entries combined) -----
   - GET: # WalletLedgerAPI
       endpoint: /finance/wallet/ledger
@@ -267,6 +284,46 @@ types:
     - payoutAmount: Maybe HighPrecMoney
     - payoutDate: Maybe UTCTime
     - payoutStatus: Maybe Text
+
+  # ----- Payment settlement list -----
+  PaymentSettlementListRes:
+    - totalItems: Int
+    - summary: Summary
+    - settlements: [PaymentSettlementListItem]
+  PaymentSettlementListItem:
+    - subscriptionPurchaseId: Maybe Text
+    - merchantRefNo: Maybe Text
+    - merchantOperatingCityId: Maybe Text
+    - pgApprovalCode: Maybe Text
+    - pgOrderId: Maybe Text
+    - transactionDateAndTime: Maybe UTCTime
+    - transactionType: Maybe Text
+    - chargedAmount: Maybe HighPrecMoney
+    - paymentStatus: Maybe Text
+    - pgFees: Maybe HighPrecMoney
+    - gstOnPgFees: Maybe HighPrecMoney
+    - netAmount: Maybe HighPrecMoney
+    - merchantId: Maybe Text
+    - paymentMode: Maybe Text
+    - driverName: Maybe Text
+    - driverMobileNo: Maybe Text
+    - driverEmailId: Maybe Text
+    - pgName: Maybe Text
+    - chargebackAmount: Maybe HighPrecMoney
+    - chargebackId: Maybe Text
+    - chargebackReasonCode: Maybe Text
+    - chargebackStatus: Maybe Text
+    - representmentStatus: Maybe Text
+    - settlementId: Maybe Text
+    - settlementDate: Maybe UTCTime
+    - settlementCycle: Maybe Text
+    - settlementAmount: Maybe HighPrecMoney
+    - utr: Maybe Text
+    - settlementStatus: Maybe Text
+    - rrnNo: Maybe Text
+    - reconciliationStatus: Maybe Text
+    - reconciliationDate: Maybe UTCTime
+    - differenceAmount: Maybe HighPrecMoney
 
   # ----- Wallet ledger (balance + ledger combined) -----
   WalletLedgerRes:

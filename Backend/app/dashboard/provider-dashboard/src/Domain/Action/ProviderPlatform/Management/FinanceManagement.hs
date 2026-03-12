@@ -4,6 +4,7 @@ module Domain.Action.ProviderPlatform.Management.FinanceManagement
   ( getFinanceManagementSubscriptionPurchaseList,
     postFinanceManagementReconciliationTrigger,
     getFinanceManagementFinancePayoutList,
+    getFinanceManagementFinancePaymentSettlementList,
     getFinanceManagementFinanceWalletLedger,
     getFinanceManagementFinanceEarningSummary,
     getFinanceManagementFinanceInvoiceList,
@@ -46,6 +47,11 @@ getFinanceManagementFinancePayoutList :: (Kernel.Types.Id.ShortId Domain.Types.M
 getFinanceManagementFinancePayoutList merchantShortId opCity apiTokenInfo driverId fleetOperatorId from limit offset to = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinancePayoutList) driverId fleetOperatorId from limit offset to
+
+getFinanceManagementFinancePaymentSettlementList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.PaymentSettlementListRes)
+getFinanceManagementFinancePaymentSettlementList merchantShortId opCity apiTokenInfo driverId fleetOwnerId from limit offset orderId settlementId subscriptionPurchaseId to = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinancePaymentSettlementList) driverId fleetOwnerId from limit offset orderId settlementId subscriptionPurchaseId to
 
 getFinanceManagementFinanceWalletLedger :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.WalletLedgerRes)
 getFinanceManagementFinanceWalletLedger merchantShortId opCity apiTokenInfo limit offset driverId fleetOperatorId from to sourceType = do
