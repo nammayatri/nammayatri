@@ -306,6 +306,7 @@ import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.MetaData as QMeta
+import qualified Storage.Queries.OperationHubRequests as QOHR
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RegistrationToken as QR
@@ -1268,6 +1269,7 @@ deleteDriver admin driverId = do
   QR.deleteByPersonId driverId.getId
   QVehicle.deleteById driverId
   QDHL.deleteByDriverId driverId
+  QOHR.deleteByDriverId driverId
   QPerson.deleteById driverId
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> deleteDriver : ") (show driverId)
   return Success
