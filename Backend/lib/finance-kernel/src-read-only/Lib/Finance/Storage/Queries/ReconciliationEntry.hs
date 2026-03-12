@@ -23,16 +23,10 @@ create = createWithKV
 createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry] -> m ())
 createMany = traverse_ create
 
-findByBookingId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry]))
-findByBookingId bookingId = do findAllWithKV [Se.Is Beam.bookingId $ Se.Eq bookingId]
-
 findByDateAndType ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Kernel.Prelude.UTCTime -> Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationType -> m ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry]))
 findByDateAndType reconciliationDate reconciliationType = do findAllWithKV [Se.And [Se.Is Beam.reconciliationDate $ Se.Eq reconciliationDate, Se.Is Beam.reconciliationType $ Se.Eq reconciliationType]]
-
-findByDcoId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry]))
-findByDcoId dcoId = do findAllWithKV [Se.Is Beam.dcoId $ Se.Eq dcoId]
 
 findById ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
@@ -75,11 +69,18 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationE
       Se.Set Beam.reconStatus reconStatus,
       Se.Set Beam.reconciliationDate reconciliationDate,
       Se.Set Beam.reconciliationType reconciliationType,
+      Se.Set Beam.rrn rrn,
+      Se.Set Beam.settlementDate settlementDate,
+      Se.Set Beam.settlementId settlementId,
+      Se.Set Beam.settlementMode settlementMode,
       Se.Set Beam.sourceDetails sourceDetails,
+      Se.Set Beam.sourceId sourceId,
       Se.Set Beam.status status,
       Se.Set Beam.summaryId (Kernel.Types.Id.getId summaryId),
       Se.Set Beam.targetDetails targetDetails,
+      Se.Set Beam.targetId targetId,
       Se.Set Beam.timestamp timestamp,
+      Se.Set Beam.transactionDate transactionDate,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.variance variance
     ]
@@ -104,11 +105,18 @@ instance FromTType' Beam.ReconciliationEntry Lib.Finance.Domain.Types.Reconcilia
             reconStatus = reconStatus,
             reconciliationDate = reconciliationDate,
             reconciliationType = reconciliationType,
+            rrn = rrn,
+            settlementDate = settlementDate,
+            settlementId = settlementId,
+            settlementMode = settlementMode,
             sourceDetails = sourceDetails,
+            sourceId = sourceId,
             status = status,
             summaryId = Kernel.Types.Id.Id summaryId,
             targetDetails = targetDetails,
+            targetId = targetId,
             timestamp = timestamp,
+            transactionDate = transactionDate,
             updatedAt = updatedAt,
             variance = variance
           }
@@ -130,11 +138,18 @@ instance ToTType' Beam.ReconciliationEntry Lib.Finance.Domain.Types.Reconciliati
         Beam.reconStatus = reconStatus,
         Beam.reconciliationDate = reconciliationDate,
         Beam.reconciliationType = reconciliationType,
+        Beam.rrn = rrn,
+        Beam.settlementDate = settlementDate,
+        Beam.settlementId = settlementId,
+        Beam.settlementMode = settlementMode,
         Beam.sourceDetails = sourceDetails,
+        Beam.sourceId = sourceId,
         Beam.status = status,
         Beam.summaryId = Kernel.Types.Id.getId summaryId,
         Beam.targetDetails = targetDetails,
+        Beam.targetId = targetId,
         Beam.timestamp = timestamp,
+        Beam.transactionDate = transactionDate,
         Beam.updatedAt = updatedAt,
         Beam.variance = variance
       }

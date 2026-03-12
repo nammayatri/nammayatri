@@ -32,10 +32,16 @@ data JobStatus = COMPLETED | FAILED | IN_PROGRESS deriving (Eq, Ord, Show, Read,
 
 data ReconciliationStatus = MATCHED | HIGHER_IN_TARGET | LOWER_IN_TARGET | MISSING_IN_TARGET deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data ReconciliationType = DSR_VS_LEDGER | DSR_VS_SUBSCRIPTION | DSSR_VS_SUBSCRIPTION deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data ReconciliationType
+  = DSR_VS_LEDGER
+  | DSR_VS_SUBSCRIPTION
+  | DSSR_VS_SUBSCRIPTION
+  | PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION
+  | PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''JobStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationType))
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationStatus))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''JobStatus))

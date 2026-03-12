@@ -19,7 +19,7 @@ ReconciliationSummary:
 
     # Reconciliation types
     ReconciliationType:
-      enum: "DSR_VS_LEDGER, DSR_VS_SUBSCRIPTION, DSSR_VS_SUBSCRIPTION"
+      enum: "DSR_VS_LEDGER, DSR_VS_SUBSCRIPTION, DSSR_VS_SUBSCRIPTION, PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION, PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST"
       derive: "ToParamSchema"
 
     JobStatus:

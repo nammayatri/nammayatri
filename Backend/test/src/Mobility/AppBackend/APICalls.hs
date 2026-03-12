@@ -147,7 +147,10 @@ mkAuthReq =
       businessEmail = Nothing,
       allowBlockedUserLogin = Nothing,
       isOperatorReq = Nothing,
-      reuseToken = Nothing
+      reuseToken = Nothing,
+      operatorBadgeToken = Nothing,
+      deviceSerialNumber = Nothing,
+      vehicleType = Nothing
     }
 
 mkAuthVerifyReq :: Reg.AuthVerifyReq

@@ -486,7 +486,6 @@ getReconciliation merchantShortId opCity mbFromDate mbLimit mbOffset mbReconcili
     Nothing -> pure []
 
   entriesItems <- mapM buildReconciliationEntry entries
-
   pure $
     API.ReconciliationRes
       { summary = summaryRes,
@@ -496,23 +495,40 @@ getReconciliation merchantShortId opCity mbFromDate mbLimit mbOffset mbReconcili
   where
     buildReconciliationEntry :: ReconciliationEntry.ReconciliationEntry -> Flow API.ReconciliationEntry
     buildReconciliationEntry entry =
-      pure
-        API.ReconciliationEntry
-          { bookingId = Just entry.bookingId,
-            dcoId = Just entry.dcoId,
-            status = Just (show entry.status),
-            mode = fmap show entry.mode,
-            expectedDsrValue = Just entry.expectedDsrValue,
-            actualLedgerValue = Just entry.actualLedgerValue,
-            variance = Just entry.variance,
-            reconStatus = Just (show entry.reconStatus),
-            mismatchReason = entry.mismatchReason,
-            timestamp = Just entry.timestamp
-          }
+      let subscriptionPurchaseIdValue =
+            case entry.reconciliationType of
+              ReconciliationEntry.PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST -> Nothing
+              _ -> entry.sourceId
+       in pure
+            API.ReconciliationEntry
+              { bookingId = entry.bookingId,
+                dcoId = entry.dcoId,
+                status = fmap show entry.status,
+                mode = fmap show entry.mode,
+                expectedDsrValue = Just entry.expectedDsrValue,
+                actualLedgerValue = Just entry.actualLedgerValue,
+                variance = Just entry.variance,
+                reconStatus = Just (show entry.reconStatus),
+                mismatchReason = entry.mismatchReason,
+                timestamp = Just entry.timestamp,
+                settlementId = entry.settlementId,
+                subscriptionPurchaseId = subscriptionPurchaseIdValue,
+                sourceId = entry.sourceId,
+                targetId = entry.targetId,
+                settlementDate = entry.settlementDate,
+                transactionDate = entry.transactionDate,
+                transactionAmount = Just entry.actualLedgerValue,
+                subscriptionPurchaseAmount = Just entry.expectedDsrValue,
+                rrn = entry.rrn,
+                settlementMode = entry.settlementMode,
+                financeComponent = fmap show entry.financeComponent
+              }
     caseToReconciliationType :: Text -> ReconSummary.ReconciliationType
     caseToReconciliationType "DSR_VS_LEDGER" = ReconSummary.DSR_VS_LEDGER
     caseToReconciliationType "DSR_VS_SUBSCRIPTION" = ReconSummary.DSR_VS_SUBSCRIPTION
     caseToReconciliationType "DSSR_VS_SUBSCRIPTION" = ReconSummary.DSSR_VS_SUBSCRIPTION
+    caseToReconciliationType "PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION" = ReconSummary.PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION
+    caseToReconciliationType "PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST" = ReconSummary.PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST
     caseToReconciliationType _ = error "Invalid reconciliation type"
 
 getFinanceManagementReconciliation :: ShortId DM.Merchant -> Context.City -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe UTCTime -> Flow API.ReconciliationRes
@@ -551,6 +567,8 @@ postFinanceManagementReconciliationTrigger merchantShortId opCity req = do
     "DSR_VS_LEDGER" -> pure ()
     "DSR_VS_SUBSCRIPTION" -> pure ()
     "DSSR_VS_SUBSCRIPTION" -> pure ()
+    "PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION" -> pure ()
+    "PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST" -> pure ()
     _ -> throwError $ InvalidRequest $ "Invalid reconciliation type: " <> reconciliationType
 
   -- Create the reconciliation job data

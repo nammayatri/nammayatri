@@ -113,7 +113,18 @@ data ReconciliationEntry = ReconciliationEntry
     variance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     reconStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mismatchReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    timestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
+    timestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    settlementId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    subscriptionPurchaseId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    sourceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    targetId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    settlementDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    transactionDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    transactionAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    subscriptionPurchaseAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    rrn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    settlementMode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    financeComponent :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
