@@ -49,7 +49,8 @@ data DIssue = DIssue
     customerEmail :: Maybe Text,
     customerPhone :: Maybe Text,
     createdAt :: UTCTimeRFC3339,
-    bapId :: Text
+    bapId :: Text,
+    domain :: Spec.Domain
   }
   deriving (Show, Generic)
 
@@ -65,7 +66,8 @@ data IssueRes = IssueRes
     merchantOperatingCity :: MerchantOperatingCity,
     issueStatus :: DIGM.Status,
     bapId :: Text,
-    bppId :: Text
+    bppId :: Text,
+    domain :: Spec.Domain
   }
 
 data ValidatedDIssue = ValidatedDIssue
@@ -84,7 +86,8 @@ data ValidatedDIssue = ValidatedDIssue
     createdAt :: UTCTimeRFC3339,
     merchantOperatingCity :: MerchantOperatingCity,
     merchant :: Merchant,
-    bppId :: Text
+    bppId :: Text,
+    domain :: Spec.Domain
   }
 
 validateRequest ::
@@ -152,12 +155,16 @@ openBecknIssue dIssue@ValidatedDIssue {..} iHandle = do
             DIGM.bookingId = getId booking.id,
             DIGM.issueRaisedByMerchant = Just bapId,
             DIGM.issueStatus = issueStatus,
-            DIGM.domain = Spec.PUBLIC_TRANSPORT,
+            DIGM.domain = domain,
             DIGM.issueType = issueType,
             DIGM.respondentAction = Nothing,
             DIGM.respondentName = Nothing,
             DIGM.respondentEmail = Nothing,
             DIGM.respondentPhone = Nothing,
+            DIGM.resolutionShortDesc = Nothing,
+            DIGM.resolutionLongDesc = Nothing,
+            DIGM.resolutionActionTriggered = Nothing,
+            DIGM.resolutionRefundAmount = Nothing,
             DIGM.updatedAt = convertRFC3339ToUTC createdAt,
             DIGM.merchantId = Just booking.providerId
           }
@@ -198,7 +205,6 @@ escalateBecknIssue ValidatedDIssue {..} now = do
             DIGM.updatedAt = now
           }
   QIGM.updateByPrimaryKey updatedIssue
-  -- shrey00 : increase priority of capture issue : How?
   pure $
     IssueRes
       { issueId = issueId,
@@ -209,6 +215,7 @@ escalateBecknIssue ValidatedDIssue {..} now = do
         createdAt = UTCTimeRFC3339 igmIssue.createdAt,
         updatedAt = UTCTimeRFC3339 now,
         merchantOperatingCity = merchantOperatingCity,
+        domain = igmIssue.domain,
         ..
       }
 
@@ -243,6 +250,7 @@ closeBecknIssue ValidatedDIssue {..} now iHandle = do
         createdAt = UTCTimeRFC3339 igmIssue.createdAt,
         updatedAt = UTCTimeRFC3339 now,
         merchantOperatingCity = merchantOperatingCity,
+        domain = igmIssue.domain,
         ..
       }
 
@@ -259,4 +267,5 @@ mapType _ = throwError $ InvalidRequest "Invalid issue type"
 
 mapDomainStatusToSpecStatus :: DIGM.Status -> Maybe Text
 mapDomainStatusToSpecStatus DIGM.CLOSED = Just $ show Spec.CLOSED
+mapDomainStatusToSpecStatus DIGM.RESOLVED = Just $ show Spec.OPEN
 mapDomainStatusToSpecStatus _ = Just $ show Spec.OPEN

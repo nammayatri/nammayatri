@@ -134,7 +134,7 @@ castFindFRFSTicketBookingById ticketBookingId = do
         { id = cast booking.id,
           merchantOperatingCityId = cast booking.merchantOperatingCityId,
           merchantId = cast booking.merchantId,
-          riderId = cast booking.riderId,
+          personId = cast booking.riderId,
           fromStationCode = booking.fromStationCode,
           toStationCode = booking.toStationCode,
           vehicleType = castVehicleType booking.vehicleType,
@@ -143,6 +143,7 @@ castFindFRFSTicketBookingById ticketBookingId = do
           status = castFRFSStatus booking.status,
           createdAt = booking.createdAt,
           updatedAt = booking.updatedAt,
+          searchId = booking.searchId.getId,
           stationsJson = booking.stationsJson
         }
 
@@ -190,6 +191,8 @@ castBookingById bookingId = do
     castBooking booking =
       Common.Booking
         { id = cast booking.id,
+          personId = cast booking.riderId,
+          transactionId = booking.transactionId,
           bapId = Nothing,
           bapUri = Nothing,
           bppId = Just booking.providerId,
@@ -410,6 +413,8 @@ findLatestBookingByRiderId personId = do
     castBooking booking =
       Common.Booking
         { id = cast booking.id,
+          personId = cast booking.riderId,
+          transactionId = booking.transactionId,
           bapId = Nothing,
           bapUri = Nothing,
           bppId = Just booking.providerId,

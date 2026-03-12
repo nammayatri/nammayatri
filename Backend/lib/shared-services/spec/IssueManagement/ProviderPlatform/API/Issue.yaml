@@ -37,6 +37,11 @@ imports:
   UpdateIssueOptionReq: IssueManagement.Common.Dashboard.Issue
   UpsertIssueMessageReq: IssueManagement.Common.Dashboard.Issue
   UpsertIssueMessageRes: IssueManagement.Common.Dashboard.Issue
+  # IGM Dashboard types
+  IGMIssueDashboardResolveReq: IssueManagement.Common.Dashboard.Issue
+  RaiseIssuePayload: IssueManagement.Common.Dashboard.Issue
+  IgmIssueData: IssueManagement.Common.Dashboard.Issue
+  IgmRespondentActionPayload: IssueManagement.Common.Dashboard.Issue
 
 module: Issue
 
@@ -65,6 +70,7 @@ apis:
         - descriptionSearch: Text
         - fromDate: UTCTime
         - toDate: UTCTime
+        - source: Text
       response:
         type: IssueReportListResponse
       migrate:
@@ -209,6 +215,50 @@ apis:
       migrate:
         endpoint: IssueAPI UpsertIssueMessageEndpoint
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE UPSERT_ISSUE_MESSAGE
+
+  # -------------------------------------------------------
+  # IGM Dashboard APIs
+  # -------------------------------------------------------
+
+  - POST: # IGMIssueResolveAPI
+      endpoint: /igm/{issueReportId}/resolve
+      name: PostIGMIssueResolve
+      auth: ApiAuthV2
+      params:
+        issueReportId: Id IssueReport
+      request:
+        type: IGMIssueDashboardResolveReq
+      response:
+        type: APISuccess
+
+  - POST: # IGMIssueRaiseAPI
+      endpoint: /igm/raise
+      name: PostIGMIssueRaise
+      auth: ApiAuthV2
+      request:
+        type: RaiseIssuePayload
+      response:
+        type: APISuccess
+
+  - GET: # IGMIssueTrailAPI
+      endpoint: /igm/{issueReportId}/trail
+      name: GetIGMIssueTrail
+      auth: ApiAuthV2
+      params:
+        issueReportId: Id IssueReport
+      response:
+        type: IgmIssueData
+
+  - POST: # IGMIssueTriggerActionAPI
+      endpoint: /igm/{issueReportId}/action
+      name: PostIGMIssueTriggerAction
+      auth: ApiAuthV2
+      params:
+        issueReportId: Id IssueReport
+      request:
+        type: IgmRespondentActionPayload
+      response:
+        type: APISuccess
 
 # Did not generated any types because we need to use common types for rider and provider dashboard
 types: {}
