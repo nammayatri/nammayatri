@@ -14,6 +14,7 @@ module SharedLogic.Finance.Wallet
     walletReferenceDriverCancellationCharges,
     walletReferenceCustomerCancellationCharges,
     walletReferenceCustomerCancellationGST,
+    walletReferenceWalletIncentive,
     walletCreditRefs,
     getWalletAccountByOwner,
     getWalletBalanceByOwner,
@@ -92,6 +93,9 @@ walletReferenceTDSDeductionCancellation = "TDSDeductionCancellation"
 walletReferenceD2DReferral :: Text
 walletReferenceD2DReferral = "D2DReferral"
 
+walletReferenceWalletIncentive :: Text
+walletReferenceWalletIncentive = "WalletIncentive"
+
 -- | Single source of truth: all wallet reference types that represent
 --   redeemable credit entries (i.e. entries that increase driver wallet balance
 --   and should be tracked for settlement/payout).
@@ -110,7 +114,8 @@ walletCreditRefs =
     walletReferenceD2DReferral,
     walletReferenceCustomerCancellationCharges,
     walletReferenceDriverCancellationCharges,
-    walletReferenceCustomerCancellationGST
+    walletReferenceCustomerCancellationGST,
+    walletReferenceWalletIncentive
   ]
 
 -- Time helpers (shared across getWalletTransactions, postWalletPayout, postWalletTopup)

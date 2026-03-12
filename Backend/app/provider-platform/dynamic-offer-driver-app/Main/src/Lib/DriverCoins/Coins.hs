@@ -39,6 +39,7 @@ import qualified Domain.Types.DriverStats as DDS
 import qualified Domain.Types.FleetConfig as DFC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MonetaryRewardConfig as DWC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
 import Domain.Types.TransporterConfig
@@ -56,11 +57,14 @@ import Kernel.Utils.App (lookupCloudType)
 import Kernel.Utils.Common
 import Lib.DriverCoins.Types
 import qualified Lib.DriverCoins.Types as DCT
+import Lib.Finance (CounterpartyType (DRIVER))
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.CancellationCoins as CancellationCoins
+import qualified SharedLogic.Finance.Wallet as SLFW
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.CoinsConfig as CDCQ
+import qualified Storage.CachedQueries.MonetaryRewardConfig as CWCQ
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Coins.CoinHistory as CHistory
@@ -116,7 +120,6 @@ driverCoinsEvent driverId merchantId merchantOpCityId eventType entityId mbVehVa
   let vehCategory = DTVeh.getVehicleCategoryFromVehicleVariantDefault mbVehVarient
   logDebug $ "Driver Coins Event Triggered for merchantOpCityId - " <> merchantOpCityId.getId <> " and driverId - " <> driverId.getId <> "and vehicle category - " <> show vehCategory
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  coinConfiguration <- CDCQ.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehCategory mbConfigVersionMap
   mbDriverStats <- B.runInReplica $ QDriverStats.findByPrimaryKey driverId
   logDebug $ "Driver stats present: " <> show (isJust mbDriverStats)
   -- fetch driver fleet here
@@ -133,19 +136,24 @@ driverCoinsEvent driverId merchantId merchantOpCityId eventType entityId mbVehVa
         _ -> []
       blacklistedEventsByDriver = fromMaybe [] (DDS.blacklistCoinEvents =<< mbDriverStats)
       combinedBlacklist = blacklistedEventsByDriver <> blacklistedEventsByFleet
-      filteredConfigAll = filter (\cc -> cc.eventFunction `notElem` combinedBlacklist) coinConfiguration
-  logDebug $ "Coin config count: total=" <> show (length coinConfiguration) <> ", filtered=" <> show (length filteredConfigAll)
-
-  logInfo $ "Coin events for driver " <> driverId.getId <> " - DriverBlacklist: " <> show blacklistedEventsByDriver <> ", FleetBlacklist: " <> show blacklistedEventsByFleet <> ", Total: " <> show (map (.eventFunction) coinConfiguration) <> ", Filtered: " <> show (map (.eventFunction) filteredConfigAll)
-
-  if null filteredConfigAll
-    then do
-      logInfo "All coin events blacklisted; skipping award"
-      pure ()
+  if fromMaybe False transporterConfig.enableDirectWalletIncentives
+    then driverMonetaryRewardEvent driverId merchantId merchantOpCityId eventType entityId vehCategory mbConfigVersionMap transporterConfig combinedBlacklist
     else do
-      finalCoinsValue <- sum <$> forM filteredConfigAll (\cc -> calculateCoins eventType driverId merchantId merchantOpCityId cc.eventFunction cc.expirationAt cc.coins transporterConfig entityId vehCategory)
-      logInfo $ "Awarding coins: " <> show finalCoinsValue
-      updateDriverCoins driverId finalCoinsValue transporterConfig.timeDiffFromUtc
+      coinConfiguration <- CDCQ.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehCategory mbConfigVersionMap
+
+      let filteredConfigAll = filter (\cc -> cc.eventFunction `notElem` combinedBlacklist) coinConfiguration
+      logDebug $ "Coin config count: total=" <> show (length coinConfiguration) <> ", filtered=" <> show (length filteredConfigAll)
+
+      logInfo $ "Coin events for driver " <> driverId.getId <> " - DriverBlacklist: " <> show blacklistedEventsByDriver <> ", FleetBlacklist: " <> show blacklistedEventsByFleet <> ", Total: " <> show (map (.eventFunction) coinConfiguration) <> ", Filtered: " <> show (map (.eventFunction) filteredConfigAll)
+
+      if null filteredConfigAll
+        then do
+          logInfo "All coin events blacklisted; skipping award"
+          pure ()
+        else do
+          finalCoinsValue <- sum <$> forM filteredConfigAll (\cc -> calculateCoins eventType driverId merchantId merchantOpCityId cc.eventFunction cc.expirationAt cc.coins transporterConfig entityId vehCategory)
+          logInfo $ "Awarding coins: " <> show finalCoinsValue
+          updateDriverCoins driverId finalCoinsValue transporterConfig.timeDiffFromUtc
 
 calculateCoins :: EventFlow m r => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> m Int
 calculateCoins eventType driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory = do
@@ -448,6 +456,72 @@ incrementValidRideCount driverId expirationPeriod incrementValue = do
 
 mkCoinAccumulationByDriverIdKey :: Id DP.Person -> Text -> Text
 mkCoinAccumulationByDriverIdKey driverId date = "DriverCoinBalance:DriverId:" <> driverId.getId <> ":" <> date
+
+-- | Wallet Incentive Pipeline
+driverMonetaryRewardEvent :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> Maybe Text -> DTV.VehicleCategory -> Maybe [LYT.ConfigVersionMap] -> TransporterConfig -> [DCT.DriverCoinsFunctionType] -> m ()
+driverMonetaryRewardEvent driverId merchantId merchantOpCityId eventType entityId vehCategory mbConfigVersionMap transporterConfig combinedBlacklist = do
+  monetaryRewardConfiguration <- CWCQ.fetchMonetaryRewardFunctionsOnEventbasis eventType merchantId merchantOpCityId vehCategory mbConfigVersionMap
+  let filteredConfigAll = filter (\wc -> DWC.eventFunction wc `notElem` combinedBlacklist) monetaryRewardConfiguration
+
+  if null filteredConfigAll
+    then do
+      logInfo "All wallet events blacklisted; skipping award"
+      pure ()
+    else do
+      forM_ filteredConfigAll (\wc -> calculateMonetaryRewardCash eventType driverId merchantId merchantOpCityId (DWC.eventFunction wc) (DWC.monetaryRewardAmount wc) transporterConfig entityId vehCategory)
+
+calculateMonetaryRewardCash :: EventFlow m r => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> HighPrecMoney -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> m Bool
+calculateMonetaryRewardCash eventType driverId merchantId merchantOpCityId eventFunction amount transporterConfig entityId _ = do
+  case eventType of
+    DCT.EndRide {} -> hMonetaryRewardEndRide driverId merchantId merchantOpCityId eventFunction amount transporterConfig entityId
+    _ -> pure False
+
+runActionWhenValidMonetaryRewardConditions :: EventFlow m r => [m Bool] -> m Bool -> m Bool
+runActionWhenValidMonetaryRewardConditions conditions action = do
+  isValid <- checkAllConditions conditions
+  if isValid
+    then do action
+    else pure False
+  where
+    checkAllConditions [] = pure True
+    checkAllConditions (condition : xs) = do
+      isValid <- condition
+      if isValid then checkAllConditions xs else pure False
+
+hMonetaryRewardEndRide :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> HighPrecMoney -> TransporterConfig -> Maybe Text -> m Bool
+hMonetaryRewardEndRide driverId merchantId merchantOpCityId eventFunction amount transporterConfig entityId = do
+  case eventFunction of
+    DCT.RidesCompleted a -> do
+      validRideCount <- fromMaybe 0 <$> getValidRideCountByDriverIdKey driverId
+      runActionWhenValidMonetaryRewardConditions [pure (validRideCount == a)] $ updateEventAndGetMonetaryRewardCredit driverId merchantId merchantOpCityId eventFunction amount transporterConfig entityId
+    _ -> pure False
+
+updateEventAndGetMonetaryRewardCredit :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> HighPrecMoney -> TransporterConfig -> Maybe Text -> m Bool
+updateEventAndGetMonetaryRewardCredit driverId merchantId merchantOpCityId eventFunction amount transporterConfig entityId = do
+  let referenceId = fromMaybe "wallet_incentive" entityId
+  logDebug $
+    "Wallet Incentive: crediting driver wallet"
+      <> " | driverId=" <> driverId.getId
+      <> " | eventFunction=" <> show eventFunction
+      <> " | amount=" <> show amount
+      <> " | currency=" <> show transporterConfig.currency
+      <> " | referenceId=" <> referenceId
+  res <-
+    SLFW.createWalletEntryDelta
+      DRIVER
+      driverId.getId
+      amount
+      transporterConfig.currency
+      merchantId.getId
+      merchantOpCityId.getId
+      SLFW.walletReferenceWalletIncentive
+      referenceId
+      Nothing
+  case res of
+    Right _ -> pure True
+    Left err -> do
+      logError $ "Failed to credit driver wallet: " <> show err
+      pure False
 
 getCoinAccumulationByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Text -> m (Maybe Int)
 getCoinAccumulationByDriverIdKey driverId currentDate = Hedis.withCrossAppRedis $ Hedis.get (mkCoinAccumulationByDriverIdKey driverId currentDate)

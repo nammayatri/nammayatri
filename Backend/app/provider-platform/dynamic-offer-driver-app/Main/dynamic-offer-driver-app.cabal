@@ -609,6 +609,7 @@ library
       Storage.CachedQueries.Merchant.Overlay
       Storage.CachedQueries.Merchant.PayoutConfig
       Storage.CachedQueries.Merchant.TransporterConfig
+      Storage.CachedQueries.MonetaryRewardConfig
       Storage.CachedQueries.PlanExtra
       Storage.CachedQueries.PlanTranslation
       Storage.CachedQueries.ReelsData
@@ -734,6 +735,7 @@ library
       Storage.Queries.MerchantServiceConfigExtra
       Storage.Queries.MessageExtra
       Storage.Queries.MessageReportExtra
+      Storage.Queries.MonetaryRewardConfigExtra
       Storage.Queries.NotificationExtra
       Storage.Queries.OperationHubExtra
       Storage.Queries.OperationHubRequestsExtra
@@ -1134,6 +1136,7 @@ library
       Domain.Types.MessageTranslation
       Domain.Types.MetaData
       Domain.Types.ModuleCompletionInformation
+      Domain.Types.MonetaryRewardConfig
       Domain.Types.Notification
       Domain.Types.OperationHub
       Domain.Types.OperationHubRequests
@@ -1307,6 +1310,7 @@ library
       Storage.Beam.MessageTranslation
       Storage.Beam.MetaData
       Storage.Beam.ModuleCompletionInformation
+      Storage.Beam.MonetaryRewardConfig
       Storage.Beam.Notification
       Storage.Beam.OperationHub
       Storage.Beam.OperationHubRequests
@@ -1485,6 +1489,7 @@ library
       Storage.Queries.MessageTranslation
       Storage.Queries.MetaData
       Storage.Queries.ModuleCompletionInformation
+      Storage.Queries.MonetaryRewardConfig
       Storage.Queries.Notification
       Storage.Queries.OperationHub
       Storage.Queries.OperationHubRequests
@@ -1548,6 +1553,7 @@ library
       Storage.Queries.OrphanInstances.MerchantServiceConfig
       Storage.Queries.OrphanInstances.Message
       Storage.Queries.OrphanInstances.MessageReport
+      Storage.Queries.OrphanInstances.MonetaryRewardConfig
       Storage.Queries.OrphanInstances.Notification
       Storage.Queries.OrphanInstances.OperationHub
       Storage.Queries.OrphanInstances.OperationHubRequests

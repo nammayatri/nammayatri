@@ -35,6 +35,7 @@ data ConfigType
   | DriverIntelligentPoolConfig
   | LeaderBoardConfig
   | CoinsConfig
+  | MonetaryRewardConfig
   | DocumentVerificationConfig
   | FleetOwnerDocumentVerificationConfig
   | GoHomeConfig
