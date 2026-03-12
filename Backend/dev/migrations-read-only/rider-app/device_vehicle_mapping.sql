@@ -10,3 +10,10 @@ ALTER TABLE atlas_app.device_vehicle_mapping ADD COLUMN merchant_operating_city_
 ALTER TABLE atlas_app.device_vehicle_mapping ADD PRIMARY KEY ( device_id);
 CREATE INDEX device_vehicle_mapping_idx_vehicle_no ON atlas_app.device_vehicle_mapping USING btree (vehicle_no);
 CREATE INDEX device_vehicle_mapping_idx_gtfs_id ON atlas_app.device_vehicle_mapping USING btree (gtfs_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.device_vehicle_mapping DROP CONSTRAINT device_vehicle_mapping_pkey;
+ALTER TABLE atlas_app.device_vehicle_mapping ADD PRIMARY KEY ( device_id, gtfs_id);
+ALTER TABLE atlas_app.device_vehicle_mapping ADD CONSTRAINT device_vehicle_mapping_unique_idx_device_id_gtfs_id_vehicle_no UNIQUE (device_id, gtfs_id, vehicle_no);
