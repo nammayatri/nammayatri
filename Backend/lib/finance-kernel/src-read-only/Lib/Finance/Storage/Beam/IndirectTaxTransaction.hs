@@ -43,6 +43,6 @@ instance B.Table IndirectTaxTransactionT where
 
 type IndirectTaxTransaction = IndirectTaxTransactionT Identity
 
-$(enableKVPG (''IndirectTaxTransactionT) [('id)] [[('invoiceNumber)], [('referenceId)]])
+$(enableKVPG (''IndirectTaxTransactionT) [('id)] [[('counterpartyId)], [('invoiceNumber)], [('referenceId)], [('transactionDate)]])
 
 $(mkTableInstancesGenericSchema (''IndirectTaxTransactionT) "indirect_tax_transaction")

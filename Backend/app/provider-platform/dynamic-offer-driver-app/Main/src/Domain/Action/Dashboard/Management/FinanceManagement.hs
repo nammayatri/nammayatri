@@ -22,7 +22,6 @@ import qualified Dashboard.Common
 import Data.List (nub)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
-import Data.Time.Clock (diffUTCTime)
 import Domain.Action.UI.Plan (getPlanAmount)
 import qualified Domain.Types.FleetOwnerInformation as FleetOwnerInfo
 import qualified Domain.Types.Merchant as DM
@@ -52,6 +51,7 @@ import qualified Lib.Finance.Domain.Types.ReconciliationEntry as ReconciliationE
 import qualified Lib.Finance.Domain.Types.ReconciliationSummary as ReconSummary
 import qualified Lib.Finance.Ledger.Service as LedgerService
 import qualified Lib.Finance.Storage.Queries.Account as QAccount
+import qualified Lib.Finance.Storage.Queries.DirectTaxTransactionExtra as QDirectTax
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtra
@@ -63,9 +63,9 @@ import qualified Lib.Finance.Storage.Queries.ReconciliationEntry as QReconEntry
 import qualified Lib.Finance.Storage.Queries.ReconciliationEntryExtra as QReconEntryExtra
 import qualified Lib.Finance.Storage.Queries.ReconciliationSummary as QReconSummary
 import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
+import qualified Lib.Payment.Domain.Types.PaymentTransaction as PaymentTransaction
 import qualified Lib.Payment.Domain.Types.PayoutOrder as PayoutOrder
 import qualified Lib.Payment.Domain.Types.Refunds as PaymentRefund
-import qualified Lib.Payment.Domain.Types.PaymentTransaction as PaymentTransaction
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import qualified Lib.Payment.Storage.Queries.PayoutOrderExtra as QPayoutOrder
@@ -105,9 +105,9 @@ mkPageOffset = max 0 . fromMaybe 0
 getFinanceManagementSubscriptionPurchaseList ::
   ShortId DM.Merchant ->
   Context.City ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  Maybe (Id Dashboard.Common.Driver) ->
   Maybe Text ->
   Maybe UTCTime ->
   Maybe Int ->
@@ -117,7 +117,7 @@ getFinanceManagementSubscriptionPurchaseList ::
   Maybe Text ->
   Maybe UTCTime ->
   Flow API.SubscriptionPurchaseListRes
-getFinanceManagementSubscriptionPurchaseList merchantShortId opCity _amountMax _amountMin mbDriverId mbFleetOperatorId mbFrom mbLimit mbOffset mbServiceName mbStatus mbSubscriptionId mbTo = do
+getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax mbAmountMin mbDriverId mbFleetOperatorId mbFrom mbLimit mbOffset mbServiceName mbStatus mbSubscriptionId mbTo = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
@@ -134,11 +134,11 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity _amountMax _
         Just sub -> pure [sub]
         Nothing -> pure []
     Nothing -> do
-      case (mbDriverId, mbFleetOperatorId) of
+      case (getId <$> mbDriverId, mbFleetOperatorId) of
         (Just driverId, _) ->
-          fetchSubscriptionsForOwner driverId DSP.DRIVER (fromMaybe DPlan.YATRI_SUBSCRIPTION mbParsedServiceName) mbParsedStatus limit offset merchantOpCityId
+          fetchSubscriptionsForOwner driverId DSP.DRIVER (fromMaybe DPlan.PREPAID_SUBSCRIPTION mbParsedServiceName) mbParsedStatus limit offset merchantOpCityId
         (_, Just fleetOwnerId) ->
-          fetchSubscriptionsForOwner fleetOwnerId DSP.FLEET_OWNER (fromMaybe DPlan.YATRI_SUBSCRIPTION mbParsedServiceName) mbParsedStatus limit offset merchantOpCityId
+          fetchSubscriptionsForOwner fleetOwnerId DSP.FLEET_OWNER (fromMaybe DPlan.PREPAID_SUBSCRIPTION mbParsedServiceName) mbParsedStatus limit offset merchantOpCityId
         _ -> do
           QSubscriptionPurchase.findAllByMerchantOpCityIdWithFilters
             merchantOpCityId
@@ -146,6 +146,8 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity _amountMax _
             mbParsedStatus
             mbFrom
             mbTo
+            mbAmountMin
+            mbAmountMax
             (Just limit)
             (Just offset)
 
@@ -186,6 +188,8 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity _amountMax _
         ownerType
         serviceName
         mbStatusVal
+        mbAmountMin
+        mbAmountMax
         (Just limit)
         (Just offset)
 
@@ -238,8 +242,10 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity _amountMax _
 
       -- Financials from Plan table (as per Excel)
       let baseAmount = Just $ getPlanAmount plan.planBaseAmount
-      let discountAmount = Just 0 -- Hardcoded for now, could come from plan if available
-      let totalAmount = Just $ getPlanAmount plan.planBaseAmount
+      let discountAmount = case plan.originalRegistrationAmount of
+            Just origAmt -> Just (origAmt - plan.registrationAmount)
+            Nothing -> Just 0
+      let totalAmount = (\b d -> b - d) <$> baseAmount <*> discountAmount
 
       -- GST details from IndirectTaxTransaction
       let gstRate = mbSubscriptionTxn <&> (.gstRate)
@@ -249,16 +255,11 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity _amountMax _
       let grossSubscriptionAmount = baseAmount
       let totalSubscriptionAmount = (\b g -> b + g) <$> baseAmount <*> gstAmount
 
-      -- Calculate plan status
-      now <- getCurrentTime
-      let planStatus =
-            Just $
-              if subscription.status == DSP.ACTIVE && maybe True (> now) subscription.expiryDate
-                then "ACTIVE"
-                else "INACTIVE"
+      -- Calculate plan status from Plan's deprecated flag
+      let planStatus = Just $ if plan.isDeprecated then "INACTIVE" else "ACTIVE"
 
-      -- Get plan validity days
-      let planValidityDays = fmap (calculateValidityDays subscription.purchaseTimestamp) subscription.expiryDate
+      -- Get plan validity days directly from plan table
+      let planValidityDays = plan.validityInDays
 
       -- Calculate usage values
       utilizedValue <- calculateUtilizedValue subscription.id
@@ -327,12 +328,6 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity _amountMax _
 
       pure utilized
 
-    calculateValidityDays :: UTCTime -> UTCTime -> Int
-    calculateValidityDays start end =
-      let diff = diffUTCTime end start
-          days = diff / (24 * 3600)
-       in round days
-
     calculateRevenueRecognized :: Id DSP.SubscriptionPurchase -> Flow HighPrecMoney
     calculateRevenueRecognized subId = do
       -- Get all rides linked to this subscription
@@ -367,34 +362,40 @@ getFinanceManagementInvoiceList ::
   Context.City ->
   Maybe UTCTime ->
   Maybe Text ->
+  Maybe Text ->
   Maybe FinanceInvoice.InvoiceType ->
   Maybe Int ->
   Maybe Int ->
   Maybe FinanceInvoice.InvoiceStatus ->
   Maybe UTCTime ->
   Flow API.InvoiceListRes
-getFinanceManagementInvoiceList merchantShortId opCity mbFrom mbInvoiceId mbInvoiceType mbLimit mbOffset mbStatus mbTo = do
+getFinanceManagementInvoiceList merchantShortId opCity mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbLimit mbOffset mbStatus mbTo = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
   let limit = mkPageLimit mbLimit
       offset = mkPageOffset mbOffset
 
-  -- Get invoices based on filters
+  -- Get invoices based on filters (invoiceId takes precedence, then invoiceNumber, then date range)
   invoices <- case mbInvoiceId of
     Just invoiceId -> do
       QFinanceInvoice.findById (Id invoiceId) >>= \case
         Just inv -> pure [inv]
         Nothing -> pure []
-    Nothing -> do
-      QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
-        merchantOpCityId.getId
-        mbFrom
-        mbTo
-        mbInvoiceType
-        mbStatus
-        (Just limit)
-        (Just offset)
+    Nothing -> case mbInvoiceNumber of
+      Just invoiceNumber -> do
+        QFinanceInvoice.findByNumber invoiceNumber >>= \case
+          Just inv -> pure [inv]
+          Nothing -> pure []
+      Nothing -> do
+        QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
+          merchantOpCityId.getId
+          mbFrom
+          mbTo
+          mbInvoiceType
+          mbStatus
+          (Just limit)
+          (Just offset)
 
   -- Build response items
   items <- mapM buildInvoiceItem invoices
@@ -418,6 +419,12 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFrom mbInvoiceId mbInvo
             (txn : _) -> (Just txn.taxableValue, Just txn.gstRate, Just txn.totalGstAmount)
             _ -> (Nothing, Nothing, Nothing)
 
+      -- Get TDS details from direct tax transaction by invoiceNumber
+      directTaxTxns <- QDirectTax.findByInvoiceNumber invoice.invoiceNumber
+      let tdsRef = case directTaxTxns of
+            (txn : _) -> Just $ fromMaybe "" txn.tdsSection <> " (TDS: " <> show txn.tdsAmount <> ")"
+            _ -> Nothing
+
       -- Get linked ride/subscription IDs from ledger links
       ledgerLinks <- QInvoiceLedgerLink.findByInvoice invoice.id
       ledgerEntries <- mapM (QLedgerEntry.findById . (.ledgerEntryId)) ledgerLinks
@@ -427,23 +434,23 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFrom mbInvoiceId mbInvo
 
       pure $
         API.InvoiceListItem
-          { invoiceId = Just invoice.id.getId,
-            invoiceNumber = Just invoice.invoiceNumber,
-            invoiceType = Just $ show invoice.invoiceType,
-            invoiceDate = Just invoice.issuedAt,
-            invoiceStatus = Just $ show invoice.status,
-            counterpartyType = Nothing, -- TODO: Get from finance_account via issuedToType
-            counterpartyId = Just invoice.issuedToId,
+          { invoiceId = invoice.id.getId,
+            invoiceNumber = invoice.invoiceNumber,
+            invoiceType = invoice.invoiceType,
+            invoiceDate = invoice.issuedAt,
+            invoiceStatus = invoice.status,
+            counterpartyType = invoice.issuedToType,
+            counterpartyId = invoice.issuedToId,
             taxableValue = taxableValue,
             gstRate = gstRate,
             gstAmount = gstAmount,
-            totalInvoiceValue = Just invoice.totalAmount,
-            tdsReference = Nothing,
+            totalInvoiceValue = invoice.totalAmount,
+            tdsReference = tdsRef,
             irn = Nothing,
             qrCode = Nothing,
             rideId = listToMaybe rideIds,
             subscriptionId = listToMaybe subscriptionIds,
-            generatedAt = Just invoice.createdAt
+            generatedAt = invoice.createdAt
           }
 
     extractIds :: LedgerEntry.LedgerEntry -> ([Text], [Text]) -> ([Text], [Text])
@@ -564,6 +571,7 @@ getFinanceManagementFinanceInvoiceList ::
   ShortId DM.Merchant ->
   Context.City ->
   Maybe UTCTime ->
+  Maybe Text ->
   Maybe Text ->
   Maybe FinanceInvoice.InvoiceType ->
   Maybe Int ->

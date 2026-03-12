@@ -133,11 +133,11 @@ postRideCancelMultiple merchantShortId opCity req = do
     pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
   pure $ Common.MultipleRideSyncResp {list = respItems}
 
-getRideInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Flow Common.RideInfoRes
-getRideInfo merchantShortId opCity rideId = do
+getRideInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Maybe Bool -> Flow Common.RideInfoRes
+getRideInfo merchantShortId opCity rideId mbFinanceData = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  DRide.rideInfo merchant.id merchantOpCityId rideId
+  DRide.rideInfo merchant.id merchantOpCityId rideId mbFinanceData
 
 postRideSync :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Flow Common.RideSyncRes
 postRideSync = DRide.rideSync

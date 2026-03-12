@@ -42,6 +42,7 @@ library
       Lib.Finance.Ledger.Service
       Lib.Finance.StateMachine.Interface
       Lib.Finance.StateMachine.Service
+      Lib.Finance.Storage.Queries.DirectTaxTransactionExtra
       Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra
       Lib.Finance.Storage.Queries.InvoiceExtra
       Lib.Finance.Storage.Queries.LedgerEntryExtra

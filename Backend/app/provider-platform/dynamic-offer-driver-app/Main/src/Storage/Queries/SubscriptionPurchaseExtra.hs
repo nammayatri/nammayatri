@@ -89,10 +89,12 @@ findAllByOwnerAndServiceNameWithPagination' ::
   SubscriptionOwnerType ->
   ServiceNames ->
   Maybe SubscriptionPurchaseStatus ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
   Maybe Int ->
   Maybe Int ->
   m [SubscriptionPurchase]
-findAllByOwnerAndServiceNameWithPagination' merchantOpCityId ownerId ownerType serviceName mbStatus limit offset =
+findAllByOwnerAndServiceNameWithPagination' merchantOpCityId ownerId ownerType serviceName mbStatus mbAmountMin mbAmountMax limit offset =
   findAllWithOptionsKV
     [ Se.And
         ( [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId,
@@ -101,6 +103,8 @@ findAllByOwnerAndServiceNameWithPagination' merchantOpCityId ownerId ownerType s
             Se.Is Beam.serviceName $ Se.Eq serviceName
           ]
             <> [Se.Is Beam.status $ Se.Eq status | Just status <- [mbStatus]]
+            <> [Se.Is Beam.planFee $ Se.GreaterThanOrEq amt | Just amt <- [mbAmountMin]]
+            <> [Se.Is Beam.planFee $ Se.LessThanOrEq amt | Just amt <- [mbAmountMax]]
         )
     ]
     (Se.Desc Beam.createdAt)
@@ -162,10 +166,12 @@ findAllByMerchantOpCityIdWithFilters ::
   Maybe SubscriptionPurchaseStatus ->
   Maybe UTCTime ->
   Maybe UTCTime ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
   Maybe Int ->
   Maybe Int ->
   m [SubscriptionPurchase]
-findAllByMerchantOpCityIdWithFilters merchantOpCityId mbServiceName mbStatus mbFrom mbTo mbLimit mbOffset = do
+findAllByMerchantOpCityIdWithFilters merchantOpCityId mbServiceName mbStatus mbFrom mbTo mbAmountMin mbAmountMax mbLimit mbOffset = do
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
   findAllWithOptionsKV
@@ -176,6 +182,8 @@ findAllByMerchantOpCityIdWithFilters merchantOpCityId mbServiceName mbStatus mbF
           <> [Se.Is Beam.status $ Se.Eq st | Just st <- [mbStatus]]
           <> [Se.Is Beam.purchaseTimestamp $ Se.GreaterThanOrEq t | Just t <- [mbFrom]]
           <> [Se.Is Beam.purchaseTimestamp $ Se.LessThanOrEq t | Just t <- [mbTo]]
+          <> [Se.Is Beam.planFee $ Se.GreaterThanOrEq amt | Just amt <- [mbAmountMin]]
+          <> [Se.Is Beam.planFee $ Se.LessThanOrEq amt | Just amt <- [mbAmountMax]]
     ]
     (Se.Desc Beam.purchaseTimestamp)
     (Just limit)

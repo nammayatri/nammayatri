@@ -12,6 +12,7 @@ import qualified EulerHS.Types
 import qualified Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.Id
 import Kernel.Utils.TH
 import qualified Lib.Finance.Domain.Types.Invoice
 import Servant
@@ -53,23 +54,23 @@ data FleetOperatorListRes = FleetOperatorListRes {totalItems :: Kernel.Prelude.I
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data InvoiceListItem = InvoiceListItem
-  { invoiceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    invoiceNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    invoiceType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    invoiceDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    invoiceStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    counterpartyType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    counterpartyId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { invoiceId :: Kernel.Prelude.Text,
+    invoiceNumber :: Kernel.Prelude.Text,
+    invoiceType :: Lib.Finance.Domain.Types.Invoice.InvoiceType,
+    invoiceDate :: Kernel.Prelude.UTCTime,
+    invoiceStatus :: Lib.Finance.Domain.Types.Invoice.InvoiceStatus,
+    counterpartyType :: Kernel.Prelude.Text,
+    counterpartyId :: Kernel.Prelude.Text,
     taxableValue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     gstRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     gstAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    totalInvoiceValue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    totalInvoiceValue :: Kernel.Types.Common.HighPrecMoney,
     tdsReference :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     irn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     qrCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rideId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     subscriptionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    generatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
+    generatedAt :: Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -350,12 +351,14 @@ data WalletLedgerRes = WalletLedgerRes
 type API = ("financeManagement" :> (GetFinanceManagementSubscriptionPurchaseList :<|> GetFinanceManagementFinanceInvoiceList :<|> GetFinanceManagementFinanceReconciliation :<|> GetFinanceManagementFinancePayoutList :<|> GetFinanceManagementFinancePaymentSettlementList :<|> GetFinanceManagementFinancePaymentGatewayTransactionList :<|> GetFinanceManagementFinanceWalletLedger :<|> GetFinanceManagementFinanceEarningSummary :<|> PostFinanceManagementReconciliationTrigger))
 
 type GetFinanceManagementSubscriptionPurchaseList =
-  ( "subscriptionPurchase" :> "list" :> QueryParam "amountMax" Kernel.Prelude.Text
+  ( "subscriptionPurchase" :> "list" :> QueryParam "amountMax" Kernel.Types.Common.HighPrecMoney
       :> QueryParam
            "amountMin"
+           Kernel.Types.Common.HighPrecMoney
+      :> QueryParam "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+      :> QueryParam
+           "fleetOwnerId"
            Kernel.Prelude.Text
-      :> QueryParam "driverId" Kernel.Prelude.Text
-      :> QueryParam "fleetOperatorId" Kernel.Prelude.Text
       :> QueryParam
            "from"
            Kernel.Prelude.UTCTime
@@ -385,9 +388,12 @@ type GetFinanceManagementSubscriptionPurchaseList =
 type GetFinanceManagementFinanceInvoiceList =
   ( "finance" :> "invoice" :> "list" :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "invoiceId" Kernel.Prelude.Text
       :> QueryParam
-           "invoiceType"
-           Lib.Finance.Domain.Types.Invoice.InvoiceType
-      :> QueryParam "limit" Kernel.Prelude.Int
+           "invoiceNumber"
+           Kernel.Prelude.Text
+      :> QueryParam "invoiceType" Lib.Finance.Domain.Types.Invoice.InvoiceType
+      :> QueryParam
+           "limit"
+           Kernel.Prelude.Int
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
@@ -528,8 +534,8 @@ type GetFinanceManagementFinanceEarningSummary =
 type PostFinanceManagementReconciliationTrigger = ("reconciliation" :> "trigger" :> ReqBody '[JSON] ReconciliationTriggerReq :> Post '[JSON] ReconciliationTriggerRes)
 
 data FinanceManagementAPIs = FinanceManagementAPIs
-  { getFinanceManagementSubscriptionPurchaseList :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe SubscriptionPurchaseStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient SubscriptionPurchaseListRes,
-    getFinanceManagementFinanceInvoiceList :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Invoice.InvoiceType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Invoice.InvoiceStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient InvoiceListRes,
+  { getFinanceManagementSubscriptionPurchaseList :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe SubscriptionPurchaseStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient SubscriptionPurchaseListRes,
+    getFinanceManagementFinanceInvoiceList :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Invoice.InvoiceType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Invoice.InvoiceStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient InvoiceListRes,
     getFinanceManagementFinanceReconciliation :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient ReconciliationRes,
     getFinanceManagementFinancePayoutList :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient PayoutListRes,
     getFinanceManagementFinancePaymentSettlementList :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient PaymentSettlementListRes,

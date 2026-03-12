@@ -197,7 +197,7 @@ castRideInfo merchantId merchantOpCityId rideId = do
   rideInfoRes <-
     Redis.safeGet makeRideInfoCacheKey >>= \case
       Just res -> pure res
-      Nothing -> cacheRideInfo /=<< DRide.rideInfo (cast merchantId) (cast merchantOpCityId) (cast rideId)
+      Nothing -> cacheRideInfo /=<< DRide.rideInfo (cast merchantId) (cast merchantOpCityId) (cast rideId) Nothing
   return $ castRideInfoRes rideInfoRes
   where
     castRideInfoRes res =

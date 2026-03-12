@@ -23,3 +23,11 @@ findByReferenceIn referenceTypes referenceId =
           Se.Is Beam.referenceId $ Se.Eq referenceId
         ]
     ]
+
+-- | Find ALL ledger entries by referenceId (no referenceType filter)
+findAllByReferenceId ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Text ->
+  m ([Domain.LedgerEntry])
+findAllByReferenceId refId =
+  findAllWithKV [Se.Is Beam.referenceId $ Se.Eq refId]

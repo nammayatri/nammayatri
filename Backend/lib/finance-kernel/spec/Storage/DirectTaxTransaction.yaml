@@ -41,6 +41,8 @@ DirectTaxTransaction:
   constraints:
     id: PrimaryKey
     referenceId: "!SecondaryKey"
+    invoiceNumber: "!SecondaryKey"
+    counterpartyId: "!SecondaryKey"
 
   queries:
     findById:

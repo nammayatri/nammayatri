@@ -21,10 +21,10 @@ apis:
         from: UTCTime
         to: UTCTime
         status: SubscriptionPurchaseStatus
-        driverId: Text
-        fleetOperatorId: Text
-        amountMin: Text
-        amountMax: Text
+        driverId: Id Driver
+        fleetOwnerId: Text
+        amountMin: HighPrecMoney
+        amountMax: HighPrecMoney
         subscriptionId: Text
         serviceName: Text
       auth: ApiAuthV2
@@ -39,6 +39,7 @@ apis:
         limit: Int
         offset: Int
         invoiceId: Text
+        invoiceNumber: Text
         from: UTCTime
         to: UTCTime
         invoiceType: InvoiceType
@@ -227,23 +228,23 @@ types:
     - summary: Summary
     - invoices: [InvoiceListItem]
   InvoiceListItem:
-    - invoiceId: Maybe Text
-    - invoiceNumber: Maybe Text
-    - invoiceType: Maybe Text
-    - invoiceDate: Maybe UTCTime
-    - invoiceStatus: Maybe Text
-    - counterpartyType: Maybe Text
-    - counterpartyId: Maybe Text
+    - invoiceId: Text
+    - invoiceNumber: Text
+    - invoiceType: InvoiceType
+    - invoiceDate: UTCTime
+    - invoiceStatus: InvoiceStatus
+    - counterpartyType: Text
+    - counterpartyId: Text
     - taxableValue: Maybe HighPrecMoney
     - gstRate: Maybe Double
     - gstAmount: Maybe HighPrecMoney
-    - totalInvoiceValue: Maybe HighPrecMoney
+    - totalInvoiceValue: HighPrecMoney
     - tdsReference: Maybe Text
     - irn: Maybe Text
     - qrCode: Maybe Text
     - rideId: Maybe Text
     - subscriptionId: Maybe Text
-    - generatedAt: Maybe UTCTime
+    - generatedAt: UTCTime
 
   # ----- Reconciliation -----
   ReconciliationRes:

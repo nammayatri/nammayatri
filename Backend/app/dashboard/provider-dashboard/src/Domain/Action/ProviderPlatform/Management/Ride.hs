@@ -96,10 +96,10 @@ postRideCancelMultiple merchantShortId opCity apiTokenInfo req = do
   T.withResponseTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.rideDSL.postRideCancelMultiple) req
 
-getRideInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Ride -> Flow Common.RideInfoRes
-getRideInfo merchantShortId opCity apiTokenInfo rideId = do
+getRideInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Ride -> Maybe Bool -> Flow Common.RideInfoRes
+getRideInfo merchantShortId opCity apiTokenInfo rideId mbFinanceData = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideInfo) rideId
+  Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideInfo) rideId mbFinanceData
 
 postRideSync :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Ride -> Flow Common.RideSyncRes
 postRideSync merchantShortId opCity apiTokenInfo rideId = do

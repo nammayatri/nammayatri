@@ -2064,6 +2064,23 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
       referral <- QDR.findById personId
       contact <- mapM decrypt person.mobileNumber
       let name = person.firstName <> maybe "" (" " <>) person.middleName <> maybe "" (" " <>) person.lastName
+
+      -- Populate financial identity fields for OPERATOR
+      mbDriverInfo <- QDriverInfo.findById personId
+      mbGstin <- QDGExtra.findGSTInByDriverId personId
+      mbPanCard <- QPanCard.findByDriverId personId
+      mbBankAccount <- QDBA.findByPrimaryKey personId
+      mbWalletAccount <- FWallet.getWalletAccountByOwner FLEET_OWNER personId.getId
+      linkedDrivers <- FDV.findAllActiveByFleetOwnerId personId.getId
+
+      let panAadhaarLinkedFlag' = (== DPanCard.PAN_AADHAAR_LINKED) <$> (mbPanCard >>= (.panAadhaarLinkage))
+          gstinApplicableFlag' = mbGstin <&> \gstin -> gstin.verificationStatus == Documents.VALID
+          bankAccountNumber' = mbBankAccount <&> (.accountId)
+          bankIfsc' = mbBankAccount >>= (.ifscCode)
+          bankVerificationStatus' = mbBankAccount <&> (\ba -> if ba.detailsSubmitted then "VERIFIED" else "PENDING")
+          walletId' = (\acc -> acc.id.getId) <$> mbWalletAccount
+          upiId' = mbDriverInfo >>= (.payoutVpa)
+
       pure
         Common.FleetOwnerInfoRes
           { id = person.id.getId,
@@ -2092,15 +2109,15 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
             stripeAddress = Nothing,
             stripeIdNumber = Nothing,
             updatedAt = person.updatedAt,
-            panAadhaarLinkedFlag = Nothing,
-            gstinApplicableFlag = Nothing,
+            panAadhaarLinkedFlag = panAadhaarLinkedFlag',
+            gstinApplicableFlag = gstinApplicableFlag',
             tdsApplicableFlag = Nothing,
-            walletId = Nothing,
-            bankAccountNumber = Nothing,
-            bankIfsc = Nothing,
-            bankVerificationStatus = Nothing,
-            upiId = Nothing,
-            linkedDriverIds = []
+            walletId = walletId',
+            bankAccountNumber = bankAccountNumber',
+            bankIfsc = bankIfsc',
+            bankVerificationStatus = bankVerificationStatus',
+            upiId = upiId',
+            linkedDriverIds = map (\assoc -> assoc.driverId.getId) linkedDrivers
           }
     Just fleetOwnerInfo -> do
       fleetConfig <- QFC.findByPrimaryKey personId
@@ -2159,7 +2176,7 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
             (== DPanCard.PAN_AADHAAR_LINKED) <$> (mbPanCard >>= (.panAadhaarLinkage))
 
       -- tdsApplicableFlag - check from FleetOwnerInfo or config (defaulting to Nothing for now)
-      let tdsApplicableFlag = Nothing
+      let tdsApplicableFlag = Just $ isJust tdsRate
 
       -- Fetch bank account details (similar to Driver info)
       mbBankAccount <- QDBA.findByPrimaryKey fleetOwnerPersonId

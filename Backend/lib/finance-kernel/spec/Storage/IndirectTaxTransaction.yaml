@@ -49,6 +49,8 @@ IndirectTaxTransaction:
     id: PrimaryKey
     invoiceNumber: "!SecondaryKey"
     referenceId: "!SecondaryKey"
+    counterpartyId: "!SecondaryKey"
+    transactionDate: "!SecondaryKey"
 
   queries:
     findById:
