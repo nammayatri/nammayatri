@@ -43,21 +43,6 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
       >>= fromMaybeM
         (InvalidRequest $ "Route not found with id: " <> routeInfo.routeId)
   -- Build a lookup list of distinct service tier types -> FRFS tier entity once
-  frfsTierMap <- do
-    let scheduleVehicleNos = map (.vehicle_no) busScheduleDetails
-        liveVehicleNos = map (.vehicleNumber) routeInfo.buses
-        allVehicleNos = nub (scheduleVehicleNos <> liveVehicleNos)
-    tierLookups <- mapM (JMU.getVehicleServiceTypeFromInMem [integratedBPPConfig]) allVehicleNos
-    let uniqueTiers = nub (catMaybes tierLookups)
-    mapM
-      ( \t ->
-          (t,)
-            <$> CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId
-              t
-              cityId
-              integratedBPPConfig.id
-      )
-      uniqueTiers
   schedulesFork <-
     awaitableFork "getBusScheduleInfo" $
       getBusScheduleInfo busScheduleDetails integratedBPPConfig routeInfo.routeId fromStopCode toStopCode frfsTierMap
