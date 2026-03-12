@@ -42,8 +42,11 @@ import Kernel.External.IncidentReport.Interface.Types as IncidentReportTypes
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.SOS as PoliceSOS
+import qualified Kernel.External.SOS.ERSS.Auth as ERSSAuth
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
+import qualified SharedLogic.External.LocationTrackingService.Types as LTSTypes
 import Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import Kernel.ServantMultipart
@@ -188,13 +191,13 @@ postSosCreate (mbPersonId, _merchantId) req = do
     Nothing -> pure Nothing
   let existingExternalRef = mbExistingSos >>= (.externalReferenceId)
 
-  (mbExternalReferenceId, externalApiCalledStatus) <- case (existingExternalRef, riderConfig.externalSOSConfig) of
-    (Just refId, _) -> pure (Just refId, Just True)
+  (mbExternalReferenceId, mbSosServiceConfig, externalApiCalledStatus) <- case (existingExternalRef, riderConfig.externalSOSConfig) of
+    (Just refId, _, _) -> pure (Just refId, Nothing, Just True)
     (Nothing, Just sosConfig)
       | sosConfig.triggerSource == DRC.FRONTEND -> do
-        mbTrackingId <- handleExternalSOS person sosConfig req personId riderConfig
-        pure (mbTrackingId, Just True)
-    _ -> pure (Nothing, Nothing)
+        (mbTrackingId, mbSpecificConfig) <- handleExternalSOS person sosConfig req personId riderConfig
+        pure (mbTrackingId, mbSpecificConfig, Just True)
+    _ -> pure (Nothing, Nothing, Nothing)
 
   let hasPoliceIntegration = isJust riderConfig.externalSOSConfig
       forceKapture = fromMaybe False req.isKaptureTicketRequired
@@ -223,6 +226,43 @@ postSosCreate (mbPersonId, _merchantId) req = do
         SOSLocation.updateSosRiderLocation sosDetails.id location Nothing (Just trackingExpiresAt)
       let finalTrackLink = buildSosTrackingUrl sosDetails.id riderConfig.trackingShortUrlPattern
       return (sosDetails.id, sosDetails.ticketId, finalTrackLink, Nothing)
+  -- Register SOS entity with LTS, optionally bundling ERSS broadcaster config.
+  do
+    mbBroadcasterConfig <- case (mbExternalReferenceId, mbSosServiceConfig) of
+      (Just refId, Just (SOSInterface.ERSSConfig erssCfg)) -> do
+        mbMobile <- getPersonMobileNo (cast personId)
+        case mbMobile of
+          Just mobileNo -> do
+            erssToken <- ERSSAuth.getERSSToken erssCfg
+            selfBaseUrl <- asks (.selfBaseUrl)
+            locationTrackingServiceKey <- asks (.locationTrackingServiceKey)
+            let nyReauthUrl = showBaseUrl selfBaseUrl <> "/internal/sos/erss-reauth"
+                tokenExpiresAt = round (utcTimeToPOSIXSeconds erssToken.accessExpiresAt) :: Int
+            pure . Just $
+              LTSTypes.SosErssConfigReq
+                { externalReferenceId = refId,
+                  baseUrl = showBaseUrl erssCfg.baseUrl,
+                  accessToken = erssToken.accessToken,
+                  tokenExpiresAt = tokenExpiresAt,
+                  nyReauthUrl = nyReauthUrl,
+                  nyApiKey = locationTrackingServiceKey,
+                  merchantOperatingCityId = person.merchantOperatingCityId.getId,
+                  pollingIntervalSecs = maybe 60 (.getSeconds) (riderConfig.externalSOSConfig >>= (.tracePollingIntervalSeconds)),
+                  timeDiffSecs = riderConfig.timeDiffFromUtc.getSeconds,
+                  expiresAt = Nothing,
+                  provider =
+                    LTSTypes.SosTraceProvider
+                      { providerKind = LTSTypes.ERSS,
+                        authId = erssCfg.authId,
+                        authCode = erssCfg.authCode,
+                        mobileNo = mobileNo,
+                        traceUrlSuffix = "/public/api/sos/trace" -- To be moved to merchant_service_config
+                      }
+                }
+          Nothing -> pure Nothing
+      _ -> pure Nothing
+    fork "ltsSosEntityUpsert" $
+      LTS.entityUpsertForSos sosId.getId personId.getId person.merchantId.getId mbBroadcasterConfig
   buildSmsReq <-
     MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
       MessageBuilder.BuildSOSAlertMessageReq
@@ -971,7 +1011,7 @@ postSosUpdateToRide (mbPersonId, merchantId) sosId UpdateToRideReq {..} = do
 
   pure APISuccess.Success
 
-handleExternalSOS :: Person.Person -> DRC.ExternalSOSConfig -> SosReq -> Id Person.Person -> DRC.RiderConfig -> Flow (Maybe Text)
+handleExternalSOS :: Person.Person -> DRC.ExternalSOSConfig -> SosReq -> Id Person.Person -> DRC.RiderConfig -> Flow (Maybe Text, Maybe SOSInterface.SOSServiceConfig)
 handleExternalSOS person sosConfig req personId riderConfig = do
   let sosServiceType = flowToSOSService sosConfig.flow
   mbMerchantSvcCfg <-
@@ -979,22 +1019,24 @@ handleExternalSOS person sosConfig req personId riderConfig = do
   case mbMerchantSvcCfg of
     Nothing -> do
       logError $ "handleExternalSOS: MerchantServiceConfig not found for SOS service " <> show sosServiceType
-      return Nothing
+      return (Nothing, Nothing)
     Just merchantSvcCfg -> case merchantSvcCfg.serviceConfig of
       DMSC.SOSServiceConfig specificConfig -> do
         mbRide <- maybe (pure Nothing) (\rideId -> QRide.findById rideId) req.rideId
         emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
         merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
         externalSOSDetails <- buildExternalSOSDetails req person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig
+        logDebug $ "sendInitialSOS specificConfig: " <> show specificConfig
+        logDebug $ "sendInitialSOS externalSOSDetails: " <> show externalSOSDetails
         initialRes <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
         if initialRes.success
-          then return initialRes.trackingId
+          then return (initialRes.trackingId, Just specificConfig)
           else do
             logError $ "handleExternalSOS: External SOS call failed: " <> fromMaybe "Unknown error" initialRes.errorMessage
-            return Nothing
+            return (Nothing, Nothing)
       _ -> do
         logError "handleExternalSOS: Invalid SOS Service Config for provider"
-        return Nothing
+        return (Nothing, Nothing)
 
 buildExternalSOSDetails ::
   SosReq ->
