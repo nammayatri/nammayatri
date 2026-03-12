@@ -86,6 +86,7 @@ import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
+import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
@@ -1315,10 +1316,11 @@ postFrfsRouteServiceability (mbPersonId, _merchantId) routeId req = do
       (\routeCode -> OTPRest.getRouteBusSchedule routeCode integratedBPPConfig)
       [routeId]
 
+  frfsTierMap <- map (\t -> (t._type, t)) <$> CQFRFSVehicleServiceTier.findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId cityId integratedBPPConfig.id
   routesWithLiveVehicles <-
     catMaybes
       <$> mapConcurrently
-        (\(r, s) -> JMRouteServiceability.buildRouteWithLiveVehicle r s integratedBPPConfig cityId req.startStopCode req.endStopCode)
+        (\(r, s) -> JMRouteServiceability.buildRouteWithLiveVehicle r s integratedBPPConfig req.startStopCode req.endStopCode frfsTierMap Nothing 5)
         (zip busesForRoutes schedulesForRoutes)
 
   case routesWithLiveVehicles of

@@ -89,10 +89,11 @@ runReconciliationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       merchantId = jobData.merchantId
       merchantOperatingCityId = jobData.merchantOperatingCityId
 
-  let lockKey = "ReconciliationJob:" <> show merchantId <> show startTime <> show endTime
+  let lockKey = "ReconciliationJob:" <> show merchantId <> ":" <> reconciliationTypeText <> ":" <> show startTime <> ":" <> show endTime
 
   resultRef <- liftIO $ newIORef Complete
-  mbResult <- Hedis.whenWithLockRedisAndReturnValue lockKey 3600 $ do
+  mbResult <- Hedis.whenWithLockRedisAndReturnValue lockKey 1800 $ do
+    -- reducing lock duration @dhruv-1010
     now <- getCurrentTime
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId (Just merchantOperatingCityId) merchant Nothing

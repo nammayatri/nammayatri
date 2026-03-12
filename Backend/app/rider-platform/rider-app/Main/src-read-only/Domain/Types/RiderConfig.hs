@@ -100,6 +100,8 @@ data RiderConfig = RiderConfig
     localPoliceNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     makeMultiModalSearch :: Kernel.Prelude.Bool,
     maxAllowedPublicTransportLegs :: Kernel.Prelude.Int,
+    maxAlternateRouteVehicles :: Kernel.Prelude.Int,
+    maxLiveVehiclesPerRoute :: Kernel.Prelude.Int,
     maxNearbyBuses :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxNumberOfLuggages :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maximumWalkDistance :: Kernel.Types.Common.Meters,

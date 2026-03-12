@@ -24,6 +24,17 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier] -> m ())
 createMany = traverse_ create
 
+findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier])
+findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId merchantOperatingCityId integratedBppConfigId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)
+        ]
+    ]
+
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier -> m (Maybe Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier))
@@ -31,7 +42,7 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 
 findByProviderCode ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier]))
+  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier])
 findByProviderCode providerCode merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
@@ -42,7 +53,7 @@ findByProviderCode providerCode merchantOperatingCityId = do
 
 findByProviderCodeAndTrainType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier]))
+  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier])
 findByProviderCodeAndTrainType providerCode trainType merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
