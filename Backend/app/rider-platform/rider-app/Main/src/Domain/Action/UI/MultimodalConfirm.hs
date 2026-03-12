@@ -2070,10 +2070,11 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
               (\routeCode -> OTPRest.getRouteBusSchedule routeCode ctx.integratedBPPConfig)
               rlRouteCodes
 
+          frfsTierMap <- map (\t -> (t._type, t)) <$> CQFRFSVehicleServiceTier.findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId ctx.merchantOperatingCityId ctx.integratedBPPConfig.id
           routesWithLiveVehicles <-
             catMaybes
               <$> mapConcurrently
-                (\(r, s) -> JMRouteServiceability.buildRouteWithLiveVehicle r s ctx.integratedBPPConfig ctx.merchantOperatingCityId rlFromStopCode rlToStopCode)
+                (\(r, s) -> JMRouteServiceability.buildRouteWithLiveVehicle r s ctx.integratedBPPConfig rlFromStopCode rlToStopCode frfsTierMap)
                 (zip busesForRoutes schedulesForRoutes)
 
           pure $
