@@ -2388,9 +2388,14 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
           DTrip.Metro -> Spec.METRO
           DTrip.Subway -> Spec.SUBWAY
           _ -> Spec.BUS
-  forM_ qrDataList $ \qrData -> do
-    let verifyReq = FRFSTicketServiceAPI.FRFSTicketVerifyReq {FRFSTicketServiceAPI.qrData = qrData}
-    void $ FRFSTicketService.postFrfsTicketVerify (mbPersonId, merchantId) (Just integratedBPPConfig.platformType) merchantOperatingCity.city frfsVehicleCategory verifyReq
+
+  void $
+    withTryCatch "postMultimodalOrderSublegSetOnboardedVehicleDetails:postFrfsTicketVerify"
+      ( do
+        forM_ qrDataList $ \qrData -> do
+          let verifyReq = FRFSTicketServiceAPI.FRFSTicketVerifyReq {FRFSTicketServiceAPI.qrData = qrData}
+          void $ FRFSTicketService.postFrfsTicketVerify (mbPersonId, merchantId) (Just integratedBPPConfig.platformType) merchantOperatingCity.city frfsVehicleCategory verifyReq
+      )
 
   QJourneyLeg.updateByPrimaryKey $
     journeyLeg
