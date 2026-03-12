@@ -53,6 +53,7 @@ getInvoiceInvoice merchantShortId _ from phoneNumber to = do
                   ("PER_STOP_CHARGES", "Per Stop Charges"),
                   ("LUGGAGE_CHARGE", "Luggage Charge"),
                   ("DRIVER_ALLOWANCE", "Driver Allowance"),
+                  ("AIRPORT_CONVENIENCE_FEE", "Airport Convenience Fee"),
                   ("RETURN_FEE", "Return Fee"),
                   ("BOOTH_CHARGE", "Booth Charge")
                 ]

@@ -202,6 +202,7 @@ mkQuoteBreakupInner quote = do
         || breakup.quotationBreakupInnerTitle == Just (show Enums.PER_STOP_CHARGES)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.LUGGAGE_CHARGE)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.DRIVER_ALLOWANCE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.AIRPORT_CONVENIENCE_FEE)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.RETURN_FEE)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.BOOTH_CHARGE)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_VAT)

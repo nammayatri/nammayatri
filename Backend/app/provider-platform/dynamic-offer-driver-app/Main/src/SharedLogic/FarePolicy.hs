@@ -394,6 +394,9 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
       driverAllowanceCaption = show Tags.DRIVER_ALLOWANCE
       driverAllowanceItem = mkBreakupItem driverAllowanceCaption . (mkValue . show) <$> farePolicy.driverAllowance
 
+      airportConvenienceFeeCaption = show Tags.AIRPORT_CONVENIENCE_FEE
+      airportConvenienceFeeItem = mkBreakupItem airportConvenienceFeeCaption . (mkValue . show) <$> farePolicy.airportConvenienceFee
+
       businessDiscountCaption = show Tags.BUSINESS_DISCOUNT_PERCENTAGE
       businessDiscountItem = mkBreakupItem businessDiscountCaption . (mkValue . show) <$> farePolicy.businessDiscountPercentage
 
@@ -476,6 +479,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
       driverMaxExtraFeeItem,
       petChargesItem,
       driverAllowanceItem,
+      airportConvenienceFeeItem,
       priorityChargesItem,
       nightShiftStartItem,
       nightShiftEndItem,
