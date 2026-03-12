@@ -164,11 +164,11 @@ confirmBooking tripId holdId = do
 bookingHoldsKey :: Text -> Text
 bookingHoldsKey bookingId = "booking-holds:" <> bookingId
 
-trackHoldForBooking :: (MonadFlow m, Redis.HedisFlow m r) => Text -> Text -> m ()
-trackHoldForBooking bookingId holdId = do
+trackHoldForBooking :: (MonadFlow m, Redis.HedisFlow m r) => Text -> Text -> Int -> m ()
+trackHoldForBooking bookingId holdId ttl' = do
   logInfo $ "SeatBooking:trackHoldForBooking bookingId=" <> bookingId <> " holdId=" <> holdId
   let k = bookingHoldsKey bookingId
-  void $ Redis.sAddExp k [holdId] 300
+  void $ Redis.sAddExp k [holdId] ttl'
 
 releaseAbandonedHolds :: (MonadFlow m, Redis.HedisFlow m r) => Text -> Text -> Text -> m ()
 releaseAbandonedHolds tripId bookingId successfulHoldId = do

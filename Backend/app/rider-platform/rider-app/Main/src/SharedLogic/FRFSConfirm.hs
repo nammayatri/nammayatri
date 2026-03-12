@@ -54,6 +54,7 @@ import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.Seat as QSeat
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
@@ -72,6 +73,10 @@ confirmAndUpsertBooking :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "clo
 confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse isSingleMode mbIsMockPayment integratedBppConfig mbTripId = do
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
   mbBooking <- QFRFSTicketBooking.findBySearchId quote.searchId
+  riderConfig <-
+    QRiderConfig.findByMerchantOperatingCityId integratedBppConfig.merchantOperatingCityId Nothing
+      >>= fromMaybeM
+        (RiderConfigNotFound $ "merchantOpCityid: " <> integratedBppConfig.merchantOperatingCityId.getId)
   isMultiInitAllowed <-
     case mbBooking of
       Just booking -> do
@@ -102,7 +107,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
               case mIndices of
                 Just (fromIdx, toIdx) -> do
                   holdId <- generateGUID
-                  let ttl' = 300
+                  let ttl' = fromMaybe 600 riderConfig.seatBookingTtl
 
                   -- validate seat quota
                   seats <- mapM QSeat.findById allSeatIds
@@ -135,7 +140,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
 
   whenJust mbHoldCtxForAll $ \(holdId, _, _) -> do
     logInfo $ "FRFSConfirm:confirmAndUpsertBooking tracking hold bookingId=" <> dConfirmRes.id.getId <> " holdId=" <> holdId
-    SeatBooking.trackHoldForBooking dConfirmRes.id.getId holdId
+    SeatBooking.trackHoldForBooking dConfirmRes.id.getId holdId (fromMaybe 600 riderConfig.seatBookingTtl)
 
   return (rider, dConfirmRes, fareParameters, updatedQuoteCategories, isMultiInitAllowed)
   where

@@ -626,3 +626,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN external_sos_config json;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN max_number_of_luggages integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN seat_booking_ttl integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN seat_booking_cleanup_ttl integer ;
