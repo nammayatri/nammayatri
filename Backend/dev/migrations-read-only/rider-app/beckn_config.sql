@@ -34,3 +34,9 @@ ALTER TABLE atlas_app.beckn_config ADD COLUMN track_ttl_sec integer ;
 ALTER TABLE atlas_app.beckn_config ADD COLUMN status_ttl_sec integer ;
 ALTER TABLE atlas_app.beckn_config ADD COLUMN rating_ttl_sec integer ;
 ALTER TABLE atlas_app.beckn_config ADD COLUMN cancel_ttl_sec integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.beckn_config ADD COLUMN ppf_enabled boolean ;

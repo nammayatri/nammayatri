@@ -40,6 +40,7 @@ library
       API.Beckn.OnCancel
       API.Beckn.OnConfirm
       API.Beckn.OnInit
+      API.Beckn.OnRecon
       API.Beckn.OnSearch
       API.Beckn.OnSelect
       API.Beckn.OnStatus
@@ -133,12 +134,14 @@ library
       Beckn.ACL.OnCancel
       Beckn.ACL.OnConfirm
       Beckn.ACL.OnInit
+      Beckn.ACL.OnRecon
       Beckn.ACL.OnSearch
       Beckn.ACL.OnSelect
       Beckn.ACL.OnStatus
       Beckn.ACL.OnTrack
       Beckn.ACL.OnUpdate
       Beckn.ACL.Rating
+      Beckn.ACL.Recon
       Beckn.ACL.Search
       Beckn.ACL.Select
       Beckn.ACL.Status
@@ -224,6 +227,7 @@ library
       Domain.Action.Internal.Sos
       Domain.Action.Internal.StopEvents
       Domain.Action.Internal.ViolationDetection
+      Domain.Action.PPF.Recon
       Domain.Action.UI.AadhaarVerification
       Domain.Action.UI.AlertWebhook
       Domain.Action.UI.AppInstalls
@@ -480,6 +484,7 @@ library
       SharedLogic.Person
       SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.PickupETA
+      SharedLogic.PPF
       SharedLogic.PTCircuitBreaker
       SharedLogic.PublicTransport
       SharedLogic.Quote

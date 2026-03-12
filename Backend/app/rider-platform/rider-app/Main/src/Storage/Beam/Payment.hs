@@ -27,6 +27,7 @@ import qualified Lib.Finance.Storage.Beam.InvoiceLedgerLink as BeamInvoiceLedger
 import qualified Lib.Finance.Storage.Beam.LedgerEntry as BeamLedger
 import qualified Lib.Finance.Storage.Beam.PgPaymentSettlementReport as BeamPgPayment
 import qualified Lib.Finance.Storage.Beam.PgPayoutSettlementReport as BeamPgPayout
+import qualified Lib.Finance.Storage.Beam.PPFRecon as BeamPPFRecon
 import qualified Lib.Finance.Storage.Beam.ReconciliationEntry as BeamReconciliationEntry
 import qualified Lib.Finance.Storage.Beam.ReconciliationSummary as BeamReconciliationSummary
 import qualified Lib.Finance.Storage.Beam.StateTransition as BeamStateTransition
@@ -110,4 +111,7 @@ instance HasSchemaName BeamReconciliationSummary.ReconciliationSummaryT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamStateTransition.StateTransitionT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamPPFRecon.PPFReconT where
   schemaName _ = T.pack currentSchemaName

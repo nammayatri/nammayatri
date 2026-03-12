@@ -34,6 +34,7 @@ library
       API.Beckn.IGM.Issue
       API.Beckn.Init
       API.Beckn.Rating
+      API.Beckn.Recon
       API.Beckn.Search
       API.Beckn.Select
       API.Beckn.Status
@@ -123,12 +124,14 @@ library
       Beckn.ACL.OnCancel
       Beckn.ACL.OnConfirm
       Beckn.ACL.OnInit
+      Beckn.ACL.OnRecon
       Beckn.ACL.OnSearch
       Beckn.ACL.OnSelect
       Beckn.ACL.OnStatus
       Beckn.ACL.OnTrack
       Beckn.ACL.OnUpdate
       Beckn.ACL.Rating
+      Beckn.ACL.Recon
       Beckn.ACL.Search
       Beckn.ACL.Select
       Beckn.ACL.Status
@@ -241,6 +244,7 @@ library
       Domain.Action.Internal.SpecialLocationUpsert
       Domain.Action.Internal.StopDetection
       Domain.Action.Internal.ViolationDetection
+      Domain.Action.PPF.Recon
       Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent
