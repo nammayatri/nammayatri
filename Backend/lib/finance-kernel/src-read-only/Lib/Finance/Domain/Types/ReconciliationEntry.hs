@@ -68,7 +68,6 @@ data RideMode = ONLINE | CASH deriving (Eq, Ord, Show, Read, Generic, ToJSON, Fr
 
 data RideStatus = COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationType))
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationStatus))

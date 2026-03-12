@@ -107,6 +107,32 @@ findAllByOwnerAndServiceNameWithPagination' merchantOpCityId ownerId ownerType s
     limit
     offset
 
+findAllByOwnerWithFilters ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Text ->
+  SubscriptionOwnerType ->
+  Maybe SubscriptionPurchaseStatus ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  m [SubscriptionPurchase]
+findAllByOwnerWithFilters merchantOpCityId ownerId ownerType mbStatus mbFrom mbTo mbLimit mbOffset =
+  findAllWithOptionsKV
+    [ Se.And $
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId,
+          Se.Is Beam.ownerId $ Se.Eq ownerId,
+          Se.Is Beam.ownerType $ Se.Eq ownerType
+        ]
+          <> [Se.Is Beam.status $ Se.Eq status | Just status <- [mbStatus]]
+          <> [Se.Is Beam.purchaseTimestamp $ Se.GreaterThanOrEq fromTime | Just fromTime <- [mbFrom]]
+          <> [Se.Is Beam.purchaseTimestamp $ Se.LessThanOrEq toTime | Just toTime <- [mbTo]]
+    ]
+    (Se.Desc Beam.purchaseTimestamp)
+    mbLimit
+    mbOffset
+
 -- | Find subscription purchases by merchant operating city and service name (for dashboard list-all)
 findAllByMerchantOpCityIdAndServiceNameWithPagination ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
