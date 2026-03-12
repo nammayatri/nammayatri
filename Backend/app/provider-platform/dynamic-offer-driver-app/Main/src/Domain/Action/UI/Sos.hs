@@ -5,6 +5,7 @@ module Domain.Action.UI.Sos
     postSosCreate,
     postSosMarkRideAsSafe,
     uploadMedia,
+    getSosRideDetails,
     SOSVideoUploadReq (..),
     AddSosVideoRes (..),
   )
@@ -35,14 +36,16 @@ import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Ticket.Interface.Types as Ticket
-import Kernel.Prelude (ToSchema)
+import Kernel.Prelude (ToSchema, showBaseUrl)
 import qualified Kernel.Prelude
 import Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
+import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions (..))
 import Kernel.Utils.Common
 import Kernel.Utils.Logging
 import Kernel.Utils.Servant.Client (withShortRetry)
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import qualified Safety.Domain.Action.UI.Sos as SafetySos
 import qualified Safety.Domain.Types.Common as SafetyCommon
 import qualified Safety.Domain.Types.Sos
@@ -387,3 +390,18 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
                     TicketTools.createTicket person.merchantId person.merchantOperatingCityId $
                       mkTicket person driverPhoneNumber mediaLinks rideInfo SafetyDSos.AudioRecording transporterConfig.kaptureDisposition transporterConfig.kaptureQueue
       return $ AddSosVideoRes {fileUrl = fileUrl}
+
+getSosRideDetails :: (Kernel.Types.Id.ShortId DRide.Ride -> Environment.Flow API.Types.UI.Sos.RideDetailsForDriverRes)
+getSosRideDetails rideShortId = do
+  checkSlidingWindowLimitWithOptions ("SosRideDetails:rateLimit:" <> rideShortId.getShortId) (APIRateLimitOptions {limit = 20, limitResetTimeInSec = 60})
+  ride <- QRide.findByShortId rideShortId >>= fromMaybeM (RideDoesNotExist rideShortId.getShortId)
+  rideDetails <- QRideDetails.findById ride.id >>= fromMaybeM (InvalidRequest $ "RideDetailsNotFound: " <> ride.id.getId)
+  return
+    APISos.RideDetailsForDriverRes
+      { trackingUrl = showBaseUrl ride.trackingUrl,
+        driverName = rideDetails.driverName,
+        tripStartPos = ride.tripStartPos,
+        tripEndPos = ride.tripEndPos,
+        vehicleNumber = rideDetails.vehicleNumber,
+        vehicleVariant = rideDetails.vehicleVariant
+      }

@@ -49,10 +49,18 @@ type API =
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
+      :<|> "sos"
+      :> "rideDetails"
+      :> Capture
+           "rideShortId"
+           (Kernel.Types.Id.ShortId Domain.Types.Ride.Ride)
+      :> Get
+           '[JSON]
+           API.Types.UI.Sos.RideDetailsForDriverRes
   )
 
 handler :: Environment.FlowServer API
-handler = getSosGetDetails :<|> postSosCreate :<|> postSosMarkRideAsSafe
+handler = getSosGetDetails :<|> postSosCreate :<|> postSosMarkRideAsSafe :<|> getSosRideDetails
 
 getSosGetDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -84,3 +92,6 @@ postSosMarkRideAsSafe ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postSosMarkRideAsSafe a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosMarkRideAsSafe (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+getSosRideDetails :: (Kernel.Types.Id.ShortId Domain.Types.Ride.Ride -> Environment.FlowHandler API.Types.UI.Sos.RideDetailsForDriverRes)
+getSosRideDetails a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.getSosRideDetails a1

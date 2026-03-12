@@ -348,6 +348,9 @@ Ride:
       kvFunction: updateOneWithKV
       params: [sosId]
       where: id
+    findByShortId:
+      kvFunction: findOneWithKV
+      where: shortId
 
   excludedDefaultQueries:
     - create

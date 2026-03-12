@@ -24,6 +24,9 @@ import qualified Storage.Beam.Ride as Beam
 import Storage.Queries.RideExtra as ReExport
 import Storage.Queries.Transformers.Ride
 
+findByShortId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.ShortId Domain.Types.Ride.Ride -> m (Maybe Domain.Types.Ride.Ride))
+findByShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq (Kernel.Types.Id.getShortId shortId)]
+
 updateCancellationChargesOnCancel :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateCancellationChargesOnCancel cancellationChargesOnCancel id = do
   _now <- getCurrentTime
