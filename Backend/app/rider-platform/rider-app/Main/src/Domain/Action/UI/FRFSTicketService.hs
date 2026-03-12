@@ -91,6 +91,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.CachedQueries.Seat as CQSeat
@@ -1213,12 +1214,14 @@ getFrfsTripRouteSeats ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow SeatLayoutResp
 getFrfsTripRouteSeats (mbPersonId, _merchantId) tripId routeId mbFromStopCode mbToStopCode vehicleNumber = do
-  shouldRun <- Hedis.setNxExpire "frfs:seat_hold_reaper_lock" 120 ("1" :: Text)
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mRiderConfig <- QRiderConfig.findByMerchantOperatingCityId personCityInfo.merchantOperatingCityId Nothing
+  let seatBookingCleanupTtl' = mRiderConfig >>= (.seatBookingCleanupTtl)
+  shouldRun <- Hedis.setNxExpire "frfs:seat_hold_reaper_lock" (fromMaybe 120 seatBookingCleanupTtl') ("1" :: Text)
   when shouldRun $
     fork "frfs-seat-hold-reaper" SeatHold.seatHoldReaperImpl
   logInfo $ "FRFSTicketService:getFrfsTripRouteSeats routeId=" <> routeId <> " tripId=" <> tripId <> " vehicleNumber=" <> show vehicleNumber <> " from=" <> show mbFromStopCode <> " to=" <> show mbToStopCode
-  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
-  personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
   let cityId = personCityInfo.merchantOperatingCityId
   integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig cityId Enums.BUS DIBC.MULTIMODAL
