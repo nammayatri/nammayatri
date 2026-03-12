@@ -581,7 +581,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     fork "GpsTollBehavior Check" $ do
       let isTollRide = isJust updRide.estimatedTollCharges || isJust updRide.tollCharges
           gpsTurnedOff = fromMaybe False updRide.driverGpsTurnedOff
-      when (isTollRide && gpsTurnedOff) $ do
+      when (isTollRide) $ do
         logInfo $ "Driver turned off GPS on toll ride. DriverId: " <> driverId.getId <> ", RideId: " <> updRide.id.getId
         -- Get window days from config (default 15 days if not configured)
         let windowDays = fromMaybe 15 thresholdConfig.gpsTollBehaviorWindowDays
