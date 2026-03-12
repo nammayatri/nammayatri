@@ -22,6 +22,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.API.NearbyDrivers as NearByAPI
+import qualified SharedLogic.External.LocationTrackingService.API.Sos as SosAPI
 import qualified SharedLogic.External.LocationTrackingService.API.VehicleTrackingOnRoute as VehicleTracking
 import SharedLogic.External.LocationTrackingService.Types
 
@@ -75,3 +76,22 @@ nearBy req = do
   let combinedLocations = primaryResult <> secondaryResult
   logDebug $ "lts nearBy: " <> show combinedLocations
   return combinedLocations
+
+setExternalConfig :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Text -> SosErssConfigReq -> m ()
+setExternalConfig sosId req = do
+  ltsCfg <- asks (.ltsCfg)
+  let url = ltsCfg.url
+  void $
+    withShortRetry $
+      callAPI url (SosAPI.setExternalConfig sosId req) "setExternalConfig" SosAPI.setExternalConfigAPI
+        >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_SET_EXTERNAL_CONFIG_API") url)
+
+entityUpsertForSos :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Text -> Text -> Text -> m ()
+entityUpsertForSos sosId personId merchantId = do
+  ltsCfg <- asks (.ltsCfg)
+  let url = ltsCfg.url
+      req = SosAPI.EntityUpsertReq {personId = personId, merchantId = merchantId, entityInfo = SosAPI.EntityStart}
+  void $
+    withShortRetry $
+      callAPI url (SosAPI.entityUpsertForSos sosId req) "entityUpsertForSos" SosAPI.entityUpsertAPI
+        >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_ENTITY_UPSERT_API") url)

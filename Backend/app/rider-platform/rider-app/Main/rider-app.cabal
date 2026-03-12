@@ -62,6 +62,7 @@ library
       API.Internal.GetPickupInstructions
       API.Internal.Rating
       API.Internal.RideSearchExpired
+      API.Internal.Sos
       API.Internal.StopEvents
       API.Internal.ViolationDetection
       API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
@@ -220,6 +221,7 @@ library
       Domain.Action.Internal.PickupInstructionHandler
       Domain.Action.Internal.Rating
       Domain.Action.Internal.RideSearchExpired
+      Domain.Action.Internal.Sos
       Domain.Action.Internal.StopEvents
       Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.AadhaarVerification
@@ -441,6 +443,7 @@ library
       SharedLogic.EstimateTags
       SharedLogic.External.BbpsService.Flow
       SharedLogic.External.LocationTrackingService.API.NearbyDrivers
+      SharedLogic.External.LocationTrackingService.API.Sos
       SharedLogic.External.LocationTrackingService.API.VehicleTrackingOnRoute
       SharedLogic.External.LocationTrackingService.Flow
       SharedLogic.External.LocationTrackingService.Types
