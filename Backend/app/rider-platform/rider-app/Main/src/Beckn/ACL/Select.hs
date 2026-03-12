@@ -134,6 +134,7 @@ mkItemTags res =
             Tags.TO_UPDATE_DEVICE_ID Tags.~= show res.toUpdateDeviceIdInfo,
             Tags.CUSTOMER_DISABILITY_DISABLE Tags.~=? ((T.pack . show) <$> res.disabilityDisable),
             Tags.PREFER_SAFETY_PLUS Tags.~= show res.preferSafetyPlus,
+            Tags.DRIVER_PREFERENCE Tags.~=? (T.intercalate "&" <$> res.driverPreference),
             Tags.IS_PET_RIDE Tags.~=? ((T.pack . show) <$> res.isPetRide),
             Tags.BILLING_CATEGORY Tags.~= show res.billingCategory,
             Tags.EMAIL_DOMAIN Tags.~=? res.emailDomain,

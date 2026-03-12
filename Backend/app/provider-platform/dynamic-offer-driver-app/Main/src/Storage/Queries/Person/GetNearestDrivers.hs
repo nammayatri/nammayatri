@@ -78,7 +78,8 @@ data NearestDriversResult = NearestDriversResult
     tripDistanceMinThreshold :: Maybe Meters,
     tripDistanceMaxThreshold :: Maybe Meters,
     maxPickupDistance :: Maybe Meters,
-    isTollRouteEligible :: Bool -- True if tollRouteBlockedTill is Nothing or < now
+    isTollRouteEligible :: Bool, -- True if tollRouteBlockedTill is Nothing or < now
+    driverGender :: Person.Gender
   }
   deriving (Generic, Show, HasCoordinates)
 
@@ -210,7 +211,8 @@ getNearestDrivers NearestDriversReq {..} = do
                 tripDistanceMinThreshold = info.tripDistanceMinThreshold,
                 tripDistanceMaxThreshold = info.tripDistanceMaxThreshold,
                 maxPickupDistance = info.maxPickupRadius,
-                isTollRouteEligible = tollRouteEligible
+                isTollRouteEligible = tollRouteEligible,
+                driverGender = person.gender
               }
 
 hasSufficientBalance ::

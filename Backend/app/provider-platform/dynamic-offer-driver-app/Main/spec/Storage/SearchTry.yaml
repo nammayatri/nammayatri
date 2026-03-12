@@ -45,6 +45,7 @@ SearchTry:
     isAdvancedBookingEnabled: Bool
     isScheduled: Bool
     preferSafetyPlus: Bool
+    driverPreference: "Maybe [Text]"
     serviceTierArray: "[Text]"
     emailDomain: Maybe Text
     createdAt: UTCTime
@@ -60,6 +61,7 @@ SearchTry:
     isAdvancedBookingEnabled: Maybe Bool
     serviceTierArray: "Maybe [Text]"
     preferSafetyPlus: Maybe Bool
+    driverPreference: "Maybe [Text]"
     billingCategory: Maybe BillingCategory
 
   beamFields:
@@ -97,6 +99,7 @@ SearchTry:
     isAdvancedBookingEnabled: fromMaybe False isAdvancedBookingEnabled|E
     serviceTierArray: fromMaybe (catMaybes [vehicleServiceTierName]) serviceTierArray|E
     preferSafetyPlus: fromMaybe False preferSafetyPlus|E
+    driverPreference: driverPreference|E
     billingCategory: fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
 
   toTType:

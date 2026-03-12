@@ -17,6 +17,7 @@ module SharedLogic.Confirm where
 import Control.Monad.Extra (anyM, maybeM)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as M
+import qualified Data.Text as T
 import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Quote as DQuote
 import qualified Domain.Types.Booking as DRB
@@ -165,7 +166,8 @@ confirm DConfirmReq {..} = do
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
   let isScheduled = (maybe False not searchRequest.isMultimodalSearch) && merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
-  (booking, bookingParties) <- buildBooking merchant personId searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions person.paymentMode dashboardAgentId requiresPaymentBeforeConfirm
+  let driverPreference = extractDriverPreference person.customerNammaTags
+  (booking, bookingParties) <- buildBooking merchant personId searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions person.paymentMode dashboardAgentId requiresPaymentBeforeConfirm driverPreference
   -- check also for the booking parties
   checkIfActiveRidePresentForParties bookingParties
   when isScheduled $ do
@@ -319,8 +321,9 @@ buildBooking ::
   Maybe DMPM.PaymentMode ->
   Maybe Text ->
   Bool ->
+  Maybe [Text] ->
   m (DRB.Booking, [DBPL.BookingPartiesLink])
-buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId paymentInstrument isScheduled disabilityTag configInExperimentVersions paymentMode dashboardAgentId requiresPaymentBeforeConfirm = do
+buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId paymentInstrument isScheduled disabilityTag configInExperimentVersions paymentMode dashboardAgentId requiresPaymentBeforeConfirm driverPreference = do
   id <- generateGUID
   let bookingId = Id id
   displayBookingId <- Just <$> DBI.generateDisplayBookingId merchant.shortId bookingId now
@@ -388,6 +391,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           hasStops = searchRequest.hasStops,
           isReferredRide = searchRequest.driverIdentifier $> True,
           preferSafetyPlus = quote.isSafetyPlus,
+          driverPreference = driverPreference,
           recentLocationId = searchRequest.recentLocationId,
           isMultimodalSearch = searchRequest.isMultimodalSearch,
           multimodalSearchRequestId = searchRequest.multimodalSearchRequestId,
@@ -483,6 +487,14 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
                 Nothing -> (True, inc.insuredAmount, inc.driverInsuredAmount)
           )
           insuranceConfig
+
+extractDriverPreference :: Maybe [LYT.TagNameValueExpiry] -> Maybe [Text]
+extractDriverPreference mbTags = do
+  tags <- mbTags
+  tagText <- find (T.isPrefixOf "driverPreference#" . LYT.getTagNameValueExpiry) tags
+  case T.splitOn "#" (LYT.getTagNameValueExpiry tagText) of
+    _ : value : _ -> Just $ filter (not . T.null) (T.splitOn "&" value)
+    _ -> Nothing
 
 findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m DExophone.Exophone
 findRandomExophone merchantOperatingCityId = do

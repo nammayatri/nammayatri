@@ -60,6 +60,7 @@ buildConfirmReqV2 req isValueAddNP = do
   let nightSafetyCheck = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getNightSafetyCheckTag isValueAddNP
       enableFrequentLocationUpdates = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableFrequentLocationUpdatesTag
       enableOtpLessRide = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableOtpLessRideTag
+      driverPreference = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getDriverPreferenceTag
   toAddress <- fulfillment.fulfillmentStops >>= Utils.getDropLocation >>= (.stopLocation) & maybe (pure Nothing) Utils.parseAddress
   let paymentId = req.confirmReqMessage.confirmReqMessageOrder.orderPayments >>= listToMaybe >>= (.paymentId)
   return $
@@ -87,3 +88,10 @@ getEnableOtpLessRideTag = maybe False getTagValue
     getTagValue tagGroups =
       let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.ENABLE_OTP_LESS_RIDE (Just tagGroups)
        in fromMaybe False (readMaybe . T.unpack =<< tagValue)
+
+getDriverPreferenceTag :: Maybe [Spec.TagGroup] -> Maybe [Text]
+getDriverPreferenceTag Nothing = Nothing
+getDriverPreferenceTag (Just tagGroups) = do
+  tagValue <- Utils.getTagV2 Tag.SAFETY_PLUS_INFO Tag.DRIVER_PREFERENCE (Just tagGroups)
+  let prefs = filter (not . T.null) $ T.strip <$> T.splitOn "&" tagValue
+  if null prefs then Nothing else Just prefs

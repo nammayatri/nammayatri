@@ -29,6 +29,7 @@ import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Driver)
+import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.TransporterConfig as DTC
@@ -109,7 +110,8 @@ data DriverPoolResult = DriverPoolResult
     minRideDistance :: Maybe Meters,
     maxRideDistance :: Maybe Meters,
     maxPickupDistance :: Maybe Meters,
-    isTollRouteEligible :: Bool -- True if driver is not blocked for toll routes
+    isTollRouteEligible :: Bool, -- True if driver is not blocked for toll routes
+    driverGender :: Maybe Person.Gender
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 
@@ -144,7 +146,8 @@ instance Default DriverPoolResult where
         minRideDistance = Nothing,
         maxRideDistance = Nothing,
         maxPickupDistance = Nothing,
-        isTollRouteEligible = True
+        isTollRouteEligible = True,
+        driverGender = Nothing
       }
 
 data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
@@ -155,6 +158,7 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
     serviceTier :: DVST.ServiceTierType,
     serviceTierDowngradeLevel :: Int,
     isAirConditioned :: Maybe Bool,
+    driverGender :: Maybe Person.Gender,
     lat :: Double,
     lon :: Double,
     previousRideDropLat :: Double,
@@ -291,5 +295,6 @@ data DriverSearchBatchInput m = DriverSearchBatchInput
     isAllocatorBatch :: Bool,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
     billingCategory :: SLT.BillingCategory,
-    emailDomain :: Maybe Text
+    emailDomain :: Maybe Text,
+    driverPreference :: Maybe [Text]
   }

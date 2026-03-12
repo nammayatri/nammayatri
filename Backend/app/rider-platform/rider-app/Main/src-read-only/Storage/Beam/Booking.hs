@@ -56,6 +56,7 @@ data BookingT f = BookingT
     displayBookingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverInsuredAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    driverPreference :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     distanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     estimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     estimatedDistanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),

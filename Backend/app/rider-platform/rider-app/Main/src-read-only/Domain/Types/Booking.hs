@@ -52,6 +52,7 @@ data Booking = Booking
     displayBookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverInsuredAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverPreference :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedFare :: Kernel.Types.Common.Price,

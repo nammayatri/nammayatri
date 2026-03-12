@@ -42,6 +42,7 @@ updateByPrimaryKey (Domain.Types.SearchTry.SearchTry {..}) = do
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.customerExtraFee (Kernel.Prelude.roundToIntegral <$> customerExtraFee),
       Se.Set Beam.customerExtraFeeAmount customerExtraFee,
+      Se.Set Beam.driverPreference driverPreference,
       Se.Set Beam.emailDomain emailDomain,
       Se.Set Beam.estimateId estimateId,
       Se.Set Beam.estimateIds (Kernel.Prelude.Just estimateIds),

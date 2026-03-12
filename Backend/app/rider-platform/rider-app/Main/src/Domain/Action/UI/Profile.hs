@@ -208,7 +208,8 @@ data UpdateProfileReq = UpdateProfileReq
     marketingParams :: Maybe MarketingParams,
     mbMobileNumber :: Maybe Text,
     mbMobileCountryCode :: Maybe Text,
-    paymentMode :: Maybe DMPM.PaymentMode
+    paymentMode :: Maybe DMPM.PaymentMode,
+    driverPreference :: Maybe [Text]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -504,7 +505,20 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
       Nothing
       req.paymentMode
       cloudType
-  updateDisability req.hasDisability req.disability personId
+  _ <- updateDisability req.hasDisability req.disability personId
+  whenJust req.driverPreference $ \prefs -> do
+    let driverPreferenceTagName = LYT.TagNameValueExpiry "driverPreference#"
+        normalizedPrefs =
+          prefs
+            <&> T.strip
+            & filter (\p -> not (T.null p) && not ("#" `T.isInfixOf` p) && not ("&" `T.isInfixOf` p))
+        newTags =
+          if null normalizedPrefs
+            then Just $ YUtils.removeTagName person.customerNammaTags driverPreferenceTagName
+            else Just $ YUtils.replaceTagNameValue person.customerNammaTags (LYT.TagNameValueExpiry $ "driverPreference#" <> T.intercalate "&" normalizedPrefs)
+    unless ((YUtils.showRawTags <$> newTags) == (YUtils.showRawTags <$> person.customerNammaTags)) $
+      QPerson.updateCustomerTags newTags personId
+  pure APISuccess.Success
 
 updateDisability :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Maybe Bool -> Maybe Disability -> Id Person.Person -> m APISuccess.APISuccess
 updateDisability hasDisability mbDisability personId = do

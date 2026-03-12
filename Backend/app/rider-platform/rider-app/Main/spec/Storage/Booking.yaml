@@ -243,6 +243,7 @@ Booking:
     disabilityTag: Maybe Text
     configInExperimentVersions: "[ConfigVersionMap]"
     preferSafetyPlus: Bool
+    driverPreference: Maybe [Text]
     recentLocationId: Maybe (Id RecentLocation)
     isInsured: Bool
     insuredAmount: Maybe Text

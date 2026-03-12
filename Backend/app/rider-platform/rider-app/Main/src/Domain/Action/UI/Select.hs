@@ -137,7 +137,8 @@ data DSelectReq = DSelectReq
     deliveryDetails :: Maybe DTDD.DeliveryDetails,
     disabilityDisable :: Maybe Bool,
     billingCategory :: Maybe BillingCategory,
-    preferSafetyPlus :: Maybe Bool
+    preferSafetyPlus :: Maybe Bool,
+    driverPreference :: Maybe [Text]
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -187,6 +188,7 @@ data DSelectRes = DSelectRes
     disabilityDisable :: Maybe Bool,
     selectResDetails :: Maybe DSelectResDetails,
     preferSafetyPlus :: Bool,
+    driverPreference :: Maybe [Text],
     mbJourneyId :: Maybe (Id DJ.Journey),
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
     paymentMode :: Maybe DMPM.PaymentMode,
@@ -324,6 +326,7 @@ select2 personId estimateId req@DSelectReq {..} = do
         tripCategory = estimate.tripCategory,
         selectResDetails = dselectResDetails,
         preferSafetyPlus = fromMaybe False preferSafetyPlus,
+        driverPreference = driverPreference,
         mbJourneyId = Just journey.id,
         paymentMethodInfo = paymentMethodInfo,
         billingCategory = fromMaybe PERSONAL billingCategory,

@@ -76,7 +76,8 @@ data DConfirmReq = DConfirmReq
     nightSafetyCheck :: Bool,
     enableFrequentLocationUpdates :: Bool,
     paymentId :: Maybe Text,
-    enableOtpLessRide :: Bool
+    enableOtpLessRide :: Bool,
+    driverPreference :: Maybe [Text]
   }
 
 data ValidatedQuote = DriverQuote DPerson.Person DDQ.DriverQuote | StaticQuote DQ.Quote | RideOtpQuote DQ.Quote | MeterRideQuote DPerson.Person DQ.Quote
@@ -189,7 +190,8 @@ handler merchant req validatedQuote = do
                 isRepeatSearch = False,
                 isAllocatorBatch = False,
                 paymentMethodInfo = paymentMethodInfo,
-                emailDomain = booking.emailDomain
+                emailDomain = booking.emailDomain,
+                driverPreference = req.driverPreference
               }
       searchTry <- initiateDriverSearchBatch driverSearchBatchInput
       QRB.updateSearchTryId booking.id searchTry.id

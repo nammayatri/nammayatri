@@ -830,6 +830,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
           customerTags = Nothing,
           minRideDistance = tripDistanceMinThreshold,
           maxRideDistance = tripDistanceMaxThreshold,
+          driverGender = Just driverGender,
           ..
         }
 
