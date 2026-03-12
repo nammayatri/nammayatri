@@ -5,7 +5,10 @@ module Domain.Action.Dashboard.Sos where
 import qualified API.Types.RiderPlatform.Management.Sos
 import qualified API.Types.UI.Sos as UISos
 import qualified Dashboard.Common
+import qualified Data.Aeson as A
+import qualified Data.ByteString.Lazy as LBS
 import Data.OpenApi (ToSchema)
+import qualified Data.Text.Encoding as TE
 import qualified Domain.Action.UI.Profile as DP
 import qualified Domain.Action.UI.Sos as Sos
 import qualified Domain.Types.Merchant
@@ -216,3 +219,29 @@ postSosCallExternalSOS _merchantShortId _opCity sosId = do
 
 sosDashboardHitsCountKey :: Kernel.Types.Id.Id Dashboard.Common.Sos -> Text
 sosDashboardHitsCountKey sosId = "SosDashboardHits:hitsCount:" <> Kernel.Types.Id.getId sosId
+
+postSosErssStatusUpdate :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.Sos.ErssStatusUpdateReq -> Environment.Flow API.Types.RiderPlatform.Management.Sos.ErssStatusUpdateRes
+postSosErssStatusUpdate _merchantShortId _opCity req = do
+  sosDetails <-
+    SafetyQSos.findByExternalReferenceId (Just req.idErss)
+      >>= fromMaybeM (InvalidRequest $ "No SOS found for signal ID: " <> req.idErss)
+
+  let newStatus = req.currentStatus
+      newEntry = Sos.ExternalStatusEntry {status = newStatus, idErss = req.idErss, lastUpdatedTime = req.lastUpdatedTime}
+      existingHistory = maybe [] (\h -> fromMaybe [] (A.decode (LBS.fromStrict $ TE.encodeUtf8 h))) sosDetails.externalStatusHistory :: [Sos.ExternalStatusEntry]
+      updatedHistory = existingHistory <> [newEntry]
+      updatedHistoryJson = Just $ TE.decodeUtf8 $ LBS.toStrict $ A.encode updatedHistory
+
+  SafetyQSos.updateExternalReferenceStatus (Just newStatus) updatedHistoryJson sosDetails.id
+
+  when (newStatus == "RESOLVED") $ do
+    SafetyQSos.updateStatus SafetyDSos.Resolved sosDetails.id
+
+  pure $
+    API.Types.RiderPlatform.Management.Sos.ErssStatusUpdateRes
+      { resultCode = "OPERATION_SUCCESS",
+        resultString = Just "Status update received successfully",
+        errorMsg = Nothing,
+        message = Nothing,
+        payLoad = Nothing
+      }

@@ -6,6 +6,7 @@ imports:
   MerchantOperatingCity: Dashboard.Common
   APISuccess: Kernel.Types.APISuccess
   UTCTime: Kernel.Prelude
+  Integer: EulerHS.Prelude
 
 module: Sos
 
@@ -36,6 +37,15 @@ apis:
         sosId: Id Sos
       response:
         type: APISuccess
+
+  # POST /sos/erss/statusUpdate (Webhook for external SOS status update from Police)
+  - POST:
+      endpoint: /erss/statusUpdate
+      auth: ApiAuthV2
+      request:
+        type: ErssStatusUpdateReq
+      response:
+        type: ErssStatusUpdateRes
 
 types:
   SosLocationRes:
@@ -91,3 +101,18 @@ types:
     - firstName: Maybe Text
     - middleName: Maybe Text
     - lastName: Maybe Text
+
+  ErssStatusUpdateReq:
+    - idSource: Maybe Text
+    - idErss: Text
+    - currentStatus: Text
+    - statusDesc: Maybe Text
+    - comments: Maybe Text
+    - lastUpdatedTime: Maybe Integer
+
+  ErssStatusUpdateRes:
+    - resultCode: Text
+    - resultString: Maybe Text
+    - errorMsg: Maybe Text
+    - message: Maybe Text
+    - payLoad: Maybe Text

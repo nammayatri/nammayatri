@@ -156,19 +156,10 @@ type API =
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
-      :<|> "sos"
-      :> "erss"
-      :> "statusUpdate"
-      :> ReqBody
-           '[JSON]
-           API.Types.UI.Sos.ErssStatusUpdateReq
-      :> Post
-           '[JSON]
-           API.Types.UI.Sos.ErssStatusUpdateRes
   )
 
 handler :: Environment.FlowServer API
-handler = getSosGetDetails :<|> getSosIvrOutcome :<|> postSosCreate :<|> postSosStatus :<|> postSosMarkRideAsSafe :<|> postSosCreateMockSos :<|> postSosCallPolice :<|> postSosUpdateLocation :<|> getSosTracking :<|> postSosStartTracking :<|> postSosUpdateState :<|> getSosTrackingDetails :<|> postSosUpdateToRide :<|> postSosErssStatusUpdate
+handler = getSosGetDetails :<|> getSosIvrOutcome :<|> postSosCreate :<|> postSosStatus :<|> postSosMarkRideAsSafe :<|> postSosCreateMockSos :<|> postSosCallPolice :<|> postSosUpdateLocation :<|> getSosTracking :<|> postSosStartTracking :<|> postSosUpdateState :<|> getSosTrackingDetails :<|> postSosUpdateToRide
 
 getSosGetDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -273,6 +264,3 @@ postSosUpdateToRide ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postSosUpdateToRide a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosUpdateToRide (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
-
-postSosErssStatusUpdate :: (API.Types.UI.Sos.ErssStatusUpdateReq -> Environment.FlowHandler API.Types.UI.Sos.ErssStatusUpdateRes)
-postSosErssStatusUpdate a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosErssStatusUpdate a1
