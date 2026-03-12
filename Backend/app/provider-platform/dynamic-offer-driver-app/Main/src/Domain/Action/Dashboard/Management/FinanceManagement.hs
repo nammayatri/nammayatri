@@ -10,6 +10,7 @@ module Domain.Action.Dashboard.Management.FinanceManagement
     postFinanceManagementReconciliationTrigger,
     getFinanceManagementFinancePayoutList,
     getFinanceManagementFinancePaymentSettlementList,
+    getFinanceManagementFinancePaymentGatewayTransactionList,
     getFinanceManagementFinanceWalletLedger,
     getFinanceManagementFinanceEarningSummary,
   )
@@ -17,8 +18,8 @@ where
 
 import qualified API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement as API
 import Control.Monad (forM)
-import Data.List (nub)
 import qualified Dashboard.Common
+import Data.List (nub)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time.Clock (diffUTCTime)
@@ -38,7 +39,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Error
-import Kernel.Types.Id (Id (..), ShortId, cast)
+import Kernel.Types.Id (Id (..), ShortId (..), cast)
 import Kernel.Utils.Common (getCurrentTime, secondsToNominalDiffTime)
 import Kernel.Utils.Error (fromMaybeM, throwError)
 import Lib.Finance.Domain.Types.Account (AccountType (..), CounterpartyType (..))
@@ -61,8 +62,14 @@ import qualified Lib.Finance.Storage.Queries.PgPaymentSettlementReportExtra as Q
 import qualified Lib.Finance.Storage.Queries.ReconciliationEntry as QReconEntry
 import qualified Lib.Finance.Storage.Queries.ReconciliationEntryExtra as QReconEntryExtra
 import qualified Lib.Finance.Storage.Queries.ReconciliationSummary as QReconSummary
+import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
 import qualified Lib.Payment.Domain.Types.PayoutOrder as PayoutOrder
+import qualified Lib.Payment.Domain.Types.Refunds as PaymentRefund
+import qualified Lib.Payment.Domain.Types.PaymentTransaction as PaymentTransaction
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import qualified Lib.Payment.Storage.Queries.PayoutOrderExtra as QPayoutOrder
+import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import qualified Lib.Scheduler.JobStorageType.DB.Table as SchedulerJobT
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QSchedulerJob
 import SharedLogic.Allocator (AllocatorJobType (..), ReconciliationJobData (..))
@@ -802,6 +809,410 @@ getFinanceManagementFinancePaymentSettlementList merchantShortId opCity mbDriver
                   differenceAmount = (.variance) <$> reconciliationEntry
                 }
           else Nothing
+
+    mkFullName :: DP.Person -> Text
+    mkFullName person = T.intercalate " " $ catMaybes [Just person.firstName, person.middleName, person.lastName]
+
+getFinanceManagementFinancePaymentGatewayTransactionList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe UTCTime ->
+  Maybe Text ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Maybe Text ->
+  Flow API.PaymentTransactionReportListRes
+getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity mbFrom mbGatewayTransactionId mbLimit mbOffset mbOrderId mbPaymentMode mbPaymentStatus mbPgGateway mbSubscriptionId mbTo mbTransactionType = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+
+  let limit = fromMaybe 20 mbLimit
+      offset = fromMaybe 0 mbOffset
+      requiresInMemoryPagination =
+        any
+          isJust
+          [ mbGatewayTransactionId,
+            mbPaymentMode,
+            mbPaymentStatus,
+            mbPgGateway,
+            mbSubscriptionId,
+            mbTransactionType
+          ]
+
+  resolveBaseReportFilters mbOrderId mbSubscriptionId >>= \case
+    Nothing -> pure $ emptyPaymentTransactionReportListRes 0 0
+    Just (mbBaseSubscriptionId, mbBaseOrderId) -> do
+      reports <-
+        QPgPaymentSettlementReport.findAllByMerchantOpCityIdWithFilters
+          merchant.id.getId
+          merchantOpCityId.getId
+          mbFrom
+          mbTo
+          mbBaseSubscriptionId
+          mbBaseOrderId
+          Nothing
+          (if requiresInMemoryPagination then Nothing else Just limit)
+          (if requiresInMemoryPagination then Nothing else Just offset)
+
+      transactions <- mapM buildPaymentGatewayTransactionItem reports
+
+      let filteredTransactions = filter matchesPaymentTransactionFilters transactions
+          paginatedTransactions =
+            if requiresInMemoryPagination
+              then take limit $ drop offset filteredTransactions
+              else filteredTransactions
+          totalItems = length paginatedTransactions
+          summaryTotalCount =
+            if requiresInMemoryPagination
+              then length filteredTransactions
+              else totalItems
+
+      pure $
+        API.PaymentTransactionReportListRes
+          { totalItems = totalItems,
+            summary = Dashboard.Common.Summary {totalCount = summaryTotalCount, count = totalItems},
+            transactions = paginatedTransactions
+          }
+  where
+    emptyPaymentTransactionReportListRes :: Int -> Int -> API.PaymentTransactionReportListRes
+    emptyPaymentTransactionReportListRes summaryTotalCount totalItems =
+      API.PaymentTransactionReportListRes
+        { totalItems = totalItems,
+          summary = Dashboard.Common.Summary {totalCount = summaryTotalCount, count = totalItems},
+          transactions = []
+        }
+
+    resolveBaseReportFilters ::
+      Maybe Text ->
+      Maybe Text ->
+      Flow (Maybe (Maybe Text, Maybe Text))
+    resolveBaseReportFilters explicitOrderId Nothing =
+      pure $ Just (Nothing, explicitOrderId)
+    resolveBaseReportFilters explicitOrderId (Just subscriptionId) = do
+      QSubscriptionPurchase.findByPrimaryKey (Id subscriptionId) >>= \case
+        Nothing -> pure Nothing
+        Just subscription -> do
+          mbOrder <- QPaymentOrder.findById subscription.paymentOrderId
+          let resolvedOrderId = explicitOrderId <|> (mbOrder <&> (.shortId.getShortId))
+              resolvedSubscriptionId =
+                if isNothing resolvedOrderId
+                  then Just subscriptionId
+                  else Nothing
+          pure $ Just (resolvedSubscriptionId, resolvedOrderId)
+
+    buildPaymentGatewayTransactionItem ::
+      PgPaymentSettlementReport.PgPaymentSettlementReport ->
+      Flow API.PaymentTransactionReportItem
+    buildPaymentGatewayTransactionItem report = do
+      mbOrderFromShortId <- QPaymentOrder.findByShortId (ShortId report.orderId)
+
+      mbSubscription <-
+        case report.referenceId of
+          Just subscriptionId ->
+            QSubscriptionPurchase.findByPrimaryKey (Id subscriptionId) >>= \case
+              Just subscription -> pure $ Just subscription
+              Nothing -> resolveSubscriptionFromOrder mbOrderFromShortId
+          Nothing -> resolveSubscriptionFromOrder mbOrderFromShortId
+
+      mbOrder <- case mbOrderFromShortId of
+        Just order -> pure $ Just order
+        Nothing -> maybe (pure Nothing) (QPaymentOrder.findById . (.paymentOrderId)) mbSubscription
+
+      mbPaymentTransaction <- case mbOrder of
+        Just order -> selectRelevantPaymentTransaction <$> QPaymentTransaction.findAllByOrderId order.id
+        Nothing -> pure Nothing
+
+      mbRefund <- case mbOrder of
+        -- TODO(finance): Match refund using report.refundId to avoid picking wrong refund
+        -- when an order has multiple refunds; keep latest fallback only if refundId is missing.  @dhruv-1010
+        Just order -> QRefunds.findLatestByOrderId order.shortId
+        Nothing -> pure Nothing
+
+      (payerTypeValue, payerNameValue, payerIdValue, payerMobileValue, payerEmailValue, fleetOwnerIdValue) <-
+        maybe (pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)) resolvePayerContext mbSubscription
+
+      mbMerchantOpCity <- case mbSubscription of
+        Just subscription -> CQMOC.findById subscription.merchantOperatingCityId
+        Nothing -> CQMOC.findById (Id report.merchantOperatingCityId)
+
+      let gatewayTransactionIdValue = (mbPaymentTransaction >>= (.epgTxnId)) <|> report.txnId
+          merchantOrderIdValue = Just report.orderId <|> (mbOrder <&> (.shortId.getShortId))
+          orderCreatedAt = (.createdAt) <$> mbOrder
+          transactionTypeValue = Just $ show report.txnType
+          transactionStatusValue = resolveTransactionStatus report mbOrder mbRefund
+          failureReasonValue = resolveFailureReason report mbOrder mbPaymentTransaction mbRefund
+          errorCodeValue = resolveErrorCode report mbOrder mbPaymentTransaction mbRefund
+          refundAmountValue = (mbRefund <&> (.refundAmount)) <|> report.refundAmount
+          gatewayChargesValue = resolveGatewayCharges report mbPaymentTransaction
+          gstOnChargesValue = resolveGstOnCharges report mbPaymentTransaction
+          paymentModeValue = resolvePaymentMode report mbPaymentTransaction
+          paymentSubModeValue = resolvePaymentSubMode report mbPaymentTransaction
+          walletProviderValue =
+            case canonicalizeText <$> paymentModeValue of
+              Just "wallet" -> paymentSubModeValue
+              _ -> Nothing
+          cityValue = mbMerchantOpCity <&> (.city) <&> show
+
+      pure $
+        API.PaymentTransactionReportItem
+          { gatewayTransactionId = gatewayTransactionIdValue,
+            merchantOrderId = merchantOrderIdValue,
+            referenceId = Nothing,
+            correlationId = Nothing,
+            parentTransactionId = Nothing,
+            transactionType = transactionTypeValue,
+            transactionStatus = transactionStatusValue,
+            failureReason = failureReasonValue,
+            errorCode = errorCodeValue,
+            transactionInitiationDate = orderCreatedAt,
+            paymentPageOpenDate = orderCreatedAt,
+            paymentGatewayOpenDate = mbPaymentTransaction >>= (.authorizationDateTime),
+            refundInitiationDate = mbRefund <&> (.createdAt),
+            refundCompletionDate = report.refundDate <|> (mbRefund >>= (.completedAt)),
+            transactionAmountGross = resolveTransactionAmountGross report mbPaymentTransaction refundAmountValue,
+            netAmount = resolveNetAmount report mbPaymentTransaction refundAmountValue,
+            gatewayCharges = gatewayChargesValue,
+            gstOnCharges = gstOnChargesValue,
+            tdsAmount = Nothing,
+            withholdingAmount = Nothing,
+            refundAmount = refundAmountValue,
+            currency = ((show <$> (mbOrder <&> (.currency))) <|> Just (show report.currency)),
+            exchangeRate = Nothing,
+            paymentMode = paymentModeValue,
+            paymentSubMode = paymentSubModeValue,
+            upiId = mbOrder >>= (.vpa),
+            upiAppName = Nothing,
+            cardType = mbPaymentTransaction >>= (.cardType),
+            cardNetwork = mbPaymentTransaction >>= (.cardBrand),
+            maskedCardNumber = mkMaskedCardNumber (mbPaymentTransaction >>= (.cardIsin)) (mbPaymentTransaction >>= (.cardLastFourDigits)),
+            issuerBank = mbPaymentTransaction >>= (.cardIssuer),
+            walletProvider = walletProviderValue,
+            payerType = payerTypeValue,
+            payerName = payerNameValue,
+            payerId = payerIdValue,
+            payerMobile = payerMobileValue,
+            payerEmail = payerEmailValue,
+            subscriptionId = (mbSubscription <&> (.id.getId)) <|> report.referenceId,
+            vehicleId = Nothing,
+            fleetOwnerId = fleetOwnerIdValue,
+            city = cityValue,
+            operatingLocation = cityValue,
+            serviceType = if isJust mbSubscription then Just "Ride based subscription" else Nothing,
+            refundId = (mbRefund >>= (.idAssignedByServiceProvider)) <|> report.refundId,
+            refundReason = Nothing,
+            refundMode = show <$> report.refundMethod,
+            refundStatus = ((show . (.status)) <$> mbRefund) <|> guardReportRefundStatus report,
+            ipAddress = Nothing,
+            pgName = (mbPaymentTransaction >>= (.gatewayName)) <|> report.paymentGateway,
+            pgMerchantId = mbOrder >>= (.paymentMerchantId)
+          }
+
+    resolveSubscriptionFromOrder ::
+      Maybe PaymentOrder.PaymentOrder ->
+      Flow (Maybe DSP.SubscriptionPurchase)
+    resolveSubscriptionFromOrder =
+      maybe (pure Nothing) (QSubscriptionPurchase.findByPaymentOrderId . (.id))
+
+    selectRelevantPaymentTransaction ::
+      [PaymentTransaction.PaymentTransaction] ->
+      Maybe PaymentTransaction.PaymentTransaction
+    selectRelevantPaymentTransaction transactions =
+      listToMaybe (filter (\txn -> canonicalizeText (show txn.status) == "charged") transactions)
+        <|> listToMaybe transactions
+
+    resolvePayerContext ::
+      DSP.SubscriptionPurchase ->
+      Flow (Maybe Text, Maybe Text, Maybe Text, Maybe Text, Maybe Text, Maybe Text)
+    resolvePayerContext subscription =
+      case subscription.ownerType of
+        DSP.DRIVER -> do
+          mbDriver <- QPerson.findById (Id subscription.ownerId)
+          driverMobile <- maybe (pure Nothing) (\driver -> decryptWithDefault driver.mobileNumber Nothing) mbDriver
+          mbFleetAssoc <- case mbDriver of
+            Just driver -> QFleetDriver.findByDriverId driver.id True
+            Nothing -> pure Nothing
+          pure
+            ( Just "DCO",
+              mkFullName <$> mbDriver,
+              Just subscription.ownerId,
+              driverMobile,
+              mbDriver >>= (.email),
+              mbFleetAssoc <&> (.fleetOwnerId)
+            )
+        DSP.FLEET_OWNER -> do
+          mbFleetOwner <- QPerson.findById (Id subscription.ownerId)
+          fleetOwnerMobile <- maybe (pure Nothing) (\fleetOwner -> decryptWithDefault fleetOwner.mobileNumber Nothing) mbFleetOwner
+          pure
+            ( Just "FO",
+              mkFullName <$> mbFleetOwner,
+              Just subscription.ownerId,
+              fleetOwnerMobile,
+              mbFleetOwner >>= (.email),
+              Just subscription.ownerId
+            )
+
+    resolveTransactionStatus ::
+      PgPaymentSettlementReport.PgPaymentSettlementReport ->
+      Maybe PaymentOrder.PaymentOrder ->
+      Maybe PaymentRefund.Refunds ->
+      Maybe Text
+    resolveTransactionStatus report mbOrder mbRefund =
+      case report.txnType of
+        PgPaymentSettlementReport.ORDER -> (show <$> (mbOrder <&> (.status))) <|> Just (show report.txnStatus)
+        PgPaymentSettlementReport.REFUND -> ((show . (.status)) <$> mbRefund) <|> Just (show report.txnStatus)
+
+    resolveFailureReason ::
+      PgPaymentSettlementReport.PgPaymentSettlementReport ->
+      Maybe PaymentOrder.PaymentOrder ->
+      Maybe PaymentTransaction.PaymentTransaction ->
+      Maybe PaymentRefund.Refunds ->
+      Maybe Text
+    resolveFailureReason report mbOrder mbPaymentTransaction mbRefund =
+      case report.txnType of
+        PgPaymentSettlementReport.ORDER ->
+          (mbOrder >>= (.bankErrorMessage)) <|> (mbPaymentTransaction >>= (.bankErrorMessage))
+        PgPaymentSettlementReport.REFUND ->
+          (mbRefund >>= (.errorMessage))
+            <|> (mbOrder >>= (.bankErrorMessage))
+            <|> (mbPaymentTransaction >>= (.bankErrorMessage))
+
+    resolveErrorCode ::
+      PgPaymentSettlementReport.PgPaymentSettlementReport ->
+      Maybe PaymentOrder.PaymentOrder ->
+      Maybe PaymentTransaction.PaymentTransaction ->
+      Maybe PaymentRefund.Refunds ->
+      Maybe Text
+    resolveErrorCode report mbOrder mbPaymentTransaction mbRefund =
+      case report.txnType of
+        PgPaymentSettlementReport.ORDER ->
+          (mbOrder >>= (.bankErrorCode)) <|> (mbPaymentTransaction >>= (.bankErrorCode))
+        PgPaymentSettlementReport.REFUND ->
+          (mbRefund >>= (.errorCode))
+            <|> (mbOrder >>= (.bankErrorCode))
+            <|> (mbPaymentTransaction >>= (.bankErrorCode))
+
+    resolveGatewayCharges ::
+      PgPaymentSettlementReport.PgPaymentSettlementReport ->
+      Maybe PaymentTransaction.PaymentTransaction ->
+      Maybe HighPrecMoney
+    resolveGatewayCharges report mbPaymentTransaction =
+      case report.txnType of
+        PgPaymentSettlementReport.ORDER ->
+          (mbPaymentTransaction >>= (.surchargeAmount)) <|> Just report.pgBaseFee
+        PgPaymentSettlementReport.REFUND ->
+          report.refundBaseFee <|> Just report.pgBaseFee
+
+    resolveGstOnCharges ::
+      PgPaymentSettlementReport.PgPaymentSettlementReport ->
+      Maybe PaymentTransaction.PaymentTransaction ->
+      Maybe HighPrecMoney
+    resolveGstOnCharges report mbPaymentTransaction =
+      case report.txnType of
+        PgPaymentSettlementReport.ORDER ->
+          (mbPaymentTransaction >>= (.taxAmount)) <|> Just report.pgTax
+        PgPaymentSettlementReport.REFUND ->
+          report.refundTax <|> Just report.pgTax
+
+    resolveTransactionAmountGross ::
+      PgPaymentSettlementReport.PgPaymentSettlementReport ->
+      Maybe PaymentTransaction.PaymentTransaction ->
+      Maybe HighPrecMoney ->
+      Maybe HighPrecMoney
+    resolveTransactionAmountGross report mbPaymentTransaction refundAmountValue =
+      case report.txnType of
+        PgPaymentSettlementReport.ORDER ->
+          (mbPaymentTransaction <&> (.amount)) <|> Just report.txnAmount
+        PgPaymentSettlementReport.REFUND ->
+          refundAmountValue <|> Just report.txnAmount
+
+    resolveNetAmount ::
+      PgPaymentSettlementReport.PgPaymentSettlementReport ->
+      Maybe PaymentTransaction.PaymentTransaction ->
+      Maybe HighPrecMoney ->
+      Maybe HighPrecMoney
+    resolveNetAmount report mbPaymentTransaction refundAmountValue =
+      case report.txnType of
+        PgPaymentSettlementReport.ORDER ->
+          (mbPaymentTransaction >>= (.netAmount))
+            <|> Just (report.txnAmount - report.pgBaseFee - report.pgTax)
+        PgPaymentSettlementReport.REFUND ->
+          case (refundAmountValue, report.refundBaseFee, report.refundTax) of
+            (Just refundAmount, Just refundBaseFee, Just refundTax) -> Just (refundAmount - refundBaseFee - refundTax)
+            (Just refundAmount, _, _) -> Just refundAmount
+            _ -> Nothing
+
+    resolvePaymentMode ::
+      PgPaymentSettlementReport.PgPaymentSettlementReport ->
+      Maybe PaymentTransaction.PaymentTransaction ->
+      Maybe Text
+    resolvePaymentMode report mbPaymentTransaction =
+      (show <$> report.paymentMethod)
+        <|> (mbPaymentTransaction >>= (.paymentMethod))
+        <|> (mbPaymentTransaction >>= (.paymentMethodType))
+
+    resolvePaymentSubMode ::
+      PgPaymentSettlementReport.PgPaymentSettlementReport ->
+      Maybe PaymentTransaction.PaymentTransaction ->
+      Maybe Text
+    resolvePaymentSubMode report mbPaymentTransaction =
+      report.paymentMethodSubType
+        <|> (mbPaymentTransaction >>= (.paymentMethodType))
+        <|> (mbPaymentTransaction >>= (.paymentMethod))
+
+    guardReportRefundStatus ::
+      PgPaymentSettlementReport.PgPaymentSettlementReport ->
+      Maybe Text
+    guardReportRefundStatus report =
+      case report.txnType of
+        PgPaymentSettlementReport.REFUND -> Just (show report.txnStatus)
+        PgPaymentSettlementReport.ORDER -> Nothing
+
+    matchesPaymentTransactionFilters :: API.PaymentTransactionReportItem -> Bool
+    matchesPaymentTransactionFilters item =
+      and
+        [ matchesMaybeTextFilter mbGatewayTransactionId item.gatewayTransactionId,
+          matchesMaybeTextFilter mbOrderId item.merchantOrderId,
+          matchesPaymentModeFilter mbPaymentMode item.paymentMode,
+          matchesMaybeTextFilter mbPaymentStatus item.transactionStatus,
+          matchesMaybeTextFilter mbPgGateway item.pgName,
+          matchesMaybeTextFilter mbSubscriptionId item.subscriptionId,
+          matchesMaybeTextFilter mbTransactionType item.transactionType
+        ]
+
+    matchesMaybeTextFilter :: Maybe Text -> Maybe Text -> Bool
+    matchesMaybeTextFilter Nothing _ = True
+    matchesMaybeTextFilter (Just expectedValue) mbActualValue =
+      maybe False ((== canonicalizeText expectedValue) . canonicalizeText) mbActualValue
+
+    matchesPaymentModeFilter :: Maybe Text -> Maybe Text -> Bool
+    matchesPaymentModeFilter Nothing _ = True
+    matchesPaymentModeFilter (Just expectedValue) mbActualValue =
+      case canonicalizeText expectedValue of
+        "card" ->
+          maybe
+            False
+            (\actualValue -> canonicalizeText actualValue `elem` ["card", "creditcard", "debitcard"])
+            mbActualValue
+        normalizedExpectedValue ->
+          maybe False ((== normalizedExpectedValue) . canonicalizeText) mbActualValue
+
+    canonicalizeText :: Text -> Text
+    canonicalizeText =
+      T.filter (\char -> char /= ' ' && char /= '_' && char /= '-')
+        . T.toLower
+        . T.strip
+
+    mkMaskedCardNumber :: Maybe Text -> Maybe Text -> Maybe Text
+    mkMaskedCardNumber mbCardIsin mbLastFourDigits =
+      case (mbCardIsin, mbLastFourDigits) of
+        (Just cardIsin, Just lastFourDigits) -> Just $ cardIsin <> "XXXXXX" <> lastFourDigits
+        _ -> Nothing
 
     mkFullName :: DP.Person -> Text
     mkFullName person = T.intercalate " " $ catMaybes [Just person.firstName, person.middleName, person.lastName]

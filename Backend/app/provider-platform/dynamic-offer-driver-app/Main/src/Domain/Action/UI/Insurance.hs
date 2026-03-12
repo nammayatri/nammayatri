@@ -52,7 +52,7 @@ getDriverInsurance (personId, _merchantId, merchantOpCityId) = do
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let todayLocal = utctDay localTime
       timeOffset = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
-      startOfToday = addUTCTime (-timeOffset) (UTCTime todayLocal 0)
+      startOfToday = addUTCTime (- timeOffset) (UTCTime todayLocal 0)
       startOfTomorrow = addUTCTime 86400 startOfToday
   mbInsurance <- QIffco.findLatestByDriverId personId
   case mbInsurance of

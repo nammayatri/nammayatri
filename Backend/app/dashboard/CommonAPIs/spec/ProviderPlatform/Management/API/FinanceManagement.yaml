@@ -91,6 +91,25 @@ apis:
       response:
         type: PaymentSettlementListRes
 
+  # ----- Payment gateway transaction list -----
+  - GET: # PaymentGatewayTransactionListAPI
+      endpoint: /finance/payment/gateway/transaction/list
+      query:
+        limit: Int
+        offset: Int
+        from: UTCTime
+        to: UTCTime
+        subscriptionId: Text
+        orderId: Text
+        gatewayTransactionId: Text
+        pgGateway: Text
+        paymentStatus: Text
+        paymentMode: Text
+        transactionType: Text
+      auth: ApiAuthV2
+      response:
+        type: PaymentTransactionReportListRes
+
   # ----- Wallet ledger (balance + ledger entries combined) -----
   - GET: # WalletLedgerAPI
       endpoint: /finance/wallet/ledger
@@ -324,6 +343,63 @@ types:
     - reconciliationStatus: Maybe Text
     - reconciliationDate: Maybe UTCTime
     - differenceAmount: Maybe HighPrecMoney
+
+  # ----- Payment gateway transaction list -----
+  PaymentTransactionReportListRes:
+    - totalItems: Int
+    - summary: Summary
+    - transactions: [PaymentTransactionReportItem]
+  PaymentTransactionReportItem:
+    - gatewayTransactionId: Maybe Text
+    - merchantOrderId: Maybe Text
+    - referenceId: Maybe Text
+    - correlationId: Maybe Text
+    - parentTransactionId: Maybe Text
+    - transactionType: Maybe Text
+    - transactionStatus: Maybe Text
+    - failureReason: Maybe Text
+    - errorCode: Maybe Text
+    - transactionInitiationDate: Maybe UTCTime
+    - paymentPageOpenDate: Maybe UTCTime
+    - paymentGatewayOpenDate: Maybe UTCTime
+    - refundInitiationDate: Maybe UTCTime
+    - refundCompletionDate: Maybe UTCTime
+    - transactionAmountGross: Maybe HighPrecMoney
+    - netAmount: Maybe HighPrecMoney
+    - gatewayCharges: Maybe HighPrecMoney
+    - gstOnCharges: Maybe HighPrecMoney
+    - tdsAmount: Maybe HighPrecMoney
+    - withholdingAmount: Maybe HighPrecMoney
+    - refundAmount: Maybe HighPrecMoney
+    - currency: Maybe Text
+    - exchangeRate: Maybe Double
+    - paymentMode: Maybe Text
+    - paymentSubMode: Maybe Text
+    - upiId: Maybe Text
+    - upiAppName: Maybe Text
+    - cardType: Maybe Text
+    - cardNetwork: Maybe Text
+    - maskedCardNumber: Maybe Text
+    - issuerBank: Maybe Text
+    - walletProvider: Maybe Text
+    - payerType: Maybe Text
+    - payerName: Maybe Text
+    - payerId: Maybe Text
+    - payerMobile: Maybe Text
+    - payerEmail: Maybe Text
+    - subscriptionId: Maybe Text
+    - vehicleId: Maybe Text
+    - fleetOwnerId: Maybe Text
+    - city: Maybe Text
+    - operatingLocation: Maybe Text
+    - serviceType: Maybe Text
+    - refundId: Maybe Text
+    - refundReason: Maybe Text
+    - refundMode: Maybe Text
+    - refundStatus: Maybe Text
+    - ipAddress: Maybe Text
+    - pgName: Maybe Text
+    - pgMerchantId: Maybe Text
 
   # ----- Wallet ledger (balance + ledger combined) -----
   WalletLedgerRes:

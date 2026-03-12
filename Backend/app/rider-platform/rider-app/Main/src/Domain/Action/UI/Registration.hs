@@ -509,7 +509,8 @@ conductorTokenAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbR
     throwError $ InvalidRequest "GIMS verification failed"
   person <-
     Person.findByOperatorBadgeTokenAndMerchantId (Just badgeToken) merchant.id
-      >>= maybe (do createPerson req SP.CONDUCTORTOKEN Nothing mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) mbCloudType merchant Nothing (Just badgeToken))
+      >>= maybe
+        (do createPerson req SP.CONDUCTORTOKEN Nothing mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) mbCloudType merchant Nothing (Just badgeToken))
         pure
   let entityId = getId $ person.id
       useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp

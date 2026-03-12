@@ -52,7 +52,6 @@ data ReconciliationType = DSR_VS_LEDGER | DSR_VS_SUBSCRIPTION | DSSR_VS_SUBSCRIP
 data RideMode = ONLINE | CASH deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data RideStatus = COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''FinanceComponent))
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationStatus))
