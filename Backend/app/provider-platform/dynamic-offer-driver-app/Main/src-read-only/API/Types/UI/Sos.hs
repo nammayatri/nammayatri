@@ -5,6 +5,7 @@ module API.Types.UI.Sos where
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.Ride
+import qualified Domain.Types.VehicleVariant
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
@@ -14,6 +15,17 @@ import Servant
 import Tools.Auth
 
 data MarkAsSafeReq = MarkAsSafeReq {contacts :: Kernel.Prelude.Maybe [Data.Text.Text], isEndLiveTracking :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, isRideEnded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RideDetailsForDriverRes = RideDetailsForDriverRes
+  { driverName :: Data.Text.Text,
+    trackingUrl :: Data.Text.Text,
+    tripEndPos :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
+    tripStartPos :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
+    vehicleNumber :: Data.Text.Text,
+    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

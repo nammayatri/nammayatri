@@ -4,6 +4,7 @@ imports:
   SosType : Safety.Domain.Types.Sos
   Sos : Safety.Domain.Types.Sos
   LatLong : Kernel.External.Maps.Types
+  VehicleVariant : Domain.Types.VehicleVariant
 
 module: Sos
 types:
@@ -25,6 +26,14 @@ types:
     isRideEnded: Maybe Bool
     isEndLiveTracking: Maybe Bool
     contacts: Maybe [Text]
+
+  RideDetailsForDriverRes:
+    trackingUrl: Text
+    driverName: Text
+    tripStartPos: Maybe LatLong
+    tripEndPos: Maybe LatLong
+    vehicleNumber: Text
+    vehicleVariant: Maybe VehicleVariant
 
 apis:
   # GET /sos/getDetails
@@ -55,6 +64,15 @@ apis:
         type: API.Types.UI.Sos.MarkAsSafeReq
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
+  # GET /sos/driver/rideDetails/{rideShortId}
+  - GET:
+      endpoint: /sos/rideDetails/{rideShortId}
+      auth: NoAuth
+      params:
+        rideShortId: ShortId Ride
+      response:
+        type: API.Types.UI.Sos.RideDetailsForDriverRes
 
 
 
