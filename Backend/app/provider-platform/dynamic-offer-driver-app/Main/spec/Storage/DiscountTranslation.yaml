@@ -1,0 +1,36 @@
+imports:
+  Discount: Domain.Types.Discount
+  Language: Kernel.External.Types
+
+DiscountTranslation:
+  tableName: discount_translation
+  derives: "Generic, Show, Eq, ToJSON, FromJSON"
+
+  fields:
+    discountId: Id Discount
+    language: Language
+    name: Text
+    description: Text
+
+  constraints:
+    discountId: PrimaryKey
+    language: PrimaryKey
+
+  queries:
+    findByDiscountIdAndLanguage:
+      kvFunction: findOneWithKV
+      where:
+        and: [discountId, language]
+
+    findAllByDiscountId:
+      kvFunction: findAllWithKV
+      where: discountId
+
+  cachedQueries:
+    findByDiscountIdAndLanguage:
+      keyParams: [discountId, language]
+      returnType: One
+      dbQuery: findByDiscountIdAndLanguage
+      dbQueryParams: [discountId, language]
+
+  excludedFields: [merchantId, merchantOperatingCityId]
