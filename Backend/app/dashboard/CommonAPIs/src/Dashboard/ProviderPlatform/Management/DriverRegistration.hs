@@ -37,7 +37,8 @@ instance HideSecrets UploadDocumentReq where
 
 data AuthReq = AuthReq
   { mobileNumber :: Text,
-    mobileCountryCode :: Text
+    mobileCountryCode :: Text,
+    name :: Maybe Text
   }
   deriving (Generic, FromJSON, ToSchema, ToJSON)
 
