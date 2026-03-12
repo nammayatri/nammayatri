@@ -103,8 +103,6 @@ import Kernel.Utils.Validation
 import Kernel.Utils.Version
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as Yudhishthira
-import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
-import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import qualified SharedLogic.External.Nandi.Flow as NandiFlow
 import SharedLogic.External.Nandi.Types (GimsVerifyReq (..))
 import qualified SharedLogic.IntegratedBPPConfig as SIBC

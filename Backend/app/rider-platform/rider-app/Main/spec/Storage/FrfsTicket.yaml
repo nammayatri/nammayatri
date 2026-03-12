@@ -625,6 +625,7 @@ FRFSTicket:
   constraints:
     id: PrimaryKey
     frfsTicketBookingId: SecondaryKey
+    ticketNumber: SecondaryKey
 
   queries:
     findById:
