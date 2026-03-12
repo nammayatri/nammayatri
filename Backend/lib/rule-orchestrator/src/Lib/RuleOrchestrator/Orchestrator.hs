@@ -29,9 +29,9 @@ import Lib.RuleOrchestrator.Executor (executePlan)
 import Lib.RuleOrchestrator.OutputMerger (mergeResults)
 import Lib.RuleOrchestrator.PlanBuilder (buildPlan)
 import Lib.RuleOrchestrator.Types
+import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow, HasYudhishthiraTablesSchema)
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
-import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow, HasYudhishthiraTablesSchema)
 
 -- | Full pipeline: build plan → execute all steps → merge outputs
 --

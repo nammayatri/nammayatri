@@ -5,6 +5,7 @@ module Lib.Payment.Payout.History
     PayoutHistoryRecord (..),
     recordPayoutHistory,
     getPayoutHistory,
+    mkEventData,
   )
 where
 

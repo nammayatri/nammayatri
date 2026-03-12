@@ -234,13 +234,14 @@ transitOperatorUpsertDeviceVehicleMapping merchantShortId opCity req = do
 
   unprocessedEntries <- fmap catMaybes $
     forM csvRows $ \row -> do
-      result <- withTryCatch "upsertDeviceVehicleMapping" $
-        upsertRow row.device_id row.fleet_id gtfsId
+      result <-
+        withTryCatch "upsertDeviceVehicleMapping" $
+          upsertRow row.device_id row.fleet_id gtfsId
       case result of
-          Left err -> do
-            logError $ "Error upserting device vehicle mapping: " <> row.device_id <> "error: " <> show err
-            pure (Just row.device_id)
-          Right _ -> pure Nothing
+        Left err -> do
+          logError $ "Error upserting device vehicle mapping: " <> row.device_id <> "error: " <> show err
+          pure (Just row.device_id)
+        Right _ -> pure Nothing
 
   pure $
     APITransitOp.UpsertDeviceVehicleMappingResp

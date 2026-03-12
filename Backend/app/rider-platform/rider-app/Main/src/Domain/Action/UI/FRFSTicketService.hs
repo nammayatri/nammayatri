@@ -838,7 +838,8 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
       let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person booking.riderId
       let orderStatusCall = Payment.orderStatus booking.merchantId booking.merchantOperatingCityId Nothing (getPaymentType (integratedBppConfig.platformType == DIBC.MULTIMODAL) booking.vehicleType) (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
           walletPostingCall = TWallet.walletPosting booking.merchantId booking.merchantOperatingCityId
-      paymentStatusResponse <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall (Just walletPostingCall)
+          commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity booking.merchantOperatingCityId
+      paymentStatusResponse <- DPayment.orderStatusService commonMerchantOperatingCityId commonPersonId paymentOrder.id orderStatusCall (Just walletPostingCall)
       action (paymentBooking, paymentOrder, Just paymentStatusResponse)
 
 getFrfsBookingList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Maybe Spec.VehicleCategory -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]

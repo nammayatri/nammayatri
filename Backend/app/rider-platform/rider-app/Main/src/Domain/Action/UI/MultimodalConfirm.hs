@@ -303,7 +303,7 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
                           merchantOperatingCityId = fromMaybe booking.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
                           orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
                           fulfillmentHandler = mkFulfillmentHandler paymentServiceType paymentOrder.id
-                      void $ SPayment.orderStatusHandler fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
+                      void $ SPayment.orderStatusHandler merchantOperatingCityId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
                       createOrderResp <- buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode
                       return (createOrderResp, Just paymentBooking.status)
                     Nothing -> return (Nothing, Nothing)
@@ -2390,11 +2390,12 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
           _ -> Spec.BUS
 
   void $
-    withTryCatch "postMultimodalOrderSublegSetOnboardedVehicleDetails:postFrfsTicketVerify"
+    withTryCatch
+      "postMultimodalOrderSublegSetOnboardedVehicleDetails:postFrfsTicketVerify"
       ( do
-        forM_ qrDataList $ \qrData -> do
-          let verifyReq = FRFSTicketServiceAPI.FRFSTicketVerifyReq {FRFSTicketServiceAPI.qrData = qrData}
-          void $ FRFSTicketService.postFrfsTicketVerify (mbPersonId, merchantId) (Just integratedBPPConfig.platformType) merchantOperatingCity.city frfsVehicleCategory verifyReq
+          forM_ qrDataList $ \qrData -> do
+            let verifyReq = FRFSTicketServiceAPI.FRFSTicketVerifyReq {FRFSTicketServiceAPI.qrData = qrData}
+            void $ FRFSTicketService.postFrfsTicketVerify (mbPersonId, merchantId) (Just integratedBPPConfig.platformType) merchantOperatingCity.city frfsVehicleCategory verifyReq
       )
 
   QJourneyLeg.updateByPrimaryKey $

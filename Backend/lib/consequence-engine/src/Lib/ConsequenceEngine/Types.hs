@@ -116,9 +116,11 @@ class (Monad m) => ConsequenceHandler m where
   handleHardBlock :: Text -> HardBlockParams -> m ()
   handlePermanentBlock :: Text -> PermanentBlockParams -> m ()
   handleChargeFee :: Text -> ChargeFeeParams -> m ()
+
   -- | Optional: called when rule output is NO_ACTION. Default: no-op.
   handleNoAction :: Text -> m ()
   handleNoAction _ = pure ()
+
   -- | Optional: log/record the consequence for audit. Default: no-op.
   recordConsequence :: Text -> ConsequenceAction -> Value -> m ()
   recordConsequence _ _ _ = pure ()

@@ -451,7 +451,7 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
           { cancelledBy = cancellationType,
             timeOfDriverCancellation = timeOfCancellation,
             timeOfCustomerCancellation = timeOfCancellation,
-            isArrivedAtPickup = isJust ride.driverArrivalTime || _isArrivedAtPickup ,
+            isArrivedAtPickup = isJust ride.driverArrivalTime || _isArrivedAtPickup,
             driverWaitingTime = fromMaybe 0 driverWaitingTime,
             callAttemptByDriver = callAttemptByDriver,
             actualCoveredDistance = fromMaybe 0 actualCoveredDistance,

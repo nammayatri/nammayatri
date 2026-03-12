@@ -28,10 +28,10 @@ import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
-import qualified Lib.Yudhishthira.Types as LYT
 import Lib.RuleOrchestrator.Types
 import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow, HasYudhishthiraTablesSchema)
+import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified Tools.DynamicLogic as TDL
 
 -- | Execute all steps in a plan, respecting priority and dependencies
@@ -119,8 +119,9 @@ executeStep mocId callerApp step input = do
     else do
       -- Step 2: Run rules
       logDebug $ "Executing step " <> step.stepName <> " with domain " <> show step.domain
-      resp <- withTryCatch ("runLogics:" <> step.stepName) $
-        LYDL.runLogicsWithDebugLog callerApp mocId step.domain allLogics input
+      resp <-
+        withTryCatch ("runLogics:" <> step.stepName) $
+          LYDL.runLogicsWithDebugLog callerApp mocId step.domain allLogics input
       case resp of
         Left err -> do
           logError $ "Error in step " <> step.stepName <> ": " <> show err
@@ -157,8 +158,10 @@ buildStepInput :: A.Value -> [StepResult] -> A.Value
 buildStepInput snapshotJson previousResults =
   case snapshotJson of
     A.Object obj ->
-      let previousOutputs = A.Object $ KM.fromList $
-            map (\r -> (AK.fromText r.stepName, r.output)) previousResults
+      let previousOutputs =
+            A.Object $
+              KM.fromList $
+                map (\r -> (AK.fromText r.stepName, r.output)) previousResults
           merged = KM.insert "stepResults" previousOutputs obj
        in A.Object merged
     _ -> snapshotJson -- if snapshot isn't an object, just pass it through

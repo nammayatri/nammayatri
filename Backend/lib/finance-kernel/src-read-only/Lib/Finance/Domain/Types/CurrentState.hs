@@ -3,6 +3,7 @@
 
 module Lib.Finance.Domain.Types.CurrentState where
 
+import Data.Aeson
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Lib.Finance.Domain.Types.StateTransition
