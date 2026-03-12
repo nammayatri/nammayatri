@@ -195,9 +195,14 @@ postSosCreate (mbPersonId, _merchantId) req = do
     (Just refId, _) -> pure (Just refId, Nothing, Just True)
     (Nothing, Just sosConfig)
       | sosConfig.triggerSource == DRC.FRONTEND -> do
+        logInfo $ "[ExternalSOS] postSosCreate calling handleExternalSOS flow=" <> show sosConfig.flow <> " personId=" <> personId.getId
         (mbTrackingId, mbSpecificConfig) <- handleExternalSOS person sosConfig req personId riderConfig
         pure (mbTrackingId, mbSpecificConfig, Just True)
-    _ -> pure (Nothing, Nothing, Nothing)
+    other ->
+      let reason = case other of
+            Nothing -> "no external SOS config for city"
+            Just cfg -> "triggerSource=" <> show cfg.triggerSource <> " (need FRONTEND for app-triggered call)"
+       in logInfo ("[ExternalSOS] postSosCreate skipping external SOS personId=" <> personId.getId <> " " <> reason) >> pure (Nothing, Nothing, Nothing)
 
   let hasPoliceIntegration = isJust riderConfig.externalSOSConfig
       forceKapture = fromMaybe False req.isKaptureTicketRequired
@@ -1014,6 +1019,7 @@ postSosUpdateToRide (mbPersonId, merchantId) sosId UpdateToRideReq {..} = do
 handleExternalSOS :: Person.Person -> DRC.ExternalSOSConfig -> SosReq -> Id Person.Person -> DRC.RiderConfig -> Flow (Maybe Text, Maybe SOSInterface.SOSServiceConfig)
 handleExternalSOS person sosConfig req personId riderConfig = do
   let sosServiceType = flowToSOSService sosConfig.flow
+  logInfo $ "[ExternalSOS] handleExternalSOS flow=" <> show sosConfig.flow <> " sosServiceType=" <> show sosServiceType <> " personId=" <> personId.getId
   mbMerchantSvcCfg <-
     QMSC.findByMerchantOpCityIdAndService person.merchantId person.merchantOperatingCityId (DMSC.SOSService sosServiceType)
   case mbMerchantSvcCfg of
@@ -1022,16 +1028,24 @@ handleExternalSOS person sosConfig req personId riderConfig = do
       return (Nothing, Nothing)
     Just merchantSvcCfg -> case merchantSvcCfg.serviceConfig of
       DMSC.SOSServiceConfig specificConfig -> do
+        logInfo $ "[ExternalSOS] handleExternalSOS calling sendInitialSOS flow=" <> show sosConfig.flow <> " personId=" <> personId.getId
         mbRide <- maybe (pure Nothing) (\rideId -> QRide.findById rideId) req.rideId
         emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
         merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
-        externalSOSDetails <- buildExternalSOSDetails req person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig Nothing
-        initialRes <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
-        if initialRes.success
-          then return (initialRes.trackingId, Just specificConfig)
-          else do
-            logError $ "handleExternalSOS: External SOS call failed: " <> fromMaybe "Unknown error" initialRes.errorMessage
-            return (Nothing, Nothing)
+        externalSOSDetails <- buildExternalSOSDetails req person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig
+        initialResOrErr <- withTryCatch "[ExternalSOS] sendInitialSOS" $ PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
+        case initialResOrErr of
+          Left err -> do
+            logError $ "[ExternalSOS] handleExternalSOS sendInitialSOS exception flow=" <> show sosConfig.flow <> " personId=" <> personId.getId <> " error=" <> show err
+            return Nothing
+          Right initialRes ->
+            if initialRes.success
+              then do
+                logInfo $ "[ExternalSOS] handleExternalSOS sendInitialSOS success flow=" <> show sosConfig.flow <> " trackingId=" <> show initialRes.trackingId <> " personId=" <> personId.getId
+                return initialRes.trackingId
+              else do
+                logError $ "[ExternalSOS] handleExternalSOS sendInitialSOS failed flow=" <> show sosConfig.flow <> " error=" <> fromMaybe "Unknown error" initialRes.errorMessage <> " personId=" <> personId.getId
+                return Nothing
       _ -> do
         logError "handleExternalSOS: Invalid SOS Service Config for provider"
         return (Nothing, Nothing)
@@ -1138,3 +1152,4 @@ extractStateCode _ = Nothing
 flowToSOSService :: DRC.ExternalSOSFlow -> SOS.SOSService
 flowToSOSService DRC.ERSS = SOS.ERSS
 flowToSOSService DRC.GJ112 = SOS.GJ112
+flowToSOSService DRC.Trinity = SOS.Trinity

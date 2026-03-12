@@ -67,6 +67,8 @@ getSosDetails merchantShortId opCity sosId = do
   mbRideConfig <- maybe (pure Nothing) (\moc -> QRC.findByMerchantOperatingCityId moc.id Nothing) mbMerchantOpCity
   let externalSOSConfig = mbRideConfig >>= \rc -> rc.externalSOSConfig
   let triggerSource = convertTriggerSource <$> (externalSOSConfig <&> (.triggerSource))
+  whenJust externalSOSConfig $ \cfg ->
+    logInfo $ "[ExternalSOS] getSosDetails sosId=" <> sosId'.getId <> " flow=" <> show cfg.flow <> " triggerSource=" <> show cfg.triggerSource
   sos <- B.runInReplica $ SafetyQSos.findById sosId' >>= fromMaybeM (InvalidRequest $ "SOS not found: " <> sosId'.getId)
   person <- B.runInReplica $ QP.findById (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId) >>= fromMaybeM (PersonNotFound sos.personId.getId)
   let riderDetails =
@@ -153,14 +155,18 @@ convertSosStatus SafetyDSos.MockResolved = API.Types.RiderPlatform.Management.So
 --   Fetches the SOS record and dispatches the external SOS API call.
 callExternalSOS :: Kernel.Types.Id.Id SafetyDSos.Sos -> Maybe Text -> Environment.Flow ()
 callExternalSOS sosId mbComments = do
+  logInfo $ "[ExternalSOS] callExternalSOS started sosId=" <> sosId.getId
   sos <- SafetyQSos.findById sosId >>= fromMaybeM (InvalidRequest "SOS record not found")
   merchantOpCityId <- Kernel.Types.Id.cast @SafetyDCommon.MerchantOperatingCity @DMOC.MerchantOperatingCity <$> sos.merchantOperatingCityId & fromMaybeM (InvalidRequest "SOS record missing merchantOperatingCityId")
   merchantId <- Kernel.Types.Id.cast @SafetyDCommon.Merchant @Domain.Types.Merchant.Merchant <$> sos.merchantId & fromMaybeM (InvalidRequest "SOS record missing merchantId")
   person <- QP.findById (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId) >>= fromMaybeM (PersonDoesNotExist sos.personId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   case riderConfig.externalSOSConfig of
-    Nothing -> throwError $ InvalidRequest "External SOS config not configured for this city"
+    Nothing -> do
+      logError $ "[ExternalSOS] callExternalSOS sosId=" <> sosId.getId <> " external SOS config not configured for city"
+      throwError $ InvalidRequest "External SOS config not configured for this city"
     Just sosConfig -> do
+      logInfo $ "[ExternalSOS] callExternalSOS sosId=" <> sosId.getId <> " flow=" <> show sosConfig.flow <> " triggerSource=" <> show sosConfig.triggerSource
       when (sosConfig.triggerSource /= DRC.DASHBOARD) $
         throwError $ InvalidRequest "External SOS trigger source is not DASHBOARD for this city"
       let sosServiceType = flowToSOSService sosConfig.flow
@@ -175,12 +181,21 @@ callExternalSOS sosId mbComments = do
           emergencyContacts <- DP.getDefaultEmergencyNumbers (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId, merchantId)
           merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
           externalSOSDetails <- Sos.buildExternalSOSDetails (mkSosReq sos customerLocation) person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig mbComments
-          initialRes <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
-          unless initialRes.success $
-            throwError $ InternalError (fromMaybe "External SOS call failed" initialRes.errorMessage)
-          whenJust initialRes.trackingId $ \trackingId -> do
-            SafetyQSos.updateExternalReferenceId (Just trackingId) sosId
-            Redis.del (Sos.mkExternalSOSTraceKey sosId)
+          logInfo $ "[ExternalSOS] callExternalSOS sosId=" <> sosId.getId <> " calling sendInitialSOS flow=" <> show sosConfig.flow
+          initialResOrErr <- withTryCatch "[ExternalSOS] sendInitialSOS" $ PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
+          case initialResOrErr of
+            Left err -> do
+              logError $ "[ExternalSOS] callExternalSOS sosId=" <> sosId.getId <> " sendInitialSOS exception flow=" <> show sosConfig.flow <> " error=" <> show err
+              throwError $ InternalError ("External SOS call failed: " <> show err)
+            Right initialRes -> do
+              if initialRes.success
+                then logInfo $ "[ExternalSOS] callExternalSOS sosId=" <> sosId.getId <> " sendInitialSOS success trackingId=" <> show initialRes.trackingId
+                else logError $ "[ExternalSOS] callExternalSOS sosId=" <> sosId.getId <> " sendInitialSOS failed: " <> fromMaybe "Unknown" initialRes.errorMessage
+              unless initialRes.success $
+                throwError $ InternalError (fromMaybe "External SOS call failed" initialRes.errorMessage)
+              whenJust initialRes.trackingId $ \trackingId -> do
+                SafetyQSos.updateExternalReferenceId (Just trackingId) sosId
+                Redis.del (Sos.mkExternalSOSTraceKey sosId)
             -- Register ERSS config with LTS for location trace forwarding
             case specificConfig of
               SOSInterface.ERSSConfig erssCfg -> do
@@ -251,6 +266,7 @@ callExternalSOS sosId mbComments = do
 flowToSOSService :: DRC.ExternalSOSFlow -> SOS.SOSService
 flowToSOSService DRC.ERSS = SOS.ERSS
 flowToSOSService DRC.GJ112 = SOS.GJ112
+flowToSOSService DRC.Trinity = SOS.Trinity
 
 postSosCallExternalSOS :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Sos -> API.Types.RiderPlatform.Management.Sos.CallExternalSOSReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postSosCallExternalSOS _merchantShortId _opCity sosId req = do
