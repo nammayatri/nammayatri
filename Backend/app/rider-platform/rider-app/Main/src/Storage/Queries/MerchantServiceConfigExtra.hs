@@ -180,3 +180,4 @@ getServiceNameConfigJSON = \case
   Domain.SOSServiceConfig sosCfg -> case sosCfg of
     SOSInterface.ERSSConfig cfg -> (Domain.SOSService SOS.ERSS, toJSON cfg)
     SOSInterface.GJ112Config cfg -> (Domain.SOSService SOS.GJ112, toJSON cfg)
+    SOSInterface.TrinityConfig cfg -> (Domain.SOSService SOS.Trinity, toJSON cfg)

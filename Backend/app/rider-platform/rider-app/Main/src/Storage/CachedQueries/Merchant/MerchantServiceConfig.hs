@@ -175,6 +175,7 @@ cacheMerchantServiceConfig merchantServiceConfig = do
       SOSServiceConfig sosCfg -> case sosCfg of
         SOSInterface.ERSSConfig _ -> SOSService SOS.ERSS
         SOSInterface.GJ112Config _ -> SOSService SOS.GJ112
+        SOSInterface.TrinityConfig _ -> SOSService SOS.Trinity
 
 makeMerchantIdAndServiceKey :: Id Merchant -> Id DMOC.MerchantOperatingCity -> ServiceName -> Text
 makeMerchantIdAndServiceKey id mocId serviceName = "CachedQueries:MerchantServiceConfig:MerchantId-" <> id.getId <> ":MechantOperatingCityId:-" <> mocId.getId <> ":ServiceName-" <> show serviceName
