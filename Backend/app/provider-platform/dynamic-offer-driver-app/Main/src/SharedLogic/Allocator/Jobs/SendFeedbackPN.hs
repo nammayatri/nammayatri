@@ -27,11 +27,14 @@ import qualified Storage.Queries.FeedbackBadgeExtra as QFeedbackBadge
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.Notifications as Notify
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 
 sendFeedbackPN ::
   ( EsqDBReplicaFlow m r,
     CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int, "kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   Job 'SendFeedbackPN ->
   m ExecutionResult
