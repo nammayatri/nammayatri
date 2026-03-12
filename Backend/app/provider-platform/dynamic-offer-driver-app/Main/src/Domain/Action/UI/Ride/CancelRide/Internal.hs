@@ -163,10 +163,10 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
               if transporterConfig.canAddCancellationFee
                 then do
                   let tagsForCancellationCharges = [validCustomerCancellation, validUserNoShowCancellation]
-                  let cancellationType =
-                        if bookingCReason.source == SBCR.ByDriver && validUserNoShowCancellation `elem` rideTags
-                          then DCT.CancellationByDriver
-                          else DCT.CancellationByCustomer
+                  let cancellationType = DCT.CancellationByDriver
+                        -- if bookingCReason.source == SBCR.ByDriver && validUserNoShowCancellation `elem` rideTags          ---------------- can be discussed if it's required.
+                        --   then DCT.CancellationByDriver
+                        --   else DCT.CancellationByCustomer
                   if any (`elem` rideTags) tagsForCancellationCharges
                     then getCancellationCharges booking ride cancellationType bookingCReason.reasonCode
                     else return Nothing
@@ -254,7 +254,7 @@ cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy cancell
   when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
   case (cancellationFee, booking.riderId) of
     (Just fee, Just rid) -> do
-      QRide.updateCancellationFeeIfCancelledField (Just fee.amount) ride.id
+      QRide.updateCancellationChargesOnCancel (Just fee.amount) ride.id
       riderDetails <- QRiderDetails.findById rid >>= fromMaybeM (RiderDetailsNotFound rid.getId)
       void $ QRiderDetails.updateCancellationDues (fee.amount + riderDetails.cancellationDues) rid
       QRiderDetails.updateValidCancellationsCount rid.getId
