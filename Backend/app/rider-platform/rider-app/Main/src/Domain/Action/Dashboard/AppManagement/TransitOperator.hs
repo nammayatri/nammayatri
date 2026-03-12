@@ -25,21 +25,37 @@ module Domain.Action.Dashboard.AppManagement.TransitOperator
     transitOperatorUpdateWaybillFleet,
     transitOperatorUpdateWaybillTablet,
     transitOperatorGetWaybills,
+    transitOperatorGetDeviceVehicleMappingList,
+    transitOperatorUpsertDeviceVehicleMapping,
   )
 where
 
+import qualified API.Types.Dashboard.AppManagement.TransitOperator as APITransitOp
 import qualified "beckn-spec" BecknV2.OnDemand.Enums
 import qualified Data.Aeson
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
+import Data.Csv (FromNamedRecord (..), Header, decodeByName, (.:))
 import Data.OpenApi (ToSchema)
+import qualified Data.Vector as V
 import qualified Domain.Action.UI.TransitOperator as DTOp
+import qualified Domain.Types.DeviceVehicleMapping
+import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
+import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Servant
+import Kernel.Utils.Common
+import Servant hiding (Header, throwError)
 import qualified "this" SharedLogic.External.Nandi.Types
+import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.DeviceVehicleMapping as QDvm
 import Tools.Auth
 
 transitOperatorGetRow :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow SharedLogic.External.Nandi.Types.NandiRow)
@@ -137,3 +153,132 @@ transitOperatorUpdateWaybillTablet merchantShortId opCity vehicleCategory req =
 transitOperatorGetWaybills :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.NandiWaybillRow])
 transitOperatorGetWaybills merchantShortId opCity limit offset vehicleCategory =
   DTOp.transitOperatorGetWaybillsUtil merchantShortId opCity vehicleCategory limit offset
+
+-- CSV row type for DeviceVehicleMapping
+data DeviceVehicleMappingCsvRow = DeviceVehicleMappingCsvRow
+  { device_id :: Text,
+    fleet_id :: Text
+  }
+
+instance FromNamedRecord DeviceVehicleMappingCsvRow where
+  parseNamedRecord r =
+    DeviceVehicleMappingCsvRow
+      <$> r .: "device_id"
+      <*> r .: "fleet_id"
+
+getFeedKey :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Environment.Flow Text
+getFeedKey merchantOpCityId = do
+  integratedBPPConfig <-
+    CQIBC.findByDomainAndCityAndVehicleCategory
+      "FRFS"
+      merchantOpCityId
+      BecknV2.OnDemand.Enums.BUS
+      Domain.Types.IntegratedBPPConfig.APPLICATION
+      >>= fromMaybeM (InternalError "IntegratedBPPConfig not found for BUS")
+  pure integratedBPPConfig.feedKey
+
+transitOperatorGetDeviceVehicleMappingList ::
+  ( Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+    Kernel.Types.Beckn.Context.City ->
+    Environment.Flow APITransitOp.DeviceVehicleMappingListRes
+  )
+transitOperatorGetDeviceVehicleMappingList merchantShortId opCity = do
+  merchant <-
+    CQM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+
+  merchantOpCity <-
+    CQMOC.findByMerchantIdAndCity merchant.id opCity
+      >>= fromMaybeM
+        ( MerchantOperatingCityNotFound $
+            "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity
+        )
+
+  gtfsId <- getFeedKey merchantOpCity.id
+  mappings <- QDvm.findAllByGtfsId gtfsId
+  let items = map toItem mappings
+  pure $
+    APITransitOp.DeviceVehicleMappingListRes
+      { APITransitOp.mappings = items
+      }
+  where
+    toItem dvm =
+      APITransitOp.DeviceVehicleMappingItem
+        { deviceId = dvm.deviceId,
+          vehicleNo = dvm.vehicleNo,
+          gtfsId = dvm.gtfsId,
+          createdAt = dvm.createdAt,
+          updatedAt = dvm.updatedAt
+        }
+
+transitOperatorUpsertDeviceVehicleMapping ::
+  ( Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+    Kernel.Types.Beckn.Context.City ->
+    APITransitOp.UpsertDeviceVehicleMappingReq ->
+    Environment.Flow APITransitOp.UpsertDeviceVehicleMappingResp
+  )
+transitOperatorUpsertDeviceVehicleMapping merchantShortId opCity req = do
+  merchant <-
+    CQM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+
+  merchantOpCity <-
+    CQMOC.findByMerchantIdAndCity merchant.id opCity
+      >>= fromMaybeM
+        ( MerchantOperatingCityNotFound $
+            "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity
+        )
+
+  gtfsId <- getFeedKey merchantOpCity.id
+  csvRows <- readCsv req.file
+
+  unprocessedEntries <- fmap catMaybes $
+    forM csvRows $ \row -> do
+      result <- withTryCatch "upsertDeviceVehicleMapping" $
+        upsertRow row.device_id row.fleet_id gtfsId
+      case result of
+          Left err -> do
+            logError $ "Error upserting device vehicle mapping: " <> row.device_id <> "error: " <> show err
+            pure (Just row.device_id)
+          Right _ -> pure Nothing
+
+  pure $
+    APITransitOp.UpsertDeviceVehicleMappingResp
+      { success = "All mappings upserted successfully",
+        unprocessedEntries = unprocessedEntries
+      }
+  where
+    readCsv :: FilePath -> Environment.Flow [DeviceVehicleMappingCsvRow]
+    readCsv csvFile = do
+      csvData <- liftIO $ BS.readFile csvFile
+      case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector DeviceVehicleMappingCsvRow)) of
+        Left err -> throwError (InvalidRequest $ show err)
+        Right (_, v) -> pure $ V.toList v
+
+    upsertRow :: Text -> Text -> Text -> Environment.Flow ()
+    upsertRow deviceId vehicleNo gtfsId = do
+      now <- getCurrentTime
+      existing <- QDvm.findByDeviceIdAndGtfsId deviceId gtfsId
+      case existing of
+        Just dvm ->
+          QDvm.updateByPrimaryKey
+            Domain.Types.DeviceVehicleMapping.DeviceVehicleMapping
+              { deviceId = deviceId,
+                vehicleNo = vehicleNo,
+                gtfsId = gtfsId,
+                createdAt = dvm.createdAt,
+                updatedAt = now,
+                merchantId = Kernel.Prelude.Nothing,
+                merchantOperatingCityId = Kernel.Prelude.Nothing
+              }
+        Nothing -> do
+          QDvm.create
+            Domain.Types.DeviceVehicleMapping.DeviceVehicleMapping
+              { deviceId = deviceId,
+                vehicleNo = vehicleNo,
+                gtfsId = gtfsId,
+                createdAt = now,
+                updatedAt = now,
+                merchantId = Kernel.Prelude.Nothing,
+                merchantOperatingCityId = Kernel.Prelude.Nothing
+              }
