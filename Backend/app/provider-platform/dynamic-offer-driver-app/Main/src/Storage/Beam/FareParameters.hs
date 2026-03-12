@@ -32,6 +32,7 @@ data FareParametersT f = FareParametersT
     baseFareAmount :: B.C f (Maybe HighPrecMoney),
     petCharges :: B.C f (Maybe HighPrecMoney),
     driverAllowance :: B.C f (Maybe HighPrecMoney),
+    airportConvenienceFee :: B.C f (Maybe HighPrecMoney),
     businessDiscount :: B.C f (Maybe HighPrecMoney),
     personalDiscount :: B.C f (Maybe HighPrecMoney),
     shouldApplyBusinessDiscount :: B.C f (Maybe Bool),

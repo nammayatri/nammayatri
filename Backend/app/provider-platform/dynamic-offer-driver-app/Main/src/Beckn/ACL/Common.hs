@@ -125,6 +125,7 @@ filterRequiredBreakups fParamsType breakup = do
                  "RETURN_FEE",
                  "BOOTH_CHARGE",
                  "DRIVER_ALLOWANCE",
+                 "AIRPORT_CONVENIENCE_FEE",
                  "RIDE_VAT",
                  "TOLL_VAT"
                ]
@@ -145,6 +146,7 @@ filterRequiredBreakups fParamsType breakup = do
                  "PARKING_CHARGE",
                  "LUGGAGE_CHARGE",
                  "DRIVER_ALLOWANCE",
+                 "AIRPORT_CONVENIENCE_FEE",
                  "RETURN_FEE",
                  "BOOTH_CHARGE",
                  "RIDE_VAT",
@@ -167,6 +169,7 @@ filterRequiredBreakups fParamsType breakup = do
                  "PARKING_CHARGE",
                  "LUGGAGE_CHARGE",
                  "DRIVER_ALLOWANCE",
+                 "AIRPORT_CONVENIENCE_FEE",
                  "RETURN_FEE",
                  "BOOTH_CHARGE",
                  "RIDE_VAT",
@@ -190,6 +193,7 @@ filterRequiredBreakups fParamsType breakup = do
                  "PARKING_CHARGE",
                  "LUGGAGE_CHARGE",
                  "DRIVER_ALLOWANCE",
+                 "AIRPORT_CONVENIENCE_FEE",
                  "RETURN_FEE",
                  "BOOTH_CHARGE",
                  "RIDE_VAT",
