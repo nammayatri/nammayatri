@@ -9,6 +9,7 @@ module SharedLogic.PersonDefaultEmergencyNumber
   ( DriverEmergencyContactEntity (..),
     getDriverDefaultEmergencyNumbers,
     notifyEmergencyContactsWithKey,
+    sendSmsToAllEmergencyContacts,
   )
 where
 
@@ -126,6 +127,7 @@ sendNotificationToEmergencyContact senderPersonId recipientPerson body title not
 sendMessageToEmergencyContact :: Person.Person -> DriverEmergencyContactEntity -> (Text -> Sms.SendSMSReq) -> Flow ()
 sendMessageToEmergencyContact person emergencyContact buildSmsReq = do
   let contactPhoneNumber = emergencyContact.mobileCountryCode <> emergencyContact.mobileNumber
+  logDebug $ "Sending SOS SMS to emergency contact: " <> emergencyContact.name <> " (" <> contactPhoneNumber <> ") for person: " <> person.id.getId
   Sms.sendSMS person.merchantId person.merchantOperatingCityId (buildSmsReq contactPhoneNumber)
     >>= Sms.checkSmsResult
 
@@ -161,3 +163,15 @@ notifyEmergencyContactsWithKey ::
 notifyEmergencyContactsWithKey person notificationKey notificationType templateVariables mbBuildSmsReq useSmsAsBackup emergencyContacts mbSosId =
   notifyEmergencyContactsInternal person notificationType (Just notificationKey) mbBuildSmsReq useSmsAsBackup emergencyContacts mbSosId $ \contactPersonEntity ->
     fetchNotificationTemplate person.merchantOperatingCityId notificationKey contactPersonEntity templateVariables
+
+sendSmsToAllEmergencyContacts ::
+  Person.Person ->
+  (Text -> Sms.SendSMSReq) ->
+  [DriverEmergencyContactEntity] ->
+  Flow ()
+sendSmsToAllEmergencyContacts person buildSmsReq emergencyContacts =
+  forM_ emergencyContacts $ \contact -> do
+    result <- withTryCatch "sendSmsToAllEmergencyContacts" $ sendMessageToEmergencyContact person contact buildSmsReq
+    case result of
+      Left err -> logError $ "Failed to send SOS SMS to contact " <> contact.name <> " (" <> contact.mobileNumber <> "): " <> show err
+      Right _ -> pure ()

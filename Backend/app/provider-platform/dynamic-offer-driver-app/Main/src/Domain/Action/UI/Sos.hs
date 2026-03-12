@@ -127,11 +127,11 @@ getSosGetDetails (mbPersonId, _, _) rideId_ = do
       return APISos.SosDetailsRes {sos = Just sosDetails}
 
 -- Tracking URL: use transporterConfig pattern when present (parity with rider), else fallback
-buildDriverSosTrackLink :: Maybe Text -> Id DRide.Ride -> Text
+buildDriverSosTrackLink :: Maybe Text -> ShortId DRide.Ride -> Text
 buildDriverSosTrackLink mbPattern rideId =
   case mbPattern of
-    Nothing -> "https://nammayatri.in/t/?vp=shareRide&rideId=" <> rideId.getId
-    Just urlPattern -> Notify.buildTemplate [("vp", "shareRide")] urlPattern <> rideId.getId
+    Nothing -> "https://nammayatri.in/p/?vp=shareRide&rideId=" <> rideId.getShortId
+    Just urlPattern -> Notify.buildTemplate [("vp", "shareRide")] urlPattern <> rideId.getShortId
 
 driverGetName :: Person.Person -> Text
 driverGetName person = person.firstName <> " " <> fromMaybe "" person.lastName
@@ -222,7 +222,7 @@ createTicketForNewSos person ride booking _merchantOperatingCityId _merchantId e
             ticketResponse <-
               withTryCatch "createTicket:sosTrigger" $
                 TicketTools.createTicket person.merchantId person.merchantOperatingCityId $
-                  mkTicket person driverPhoneNumber ["https://" <> trackLink] rideInfo req.flow kaptureDisposition kaptureQueue
+                  mkTicket person driverPhoneNumber [trackLink] rideInfo req.flow kaptureDisposition kaptureQueue
             case ticketResponse of
               Right ticketResponse' -> return (Just ticketResponse'.ticketId)
               Left err -> do
@@ -267,7 +267,7 @@ postSosCreate (mbPersonId, _merchantId, _merchantOperatingCityId) req = do
   let enableSupportForSafety = fromMaybe False transporterConfig.enableSupportForSafety
       kaptureDisposition = transporterConfig.kaptureDisposition
       kaptureQueue = transporterConfig.kaptureQueue
-      trackLink = buildDriverSosTrackLink transporterConfig.trackingShortUrlPattern ride.id
+      trackLink = buildDriverSosTrackLink transporterConfig.trackingShortUrlPattern ride.shortId
   sosId <- createTicketForNewSos person ride booking _merchantOperatingCityId _merchantId enableSupportForSafety kaptureDisposition kaptureQueue trackLink req
   buildSmsReq <-
     MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
@@ -279,7 +279,8 @@ postSosCreate (mbPersonId, _merchantId, _merchantOperatingCityId) req = do
         }
   emergencyContacts <- SPDEN.getDriverDefaultEmergencyNumbers personId
   when (triggerShareRideAndNotifyContacts safetySettings) $
-    SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" Notification.SOS_TRIGGERED [("userName", driverGetName person)] (Just buildSmsReq) True emergencyContacts (Just sosId)
+    fork "sendSmsToEmergencyContacts" $
+      SPDEN.sendSmsToAllEmergencyContacts person buildSmsReq emergencyContacts
   return $ APISos.SosRes {sosId = sosId}
   where
     triggerShareRideAndNotifyContacts safetySettings = (fromMaybe safetySettings.notifySosWithEmergencyContacts req.notifyAllContacts) && req.flow == SafetyDSos.SafetyFlow
@@ -371,8 +372,8 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
               mobileNumber <- decrypt riderDetails.mobileNumber
               pure $ Just (riderDetails.mobileCountryCode <> mobileNumber)
           let rideInfo = buildRideInfo ride booking rideDetails person driverPhoneNumber customerPhoneNumber
-              trackLink = buildDriverSosTrackLink transporterConfig.trackingShortUrlPattern ride.id
-              mediaLinks = ["https://" <> trackLink] <> dashboardFileUrl
+              trackLink = buildDriverSosTrackLink transporterConfig.trackingShortUrlPattern ride.shortId
+              mediaLinks = [trackLink] <> dashboardFileUrl
           case sosDetails.ticketId of
             Just ticketId -> do
               let comment =
