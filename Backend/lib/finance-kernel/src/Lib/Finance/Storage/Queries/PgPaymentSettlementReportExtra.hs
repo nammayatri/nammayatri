@@ -74,3 +74,37 @@ findAllByMerchantOpCityIdWithFilters merchantId merchantOpCityId mbFrom mbTo mbS
     (Se.Desc Beam.createdAt)
     mbLimit
     mbOffset
+findByOrderIdAndTxnType ::
+  (BeamFlow m r) =>
+  Text ->
+  Dom.TxnType ->
+  m [Dom.PgPaymentSettlementReport]
+findByOrderIdAndTxnType orderId txnType =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.orderId $ Se.Eq orderId,
+          Se.Is Beam.txnType $ Se.Eq txnType
+        ]
+    ]
+
+findByMerchantIdAndDateRange ::
+  (BeamFlow m r) =>
+  Text ->
+  UTCTime ->
+  UTCTime ->
+  m [Dom.PgPaymentSettlementReport]
+findByMerchantIdAndDateRange merchantId fromDate toDate =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq merchantId,
+          Se.Is Beam.createdAt $ Se.GreaterThanOrEq fromDate,
+          Se.Is Beam.createdAt $ Se.LessThanOrEq toDate
+        ]
+    ]
+
+findBySettlementId ::
+  (BeamFlow m r) =>
+  Text ->
+  m [Dom.PgPaymentSettlementReport]
+findBySettlementId settlementId =
+  findAllWithKV [Se.Is Beam.settlementId $ Se.Eq (Just settlementId)]

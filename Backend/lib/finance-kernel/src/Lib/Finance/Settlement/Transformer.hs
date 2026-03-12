@@ -2,6 +2,7 @@
 
 module Lib.Finance.Settlement.Transformer
   ( toPgPaymentSettlementReport,
+    mapTxnType,
   )
 where
 
@@ -16,9 +17,11 @@ toPgPaymentSettlementReport ::
   (BeamFlow.BeamFlow m r) =>
   Text ->
   Text ->
+  Maybe Text ->
+  Maybe Text ->
   Ext.PaymentSettlementReport ->
   m Dom.PgPaymentSettlementReport
-toPgPaymentSettlementReport merchantId merchantOperatingCityId report = do
+toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId referenceType report = do
   now <- getCurrentTime
   reportId <- generateGUID
   let (chargebackId, chargebackReasonCode, chargebackStatus) = case report.txnType of
@@ -56,8 +59,8 @@ toPgPaymentSettlementReport merchantId merchantOperatingCityId report = do
         settlementMode = mapSettlementMode <$> report.settlementMode,
         settlementId = report.settlementId,
         settlementDate = report.settlementDate,
-        referenceId = Nothing,
-        referenceType = Nothing,
+        referenceId = referenceId,
+        referenceType = referenceType,
         refundId = report.refundId,
         refundArn = report.refundArn,
         refundDate = report.refundDate,
