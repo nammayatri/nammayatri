@@ -18,7 +18,7 @@ module Domain.Action.UI.Plan where
 import Data.List (intersect, nub, nubBy)
 import qualified Data.List as DL
 import qualified Data.Map as M
-import Data.Maybe (listToMaybe)
+import Data.Maybe (fromJust, listToMaybe)
 import Data.OpenApi (ToSchema (..))
 import qualified Data.Text as T
 import qualified Data.Time as DT
@@ -927,8 +927,19 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
       if not (null driverManualDuesFees)
         then do
           vendorFees' <- if splitEnabled then concat <$> mapM (QVF.findAllByDriverFeeId . DF.id) driverManualDuesFees else pure []
-          let vendorFees = map roundVendorFee vendorFees'
-          SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName (driverFee : driverManualDuesFees, []) mbMandateOrder INV.MANDATE_SETUP_INVOICE mbInvoiceIdTuple vendorFees mbDeepLinkData splitEnabled Nothing
+          let roundedVendorFees = map SPayment.roundVendorFee vendorFees'
+          let (vendorFees, hasMigrations) = SPayment.applyVendorMigrations subscriptionConfig.vendorMigrationMappings roundedVendorFees
+          when hasMigrations $
+            forM_ vendorFees' $ \vf ->
+              whenJust (subscriptionConfig.vendorMigrationMappings >>= find (\m -> m.oldVendorId == vf.vendorId)) $ \mapping ->
+                QVF.updateVendorId vf.driverFeeId mapping.oldVendorId mapping.newVendorId
+          finalInvoiceIdTuple <- if hasMigrations && isJust mbInvoiceIdTuple
+                                 then do
+                                   let (invoiceId, _) = fromJust mbInvoiceIdTuple
+                                   QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE invoiceId
+                                   return Nothing
+                                 else return mbInvoiceIdTuple
+          SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName (driverFee : driverManualDuesFees, []) mbMandateOrder INV.MANDATE_SETUP_INVOICE finalInvoiceIdTuple vendorFees mbDeepLinkData splitEnabled Nothing
         else do
           SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName ([driverFee], []) mbMandateOrder INV.MANDATE_SETUP_INVOICE mbInvoiceIdTuple [] mbDeepLinkData splitEnabled Nothing
     calculateDues driverFees = sum $ map (\dueInvoice -> roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) driverFees

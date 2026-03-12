@@ -180,7 +180,6 @@ import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleRegistrationCertificate
 import Domain.Types.VehicleVariant
 import qualified Domain.Types.VehicleVariant as DV
-import qualified Domain.Types.VendorFee as VF
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (decodeUtf8, id, state)
@@ -2352,7 +2351,8 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
       sortedInvoices = mergeSortAndRemoveDuplicate invoices
       splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
   vendorFees' <- if splitEnabled then concat <$> mapM (QVF.findAllByDriverFeeId . DDF.id) dueDriverFees else pure []
-  (vendorFees, finalInvoices) <- applyVendorMigrations subscriptionConfig.vendorMigrationMappings vendorFees' sortedInvoices
+  let roundedVendorFees = map SPayment.roundVendorFee vendorFees'
+  (vendorFees, finalInvoices) <- applyVendorMigrations subscriptionConfig.vendorMigrationMappings roundedVendorFees sortedInvoices
   clearDueResp <- do
     case finalInvoices of
       [] -> mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (dueDriverFees, []) Nothing INV.MANUAL_INVOICE Nothing vendorFees mbDeepLinkData splitEnabled Nothing
@@ -2370,28 +2370,16 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
       SPayment.sendLinkTroughChannelProvided mbPaymentLink personId mbAmount (Just subscriptionConfig.paymentLinkChannel) False messageKey
   return clearDueResp
   where
-    -- Applies configured vendor ID migrations in both database and memory for vendor account changes.
-    -- Invalidates existing invoices when any vendor migrations are found to force new orders with updated vendors.
-    -- Returns updated vendor fees list and filtered invoices (empty if migrations applied, original list otherwise).
     applyVendorMigrations mbMappings vendorFees' sortedInvoices = do
-      case mbMappings of
-        Nothing -> return (map SPayment.roundVendorFee vendorFees', sortedInvoices)
-        Just mappings -> do
-          let vendorFeesToMigrate = filter (\vf -> any (\m -> vf.vendorId == m.oldVendorId) mappings) vendorFees'
-          forM_ vendorFeesToMigrate $ \vf ->
-            whenJust (find (\m -> m.oldVendorId == vf.vendorId) mappings) $ \mapping ->
-              QVF.updateVendorId vf.driverFeeId mapping.oldVendorId mapping.newVendorId
-          let updatedVendorFees = map (applyMigrationToVendorFee mappings) $ map SPayment.roundVendorFee vendorFees'
-              hasMigrations = not (null vendorFeesToMigrate)
-          when (hasMigrations && not (null sortedInvoices)) $
-            mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) sortedInvoices
-          let finalInvoices = if hasMigrations then [] else sortedInvoices
-          return (updatedVendorFees, finalInvoices)
-      where
-        applyMigrationToVendorFee mappings vf =
-          case find (\m -> m.oldVendorId == vf.vendorId) mappings of
-            Just mapping -> vf {VF.vendorId = mapping.newVendorId}
-            Nothing -> vf
+      let (vendorFees, hasMigrations) = SPayment.applyVendorMigrations mbMappings vendorFees'
+      when hasMigrations $ do
+        forM_ vendorFees' $ \vf ->
+          whenJust (mbMappings >>= find (\m -> m.oldVendorId == vf.vendorId)) $ \mapping ->
+            QVF.updateVendorId vf.driverFeeId mapping.oldVendorId mapping.newVendorId
+        unless (null sortedInvoices) $
+          mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) sortedInvoices
+      let finalInvoices = if hasMigrations then [] else sortedInvoices
+      return (vendorFees, finalInvoices)
 
     validateExistingInvoice invoice driverFees = do
       invoices <- runInReplica $ QINV.findAllByInvoiceId invoice.id
@@ -2985,7 +2973,12 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
       sortedInvoices = mergeSortAndRemoveDuplicate invoices
       splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
   vendorFees' <- if splitEnabled then concat <$> mapM (QVF.findAllByDriverFeeId . DDF.id) driverFee else pure []
-  let vendorFees = map SPayment.roundVendorFee vendorFees'
+  let roundedVendorFees = map SPayment.roundVendorFee vendorFees'
+  let (vendorFees, hasMigrations) = SPayment.applyVendorMigrations subscriptionConfig.vendorMigrationMappings roundedVendorFees
+  when hasMigrations $
+    forM_ vendorFees' $ \vf ->
+      whenJust (subscriptionConfig.vendorMigrationMappings >>= find (\m -> m.oldVendorId == vf.vendorId)) $ \mapping ->
+        QVF.updateVendorId vf.driverFeeId mapping.oldVendorId mapping.newVendorId
   resp <- do
     case sortedInvoices of
       -- if no invoice is present, then create a new invoice for all the driver fees

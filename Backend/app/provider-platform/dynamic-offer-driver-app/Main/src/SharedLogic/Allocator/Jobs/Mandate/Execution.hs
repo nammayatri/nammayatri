@@ -30,6 +30,7 @@ import Lib.Scheduler
 import SharedLogic.Allocator
 import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual, roundToHalf)
 import SharedLogic.Payment
+import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.Payment ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -125,7 +126,12 @@ buildExecutionRequestAndInvoice driverFee notification executionDate subscriptio
     Just invoice -> do
       let splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
       vendorFees' <- if splitEnabled then B.runInReplica $ QVF.findAllByDriverFeeId driverFee.id else pure []
-      let vendorFees = map roundVendorFee vendorFees'
+      let roundedVendorFees = map SPayment.roundVendorFee vendorFees'
+      let (vendorFees, hasMigrations) = SPayment.applyVendorMigrations subscriptionConfig.vendorMigrationMappings roundedVendorFees
+      when hasMigrations $
+        forM_ vendorFees' $ \vf ->
+          whenJust (subscriptionConfig.vendorMigrationMappings >>= find (\m -> m.oldVendorId == vf.vendorId)) $ \mapping ->
+            QVF.updateVendorId vf.driverFeeId mapping.oldVendorId mapping.newVendorId
       splitSettlementDetails' <- withTryCatch "mkSplitSettlementDetails:buildExecutionRequestAndInvoice" $ if splitEnabled then mkSplitSettlementDetails vendorFees (roundToHalf driverFee.currency (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst + fromMaybe 0 driverFee.cancellationPenaltyAmount)) else pure Nothing
       case splitSettlementDetails' of
         Left err -> do
