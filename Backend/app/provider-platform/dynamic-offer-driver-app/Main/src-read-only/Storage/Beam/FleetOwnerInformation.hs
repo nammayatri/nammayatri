@@ -41,6 +41,7 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     panNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     panNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     panNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    reasonCodeDifferentialDeduction :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredByOperatorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     registeredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     stripeAddress :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),

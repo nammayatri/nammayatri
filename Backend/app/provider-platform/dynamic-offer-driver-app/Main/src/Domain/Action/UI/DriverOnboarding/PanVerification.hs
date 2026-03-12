@@ -68,6 +68,7 @@ import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverPanCard as DPQuery
+import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as IQuery
@@ -232,6 +233,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
           when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
             DVRC.validateDocument person.merchantId merchantOpCityId person.id extractedPan.name_on_card extractedPan.date_of_birth (Just req.panNumber) ODC.PanCard driverDocument
           DPQuery.updateVerificationStatus Documents.VALID person.id
+          updateDriverReasonCodeForPanStatus person Documents.VALID
         Nothing -> do
           resp <- Verification.extractPanImage person.merchantId merchantOpCityId extractReq
           extractedPan <- validateExtractedPan resp
@@ -239,6 +241,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
             DVRC.validateDocument person.merchantId merchantOpCityId person.id extractedPan.name_on_card extractedPan.date_of_birth (Just req.panNumber) ODC.PanCard driverDocument
           panCardDetails <- buildPanCard person extractedPan.pan_type extractedPan.name_on_card extractedPan.date_of_birth (Just verifyBy) (Id req.imageId) req.panNumber
           DPQuery.create panCardDetails
+          updateDriverReasonCodeForPanStatus person Documents.VALID
 
       pure Success
 
@@ -308,8 +311,12 @@ onVerifyPanHandler person imageId1 imageId2 output = do
     Just details -> do
       mEncryptedPanNumber <- mapM encrypt (Just $ details.inputPanNumber)
       let isvalid = (&&) <$> output.dobMatch <*> output.nameMatch
-      when (isvalid == Just True) $ DPQuery.updateVerificationStatus Documents.VALID person.id
-      when (isvalid == Just False) $ DPQuery.updateVerificationStatus Documents.INVALID person.id
+      when (isvalid == Just True) $ do
+        DPQuery.updateVerificationStatus Documents.VALID person.id
+        updateDriverReasonCodeForPanStatus person Documents.VALID
+      when (isvalid == Just False) $ do
+        DPQuery.updateVerificationStatus Documents.INVALID person.id
+        updateDriverReasonCodeForPanStatus person Documents.INVALID
       case person.role of
         role | DCommon.checkFleetOwnerRole role -> do
           QFOI.updatePanImage mEncryptedPanNumber (Just imageId1.getId) person.id
@@ -319,6 +326,26 @@ onVerifyPanHandler person imageId1 imageId2 output = do
       (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
       when (((image1 >>= (.verificationStatus)) /= Just Documents.VALID) && ((image2 >>= (.verificationStatus)) /= Just Documents.VALID)) $
         mapM_ (maybe (return ()) (ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard."))) [Just imageId1, imageId2]
+    _ -> pure ()
+
+updateDriverReasonCodeForPanStatus :: Person.Person -> Documents.VerificationStatus -> Flow ()
+updateDriverReasonCodeForPanStatus person panStatus =
+  case person.role of
+    Person.DRIVER -> do
+      isFleetLinked <- isJust <$> QFleetDriver.findByDriverId person.id True
+      unless isFleetLinked $ do
+        mbDriverInfo <- DIQuery.findById person.id
+        whenJust mbDriverInfo $ \driverInfo ->
+          unless (isJust driverInfo.tdsRate || driverInfo.reasonCodeDifferentialDeduction == Just "A") $ do
+            let newReasonCode = if panStatus /= Documents.VALID then Just "C" else Nothing
+            DIQuery.updateReasonCodeDifferentialDeduction newReasonCode person.id
+    role
+      | DCommon.checkFleetOwnerRole role -> do
+          mbFleetOwnerInfo <- QFOI.findByPrimaryKey person.id
+          whenJust mbFleetOwnerInfo $ \fleetOwnerInfo ->
+            unless (isJust fleetOwnerInfo.tdsRate || fleetOwnerInfo.reasonCodeDifferentialDeduction == Just "A") $ do
+              let newReasonCode = if panStatus /= Documents.VALID then Just "C" else Nothing
+              QFOI.updateReasonCodeDifferentialDeduction newReasonCode person.id
     _ -> pure ()
 
 buildPanCard :: Person.Person -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe DPan.VerifiedBy -> Id Image.Image -> Text -> Flow DPan.DriverPanCard

@@ -114,3 +114,27 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN tds_rate d
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN is_blocked_for_scheduled_payout boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN reason_code_differential_deduction text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

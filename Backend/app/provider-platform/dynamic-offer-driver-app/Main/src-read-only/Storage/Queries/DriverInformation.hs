@@ -272,6 +272,11 @@ updatePendingPayment paymentPending driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.paymentPending paymentPending, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateReasonCodeDifferentialDeduction :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateReasonCodeDifferentialDeduction reasonCodeDifferentialDeduction driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.reasonCodeDifferentialDeduction reasonCodeDifferentialDeduction, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateReferredByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateReferredByFleetOwnerId referredByFleetOwnerId driverId = do
   _now <- getCurrentTime
@@ -451,6 +456,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.payoutVpaStatus payoutVpaStatus,
       Se.Set Beam.preferredPrimarySpecialLocId (Kernel.Types.Id.getId <$> preferredPrimarySpecialLocId),
       Se.Set Beam.preferredSecondarySpecialLocIds (Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds)),
+      Se.Set Beam.reasonCodeDifferentialDeduction reasonCodeDifferentialDeduction,
       Se.Set Beam.referralCode referralCode,
       Se.Set Beam.referredByDriverId (Kernel.Types.Id.getId <$> referredByDriverId),
       Se.Set Beam.referredByFleetOwnerId referredByFleetOwnerId,

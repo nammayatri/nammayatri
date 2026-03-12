@@ -134,6 +134,7 @@ DriverInformation:
     servicesEnabledForSubscription: "[ServiceNames]"
     panNumber: Maybe (EncryptedHashedField e Text)
     tdsRate: Maybe Double
+    reasonCodeDifferentialDeduction: Maybe Text
     aadhaarNumber: Maybe (EncryptedHashedField e Text)
     dlNumber: Maybe (EncryptedHashedField e Text)
     driverFlowStatus: Maybe DriverFlowStatus
@@ -300,6 +301,10 @@ DriverInformation:
     updateTdsRate:
       kvFunction: updateOneWithKV
       params: [tdsRate]
+      where: driverId
+    updateReasonCodeDifferentialDeduction:
+      kvFunction: updateOneWithKV
+      params: [reasonCodeDifferentialDeduction]
       where: driverId
     updateDriverDowngradeForSuv: #check
       kvFunction: updateOneWithKV

@@ -97,6 +97,7 @@ data DriverInformationT f = DriverInformationT
     payoutVpaStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.PayoutVpaStatus),
     preferredPrimarySpecialLocId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     preferredSecondarySpecialLocIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    reasonCodeDifferentialDeduction :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredByDriverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredByFleetOwnerId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

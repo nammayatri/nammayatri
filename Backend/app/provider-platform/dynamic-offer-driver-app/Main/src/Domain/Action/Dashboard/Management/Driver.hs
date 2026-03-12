@@ -1292,9 +1292,33 @@ postDriverTdsRateUpdate merchantShortId opCity req = do
     Common.DRIVER -> do
       _ <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
       QDriverInfo.updateTdsRate tdsRate personId
+      isFleetLinked <- isJust <$> QFleetDriver.findByDriverId personId True
+      unless isFleetLinked $
+        case tdsRate of
+          Just _ -> do
+            -- Code "A" only if driver has an approved LDC certificate on file
+            mbLdcImage <- QImage.findByPersonIdImageTypeAndValidationStatus personId DomainDVC.LDCCertificate DImage.APPROVED
+            let reasonCode = if isJust mbLdcImage then Just "A" else Nothing
+            QDriverInfo.updateReasonCodeDifferentialDeduction reasonCode personId
+          Nothing -> do
+            -- Rate cleared → fall back to "C" if PAN is invalid, else clear the flag
+            mbPanCard <- QPanCard.findByDriverId personId
+            let panIsInvalid = maybe True (\pan -> pan.verificationStatus /= Documents.VALID) mbPanCard
+            QDriverInfo.updateReasonCodeDifferentialDeduction (if panIsInvalid then Just "C" else Nothing) personId
     Common.FLEET_OWNER -> do
       _ <- QFOI.findByPrimaryKey personId >>= fromMaybeM (FleetOwnerNotFound personId.getId)
       QFOI.updateTdsRate tdsRate personId
+      case tdsRate of
+        Just _ -> do
+          -- Code "A" only if owner has an approved LDC certificate on file
+          mbLdcImage <- QImage.findByPersonIdImageTypeAndValidationStatus personId DomainDVC.LDCCertificate DImage.APPROVED
+          let reasonCode = if isJust mbLdcImage then Just "A" else Nothing
+          QFOI.updateReasonCodeDifferentialDeduction reasonCode personId
+        Nothing -> do
+          -- Rate cleared -> fall back to "C" if PAN is invalid, else clear the flag
+          mbPanCard <- QPanCard.findByDriverId personId
+          let panIsInvalid = maybe True (\pan -> pan.verificationStatus /= Documents.VALID) mbPanCard
+          QFOI.updateReasonCodeDifferentialDeduction (if panIsInvalid then Just "C" else Nothing) personId
   pure Success
 
 ---------------------------------------------------------------------
