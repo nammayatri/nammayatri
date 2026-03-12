@@ -108,4 +108,3 @@ dispatchCommunication entityId action = do
             success = False,
             errorMessage = Just (show err)
           }
-

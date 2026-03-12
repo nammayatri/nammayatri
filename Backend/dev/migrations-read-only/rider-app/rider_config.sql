@@ -604,3 +604,13 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN max_number_of_luggages integer ;
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN seat_booking_ttl integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN seat_booking_cleanup_ttl integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN max_live_vehicles_per_route integer  default 5;
+ALTER TABLE atlas_app.rider_config ADD COLUMN max_alternate_route_vehicles integer  default 7;
+
+
+------- SQL updates -------
+

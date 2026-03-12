@@ -96,9 +96,11 @@ class (Monad m) => CommunicationHandler m where
   sendInAppMessage :: Text -> InAppMessageParams -> m ()
   sendSms :: Text -> SmsParams -> m ()
   sendBadge :: Text -> BadgeParams -> m ()
+
   -- | Optional: called when communication is NoCommunication. Default: no-op.
   handleNoCommunication :: Text -> m ()
   handleNoCommunication _ = pure ()
+
   -- | Optional: log/record the communication for audit. Default: no-op.
   recordCommunication :: Text -> CommunicationAction -> Value -> m ()
   recordCommunication _ _ _ = pure ()

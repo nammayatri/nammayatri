@@ -169,9 +169,9 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                 then do
                   let tagsForCancellationCharges = [validCustomerCancellation, validUserNoShowCancellation]
                   let cancellationType = DCT.CancellationByDriver
-                        -- if bookingCReason.source == SBCR.ByDriver && validUserNoShowCancellation `elem` rideTags          ---------------- can be discussed if it's required.
-                        --   then DCT.CancellationByDriver
-                        --   else DCT.CancellationByCustomer
+                  -- if bookingCReason.source == SBCR.ByDriver && validUserNoShowCancellation `elem` rideTags          ---------------- can be discussed if it's required.
+                  --   then DCT.CancellationByDriver
+                  --   else DCT.CancellationByCustomer
                   if any (`elem` rideTags) tagsForCancellationCharges
                     then getCancellationCharges booking ride cancellationType bookingCReason.reasonCode
                     else return Nothing

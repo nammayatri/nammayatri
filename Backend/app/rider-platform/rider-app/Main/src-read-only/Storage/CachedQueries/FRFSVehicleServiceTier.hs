@@ -15,19 +15,19 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.FRFSVehicleServiceTier as Queries
 
-
 findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId ::
-    (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-    (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ([Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier]))
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier])
 findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId merchantOperatingCityId integratedBppConfigId = do
   (Hedis.safeGet $ "CachedQueries:FRFSVehicleServiceTier:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":IntegratedBppConfigId-" <> Kernel.Types.Id.getId integratedBppConfigId)
-    >>= (\case
-        Just a -> pure a
-        Nothing ->
-            ( \dataToBeCached -> do
-                {expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime);
-                    Hedis.setExp ("CachedQueries:FRFSVehicleServiceTier:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":IntegratedBppConfigId-" <> Kernel.Types.Id.getId integratedBppConfigId) dataToBeCached expTime}
-            ) /=<< Queries.findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId   merchantOperatingCityId   integratedBppConfigId
+    >>= ( \case
+            Just a -> pure a
+            Nothing ->
+              ( \dataToBeCached -> do
+                  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+                  Hedis.setExp ("CachedQueries:FRFSVehicleServiceTier:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":IntegratedBppConfigId-" <> Kernel.Types.Id.getId integratedBppConfigId) dataToBeCached expTime
+              )
+                /=<< Queries.findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId merchantOperatingCityId integratedBppConfigId
         )
 
 findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId ::

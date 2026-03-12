@@ -334,7 +334,7 @@ data RouteServiceabilityReq = RouteServiceabilityReq
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RouteServiceabilityResp = RouteServiceabilityResp {effectiveStops :: Kernel.Prelude.Maybe EffectiveStops, legs :: [LegRouteWithLiveVehicle]}
+data RouteServiceabilityResp = RouteServiceabilityResp {alternateRouteCodes :: Kernel.Prelude.Maybe [Kernel.Prelude.Text], effectiveStops :: Kernel.Prelude.Maybe EffectiveStops, legs :: [LegRouteWithLiveVehicle]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

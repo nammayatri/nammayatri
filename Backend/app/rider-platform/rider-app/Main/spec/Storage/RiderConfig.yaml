@@ -233,6 +233,8 @@ RiderConfig:
     invoiceLogoUrl: Maybe Text
     externalSOSConfig: Maybe ExternalSOSConfig
     maxNumberOfLuggages: Maybe Int
+    maxLiveVehiclesPerRoute: Int
+    maxAlternateRouteVehicles: Int
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -250,6 +252,8 @@ RiderConfig:
     maximumWalkDistance: Maybe Meters
     minimumWalkDistance: Maybe Meters
     maxAllowedPublicTransportLegs: Maybe Int
+    maxLiveVehiclesPerRoute: Maybe Int
+    maxAlternateRouteVehicles: Maybe Int
     dynamicLogicUpdatePassword: Maybe Text
     feedbackAlertRatingThreshold: Maybe Int
     postRideSafetyNotificationDelay: Maybe Seconds
@@ -312,6 +316,8 @@ RiderConfig:
     maximumWalkDistance: fromMaybe 600 maximumWalkDistance|E
     minimumWalkDistance: fromMaybe 100 minimumWalkDistance|E
     maxAllowedPublicTransportLegs: fromMaybe (2) maxAllowedPublicTransportLegs|E
+    maxLiveVehiclesPerRoute: fromMaybe 5 maxLiveVehiclesPerRoute|E
+    maxAlternateRouteVehicles: fromMaybe 7 maxAlternateRouteVehicles|E
     dynamicLogicUpdatePassword: fromMaybe "dummy-password" dynamicLogicUpdatePassword|E
     feedbackAlertRatingThreshold: fromMaybe 3 feedbackAlertRatingThreshold|E
     postRideSafetyNotificationDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> postRideSafetyNotificationDelay)|E
@@ -365,6 +371,8 @@ RiderConfig:
     maximumWalkDistance: Just maximumWalkDistance|E
     minimumWalkDistance: Just minimumWalkDistance|E
     maxAllowedPublicTransportLegs: Just maxAllowedPublicTransportLegs|E
+    maxLiveVehiclesPerRoute: Just maxLiveVehiclesPerRoute|E
+    maxAlternateRouteVehicles: Just maxAlternateRouteVehicles|E
     dynamicLogicUpdatePassword: Just dynamicLogicUpdatePassword|E
     feedbackAlertRatingThreshold: Just feedbackAlertRatingThreshold|E
     postRideSafetyNotificationDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -431,6 +439,8 @@ RiderConfig:
     domainRouteCalculationEnabledModes: "'{Bus, Subway}'"
     busScanRouteCalculationEnabledModes: "true"
     maxAllowedPublicTransportLegs: "2"
+    maxLiveVehiclesPerRoute: "5"
+    maxAlternateRouteVehicles: "7"
     postRideSafetyNotificationDelay : "60"
     useUserSettingsForSafetyIVR: "false"
     payoutReferralProgram: "false"
