@@ -186,7 +186,7 @@ data RiderConfig = RiderConfig
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Show, (Generic), (ToJSON), (FromJSON), (Eq))
+  deriving (Show, Generic, ToJSON, FromJSON, Eq)
 
 data BusTierSortingConfig = BusTierSortingConfig {rank :: Kernel.Prelude.Int, tier :: BecknV2.FRFS.Enums.ServiceTierType} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
@@ -214,7 +214,7 @@ data ExternalSOSConfig = ExternalSOSConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data ExternalSOSFlow = ERSS | GJ112 deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ExternalSOSFlow = ERSS | GJ112 | Trinity deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data ExternalSOSTriggerSource = FRONTEND | DASHBOARD deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -229,8 +229,8 @@ data ServiceTierSource = NANDI | QUOTES deriving (Eq, Ord, Show, Read, Generic, 
 data SpecialVehicleNotificationConfig = SpecialVehicleNotificationConfig {notificationMessage :: Kernel.Prelude.Text, notificationTitle :: Kernel.Prelude.Text, vehicleNo :: Kernel.Prelude.Text}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ExternalSOSFlow))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSFlow)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ExternalSOSTriggerSource))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSTriggerSource)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ServiceTierSource))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceTierSource)
