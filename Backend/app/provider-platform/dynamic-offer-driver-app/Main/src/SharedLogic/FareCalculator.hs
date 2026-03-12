@@ -118,6 +118,9 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       driverAllowanceCaption = show Enums.DRIVER_ALLOWANCE
       mbDriverAllowanceItem = mkBreakupItem driverAllowanceCaption . mkPrice <$> fareParams.driverAllowance
 
+      airportConvenienceFeeCaption = show Enums.AIRPORT_CONVENIENCE_FEE
+      mbAirportConvenienceFeeItem = mkBreakupItem airportConvenienceFeeCaption . mkPrice <$> fareParams.airportConvenienceFee
+
       mkBusinessDiscountCaption = show Enums.BUSINESS_DISCOUNT
       mbBusinessDiscountItem = mkBreakupItem mkBusinessDiscountCaption . mkPrice <$> fareParams.businessDiscount
 
@@ -170,6 +173,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbFixedGovtRateItem,
       mbPetChargesItem,
       mbDriverAllowanceItem,
+      mbAirportConvenienceFeeItem,
       mbPriorityChargesItem,
       mbServiceChargeItem,
       mbSelectedFareItem,
@@ -308,6 +312,7 @@ pureFareSum fareParams conditionalChargeCategories = do
     + fromMaybe 0.0 fareParams.congestionCharge
     + fromMaybe 0.0 fareParams.petCharges
     + fromMaybe 0.0 fareParams.driverAllowance
+    + fromMaybe 0.0 fareParams.airportConvenienceFee
     + fromMaybe 0.0 fareParams.stopCharges
     + fromMaybe 0.0 fareParams.priorityCharges
     + partOfNightShiftCharge
@@ -432,6 +437,7 @@ calculateFareParameters params = do
           + finalCongestionCharge ----------Needs to be changed to congestionChargeResult
           + fromMaybe 0.0 params.petCharges
           + fromMaybe 0.0 fp.driverAllowance
+          + fromMaybe 0.0 fp.airportConvenienceFee
           + fromMaybe 0.0 fp.serviceCharge
           + fromMaybe 0.0 fp.priorityCharges
           + fromMaybe 0.0 insuranceChargeResult
@@ -461,6 +467,7 @@ calculateFareParameters params = do
             baseFare = baseFare,
             petCharges = params.petCharges,
             driverAllowance = fp.driverAllowance,
+            airportConvenienceFee = fp.airportConvenienceFee,
             priorityCharges = fp.priorityCharges,
             congestionCharge = Just finalCongestionCharge,
             congestionChargeViaDp = congestionChargeByPerMin,
