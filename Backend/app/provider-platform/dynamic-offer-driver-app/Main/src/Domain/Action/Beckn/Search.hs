@@ -413,8 +413,8 @@ handler ValidatedDSearchReq {..} sReq = do
             logInfo $ "VST " <> show fp.vehicleServiceTier <> " skipped due to area restrictions for area: " <> show mbAreaForVST
           if isAllowed
             then case tripCategoryToPricingPolicy fp'.tripCategory of
-                   EstimateBased {..} -> buildEstimateHelper nightShiftOverlapChecking vehicleServiceTierItem fp' >>= \est -> pure (est : estimates, quotes)
-                   QuoteBased {..} -> buildQuoteHelper nightShiftOverlapChecking vehicleServiceTierItem fp' >>= \quote -> pure (estimates, quote : quotes)
+              EstimateBased {..} -> buildEstimateHelper nightShiftOverlapChecking vehicleServiceTierItem fp' >>= \est -> pure (est : estimates, quotes)
+              QuoteBased {..} -> buildQuoteHelper nightShiftOverlapChecking vehicleServiceTierItem fp' >>= \quote -> pure (estimates, quote : quotes)
             else pure (estimates, quotes)
         Nothing -> do
           logError $ "Vehicle service tier not found for " <> show fp'.vehicleServiceTier

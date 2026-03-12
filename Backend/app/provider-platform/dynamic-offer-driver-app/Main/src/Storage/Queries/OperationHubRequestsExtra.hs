@@ -79,9 +79,10 @@ findAllRequestsInRange from to limit offset mbMobileNumberHash mbReqStatus mbReq
       logError $ "Error in findAllRequestsInRange " <> show err
       pure []
 
+-- Custom deletes with Id Person (DB columns are Maybe; avoid Maybe in API)
 deleteByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> m ()
 deleteByDriverId driverId = do
-  deleteWithKV [Se.Is BeamOHR.creatorId $ Se.Eq (getId driverId)]
+  deleteWithKV [Se.Is BeamOHR.driverId $ Se.Eq (Just $ getId driverId)]
 
 deleteByOperatorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> m ()
 deleteByOperatorId operatorId = do
