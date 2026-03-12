@@ -1382,6 +1382,7 @@ library
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.CancellationFarePolicy
       Storage.CachedQueries.Discount
+      Storage.CachedQueries.DiscountTier
       Storage.CachedQueries.DiscountTierTranslation
       Storage.CachedQueries.DiscountTranslation
       Storage.CachedQueries.FeedbackForm

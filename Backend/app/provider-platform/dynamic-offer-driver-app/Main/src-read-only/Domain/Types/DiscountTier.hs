@@ -21,10 +21,10 @@ data DiscountTier = DiscountTier
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (Show), (Eq))
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
-data DiscountValueType = PERCENTAGE | FIXED deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), (Eq), (Ord), (Read), (ToParamSchema))
+data DiscountValueType = PERCENTAGE | FIXED deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''DiscountValueType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''DiscountValueType)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''DiscountValueType))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''DiscountValueType)

@@ -14,10 +14,10 @@ import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Logging
+import qualified Storage.CachedQueries.Discount as QDiscount
+import qualified Storage.CachedQueries.DiscountTier as QDiscountTier
 import qualified Storage.CachedQueries.DiscountTierTranslation as QDiscountTierTranslation
 import qualified Storage.CachedQueries.DiscountTranslation as QDiscountTranslation
-import qualified Storage.Queries.Discount as QDiscountDB
-import qualified Storage.Queries.DiscountTier as QDiscountTier
 
 getDiscountList ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -34,13 +34,25 @@ getDiscountList ::
 getDiscountList (_, _, merchantOpCityId) mbLanguage mbDiscountType mbPlanId mbVehicleCategory mbPaymentMode = do
   logInfo $ "getDiscountList called with language: " <> show mbLanguage <> ", discountType: " <> show mbDiscountType <> ", planId: " <> show mbPlanId <> ", vehicleCategory: " <> show mbVehicleCategory <> ", paymentMode: " <> show mbPaymentMode
   let lang = fromMaybe Kernel.External.Types.ENGLISH mbLanguage
-  discounts <- QDiscountDB.findByFilters merchantOpCityId True mbDiscountType mbPlanId mbVehicleCategory mbPaymentMode
+  -- Fetch all enabled discounts from cache
+  allDiscounts <- QDiscount.findAllEnabledByMerchantOpCityId merchantOpCityId True
+  -- Filter in-memory based on the criteria
+  let discounts =
+        filter
+          ( \discount ->
+              (maybe True (== discount.discountType) mbDiscountType)
+                && (maybe True (== discount.planId) (Just <$> mbPlanId))
+                && (maybe True (== discount.vehicleCategory) (Just <$> mbVehicleCategory))
+                && (maybe True (== discount.paymentMode) (Just <$> mbPaymentMode))
+          )
+          allDiscounts
   discountInfos <- forM discounts $ \discount -> do
     mbTranslation <- QDiscountTranslation.findByDiscountIdAndLanguage discount.id lang
     translation <- case mbTranslation of
       Just t -> pure (Just t)
       Nothing -> QDiscountTranslation.findByDiscountIdAndLanguage discount.id Kernel.External.Types.ENGLISH
-    tiers <- QDiscountTier.findAllByDiscountIdOrderByTier Nothing Nothing discount.id
+    -- Use cached query for discount tiers
+    tiers <- QDiscountTier.findAllByDiscountId discount.id
     tierInfos <- forM tiers $ \tier -> do
       mbTierTrans <- QDiscountTierTranslation.findByTierIdAndLanguage tier.id lang
       tierTrans <- case mbTierTrans of

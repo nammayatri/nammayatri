@@ -3,7 +3,7 @@ imports:
 
 DiscountTier:
   tableName: discount_tier
-  derives: "Generic, Show, Eq"
+  derives: "Generic, Show, Eq, ToJSON, FromJSON"
 
   types:
     DiscountValueType:
@@ -39,5 +39,12 @@ DiscountTier:
       where: discountId
       orderBy: tierOrder
       order: ASC
+
+  cachedQueries:
+    findAllByDiscountId:
+      keyParams: [discountId]
+      returnType: Array
+      dbQuery: findAllByDiscountId
+      dbQueryParams: [discountId]
 
   excludedFields: [merchantId, merchantOperatingCityId]
