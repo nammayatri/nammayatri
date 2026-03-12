@@ -1188,6 +1188,7 @@ TransporterConfig:
     reconciliationSchedulerTime: Maybe Seconds # Time of day to run reconciliation job (in seconds from midnight IST), e.g., 10800 = 3:00 AM IST
     enableScheduleReallocation: Maybe Bool
     enableCoinsToDirectPayout: Maybe Bool
+    enableDirectWalletIncentives: Maybe Bool
 
   beamType:
     currency: Maybe Currency

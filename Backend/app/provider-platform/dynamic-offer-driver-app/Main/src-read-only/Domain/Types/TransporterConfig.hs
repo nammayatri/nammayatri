@@ -144,6 +144,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     emailOtpConfig :: Kernel.Prelude.Maybe Email.Types.EmailOTPConfig,
     enableCoinsToDirectPayout :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableDashboardSms :: Kernel.Prelude.Bool,
+    enableDirectWalletIncentives :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableExistingVehicleInBulkUpload :: Kernel.Prelude.Bool,
     enableFaceVerification :: Kernel.Prelude.Bool,
     enableFareCalculatorV2 :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

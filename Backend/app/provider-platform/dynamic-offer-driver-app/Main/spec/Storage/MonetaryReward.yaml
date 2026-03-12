@@ -1,0 +1,29 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  VehicleCategory: Domain.Types.VehicleCategory
+  DriverCoinsFunctionType: Lib.DriverCoins.Types
+  HighPrecMoney: Kernel.Types.Common
+
+MonetaryRewardConfig:
+  tableName: monetary_reward_config
+
+  derives: "Generic,Show,FromJSON,ToJSON"
+
+  fields:
+    id: Id MonetaryRewardConfig
+    eventFunction: DriverCoinsFunctionType
+    eventName: Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    monetaryRewardAmount: HighPrecMoney
+    expirationAt: Maybe Int
+    active: Bool
+    vehicleCategory: Maybe VehicleCategory|NoRelation
+
+  constraints:
+    id: PrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+

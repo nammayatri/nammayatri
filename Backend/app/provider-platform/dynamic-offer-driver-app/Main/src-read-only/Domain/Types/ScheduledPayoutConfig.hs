@@ -32,7 +32,7 @@ data ScheduledPayoutConfig = ScheduledPayoutConfig
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON, Eq)
 
 data ScheduledPayoutFrequency = DAILY | WEEKLY | MONTHLY deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
