@@ -140,12 +140,12 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
           Just VI.HyperVerge -> do
             let panReq = DO.DriverPanReq {panNumber = req.panNumber, imageId1 = Id req.imageId, imageId2 = Nothing, consent = True, nameOnCard = Nothing, dateOfBirth = Nothing, consentTimestamp = Nothing, validationStatus = Nothing, verifiedBy = Nothing, transactionId = Nothing, nameOnGovtDB = Nothing, docType = Nothing}
             void $ checkIfGenuineReq panReq person
-            panCardDetails <- buildPanCard person Nothing Nothing Nothing (Just verifyBy) (Id req.imageId) req.panNumber
+            panCardDetails <- buildPanCard person Nothing Nothing Nothing (Just verifyBy) (Id req.imageId) req.panNumber (Just Documents.VALID)
             DPQuery.create panCardDetails
           Just VI.Idfy -> do
             void $ callIdfy person mdriverPanInformation driverDocument transporterConfig
           _ -> do
-            panCardDetails <- buildPanCard person Nothing Nothing Nothing (Just verifyBy) (Id req.imageId) req.panNumber
+            panCardDetails <- buildPanCard person Nothing Nothing Nothing (Just verifyBy) (Id req.imageId) req.panNumber Nothing
             DPQuery.create $ panCardDetails
         case person.role of
           role | DCommon.checkFleetOwnerRole role -> do
@@ -237,7 +237,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
           extractedPan <- validateExtractedPan resp
           when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
             DVRC.validateDocument person.merchantId merchantOpCityId person.id extractedPan.name_on_card extractedPan.date_of_birth (Just req.panNumber) ODC.PanCard driverDocument
-          panCardDetails <- buildPanCard person extractedPan.pan_type extractedPan.name_on_card extractedPan.date_of_birth (Just verifyBy) (Id req.imageId) req.panNumber
+          panCardDetails <- buildPanCard person extractedPan.pan_type extractedPan.name_on_card extractedPan.date_of_birth (Just verifyBy) (Id req.imageId) req.panNumber (if not documentVerificationConfig.doStrictVerifcation then Just Documents.VALID else Nothing)
           DPQuery.create panCardDetails
 
       pure Success
@@ -321,8 +321,8 @@ onVerifyPanHandler person imageId1 imageId2 output = do
         mapM_ (maybe (return ()) (ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard."))) [Just imageId1, imageId2]
     _ -> pure ()
 
-buildPanCard :: Person.Person -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe DPan.VerifiedBy -> Id Image.Image -> Text -> Flow DPan.DriverPanCard
-buildPanCard person panType panName panDob verifyBy image1 panNumber = do
+buildPanCard :: Person.Person -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe DPan.VerifiedBy -> Id Image.Image -> Text -> Maybe Documents.VerificationStatus -> Flow DPan.DriverPanCard
+buildPanCard person panType panName panDob verifyBy image1 panNumber verificationStatus = do
   panNoEnc <- encrypt panNumber
   now <- getCurrentTime
   uuid <- generateGUID
@@ -333,7 +333,7 @@ buildPanCard person panType panName panDob verifyBy image1 panNumber = do
         documentImageId1 = image1,
         driverId = person.id,
         id = uuid,
-        verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
+        verificationStatus = fromMaybe Documents.MANUAL_VERIFICATION_REQUIRED verificationStatus,
         merchantId = Just person.merchantId,
         merchantOperatingCityId = Just person.merchantOperatingCityId,
         createdAt = now,
