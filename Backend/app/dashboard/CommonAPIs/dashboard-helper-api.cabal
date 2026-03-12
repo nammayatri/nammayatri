@@ -32,6 +32,7 @@ library
       Dashboard.Common.DriverCoins
       Dashboard.Common.Exotel
       Dashboard.Common.FinanceManagement
+      Dashboard.Common.KnowledgeCenter
       Dashboard.Common.MediaFileDocument
       Dashboard.Common.Merchant
       Dashboard.Common.Ride
@@ -45,6 +46,7 @@ library
       Dashboard.ProviderPlatform.Management.DriverReferral
       Dashboard.ProviderPlatform.Management.DriverRegistration
       Dashboard.ProviderPlatform.Management.FinanceManagement
+      Dashboard.ProviderPlatform.Management.KnowledgeCenter
       Dashboard.ProviderPlatform.Management.MediaFileDocument
       Dashboard.ProviderPlatform.Management.Merchant
       Dashboard.ProviderPlatform.Management.Message
@@ -87,6 +89,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.EntityInfo
       API.Types.ProviderPlatform.Management.Endpoints.FeedbackForm
       API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement
+      API.Types.ProviderPlatform.Management.Endpoints.KnowledgeCenter
       API.Types.ProviderPlatform.Management.Endpoints.Media
       API.Types.ProviderPlatform.Management.Endpoints.MediaFileDocument
       API.Types.ProviderPlatform.Management.Endpoints.Merchant
@@ -103,6 +106,7 @@ library
       API.Types.ProviderPlatform.Management.EntityInfo
       API.Types.ProviderPlatform.Management.FeedbackForm
       API.Types.ProviderPlatform.Management.FinanceManagement
+      API.Types.ProviderPlatform.Management.KnowledgeCenter
       API.Types.ProviderPlatform.Management.Media
       API.Types.ProviderPlatform.Management.MediaFileDocument
       API.Types.ProviderPlatform.Management.Merchant

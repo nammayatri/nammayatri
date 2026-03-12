@@ -1,0 +1,177 @@
+imports:
+  FileType: AWS.S3
+  UTCTime: Kernel.Prelude
+
+module: KnowledgeCenter
+apiPrefix: knowledgeCenter
+
+apis:
+  - GET:
+      endpoint: /getDocument/{knowledgeCenterId}
+      auth: ApiAuthV2
+      params:
+        knowledgeCenterId: Text
+      response:
+        type: GetKnowledgeCenterDocumentResp
+      helperApi:
+        - GET:
+            endpoint: /getDocument/{knowledgeCenterId}
+            auth: ApiAuthV2
+            params:
+              knowledgeCenterId: Text
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: GetKnowledgeCenterDocumentResp
+  - GET:
+      endpoint: /sop/list
+      auth: ApiAuthV2
+      query:
+        merchantOperatingCityId: Text
+      response:
+        type: KnowledgeCenterSopListResp
+      helperApi:
+        - GET:
+            endpoint: /sop/list
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            query:
+              merchantOperatingCityId: Text
+            response:
+              type: KnowledgeCenterSopListResp
+  - POST:
+      endpoint: /sop/upload
+      auth: ApiAuthV2
+      request:
+        type: KnowledgeCenterUploadImageReq
+      response:
+        type: KnowledgeCenterUploadImageResp
+      helperApi:
+        - POST:
+            endpoint: /sop/upload
+            auth: ApiAuthV2
+            request:
+              type: KnowledgeCenterUploadImageReq
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: KnowledgeCenterUploadImageResp
+  - POST:
+      endpoint: /video/uploadLink
+      auth: ApiAuthV2
+      request:
+        type: KnowledgeCenterUploadVideoLinkReq
+      response:
+        type: KnowledgeCenterUploadVideoLinkResp
+      helperApi:
+        - POST:
+            endpoint: /video/uploadLink
+            auth: ApiAuthV2
+            request:
+              type: KnowledgeCenterUploadVideoLinkReq
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: KnowledgeCenterUploadVideoLinkResp
+  - POST:
+      endpoint: /video/confirm
+      auth: ApiAuthV2
+      request:
+        type: KnowledgeCenterConfirmVideoReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /video/confirm
+            auth: ApiAuthV2
+            request:
+              type: KnowledgeCenterConfirmVideoReq
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: APISuccess
+  - PUT:
+      endpoint: /sopType/rename
+      auth: ApiAuthV2
+      request:
+        type: KnowledgeCenterRenameSopTypeReq
+      response:
+        type: APISuccess
+      helperApi:
+        - PUT:
+            endpoint: /sopType/rename
+            auth: ApiAuthV2
+            request:
+              type: KnowledgeCenterRenameSopTypeReq
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: APISuccess
+  - DELETE:
+      endpoint: /sop/document/{knowledgeCenterId}
+      auth: ApiAuthV2
+      params:
+        knowledgeCenterId: Text
+      response:
+        type: APISuccess
+      helperApi:
+        - DELETE:
+            endpoint: /sop/document/{knowledgeCenterId}
+            auth: ApiAuthV2
+            params:
+              knowledgeCenterId: Text
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: APISuccess
+  - DELETE:
+      endpoint: /sopType
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - sopType: Text
+      response:
+        type: APISuccess
+      helperApi:
+        - DELETE:
+            endpoint: /sopType
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - sopType: Text
+              - requestorId: Text
+            response:
+              type: APISuccess
+
+types:
+  SopTypeDocumentsItem:
+    - sopType: Text
+    - knowledgeCenterIds: [Text]
+  KnowledgeCenterSopListResp:
+    - sopTypeDocuments: [SopTypeDocumentsItem]
+  GetKnowledgeCenterDocumentResp:
+    - fileType: FileType
+    - imageBase64: Maybe Text
+    - viewLink: Maybe Text
+  KnowledgeCenterUploadImageReq:
+    - sopType: Text
+    - imageBase64: Text
+    - fileExtension: Maybe Text
+    - merchantOperatingCityId: Maybe Text
+  KnowledgeCenterUploadImageResp:
+    - knowledgeCenterId: Text
+  KnowledgeCenterUploadVideoLinkReq:
+    - sopType: Text
+    - reqContentType: Text
+    - merchantOperatingCityId: Maybe Text
+  KnowledgeCenterUploadVideoLinkResp:
+    - uploadLink: Maybe Text
+    - knowledgeCenterId: Text
+  KnowledgeCenterConfirmVideoReq:
+    - knowledgeCenterId: Text
+  KnowledgeCenterRenameSopTypeReq:
+    - oldSopType: Text
+    - newSopType: Text
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE
+  - EXTRA_API_COMMON_TYPES_FILE
