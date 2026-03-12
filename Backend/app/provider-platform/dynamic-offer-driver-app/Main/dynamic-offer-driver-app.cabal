@@ -383,6 +383,7 @@ library
       Domain.Types.Geometry
       Domain.Types.InterCityTravelCities
       Domain.Types.LmsEnumTypes
+      Domain.Types.MonetaryReward.MonetaryRewardConfig
       Domain.Types.OnCancel
       Domain.Types.OnUpdate
       Domain.Types.Quote
@@ -538,6 +539,7 @@ library
       Storage.Beam.InterCityTravelCities.InterCityTravelCities
       Storage.Beam.InterCityTravelCities.InterCityTravelCitiesGeom
       Storage.Beam.IssueManagement
+      Storage.Beam.MonetaryReward.MonetaryRewardConfig
       Storage.Beam.Payment
       Storage.Beam.Quote
       Storage.Beam.SchedulerJob
@@ -598,6 +600,7 @@ library
       Storage.CachedQueries.Merchant.Overlay
       Storage.CachedQueries.Merchant.PayoutConfig
       Storage.CachedQueries.Merchant.TransporterConfig
+      Storage.CachedQueries.MonetaryReward.MonetaryRewardConfig
       Storage.CachedQueries.PlanExtra
       Storage.CachedQueries.PlanTranslation
       Storage.CachedQueries.ReelsData
@@ -723,6 +726,7 @@ library
       Storage.Queries.MerchantServiceConfigExtra
       Storage.Queries.MessageExtra
       Storage.Queries.MessageReportExtra
+      Storage.Queries.MonetaryReward.MonetaryRewardConfig
       Storage.Queries.NotificationExtra
       Storage.Queries.OperationHubExtra
       Storage.Queries.OperationHubRequestsExtra
