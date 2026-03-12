@@ -6,7 +6,6 @@ where
 import qualified Data.Text as Text
 import Data.Time (UTCTime (..), utctDay)
 import qualified Data.Time.Calendar as Cal
-
 import qualified Domain.Types.Extra.MerchantServiceConfig as ExtraMSC
 import qualified Domain.Types.IffcoTokioInsurance as DITI
 import qualified Domain.Types.Merchant as DM
@@ -60,7 +59,7 @@ triggerIffcoTokioInsurance driverId merchantId merchantOpCityId = do
     now <- getCurrentTime
     let todayLocal = utctDay localTime
         timeOffset = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
-        startOfTodayUTC = addUTCTime (-timeOffset) (UTCTime todayLocal 0)
+        startOfTodayUTC = addUTCTime (- timeOffset) (UTCTime todayLocal 0)
         startOfTomorrowUTC = addUTCTime 86400 startOfTodayUTC
     mbExisting <- QIffco.findLatestByDriverId driverId
     let alreadyInsured = case mbExisting of
