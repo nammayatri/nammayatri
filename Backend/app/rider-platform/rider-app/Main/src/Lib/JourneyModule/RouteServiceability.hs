@@ -1,26 +1,22 @@
 module Lib.JourneyModule.RouteServiceability where
 
 import qualified API.Types.UI.MultimodalConfirm
-import Data.List (nub)
 import qualified BecknV2.FRFS.Enums
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Domain.Types.FRFSVehicleServiceTier as DFRFSVehicleServiceTier
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
-import Domain.Types.MerchantOperatingCity
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (all, any, catMaybes, concatMap, elem, find, foldr, groupBy, id, length, map, mapM_, null, readMaybe, toList, whenJust)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude hiding (whenJust)
 import Kernel.Types.Error
-import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Common.FRFSJourneyUtils as JLCF
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
-import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 
@@ -30,7 +26,6 @@ buildRouteWithLiveVehicle ::
   CQMMB.RouteWithBuses ->
   NandiTypes.BusScheduleDetails ->
   DIntegratedBPPConfig.IntegratedBPPConfig ->
-  Id MerchantOperatingCity ->
   Text ->
   Text ->
   [(BecknV2.FRFS.Enums.ServiceTierType, DFRFSVehicleServiceTier.FRFSVehicleServiceTier)] ->
@@ -42,7 +37,6 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
     OTPRest.getRouteByRouteId integratedBPPConfig routeInfo.routeId
       >>= fromMaybeM
         (InvalidRequest $ "Route not found with id: " <> routeInfo.routeId)
-  -- Build a lookup list of distinct service tier types -> FRFS tier entity once
   schedulesFork <-
     awaitableFork "getBusScheduleInfo" $
       getBusScheduleInfo busScheduleDetails integratedBPPConfig routeInfo.routeId fromStopCode toStopCode frfsTierMap
@@ -94,7 +88,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
               mbServiceTier <- JMU.getVehicleServiceTypeFromInMem [integratedBPPConfig'] detail.vehicle_no
               case mbServiceTier of
                 Just serviceTier -> do
-                  let frfsServiceTier = join $ lookup serviceTier frfsTierMap'
+                  let frfsServiceTier = lookup serviceTier frfsTierMap'
                   -- Get service subtypes from in-memory cache
                   mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [integratedBPPConfig'] detail.vehicle_no
 

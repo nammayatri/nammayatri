@@ -1183,6 +1183,15 @@ FRFSVehicleServiceTier:
         - _type
         - merchantOperatingCityId
         - integratedBppConfigId
+    findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId:
+      keyParams:
+        - merchantOperatingCityId
+        - integratedBppConfigId
+      returnType: Array
+      dbQuery: findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId
+      dbQueryParams:
+        - merchantOperatingCityId
+        - integratedBppConfigId
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -1199,6 +1208,10 @@ FRFSVehicleServiceTier:
       kvFunction: findOneWithKV
       where:
         and: [_type, merchantOperatingCityId, integratedBppConfigId]
+    findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, integratedBppConfigId]
 
 RouteTripMapping:
   tableName: route_trip_mapping
