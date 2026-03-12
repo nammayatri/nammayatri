@@ -67,6 +67,7 @@ library
       API.Internal.ViolationDetection
       API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
       API.Types.Dashboard.AppManagement.OrphanInstances.TicketDashboard
+      API.Types.Dashboard.AppManagement.OrphanInstances.TransitOperator
       API.Types.UI.PartnerBookingStatementExtra
       API.Types.UI.Payment
       API.UI

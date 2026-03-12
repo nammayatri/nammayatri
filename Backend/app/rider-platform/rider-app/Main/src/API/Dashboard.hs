@@ -19,6 +19,7 @@ import qualified API.Action.Dashboard.IssueManagement as IssueManagementDSL
 import qualified API.Action.Dashboard.Management as ManagementDSL
 import qualified API.Action.Dashboard.RideBooking as RideBookingDSL
 import qualified API.Dashboard.Exotel as Exotel
+import API.Types.Dashboard.AppManagement.OrphanInstances.TransitOperator ()
 import qualified Domain.Types.Merchant as DM
 import Environment
 import qualified Kernel.Types.Beckn.Context as Context

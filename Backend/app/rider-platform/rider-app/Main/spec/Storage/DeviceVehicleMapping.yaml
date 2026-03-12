@@ -17,10 +17,13 @@ DeviceVehicleMapping:
 
   constraints:
     deviceId: PrimaryKey
+    gtfsId: PrimaryKey
 
   extraIndexes:
     - columns: [vehicleNo]
     - columns: [gtfsId]
+    - columns: [deviceId, vehicleNo, gtfsId]
+      unique: true
 
   queries:
     findByDeviceId:
@@ -36,13 +39,26 @@ DeviceVehicleMapping:
           - vehicleNo
 
     upsertMapping:
-      kvFunction: upsertWithKV
+      kvFunction: updateWithKV
       params:
         - vehicleNo
         - gtfsId
       where:
         eq:
           - deviceId
+
+    findAllByGtfsId:
+      kvFunction: findAllWithKV
+      where:
+        eq:
+          - gtfsId
+
+    findByDeviceIdAndGtfsId:
+      kvFunction: findOneWithKV
+      where:
+        eq:
+          - deviceId
+          - gtfsId
 
   cachedQueries:
     findByDeviceIdCached:

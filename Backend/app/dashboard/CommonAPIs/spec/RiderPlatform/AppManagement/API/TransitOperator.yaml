@@ -22,6 +22,7 @@ imports:
   NandiWaybillRow: SharedLogic.External.Nandi.Types
   QueryBody: SharedLogic.External.Nandi.Types
   Value: Data.Aeson
+  FilePath: EulerHS.Prelude
 
 importPackageOverrides:
   BecknV2.OnDemand.Enums: "beckn-spec"
@@ -278,5 +279,36 @@ apis:
       response:
         type: "[NandiWaybillRow]"
 
-types: {}
+  - GET:
+      endpoint: /deviceVehicleMapping/list
+      name: TransitOperatorGetDeviceVehicleMappingList
+      auth: ApiAuthV2
+      response:
+        type: DeviceVehicleMappingListRes
+
+  - POST:
+      endpoint: /deviceVehicleMapping/upsert
+      name: TransitOperatorUpsertDeviceVehicleMapping
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertDeviceVehicleMappingReq
+      response:
+        type: UpsertDeviceVehicleMappingResp
+
+types:
+  DeviceVehicleMappingListRes:
+    mappings: "[DeviceVehicleMappingItem]"
+  DeviceVehicleMappingItem:
+    deviceId: Text
+    vehicleNo: Text
+    gtfsId: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  UpsertDeviceVehicleMappingReq:
+    recordType: NewType
+    file: FilePath
+    derive: "'HideSecrets"
+  UpsertDeviceVehicleMappingResp:
+    success: Text
+    unprocessedEntries: [Text]
 
