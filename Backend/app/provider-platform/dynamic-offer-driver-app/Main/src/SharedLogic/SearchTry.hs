@@ -316,23 +316,25 @@ buildTripQuoteDetail ::
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
   m TripQuoteDetail
-buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare isDashboardRequest mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId conditionalCharges eligibleForUpgrade congestionCharges petCharges priorityCharges commissionCharges mbTollCharges = do
+buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare isDashboardRequest mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId conditionalCharges eligibleForUpgrade congestionCharges petCharges priorityCharges commissionCharges mbTollCharges mbStateEntryPermitCharges = do
   vehicleServiceTierName <-
     case mbVehicleServiceTierName of
       Just name -> return name
       _ -> do
         item <- CQDVST.findByServiceTierTypeAndCityIdInRideFlow vehicleServiceTier searchReq.merchantOperatingCityId searchReq.configInExperimentVersions >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
         return item.name
-  (driverParkingCharge, tollCharges, driverPickUpCharge, driverMinFee, driverMaxFee, driverStepFee, driverDefaultStepFee) <-
+  (driverParkingCharge, tollCharges, stateEntryPermitCharges, driverPickUpCharge, driverMinFee, driverMaxFee, driverStepFee, driverDefaultStepFee) <-
     case (mbDriverParkingCharge, mbTollCharges, mDriverPickUpCharge, mbDriverMinFee, mbDriverMaxFee, mbStepFee, mbDefaultStepFee) of
-      (Just parkingCharge, Just tollCharges', Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee) -> return (Just parkingCharge, Just tollCharges', Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee)
+      (Just parkingCharge, Just tollCharges', Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee) -> return (Just parkingCharge, Just tollCharges', mbStateEntryPermitCharges, Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee)
       _ -> do
         farePolicy <- getFarePolicyByEstOrQuoteId (Just $ getCoordinates searchReq.fromLocation) (Just . getCoordinates =<< searchReq.toLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId Nothing isDashboardRequest searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId))) searchReq.configInExperimentVersions searchReq.specialLocationName
         let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
         return $
           ( farePolicy.parkingCharge,
             Nothing, -- TODO: @Himanshu Fallback to searchReq.tollCharges (and SEPC when added) once Step 2+ of plan.
+            Nothing,
             USRD.extractDriverPickupCharges farePolicy.farePolicyDetails,
             mbDriverExtraFeeBounds <&> (.minFee),
             mbDriverExtraFeeBounds <&> (.maxFee),

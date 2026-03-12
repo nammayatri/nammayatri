@@ -624,6 +624,7 @@ data BookingAPIEntity = BookingAPIEntity
     estimatedDuration :: Maybe Seconds,
     fareParams :: FareParameters,
     tollNames :: Maybe [Text],
+    stateEntryPermitNames :: Maybe [Text],
     billingCategory :: SLT.BillingCategory,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
@@ -1651,7 +1652,27 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       let driverPickUpCharges = USRD.extractDriverPickupCharges farePolicy.farePolicyDetails
           parkingCharges = farePolicy.parkingCharge
       let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) farePolicy.conditionalCharges
-      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) (estimate >>= (.fareParams) >>= (.tollCharges)) -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      return $
+        USRD.makeSearchRequestForDriverAPIEntity
+          nearbyReq
+          searchRequest
+          searchTry
+          bapMetadata
+          popupDelaySeconds
+          Nothing
+          (Seconds 0)
+          nearbyReq.vehicleServiceTier
+          False
+          isValueAddNP
+          useSilentFCMForForwardBatch
+          driverPickUpCharges
+          parkingCharges
+          safetyCharges
+          (estimate >>= (.fareParams) >>= (.congestionCharge))
+          (estimate >>= (.fareParams) >>= (.petCharges))
+          (estimate >>= (.fareParams) >>= (.priorityCharges))
+          (estimate >>= (.fareParams) >>= (.tollCharges))
+          (estimate >>= (.fareParams) >>= (.stateEntryPermitCharges)) -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
@@ -1881,6 +1902,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               nightShiftCharge = Nothing,
               customerCancellationDues = searchReq.customerCancellationDues,
               tollCharges = searchReq.tollCharges,
+              stateEntryPermitCharges = searchReq.stateEntryPermitCharges,
               estimatedRideDuration = searchReq.estimatedDuration,
               nightShiftOverlapChecking = DTC.isFixedNightCharge searchTry.tripCategory,
               estimatedCongestionCharge = Nothing,
@@ -1979,12 +2001,15 @@ getStats (driverId, _, merchantOpCityId) date = do
   let totalEarningsOfDay = maybe 0.0 (.totalEarnings) driverDailyStats
       tipsEarningOfDay = maybe 0.0 (.tipAmount) driverDailyStats
       totalDistanceTravelledInKilometers = maybe 0 (.totalDistance) driverDailyStats `div` 1000
-      totalEarningOfDayExcludingTollCharges = totalEarningsOfDay - maybe 0.0 (.tollCharges) driverDailyStats
+      totalEarningOfDayExcludingTollAndStateEntryCharges =
+        totalEarningsOfDay
+          - maybe 0.0 (.tollCharges) driverDailyStats
+          - maybe 0.0 (.stateEntryPermitCharges) driverDailyStats
       bonusEarning = maybe 0.0 (.bonusEarnings) driverDailyStats
       totalEarningsOfDayPerKm =
         if totalDistanceTravelledInKilometers.getMeters == 0
           then HighPrecMoney 0.0
-          else toHighPrecMoney $ roundToIntegral totalEarningOfDayExcludingTollCharges `div` totalDistanceTravelledInKilometers.getMeters
+          else toHighPrecMoney $ roundToIntegral totalEarningOfDayExcludingTollAndStateEntryCharges `div` totalDistanceTravelledInKilometers.getMeters
   return $
     DriverStatsRes
       { coinBalance = coinBalance_,
@@ -2987,7 +3012,7 @@ buildBookingAPIEntityFromBooking mbDriverLocation DRB.Booking {..} = do
       fork "Error in case of no quote - Potential drainer lag" $ throwError (ShouldNotHappen $ "Quote with quoteId = \"" <> quoteId <> "\" not found.")
       pure Nothing
     Just quote -> do
-      let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id (mkBreakupItem currency) estimatedDistance quote.fareParams.customerCancellationDues Nothing estimatedFare quote.fareParams.congestionChargeViaDp govtChargesRate) quote.farePolicy
+      let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id (mkBreakupItem currency) estimatedDistance quote.fareParams.customerCancellationDues Nothing Nothing estimatedFare quote.fareParams.congestionChargeViaDp govtChargesRate) quote.farePolicy
       return $ Just $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', isInsured = Just isInsured, ..} (catMaybes farePolicyBreakups)
 
 mkBreakupItem :: Currency -> Text -> Text -> Maybe DOVT.RateCardItem

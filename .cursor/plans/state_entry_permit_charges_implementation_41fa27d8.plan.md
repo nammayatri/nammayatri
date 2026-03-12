@@ -394,6 +394,10 @@ flowchart LR
     - `tollCharges = ... -- TODO: @Himanshu add SEPC charges below it, we have removed addition of static charges here.`  
     - `stateEntryPermitCharges = Nothing, -- TODO: @Himanshu wire SEPC into FareParameters (Phase 4)`  
     - **Action**: include dynamic SEPC in `FareParameters` alongside toll, using detector output and Redis keys as defined in Phase 3–4.
+- **FarePolicy selection vs toll route (Phase 5.1)**  
+  - `Domain.Action.Beckn.Search`:  
+    - `-- TODO: @Himanshu check this toll-based vehicleAllowedOnTollRoute logic with Khuzema (toll-only vs SEPC-enabled behaviour).`  
+  - **Action**: align fare policy selection rules (auto/bike on toll routes) with product decision for SEPC-enabled flows; keep current behaviour until clarified.
 - **Geometry bbox: DB load + backfill (Phase 2.1 / geometry bbox)**  
   - `Storage.Queries.GeometryGeom`:  
     - `bbox = Nothing -- TODO: @Himanshu extend raw query to select bbox jsonb and parse into BoundingBoxPoints`

@@ -429,6 +429,7 @@ isStateEntryPermitApplicableForTrip :: ServiceTierType -> TripCategory -> Bool
 isStateEntryPermitApplicableForTrip AUTO_RICKSHAW _ = False
 isStateEntryPermitApplicableForTrip _ (OneWay _) = True
 isStateEntryPermitApplicableForTrip _ (CrossCity _ _) = True
+isStateEntryPermitApplicableForTrip _ (InterCity _ _) = True
 isStateEntryPermitApplicableForTrip _ (Delivery _) = True
 isStateEntryPermitApplicableForTrip _ _ = False
 

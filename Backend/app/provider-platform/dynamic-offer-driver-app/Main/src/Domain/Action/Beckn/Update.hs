@@ -56,6 +56,7 @@ import SharedLogic.FarePolicy
 import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.Ride
+import SharedLogic.StateEntryPermitDetector
 import SharedLogic.TollsDetector
 import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -255,6 +256,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             farePolicy <- getFarePolicy (Just srcPt) (Just dropLatLong) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) merchantOperatingCity.id False booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just booking.startTime) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
             logTagInfo "Dynamic Pricing debugging update Ride soft update" $ "transactionId" <> booking.transactionId <> "farePolicy: " <> show farePolicy
             mbTollInfo <- getTollInfoOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points
+            mbStateEntryPermitInfo <- getStateEntryPermitInfoOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points
             let isTollAllowed =
                   maybe
                     True
@@ -299,6 +301,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     shouldApplyBusinessDiscount = booking.billingCategory == SLT.BUSINESS,
                     shouldApplyPersonalDiscount = booking.billingCategory == SLT.PERSONAL,
                     tollCharges = mbTollInfo <&> (\(tollCharges, _, _, _, _) -> tollCharges),
+                    stateEntryPermitCharges = mbStateEntryPermitInfo <&> \(charges, _, _) -> charges,
                     currency = booking.currency,
                     distanceUnit = booking.distanceUnit,
                     estimatedCongestionCharge = booking.estimatedCongestionCharge,

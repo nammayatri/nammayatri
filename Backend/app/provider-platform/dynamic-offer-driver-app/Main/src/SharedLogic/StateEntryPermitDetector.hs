@@ -19,12 +19,12 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Domain.Types.StateEntryPermitCharges
+import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.InMem as IM
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error (GenericError (InternalError))
-import Kernel.External.Maps.Types (LatLong)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.ComputeIntersection
@@ -150,31 +150,31 @@ computeChargesAlongRouteSegments routeSegments candidateGeomIds stateToSEPC = do
   (total, names, ids, _) <-
     foldM
       ( \(accTotal, accNames, accIds, chargedSet) (p1, p2) -> do
-        geoms1 <- findGeometriesContainingGps p1
-        geoms2 <- findGeometriesContainingGps p2
+          geoms1 <- findGeometriesContainingGps p1
+          geoms2 <- findGeometriesContainingGps p2
 
-        let inCandidate g = getId g.id `Set.member` candidateGeomIds
-            geoms1' = filter inCandidate geoms1
-            geoms2' = filter inCandidate geoms2
-            states1 = nub $ map (.state) geoms1'
-            states2 = nub $ map (.state) geoms2'
-            destinationStatesEntered = states2 \\ states1
-            sepcsForDestinationStatesEntered = mapMaybe (`Map.lookup` stateToSEPC) destinationStatesEntered
+          let inCandidate g = getId g.id `Set.member` candidateGeomIds
+              geoms1' = filter inCandidate geoms1
+              geoms2' = filter inCandidate geoms2
+              states1 = nub $ map (.state) geoms1'
+              states2 = nub $ map (.state) geoms2'
+              destinationStatesEntered = states2 \\ states1
+              sepcsForDestinationStatesEntered = mapMaybe (`Map.lookup` stateToSEPC) destinationStatesEntered
 
-            toCharge =
-              filter
-                (\s -> getId s.id `Set.notMember` chargedSet)
-                (nubBy (\a b -> getId a.id == getId b.id) sepcsForDestinationStatesEntered)
+              toCharge =
+                filter
+                  (\s -> getId s.id `Set.notMember` chargedSet)
+                  (nubBy (\a b -> getId a.id == getId b.id) sepcsForDestinationStatesEntered)
 
-            newCharged = chargedSet <> Set.fromList (map (getId . (.id)) toCharge)
-            addTotal = sum $ map (.amount) toCharge
-            addNames = map (fromMaybe "" . (.name)) toCharge
-            addIds = map (getId . (.id)) toCharge
+              newCharged = chargedSet <> Set.fromList (map (getId . (.id)) toCharge)
+              addTotal = sum $ map (.amount) toCharge
+              addNames = map (fromMaybe "" . (.name)) toCharge
+              addIds = map (getId . (.id)) toCharge
 
-        pure (accTotal + addTotal, accNames <> addNames, accIds <> addIds, newCharged)
-    )
-    (0, [], [], Set.empty)
-    routeSegments
+          pure (accTotal + addTotal, accNames <> addNames, accIds <> addIds, newCharged)
+      )
+      (0, [], [], Set.empty)
+      routeSegments
   pure (total, names, ids)
 
 -- | Returns state entry permit charges (total, names, ids) for the given route, or Nothing if none apply.

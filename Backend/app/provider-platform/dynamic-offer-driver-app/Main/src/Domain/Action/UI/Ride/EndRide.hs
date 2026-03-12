@@ -744,6 +744,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               nightShiftOverlapChecking = DTC.isFixedNightCharge booking.tripCategory,
               timeDiffFromUtc = Just thresholdConfig.timeDiffFromUtc,
               tollCharges = ride.tollCharges,
+              stateEntryPermitCharges = ride.stateEntryPermitCharges,
               vehicleAge = vehicleAge,
               currency = booking.currency,
               noOfStops = length ride.stops,

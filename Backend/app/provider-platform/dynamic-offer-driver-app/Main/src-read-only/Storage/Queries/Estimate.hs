@@ -30,7 +30,7 @@ createMany = traverse_ create
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
 findById id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-findEligibleForCabUpgrade :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Kernel.Prelude.Bool -> m [Domain.Types.Estimate.Estimate])
+findEligibleForCabUpgrade :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Kernel.Prelude.Bool -> m ([Domain.Types.Estimate.Estimate]))
 findEligibleForCabUpgrade requestId eligibleForUpgrade = do
   findAllWithKVAndConditionalDB
     [ Se.And
@@ -69,17 +69,17 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.dpVersion dpVersion,
-      Se.Set Beam.driverExtraFeeDefaultStepFee (driverExtraFeeBounds <&> (.defaultStepFee)),
-      Se.Set Beam.driverExtraFeeDistanceUnit (driverExtraFeeBounds <&> (.distanceUnit)),
-      Se.Set Beam.driverExtraFeeMaxFee (driverExtraFeeBounds <&> (.maxFee)),
-      Se.Set Beam.driverExtraFeeMinFee (driverExtraFeeBounds <&> (.minFee)),
-      Se.Set Beam.driverExtraFeeStartDistance (driverExtraFeeBounds <&> (.startDistance)),
-      Se.Set Beam.driverExtraFeeStepFee (driverExtraFeeBounds <&> (.stepFee)),
+      Se.Set Beam.driverExtraFeeDefaultStepFee ((driverExtraFeeBounds <&> (.defaultStepFee))),
+      Se.Set Beam.driverExtraFeeDistanceUnit ((driverExtraFeeBounds <&> (.distanceUnit))),
+      Se.Set Beam.driverExtraFeeMaxFee ((driverExtraFeeBounds <&> (.maxFee))),
+      Se.Set Beam.driverExtraFeeMinFee ((driverExtraFeeBounds <&> (.minFee))),
+      Se.Set Beam.driverExtraFeeStartDistance ((driverExtraFeeBounds <&> (.startDistance))),
+      Se.Set Beam.driverExtraFeeStepFee ((driverExtraFeeBounds <&> (.stepFee))),
       Se.Set Beam.eligibleForUpgrade (Kernel.Prelude.Just eligibleForUpgrade),
       Se.Set Beam.estimatedDistance estimatedDistance,
       Se.Set Beam.estimatedDuration estimatedDuration,
       Se.Set Beam.fareParamsId ((Kernel.Types.Id.getId . (.id) <$>) fareParams),
-      Se.Set Beam.farePolicyId ((Kernel.Types.Id.getId . (.id) <$>) farePolicy),
+      Se.Set Beam.farePolicyId (((Kernel.Types.Id.getId . (.id) <$>)) farePolicy),
       Se.Set Beam.fromLocGeohash fromLocGeohash,
       Se.Set Beam.isBlockedRoute isBlockedRoute,
       Se.Set Beam.isCustomerPrefferedSearchRoute isCustomerPrefferedSearchRoute,
@@ -108,6 +108,8 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.smartTipSuggestion smartTipSuggestion,
       Se.Set Beam.specialLocationName specialLocationName,
       Se.Set Beam.specialLocationTag specialLocationTag,
+      Se.Set Beam.stateEntryPermitIds stateEntryPermitIds,
+      Se.Set Beam.stateEntryPermitNames stateEntryPermitNames,
       Se.Set Beam.supplyDemandRatioFromLoc supplyDemandRatioFromLoc,
       Se.Set Beam.supplyDemandRatioToLoc supplyDemandRatioToLoc,
       Se.Set Beam.tipOptions tipOptions,
@@ -122,7 +124,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
 
 instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
   fromTType' (Beam.EstimateT {..}) = do
-    farePolicy' <- maybe (pure Nothing) (Storage.Cac.FarePolicy.findById Nothing . Kernel.Types.Id.Id) farePolicyId
+    farePolicy' <- (maybe (pure Nothing) ((Storage.Cac.FarePolicy.findById Nothing) . Kernel.Types.Id.Id)) farePolicyId
     fareParams' <- maybe (pure Nothing) (Storage.Queries.FareParameters.findById . Kernel.Types.Id.Id) fareParamsId
     pure $
       Just
@@ -167,6 +169,8 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             smartTipSuggestion = smartTipSuggestion,
             specialLocationName = specialLocationName,
             specialLocationTag = specialLocationTag,
+            stateEntryPermitIds = stateEntryPermitIds,
+            stateEntryPermitNames = stateEntryPermitNames,
             supplyDemandRatioFromLoc = supplyDemandRatioFromLoc,
             supplyDemandRatioToLoc = supplyDemandRatioToLoc,
             tipOptions = tipOptions,
@@ -188,17 +192,17 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.currency = Kernel.Prelude.Just currency,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.dpVersion = dpVersion,
-        Beam.driverExtraFeeDefaultStepFee = driverExtraFeeBounds <&> (.defaultStepFee),
-        Beam.driverExtraFeeDistanceUnit = driverExtraFeeBounds <&> (.distanceUnit),
-        Beam.driverExtraFeeMaxFee = driverExtraFeeBounds <&> (.maxFee),
-        Beam.driverExtraFeeMinFee = driverExtraFeeBounds <&> (.minFee),
-        Beam.driverExtraFeeStartDistance = driverExtraFeeBounds <&> (.startDistance),
-        Beam.driverExtraFeeStepFee = driverExtraFeeBounds <&> (.stepFee),
+        Beam.driverExtraFeeDefaultStepFee = (driverExtraFeeBounds <&> (.defaultStepFee)),
+        Beam.driverExtraFeeDistanceUnit = (driverExtraFeeBounds <&> (.distanceUnit)),
+        Beam.driverExtraFeeMaxFee = (driverExtraFeeBounds <&> (.maxFee)),
+        Beam.driverExtraFeeMinFee = (driverExtraFeeBounds <&> (.minFee)),
+        Beam.driverExtraFeeStartDistance = (driverExtraFeeBounds <&> (.startDistance)),
+        Beam.driverExtraFeeStepFee = (driverExtraFeeBounds <&> (.stepFee)),
         Beam.eligibleForUpgrade = Kernel.Prelude.Just eligibleForUpgrade,
         Beam.estimatedDistance = estimatedDistance,
         Beam.estimatedDuration = estimatedDuration,
-        Beam.fareParamsId = (Kernel.Types.Id.getId . (.id) <$>) fareParams,
-        Beam.farePolicyId = (Kernel.Types.Id.getId . (.id) <$>) farePolicy,
+        Beam.fareParamsId = ((Kernel.Types.Id.getId . (.id) <$>) fareParams),
+        Beam.farePolicyId = ((Kernel.Types.Id.getId . (.id) <$>)) farePolicy,
         Beam.fromLocGeohash = fromLocGeohash,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isBlockedRoute = isBlockedRoute,
@@ -228,6 +232,8 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.smartTipSuggestion = smartTipSuggestion,
         Beam.specialLocationName = specialLocationName,
         Beam.specialLocationTag = specialLocationTag,
+        Beam.stateEntryPermitIds = stateEntryPermitIds,
+        Beam.stateEntryPermitNames = stateEntryPermitNames,
         Beam.supplyDemandRatioFromLoc = supplyDemandRatioFromLoc,
         Beam.supplyDemandRatioToLoc = supplyDemandRatioToLoc,
         Beam.tipOptions = tipOptions,

@@ -94,6 +94,7 @@ data Pricing = Pricing
     fulfillmentType :: Text,
     distanceToNearestDriver :: Maybe Meters,
     tollNames :: Maybe [Text],
+    stateEntryPermitNames :: Maybe [Text],
     tipOptions :: Maybe [Int],
     currency :: Currency,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
@@ -601,6 +602,9 @@ mkOdometerTagGroupV2 = Tags.mkSingleTagGroup Tags.START_ODOMETER_READING
 mkTollConfidenceTagGroupV2 :: Maybe Confidence -> Maybe [Spec.TagGroup]
 mkTollConfidenceTagGroupV2 = Tags.mkSingleTagGroup Tags.TOLL_CONFIDENCE
 
+mkStateEntryPermitConfidenceTagGroupV2 :: Maybe Confidence -> Maybe [Spec.TagGroup]
+mkStateEntryPermitConfidenceTagGroupV2 = Tags.mkSingleTagGroup Tags.STATE_ENTRY_PERMIT_CONFIDENCE
+
 mkRideDetailsTagGroup :: Maybe Bool -> Maybe [Spec.TagGroup]
 mkRideDetailsTagGroup = Tags.mkSingleTagGroup Tags.IS_VALID_RIDE
 
@@ -747,6 +751,7 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_CHARGES)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.STATE_ENTRY_PERMIT_CHARGES)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.NIGHT_SHIFT_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_STOP_CHARGES)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PER_STOP_CHARGES)
@@ -771,6 +776,7 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_CHARGES)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.STATE_ENTRY_PERMIT_CHARGES)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_CHARGES)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.LUGGAGE_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.DRIVER_ALLOWANCE)
@@ -818,7 +824,7 @@ tfItems booking shortId estimatedDistance mbFarePolicy mbPaymentId =
           Spec.itemCategoryIds = Just [tripCategoryToCategoryCode booking.tripCategory],
           Spec.itemPaymentIds = tfPaymentId mbPaymentId,
           Spec.itemPrice = tfItemPrice booking.estimatedFare booking.currency,
-          Spec.itemTags = mkRateCardTag estimatedDistance booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing Nothing
+          Spec.itemTags = mkRateCardTag estimatedDistance booking.fareParams.customerCancellationDues Nothing Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing Nothing
         }
     ]
 
@@ -833,7 +839,7 @@ tfItemsSoftUpdate booking shortId estimatedDistance mbFarePolicy mbPaymentId upd
           Spec.itemCategoryIds = Just [tripCategoryToCategoryCode booking.tripCategory],
           Spec.itemPaymentIds = tfPaymentId mbPaymentId,
           Spec.itemPrice = tfItemPrice updatedBooking.estimatedFare booking.currency,
-          Spec.itemTags = mkRateCardTag estimatedDistance' booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing Nothing
+          Spec.itemTags = mkRateCardTag estimatedDistance' booking.fareParams.customerCancellationDues Nothing Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing Nothing
         }
     ]
 
@@ -875,6 +881,8 @@ convertEstimateToPricing _specialLocationName (DEst.Estimate {..}, serviceTier, 
       vehicleServiceTierAirConditioned = serviceTier.airConditionedThreshold,
       isAirConditioned = serviceTier.isAirConditioned,
       qar = mbActualQARFromLocGeohashDistance <|> mbActualQARFromLocGeohash <|> mbActualQARCity,
+      tollNames = tollNames,
+      stateEntryPermitNames = stateEntryPermitNames,
       ..
     }
 
@@ -900,6 +908,8 @@ convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDri
       qar = Nothing,
       businessDiscount = fareParams.businessDiscount,
       personalDiscount = fareParams.personalDiscount,
+      tollNames = tollNames,
+      stateEntryPermitNames = stateEntryPermitNames,
       ..
     }
 
@@ -927,6 +937,8 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       qar = Nothing,
       businessDiscount = fareParams.businessDiscount,
       personalDiscount = fareParams.personalDiscount,
+      tollNames = tollNames,
+      stateEntryPermitNames = stateEntryPermitNames,
       ..
     }
 
@@ -944,6 +956,7 @@ mkGeneralInfoTagGroup pricing isValueAddNP =
             mkOptTag Tags.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE (guardVNP (show <$> pricing.isCustomerPrefferedSearchRoute)),
             mkOptTag Tags.IS_BLOCKED_SEARCH_ROUTE (guardVNP (show <$> pricing.isBlockedRoute)),
             mkOptTag Tags.TOLL_NAMES (guardVNP (show <$> pricing.tollNames)),
+            mkOptTag Tags.STATE_ENTRY_PERMIT_CHARGE_NAMES (guardVNP (show <$> pricing.stateEntryPermitNames)),
             mkOptTag Tags.TIP_OPTIONS (guardVNP (show <$> pricing.tipOptions)),
             mkOptTag Tags.DURATION_TO_NEAREST_DRIVER_MINUTES (guardVNP (getDuration pricing.distanceToNearestDriver 25)),
             mkOptTag Tags.SMART_TIP_SUGGESTION (guardVNP (show <$> pricing.smartTipSuggestion)),
@@ -965,9 +978,9 @@ mkGeneralInfoTagGroup pricing isValueAddNP =
             estimatedTimeTakenInSeconds :: Int = ceiling $ (distanceInMeters / avgSpeedInMetersPerSec)
         Just $ show estimatedTimeTakenInSeconds
 
-mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe Bool -> Maybe Params.FareParameters -> Maybe Double -> Maybe [Spec.TagGroup]
-mkRateCardTag estimatedDistance mbCancellationCharge tollCharges estimatedFare congestionChargeViaDp farePolicy fareParametersInRateCard fareParams mbGovtChargesRate = do
-  let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance mbCancellationCharge tollCharges estimatedFare congestionChargeViaDp mbGovtChargesRate) farePolicy
+mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe Bool -> Maybe Params.FareParameters -> Maybe Double -> Maybe [Spec.TagGroup]
+mkRateCardTag estimatedDistance mbCancellationCharge tollCharges stateEntryPermitCharges estimatedFare congestionChargeViaDp farePolicy fareParametersInRateCard fareParams mbGovtChargesRate = do
+  let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance mbCancellationCharge tollCharges stateEntryPermitCharges estimatedFare congestionChargeViaDp mbGovtChargesRate) farePolicy
       fareParamsBreakups =
         case fareParametersInRateCard of
           Just True -> maybe [] (mkFareParamsBreakups (\price -> show price) mkRateCardFareParamsBreakupItem) fareParams

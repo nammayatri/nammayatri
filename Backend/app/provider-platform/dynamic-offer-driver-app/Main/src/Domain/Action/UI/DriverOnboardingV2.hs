@@ -330,6 +330,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                   shouldApplyBusinessDiscount = False,
                   shouldApplyPersonalDiscount = True,
                   tollCharges = Nothing,
+                  stateEntryPermitCharges = Nothing,
                   merchantOperatingCityId = Just merchantOperatingCityId,
                   mbAdditonalChargeCategories = Nothing,
                   numberOfLuggages = Nothing,
@@ -348,7 +349,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                     currency
                   }
               perMinuteRate = getPerMinuteRate fareParams
-          let rateCardItems = catMaybes $ mkFarePolicyBreakups EulerHS.Prelude.id (mkBreakupItem currency) Nothing Nothing Nothing totalFare.amount Nothing (transporterConfig >>= (computeTotalGstRate . (.taxConfig.rideGst))) (fullFarePolicyToFarePolicy fullFarePolicy)
+          let rateCardItems = catMaybes $ mkFarePolicyBreakups EulerHS.Prelude.id (mkBreakupItem currency) Nothing Nothing Nothing Nothing totalFare.amount Nothing (transporterConfig >>= (computeTotalGstRate . (.taxConfig.rideGst))) (fullFarePolicyToFarePolicy fullFarePolicy)
           return $
             Just $
               API.Types.UI.DriverOnboardingV2.RateCardResp

@@ -57,6 +57,8 @@ data Estimate = Estimate
     smartTipSuggestion :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    stateEntryPermitIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    stateEntryPermitNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     supplyDemandRatioFromLoc :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     supplyDemandRatioToLoc :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     tipOptions :: Kernel.Prelude.Maybe [Kernel.Prelude.Int],

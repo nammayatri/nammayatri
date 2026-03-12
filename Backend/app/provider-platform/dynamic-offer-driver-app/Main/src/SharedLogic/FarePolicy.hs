@@ -349,6 +349,7 @@ calculateFareParametersForFarePolicy fullFarePolicy mbDistance mbDuration mercha
             shouldApplyBusinessDiscount = False,
             shouldApplyPersonalDiscount = True,
             tollCharges = Nothing, ------fix it in future
+            stateEntryPermitCharges = Nothing,
             noOfStops = 0, ------fix it in future
             currency,
             distanceUnit,
@@ -359,14 +360,17 @@ calculateFareParametersForFarePolicy fullFarePolicy mbDistance mbDuration mercha
           }
   SFC.calculateFareParameters params
 
-mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Meters -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe Double -> FarePolicyD.FarePolicy -> [breakupItem]
-mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTollCharges estimatedTotalFare congestionChargeViaDp mbGovtChargesRate farePolicy = do
+mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Meters -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe Double -> FarePolicyD.FarePolicy -> [breakupItem]
+mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTollCharges mbStateEntryPermitCharges estimatedTotalFare congestionChargeViaDp mbGovtChargesRate farePolicy = do
   let distance = fromMaybe 0 mbDistance -- TODO: Fix Later
       driverExtraFeeBounds = FarePolicyD.findDriverExtraFeeBoundsByDistance distance <$> farePolicy.driverExtraFeeBounds
       nightShiftBounds = farePolicy.nightShiftBounds
 
       tollChargesCaption = show Tags.TOLL_CHARGES
       tollChargesItem = mkBreakupItem tollChargesCaption . (mkValue . show) <$> mbTollCharges
+
+      stateEntryPermitChargesCaption = show Tags.STATE_ENTRY_PERMIT_CHARGES
+      stateEntryPermitChargesItem = mkBreakupItem stateEntryPermitChargesCaption . (mkValue . show) <$> mbStateEntryPermitCharges
 
       cancellationChargeCaption = show Tags.CANCELLATION_CHARGES
       cancellationChargeItem = mkBreakupItem cancellationChargeCaption . (mkValue . highPrecMoneyToText) <$> mbCancellationCharge
@@ -464,6 +468,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
       conditionalCharges = processAdditionalCharges farePolicy.conditionalCharges
   catMaybes
     [ tollChargesItem,
+      stateEntryPermitChargesItem,
       serviceChargeItem,
       cancellationChargeItem,
       parkingChargeItem,

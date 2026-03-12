@@ -100,6 +100,9 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       tollChargesCaption = show Enums.TOLL_CHARGES
       mbTollChargesItem = mkBreakupItem tollChargesCaption . mkPrice <$> fareParams.tollCharges
 
+      stateEntryPermitChargesCaption = show Enums.STATE_ENTRY_PERMIT_CHARGES
+      mbStateEntryPermitChargesItem = mkBreakupItem stateEntryPermitChargesCaption . mkPrice <$> fareParams.stateEntryPermitCharges
+
       petChargesCaption = show Enums.PET_CHARGES
       mbPetChargesItem = mkBreakupItem petChargesCaption . mkPrice <$> fareParams.petCharges
 
@@ -161,6 +164,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mkCustomerExtraFareItem,
       mkExtraTimeFareCaption,
       mbTollChargesItem,
+      mbStateEntryPermitChargesItem,
       mbCustomerCancellationDues,
       mbInsuranceChargeItem,
       mbCardChargesFareItem,
@@ -298,7 +302,7 @@ pureFareSum fareParams conditionalChargeCategories = do
     + partOfNightShiftCharge
     + notPartOfNightShiftCharge
     + platformFee
-    + (fromMaybe 0.0 fareParams.customerCancellationDues + fromMaybe 0.0 fareParams.tollCharges + fromMaybe 0.0 fareParams.parkingCharge)
+    + (fromMaybe 0.0 fareParams.customerCancellationDues + fromMaybe 0.0 fareParams.tollCharges + fromMaybe 0.0 fareParams.stateEntryPermitCharges + fromMaybe 0.0 fareParams.parkingCharge)
     + fromMaybe 0.0 fareParams.insuranceCharge
     + fromMaybe 0.0 fareParams.luggageCharge
     + fromMaybe 0.0 fareParams.returnFeeCharge
@@ -347,6 +351,7 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     estimatedDistance :: Maybe Meters,
     timeDiffFromUtc :: Maybe Seconds,
     tollCharges :: Maybe HighPrecMoney,
+    stateEntryPermitCharges :: Maybe HighPrecMoney,
     noOfStops :: Int,
     currency :: Currency,
     distanceUnit :: DistanceUnit,
@@ -476,8 +481,8 @@ calculateFareParameters params = do
                   params.currency
                   fareParametersDetails,
             customerCancellationDues = params.customerCancellationDues,
-            tollCharges = if isTollApplicableForTrip fp.vehicleServiceTier fp.tripCategory then params.tollCharges else Nothing, -- TODO: @Himanshu add SEPC charges below it, we have removed addition of static charges here.
-            stateEntryPermitCharges = Nothing, -- TODO: @Himanshu wire SEPC into FareParameters (Phase 4)
+            tollCharges = if isTollApplicableForTrip fp.vehicleServiceTier fp.tripCategory then params.tollCharges else Nothing,
+            stateEntryPermitCharges = if isStateEntryPermitApplicableForTrip fp.vehicleServiceTier fp.tripCategory then params.stateEntryPermitCharges else Nothing,
             govtCharges = govtCharges,
             insuranceCharge = insuranceChargeResult,
             luggageCharge = luggageCharge,
