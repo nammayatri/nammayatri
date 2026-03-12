@@ -99,6 +99,8 @@ data RiderConfigT f = RiderConfigT
     localPoliceNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     makeMultiModalSearch :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     maxAllowedPublicTransportLegs :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    maxAlternateRouteVehicles :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    maxLiveVehiclesPerRoute :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     maxNearbyBuses :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     maxNumberOfLuggages :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     maximumWalkDistance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters)),

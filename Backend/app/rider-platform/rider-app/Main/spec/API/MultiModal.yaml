@@ -366,6 +366,7 @@ types:
   RouteServiceabilityResp:
     legs: [LegRouteWithLiveVehicle]
     effectiveStops: Maybe EffectiveStops
+    alternateRouteCodes: "Maybe [Text]"
 
   RouteCodesWithLeg:
     legOrder: Int

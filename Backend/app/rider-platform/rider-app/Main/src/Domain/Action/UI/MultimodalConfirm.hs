@@ -60,6 +60,7 @@ import Control.Monad.Extra (mapMaybeM)
 import qualified Data.HashMap.Strict as HashMap
 import Data.Int ()
 import Data.List (nub, nubBy, partition)
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (UTCTime (..), defaultTimeLocale, diffTimeToPicoseconds, formatTime, parseTimeM)
@@ -1757,7 +1758,9 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
 data RouteServiceabilityContext = RouteServiceabilityContext
   { integratedBPPConfig :: DIBC.IntegratedBPPConfig,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    merchantId :: Id Domain.Types.Merchant.Merchant
+    merchantId :: Id Domain.Types.Merchant.Merchant,
+    maxLiveVehiclesPerRoute :: Int,
+    maxAlternateRouteVehicles :: Int
   }
 
 data ResolvedLeg = ResolvedLeg
@@ -1781,12 +1784,16 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
     ( do
         person <- authenticate mbPersonId
         integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+        riderConfig <- QRiderConfig.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound person.merchantOperatingCityId.getId)
         let routeServiceabilityContext =
               RouteServiceabilityContext
                 { integratedBPPConfig,
                   merchantOperatingCityId = person.merchantOperatingCityId,
-                  merchantId = person.merchantId
+                  merchantId = person.merchantId,
+                  maxLiveVehiclesPerRoute = riderConfig.maxLiveVehiclesPerRoute,
+                  maxAlternateRouteVehicles = riderConfig.maxAlternateRouteVehicles
                 }
+        let userRequestedCodes = maybe [] (concatMap (.routeCodes)) req.routeCodes
         case req.vehicleNumber of
           Just vno -> do
             routeId <- extractRouteCode req.routeCodes
@@ -1795,8 +1802,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
             (srcCode, destCode) <- JMU.measureLatency (resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode req.routeCodes routeServiceabilityContext) ("resolveSrcAndDestCode req=" <> show req)
             directRouteCodes <- JMU.measureLatency (JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig) ("JLU.getRouteCodesFromTo src=" <> srcCode <> " dest=" <> destCode)
             if null directRouteCodes
-              then JMU.measureLatency (handleOtpRoute routeServiceabilityContext srcCode destCode) ("handleOtpRoute src=" <> srcCode <> " dest=" <> destCode)
-              else JMU.measureLatency (handleDirectRoute routeServiceabilityContext srcCode destCode directRouteCodes) ("handleDirectRoute src=" <> srcCode <> " dest=" <> destCode <> " routeCodes=" <> show directRouteCodes)
+              then JMU.measureLatency (handleOtpRoute routeServiceabilityContext userRequestedCodes srcCode destCode) ("handleOtpRoute src=" <> srcCode <> " dest=" <> destCode)
+              else JMU.measureLatency (handleDirectRoute routeServiceabilityContext userRequestedCodes srcCode destCode directRouteCodes) ("handleDirectRoute src=" <> srcCode <> " dest=" <> destCode <> " routeCodes=" <> show directRouteCodes)
     )
     ("FULL_API postMultimodalRouteServiceability req=" <> show req)
   where
@@ -1860,13 +1867,13 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
       case maybeBus of
         Nothing -> do
           logDebug $ "handleSingleVehicleRoute: no live data for vehicle=" <> vno <> " routeId=" <> routeId
-          pure $ ApiTypes.RouteServiceabilityResp Nothing []
+          pure $ ApiTypes.RouteServiceabilityResp Nothing Nothing []
         Just singleBus -> do
           mbServiceTier <- JLU.getVehicleServiceTypeFromInMem [ctx.integratedBPPConfig] vno
           case mbServiceTier of
             Nothing -> do
               logError $ "handleSingleVehicleRoute: vehicle service type not found for vehicle=" <> vno
-              pure $ ApiTypes.RouteServiceabilityResp Nothing []
+              pure $ ApiTypes.RouteServiceabilityResp Nothing Nothing []
             Just serviceTier -> do
               frfsServiceTier <-
                 CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId
@@ -1890,6 +1897,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                       }
               pure $
                 ApiTypes.RouteServiceabilityResp
+                  Nothing
                   Nothing
                   [ ApiTypes.LegRouteWithLiveVehicle
                       { legOrder = 0,
@@ -1990,34 +1998,38 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
 
     getRouteServiceability ::
       Maybe ApiTypes.EffectiveStops ->
+      Maybe [Text] ->
+      [Text] ->
       RouteServiceabilityContext ->
       [ResolvedLeg] ->
       Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
-    getRouteServiceability mEffStops ctx legs = do
-      legRoutes <- JMU.measureLatency (enrichResolvedLegs ctx legs) ("enrichResolvedLegs legsCount=" <> show (length legs))
-      pure $ ApiTypes.RouteServiceabilityResp mEffStops legRoutes
+    getRouteServiceability mEffStops mAlternateRouteCodes userRequestedCodes ctx legs = do
+      legRoutes <- JMU.measureLatency (enrichResolvedLegs ctx userRequestedCodes legs) ("enrichResolvedLegs legsCount=" <> show (length legs))
+      pure $ ApiTypes.RouteServiceabilityResp mAlternateRouteCodes mEffStops legRoutes
 
     handleDirectRoute ::
       RouteServiceabilityContext ->
+      [Text] ->
       Text ->
       Text ->
       [Text] ->
       Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
-    handleDirectRoute ctx srcCode destCode directRouteCodes = do
+    handleDirectRoute ctx userRequestedCodes srcCode destCode directRouteCodes = do
       let resolvedLegs =
             resolveLegsForDirectRoute srcCode destCode directRouteCodes
-      JMU.measureLatency (getRouteServiceability Nothing ctx resolvedLegs) ("getRouteServiceability legsCount=" <> show (length resolvedLegs))
+      JMU.measureLatency (getRouteServiceability Nothing (Just directRouteCodes) userRequestedCodes ctx resolvedLegs) ("getRouteServiceability legsCount=" <> show (length resolvedLegs))
 
     handleOtpRoute ::
       RouteServiceabilityContext ->
+      [Text] ->
       Text ->
       Text ->
       Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
-    handleOtpRoute ctx srcCode destCode = do
+    handleOtpRoute ctx userRequestedCodes srcCode destCode = do
       (effectiveStops, resolvedLegs) <-
         JMU.measureLatency (resolveLegsViaOtpCached ctx srcCode destCode) ("resolveLegsViaOtpCached src=" <> srcCode <> " dest=" <> destCode)
 
-      JMU.measureLatency (getRouteServiceability effectiveStops ctx resolvedLegs) ("getRouteServiceability legsCount=" <> show (length resolvedLegs))
+      JMU.measureLatency (getRouteServiceability effectiveStops Nothing userRequestedCodes ctx resolvedLegs) ("getRouteServiceability legsCount=" <> show (length resolvedLegs))
 
     makeOtpResolvedRouteKey ::
       RouteServiceabilityContext ->
@@ -2056,12 +2068,21 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
 
     enrichResolvedLegs ::
       RouteServiceabilityContext ->
+      [Text] ->
       [ResolvedLeg] ->
       Environment.Flow [ApiTypes.LegRouteWithLiveVehicle]
-    enrichResolvedLegs ctx =
+    enrichResolvedLegs ctx userRequestedCodes =
       mapConcurrently enrichLeg
       where
         enrichLeg ResolvedLeg {..} = do
+          -- Resolve source stop LatLong for distance-based sorting
+          mbSourceStation <- OTPRest.getStationByGtfsIdAndStopCode rlFromStopCode ctx.integratedBPPConfig
+          let mbSourceLatLong = do
+                station <- mbSourceStation
+                lat' <- station.lat
+                lon' <- station.lon
+                pure $ LatLong lat' lon'
+
           busesForRoutes <-
             CQMMB.getBusesForRoutes rlRouteCodes ctx.integratedBPPConfig
 
@@ -2073,13 +2094,19 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
           routesWithLiveVehicles <-
             catMaybes
               <$> mapConcurrently
-                (\(r, s) -> JMRouteServiceability.buildRouteWithLiveVehicle r s ctx.integratedBPPConfig ctx.merchantOperatingCityId rlFromStopCode rlToStopCode)
+                (\(r, s) -> JMRouteServiceability.buildRouteWithLiveVehicle r s ctx.integratedBPPConfig rlFromStopCode rlToStopCode frfsTierMap mbSourceLatLong ctx.maxLiveVehiclesPerRoute)
                 (zip busesForRoutes schedulesForRoutes)
+
+          -- Separate user-requested routes (5 per route, already limited by distance)
+          -- from alternate routes (capped to 7 total combined by ETA)
+          let (requestedRoutes, alternateRoutes) =
+                partition (\r -> r.routeCode `elem` userRequestedCodes) routesWithLiveVehicles
+              cappedAlternates = capVehiclesAcrossRoutes rlFromStopCode ctx.maxAlternateRouteVehicles alternateRoutes
 
           pure $
             ApiTypes.LegRouteWithLiveVehicle
               { legOrder = rlOrder,
-                routeWithLiveVehicles = routesWithLiveVehicles
+                routeWithLiveVehicles = requestedRoutes <> cappedAlternates
               }
 
     resolveLegsViaOtp ::
@@ -2171,6 +2198,60 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
             rlToStopCode = dest
           }
       ]
+    capVehiclesAcrossRoutes ::
+      Text ->
+      Int ->
+      [API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle] ->
+      [API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle]
+    capVehiclesAcrossRoutes sourceStopCode maxCount routes =
+      let -- Tag each vehicle with its route code and source-stop arrival time
+          taggedLive =
+            concatMap
+              ( \r ->
+                  map
+                    (\v -> (r.routeCode, Left v, getSourceStopETAFromLive sourceStopCode v))
+                    r.liveVehicles
+              )
+              routes
+          taggedScheduled =
+            concatMap
+              ( \r ->
+                  map
+                    (\v -> (r.routeCode, Right v, getSourceStopETAFromScheduled sourceStopCode v))
+                    r.schedules
+              )
+              routes
+          allTagged = taggedLive <> taggedScheduled
+          -- Sort by arrival time (earliest first, Nothing goes to the end)
+          sorted = sortBy (\(_, _, a) (_, _, b) -> compareETA a b) allTagged
+          compareETA (Just t1) (Just t2) = compare t1 t2
+          compareETA (Just _) Nothing = LT
+          compareETA Nothing (Just _) = GT
+          compareETA Nothing Nothing = EQ
+          top = take maxCount sorted
+          -- Redistribute back into per-route grouping
+          topByRoute =
+            Map.fromListWith
+              (\(l1, s1) (l2, s2) -> (l1 <> l2, s1 <> s2))
+              (map toRouteEntry top)
+          toRouteEntry (rc, Left lv, _) = (rc, ([lv], []))
+          toRouteEntry (rc, Right sv, _) = (rc, ([], [sv]))
+       in -- Rebuild routes, keeping only vehicles that made the cut
+          filter (\r -> not (null r.liveVehicles && null r.schedules)) $
+            map
+              ( \r ->
+                  let (keptLive, keptScheduled) = fromMaybe ([], []) $ Map.lookup r.routeCode topByRoute
+                   in r {API.Types.UI.MultimodalConfirm.liveVehicles = keptLive, API.Types.UI.MultimodalConfirm.schedules = keptScheduled}
+              )
+              routes
+
+    getSourceStopETAFromLive :: Text -> API.Types.UI.MultimodalConfirm.LiveVehicleInfo -> Maybe UTCTime
+    getSourceStopETAFromLive stopCode v =
+      v.eta >>= find (\e -> e.stopCode == stopCode) >>= \e -> Just e.arrivalTime
+
+    getSourceStopETAFromScheduled :: Text -> API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo -> Maybe UTCTime
+    getSourceStopETAFromScheduled stopCode v =
+      v.eta >>= find (\e -> e.stopCode == stopCode) >>= \e -> Just e.arrivalTime
 
 postMultimodalRouteAvailability ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
