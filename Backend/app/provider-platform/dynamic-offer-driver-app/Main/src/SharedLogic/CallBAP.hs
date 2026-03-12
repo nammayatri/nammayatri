@@ -30,6 +30,7 @@ module SharedLogic.CallBAP
     sendNewMessageToBAP,
     sendDriverOffer,
     callOnConfirmV2,
+    callOnReconV2,
     callOnStatusV2,
     buildBppUrl,
     sendSafetyAlertToBAP,
@@ -53,9 +54,11 @@ import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
+import qualified Beckn.Types.Core.Taxi.API.Recon as ReconAPI
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Types.Recon as ReconSpec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
@@ -220,6 +223,27 @@ callOnStatusV2 req retryConfig merchantId = do
   bppSubscriberId <- req.onStatusReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   void $ withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_STATUS) API.onStatusAPIV2 bapUri internalEndPointHashMap req
+
+callOnReconV2 ::
+  ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    MonadFlow m,
+    CoreMetrics m,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]
+  ) =>
+  ReconSpec.OnReconReq ->
+  Id Merchant.Merchant ->
+  m ()
+callOnReconV2 req merchantId = do
+  bapUri' <- req.onReconReqContext.contextBapUri & fromMaybeM (InternalError "BAP URI is not present in on_recon request context.")
+  bapUri <- parseBaseUrl bapUri'
+  bppSubscriberId <- req.onReconReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in on_recon request context.")
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  void $ withShortRetry $ callBecknAPIWithSignature' merchantId bppSubscriberId "ON_RECON" ReconAPI.onReconAPIV2 bapUri internalEndPointHashMap req
 
 callOnCancelV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],

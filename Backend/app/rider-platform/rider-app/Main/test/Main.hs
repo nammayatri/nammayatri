@@ -16,6 +16,7 @@ import Kernel.Utils.FlowLogging
 import System.Environment (lookupEnv)
 import System.Environment as Env (setEnv)
 
+
 main :: IO ()
 main = do
   -- setEnv "RIDER_APP_CONFIG_PATH" "../../../../dhall-configs/dev/rider-app.dhall"

@@ -25,6 +25,7 @@ data BecknConfig = BecknConfig
     id :: Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig,
     initTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     paymentParamsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    ppfEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     ratingTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     registryUrl :: Servant.Client.Core.BaseUrl,
     searchTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

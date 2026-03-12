@@ -47,6 +47,10 @@ module Lib.Finance
     module Lib.Finance.Tax.Types,
     module Lib.Finance.Tax.Interface,
 
+    -- * Reconciliation
+    module Lib.Finance.Recon.Interface,
+    module Lib.Finance.Recon.Service,
+
     -- * Error
     module Lib.Finance.Error.Types,
 
@@ -76,6 +80,8 @@ import Lib.Finance.Invoice.Interface
 import Lib.Finance.Invoice.Service
 import Lib.Finance.Ledger.Interface
 import Lib.Finance.Ledger.Service
+import Lib.Finance.Recon.Interface
+import Lib.Finance.Recon.Service
 import Lib.Finance.StateMachine.Interface
 import Lib.Finance.StateMachine.Service
 import Lib.Finance.Tax.Interface
