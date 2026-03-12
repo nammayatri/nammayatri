@@ -15,7 +15,7 @@ ReconciliationEntry:
   types:
     # Matches TypeScript FinanceComponent
     FinanceComponent:
-      enum: "GROSS_RIDE_FARE, GST, USER_CANCELLATION, DRIVER_CANCELLATION, DRIVER_TAKE_HOME_EARNINGS, SUBSCRIPTION_PURCHASE, EXPIRY"
+      enum: "GROSS_RIDE_FARE, GST, USER_CANCELLATION, DRIVER_CANCELLATION, DRIVER_TAKE_HOME_EARNINGS, SUBSCRIPTION_PURCHASE, EXPIRY, PG_PAYMENT_SETTLEMENT, PG_PAYOUT_SETTLEMENT"
       derive: "ToParamSchema"
 
     # Matches TypeScript ReconStatus
@@ -25,7 +25,7 @@ ReconciliationEntry:
 
     # Matches JSON bookingId field
     ReconciliationType:
-      enum: "DSR_VS_LEDGER, DSR_VS_SUBSCRIPTION, DSSR_VS_SUBSCRIPTION"
+      enum: "DSR_VS_LEDGER, DSR_VS_SUBSCRIPTION, DSSR_VS_SUBSCRIPTION, PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION, PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST"
       derive: "ToParamSchema"
 
     # Matches JSON mode field
@@ -44,10 +44,10 @@ ReconciliationEntry:
     reconciliationDate: UTCTime
     reconciliationType: ReconciliationType
 
-    # Keys matching JSON output
-    bookingId: Text  # matches JSON "bookingId"
-    dcoId: Text  # matches JSON "dcoId" (driver/fleet owner ID)
-    status: RideStatus  # matches JSON "status" (COMPLETED/CANCELLED)
+    # Keys matching JSON output - all Maybe as they may be empty for some
+    bookingId: Maybe Text  # matches JSON "bookingId" - booking.id / subscription.id / payout.id
+    dcoId: Maybe Text  # matches JSON "dcoId" (driver/fleet owner ID) - driver.id / settlement.id
+    status: Maybe RideStatus  # matches JSON "status" (COMPLETED/CANCELLED)
     mode: Maybe RideMode  # matches JSON "mode" (ONLINE/CASH)
 
     # Financial values matching JSON
@@ -62,6 +62,15 @@ ReconciliationEntry:
 
     # Additional fields for detailed tracking
     financeComponent: Maybe FinanceComponent  # Which component (GROSS_RIDE_FARE, GST, etc.)
+
+    # For PG Settlement reconciliation (Jobs 4 & 5)
+    sourceId: Maybe Text  # subscription.id / payout_request.id
+    targetId: Maybe Text  # settlement report row id (finance_reconciliation_entry.id)
+    settlementId: Maybe Text  # PG settlement batch ID from pg_*_settlement_report.settlement_id
+    settlementDate: Maybe UTCTime  # from settlement report
+    transactionDate: Maybe UTCTime  # purchaseTimestamp / createdAt
+    rrn: Maybe Text  # bank reference number
+    settlementMode: Maybe Text  # payment method
 
     # For debugging - store raw values as JSON
     sourceDetails: Maybe Text
@@ -87,14 +96,6 @@ ReconciliationEntry:
       kvFunction: findAllWithKV
       where: summaryId
 
-    findByBookingId:
-      kvFunction: findAllWithKV
-      where: bookingId
-
-    findByDcoId:
-      kvFunction: findAllWithKV
-      where: dcoId
-
     findByReconciliationStatus:
       kvFunction: findAllWithKV
       where: reconStatus
@@ -108,6 +109,12 @@ ReconciliationEntry:
       kvFunction: findAllWithKV
       where:
         and: [reconciliationDate, reconciliationType]
+
+  default:
+    bookingId: "''"
+    dcoId: "''"
+    status: "'COMPLETED'"
+    mode: "'ONLINE'"
 
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

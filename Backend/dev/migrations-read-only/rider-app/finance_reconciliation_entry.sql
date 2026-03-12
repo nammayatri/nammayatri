@@ -28,3 +28,21 @@ ALTER TABLE atlas_app.finance_reconciliation_entry ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.finance_reconciliation_entry ALTER COLUMN merchant_id TYPE text;
 ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN merchant_operating_city_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.finance_reconciliation_entry ALTER COLUMN status SET DEFAULT 'COMPLETED';
+ALTER TABLE atlas_app.finance_reconciliation_entry ALTER COLUMN status DROP NOT NULL;
+ALTER TABLE atlas_app.finance_reconciliation_entry ALTER COLUMN mode SET DEFAULT 'ONLINE';
+ALTER TABLE atlas_app.finance_reconciliation_entry ALTER COLUMN dco_id SET DEFAULT '';
+ALTER TABLE atlas_app.finance_reconciliation_entry ALTER COLUMN dco_id DROP NOT NULL;
+ALTER TABLE atlas_app.finance_reconciliation_entry ALTER COLUMN booking_id SET DEFAULT '';
+ALTER TABLE atlas_app.finance_reconciliation_entry ALTER COLUMN booking_id DROP NOT NULL;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN transaction_date timestamp with time zone ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN target_id text ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN source_id text ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN settlement_mode text ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN settlement_id text ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN settlement_date timestamp with time zone ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN rrn text ;

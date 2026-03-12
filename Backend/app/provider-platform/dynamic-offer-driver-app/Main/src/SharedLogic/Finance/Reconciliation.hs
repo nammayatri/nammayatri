@@ -47,6 +47,8 @@ data ReconciliationJobType
   | SubscriptionRecon
   | PayoutRecon
   | DSSRvsSubscription
+  | PgPaymentVsSubscription
+  | PgPayoutVsPayoutRequest
   | OtherRecon Text
   deriving (Show, Eq, Generic)
 
@@ -55,6 +57,8 @@ instance ToJSON ReconciliationJobType where
   toJSON SubscriptionRecon = A.String "SubscriptionRecon"
   toJSON DSSRvsSubscription = A.String "DSSRvsSubscription"
   toJSON PayoutRecon = A.String "PayoutRecon"
+  toJSON PgPaymentVsSubscription = A.String "PgPaymentVsSubscription"
+  toJSON PgPayoutVsPayoutRequest = A.String "PgPayoutVsPayoutRequest"
   toJSON (OtherRecon t) = A.String t
 
 instance FromJSON ReconciliationJobType where
@@ -62,6 +66,8 @@ instance FromJSON ReconciliationJobType where
   parseJSON (A.String "SubscriptionRecon") = pure SubscriptionRecon
   parseJSON (A.String "DSSRvsSubscription") = pure DSSRvsSubscription
   parseJSON (A.String "PayoutRecon") = pure PayoutRecon
+  parseJSON (A.String "PgPaymentVsSubscription") = pure PgPaymentVsSubscription
+  parseJSON (A.String "PgPayoutVsPayoutRequest") = pure PgPayoutVsPayoutRequest
   parseJSON (A.String t) = pure $ OtherRecon t
   parseJSON _ = fail "Invalid ReconciliationJobType"
 
@@ -105,6 +111,8 @@ getReconStatusForJob (ReconciliationStatusMap m) jobType =
     getJobTypeKey SubscriptionRecon = "SubscriptionRecon"
     getJobTypeKey DSSRvsSubscription = "DSSRvsSubscription"
     getJobTypeKey PayoutRecon = "PayoutRecon"
+    getJobTypeKey PgPaymentVsSubscription = "PgPaymentVsSubscription"
+    getJobTypeKey PgPayoutVsPayoutRequest = "PgPayoutVsPayoutRequest"
     getJobTypeKey (OtherRecon t) = t
 
 -- | Update status for a specific job type
@@ -116,6 +124,8 @@ updateReconStatus (ReconciliationStatusMap m) jobType status =
     getJobTypeKey SubscriptionRecon = "SubscriptionRecon"
     getJobTypeKey DSSRvsSubscription = "DSSRvsSubscription"
     getJobTypeKey PayoutRecon = "PayoutRecon"
+    getJobTypeKey PgPaymentVsSubscription = "PgPaymentVsSubscription"
+    getJobTypeKey PgPayoutVsPayoutRequest = "PgPayoutVsPayoutRequest"
     getJobTypeKey (OtherRecon t) = t
 
 -- | Create a JSON Value from status map

@@ -247,6 +247,17 @@ types:
     - reconStatus: Maybe Text
     - mismatchReason: Maybe Text
     - timestamp: Maybe UTCTime
+    - settlementId: Maybe Text
+    - subscriptionPurchaseId: Maybe Text
+    - sourceId: Maybe Text
+    - targetId: Maybe Text
+    - settlementDate: Maybe UTCTime
+    - transactionDate: Maybe UTCTime
+    - transactionAmount: Maybe HighPrecMoney
+    - subscriptionPurchaseAmount: Maybe HighPrecMoney
+    - rrn: Maybe Text
+    - settlementMode: Maybe Text
+    - financeComponent: Maybe Text
   PaginationInfo:
     - total: Int
     - limit: Int

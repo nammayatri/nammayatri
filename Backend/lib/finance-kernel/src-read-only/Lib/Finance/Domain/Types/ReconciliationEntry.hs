@@ -12,9 +12,9 @@ import qualified Lib.Finance.Domain.Types.ReconciliationSummary
 
 data ReconciliationEntry = ReconciliationEntry
   { actualLedgerValue :: Kernel.Types.Common.HighPrecMoney,
-    bookingId :: Kernel.Prelude.Text,
+    bookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
-    dcoId :: Kernel.Prelude.Text,
+    dcoId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     expectedDsrValue :: Kernel.Types.Common.HighPrecMoney,
     financeComponent :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.ReconciliationEntry.FinanceComponent,
     id :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry,
@@ -25,11 +25,18 @@ data ReconciliationEntry = ReconciliationEntry
     reconStatus :: Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationStatus,
     reconciliationDate :: Kernel.Prelude.UTCTime,
     reconciliationType :: Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationType,
+    rrn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    settlementDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    settlementId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    settlementMode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sourceDetails :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    status :: Lib.Finance.Domain.Types.ReconciliationEntry.RideStatus,
+    sourceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    status :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.ReconciliationEntry.RideStatus,
     summaryId :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary,
     targetDetails :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    targetId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     timestamp :: Kernel.Prelude.UTCTime,
+    transactionDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime,
     variance :: Kernel.Types.Common.HighPrecMoney
   }
@@ -43,21 +50,30 @@ data FinanceComponent
   | DRIVER_TAKE_HOME_EARNINGS
   | SUBSCRIPTION_PURCHASE
   | EXPIRY
+  | PG_PAYMENT_SETTLEMENT
+  | PG_PAYOUT_SETTLEMENT
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data ReconciliationStatus = MATCHED | HIGHER_IN_TARGET | LOWER_IN_TARGET | MISSING_IN_TARGET deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data ReconciliationType = DSR_VS_LEDGER | DSR_VS_SUBSCRIPTION | DSSR_VS_SUBSCRIPTION deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data ReconciliationType
+  = DSR_VS_LEDGER
+  | DSR_VS_SUBSCRIPTION
+  | DSSR_VS_SUBSCRIPTION
+  | PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION
+  | PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data RideMode = ONLINE | CASH deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data RideStatus = COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''FinanceComponent))
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationType))
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationStatus))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''FinanceComponent))
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''RideMode))
 
