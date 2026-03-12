@@ -818,9 +818,15 @@ postDriverAddRidePayoutAccountNumber merchantShortId opCity req = do
   person <-
     case mbPerson of
       Nothing -> do
-        void $ DRBReg.auth merchantShortId opCity (Common.AuthReq req.driverMobileNumber req.driverMobileNumberCountryCode)
+        void $
+          DRBReg.auth
+            merchantShortId
+            opCity
+            (Common.AuthReq req.driverMobileNumber req.driverMobileNumberCountryCode req.driverName)
         QP.findByMobileNumberAndMerchantAndRole req.driverMobileNumberCountryCode mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (DriverNotFound req.driverMobileNumber)
-      Just p -> return p
+      Just p -> do
+        whenJust req.driverName $ \name -> QPerson.updateName name p.id
+        return p
   bankAccountNumber <- encrypt `mapM` req.accountNumber
   bankIfscCode <- encrypt `mapM` req.ifscCode
   rc <- RCQuery.findLastVehicleRCWrapper req.vehicleRegistrationNumber >>= fromMaybeM (RCNotFound req.vehicleRegistrationNumber)

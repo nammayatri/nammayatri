@@ -1468,6 +1468,7 @@ types:
   AddRidePayoutAccountNumberReq:
     - driverMobileNumber: Text
     - driverMobileNumberCountryCode: Text
+    - driverName: Maybe Text
     - accountNumber: Maybe Text
     - ifscCode: Maybe Text
     - bankName: Maybe Text
