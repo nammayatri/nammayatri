@@ -19,6 +19,7 @@ import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Action.UI.ParkingBooking as ParkingBooking
 import qualified Domain.Action.UI.Pass as Pass
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
@@ -130,7 +131,8 @@ processRefundStatus refundEntry person paymentOrder = do
     then do
       let orderStatusCall = Payment.orderStatus person.merchantId person.merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
           walletPostingCall = TWallet.walletPosting person.merchantId person.merchantOperatingCityId
-      paymentStatusResponse <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall (Just walletPostingCall)
+          commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity person.merchantOperatingCityId
+      paymentStatusResponse <- DPayment.orderStatusService commonMerchantOperatingCityId paymentOrder.personId paymentOrder.id orderStatusCall (Just walletPostingCall)
       let matchingRefund = find (\refund -> refund.requestId == refundEntry.id.getId) paymentStatusResponse.refunds
       case matchingRefund of
         Just refund -> do
@@ -141,7 +143,7 @@ processRefundStatus refundEntry person paymentOrder = do
 
           when (newStatus `notElem` nonTerminalStatuses) $ do
             let fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast paymentOrder.merchantId) paymentOrder.id
-            void $ SPayment.orderStatusHandler fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
+            void $ SPayment.orderStatusHandler person.merchantOperatingCityId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
           return True
         Nothing -> return False
     else return False

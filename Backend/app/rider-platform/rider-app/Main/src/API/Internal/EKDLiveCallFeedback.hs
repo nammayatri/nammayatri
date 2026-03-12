@@ -17,6 +17,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Notifications as Notify
+
 newtype EKDLiveCallFeedbackReq = EKDLiveCallFeedbackReq {rideId :: Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

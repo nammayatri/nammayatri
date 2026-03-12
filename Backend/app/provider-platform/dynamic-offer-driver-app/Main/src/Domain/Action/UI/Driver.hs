@@ -238,7 +238,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Payment.Domain.Types.PaymentTransaction
-import Lib.Payment.Storage.Queries.PaymentTransaction
+import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QTransaction
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
@@ -2379,7 +2379,7 @@ getDriverPayments (personId, _, merchantOpCityId) mbFrom mbTo mbStatus mbLimit m
           chargesBreakup = mkChargesBreakup currency govtCharges platformFee.fee platformFee.cgst platformFee.sgst
           totalRides = numRides
           driverFeeId = cast invoiceId
-      transactionDetails <- findAllByOrderId (cast invoiceId)
+      transactionDetails <- QTransaction.findAllByOrderId (cast invoiceId)
       let txnInfo = map mkDriverTxnInfo transactionDetails
       return
         DriverPaymentHistoryResp

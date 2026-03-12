@@ -33,6 +33,7 @@ library
       Lib.Payment.Domain.Types.Common
       Lib.Payment.Domain.Types.PaymentOrder
       Lib.Payment.Domain.Types.PaymentTransaction
+      Lib.Payment.Payment.History
       Lib.Payment.Payout.History
       Lib.Payment.Payout.Order
       Lib.Payment.Payout.PayoutItems

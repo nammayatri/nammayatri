@@ -167,6 +167,7 @@ getStatus ::
   m DPayment.PaymentStatusResp
 getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
   let commonPersonId = cast @DP.Person @DPayment.Person personId
+      commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
       orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId -- api call
   order <- QOrder.findById paymentOrderId >>= fromMaybeM (PaymentOrderNotFound paymentOrderId.getId)
   now <- getCurrentTime
@@ -215,7 +216,7 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
       -- Use MembershipPaymentService for STCL orders, otherwise use the service config's payment service name
       let defaultPaymentServiceName = if isStclOrder then DMSC.MembershipPaymentService Payment.Juspay else serviceConfig.paymentServiceName
       paymentServiceName <- Payment.decidePaymentService defaultPaymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
-      paymentStatus <- DPayment.orderStatusService commonPersonId paymentOrderId (orderStatusCall paymentServiceName (Just order.personId.getId)) Nothing
+      paymentStatus <- DPayment.orderStatusService commonMerchantOperatingCityId commonPersonId paymentOrderId (orderStatusCall paymentServiceName (Just order.personId.getId)) Nothing
       case paymentStatus of
         DPayment.MandatePaymentStatus {..} -> do
           unless (status /= Payment.CHARGED) $ do
@@ -308,14 +309,15 @@ juspayWebhookHandler ::
 juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
   merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
-  merchanOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant mbOpCity
+  merchantOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant mbOpCity
   let merchantId = merchant.id
       serviceName' = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName
+      commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchanOperatingCityId Nothing serviceName'
-      >>= fromMaybeM (NoSubscriptionConfigForService merchanOperatingCityId.getId $ show serviceName')
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId Nothing serviceName'
+      >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName')
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity (subscriptionConfig.paymentServiceName) merchanOperatingCityId
+    CQMSC.findByServiceAndCity (subscriptionConfig.paymentServiceName) merchantOperatingCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   psc <- case merchantServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig psc' -> pure psc'
@@ -323,7 +325,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
     DMSC.CautioPaymentServiceConfig psc' -> pure psc'
     DMSC.MembershipPaymentServiceConfig psc' -> pure psc'
     _ -> throwError $ InternalError "Unknown Service Config"
-  orderStatusResp <- Juspay.orderStatusWebhook psc DPayment.juspayWebhookService authData value
+  orderStatusResp <- Juspay.orderStatusWebhook psc (DPayment.juspayWebhookService commonMerchantOperatingCityId) authData value
   osr <- case orderStatusResp of
     Nothing -> throwError $ InternalError "Order Contents not found."
     Just osr' -> pure osr'
@@ -347,7 +349,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
             logDebug $ "Updating Payout And Process Previous Payout For Person: " <> show order.personId <> " with Vpa: " <> show mbVpa
             -- Store VPA on PaymentOrder
             QOrder.updateVpa order.id mbVpa
-            when (isJust mbVpa) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) mbVpa merchanOperatingCityId
+            when (isJust mbVpa) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) mbVpa merchantOperatingCityId
           when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
             when (order.entityName == Just DPayment.DRIVER_WALLET_TOPUP && transactionStatus == Payment.CHARGED) $ do
               let driverFeeIds = (.driverFeeId) <$> invoices

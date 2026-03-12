@@ -483,7 +483,7 @@ fetchPaymentServiceConfig ::
   Maybe Payment.PaymentServiceType ->
   Maybe Text ->
   Payment.PaymentService ->
-  Flow Payment.PaymentServiceConfig
+  Flow (Payment.PaymentServiceConfig, DMOC.MerchantOperatingCity)
 fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId service = do
   merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
   let city = fromMaybe merchant.defaultCity mbCity
@@ -495,7 +495,7 @@ fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId service
   merchantServiceConfig' <- do
     CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCity.id (getPaymentServiceByType mbServiceType)
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOperatingCity.id.getId "Payment" (show service))
-  case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig'.serviceConfig of
+  (,merchantOperatingCity) <$> case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig'.serviceConfig of
     Just (DMSC.PaymentServiceConfig vsc) -> pure vsc
     Just (DMSC.MetroPaymentServiceConfig vsc) -> pure vsc
     Just (DMSC.BusPaymentServiceConfig vsc) -> pure vsc
@@ -527,8 +527,9 @@ juspayWebhookHandler ::
   Value ->
   Flow AckResponse
 juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData value = do
-  paymentServiceConfig <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId Payment.Juspay
-  orderWebhookResponse <- Juspay.orderStatusWebhook paymentServiceConfig DPayment.juspayWebhookService authData value
+  (paymentServiceConfig, merchantOperatingCity) <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId Payment.Juspay
+  let commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCity.id
+  orderWebhookResponse <- Juspay.orderStatusWebhook paymentServiceConfig (DPayment.juspayWebhookService commonMerchantOperatingCityId) authData value
   osr <- case orderWebhookResponse of
     Nothing -> throwError $ InternalError "Order Contents not found."
     Just osr' -> pure osr'
@@ -546,17 +547,17 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
             return $ ticketBooking <&> (.ticketPlaceId)
           _ -> return Nothing
       let orderStatusCall = Payment.orderStatus (cast paymentOrder.merchantId) (cast mocId) ticketPlaceId paymentServiceType (Just paymentOrder.personId.getId) person.clientSdkVersion paymentOrder.isMockPayment
-      void $ callWebhookHandlerWithOrderStatus paymentServiceType (ShortId orderShortId) orderStatusCall
+      void $ callWebhookHandlerWithOrderStatus merchantOperatingCity paymentServiceType (ShortId orderShortId) orderStatusCall
   pure Ack
   where
     getOrderData osr = case osr of
       Payment.OrderStatusResp {..} -> pure (orderShortId, transactionStatus)
       _ -> throwError $ InternalError "Order Id not found in response."
-    callWebhookHandlerWithOrderStatus paymentServiceType' orderShortId orderStatusCall = do
+    callWebhookHandlerWithOrderStatus merchantOperatingCity paymentServiceType' orderShortId orderStatusCall = do
       paymentOrder <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound orderShortId.getShortId)
       let paymentServiceType = fromMaybe paymentServiceType' paymentOrder.paymentServiceType
           fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast paymentOrder.merchantId) paymentOrder.id
-      SPayment.orderStatusHandler fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
+      SPayment.orderStatusHandler merchantOperatingCity.id fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
 
 -- | Idempotent: confirm ride booking after payment success. Single place for Paytm EDC callback and rideBookingOrderStatusHandler.
 confirmRideBookingFromPaymentOrder :: DOrder.PaymentOrder -> Flow (DPayment.PaymentFulfillmentStatus, Maybe Text, Maybe Text)
@@ -692,22 +693,24 @@ stripeWebhookHandler' ::
   RawByteString ->
   Flow AckResponse
 stripeWebhookHandler' serviceName merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader rawBytes = do
-  paymentServiceConfig <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId serviceName
+  (paymentServiceConfig, merchantOperatingCity) <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId serviceName
   let checkDuplicatedEvent _eventId = pure False -- FIXME
-  Stripe.serviceEventWebhook paymentServiceConfig checkDuplicatedEvent stripeWebhookAction mbSigHeader rawBytes
+  Stripe.serviceEventWebhook paymentServiceConfig checkDuplicatedEvent (stripeWebhookAction merchantOperatingCity.id) mbSigHeader rawBytes
 
 stripeWebhookAction ::
+  Id DMOC.MerchantOperatingCity ->
   PEInterface.ServiceEventResp ->
   Text ->
   Flow AckResponse
-stripeWebhookAction resp respDump = do
+stripeWebhookAction merchantOperatingCityId resp respDump = do
   let stripeWebhookData = DPayment.mkStripeWebhookData resp.eventData
+  let commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
   case stripeWebhookData of
     DPayment.RefundWebhookData refundInfo -> do
       orderId <- (Id @DOrder.PaymentOrder <$>) $ refundInfo.orderId & fromMaybeM (InvalidRequest "orderId not found")
       refundsId <- (Id @DRefunds.Refunds <$>) $ refundInfo.refundsId & fromMaybeM (InvalidRequest "refundsId not found")
       Redis.whenWithLockRedis (DRidePayment.refundRequestProccessingKey orderId) 60 $ do
-        void $ DPayment.stripeWebhookService resp respDump stripeWebhookData
+        void $ DPayment.stripeWebhookService commonMerchantOperatingCityId resp respDump stripeWebhookData
         QRefundRequest.findByRefundsId (Just refundsId) >>= \case
           Nothing -> logInfo $ "No refund request found for update in webhook with refundsId: " <> refundsId.getId
           Just refundRequest -> do
@@ -723,7 +726,7 @@ stripeWebhookAction resp respDump = do
               QPaymentInvoiceExtra.updatePaymentStatusByRideIdAndTypeAndPurpose rideId DPI.REFUNDS paymentPurpose invoiceStatus
               Notify.notifyRefunds updRefundRequest
       pure Ack
-    _ -> DPayment.stripeWebhookService resp respDump stripeWebhookData
+    _ -> DPayment.stripeWebhookService commonMerchantOperatingCityId resp respDump stripeWebhookData
 
 ----------------------------------------- wallet apis -----------------------------------------------------
 

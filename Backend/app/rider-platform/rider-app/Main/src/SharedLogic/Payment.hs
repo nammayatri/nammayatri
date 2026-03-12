@@ -94,12 +94,13 @@ orderStatusHandler ::
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text]
   ) =>
+  Id DMOC.MerchantOperatingCity ->
   FulfillmentStatusHandler m ->
   DOrder.PaymentServiceType ->
   DOrder.PaymentOrder ->
   (Payment.OrderStatusReq -> m Payment.OrderStatusResp) ->
   m DPayment.PaymentStatusResp
-orderStatusHandler fulfillmentHandler paymentService paymentOrder orderStatusCall = do
+orderStatusHandler merchantOpCityId fulfillmentHandler paymentService paymentOrder orderStatusCall = do
   Redis.withWaitAndLockCrossAppRedis
     makePaymentOrderStatusHandlerLockKey
     60
@@ -108,7 +109,8 @@ orderStatusHandler fulfillmentHandler paymentService paymentOrder orderStatusCal
         let walletPostingCall = case paymentOrder.merchantOperatingCityId of
               Just merchantOperatingCityId -> Just $ TWallet.walletPosting (cast paymentOrder.merchantId) (cast merchantOperatingCityId)
               Nothing -> Nothing
-        orderStatusResponse <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall walletPostingCall
+            commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
+        orderStatusResponse <- DPayment.orderStatusService commonMerchantOperatingCityId paymentOrder.personId paymentOrder.id orderStatusCall walletPostingCall
         mbUpdatedPaymentOrder <- QPaymentOrder.findById paymentOrder.id
         let updatedPaymentOrder = fromMaybe paymentOrder mbUpdatedPaymentOrder
         orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder updatedPaymentOrder orderStatusResponse
@@ -424,7 +426,8 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
   let merchantOperatingCityId = fromMaybe person.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
       orderStatusCall = TPayment.orderStatus (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
       walletPostingCall = TWallet.walletPosting (cast paymentOrder.merchantId) merchantOperatingCityId
-  paymentStatusResp <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall (Just walletPostingCall)
+      commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
+  paymentStatusResp <- DPayment.orderStatusService commonMerchantOperatingCityId paymentOrder.personId paymentOrder.id orderStatusCall (Just walletPostingCall)
   refundStatusHandler paymentOrder paymentServiceType
   return paymentStatusResp
   where
@@ -532,8 +535,9 @@ syncOrderStatus ::
   m DPayment.PaymentStatusResp
 syncOrderStatus fulfillmentHandler merchantId personId paymentOrder = do
   person <- QPerson.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
-  mocId <- paymentOrder.merchantOperatingCityId & fromMaybeM (InternalError "MerchantOperatingCityId not found in payment order")
+  commonMerchantOperatingCityId <- paymentOrder.merchantOperatingCityId & fromMaybeM (InternalError "MerchantOperatingCityId not found in payment order")
   let paymentServiceType = fromMaybe DOrder.Normal paymentOrder.paymentServiceType
+      mocId = cast @DPayment.MerchantOperatingCity @DMOC.MerchantOperatingCity commonMerchantOperatingCityId
   ticketPlaceId <-
     case paymentServiceType of
       DOrder.Normal -> do
@@ -541,8 +545,8 @@ syncOrderStatus fulfillmentHandler merchantId personId paymentOrder = do
         return $ ticketBooking <&> (.ticketPlaceId)
       DOrder.RideBooking -> return Nothing
       _ -> return Nothing
-  let orderStatusCall = TPayment.orderStatus merchantId (cast mocId) ticketPlaceId paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
-  orderStatusHandler fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
+  let orderStatusCall = TPayment.orderStatus merchantId mocId ticketPlaceId paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
+  orderStatusHandler mocId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
 
 -------------------------------------------------------------------------------------------------------
 ------------------------------------- Payment Utility Functions ---------------------------------------
@@ -565,10 +569,11 @@ makePaymentIntent ::
   m DPayment.CreatePaymentIntentServiceResp
 makePaymentIntent merchantId merchantOpCityId paymentMode personId mbExistingOrderId createPaymentIntentServiceReq = do
   let commonMerchantId = cast @Merchant.Merchant @DPayment.Merchant merchantId
+      commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
       commonPersonId = cast @Person.Person @DPayment.Person personId
       createPaymentIntentCall = TPayment.createPaymentIntent merchantId merchantOpCityId paymentMode
       cancelPaymentIntentCall = TPayment.cancelPaymentIntent merchantId merchantOpCityId paymentMode
-  DPayment.createPaymentIntentService commonMerchantId (Just $ cast merchantOpCityId) commonPersonId mbExistingOrderId createPaymentIntentServiceReq createPaymentIntentCall cancelPaymentIntentCall
+  DPayment.createPaymentIntentService commonMerchantId commonMerchantOperatingCityId commonPersonId mbExistingOrderId createPaymentIntentServiceReq createPaymentIntentCall cancelPaymentIntentCall
 
 cancelPaymentIntent ::
   ( MonadFlow m,
@@ -585,7 +590,8 @@ cancelPaymentIntent ::
   m ()
 cancelPaymentIntent merchantId merchantOpCityId paymentMode rideId = do
   let cancelPaymentIntentCall = TPayment.cancelPaymentIntent merchantId merchantOpCityId paymentMode
-  DPayment.cancelPaymentIntentService (cast @Ride.Ride @DPayment.Ride rideId) cancelPaymentIntentCall
+      commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
+  DPayment.cancelPaymentIntentService commonMerchantOperatingCityId (cast @Ride.Ride @DPayment.Ride rideId) cancelPaymentIntentCall
 
 chargePaymentIntent ::
   ( MonadFlow m,
@@ -603,7 +609,8 @@ chargePaymentIntent ::
 chargePaymentIntent merchantId merchantOpCityId paymentMode paymentIntentId = do
   let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId paymentMode
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId paymentMode
-  DPayment.chargePaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall
+      commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
+  DPayment.chargePaymentIntentService commonMerchantOperatingCityId paymentIntentId capturePaymentIntentCall getPaymentIntentCall
 
 makeStripeRefund ::
   ( MonadFlow m,
@@ -688,7 +695,8 @@ makeCxCancellationPayment ::
 makeCxCancellationPayment merchantId merchantOpCityId paymentMode paymentIntentId cancellationAmount = do
   let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId paymentMode
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId paymentMode
-  DPayment.updateForCXCancelPaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancellationAmount
+      commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
+  DPayment.updateForCXCancelPaymentIntentService commonMerchantOperatingCityId paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancellationAmount
 
 validatePaymentInstrument :: (MonadThrow m, Log m) => Merchant.Merchant -> Maybe DMPM.PaymentInstrument -> Maybe Payment.PaymentMethodId -> m ()
 validatePaymentInstrument merchant mbPaymentInstrument mbPaymentMethodId = do

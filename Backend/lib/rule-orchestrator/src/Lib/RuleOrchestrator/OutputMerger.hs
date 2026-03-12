@@ -18,8 +18,8 @@ module Lib.RuleOrchestrator.OutputMerger
 where
 
 import qualified Data.Aeson as A
-import qualified Data.Aeson.KeyMap as KM
 import qualified Data.Aeson.Key as AK
+import qualified Data.Aeson.KeyMap as KM
 import Kernel.Prelude
 import Lib.RuleOrchestrator.Types
 
