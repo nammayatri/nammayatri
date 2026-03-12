@@ -97,6 +97,8 @@ RiderConfig:
     trackingShortUrlPattern: Text
     specialZoneRadius: Int
     appUrl: Text
+    seatBookingTtl: Maybe Int
+    seatBookingCleanupTtl: Maybe Int
     collectAutoCompleteData: Maybe Bool
     distanceWeightage: Int
     collectMMIRouteData: Maybe Bool
