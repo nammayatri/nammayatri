@@ -52,7 +52,7 @@ import qualified Domain.Types.StopInformation as DSI
 import Environment
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
-import Kernel.External.Encryption (decrypt, getDbHash)
+import Kernel.External.Encryption (DbHash, decrypt, getDbHash)
 import Kernel.External.Maps.HasCoordinates
 import qualified Kernel.External.Maps.Types as KEMT
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
@@ -107,13 +107,17 @@ getRideList ::
   Maybe UTCTime ->
   Maybe Int ->
   Maybe Int ->
+  Maybe (Id Common.Ride) ->
   Maybe (ShortId Common.Ride) ->
   Maybe UTCTime ->
   Maybe Text ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  Maybe Text ->
   Text ->
   Flow Common.RideListRes
-getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId mbto mbFleetOwnerId requestorId = do
-  getRideListUtil Nothing merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId mbto Nothing mbFleetOwnerId (Just requestorId)
+getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount mbDriverId requestorId = do
+  getRideListUtil Nothing merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto Nothing mbFleetOwnerId mbDriverId mbFromAmount mbToAmount (Just requestorId)
 
 getRideAgentList ::
   ShortId DM.Merchant ->
@@ -130,7 +134,87 @@ getRideAgentList ::
   Maybe Text ->
   Flow Common.RideListRes
 getRideAgentList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId mbto mbVehicleNo =
-  getRideListUtil (Just True) merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId mbto mbVehicleNo Nothing Nothing
+  getRideListUtil (Just True) merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset Nothing mbReqShortRideId mbto mbVehicleNo Nothing Nothing Nothing Nothing Nothing
+
+-- | Common parameters resolved during ride-list setup (shared by V1 and V2).
+data RideListCommonParams = RideListCommonParams
+  { merchant :: DM.Merchant,
+    merchantOpCity :: DMOC.MerchantOperatingCity,
+    limit :: Int,
+    offset :: Int,
+    mbShortRideId :: Maybe (ShortId DRide.Ride),
+    mbResolvedRideId :: Maybe (Id DRide.Ride),
+    mbCustomerPhoneDBHash :: Maybe DbHash,
+    mbDriverPhoneDBHash :: Maybe DbHash,
+    mbDriverId :: Maybe Text,
+    mbFromAmount :: Maybe HighPrecMoney,
+    mbToAmount :: Maybe HighPrecMoney,
+    mbVehicleNo :: Maybe Text,
+    mbFleetOwnerId :: Maybe Text,
+    now :: UTCTime,
+    from :: UTCTime,
+    to :: UTCTime,
+    useClickhouse :: Bool
+  }
+
+-- | Shared setup for ride-list endpoints: merchant lookup, currency check,
+--   pagination, phone hashing, date validation, filter-presence check, and clickhouse env check.
+withRideListCommonParams ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Currency ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe (Id Common.Ride) ->
+  Maybe (ShortId Common.Ride) ->
+  Maybe UTCTime ->
+  Maybe Text ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  Maybe Text ->
+  Maybe Text ->
+  (RideListCommonParams -> Flow a) ->
+  Flow a
+withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto mbDriverId mbFromAmount mbToAmount mbVehicleNo mbFleetOwnerId cont = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  whenJust mbCurrency $ \currency -> do
+    unless (currency == merchantOpCity.currency) $
+      throwError (InvalidRequest "Invalid currency")
+  let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
+      offset = fromMaybe 0 mbOffset
+  let mbShortRideId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbReqShortRideId
+  let mbResolvedRideId = cast @Common.Ride @DRide.Ride <$> mbReqRideId
+  mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
+  mbDriverPhoneDBHash <- getDbHash `traverse` mbDriverPhone
+  now <- getCurrentTime
+  let hasAmountRange = isJust mbFromAmount && isJust mbToAmount
+      hasAnyFilter =
+        isJust mbShortRideId
+          || isJust mbResolvedRideId
+          || isJust mbCustomerPhoneDBHash
+          || isJust mbDriverPhoneDBHash
+          || isJust mbDriverId
+          || hasAmountRange
+          || isJust mbVehicleNo
+          || isJust mbFleetOwnerId
+  unless hasAnyFilter $
+    throwError $ InvalidRequest "At least one filter is required"
+  when (isNothing mbShortRideId && isNothing mbResolvedRideId && isNothing mbfrom && isNothing mbto) $ throwError $ InvalidRequest "from and to date are required"
+  case (mbfrom, mbto) of
+    (Just from', Just to') -> when (from' > to') $ throwError $ InvalidRequest "from date should be less than to date"
+    _ -> pure ()
+  let from = fromMaybe now mbfrom
+  let to = fromMaybe now mbto
+  enableClickhouse <- L.runIO $ Se.lookupEnv "ENABLE_CLICKHOUSE"
+  let useClickhouse = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now >= fromMaybe now mbto && enableClickhouse == Just "True"
+  cont RideListCommonParams {..}
+  where
+    maxLimit = 20
+    defaultLimit = 10
 
 getRideListUtil ::
   Maybe Bool ->
@@ -143,54 +227,36 @@ getRideListUtil ::
   Maybe UTCTime ->
   Maybe Int ->
   Maybe Int ->
+  Maybe (Id Common.Ride) ->
   Maybe (ShortId Common.Ride) ->
   Maybe UTCTime ->
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  Maybe Text ->
   Flow Common.RideListRes
-getRideListUtil isDashboardRequest merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId mbto mbVehicleNo mbFleetOwnerId mbRequestorId = do
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  whenJust mbCurrency $ \currency -> do
-    unless (currency == merchantOpCity.currency) $
-      throwError (InvalidRequest "Invalid currency")
-  (shouldShowCustomerInfo, effectiveFleetOwnerId) <- resolveFleetAndCustomerVisibility mbFleetOwnerId
-  let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
-      offset = fromMaybe 0 mbOffset
-  let mbShortRideId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbReqShortRideId
-  mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
-  mbDriverPhoneDBHash <- getDbHash `traverse` mbDriverPhone
-  now <- getCurrentTime
-  when (isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhoneDBHash && isNothing mbVehicleNo && isNothing effectiveFleetOwnerId) $
-    throwError $ InvalidRequest "At least one filter is required"
-  when (isNothing mbfrom && isNothing mbto) $ throwError $ InvalidRequest "from and to date are required"
-  case (mbfrom, mbto) of
-    (Just from, Just to) -> when (from > to) $ throwError $ InvalidRequest "from date should be less than to date"
-    _ -> pure ()
-  let from = fromMaybe now mbfrom
-  let to = fromMaybe now mbto
-  enableClickhouse <- L.runIO $ Se.lookupEnv "ENABLE_CLICKHOUSE"
-  rideItems <-
-    if addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now >= fromMaybe now mbto && enableClickhouse == Just "True"
-      then BppT.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now from to mbVehicleNo effectiveFleetOwnerId
-      else QRide.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now mbfrom mbto mbVehicleNo effectiveFleetOwnerId
-  logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
-  rideListItems <- traverse buildRideListItem rideItems
-  let rideListItems' :: [Common.RideListItem]
-      rideListItems' =
-        if shouldShowCustomerInfo
-          then rideListItems
-          else map (\item -> (item {Common.customerName = Nothing, Common.customerPhoneNo = ""} :: Common.RideListItem)) rideListItems
-  let count = length rideListItems'
-  -- should we consider filters in totalCount, e.g. count all canceled rides?
-  -- totalCount <- runInReplica $ QRide.countRides merchant.id
-  let summary = Common.Summary {totalCount = 10000, count}
-  pure Common.RideListRes {totalItems = count, summary, rides = rideListItems'}
+getRideListUtil isDashboardRequest merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto _mbVehicleNo _mbFleetOwnerId _mbDriverId _mbFromAmount _mbToAmount mbRequestorId = do
+  withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto _mbDriverId _mbFromAmount _mbToAmount _mbVehicleNo _mbFleetOwnerId $ \RideListCommonParams {..} -> do
+    (shouldShowCustomerInfo, effectiveFleetOwnerId) <- resolveFleetAndCustomerVisibility mbFleetOwnerId
+    rideItems <-
+      if useClickhouse
+        then BppT.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId now from to mbVehicleNo effectiveFleetOwnerId mbFromAmount mbToAmount
+        else QRide.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId now mbfrom mbto mbVehicleNo effectiveFleetOwnerId mbFromAmount mbToAmount
+    logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
+    rideListItems <- traverse buildRideListItem rideItems
+    let rideListItems' :: [Common.RideListItem]
+        rideListItems' =
+          if shouldShowCustomerInfo
+            then rideListItems
+            else map (\item -> (item {Common.customerName = Nothing, Common.customerPhoneNo = ""} :: Common.RideListItem)) rideListItems
+    let count = length rideListItems'
+    -- should we consider filters in totalCount, e.g. count all canceled rides?
+    -- totalCount <- runInReplica $ QRide.countRides merchant.id
+    let summary = Common.Summary {totalCount = 10000, count}
+    pure Common.RideListRes {totalItems = count, summary, rides = rideListItems'}
   where
-    maxLimit = 20
-    defaultLimit = 10
-
     -- Resolve (show customer info?, effective fleet filter). Fleet owner/operator: only their fleet, no customer info; other roles: may filter by any fleet, show customer info.
     resolveFleetAndCustomerVisibility :: Maybe Text -> Flow (Bool, Maybe Text)
     resolveFleetAndCustomerVisibility (Just fleetOwnerId) = do
@@ -224,41 +290,19 @@ getRideListUtil isDashboardRequest merchantShortId opCity mbBookingStatus mbCurr
               DP.OPERATOR -> throwError AccessDenied
               _ -> pure (True, Nothing)
 
-getRideListV2 :: ShortId DM.Merchant -> Context.City -> Maybe Currency -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Maybe (ShortId Common.Ride) -> Maybe DRide.RideStatus -> Maybe UTCTime -> Flow Common.RideListResV2
-getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId mbRideStatus mbto = do
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  whenJust mbCurrency $ \currency -> do
-    unless (currency == merchantOpCity.currency) $
-      throwError (InvalidRequest "Invalid currency")
-
-  let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
-  let offset = fromMaybe 0 mbOffset
-  let mbShortRideId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbReqShortRideId
-  mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
-  mbDriverPhoneDBHash <- getDbHash `traverse` mbDriverPhone
-  now <- getCurrentTime
-  when (isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhoneDBHash) $
-    throwError $ InvalidRequest "At least one filter is required"
-  when (isNothing mbfrom && isNothing mbto) $ throwError $ InvalidRequest "from and to date are required"
-  case (mbfrom, mbto) of
-    (Just from, Just to) -> when (from > to) $ throwError $ InvalidRequest "from date should be less than to date"
-    _ -> pure ()
-  let from = fromMaybe now mbfrom
-  let to = fromMaybe now mbto
-  enableClickhouse <- L.runIO $ Se.lookupEnv "ENABLE_CLICKHOUSE"
-  rideItems <-
-    if addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now >= fromMaybe now mbto && enableClickhouse == Just "True"
-      then BppT.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash from to
-      else QRide.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverPhone now mbfrom mbto
-  logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
-  rideListItems <- traverse buildRideListItemV2 rideItems
-  let count = length rideListItems
-  let summary = Common.Summary {totalCount = 10000, count}
-  pure Common.RideListResV2 {totalItems = count, summary, rides = rideListItems}
-  where
-    maxLimit = 20
-    defaultLimit = 10
+getRideListV2 :: ShortId DM.Merchant -> Context.City -> Maybe Currency -> Maybe Text -> Maybe (Id Common.Driver) -> Maybe Text -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Int -> Maybe Common.PaymentMode -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe DRide.RideStatus -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Text -> Flow Common.RideListResV2
+getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone _mbDriverId mbDriverPhone mbfrom _mbFromAmount mbLimit mbOffset _mbPaymentMode mbRideId mbReqShortRideId mbRideStatus mbto _mbToAmount _mbFleetOwnerId = do
+  let mbDriverIdText = getId <$> _mbDriverId
+  withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbRideId mbReqShortRideId mbto mbDriverIdText _mbFromAmount _mbToAmount Nothing _mbFleetOwnerId $ \RideListCommonParams {..} -> do
+    rideItems <-
+      if useClickhouse
+        then BppT.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId from to mbFromAmount mbToAmount
+        else QRide.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId mbDriverPhone now mbfrom mbto mbFromAmount mbToAmount
+    logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
+    rideListItems <- traverse buildRideListItemV2 rideItems
+    let count = length rideListItems
+    let summary = Common.Summary {totalCount = 10000, count}
+    pure Common.RideListResV2 {totalItems = count, summary, rides = rideListItems}
 
 -- | Reference types used for ride/booking in finance ledger (for wallet_transaction_ids).
 rideLedgerReferenceTypes :: [Text]

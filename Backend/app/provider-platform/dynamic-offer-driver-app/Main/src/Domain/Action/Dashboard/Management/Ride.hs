@@ -60,17 +60,22 @@ getRideList ::
   Maybe Common.BookingStatus ->
   Maybe Currency ->
   Maybe Text ->
+  Maybe (Id Common.Driver) ->
   Maybe Text ->
   Maybe Text ->
   Maybe UTCTime ->
+  Maybe HighPrecMoney ->
   Maybe Int ->
   Maybe Int ->
+  Maybe Common.PaymentMode ->
+  Maybe (Id Common.Ride) ->
   Maybe (ShortId Common.Ride) ->
   Maybe UTCTime ->
+  Maybe HighPrecMoney ->
   Flow Common.RideListRes
-getRideList merchantShortId opCity requestorId mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbFleetOwnerId mbfrom mbLimit mbOffset mbReqShortRideId mbto = do
+getRideList merchantShortId opCity requestorId mbBookingStatus mbCurrency mbCustomerPhone mbDriverId mbDriverPhone mbFleetOwnerId mbfrom mbFromAmount mbLimit mbOffset _mbPaymentMode mbRideId mbReqShortRideId mbto mbToAmount = do
   logInfo $ "Ride list requested by: " <> requestorId
-  DRide.getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId mbto mbFleetOwnerId requestorId
+  DRide.getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount (getId <$> mbDriverId) requestorId
 
 getRideAgentList ::
   ShortId DM.Merchant ->
@@ -149,9 +154,9 @@ getRideKaptureList = DRide.ticketRideList
 getRideFareBreakUp :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Environment.Flow Common.FareBreakUpRes
 getRideFareBreakUp = DRide.fareBreakUp
 
-getRideListV2 :: ShortId DM.Merchant -> Context.City -> Maybe Currency -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Maybe (ShortId Common.Ride) -> Maybe Common.RideStatus -> Maybe UTCTime -> Flow Common.RideListResV2
-getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId mbRideStatus mbto =
-  DRide.getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId (castRideStatus <$> mbRideStatus) mbto
+getRideListV2 :: ShortId DM.Merchant -> Context.City -> Maybe Currency -> Maybe Text -> Maybe (Id Common.Driver) -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Int -> Maybe Common.PaymentMode -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe Common.RideStatus -> Maybe UTCTime -> Maybe HighPrecMoney -> Flow Common.RideListResV2
+getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone mbDriverId mbDriverPhone mbFleetOwnerId mbfrom mbFromAmount mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbRideStatus mbto mbToAmount =
+  DRide.getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone mbDriverId mbDriverPhone mbfrom mbFromAmount mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId (castRideStatus <$> mbRideStatus) mbto mbToAmount mbFleetOwnerId
 
 castRideStatus :: Common.RideStatus -> DRide.RideStatus
 castRideStatus s = case s of

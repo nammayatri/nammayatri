@@ -42,6 +42,8 @@ $(mkHttpInstancesForEnum ''BookingStatus)
 
 $(mkHttpInstancesForEnum ''RideStatus)
 
+$(mkHttpInstancesForEnum ''PaymentMode)
+
 ---------------------------------------------------------
 -- multiple ride end ------------------------------
 

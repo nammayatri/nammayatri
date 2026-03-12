@@ -522,15 +522,19 @@ findAllRideItems ::
   Int ->
   Maybe Common.BookingStatus ->
   Maybe (ShortId Ride) ->
+  Maybe (Id Ride) ->
   Maybe DbHash ->
   Maybe DbHash ->
+  Maybe Text ->
   UTCTime ->
   Maybe UTCTime ->
   Maybe UTCTime ->
   Maybe Text ->
   Maybe Text ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
   m [RideItem]
-findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash now mbFrom mbTo mbVehicleNo mbFleetOwnerId = do
+findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId now mbFrom mbTo mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount = do
   case mbRideShortId of
     Just rideShortId -> do
       ride <- findOneWithKV [Se.Is BeamR.shortId $ Se.Eq $ getShortId rideShortId] >>= fromMaybeM (RideNotFound $ "for ride shortId: " <> rideShortId.getShortId)
@@ -622,6 +626,10 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTCToDate defaultTo)) mbTo
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rid -> ride.id B.==?. B.val_ (getId rid)) mbRideId
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\did -> ride.driverId B.==?. B.val_ did) mbDriverId
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fa -> B.sqlBool_ $ ride.fareAmount B.>=. B.val_ (Just fa)) mbFromAmount
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\ta -> B.sqlBool_ $ ride.fareAmount B.<=. B.val_ (Just ta)) mbToAmount
                   )
                   do
                     booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
@@ -711,14 +719,18 @@ findAllRideItemsV2 ::
   Int ->
   Maybe DRide.RideStatus ->
   Maybe (ShortId Ride) ->
+  Maybe (Id Ride) ->
   Maybe DbHash ->
   Maybe DbHash ->
+  Maybe Text ->
   Maybe Text ->
   UTCTime ->
   Maybe UTCTime ->
   Maybe UTCTime ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
   m [RideItemV2]
-findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverPhoneNo now mbFrom mbTo = do
+findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverIdParam mbDriverPhoneNo now mbFrom mbTo mbFromAmount mbToAmount = do
   mbDriver <- case mbDriverPhoneDBHash of
     Just _driverPhoneDBHash ->
       findOneWithKV
@@ -731,7 +743,7 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId
     Nothing ->
       pure Nothing
 
-  let mbDriverId = getId . (.id) <$> mbDriver
+  let mbDriverId = mbDriverIdParam <|> (getId . (.id) <$> mbDriver)
 
   logDebug $ "mbDriverId: " <> show mbDriverId
   logDebug $ "mbDriverPhoneNo: " <> show mbDriverPhoneNo
@@ -803,6 +815,10 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTCToDate defaultTo)) mbTo
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideStatus -> ride.status B.==?. B.val_ rideStatus) mbRideStatus
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rid -> ride.id B.==?. B.val_ (getId rid)) mbRideId
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\did -> ride.driverId B.==?. B.val_ did) mbDriverId
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fa -> B.sqlBool_ $ ride.fareAmount B.>=. B.val_ (Just fa)) mbFromAmount
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\ta -> B.sqlBool_ $ ride.fareAmount B.<=. B.val_ (Just ta)) mbToAmount
                       )
                       do
                         booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)

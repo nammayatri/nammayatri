@@ -20,6 +20,11 @@ apis:
         offset: Int
         bookingStatus: BookingStatus
         rideShortId: ShortId Ride
+        rideId: Id Ride
+        driverId: Id Driver
+        paymentMode: PaymentMode
+        fromAmount: HighPrecMoney
+        toAmount: HighPrecMoney
         customerPhoneNo: Text
         driverPhoneNo: Text
         currency: Currency
@@ -41,6 +46,11 @@ apis:
               rideShortId: ShortId Ride
               customerPhoneNo: Text
               driverPhoneNo: Text
+              rideId: Id Ride
+              driverId: Id Driver
+              paymentMode: PaymentMode
+              fromAmount: HighPrecMoney
+              toAmount: HighPrecMoney
               currency: Currency
               from: UTCTime
               to: UTCTime
@@ -73,11 +83,17 @@ apis:
         offset: Int
         rideStatus: RideStatus
         rideShortId: ShortId Ride
+        rideId: Id Ride
+        driverId: Id Driver
+        paymentMode: PaymentMode
+        fromAmount: HighPrecMoney
+        toAmount: HighPrecMoney
         customerPhoneNo: Text
         driverPhoneNo: Text
         currency: Currency
         from: UTCTime
         to: UTCTime
+        fleetOwnerId: Text
       auth: ApiAuthV2
       response:
         type: RideListResV2
@@ -184,6 +200,7 @@ apis:
         type: APISuccess
 
 types:
+
   RideListRes:
     - totalItems: Int # for backward compatibility
     - summary: Summary
@@ -294,6 +311,10 @@ types:
 
   DeprecatedTripCategory: # TODO :: Deprecated, please do not maintain this in future. `DeprecatedTripCategory` is replaced with `TripCategory`
     - enum: "OneWay, Rental, RideShare, InterCity, CrossCity, Ambulance"
+
+  PaymentMode:
+    - enum: "CASH, ONLINE"
+    - derive: "Read, Kernel.Prelude.ToParamSchema"
   BookingStatus:
     - enum: "UPCOMING, UPCOMING_6HRS, ONGOING, ONGOING_6HRS, COMPLETED, CANCELLED"
     - derive: "Read, Kernel.Prelude.ToParamSchema"

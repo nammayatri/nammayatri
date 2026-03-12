@@ -95,6 +95,7 @@ data BppTransactionJoinT f = BppTransactionJoinT
     rideFare :: C f (Maybe HighPrecMoney),
     rideFareAmount :: C f HighPrecMoney,
     rideFleetOwnerId :: C f (Maybe Text),
+    rideDriverId :: C f Text,
     rideStatus :: C f RideStatus,
     rideTripStartTime :: C f (Maybe UTCTime)
   }
@@ -162,6 +163,7 @@ bppTransactionJoinTTable =
       rideFare = "ride_fare",
       rideFareAmount = "ride_fare_amount",
       rideFleetOwnerId = "ride_fleet_owner_id",
+      rideDriverId = "ride_driver_id",
       rideTripStartTime = "ride_trip_start_time",
       rideStatus = "ride_status"
     }
@@ -189,15 +191,19 @@ findAllRideItems ::
   Int ->
   Maybe Common.BookingStatus ->
   Maybe (ShortId Ride) ->
+  Maybe (Id Ride) ->
   Maybe DbHash ->
   Maybe DbHash ->
+  Maybe Text ->
   UTCTime ->
   UTCTime ->
   UTCTime ->
   Maybe Text ->
   Maybe Text ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
   m [QRE.RideItem]
-findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash now from to mbVehicleNo mbFleetOwnerId = do
+findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId now from to mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount = do
   bppTransaction <-
     CH.findAll $
       CH.select $
@@ -211,11 +217,15 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
                     CH.&&. bppTransaction.bookingProviderId CH.==. merchant.id
                     CH.&&. (bppTransaction.bookingMerchantOperatingCityId CH.==. opCity.id)
                     CH.&&. CH.whenJust_ mbRideShortId (\rsid -> bppTransaction.rideShortId CH.==. rsid)
+                    CH.&&. CH.whenJust_ mbRideId (\rid -> bppTransaction.rideDetailsId CH.==. rid)
                     CH.&&. CH.whenJust_ mbCustomerPhoneDBHash (\cpdh -> bppTransaction.riderDetailsMobileNumberHash CH.==. (Text.pack . show . unDbHash) cpdh)
                     CH.&&. CH.whenJust_ mbDriverPhoneDBHash (\dpdh -> bppTransaction.rideDetailsDriverNumberHash CH.==. Just ((Text.pack . show . unDbHash) dpdh))
                     CH.&&. CH.whenJust_ mbVehicleNo (\vehicleNo -> bppTransaction.rideDetailsVehicleNumber CH.==. vehicleNo)
                     CH.&&. CH.whenJust_ mbFleetOwnerId (\foid -> bppTransaction.rideFleetOwnerId CH.==. Just foid)
                     CH.&&. CH.whenJust_ mbBookingStatus (`mkBookingStatusCond` bppTransaction)
+                    CH.&&. CH.whenJust_ mbFromAmount (\fa -> bppTransaction.rideFareAmount CH.>=. fa)
+                    CH.&&. CH.whenJust_ mbToAmount (\ta -> bppTransaction.rideFareAmount CH.<=. ta)
+                    CH.&&. CH.whenJust_ mbDriverId (\did -> bppTransaction.rideDriverId CH.==. did)
               )
               (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bppTransactionJoinTTable)
   return $ fmap mkRideItem bppTransaction
@@ -310,12 +320,16 @@ findAllRideItemsV2 ::
   Int ->
   Maybe Ride.RideStatus ->
   Maybe (ShortId Ride) ->
+  Maybe (Id Ride) ->
   Maybe DbHash ->
   Maybe DbHash ->
+  Maybe Text ->
   UTCTime ->
   UTCTime ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
   m [QRE.RideItemV2]
-findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash from to = do
+findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId from to mbFromAmount mbToAmount = do
   bppTransaction <-
     CH.findAll $
       CH.select $
@@ -329,9 +343,13 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId
                     CH.&&. bppTransaction.bookingProviderId CH.==. merchant.id
                     CH.&&. (bppTransaction.bookingMerchantOperatingCityId CH.==. opCity.id)
                     CH.&&. CH.whenJust_ mbRideShortId (\rsid -> bppTransaction.rideShortId CH.==. rsid)
+                    CH.&&. CH.whenJust_ mbRideId (\rid -> bppTransaction.rideDetailsId CH.==. rid)
                     CH.&&. CH.whenJust_ mbCustomerPhoneDBHash (\cpdh -> bppTransaction.riderDetailsMobileNumberHash CH.==. (Text.pack . show . unDbHash) cpdh)
                     CH.&&. CH.whenJust_ mbDriverPhoneDBHash (\dpdh -> bppTransaction.rideDetailsDriverNumberHash CH.==. Just ((Text.pack . show . unDbHash) dpdh))
                     CH.&&. CH.whenJust_ mbRideStatus (\status -> bppTransaction.rideStatus CH.==. status)
+                    CH.&&. CH.whenJust_ mbFromAmount (\fa -> bppTransaction.rideFareAmount CH.>=. fa)
+                    CH.&&. CH.whenJust_ mbToAmount (\ta -> bppTransaction.rideFareAmount CH.<=. ta)
+                    CH.&&. CH.whenJust_ mbDriverId (\did -> bppTransaction.rideDriverId CH.==. did)
               )
               (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bppTransactionJoinTTable)
   return $ fmap mkRideItemV2 bppTransaction
