@@ -218,7 +218,7 @@ data ExternalSOSConfig = ExternalSOSConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data ExternalSOSFlow = ERSS | GJ112 deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ExternalSOSFlow = ERSS | GJ112 | Trinity deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data ExternalSOSTriggerSource = FRONTEND | DASHBOARD deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
