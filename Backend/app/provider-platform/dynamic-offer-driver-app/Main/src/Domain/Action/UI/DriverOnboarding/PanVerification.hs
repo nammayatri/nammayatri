@@ -333,7 +333,7 @@ buildPanCard person panType panName panDob verifyBy image1 panNumber = do
         documentImageId1 = image1,
         driverId = person.id,
         id = uuid,
-        verificationStatus = Documents.VALID,
+        verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
         merchantId = Just person.merchantId,
         merchantOperatingCityId = Just person.merchantOperatingCityId,
         createdAt = now,
@@ -474,12 +474,18 @@ verifyPanAadhaarLinkageIfAadhaarExists ::
   Maybe DPan.DriverPanCard ->
   Flow ()
 verifyPanAadhaarLinkageIfAadhaarExists person merchantOpCityId mdriverPanCard = do
-  -- Get Aadhaar number from DriverInformation table (encrypted; decrypt to get Text for API).
+  -- Get Aadhaar number: for fleet owners query FleetOwnerInformation table,
+  -- for drivers query DriverInformation table (encrypted; decrypt to get Text for API).
   -- AadhaarCard only stores aadhaarNumberHash (one-way), not the full number.
   whenJust mdriverPanCard $ \driverPanCard -> do
     panNumber <- decrypt driverPanCard.panCardNumber
-    driverInfo <- DIQuery.findById person.id >>= fromMaybeM (PersonNotFound person.id.getId)
-    mbAadhaarNumber <- traverse decrypt driverInfo.aadhaarNumber
+    mbAadhaarNumber <- case person.role of
+      role | DCommon.checkFleetOwnerRole role -> do
+        fleetOwnerInfo <- QFOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
+        traverse decrypt fleetOwnerInfo.aadhaarNumber
+      _ -> do
+        driverInfo <- DIQuery.findById person.id >>= fromMaybeM (PersonNotFound person.id.getId)
+        traverse decrypt driverInfo.aadhaarNumber
     whenJust mbAadhaarNumber $ \aadhaarNumber -> do
       verifyRes <-
         Verification.verifyPanAadhaarLinkAsync person.merchantId merchantOpCityId $
