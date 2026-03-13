@@ -107,6 +107,14 @@ FeedbackForm:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, rating]
+    findAllFeedbackByMerchantIdAndMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, merchantOperatingCityId]
+    findAllFeedbackByMerchantIdAndMerchantOperatingCityIdAndRating:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, merchantOperatingCityId, rating]
 
   cachedQueries:
     findAllFeedback:
@@ -130,6 +138,24 @@ FeedbackForm:
         - rating: Int
       dbQuery: findAllFeedbackByMerchantOpCityIdAndRating
       dbQueryParams:
+        - (Kernel.Prelude.Just merchantOperatingCityId)|CIM
+        - (Kernel.Prelude.Just rating)|CIM
+    findAllFeedbackByMerchantIdAndMerchantOperatingCityId:
+      keyParams:
+        - merchantId: Id Merchant
+        - merchantOperatingCityId: Id MerchantOperatingCity
+      dbQuery: findAllFeedbackByMerchantIdAndMerchantOperatingCityId
+      dbQueryParams:
+        - (Kernel.Prelude.Just merchantId)|CIM
+        - (Kernel.Prelude.Just merchantOperatingCityId)|CIM
+    findAllFeedbackByMerchantIdAndMerchantOperatingCityIdAndRating:
+      keyParams:
+        - merchantId: Id Merchant
+        - merchantOperatingCityId: Id MerchantOperatingCity
+        - rating: Int
+      dbQuery: findAllFeedbackByMerchantIdAndMerchantOperatingCityIdAndRating
+      dbQueryParams:
+        - (Kernel.Prelude.Just merchantId)|CIM
         - (Kernel.Prelude.Just merchantOperatingCityId)|CIM
         - (Kernel.Prelude.Just rating)|CIM
   extraOperations:

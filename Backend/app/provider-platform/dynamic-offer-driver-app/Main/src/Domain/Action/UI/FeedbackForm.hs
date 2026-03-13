@@ -16,6 +16,7 @@ module Domain.Action.UI.FeedbackForm where
 
 import Data.List (groupBy, sortOn)
 import Domain.Types.FeedbackForm
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified IssueManagement.Common as IMC
 import Kernel.External.Types (Language)
@@ -90,14 +91,15 @@ makeFeedbackFormAPIEntity response = map convertRatingGroup ratingGroups
 
 feedbackForm ::
   (CacheFlow m r, EsqDBFlow m r) =>
+  Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Language ->
   Maybe Int ->
   m FeedbackFormList
-feedbackForm merchantOperatingCityId language ratingValue = do
+feedbackForm merchantId merchantOperatingCityId language ratingValue = do
   formList <- case ratingValue of
-    Just rating -> CQFF.findAllFeedbackByMerchantOpCityIdAndRating merchantOperatingCityId rating
-    Nothing -> CQFF.findAllFeedbackByMerchantOpCityId merchantOperatingCityId
+    Just rating -> CQFF.findAllFeedbackByMerchantIdAndMerchantOperatingCityIdAndRating merchantId merchantOperatingCityId rating
+    Nothing -> CQFF.findAllFeedbackByMerchantIdAndMerchantOperatingCityId merchantId merchantOperatingCityId
 
   let filteredForms = map (filterFeedbackFormByLanguage language) formList
   pure $ makeFeedbackFormList (makeFeedbackFormAPIEntity filteredForms)
