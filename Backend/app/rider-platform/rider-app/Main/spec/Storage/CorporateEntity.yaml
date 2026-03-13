@@ -1,0 +1,67 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  PartnerOrganization: Domain.Types.PartnerOrganization
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+
+CorporateEntity:
+  tableName: corporate_entity
+
+  fields:
+    id: Id CorporateEntity
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    partnerOrgId: Maybe (Id PartnerOrganization)
+    name: Text
+    registeredName: Text
+    gstin: Maybe Text
+    industry: Text
+    contactPersonName: Text
+    contactEmail: Text
+    contactPhone: Text
+    billingAddress: Text
+    billingModel: CorporateBillingModel
+    billingCycleType: BillingCycleType
+    creditLimit: HighPrecMoney
+    currency: Currency
+    status: CorporateEntityStatus
+    contractStartDate: UTCTime
+    contractEndDate: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    CorporateBillingModel:
+      enum: "PER_TRIP,PER_EMPLOYEE_MONTH,PER_SEAT_KM,FLAT_ROUTE,HYBRID"
+      derive': "HttpInstance"
+    BillingCycleType:
+      enum: "WEEKLY,BIWEEKLY,MONTHLY"
+      derive': "HttpInstance"
+    CorporateEntityStatus:
+      enum: "ONBOARDING,ACTIVE,SUSPENDED,CHURNED"
+      derive': "HttpInstance"
+
+  constraints:
+    id: PrimaryKey
+    merchantId: SecondaryKey
+    partnerOrgId: SecondaryKey
+
+  queries:
+    findByMerchantId:
+      kvFunction: findAllWithKV
+      where:
+        merchantId: merchantId
+    findByStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, status]
+    updateStatus:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where:
+        id: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE

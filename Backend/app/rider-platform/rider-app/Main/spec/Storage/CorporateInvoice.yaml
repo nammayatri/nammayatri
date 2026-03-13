@@ -1,0 +1,67 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  CorporateEntity: Domain.Types.CorporateEntity
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+
+CorporateInvoice:
+  tableName: corporate_invoice
+
+  fields:
+    id: Id CorporateInvoice
+    corporateEntityId: Id CorporateEntity
+    invoiceNumber: Text
+    periodStart: UTCTime
+    periodEnd: UTCTime
+    totalTrips: Int
+    baseAmount: HighPrecMoney
+    cgstRate: Maybe Double
+    cgstAmount: Maybe HighPrecMoney
+    sgstRate: Maybe Double
+    sgstAmount: Maybe HighPrecMoney
+    igstRate: Maybe Double
+    igstAmount: Maybe HighPrecMoney
+    totalTaxAmount: HighPrecMoney
+    netAmount: HighPrecMoney
+    currency: Currency
+    sacCode: Text
+    placeOfSupply: Text
+    supplierGstin: Text
+    recipientGstin: Maybe Text
+    eInvoiceIrn: Maybe Text
+    status: CorporateInvoiceStatus
+    pdfUrl: Maybe Text
+    generatedAt: UTCTime
+    paidAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    CorporateInvoiceStatus:
+      enum: "DRAFT,PENDING_APPROVAL,APPROVED,SENT,PAID,DISPUTED,CREDIT_NOTE_ISSUED,OVERDUE"
+      derive': "HttpInstance"
+
+  constraints:
+    id: PrimaryKey
+    corporateEntityId: SecondaryKey
+    invoiceNumber: SecondaryKey
+
+  queries:
+    findByCorporateEntityId:
+      kvFunction: findAllWithKV
+      where:
+        corporateEntityId: corporateEntityId
+    findByInvoiceNumber:
+      kvFunction: findOneWithKV
+      where:
+        invoiceNumber: invoiceNumber
+    updateStatus:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where:
+        id: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE

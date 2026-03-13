@@ -117,6 +117,7 @@ data BecknTagGroup
   | DISABILITY_DWARFISM -- dwarfism
   | DISABILITY_ACID_ATTACK -- acid attack survivor
   | DISABILITY_MULTIPLE_DIS -- multiple disabilities
+  | CORPORATE_CONTEXT
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance CompleteTagGroup BecknTagGroup where
@@ -153,7 +154,29 @@ instance CompleteTagGroup BecknTagGroup where
     DISABILITY_DWARFISM -> (Just "Dwarfism Information", Nothing)
     DISABILITY_ACID_ATTACK -> (Just "Acid Attack Survivor Information", Nothing)
     DISABILITY_MULTIPLE_DIS -> (Just "Multiple Disabilities Information", Nothing)
+    CORPORATE_CONTEXT -> (Just "Corporate Context Information", Nothing)
     _ -> (Just $ convertToSentence tagGroup, Nothing) -- TODO: move all the tagGroups to this function and remove (_ -> case statement)
+
+data CorporateContextTag
+  = CORPORATE_ENTITY_ID
+  | CORPORATE_EMPLOYEE_ID
+  | CORPORATE_SHIFT_ID
+  | CORPORATE_ROUTE_ID
+  | CORPORATE_POLICY_ID
+  | CORPORATE_BILLING_MODE
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+instance CompleteTag CorporateContextTag where
+  type TagGroupF CorporateContextTag = BecknTagGroup
+
+  getTagDisplay = const False
+
+  getTagDescriptor tag = uncurry (Spec.Descriptor (Just . T.pack $ show tag) Nothing) $
+    (Just $ convertToSentence tag, Nothing)
+
+  getFullTag tag = Spec.Tag (Just $ getTagDescriptor tag) (Just $ getTagDisplay tag)
+
+  getTagGroup = const CORPORATE_CONTEXT
 
 data EXTRA_PER_KM_STEP_FARE = EXTRA_PER_KM_STEP_FARE
   { startThreshold :: Int,
@@ -561,6 +584,13 @@ data BecknTag
   | SETTLEMENT_BANK_CODE -- BAP_TERMS/BPP_TERMS: bank IFSC code
   | SETTLEMENT_BANK_ACCOUNT_NUMBER -- BAP_TERMS/BPP_TERMS: bank account number
   | SETTLEMENT_VIRTUAL_PAYMENT_ADDRESS -- BAP_TERMS/BPP_TERMS: UPI VPA
+  | -- Corporate commute tags
+    CORP_ENTITY_ID
+  | CORP_EMPLOYEE_ID
+  | CORP_SHIFT_ID
+  | CORP_ROUTE_ID
+  | CORP_POLICY_ID
+  | CORP_BILLING_MODE
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
@@ -622,6 +652,12 @@ instance CompleteTag BecknTag where
     IS_INSURED -> (Just "is insured", Nothing)
     INSURED_AMOUNT -> (Just "insured amount", Nothing)
     NYREGULAR_SUBSCRIPTION_CHARGE -> (Just "NYRegular subscription charge", Nothing)
+    CORP_ENTITY_ID -> (Just "Corporate Entity ID", Nothing)
+    CORP_EMPLOYEE_ID -> (Just "Corporate Employee ID", Nothing)
+    CORP_SHIFT_ID -> (Just "Corporate Shift ID", Nothing)
+    CORP_ROUTE_ID -> (Just "Corporate Route ID", Nothing)
+    CORP_POLICY_ID -> (Just "Corporate Policy ID", Nothing)
+    CORP_BILLING_MODE -> (Just "Corporate Billing Mode", Nothing)
     _ -> (Just $ convertToSentence tag, Nothing) -- TODO: move all the tags to this function and remove (_ -> case statement)
 
   getFullTag tag = Spec.Tag (Just $ getTagDescriptor tag) (Just $ getTagDisplay tag)
@@ -854,6 +890,13 @@ instance CompleteTag BecknTag where
     SETTLEMENT_BANK_CODE -> BPP_TERMS
     SETTLEMENT_BANK_ACCOUNT_NUMBER -> BPP_TERMS
     SETTLEMENT_VIRTUAL_PAYMENT_ADDRESS -> BPP_TERMS
+    -- Corporate commute tags
+    CORP_ENTITY_ID -> CORPORATE_CONTEXT
+    CORP_EMPLOYEE_ID -> CORPORATE_CONTEXT
+    CORP_SHIFT_ID -> CORPORATE_CONTEXT
+    CORP_ROUTE_ID -> CORPORATE_CONTEXT
+    CORP_POLICY_ID -> CORPORATE_CONTEXT
+    CORP_BILLING_MODE -> CORPORATE_CONTEXT
 
 convertToSentence :: Show a => a -> Text
 convertToSentence = T.pack . toSentence . show

@@ -1,0 +1,34 @@
+imports:
+  CorporateRouteStop: Domain.Types.CorporateRouteStop
+  CorporateEmployee: Domain.Types.CorporateEmployee
+
+CorporateRouteStopAssignment:
+  tableName: corporate_route_stop_assignment
+
+  fields:
+    id: Id CorporateRouteStopAssignment
+    routeStopId: Id CorporateRouteStop
+    employeeId: Id CorporateEmployee
+    effectiveFrom: UTCTime
+    effectiveTo: Maybe UTCTime
+    createdAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    routeStopId: SecondaryKey
+    employeeId: SecondaryKey
+
+  queries:
+    findByRouteStopId:
+      kvFunction: findAllWithKV
+      where:
+        routeStopId: routeStopId
+    findByEmployeeId:
+      kvFunction: findAllWithKV
+      where:
+        employeeId: employeeId
+
+  excludedFields: [merchantId, merchantOperatingCityId, updatedAt]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

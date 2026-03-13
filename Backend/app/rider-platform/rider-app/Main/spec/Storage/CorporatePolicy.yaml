@@ -1,0 +1,47 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  CorporateEntity: Domain.Types.CorporateEntity
+  HighPrecMoney: Kernel.Types.Common
+
+CorporatePolicy:
+  tableName: corporate_policy
+
+  fields:
+    id: Id CorporatePolicy
+    corporateEntityId: Id CorporateEntity
+    name: Text
+    policyType: CorporatePolicyType
+    maxFarePerTrip: Maybe HighPrecMoney
+    maxMonthlyBudgetPerEmployee: Maybe HighPrecMoney
+    allowedServiceTiers: Text
+    requiresApproval: Bool
+    nightShiftSafetyEnabled: Bool
+    womenSafetyRulesEnabled: Bool
+    surgeCap: Maybe Double
+    isActive: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    CorporatePolicyType:
+      enum: "RIDE_BUDGET,VEHICLE_TIER,APPROVAL,SAFETY"
+      derive': "HttpInstance"
+
+  constraints:
+    id: PrimaryKey
+    corporateEntityId: SecondaryKey
+
+  queries:
+    findByCorporateEntityId:
+      kvFunction: findAllWithKV
+      where:
+        corporateEntityId: corporateEntityId
+    findActiveByCorporateEntityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [corporateEntityId, isActive]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE

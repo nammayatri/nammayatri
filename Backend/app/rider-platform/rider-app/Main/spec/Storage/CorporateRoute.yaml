@@ -1,0 +1,55 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  CorporateEntity: Domain.Types.CorporateEntity
+  CorporateShift: Domain.Types.CorporateShift
+
+CorporateRoute:
+  tableName: corporate_route
+
+  fields:
+    id: Id CorporateRoute
+    corporateEntityId: Id CorporateEntity
+    shiftId: Id CorporateShift
+    routeCode: Text
+    direction: CorporateRouteDirection
+    estimatedDurationMinutes: Int
+    estimatedDistanceMeters: Int
+    vehicleTier: Text
+    maxCapacity: Int
+    polyline: Maybe Text
+    status: CorporateRouteStatus
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    CorporateRouteDirection:
+      enum: "PICKUP,DROP"
+      derive': "HttpInstance"
+    CorporateRouteStatus:
+      enum: "ACTIVE,INACTIVE,OPTIMIZING,ARCHIVED"
+      derive': "HttpInstance"
+
+  constraints:
+    id: PrimaryKey
+    corporateEntityId: SecondaryKey
+    shiftId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where:
+        id: id
+    findByShiftId:
+      kvFunction: findAllWithKV
+      where:
+        shiftId: shiftId
+    updateStatus:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where:
+        id: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE

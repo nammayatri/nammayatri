@@ -1,0 +1,291 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+  CorporateEntity: Domain.Types.CorporateEntity
+  CorporateEmployee: Domain.Types.CorporateEmployee
+  CorporateShift: Domain.Types.CorporateShift
+  CorporateRoute: Domain.Types.CorporateRoute
+  CorporateRoster: Domain.Types.CorporateRoster
+  CorporateWallet: Domain.Types.CorporateWallet
+  CorporateInvoice: Domain.Types.CorporateInvoice
+  CorporateEntityStatus: Domain.Types.CorporateEntity
+  CorporateEmployeeStatus: Domain.Types.CorporateEmployee
+  CorporateShiftStatus: Domain.Types.CorporateShift
+  CorporateRouteStatus: Domain.Types.CorporateRoute
+  CorporateRouteDirection: Domain.Types.CorporateRoute
+  CorporateAttendanceStatus: Domain.Types.CorporateRoster
+  CorporateWalletStatus: Domain.Types.CorporateWallet
+  CorporateInvoiceStatus: Domain.Types.CorporateInvoice
+  CorporateBillingModel: Domain.Types.CorporateEntity
+  BillingCycleType: Domain.Types.CorporateEntity
+  CorporatePolicyType: Domain.Types.CorporatePolicy
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  Booking: Domain.Types.Booking
+  Day: Data.Time.Calendar
+
+module: CorporateCommute
+types:
+  CorporateEntityResp:
+    id: Id CorporateEntity
+    name: Text
+    registeredName: Text
+    gstin: Maybe Text
+    industry: Text
+    contactPersonName: Text
+    contactEmail: Text
+    contactPhone: Text
+    billingModel: CorporateBillingModel
+    billingCycleType: BillingCycleType
+    creditLimit: HighPrecMoney
+    currency: Currency
+    status: CorporateEntityStatus
+    contractStartDate: UTCTime
+    contractEndDate: Maybe UTCTime
+
+  CorporateEmployeeResp:
+    id: Id CorporateEmployee
+    employeeCode: Text
+    name: Text
+    email: Text
+    phone: Text
+    department: Text
+    costCenter: Maybe Text
+    status: CorporateEmployeeStatus
+    linkedAt: Maybe UTCTime
+
+  CreateEmployeeReq:
+    employeeCode: Text
+    name: Text
+    email: Text
+    phone: Text
+    department: Text
+    costCenter: Maybe Text
+    defaultPickupLat: Double
+    defaultPickupLon: Double
+    defaultPickupAddress: Text
+    reportingManagerEmail: Maybe Text
+
+  BulkUploadReq:
+    csvData: Text
+
+  BulkUploadResp:
+    totalRows: Int
+    successCount: Int
+    errorCount: Int
+    errors: "[Text]"
+
+  CorporateShiftResp:
+    id: Id CorporateShift
+    name: Text
+    pickupWindowStart: Text
+    pickupWindowEnd: Text
+    dropWindowStart: Text
+    dropWindowEnd: Text
+    activeDays: Text
+    isNightShift: Bool
+    maxOccupancy: Int
+    allowedVehicleTiers: Text
+    confirmationDeadlineMinutes: Int
+    status: CorporateShiftStatus
+
+  CreateShiftReq:
+    name: Text
+    pickupWindowStart: Text
+    pickupWindowEnd: Text
+    dropWindowStart: Text
+    dropWindowEnd: Text
+    activeDays: Text
+    isNightShift: Bool
+    maxOccupancy: Int
+    allowedVehicleTiers: Text
+    confirmationDeadlineMinutes: Int
+
+  CorporateRosterResp:
+    id: Id CorporateRoster
+    employeeName: Text
+    employeeCode: Text
+    attendanceStatus: CorporateAttendanceStatus
+    confirmedAt: Maybe UTCTime
+
+  CorporateRouteResp:
+    id: Id CorporateRoute
+    routeCode: Text
+    direction: CorporateRouteDirection
+    estimatedDurationMinutes: Int
+    estimatedDistanceMeters: Int
+    vehicleTier: Text
+    maxCapacity: Int
+    status: CorporateRouteStatus
+
+  OptimizeRoutesResp:
+    message: Text
+    routesOptimized: Int
+
+  CorporateBookingResp:
+    bookingId: Maybe (Id Booking)
+    employeeName: Text
+    status: Text
+    rosterDate: Day
+
+  ScheduleRidesReq:
+    shiftId: Id CorporateShift
+    rosterDate: Day
+
+  ScheduleRidesResp:
+    totalScheduled: Int
+    totalFailed: Int
+    errors: "[Text]"
+
+  CorporateWalletResp:
+    id: Id CorporateWallet
+    balance: HighPrecMoney
+    currency: Currency
+    status: CorporateWalletStatus
+    lastTopUpAt: Maybe UTCTime
+
+  TopUpWalletReq:
+    amount: HighPrecMoney
+    currency: Currency
+
+  CorporateInvoiceResp:
+    id: Id CorporateInvoice
+    invoiceNumber: Text
+    periodStart: UTCTime
+    periodEnd: UTCTime
+    totalTrips: Int
+    netAmount: HighPrecMoney
+    currency: Currency
+    status: CorporateInvoiceStatus
+    generatedAt: UTCTime
+    paidAt: Maybe UTCTime
+
+  CorporateAnalyticsResp:
+    totalEmployees: Int
+    activeEmployees: Int
+    totalTrips: Int
+    totalSpend: HighPrecMoney
+    currency: Currency
+    averageFarePerTrip: HighPrecMoney
+    onTimePercentage: Double
+
+apis:
+  - GET:
+      endpoint: /corporate/entity
+      auth: TokenAuth
+      response:
+        type: CorporateEntityResp
+
+  - GET:
+      endpoint: /corporate/employees
+      auth: TokenAuth
+      mandatoryQuery:
+        limit: Int
+        offset: Int
+      response:
+        type: "[CorporateEmployeeResp]"
+
+  - POST:
+      endpoint: /corporate/employees
+      auth: TokenAuth
+      request:
+        type: CreateEmployeeReq
+      response:
+        type: CorporateEmployeeResp
+
+  - POST:
+      endpoint: /corporate/employees/bulkUpload
+      auth: TokenAuth
+      request:
+        type: BulkUploadReq
+      response:
+        type: BulkUploadResp
+
+  - GET:
+      endpoint: /corporate/shifts
+      auth: TokenAuth
+      response:
+        type: "[CorporateShiftResp]"
+
+  - POST:
+      endpoint: /corporate/shifts
+      auth: TokenAuth
+      request:
+        type: CreateShiftReq
+      response:
+        type: CorporateShiftResp
+
+  - GET:
+      endpoint: /corporate/roster/{shiftId}/{date}
+      auth: TokenAuth
+      params:
+        shiftId: Id CorporateShift
+        date: Day
+      response:
+        type: "[CorporateRosterResp]"
+
+  - POST:
+      endpoint: /corporate/roster/{rosterId}/confirm
+      auth: TokenAuth
+      params:
+        rosterId: Id CorporateRoster
+      response:
+        type: APISuccess
+
+  - GET:
+      endpoint: /corporate/routes/{shiftId}
+      auth: TokenAuth
+      params:
+        shiftId: Id CorporateShift
+      response:
+        type: "[CorporateRouteResp]"
+
+  - POST:
+      endpoint: /corporate/routes/{shiftId}/optimize
+      auth: TokenAuth
+      params:
+        shiftId: Id CorporateShift
+      response:
+        type: OptimizeRoutesResp
+
+  - GET:
+      endpoint: /corporate/bookings
+      auth: TokenAuth
+      mandatoryQuery:
+        limit: Int
+        offset: Int
+      response:
+        type: "[CorporateBookingResp]"
+
+  - POST:
+      endpoint: /corporate/bookings/schedule
+      auth: TokenAuth
+      request:
+        type: ScheduleRidesReq
+      response:
+        type: ScheduleRidesResp
+
+  - GET:
+      endpoint: /corporate/wallet
+      auth: TokenAuth
+      response:
+        type: CorporateWalletResp
+
+  - POST:
+      endpoint: /corporate/wallet/topup
+      auth: TokenAuth
+      request:
+        type: TopUpWalletReq
+      response:
+        type: CorporateWalletResp
+
+  - GET:
+      endpoint: /corporate/invoices
+      auth: TokenAuth
+      response:
+        type: "[CorporateInvoiceResp]"
+
+  - GET:
+      endpoint: /corporate/analytics
+      auth: TokenAuth
+      response:
+        type: CorporateAnalyticsResp

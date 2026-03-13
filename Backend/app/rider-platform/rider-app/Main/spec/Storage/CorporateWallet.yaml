@@ -1,0 +1,49 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  CorporateEntity: Domain.Types.CorporateEntity
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+
+CorporateWallet:
+  tableName: corporate_wallet
+
+  fields:
+    id: Id CorporateWallet
+    corporateEntityId: Id CorporateEntity
+    balance: HighPrecMoney
+    currency: Currency
+    status: CorporateWalletStatus
+    graceStartedAt: Maybe UTCTime
+    lastTopUpAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    CorporateWalletStatus:
+      enum: "ACTIVE,GRACE_PERIOD,FROZEN,CLOSED"
+      derive': "HttpInstance"
+
+  constraints:
+    id: PrimaryKey
+    corporateEntityId: SecondaryKey
+
+  queries:
+    findByCorporateEntityId:
+      kvFunction: findOneWithKV
+      where:
+        corporateEntityId: corporateEntityId
+    updateBalance:
+      kvFunction: updateWithKV
+      params: [balance, lastTopUpAt, updatedAt]
+      where:
+        id: id
+    updateStatus:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where:
+        id: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE

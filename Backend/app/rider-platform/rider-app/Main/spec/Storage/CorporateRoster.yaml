@@ -1,0 +1,70 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  CorporateEntity: Domain.Types.CorporateEntity
+  CorporateEmployee: Domain.Types.CorporateEmployee
+  CorporateShift: Domain.Types.CorporateShift
+  CorporateRoute: Domain.Types.CorporateRoute
+  CorporateRouteStop: Domain.Types.CorporateRouteStop
+  Booking: Domain.Types.Booking
+  Day: Data.Time.Calendar
+
+CorporateRoster:
+  tableName: corporate_roster
+
+  fields:
+    id: Id CorporateRoster
+    corporateEntityId: Id CorporateEntity
+    corporateEmployeeId: Id CorporateEmployee
+    corporateShiftId: Id CorporateShift
+    corporateRouteId: Maybe (Id CorporateRoute)
+    corporateRouteStopId: Maybe (Id CorporateRouteStop)
+    rosterDate: Day
+    attendanceStatus: CorporateAttendanceStatus
+    bookingId: Maybe (Id Booking)
+    confirmedAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    CorporateAttendanceStatus:
+      enum: "SCHEDULED,CONFIRMED,ON_LEAVE,NO_SHOW,COMPLETED,CANCELLED"
+      derive': "HttpInstance"
+
+  constraints:
+    id: PrimaryKey
+    corporateEntityId: SecondaryKey
+    corporateEmployeeId: SecondaryKey
+    corporateShiftId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where:
+        id: id
+    findByCorporateEntityId:
+      kvFunction: findAllWithKV
+      where:
+        corporateEntityId: corporateEntityId
+    findByShiftIdAndDate:
+      kvFunction: findAllWithKV
+      where:
+        and: [corporateShiftId, rosterDate]
+    findByEmployeeIdAndDate:
+      kvFunction: findOneWithKV
+      where:
+        and: [corporateEmployeeId, rosterDate]
+    updateAttendanceStatus:
+      kvFunction: updateWithKV
+      params: [attendanceStatus, confirmedAt, updatedAt]
+      where:
+        id: id
+    updateBookingId:
+      kvFunction: updateWithKV
+      params: [bookingId, updatedAt]
+      where:
+        id: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE

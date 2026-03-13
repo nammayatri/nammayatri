@@ -1,0 +1,67 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  CorporateEntity: Domain.Types.CorporateEntity
+  Person: Domain.Types.Person
+  Gender: Domain.Types.Person
+
+CorporateEmployee:
+  tableName: corporate_employee
+
+  fields:
+    id: Id CorporateEmployee
+    corporateEntityId: Id CorporateEntity
+    personId: Maybe (Id Person)
+    employeeCode: Text
+    name: Text
+    email: Text
+    phone: Text
+    department: Text
+    costCenter: Maybe Text
+    gender: Gender|NoRelation
+    officeLocationId: Maybe Text
+    defaultPickupLat: Double
+    defaultPickupLon: Double
+    defaultPickupAddress: Text
+    reportingManagerEmail: Maybe Text
+    status: CorporateEmployeeStatus
+    linkedAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    CorporateEmployeeStatus:
+      enum: "ACTIVE,INACTIVE,ON_LEAVE,TERMINATED"
+      derive': "HttpInstance"
+
+  constraints:
+    id: PrimaryKey
+    corporateEntityId: SecondaryKey
+    personId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where:
+        id: id
+    findByCorporateEntityId:
+      kvFunction: findAllWithKV
+      where:
+        corporateEntityId: corporateEntityId
+    findByPersonId:
+      kvFunction: findOneWithKV
+      where:
+        personId: personId
+    findByPhoneAndEntity:
+      kvFunction: findOneWithKV
+      where:
+        and: [phone, corporateEntityId]
+    updateStatus:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where:
+        id: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE

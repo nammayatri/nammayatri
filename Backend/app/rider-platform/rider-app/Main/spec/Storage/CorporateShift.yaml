@@ -1,0 +1,50 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  CorporateEntity: Domain.Types.CorporateEntity
+  TimeOfDay: Data.Time
+
+CorporateShift:
+  tableName: corporate_shift
+
+  fields:
+    id: Id CorporateShift
+    corporateEntityId: Id CorporateEntity
+    merchantOperatingCityId: Id MerchantOperatingCity
+    name: Text
+    pickupWindowStart: TimeOfDay
+    pickupWindowEnd: TimeOfDay
+    dropWindowStart: TimeOfDay
+    dropWindowEnd: TimeOfDay
+    activeDays: Text
+    isNightShift: Bool
+    maxOccupancy: Int
+    allowedVehicleTiers: Text
+    confirmationDeadlineMinutes: Int
+    status: CorporateShiftStatus
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    CorporateShiftStatus:
+      enum: "ACTIVE,INACTIVE,ARCHIVED"
+      derive': "HttpInstance"
+
+  constraints:
+    id: PrimaryKey
+    corporateEntityId: SecondaryKey
+
+  queries:
+    findByCorporateEntityId:
+      kvFunction: findAllWithKV
+      where:
+        corporateEntityId: corporateEntityId
+    updateStatus:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where:
+        id: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE

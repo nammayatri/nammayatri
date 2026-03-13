@@ -1,0 +1,30 @@
+imports:
+  CorporateRoute: Domain.Types.CorporateRoute
+
+CorporateRouteStop:
+  tableName: corporate_route_stop
+
+  fields:
+    id: Id CorporateRouteStop
+    routeId: Id CorporateRoute
+    sequence: Int
+    lat: Double
+    lon: Double
+    address: Text
+    estimatedArrivalOffset: Int
+    createdAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    routeId: SecondaryKey
+
+  queries:
+    findByRouteId:
+      kvFunction: findAllWithKV
+      where:
+        routeId: routeId
+
+  excludedFields: [merchantId, merchantOperatingCityId, updatedAt]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
