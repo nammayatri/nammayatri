@@ -86,7 +86,6 @@ library
   ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
   build-depends:
       aeson
-    , async
     , base >=4.7 && <5
     , beam-core
     , beam-mysql
@@ -174,7 +173,6 @@ executable kafka-consumers-exe
   ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
   build-depends:
       aeson
-    , async
     , base >=4.7 && <5
     , beam-core
     , beam-mysql

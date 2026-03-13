@@ -1,11 +1,9 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Types.Communication (module Domain.Types.Communication, module ReExport) where
+module Domain.Types.Communication where
 
 import Data.Aeson
-import Domain.Types.Extra.Communication as ReExport
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person

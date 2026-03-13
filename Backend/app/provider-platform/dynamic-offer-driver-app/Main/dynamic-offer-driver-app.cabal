@@ -359,7 +359,6 @@ library
       Domain.Types.DriverLocation
       Domain.Types.DriverWallet
       Domain.Types.External.LiveEKD
-      Domain.Types.Extra.Communication
       Domain.Types.Extra.ConditionalCharges
       Domain.Types.Extra.DriverFee
       Domain.Types.Extra.DriverHomeLocation

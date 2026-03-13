@@ -241,16 +241,18 @@ MerchantMessage:
     merchantOperatingCityId: PrimaryKey
     messageKey: PrimaryKey
 
+  extraIndexes:
+    - columns: [merchantOperatingCityId, domain, channel]
+      unique: true
+    - columns: [merchantOperatingCityId, messageKey, vehicleCategory]
+      unique: true
+
   excludedDefaultQueries:
     - findByPrimaryKey
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
       where: merchantOperatingCityId
-    findByMerchantOpCityIdAndMessageKey:
-      kvFunction: findOneWithKV
-      where:
-        and: [merchantOperatingCityId, messageKey]
     findByMerchantOpCityIdAndMessageKeyVehicleCategory:
       kvFunction: findOneWithKV
       where:
