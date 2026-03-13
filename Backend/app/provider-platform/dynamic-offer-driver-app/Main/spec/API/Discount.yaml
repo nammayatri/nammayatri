@@ -1,0 +1,45 @@
+imports:
+  Discount: Domain.Types.Discount
+  DiscountTier: Domain.Types.DiscountTier
+  DiscountValueType: Domain.Types.DiscountTier
+  Language: Kernel.External.Types
+  VehicleCategory: Domain.Types.VehicleCategory
+  PaymentMode: Domain.Types.Plan
+  Plan: Domain.Types.Plan
+
+module: Discount
+
+types:
+  DiscountTierInfo:
+    tierOrder: Int
+    thresholdValue: Double
+    discountValue: Double
+    discountValueType: DiscountValueType
+    name: Text
+    description: Text
+  DiscountInfo:
+    discountId: Id Discount
+    discountType: Text
+    name: Text
+    description: Text
+    planId: Maybe (Id Plan)
+    vehicleCategory: Maybe VehicleCategory
+    paymentMode: Maybe PaymentMode
+    validFrom: Maybe UTCTime
+    validTo: Maybe UTCTime
+    tiers: "[DiscountTierInfo]"
+  GetDiscountsRes:
+    discounts: "[DiscountInfo]"
+
+apis:
+  - GET:
+      endpoint: /discount/list
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - language: Language
+        - discountType: Text
+        - planId: Id Plan
+        - vehicleCategory: VehicleCategory
+        - paymentMode: PaymentMode
+      response:
+        type: GetDiscountsRes
