@@ -275,6 +275,7 @@ types:
     rsm: [TransportRouteStopMapping]
     ptcv: Text
     eligiblePassIds: Maybe [Text]
+    vehicleServiceType: Maybe ServiceTierType
     derive': "Generic, ToSchema"
 
   UpdatePaymentOrderReq:
