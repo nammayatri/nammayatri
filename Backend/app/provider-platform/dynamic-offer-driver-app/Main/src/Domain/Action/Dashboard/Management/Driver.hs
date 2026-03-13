@@ -1227,7 +1227,9 @@ isAssociationBetweenTwoPerson requestedPersonDetails personDetails = do
   case (requestedPersonDetails.role, personDetails.role) of
     (DP.OPERATOR, DP.DRIVER) -> checkFleetDriverAndDriverOperatorAssociation personDetails.id requestedPersonDetails.id
     (DP.OPERATOR, DP.FLEET_OWNER) -> checkFleetOperatorAssociation personDetails.id requestedPersonDetails.id
+    (DP.OPERATOR, DP.OPERATOR) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
     (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id personDetails.id
+    (DP.FLEET_OWNER, DP.FLEET_OWNER) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
     (DP.ADMIN, _) -> return True
     _ -> return False
 

@@ -1095,10 +1095,17 @@ data UnlinkedVehicle = UnlinkedVehicle {vehicleNo :: Kernel.Prelude.Maybe Kernel
 data UpdateDriverReq = UpdateDriverReq
   { firstName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lastName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    mobileNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dob :: Kernel.Prelude.Maybe Data.Time.Day,
     email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    addressDocumentType :: Kernel.Prelude.Maybe AddressDocumentType
+    addressDocumentType :: Kernel.Prelude.Maybe AddressDocumentType,
+    fleetDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    stripeAddress :: Kernel.Prelude.Maybe Dashboard.Common.Driver.StripeAddress,
+    stripeIdNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fleetType :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetType
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

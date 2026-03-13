@@ -1489,10 +1489,17 @@ types:
   UpdateDriverReq:
     - firstName: Maybe Text
     - lastName: Maybe Text
+    - mobileNo: Maybe Text
+    - mobileCountryCode: Maybe Text
     - dob: Maybe Day
     - email: Maybe Text
     - address: Maybe Text
     - addressDocumentType: Maybe AddressDocumentType
+    - fleetDob: Maybe UTCTime
+    - stripeAddress: Maybe StripeAddress
+    - stripeIdNumber: Maybe Text
+    - fleetName: Maybe Text
+    - fleetType: Maybe FleetType
     - derive: "'HideSecrets"
   AddressDocumentType:
     enum: RationCard | UtilityBill | Passport
