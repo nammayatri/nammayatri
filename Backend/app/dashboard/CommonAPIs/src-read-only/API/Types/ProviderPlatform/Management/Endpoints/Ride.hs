@@ -362,7 +362,9 @@ data RideInfoRes = RideInfoRes
     paymentStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentReferenceInternal :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     walletTransactions :: [WalletTransactionItem],
-    invoiceIds :: [Kernel.Prelude.Text]
+    invoiceIds :: [Kernel.Prelude.Text],
+    badge :: [Kernel.Prelude.Text],
+    rating :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

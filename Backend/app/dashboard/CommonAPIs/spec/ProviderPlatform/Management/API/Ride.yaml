@@ -358,6 +358,8 @@ types:
     - paymentReferenceInternal: Maybe Text
     - walletTransactions: [WalletTransactionItem]
     - invoiceIds: [Text]
+    - badge: [Text]
+    - rating: Maybe Int
   StopInformation:
     - stopId: Text
     - stopLocId: Text
