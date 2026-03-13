@@ -44,8 +44,8 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
   _driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
 
   now <- getCurrentTime
-  let fromDate = fromMaybe (UTCTime (utctDay now) 0) mbFrom
-      toDate = fromMaybe now mbTo
+  let fromDate = mbFrom
+      toDate = mbTo <|> Just now
       limit = min 20 . fromMaybe 10 $ mbLimit
       offset = fromMaybe 0 mbOffset
 
@@ -61,16 +61,16 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
       QFinanceInvoiceExtra.findBySupplierAndType
         driverIdText
         (Just FinanceInvoice.Ride)
-        (Just fromDate)
-        (Just toDate)
+        fromDate
+        toDate
         (Just limit)
         (Just offset)
     _ ->
       QFinanceInvoiceExtra.findByIssuedToAndType
         driverIdText
         mbInvoiceType
-        (Just fromDate)
-        (Just toDate)
+        fromDate
+        toDate
         (Just limit)
         (Just offset)
 
