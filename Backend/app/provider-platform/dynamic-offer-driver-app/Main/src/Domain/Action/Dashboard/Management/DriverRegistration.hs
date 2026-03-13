@@ -31,6 +31,8 @@ module Domain.Action.Dashboard.Management.DriverRegistration
     postDriverRegistrationVerifyBankAccount,
     getDriverRegistrationInfoBankAccount,
     postDriverRegistrationDeleteBankAccount,
+    getDriverRegistrationDocumentsCommonList,
+    getDriverRegistrationCommonDocumentsList,
   )
 where
 
@@ -97,6 +99,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BusinessLicense as QBL
 import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDriverOnboardingDocuments
+import qualified Storage.Queries.CommonDriverOnboardingDocumentsExtra as QCommonDriverOnboardingDocumentsExtra
 import qualified Storage.Queries.DriverGstin as QGstin
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDL
@@ -251,6 +254,89 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
           createdAt = doc.createdAt,
           updatedAt = doc.updatedAt
         }
+
+getDriverRegistrationCommonDocumentsList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe [Common.DocumentType] ->
+  Maybe [Common.VerificationStatus] ->
+  Maybe [Id Common.Driver] ->
+  Maybe Text ->
+  Maybe Text ->
+  Flow Common.CommonDocumentsListRes
+getDriverRegistrationCommonDocumentsList merchantShortId opCity mbLimit mbOffset mbFrom mbTo mbDocTypes mbVerStatuses mbDriverIds mbSortByField mbSortOrder = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let mbPersonIds = fmap (map (cast @Common.Driver @DP.Person)) mbDriverIds
+      mbDomainDocTypes = fmap (map mapDocumentType) mbDocTypes
+      convertStatus = \case
+        Common.PENDING -> Documents.PENDING
+        Common.VALID -> Documents.VALID
+        Common.INVALID -> Documents.INVALID
+        Common.MANUAL_VERIFICATION_REQUIRED -> Documents.MANUAL_VERIFICATION_REQUIRED
+        Common.UNAUTHORIZED -> Documents.UNAUTHORIZED
+      mbDomainVerStatuses = fmap (map convertStatus) mbVerStatuses
+  let filters =
+        QCommonDriverOnboardingDocumentsExtra.CommonDocumentsFilter
+          { merchantId = merchant.id,
+            merchantOperatingCityId = merchantOpCityId,
+            driverIds = mbPersonIds,
+            documentTypes = mbDomainDocTypes,
+            verificationStatuses = mbDomainVerStatuses,
+            from = mbFrom,
+            to = mbTo,
+            limit = mbLimit,
+            offset = mbOffset,
+            sortByField = mbSortByField,
+            sortOrder = mbSortOrder
+          }
+  docs <- runInReplica $ QCommonDriverOnboardingDocumentsExtra.findAllForCommonDocuments filters
+  let documents = map toCommonDocumentListItem docs
+      summary =
+        Common.Summary
+          { totalCount = 20,
+            count = Kernel.Prelude.length documents
+          }
+  pure
+    Common.CommonDocumentsListRes
+      { summary = summary,
+        documents = documents
+      }
+  where
+    toCommonDocumentListItem :: DCommonDoc.CommonDriverOnboardingDocuments -> Common.CommonDocumentListItem
+    toCommonDocumentListItem doc =
+      Common.CommonDocumentListItem
+        { documentId = cast doc.id,
+          driverId = (.getId) <$> doc.driverId,
+          documentType = SDO.castDocumentType doc.documentType,
+          documentData = doc.documentData,
+          verificationStatus = DCommon.castVerificationStatus doc.verificationStatus,
+          rejectReason = doc.rejectReason,
+          documentImageId = (.getId) <$> doc.documentImageId,
+          createdAt = doc.createdAt,
+          updatedAt = doc.updatedAt
+        }
+
+-- Backwards-compatible name expected by generated API.Action module
+getDriverRegistrationDocumentsCommonList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe [Common.DocumentType] ->
+  Maybe [Common.VerificationStatus] ->
+  Maybe [Id Common.Driver] ->
+  Maybe Text ->
+  Maybe Text ->
+  Flow Common.CommonDocumentsListRes
+getDriverRegistrationDocumentsCommonList =
+  getDriverRegistrationCommonDocumentsList
 
 getDriverRegistrationGetDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Image -> Flow Common.GetDocumentResponse
 getDriverRegistrationGetDocument merchantShortId _ imageId = do

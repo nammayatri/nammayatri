@@ -19,6 +19,7 @@ import Kernel.Prelude (Generic)
 import Storage.Beam.Booking
 import Storage.Beam.BookingCancellationReason
 import Storage.Beam.CallStatus
+import Storage.Beam.CommonDriverOnboardingDocuments
 import Storage.Beam.DriverFee
 import Storage.Beam.DriverGoHomeRequest
 import Storage.Beam.DriverInformation
@@ -104,7 +105,8 @@ atlasDB =
         fleetOwnerInformation = fleetOwnerInformationTable,
         fleetBookingAssignments = fleetBookingAssignmentsTable,
         fleetBookingInformation = fleetBookingInformationTable,
-        fleetRcDailyStats = fleetRcDailyStatsTable
+        fleetRcDailyStats = fleetRcDailyStatsTable,
+        commonDriverOnboardingDocuments = commonDriverOnboardingDocumentsTable
       }
 
 data AtlasDB f = AtlasDB
@@ -149,6 +151,7 @@ data AtlasDB f = AtlasDB
     fleetOwnerInformation :: f (B.TableEntity FleetOwnerInformationT),
     fleetBookingAssignments :: f (B.TableEntity FleetBookingAssignmentsT),
     fleetBookingInformation :: f (B.TableEntity FleetBookingInformationT),
-    fleetRcDailyStats :: f (B.TableEntity FleetRcDailyStatsT)
+    fleetRcDailyStats :: f (B.TableEntity FleetRcDailyStatsT),
+    commonDriverOnboardingDocuments :: f (B.TableEntity CommonDriverOnboardingDocumentsT)
   }
   deriving (Generic, B.Database be)

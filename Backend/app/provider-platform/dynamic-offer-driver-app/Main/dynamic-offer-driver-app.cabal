@@ -653,6 +653,7 @@ library
       Storage.Queries.CallStatusExtra
       Storage.Queries.Coins.CoinHistory
       Storage.Queries.Coins.CoinsConfig
+      Storage.Queries.CommonDriverOnboardingDocumentsExtra
       Storage.Queries.CommunicationDeliveryExtra
       Storage.Queries.CommunicationExtra
       Storage.Queries.DailyStatsExtra
