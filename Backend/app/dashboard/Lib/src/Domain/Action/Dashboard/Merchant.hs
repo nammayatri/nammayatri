@@ -101,7 +101,7 @@ createMerchantWithAdmin tokenInfo req = do
   QMerchant.create merchant
   merchantAccess <- DPerson.buildMerchantAccess person.id merchant.id merchant.shortId tokenInfo.city
   QAccess.create merchantAccess
-  pure $ AP.makePersonAPIEntity decPerson role [merchant.shortId] (Just [DP.AvailableCitiesForMerchant {merchantShortId = merchant.shortId, operatingCity = [req.defaultOperatingCity]}])
+  pure $ AP.makePersonAPIEntity decPerson role [merchant.shortId] (Just [DP.AvailableCitiesForMerchant {merchantShortId = merchant.shortId, operatingCity = [req.defaultOperatingCity]}]) Nothing
 
 createMerchant ::
   (BeamFlow m r, EncFlow m r) =>

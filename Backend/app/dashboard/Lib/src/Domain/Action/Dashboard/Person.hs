@@ -218,7 +218,7 @@ createPerson _ personEntity = do
   role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
   person <- buildPerson personEntity (role.dashboardAccessType)
   decPerson <- decrypt person
-  let personAPIEntity = AP.makePersonAPIEntity decPerson role [] Nothing
+  let personAPIEntity = AP.makePersonAPIEntity decPerson role [] Nothing Nothing
   QP.create person
   return $ CreatePersonRes personAPIEntity
 
@@ -230,13 +230,15 @@ listPerson ::
   Maybe Integer ->
   Maybe (Id DP.Person) ->
   m ListPersonRes
-listPerson _ mbSearchString mbLimit mbOffset mbPersonId = do
+listPerson tokenInfo mbSearchString mbLimit mbOffset mbPersonId = do
   mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
   personAndRoleList <- B.runInReplica $ QP.findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset mbPersonId
   res <- forM personAndRoleList $ \(encPerson, role, merchantAccessList, merchantCityAccessList) -> do
     decPerson <- decrypt encPerson
+    mbRegToken <- QReg.findByPersonIdAndMerchantIdAndCity decPerson.id tokenInfo.merchantId tokenInfo.city
+    let enabled = (.enabled) <$> mbRegToken
     let availableCitiesForMerchant = makeAvailableCitiesForMerchant merchantAccessList merchantCityAccessList
-    pure $ DP.makePersonAPIEntity decPerson role (nub merchantAccessList) (Just availableCitiesForMerchant)
+    pure $ DP.makePersonAPIEntity decPerson role (nub merchantAccessList) (Just availableCitiesForMerchant) enabled
   let count = length res
   let summary = Summary {totalCount = 10000, count}
   pure $ ListPersonRes {list = res, summary = summary}
@@ -430,7 +432,7 @@ profile tokenInfo = do
       let sortedMerchantAccessList = sortOn DAccess.merchantId merchantAccessList'
       let groupedByMerchant = groupBy ((==) `on` DAccess.merchantId) sortedMerchantAccessList
       let merchantAccesslistWithCity = map (\group -> DP.AvailableCitiesForMerchant ((.merchantShortId) (head group)) (map (.operatingCity) group)) groupedByMerchant
-      pure $ DP.makePersonAPIEntity decPerson role (merchantAccesslistWithCity <&> (.merchantShortId)) (Just merchantAccesslistWithCity)
+      pure $ DP.makePersonAPIEntity decPerson role (merchantAccesslistWithCity <&> (.merchantShortId)) (Just merchantAccesslistWithCity) Nothing
 
 getCurrentMerchant ::
   BeamFlow m r =>
