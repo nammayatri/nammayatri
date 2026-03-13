@@ -72,12 +72,28 @@ This document captures all review feedback from independent reviewers and the ch
 
 ## Implementation Plan Review (Reviewer 3 - Architecture Perspective)
 
-*(Feedback incorporated from parallel review)*
+**Overall Rating**: 3.1/5
 
-### Key Technical Improvements
-- Use OpenTripPlanner for "Arrive By" reverse routing instead of building from scratch
-- Add rate limiting to schedule query APIs
-- Add circuit breaker for GTFS server calls
-- Use existing NammaDSL code generation patterns consistently
-- Add data quality monitoring pipeline from Phase 1
-- Reduce concurrency targets to realistic numbers
+### Critical Issues Found & Fixed
+
+| # | Feedback | Rating | Action |
+|---|----------|--------|--------|
+| I1 | Separate `/reachOnTime/*` API duplicates existing search flow | **2/5 API** | Merged into existing MultiModal.yaml and search flow |
+| I2 | `init` function signature change is breaking | **3/5 Patterns** | Added fields to JourneyInitData instead (non-breaking) |
+| I3 | Journey YAML not updated (only raw SQL) | **3/5 DB** | Added NammaDSL YAML changes for Journey fields |
+| I4 | `CustomDays` recurrence can't be persisted in VARCHAR | **3/5 DB** | Added `customDays` text column for JSON encoding |
+| I5 | Scheduler job in wrong directory | **3/5 Architecture** | Moved to `SharedLogic/Scheduler/Jobs/` |
+| I6 | IDOR vulnerability on saved trip endpoints | **3/5 Security** | Added riderId authorization check requirement |
+| I7 | No Beckn protocol integration for time constraints | **2/5 Missing** | Noted: time params must propagate through Beckn search |
+| I8 | `SavedTripConfig`/`TripRecurrence` don't belong in shared-kernel | **3/5 Architecture** | Moved to `Domain.Types` in rider-app |
+| I9 | Missing `fromTType`/`toTType` for `TimeOfDay` | **3/5 DB** | Added beam field transformers |
+| I10 | Existing `filterTransitRoutes` and leg time fields not leveraged | **4/5 Reuse** | Added reuse notes for existing infrastructure |
+| I11 | `findAllActiveRecurring` needs EXTRA_QUERY_FILE | **3/5 Patterns** | Added `extraOperations` to YAML |
+| I12 | Hardcoded IST timezone | **3/5 Quality** | Noted: use merchant city timezone |
+| I13 | Advisory cache (2min TTL) stales immediately | **3/5 Perf** | Cache route/schedule data, compute advisory on-the-fly |
+
+### Positive Feedback
+- "Good domain understanding and reasonable phasing"
+- "Excellent identification of reusable patterns"
+- "Feature flags properly separated"
+- "Pre-built ScheduleIndex with BTreeMap is the right data structure"

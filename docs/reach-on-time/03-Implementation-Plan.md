@@ -373,22 +373,32 @@ SavedTrip:
     createdAt: UTCTime
     updatedAt: UTCTime
 
+  # NOTE (per review): CustomDays needs a separate column for day list
+  # TimeOfDay needs fromTType/toTType transformers
+  extraFields:
+    customDays: Maybe Text  # JSON-encoded [DayOfWeek] for Custom recurrence
+
   types:
     TimeMode:
       enum: "LeaveNow, ArriveBy, DepartAt"
     TripRecurrence:
       enum: "NoRecurrence, Daily, Weekdays, Weekends, Custom"
 
+  beamFields:
+    targetTimeOfDay:
+      toTType: Kernel.Prelude.fmap Data.Time.timeToTimeOfDay
+      fromTType: Kernel.Prelude.fmap Data.Time.timeOfDayToTime
+
+  extraOperations:
+    - EXTRA_QUERY_FILE  # Needed for complex findAllActiveRecurring query
+
   queries:
     findAllByRiderId:
       kvFunction: findAllWithKV
       where:
         riderId: Id Person
-    findAllActiveRecurring:
-      kvFunction: findAllWithKV
-      where:
-        isActive: true
-        recurrence: "!= NoRecurrence"
+    # findAllActiveRecurring moved to Extra query file
+    # because NammaDSL may not support != operator
 ```
 
 **Migration**: `Backend/dev/migrations/rider-app/XXXX-add-saved-trip.sql`
@@ -435,106 +445,108 @@ ALTER TABLE atlas_app.journey ADD COLUMN risk_level VARCHAR(20);
 ALTER TABLE atlas_app.journey ADD COLUMN recommended_departure TIMESTAMP WITH TIME ZONE;
 ```
 
-#### 2.3.2 API Specification
+#### 2.3.2 API Design *(Revised per architecture review)*
 
-**New YAML Spec**: `Backend/app/rider-platform/rider-app/Main/spec/API/ReachOnTime.yaml`
+> **CRITICAL REVIEW FEEDBACK (Rated 2/5)**: Do NOT create a separate `/reachOnTime/*` API namespace.
+> Instead, extend the existing multimodal search and journey APIs. The existing `SearchRequest` already
+> has `startTime`/`returnTime` fields. Add `timeMode`, `targetTime`, `bufferMinutes` to the existing
+> search flow and `MultiModal.yaml`.
+
+**Extend existing YAML**: `Backend/app/rider-platform/rider-app/Main/spec/API/MultiModal.yaml`
 
 ```yaml
-imports:
-  Domain.Types.Journey: Journey
-  Domain.Types.SavedTrip: SavedTrip
-  Domain.Types.Person: Person
+# ADD to existing multimodal APIs:
 
-module: Domain.Action.UI.ReachOnTime
-
-apis:
-  # Time-aware search endpoint
-  - POST /reachOnTime/search:
-      auth: TokenAuth
-      request:
-        originLat: Double
-        originLon: Double
-        destinationLat: Double
-        destinationLon: Double
-        timeMode: TimeMode          # LeaveNow | ArriveBy | DepartAt
-        targetTime: Maybe UTCTime   # Required for ArriveBy/DepartAt
-        bufferMinutes: Maybe Int    # Optional buffer (default 10)
-        preferences: Maybe MultimodalUserPreferences
-      response:
-        searchId: Text
-        journeyOptions: "[JourneyOption]"
-
-  # Get departure advisory for a journey
-  - GET /reachOnTime/journey/{journeyId}/advisory:
+  # Departure advisory (extend existing journey info)
+  - GET /journey/{journeyId}/advisory:
       auth: TokenAuth
       response:
         advisory: DepartureAdvisory
         alternativeAdvisories: "[DepartureAdvisory]"
 
-  # Saved trips CRUD
-  - POST /reachOnTime/savedTrip:
+  # Saved trips CRUD (new section in MultiModal.yaml)
+  - POST /journey/savedTrip:
       auth: TokenAuth
       request: SavedTripCreateReq
       response:
         savedTripId: Id SavedTrip
 
-  - GET /reachOnTime/savedTrips:
+  - GET /journey/savedTrips:
       auth: TokenAuth
+      query:
+        limit: Maybe Int
+        offset: Maybe Int
       response:
         trips: "[SavedTripResp]"
+        total: Int
 
-  - PUT /reachOnTime/savedTrip/{savedTripId}:
+  - PUT /journey/savedTrip/{savedTripId}:
       auth: TokenAuth
       request: SavedTripUpdateReq
 
-  - DELETE /reachOnTime/savedTrip/{savedTripId}:
+  - DELETE /journey/savedTrip/{savedTripId}:
       auth: TokenAuth
 
-  # Compute departure for a saved trip (on-demand)
-  - POST /reachOnTime/savedTrip/{savedTripId}/compute:
+  - POST /journey/savedTrip/{savedTripId}/compute:
       auth: TokenAuth
       response:
         advisory: DepartureAdvisory
-        journeyOptions: "[JourneyOption]"
-
-  # Set notification preference for a trip
-  - POST /reachOnTime/savedTrip/{savedTripId}/notification:
-      auth: TokenAuth
-      request:
-        enabled: Bool
-        notifyBeforeMinutes: Maybe Int
+        journeyOptions: "[JourneyInfoResp]"  # Reuse existing type
 ```
+
+**Extend existing YAML**: `Backend/app/rider-platform/rider-app/Main/spec/Storage/SearchRequest.yaml`
+
+```yaml
+# ADD fields to existing SearchRequest:
+  timeMode: Maybe TimeMode           # LeaveNow | ArriveBy | DepartAt
+  targetArrivalTime: Maybe UTCTime   # For ArriveBy mode
+  targetDepartureTime: Maybe UTCTime # For DepartAt mode
+  bufferMinutes: Maybe Int           # Comfort buffer (default 10)
+```
+
+**Extend existing YAML**: `Backend/app/rider-platform/rider-app/Main/spec/Storage/MultiModal.yaml`
+
+```yaml
+# ADD fields to existing Journey section:
+  timeMode: Maybe TimeMode
+  targetArrivalTime: Maybe UTCTime
+  targetDepartureTime: Maybe UTCTime
+  bufferMinutes: Maybe Int
+  riskLevel: Maybe RiskLevel
+  recommendedDeparture: Maybe UTCTime
+```
+
+> **Security note (per review)**: All saved trip endpoints MUST verify `savedTrip.riderId == authenticatedPersonId`
+> to prevent IDOR vulnerabilities. Add authorization check in each handler.
 
 #### 2.3.3 Core Business Logic
 
-**New File**: `Backend/app/rider-platform/rider-app/Main/src/Domain/Action/UI/ReachOnTime.hs`
+**Extend existing file**: `Backend/app/rider-platform/rider-app/Main/src/Domain/Action/UI/MultimodalConfirm.hs`
+*(Per review: do NOT create a separate ReachOnTime.hs — integrate into existing multimodal flow)*
 
 ```haskell
-module Domain.Action.UI.ReachOnTime where
+-- ADD to existing MultimodalConfirm.hs:
 
--- Key functions:
+-- | Get departure advisory for a time-constrained journey
+getJourneyAdvisory
+  :: (Maybe (Id Person), Id Merchant)
+  -> Id Journey
+  -> Flow DepartureAdvisoryResp
+getJourneyAdvisory (mbPersonId, merchantId) journeyId = do
+  journey <- QJourney.findById journeyId >>= fromMaybeM (JourneyNotFound journeyId.getId)
+  legs <- QJourneyLeg.findAllByJourneyId journeyId
+  advisory <- computeDepartureAdvisory journey.timeMode journey.targetArrivalTime legs journey.bufferMinutes
+  pure $ DepartureAdvisoryResp advisory
+```
 
--- | Time-aware multimodal search
--- Extends existing search flow with time constraints
-postReachOnTimeSearch
-  :: (PersonId, MerchantId)
-  -> ReachOnTimeSearchReq
-  -> Flow ReachOnTimeSearchResp
-postReachOnTimeSearch (personId, merchantId) req = do
-  -- 1. Validate time constraints
-  validateTimeConstraint req.timeMode req.targetTime
-  -- 2. Get multimodal route options from Google Transit / OTP
-  --    Pass time constraint to transit API
-  multiModalRoutes <- getMultiModalRoutes req
-  -- 3. For each route option, compute departure advisory
-  journeyOptions <- forM multiModalRoutes $ \route -> do
-    advisory <- computeDepartureAdvisory req.timeMode req.targetTime route req.bufferMinutes
-    pure $ JourneyOption route advisory
-  -- 4. Rank and sort by relevance to time constraint
-  let ranked = rankByTimeConstraint req.timeMode journeyOptions
-  -- 5. Store search and return
-  searchId <- createReachOnTimeSearch personId req ranked
-  pure $ ReachOnTimeSearchResp searchId ranked
+**Extend existing search flow**: `Backend/app/rider-platform/rider-app/Main/src/Domain/Action/UI/Search.hs`
+
+```haskell
+-- In the existing search handler, add time constraint propagation:
+-- When searchRequest has timeMode == ArriveBy or DepartAt,
+-- pass the constraint to the multimodal route planner.
+-- This integrates naturally with the existing Beckn search flow
+-- for taxi legs (time constraint is passed via Beckn search params).
 ```
 
 **New File**: `Backend/app/rider-platform/rider-app/Main/src/SharedLogic/ReachOnTime/DepartureAdvisor.hs`
@@ -671,21 +683,35 @@ queryScheduledTransit timeMode origin destination time prefs = do
 Add time constraint propagation to existing journey module:
 
 ```haskell
--- Add to existing init function signature:
-init :: JourneyInitData
-     -> MultimodalUserPreferences
-     -> Maybe JourneyTimeConstraint  -- NEW parameter
-     -> m (Maybe Journey)
+-- IMPORTANT (per review): Do NOT change the init function signature
+-- (that would be a breaking change for all callers).
+-- Instead, add time constraint fields to JourneyInitData:
+
+-- In Lib/JourneyModule/Types.hs, extend JourneyInitData:
+data JourneyInitData = JourneyInitData
+  { -- ... existing fields ...
+  , timeMode :: Maybe TimeMode                -- NEW
+  , targetArrivalTime :: Maybe UTCTime        -- NEW
+  , targetDepartureTime :: Maybe UTCTime      -- NEW
+  , bufferMinutes :: Maybe Int                -- NEW
+  }
 
 -- Inside init:
 -- When time constraint is provided, filter legs by schedule availability
+-- Reuse existing filterTransitRoutes (Base.hs lines 104-138) with time param
+-- Leverage existing fromDepartureTime/toArrivalTime on JourneyLeg
 -- Compute departure advisory for the complete journey
 -- Store time constraint and advisory in Journey record
 ```
 
+> **Reuse note (per review)**: The existing `fromDepartureTime`, `toArrivalTime` fields
+> on `JourneyLeg` and the `filterTransitRoutes` function in `Base.hs` already do
+> primitive time-aware filtering. Extend these rather than building parallel logic.
+
 #### 2.3.4 Notification Scheduler
 
-**New File**: `Backend/app/rider-platform/rider-app/Scheduler/src/Schedulers/DepartureReminder.hs`
+**New File**: `Backend/app/rider-platform/rider-app/Main/src/SharedLogic/Scheduler/Jobs/DepartureReminder.hs`
+*(Per review: scheduler jobs go in SharedLogic/Scheduler/Jobs/, not Scheduler/src/Schedulers/)*
 
 ```haskell
 module Schedulers.DepartureReminder where
