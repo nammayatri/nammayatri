@@ -91,6 +91,17 @@ updateBPPBookingId rbId bppRbId = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
+updateBPPBookingIdAndProviderUrl :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Id BPPBooking -> Maybe BaseUrl -> m ()
+updateBPPBookingIdAndProviderUrl rbId bppRbId mbProviderUrl = do
+  now <- getCurrentTime
+  updateOneWithKV
+    ( [ Se.Set BeamB.bppBookingId (Just $ getId bppRbId),
+        Se.Set BeamB.updatedAt now
+      ]
+        <> maybe [] (\url -> [Se.Set BeamB.providerUrl (showBaseUrl url)]) mbProviderUrl
+    )
+    [Se.Is BeamB.id (Se.Eq $ getId rbId)]
+
 updateOtpCodeBookingId :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Text -> m ()
 updateOtpCodeBookingId rbId otp = do
   now <- getCurrentTime

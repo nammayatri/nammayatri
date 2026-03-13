@@ -158,6 +158,7 @@ data BookingDetails = BookingDetails
 data RideAssignedReq = RideAssignedReq
   { bookingDetails :: BookingDetails,
     transactionId :: Text,
+    bppUri :: Maybe BaseUrl,
     isDriverBirthDay :: Bool,
     vehicleAge :: Maybe Months,
     isFreeRide :: Bool,
@@ -186,6 +187,7 @@ data ValidatedRideAssignedReq = ValidatedRideAssignedReq
     onlinePaymentParameters :: Maybe OnlinePaymentParameters,
     previousRideEndPos :: Maybe LatLong,
     booking :: DRB.Booking,
+    bppUri :: Maybe BaseUrl,
     fareBreakups :: Maybe [DFareBreakup],
     driverTrackingUrl :: Maybe BaseUrl,
     isAlreadyFav :: Bool,
@@ -423,8 +425,8 @@ rideAssignedReqHandler ::
   m ()
 rideAssignedReqHandler req = do
   let BookingDetails {..} = req.bookingDetails
-  void $ QRB.updateBPPBookingId req.booking.id bppBookingId
-  let booking = req.booking {DRB.bppBookingId = Just bppBookingId}
+  void $ QRB.updateBPPBookingIdAndProviderUrl req.booking.id bppBookingId req.bppUri
+  let booking = req.booking {DRB.bppBookingId = Just bppBookingId, DRB.providerUrl = fromMaybe req.booking.providerUrl req.bppUri}
   mbMerchant <- CQM.findById booking.merchantId
   now <- getCurrentTime
   let rideStatus = case mbMerchant of
