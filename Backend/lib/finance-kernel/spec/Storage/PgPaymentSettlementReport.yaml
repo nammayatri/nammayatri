@@ -24,7 +24,7 @@ PgPaymentSettlementReport:
   types:
 
     TxnType:
-      enum: "ORDER,REFUND"
+      enum: "ORDER,REFUND,CHARGEBACK"
       derive: "ToParamSchema"
 
     TxnStatus:

@@ -37,6 +37,7 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.VehicleCategory as DVC
+import Kernel.External.Settlement.Types (SettlementSourceConfig (..))
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Id
@@ -86,6 +87,7 @@ data AllocatorJobType
   | ExpireSubscriptionPurchase
   | Reconciliation
   | ScheduledBatchPayout
+  | SettlementReportIngestion
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -133,6 +135,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SExpireSubscriptionPurchase jobData = AnyJobInfo <$> restoreJobInfo SExpireSubscriptionPurchase jobData
   restoreAnyJobInfo SReconciliation jobData = AnyJobInfo <$> restoreJobInfo SReconciliation jobData
   restoreAnyJobInfo SScheduledBatchPayout jobData = AnyJobInfo <$> restoreJobInfo SScheduledBatchPayout jobData
+  restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -518,3 +521,15 @@ data ScheduledBatchPayoutJobData = ScheduledBatchPayoutJobData
 instance JobInfoProcessor 'ScheduledBatchPayout
 
 type instance JobContent 'ScheduledBatchPayout = ScheduledBatchPayoutJobData
+
+data SettlementReportIngestionJobData = SettlementReportIngestionJobData
+  { settlementService :: Text,
+    merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    sourceConfig :: SettlementSourceConfig
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SettlementReportIngestion
+
+type instance JobContent 'SettlementReportIngestion = SettlementReportIngestionJobData

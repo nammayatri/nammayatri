@@ -58,6 +58,7 @@ dependencies:
   - record-hasfield
   - text
   - time
+  - bytestring
   - aeson
   - mtl
   - exceptions

@@ -1,0 +1,163 @@
+# Finance Kernel - PG Settlement Config Table
+# Namma-DSL YAML specification
+#
+# Purpose:
+#   One row per (merchant, merchantOperatingCity, paymentGateway) combination.
+#   Stores which source (SFTP / EMAIL) is used to ingest the PG settlement
+#   report and the credentials required to fetch from that source.
+#   The scheduler job reads this config to know where to pull settlement
+#   CSVs for each merchant-PG pair.
+
+imports:
+  UTCTime: Kernel.Prelude
+  EncryptedField: Kernel.External.Encryption
+  Encrypted: Kernel.External.Encryption
+  AsEncrypted: Kernel.External.Encryption
+
+PgSettlementConfig:
+  tableName: pg_settlement_config
+  derives: "Generic"
+
+  # ---------------------------------------------------------------------------
+  # Enums
+  # ---------------------------------------------------------------------------
+  types:
+
+    PaymentGateway:
+      enum: "HYPER_PG,BILL_DESK"
+      derive: "ToParamSchema"
+
+    SourceType:
+      enum: "EMAIL,SFTP"
+      derive: "ToParamSchema"
+
+    ReportType:
+      enum: "PAYMENT,PAYOUT"
+      derive: "ToParamSchema"
+
+    ConfigStatus:
+      enum: "ACTIVE,INACTIVE"
+      derive: "ToParamSchema"
+
+  # ---------------------------------------------------------------------------
+  # Fields
+  # ---------------------------------------------------------------------------
+  fields:
+    id: Id PgSettlementConfig
+
+    # --- Multi-tenancy ---
+    merchantId: Text
+    merchantOperatingCityId: Text
+
+    # --- PG identification ---
+    paymentGateway: PaymentGateway
+
+    # --- Report type: PAYMENT or PAYOUT ---
+    reportType: ReportType
+
+    # --- Source configuration ---
+    sourceType: SourceType
+
+    # --- SFTP credentials (populated when sourceType = SFTP) ---
+    sftpHost: Maybe Text
+    sftpPort: Maybe Int
+    sftpUsername: Maybe Text
+    sftpPassword: Maybe (EncryptedField 'AsEncrypted Text)
+    sftpRemotePath: Maybe Text
+    sftpFilePattern: Maybe Text                    # glob / regex to match the daily file, e.g. "metropol_*_YESAP*.csv"
+
+    # --- Email / IMAP credentials (populated when sourceType = EMAIL) ---
+    emailImapHost: Maybe Text
+    emailImapPort: Maybe Int
+    emailUsername: Maybe Text
+    emailPassword: Maybe (EncryptedField 'AsEncrypted Text)
+    emailFolderName: Maybe Text                    # e.g. "INBOX", "Settlement"
+    emailSubjectFilter: Maybe Text                 # e.g. "Settlement Report"
+
+    # --- Scheduling ---
+    ingestionEnabled: Bool                         # master toggle
+    scheduledHourUtc: Int                          # hour of day in UTC (0-23) when job should run
+    scheduledMinuteUtc: Int                        # minute of hour in UTC (0-59)
+
+    # --- Status & metadata ---
+    status: ConfigStatus
+    lastIngestionAt: Maybe UTCTime
+    lastIngestionStatus: Maybe Text                # "SUCCESS" | "FAILED" | error message
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  # ---------------------------------------------------------------------------
+  # DB-level type overrides
+  # ---------------------------------------------------------------------------
+  beamType:
+    sftpPassword: Maybe Text
+    emailPassword: Maybe Text
+
+  fromTType:
+    sftpPassword: Encrypted <$> sftpPassword|E
+    emailPassword: Encrypted <$> emailPassword|E
+
+  toTType:
+    sftpPassword:  sftpPassword <&> unEncrypted|E
+    emailPassword: emailPassword <&> unEncrypted|E
+
+  # ---------------------------------------------------------------------------
+  # Default values
+  # ---------------------------------------------------------------------------
+  default:
+    status: "'ACTIVE'"
+    ingestionEnabled: "true"
+    scheduledHourUtc: "3"
+    scheduledMinuteUtc: "0"
+
+  # ---------------------------------------------------------------------------
+  # Constraints / indexes
+  # ---------------------------------------------------------------------------
+  constraints:
+    id: PrimaryKey
+
+  # ---------------------------------------------------------------------------
+  # Generated queries
+  # ---------------------------------------------------------------------------
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByMerchantIdAndPaymentGatewayAndReportType:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, merchantOperatingCityId, paymentGateway, reportType]
+
+    findAllActiveByMerchantId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, ingestionEnabled, status]
+
+    findAllActiveByMerchantIdAndReportType:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, ingestionEnabled, status, reportType]
+
+    updateLastIngestion:
+      kvFunction: updateOneWithKV
+      params: [lastIngestionAt, lastIngestionStatus, updatedAt]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  # ---------------------------------------------------------------------------
+  # Finance kernel boilerplate
+  # ---------------------------------------------------------------------------
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PaymentGateway>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <PaymentGateway>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SourceType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <SourceType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <ReportType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <ReportType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <ConfigStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <ConfigStatus>
