@@ -41,6 +41,7 @@ mkPersist
       locationType Domain.SpecialLocationType Maybe
       priority Int
       enabled Bool
+      isOpenMarketEnabled Bool Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
@@ -63,5 +64,6 @@ instance FromTType SpecialLocationT Domain.SpecialLocation where
           locationType = fromMaybe Domain.Closed locationType,
           merchantId = Id <$> merchantId,
           merchantOperatingCityId = Id <$> merchantOperatingCityId,
+          isOpenMarketEnabled = fromMaybe True isOpenMarketEnabled,
           ..
         }
