@@ -36,6 +36,7 @@ buildOnStatusReqV2 ::
   m (Maybe DOnStatus.DOnStatusReq)
 buildOnStatusReqV2 req txnId = do
   ContextV2.validateContext Context.ON_STATUS req.onStatusReqContext
+  bppUri <- Utils.getContextBppUri req.onStatusReqContext
   handleErrorV2 req \message -> do
     let order = message.confirmReqMessageOrder
     messageId <- Utils.getMessageId req.onStatusReqContext
@@ -58,7 +59,11 @@ buildOnStatusReqV2 req txnId = do
         "ACTIVE" -> do
           case eventType of
             "RIDE_ASSIGNED" -> do
-              assignedReq <- Common.parseRideAssignedEvent order messageId txnId
+              assignedReq <- Common.parseRideAssignedEvent order messageId txnId bppUri
+              return $ DOnStatus.RideAssignedDetails assignedReq
+            "RIDE_CONFIRMED" -> do
+              -- ONDC v2.1.0: handle phased confirmation
+              assignedReq <- Common.parseRideAssignedEvent order messageId txnId bppUri
               return $ DOnStatus.RideAssignedDetails assignedReq
             "RIDE_ENROUTE_PICKUP" -> pure DOnStatus.RideEnroutePickupDetails
             "RIDE_ARRIVED_PICKUP" -> do
