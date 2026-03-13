@@ -184,6 +184,7 @@ library
       Domain.Action.Dashboard.Management.EntityInfo
       Domain.Action.Dashboard.Management.FeedbackForm
       Domain.Action.Dashboard.Management.FinanceManagement
+      Domain.Action.Dashboard.Management.KnowledgeCenter
       Domain.Action.Dashboard.Management.Media
       Domain.Action.Dashboard.Management.MediaFileDocument
       Domain.Action.Dashboard.Management.Merchant
@@ -491,6 +492,7 @@ library
       SharedLogic.IffcoTokioInsurance
       SharedLogic.KaalChakra.Actions
       SharedLogic.KaalChakra.Chakras
+      SharedLogic.KnowledgeCenter
       SharedLogic.LocationMapping
       SharedLogic.MediaFileDocument
       SharedLogic.Merchant
@@ -723,6 +725,7 @@ library
       Storage.Queries.InterCityTravelCities
       Storage.Queries.InvoiceExtra
       Storage.Queries.KioskLocationExtra
+      Storage.Queries.KnowledgeCenterExtra
       Storage.Queries.LocationExtra
       Storage.Queries.LocationMappingExtra
       Storage.Queries.MandateExtra
@@ -873,6 +876,7 @@ library
       API.Action.Dashboard.Management.EntityInfo
       API.Action.Dashboard.Management.FeedbackForm
       API.Action.Dashboard.Management.FinanceManagement
+      API.Action.Dashboard.Management.KnowledgeCenter
       API.Action.Dashboard.Management.Media
       API.Action.Dashboard.Management.MediaFileDocument
       API.Action.Dashboard.Management.Merchant
@@ -1108,6 +1112,7 @@ library
       Domain.Types.Invoice
       Domain.Types.KioskLocation
       Domain.Types.KioskLocationTranslation
+      Domain.Types.KnowledgeCenter
       Domain.Types.LeaderBoardConfigs
       Domain.Types.LlmPrompt
       Domain.Types.LmsCertificate
@@ -1281,6 +1286,7 @@ library
       Storage.Beam.Invoice
       Storage.Beam.KioskLocation
       Storage.Beam.KioskLocationTranslation
+      Storage.Beam.KnowledgeCenter
       Storage.Beam.LeaderBoardConfigs
       Storage.Beam.LlmPrompt
       Storage.Beam.LmsCertificate
@@ -1459,6 +1465,7 @@ library
       Storage.Queries.Invoice
       Storage.Queries.KioskLocation
       Storage.Queries.KioskLocationTranslation
+      Storage.Queries.KnowledgeCenter
       Storage.Queries.LeaderBoardConfigs
       Storage.Queries.LlmPrompt
       Storage.Queries.LmsCertificate
@@ -1537,6 +1544,7 @@ library
       Storage.Queries.OrphanInstances.Image
       Storage.Queries.OrphanInstances.Invoice
       Storage.Queries.OrphanInstances.KioskLocation
+      Storage.Queries.OrphanInstances.KnowledgeCenter
       Storage.Queries.OrphanInstances.Location
       Storage.Queries.OrphanInstances.LocationMapping
       Storage.Queries.OrphanInstances.Mandate

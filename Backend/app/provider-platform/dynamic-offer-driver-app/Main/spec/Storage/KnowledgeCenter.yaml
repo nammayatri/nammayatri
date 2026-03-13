@@ -1,0 +1,42 @@
+imports:
+  KnowledgeCenter: Domain.Types.KnowledgeCenter
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  FileType: AWS.S3.Types
+  UTCTime: Kernel.Prelude
+
+KnowledgeCenter:
+  tableName: knowledge_center
+  fields:
+    id: Id KnowledgeCenter
+    fileType: FileType
+    sopType: Text
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    s3Path: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  constraints:
+    id: PrimaryKey
+    sopType: SecondaryKey
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllBySopType:
+      kvFunction: findAllWithOptionsKV
+      where: sopType
+      orderBy:
+        field: createdAt
+        order: desc
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+    deleteBySopType:
+      kvFunction: deleteWithKV
+      where: sopType
+    updateSopTypeBySopType:
+      kvFunction: updateWithKV
+      params: [sopType, updatedAt]
+      where: sopType
+  extraOperations:
+    - EXTRA_QUERY_FILE
