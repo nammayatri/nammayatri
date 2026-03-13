@@ -32,6 +32,7 @@ data Pass = Pass
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     order :: Kernel.Prelude.Int,
+    passConfig :: Kernel.Prelude.Maybe Domain.Types.Pass.PassConfig,
     passTypeId :: Kernel.Types.Id.Id Domain.Types.PassType.PassType,
     purchaseEligibilityJsonLogic :: [Data.Aeson.Value],
     redeemEligibilityJsonLogic :: [Data.Aeson.Value],
@@ -46,6 +47,8 @@ data Benefit
   | FixedSaving Kernel.Types.Common.HighPrecMoney
   | PercentageSaving Kernel.Types.Common.HighPrecMoney
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data PassConfig = PassConfig {maxSwitchCount :: Kernel.Prelude.Int} deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data PassDocumentType = ProfilePicture | Aadhaar deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
