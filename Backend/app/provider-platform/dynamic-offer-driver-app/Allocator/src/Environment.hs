@@ -23,7 +23,7 @@ module Environment
   )
 where
 
-import AWS.S3
+import Storage
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import qualified Data.Map.Strict as MS
@@ -183,7 +183,7 @@ buildHandlerEnv HandlerCfg {..} = do
   dashboardClickhouseEnv <- createConn dashboardClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
   let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
-  let s3Env = buildS3Env s3Config
+  s3Env <- buildStorageEnvIO loggerEnv appCfg.storageServiceConfig
   let searchRequestExpirationSeconds' = fromIntegral appCfg.searchRequestExpirationSeconds
       serviceClickhouseCfg = driverClickhouseCfg
       searchRequestExpirationSecondsForMultimodal' = fromIntegral appCfg.searchRequestExpirationSecondsForMultimodal

@@ -33,6 +33,10 @@ library
       AWS.S3.SignatureAuth
       AWS.S3.Types
       AWS.S3.Utils
+      Storage
+      Storage.Flow
+      Storage.GCS.Flow
+      Storage.Types
   other-modules:
       Paths_beckn_services
   hs-source-dirs:
