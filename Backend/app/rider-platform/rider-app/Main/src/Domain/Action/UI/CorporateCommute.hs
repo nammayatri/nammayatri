@@ -202,17 +202,21 @@ createShift (_personId, merchantId) req = do
   entity <- listToMaybe entities & fromMaybeM (InvalidRequest "No corporate entity found for this merchant")
   newId <- generateGUID
   now <- getCurrentTime
-  let parseTOD t = fromMaybe (error "Invalid time format") (readMaybe (toString t))
+  let parseTOD t = readMaybe (toString t) & fromMaybeM (InvalidRequest $ "Invalid time format: " <> t)
+  pickupStart <- parseTOD req.pickupWindowStart
+  pickupEnd <- parseTOD req.pickupWindowEnd
+  dropStart <- parseTOD req.dropWindowStart
+  dropEnd <- parseTOD req.dropWindowEnd
   let shift =
         DCS.CorporateShift
           { id = newId,
             corporateEntityId = entity.id,
             merchantOperatingCityId = entity.merchantOperatingCityId,
             name = req.name,
-            pickupWindowStart = parseTOD req.pickupWindowStart,
-            pickupWindowEnd = parseTOD req.pickupWindowEnd,
-            dropWindowStart = parseTOD req.dropWindowStart,
-            dropWindowEnd = parseTOD req.dropWindowEnd,
+            pickupWindowStart = pickupStart,
+            pickupWindowEnd = pickupEnd,
+            dropWindowStart = dropStart,
+            dropWindowEnd = dropEnd,
             activeDays = req.activeDays,
             isNightShift = req.isNightShift,
             maxOccupancy = req.maxOccupancy,
@@ -255,7 +259,7 @@ confirmAttendance ::
   Id DCR.CorporateRoster ->
   m APISuccess.APISuccess
 confirmAttendance (_personId, _merchantId) rosterId = do
-  roster <- QCorporateRoster.findById rosterId >>= fromMaybeM (InvalidRequest "Roster entry not found")
+  _roster <- QCorporateRoster.findById rosterId >>= fromMaybeM (InvalidRequest "Roster entry not found")
   now <- getCurrentTime
   QCorporateRoster.updateAttendanceStatus DCR.CONFIRMED (Just now) now rosterId
   logInfo $ "Corporate Commute: confirmed attendance for roster " <> rosterId.getId

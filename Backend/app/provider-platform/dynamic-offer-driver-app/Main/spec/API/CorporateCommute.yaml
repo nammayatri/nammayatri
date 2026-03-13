@@ -1,0 +1,86 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+  CorporateShift: Domain.Types.CorporateShift
+  CorporateRoute: Domain.Types.CorporateRoute
+  CorporateRoster: Domain.Types.CorporateRoster
+  CorporateAttendanceStatus: Domain.Types.CorporateRoster
+  CorporateRouteDirection: Domain.Types.CorporateRoute
+  CorporateRouteStatus: Domain.Types.CorporateRoute
+  HighPrecMoney: Kernel.Types.Common
+  Day: Data.Time.Calendar
+
+module: CorporateCommute
+types:
+  CorporateShiftDriverResp:
+    id: Id CorporateShift
+    name: Text
+    pickupWindowStart: Text
+    pickupWindowEnd: Text
+    dropWindowStart: Text
+    dropWindowEnd: Text
+    vehicleTier: Text
+    isNightShift: Bool
+    maxOccupancy: Int
+
+  CorporateRouteDriverResp:
+    id: Id CorporateRoute
+    routeCode: Text
+    direction: CorporateRouteDirection
+    estimatedDurationMinutes: Int
+    estimatedDistanceMeters: Int
+    maxCapacity: Int
+    status: CorporateRouteStatus
+
+  CorporateRosterDriverResp:
+    id: Id CorporateRoster
+    rosterDate: Day
+    shiftName: Text
+    routeCode: Maybe Text
+    pickupTime: Text
+    attendanceStatus: CorporateAttendanceStatus
+
+  AcceptCorporateRideReq:
+    rosterId: Id CorporateRoster
+
+  CorporateEarningsSummary:
+    totalTrips: Int
+    totalEarnings: HighPrecMoney
+    periodStart: UTCTime
+    periodEnd: UTCTime
+
+apis:
+  - GET:
+      endpoint: /driver/corporate/shifts
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: "[CorporateShiftDriverResp]"
+
+  - GET:
+      endpoint: /driver/corporate/routes/{shiftId}
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        shiftId: Id CorporateShift
+      response:
+        type: "[CorporateRouteDriverResp]"
+
+  - GET:
+      endpoint: /driver/corporate/roster
+      auth: TokenAuth PROVIDER_TYPE
+      mandatoryQuery:
+        date: Day
+      response:
+        type: "[CorporateRosterDriverResp]"
+
+  - POST:
+      endpoint: /driver/corporate/ride/accept
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: AcceptCorporateRideReq
+      response:
+        type: APISuccess
+
+  - GET:
+      endpoint: /driver/corporate/earnings
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: CorporateEarningsSummary
