@@ -222,7 +222,8 @@ data LegStatus = LegStatus
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LiveVehicleInfo = LiveVehicleInfo
-  { currentTripNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+  { currentTripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    currentTripNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA],
     locationUTCTimestamp :: Kernel.Prelude.UTCTime,
     number :: Kernel.Prelude.Text,
@@ -318,7 +319,7 @@ data RouteAvailabilityReq = RouteAvailabilityReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RouteAvailabilityResp = RouteAvailabilityResp {availableRoutes :: [AvailableRoute], userBookedTripNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Int}
+data RouteAvailabilityResp = RouteAvailabilityResp {availableRoutes :: [AvailableRoute], userBookedTripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text, userBookedTripNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

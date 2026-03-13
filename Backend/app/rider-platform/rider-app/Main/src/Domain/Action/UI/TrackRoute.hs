@@ -79,21 +79,24 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
   let oneFromEachRemaining :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] = filter (\(st, _) -> not $ st `elem` alreadySelectedServiceTiers) . M.toList $ M.fromList serviceTiersOfRemainingBuses
   let allBuses :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] = serviceTiersOfSelectedBuses <> oneFromEachRemaining
 
-  userBookedTripNumber <- getUserBookedTripNumber mbJourneyId routeCode
+  (userBookedTripNumber, userBookedTripId) <- getUserBookedTripInfo mbJourneyId routeCode
 
   vehicleTrackingInfoWithSubTypes <- forM allBuses $ \(mbServiceTier, (actualRouteCode, vt@VehicleTracking {..})) -> do
     mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [integratedBPPConfig] vehicleId
-    currentTripNumber <-
+    (currentTripNumber, currentTripId) <-
       if mbServiceTier == Just Spec.PREMIUM
-        then (>>= (.tripNumber)) <$> JMU.getLiveRouteInfo integratedBPPConfig vehicleId actualRouteCode
-        else pure Nothing
-    let resp = mkVehicleTrackingResponse mbServiceTier mbServiceSubTypes currentTripNumber (actualRouteCode, vt)
+        then do
+          mbLiveInfo <- JMU.getLiveRouteInfo integratedBPPConfig vehicleId actualRouteCode
+          pure (mbLiveInfo >>= (.tripNumber), buildTripId mbLiveInfo)
+        else pure (Nothing, Nothing)
+    let resp = mkVehicleTrackingResponse mbServiceTier mbServiceSubTypes currentTripNumber currentTripId (actualRouteCode, vt)
     pure resp
 
   pure $
     TrackRoute.TrackingResp
       { vehicleTrackingInfo = vehicleTrackingInfoWithSubTypes,
-        userBookedTripNumber = userBookedTripNumber
+        userBookedTripNumber = userBookedTripNumber,
+        userBookedTripId = userBookedTripId
       }
   where
     filterVehiclesYetToReachSelectedStop vehicleTracking =
@@ -101,7 +104,7 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
         Just selectedStopId -> filter (\(_, vt) -> any (\u -> u.stopCode == selectedStopId) vt.upcomingStops) vehicleTracking
         Nothing -> vehicleTracking
 
-    mkVehicleTrackingResponse serviceTierType mbServiceSubTypes currentTripNum (actualRouteCode, VehicleTracking {..}) =
+    mkVehicleTrackingResponse serviceTierType mbServiceSubTypes currentTripNum currentTripId' (actualRouteCode, VehicleTracking {..}) =
       TrackRoute.VehicleTrackingInfo
         { vehicleId = vehicleId,
           nextStop = nextStop,
@@ -117,7 +120,8 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
           routeCode = actualRouteCode,
           routeShortName = routeShortName,
           serviceTierType = serviceTierType,
-          currentTripNumber = currentTripNum
+          currentTripNumber = currentTripNum,
+          currentTripId = currentTripId'
         }
 
     mkVehicleInfo mbServiceSubTypes VehicleInfo {..} = TrackRoute.VehicleInfoForRoute {serviceSubTypes = mbServiceSubTypes, ..}
@@ -132,24 +136,36 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
       DIBC.ONDC DIBC.ONDCBecknConfig {routeBasedVehicleTracking} -> fromMaybe False routeBasedVehicleTracking
       _ -> False
 
-getUserBookedTripNumber ::
+getUserBookedTripInfo ::
   Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey) ->
   Text ->
-  Environment.Flow (Maybe Int)
-getUserBookedTripNumber mbJourneyId targetRouteCode = do
+  Environment.Flow (Maybe Int, Maybe Text)
+getUserBookedTripInfo mbJourneyId targetRouteCode = do
   case mbJourneyId of
-    Nothing -> pure Nothing
+    Nothing -> pure (Nothing, Nothing)
     Just journeyId -> do
       legs <- QJourneyLeg.getJourneyLegs journeyId
       let matchingLeg = List.find (\leg -> any (\rd -> rd.routeCode == Just targetRouteCode) leg.routeDetails) legs
       case matchingLeg >>= (.legSearchId) of
-        Nothing -> pure Nothing
+        Nothing -> pure (Nothing, Nothing)
         Just searchId -> do
           mbBooking <- QFRFSTicketBooking.findBySearchId (Kernel.Types.Id.Id searchId)
-          pure $ mbBooking >>= (.tripId) >>= parseTripNumberFromTripId
+          let mbPremiumTripId = do
+                booking <- mbBooking
+                guard (booking.serviceTierType == Just Spec.PREMIUM)
+                booking.tripId
+              mbTripNumber = mbPremiumTripId >>= parseTripNumberFromTripId
+          pure (mbTripNumber, mbPremiumTripId)
 
 parseTripNumberFromTripId :: Text -> Maybe Int
 parseTripNumberFromTripId tripId' =
   case reverse (T.splitOn "-" tripId') of
     (lastPart : _) -> readMaybe (T.unpack lastPart)
     _ -> Nothing
+
+buildTripId :: Maybe JMU.VehicleLiveRouteInfo -> Maybe Text
+buildTripId mbLiveInfo = do
+  lri <- mbLiveInfo
+  waybill <- lri.waybillId
+  tNum <- lri.tripNumber
+  pure $ waybill <> "-" <> show tNum

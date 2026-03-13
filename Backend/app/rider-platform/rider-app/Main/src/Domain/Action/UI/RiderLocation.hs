@@ -87,12 +87,19 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
               distanceToBus = realToFrac $ Kernel.Utils.CalculateDistance.distanceBetweenInMeters riderLocation busLocation
               busNumber = fromMaybe "UNKNOWN" busData.vehicle_number
           mbServiceTier <- JMU.getVehicleServiceTypeFromInMem [integratedBPPConfig'] busNumber
-          currentTripNum <-
+          (currentTripNum, currentTripId') <-
             if mbServiceTier == Just Spec.PREMIUM
               then do
                 mbLiveRouteInfo <- JMU.getVehicleLiveRouteInfo [integratedBPPConfig'] busNumber Nothing
-                pure $ (snd <$> mbLiveRouteInfo) >>= (.tripNumber)
-              else pure Nothing
+                let mbLri = snd <$> mbLiveRouteInfo
+                    tripNum = mbLri >>= (.tripNumber)
+                    tripId' = do
+                      lri <- mbLri
+                      waybill <- lri.waybillId
+                      tNum <- lri.tripNumber
+                      pure $ waybill <> "-" <> show tNum
+                pure (tripNum, tripId')
+              else pure (Nothing, Nothing)
           locationId <- generateGUID
           pure $
             Just
@@ -104,7 +111,8 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
                   customerLocation = riderLocation,
                   customerLocationTimestamp = Just now,
                   locationAccuracy = req.locationAccuracy,
-                  currentTripNumber = currentTripNum
+                  currentTripNumber = currentTripNum,
+                  currentTripId = currentTripId'
                 }
 
     nearbyBusKey :: Maybe Text -> Text

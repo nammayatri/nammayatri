@@ -31,6 +31,7 @@ types:
       shortName: Maybe Text
       bearing: Maybe Int
       currentTripNumber: Maybe Int
+      currentTripId: Maybe Text
 
   RecentRide:
       fromStopCode: Text

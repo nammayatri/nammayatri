@@ -313,6 +313,7 @@ types:
   RouteAvailabilityResp:
     availableRoutes: "[AvailableRoute]"
     userBookedTripNumber: Maybe Int
+    userBookedTripId: Maybe Text
 
   RouteStopMapping:
     code: Text
@@ -342,6 +343,7 @@ types:
     position: LatLong
     serviceSubTypes: "Maybe [ServiceSubType]"
     currentTripNumber: Maybe Int
+    currentTripId: Maybe Text
 
   AlternateRouteDetails:
     routeCode: Text

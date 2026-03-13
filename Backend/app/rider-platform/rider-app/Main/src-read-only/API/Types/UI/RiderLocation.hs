@@ -13,6 +13,7 @@ import Tools.Auth
 
 data BusLocation = BusLocation
   { busNumber :: Data.Text.Text,
+    currentTripId :: Kernel.Prelude.Maybe Data.Text.Text,
     currentTripNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     customerLocation :: Kernel.External.Maps.Types.LatLong,
     customerLocationTimestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

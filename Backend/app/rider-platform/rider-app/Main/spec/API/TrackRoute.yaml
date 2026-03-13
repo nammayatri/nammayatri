@@ -18,6 +18,7 @@ types:
   TrackingResp:
     vehicleTrackingInfo: "[VehicleTrackingInfo]"
     userBookedTripNumber: Maybe Int
+    userBookedTripId: Maybe Text
 
   VehicleInfoForRoute:
     startTime: Maybe UTCTime
@@ -45,6 +46,7 @@ types:
     routeShortName: Maybe Text
     serviceTierType: Maybe ServiceTierType
     currentTripNumber: Maybe Int
+    currentTripId: Maybe Text
 
 apis:
   - GET:

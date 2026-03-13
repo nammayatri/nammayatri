@@ -1885,10 +1885,18 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                 mapConcurrently
                   (JMRouteServiceability.enrichBusStopETA ctx.integratedBPPConfig)
                   (fromMaybe [] singleBus.busData.eta_data)
-              currentTripNum <-
+              (currentTripNum, currentTripId') <-
                 if serviceTier == Spec.PREMIUM
-                  then (>>= (.tripNumber)) <$> JMU.getLiveRouteInfo ctx.integratedBPPConfig vno routeId
-                  else pure Nothing
+                  then do
+                    mbLiveInfo <- JMU.getLiveRouteInfo ctx.integratedBPPConfig vno routeId
+                    let tripNum = mbLiveInfo >>= (.tripNumber)
+                        tripId' = do
+                          lri <- mbLiveInfo
+                          wb <- lri.waybillId
+                          tn <- lri.tripNumber
+                          pure $ wb <> "-" <> show tn
+                    pure (tripNum, tripId')
+                  else pure (Nothing, Nothing)
               let vehicleInfo =
                     API.Types.UI.MultimodalConfirm.LiveVehicleInfo
                       { eta = Just enrichedEta,
@@ -1898,7 +1906,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                         serviceTierType = serviceTier,
                         serviceTierName = (.shortName) <$> frfsServiceTier,
                         serviceSubTypes = mbServiceSubTypes,
-                        currentTripNumber = currentTripNum
+                        currentTripNumber = currentTripNum,
+                        currentTripId = currentTripId'
                       }
               pure $
                 ApiTypes.RouteServiceabilityResp
@@ -2281,7 +2290,7 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
   -- Get rider config to check source of service tier
   mbSourceOfServiceTier <- fmap (.sourceOfServiceTier) <$> QRiderConfig.findByMerchantOperatingCityId person.merchantOperatingCityId
 
-  (frfsQuotesAndCategories, userBookedTripNumber) <-
+  (frfsQuotesAndCategories, userBookedTripNumber, userBookedTripId) <-
     case (req.journeyId, req.legOrder) of
       (Just journeyId, Just legOrder) -> do
         journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
@@ -2293,23 +2302,23 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
                 return (quote, quoteCategories)
             )
             quotes
-        -- Look up userBookedTripNumber from the booking (only for PREMIUM)
-        bookedTripNum <- case journeyLeg.legSearchId of
+        -- Look up userBookedTripNumber and tripId from the booking (only for PREMIUM)
+        (bookedTripNum, bookedTripId) <- case journeyLeg.legSearchId of
           Just searchId -> do
             mbBooking <- QFRFSTicketBooking.findBySearchId (Id searchId)
-            pure $ do
-              booking <- mbBooking
-              guard (booking.serviceTierType == Just Spec.PREMIUM)
-              tripId' <- booking.tripId
-              parseTripNumberFromTripId tripId'
-          Nothing -> pure Nothing
-        return (qcs, bookedTripNum)
-      _ -> pure ([], Nothing)
+            let mbPremiumTripId = do
+                  booking <- mbBooking
+                  guard (booking.serviceTierType == Just Spec.PREMIUM)
+                  booking.tripId
+            pure (mbPremiumTripId >>= parseTripNumberFromTripId, mbPremiumTripId)
+          Nothing -> pure (Nothing, Nothing)
+        return (qcs, bookedTripNum, bookedTripId)
+      _ -> pure ([], Nothing, Nothing)
   let frfsQuotes = fst <$> frfsQuotesAndCategories
 
   let availableServiceTiers = if null frfsQuotes then Nothing else Just (mapMaybe (\(quote, quoteCategories) -> JMU.getServiceTierFromQuote quoteCategories quote) frfsQuotesAndCategories)
   case integratedBPPConfigs of
-    [] -> return $ ApiTypes.RouteAvailabilityResp {availableRoutes = [], userBookedTripNumber = Nothing}
+    [] -> return $ ApiTypes.RouteAvailabilityResp {availableRoutes = [], userBookedTripNumber = Nothing, userBookedTripId = Nothing}
     (integratedBPPConfig : _) -> do
       (_, availableRoutesByTier, _) <-
         JMU.findPossibleRoutes
@@ -2336,10 +2345,10 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
       case mbSourceOfServiceTier of
         Just DRC.QUOTES -> do
           availableRoutes <- concatMapM (convertToAvailableRouteWithQuotes integratedBPPConfig person frfsQuotes) filteredRoutes
-          return $ ApiTypes.RouteAvailabilityResp {availableRoutes = availableRoutes, userBookedTripNumber}
+          return $ ApiTypes.RouteAvailabilityResp {availableRoutes = availableRoutes, userBookedTripNumber, userBookedTripId}
         _ -> do
           availableRoutes <- concatMapM (convertToAvailableRoute integratedBPPConfig person) filteredRoutes
-          return $ ApiTypes.RouteAvailabilityResp {availableRoutes = availableRoutes, userBookedTripNumber}
+          return $ ApiTypes.RouteAvailabilityResp {availableRoutes = availableRoutes, userBookedTripNumber, userBookedTripId}
   where
     parseTripNumberFromTripId :: Text -> Maybe Int
     parseTripNumberFromTripId tripId' =

@@ -14,7 +14,7 @@ import qualified SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.Merchant.MultiModalBus
 import Tools.Auth
 
-data TrackingResp = TrackingResp {userBookedTripNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Int, vehicleTrackingInfo :: [VehicleTrackingInfo]}
+data TrackingResp = TrackingResp {userBookedTripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text, userBookedTripNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Int, vehicleTrackingInfo :: [VehicleTrackingInfo]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -35,7 +35,8 @@ data VehicleInfoForRoute = VehicleInfoForRoute
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data VehicleTrackingInfo = VehicleTrackingInfo
-  { currentTripNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+  { currentTripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    currentTripNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     delay :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     nextStop :: Kernel.Prelude.Maybe Domain.Types.RouteStopMapping.RouteStopMapping,
     nextStopTravelDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
