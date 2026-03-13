@@ -24,7 +24,7 @@ import qualified API.Types.ProviderPlatform.Management.Endpoints.DriverRegistrat
 import Control.Applicative ((<|>))
 import qualified Data.List as DL
 import qualified Data.Text as T
-import Data.Time hiding (getCurrentTime)
+import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Time.Calendar.OrdinalDate as TO
 import qualified Domain.Types as DVST
 import qualified Domain.Types.DocumentVerificationConfig
@@ -573,6 +573,10 @@ convertTextToDay a = do
 
 convertUTCTimetoDate :: UTCTime -> Text
 convertUTCTimetoDate utctime = T.pack (formatTime defaultTimeLocale "%d/%m/%Y" utctime)
+
+-- | Parse a date string in "YYYY-MM-DD" format into a UTCTime (midnight UTC).
+parseDateTime :: Text -> Maybe UTCTime
+parseDateTime = parseTimeM True defaultTimeLocale "%Y-%m-%d" . T.unpack
 
 data VerificationReqRecord = VerificationReqRecord
   { airConditioned :: Maybe Bool,

@@ -1,11 +1,11 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.Dashboard.Management
-  ( API,
-    handler,
-  )
-where
 
+module API.Action.Dashboard.Management
+( API,
+handler )
+where
+import Servant
 import qualified API.Action.Dashboard.Management.Account
 import qualified API.Action.Dashboard.Management.Booking
 import qualified API.Action.Dashboard.Management.CoinsConfig
@@ -36,7 +36,8 @@ import qualified Domain.Types.Merchant
 import qualified Environment
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import Servant
+
+
 
 type API = (API.Action.Dashboard.Management.Account.API :<|> API.Action.Dashboard.Management.Booking.API :<|> API.Action.Dashboard.Management.CoinsConfig.API :<|> API.Action.Dashboard.Management.Communication.API :<|> API.Action.Dashboard.Management.DomainDiscountConfig.API :<|> API.Action.Dashboard.Management.Driver.API :<|> API.Action.Dashboard.Management.DriverCoins.API :<|> API.Action.Dashboard.Management.DriverGoHome.API :<|> API.Action.Dashboard.Management.DriverReferral.API :<|> API.Action.Dashboard.Management.DriverRegistration.API :<|> API.Action.Dashboard.Management.EntityInfo.API :<|> API.Action.Dashboard.Management.FeedbackForm.API :<|> API.Action.Dashboard.Management.FinanceManagement.API :<|> API.Action.Dashboard.Management.Media.API :<|> API.Action.Dashboard.Management.MediaFileDocument.API :<|> API.Action.Dashboard.Management.Merchant.API :<|> API.Action.Dashboard.Management.Message.API :<|> API.Action.Dashboard.Management.NammaTag.API :<|> API.Action.Dashboard.Management.Payout.API :<|> API.Action.Dashboard.Management.PlanManagement.API :<|> API.Action.Dashboard.Management.Revenue.API :<|> API.Action.Dashboard.Management.Ride.API :<|> API.Action.Dashboard.Management.SosMedia.API :<|> API.Action.Dashboard.Management.System.API :<|> API.Action.Dashboard.Management.VehicleInfo.API :<|> API.Action.Dashboard.Management.Volunteer.API)
 
