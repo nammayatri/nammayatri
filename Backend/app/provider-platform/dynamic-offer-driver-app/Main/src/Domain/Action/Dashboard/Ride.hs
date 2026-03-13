@@ -86,6 +86,7 @@ import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.DriverQuote as DQ
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.FareParameters as SQFP
+import qualified Storage.Queries.Feedback as QFeedback
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QP
@@ -580,13 +581,17 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
             tdsR,
             tdsAmt,
             netPayable,
-            Nothing, -- paymentMode: NA for now
+            (T.pack . show) <$> booking.paymentMode,
             payStatus,
             payRef,
             walletTxns,
             invoiceNums
           )
       else pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, [], [])
+
+  feedbacks <- runInReplica $ QFeedback.findFeedbackFromRatings [ride.id]
+  let mbFeedback = listToMaybe feedbacks
+
   pure
     Common.RideInfoRes
       { rideId = cast @DRide.Ride @Common.Ride ride.id,
@@ -672,7 +677,9 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
         paymentStatus,
         paymentReferenceInternal,
         walletTransactions,
-        invoiceIds
+        invoiceIds,
+        badge = map (.badge) feedbacks,
+        rating = mbFeedback >>= (.rating)
       }
 
 mkStopInformation :: DSI.StopInformation -> Common.StopInformation
