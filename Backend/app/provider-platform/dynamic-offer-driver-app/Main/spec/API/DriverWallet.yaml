@@ -30,7 +30,7 @@ types:
     deductions: WalletItemGroup
   TopUpRequest:
     amount: HighPrecMoney
-    derive: "'HideSecrets"
+    purpose: Maybe Text  # Optional. Use "airport" for airport entry fee recharge; omit for general wallet topup.
   PayoutHistoryItem:
     amount: Maybe HighPrecMoney
     payoutFee: HighPrecMoney

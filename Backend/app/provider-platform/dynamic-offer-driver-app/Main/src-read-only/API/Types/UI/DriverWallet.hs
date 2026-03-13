@@ -7,7 +7,6 @@ import qualified Data.Time
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Kernel.Types.HideSecrets
 import qualified Lib.Payment.Domain.Types.Common
 import qualified Lib.Payment.Domain.Types.PayoutRequest
 import Servant
@@ -34,12 +33,9 @@ data PayoutHistoryResponse = PayoutHistoryResponse
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TopUpRequest = TopUpRequest {amount :: Kernel.Types.Common.HighPrecMoney}
+data TopUpRequest = TopUpRequest {amount :: Kernel.Types.Common.HighPrecMoney, purpose :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance Kernel.Types.HideSecrets.HideSecrets TopUpRequest where
-  hideSecrets = Kernel.Prelude.identity
 
 data WalletItem = WalletItem
   { itemName :: Kernel.Prelude.Text,
