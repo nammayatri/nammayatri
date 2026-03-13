@@ -156,8 +156,8 @@ parseBookingDetails order msgId = do
         ..
       }
 
-parseRideAssignedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> Text -> m Common.RideAssignedReq
-parseRideAssignedEvent order msgId txnId = do
+parseRideAssignedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> Text -> Maybe BaseUrl -> m Common.RideAssignedReq
+parseRideAssignedEvent order msgId txnId bppUri = do
   let tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
   let tagGroupsFullfillment = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
   let isDriverBirthDay = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_DRIVER_BIRTHDAY tagGroups
@@ -177,6 +177,7 @@ parseRideAssignedEvent order msgId txnId = do
     Common.RideAssignedReq
       { bookingDetails = bookingDetails{driverAlternatePhoneNumber = driverAlternateNumber},
         transactionId = txnId,
+        bppUri = bppUri,
         ..
       }
 

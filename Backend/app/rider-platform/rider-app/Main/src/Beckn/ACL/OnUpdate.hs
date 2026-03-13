@@ -45,8 +45,9 @@ buildOnUpdateReqV2 req = do
   ContextV2.validateContext Context.ON_UPDATE $ req.onUpdateReqContext
   transactionId <- Utils.getTransactionId req.onUpdateReqContext
   messageId <- Utils.getMessageId req.onUpdateReqContext
+  bppUri <- Utils.getContextBppUri req.onUpdateReqContext
   handleErrorV2 req messageId $ \message -> do
-    parseEventV2 transactionId messageId message.confirmReqMessageOrder
+    parseEventV2 transactionId messageId bppUri message.confirmReqMessageOrder
 
 handleErrorV2 ::
   (MonadFlow m) =>
@@ -68,8 +69,8 @@ handleErrorV2 req messageId action = do
         logTagError "on_update req" "on_update message object is not present without any error."
         pure Nothing
 
-parseEventV2 :: (MonadFlow m, CacheFlow m r) => Text -> Text -> Spec.Order -> m DOnUpdate.OnUpdateReq
-parseEventV2 transactionId messageId order = do
+parseEventV2 :: (MonadFlow m, CacheFlow m r) => Text -> Text -> Maybe BaseUrl -> Spec.Order -> m DOnUpdate.OnUpdateReq
+parseEventV2 transactionId messageId bppUri order = do
   case order.orderStatus of
     Just "SOFT_UPDATE" -> do
       editDestinationReq <- parseEditDestinationSoftUpdate transactionId order messageId
@@ -89,10 +90,14 @@ parseEventV2 transactionId messageId order = do
       -- TODO::Beckn, fix this codes after correct v2-spec mapping
       case eventType of
         "SCHEDULED_RIDE_ASSIGNED" -> do
-          assignedReq <- Common.parseRideAssignedEvent order messageId transactionId
+          assignedReq <- Common.parseRideAssignedEvent order messageId transactionId bppUri
           return $ DOnUpdate.OUScheduledRideAssignedReq assignedReq
         "RIDE_ASSIGNED" -> do
-          assignedReq <- Common.parseRideAssignedEvent order messageId transactionId
+          assignedReq <- Common.parseRideAssignedEvent order messageId transactionId bppUri
+          return $ DOnUpdate.OURideAssignedReq assignedReq
+        "RIDE_CONFIRMED" -> do
+          -- ONDC v2.1.0: handle phased confirmation
+          assignedReq <- Common.parseRideAssignedEvent order messageId transactionId bppUri
           return $ DOnUpdate.OURideAssignedReq assignedReq
         "RIDE_ARRIVED_PICKUP" -> do
           arrivedReq <- Common.parseDriverArrivedEvent order messageId transactionId
