@@ -3929,34 +3929,86 @@ postDriverFleetDriverUpdate ::
   Flow APISuccess
 postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
   merchant <- findMerchantByShortId merchantShortId
-  _ <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   let personId = cast driverId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   mbRequestor <- QPerson.findById (Id requestorId)
+
+  -- Only admin (no requestor at BPP) is allowed to update mobile number/country code
+  when (isJust mbRequestor && (isJust req.mobileNo || isJust req.mobileCountryCode)) $
+    throwError AccessDenied
+
   -- If requestor is not found at BPP (e.g. Admin), allow; only fleet/operator exist at BPP
   whenJust mbRequestor $ \requestor -> do
     isValid <- DDriver.isAssociationBetweenTwoPerson requestor driver
     unless isValid $ throwError AccessDenied
 
-  when (isJust req.firstName || isJust req.lastName || isJust req.email) $ do
+  -- Update basic profile fields (name, email, mobile) in one go
+  when (isJust req.firstName || isJust req.lastName || isJust req.email || isJust req.mobileNo) $ do
+    -- Email uniqueness
     whenJust req.email $ \reqEmail -> do
       existingPerson <- QPerson.findByEmailAndMerchantIdAndRole (Just reqEmail) merchant.id driver.role
       whenJust existingPerson $ \existing ->
         when (existing.id /= personId) $ throwError (EmailAlreadyLinked reqEmail)
+
+    -- Mobile uniqueness + encryption (if provided)
+    (newMobileCountryCode, newMobileNumber) <-
+      case req.mobileNo of
+        Nothing -> pure (driver.mobileCountryCode, driver.mobileNumber)
+        Just reqMobileNo -> do
+          mobileNumberHash <- getDbHash reqMobileNo
+          let countryCodeFallback = P.getCountryMobileCode merchantOpCity.country
+              countryCode = fromMaybe countryCodeFallback req.mobileCountryCode
+          existingByMobile <- QPerson.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id driver.role
+          whenJust existingByMobile $ \existing ->
+            when (existing.id /= personId) $ throwError (MobileNumberAlreadyLinked reqMobileNo)
+          encNewPhoneNumber <- encrypt reqMobileNo
+          pure (Just countryCode, Just encNewPhoneNumber)
+
     let updDriver =
           driver
             { DP.firstName = fromMaybe driver.firstName req.firstName,
               DP.lastName = req.lastName,
-              DP.email = req.email
+              DP.email = req.email,
+              DP.mobileCountryCode = newMobileCountryCode,
+              DP.mobileNumber = newMobileNumber
             }
     QPerson.updatePersonDetails updDriver
 
-  when (isJust req.dob || isJust req.address || isJust req.addressDocumentType) $ do
-    driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
-    let dob = fmap (\d -> UTCTime d 0) req.dob <|> driverInfo.driverDob
-        address = req.address <|> driverInfo.address
-        addressDocumentType = castAddressDocumentType <$> req.addressDocumentType <|> driverInfo.addressDocumentType
-    QDriverInfo.updateDriverDobAndAddress dob address addressDocumentType personId
+  -- Driver can update driver-info fields; fleet owner can update fleet-info fields.
+  -- Run this block if ANY relevant field (driver or fleet) is present.
+  when
+    (  isJust req.dob
+    || isJust req.address
+    || isJust req.addressDocumentType
+    || isJust req.fleetDob
+    || isJust req.stripeAddress
+    || isJust req.stripeIdNumber
+    || isJust req.fleetName
+    || isJust req.fleetType
+    )
+    $ do
+    case driver.role of
+      DP.DRIVER -> do
+        driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
+        let dob = fmap (\d -> UTCTime d 0) req.dob <|> driverInfo.driverDob
+            address = req.address <|> driverInfo.address
+            addressDocumentType = castAddressDocumentType <$> req.addressDocumentType <|> driverInfo.addressDocumentType
+        QDriverInfo.updateDriverDobAndAddress dob address addressDocumentType personId
+      DP.FLEET_OWNER -> do
+        fleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
+        reqStripeIdNumber <- forM req.stripeIdNumber encrypt
+        let updFleetOwnerInfo =
+              fleetOwnerInfo
+                { DFOI.fleetDob = req.fleetDob <|> fleetOwnerInfo.fleetDob,
+                  DFOI.stripeAddress = req.stripeAddress <|> fleetOwnerInfo.stripeAddress,
+                  DFOI.stripeIdNumber = reqStripeIdNumber <|> fleetOwnerInfo.stripeIdNumber,
+                  DFOI.fleetName = req.fleetName <|> fleetOwnerInfo.fleetName,
+                  DFOI.fleetType = fromMaybe fleetOwnerInfo.fleetType (DRegV2.castFleetType <$> req.fleetType)
+                }
+        FOI.updateFleetOwnerInfo updFleetOwnerInfo
+      _ -> pure ()
 
   pure Success
   where
