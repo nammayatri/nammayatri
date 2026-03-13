@@ -141,6 +141,7 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
   vehicleInsImgs <- getDriverImages merchant.id DVC.VehicleInsurance
   profilePics <- getDriverImages merchant.id DVC.ProfilePhoto
   gstImgs <- getDriverImages merchant.id DVC.GSTCertificate
+  udyamImgs <- getDriverImages merchant.id DVC.UDYAMCertificate
   panImgs <- getDriverImages merchant.id DVC.PanCard
   businessLicenseImgs <- getDriverImages merchant.id DVC.BusinessLicense
   aadhaarImgs <- getDriverImages merchant.id DVC.AadhaarCard
@@ -183,6 +184,7 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
         vehicleNOC = vehicleNOCImgs,
         odometer = odometerImg,
         gstCertificate = gstImgs,
+        udyamCertificate = udyamImgs,
         commonDocuments = commonDocuments
       }
   where

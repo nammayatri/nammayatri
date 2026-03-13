@@ -291,6 +291,7 @@ types:
     - odometer: [Text]
     - aadhaar: [Text]
     - gstCertificate: [Text]
+    - udyamCertificate: [Text]
     - commonDocuments: [CommonDocumentItem]
   GetDocumentResponse:
     - imageBase64: Text
