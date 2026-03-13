@@ -614,3 +614,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN max_alternate_route_vehicles integ
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN include_vehicles_with_no_eta boolean ;

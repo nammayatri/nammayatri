@@ -42,7 +42,8 @@ data BAPMetricsContainer = BAPMetricsContainer
     initDuration :: DurationMetric,
     confirmDuration :: DurationMetric,
     busScannerCounter :: BusScannetCounterMetric,
-    fleetRouteMapMissingCounter :: FleetRouteMapMissingCounterMetric
+    fleetRouteMapMissingCounter :: FleetRouteMapMissingCounterMetric,
+    vehicleNoEtaCounter :: VehicleNoEtaCounterMetric
   }
 
 type SearchRequestCounterMetric = P.Vector P.Label3 P.Counter
@@ -57,6 +58,8 @@ type SearchDurationMetric = (P.Vector P.Label2 P.Histogram, P.Vector P.Label2 P.
 
 type DurationMetric = (P.Vector P.Label3 P.Histogram, P.Vector P.Label3 P.Counter)
 
+type VehicleNoEtaCounterMetric = P.Vector P.Label4 P.Counter
+
 type BusScanSearchRequestCounterMetric = P.Vector P.Label3 P.Counter
 
 registerBAPMetricsContainer :: Seconds -> IO BAPMetricsContainer
@@ -64,6 +67,7 @@ registerBAPMetricsContainer searchDurationTimeout = do
   searchRequestCounter <- registerSearchRequestCounterMetric
   busScannerCounter <- registerBusScannetCounterMetric
   fleetRouteMapMissingCounter <- registerFleetRouteMapMissingCounterMetric
+  vehicleNoEtaCounter <- registerVehicleNoEtaCounterMetric
   busScanSearchRequestCounter <- registerBusScanSearchRequestCounterMetric
   rideCreatedCounter <- registerRideCreatedCounterMetric
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
@@ -85,6 +89,9 @@ registerBusScannetCounterMetric = P.register $ P.vector ("merchant_name", "versi
 
 registerFleetRouteMapMissingCounterMetric :: IO FleetRouteMapMissingCounterMetric
 registerFleetRouteMapMissingCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId", "vehicle_number") $ P.counter $ P.Info "fleet_route_map_missing_counter" ""
+
+registerVehicleNoEtaCounterMetric :: IO VehicleNoEtaCounterMetric
+registerVehicleNoEtaCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId", "source") $ P.counter $ P.Info "vehicle_no_eta_count" ""
 
 registerBusScanSearchRequestCounterMetric :: IO BusScanSearchRequestCounterMetric
 registerBusScanSearchRequestCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId") $ P.counter $ P.Info "bus_scan_search_request_count" ""

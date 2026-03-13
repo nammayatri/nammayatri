@@ -31,6 +31,7 @@ import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import Tools.Error
+import qualified Tools.Metrics.BAPMetrics as Metrics
 
 -- Helper functions for bus tracking, adapted from Lib.JourneyModule.Base
 -- These functions are suffixed with CFRFS to avoid potential name clashes if Lib.JourneyModule.Base is also imported.
@@ -69,8 +70,22 @@ isYetToReachStop stopCode now bus =
         Nothing -> False
     Nothing -> False
 
+filterBusesYetToReachStop :: (MonadFlow m, Metrics.HasBAPMetrics m r) => Text -> UTCTime -> Bool -> Id MerchantOperatingCity -> [FullBusData] -> m [FullBusData]
+filterBusesYetToReachStop stopCode now includeNoEta merchantOpCityId allBuses = do
+  let (matched, rest) = partition (isYetToReachStop stopCode now) allBuses
+  let busesWithNoEta = filter (\bus -> isNothing bus.busData.eta_data) rest
+  unless (null busesWithNoEta) $ do
+    logError $
+      "Buses with no eta_data found - stopCode: " <> stopCode
+        <> ", vehicles: "
+        <> show (map (\bus -> (bus.vehicleNumber, bus.busData.route_id)) busesWithNoEta)
+    Metrics.incrementVehicleNoEtaCounter merchantOpCityId.getId merchantOpCityId.getId "riderLocation"
+  if includeNoEta
+    then pure $ matched <> busesWithNoEta
+    else pure matched
+
 processBusLegState ::
-  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv), HasShortDurationRetryCfg r c, HasKafkaProducer r) =>
+  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv), HasShortDurationRetryCfg r c, HasKafkaProducer r, Metrics.HasBAPMetrics m r) =>
   UTCTime ->
   Maybe DJourneyLeg.JourneyLeg ->
   Maybe Text ->
@@ -98,14 +113,15 @@ processBusLegState
   movementDetected
   integratedBppConfig = do
     logDebug $ "movementDetected: " <> show movementDetected <> " journeyLegTrackingStatus: " <> show journeyLegTrackingStatus
+    riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+    let includeNullUpcomingStops = fromMaybe False riderConfig.includeVehiclesWithNoEta
     if (isOngoingJourneyLeg journeyLegTrackingStatus) && movementDetected
       then do
-        let filteredBusData = case (mbUserBoardingStation, mbLegEndStation) of
-              (_, Just destStation) -> filter (isYetToReachStop destStation.code now) allBusDataForRoute
-              _ -> allBusDataForRoute
+        filteredBusData <- case (mbUserBoardingStation, mbLegEndStation) of
+          (_, Just destStation) -> filterBusesYetToReachStop destStation.code now includeNullUpcomingStops merchantOperatingCityId allBusDataForRoute
+          _ -> pure allBusDataForRoute
         case (mbCurrentLegDetails, routeCodeToUseForTrackVehicles, listToMaybe riderLastPoints) of
           (Just legDetails, Just rc, Just userPos) -> do
-            riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
             let busTrackingConfig = fromMaybe defaultBusTrackingConfigFRFS riderConfig.busTrackingConfig
             nearbyBusesETA <- getNearbyBusesFRFS userPos.latLong riderConfig integratedBppConfig
             logDebug $ "nearbyBusesETA: " <> show nearbyBusesETA <> "for route_id: " <> show rc
@@ -156,7 +172,7 @@ processBusLegState
                 logDebug $ "changedBuses: " <> show changedBuses
                 if null changedBuses
                   then do
-                    findfilteredBusData mbUserBoardingStation allBusDataForRoute
+                    findfilteredBusData includeNullUpcomingStops mbUserBoardingStation allBusDataForRoute
                   else findVehiclePositionFromSequence (reverse changedBuses)
               Nothing -> do
                 logDebug "No current leg details available, returning empty list"
@@ -165,7 +181,7 @@ processBusLegState
             logDebug $ "Journey leg is not ongoing or movement is not detected, returning empty list" <> show journeyLegTrackingStatus
             if journeyLegTrackingStatus `elem` [JMStateTypes.InPlan, JMStateTypes.Arriving, JMStateTypes.AlmostArrived, JMStateTypes.Arrived]
               then do
-                findfilteredBusData mbUserBoardingStation allBusDataForRoute
+                findfilteredBusData includeNullUpcomingStops mbUserBoardingStation allBusDataForRoute
               else do
                 logDebug "No filtered bus data available, returning empty list"
                 pure []
@@ -190,11 +206,11 @@ processBusLegState
           Nothing -> do
             logDebug $ "No bus data found for vehicle number: " <> show rest
             findVehiclePositionFromSequence rest
-      findfilteredBusData :: (MonadFlow m) => Maybe Station -> [FullBusData] -> m [JT.VehiclePosition]
-      findfilteredBusData mbBoardingStation allBusData = do
-        let filteredBusData = case mbBoardingStation of
-              Just boardingStation -> filter (isYetToReachStop boardingStation.code now) allBusData
-              Nothing -> allBusData
+      findfilteredBusData :: (MonadFlow m, Metrics.HasBAPMetrics m r) => Bool -> Maybe Station -> [FullBusData] -> m [JT.VehiclePosition]
+      findfilteredBusData includeNoEta mbBoardingStation allBusData = do
+        filteredBusData <- case mbBoardingStation of
+          Just boardingStation -> filterBusesYetToReachStop boardingStation.code now includeNoEta merchantOperatingCityId allBusData
+          Nothing -> pure allBusData
         let (confirmedHighBuses, ghostBuses) = partition (\a -> a.busData.route_state == Just CQMMB.ConfirmedHigh) filteredBusData
         logInfo $ "confirmedHighBuses: " <> show (length confirmedHighBuses) <> " ghostBuses: " <> show (length ghostBuses)
         pure $
