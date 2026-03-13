@@ -415,9 +415,17 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFrom mbInvoiceId mbInvo
       -- Get GST details from indirect tax transaction
       indirectTaxTxns <- QIndirectTax.findByInvoiceNumber invoice.invoiceNumber
 
-      let (taxableValue, gstRate, gstAmount) = case indirectTaxTxns of
-            (txn : _) -> (Just txn.taxableValue, Just txn.gstRate, Just txn.totalGstAmount)
-            _ -> (Nothing, Nothing, Nothing)
+      let (taxableValue, gstRate, gstAmount, cgstAmount, sgstAmount, gstinOfParty, sacCode) = case indirectTaxTxns of
+            (txn : _) ->
+              ( Just txn.taxableValue,
+                Just txn.gstRate,
+                Just txn.totalGstAmount,
+                Just txn.cgstAmount,
+                Just txn.sgstAmount,
+                txn.gstinOfParty,
+                txn.sacCode
+              )
+            _ -> (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
 
       -- Get TDS details from direct tax transaction by invoiceNumber
       directTaxTxns <- QDirectTax.findByInvoiceNumber invoice.invoiceNumber
@@ -432,6 +440,13 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFrom mbInvoiceId mbInvo
       -- Extract ride_id and subscription_id from ledger entries
       let (rideIds, subscriptionIds) = foldr extractIds ([], []) (catMaybes ledgerEntries)
 
+      -- Get payment method from payment_transaction via invoice.paymentOrderId
+      mbPaymentMethod <- case invoice.paymentOrderId of
+        Just orderId -> do
+          txns <- QPaymentTransaction.findAllByOrderId (Id orderId)
+          pure $ listToMaybe txns >>= (.paymentMethod)
+        Nothing -> pure Nothing
+
       pure $
         API.InvoiceListItem
           { invoiceId = invoice.id.getId,
@@ -444,12 +459,25 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFrom mbInvoiceId mbInvo
             taxableValue = taxableValue,
             gstRate = gstRate,
             gstAmount = gstAmount,
+            cgstAmount = cgstAmount,
+            sgstAmount = sgstAmount,
             totalInvoiceValue = invoice.totalAmount,
             tdsReference = tdsRef,
             irn = Nothing,
             qrCode = Nothing,
             rideId = listToMaybe rideIds,
             subscriptionId = listToMaybe subscriptionIds,
+            supplierName = invoice.supplierName,
+            supplierAddress = invoice.supplierAddress,
+            supplierGstin = invoice.supplierGSTIN,
+            issuedToName = invoice.issuedToName,
+            issuedToAddress = invoice.issuedToAddress,
+            issuedByName = invoice.issuedByName,
+            issuedByAddress = invoice.issuedByAddress,
+            gstinOfParty = gstinOfParty,
+            sacCode = sacCode,
+            paymentMethod = mbPaymentMethod,
+            taxableValueOfServiceSupplied = Just invoice.subtotal,
             generatedAt = invoice.createdAt
           }
 

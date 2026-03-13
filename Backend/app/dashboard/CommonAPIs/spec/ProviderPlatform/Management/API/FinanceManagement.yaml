@@ -244,6 +244,19 @@ types:
     - qrCode: Maybe Text
     - rideId: Maybe Text
     - subscriptionId: Maybe Text
+    - cgstAmount: Maybe HighPrecMoney
+    - sgstAmount: Maybe HighPrecMoney
+    - supplierName: Maybe Text
+    - supplierAddress: Maybe Text
+    - supplierGstin: Maybe Text
+    - issuedToName: Maybe Text
+    - issuedToAddress: Maybe Text
+    - issuedByName: Maybe Text
+    - issuedByAddress: Maybe Text
+    - gstinOfParty: Maybe Text
+    - sacCode: Maybe Text
+    - paymentMethod: Maybe Text
+    - taxableValueOfServiceSupplied: Maybe HighPrecMoney
     - generatedAt: UTCTime
 
   # ----- Reconciliation -----

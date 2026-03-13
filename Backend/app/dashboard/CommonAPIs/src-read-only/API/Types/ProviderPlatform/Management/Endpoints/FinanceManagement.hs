@@ -70,6 +70,19 @@ data InvoiceListItem = InvoiceListItem
     qrCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rideId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     subscriptionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cgstAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    sgstAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    supplierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    supplierAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    supplierGstin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    issuedToName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    issuedToAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    issuedByName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    issuedByAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    gstinOfParty :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    sacCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    paymentMethod :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    taxableValueOfServiceSupplied :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     generatedAt :: Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)
