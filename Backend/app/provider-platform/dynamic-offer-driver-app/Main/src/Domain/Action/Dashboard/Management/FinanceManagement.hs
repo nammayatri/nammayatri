@@ -8,11 +8,9 @@ module Domain.Action.Dashboard.Management.FinanceManagement
     getFinanceManagementReconciliation,
     getFinanceManagementFinanceReconciliation,
     postFinanceManagementReconciliationTrigger,
-    getFinanceManagementFinancePayoutList,
     getFinanceManagementFinancePaymentSettlementList,
     getFinanceManagementFinancePaymentGatewayTransactionList,
     getFinanceManagementFinanceWalletLedger,
-    getFinanceManagementFinanceEarningSummary,
   )
 where
 
@@ -64,11 +62,9 @@ import qualified Lib.Finance.Storage.Queries.ReconciliationEntryExtra as QReconE
 import qualified Lib.Finance.Storage.Queries.ReconciliationSummary as QReconSummary
 import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as PaymentTransaction
-import qualified Lib.Payment.Domain.Types.PayoutOrder as PayoutOrder
 import qualified Lib.Payment.Domain.Types.Refunds as PaymentRefund
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
-import qualified Lib.Payment.Storage.Queries.PayoutOrderExtra as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import qualified Lib.Scheduler.JobStorageType.DB.Table as SchedulerJobT
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QSchedulerJob
@@ -652,73 +648,27 @@ postFinanceManagementReconciliationTrigger merchantShortId opCity req = do
         message = "Reconciliation job scheduled successfully for " <> reconciliationType <> " from " <> show req.fromDate <> " to " <> show req.toDate
       }
 
--- | Get payout list with filters
-getFinanceManagementFinancePayoutList ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe UTCTime ->
-  Maybe Int ->
-  Maybe Int ->
-  Maybe UTCTime ->
-  Flow API.PayoutListRes
-getFinanceManagementFinancePayoutList merchantShortId opCity mbDriverId mbFleetOperatorId mbFrom mbLimit mbOffset mbTo = do
-  merchant <- SMerchant.findMerchantByShortId merchantShortId
-  _merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-
-  let limit = mkPageLimit mbLimit
-      offset = mkPageOffset mbOffset
-
-  -- Resolve customerId from driverId or fleetOperatorId
-  let mbCustomerId = mbDriverId <|> mbFleetOperatorId
-
-  payouts <- case mbCustomerId of
-    Just customerId ->
-      QPayoutOrder.findAllWithOptions
-        limit
-        offset
-        (Just customerId)
-        Nothing
-        mbFrom
-        mbTo
-        False
-        opCity
-    Nothing -> pure []
-
-  -- Map to response items
-  let payoutItems = map buildPayoutItem payouts
-      totalItems = length payoutItems
-
-  pure $
-    API.PayoutListRes
-      { totalItems = totalItems,
-        payouts = payoutItems
-      }
-  where
-    buildPayoutItem :: PayoutOrder.PayoutOrder -> API.PayoutListItem
-    buildPayoutItem po =
-      API.PayoutListItem
-        { payoutReference = Just po.orderId,
-          payoutAmount = Just po.amount.amount,
-          payoutDate = Just po.createdAt,
-          payoutStatus = Just (show po.status)
-        }
-
 getFinanceManagementFinancePaymentSettlementList ::
   ShortId DM.Merchant ->
   Context.City ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe UTCTime ->
-  Maybe Int ->
-  Maybe Int ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe UTCTime ->
+  Maybe Text -> -- driverId
+  Maybe Text -> -- fleetOwnerId
+  Maybe UTCTime -> -- from
+  Maybe Int -> -- limit
+  Maybe Int -> -- offset
+  Maybe Text -> -- orderId
+  Maybe Text -> -- pgApprovalCode
+  Maybe Text -> -- pgName
+  Maybe HighPrecMoney -> -- settlementAmountMax
+  Maybe HighPrecMoney -> -- settlementAmountMin
+  Maybe UTCTime -> -- settlementFrom
+  Maybe Text -> -- settlementId
+  Maybe UTCTime -> -- settlementTo
+  Maybe Text -> -- settlementUtr
+  Maybe Text -> -- subscriptionPurchaseId
+  Maybe UTCTime -> -- to
   Flow API.PaymentSettlementListRes
-getFinanceManagementFinancePaymentSettlementList merchantShortId opCity mbDriverId mbFleetOwnerId mbFrom mbLimit mbOffset mbOrderId mbSettlementId mbSubscriptionPurchaseId mbTo = do
+getFinanceManagementFinancePaymentSettlementList merchantShortId opCity mbDriverId mbFleetOwnerId mbFrom mbLimit mbOffset mbOrderId mbPgApprovalCode mbPgName mbSettlementAmountMax mbSettlementAmountMin mbSettlementFrom mbSettlementId mbSettlementTo mbSettlementUtr mbSubscriptionPurchaseId mbTo = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
@@ -735,6 +685,15 @@ getFinanceManagementFinancePaymentSettlementList merchantShortId opCity mbDriver
         mbSubscriptionPurchaseId
         mbOrderId
         mbSettlementId
+        Nothing
+        mbPgApprovalCode
+        mbSettlementUtr
+        mbSettlementFrom
+        mbSettlementTo
+        mbPgName
+        mbSettlementAmountMin
+        mbSettlementAmountMax
+        Nothing
         Nothing
         (Just limit)
         (Just offset)
@@ -778,7 +737,14 @@ getFinanceManagementFinancePaymentSettlementList merchantShortId opCity mbDriver
           pure $
             reportsBySubscription
               & filter (\report -> maybe True (== report.orderId) mbOrderId)
-              & filter (\report -> maybe True (\settlementId -> report.settlementId == Just settlementId) mbSettlementId)
+              & filter (\report -> maybe True (\s -> report.settlementId == Just s) mbSettlementId)
+              & filter (\report -> maybe True (\code -> report.pgApprovalCode == Just code) mbPgApprovalCode)
+              & filter (\report -> maybe True (\u -> report.utr == Just u) mbSettlementUtr)
+              & filter (\report -> maybe True (\t -> maybe False (>= t) report.settlementDate) mbSettlementFrom)
+              & filter (\report -> maybe True (\t -> maybe False (<= t) report.settlementDate) mbSettlementTo)
+              & filter (\report -> maybe True (\name -> report.paymentGateway == Just name) mbPgName)
+              & filter (\report -> maybe True (\minAmt -> report.settlementAmount >= Kernel.Types.Common.HighPrecMoney (toRational minAmt)) mbSettlementAmountMin)
+              & filter (\report -> maybe True (\maxAmt -> report.settlementAmount <= Kernel.Types.Common.HighPrecMoney (toRational maxAmt)) mbSettlementAmountMax)
               & sortOn (Down . (.createdAt))
               & drop pageOffset
               & take pageLimit
@@ -893,23 +859,26 @@ getFinanceManagementFinancePaymentGatewayTransactionList ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Maybe UTCTime ->
   Maybe Text ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
   Flow API.PaymentTransactionReportListRes
-getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity mbFrom mbGatewayTransactionId mbLimit mbOffset mbOrderId mbPaymentMode mbPaymentStatus mbPgGateway mbSubscriptionId mbTo mbTransactionType = do
+getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity mbFrom mbGatewayTransactionId mbLimit mbOffset mbOrderId mbPaymentMode mbPaymentStatus mbPgGateway mbPgName mbSubscriptionId mbTo mbTransactionType mbTxnAmountMax mbTxnAmountMin = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
   let limit = mkPageLimit mbLimit
       offset = mkPageOffset mbOffset
       mbTxnTypeForDb = mbTransactionType >>= parseTxnTypeFilter
+      mbPgNameFilter = mbPgGateway <|> mbPgName
       requiresInMemoryPagination =
         any
           isJust
           [ mbGatewayTransactionId,
             mbPaymentMode,
-            mbPaymentStatus,
-            mbPgGateway
+            mbPaymentStatus
           ]
 
   resolveBaseReportFilters mbOrderId mbSubscriptionId >>= \case
@@ -925,6 +894,15 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
           mbBaseOrderId
           Nothing
           mbTxnTypeForDb
+          Nothing
+          Nothing
+          Nothing
+          Nothing
+          mbPgNameFilter
+          Nothing
+          Nothing
+          mbTxnAmountMin
+          mbTxnAmountMax
           (if requiresInMemoryPagination then Nothing else Just limit)
           (if requiresInMemoryPagination then Nothing else Just offset)
 
@@ -1241,6 +1219,9 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
         PgPaymentSettlementReport.REFUND -> Just (show report.txnStatus)
         PgPaymentSettlementReport.ORDER -> Nothing
 
+    mbPgNameFilterFn :: Maybe Text
+    mbPgNameFilterFn = mbPgGateway <|> mbPgName
+
     matchesPaymentTransactionFilters :: API.PaymentTransactionReportItem -> Bool
     matchesPaymentTransactionFilters item =
       and
@@ -1248,7 +1229,7 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
           matchesMaybeTextFilter mbOrderId item.merchantOrderId,
           matchesPaymentModeFilter mbPaymentMode item.paymentMode,
           matchesMaybeTextFilter mbPaymentStatus item.transactionStatus,
-          matchesMaybeTextFilter mbPgGateway item.pgName,
+          matchesMaybeTextFilter mbPgNameFilterFn item.pgName,
           matchesMaybeTextFilter mbSubscriptionId item.subscriptionId,
           matchesMaybeTextFilter mbTransactionType item.transactionType
         ]
@@ -1405,85 +1386,3 @@ getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mb
             openingBalance = openingBalance,
             closingBalance = closingBalance
           }
-
-getFinanceManagementFinanceEarningSummary ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe UTCTime ->
-  Maybe UTCTime ->
-  Flow API.EarningsSummaryRes
-getFinanceManagementFinanceEarningSummary _merchantShortId _opCity mbDriverId mbFleetOwnerId mbFrom mbTo = do
-  (ownerId, counterpartyType) <- case (mbDriverId, mbFleetOwnerId) of
-    (Just driverId, Nothing) -> pure (driverId, DRIVER)
-    (Nothing, Just fleetOwnerId) -> pure (fleetOwnerId, FLEET_OWNER)
-    (Just _, Just _) -> throwError $ InvalidRequest "Provide either driverId or fleetOwnerId, not both"
-    (Nothing, Nothing) -> throwError $ InvalidRequest "Provide either driverId or fleetOwnerId"
-
-  mbAccount <- WalletService.getWalletAccountByOwner counterpartyType ownerId
-
-  case mbAccount of
-    Nothing -> pure $ emptyEarningsSummary
-    Just account -> do
-      allEntries <-
-        LedgerService.findByAccountWithFilters
-          account.id
-          mbFrom
-          mbTo
-          Nothing
-          Nothing
-          (Just LedgerEntry.SETTLED)
-          Nothing
-
-      let rideEarningEntries = filter (\e -> e.toAccountId == account.id && e.referenceType `elem` rideEarningTypes) allEntries
-      let baseRideEarnings = sum $ map (.amount) rideEarningEntries
-
-      let rideEarningBookingIds = map (.referenceId) rideEarningEntries
-
-      gstOnlineEntriesForRideBookings <- fmap concat $
-        forM rideEarningBookingIds $ \bookingId ->
-          LedgerService.getEntriesByReference WalletService.walletReferenceGSTOnline bookingId
-
-      let gstOnlineCreditAmount = sum $ map (.amount) $ filter (\e -> e.toAccountId == account.id) gstOnlineEntriesForRideBookings
-          totalRideEarnings = baseRideEarnings + gstOnlineCreditAmount
-          penaltyEntries = filter (\e -> e.fromAccountId == account.id && e.referenceType == "DriverCancellation") allEntries
-          totalPenalties = sum $ map (.amount) penaltyEntries
-          totalIncentives = 0
-          grossEarnings = totalRideEarnings + totalIncentives
-          tdsEntries = filter (\e -> e.fromAccountId == account.id && e.referenceType `elem` tdsTypes) allEntries
-          totalTdsDeducted = sum $ map (.amount) tdsEntries
-          gstCashEntries = filter (\e -> e.fromAccountId == account.id && e.referenceType == WalletService.walletReferenceGSTCash) allEntries
-          gstCashAmount = sum $ map (.amount) gstCashEntries
-          gstOnlineDebitAmount = sum $ map (.amount) $ filter (\e -> e.fromAccountId == account.id) gstOnlineEntriesForRideBookings
-          totalGstDeducted = gstCashAmount + gstOnlineDebitAmount
-          netEarnings = grossEarnings - totalTdsDeducted - totalGstDeducted - totalPenalties
-
-      pure $
-        API.EarningsSummaryRes
-          { totalRideEarnings,
-            totalIncentives,
-            totalPenalties,
-            grossEarnings,
-            totalTdsDeducted,
-            totalGstDeducted,
-            netEarnings
-          }
-  where
-    rideEarningTypes :: [Text]
-    rideEarningTypes = [WalletService.walletReferenceBaseRide, "UserCancellation", "BuyerDiscount"]
-
-    tdsTypes :: [Text]
-    tdsTypes = [WalletService.walletReferenceTDSDeductionOnline, WalletService.walletReferenceTDSDeductionCash]
-
-    emptyEarningsSummary :: API.EarningsSummaryRes
-    emptyEarningsSummary =
-      API.EarningsSummaryRes
-        { totalRideEarnings = 0,
-          totalIncentives = 0,
-          totalPenalties = 0,
-          grossEarnings = 0,
-          totalTdsDeducted = 0,
-          totalGstDeducted = 0,
-          netEarnings = 0
-        }

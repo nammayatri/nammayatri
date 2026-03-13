@@ -62,19 +62,6 @@ apis:
       response:
         type: ReconciliationRes
 
-  # ----- Payout list -----
-  - GET: # PayoutListAPI
-      endpoint: /finance/payout/list
-      query:
-        limit: Int
-        offset: Int
-        driverId: Text
-        fleetOperatorId: Text
-        from: UTCTime
-        to: UTCTime
-      auth: ApiAuthV2
-      response:
-        type: PayoutListRes
 
   # ----- Payment settlement list -----
   - GET: # PaymentSettlementListAPI
@@ -89,6 +76,13 @@ apis:
         settlementId: Text
         driverId: Text
         fleetOwnerId: Text
+        pgApprovalCode: Text
+        settlementUtr: Text
+        settlementFrom: UTCTime
+        settlementTo: UTCTime
+        pgName: Text
+        settlementAmountMin: HighPrecMoney
+        settlementAmountMax: HighPrecMoney
       auth: ApiAuthV2
       response:
         type: PaymentSettlementListRes
@@ -105,9 +99,12 @@ apis:
         orderId: Text
         gatewayTransactionId: Text
         pgGateway: Text
+        pgName: Text
         paymentStatus: Text
         paymentMode: Text
         transactionType: Text
+        txnAmountMin: HighPrecMoney
+        txnAmountMax: HighPrecMoney
       auth: ApiAuthV2
       response:
         type: PaymentTransactionReportListRes
@@ -127,17 +124,6 @@ apis:
       response:
         type: WalletLedgerRes
 
-  # ----- Earnings Summary -----
-  - GET: # EarningSummaryAPI
-      endpoint: /finance/earning/summary
-      auth: ApiAuthV2
-      query:
-        - driverId: Text
-        - fleetOwnerId: Text
-        - from: UTCTime
-        - to: UTCTime
-      response:
-        type: EarningsSummaryRes
 
   - POST: # ReconciliationTriggerAPI
       endpoint: /reconciliation/trigger

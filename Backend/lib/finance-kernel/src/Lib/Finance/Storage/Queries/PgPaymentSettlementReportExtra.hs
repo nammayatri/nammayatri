@@ -7,6 +7,7 @@ import qualified Data.Time as Time
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Types.Common (HighPrecMoney (..))
 import Kernel.Types.Error
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as Domain
@@ -55,10 +56,19 @@ findAllByMerchantOpCityIdWithFilters ::
   Maybe Text -> -- orderId
   Maybe Text -> -- settlementId
   Maybe Domain.TxnType -> -- transactionType
+  Maybe Text -> -- pgApprovalCode
+  Maybe Text -> -- utr
+  Maybe UTCTime -> -- settlementFrom
+  Maybe UTCTime -> -- settlementTo
+  Maybe Text -> -- pgName (paymentGateway)
+  Maybe HighPrecMoney -> -- settlementAmountMin
+  Maybe HighPrecMoney -> -- settlementAmountMax
+  Maybe HighPrecMoney -> -- txnAmountMin
+  Maybe HighPrecMoney -> -- txnAmountMax
   Maybe Int ->
   Maybe Int ->
   m [Domain.PgPaymentSettlementReport]
-findAllByMerchantOpCityIdWithFilters merchantId merchantOpCityId mbFrom mbTo mbSubscriptionPurchaseId mbOrderId mbSettlementId mbTxnType mbLimit mbOffset =
+findAllByMerchantOpCityIdWithFilters merchantId merchantOpCityId mbFrom mbTo mbSubscriptionPurchaseId mbOrderId mbSettlementId mbTxnType mbPgApprovalCode mbUtr mbSettlementFrom mbSettlementTo mbPgName mbSettlementAmountMin mbSettlementAmountMax mbTxnAmountMin mbTxnAmountMax mbLimit mbOffset =
   findAllWithOptionsKV
     [ Se.And $
         [ Se.Is Beam.merchantId $ Se.Eq merchantId,
@@ -70,6 +80,15 @@ findAllByMerchantOpCityIdWithFilters merchantId merchantOpCityId mbFrom mbTo mbS
           <> [Se.Is Beam.orderId $ Se.Eq orderId | Just orderId <- [mbOrderId]]
           <> [Se.Is Beam.settlementId $ Se.Eq (Just settlementId) | Just settlementId <- [mbSettlementId]]
           <> [Se.Is Beam.txnType $ Se.Eq txnType | Just txnType <- [mbTxnType]]
+          <> [Se.Is Beam.pgApprovalCode $ Se.Eq (Just code) | Just code <- [mbPgApprovalCode]]
+          <> [Se.Is Beam.utr $ Se.Eq (Just u) | Just u <- [mbUtr]]
+          <> [Se.Is Beam.settlementDate $ Se.GreaterThanOrEq (Just t) | Just t <- [mbSettlementFrom]]
+          <> [Se.Is Beam.settlementDate $ Se.LessThanOrEq (Just t) | Just t <- [mbSettlementTo]]
+          <> [Se.Is Beam.paymentGateway $ Se.Eq (Just name) | Just name <- [mbPgName]]
+          <> [Se.Is Beam.settlementAmount $ Se.GreaterThanOrEq minAmt | Just minAmt <- [mbSettlementAmountMin]]
+          <> [Se.Is Beam.settlementAmount $ Se.LessThanOrEq maxAmt | Just maxAmt <- [mbSettlementAmountMax]]
+          <> [Se.Is Beam.txnAmount $ Se.GreaterThanOrEq minAmt | Just minAmt <- [mbTxnAmountMin]]
+          <> [Se.Is Beam.txnAmount $ Se.LessThanOrEq maxAmt | Just maxAmt <- [mbTxnAmountMax]]
     ]
     (Se.Desc Beam.createdAt)
     mbLimit
