@@ -35,20 +35,6 @@ findByRecipientIdAndWebChannel recipientId mbLimit mbOffset = do
     (Just limitVal)
     (Just offsetVal)
 
-countUnreadByRecipientId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Kernel.Types.Id.Id Domain.Types.Person.Person ->
-  m Int
-countUnreadByRecipientId recipientId = do
-  deliveries <-
-    findAllWithKV
-      [ Se.And
-          [ Se.Is Beam.recipientId $ Se.Eq (Kernel.Types.Id.getId recipientId),
-            Se.Is Beam.channel $ Se.Eq Domain.Types.Communication.CH_WEB,
-            Se.Is Beam.status $ Se.Not (Se.Eq Domain.Types.CommunicationDelivery.DS_READ)
-          ]
-      ]
-  return $ length deliveries
 
 findByCommunicationIdWithFilters ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

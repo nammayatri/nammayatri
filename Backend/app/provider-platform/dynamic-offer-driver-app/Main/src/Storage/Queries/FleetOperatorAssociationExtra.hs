@@ -201,6 +201,25 @@ findAllActiveByOperatorId operatorId = do
         ]
     ]
 
+findAllActiveByOperatorIdWithLimitOffset ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Int ->
+  Int ->
+  m [FleetOperatorAssociation]
+findAllActiveByOperatorIdWithLimitOffset operatorId limit offset = do
+  now <- getCurrentTime
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamFOA.operatorId $ Se.Eq operatorId,
+          Se.Is BeamFOA.isActive $ Se.Eq True,
+          Se.Is BeamFOA.associatedTill (Se.GreaterThan $ Just now)
+        ]
+    ]
+    (Se.Desc BeamFOA.createdAt)
+    (Just limit)
+    (Just offset)
+
 findActiveAssociationByOperatorId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DP.Person ->
@@ -238,3 +257,23 @@ findByFleetOwnerId fleetOwnerId isActive = do
     (Se.Desc BeamFOA.createdAt)
     Nothing
     Nothing
+
+findByFleetOwnerIdWithLimitOffset ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Bool ->
+  Int ->
+  Int ->
+  m [FleetOperatorAssociation]
+findByFleetOwnerIdWithLimitOffset fleetOwnerId isActive limit offset = do
+  now <- getCurrentTime
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamFOA.fleetOwnerId $ Se.Eq fleetOwnerId,
+          Se.Is BeamFOA.isActive $ Se.Eq isActive,
+          Se.Is BeamFOA.associatedTill (Se.GreaterThan $ Just now)
+        ]
+    ]
+    (Se.Desc BeamFOA.createdAt)
+    (Just limit)
+    (Just offset)

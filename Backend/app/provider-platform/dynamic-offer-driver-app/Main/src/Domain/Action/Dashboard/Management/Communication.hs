@@ -70,7 +70,7 @@ import qualified Tools.Whatsapp as Whatsapp
 data CommunicationDeliveryDispatchPayload = CommunicationDeliveryDispatchPayload
   { deliveryId :: Text,
     communicationId :: Text,
-    channel :: Text,
+    channel :: DComm.ChannelType,
     recipientId :: Text,
     merchantId :: Text,
     merchantOperatingCityId :: Text,
@@ -332,36 +332,73 @@ getCommunicationRecipients merchantShortId opCity mbRole mbFleetOwnerId mbOperat
   let limit = min 100 . fromMaybe 20 $ mbLimit
       offset = fromMaybe 0 mbOffset
   mbSearchDbHash <- getDbHash `traverse` mbSearch
-  drivers <-
-    case (mbFleetOwnerId, mbOperatorId) of
-      (Just fleetOwnerId, _) -> do
-        pairs <- B.runInReplica $ QFDA.findAllActiveDriverByFleetOwnerId fleetOwnerId (Just limit) (Just offset) mbSearchDbHash mbSearch mbSearch (Just True)
-        pure $ map (\(_, person) -> person) pairs
-      (_, Just operatorId) -> do
-        assocs <- QFOA.findAllActiveByOperatorId operatorId
+  persons <-
+    case mbRole of
+      -- Operator asks for fleet owners: return only fleet owners linked to this operator (FleetOperatorAssociation).
+      Just CommAPI.ROLE_FLEET_OWNER | Just operatorId <- mbOperatorId -> do
+        assocs <- QFOA.findAllActiveByOperatorIdWithLimitOffset operatorId limit offset
         fleetOwnerIds <- pure $ nub $ map (.fleetOwnerId) assocs
         if null fleetOwnerIds
           then pure []
           else do
-            pairs <- B.runInReplica $ QFDA.findAllActiveDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mbSearchDbHash mbSearch mbSearch (Just True)
-            pure $ map (\(_, person) -> person) pairs
+            allFleetOwners <- B.runInReplica $ QPerson.findAllByPersonIds fleetOwnerIds
+            let filtered = maybe allFleetOwners (\s -> filter (\p -> personMatchesSearch p s) allFleetOwners) mbSearch
+            pure filtered
+      -- Admin or no operator: all fleet owners in merchant+city.
+      Just CommAPI.ROLE_FLEET_OWNER ->
+        B.runInReplica $ QPerson.findAllByMerchantIdAndOpCityAndRoles merchant merchantOpCity [DP.FLEET_OWNER] limit offset
+      -- No operator-to-operator: operator cannot list other operators.
+      Just CommAPI.ROLE_OPERATOR | Just _ <- mbOperatorId ->
+        pure []
+      -- Fleet owner asks for operators: return only operator(s) linked to this fleet owner (FleetOperatorAssociation).
+      Just CommAPI.ROLE_OPERATOR | Just fleetOwnerId <- mbFleetOwnerId -> do
+        assocs <- QFOA.findByFleetOwnerIdWithLimitOffset fleetOwnerId True limit offset
+        operatorIds <- pure $ nub $ map (.operatorId) assocs
+        if null operatorIds
+          then pure []
+          else do
+            allOperators <- B.runInReplica $ QPerson.findAllByPersonIds operatorIds
+            let filtered = maybe allOperators (\s -> filter (\p -> personMatchesSearch p s) allOperators) mbSearch
+            pure filtered
+      -- Admin: all operators in merchant+city.
+      Just CommAPI.ROLE_OPERATOR ->
+        B.runInReplica $ QPerson.findAllByMerchantIdAndOpCityAndRoles merchant merchantOpCity [DP.OPERATOR] limit offset
+      -- No admin-to-admin: do not list admins as recipients.
+      Just CommAPI.ROLE_ADMIN ->
+        pure []
+      -- ROLE_DRIVER or Nothing: fetch drivers (scoped by fleetOwnerId/operatorId when provided).
       _ -> do
-        tuples <-
-          B.runInReplica $
-            QPerson.findAllDriversWithInfoAndVehicle
-              merchant
-              merchantOpCity
-              limit
-              offset
-              Nothing
-              Nothing
-              Nothing
-              Nothing
-              mbSearchDbHash
-              mbSearch
-              mbSearch
-        pure $ map (\(person, _, _) -> person) tuples
-  recipients <- mapM (buildRecipientItem mbRole) drivers
+        drivers <-
+          case (mbFleetOwnerId, mbOperatorId) of
+            (Just fleetOwnerId, _) -> do
+              pairs <- B.runInReplica $ QFDA.findAllActiveDriverByFleetOwnerId fleetOwnerId (Just limit) (Just offset) mbSearchDbHash mbSearch mbSearch (Just True)
+              pure $ map (\(_, person) -> person) pairs
+            (_, Just operatorId) -> do
+              assocs <- QFOA.findAllActiveByOperatorId operatorId
+              fleetOwnerIds <- pure $ nub $ map (.fleetOwnerId) assocs
+              if null fleetOwnerIds
+                then pure []
+                else do
+                  pairs <- B.runInReplica $ QFDA.findAllActiveDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mbSearchDbHash mbSearch mbSearch (Just True)
+                  pure $ map (\(_, person) -> person) pairs
+            _ -> do
+              tuples <-
+                B.runInReplica $
+                  QPerson.findAllDriversWithInfoAndVehicle
+                    merchant
+                    merchantOpCity
+                    limit
+                    offset
+                    Nothing
+                    Nothing
+                    Nothing
+                    Nothing
+                    mbSearchDbHash
+                    mbSearch
+                    mbSearch
+              pure $ map (\(person, _, _) -> person) tuples
+        pure drivers
+  recipients <- mapM buildRecipientItem persons
   let count = length recipients
   return $
     CommAPI.RecipientsResponse
@@ -369,19 +406,31 @@ getCommunicationRecipients merchantShortId opCity mbRole mbFleetOwnerId mbOperat
         summary = Dashboard.Common.Summary {totalCount = count, count}
       }
 
+personMatchesSearch :: DP.Person -> Text -> Bool
+personMatchesSearch p s =
+  let fullName = p.firstName <> " " <> maybe "" (<> " ") p.middleName <> fromMaybe "" p.lastName
+   in T.toLower s `T.isInfixOf` T.toLower fullName
+        || maybe False (T.isInfixOf s) p.maskedMobileDigits
+
+personRoleToCommRole :: DP.Role -> CommAPI.CommunicationRoleType
+personRoleToCommRole DP.DRIVER = CommAPI.ROLE_DRIVER
+personRoleToCommRole DP.FLEET_OWNER = CommAPI.ROLE_FLEET_OWNER
+personRoleToCommRole DP.OPERATOR = CommAPI.ROLE_OPERATOR
+personRoleToCommRole DP.ADMIN = CommAPI.ROLE_ADMIN
+personRoleToCommRole DP.FLEET_BUSINESS = CommAPI.ROLE_FLEET_OWNER
+
 buildRecipientItem ::
   (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
-  Maybe CommAPI.CommunicationRoleType ->
   DP.Person ->
   m CommAPI.RecipientItem
-buildRecipientItem _mbRole person = do
+buildRecipientItem person = do
   phone <- mapM decrypt person.mobileNumber
   let name = person.firstName <> maybe "" (" " <>) person.middleName <> maybe "" (" " <>) person.lastName
   pure $
     CommAPI.RecipientItem
       { id = person.id.getId,
         name,
-        role = CommAPI.ROLE_DRIVER,
+        role = personRoleToCommRole person.role,
         phone,
         email = person.email,
         fleetOwnerName = Nothing,
@@ -614,7 +663,7 @@ dispatchToRecipients merchantId merchantOpCityId comm recipients now = do
               CommunicationDeliveryDispatchPayload
                 { deliveryId = delivery.id.getId,
                   communicationId = comm.id.getId,
-                  channel = channelToText delivery.channel,
+                  channel = delivery.channel,
                   recipientId = delivery.recipientId.getId,
                   merchantId = merchantId.getId,
                   merchantOperatingCityId = merchantOpCityId.getId,
@@ -625,12 +674,6 @@ dispatchToRecipients merchantId merchantOpCityId comm recipients now = do
                   templateName = comm.templateName
                 }
         produceMessage (topic, Just $ TEnc.encodeUtf8 delivery.id.getId) payload
-  where
-    channelToText DComm.CH_PUSH = "PUSH"
-    channelToText DComm.CH_SMS = "SMS"
-    channelToText DComm.CH_EMAIL = "EMAIL"
-    channelToText DComm.CH_WHATSAPP = "WHATSAPP"
-    channelToText DComm.CH_WEB = "WEB"
 
 -- | Process a fleet communication delivery from Kafka payload (called by consumer).
 -- Sends via the appropriate channel and updates delivery status to SENT or FAILED.
@@ -675,10 +718,10 @@ dispatchFromPayload p = do
       merchantId = Kernel.Types.Id.Id p.merchantId
       merchantOpCityId = Kernel.Types.Id.Id p.merchantOperatingCityId
   case p.channel of
-    "PUSH" -> do
+    DComm.CH_PUSH -> do
       person <- QPerson.findById recipientId >>= fromMaybeM (InvalidRequest $ "Recipient not found: " <> Kernel.Types.Id.getId recipientId)
       Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW (Just FCM.HIGH) FCM.NEW_MESSAGE p.title p.body person person.deviceToken
-    "SMS" -> do
+    DComm.CH_SMS -> do
       person <- QPerson.findById recipientId >>= fromMaybeM (InvalidRequest $ "Recipient not found: " <> Kernel.Types.Id.getId recipientId)
       mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (InvalidRequest "Recipient phone not available for SMS")
       let phoneNumber = fromMaybe "+91" person.mobileCountryCode <> mobileNumber
@@ -695,7 +738,7 @@ dispatchFromPayload p = do
           -- Fallback: send as-is if no template found
           logWarning $ "No merchant_message template found for FLEET SMS, sending body as-is for delivery " <> p.deliveryId
           Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq p.body phoneNumber smsCfg.sender (fromMaybe "" p.templateId) Nothing) >>= Sms.checkSmsResult
-    "WHATSAPP" -> do
+    DComm.CH_WHATSAPP -> do
       person <- QPerson.findById recipientId >>= fromMaybeM (InvalidRequest $ "Recipient not found: " <> Kernel.Types.Id.getId recipientId)
       mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (InvalidRequest "Recipient phone not available for WhatsApp")
       let phoneNumber = fromMaybe "+91" person.mobileCountryCode <> mobileNumber
@@ -712,8 +755,8 @@ dispatchFromPayload p = do
               }
       result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI merchantId merchantOpCityId req
       when (result._response.status /= "success") $ throwError (InvalidRequest "WhatsApp send failed")
-    "EMAIL" -> logInfo $ "EMAIL dispatch skipped for delivery " <> p.deliveryId <> " - use sendEmailWithAttachment for custom subject/body"
-    _ -> throwError (InvalidRequest $ "Unknown channel: " <> p.channel)
+    DComm.CH_EMAIL -> logInfo $ "EMAIL dispatch skipped for delivery " <> p.deliveryId <> " - use sendEmailWithAttachment for custom subject/body"
+    DComm.CH_WEB -> logInfo $ "WEB channel delivery " <> p.deliveryId <> " should be handled in-process; skipping dispatch"
 
 mkSentListItem :: DComm.Communication -> CommAPI.CommunicationListItem
 mkSentListItem comm =

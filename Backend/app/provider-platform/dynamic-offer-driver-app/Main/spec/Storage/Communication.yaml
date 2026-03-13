@@ -110,7 +110,6 @@ Communication:
 
   extraOperations:
     - EXTRA_QUERY_FILE
-    - EXTRA_DOMAIN_TYPE_FILE
 
   excludedDefaultQueries:
     - updateByPrimaryKey
