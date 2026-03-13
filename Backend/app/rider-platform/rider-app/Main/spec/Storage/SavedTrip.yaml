@@ -1,0 +1,87 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+SavedTrip:
+  tableName: saved_trip
+
+  types:
+    TimeMode:
+      enum: "LeaveNow, ArriveBy, DepartAt"
+      derive: "ToParamSchema"
+    TripRecurrence:
+      enum: "NoRecurrence, Daily, Weekdays, Weekends, Custom"
+      derive: "ToParamSchema"
+
+  fields:
+    id: Id SavedTrip
+    riderId: Id Person
+    name: Text
+    originLat: Double
+    originLon: Double
+    originAddress: Maybe Text
+    destinationLat: Double
+    destinationLon: Double
+    destinationAddress: Maybe Text
+    timeMode: TimeMode
+    targetTime: Maybe UTCTime
+    targetTimeOfDay: Maybe TimeOfDay
+    bufferMinutes: Int
+    recurrence: TripRecurrence
+    customDays: Maybe Text
+    notifyBeforeMinutes: Int
+    isActive: Bool
+    lastComputedDeparture: Maybe UTCTime
+    lastNotifiedAt: Maybe UTCTime
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamFields:
+    targetTimeOfDay:
+      targetTimeOfDaySeconds: Maybe Int
+
+  fromTType:
+    targetTimeOfDay: (Kernel.Prelude.fmap secondsToTimeOfDay targetTimeOfDaySeconds)|E
+
+  toTType:
+    targetTimeOfDaySeconds: (Kernel.Prelude.fmap timeOfDayToSeconds targetTimeOfDay)|E
+
+  constraints:
+    id: PrimaryKey
+    riderId: "!SecondaryKey"
+
+  queries:
+    findAllByRiderId:
+      kvFunction: findAllWithKV
+      where: riderId
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    updateIsActive:
+      kvFunction: updateOneWithKV
+      params: [isActive]
+      where: id
+    updateLastNotified:
+      kvFunction: updateOneWithKV
+      params: [lastNotifiedAt, lastComputedDeparture]
+      where: id
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <TimeMode>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <TripRecurrence>
+
+  default:
+    timeMode: "'LeaveNow'"
+    recurrence: "'NoRecurrence'"
+    bufferMinutes: "10"
+    notifyBeforeMinutes: "5"
+    isActive: "true"

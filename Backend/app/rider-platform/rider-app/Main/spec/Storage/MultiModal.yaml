@@ -61,6 +61,12 @@ Journey:
     isSingleMode: Maybe Bool
     paymentOrderShortId: Maybe (ShortId PaymentOrder)
     journeyExpiryTime: Maybe UTCTime
+    timeMode: Maybe Text
+    targetArrivalTime: Maybe UTCTime
+    targetDepartureTime: Maybe UTCTime
+    bufferMinutes: Maybe Int
+    riskLevel: Maybe Text
+    recommendedDeparture: Maybe UTCTime
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
 

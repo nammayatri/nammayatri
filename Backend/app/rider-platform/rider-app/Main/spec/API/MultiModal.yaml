@@ -49,6 +49,7 @@ imports:
   PaymentStatusResp: Lib.Payment.Domain.Action
   CumulativeOfferResp: SharedLogic.Offer
   BusStopETA: Storage.CachedQueries.Merchant.MultiModalBus
+  SavedTrip: Domain.Types.SavedTrip
 
 module: MultimodalConfirm
 
@@ -389,6 +390,70 @@ types:
     routeShortName: Text
     routeLongName: Text
     routeTimings: "[Seconds]"
+
+  DepartureAdvisoryResp:
+    latestDeparture: UTCTime
+    recommendedDeparture: UTCTime
+    comfortableDeparture: UTCTime
+    riskLevel: Text
+    bufferMinutes: Int
+    advisoryMessage: Text
+    safetyWarnings: "[SafetyWarning]"
+
+  SafetyWarning:
+    legOrder: Int
+    warning: Text
+    severity: Text
+
+  SavedTripCreateReq:
+    name: Text
+    originLat: Double
+    originLon: Double
+    originAddress: Maybe Text
+    destinationLat: Double
+    destinationLon: Double
+    destinationAddress: Maybe Text
+    timeMode: Text
+    targetTime: Maybe UTCTime
+    targetTimeOfDay: Maybe Text
+    bufferMinutes: Int
+    recurrence: Text
+    customDays: Maybe Text
+    notifyBeforeMinutes: Int
+
+  SavedTripResp:
+    id: Id SavedTrip
+    name: Text
+    originLat: Double
+    originLon: Double
+    originAddress: Maybe Text
+    destinationLat: Double
+    destinationLon: Double
+    destinationAddress: Maybe Text
+    timeMode: Text
+    targetTime: Maybe UTCTime
+    targetTimeOfDay: Maybe Text
+    bufferMinutes: Int
+    recurrence: Text
+    customDays: Maybe Text
+    notifyBeforeMinutes: Int
+    isActive: Bool
+    lastComputedDeparture: Maybe UTCTime
+    createdAt: UTCTime
+
+  SavedTripUpdateReq:
+    name: Maybe Text
+    timeMode: Maybe Text
+    targetTime: Maybe UTCTime
+    targetTimeOfDay: Maybe Text
+    bufferMinutes: Maybe Int
+    recurrence: Maybe Text
+    customDays: Maybe Text
+    notifyBeforeMinutes: Maybe Int
+    isActive: Maybe Bool
+
+  SavedTripComputeResp:
+    advisory: DepartureAdvisoryResp
 
   SwitchRouteReq:
     journeyId: Id Journey
@@ -767,3 +832,55 @@ apis:
         type: TowerInfoReq
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
+  # Reach on Time: Departure Advisory
+  - GET:
+      endpoint: /multimodal/{journeyId}/advisory
+      params:
+        journeyId: Id Journey
+      response:
+        type: DepartureAdvisoryResp
+
+  # Reach on Time: Saved Trips CRUD
+  - POST:
+      endpoint: /multimodal/savedTrip
+      auth: TokenAuth
+      request:
+        type: SavedTripCreateReq
+      response:
+        type: SavedTripResp
+
+  - GET:
+      endpoint: /multimodal/savedTrips
+      auth: TokenAuth
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: "[SavedTripResp]"
+
+  - PUT:
+      endpoint: /multimodal/savedTrip/{savedTripId}
+      auth: TokenAuth
+      params:
+        savedTripId: Id SavedTrip
+      request:
+        type: SavedTripUpdateReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - DELETE:
+      endpoint: /multimodal/savedTrip/{savedTripId}
+      auth: TokenAuth
+      params:
+        savedTripId: Id SavedTrip
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: /multimodal/savedTrip/{savedTripId}/compute
+      auth: TokenAuth
+      params:
+        savedTripId: Id SavedTrip
+      response:
+        type: SavedTripComputeResp

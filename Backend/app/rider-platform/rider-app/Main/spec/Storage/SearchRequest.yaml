@@ -102,6 +102,10 @@ SearchRequest:
     busLocationData: "[BusLocation]"
     fromSpecialLocationId: Maybe Text  # Fixed route: origin area ID
     toSpecialLocationId: Maybe Text    # Fixed route: destination area ID
+    timeMode: Maybe Text
+    targetArrivalTime: Maybe UTCTime
+    targetDepartureTime: Maybe UTCTime
+    bufferMinutes: Maybe Int
 
 
   default:
