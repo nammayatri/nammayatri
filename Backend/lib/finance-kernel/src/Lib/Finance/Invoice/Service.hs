@@ -172,9 +172,10 @@ createInvoice input entryIds = do
         | toAccount.counterpartyType == Just GOVERNMENT_DIRECT -> do
           taxTxnId <- generateGUID
           let tdsAmount = entry.amount
-              grossAmount = subtotal
+              extCharges = sum $ map (.lineTotal) $ filter (.isExternalCharge) input.lineItems
+              grossAmount = subtotal - extCharges
               netAmountPaid = grossAmount - tdsAmount
-              tdsRate = if grossAmount > 0 then realToFrac (tdsAmount / grossAmount) * 100.0 else 0.0
+              tdsRate = if netAmountPaid > 0 then realToFrac (tdsAmount / netAmountPaid) * 100.0 else 0.0
               txnType = invoiceTypeToDirectTransactionType input.invoiceType
           let directTaxTxn =
                 DirectTaxTransaction

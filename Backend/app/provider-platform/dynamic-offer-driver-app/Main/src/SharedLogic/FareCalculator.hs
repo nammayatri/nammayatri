@@ -947,4 +947,4 @@ computeTotalGstRate gstBreakup =
       sgst = maybe 0 (fromRational . (.getHighPrecMoney)) gstBreakup.sgstPercentage
       igst = maybe 0 (fromRational . (.getHighPrecMoney)) gstBreakup.igstPercentage
       total = cgst + sgst + igst
-   in if total > 0 then Just (total / 100.0) else Nothing
+   in if total > 0 then Just total else Nothing
