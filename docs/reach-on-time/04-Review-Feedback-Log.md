@@ -41,15 +41,32 @@ This document captures all review feedback from independent reviewers and the ch
 
 ## UI/UX Review (Reviewer 2 - Design Perspective)
 
-*(Feedback incorporated from parallel review)*
+**Overall Rating**: "Well-structured spec with clear wireframes and coherent color system"
 
-### Key Design Improvements
-- Added empty/error/loading states to all screens
-- Added crowding indicators for peak hours
-- Added safety indicators for late-night routes
-- Improved Tamil localization with phonetic alternatives
-- Added haptic feedback for time picker interactions
-- Added "swap trip" button for return trips
+### Critical Issues Found & Fixed
+
+| # | Feedback | Severity | Action |
+|---|----------|----------|--------|
+| U1 | Amber #F9A825 fails WCAG AA contrast on white | **Blocking** | Changed to #E65100 (deep orange) |
+| U2 | No loading/error/empty state wireframes | High | Added skeleton cards, error state, empty state |
+| U3 | Auto icon color (#F9A825) = "Good" risk color | High | Changed auto to #FBC02D |
+| U4 | Risk badge 12sp too small for 200% scaling | Medium | Increased to 14sp |
+| U5 | No dark mode color definitions | Medium | Added complete dark mode palette |
+| U6 | No reduced motion support for animations | Medium | Added prefers-reduced-motion fallback |
+| U7 | Route card has 3 action buttons — too cramped | Medium | Moved Save/Reminder to detail screen |
+| U8 | Missing swap origin/destination interaction | Medium | Added ⇄ swap icon interaction |
+| U9 | Time picker back/cancel behavior undefined | Medium | Added dismissal behavior spec |
+| U10 | "Leave Now" re-selection after "Arrive By" undefined | Medium | Added state transition spec |
+| U11 | No fare breakdown per leg | Low | Added to journey detail |
+| U12 | No "What if I miss it?" fallback | Low | Added backup plan section |
+| U13 | Missing offline/stale data indicator | Low | Added stale schedule banner |
+
+### Positive Feedback
+- "Risk-badge system is genuinely innovative for Indian transit"
+- "Progressive disclosure correctly applied"
+- "Tamil translations are colloquial, which is correct"
+- "Departure advisor card is a strong concept"
+- "Journey timeline bar is competitive with Citymapper"
 
 ---
 

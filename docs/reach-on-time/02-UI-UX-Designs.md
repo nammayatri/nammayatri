@@ -187,10 +187,11 @@
 │  [walk]─[bus icon + route#]─[metro]─  │
 │                                       │
 │  Cost · Duration · Transfer count     │
-│  Real-time status (live/scheduled)    │
-│                                       │
-│  [Save Trip] [Set Reminder] [Details] │
+│  Real-time status (live/scheduled)  → │  ← Chevron indicates tappable
 └───────────────────────────────────────┘
+Note: [Save Trip] and [Set Reminder] moved to Journey Detail
+screen to reduce card clutter (per review).
+```
 ```
 
 **Risk Badge Logic**:
@@ -244,8 +245,15 @@
 │                                       │
 │  ┌─────────────────────────────────┐ │
 │  │   ₹35 total · 63 min journey   │ │
+│  │   Bus ₹15 + Metro ₹20          │ │  ← Fare breakdown (added per review)
 │  │                                   │ │
 │  │   [Start Journey]               │ │
+│  └─────────────────────────────────┘ │
+│                                       │
+│  ┌─────────────────────────────────┐ │  ← "What if" fallback (added per review)
+│  │ If you miss the 8:20 bus →      │ │
+│  │ Next option: 8:35 bus, arr 9:25 │ │
+│  │ [View backup plan ▾]            │ │
 │  └─────────────────────────────────┘ │
 │                                       │
 └──────────────────────────────────────┘
@@ -342,7 +350,40 @@ User views route results
   → Trip appears in Home screen widget and Saved Trips screen
 ```
 
-### 4.3 Notification → Journey Flow
+### 4.3 Time Picker Dismissal *(Added per review)*
+```
+User opens time picker → changes time → taps outside modal or presses back
+  → Time reverts to previous value (unsaved)
+  → Pill shows previous time mode/value
+  → Only "Set Time" button confirms the selection
+```
+
+### 4.4 Swap Origin/Destination *(Added per review)*
+```
+User taps ⇄ icon between origin and destination fields
+  → Fields swap instantly
+  → If time constraint is set, search auto-triggers with swapped locations
+  → Useful for return trip planning
+```
+
+### 4.5 "Leave Now" Re-selection *(Added per review)*
+```
+User is in "Arrive By" mode with time set
+  → Taps "Leave Now" in time mode selector
+  → Time constraint is cleared silently (no confirmation needed)
+  → Search auto-triggers with current time
+  → Pill reverts to "Leave Now"
+```
+
+### 4.6 "What If I Miss It?" Fallback *(Added per review)*
+```
+Journey Detail screen shows collapsed section at bottom:
+  "If you miss the 8:20 bus → Next option departs 8:35"
+  → User taps to expand
+  → Shows alternative journey with updated times/risk
+```
+
+### 4.7 Notification → Journey Flow
 
 ```
 User receives "Time to Leave" push notification
@@ -362,7 +403,7 @@ User receives "Time to Leave" push notification
 | State | Color | Hex | Usage |
 |-------|-------|-----|-------|
 | Comfortable | Green | #2E7D32 | Safe departure window |
-| Good | Amber | #F9A825 | Adequate buffer |
+| Good | Deep Orange | #E65100 | Adequate buffer *(Revised: #F9A825 failed WCAG AA contrast on white)* |
 | Tight | Red | #C62828 | Risky timing |
 | Too Late | Grey | #757575 | Impossible to make it |
 | Live | Blue | #1565C0 | Real-time data indicator |
@@ -376,19 +417,22 @@ User receives "Time to Leave" push notification
 | MTC Bus | 🚌 (bus) | MTC Red #D32F2F |
 | Metro | 🚇 (metro) | CMRL Blue #1565C0 |
 | Suburban Rail | 🚆 (train) | SR Green #388E3C |
-| Auto | 🛺 (auto-rickshaw) | Yellow #F9A825 |
+| Auto | 🛺 (auto-rickshaw) | Yellow #FBC02D | *(Revised: differentiated from "Good" risk color)* |
 | Taxi/Cab | 🚕 (car) | Black #212121 |
 
 ### 5.3 Typography
 
-| Element | Style | Size |
-|---------|-------|------|
-| Departure time | Bold | 18sp |
-| Arrival time | Bold | 18sp |
-| Risk badge | Semi-bold, uppercase | 12sp |
-| Route summary | Regular | 14sp |
-| Real-time status | Regular, italic | 12sp |
-| Cost/duration | Medium | 14sp |
+| Element | Style | Size | Notes |
+|---------|-------|------|-------|
+| Departure time | Bold | 18sp | |
+| Arrival time | Bold | 18sp | |
+| Risk badge | Semi-bold, uppercase | 14sp | *(Revised from 12sp: must be readable at 200% scaling)* |
+| Route summary | Regular | 14sp | |
+| Real-time status | Regular, italic | 12sp | |
+| Cost/duration | Medium | 14sp | |
+| Saved trip name | Semi-bold | 16sp | *(Added per review)* |
+| Recurrence pattern | Regular | 12sp | *(Added per review)* |
+| Today's departure | Medium | 14sp | *(Added per review)* |
 
 ### 5.4 Journey Timeline Bar
 
@@ -407,6 +451,92 @@ A horizontal visual bar showing the journey composition:
 
 ---
 
+### 5.5 Dark Mode Colors *(Added per review)*
+
+| Element | Light Mode | Dark Mode |
+|---------|-----------|-----------|
+| Background | #FFFFFF | #121212 |
+| Card background | #FFFFFF | #1E1E1E |
+| Primary text | #212121 | #E0E0E0 |
+| Risk: Comfortable | bg #E8F5E9, text #2E7D32 | bg #1B3A1F, text #66BB6A |
+| Risk: Good | bg #FFF3E0, text #E65100 | bg #3E2700, text #FFB74D |
+| Risk: Tight | bg #FFEBEE, text #C62828 | bg #3E1010, text #EF5350 |
+| Risk: Too Late | bg #F5F5F5, text #757575 | bg #2A2A2A, text #9E9E9E |
+| Live indicator | #1565C0 | #42A5F5 |
+
+---
+
+### 5.6 Loading, Error, and Empty States *(Added per review)*
+
+**Loading State (Route Search)**:
+```
+┌──────────────────────────────────────┐
+│  ← Tambaram → T.Nagar               │
+│  Arrive by 9:30 AM · Today          │
+│                                       │
+│  ┌─────────────────────────────────┐ │
+│  │ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │ │  ← Skeleton card 1
+│  │ ░░░░░░░ ░░░░ ░░░░ ░░░░░░░░░░░ │ │
+│  │ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │ │
+│  └─────────────────────────────────┘ │
+│  ┌─────────────────────────────────┐ │
+│  │ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │ │  ← Skeleton card 2
+│  │ ░░░░░░░ ░░░░ ░░░░ ░░░░░░░░░░░ │ │
+│  └─────────────────────────────────┘ │
+│                                       │
+│  Finding the best routes for you...  │
+│                                       │
+└──────────────────────────────────────┘
+```
+
+**Error State (API Failure)**:
+```
+┌──────────────────────────────────────┐
+│  ← Tambaram → T.Nagar               │
+│                                       │
+│           ⚠️ (large icon)            │
+│                                       │
+│    Something went wrong.             │
+│    We couldn't find routes           │
+│    right now.                        │
+│                                       │
+│    [Try Again]                       │
+│                                       │
+│    Or try auto/taxi instead:         │
+│    [Book Auto →]                     │
+│                                       │
+└──────────────────────────────────────┘
+```
+
+**Empty State (No Saved Trips)**:
+```
+┌──────────────────────────────────────┐
+│  ← Saved Trips                       │
+│                                       │
+│         (illustration)               │
+│     📍 ─ ─ ─ ─ ─ ─ 📍              │
+│                                       │
+│    No saved trips yet               │
+│                                       │
+│    Save a trip to get daily          │
+│    "Time to Leave" reminders.        │
+│                                       │
+│    [Plan a Trip →]                   │
+│                                       │
+└──────────────────────────────────────┘
+```
+
+**Stale/Offline State (Cached Schedule)**:
+```
+┌──────────────────────────────────────┐
+│  ⚠️ Showing cached schedule          │
+│  Last updated 2 hours ago            │
+│  [Refresh when online]              │
+└──────────────────────────────────────┘
+```
+
+---
+
 ## 6. Animations & Transitions
 
 | Interaction | Animation | Duration |
@@ -418,6 +548,8 @@ A horizontal visual bar showing the journey composition:
 | Timeline bar build | Left-to-right reveal | 400ms |
 | Live indicator | Pulse animation | 2s loop |
 | Notification slide | Top slide down | 300ms |
+
+**Reduced Motion**: When `prefers-reduced-motion` is enabled, all animations are replaced with instant transitions (0ms). Pulse animations are replaced with static indicators. *(Added per review: WCAG 2.1 AA 2.3.3)*
 
 ---
 
