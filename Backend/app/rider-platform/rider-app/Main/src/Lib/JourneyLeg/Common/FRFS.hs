@@ -63,6 +63,26 @@ import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import Tools.Error
 
+-- Helper function to get current trip ID from vehicle number and config
+getVehicleCurrentTripId ::
+  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["cloudType" ::: Maybe CloudType], HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv), HasShortDurationRetryCfg r c) =>
+  DIBC.IntegratedBPPConfig ->
+  Text ->
+  m (Maybe Text)
+getVehicleCurrentTripId integratedBppConfig vehicleNumber = do
+  mbServiceTier <- JMU.getVehicleServiceTypeFromInMem [integratedBppConfig] vehicleNumber
+  if mbServiceTier == Just Spec.PREMIUM
+    then do
+      mbLiveRouteInfo <- JMU.getVehicleLiveRouteInfo [integratedBppConfig] vehicleNumber Nothing
+      let mbLri = snd <$> mbLiveRouteInfo
+      let mbCurrentTripId = do
+            lri <- mbLri
+            waybill <- lri.waybillId
+            tripNum <- lri.tripNumber
+            pure $ waybill <> "-" <> show tripNum
+      pure mbCurrentTripId
+    else pure Nothing
+
 -- getState and other functions from the original file...
 
 getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv), HasShortDurationRetryCfg r c, HasKafkaProducer r) => DTrip.MultimodalTravelMode -> Id FRFSSearch -> [APITypes.RiderLocationReq] -> Bool -> Maybe Text -> DJourneyLeg.JourneyLeg -> m JT.JourneyLegState
@@ -98,6 +118,9 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                 case listToMaybe trackingStatuses of
                   Just (_, ts, tsupAt) -> (ts, tsupAt)
                   Nothing -> (JMStateTypes.InPlan, now)
+          mbCurrentTripId <- case mbCurrentLegDetails >>= (.finalBoardedBusNumber) of
+            Just vehicleNumber -> getVehicleCurrentTripId integratedBppConfig vehicleNumber
+            Nothing -> pure Nothing
           let baseStateData =
                 JT.JourneyLegStateData
                   { status = oldStatus,
@@ -109,7 +132,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                     legOrder = journeyLeg.sequenceNumber,
                     subLegOrder = 1,
                     mode,
-                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber)
+                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber),
+                    currentTripId = mbCurrentTripId
                   }
           mbQuote <- QFRFSQuote.findById booking.quoteId
           validBuses <-
@@ -162,7 +186,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                       legOrder = journeyLeg.sequenceNumber,
                       subLegOrder,
                       mode,
-                      fleetNo = Nothing
+                      fleetNo = Nothing,
+                      currentTripId = Nothing
                     }
                   | (subLegOrder, trackingStatus, trackingStatusLastUpdatedAt) <- trackingStatuses
                 ]
@@ -192,6 +217,9 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                 case listToMaybe trackingStatuses of
                   Just (_, ts, tsupAt) -> (ts, tsupAt)
                   Nothing -> (JMStateTypes.InPlan, now)
+          mbCurrentTripId <- case mbCurrentLegDetails >>= (.finalBoardedBusNumber) of
+            Just vehicleNumber -> getVehicleCurrentTripId integratedBppConfig vehicleNumber
+            Nothing -> pure Nothing
           let baseStateData =
                 JT.JourneyLegStateData
                   { status = oldStatus,
@@ -203,7 +231,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                     legOrder = journeyLeg.sequenceNumber,
                     subLegOrder = 1,
                     mode,
-                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber)
+                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber),
+                    currentTripId = mbCurrentTripId
                   }
 
           vehiclePositionsToReturn <-
@@ -240,7 +269,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                       legOrder = journeyLeg.sequenceNumber,
                       subLegOrder = subLegOrder,
                       mode,
-                      fleetNo = Nothing
+                      fleetNo = Nothing,
+                      currentTripId = Nothing
                     }
                   | (subLegOrder, trackingStatus, trackingStatusLastUpdatedAt) <- trackingStatuses
                 ]
