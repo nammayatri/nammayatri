@@ -12,6 +12,7 @@ import qualified BecknV2.FRFS.Enums
 import qualified Control.Lens
 import qualified Domain.Action.UI.TrackRoute
 import qualified Domain.Types.IntegratedBPPConfig
+import qualified Domain.Types.Journey
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment
@@ -31,6 +32,9 @@ type API =
       :> QueryParam
            "integratedBppConfigId"
            (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig)
+      :> QueryParam
+           "journeyId"
+           (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
       :> QueryParam
            "maxBuses"
            Kernel.Prelude.Int
@@ -62,6 +66,7 @@ getTrackVehicles ::
     Kernel.Prelude.Maybe (Kernel.Prelude.Double) ->
     Kernel.Prelude.Maybe (Kernel.Prelude.Double) ->
     Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig) ->
+    Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey) ->
     Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
     Kernel.Prelude.Maybe (Domain.Types.IntegratedBPPConfig.PlatformType) ->
     Kernel.Prelude.Maybe (Kernel.Prelude.Text) ->
@@ -69,4 +74,4 @@ getTrackVehicles ::
     Kernel.Prelude.Maybe (BecknV2.FRFS.Enums.VehicleCategory) ->
     Environment.FlowHandler API.Types.UI.TrackRoute.TrackingResp
   )
-getTrackVehicles a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TrackRoute.getTrackVehicles (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a10) a9 a8 a7 a6 a5 a4 a3 a2 a1
+getTrackVehicles a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TrackRoute.getTrackVehicles (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a11) a10 a9 a8 a7 a6 a5 a4 a3 a2 a1

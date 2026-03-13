@@ -30,6 +30,7 @@ types:
       routeState: Maybe RouteState
       shortName: Maybe Text
       bearing: Maybe Int
+      currentTripNumber: Maybe Int
 
   RecentRide:
       fromStopCode: Text

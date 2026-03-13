@@ -58,6 +58,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding as SDO
@@ -103,7 +104,6 @@ import qualified Tools.BackgroundVerification as BackgroundVerificationT
 import Tools.Error
 import qualified Tools.Verification as Verification
 import Utils.Common.Cac.KeyNameConstants
-import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
 
 stringToPrice :: Currency -> Text -> Maybe Price
 stringToPrice currency value = do

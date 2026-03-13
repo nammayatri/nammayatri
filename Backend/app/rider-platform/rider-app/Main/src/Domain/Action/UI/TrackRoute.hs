@@ -6,7 +6,9 @@ import BecknV2.FRFS.Utils (frfsVehicleCategoryToBecknVehicleCategory)
 import Data.Function
 import qualified Data.List as List
 import qualified Data.Map as M
+import qualified Data.Text as T
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.Journey
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment
@@ -22,6 +24,8 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import qualified Storage.Queries.JourneyLegExtra as QJourneyLeg
 import Storage.Queries.Person as QP
 import Tools.Error
 
@@ -33,6 +37,7 @@ getTrackVehicles ::
     Kernel.Prelude.Maybe Kernel.Prelude.Double ->
     Kernel.Prelude.Maybe Kernel.Prelude.Double ->
     Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) ->
+    Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey) ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe DIBC.PlatformType ->
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
@@ -40,7 +45,7 @@ getTrackVehicles ::
     Kernel.Prelude.Maybe Spec.VehicleCategory ->
     Environment.Flow TrackRoute.TrackingResp
   )
-getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon mbIntegratedBPPConfigId mbMaxBuses mbPlatformType mbSelectedDestinationStopId mbSelectedSourceStopId mbVehicleType = do
+getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon mbIntegratedBPPConfigId mbJourneyId mbMaxBuses mbPlatformType mbSelectedDestinationStopId mbSelectedSourceStopId mbVehicleType = do
   let vehicleType = fromMaybe Spec.BUS mbVehicleType
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -74,14 +79,21 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
   let oneFromEachRemaining :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] = filter (\(st, _) -> not $ st `elem` alreadySelectedServiceTiers) . M.toList $ M.fromList serviceTiersOfRemainingBuses
   let allBuses :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] = serviceTiersOfSelectedBuses <> oneFromEachRemaining
 
+  userBookedTripNumber <- getUserBookedTripNumber mbJourneyId routeCode
+
   vehicleTrackingInfoWithSubTypes <- forM allBuses $ \(mbServiceTier, (actualRouteCode, vt@VehicleTracking {..})) -> do
     mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [integratedBPPConfig] vehicleId
-    let resp = mkVehicleTrackingResponse mbServiceTier mbServiceSubTypes (actualRouteCode, vt)
+    currentTripNumber <-
+      if mbServiceTier == Just Spec.PREMIUM
+        then (>>= (.tripNumber)) <$> JMU.getLiveRouteInfo integratedBPPConfig vehicleId actualRouteCode
+        else pure Nothing
+    let resp = mkVehicleTrackingResponse mbServiceTier mbServiceSubTypes currentTripNumber (actualRouteCode, vt)
     pure resp
 
   pure $
     TrackRoute.TrackingResp
-      { vehicleTrackingInfo = vehicleTrackingInfoWithSubTypes
+      { vehicleTrackingInfo = vehicleTrackingInfoWithSubTypes,
+        userBookedTripNumber = userBookedTripNumber
       }
   where
     filterVehiclesYetToReachSelectedStop vehicleTracking =
@@ -89,7 +101,7 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
         Just selectedStopId -> filter (\(_, vt) -> any (\u -> u.stopCode == selectedStopId) vt.upcomingStops) vehicleTracking
         Nothing -> vehicleTracking
 
-    mkVehicleTrackingResponse serviceTierType mbServiceSubTypes (actualRouteCode, VehicleTracking {..}) =
+    mkVehicleTrackingResponse serviceTierType mbServiceSubTypes currentTripNum (actualRouteCode, VehicleTracking {..}) =
       TrackRoute.VehicleTrackingInfo
         { vehicleId = vehicleId,
           nextStop = nextStop,
@@ -104,7 +116,8 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
               vehicleInfo,
           routeCode = actualRouteCode,
           routeShortName = routeShortName,
-          serviceTierType = serviceTierType
+          serviceTierType = serviceTierType,
+          currentTripNumber = currentTripNum
         }
 
     mkVehicleInfo mbServiceSubTypes VehicleInfo {..} = TrackRoute.VehicleInfoForRoute {serviceSubTypes = mbServiceSubTypes, ..}
@@ -118,3 +131,25 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
     isRouteBasedVehicleTracking config = case config.providerConfig of
       DIBC.ONDC DIBC.ONDCBecknConfig {routeBasedVehicleTracking} -> fromMaybe False routeBasedVehicleTracking
       _ -> False
+
+getUserBookedTripNumber ::
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey) ->
+  Text ->
+  Environment.Flow (Maybe Int)
+getUserBookedTripNumber mbJourneyId targetRouteCode = do
+  case mbJourneyId of
+    Nothing -> pure Nothing
+    Just journeyId -> do
+      legs <- QJourneyLeg.getJourneyLegs journeyId
+      let matchingLeg = List.find (\leg -> any (\rd -> rd.routeCode == Just targetRouteCode) leg.routeDetails) legs
+      case matchingLeg >>= (.legSearchId) of
+        Nothing -> pure Nothing
+        Just searchId -> do
+          mbBooking <- QFRFSTicketBooking.findBySearchId (Kernel.Types.Id.Id searchId)
+          pure $ mbBooking >>= (.tripId) >>= parseTripNumberFromTripId
+
+parseTripNumberFromTripId :: Text -> Maybe Int
+parseTripNumberFromTripId tripId' =
+  case reverse (T.splitOn "-" tripId') of
+    (lastPart : _) -> readMaybe (T.unpack lastPart)
+    _ -> Nothing

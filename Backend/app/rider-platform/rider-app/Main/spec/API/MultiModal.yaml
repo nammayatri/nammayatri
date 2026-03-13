@@ -312,6 +312,7 @@ types:
 
   RouteAvailabilityResp:
     availableRoutes: "[AvailableRoute]"
+    userBookedTripNumber: Maybe Int
 
   RouteStopMapping:
     code: Text
@@ -330,6 +331,7 @@ types:
     position: Maybe LatLong
     serviceSubTypes: "Maybe [ServiceSubType]"
     availableSeats: Maybe Int
+    currentTripNumber: Maybe Int
 
   LiveVehicleInfo:
     number: Text
@@ -339,6 +341,7 @@ types:
     eta: "Maybe [BusStopETA]"
     position: LatLong
     serviceSubTypes: "Maybe [ServiceSubType]"
+    currentTripNumber: Maybe Int
 
   AlternateRouteDetails:
     routeCode: Text

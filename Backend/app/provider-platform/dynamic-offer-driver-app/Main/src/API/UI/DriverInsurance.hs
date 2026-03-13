@@ -10,12 +10,12 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
+import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.CallBAPInternal
 import Servant
+import qualified SharedLogic.CallBAPInternal
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
-import qualified Kernel.Types.Id
 
 type API =
   TokenAuth

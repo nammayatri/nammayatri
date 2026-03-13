@@ -10,12 +10,14 @@ imports:
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   RouteState: Storage.CachedQueries.Merchant.MultiModalBus
   ServiceSubType: BecknV2.FRFS.Enums
+  Journey: Domain.Types.Journey
 
 module: TrackRoute
 
 types:
   TrackingResp:
     vehicleTrackingInfo: "[VehicleTrackingInfo]"
+    userBookedTripNumber: Maybe Int
 
   VehicleInfoForRoute:
     startTime: Maybe UTCTime
@@ -42,6 +44,7 @@ types:
     delay: Maybe Seconds
     routeShortName: Maybe Text
     serviceTierType: Maybe ServiceTierType
+    currentTripNumber: Maybe Int
 
 apis:
   - GET:
@@ -55,6 +58,7 @@ apis:
         selectedSourceStopCode: Text
         selectedDestinationStopCode: Text
         maxBuses: Int
+        journeyId: Id Journey
       params:
         routeCode: Text
       response:

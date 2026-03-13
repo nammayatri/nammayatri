@@ -19,6 +19,7 @@ import Tools.Auth
 data NearbyBus = NearbyBus
   { bearing :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     currentLocation :: Kernel.External.Maps.Types.LatLong,
+    currentTripNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     distance :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     routeCode :: Data.Text.Text,
     routeState :: Kernel.Prelude.Maybe Storage.CachedQueries.Merchant.MultiModalBus.RouteState,

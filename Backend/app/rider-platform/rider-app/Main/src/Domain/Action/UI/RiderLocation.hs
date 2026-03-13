@@ -3,6 +3,7 @@
 module Domain.Action.UI.RiderLocation (postIdentifyNearByBus) where
 
 import qualified API.Types.UI.RiderLocation
+import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Monad.Extra (mapMaybeM)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -22,6 +23,7 @@ import qualified Kernel.Types.Id
 import Kernel.Types.Version (CloudType (..))
 import qualified Kernel.Utils.CalculateDistance
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -34,16 +36,16 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
   _merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchantId req.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show req.city)
   riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing merchantOperatingCity.id Enums.BUS DIBC.MULTIMODAL
   let riderLocation = Kernel.External.Maps.Types.LatLong req.riderLat req.riderLon
-  nearbyBuses <- getNearbyBuses riderLocation riderConfig merchantOperatingCity.id
-  busLocations <- mapMaybeM (convertToBusLocation riderLocation riderConfig) nearbyBuses
+  nearbyBuses <- getNearbyBuses riderLocation riderConfig merchantOperatingCity.id integratedBPPConfig
+  busLocations <- mapMaybeM (convertToBusLocation riderLocation riderConfig integratedBPPConfig) nearbyBuses
 
   return $ API.Types.UI.RiderLocation.RiderLocationResponse {buses = busLocations}
   where
-    getNearbyBuses :: Kernel.External.Maps.Types.LatLong -> DomainRiderConfig.RiderConfig -> Id MerchantOperatingCity -> Environment.Flow [CQMMB.BusDataWithRoutesInfo]
-    getNearbyBuses userPos riderConfig merchantOperatingCityId = do
-      integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
-      let redisPrefix = case integratedBPPConfig.providerConfig of
+    getNearbyBuses :: Kernel.External.Maps.Types.LatLong -> DomainRiderConfig.RiderConfig -> Id MerchantOperatingCity -> DIBC.IntegratedBPPConfig -> Environment.Flow [CQMMB.BusDataWithRoutesInfo]
+    getNearbyBuses userPos riderConfig _merchantOperatingCityId integratedBPPConfig' = do
+      let redisPrefix = case integratedBPPConfig'.providerConfig of
             DIBC.ONDC config -> config.redisPrefix
             _ -> Nothing
       let nearbyBusSearchRadius :: Double = fromMaybe 0.1 riderConfig.nearbyBusSearchRadius
@@ -70,8 +72,8 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
         distanceToUser :: Kernel.External.Maps.Types.LatLong -> CQMMB.BusDataWithRoutesInfo -> Double
         distanceToUser riderLoc busData = realToFrac $ Kernel.Utils.CalculateDistance.distanceBetweenInMeters riderLoc (Kernel.External.Maps.Types.LatLong busData.latitude busData.longitude)
 
-    convertToBusLocation :: Kernel.External.Maps.Types.LatLong -> DomainRiderConfig.RiderConfig -> CQMMB.BusDataWithRoutesInfo -> Environment.Flow (Maybe API.Types.UI.RiderLocation.BusLocation)
-    convertToBusLocation riderLocation riderConfig busData = do
+    convertToBusLocation :: Kernel.External.Maps.Types.LatLong -> DomainRiderConfig.RiderConfig -> DIBC.IntegratedBPPConfig -> CQMMB.BusDataWithRoutesInfo -> Environment.Flow (Maybe API.Types.UI.RiderLocation.BusLocation)
+    convertToBusLocation riderLocation riderConfig integratedBPPConfig' busData = do
       now <- getCurrentTime
       let busTimestamp = posixSecondsToUTCTime (fromIntegral busData.timestamp)
           ageInSeconds = diffUTCTime now busTimestamp
@@ -84,6 +86,13 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
           let busLocation = Kernel.External.Maps.Types.LatLong busData.latitude busData.longitude
               distanceToBus = realToFrac $ Kernel.Utils.CalculateDistance.distanceBetweenInMeters riderLocation busLocation
               busNumber = fromMaybe "UNKNOWN" busData.vehicle_number
+          mbServiceTier <- JMU.getVehicleServiceTypeFromInMem [integratedBPPConfig'] busNumber
+          currentTripNum <-
+            if mbServiceTier == Just Spec.PREMIUM
+              then do
+                mbLiveRouteInfo <- JMU.getVehicleLiveRouteInfo [integratedBPPConfig'] busNumber Nothing
+                pure $ (snd <$> mbLiveRouteInfo) >>= (.tripNumber)
+              else pure Nothing
           locationId <- generateGUID
           pure $
             Just
@@ -94,7 +103,8 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
                   timestamp = Just busTimestamp,
                   customerLocation = riderLocation,
                   customerLocationTimestamp = Just now,
-                  locationAccuracy = req.locationAccuracy
+                  locationAccuracy = req.locationAccuracy,
+                  currentTripNumber = currentTripNum
                 }
 
     nearbyBusKey :: Maybe Text -> Text

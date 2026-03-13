@@ -21,6 +21,7 @@ types:
     id : Maybe Text
     customerLocationTimestamp: Maybe UTCTime
     locationAccuracy: Maybe Double
+    currentTripNumber: Maybe Int
     derive: "Show"
 
   RiderLocationResponse:

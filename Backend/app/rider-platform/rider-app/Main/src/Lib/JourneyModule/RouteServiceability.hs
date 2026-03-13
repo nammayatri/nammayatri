@@ -96,12 +96,16 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                         waybill <- detail.waybill_no
                         tNum <- detail.trip_number
                         return $ waybill <> "-" <> show tNum
-                  seatLayoutId <-
+                  mbLiveRouteInfo <-
                     JMU.getLiveRouteInfo
                       integratedBPPConfig'
                       detail.vehicle_no
                       routeId'
-                      <&> (>>= (.seatLayoutId))
+                  let seatLayoutId = mbLiveRouteInfo >>= (.seatLayoutId)
+                      currentTripNum =
+                        if serviceTier == BecknV2.FRFS.Enums.PREMIUM
+                          then mbLiveRouteInfo >>= (.tripNumber)
+                          else Nothing
                   (isAvailable, availableSeatsCount) <- case seatLayoutId of
                     Just layoutId -> case combinedTripId of
                       Nothing -> return (False, Nothing)
@@ -128,7 +132,8 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                             vehicleNumber = detail.vehicle_no,
                             tripId = combinedTripId,
                             serviceSubTypes = mbServiceSubTypes,
-                            availableSeats = availableSeatsCount
+                            availableSeats = availableSeatsCount,
+                            currentTripNumber = currentTripNum
                           }
                 Nothing -> do
                   logError $ "Vehicle info not found for bus: " <> detail.vehicle_no
@@ -153,6 +158,10 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                       mapM
                         (enrichBusStopETA integratedBPPConfig')
                         (fromMaybe [] bus.busData.eta_data)
+                    currentTripNum <-
+                      if serviceTier == BecknV2.FRFS.Enums.PREMIUM
+                        then (>>= (.tripNumber)) <$> JMU.getLiveRouteInfo integratedBPPConfig' bus.vehicleNumber bus.busData.route_id
+                        else pure Nothing
                     return . Just $
                       API.Types.UI.MultimodalConfirm.LiveVehicleInfo
                         { eta = Just enrichedEta,
@@ -161,7 +170,8 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                           locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral bus.busData.timestamp,
                           serviceTierType = serviceTier,
                           serviceTierName = (.shortName) <$> frfsServiceTier,
-                          serviceSubTypes = mbServiceSubTypes
+                          serviceSubTypes = mbServiceSubTypes,
+                          currentTripNumber = currentTripNum
                         }
                   Nothing -> do
                     logError $ "Vehicle info not found for bus: " <> bus.vehicleNumber

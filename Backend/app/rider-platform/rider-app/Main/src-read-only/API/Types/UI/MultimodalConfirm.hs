@@ -222,7 +222,8 @@ data LegStatus = LegStatus
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LiveVehicleInfo = LiveVehicleInfo
-  { eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA],
+  { currentTripNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA],
     locationUTCTimestamp :: Kernel.Prelude.UTCTime,
     number :: Kernel.Prelude.Text,
     position :: Kernel.External.Maps.Types.LatLong,
@@ -317,7 +318,7 @@ data RouteAvailabilityReq = RouteAvailabilityReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RouteAvailabilityResp = RouteAvailabilityResp {availableRoutes :: [AvailableRoute]}
+data RouteAvailabilityResp = RouteAvailabilityResp {availableRoutes :: [AvailableRoute], userBookedTripNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -348,6 +349,7 @@ data RouteWithLiveVehicle = RouteWithLiveVehicle {liveVehicles :: [LiveVehicleIn
 
 data ScheduledVehicleInfo = ScheduledVehicleInfo
   { availableSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    currentTripNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA],
     locationUTCTimestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     position :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,

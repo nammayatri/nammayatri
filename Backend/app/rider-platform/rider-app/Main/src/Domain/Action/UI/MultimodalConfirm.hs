@@ -1885,6 +1885,10 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                 mapConcurrently
                   (JMRouteServiceability.enrichBusStopETA ctx.integratedBPPConfig)
                   (fromMaybe [] singleBus.busData.eta_data)
+              currentTripNum <-
+                if serviceTier == Spec.PREMIUM
+                  then (>>= (.tripNumber)) <$> JMU.getLiveRouteInfo ctx.integratedBPPConfig vno routeId
+                  else pure Nothing
               let vehicleInfo =
                     API.Types.UI.MultimodalConfirm.LiveVehicleInfo
                       { eta = Just enrichedEta,
@@ -1893,7 +1897,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                         locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral singleBus.busData.timestamp,
                         serviceTierType = serviceTier,
                         serviceTierName = (.shortName) <$> frfsServiceTier,
-                        serviceSubTypes = mbServiceSubTypes
+                        serviceSubTypes = mbServiceSubTypes,
+                        currentTripNumber = currentTripNum
                       }
               pure $
                 ApiTypes.RouteServiceabilityResp
@@ -1995,7 +2000,6 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
     getRouteNotFoundError MultiModalTypes.Subway source dest = NoValidSubwayRoute source dest
     getRouteNotFoundError MultiModalTypes.Bus source dest = NoValidBusRoute source dest
     getRouteNotFoundError _ source dest = NoValidMetroRoute source dest -- fallback
-
     getRouteServiceability ::
       Maybe ApiTypes.EffectiveStops ->
       Maybe [Text] ->
@@ -2277,23 +2281,35 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
   -- Get rider config to check source of service tier
   mbSourceOfServiceTier <- fmap (.sourceOfServiceTier) <$> QRiderConfig.findByMerchantOperatingCityId person.merchantOperatingCityId
 
-  frfsQuotesAndCategories <-
+  (frfsQuotesAndCategories, userBookedTripNumber) <-
     case (req.journeyId, req.legOrder) of
       (Just journeyId, Just legOrder) -> do
         journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
         quotes <- maybe (pure []) (QFRFSQuote.findAllBySearchId . Id) journeyLeg.legSearchId
-        mapM
-          ( \quote -> do
-              quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
-              return (quote, quoteCategories)
-          )
-          quotes
-      _ -> pure []
+        qcs <-
+          mapM
+            ( \quote -> do
+                quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+                return (quote, quoteCategories)
+            )
+            quotes
+        -- Look up userBookedTripNumber from the booking (only for PREMIUM)
+        bookedTripNum <- case journeyLeg.legSearchId of
+          Just searchId -> do
+            mbBooking <- QFRFSTicketBooking.findBySearchId (Id searchId)
+            pure $ do
+              booking <- mbBooking
+              guard (booking.serviceTierType == Just Spec.PREMIUM)
+              tripId' <- booking.tripId
+              parseTripNumberFromTripId tripId'
+          Nothing -> pure Nothing
+        return (qcs, bookedTripNum)
+      _ -> pure ([], Nothing)
   let frfsQuotes = fst <$> frfsQuotesAndCategories
 
   let availableServiceTiers = if null frfsQuotes then Nothing else Just (mapMaybe (\(quote, quoteCategories) -> JMU.getServiceTierFromQuote quoteCategories quote) frfsQuotesAndCategories)
   case integratedBPPConfigs of
-    [] -> return $ ApiTypes.RouteAvailabilityResp {availableRoutes = []}
+    [] -> return $ ApiTypes.RouteAvailabilityResp {availableRoutes = [], userBookedTripNumber = Nothing}
     (integratedBPPConfig : _) -> do
       (_, availableRoutesByTier, _) <-
         JMU.findPossibleRoutes
@@ -2320,11 +2336,17 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
       case mbSourceOfServiceTier of
         Just DRC.QUOTES -> do
           availableRoutes <- concatMapM (convertToAvailableRouteWithQuotes integratedBPPConfig person frfsQuotes) filteredRoutes
-          return $ ApiTypes.RouteAvailabilityResp {availableRoutes = availableRoutes}
+          return $ ApiTypes.RouteAvailabilityResp {availableRoutes = availableRoutes, userBookedTripNumber}
         _ -> do
           availableRoutes <- concatMapM (convertToAvailableRoute integratedBPPConfig person) filteredRoutes
-          return $ ApiTypes.RouteAvailabilityResp {availableRoutes = availableRoutes}
+          return $ ApiTypes.RouteAvailabilityResp {availableRoutes = availableRoutes, userBookedTripNumber}
   where
+    parseTripNumberFromTripId :: Text -> Maybe Int
+    parseTripNumberFromTripId tripId' =
+      case reverse (T.splitOn "-" tripId') of
+        (lastPart : _) -> readMaybe (T.unpack lastPart)
+        _ -> Nothing
+
     findQuoteIdByRouteCode :: [DFRFSQuote.FRFSQuote] -> [Text] -> Maybe (Id DFRFSQuote.FRFSQuote)
     findQuoteIdByRouteCode quotes routeCodes =
       listToMaybe $
@@ -2472,11 +2494,12 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
           _ -> Spec.BUS
 
   void $
-    withTryCatch "postMultimodalOrderSublegSetOnboardedVehicleDetails:postFrfsTicketVerify"
+    withTryCatch
+      "postMultimodalOrderSublegSetOnboardedVehicleDetails:postFrfsTicketVerify"
       ( do
-        forM_ qrDataList $ \qrData -> do
-          let verifyReq = FRFSTicketServiceAPI.FRFSTicketVerifyReq {FRFSTicketServiceAPI.qrData = qrData}
-          void $ FRFSTicketService.postFrfsTicketVerify (mbPersonId, merchantId) (Just integratedBPPConfig.platformType) merchantOperatingCity.city frfsVehicleCategory verifyReq
+          forM_ qrDataList $ \qrData -> do
+            let verifyReq = FRFSTicketServiceAPI.FRFSTicketVerifyReq {FRFSTicketServiceAPI.qrData = qrData}
+            void $ FRFSTicketService.postFrfsTicketVerify (mbPersonId, merchantId) (Just integratedBPPConfig.platformType) merchantOperatingCity.city frfsVehicleCategory verifyReq
       )
 
   QJourneyLeg.updateByPrimaryKey $

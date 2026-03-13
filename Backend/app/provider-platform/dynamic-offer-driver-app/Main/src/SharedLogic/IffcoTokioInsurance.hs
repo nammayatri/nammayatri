@@ -4,7 +4,10 @@ module SharedLogic.IffcoTokioInsurance
 where
 
 import qualified Data.Text as Text
+import Data.Time (UTCTime (..), utctDay)
+import Data.Time.Calendar (addDays)
 import qualified Data.Time.Calendar as Cal
+import qualified Domain.Types.Extra.MerchantServiceConfig as ExtraMSC
 import qualified Domain.Types.IffcoTokioInsurance as DITI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -12,22 +15,19 @@ import qualified Domain.Types.Person as DP
 import Environment ()
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Insurance.IffcoTokio.Types as IffcoTokio
 import qualified Kernel.External.Insurance.Interface as Insurance
 import qualified Kernel.External.Insurance.Interface.Types as InsuranceTypes
-import qualified Kernel.External.Insurance.IffcoTokio.Types as IffcoTokio
 import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude hiding (all, whenJust)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant.Client.Core (Scheme (..))
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
-import qualified Domain.Types.Extra.MerchantServiceConfig as ExtraMSC
 import qualified Storage.Queries.IffcoTokioInsurance as QIffco
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.Notifications as Notify
-import Data.Time (UTCTime (..), utctDay)
-import Data.Time.Calendar (addDays)
 
 -- | Trigger IffcoTokio insurance for a driver at ride start.
 -- Skips if (1) config not set for the city, (2) driver already insured today (same calendar day).

@@ -102,13 +102,13 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
 
       let successfulMappings = catMaybes busRouteMapping
 
-      serviceTypeMap :: HashMap.HashMap Text (Spe.ServiceTierType, Maybe Text, Maybe [Spe.ServiceSubType]) <-
+      serviceTypeMap :: HashMap.HashMap Text (Spe.ServiceTierType, Maybe Text, Maybe [Spe.ServiceSubType], Maybe Int) <-
         HashMap.fromList
           <$> mapM
             ( \m -> do
                 frfsServiceTier <- SIBC.fetchFirstIntegratedBPPConfigMaybeResult integratedBPPConfigs $ \config -> do
                   CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId m.service_type riderConfig.merchantOperatingCityId config.id
-                return (m.vehicle_no, (m.service_type, frfsServiceTier <&> (.shortName), m.service_sub_types))
+                return (m.vehicle_no, (m.service_type, frfsServiceTier <&> (.shortName), m.service_sub_types, m.trip_number))
             )
             successfulMappings
 
@@ -116,17 +116,19 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
         map
           ( \(bus, (route_id, routeInfo)) ->
               let maybeServiceType = bus.vehicle_number >>= (`HashMap.lookup` serviceTypeMap)
+                  isPremium = maybe False (\(sType, _, _, _) -> sType == Spe.PREMIUM) maybeServiceType
                in API.Types.UI.NearbyBuses.NearbyBus
                     { currentLocation = Maps.LatLong bus.latitude bus.longitude,
                       distance = Nothing,
                       routeCode = route_id,
                       routeState = Just routeInfo.route_state,
-                      serviceType = (\(sType, _, _) -> sType) <$> maybeServiceType,
-                      serviceTierName = maybeServiceType >>= (\(_, sName, _) -> sName),
-                      serviceSubTypes = maybeServiceType >>= (\(_, _, sSubTypes) -> sSubTypes),
+                      serviceType = (\(sType, _, _, _) -> sType) <$> maybeServiceType,
+                      serviceTierName = maybeServiceType >>= (\(_, sName, _, _) -> sName),
+                      serviceSubTypes = maybeServiceType >>= (\(_, _, sSubTypes, _) -> sSubTypes),
                       shortName = routeInfo.route_number,
                       vehicleNumber = bus.vehicle_number,
-                      bearing = round <$> bus.bearing
+                      bearing = round <$> bus.bearing,
+                      currentTripNumber = if isPremium then maybeServiceType >>= (\(_, _, _, tripNum) -> tripNum) else Nothing
                     }
           )
           busesWithMostMatchingRouteStates

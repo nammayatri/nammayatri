@@ -23,9 +23,9 @@ import qualified API.DistanceMatrix as DistanceMatrix
 import qualified API.PlaceName as PlaceName
 import qualified API.SnapToRoad as SnapToRoad
 import Environment
-import Kernel.Prelude (Text, pure)
 import qualified Kernel.External.Maps.Google.MapsClient as Maps
 import qualified Kernel.External.Maps.Google.RoadsClient as Roads
+import Kernel.Prelude (Text, pure)
 import Servant
 
 type API =
