@@ -85,7 +85,25 @@ data CommonDocumentItem = CommonDocumentItem
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data CommonDocumentListItem = CommonDocumentListItem
+  { documentId :: Kernel.Types.Id.Id Dashboard.Common.CommonDriverOnboardingDocuments,
+    driverId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    documentType :: DocumentType,
+    documentData :: Kernel.Prelude.Text,
+    verificationStatus :: Dashboard.Common.VerificationStatus,
+    rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    documentImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data CommonDocumentRejectDetails = CommonDocumentRejectDetails {reason :: Kernel.Prelude.Text, documentId :: Kernel.Types.Id.Id Dashboard.Common.CommonDriverOnboardingDocuments}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CommonDocumentsListRes = CommonDocumentsListRes {summary :: Dashboard.Common.Summary, documents :: [CommonDocumentListItem]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -105,7 +123,7 @@ data DLDetails = DLDetails
     driverDateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     classOfVehicles :: [Kernel.Prelude.Text],
     imageId1 :: Kernel.Prelude.Text,
-    imageId2 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    imageId2 :: Kernel.Prelude.Maybe (Kernel.Prelude.Text),
     dateOfIssue :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     createdAt :: Kernel.Prelude.UTCTime
   }
@@ -512,7 +530,7 @@ data VerifyBankAccountReq = VerifyBankAccountReq {bankAccountNo :: Kernel.Prelud
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = (GetDriverRegistrationDocumentsList :<|> GetDriverRegistrationGetDocument :<|> PostDriverRegistrationDocumentUpload :<|> PostDriverRegistrationRegisterDl :<|> PostDriverRegistrationVerifyBankAccount :<|> GetDriverRegistrationInfoBankAccount :<|> PostDriverRegistrationDeleteBankAccount :<|> PostDriverRegistrationRegisterRc :<|> PostDriverRegistrationRegisterAadhaar :<|> PostDriverRegistrationRegisterGenerateAadhaarOtp :<|> PostDriverRegistrationRegisterVerifyAadhaarOtp :<|> GetDriverRegistrationUnderReviewDrivers :<|> GetDriverRegistrationDocumentsInfo :<|> GetDriverRegistrationVerificationStatus :<|> PostDriverRegistrationDocumentsUpdate :<|> PostDriverRegistrationDocumentsCommon :<|> PostDriverRegistrationUnlinkDocumentHelper :<|> PostDriverRegistrationTriggerReminderHelper)
+type API = (GetDriverRegistrationDocumentsList :<|> GetDriverRegistrationGetDocument :<|> PostDriverRegistrationDocumentUpload :<|> PostDriverRegistrationRegisterDl :<|> PostDriverRegistrationVerifyBankAccount :<|> GetDriverRegistrationInfoBankAccount :<|> PostDriverRegistrationDeleteBankAccount :<|> PostDriverRegistrationRegisterRc :<|> PostDriverRegistrationRegisterAadhaar :<|> PostDriverRegistrationRegisterGenerateAadhaarOtp :<|> PostDriverRegistrationRegisterVerifyAadhaarOtp :<|> GetDriverRegistrationUnderReviewDrivers :<|> GetDriverRegistrationDocumentsInfo :<|> GetDriverRegistrationVerificationStatus :<|> GetDriverRegistrationDocumentsCommonList :<|> PostDriverRegistrationDocumentsUpdate :<|> PostDriverRegistrationDocumentsCommon :<|> PostDriverRegistrationUnlinkDocumentHelper :<|> PostDriverRegistrationTriggerReminderHelper)
 
 type GetDriverRegistrationDocumentsList =
   ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "documents" :> "list" :> QueryParam "rcId" Kernel.Prelude.Text
@@ -610,6 +628,32 @@ type GetDriverRegistrationVerificationStatus =
            VerificationStatusListResponse
   )
 
+type GetDriverRegistrationDocumentsCommonList =
+  ( "documents" :> "common" :> "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
+      :> QueryParam
+           "from"
+           Kernel.Prelude.UTCTime
+      :> QueryParam "to" Kernel.Prelude.UTCTime
+      :> QueryParam
+           "documentType"
+           [DocumentType]
+      :> QueryParam
+           "verificationStatus"
+           [Dashboard.Common.VerificationStatus]
+      :> QueryParam
+           "driverId"
+           [Kernel.Types.Id.Id Dashboard.Common.Driver]
+      :> QueryParam
+           "sortByField"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "sortOrder"
+           Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           CommonDocumentsListRes
+  )
+
 type PostDriverRegistrationDocumentsUpdate = ("documents" :> "update" :> ReqBody '[JSON] UpdateDocumentRequest :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostDriverRegistrationDocumentsCommon =
@@ -666,6 +710,7 @@ data DriverRegistrationAPIs = DriverRegistrationAPIs
     getDriverRegistrationUnderReviewDrivers :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient UnderReviewDriversListResponse,
     getDriverRegistrationDocumentsInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient [DriverDocument],
     getDriverRegistrationVerificationStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> DocumentType -> ServiceType -> EulerHS.Types.EulerClient VerificationStatusListResponse,
+    getDriverRegistrationDocumentsCommonList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe [DocumentType] -> Kernel.Prelude.Maybe [Dashboard.Common.VerificationStatus] -> Kernel.Prelude.Maybe [Kernel.Types.Id.Id Dashboard.Common.Driver] -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient CommonDocumentsListRes,
     postDriverRegistrationDocumentsUpdate :: UpdateDocumentRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverRegistrationDocumentsCommon :: Kernel.Types.Id.Id Dashboard.Common.Driver -> CommonDocumentCreateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverRegistrationUnlinkDocument :: Kernel.Types.Id.Id Dashboard.Common.Driver -> DocumentType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient UnlinkDocumentResp,
@@ -675,7 +720,7 @@ data DriverRegistrationAPIs = DriverRegistrationAPIs
 mkDriverRegistrationAPIs :: (Client EulerHS.Types.EulerClient API -> DriverRegistrationAPIs)
 mkDriverRegistrationAPIs driverRegistrationClient = (DriverRegistrationAPIs {..})
   where
-    getDriverRegistrationDocumentsList :<|> getDriverRegistrationGetDocument :<|> postDriverRegistrationDocumentUpload :<|> postDriverRegistrationRegisterDl :<|> postDriverRegistrationVerifyBankAccount :<|> getDriverRegistrationInfoBankAccount :<|> postDriverRegistrationDeleteBankAccount :<|> postDriverRegistrationRegisterRc :<|> postDriverRegistrationRegisterAadhaar :<|> postDriverRegistrationRegisterGenerateAadhaarOtp :<|> postDriverRegistrationRegisterVerifyAadhaarOtp :<|> getDriverRegistrationUnderReviewDrivers :<|> getDriverRegistrationDocumentsInfo :<|> getDriverRegistrationVerificationStatus :<|> postDriverRegistrationDocumentsUpdate :<|> postDriverRegistrationDocumentsCommon :<|> postDriverRegistrationUnlinkDocument :<|> postDriverRegistrationTriggerReminder = driverRegistrationClient
+    getDriverRegistrationDocumentsList :<|> getDriverRegistrationGetDocument :<|> postDriverRegistrationDocumentUpload :<|> postDriverRegistrationRegisterDl :<|> postDriverRegistrationVerifyBankAccount :<|> getDriverRegistrationInfoBankAccount :<|> postDriverRegistrationDeleteBankAccount :<|> postDriverRegistrationRegisterRc :<|> postDriverRegistrationRegisterAadhaar :<|> postDriverRegistrationRegisterGenerateAadhaarOtp :<|> postDriverRegistrationRegisterVerifyAadhaarOtp :<|> getDriverRegistrationUnderReviewDrivers :<|> getDriverRegistrationDocumentsInfo :<|> getDriverRegistrationVerificationStatus :<|> getDriverRegistrationDocumentsCommonList :<|> postDriverRegistrationDocumentsUpdate :<|> postDriverRegistrationDocumentsCommon :<|> postDriverRegistrationUnlinkDocument :<|> postDriverRegistrationTriggerReminder = driverRegistrationClient
 
 data DriverRegistrationUserActionType
   = GET_DRIVER_REGISTRATION_DOCUMENTS_LIST
@@ -692,6 +737,7 @@ data DriverRegistrationUserActionType
   | GET_DRIVER_REGISTRATION_UNDER_REVIEW_DRIVERS
   | GET_DRIVER_REGISTRATION_DOCUMENTS_INFO
   | GET_DRIVER_REGISTRATION_VERIFICATION_STATUS
+  | GET_DRIVER_REGISTRATION_DOCUMENTS_COMMON_LIST
   | POST_DRIVER_REGISTRATION_DOCUMENTS_UPDATE
   | POST_DRIVER_REGISTRATION_DOCUMENTS_COMMON
   | POST_DRIVER_REGISTRATION_UNLINK_DOCUMENT

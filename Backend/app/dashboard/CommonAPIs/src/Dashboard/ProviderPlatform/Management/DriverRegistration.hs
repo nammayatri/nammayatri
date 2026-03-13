@@ -22,15 +22,29 @@ where
 import API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration as Reexport
 import Dashboard.Common as Reexport
 import Data.Aeson
+import qualified Data.ByteString.Lazy as BSL
 import Data.List (sortOn)
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.Prelude
 import Kernel.Types.Predicate
 import Kernel.Utils.Validation
+import Servant
 
 instance HideSecrets UploadDocumentReq where
   type ReqWithoutSecrets UploadDocumentReq = UploadDocumentTReq
   hideSecrets UploadDocumentReq {..} = UploadDocumentTReq {..}
+
+instance FromHttpApiData [DocumentType] where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader bs = left T.pack . eitherDecode . BSL.fromStrict $ bs
+
+instance ToHttpApiData [DocumentType] where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
 
 -- auth  API ------------------------
 -- ----------------------------------------

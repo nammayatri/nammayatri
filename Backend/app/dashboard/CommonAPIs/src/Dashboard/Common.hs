@@ -45,6 +45,7 @@ import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Types.HideSecrets
 import Kernel.Types.HideSecrets as Reexport
+import qualified Kernel.Types.Id as Id
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Servant
 
@@ -116,7 +117,31 @@ data Operator
 
 data VerificationStatus = PENDING | VALID | INVALID | MANUAL_VERIFICATION_REQUIRED | UNAUTHORIZED
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+-- Allow parsing lists of driver IDs from query params (JSON-encoded list),
+-- similar to existing list instances for booking statuses, service tiers, etc.
+instance FromHttpApiData [Id.Id Driver] where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader bs = left T.pack . eitherDecode . BSL.fromStrict $ bs
+
+instance ToHttpApiData [Id.Id Driver] where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
+
+-- Allow parsing lists of VerificationStatus from query params (JSON-encoded list),
+-- matching how other list enums (e.g. BookingStatus) are handled.
+instance FromHttpApiData [VerificationStatus] where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader bs = left T.pack . eitherDecode . BSL.fromStrict $ bs
+
+instance ToHttpApiData [VerificationStatus] where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
 
 data DriverVehicleDetails = DriverVehicleDetails
   { vehicleManufacturer :: Text,

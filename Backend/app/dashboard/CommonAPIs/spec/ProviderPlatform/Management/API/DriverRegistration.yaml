@@ -170,6 +170,22 @@ apis:
       response:
         type: VerificationStatusListResponse
 
+  - GET: # CommonDocumentsListAPI
+      endpoint: /documents/common/list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - from: UTCTime
+        - to: UTCTime
+        - documentType: "[DocumentType]"
+        - verificationStatus: "[VerificationStatus]"
+        - driverId: "[Id Driver]"
+        - sortByField: Text
+        - sortOrder: Text
+      response:
+        type: CommonDocumentsListRes
+
   - POST: # UpdateDocumentAPI
       endpoint: /documents/update
       auth: ApiAuthV2
@@ -417,6 +433,19 @@ types:
     - documentImageId: Maybe Text
     - createdAt: UTCTime
     - updatedAt: UTCTime
+  CommonDocumentListItem:
+    - documentId: Id CommonDriverOnboardingDocuments
+    - driverId: Maybe Text
+    - documentType: DocumentType
+    - documentData: Text
+    - verificationStatus: VerificationStatus
+    - rejectReason: Maybe Text
+    - documentImageId: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  CommonDocumentsListRes:
+    - summary: Summary
+    - documents: [CommonDocumentListItem]
   CommonDocumentCreateReq:
     - documentType: DocumentType
     - documentData: Text
