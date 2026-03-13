@@ -5,6 +5,7 @@ module API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement where
 
 import qualified Dashboard.Common
 import Data.Aeson
+import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
@@ -83,6 +84,7 @@ data InvoiceListItem = InvoiceListItem
     sacCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentMethod :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     taxableValueOfServiceSupplied :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    lineItems :: Data.Aeson.Value,
     generatedAt :: Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)

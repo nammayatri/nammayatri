@@ -478,6 +478,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFrom mbInvoiceId mbInvo
             sacCode = sacCode,
             paymentMethod = mbPaymentMethod,
             taxableValueOfServiceSupplied = Just invoice.subtotal,
+            lineItems = invoice.lineItems,
             generatedAt = invoice.createdAt
           }
 

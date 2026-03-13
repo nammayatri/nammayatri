@@ -8,6 +8,7 @@ imports:
   Driver: Dashboard.Common
   InvoiceStatus: Lib.Finance.Domain.Types.Invoice
   InvoiceType: Lib.Finance.Domain.Types.Invoice
+  Value: Data.Aeson
 
 module: FinanceManagement
 
@@ -257,6 +258,7 @@ types:
     - sacCode: Maybe Text
     - paymentMethod: Maybe Text
     - taxableValueOfServiceSupplied: Maybe HighPrecMoney
+    - lineItems: Value
     - generatedAt: UTCTime
 
   # ----- Reconciliation -----
