@@ -79,6 +79,7 @@ import Kernel.Utils.Version
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+-- import qualified SharedLogic.IffcoTokioInsurance as IffcoInsurance
 import qualified SharedLogic.OTP as SOTP
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
@@ -536,6 +537,7 @@ verify tokenId req = do
   person <- checkPersonExists entityId
   fork "generating the referral code for driver" $ do
     void $ generateReferralCode (Just person.role) (person.id, person.merchantId, Id merchantOperatingCityId)
+  -- fork "IffcoTokio driver insurance" $ IffcoInsurance.triggerIffcoTokioInsurance person.id person.merchantId (Id merchantOperatingCityId)
 
   let isNewPerson = person.isNew
   let deviceToken = Just req.deviceToken

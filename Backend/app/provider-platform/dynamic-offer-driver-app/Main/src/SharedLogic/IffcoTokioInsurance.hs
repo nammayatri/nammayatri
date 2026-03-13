@@ -114,9 +114,18 @@ triggerIffcoTokioInsurance driverId merchantId merchantOpCityId = do
                     <> maybe "" (" " <>) person.lastName,
                 invoiceDate = invoiceDateStr,
                 invoiceRequestNumber = invoiceReqNum,
-                insuredAddress = iffcoExtCfg.insuredAddress,
-                insuredEmail = iffcoExtCfg.insuredEmail,
-                ewCommencesOn = Nothing
+                insuredAddress = Just iffcoExtCfg.insuredAddress,
+                insuredEmail = Just iffcoExtCfg.insuredEmail,
+                ewCommencesOn = Nothing,
+                customerId = Nothing,
+                extraAttrib01 = Nothing,
+                insurancePlan = Just iffcoExtCfg.insurancePlan,
+                insuredProductCode = Nothing,
+                itemDetail = Nothing,
+                masterPolicyClient = Just iffcoExtCfg.masterPolicyClient,
+                riskEndDate = Nothing,
+                riskStartDate = Nothing,
+                sumInsured = Nothing
               }
       logInfo $ "IffcoTokio: triggering insurance for driver=" <> driverId.getId <> " invoiceReqNum=" <> invoiceReqNum
       void $
