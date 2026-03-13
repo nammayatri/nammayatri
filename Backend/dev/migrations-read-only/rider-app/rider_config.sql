@@ -613,3 +613,6 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN max_number_of_luggages integer ;
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN seat_booking_ttl integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN seat_booking_cleanup_ttl integer ;
+
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN include_vehicles_with_no_eta boolean ;

@@ -231,6 +231,7 @@ RiderConfig:
     invoiceLogoUrl: Maybe Text
     externalSOSConfig: Maybe ExternalSOSConfig
     maxNumberOfLuggages: Maybe Int
+    includeVehiclesWithNoEta: Maybe Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

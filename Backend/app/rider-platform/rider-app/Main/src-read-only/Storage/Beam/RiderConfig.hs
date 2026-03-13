@@ -85,6 +85,7 @@ data RiderConfigT f = RiderConfigT
     frfsMetricsApiKey :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     hardLimitForSafetyJobs :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds)),
     incidentReportSupport :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    includeVehiclesWithNoEta :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     initiateFirstMultimodalJourney :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     intercitySearchLocations :: (B.C f (Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.IntercitySearchLocation])),
     invoiceLogoUrl :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
@@ -193,8 +194,8 @@ instance B.Table RiderConfigT where
 
 type RiderConfig = RiderConfigT Identity
 
-$(enableKVPG (''RiderConfigT) [('merchantOperatingCityId)] [])
+$(enableKVPG ''RiderConfigT ['merchantOperatingCityId] [])
 
-$(mkTableInstances (''RiderConfigT) "rider_config")
+$(mkTableInstances ''RiderConfigT "rider_config")
 
-$(Domain.Types.UtilsTH.mkCacParseInstance (''RiderConfigT))
+$(Domain.Types.UtilsTH.mkCacParseInstance ''RiderConfigT)
