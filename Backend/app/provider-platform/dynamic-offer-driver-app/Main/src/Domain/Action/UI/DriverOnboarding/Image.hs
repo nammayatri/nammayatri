@@ -154,11 +154,12 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
   let merchantId = person.merchantId
   docConfigs <- maybe (CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing) pure mbDocConfigs
   -- Only restrict when rolesAllowedToUploadDocument is non-empty; Nothing or [] means all roles allowed
+  -- When mbUploaderRole is Nothing (e.g. admin not at BPP), allow; only check when uploader role is known
   whenJust (listToMaybe docConfigs >>= (.rolesAllowedToUploadDocument)) $ \allowedRoles ->
-    unless (null allowedRoles) $ do
-      let uploaderRole = fromMaybe person.role mbUploaderRole
-      unless (uploaderRole `elem` allowedRoles) $
-        throwError (InvalidRequesterRole $ show uploaderRole)
+    unless (null allowedRoles) $
+      whenJust mbUploaderRole $ \uploaderRole ->
+        unless (uploaderRole `elem` allowedRoles) $
+          throwError (InvalidRequesterRole $ show uploaderRole)
   when (isJust validationStatus && imageType == DVC.ProfilePhoto) $ checkIfGenuineReq merchantId req
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
