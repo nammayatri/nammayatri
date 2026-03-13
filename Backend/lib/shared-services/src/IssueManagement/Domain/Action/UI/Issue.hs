@@ -998,6 +998,7 @@ getConfigValue language issueConfig mbRideInfoRes key = do
       tollCharges = maybe 0.0 (.amount.amount) (getFareFromArray "TOLL_CHARGES" fareBreakup)
       petCharges = maybe 0.0 (.amount.amount) (getFareFromArray "PET_CHARGES" fareBreakup)
       driverAllowance = maybe 0.0 (.amount.amount) (getFareFromArray "DRIVER_ALLOWANCE" fareBreakup)
+      airportConvenienceFee = maybe 0.0 (.amount.amount) (getFareFromArray "AIRPORT_CONVENIENCE_FEE" fareBreakup)
       businessDiscount = maybe 0.0 (.amount.amount) (getFareFromArray "BUSINESS_DISCOUNT" fareBreakup)
       personalDiscount = maybe 0.0 (.amount.amount) (getFareFromArray "PERSONAL_DISCOUNT" fareBreakup)
       priorityCharges = maybe 0.0 (.amount.amount) (getFareFromArray "PRIORITY_CHARGES" fareBreakup)
@@ -1039,6 +1040,7 @@ getConfigValue language issueConfig mbRideInfoRes key = do
         "RIDE_STOP_CHARGES" -> show rideStopCharges
         "LUGGAGE_CHARGE" -> show luggageCharges
         "DRIVER_ALLOWANCE" -> show driverAllowance
+        "AIRPORT_CONVENIENCE_FEE" -> show airportConvenienceFee
         "BOOTH_CHARGE" -> show boothCharges
         "RETURN_FEE" -> show returnCharges
         "HEADING" -> "{SUBPART}{HEADING}{!!!}"

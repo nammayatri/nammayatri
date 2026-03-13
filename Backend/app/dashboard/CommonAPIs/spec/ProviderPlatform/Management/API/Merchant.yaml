@@ -941,6 +941,7 @@ types:
     - nightShiftCharge: Maybe NightShiftChargeAPIEntity
     - petCharges: Maybe HighPrecMoney
     - driverAllowance: Maybe HighPrecMoney
+    - airportConvenienceFee: Maybe HighPrecMoney
     - businessDiscountPercentage: Maybe Double
     - personalDiscountPercentage: Maybe Double
     - derive: "'HideSecrets"
