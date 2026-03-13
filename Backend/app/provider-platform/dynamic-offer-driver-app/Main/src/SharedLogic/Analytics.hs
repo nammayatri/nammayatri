@@ -18,7 +18,6 @@ import qualified Data.Map as Map
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as SBCR
-import qualified Domain.Types.DriverFlowStatus as DDF
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
@@ -80,11 +79,11 @@ convertToAllTimeFallbackRes metricsList =
             totalRequestCount = getMetricValue TOTAL_REQUEST_COUNT
           }
 
-data FleetAllTimeMetric = ACTIVE_DRIVER_COUNT | ACTIVE_VEHICLE_COUNT
+data FleetAllTimeMetric = ACTIVE_DRIVER_COUNT | ACTIVE_VEHICLE_COUNT | CURRENT_ONLINE_DRIVER_COUNT
   deriving (Show, Eq, Ord)
 
 fleetAllTimeMetrics :: [FleetAllTimeMetric]
-fleetAllTimeMetrics = [ACTIVE_DRIVER_COUNT, ACTIVE_VEHICLE_COUNT]
+fleetAllTimeMetrics = [ACTIVE_DRIVER_COUNT, ACTIVE_VEHICLE_COUNT, CURRENT_ONLINE_DRIVER_COUNT]
 
 -- | Zip keys with optional values, dropping entries where the value is Nothing.
 zipJusts :: [a] -> [Maybe b] -> [(a, b)]
@@ -148,19 +147,19 @@ updateFleetOwnerAnalyticsKeys fleetOwnerId mbActiveDrivers mbActiveVehicles mbCu
   let avcKey = makeFleetAnalyticsKey fleetOwnerId ACTIVE_VEHICLE_COUNT
   setOrDel avcKey mbActiveVehicles
 
-  -- current online driver count uses ONLINE status key
-  let codKey = DDF.getStatusKey fleetOwnerId DDF.ONLINE
+  -- current online driver count
+  let codKey = makeFleetAnalyticsKey fleetOwnerId CURRENT_ONLINE_DRIVER_COUNT
   setOrDel codKey mbCurrentOnline
 
-convertToFleetAllTimeFallbackRes :: [(FleetAllTimeMetric, Int)] -> Maybe Int -> CommonAllTimeFallbackRes
-convertToFleetAllTimeFallbackRes metricsList mbCurrentOnlineDriverCount =
+convertToFleetAllTimeFallbackRes :: [(FleetAllTimeMetric, Int)] -> CommonAllTimeFallbackRes
+convertToFleetAllTimeFallbackRes metricsList =
   let metricsMap = Map.fromList metricsList
       getMetricValue metric = Map.lookup metric metricsMap
    in FleetAllTimeFallback $
         FleetAllTimeFallbackRes
           { activeDriverCount = getMetricValue ACTIVE_DRIVER_COUNT,
             activeVehicleCount = getMetricValue ACTIVE_VEHICLE_COUNT,
-            currentOnlineDriverCount = mbCurrentOnlineDriverCount
+            currentOnlineDriverCount = getMetricValue CURRENT_ONLINE_DRIVER_COUNT
           }
 
 makeFleetKeyPrefix :: Text -> Text
@@ -704,6 +703,52 @@ decrementFleetOwnerAnalyticsActiveVehicleCount mbFleetOwnerId driverId = do
       let totalActiveVehicleCountKey = makeFleetAnalyticsKey fleetOwnerId ACTIVE_VEHICLE_COUNT
       ensureRedisKeysExistForAllTimeCommon DP.FLEET_OWNER fleetOwnerId totalActiveVehicleCountKey Redis.decrby 1
 
+incrementFleetOwnerAnalyticsCurrentOnlineDriverCount ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
+  Maybe Text ->
+  Id DP.Person ->
+  m ()
+incrementFleetOwnerAnalyticsCurrentOnlineDriverCount mbFleetOwnerId driverId = do
+  case mbFleetOwnerId of
+    Just fleetOwnerId -> incrementCurrentOnlineDriverCount fleetOwnerId
+    Nothing -> do
+      mbFleetOwner <- QFDA.findByDriverId driverId True
+      when (isNothing mbFleetOwner) $ logTagError "AnalyticsUpdateCurrentOnlineDriverCount" $ "No fleet owner found for driver: " <> show driverId
+      whenJust mbFleetOwner $ \fleetOwner -> incrementCurrentOnlineDriverCount fleetOwner.fleetOwnerId
+  where
+    incrementCurrentOnlineDriverCount fleetOwnerId = do
+      let currentOnlineDriverCountKey = makeFleetAnalyticsKey fleetOwnerId CURRENT_ONLINE_DRIVER_COUNT
+      ensureRedisKeysExistForAllTimeCommon DP.FLEET_OWNER fleetOwnerId currentOnlineDriverCountKey Redis.incrby 1
+
+decrementFleetOwnerAnalyticsCurrentOnlineDriverCount ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
+  Maybe Text ->
+  Id DP.Person ->
+  m ()
+decrementFleetOwnerAnalyticsCurrentOnlineDriverCount mbFleetOwnerId driverId = do
+  case mbFleetOwnerId of
+    Just fleetOwnerId -> decrementCurrentOnlineDriverCount fleetOwnerId
+    Nothing -> do
+      mbFleetOwner <- QFDA.findByDriverId driverId True
+      when (isNothing mbFleetOwner) $ logTagError "AnalyticsUpdateCurrentOnlineDriverCount" $ "No fleet owner found for driver: " <> show driverId
+      whenJust mbFleetOwner $ \fleetOwner -> decrementCurrentOnlineDriverCount fleetOwner.fleetOwnerId
+  where
+    decrementCurrentOnlineDriverCount fleetOwnerId = do
+      let currentOnlineDriverCountKey = makeFleetAnalyticsKey fleetOwnerId CURRENT_ONLINE_DRIVER_COUNT
+      ensureRedisKeysExistForAllTimeCommon DP.FLEET_OWNER fleetOwnerId currentOnlineDriverCountKey Redis.decrby 1
+
 -- | ClickHouse fallback function for fleet analytics
 fallbackToClickHouseAndUpdateRedisForAllTime ::
   ( MonadFlow m,
@@ -745,21 +790,19 @@ fallbackToClickHouseAndUpdateRedisForAllTimeFleet fleetOwnerId fleetAllTimeKeysD
   mbDriverIds <- CFDA.getDriverIdsByFleetOwnerId fleetOwnerId
   let mbActiveDriverCount = length <$> mbDriverIds
   mbActiveVehicleCount <- maybe (pure Nothing) (CVehicle.countByDriverIds) mbDriverIds
-  mbCurrentOnlineDriverCount <- getOnlineDriverCount
+  mbCurrentOnlineDriverCount <- getOnlineDriverCount mbDriverIds
   logTagInfo "fallbackClickhouseAllTimeFleet" ("mbActiveDriverCount: " <> show mbActiveDriverCount <> ", mbActiveVehicleCount: " <> show mbActiveVehicleCount <> ", mbCurrentOnlineDriverCount: " <> show mbCurrentOnlineDriverCount)
 
-  mapM_ (uncurry Redis.set) (zipJusts fleetAllTimeKeysData [mbActiveDriverCount, mbActiveVehicleCount])
+  mapM_ (uncurry Redis.set) (zipJusts fleetAllTimeKeysData [mbActiveDriverCount, mbActiveVehicleCount, mbCurrentOnlineDriverCount])
 
-  pure $ convertToFleetAllTimeFallbackRes (zipJusts fleetAllTimeMetrics [mbActiveDriverCount, mbActiveVehicleCount]) mbCurrentOnlineDriverCount
+  pure $ convertToFleetAllTimeFallbackRes (zipJusts fleetAllTimeMetrics [mbActiveDriverCount, mbActiveVehicleCount, mbCurrentOnlineDriverCount])
   where
-    getOnlineDriverCount = do
-      res <- DDF.getOnlineKeyValue fleetOwnerId
-      if isNothing res
-        then do
-          void $ SDFStatus.handleCacheMissForDriverFlowStatus DP.FLEET_OWNER fleetOwnerId (DDF.allKeys fleetOwnerId)
-          onlineRes <- DDF.getOnlineKeyValue fleetOwnerId
-          pure onlineRes
-        else pure res
+    getOnlineDriverCount mbDriverIds = do
+      case mbDriverIds of
+        Just driverIds -> do
+          onlineCount <- CDI.getOnlineDriverCountByDriverIds driverIds
+          pure (Just onlineCount)
+        Nothing -> pure Nothing
 
 -- | Compute period dashboard analytics via ClickHouse for a given operator and time window
 fallbackComputePeriodOperatorAnalytics ::
@@ -848,9 +891,7 @@ handleCacheMissForAnalyticsAllTimeCommon role entityId allTimeKeysData = do
       logTagInfo logTag $ "allTimeKeysRes: " <> show allTimeKeysRes
       case role of
         DP.OPERATOR -> pure $ convertToAllTimeFallbackRes (zipJusts allTimeMetrics allTimeKeysRes)
-        DP.FLEET_OWNER -> do
-          mbCurrentOnlineDriverCount <- DDF.getOnlineKeyValue entityId
-          pure $ convertToFleetAllTimeFallbackRes (zipJusts fleetAllTimeMetrics allTimeKeysRes) mbCurrentOnlineDriverCount
+        DP.FLEET_OWNER -> pure $ convertToFleetAllTimeFallbackRes (zipJusts fleetAllTimeMetrics allTimeKeysRes)
         _ -> throwError $ InvalidRequest $ "Unsupported role for analytics: " <> show role
     _ -> do
       lockAcquired <- Redis.setNxExpire inProgressKey 60 True -- 60 seconds expiry
