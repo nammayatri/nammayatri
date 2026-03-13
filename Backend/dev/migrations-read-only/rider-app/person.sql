@@ -273,3 +273,7 @@ CREATE INDEX person_idx_customer_referral_code ON atlas_app.person USING btree (
 CREATE INDEX person_idx_device_token ON atlas_app.person USING btree (device_token);
 CREATE INDEX person_idx_referral_code ON atlas_app.person USING btree (referral_code);
 ALTER TABLE atlas_app.person ADD CONSTRAINT person_unique_idx_merchant_id_operator_badge_token UNIQUE (merchant_id, operator_badge_token);
+
+------- SQL updates -------
+
+CREATE INDEX person_idx_operator_badge_token ON atlas_app.person USING btree (operator_badge_token);
