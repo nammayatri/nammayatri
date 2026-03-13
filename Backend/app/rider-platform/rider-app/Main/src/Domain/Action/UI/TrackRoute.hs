@@ -24,6 +24,7 @@ import Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.Queries.Person as QP
 import Tools.Error
+import qualified Tools.Metrics.BAPMetrics as Metrics
 
 getTrackVehicles ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -63,7 +64,8 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
   vehicleTrackingWithRoutes <- concatMapM (\routeIdToTrack -> map (routeIdToTrack,) <$> trackVehicles personId merchantId personCityInfo.merchantOperatingCityId vehicleType routeIdToTrack (fromMaybe DIBC.APPLICATION mbPlatformType) currentLocation (Just integratedBPPConfig.id)) routeIdsToTrack
   let deduplicatedVehicles = List.nubBy (\a b -> (snd a).vehicleId == (snd b).vehicleId) vehicleTrackingWithRoutes
   logInfo $ "deduplicatedVehicles: " <> show deduplicatedVehicles
-  let vehiclesYetToReachSelectedStop = filterVehiclesYetToReachSelectedStop deduplicatedVehicles
+  let includeNullUpcomingStops = fromMaybe False riderConfig.includeVehiclesWithNoEta
+  vehiclesYetToReachSelectedStop <- filterVehiclesYetToReachSelectedStop includeNullUpcomingStops personCityInfo.merchantOperatingCityId deduplicatedVehicles
   let (confirmedHighBuses, ghostBuses) = List.partition (\a -> ((snd a).vehicleInfo >>= (.routeState)) == Just CQMMB.ConfirmedHigh) vehiclesYetToReachSelectedStop
   let sortedTracking = sortOn (distanceToStop currentLocation . snd) ghostBuses
   let sortedConfirmed = sortOn (distanceToStop currentLocation . snd) confirmedHighBuses
@@ -84,10 +86,25 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
       { vehicleTrackingInfo = vehicleTrackingInfoWithSubTypes
       }
   where
-    filterVehiclesYetToReachSelectedStop vehicleTracking =
+    filterVehiclesYetToReachSelectedStop includeNullUpcomingStops merchantOperatingCityId vehicleTracking =
       case mbSelectedSourceStopId of
-        Just selectedStopId -> filter (\(_, vt) -> any (\u -> u.stopCode == selectedStopId) vt.upcomingStops) vehicleTracking
-        Nothing -> vehicleTracking
+        Just selectedStopId -> do
+          let (matched, rest) = List.partition (\(_, vt) -> any (\u -> u.stopCode == selectedStopId) vt.upcomingStops) vehicleTracking
+          let vehiclesWithNullUpcomingStops = filter (\(_, vt) -> null vt.upcomingStops) rest
+          unless (null vehiclesWithNullUpcomingStops) $ do
+            logError $
+              "Vehicles with null upcomingStops found - routeCode: " <> routeCode
+                <> ", sourceStopId: "
+                <> selectedStopId
+                <> ", destinationStopId: "
+                <> show mbSelectedDestinationStopId
+                <> ", vehicles: "
+                <> show (map (\(rc, vt) -> (rc, vt.vehicleId, vt.vehicleInfo)) vehiclesWithNullUpcomingStops)
+            Metrics.incrementVehicleNoEtaCounter merchantId.getId merchantOperatingCityId.getId "trackVehicle"
+          if includeNullUpcomingStops
+            then pure $ matched <> vehiclesWithNullUpcomingStops
+            else pure matched
+        Nothing -> pure vehicleTracking
 
     mkVehicleTrackingResponse serviceTierType mbServiceSubTypes (actualRouteCode, VehicleTracking {..}) =
       TrackRoute.VehicleTrackingInfo

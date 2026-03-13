@@ -185,6 +185,7 @@ type GetStateFlow m r c =
     HasField "ltsHedisEnv" r Redis.HedisEnv,
     HasLongDurationRetryCfg r c,
     HasShortDurationRetryCfg r c,
+    HasBAPMetrics m r,
     m ~ Kernel.Types.Flow.FlowR AppEnv
   )
 
