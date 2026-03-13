@@ -146,6 +146,9 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
   businessLicenseImgs <- getDriverImages merchant.id DVC.BusinessLicense
   aadhaarImgs <- getDriverImages merchant.id DVC.AadhaarCard
   vehicleNOCImgs <- getDriverImages merchant.id DVC.VehicleNOC
+  localResidenceProofImgs <- getDriverImages merchant.id DVC.LocalResidenceProof
+  policeVerificationCertificateImgs <- getDriverImages merchant.id DVC.PoliceVerificationCertificate
+  drivingSchoolCertificateImgs <- getDriverImages merchant.id DVC.DrivingSchoolCertificate
   commonDocumentsData <- runInReplica (QCommonDriverOnboardingDocuments.findByDriverId (Just (cast driverId)))
   let commonDocuments = map toCommonDocumentItem commonDocumentsData
   allDlImgs <- runInReplica (QDL.findAllByImageId (map (Id) $ mapMaybe listToMaybe dlImgs))
@@ -184,6 +187,9 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
         vehicleNOC = vehicleNOCImgs,
         odometer = odometerImg,
         gstCertificate = gstImgs,
+        localResidenceProof = localResidenceProofImgs,
+        policeVerificationCertificate = policeVerificationCertificateImgs,
+        drivingSchoolCertificate = drivingSchoolCertificateImgs,
         udyamCertificate = udyamImgs,
         commonDocuments = commonDocuments
       }
@@ -251,7 +257,7 @@ getDriverRegistrationGetDocument merchantShortId _ imageId = do
   merchant <- findMerchantByShortId merchantShortId
   img <- getImage merchant.id (cast imageId)
   image <- QImage.findById (cast imageId) >>= fromMaybeM (InternalError "Image not found by image id")
-  pure Common.GetDocumentResponse {imageBase64 = img, status = castVerificationStatus <$> image.verificationStatus}
+  pure Common.GetDocumentResponse {imageBase64 = img, status = castVerificationStatus <$> image.verificationStatus, createdAt = image.createdAt}
   where
     castVerificationStatus :: VerificationStatus -> Common.VerificationStatus
     castVerificationStatus = \case
@@ -332,15 +338,17 @@ postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
   mbUploaderRole <-
     if isRoleRestricted
       then do
-        requestorId <- req.requestorId & fromMaybeM (InvalidRequest "This document can only be uploaded by operator or admin")
-        -- If requestor is not found at BPP (e.g. Admin), allow; only fleet/operator exist at BPP
-        mbRequestor <- QPerson.findById (Id requestorId)
-        return (DP.role <$> mbRequestor)
+        -- When requestorId is present, get their role for validation; when absent, skip and use Nothing
+        case req.requestorId of
+          Nothing -> return Nothing
+          Just requestorId -> do
+            mbRequestor <- QPerson.findById (Id requestorId)
+            return (DP.role <$> mbRequestor)
       else do
+        -- When requestorId is present and requestor exists at BPP, validate association; when absent or not at BPP (e.g. Admin), allow. Single query for both.
         whenJust req.requestorId $ \requestorId -> do
           entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, cast driverId_] merchantOpCityId
           entity <- find (\e -> e.id == cast driverId_) entities & fromMaybeM (PersonDoesNotExist driverId_.getId)
-          -- If requestor is not found at BPP (e.g. Admin), allow; only fleet/operator exist at BPP
           whenJust (find (\e -> e.id == Id requestorId) entities) $ \requestor -> do
             isValid <- DDriver.isAssociationBetweenTwoPerson requestor entity
             unless isValid $ throwError (InvalidRequest "Driver is not associated with the entity")
@@ -401,9 +409,9 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   person <- case mbRequestorId of
     Just requestorId -> do
+      -- Single query for both person and requestor; if requestor not present at BPP (e.g. Admin), allow
       entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, cast personId] merchantOpCityId
       entity <- find (\e -> e.id == cast personId) entities & fromMaybeM (PersonDoesNotExist personId.getId)
-      -- If requestor is not found at BPP (e.g. Admin), allow; only fleet/operator exist at BPP
       whenJust (find (\e -> e.id == Id requestorId) entities) $ \requestor -> do
         isValid <- DDriver.isAssociationBetweenTwoPerson requestor entity
         unless isValid $ throwError (InvalidRequest "Driver is not associated with the entity")
@@ -1284,19 +1292,22 @@ postDriverRegistrationTriggerReminder merchantShortId opCity driverId_ mbRequest
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
-  -- Load and validate driver ownership (merchant/op-city)
+  -- Load driver (and requestor when present) in one query when mbRequestorId is Just; validate driver ownership and association
   let driverPersonId = cast @Common.Driver @DP.Person driverId_
-  driver <- runInReplica $ QPerson.findById driverPersonId >>= fromMaybeM (PersonNotFound driverPersonId.getId)
-  unless (driver.merchantId == merchant.id && driver.merchantOperatingCityId == merchantOpCityId) $
-    throwError (InvalidRequest "Driver does not belong to the specified merchant and operating city")
-
-  -- Validate authorization: only fleet owners, operators linked to driver, or admins can trigger reminders
-  requestorId <- mbRequestorId & fromMaybeM (InvalidRequest "requestorId is required")
-  entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, driverPersonId] merchantOpCityId
-  -- If requestor is not found at BPP (e.g. Admin), allow; only fleet/operator exist at BPP
-  whenJust (find (\e -> e.id == Id requestorId) entities) $ \requestor -> do
-    isValid <- DDriver.isAssociationBetweenTwoPerson requestor driver
-    unless isValid $ throwError (InvalidRequest "Only fleet owners, operators linked to the driver, or admins can trigger reminders")
+  void $
+    case mbRequestorId of
+      Nothing -> do
+        d <- runInReplica $ QPerson.findById driverPersonId >>= fromMaybeM (PersonNotFound driverPersonId.getId)
+        unless (d.merchantId == merchant.id && d.merchantOperatingCityId == merchantOpCityId) $
+          throwError (InvalidRequest "Driver does not belong to the specified merchant and operating city")
+        pure ()
+      Just requestorId -> do
+        entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, driverPersonId] merchantOpCityId
+        d <- find (\e -> e.id == driverPersonId) entities & fromMaybeM (PersonNotFound driverPersonId.getId)
+        whenJust (find (\e -> e.id == Id requestorId) entities) $ \requestor -> do
+          isValid <- DDriver.isAssociationBetweenTwoPerson requestor d
+          unless isValid $ throwError (InvalidRequest "Only fleet owners, operators linked to the driver, or admins can trigger reminders")
+        pure ()
 
   reminderDocumentType <- maybe (throwError $ InvalidRequest $ "Document type " <> show documentType <> " does not support reminder triggers") pure $ mapDocumentTypeToReminderType documentType
   createReminder reminderDocumentType driverPersonId merchant.id merchantOpCityId Nothing dueDate intervals

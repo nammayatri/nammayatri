@@ -201,6 +201,9 @@ data DocumentsListResponse = DocumentsListResponse
     odometer :: [Kernel.Prelude.Text],
     aadhaar :: [Kernel.Prelude.Text],
     gstCertificate :: [Kernel.Prelude.Text],
+    localResidenceProof :: [Kernel.Prelude.Text],
+    policeVerificationCertificate :: [Kernel.Prelude.Text],
+    drivingSchoolCertificate :: [Kernel.Prelude.Text],
     udyamCertificate :: [Kernel.Prelude.Text],
     commonDocuments :: [CommonDocumentItem]
   }
@@ -246,7 +249,7 @@ data GenerateAadhaarOtpRes = GenerateAadhaarOtpRes {message :: Kernel.Prelude.Te
 instance Kernel.Types.HideSecrets.HideSecrets GenerateAadhaarOtpRes where
   hideSecrets = Kernel.Prelude.identity
 
-data GetDocumentResponse = GetDocumentResponse {imageBase64 :: Kernel.Prelude.Text, status :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus}
+data GetDocumentResponse = GetDocumentResponse {imageBase64 :: Kernel.Prelude.Text, status :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus, createdAt :: Kernel.Prelude.UTCTime}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
