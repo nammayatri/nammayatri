@@ -25,7 +25,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.AppMetrics (shouldPushLatencyMetrics)
 import Kernel.Tools.Metrics.CoreMetrics (DeploymentVersion)
 import Kernel.Types.Common
-import Prometheus as P
+import Prometheus as P hiding (counter)
 import Tools.Metrics.BAPMetrics.Types as Reexport
 
 data MetricsAction = INIT | CONFIRM | SEARCH_FRFS | SELECT_FRFS | INIT_FRFS | CONFIRM_FRFS | CANCEL_FRFS | CREATE_ORDER_FRFS
