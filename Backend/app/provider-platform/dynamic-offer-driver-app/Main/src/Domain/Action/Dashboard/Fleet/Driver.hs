@@ -3979,36 +3979,36 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
   -- Driver can update driver-info fields; fleet owner can update fleet-info fields.
   -- Run this block if ANY relevant field (driver or fleet) is present.
   when
-    (  isJust req.dob
-    || isJust req.address
-    || isJust req.addressDocumentType
-    || isJust req.fleetDob
-    || isJust req.stripeAddress
-    || isJust req.stripeIdNumber
-    || isJust req.fleetName
-    || isJust req.fleetType
+    ( isJust req.dob
+        || isJust req.address
+        || isJust req.addressDocumentType
+        || isJust req.fleetDob
+        || isJust req.stripeAddress
+        || isJust req.stripeIdNumber
+        || isJust req.fleetName
+        || isJust req.fleetType
     )
     $ do
-    case driver.role of
-      DP.DRIVER -> do
-        driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
-        let dob = fmap (\d -> UTCTime d 0) req.dob <|> driverInfo.driverDob
-            address = req.address <|> driverInfo.address
-            addressDocumentType = castAddressDocumentType <$> req.addressDocumentType <|> driverInfo.addressDocumentType
-        QDriverInfo.updateDriverDobAndAddress dob address addressDocumentType personId
-      DP.FLEET_OWNER -> do
-        fleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
-        reqStripeIdNumber <- forM req.stripeIdNumber encrypt
-        let updFleetOwnerInfo =
-              fleetOwnerInfo
-                { DFOI.fleetDob = req.fleetDob <|> fleetOwnerInfo.fleetDob,
-                  DFOI.stripeAddress = req.stripeAddress <|> fleetOwnerInfo.stripeAddress,
-                  DFOI.stripeIdNumber = reqStripeIdNumber <|> fleetOwnerInfo.stripeIdNumber,
-                  DFOI.fleetName = req.fleetName <|> fleetOwnerInfo.fleetName,
-                  DFOI.fleetType = fromMaybe fleetOwnerInfo.fleetType (DRegV2.castFleetType <$> req.fleetType)
-                }
-        FOI.updateFleetOwnerInfo updFleetOwnerInfo
-      _ -> pure ()
+      case driver.role of
+        DP.DRIVER -> do
+          driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
+          let dob = fmap (\d -> UTCTime d 0) req.dob <|> driverInfo.driverDob
+              address = req.address <|> driverInfo.address
+              addressDocumentType = castAddressDocumentType <$> req.addressDocumentType <|> driverInfo.addressDocumentType
+          QDriverInfo.updateDriverDobAndAddress dob address addressDocumentType personId
+        DP.FLEET_OWNER -> do
+          fleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
+          reqStripeIdNumber <- forM req.stripeIdNumber encrypt
+          let updFleetOwnerInfo =
+                fleetOwnerInfo
+                  { DFOI.fleetDob = req.fleetDob <|> fleetOwnerInfo.fleetDob,
+                    DFOI.stripeAddress = req.stripeAddress <|> fleetOwnerInfo.stripeAddress,
+                    DFOI.stripeIdNumber = reqStripeIdNumber <|> fleetOwnerInfo.stripeIdNumber,
+                    DFOI.fleetName = req.fleetName <|> fleetOwnerInfo.fleetName,
+                    DFOI.fleetType = fromMaybe fleetOwnerInfo.fleetType (DRegV2.castFleetType <$> req.fleetType)
+                  }
+          FOI.updateFleetOwnerInfo updFleetOwnerInfo
+        _ -> pure ()
 
   pure Success
   where
