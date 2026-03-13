@@ -1470,6 +1470,7 @@ data VehicleLiveRouteInfo = VehicleLiveRouteInfo
     busDriverId :: Maybe Text,
     eligiblePassIds :: Maybe [Text],
     serviceSubTypes :: Maybe [Spec.ServiceSubType],
+    waybillStatus :: Maybe Spec.WaybillStatus,
     seatLayoutId :: Maybe (Id SeatLayout.SeatLayout)
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
@@ -1526,7 +1527,7 @@ getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber mbPassVerifyReq
         mbResult
           <&> ( \result ->
                   ( integratedBPPConfig,
-                    VehicleLiveRouteInfo {routeNumber = result.route_number, vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type, waybillId = result.waybill_id, scheduleNo = result.schedule_no, depot = result.depot, isActuallyValid = result.is_actually_valid, remaining_trip_details = result.remaining_trip_details, tripNumber = result.trip_number, busConductorId = result.conductor_id, busDriverId = result.driver_id, eligiblePassIds = result.eligible_pass_ids, serviceSubTypes = result.service_sub_types, seatLayoutId = Id <$> result.seatLayoutId}
+                    VehicleLiveRouteInfo {routeNumber = result.route_number, vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type, waybillId = result.waybill_id, scheduleNo = result.schedule_no, depot = result.depot, isActuallyValid = result.is_actually_valid, remaining_trip_details = result.remaining_trip_details, tripNumber = result.trip_number, busConductorId = result.conductor_id, busDriverId = result.driver_id, eligiblePassIds = result.eligible_pass_ids, serviceSubTypes = result.service_sub_types, waybillStatus = result.waybill_status, seatLayoutId = Id <$> result.seatLayoutId}
                   )
               )
 

@@ -34,6 +34,7 @@ imports:
   SDKPayloadDetails: Kernel.External.Payment.Juspay.Types
   ServiceTierType: BecknV2.FRFS.Enums
   ServiceSubType: BecknV2.FRFS.Enums
+  WaybillStatus: BecknV2.FRFS.Enums
   City: Kernel.Types.Beckn.Context
   SuggestedStations: Domain.Types.StationType
   PlatformType: Domain.Types.IntegratedBPPConfig
@@ -275,6 +276,7 @@ types:
     rsm: [TransportRouteStopMapping]
     ptcv: Text
     eligiblePassIds: Maybe [Text]
+    waybillStatus: Maybe WaybillStatus
     derive': "Generic, ToSchema"
 
   UpdatePaymentOrderReq:
