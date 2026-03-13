@@ -37,6 +37,7 @@ SubscriptionPurchase:
     financeInvoiceId: Maybe (Id Invoice)
     status: SubscriptionPurchaseStatus
     expiryDate: Maybe UTCTime
+    startDate: Maybe UTCTime
     vehicleCategory: Maybe VehicleCategory
     enableServiceUsageCharge: Bool
     waiverOffPercentage: HighPrecMoney

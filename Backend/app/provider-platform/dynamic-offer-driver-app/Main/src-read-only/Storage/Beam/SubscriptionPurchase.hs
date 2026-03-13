@@ -34,6 +34,7 @@ data SubscriptionPurchaseT f = SubscriptionPurchaseT
     purchaseTimestamp :: B.C f Kernel.Prelude.UTCTime,
     reconciliationStatus :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     serviceName :: B.C f Domain.Types.Extra.Plan.ServiceNames,
+    startDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     status :: B.C f Domain.Types.SubscriptionPurchase.SubscriptionPurchaseStatus,
     vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     waiveOfMode :: B.C f Domain.Types.DriverPlan.WaiveOffMode,

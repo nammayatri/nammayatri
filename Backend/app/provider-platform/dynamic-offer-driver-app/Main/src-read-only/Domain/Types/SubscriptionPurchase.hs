@@ -36,6 +36,7 @@ data SubscriptionPurchase = SubscriptionPurchase
     purchaseTimestamp :: Kernel.Prelude.UTCTime,
     reconciliationStatus :: Kernel.Prelude.Maybe Data.Aeson.Value,
     serviceName :: Domain.Types.Extra.Plan.ServiceNames,
+    startDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     status :: Domain.Types.SubscriptionPurchase.SubscriptionPurchaseStatus,
     vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     waiveOfMode :: Domain.Types.DriverPlan.WaiveOffMode,

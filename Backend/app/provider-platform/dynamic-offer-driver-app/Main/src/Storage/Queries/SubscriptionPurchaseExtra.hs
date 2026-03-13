@@ -210,17 +210,19 @@ findActiveByDateRange merchantOpCityId startTime endTime =
           ]
       ]
 
--- | Update the expiryDate for a specific subscription purchase.
+-- | Update the expiryDate and startDate for a specific subscription purchase.
 -- Used when activating a queued purchase's expiry timer (deferred FIFO logic).
-updateExpiryDateById ::
+updateExpiryAndStartDateById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe UTCTime ->
   Maybe UTCTime ->
   Id SubscriptionPurchase ->
   m ()
-updateExpiryDateById newExpiryDate purchaseId = do
+updateExpiryAndStartDateById newExpiryDate newStartDate purchaseId = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.expiryDate newExpiryDate,
+      Se.Set Beam.startDate newStartDate,
       Se.Set Beam.updatedAt now
     ]
     [Se.Is Beam.id $ Se.Eq (getId purchaseId)]

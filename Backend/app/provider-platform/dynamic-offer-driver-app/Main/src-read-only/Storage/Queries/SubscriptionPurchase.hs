@@ -75,6 +75,7 @@ updateByPrimaryKey (Domain.Types.SubscriptionPurchase.SubscriptionPurchase {..})
       Se.Set Beam.purchaseTimestamp purchaseTimestamp,
       Se.Set Beam.reconciliationStatus reconciliationStatus,
       Se.Set Beam.serviceName serviceName,
+      Se.Set Beam.startDate startDate,
       Se.Set Beam.status status,
       Se.Set Beam.vehicleCategory vehicleCategory,
       Se.Set Beam.waiveOfMode waiveOfMode,

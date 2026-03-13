@@ -8,6 +8,7 @@ module SharedLogic.Finance.Wallet
     walletReferenceTDSDeductionOnline,
     walletReferenceGSTCash,
     walletReferenceTDSDeductionCash,
+    walletReferenceTDSDeductionCancellation,
     walletReferenceTopup,
     walletReferencePayout,
     walletReferenceDriverCancellationCharges,
@@ -85,6 +86,9 @@ walletReferenceCustomerCancellationCharges = "CustomerCancellationCharges"
 walletReferenceCustomerCancellationGST :: Text
 walletReferenceCustomerCancellationGST = "CustomerCancellationGST"
 
+walletReferenceTDSDeductionCancellation :: Text
+walletReferenceTDSDeductionCancellation = "TDSDeductionCancellation"
+
 walletReferenceD2DReferral :: Text
 walletReferenceD2DReferral = "D2DReferral"
 
@@ -101,6 +105,7 @@ walletCreditRefs =
     walletReferenceParkingCharges,
     walletReferenceTDSDeductionOnline,
     walletReferenceTDSDeductionCash,
+    walletReferenceTDSDeductionCancellation,
     walletReferenceTopup,
     walletReferenceD2DReferral,
     walletReferenceCustomerCancellationCharges,

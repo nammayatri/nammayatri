@@ -293,7 +293,7 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
             planValidityDays = planValidityDays,
             planGeography = planGeography,
             planVehicleCategory = Just $ show plan.vehicleCategory,
-            subscriptionStartDate = Just subscription.purchaseTimestamp,
+            subscriptionStartDate = subscription.startDate <|> Just subscription.purchaseTimestamp,
             subscriptionEndDate = subscription.expiryDate,
             subscriptionStatus = Just $ show subscription.status,
             baseAmount = baseAmount,

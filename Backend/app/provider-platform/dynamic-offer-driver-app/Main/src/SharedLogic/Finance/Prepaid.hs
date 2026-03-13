@@ -808,8 +808,8 @@ activateNextQueuedPurchaseExpiry ownerId ownerType = do
         Just plan -> do
           now <- getCurrentTime
           let expiryDate = fmap (\days -> addUTCTime (fromIntegral (days * 60 * 60 * 24)) now) plan.validityInDays
-          QSPE.updateExpiryDateById expiryDate nextPurchase.id
-          logInfo $ "Activated expiry for queued subscription " <> nextPurchase.id.getId <> " with expiryDate: " <> show expiryDate
+          QSPE.updateExpiryAndStartDateById expiryDate (Just now) nextPurchase.id
+          logInfo $ "Activated expiry for queued subscription " <> nextPurchase.id.getId <> " with expiryDate: " <> show expiryDate <> " startDate: " <> show now
           pure $ (nextPurchase.id,) <$> expiryDate
         Nothing -> do
           logInfo $ "Plan not found for queued subscription: " <> nextPurchase.planId.getId

@@ -1080,6 +1080,7 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
             financeInvoiceId = Nothing,
             status = DSP.PENDING,
             expiryDate = expiryDate,
+            startDate = Nothing,
             vehicleCategory = Just plan.vehicleCategory,
             enableServiceUsageCharge = True,
             waiverOffPercentage = 0.0,

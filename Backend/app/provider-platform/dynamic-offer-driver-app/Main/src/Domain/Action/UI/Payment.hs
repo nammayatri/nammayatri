@@ -561,6 +561,7 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                 { status = DSP.ACTIVE,
                   purchaseTimestamp = now,
                   expiryDate = expiryDate,
+                  startDate = if isJust expiryDate then Just now else Nothing,
                   financeInvoiceId = mbInvoiceId
                 }
         QSP.updateByPrimaryKey updatedPurchase

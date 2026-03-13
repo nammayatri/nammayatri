@@ -274,6 +274,12 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
               [ (baseCancellation, walletReferenceCustomerCancellationCharges, OwnerLiability),
                 (gstOnCancellation, walletReferenceCustomerCancellationGST, GovtIndirect)
               ]
+            -- TDS on cancellation charges (same rate as ride)
+            mbTdsRate = transporterConfig.taxConfig.defaultTdsRate
+            mbTdsAmount = do
+              rate <- mbTdsRate
+              let amount = baseCancellation * realToFrac rate
+              if amount > 0 then Just amount else Nothing
         ctx <- buildFinanceCtx booking ride (Just driver)
         result <- runFinance ctx $ do
           mapM_
@@ -282,6 +288,9 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
                 void $ transfer BuyerExternal dest amt ref
             )
             cancellationComponents
+          -- TDS: Liability(DRIVER/FLEET_OWNER) -> Liability(GOVERNMENT_DIRECT)
+          whenJust mbTdsAmount $ \tdsAmount ->
+            void $ transfer OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCancellation
           invoice
             InvoiceConfig
               { invoiceType = Invoice.RideCancellation,
@@ -303,7 +312,7 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
         case result of
           Left err -> logInfo $ "Failed to create cancellation ledger entries: " <> show err
           Right _ -> pure ()
-        logInfo $ "Created customer cancellation ledger entries for bookingId: " <> booking.id.getId <> " base=" <> show baseCancellation <> " gst=" <> show gstOnCancellation
+        logInfo $ "Created customer cancellation ledger entries for bookingId: " <> booking.id.getId <> " base=" <> show baseCancellation <> " gst=" <> show gstOnCancellation <> " tds=" <> show mbTdsAmount
     _ -> do
       logError "cancelRideTransaction: riderId in booking or cancellationFee is not present"
 
