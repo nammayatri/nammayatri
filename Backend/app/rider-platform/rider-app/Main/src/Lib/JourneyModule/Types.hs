@@ -248,7 +248,8 @@ data JourneyLegStateData = JourneyLegStateData
     subLegOrder :: Int,
     legOrder :: Int,
     mode :: DTrip.MultimodalTravelMode,
-    fleetNo :: Maybe Text
+    fleetNo :: Maybe Text,
+    currentTripId :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -456,7 +457,8 @@ data BusLegExtraInfo = BusLegExtraInfo
     busConductorId :: Maybe Text,
     busDriverId :: Maybe Text,
     tripStartTime :: Maybe [UTCTime],
-    bookedStopETA :: Maybe [UTCTime]
+    bookedStopETA :: Maybe [UTCTime],
+    userBookedTripId :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -999,7 +1001,8 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   categories = categories,
                   categoryBookingDetails = Just categoryBookingDetails,
                   tripStartTime = fmap pure mTripStartTime,
-                  bookedStopETA = fmap pure mBookedStopETA
+                  bookedStopETA = fmap pure mBookedStopETA,
+                  userBookedTripId = booking.tripId
                 }
         Spec.SUBWAY -> do
           mbQuote <- QFRFSQuote.findById booking.quoteId
@@ -1261,7 +1264,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
                   categories = categories,
                   categoryBookingDetails = Nothing,
                   tripStartTime = Nothing,
-                  bookedStopETA = Nothing
+                  bookedStopETA = Nothing,
+                  userBookedTripId = Nothing
                 }
         Spec.SUBWAY -> do
           let mbSelectedServiceTier = getServiceTierFromQuote quoteCategories =<< mbQuote

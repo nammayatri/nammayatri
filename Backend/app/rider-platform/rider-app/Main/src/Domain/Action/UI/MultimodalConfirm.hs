@@ -1885,18 +1885,6 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                 mapConcurrently
                   (JMRouteServiceability.enrichBusStopETA ctx.integratedBPPConfig)
                   (fromMaybe [] singleBus.busData.eta_data)
-              (currentTripNum, currentTripId') <-
-                if serviceTier == Spec.PREMIUM
-                  then do
-                    mbLiveInfo <- JMU.getLiveRouteInfo ctx.integratedBPPConfig vno routeId
-                    let tripNum = mbLiveInfo >>= (.tripNumber)
-                        tripId' = do
-                          lri <- mbLiveInfo
-                          wb <- lri.waybillId
-                          tn <- lri.tripNumber
-                          pure $ wb <> "-" <> show tn
-                    pure (tripNum, tripId')
-                  else pure (Nothing, Nothing)
               let vehicleInfo =
                     API.Types.UI.MultimodalConfirm.LiveVehicleInfo
                       { eta = Just enrichedEta,
@@ -1905,9 +1893,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                         locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral singleBus.busData.timestamp,
                         serviceTierType = serviceTier,
                         serviceTierName = (.shortName) <$> frfsServiceTier,
-                        serviceSubTypes = mbServiceSubTypes,
-                        currentTripNumber = currentTripNum,
-                        currentTripId = currentTripId'
+                        serviceSubTypes = mbServiceSubTypes
                       }
               pure $
                 ApiTypes.RouteServiceabilityResp

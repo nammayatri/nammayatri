@@ -1470,7 +1470,8 @@ generateJourneyStatusResponse journey legs = do
               userPosition = legData.userPosition,
               vehiclePositions = legData.vehiclePositions,
               mode = legData.mode,
-              fleetNo = legData.fleetNo
+              fleetNo = legData.fleetNo,
+              currentTripId = legData.currentTripId
             }
 
 markLegStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe JL.JourneyLegStatus -> Maybe JMState.TrackingStatus -> DJourneyLeg.JourneyLeg -> Maybe Int -> UTCTime -> m ()
