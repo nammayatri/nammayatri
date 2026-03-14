@@ -801,6 +801,12 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_direct_w
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN tracking_short_url_pattern SET DEFAULT 'https://nammayatri.in/p/?vp={#vp#}&rideId=';
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN dashboard_media_file_url_pattern SET DEFAULT 'https://nammayatri.in/p/<FILE_PATH>';
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN knowledge_center_sop_types json  default '[]' :: json;
 
 
