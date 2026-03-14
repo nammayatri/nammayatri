@@ -437,7 +437,7 @@ rideAssignedReqHandler req = do
         when req.isDriverBirthDay $
           Notify.notifyDriverBirthDay booking.riderId booking.tripCategory driverName
       withLongRetry $ CallBPP.callTrack booking ride
-    Nothing -> assignRideUpdate req mbMerchant rideStatus now
+    Nothing -> assignRideUpdate req {booking = booking} mbMerchant rideStatus now
   where
     notifyRideRelatedNotificationOnEvent booking ride now timeDiffEvent = do
       rideRelatedNotificationConfigList <- CRRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId timeDiffEvent booking.configInExperimentVersions
