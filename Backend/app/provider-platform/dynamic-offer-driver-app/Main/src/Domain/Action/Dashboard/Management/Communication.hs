@@ -348,8 +348,9 @@ getCommunicationRecipients merchantShortId opCity mbRole mbFleetOwnerId mbOperat
       Just CommAPI.ROLE_FLEET_OWNER ->
         B.runInReplica $ QPerson.findAllByMerchantIdAndOpCityAndRoles merchant merchantOpCity [DP.FLEET_OWNER] limit offset
       -- No operator-to-operator: operator cannot list other operators.
-      Just CommAPI.ROLE_OPERATOR | Just _ <- mbOperatorId ->
-        pure []
+      Just CommAPI.ROLE_OPERATOR
+        | Just _ <- mbOperatorId ->
+          pure []
       -- Fleet owner asks for operators: return only operator(s) linked to this fleet owner (FleetOperatorAssociation).
       Just CommAPI.ROLE_OPERATOR | Just fleetOwnerId <- mbFleetOwnerId -> do
         assocs <- QFOA.findByFleetOwnerIdWithLimitOffset fleetOwnerId True limit offset

@@ -26,8 +26,10 @@ where
 
 import Data.Aeson (Value)
 import qualified Data.List as DL
+import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.Extra.Plan (ServiceNames (..))
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import Kernel.External.Encryption (EncFlow, decrypt)
 import Kernel.Prelude
 import Kernel.Types.Common (Currency (..), HighPrecMoney)
 import Kernel.Types.Id
@@ -36,6 +38,7 @@ import Lib.Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import SharedLogic.Finance.Wallet (computeTdsRateReason)
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.SubscriptionPurchase as QSP
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
@@ -378,7 +381,7 @@ settlePrepaidHoldByReference counterpartyType ownerId referenceId finalAmount = 
         pendingEntries
 
 creditPrepaidBalance ::
-  (BeamFlow m r) =>
+  (BeamFlow m r, EncFlow m r) =>
   CounterpartyType ->
   Text -> -- Owner ID
   HighPrecMoney -> -- Ride credit amount
@@ -391,8 +394,9 @@ creditPrepaidBalance ::
   Text -> -- Reference ID
   Maybe Value ->
   Maybe InvoiceCreationParams -> -- Optional invoice creation params
+  Maybe DPanCard.DriverPanCard -> -- Optional PAN card data
   m (Either FinanceError (HighPrecMoney, Maybe (Id FInvoice.Invoice)))
-creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate mbGstBreakdown currency merchantId merchantOperatingCityId referenceId metadata mbInvoiceParams = do
+creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate mbGstBreakdown currency merchantId merchantOperatingCityId referenceId metadata mbInvoiceParams mbPanCard = do
   let gstAmount = case mbGstBreakdown of
         Just breakdown -> fromMaybe 0 breakdown.cgstAmount + fromMaybe 0 breakdown.sgstAmount + fromMaybe 0 breakdown.igstAmount
         Nothing -> 0
@@ -549,6 +553,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
       -- Create invoice for subscription purchases
       mbInvoiceId <- case mbInvoiceParams of
         Just invoiceParams | not (null entryIds) -> do
+          panDecrypted <- traverse (decrypt . (.panCardNumber)) mbPanCard
+          let panTypeText = mbPanCard >>= (fmap show . (.docType))
           let invoiceInput =
                 InvoiceInput
                   { invoiceType = SubscriptionPurchase,
@@ -566,7 +572,10 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                     supplierGSTIN = Nothing,
                     supplierId = Nothing,
                     gstinOfParty = invoiceParams.gstinOfParty,
-                    panOfParty = Nothing,
+                    panOfParty = panDecrypted,
+                    panType = panTypeText,
+                    counterpartyId = ownerId,
+                    tdsRateReason = computeTdsRateReason mbPanCard False,
                     tanOfDeductee = Nothing,
                     lineItems =
                       let lineItemGstAmount = max 0 gstAmount

@@ -35,7 +35,6 @@ findByRecipientIdAndWebChannel recipientId mbLimit mbOffset = do
     (Just limitVal)
     (Just offsetVal)
 
-
 findByCommunicationIdWithFilters ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Types.Id.Id Domain.Types.Communication.Communication ->

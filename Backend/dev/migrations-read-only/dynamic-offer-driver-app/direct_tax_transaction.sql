@@ -25,3 +25,5 @@ ALTER TABLE atlas_driver_offer_bpp.direct_tax_transaction ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.direct_tax_transaction ADD COLUMN tds_section text ;
+ALTER TABLE atlas_driver_offer_bpp.direct_tax_transaction ADD COLUMN pan_type text ;
+ALTER TABLE atlas_driver_offer_bpp.direct_tax_transaction ADD COLUMN tds_rate_reason text ;

@@ -99,6 +99,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverPanCard as QPanCard
 import Storage.Queries.DriverPlan (findByDriverIdWithServiceName)
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
@@ -424,7 +425,8 @@ processPayment ::
   ( MonadFlow m,
     CacheFlow m r,
     EsqDBReplicaFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    EncFlow m r
   ) =>
   Id DM.Merchant ->
   DP.Driver ->
@@ -455,7 +457,8 @@ processNonClearedDriverFees ::
   ( MonadFlow m,
     CacheFlow m r,
     EsqDBReplicaFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    EncFlow m r
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -541,6 +544,7 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                     sgstAmount = Just sgst,
                     igstAmount = Nothing
                   }
+        mbPanCard <- QPanCard.findByDriverId person.id
         (_newBalance, mbInvoiceId) <-
           creditPrepaidBalance
             counterpartyType
@@ -555,6 +559,7 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
             referenceId
             Nothing
             (Just invoiceParams)
+            mbPanCard
             >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
         let updatedPurchase =
               latestPurchase
@@ -587,7 +592,8 @@ updatePrepaidBalanceAndExpiry ::
   ( MonadFlow m,
     CacheFlow m r,
     EsqDBReplicaFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    EncFlow m r
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -597,6 +603,7 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
   let creditAmount = driverFee.totalEarnings
   let paidAmount = driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst
   let referenceId = fromMaybe driverFee.id.getId ((.getId) <$> driverFee.planId)
+  mbPanCard <- QPanCard.findByDriverId person.id
   if DCommon.checkFleetOwnerRole person.role
     then do
       let fleetGstBreakdown =
@@ -620,6 +627,7 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
           referenceId
           Nothing
           Nothing
+          mbPanCard
           >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
       pure (fst newBalance, Just person.id)
     else do
@@ -644,6 +652,7 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
           referenceId
           Nothing
           Nothing
+          mbPanCard
           >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
       logInfo $ "Prepaid recharge completed " <> show person.id.getId
       let prepaidRechargeMessage =

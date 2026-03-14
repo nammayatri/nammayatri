@@ -15,6 +15,7 @@ where
 
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
+import Lib.Finance.Domain.Types.DirectTaxTransaction (TdsRateReason)
 import Lib.Finance.Domain.Types.Invoice (InvoiceType)
 
 -- | Single line item in an invoice
@@ -46,6 +47,9 @@ data InvoiceInput = InvoiceInput
     supplierId :: Maybe Text,
     gstinOfParty :: Maybe Text,
     panOfParty :: Maybe Text,
+    panType :: Maybe Text,
+    counterpartyId :: Text, -- driver/fleet-owner ID for TDS counterparty
+    tdsRateReason :: Maybe TdsRateReason,
     tanOfDeductee :: Maybe Text,
     lineItems :: [InvoiceLineItem],
     gstBreakdown :: Maybe GstAmountBreakdown, -- caller-provided CGST/SGST/IGST amounts

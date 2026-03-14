@@ -45,6 +45,8 @@ import SharedLogic.Finance.Wallet
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.DriverFee as QDF
+import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.Ride as QRide
 import Tools.Constants
 import Tools.Error
@@ -164,7 +166,9 @@ accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterC
       Just penaltyAmount ->
         if isWalletEnabled
           then do
-            ctx <- buildFinanceCtx booking ride (Just driver)
+            mbPanCard <- QPanCard.findByDriverId ride.driverId
+            mbDriverInfo <- QDI.findById (cast ride.driverId)
+            ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig
             result <- runFinance ctx $ do
               _ <- transfer OwnerLiability OwnerExpense penaltyAmount walletReferenceDriverCancellationCharges
               invoice

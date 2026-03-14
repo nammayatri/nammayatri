@@ -30,16 +30,21 @@ module SharedLogic.Finance.Wallet
     getRedeemableEntryIds,
     settleWalletEntries,
     getPayoutEligibilityData,
+    computeTdsRateReason,
   )
 where
 
 import qualified Data.Time as Time
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.DriverInformation as DDI
+import qualified Domain.Types.DriverPanCard as DPanCard
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
+import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import Kernel.Types.Common
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance
@@ -176,15 +181,18 @@ getWalletBalanceByOwner counterpartyType ownerId = do
   pure $ mbAcc <&> (.balance)
 
 -- | Build a FinanceCtx from booking + ride data.
---   Resolves merchant name, shortId, address, and supplier info from DB.
+--   Resolves merchant name, shortId, address, supplier info, and TDS rate reason from DB.
 --   This is the standard way to create a context for wallet operations.
 buildFinanceCtx ::
-  (BeamFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+  (BeamFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   SRB.Booking ->
   DRide.Ride ->
   Maybe DP.Person ->
+  Maybe DPanCard.DriverPanCard ->
+  Maybe DDI.DriverInformation ->
+  DTC.TransporterConfig ->
   m FinanceCtx
-buildFinanceCtx booking ride mbDriver = do
+buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig = do
   let merchantId = fromMaybe booking.providerId ride.merchantId
       mid = merchantId.getId
       mocid = booking.merchantOperatingCityId.getId
@@ -199,21 +207,31 @@ buildFinanceCtx booking ride mbDriver = do
       address =
         mbMerchantOpCity <&> \city ->
           show city.city <> ", " <> show city.state <> ", " <> show city.country
-  -- Resolve supplier info (fleet owner or driver)
-  (sName, sGSTIN, sId) <- case ride.fleetOwnerId of
+  -- Resolve supplier info (fleet owner or driver) and detect LDC custom rate
+  let configDefaultTdsRate = transporterConfig.taxConfig.defaultTdsRate
+  (sName, sGSTIN, sId, hasCustomRate) <- case ride.fleetOwnerId of
     Just fleetOwnerId -> do
       mbFleetInfo <- QFOI.findByPrimaryKey (cast fleetOwnerId)
+      let customRate = mbFleetInfo >>= (.tdsRate) >>= \r -> if configDefaultTdsRate == Just r then Nothing else Just r
       pure
         ( mbFleetInfo >>= (.fleetName),
           mbFleetInfo >>= (.gstNumberDec),
-          Just fleetOwnerId.getId
+          Just fleetOwnerId.getId,
+          isJust customRate
         )
-    Nothing ->
+    Nothing -> do
+      let customRate = mbDriverInfo >>= (.tdsRate) >>= \r -> if configDefaultTdsRate == Just r then Nothing else Just r
       pure
         ( mbDriver <&> \d -> d.firstName <> maybe "" (" " <>) d.lastName,
           Nothing,
-          Just ride.driverId.getId
+          Just ride.driverId.getId,
+          isJust customRate
         )
+  -- Resolve PAN info from already-fetched DriverPanCard
+  panDecrypted <- traverse (decrypt . (.panCardNumber)) mbPanCard
+  let panTypeText = mbPanCard >>= (fmap show . (.docType))
+  -- Compute TDS rate reason
+  let rateReason = computeTdsRateReason mbPanCard hasCustomRate
   pure
     FinanceCtx
       { merchantId = mid,
@@ -227,31 +245,57 @@ buildFinanceCtx booking ride mbDriver = do
         issuedByAddress = address,
         supplierName = sName,
         supplierGSTIN = sGSTIN,
-        supplierId = sId
+        supplierId = sId,
+        panOfParty = panDecrypted,
+        panType = panTypeText,
+        tdsRateReason = rateReason
       }
+
+-- | Pure helper to compute TDS rate reason from PAN card data and LDC status.
+computeTdsRateReason :: Maybe DPanCard.DriverPanCard -> Bool -> Maybe TdsRateReason
+computeTdsRateReason mbPanCard hasCustomRate =
+  let hasValidPan = maybe False (\pan -> pan.verificationStatus == Documents.VALID) mbPanCard
+      panAadhaarLinked = maybe False (\pan -> pan.panAadhaarLinkage == Just DPanCard.PAN_AADHAAR_LINKED) mbPanCard
+   in Just $
+        if not hasValidPan
+          then NO_PAN
+          else
+            if hasCustomRate
+              then LDC_CERTIFICATE
+              else
+                if panAadhaarLinked
+                  then PAN_AADHAR_LINKAGE
+                  else PAN
 
 -- | Build a minimal FinanceCtx without invoice fields (for callers that
 --   only need transfers, not invoices).
-financeCtxFromRide :: SRB.Booking -> DRide.Ride -> FinanceCtx
-financeCtxFromRide booking ride =
+financeCtxFromRide :: (EncFlow m r, MonadFlow m) => SRB.Booking -> DRide.Ride -> Maybe DPanCard.DriverPanCard -> m FinanceCtx
+financeCtxFromRide booking ride mbPanCard = do
   let merchantId = fromMaybe booking.providerId ride.merchantId
       (cType, cId) = case ride.fleetOwnerId of
         Just fleetOwnerId -> (FLEET_OWNER, fleetOwnerId.getId)
         Nothing -> (DRIVER, ride.driverId.getId)
-   in FinanceCtx
-        { merchantId = merchantId.getId,
-          merchantOpCityId = booking.merchantOperatingCityId.getId,
-          currency = booking.currency,
-          counterpartyType = cType,
-          counterpartyId = cId,
-          referenceId = booking.id.getId,
-          merchantName = Nothing,
-          merchantShortId = Nothing,
-          issuedByAddress = Nothing,
-          supplierName = Nothing,
-          supplierGSTIN = Nothing,
-          supplierId = Nothing
-        }
+  panDecrypted <- traverse (decrypt . (.panCardNumber)) mbPanCard
+  let panTypeText = mbPanCard >>= (fmap show . (.docType))
+      rateReason = computeTdsRateReason mbPanCard False
+  pure
+    FinanceCtx
+      { merchantId = merchantId.getId,
+        merchantOpCityId = booking.merchantOperatingCityId.getId,
+        currency = booking.currency,
+        counterpartyType = cType,
+        counterpartyId = cId,
+        referenceId = booking.id.getId,
+        merchantName = Nothing,
+        merchantShortId = Nothing,
+        issuedByAddress = Nothing,
+        supplierName = Nothing,
+        supplierGSTIN = Nothing,
+        supplierId = Nothing,
+        panOfParty = panDecrypted,
+        panType = panTypeText,
+        tdsRateReason = rateReason
+      }
 
 -- Wallet entry delta (for topup/payout)
 

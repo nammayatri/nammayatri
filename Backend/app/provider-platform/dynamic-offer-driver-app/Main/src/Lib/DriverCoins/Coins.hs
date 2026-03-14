@@ -501,11 +501,16 @@ updateEventAndGetMonetaryRewardCredit driverId merchantId merchantOpCityId event
   let referenceId = fromMaybe "wallet_incentive" entityId
   logDebug $
     "Wallet Incentive: crediting driver wallet"
-      <> " | driverId=" <> driverId.getId
-      <> " | eventFunction=" <> show eventFunction
-      <> " | amount=" <> show amount
-      <> " | currency=" <> show transporterConfig.currency
-      <> " | referenceId=" <> referenceId
+      <> " | driverId="
+      <> driverId.getId
+      <> " | eventFunction="
+      <> show eventFunction
+      <> " | amount="
+      <> show amount
+      <> " | currency="
+      <> show transporterConfig.currency
+      <> " | referenceId="
+      <> referenceId
   res <-
     SLFW.createWalletEntryDelta
       DRIVER

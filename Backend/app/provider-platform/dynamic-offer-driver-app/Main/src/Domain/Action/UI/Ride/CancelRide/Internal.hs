@@ -34,11 +34,11 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as DTCR
 import Domain.Types.DriverLocation
-import qualified Domain.Types.Merchant as DMerc
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
 
 -- import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 
+import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RiderDetails
@@ -54,6 +54,7 @@ import qualified Kernel.Storage.Esqueleto as Esq hiding (whenJust_)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
+
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as DC
@@ -88,6 +89,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
@@ -235,7 +237,8 @@ cancelRideTransaction ::
     CacheFlow m r,
     Esq.EsqDBReplicaFlow m r,
     LT.HasLocationService m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    EncFlow m r
   ) =>
   SRB.Booking ->
   DRide.Ride ->
@@ -280,7 +283,9 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
               rate <- mbTdsRate
               let amount = baseCancellation * realToFrac rate
               if amount > 0 then Just amount else Nothing
-        ctx <- buildFinanceCtx booking ride (Just driver)
+        mbPanCard <- QPanCard.findByDriverId ride.driverId
+        mbDriverInfo <- QDI.findById (cast ride.driverId)
+        ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig
         result <- runFinance ctx $ do
           mapM_
             ( \(amt, ref, dest) -> do

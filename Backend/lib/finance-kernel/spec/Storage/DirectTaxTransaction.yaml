@@ -18,6 +18,10 @@ DirectTaxTransaction:
       enum: "Deducted,Reimbursed"
       derive: "ToParamSchema"
 
+    TdsRateReason:
+      enum: "PAN,PAN_AADHAR_LINKAGE,LDC_CERTIFICATE,NO_PAN"
+      derive: "ToParamSchema"
+
   fields:
     id: Id DirectTaxTransaction
     transactionDate: UTCTime
@@ -30,6 +34,7 @@ DirectTaxTransaction:
     tdsTreatment: TdsTreatment
     counterpartyId: Text
     panOfParty: Maybe Text
+    panType: Maybe Text
     tanOfDeductee: Maybe Text
     paymentDate: Maybe UTCTime
     invoiceNumber: Maybe Text
@@ -37,6 +42,7 @@ DirectTaxTransaction:
     merchantOperatingCityId: Text
     createdAt: UTCTime
     tdsSection: Maybe Text
+    tdsRateReason: Maybe TdsRateReason
 
   constraints:
     id: PrimaryKey
@@ -62,3 +68,4 @@ DirectTaxTransaction:
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TransactionType>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TdsTreatment>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TdsRateReason>

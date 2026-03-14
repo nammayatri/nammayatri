@@ -51,6 +51,9 @@ module Lib.Finance.FinanceM
     -- * Invoice
     InvoiceConfig (..),
     invoice,
+
+    -- * TDS Rate Reason
+    TdsRateReason (..),
   )
 where
 
@@ -63,6 +66,7 @@ import Kernel.Utils.Common (MonadFlow)
 import Lib.Finance.Account.Interface (AccountInput (..))
 import Lib.Finance.Account.Service (getOrCreateAccount)
 import Lib.Finance.Domain.Types.Account
+import Lib.Finance.Domain.Types.DirectTaxTransaction (TdsRateReason (..))
 import Lib.Finance.Domain.Types.Invoice (InvoiceType)
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.Error.Types (FinanceError (..))
@@ -89,7 +93,10 @@ data FinanceCtx = FinanceCtx
     issuedByAddress :: Maybe Text,
     supplierName :: Maybe Text,
     supplierGSTIN :: Maybe Text,
-    supplierId :: Maybe Text
+    supplierId :: Maybe Text,
+    panOfParty :: Maybe Text,
+    panType :: Maybe Text,
+    tdsRateReason :: Maybe TdsRateReason
   }
   deriving (Eq, Show, Generic)
 
@@ -527,7 +534,10 @@ invoice config = do
               supplierGSTIN = ctx.supplierGSTIN,
               supplierId = ctx.supplierId,
               gstinOfParty = Nothing,
-              panOfParty = Nothing,
+              panOfParty = ctx.panOfParty,
+              panType = ctx.panType,
+              counterpartyId = ctx.counterpartyId,
+              tdsRateReason = ctx.tdsRateReason,
               tanOfDeductee = Nothing,
               lineItems = config.lineItems,
               gstBreakdown = config.gstBreakdown,

@@ -432,7 +432,8 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
 createDriverWalletTransaction ::
   ( MonadFlow m,
     EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    EncFlow m r
   ) =>
   Ride.Ride ->
   SRB.Booking ->
@@ -500,7 +501,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
           let amount = baseFareForTds * realToFrac rate -- tdsRate is already decimal (0.01 = 1%)
           if amount > 0 then Just amount else Nothing
 
-    ctx <- buildFinanceCtx booking ride mbDriver
+    ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig
     let invoiceConfig =
           InvoiceConfig
             { invoiceType = Invoice.Ride,
