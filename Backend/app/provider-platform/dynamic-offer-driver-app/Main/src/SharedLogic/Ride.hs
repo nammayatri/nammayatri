@@ -89,21 +89,27 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   let merchantId = merchant.id
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
   transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  when (isPrepaidSubscriptionAndWalletEnabled && isJust transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold) $ do
-    whenJust mFleetOwnerId $ \fleetOwnerId -> do
-      Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey fleetOwnerId.getId) 10 10 $ do
-        mbAvailableBalance <- getPrepaidAvailableBalanceByOwner counterpartyFleetOwner fleetOwnerId.getId
+  when isPrepaidSubscriptionAndWalletEnabled $ do
+    let (counterpartyType, ownerId) = case mFleetOwnerId of
+          Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
+          Nothing -> (counterpartyDriver, driver.id.getId)
+    mbAccount <- getPrepaidAccountByOwner counterpartyType ownerId
+    whenJust mbAccount $ \_ -> do
+      Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 $ do
+        mbAvailableBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId
         let gstAmount = fromMaybe 0 booking.fareParams.govtCharges
             tollAmount = fromMaybe 0 booking.fareParams.tollCharges
             parkingAmount = fromMaybe 0 booking.fareParams.parkingCharge
             rideFare = booking.estimatedFare - gstAmount - tollAmount - parkingAmount
-            threshold = fromMaybe 0 transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold
+            threshold = fromMaybe 0 $ case mFleetOwnerId of
+              Just _ -> transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold
+              Nothing -> transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold
             balance = fromMaybe 0 mbAvailableBalance
-        when (balance < rideFare + threshold) $ throwError (InvalidRequest "Low fleet balance.")
+        when (balance < rideFare + threshold) $ throwError (InvalidRequest "Low balance.")
         _ <-
           createPrepaidHold
-            counterpartyFleetOwner
-            fleetOwnerId.getId
+            counterpartyType
+            ownerId
             rideFare
             booking.currency
             booking.providerId.getId
@@ -196,14 +202,16 @@ releaseLien ::
   DRide.Ride ->
   m ()
 releaseLien booking ride = do
-  result <- try $
-    whenJust ride.fleetOwnerId $ \fleetOwnerId -> do
-      Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey fleetOwnerId.getId) 10 10 $ do
-        voidPrepaidHold
-          counterpartyFleetOwner
-          fleetOwnerId.getId
-          booking.id.getId
-          "Ride cancelled"
+  result <- try $ do
+    let (counterpartyType, ownerId) = case ride.fleetOwnerId of
+          Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
+          Nothing -> (counterpartyDriver, ride.driverId.getId)
+    Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 $ do
+      voidPrepaidHold
+        counterpartyType
+        ownerId
+        booking.id.getId
+        "Ride cancelled"
   case result of
     Left (e :: SomeException) ->
       logTagError ("releaseLien failed for rideId " <> getId ride.id) (show e)
