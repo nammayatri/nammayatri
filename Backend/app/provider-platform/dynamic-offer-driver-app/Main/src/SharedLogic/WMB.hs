@@ -230,7 +230,7 @@ endOngoingTripTransaction fleetConfig tripTransaction currentLocation tripTermin
                   Nothing
                   (Just fleetConfig.fleetOwnerId.getId)
 
-        void $ LF.rideEnd (cast tripTransaction.id) currentLocation.lat currentLocation.lon tripTransaction.merchantId tripTransaction.driverId Nothing (Just tripInfo)
+        void $ LF.rideEnd (cast tripTransaction.id) currentLocation.lat currentLocation.lon tripTransaction.merchantId tripTransaction.driverId Nothing (Just tripInfo) Nothing
         QTT.updateOnEnd (if isCancelled then CANCELLED else COMPLETED) (Just currentLocation) (Just now) (Just tripTerminationSource) tripTransaction.id
         TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId COMPLETED "Ride Ended" "Your ride has ended" EmptyDynamicParam
 

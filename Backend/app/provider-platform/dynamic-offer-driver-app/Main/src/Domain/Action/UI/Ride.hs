@@ -39,6 +39,7 @@ import Data.Ord
 import qualified Data.Text as T hiding (count, map)
 import qualified Data.Text as Text
 import Data.Time (Day)
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Action.UI.RideDetails as RD
@@ -331,14 +332,15 @@ stopAction rideId pt stopLocId action = do
       let request = CallBAPInternal.StopEventsReq CallBAPInternal.Depart rideId stopLM.order stopInfo.waitingTimeStart (Just now)
       void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
       let currentPassStop = LatLong stopInfo.stopStartLatLng.lat stopInfo.stopStartLatLng.lon
-      existingStops <- Redis.runInMultiCloudRedisMaybeResult $ Redis.get (VID.mkReachedStopKey rideId)
-      case existingStops of
-        Just reachedStopList -> do
-          unless (currentPassStop `elem` reachedStopList) $ do
-            let updatedList = reachedStopList ++ [currentPassStop]
-            Redis.setExp (VID.mkReachedStopKey rideId) updatedList 86400
-        Nothing -> do
-          Redis.setExp (VID.mkReachedStopKey rideId) [currentPassStop] 86400
+      let nowTs = floor $ utcTimeToPOSIXSeconds now
+      mbExistingStops <- Redis.runInMultiCloudRedisMaybeResult $ Redis.get (VID.mkReachedStopKey rideId)
+      case mbExistingStops of
+        Just stops -> do
+          unless (VID.isNearLastStop currentPassStop stops) $
+            Redis.setExp (VID.mkReachedStopKey rideId) (stops <> [(currentPassStop, nowTs)]) 86400
+
+        Nothing ->
+          Redis.setExp (VID.mkReachedStopKey rideId) [(currentPassStop, nowTs)] 86400
       pure Success
     ARRIVE -> do
       unless (isValidStopArrivedAction stopLM stopsInfo) $ throwError $ InvalidRequest ("Invalid Stop arrived request with stopLocId " <> stopLocId.getId <> "for ride " <> ride.id.getId)
