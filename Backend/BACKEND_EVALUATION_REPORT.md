@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-The NammaYatri backend is a **large, mature Haskell ride-hailing platform** (~4,552 Haskell files, 45 cabal packages, 19 shared libraries) with strong architectural discipline through NammaDSL code generation. The codebase has clear separation of concerns and enforces quality through `-Werror`.
+The NammaYatri backend is a **large, mature Haskell ride-hailing platform** (~4,552 Haskell files, **~352,795 hand-written lines + ~131,504 generated lines = ~484K total lines**, 45 cabal packages, 19 shared libraries) with strong architectural discipline through NammaDSL code generation. The codebase has clear separation of concerns and enforces quality through `-Werror`.
 
 **However, six systemic issues threaten production reliability and scalability:**
 
@@ -17,9 +17,9 @@ The NammaYatri backend is a **large, mature Haskell ride-hailing platform** (~4,
 | **Reliability** | 6/10 | Silent error swallowing in Beckn callbacks; unsafe partial functions |
 | **Performance** | 5/10 | Endemic N+1 queries; sequential allocator; Redis contention |
 | **Code Quality** | 7/10 | Strong architecture, but large monolithic handlers (3,500+ lines) |
-| **Testing Maturity** | 3/10 | Integration-only; no unit tests for business logic; no property tests |
+| **Testing Maturity** | 2/10 | 1.77% test-to-code ratio; integration-only; no unit test mocking; CI doesn't run tests |
 | **Agent Readiness** | 8/10 | Excellent patterns, CLAUDE.md, clear generated/manual boundary |
-| **Overall** | **5.8/10** | Strong foundation, but critical gaps in testing and performance |
+| **Overall** | **5.6/10** | Strong foundation, but critical gaps in testing (1.77% ratio) and performance |
 
 ---
 
@@ -209,14 +209,16 @@ otp: Text               # Should be: OTP
 
 ## Part 4: Testing Strategy Assessment
 
-### Current State: 3/10
+### Current State: 2/10 (Reviewer-adjusted)
+
+**Key metric**: 6,235 test lines / 352,795 source lines = **1.77% test-to-code ratio**
 
 | Aspect | Status |
 |--------|--------|
 | **Test framework** | Tasty + HSpec + HUnit (adequate) |
 | **Integration tests** | ~6,235 lines covering happy-path ride flows |
 | **Unit tests** | Minimal — only 3 dashboard-related files in `hunit-tests/` |
-| **Property-based tests** | None (no QuickCheck) |
+| **Property-based tests** | Minimal — QuickCheck exists in `lib/location-updates/test/` only (not in core domain) |
 | **Beckn ACL tests** | None (67 untested modules) |
 | **Cache tests** | None |
 | **Error path tests** | None |
@@ -628,6 +630,7 @@ After full implementation:
 
 | Metric | Current | Target |
 |--------|---------|--------|
+| Test-to-code ratio | 1.77% (6,235 / 352,795 lines) | >10% |
 | Test count | ~50 integration | 750+ (unit + property + integration + contract) |
 | CI test execution | No | Yes, blocking on failure |
 | Unsafe partial functions | 10+ locations | 0 |
