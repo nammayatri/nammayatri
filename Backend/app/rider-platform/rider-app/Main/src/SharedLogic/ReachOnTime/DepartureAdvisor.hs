@@ -67,14 +67,17 @@ computeDepartAtAdvisory ::
 computeDepartAtAdvisory departTime durationSec now =
   let arrivalTime = addUTCTime (fromIntegral durationSec) departTime
       availableTime = diffUTCTime departTime now
-      risk =
-        if availableTime <= 0
-          then TooLate
-          else Comfortable
-      msg =
-        if availableTime <= 0
-          then "Departure time has passed"
-          else "Estimated arrival at " <> showTimeIST arrivalTime
+      availableMins = round (availableTime / 60) :: Int
+      risk
+        | availableTime <= 0 = TooLate
+        | availableMins < 5 = Tight
+        | availableMins < 12 = Good
+        | otherwise = Comfortable
+      msg = case risk of
+        TooLate -> "Departure time has passed"
+        Tight -> "Leave now! Only " <> show availableMins <> " minutes until departure."
+        Good -> "Leave soon. " <> show availableMins <> " minutes until departure."
+        Comfortable -> "Estimated arrival at " <> showTimeIST arrivalTime
    in DepartureAdvisory
         { latestDeparture = departTime,
           recommendedDeparture = departTime,
@@ -124,12 +127,12 @@ generateAdvisoryMessage risk availableTime bufferMins =
 computeCrowdingBufferSeconds :: UTCTime -> Maybe Int
 computeCrowdingBufferSeconds departureTime =
   let -- IST is UTC+5:30
-      istOffset = 5 * 3600 + 30 * 60
+      istOffset = istOffsetSeconds
       istTime = addUTCTime (fromIntegral (istOffset :: Int)) departureTime
       (_, timeOfDay) = Time.utctDayTime istTime `divMod'` (24 * 3600)
       hours = timeOfDay `div` 3600
       mins = (timeOfDay `mod` 3600) `div` 60
-      isPeakMorning = hours >= 7 && (hours < 10 || (hours == 7 && mins >= 30))
+      isPeakMorning = (hours == 7 && mins >= 30) || (hours >= 8 && hours < 10)
       isPeakEvening = hours >= 17 && hours < 20
    in if isPeakMorning || isPeakEvening
         then Just 600 -- 10 minutes default crowding buffer
@@ -156,6 +159,10 @@ flagLateNightWalking departureTime legs =
                 severity = "Medium"
               }
       | otherwise = Nothing
+
+-- | IST offset in seconds (UTC+5:30)
+istOffsetSeconds :: Int
+istOffsetSeconds = 5 * 3600 + 30 * 60
 
 -- | Format UTC time as IST string (HH:MM AM/PM)
 showTimeIST :: UTCTime -> Text

@@ -14,9 +14,10 @@
 
 module SharedLogic.Scheduler.Jobs.DepartureReminder where
 
-import Data.Time (UTCTime, addUTCTime, diffUTCTime, utctDay)
+import Data.Time (UTCTime(..), addUTCTime, diffUTCTime, utctDay)
 import qualified Data.Time.Calendar as Calendar
 import qualified Data.Time.Calendar.WeekDate as WeekDate
+import qualified Data.Aeson as Aeson
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -52,11 +53,11 @@ processDepartureReminders = do
             -- In production: sendPushNotification trip.riderId advisory
             QSavedTrip.updateLastNotified trip.id (Just now) (Just advisory.recommendedDeparture)
 
--- | Check if a trip's recurrence matches today
+-- | Check if a trip's recurrence matches today (using IST day)
 isScheduledForToday :: DST.TripRecurrence -> Maybe Text -> UTCTime -> Bool
 isScheduledForToday recurrence mbCustomDays now =
-  let today = utctDay now
-      (_, _, dayOfWeek) = WeekDate.toWeekDate today
+  let istDay = utctDay (addUTCTime istOffsetNDT now) -- use IST day, not UTC day
+      (_, _, dayOfWeek) = WeekDate.toWeekDate istDay
    in case recurrence of
         DST.NoRecurrence -> False
         DST.Daily -> True
@@ -64,29 +65,39 @@ isScheduledForToday recurrence mbCustomDays now =
         DST.Weekends -> dayOfWeek >= 6
         DST.Custom -> case mbCustomDays of
           Nothing -> False
-          Just daysJson -> show dayOfWeek `isInfixOf` daysJson -- Simple check; production should parse JSON
+          Just daysJson ->
+            -- Parse as JSON array of ints for exact matching (avoids isInfixOf false positives)
+            case Aeson.decode (encodeUtf8 daysJson) of
+              Just (days :: [Int]) -> dayOfWeek `elem` days
+              Nothing -> False
 
 -- | Get the target time for today based on saved trip's time-of-day
+-- Target time-of-day is in IST; we convert to UTC for internal use
 getTargetTimeForToday :: DST.SavedTrip -> UTCTime -> Maybe UTCTime
 getTargetTimeForToday trip now =
   case (trip.timeMode, trip.targetTimeOfDay) of
     (DST.ArriveBy, Just tod) ->
-      let today = utctDay now
-          -- Convert TimeOfDay to seconds and set on today
+      let istDay = utctDay (addUTCTime istOffsetNDT now) -- IST day
           todSecs = timeOfDayToSeconds tod
-       in Just $ UTCTime today (fromIntegral todSecs)
+          -- Construct IST target time, then convert back to UTC
+          istTargetUTC = UTCTime istDay (fromIntegral todSecs)
+       in Just $ addUTCTime (negate istOffsetNDT) istTargetUTC
     (DST.DepartAt, Just tod) ->
-      let today = utctDay now
+      let istDay = utctDay (addUTCTime istOffsetNDT now) -- IST day
           todSecs = timeOfDayToSeconds tod
-       in Just $ UTCTime today (fromIntegral todSecs)
+          istTargetUTC = UTCTime istDay (fromIntegral todSecs)
+       in Just $ addUTCTime (negate istOffsetNDT) istTargetUTC
     _ -> trip.targetTime
 
--- | Check if we already sent a notification today
+-- | Check if we already sent a notification today (using IST day)
 alreadyNotifiedToday :: DST.SavedTrip -> UTCTime -> Bool
 alreadyNotifiedToday trip now =
   case trip.lastNotifiedAt of
     Nothing -> False
-    Just lastNotified -> utctDay lastNotified == utctDay now
+    Just lastNotified ->
+      let istDayNow = utctDay (addUTCTime istOffsetNDT now)
+          istDayNotified = utctDay (addUTCTime istOffsetNDT lastNotified)
+       in istDayNotified == istDayNow
 
 -- | Convert TimeOfDay to seconds since midnight
 timeOfDayToSeconds :: TimeOfDay -> Int
@@ -100,5 +111,6 @@ secondsToTimeOfDay secs =
       s = secs `mod` 60
    in TimeOfDay h m (fromIntegral s)
 
--- | Helper for UTCTime construction
-data UTCTime' = UTCTime' {utctDay' :: Calendar.Day, utctDayTime' :: NominalDiffTime}
+-- | IST offset as NominalDiffTime (UTC+5:30 = 19800 seconds)
+istOffsetNDT :: NominalDiffTime
+istOffsetNDT = fromIntegral (5 * 3600 + 30 * 60 :: Int)
