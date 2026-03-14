@@ -628,8 +628,7 @@ processDsrVsLedger booking ledgerEntries now = do
         _ -> IndirectTax.Cancellation
       mbIndirectTxn = find (\t -> t.transactionType == relevantType) indirectTaxTxns
       expectedGstFromTax = (.totalGstAmount) <$> mbIndirectTxn
-      expectedGstFallback = (* 0.05) <$> calculateExpectedGross booking
-      expectedGst = expectedGstFromTax <|> expectedGstFallback
+      expectedGst = expectedGstFromTax
 
   -- Get expected values from booking (DSR)
   let expectedGross = calculateExpectedGross booking
@@ -718,10 +717,13 @@ processDsrVsSubscription booking ledgerEntry now = do
   rides <- QRide.findRidesByBookingId [booking.id]
   let dcoId = (.driverId.getId) <$> listToMaybe rides
 
-  -- Calculate driver take home: estimatedFare - commission
-  let estimatedFare = booking.estimatedFare
-      commission = fromMaybe 0 booking.commission
-      expectedValue = estimatedFare - commission
+  -- Calculate driver take home: ride.fare - parkingCharge - govtCharges - tollCharges
+  let mbRide = listToMaybe rides
+      rideFare = fromMaybe booking.estimatedFare (mbRide >>= (.fare))
+      parkingCharge = fromMaybe 0 booking.fareParams.parkingCharge
+      govtCharges = fromMaybe 0 booking.fareParams.govtCharges
+      tollCharges = fromMaybe 0 booking.tollCharges
+      expectedValue = rideFare - parkingCharge - govtCharges - tollCharges
       actualValue = ledgerEntry.amount
       variance = expectedValue - actualValue
 
@@ -856,7 +858,8 @@ calculateExpectedGross :: DB.Booking -> Maybe HighPrecMoney
 calculateExpectedGross booking =
   let estimatedFare = booking.estimatedFare
       tollCharges = fromMaybe 0 booking.tollCharges
-   in Just $ estimatedFare - tollCharges
+      parkingCharge = fromMaybe 0 booking.fareParams.parkingCharge
+   in Just $ estimatedFare - tollCharges - parkingCharge
 
 -- | HIGHER_IN_TARGET when actual > expected, LOWER_IN_TARGET when actual < expected (per doc semantics).
 mismatchStatus :: Maybe HighPrecMoney -> Maybe HighPrecMoney -> ReconSummary.ReconciliationStatus
