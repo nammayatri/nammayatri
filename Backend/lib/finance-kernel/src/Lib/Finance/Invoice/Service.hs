@@ -173,9 +173,12 @@ createInvoice input entryIds = do
           taxTxnId <- generateGUID
           let tdsAmount = entry.amount
               extCharges = sum $ map (.lineTotal) $ filter (.isExternalCharge) input.lineItems
-              grossAmount = subtotal - extCharges
+              gstAmount = case input.gstBreakdown of
+                Just breakdown -> fromMaybe 0 breakdown.cgstAmount + fromMaybe 0 breakdown.sgstAmount + fromMaybe 0 breakdown.igstAmount
+                Nothing -> 0
+              grossAmount = subtotal - extCharges - gstAmount
               netAmountPaid = grossAmount - tdsAmount
-              tdsRate = if netAmountPaid > 0 then realToFrac (tdsAmount / netAmountPaid) * 100.0 else 0.0
+              tdsRate = if netAmountPaid > 0 then realToFrac (tdsAmount / grossAmount) * 100.0 else 0.0
               txnType = invoiceTypeToDirectTransactionType input.invoiceType
           let directTaxTxn =
                 DirectTaxTransaction

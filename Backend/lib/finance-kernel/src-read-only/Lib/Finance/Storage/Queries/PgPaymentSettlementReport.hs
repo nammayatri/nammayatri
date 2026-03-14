@@ -45,6 +45,7 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPayment
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.bankId bankId,
+      Se.Set Beam.chargebackAmount chargebackAmount,
       Se.Set Beam.chargebackId chargebackId,
       Se.Set Beam.chargebackReasonCode chargebackReasonCode,
       Se.Set Beam.chargebackStatus chargebackStatus,

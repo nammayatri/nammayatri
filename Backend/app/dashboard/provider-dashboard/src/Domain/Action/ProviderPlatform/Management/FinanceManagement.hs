@@ -46,27 +46,25 @@ getFinanceManagementFinancePaymentSettlementList ::
   ( Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
     Kernel.Types.Beckn.Context.City ->
     ApiTokenInfo ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- driverId
-    Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- fleetOwnerId
     Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> -- from
     Kernel.Prelude.Maybe Kernel.Prelude.Int -> -- limit
     Kernel.Prelude.Maybe Kernel.Prelude.Int -> -- offset
-    Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- orderId
+    Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.PaymentOrder) -> -- paymentOrderShortId
     Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- pgApprovalCode
-    Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- pgName
+    Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.PgGateway -> -- pgGateway
     Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> -- settlementAmountMax
     Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> -- settlementAmountMin
     Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> -- settlementFrom
-    Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- settlementId
+    Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.PGPaymentSettlementReport) -> -- settlementId
     Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> -- settlementTo
     Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- settlementUtr
-    Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- subscriptionPurchaseId
+    Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.SubscriptionPurchase) -> -- subscriptionPurchaseId
     Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> -- to
     Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.PaymentSettlementListRes
   )
-getFinanceManagementFinancePaymentSettlementList merchantShortId opCity apiTokenInfo driverId fleetOwnerId from limit offset orderId pgApprovalCode pgName settlementAmountMax settlementAmountMin settlementFrom settlementId settlementTo settlementUtr subscriptionPurchaseId to = do
+getFinanceManagementFinancePaymentSettlementList merchantShortId opCity apiTokenInfo from limit offset paymentOrderShortId pgApprovalCode pgGateway settlementAmountMax settlementAmountMin settlementFrom settlementId settlementTo settlementUtr subscriptionPurchaseId to = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinancePaymentSettlementList) driverId fleetOwnerId from limit offset orderId pgApprovalCode pgName settlementAmountMax settlementAmountMin settlementFrom settlementId settlementTo settlementUtr subscriptionPurchaseId to
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinancePaymentSettlementList) from limit offset paymentOrderShortId pgApprovalCode pgGateway settlementAmountMax settlementAmountMin settlementFrom settlementId settlementTo settlementUtr subscriptionPurchaseId to
 
 getFinanceManagementFinanceWalletLedger :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.WalletLedgerRes)
 getFinanceManagementFinanceWalletLedger merchantShortId opCity apiTokenInfo limit offset driverId fleetOperatorId from to sourceType = do
@@ -92,21 +90,18 @@ getFinanceManagementFinancePaymentGatewayTransactionList ::
     Kernel.Types.Beckn.Context.City ->
     ApiTokenInfo ->
     Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> -- from
-    Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- gatewayTransactionId
     Kernel.Prelude.Maybe Kernel.Prelude.Int -> -- limit
     Kernel.Prelude.Maybe Kernel.Prelude.Int -> -- offset
-    Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- orderId
-    Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- paymentMode
-    Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- paymentStatus
-    Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- pgGateway
-    Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- pgName
-    Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- subscriptionId
+    Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.PaymentModeFilter -> -- paymentMode
+    Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.PaymentOrder) -> -- paymentOrderId
+    Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.PaymentStatusFilter -> -- paymentStatus
+    Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.PgGateway -> -- pgGateway
+    Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.SubscriptionPurchase) -> -- subscriptionId
     Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> -- to
-    Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- transactionType
     Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> -- txnAmountMax
     Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> -- txnAmountMin
     Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.PaymentTransactionReportListRes
   )
-getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity apiTokenInfo from gatewayTransactionId limit offset orderId paymentMode paymentStatus pgGateway pgName subscriptionId to transactionType txnAmountMax txnAmountMin = do
+getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity apiTokenInfo from limit offset paymentMode paymentOrderId paymentStatus pgGateway subscriptionId to txnAmountMax txnAmountMin = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinancePaymentGatewayTransactionList) from gatewayTransactionId limit offset orderId paymentMode paymentStatus pgGateway pgName subscriptionId to transactionType txnAmountMax txnAmountMin
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinancePaymentGatewayTransactionList) from limit offset paymentMode paymentOrderId paymentStatus pgGateway subscriptionId to txnAmountMax txnAmountMin

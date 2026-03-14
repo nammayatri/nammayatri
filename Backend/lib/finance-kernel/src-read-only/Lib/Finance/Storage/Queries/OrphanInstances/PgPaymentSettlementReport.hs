@@ -18,6 +18,7 @@ instance FromTType' Beam.PgPaymentSettlementReport Lib.Finance.Domain.Types.PgPa
       Just
         Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPaymentSettlementReport
           { bankId = bankId,
+            chargebackAmount = chargebackAmount,
             chargebackId = chargebackId,
             chargebackReasonCode = chargebackReasonCode,
             chargebackStatus = chargebackStatus,
@@ -69,6 +70,7 @@ instance ToTType' Beam.PgPaymentSettlementReport Lib.Finance.Domain.Types.PgPaym
   toTType' (Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPaymentSettlementReport {..}) = do
     Beam.PgPaymentSettlementReportT
       { Beam.bankId = bankId,
+        Beam.chargebackAmount = chargebackAmount,
         Beam.chargebackId = chargebackId,
         Beam.chargebackReasonCode = chargebackReasonCode,
         Beam.chargebackStatus = chargebackStatus,

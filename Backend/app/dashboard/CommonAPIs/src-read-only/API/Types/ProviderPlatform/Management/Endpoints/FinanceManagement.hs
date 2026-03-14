@@ -102,6 +102,14 @@ data PaginationInfo = PaginationInfo {total :: Kernel.Prelude.Int, limit :: Kern
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data PaymentModeFilter
+  = UPI
+  | Card
+  | NetBanking
+  | Wallet
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
 data PaymentSettlementListItem = PaymentSettlementListItem
   { subscriptionPurchaseId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantRefNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -109,7 +117,7 @@ data PaymentSettlementListItem = PaymentSettlementListItem
     pgApprovalCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     pgOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     transactionDateAndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    transactionType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    transactionType :: Kernel.Prelude.Maybe TransactionTypeFilter,
     chargedAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     paymentStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     pgFees :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -144,13 +152,20 @@ data PaymentSettlementListRes = PaymentSettlementListRes {totalItems :: Kernel.P
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data PaymentStatusFilter
+  = Success
+  | Failed
+  | Pending
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
 data PaymentTransactionReportItem = PaymentTransactionReportItem
   { gatewayTransactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     correlationId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     parentTransactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    transactionType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    transactionType :: Kernel.Prelude.Maybe TransactionTypeFilter,
     transactionStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     failureReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     errorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -215,6 +230,12 @@ data PayoutListItem = PayoutListItem
 data PayoutListRes = PayoutListRes {totalItems :: Kernel.Prelude.Int, payouts :: [PayoutListItem]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PgGateway
+  = Juspay
+  | BillDesk
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
 data ReconciliationEntriesRes = ReconciliationEntriesRes {entries :: [ReconciliationEntry], pagination :: PaginationInfo}
   deriving stock (Generic)
@@ -340,6 +361,12 @@ data SubscriptionPurchaseStatus
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
+data TransactionTypeFilter
+  = Order
+  | Refund
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
 data WalletLedgerItem = WalletLedgerItem
   { walletTxnId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     walletTxnDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -438,24 +465,20 @@ type GetFinanceManagementFinanceReconciliation =
   )
 
 type GetFinanceManagementFinancePaymentSettlementList =
-  ( "finance" :> "payment" :> "settlement" :> "list" :> QueryParam "driverId" Kernel.Prelude.Text
+  ( "finance" :> "payment" :> "settlement" :> "list" :> QueryParam "from" Kernel.Prelude.UTCTime
       :> QueryParam
-           "fleetOwnerId"
-           Kernel.Prelude.Text
-      :> QueryParam "from" Kernel.Prelude.UTCTime
-      :> QueryParam "limit" Kernel.Prelude.Int
-      :> QueryParam
-           "offset"
+           "limit"
            Kernel.Prelude.Int
+      :> QueryParam "offset" Kernel.Prelude.Int
       :> QueryParam
-           "orderId"
-           Kernel.Prelude.Text
+           "paymentOrderShortId"
+           (Kernel.Types.Id.ShortId Dashboard.Common.PaymentOrder)
       :> QueryParam
            "pgApprovalCode"
            Kernel.Prelude.Text
       :> QueryParam
-           "pgName"
-           Kernel.Prelude.Text
+           "pgGateway"
+           PgGateway
       :> QueryParam
            "settlementAmountMax"
            Kernel.Types.Common.HighPrecMoney
@@ -467,7 +490,7 @@ type GetFinanceManagementFinancePaymentSettlementList =
            Kernel.Prelude.UTCTime
       :> QueryParam
            "settlementId"
-           Kernel.Prelude.Text
+           (Kernel.Types.Id.Id Dashboard.Common.PGPaymentSettlementReport)
       :> QueryParam
            "settlementTo"
            Kernel.Prelude.UTCTime
@@ -476,7 +499,7 @@ type GetFinanceManagementFinancePaymentSettlementList =
            Kernel.Prelude.Text
       :> QueryParam
            "subscriptionPurchaseId"
-           Kernel.Prelude.Text
+           (Kernel.Types.Id.Id Dashboard.Common.SubscriptionPurchase)
       :> QueryParam
            "to"
            Kernel.Prelude.UTCTime
@@ -486,39 +509,29 @@ type GetFinanceManagementFinancePaymentSettlementList =
   )
 
 type GetFinanceManagementFinancePaymentGatewayTransactionList =
-  ( "finance" :> "payment" :> "gateway" :> "transaction" :> "list"
+  ( "finance" :> "payment" :> "gateway" :> "transaction" :> "list" :> QueryParam "from" Kernel.Prelude.UTCTime
       :> QueryParam
-           "from"
-           Kernel.Prelude.UTCTime
-      :> QueryParam "gatewayTransactionId" Kernel.Prelude.Text
-      :> QueryParam "limit" Kernel.Prelude.Int
-      :> QueryParam
-           "offset"
+           "limit"
            Kernel.Prelude.Int
-      :> QueryParam
-           "orderId"
-           Kernel.Prelude.Text
+      :> QueryParam "offset" Kernel.Prelude.Int
       :> QueryParam
            "paymentMode"
-           Kernel.Prelude.Text
+           PaymentModeFilter
+      :> QueryParam
+           "paymentOrderId"
+           (Kernel.Types.Id.ShortId Dashboard.Common.PaymentOrder)
       :> QueryParam
            "paymentStatus"
-           Kernel.Prelude.Text
+           PaymentStatusFilter
       :> QueryParam
            "pgGateway"
-           Kernel.Prelude.Text
-      :> QueryParam
-           "pgName"
-           Kernel.Prelude.Text
+           PgGateway
       :> QueryParam
            "subscriptionId"
-           Kernel.Prelude.Text
+           (Kernel.Types.Id.Id Dashboard.Common.SubscriptionPurchase)
       :> QueryParam
            "to"
            Kernel.Prelude.UTCTime
-      :> QueryParam
-           "transactionType"
-           Kernel.Prelude.Text
       :> QueryParam
            "txnAmountMax"
            Kernel.Types.Common.HighPrecMoney
@@ -556,8 +569,8 @@ data FinanceManagementAPIs = FinanceManagementAPIs
   { getFinanceManagementSubscriptionPurchaseList :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe SubscriptionPurchaseStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient SubscriptionPurchaseListRes,
     getFinanceManagementFinanceInvoiceList :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Invoice.InvoiceType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Invoice.InvoiceStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient InvoiceListRes,
     getFinanceManagementFinanceReconciliation :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient ReconciliationRes,
-    getFinanceManagementFinancePaymentSettlementList :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient PaymentSettlementListRes,
-    getFinanceManagementFinancePaymentGatewayTransactionList :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> EulerHS.Types.EulerClient PaymentTransactionReportListRes,
+    getFinanceManagementFinancePaymentSettlementList :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.PaymentOrder) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe PgGateway -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.PGPaymentSettlementReport) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.SubscriptionPurchase) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient PaymentSettlementListRes,
+    getFinanceManagementFinancePaymentGatewayTransactionList :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe PaymentModeFilter -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.PaymentOrder) -> Kernel.Prelude.Maybe PaymentStatusFilter -> Kernel.Prelude.Maybe PgGateway -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.SubscriptionPurchase) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> EulerHS.Types.EulerClient PaymentTransactionReportListRes,
     getFinanceManagementFinanceWalletLedger :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient WalletLedgerRes,
     postFinanceManagementReconciliationTrigger :: ReconciliationTriggerReq -> EulerHS.Types.EulerClient ReconciliationTriggerRes
   }
@@ -578,6 +591,14 @@ data FinanceManagementUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+$(mkHttpInstancesForEnum ''PaymentModeFilter)
+
+$(mkHttpInstancesForEnum ''PaymentStatusFilter)
+
+$(mkHttpInstancesForEnum ''PgGateway)
+
 $(mkHttpInstancesForEnum ''SubscriptionPurchaseStatus)
+
+$(mkHttpInstancesForEnum ''TransactionTypeFilter)
 
 $(Data.Singletons.TH.genSingletons [''FinanceManagementUserActionType])

@@ -111,6 +111,7 @@ PgPaymentSettlementReport:
     chargebackId: Maybe Text                       # PG chargeback ID
     chargebackReasonCode: Maybe Text               # Reason for chargeback
     chargebackStatus: Maybe Text                   # Chargeback status
+    chargebackAmount: Maybe HighPrecMoney
 
 
     # --- Dispute fields ---

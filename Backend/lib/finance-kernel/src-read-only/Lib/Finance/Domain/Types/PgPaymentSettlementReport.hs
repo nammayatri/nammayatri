@@ -12,6 +12,7 @@ import qualified Kernel.Utils.TH
 
 data PgPaymentSettlementReport = PgPaymentSettlementReport
   { bankId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    chargebackAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     chargebackId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     chargebackReasonCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     chargebackStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

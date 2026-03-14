@@ -99,6 +99,12 @@ data IntegratedBPPConfig
 
 data FRFSTicketBooking
 
+data SubscriptionPurchase
+
+data PaymentOrder
+
+data PGPaymentSettlementReport
+
 data Role = DRIVER | FLEET
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)

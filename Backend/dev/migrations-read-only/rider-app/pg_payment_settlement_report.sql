@@ -99,3 +99,9 @@ ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN bank_id text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN chargeback_amount double precision ;

@@ -14,6 +14,7 @@ import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport
 
 data PgPaymentSettlementReportT f = PgPaymentSettlementReportT
   { bankId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    chargebackAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     chargebackId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     chargebackReasonCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     chargebackStatus :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
@@ -68,6 +69,6 @@ instance B.Table PgPaymentSettlementReportT where
 
 type PgPaymentSettlementReport = PgPaymentSettlementReportT Identity
 
-$(enableKVPG (''PgPaymentSettlementReportT) [('id)] [[('orderId)], [('referenceId)], [('rrn)], [('settlementId)]])
+$(enableKVPG (''PgPaymentSettlementReportT) [('id)] [[('orderId)], [('referenceId)], [('rrn)], [('settlementId)], [('utr)]])
 
 $(mkTableInstancesGenericSchema (''PgPaymentSettlementReportT) "pg_payment_settlement_report")

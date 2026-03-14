@@ -6,6 +6,9 @@
 imports:
   Summary: Dashboard.Common
   Driver: Dashboard.Common
+  SubscriptionPurchase: Dashboard.Common
+  PaymentOrder: Dashboard.Common
+  PGPaymentSettlementReport: Dashboard.Common
   InvoiceStatus: Lib.Finance.Domain.Types.Invoice
   InvoiceType: Lib.Finance.Domain.Types.Invoice
   Value: Data.Aeson
@@ -71,16 +74,14 @@ apis:
         offset: Int
         from: UTCTime
         to: UTCTime
-        subscriptionPurchaseId: Text
-        orderId: Text
-        settlementId: Text
-        driverId: Text
-        fleetOwnerId: Text
+        subscriptionPurchaseId: Id SubscriptionPurchase
+        paymentOrderShortId: ShortId PaymentOrder
+        settlementId: Id PGPaymentSettlementReport
         pgApprovalCode: Text
         settlementUtr: Text
         settlementFrom: UTCTime
         settlementTo: UTCTime
-        pgName: Text
+        pgGateway: PgGateway
         settlementAmountMin: HighPrecMoney
         settlementAmountMax: HighPrecMoney
       auth: ApiAuthV2
@@ -95,14 +96,11 @@ apis:
         offset: Int
         from: UTCTime
         to: UTCTime
-        subscriptionId: Text
-        orderId: Text
-        gatewayTransactionId: Text
-        pgGateway: Text
-        pgName: Text
-        paymentStatus: Text
-        paymentMode: Text
-        transactionType: Text
+        subscriptionId: Id SubscriptionPurchase
+        paymentOrderId: ShortId PaymentOrder
+        pgGateway: PgGateway
+        paymentStatus: PaymentStatusFilter
+        paymentMode: PaymentModeFilter
         txnAmountMin: HighPrecMoney
         txnAmountMax: HighPrecMoney
       auth: ApiAuthV2
@@ -137,6 +135,22 @@ apis:
 types:
   SubscriptionPurchaseStatus:
     - enum: "SubscriptionPending, SubscriptionActive, SubscriptionExpired, SubscriptionFailed, SubscriptionExhausted"
+    - derive: "ToParamSchema,HttpInstance"
+
+  PgGateway:
+    - enum: "Juspay, BillDesk"
+    - derive: "ToParamSchema,HttpInstance"
+
+  PaymentModeFilter:
+    - enum: "UPI, Card, NetBanking, Wallet"
+    - derive: "ToParamSchema,HttpInstance"
+
+  PaymentStatusFilter:
+    - enum: "Success, Failed, Pending"
+    - derive: "ToParamSchema,HttpInstance"
+
+  TransactionTypeFilter:
+    - enum: "Order, Refund"
     - derive: "ToParamSchema,HttpInstance"
 
   # ----- Subscription Purchase -----
@@ -329,7 +343,7 @@ types:
     - pgApprovalCode: Maybe Text
     - pgOrderId: Maybe Text
     - transactionDateAndTime: Maybe UTCTime
-    - transactionType: Maybe Text
+    - transactionType: Maybe TransactionTypeFilter
     - chargedAmount: Maybe HighPrecMoney
     - paymentStatus: Maybe Text
     - pgFees: Maybe HighPrecMoney
@@ -368,7 +382,7 @@ types:
     - referenceId: Maybe Text
     - correlationId: Maybe Text
     - parentTransactionId: Maybe Text
-    - transactionType: Maybe Text
+    - transactionType: Maybe TransactionTypeFilter
     - transactionStatus: Maybe Text
     - failureReason: Maybe Text
     - errorCode: Maybe Text
