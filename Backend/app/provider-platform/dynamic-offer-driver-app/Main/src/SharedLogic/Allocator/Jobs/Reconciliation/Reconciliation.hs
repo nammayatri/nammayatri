@@ -215,7 +215,7 @@ doReconciliationDsrVsLedger merchantId merchantOpCityId startTime endTime now = 
 
   -- Create summary
   summaryId <- cast <$> generateGUID
-  let summary = createSummary ReconSummary.DSR_VS_LEDGER validEntries now merchantId.getId merchantOpCityId summaryId
+  let summary = createSummary ReconSummary.DSR_VS_LEDGER validEntries startTime now merchantId.getId merchantOpCityId summaryId
   QReconSummary.create summary
 
   -- Create entries linked to summary
@@ -268,7 +268,7 @@ doReconciliationDsrVsSubscription merchantId merchantOpCityId startTime endTime 
   -- Create summary
   let validEntries = catMaybes entries
   summaryId <- cast <$> generateGUID
-  let summary = createSummary ReconSummary.DSR_VS_SUBSCRIPTION validEntries now merchantId.getId merchantOpCityId summaryId
+  let summary = createSummary ReconSummary.DSR_VS_SUBSCRIPTION validEntries startTime now merchantId.getId merchantOpCityId summaryId
   QReconSummary.create summary
 
   let entriesWithSummary = map (\e -> e {ReconEntry.summaryId = summaryId}) validEntries
@@ -315,7 +315,7 @@ doReconciliationDssrVsSubscription merchantId merchantOpCityId startTime endTime
   -- Create summary
   let validEntries = catMaybes entries
   summaryId <- cast <$> generateGUID
-  let summary = createSummary ReconSummary.DSSR_VS_SUBSCRIPTION validEntries now merchantId.getId merchantOpCityId summaryId
+  let summary = createSummary ReconSummary.DSSR_VS_SUBSCRIPTION validEntries startTime now merchantId.getId merchantOpCityId summaryId
   QReconSummary.create summary
 
   let entriesWithSummary = map (\e -> e {ReconEntry.summaryId = summaryId}) validEntries
@@ -452,7 +452,7 @@ doReconciliationPgPaymentVsSubscription merchantId merchantOpCityId startTime en
 
   -- Create summary
   let validEntries = catMaybes entries
-  let summary = createSummary ReconSummary.PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION validEntries now merchantId.getId merchantOpCityId summaryId
+  let summary = createSummary ReconSummary.PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION validEntries startTime now merchantId.getId merchantOpCityId summaryId
   QReconSummary.create summary
 
   mapM_ QReconEntry.create validEntries
@@ -582,7 +582,7 @@ doReconciliationPgPayoutVsPayoutRequest merchantId merchantOpCityId startTime en
 
   -- Create summary
   let validEntries = catMaybes entries
-  let summary = createSummary ReconSummary.PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST validEntries now merchantId.getId merchantOpCityId summaryId
+  let summary = createSummary ReconSummary.PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST validEntries startTime now merchantId.getId merchantOpCityId summaryId
   QReconSummary.create summary
 
   mapM_ QReconEntry.create validEntries
@@ -925,8 +925,8 @@ getActualValue baseRideEntry _gstOnlineEntry gstCashEntry userCancellationEntry 
     DB.CANCELLED -> (userCancellationEntry <&> (.amount)) <|> (driverCancellationEntry <&> (.amount))
     _ -> Nothing
 
-createSummary :: ReconSummary.ReconciliationType -> [ReconEntry.ReconciliationEntry] -> UTCTime -> Text -> Id DMOC.MerchantOperatingCity -> Id ReconSummary.ReconciliationSummary -> ReconSummary.ReconciliationSummary
-createSummary reconType entries now merchantId merchantOpCityId summaryId =
+createSummary :: ReconSummary.ReconciliationType -> [ReconEntry.ReconciliationEntry] -> UTCTime -> UTCTime -> Text -> Id DMOC.MerchantOperatingCity -> Id ReconSummary.ReconciliationSummary -> ReconSummary.ReconciliationSummary
+createSummary reconType entries startTime now merchantId merchantOpCityId summaryId =
   let totalRecords = length entries
       matchedRecords = length $ filter (\e -> e.reconStatus == ReconEntry.MATCHED) entries
       discrepancies = totalRecords - matchedRecords
@@ -936,7 +936,7 @@ createSummary reconType entries now merchantId merchantOpCityId summaryId =
       matchRate = if totalRecords > 0 then show (fromIntegral matchedRecords * 100 / fromIntegral totalRecords :: Double) <> "%" else "0%"
    in ReconSummary.ReconciliationSummary
         { id = summaryId,
-          reconciliationDate = now,
+          reconciliationDate = startTime,
           reconciliationType = reconType,
           merchantId = merchantId,
           merchantOperatingCityId = merchantOpCityId.getId,

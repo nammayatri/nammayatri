@@ -49,6 +49,7 @@ library
       Lib.Finance.Storage.Queries.PgPaymentSettlementReportExtra
       Lib.Finance.Storage.Queries.PgPayoutSettlementReportExtra
       Lib.Finance.Storage.Queries.ReconciliationEntryExtra
+      Lib.Finance.Storage.Queries.ReconciliationSummaryExtra
       Lib.Finance.Tax.Interface
       Lib.Finance.Tax.Types
       Lib.Finance.Domain.Types.Account

@@ -37,6 +37,7 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id (Id (..), ShortId (..), cast)
+import Data.Time (addUTCTime)
 import Kernel.Utils.Common (getCurrentTime, secondsToNominalDiffTime)
 import Kernel.Utils.Error (fromMaybeM, throwError)
 import Lib.Finance.Domain.Types.Account (AccountType (..), CounterpartyType (..))
@@ -60,6 +61,7 @@ import qualified Lib.Finance.Storage.Queries.PgPaymentSettlementReportExtra as Q
 import qualified Lib.Finance.Storage.Queries.ReconciliationEntry as QReconEntry
 import qualified Lib.Finance.Storage.Queries.ReconciliationEntryExtra as QReconEntryExtra
 import qualified Lib.Finance.Storage.Queries.ReconciliationSummary as QReconSummary
+import qualified Lib.Finance.Storage.Queries.ReconciliationSummaryExtra as QReconSummaryExtra
 import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as PaymentTransaction
 import qualified Lib.Payment.Domain.Types.Refunds as PaymentRefund
@@ -502,15 +504,17 @@ getReconciliation merchantShortId opCity mbFromDate mbLimit mbOffset mbReconcili
   let limit = mkPageLimit mbLimit
       offset = mkPageOffset mbOffset
 
-  -- Fetch summaries - use single date or merchant filter (generated API has findByDateAndType date type, findByMerchantId)
-  summaries <- case (mbReconciliationType, mbFromDate <|> mbToDate) of
-    (Just rType, Just d) -> QReconSummary.findByDateAndType d (caseToReconciliationType rType)
-    (Just rType, Nothing) -> do
-      now <- getCurrentTime
-      QReconSummary.findByDateAndType now (caseToReconciliationType rType)
-    (Nothing, _) -> do
+  -- Subtract IST offset (5h 30m = 19800 seconds) from the incoming dates before querying.
+  let istOffset = secondsToNominalDiffTime 19800
+      adjustedFromDate = fmap (addUTCTime (-istOffset)) mbFromDate
+      adjustedToDate = fmap (addUTCTime (-istOffset)) mbToDate
+
+  -- Fetch summaries filtered by reconciliation date range and type
+  summaries <- case mbReconciliationType of
+    Just rType -> QReconSummaryExtra.findByDateRangeAndType adjustedFromDate adjustedToDate (caseToReconciliationType rType)
+    Nothing -> do
       allSummaries <- QReconSummary.findByMerchantId merchant.id.getId
-      pure $ filter (\s -> maybe True (s.reconciliationDate >=) mbFromDate && maybe True (s.reconciliationDate <=) mbToDate) allSummaries
+      pure $ filter (\s -> maybe True (s.reconciliationDate >=) adjustedFromDate && maybe True (s.reconciliationDate <=) adjustedToDate) allSummaries
 
   let latestSummary = listToMaybe summaries
 
