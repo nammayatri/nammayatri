@@ -451,17 +451,21 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
 
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
     isOnline <- do
-      mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId ->
-        do
-          CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-          >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-      case mbPaymentMethod of
-        Nothing -> pure False -- Considering OFFLINE
-        Just paymentMethod -> do
-          case paymentMethod.paymentInstrument of
-            Cash -> pure False
-            BoothOnline -> pure False
-            _ -> pure True
+      let forceOnline = fromMaybe False transporterConfig.driverWalletConfig.forceOnlineLedger
+      if forceOnline
+        then pure True
+        else do
+          mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId ->
+            do
+              CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+              >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+          case mbPaymentMethod of
+            Nothing -> pure False -- Considering OFFLINE
+            Just paymentMethod -> do
+              case paymentMethod.paymentInstrument of
+                Cash -> pure False
+                BoothOnline -> pure False
+                _ -> pure True
 
     let driverOrFleetPersonId = fromMaybe ride.driverId ride.fleetOwnerId
 

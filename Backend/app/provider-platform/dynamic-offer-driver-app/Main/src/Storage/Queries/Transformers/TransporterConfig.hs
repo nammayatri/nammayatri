@@ -57,6 +57,7 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
             gstPercentage = 0.0,
             enableWalletPayout = False,
             enableWalletTopup = False,
+            forceOnlineLedger = Nothing,
             maxWalletPayoutsPerDay = Nothing,
             minWalletAmountForCashRides = Nothing,
             minimumWalletPayoutAmount = 0,
