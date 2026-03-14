@@ -13,6 +13,10 @@ import AddVehicleUnitTests (addVehicleUnitTests)
 import CreateRequestUnitTests (createRequestUnitTests)
 import DriverDocumentUploadUnitTests (driverDocumentUploadUnitTests)
 import DriverOperationHubUnitTests (driverOperationHubUnitTests)
+import FleetDriverStatsUnitTests (fleetDriverStatsUnitTests)
+import FleetEarningsUnitTests (fleetEarningsUnitTests)
+import FleetManagementUnitTests (fleetManagementUnitTests)
+import FleetVehicleStatsUnitTests (fleetVehicleStatsUnitTests)
 import RegistrationUnitTests (registrationUnitTests)
 import Test.Tasty (TestTree, testGroup)
 import VehicleAssociationUnitTests (vehicleAssociationUnitTests)
@@ -27,5 +31,9 @@ dashboardUnitTests =
       driverDocumentUploadUnitTests,
       driverOperationHubUnitTests,
       addVehicleUnitTests,
-      createRequestUnitTests
+      createRequestUnitTests,
+      fleetManagementUnitTests,
+      fleetEarningsUnitTests,
+      fleetDriverStatsUnitTests,
+      fleetVehicleStatsUnitTests
     ]

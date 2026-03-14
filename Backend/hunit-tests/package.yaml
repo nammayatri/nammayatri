@@ -87,6 +87,10 @@ library:
   - AddVehicleUnitTests
   - DriverOperationHubUnitTests
   - CreateRequestUnitTests
+  - FleetManagementUnitTests
+  - FleetEarningsUnitTests
+  - FleetDriverStatsUnitTests
+  - FleetVehicleStatsUnitTests
 
 executables:
   hunit-tests:

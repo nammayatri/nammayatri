@@ -29,6 +29,10 @@ library
       AddVehicleUnitTests
       DriverOperationHubUnitTests
       CreateRequestUnitTests
+      FleetManagementUnitTests
+      FleetEarningsUnitTests
+      FleetDriverStatsUnitTests
+      FleetVehicleStatsUnitTests
   hs-source-dirs:
       src
   default-extensions:
