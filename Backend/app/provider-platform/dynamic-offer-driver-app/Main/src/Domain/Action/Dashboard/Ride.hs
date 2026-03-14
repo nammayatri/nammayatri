@@ -585,7 +585,7 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
             tdsR,
             tdsAmt,
             netPayable,
-            (T.pack . show) <$> booking.paymentMode,
+            (T.pack . show) <$> booking.paymentInstrument,
             payStatus,
             payRef,
             walletTxns,
