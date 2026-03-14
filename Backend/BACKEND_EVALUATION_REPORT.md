@@ -27,20 +27,15 @@ The NammaYatri backend is a **large, mature Haskell ride-hailing platform** (~4,
 
 ### CRITICAL
 
-#### 1.1 Unsafe Partial Functions in Production Code
+#### 1.1 ~~Unsafe Partial Functions in Production Code~~ [RETRACTED - False Positive]
 - **File**: `app/rider-platform/rider-app/Main/src/Storage/Clickhouse/FRFSLiveAlerts.hs:62-63,96-97`
-- **Issue**: Uses `head` and `tail` on potentially empty lists without safety checks
-  ```haskell
-  let base = booking.vehicleType CH.==. head effectiveModes
-      rest = tail effectiveModes
-  ```
-- **Risk**: Runtime exception if `effectiveModes` is empty
-- **Fix**: Use `Data.List.NonEmpty` or pattern match with guard
+- **Reviewer correction**: `effectiveModes` is guaranteed non-empty — when `modes` is null, the fallback is `["BUS","METRO","SUBWAY"]` (line 58-59). The `else modes` branch requires non-null input. **Not a real issue.**
 
-#### 1.2 Unsafe `fromJust` in Database Query
+#### 1.2 Unsafe `fromJust` in Database Query [Downgraded: CRITICAL -> MEDIUM]
 - **File**: `app/rider-platform/rider-app/Main/src/Storage/Queries/BBPSExtra.hs:30`
 - **Issue**: `fromJust` on `Maybe` value despite `isJust` guard — fragile under refactoring
-- **Fix**: Use pattern matching or `fromMaybeM`
+- **Reviewer note**: Guarded by `isJust` on same branch, so runtime crash unlikely. Style issue, not critical.
+- **Fix**: Use pattern matching: `maybe activeConditionCheck (\s -> [Se.Is BeamT.status $ Se.Eq s]) bbpsStatus`
 
 ### HIGH
 
@@ -75,6 +70,25 @@ The NammaYatri backend is a **large, mature Haskell ride-hailing platform** (~4,
   paymentUrl = Nothing, -- TODO check with ONDC
   ```
 - Multiple other TODO/FIXME patterns across codebase indicating incomplete features
+
+### REVIEWER-IDENTIFIED GAPS (Areas Missed by Initial Evaluation)
+
+#### 1.7 KV Drainer Reliability [NOT EVALUATED - HIGH RISK]
+- The `rider-app-drainer` syncs Redis writes to PostgreSQL. Failures here cause **data loss**.
+- This critical subsystem was not examined in the initial evaluation.
+
+#### 1.8 Kafka Consumer Error Handling [NOT EVALUATED - HIGH RISK]
+- The `kafka-consumers` app processes critical events (availability, stats).
+- Failures could cause data inconsistencies. Not examined.
+
+#### 1.9 Driver-App Coverage Gap [PARTIAL]
+- Initial evaluation focused almost entirely on rider-app.
+- `dynamic-offer-driver-app` has comparable complexity and should receive equal scrutiny.
+
+#### Reviewer False Positive Corrections
+- **Issue 1.1**: Retracted — `effectiveModes` guaranteed non-empty via fallback
+- **Issue 1.2**: Downgraded CRITICAL -> MEDIUM — guarded by `isJust`
+- **Ride.hs:154 error log claim**: False positive — line 157 has proper `logError`
 
 ---
 
