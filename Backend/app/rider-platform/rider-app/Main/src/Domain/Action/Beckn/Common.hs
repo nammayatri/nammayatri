@@ -22,6 +22,7 @@ where
 import qualified BecknV2.OnDemand.Enums as BecknEnums
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import Control.Monad.Extra (mapMaybeM)
+import qualified Data.Aeson as A
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.Geohash as Geohash
 import qualified Data.HashMap.Strict as HM
@@ -79,6 +80,7 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Kernel.Utils.Time as KUT
+import qualified Lib.Finance.Storage.Queries.PPFRecon as QPPFRecon
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
@@ -95,10 +97,12 @@ import qualified SharedLogic.Insurance as SI
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.PPF
 import SharedLogic.Payment as SPayment
 import qualified SharedLogic.PaymentInvoice as SPInvoice
 import qualified SharedLogic.ScheduledNotifications as SN
 import Storage.Beam.Yudhishthira ()
+import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -135,6 +139,7 @@ import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as TP
 import qualified Tools.SMS as Sms
 import qualified Tools.Whatsapp as Whatsapp
+import TransactionLogs.PushLogs (pushLogs)
 import TransactionLogs.Types
 import qualified UrlShortner.Common as UrlShortner
 
@@ -806,6 +811,22 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   QPFS.clearCache booking.riderId
   createRecentLocationForTaxi booking
   checkAndUpdateJourneyTerminalStatusForNormalRide booking DJourney.COMPLETED
+
+  -- PPF (Payment Protection Framework) recon entry creation
+  fork "ppf recon entry creation" $
+    ( do
+        bapConfigs <- CQBC.findByMerchantIdDomainandMerchantOperatingCityId booking.merchantId "MOBILITY" booking.merchantOperatingCityId
+        case listToMaybe bapConfigs of
+          Just bapConfig -> do
+            when (SharedLogic.PPF.isPPFEnabled bapConfig) $ do
+              logInfo $ "Creating PPF recon entry for ride: " <> updRide.id.getId
+              ppfReconEntry <- SharedLogic.PPF.buildMobilityPPFReconEntry bapConfig booking updRide totalFare
+              QPPFRecon.create ppfReconEntry
+              void $ pushLogs "recon" (A.object ["networkOrderId" A..= ppfReconEntry.networkOrderId, "transactionId" A..= ppfReconEntry.transactionId]) booking.merchantId.getId "MOBILITY"
+          Nothing -> pure ()
+    )
+      `catch` \(e :: SomeException) ->
+        logError $ "PPF recon entry creation failed for ride: " <> updRide.id.getId <> " error: " <> show e
 
   -- uncomment for update api test; booking.paymentMethodId should be present
   -- whenJust booking.paymentMethodId $ \paymentMethodId -> do

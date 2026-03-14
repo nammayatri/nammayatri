@@ -10,6 +10,7 @@ module Lib.Finance.Error.Types
     InvoiceErrorCode (..),
     StateErrorCode (..),
     TaxErrorCode (..),
+    ReconErrorCode (..),
     RecoveryAction (..),
   )
 where
@@ -23,6 +24,7 @@ data FinanceError
   | InvoiceError InvoiceErrorCode Text
   | StateError StateErrorCode Text
   | TaxError TaxErrorCode Text
+  | ReconError ReconErrorCode Text
   | DomainError Text Text -- Domain extends
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
@@ -63,6 +65,14 @@ data TaxErrorCode
   = RateNotFound
   | CalculationError
   | JurisdictionNotSupported
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)
+
+-- | Reconciliation-specific errors
+data ReconErrorCode
+  = FareMismatch -- Reported amount differs from actual
+  | OrderNotFound -- Order/ride not found for reconciliation
+  | DuplicateRecon -- Recon entry already exists
+  | InvalidDomain -- Unrecognized PPF domain
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)
 
 -- | Recovery actions (domain provides specific handlers)

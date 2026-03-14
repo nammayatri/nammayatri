@@ -15,12 +15,25 @@ module BecknV2.Utils where
 
 import BecknV2.OnDemand.Tags
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Types.Recon as ReconSpec
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import Data.Time
 import Data.Time.Format.ISO8601
 import EulerHS.Prelude
+import Kernel.Types.Common (HighPrecMoney, Price, mkPrice)
 import Text.Regex.Posix ((=~))
+
+parseReconAmount :: ReconSpec.ReconAmount -> Maybe Price
+parseReconAmount reconAmt = do
+  currency <- readMaybe (T.unpack reconAmt.reconAmountCurrency)
+  money <- readMaybe (T.unpack reconAmt.reconAmountValue)
+  Just $ mkPrice (Just currency) money
+
+parseReconDiffAmount :: ReconSpec.ReconAmount -> Maybe HighPrecMoney
+parseReconDiffAmount reconAmt = do
+  diffStr <- reconAmt.reconAmountDiffAmount
+  readMaybe (T.unpack diffStr)
 
 getTagV2 :: BecknTagGroup -> BecknTag -> Maybe [Spec.TagGroup] -> Maybe Text
 getTagV2 tagGroupCode tagCode mbTagGroups = do
