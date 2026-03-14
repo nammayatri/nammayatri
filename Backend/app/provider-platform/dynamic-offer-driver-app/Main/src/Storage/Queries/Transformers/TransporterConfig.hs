@@ -6,10 +6,12 @@ module Storage.Queries.Transformers.TransporterConfig
     parseDriverWalletConfig,
     parseSubscriptionConfig,
     parseTaxConfig,
+    parseKnowledgeCenterSopTypesConfig,
   )
 where
 
 import qualified Data.Aeson as A
+import qualified Domain.Types.Extra.TransporterConfig as Extra
 import Domain.Types.TransporterConfig hiding (SubscriptionConfig (..))
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -79,3 +81,10 @@ parseTaxConfig merchantOperatingCityId mbVal = do
             invalidPanTdsRate = 0
           }
   parseFieldWithDefaultM "transporterConfig" "taxConfig" merchantOperatingCityId def parseTaxConfigWithDefault mbVal
+
+parseKnowledgeCenterSopTypesConfig :: (Monad m, Log m) => Text -> Maybe A.Value -> m Extra.KnowledgeCenterSopTypesConfig
+parseKnowledgeCenterSopTypesConfig _mocId = \case
+  Nothing -> pure (Extra.KnowledgeCenterSopTypesConfig [])
+  Just v -> case A.fromJSON v of
+    A.Success cfg -> pure cfg
+    A.Error _ -> pure (Extra.KnowledgeCenterSopTypesConfig [])

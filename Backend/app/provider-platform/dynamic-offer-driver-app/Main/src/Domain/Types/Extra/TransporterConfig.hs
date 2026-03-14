@@ -76,3 +76,29 @@ instance ToJSON ExotelMapping where
 
 instance FromJSON ExotelMapping where
   parseJSON = withObject "ExotelMapping" $ \v -> ExotelMapping <$> v .: "exotelMap"
+
+-- | Config: list of SOP type names only. Documents are stored in knowledge_center table and queried by sopType + merchantOpCityId.
+newtype KnowledgeCenterSopTypesConfig = KnowledgeCenterSopTypesConfig
+  { unKnowledgeCenterSopTypesConfig :: [Text]
+  }
+  deriving (Show, Read, Eq, Ord, Generic)
+
+instance ToJSON KnowledgeCenterSopTypesConfig where
+  toJSON (KnowledgeCenterSopTypesConfig xs) = toJSON xs
+
+instance FromJSON KnowledgeCenterSopTypesConfig where
+  parseJSON v = KnowledgeCenterSopTypesConfig <$> parseJSON v
+
+instance HasSqlValueSyntax be Value => HasSqlValueSyntax be KnowledgeCenterSopTypesConfig where
+  sqlValueSyntax = sqlValueSyntax . toJSON
+
+instance FromField KnowledgeCenterSopTypesConfig where
+  fromField f mbValue = do
+    value <- fromField f mbValue
+    case fromJSON value of
+      Success a -> pure a
+      _ -> DPSF.returnError DPSF.ConversionFailed f "Conversion failed"
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be KnowledgeCenterSopTypesConfig
+
+instance FromBackendRow Postgres KnowledgeCenterSopTypesConfig
