@@ -787,6 +787,13 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN tax_config json
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_number_of_luggages integer ;
 
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN min_base_fare double precision ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_fare_policy_update_below_min_base_fare boolean  default true;
+
+
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_direct_wallet_incentives boolean ;

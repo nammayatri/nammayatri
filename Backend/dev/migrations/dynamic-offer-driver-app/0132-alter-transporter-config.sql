@@ -17,7 +17,9 @@ SET
     valid_name_compare_percentage = 90,
     enable_mobile_number_validation = true,
     separate_driver_vehicle_enablement = true,
-    requires_driver_onboarding_inspection = true
+    requires_driver_onboarding_inspection = true,
+    min_base_fare = 500,
+    allow_fare_policy_update_below_min_base_fare = true
 WHERE merchant_operating_city_id IN (
     SELECT id
     FROM atlas_driver_offer_bpp.merchant_operating_city
