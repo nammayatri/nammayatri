@@ -41,6 +41,7 @@ imports:
   VehicleCategory: Domain.Types.VehicleCategory
   Hours: Kernel.Types.Common
   ExotelMapping: Domain.Types.Extra.TransporterConfig
+  KnowledgeCenterSopTypesConfig: Domain.Types.Extra.TransporterConfig
   Expand: Kernel.External.Payout.Interface.Types
   TripCategory: Domain.Types.Trip
   IssueBreachConfig: SharedLogic.BehaviourManagement.IssueBreach
@@ -1162,6 +1163,7 @@ TransporterConfig:
     analyticsConfig: AnalyticsConfig
     driverWalletConfig: DriverWalletConfig
     taxConfig: TaxConfig
+    knowledgeCenterSopTypes: KnowledgeCenterSopTypesConfig
     cancellationFeeCycle: Maybe Seconds
     cancellationFeeDisputeWindow: Maybe Seconds
     cancellationFeeVendor: Maybe Text
@@ -1269,6 +1271,8 @@ TransporterConfig:
       subscriptionConfig: Maybe Value
     taxConfig:
       taxConfig: Maybe Value
+    knowledgeCenterSopTypes:
+      knowledgeCenterSopTypes: Maybe Value
 
   toTType:
     currency: Just currency|E
@@ -1337,6 +1341,7 @@ TransporterConfig:
     driverWalletConfig: Just . Data.Aeson.toJSON|I
     subscriptionConfig: Just . Data.Aeson.toJSON|I
     taxConfig: Just . Data.Aeson.toJSON|I
+    knowledgeCenterSopTypes: Just . Data.Aeson.toJSON|I
     feedbackNotificationConfig: Data.Aeson.toJSON <$> feedbackNotificationConfig|E
     vehicleCategoryExcludedFromVerification: (Data.Text.pack . Kernel.Prelude.show <$>) <$> vehicleCategoryExcludedFromVerification|E
 
@@ -1420,6 +1425,7 @@ TransporterConfig:
     driverWalletConfig: Storage.Queries.Transformers.TransporterConfig.parseDriverWalletConfig merchantOperatingCityId|IM
     subscriptionConfig: Storage.Queries.Transformers.TransporterConfig.parseSubscriptionConfig merchantOperatingCityId|IM
     taxConfig: Storage.Queries.Transformers.TransporterConfig.parseTaxConfig merchantOperatingCityId|IM
+    knowledgeCenterSopTypes: Storage.Queries.Transformers.TransporterConfig.parseKnowledgeCenterSopTypesConfig merchantOperatingCityId|IM
     vehicleCategoryExcludedFromVerification: (mapMaybe (readMaybe . Data.Text.unpack)) <$> vehicleCategoryExcludedFromVerification|E
 
   constraints:
@@ -1487,6 +1493,7 @@ TransporterConfig:
     subscriptionConfig: json
     feedbackNotificationConfig: json
     taxConfig: json
+    knowledgeCenterSopTypes: json
     vehicleCategoryExcludedFromVerification: "text[]"
     minBaseFare: double precision
     allowFarePolicyUpdateBelowMinBaseFare: boolean
@@ -1647,6 +1654,7 @@ TransporterConfig:
     enableSupportForSafety: "false"
     trackingShortUrlPattern: "'nammayatri.in/t/'"
     dashboardMediaFileUrlPattern: "'https://nammayatri.in/t/<FILE_PATH>'"
+    knowledgeCenterSopTypes: '''[]'' :: json'
     allowFarePolicyUpdateBelowMinBaseFare: "true"
   excludedDefaultQueries:
     - findByPrimaryKey
@@ -1694,6 +1702,7 @@ TransporterConfig:
         - snapToRoadConfidenceThreshold
         - useWithSnapToRoadFallback
         - dpGeoHashPercision
+        - knowledgeCenterSopTypes
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId

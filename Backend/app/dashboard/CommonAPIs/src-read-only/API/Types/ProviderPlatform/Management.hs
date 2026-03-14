@@ -16,6 +16,7 @@ import qualified API.Types.ProviderPlatform.Management.DriverRegistration
 import qualified API.Types.ProviderPlatform.Management.EntityInfo
 import qualified API.Types.ProviderPlatform.Management.FeedbackForm
 import qualified API.Types.ProviderPlatform.Management.FinanceManagement
+import qualified API.Types.ProviderPlatform.Management.KnowledgeCenter
 import qualified API.Types.ProviderPlatform.Management.Media
 import qualified API.Types.ProviderPlatform.Management.MediaFileDocument
 import qualified API.Types.ProviderPlatform.Management.Merchant
@@ -50,6 +51,7 @@ data ManagementUserActionType
   | ENTITY_INFO API.Types.ProviderPlatform.Management.EntityInfo.EntityInfoUserActionType
   | FEEDBACK_FORM API.Types.ProviderPlatform.Management.FeedbackForm.FeedbackFormUserActionType
   | FINANCE_MANAGEMENT API.Types.ProviderPlatform.Management.FinanceManagement.FinanceManagementUserActionType
+  | KNOWLEDGE_CENTER API.Types.ProviderPlatform.Management.KnowledgeCenter.KnowledgeCenterUserActionType
   | MEDIA API.Types.ProviderPlatform.Management.Media.MediaUserActionType
   | MEDIA_FILE_DOCUMENT API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentUserActionType
   | MERCHANT API.Types.ProviderPlatform.Management.Merchant.MerchantUserActionType
@@ -81,6 +83,7 @@ instance Text.Show.Show ManagementUserActionType where
     ENTITY_INFO e -> "ENTITY_INFO/" <> show e
     FEEDBACK_FORM e -> "FEEDBACK_FORM/" <> show e
     FINANCE_MANAGEMENT e -> "FINANCE_MANAGEMENT/" <> show e
+    KNOWLEDGE_CENTER e -> "KNOWLEDGE_CENTER/" <> show e
     MEDIA e -> "MEDIA/" <> show e
     MEDIA_FILE_DOCUMENT e -> "MEDIA_FILE_DOCUMENT/" <> show e
     MERCHANT e -> "MERCHANT/" <> show e
@@ -201,6 +204,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "FINANCE_MANAGEMENT/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( KNOWLEDGE_CENTER v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "KNOWLEDGE_CENTER/" r,
                    ( v1,
                      r2
                      ) <-
@@ -328,4 +340,4 @@ instance Text.Read.Read ManagementUserActionType where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [''ManagementUserActionType])
+$(Data.Singletons.TH.genSingletons [(''ManagementUserActionType)])

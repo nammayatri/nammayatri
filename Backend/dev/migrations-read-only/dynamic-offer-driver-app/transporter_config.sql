@@ -797,3 +797,10 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_fare_poli
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_direct_wallet_incentives boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN knowledge_center_sop_types json  default '[]' :: json;
+
+

@@ -4,6 +4,7 @@
 
 module Storage.Queries.TransporterConfig (module Storage.Queries.TransporterConfig, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.TransporterConfig
 import Kernel.Beam.Functions
@@ -71,6 +72,7 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.snapToRoadConfidenceThreshold snapToRoadConfidenceThreshold,
       Se.Set Beam.useWithSnapToRoadFallback useWithSnapToRoadFallback,
       Se.Set Beam.dpGeoHashPercision dpGeoHashPercision,
+      Se.Set Beam.knowledgeCenterSopTypes ((Just . Data.Aeson.toJSON) knowledgeCenterSopTypes),
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]

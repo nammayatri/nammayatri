@@ -25,6 +25,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
     fcmUrl' <- Kernel.Prelude.parseBaseUrl fcmUrl
     analyticsConfig' <- Storage.Queries.Transformers.TransporterConfig.parseAnalyticsConfig merchantOperatingCityId analyticsConfig
     driverWalletConfig' <- Storage.Queries.Transformers.TransporterConfig.parseDriverWalletConfig merchantOperatingCityId driverWalletConfig
+    knowledgeCenterSopTypes' <- Storage.Queries.Transformers.TransporterConfig.parseKnowledgeCenterSopTypesConfig merchantOperatingCityId knowledgeCenterSopTypes
     subscriptionConfig' <- Storage.Queries.Transformers.TransporterConfig.parseSubscriptionConfig merchantOperatingCityId subscriptionConfig
     taxConfig' <- Storage.Queries.Transformers.TransporterConfig.parseTaxConfig merchantOperatingCityId taxConfig
     pure $
@@ -49,7 +50,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             allowPanAadhaarLinkage = allowPanAadhaarLinkage,
             allowRcUnlinkWhenDriverOffline = allowRcUnlinkWhenDriverOffline,
             allowedPaymentInstrumentForPayout = allowedPaymentInstrumentForPayout,
-            allowedReferralEntities = maybe [] (mapMaybe (readMaybe . Data.Text.unpack)) allowedReferralEntities,
+            allowedReferralEntities = (maybe [] (mapMaybe (readMaybe . Data.Text.unpack)) allowedReferralEntities),
             analyticsConfig = analyticsConfig',
             approxRideDistanceDiffThreshold = approxRideDistanceDiffThreshold,
             arrivalTimeBufferOfVehicle = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< arrivalTimeBufferOfVehicle,
@@ -65,7 +66,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             bookAnyVehicleDowngradeLevel = bookAnyVehicleDowngradeLevel,
             bulkWaiveOffLimit = fromMaybe 200 bulkWaiveOffLimit,
             cacheOfferListByDriverId = cacheOfferListByDriverId,
-            cachedDevicesOSForSearchRequest = maybe [] (mapMaybe (readMaybe . Data.Text.unpack)) cachedDevicesOSForSearchRequest,
+            cachedDevicesOSForSearchRequest = (maybe [] (mapMaybe (readMaybe . Data.Text.unpack)) cachedDevicesOSForSearchRequest),
             canAddCancellationFee = canAddCancellationFee,
             canDowngradeToHatchback = canDowngradeToHatchback,
             canDowngradeToSedan = canDowngradeToSedan,
@@ -183,6 +184,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             issueBreachConfig = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachConfig,
             kaptureDisposition = kaptureDisposition,
             kaptureQueue = kaptureQueue,
+            knowledgeCenterSopTypes = knowledgeCenterSopTypes',
             languagesToBeTranslated = languagesToBeTranslated,
             lastNdaysToCheckForPayoutOrderStatus = lastNdaysToCheckForPayoutOrderStatus,
             linkFleetToUnVerifiedExistingRC = linkFleetToUnVerifiedExistingRC,
@@ -287,7 +289,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             useWithSnapToRoadFallback = useWithSnapToRoadFallback,
             validNameComparePercentage = validNameComparePercentage,
             variantsToEnableForSubscription = variantsToEnableForSubscription,
-            vehicleCategoryExcludedFromVerification = mapMaybe (readMaybe . Data.Text.unpack) <$> vehicleCategoryExcludedFromVerification,
+            vehicleCategoryExcludedFromVerification = ((mapMaybe (readMaybe . Data.Text.unpack)) <$> vehicleCategoryExcludedFromVerification),
             videoFileSizeUpperLimit = videoFileSizeUpperLimit,
             volunteerSmsSendingLimit = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< volunteerSmsSendingLimit,
             weeklyConditionCooldownTimeHours = weeklyConditionCooldownTimeHours,
@@ -318,7 +320,7 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.allowPanAadhaarLinkage = allowPanAadhaarLinkage,
         Beam.allowRcUnlinkWhenDriverOffline = allowRcUnlinkWhenDriverOffline,
         Beam.allowedPaymentInstrumentForPayout = allowedPaymentInstrumentForPayout,
-        Beam.allowedReferralEntities = Just (Data.Text.pack . Kernel.Prelude.show <$> allowedReferralEntities),
+        Beam.allowedReferralEntities = (Just (Data.Text.pack . Kernel.Prelude.show <$> allowedReferralEntities)),
         Beam.analyticsConfig = (Just . Data.Aeson.toJSON) analyticsConfig,
         Beam.approxRideDistanceDiffThreshold = approxRideDistanceDiffThreshold,
         Beam.arrivalTimeBufferOfVehicle = Kernel.Prelude.toJSON <$> arrivalTimeBufferOfVehicle,
@@ -334,7 +336,7 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.bookAnyVehicleDowngradeLevel = bookAnyVehicleDowngradeLevel,
         Beam.bulkWaiveOffLimit = Just bulkWaiveOffLimit,
         Beam.cacheOfferListByDriverId = cacheOfferListByDriverId,
-        Beam.cachedDevicesOSForSearchRequest = Just (Data.Text.pack . Kernel.Prelude.show <$> cachedDevicesOSForSearchRequest),
+        Beam.cachedDevicesOSForSearchRequest = (Just (Data.Text.pack . Kernel.Prelude.show <$> cachedDevicesOSForSearchRequest)),
         Beam.canAddCancellationFee = canAddCancellationFee,
         Beam.canDowngradeToHatchback = canDowngradeToHatchback,
         Beam.canDowngradeToSedan = canDowngradeToSedan,
@@ -454,6 +456,7 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.issueBreachConfig = Kernel.Prelude.toJSON <$> issueBreachConfig,
         Beam.kaptureDisposition = kaptureDisposition,
         Beam.kaptureQueue = kaptureQueue,
+        Beam.knowledgeCenterSopTypes = (Just . Data.Aeson.toJSON) knowledgeCenterSopTypes,
         Beam.languagesToBeTranslated = languagesToBeTranslated,
         Beam.lastNdaysToCheckForPayoutOrderStatus = lastNdaysToCheckForPayoutOrderStatus,
         Beam.linkFleetToUnVerifiedExistingRC = linkFleetToUnVerifiedExistingRC,
@@ -558,7 +561,7 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.useWithSnapToRoadFallback = useWithSnapToRoadFallback,
         Beam.validNameComparePercentage = validNameComparePercentage,
         Beam.variantsToEnableForSubscription = variantsToEnableForSubscription,
-        Beam.vehicleCategoryExcludedFromVerification = (Data.Text.pack . Kernel.Prelude.show <$>) <$> vehicleCategoryExcludedFromVerification,
+        Beam.vehicleCategoryExcludedFromVerification = ((Data.Text.pack . Kernel.Prelude.show <$>) <$> vehicleCategoryExcludedFromVerification),
         Beam.videoFileSizeUpperLimit = videoFileSizeUpperLimit,
         Beam.volunteerSmsSendingLimit = Kernel.Prelude.toJSON <$> volunteerSmsSendingLimit,
         Beam.weeklyConditionCooldownTimeHours = weeklyConditionCooldownTimeHours,
