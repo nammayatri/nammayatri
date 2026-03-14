@@ -34,6 +34,8 @@ where
 
 import qualified API.Types.UI.CorporateCommute as API
 import Data.Time.Calendar (Day)
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
 import qualified Domain.Types.CorporateEmployee as DCE
 import qualified Domain.Types.CorporateEntity as DCEnt
 import qualified Domain.Types.CorporateInvoice as DCI
@@ -57,14 +59,33 @@ import qualified Storage.Queries.CorporateRoute as QCorporateRoute
 import qualified Storage.Queries.CorporateShift as QCorporateShift
 import qualified Storage.Queries.CorporateWallet as QCorporateWallet
 
+-- | Helper to fetch the corporate entity for a merchant (avoids repetition across handlers)
+getCorporateEntityForMerchant ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DM.Merchant ->
+  m DCEnt.CorporateEntity
+getCorporateEntityForMerchant merchantId = do
+  entities <- QCorporateEntity.findByMerchantId merchantId
+  listToMaybe entities & fromMaybeM (InvalidRequest "No corporate entity found for this merchant")
+
+-- | Helper to verify a shift belongs to the given corporate entity
+verifyShiftOwnership ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DCEnt.CorporateEntity ->
+  Id DCS.CorporateShift ->
+  m DCS.CorporateShift
+verifyShiftOwnership entityId shiftId = do
+  shift <- QCorporateShift.findByPrimaryKey shiftId >>= fromMaybeM (InvalidRequest "Shift not found")
+  unless (shift.corporateEntityId == entityId) $ throwError (InvalidRequest "Shift does not belong to this corporate entity")
+  pure shift
+
 -- | Fetch the corporate entity for the current merchant
 getCorporateEntity ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   (Id DP.Person, Id DM.Merchant) ->
   m API.CorporateEntityResp
 getCorporateEntity (_personId, merchantId) = do
-  entities <- QCorporateEntity.findByMerchantId merchantId
-  entity <- listToMaybe entities & fromMaybeM (InvalidRequest "No corporate entity found for this merchant")
+  entity <- getCorporateEntityForMerchant merchantId
   pure $
     API.CorporateEntityResp
       { id = entity.id,
@@ -91,11 +112,12 @@ listEmployees ::
   Int ->
   Int ->
   m [API.CorporateEmployeeResp]
-listEmployees (_personId, merchantId) _limit _offset = do
-  entities <- QCorporateEntity.findByMerchantId merchantId
-  entity <- listToMaybe entities & fromMaybeM (InvalidRequest "No corporate entity found for this merchant")
+listEmployees (_personId, merchantId) limit offset = do
+  entity <- getCorporateEntityForMerchant merchantId
+  let safeLimit = min (max 1 limit) 100
+      safeOffset = max 0 offset
   employees <- QCorporateEmployee.findByCorporateEntityId entity.id
-  pure $ map mkEmployeeResp employees
+  pure $ map mkEmployeeResp (take safeLimit . drop safeOffset $ employees)
 
 mkEmployeeResp :: DCE.CorporateEmployee -> API.CorporateEmployeeResp
 mkEmployeeResp emp =
@@ -118,8 +140,14 @@ createEmployee ::
   API.CreateEmployeeReq ->
   m API.CorporateEmployeeResp
 createEmployee (_personId, merchantId) req = do
-  entities <- QCorporateEntity.findByMerchantId merchantId
-  entity <- listToMaybe entities & fromMaybeM (InvalidRequest "No corporate entity found for this merchant")
+  entity <- getCorporateEntityForMerchant merchantId
+  -- Input validation
+  when (T.null req.name) $ throwError (InvalidRequest "Employee name cannot be empty")
+  when (T.null req.employeeCode) $ throwError (InvalidRequest "Employee code cannot be empty")
+  when (T.null req.email) $ throwError (InvalidRequest "Email cannot be empty")
+  when (T.null req.phone) $ throwError (InvalidRequest "Phone cannot be empty")
+  when (req.defaultPickupLat < -90 || req.defaultPickupLat > 90) $ throwError (InvalidRequest "Invalid latitude: must be between -90 and 90")
+  when (req.defaultPickupLon < -180 || req.defaultPickupLon > 180) $ throwError (InvalidRequest "Invalid longitude: must be between -180 and 180")
   newId <- generateGUID
   now <- getCurrentTime
   let employee =
@@ -169,8 +197,7 @@ listShifts ::
   (Id DP.Person, Id DM.Merchant) ->
   m [API.CorporateShiftResp]
 listShifts (_personId, merchantId) = do
-  entities <- QCorporateEntity.findByMerchantId merchantId
-  entity <- listToMaybe entities & fromMaybeM (InvalidRequest "No corporate entity found for this merchant")
+  entity <- getCorporateEntityForMerchant merchantId
   shifts <- QCorporateShift.findByCorporateEntityId entity.id
   pure $ map mkShiftResp shifts
 
@@ -198,15 +225,19 @@ createShift ::
   API.CreateShiftReq ->
   m API.CorporateShiftResp
 createShift (_personId, merchantId) req = do
-  entities <- QCorporateEntity.findByMerchantId merchantId
-  entity <- listToMaybe entities & fromMaybeM (InvalidRequest "No corporate entity found for this merchant")
+  entity <- getCorporateEntityForMerchant merchantId
   newId <- generateGUID
   now <- getCurrentTime
+  when (T.null req.name) $ throwError (InvalidRequest "Shift name cannot be empty")
+  when (req.maxOccupancy <= 0) $ throwError (InvalidRequest "Max occupancy must be positive")
+  when (req.confirmationDeadlineMinutes <= 0) $ throwError (InvalidRequest "Confirmation deadline must be positive")
   let parseTOD t = readMaybe (toString t) & fromMaybeM (InvalidRequest $ "Invalid time format: " <> t)
   pickupStart <- parseTOD req.pickupWindowStart
   pickupEnd <- parseTOD req.pickupWindowEnd
   dropStart <- parseTOD req.dropWindowStart
   dropEnd <- parseTOD req.dropWindowEnd
+  when (pickupStart >= pickupEnd) $ throwError (InvalidRequest "Pickup window start must be before end")
+  when (dropStart >= dropEnd) $ throwError (InvalidRequest "Drop window start must be before end")
   let shift =
         DCS.CorporateShift
           { id = newId,
@@ -222,7 +253,7 @@ createShift (_personId, merchantId) req = do
             maxOccupancy = req.maxOccupancy,
             allowedVehicleTiers = req.allowedVehicleTiers,
             confirmationDeadlineMinutes = req.confirmationDeadlineMinutes,
-            status = DCS.ACTIVE,
+            status = DCS.CS_ACTIVE,
             createdAt = now,
             updatedAt = now
           }
@@ -236,21 +267,26 @@ getRoster ::
   Id DCS.CorporateShift ->
   Day ->
   m [API.CorporateRosterResp]
-getRoster (_personId, _merchantId) shiftId date = do
+getRoster (_personId, merchantId) shiftId date = do
+  entity <- getCorporateEntityForMerchant merchantId
+  _ <- verifyShiftOwnership entity.id shiftId
   rosters <- QCorporateRoster.findByShiftIdAndDate shiftId date
-  mapM mkRosterResp rosters
+  -- Batch-fetch employees to avoid N+1 queries
+  let employeeIds = map (.corporateEmployeeId) rosters
+  employees <- mapM (\eid -> QCorporateEmployee.findById eid) employeeIds
+  let employeeMap = Map.fromList [(e.id, e) | Just e <- employees]
+  pure $ map (mkRosterRespFromMap employeeMap) rosters
 
-mkRosterResp :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DCR.CorporateRoster -> m API.CorporateRosterResp
-mkRosterResp r = do
-  employee <- QCorporateEmployee.findById r.corporateEmployeeId >>= fromMaybeM (InvalidRequest "Employee not found")
-  pure $
-    API.CorporateRosterResp
-      { id = r.id,
-        employeeName = employee.name,
-        employeeCode = employee.employeeCode,
-        attendanceStatus = r.attendanceStatus,
-        confirmedAt = r.confirmedAt
-      }
+mkRosterRespFromMap :: Map.Map (Id DCE.CorporateEmployee) DCE.CorporateEmployee -> DCR.CorporateRoster -> API.CorporateRosterResp
+mkRosterRespFromMap employeeMap r =
+  let mEmployee = Map.lookup r.corporateEmployeeId employeeMap
+   in API.CorporateRosterResp
+        { id = r.id,
+          employeeName = maybe "Unknown" (.name) mEmployee,
+          employeeCode = maybe "Unknown" (.employeeCode) mEmployee,
+          attendanceStatus = r.attendanceStatus,
+          confirmedAt = r.confirmedAt
+        }
 
 -- | Confirm attendance for a roster entry
 confirmAttendance ::
@@ -258,8 +294,14 @@ confirmAttendance ::
   (Id DP.Person, Id DM.Merchant) ->
   Id DCR.CorporateRoster ->
   m APISuccess.APISuccess
-confirmAttendance (_personId, _merchantId) rosterId = do
-  _roster <- QCorporateRoster.findById rosterId >>= fromMaybeM (InvalidRequest "Roster entry not found")
+confirmAttendance (_personId, merchantId) rosterId = do
+  entity <- getCorporateEntityForMerchant merchantId
+  roster <- QCorporateRoster.findById rosterId >>= fromMaybeM (InvalidRequest "Roster entry not found")
+  -- Verify roster belongs to this entity's shift
+  _ <- verifyShiftOwnership entity.id roster.corporateShiftId
+  -- Validate state transition: only SCHEDULED can be confirmed
+  unless (roster.attendanceStatus == DCR.SCHEDULED) $
+    throwError (InvalidRequest $ "Cannot confirm attendance from status: " <> show roster.attendanceStatus)
   now <- getCurrentTime
   QCorporateRoster.updateAttendanceStatus DCR.CONFIRMED (Just now) now rosterId
   logInfo $ "Corporate Commute: confirmed attendance for roster " <> rosterId.getId
@@ -271,7 +313,9 @@ listRoutes ::
   (Id DP.Person, Id DM.Merchant) ->
   Id DCS.CorporateShift ->
   m [API.CorporateRouteResp]
-listRoutes (_personId, _merchantId) shiftId = do
+listRoutes (_personId, merchantId) shiftId = do
+  entity <- getCorporateEntityForMerchant merchantId
+  _ <- verifyShiftOwnership entity.id shiftId
   routes <- QCorporateRoute.findByShiftId shiftId
   pure $ map mkRouteResp routes
 
@@ -294,7 +338,9 @@ optimizeRoutes ::
   (Id DP.Person, Id DM.Merchant) ->
   Id DCS.CorporateShift ->
   m API.OptimizeRoutesResp
-optimizeRoutes (_personId, _merchantId) shiftId = do
+optimizeRoutes (_personId, merchantId) shiftId = do
+  entity <- getCorporateEntityForMerchant merchantId
+  _ <- verifyShiftOwnership entity.id shiftId
   logInfo $ "Corporate Commute: route optimization requested for shift " <> shiftId.getId
   routes <- QCorporateRoute.findByShiftId shiftId
   pure $
@@ -310,21 +356,27 @@ listBookings ::
   Int ->
   Int ->
   m [API.CorporateBookingResp]
-listBookings (_personId, merchantId) _limit _offset = do
-  entities <- QCorporateEntity.findByMerchantId merchantId
-  entity <- listToMaybe entities & fromMaybeM (InvalidRequest "No corporate entity found for this merchant")
+listBookings (_personId, merchantId) limit offset = do
+  entity <- getCorporateEntityForMerchant merchantId
+  let safeLimit = min (max 1 limit) 100
+      safeOffset = max 0 offset
   rosters <- QCorporateRoster.findByCorporateEntityId entity.id
-  mapM mkBookingResp rosters
-  where
-    mkBookingResp r = do
-      employee <- QCorporateEmployee.findById r.corporateEmployeeId >>= fromMaybeM (InvalidRequest "Employee not found")
-      pure $
-        API.CorporateBookingResp
-          { bookingId = r.bookingId,
-            employeeName = employee.name,
-            status = show r.attendanceStatus,
-            rosterDate = r.rosterDate
-          }
+  let paginatedRosters = take safeLimit . drop safeOffset $ rosters
+  -- Batch-fetch employees to avoid N+1 queries
+  let employeeIds = map (.corporateEmployeeId) paginatedRosters
+  employees <- mapM (\eid -> QCorporateEmployee.findById eid) employeeIds
+  let employeeMap = Map.fromList [(e.id, e) | Just e <- employees]
+  pure $ map (mkBookingRespFromMap employeeMap) paginatedRosters
+
+mkBookingRespFromMap :: Map.Map (Id DCE.CorporateEmployee) DCE.CorporateEmployee -> DCR.CorporateRoster -> API.CorporateBookingResp
+mkBookingRespFromMap employeeMap r =
+  let mEmployee = Map.lookup r.corporateEmployeeId employeeMap
+   in API.CorporateBookingResp
+        { bookingId = r.bookingId,
+          employeeName = maybe "Unknown" (.name) mEmployee,
+          status = show r.attendanceStatus,
+          rosterDate = r.rosterDate
+        }
 
 -- | Schedule rides from roster
 scheduleRides ::
@@ -347,8 +399,7 @@ getWallet ::
   (Id DP.Person, Id DM.Merchant) ->
   m API.CorporateWalletResp
 getWallet (_personId, merchantId) = do
-  entities <- QCorporateEntity.findByMerchantId merchantId
-  entity <- listToMaybe entities & fromMaybeM (InvalidRequest "No corporate entity found for this merchant")
+  entity <- getCorporateEntityForMerchant merchantId
   wallet <- QCorporateWallet.findByCorporateEntityId entity.id >>= fromMaybeM (InvalidRequest "Wallet not found for this corporate entity")
   pure $
     API.CorporateWalletResp
@@ -366,10 +417,16 @@ topUpWallet ::
   API.TopUpWalletReq ->
   m API.CorporateWalletResp
 topUpWallet (personId, merchantId) req = do
-  entities <- QCorporateEntity.findByMerchantId merchantId
-  entity <- listToMaybe entities & fromMaybeM (InvalidRequest "No corporate entity found for this merchant")
+  entity <- getCorporateEntityForMerchant merchantId
+  -- Validate top-up amount is positive
+  when (req.amount <= 0) $ throwError (InvalidRequest "Top-up amount must be positive")
   wallet <- QCorporateWallet.findByCorporateEntityId entity.id >>= fromMaybeM (InvalidRequest "Wallet not found for this corporate entity")
+  -- Validate currency matches wallet currency
+  when (req.currency /= wallet.currency) $ throwError (InvalidRequest "Currency mismatch: top-up currency does not match wallet currency")
+  when (wallet.status /= DCW.CW_ACTIVE) $ throwError (InvalidRequest "Wallet is not active")
   now <- getCurrentTime
+  -- Note: For production, this should use an atomic DB update (UPDATE SET balance = balance + amount)
+  -- to prevent lost-update race conditions on concurrent top-ups
   let newBalance = wallet.balance + req.amount
   QCorporateWallet.updateBalance newBalance (Just now) now wallet.id
   logInfo $ "Corporate Commute: wallet topped up by " <> show req.amount <> " for entity " <> entity.id.getId
@@ -381,8 +438,7 @@ listInvoices ::
   (Id DP.Person, Id DM.Merchant) ->
   m [API.CorporateInvoiceResp]
 listInvoices (_personId, merchantId) = do
-  entities <- QCorporateEntity.findByMerchantId merchantId
-  entity <- listToMaybe entities & fromMaybeM (InvalidRequest "No corporate entity found for this merchant")
+  entity <- getCorporateEntityForMerchant merchantId
   invoices <- QCorporateInvoice.findByCorporateEntityId entity.id
   pure $ map mkInvoiceResp invoices
 
@@ -407,8 +463,7 @@ getAnalytics ::
   (Id DP.Person, Id DM.Merchant) ->
   m API.CorporateAnalyticsResp
 getAnalytics (_personId, merchantId) = do
-  entities <- QCorporateEntity.findByMerchantId merchantId
-  entity <- listToMaybe entities & fromMaybeM (InvalidRequest "No corporate entity found for this merchant")
+  entity <- getCorporateEntityForMerchant merchantId
   employees <- QCorporateEmployee.findByCorporateEntityId entity.id
   let activeEmps = filter (\e -> e.status == DCE.ACTIVE) employees
   logInfo "Corporate Commute: analytics request - stub"
