@@ -72,9 +72,11 @@ validatePositive :: (MonadFlow m, Ord a, Num a) => Text -> a -> m ()
 validatePositive fieldName value =
   when (value <= 0) $ throwError (InvalidRequest $ fieldName <> " must be positive")
 
--- | Validate latitude and longitude ranges
+-- | Validate latitude and longitude ranges (also rejects NaN and Infinity)
 validateCoordinates :: (MonadFlow m) => Double -> Double -> m ()
 validateCoordinates lat lon = do
+  when (isNaN lat || isInfinite lat) $ throwError (InvalidRequest "Invalid latitude: must be a finite number")
+  when (isNaN lon || isInfinite lon) $ throwError (InvalidRequest "Invalid longitude: must be a finite number")
   when (lat < -90 || lat > 90) $ throwError (InvalidRequest "Invalid latitude: must be between -90 and 90")
   when (lon < -180 || lon > 180) $ throwError (InvalidRequest "Invalid longitude: must be between -180 and 180")
 
