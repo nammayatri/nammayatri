@@ -57,7 +57,7 @@ import Kernel.Utils.App (lookupCloudType)
 import Kernel.Utils.Common
 import Lib.DriverCoins.Types
 import qualified Lib.DriverCoins.Types as DCT
-import Lib.Finance (CounterpartyType (DRIVER))
+import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.CancellationCoins as CancellationCoins
@@ -137,7 +137,7 @@ driverCoinsEvent driverId merchantId merchantOpCityId eventType entityId mbVehVa
       blacklistedEventsByDriver = fromMaybe [] (DDS.blacklistCoinEvents =<< mbDriverStats)
       combinedBlacklist = blacklistedEventsByDriver <> blacklistedEventsByFleet
   if fromMaybe False transporterConfig.enableDirectWalletIncentives
-    then driverMonetaryRewardEvent driverId merchantId merchantOpCityId eventType entityId vehCategory mbConfigVersionMap transporterConfig combinedBlacklist
+    then driverMonetaryRewardEvent driverId merchantId merchantOpCityId eventType entityId vehCategory mbConfigVersionMap transporterConfig combinedBlacklist mbFleetOwnerId
     else do
       coinConfiguration <- CDCQ.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehCategory mbConfigVersionMap
 
@@ -458,8 +458,8 @@ mkCoinAccumulationByDriverIdKey :: Id DP.Person -> Text -> Text
 mkCoinAccumulationByDriverIdKey driverId date = "DriverCoinBalance:DriverId:" <> driverId.getId <> ":" <> date
 
 -- | Wallet Incentive Pipeline
-driverMonetaryRewardEvent :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> Maybe Text -> DTV.VehicleCategory -> Maybe [LYT.ConfigVersionMap] -> TransporterConfig -> [DCT.DriverCoinsFunctionType] -> m ()
-driverMonetaryRewardEvent driverId merchantId merchantOpCityId eventType entityId vehCategory mbConfigVersionMap transporterConfig combinedBlacklist = do
+driverMonetaryRewardEvent :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> Maybe Text -> DTV.VehicleCategory -> Maybe [LYT.ConfigVersionMap] -> TransporterConfig -> [DCT.DriverCoinsFunctionType] -> Maybe (Id DP.Person) -> m ()
+driverMonetaryRewardEvent driverId merchantId merchantOpCityId eventType entityId vehCategory mbConfigVersionMap transporterConfig combinedBlacklist mbFleetOwnerId = do
   monetaryRewardConfiguration <- CWCQ.fetchMonetaryRewardFunctionsOnEventbasis eventType merchantId merchantOpCityId vehCategory mbConfigVersionMap
   let filteredConfigAll = filter (\wc -> DWC.eventFunction wc `notElem` combinedBlacklist) monetaryRewardConfiguration
 
@@ -468,12 +468,12 @@ driverMonetaryRewardEvent driverId merchantId merchantOpCityId eventType entityI
       logInfo "All wallet events blacklisted; skipping award"
       pure ()
     else do
-      forM_ filteredConfigAll (\wc -> calculateMonetaryRewardCash eventType driverId merchantId merchantOpCityId (DWC.eventFunction wc) (DWC.monetaryRewardAmount wc) transporterConfig entityId vehCategory)
+      forM_ filteredConfigAll (\wc -> calculateMonetaryRewardCash eventType driverId merchantId merchantOpCityId (DWC.eventFunction wc) (DWC.monetaryRewardAmount wc) transporterConfig entityId vehCategory mbFleetOwnerId)
 
-calculateMonetaryRewardCash :: EventFlow m r => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> HighPrecMoney -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> m Bool
-calculateMonetaryRewardCash eventType driverId merchantId merchantOpCityId eventFunction amount transporterConfig entityId _ = do
+calculateMonetaryRewardCash :: EventFlow m r => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> HighPrecMoney -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe (Id DP.Person) -> m Bool
+calculateMonetaryRewardCash eventType driverId merchantId merchantOpCityId eventFunction amount transporterConfig entityId _ mbFleetOwnerId = do
   case eventType of
-    DCT.EndRide {} -> hMonetaryRewardEndRide driverId merchantId merchantOpCityId eventFunction amount transporterConfig entityId
+    DCT.EndRide {} -> hMonetaryRewardEndRide driverId merchantId merchantOpCityId eventFunction amount transporterConfig entityId mbFleetOwnerId
     _ -> pure False
 
 runActionWhenValidMonetaryRewardConditions :: EventFlow m r => [m Bool] -> m Bool -> m Bool
@@ -488,16 +488,16 @@ runActionWhenValidMonetaryRewardConditions conditions action = do
       isValid <- condition
       if isValid then checkAllConditions xs else pure False
 
-hMonetaryRewardEndRide :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> HighPrecMoney -> TransporterConfig -> Maybe Text -> m Bool
-hMonetaryRewardEndRide driverId merchantId merchantOpCityId eventFunction amount transporterConfig entityId = do
+hMonetaryRewardEndRide :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> HighPrecMoney -> TransporterConfig -> Maybe Text -> Maybe (Id DP.Person) -> m Bool
+hMonetaryRewardEndRide driverId merchantId merchantOpCityId eventFunction amount transporterConfig entityId mbFleetOwnerId = do
   case eventFunction of
     DCT.RidesCompleted a -> do
       validRideCount <- fromMaybe 0 <$> getValidRideCountByDriverIdKey driverId
-      runActionWhenValidMonetaryRewardConditions [pure (validRideCount == a)] $ updateEventAndGetMonetaryRewardCredit driverId merchantId merchantOpCityId eventFunction amount transporterConfig entityId
+      runActionWhenValidMonetaryRewardConditions [pure (validRideCount == a)] $ updateEventAndGetMonetaryRewardCredit driverId merchantId merchantOpCityId eventFunction amount transporterConfig entityId mbFleetOwnerId
     _ -> pure False
 
-updateEventAndGetMonetaryRewardCredit :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> HighPrecMoney -> TransporterConfig -> Maybe Text -> m Bool
-updateEventAndGetMonetaryRewardCredit driverId merchantId merchantOpCityId eventFunction amount transporterConfig entityId = do
+updateEventAndGetMonetaryRewardCredit :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> HighPrecMoney -> TransporterConfig -> Maybe Text -> Maybe (Id DP.Person) -> m Bool
+updateEventAndGetMonetaryRewardCredit driverId merchantId merchantOpCityId eventFunction amount transporterConfig entityId mbFleetOwnerId = do
   let referenceId = fromMaybe "wallet_incentive" entityId
   logDebug $
     "Wallet Incentive: crediting driver wallet"
@@ -511,10 +511,13 @@ updateEventAndGetMonetaryRewardCredit driverId merchantId merchantOpCityId event
       <> show transporterConfig.currency
       <> " | referenceId="
       <> referenceId
+  let (counterparty, ownerId) = case mbFleetOwnerId of
+        Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
+        Nothing -> (counterpartyDriver, driverId.getId)
   res <-
     SLFW.createWalletEntryDelta
-      DRIVER
-      driverId.getId
+      counterparty
+      ownerId
       amount
       transporterConfig.currency
       merchantId.getId

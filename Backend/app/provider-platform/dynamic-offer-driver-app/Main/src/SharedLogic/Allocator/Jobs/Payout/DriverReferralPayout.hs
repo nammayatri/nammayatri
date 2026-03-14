@@ -40,7 +40,7 @@ import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobInWithCheck)
 import SharedLogic.Allocator
-import SharedLogic.Finance.Prepaid (counterpartyDriver)
+import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import SharedLogic.Finance.Wallet (createWalletEntryDelta, walletReferenceD2DReferral)
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
@@ -53,6 +53,7 @@ import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QV
+import qualified Storage.Queries.FleetDriverAssociationExtra as QFDAE
 import qualified Tools.Payout as TP
 
 data DailyStatsWithVpa = DailyStatsWithVpa
@@ -229,10 +230,14 @@ callPayoutHandler DS.DailyStats {..} driverInfo payoutVpa payoutConfigList statu
                         [ "d2dReferralEarnings" A..= d2dAmount,
                           "dailyStatsId" A..= id
                         ]
+                mbFleetDriverAssociation <- QFDAE.findByDriverId driverId True
+                let (counterparty, walletOwnerId) = case mbFleetDriverAssociation of
+                      Just fda -> (counterpartyFleetOwner, fda.fleetOwnerId)
+                      Nothing -> (counterpartyDriver, driverId.getId)
                 void $
                   createWalletEntryDelta
-                    counterpartyDriver
-                    driverId.getId
+                    counterparty
+                    walletOwnerId
                     d2dAmount
                     dailyStat.currency
                     person.merchantId.getId
