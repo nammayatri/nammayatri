@@ -238,25 +238,74 @@ The dual-Redis multi-cloud architecture has a documented pitfall: "stale cache h
 
 ## 4. Duplication
 
-### D-1: SharedLogic Clones Between rider-app and driver-app
+**Total estimated duplicate code: ~12,000+ lines across 48+ files with name overlap.**
 
-**15 files** share identical names across both services' SharedLogic directories:
+### D-1: SharedLogic Clones Between rider-app and driver-app (15 files)
 
 | File | rider-app | driver-app | Similarity |
 |------|-----------|------------|-----------|
-| `GoogleTranslate.hs` | 88 lines | 89 lines | ~98% identical (trivial import diff) |
+| `GoogleTranslate.hs` | 88 lines | 89 lines | ~98% identical (1-line diff) |
 | `LocationMapping.hs` | 74 lines | 74 lines | ~99% identical (constraint order diff) |
-| `Cac.hs` | — | — | Likely similar |
-| `Merchant.hs` | — | — | Likely similar |
-| `MessageBuilder.hs` | — | — | Likely similar |
-| `OTP.hs` | — | — | Likely similar |
-| `PersonDefaultEmergencyNumber.hs` | — | — | Likely similar |
-| `ScheduledNotifications.hs` | — | — | Likely similar |
-| `Type.hs` | — | — | Likely similar |
+| `MerchantPaymentMethod.hs` | 47 lines | 47 lines | Identical |
+| `OTP.hs` | 215 lines | 215 lines | Very similar |
+| `Payment.hs` | 845 lines | 414 lines | Major shared logic |
+| `Ride.hs` | ~719 lines | ~719 lines | Major duplication |
+| `ScheduledNotifications.hs` | 101 lines | 101 lines | Likely identical |
+| `PersonDefaultEmergencyNumber.hs` | ~290 lines | ~290 lines | Likely duplicate |
+| `Cancel.hs` | 113 lines | 324 lines | Substantial shared logic |
+| `Cac.hs` | — | — | Duplicate functionality |
+| `Merchant.hs` | 29 lines | 55 lines | Partially duplicate |
+| `MessageBuilder.hs` | 805 lines | — | Same patterns, different messages |
+| `Booking.hs` | 68 lines | 193 lines | Different scope |
+| `Person.hs` | 172 lines | 52 lines | Similar structure |
+| `Type.hs` | 53 lines | 13 lines | Partial (BillingCategory shared) |
 
-Files like `GoogleTranslate.hs` and `LocationMapping.hs` are **near-identical copies** differing only in import ordering or constraint parameter order. These should be extracted to `lib/shared-services` or a new `lib/common-logic` library.
+**~6,300+ lines of SharedLogic with direct duplication potential.**
 
-### D-2: Repeated BPP Detail Lookup Pattern
+### D-2: Beckn ACL Handler Duplication (18 files)
+
+Both services implement the same BECKN protocol ACL transformers with identical function signatures:
+
+```
+Common.hs, Confirm.hs, Init.hs, Cancel.hs, Search.hs, Select.hs, Status.hs,
+Track.hs, Update.hs, Rating.hs, OnCancel.hs, OnConfirm.hs, OnInit.hs,
+OnSearch.hs, OnSelect.hs, OnStatus.hs, OnTrack.hs, OnUpdate.hs
+```
+
+Concrete example — both `Beckn/ACL/Common.hs` files contain identical payment casting functions:
+```haskell
+castDPaymentCollector :: DMPM.PaymentCollector -> Payment.PaymentCollector
+castDPaymentType :: DMPM.PaymentType -> Payment.PaymentType
+castDPaymentInstrument :: DMPM.PaymentInstrument -> Payment.PaymentInstrument
+```
+
+### D-3: Tools Utility Module Duplication (16 files)
+
+| File | Combined Lines | Duplication Level |
+|------|---------------|-------------------|
+| `Tools/Notifications.hs` | ~3,399 | Critical |
+| `Tools/Error.hs` | ~3,149 | High |
+| `Tools/Payment.hs` | ~951 | High |
+| `Tools/Maps.hs` | ~454 | High |
+| `Tools/Auth.hs` | ~383 | Medium |
+| `Tools/Call.hs` | ~122 | Medium |
+| `Tools/SMS.hs`, `Whatsapp.hs`, `Payout.hs`, `Ticket.hs`, etc. | — | Low-Medium |
+
+### D-4: Storage/Queries Extra File Duplication (19 files)
+
+Both services maintain separate "Extra" query implementations for shared entities:
+
+```
+BookingExtra.hs, RideExtra.hs, PersonExtra.hs, MerchantExtra.hs,
+MerchantOperatingCityExtra.hs, MerchantPaymentMethodExtra.hs,
+MerchantServiceConfigExtra.hs, RatingExtra.hs, RegistrationTokenExtra.hs,
+LocationMappingExtra.hs, ExophoneExtra.hs, SearchRequestExtra.hs,
+TranslationsExtra.hs, CallStatusExtra.hs, FeedbackBadgeExtra.hs,
+FeedbackFormExtra.hs, BookingCancellationReasonExtra.hs,
+VehicleRouteMappingExtra.hs, WhiteListOrgExtra.hs
+```
+
+### D-5: Repeated BPP Detail Lookup Pattern
 
 The following pattern appears verbatim in at least 5 locations across rider-app:
 
@@ -269,7 +318,7 @@ bppDetailList <- forM ((.providerId) <$> quotes) (\bppId ->
 
 Found in: `Select.hs` (twice), `Quote.hs` (twice), `OnSelect.hs` (twice).
 
-### D-3: Invoice Lookup Pattern in Driver Fees
+### D-6: Invoice Lookup Pattern in Driver Fees
 
 The `mapM + findActiveManualInvoiceByFeeId` pattern appears at least 6 times in `Driver.hs` and `DriverFee.hs`:
 
@@ -279,9 +328,13 @@ invoices <- mapM (\fee -> runInReplica
   dueDriverFees
 ```
 
-### D-4: Dashboard Action Handlers
+### D-7: Dashboard Action Handlers
 
 `Dashboard/Management/Driver.hs` (driver-app, ~1,700 lines) and `Dashboard/Merchant.hs` (rider-app, ~1,700 lines) contain structurally similar config-update handlers that follow the same pattern: fetch config → validate → update → return. A generic config-update combinator could replace dozens of near-identical handlers.
+
+### D-8: Environment/Config Setup Code
+
+Both services maintain separate `Environment.hs` files (~200+ lines each) with largely similar database configuration, Redis/cache setup, service dependencies, and metrics initialization. The `AppCfg` data types share 50+ identical fields.
 
 ---
 
