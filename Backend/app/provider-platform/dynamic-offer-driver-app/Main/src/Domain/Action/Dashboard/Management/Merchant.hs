@@ -1360,6 +1360,18 @@ postMerchantConfigFarePolicyPerExtraKmRateUpdate merchantShortId city reqFarePol
   CQFP.clearCacheById farePolicyId
   pure Success
 
+isBaseFareBelowMin :: Maybe HighPrecMoney -> HighPrecMoney -> Bool
+isBaseFareBelowMin Nothing _ = False
+isBaseFareBelowMin (Just minVal) baseFare = baseFare < minVal
+
+getAllBaseFaresFromFarePolicy :: FarePolicy.FarePolicy -> [HighPrecMoney]
+getAllBaseFaresFromFarePolicy fp = case fp.farePolicyDetails of
+  FarePolicy.ProgressiveDetails d -> [d.baseFare]
+  FarePolicy.SlabsDetails d -> (.baseFare) <$> NE.toList d.slabs
+  FarePolicy.RentalDetails d -> [d.baseFare]
+  FarePolicy.InterCityDetails d -> [d.baseFare]
+  FarePolicy.AmbulanceDetails d -> (.baseFare) <$> NE.toList d.slabs
+
 postMerchantConfigFarePolicyUpdate :: ShortId DM.Merchant -> Context.City -> Id Common.FarePolicy -> Common.UpdateFarePolicyReq -> Flow APISuccess
 postMerchantConfigFarePolicyUpdate _ _ reqFarePolicyId req = do
   let farePolicyId = cast reqFarePolicyId
@@ -2337,44 +2349,54 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
 
           newId <- generateGUID
           finalFarePolicy <- mergeFarePolicy newId firstFarePolicy
-          CQFP.create finalFarePolicy
-          case finalFarePolicy.farePolicyDetails of
-            FarePolicy.AmbulanceDetails details ->
-              Hedis.withLockRedis ambulanceSlabsCreateLockKey 60 $ do
-                QueriesFPAD.delete finalFarePolicy.id
-                forM_ (NE.toList details.slabs) $ \slab ->
-                  QueriesFPAD.create (finalFarePolicy.id, slab)
-            _ -> pure ()
-          let merchanOperatingCityId = merchantOpCity.id
-          (oldFareProducts, newBoundedAlreadyDeletedMap) <-
-            case timeBounds of
-              Unbounded -> do
-                fareProducts <- SQF.findAllUnboundedByMerchantOpCityIdVariantArea merchanOperatingCityId area tripCategory vehicleServiceTier TB.Unbounded True [searchSource]
-                return (fareProducts, boundedAlreadyDeletedMap)
-              _ -> do
-                let key = makeKey merchanOperatingCityId vehicleServiceTier tripCategory area searchSource
-                let value = Map.lookup key boundedAlreadyDeletedMap
-                if isJust value
-                  then return ([], boundedAlreadyDeletedMap)
-                  else do
-                    fareProducts <- CQFProduct.findAllBoundedByMerchantVariantArea merchanOperatingCityId [searchSource] tripCategory vehicleServiceTier area
-                    let updatedBoundedAlreadyDeletedMap = markBoundedAreadyDeleted merchanOperatingCityId vehicleServiceTier tripCategory area searchSource boundedAlreadyDeletedMap
-                    return (fareProducts, updatedBoundedAlreadyDeletedMap)
+          mbTransporterConfig <- CTC.findByMerchantOpCityId merchantOpCity.id Nothing
+          let baseFares = getAllBaseFaresFromFarePolicy finalFarePolicy
+              minBaseFare = mbTransporterConfig >>= (.minBaseFare)
+              allowUpdate = fromMaybe True (mbTransporterConfig >>= (.allowFarePolicyUpdateBelowMinBaseFare))
+              anyBelowMin = any (isBaseFareBelowMin minBaseFare) baseFares
+              belowMinMsg = "Base fare is below the minimum base fare for this city (area: " <> show area <> ", vehicleServiceTier: " <> show vehicleServiceTier <> ", tripCategory: " <> show tripCategory <> ")."
+              newErrors = if anyBelowMin then errors <> [belowMinMsg] else errors
+          if anyBelowMin && not allowUpdate
+            then return (newErrors, boundedAlreadyDeletedMap)
+            else do
+              CQFP.create finalFarePolicy
+              case finalFarePolicy.farePolicyDetails of
+                FarePolicy.AmbulanceDetails details ->
+                  Hedis.withLockRedis ambulanceSlabsCreateLockKey 60 $ do
+                    QueriesFPAD.delete finalFarePolicy.id
+                    forM_ (NE.toList details.slabs) $ \slab ->
+                      QueriesFPAD.create (finalFarePolicy.id, slab)
+                _ -> pure ()
+              let merchanOperatingCityId = merchantOpCity.id
+              (oldFareProducts, newBoundedAlreadyDeletedMap) <-
+                case timeBounds of
+                  Unbounded -> do
+                    fareProducts <- SQF.findAllUnboundedByMerchantOpCityIdVariantArea merchanOperatingCityId area tripCategory vehicleServiceTier TB.Unbounded True [searchSource]
+                    return (fareProducts, boundedAlreadyDeletedMap)
+                  _ -> do
+                    let key = makeKey merchanOperatingCityId vehicleServiceTier tripCategory area searchSource
+                    let value = Map.lookup key boundedAlreadyDeletedMap
+                    if isJust value
+                      then return ([], boundedAlreadyDeletedMap)
+                      else do
+                        fareProducts <- CQFProduct.findAllBoundedByMerchantVariantArea merchanOperatingCityId [searchSource] tripCategory vehicleServiceTier area
+                        let updatedBoundedAlreadyDeletedMap = markBoundedAreadyDeleted merchanOperatingCityId vehicleServiceTier tripCategory area searchSource boundedAlreadyDeletedMap
+                        return (fareProducts, updatedBoundedAlreadyDeletedMap)
 
-          oldFareProducts `forM_` \fp -> do
-            fareProducts <- CQFProduct.findAllFareProductByFarePolicyId fp.farePolicyId
-            when (length fareProducts == 1) $ CQFP.delete fp.farePolicyId
-            CQFProduct.delete fp.id
-            CQFProduct.clearCache fp
+              oldFareProducts `forM_` \fp -> do
+                fareProducts <- CQFProduct.findAllFareProductByFarePolicyId fp.farePolicyId
+                when (length fareProducts == 1) $ CQFP.delete fp.farePolicyId
+                CQFProduct.delete fp.id
+                CQFProduct.clearCache fp
 
-          id <- generateGUID
-          let farePolicyId = finalFarePolicy.id
-          let fareProduct = DFareProduct.FareProduct {enabled = enabled', merchantId = merchantOpCity.merchantId, merchantOperatingCityId = merchantOpCity.id, ..}
-          CQFProduct.create fareProduct
-          CQFProduct.clearCache fareProduct
-          oldFareProducts `forM_` CQFProduct.clearCache
+              id <- generateGUID
+              let farePolicyId = finalFarePolicy.id
+              let fareProduct = DFareProduct.FareProduct {enabled = enabled', merchantId = merchantOpCity.merchantId, merchantOperatingCityId = merchantOpCity.id, ..}
+              CQFProduct.create fareProduct
+              CQFProduct.clearCache fareProduct
+              oldFareProducts `forM_` CQFProduct.clearCache
 
-          return (errors, newBoundedAlreadyDeletedMap)
+              return (newErrors, newBoundedAlreadyDeletedMap)
 
     checkIfvehicleServiceTierExists vehicleServiceTier merchanOperatingCityId = CQVST.findByServiceTierTypeAndCityId merchanOperatingCityId vehicleServiceTier (Just []) >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
 
