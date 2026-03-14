@@ -21,7 +21,6 @@ module SharedLogic.Finance.Reconciliation
   )
 where
 
-import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.HashMap.Strict as HM
@@ -228,8 +227,7 @@ performReconciliation booking _mbRide ledgerEntries = do
         _ -> IndirectTax.Cancellation
       mbIndirectTxn = find (\t -> t.transactionType == relevantType) indirectTaxTxns
       expectedGstFromTax = (.totalGstAmount) <$> mbIndirectTxn
-      expectedGstFallback = (* 0.05) <$> calculateExpectedGross booking
-      expectedGst = expectedGstFromTax <|> expectedGstFallback
+      expectedGst = expectedGstFromTax
 
   -- Get expected gross value
   let expectedGross = calculateExpectedGross booking
@@ -337,8 +335,8 @@ reconcileCashCompleted expectedGst gstCashEntry = do
     _ ->
       pure $
         ReconciliationResult
-          ReconSummary.MISSING_IN_TARGET
-          (Just "Both expected and actual GST missing")
+          ReconSummary.MATCHED
+          Nothing
           0
           0
 
