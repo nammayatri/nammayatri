@@ -27,6 +27,7 @@ import Kernel.Utils.Logging
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,
+    setHost,
     setPort,
   )
 
@@ -36,7 +37,7 @@ runMock _cfgModifier = do
   withAppEnv appCfg $ \appEnv -> do
     let port = appCfg.port
         settings =
-          defaultSettings & setPort port
+          defaultSettings & setHost "127.0.0.1" & setPort port
         reqRespLogger :: Text -> Text -> IO ()
         reqRespLogger tag info = runReaderT (runMockM $ withLogTag tag $ logOutput INFO info) appEnv
 

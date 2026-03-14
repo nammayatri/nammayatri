@@ -14,12 +14,16 @@
 
 module API.EncodeFile where
 
+import Data.Char (isAlphaNum)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Base64 as B64
 import Data.String.Conversions
+import qualified Data.Text as T
 import Environment
 import Kernel.Mock.App hiding (runMock)
 import Kernel.Prelude
+import Kernel.Types.Error (GenericError (InvalidRequest))
+import Kernel.Utils.Common (fromMaybeM)
 import Servant
 
 type EncodeFileAPI =
@@ -39,7 +43,24 @@ newtype EncodeFileResp = EncodeFileResp
 
 encodeFileHandler :: EncodeFileReq -> MockM AppEnv EncodeFileResp
 encodeFileHandler req = do
-  let path = req.filePath
-  raw <- liftIO $ B.readFile $ cs path
+  path <- toSandboxedPath req.filePath & fromMaybeM (InvalidRequest "filePath must be a simple file name")
+  raw <- liftIO $ B.readFile path
   let base64 = cs $ B64.encode raw
   pure EncodeFileResp {base64}
+
+toSandboxedPath :: Text -> Maybe FilePath
+toSandboxedPath rawName = do
+  let fileName = T.strip rawName
+  guard $ isValidFileName fileName
+  pure $ "/tmp/image-api-helper-" <> T.unpack fileName
+
+isValidFileName :: Text -> Bool
+isValidFileName fileName =
+  not (T.null fileName)
+    && T.length fileName <= 128
+    && fileName /= "."
+    && fileName /= ".."
+    && T.all isSafeFileNameChar fileName
+
+isSafeFileNameChar :: Char -> Bool
+isSafeFileNameChar char = isAlphaNum char || char `elem` ['.', '_', '-']
