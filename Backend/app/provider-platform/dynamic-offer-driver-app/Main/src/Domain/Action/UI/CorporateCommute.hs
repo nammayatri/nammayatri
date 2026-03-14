@@ -29,6 +29,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 
@@ -38,8 +39,7 @@ getDriverCorporateShifts ::
   (Maybe (Id DP.Person), Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   m [API.CorporateShiftDriverResp]
 getDriverCorporateShifts (_personId, _merchantId, _merchantOperatingCityId) = do
-  logInfo "Corporate Commute: driver requesting available shifts - stub"
-  pure []
+  throwError (InvalidRequest "Driver corporate shifts listing is not yet implemented")
 
 -- | List routes for a given corporate shift
 getDriverCorporateRoutes ::

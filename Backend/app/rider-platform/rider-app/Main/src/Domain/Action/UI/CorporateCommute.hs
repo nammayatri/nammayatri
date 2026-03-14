@@ -39,7 +39,6 @@ import qualified Data.Text as T
 import qualified Domain.Types.CorporateEmployee as DCE
 import qualified Domain.Types.CorporateEntity as DCEnt
 import qualified Domain.Types.CorporateInvoice as DCI
-import qualified Domain.Types.CorporatePolicy as DCP
 import qualified Domain.Types.CorporateRoster as DCR
 import qualified Domain.Types.CorporateRoute as DCRt
 import qualified Domain.Types.CorporateShift as DCS
@@ -59,6 +58,54 @@ import qualified Storage.Queries.CorporateRoute as QCorporateRoute
 import qualified Storage.Queries.CorporateShift as QCorporateShift
 import qualified Storage.Queries.CorporateWallet as QCorporateWallet
 
+-- ==========================================
+-- Fix 4: Validation Helper Functions
+-- ==========================================
+
+-- | Validate that a text field is not empty
+validateNonEmpty :: (MonadFlow m) => Text -> Text -> m ()
+validateNonEmpty fieldName value =
+  when (T.null value) $ throwError (InvalidRequest $ fieldName <> " cannot be empty")
+
+-- | Validate that a numeric value is positive
+validatePositive :: (MonadFlow m, Ord a, Num a) => Text -> a -> m ()
+validatePositive fieldName value =
+  when (value <= 0) $ throwError (InvalidRequest $ fieldName <> " must be positive")
+
+-- | Validate latitude and longitude ranges
+validateCoordinates :: (MonadFlow m) => Double -> Double -> m ()
+validateCoordinates lat lon = do
+  when (lat < -90 || lat > 90) $ throwError (InvalidRequest "Invalid latitude: must be between -90 and 90")
+  when (lon < -180 || lon > 180) $ throwError (InvalidRequest "Invalid longitude: must be between -180 and 180")
+
+-- | Validate that a time window start is before its end
+validateTimeWindow :: (MonadFlow m, Ord a) => a -> a -> Text -> m ()
+validateTimeWindow start end windowName =
+  when (start >= end) $ throwError (InvalidRequest $ windowName <> " window start must be before end")
+
+-- ==========================================
+-- Fix 5: Consistent Error Handling Helpers
+-- ==========================================
+
+-- | Lookup a corporate entity by ID, throwing if not found
+lookupEntity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DCEnt.CorporateEntity -> m DCEnt.CorporateEntity
+lookupEntity entityId =
+  QCorporateEntity.findByPrimaryKey entityId >>= fromMaybeM (InvalidRequest "Corporate entity not found")
+
+-- | Lookup a corporate shift by ID, throwing if not found
+lookupShift :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DCS.CorporateShift -> m DCS.CorporateShift
+lookupShift shiftId =
+  QCorporateShift.findByPrimaryKey shiftId >>= fromMaybeM (InvalidRequest "Shift not found")
+
+-- | Lookup a corporate wallet by entity ID, throwing if not found
+lookupWallet :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DCEnt.CorporateEntity -> m DCW.CorporateWallet
+lookupWallet entityId =
+  QCorporateWallet.findByCorporateEntityId entityId >>= fromMaybeM (InvalidRequest "Wallet not found for this corporate entity")
+
+-- ==========================================
+-- Existing helpers
+-- ==========================================
+
 -- | Helper to fetch the corporate entity for a merchant (avoids repetition across handlers)
 getCorporateEntityForMerchant ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -75,7 +122,7 @@ verifyShiftOwnership ::
   Id DCS.CorporateShift ->
   m DCS.CorporateShift
 verifyShiftOwnership entityId shiftId = do
-  shift <- QCorporateShift.findByPrimaryKey shiftId >>= fromMaybeM (InvalidRequest "Shift not found")
+  shift <- lookupShift shiftId
   unless (shift.corporateEntityId == entityId) $ throwError (InvalidRequest "Shift does not belong to this corporate entity")
   pure shift
 
@@ -105,7 +152,7 @@ getCorporateEntity (_personId, merchantId) = do
         contractEndDate = entity.contractEndDate
       }
 
--- | List employees with pagination
+-- | List employees with pagination (Fix 3: uses DB-level pagination)
 listEmployees ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   (Id DP.Person, Id DM.Merchant) ->
@@ -116,8 +163,8 @@ listEmployees (_personId, merchantId) limit offset = do
   entity <- getCorporateEntityForMerchant merchantId
   let safeLimit = min (max 1 limit) 100
       safeOffset = max 0 offset
-  employees <- QCorporateEmployee.findByCorporateEntityId entity.id
-  pure $ map mkEmployeeResp (take safeLimit . drop safeOffset $ employees)
+  employees <- QCorporateEmployee.findByCorporateEntityIdPaginated entity.id safeLimit safeOffset
+  pure $ map mkEmployeeResp employees
 
 mkEmployeeResp :: DCE.CorporateEmployee -> API.CorporateEmployeeResp
 mkEmployeeResp emp =
@@ -133,7 +180,7 @@ mkEmployeeResp emp =
       linkedAt = emp.linkedAt
     }
 
--- | Create a single employee
+-- | Create a single employee (Fix 4: uses validation helpers)
 createEmployee ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   (Id DP.Person, Id DM.Merchant) ->
@@ -141,13 +188,12 @@ createEmployee ::
   m API.CorporateEmployeeResp
 createEmployee (_personId, merchantId) req = do
   entity <- getCorporateEntityForMerchant merchantId
-  -- Input validation
-  when (T.null req.name) $ throwError (InvalidRequest "Employee name cannot be empty")
-  when (T.null req.employeeCode) $ throwError (InvalidRequest "Employee code cannot be empty")
-  when (T.null req.email) $ throwError (InvalidRequest "Email cannot be empty")
-  when (T.null req.phone) $ throwError (InvalidRequest "Phone cannot be empty")
-  when (req.defaultPickupLat < -90 || req.defaultPickupLat > 90) $ throwError (InvalidRequest "Invalid latitude: must be between -90 and 90")
-  when (req.defaultPickupLon < -180 || req.defaultPickupLon > 180) $ throwError (InvalidRequest "Invalid longitude: must be between -180 and 180")
+  -- Input validation using helpers
+  validateNonEmpty "Employee name" req.name
+  validateNonEmpty "Employee code" req.employeeCode
+  validateNonEmpty "Email" req.email
+  validateNonEmpty "Phone" req.phone
+  validateCoordinates req.defaultPickupLat req.defaultPickupLon
   newId <- generateGUID
   now <- getCurrentTime
   let employee =
@@ -175,21 +221,14 @@ createEmployee (_personId, merchantId) req = do
   QCorporateEmployee.create employee
   pure $ mkEmployeeResp employee
 
--- | Bulk upload employees from CSV
+-- | Bulk upload employees from CSV (Fix 6: throws not-implemented error)
 bulkUploadEmployees ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   (Id DP.Person, Id DM.Merchant) ->
   API.BulkUploadReq ->
   m API.BulkUploadResp
 bulkUploadEmployees (_personId, _merchantId) _req = do
-  logInfo "Corporate Commute: bulk upload employees - stub"
-  pure $
-    API.BulkUploadResp
-      { totalRows = 0,
-        successCount = 0,
-        errorCount = 0,
-        errors = []
-      }
+  throwError (InvalidRequest "Bulk upload is not yet implemented")
 
 -- | List shifts for the corporate entity
 listShifts ::
@@ -218,7 +257,7 @@ mkShiftResp s =
       status = s.status
     }
 
--- | Create a shift
+-- | Create a shift (Fix 4: uses validation helpers)
 createShift ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   (Id DP.Person, Id DM.Merchant) ->
@@ -228,16 +267,16 @@ createShift (_personId, merchantId) req = do
   entity <- getCorporateEntityForMerchant merchantId
   newId <- generateGUID
   now <- getCurrentTime
-  when (T.null req.name) $ throwError (InvalidRequest "Shift name cannot be empty")
-  when (req.maxOccupancy <= 0) $ throwError (InvalidRequest "Max occupancy must be positive")
-  when (req.confirmationDeadlineMinutes <= 0) $ throwError (InvalidRequest "Confirmation deadline must be positive")
+  validateNonEmpty "Shift name" req.name
+  validatePositive "Max occupancy" req.maxOccupancy
+  validatePositive "Confirmation deadline" req.confirmationDeadlineMinutes
   let parseTOD t = readMaybe (toString t) & fromMaybeM (InvalidRequest $ "Invalid time format: " <> t)
   pickupStart <- parseTOD req.pickupWindowStart
   pickupEnd <- parseTOD req.pickupWindowEnd
   dropStart <- parseTOD req.dropWindowStart
   dropEnd <- parseTOD req.dropWindowEnd
-  when (pickupStart >= pickupEnd) $ throwError (InvalidRequest "Pickup window start must be before end")
-  when (dropStart >= dropEnd) $ throwError (InvalidRequest "Drop window start must be before end")
+  validateTimeWindow pickupStart pickupEnd "Pickup"
+  validateTimeWindow dropStart dropEnd "Drop"
   let shift =
         DCS.CorporateShift
           { id = newId,
@@ -260,7 +299,7 @@ createShift (_personId, merchantId) req = do
   QCorporateShift.create shift
   pure $ mkShiftResp shift
 
--- | Get roster for a given shift and date
+-- | Get roster for a given shift and date (Fix 2: uses batch employee fetching)
 getRoster ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   (Id DP.Person, Id DM.Merchant) ->
@@ -273,8 +312,8 @@ getRoster (_personId, merchantId) shiftId date = do
   rosters <- QCorporateRoster.findByShiftIdAndDate shiftId date
   -- Batch-fetch employees to avoid N+1 queries
   let employeeIds = map (.corporateEmployeeId) rosters
-  employees <- mapM (\eid -> QCorporateEmployee.findById eid) employeeIds
-  let employeeMap = Map.fromList [(e.id, e) | Just e <- employees]
+  employees <- QCorporateEmployee.findByIds employeeIds
+  let employeeMap = Map.fromList [(e.id, e) | e <- employees]
   pure $ map (mkRosterRespFromMap employeeMap) rosters
 
 mkRosterRespFromMap :: Map.Map (Id DCE.CorporateEmployee) DCE.CorporateEmployee -> DCR.CorporateRoster -> API.CorporateRosterResp
@@ -288,7 +327,7 @@ mkRosterRespFromMap employeeMap r =
           confirmedAt = r.confirmedAt
         }
 
--- | Confirm attendance for a roster entry
+-- | Confirm attendance for a roster entry (Fix 5: uses lookup helpers)
 confirmAttendance ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   (Id DP.Person, Id DM.Merchant) ->
@@ -332,24 +371,16 @@ mkRouteResp r =
       status = r.status
     }
 
--- | Trigger route optimization for a shift
+-- | Trigger route optimization for a shift (Fix 6: throws not-implemented error)
 optimizeRoutes ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   (Id DP.Person, Id DM.Merchant) ->
   Id DCS.CorporateShift ->
   m API.OptimizeRoutesResp
-optimizeRoutes (_personId, merchantId) shiftId = do
-  entity <- getCorporateEntityForMerchant merchantId
-  _ <- verifyShiftOwnership entity.id shiftId
-  logInfo $ "Corporate Commute: route optimization requested for shift " <> shiftId.getId
-  routes <- QCorporateRoute.findByShiftId shiftId
-  pure $
-    API.OptimizeRoutesResp
-      { message = "Route optimization initiated",
-        routesOptimized = length routes
-      }
+optimizeRoutes (_personId, _merchantId) _shiftId = do
+  throwError (InvalidRequest "Route optimization is not yet implemented")
 
--- | List corporate bookings
+-- | List corporate bookings (Fix 2: batch fetch, Fix 3: DB-level pagination)
 listBookings ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   (Id DP.Person, Id DM.Merchant) ->
@@ -360,12 +391,11 @@ listBookings (_personId, merchantId) limit offset = do
   entity <- getCorporateEntityForMerchant merchantId
   let safeLimit = min (max 1 limit) 100
       safeOffset = max 0 offset
-  rosters <- QCorporateRoster.findByCorporateEntityId entity.id
-  let paginatedRosters = take safeLimit . drop safeOffset $ rosters
+  paginatedRosters <- QCorporateRoster.findByCorporateEntityIdPaginated entity.id safeLimit safeOffset
   -- Batch-fetch employees to avoid N+1 queries
   let employeeIds = map (.corporateEmployeeId) paginatedRosters
-  employees <- mapM (\eid -> QCorporateEmployee.findById eid) employeeIds
-  let employeeMap = Map.fromList [(e.id, e) | Just e <- employees]
+  employees <- QCorporateEmployee.findByIds employeeIds
+  let employeeMap = Map.fromList [(e.id, e) | e <- employees]
   pure $ map (mkBookingRespFromMap employeeMap) paginatedRosters
 
 mkBookingRespFromMap :: Map.Map (Id DCE.CorporateEmployee) DCE.CorporateEmployee -> DCR.CorporateRoster -> API.CorporateBookingResp
@@ -378,29 +408,23 @@ mkBookingRespFromMap employeeMap r =
           rosterDate = r.rosterDate
         }
 
--- | Schedule rides from roster
+-- | Schedule rides from roster (Fix 6: throws not-implemented error)
 scheduleRides ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   (Id DP.Person, Id DM.Merchant) ->
   API.ScheduleRidesReq ->
   m API.ScheduleRidesResp
-scheduleRides (_personId, _merchantId) req = do
-  logInfo $ "Corporate Commute: scheduling rides for shift " <> req.shiftId.getId <> " on " <> show req.rosterDate
-  pure $
-    API.ScheduleRidesResp
-      { totalScheduled = 0,
-        totalFailed = 0,
-        errors = []
-      }
+scheduleRides (_personId, _merchantId) _req = do
+  throwError (InvalidRequest "Ride scheduling is not yet implemented")
 
--- | Get wallet balance
+-- | Get wallet balance (Fix 5: uses lookup helper)
 getWallet ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   (Id DP.Person, Id DM.Merchant) ->
   m API.CorporateWalletResp
 getWallet (_personId, merchantId) = do
   entity <- getCorporateEntityForMerchant merchantId
-  wallet <- QCorporateWallet.findByCorporateEntityId entity.id >>= fromMaybeM (InvalidRequest "Wallet not found for this corporate entity")
+  wallet <- lookupWallet entity.id
   pure $
     API.CorporateWalletResp
       { id = wallet.id,
@@ -410,7 +434,7 @@ getWallet (_personId, merchantId) = do
         lastTopUpAt = wallet.lastTopUpAt
       }
 
--- | Top up wallet
+-- | Top up wallet (Fix 1: uses atomic balance update, Fix 5: uses lookup helper)
 topUpWallet ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   (Id DP.Person, Id DM.Merchant) ->
@@ -419,16 +443,14 @@ topUpWallet ::
 topUpWallet (personId, merchantId) req = do
   entity <- getCorporateEntityForMerchant merchantId
   -- Validate top-up amount is positive
-  when (req.amount <= 0) $ throwError (InvalidRequest "Top-up amount must be positive")
-  wallet <- QCorporateWallet.findByCorporateEntityId entity.id >>= fromMaybeM (InvalidRequest "Wallet not found for this corporate entity")
+  validatePositive "Top-up amount" req.amount
+  wallet <- lookupWallet entity.id
   -- Validate currency matches wallet currency
   when (req.currency /= wallet.currency) $ throwError (InvalidRequest "Currency mismatch: top-up currency does not match wallet currency")
   when (wallet.status /= DCW.CW_ACTIVE) $ throwError (InvalidRequest "Wallet is not active")
   now <- getCurrentTime
-  -- Note: For production, this should use an atomic DB update (UPDATE SET balance = balance + amount)
-  -- to prevent lost-update race conditions on concurrent top-ups
-  let newBalance = wallet.balance + req.amount
-  QCorporateWallet.updateBalance newBalance (Just now) now wallet.id
+  -- Atomic DB-level balance increment to prevent lost-update race conditions
+  QCorporateWallet.atomicAddBalance req.amount now wallet.id
   logInfo $ "Corporate Commute: wallet topped up by " <> show req.amount <> " for entity " <> entity.id.getId
   getWallet (personId, merchantId)
 
@@ -457,7 +479,7 @@ mkInvoiceResp inv =
       paidAt = inv.paidAt
     }
 
--- | Get basic analytics
+-- | Get basic analytics (partially working - counts employees but logs warning for incomplete data)
 getAnalytics ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   (Id DP.Person, Id DM.Merchant) ->
@@ -466,7 +488,7 @@ getAnalytics (_personId, merchantId) = do
   entity <- getCorporateEntityForMerchant merchantId
   employees <- QCorporateEmployee.findByCorporateEntityId entity.id
   let activeEmps = filter (\e -> e.status == DCE.ACTIVE) employees
-  logInfo "Corporate Commute: analytics request - stub"
+  logWarning "Corporate Commute: analytics data is partial - trip counts, spend, and on-time percentage are not yet computed"
   pure $
     API.CorporateAnalyticsResp
       { totalEmployees = length employees,
