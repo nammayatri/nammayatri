@@ -43,3 +43,16 @@ findByShiftIdAndDatePaginated shiftId date limit offset =
     (Se.Asc Beam.createdAt)
     (Just limit)
     (Just offset)
+
+-- | Count completed roster entries for a corporate entity
+findCompletedByEntityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DCEnt.CorporateEntity ->
+  m [CorporateRoster]
+findCompletedByEntityId entityId =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.corporateEntityId $ Se.Eq (getId entityId),
+          Se.Is Beam.attendanceStatus $ Se.Eq (show COMPLETED)
+        ]
+    ]

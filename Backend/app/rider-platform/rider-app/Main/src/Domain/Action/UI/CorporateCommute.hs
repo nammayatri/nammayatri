@@ -481,7 +481,7 @@ mkInvoiceResp inv =
       paidAt = inv.paidAt
     }
 
--- | Get basic analytics (partially working - counts employees but logs warning for incomplete data)
+-- | Get analytics with real data from completed rosters and invoices
 getAnalytics ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   (Id DP.Person, Id DM.Merchant) ->
@@ -490,14 +490,29 @@ getAnalytics (_personId, merchantId) = do
   entity <- getCorporateEntityForMerchant merchantId
   employees <- QCorporateEmployee.findByCorporateEntityId entity.id
   let activeEmps = filter (\e -> e.status == DCE.ACTIVE) employees
-  logWarning "Corporate Commute: analytics data is partial - trip counts, spend, and on-time percentage are not yet computed"
+  -- Fetch completed roster entries for real trip counts
+  completedRosters <- QCorporateRoster.findCompletedByEntityId entity.id
+  let totalTrips = length completedRosters
+  -- Fetch paid invoices for real spend data
+  invoices <- QCorporateInvoice.findByCorporateEntityId entity.id
+  let paidInvoices = filter (\inv -> inv.status == DCI.PAID) invoices
+      totalSpend = sum $ map (.netAmount) paidInvoices
+      averageFare = if totalTrips > 0 then totalSpend / fromIntegral totalTrips else 0
+  -- Compute on-time percentage from completed vs total non-cancelled rosters
+  allRosters <- QCorporateRoster.findByCorporateEntityId entity.id
+  let nonCancelledRosters = filter (\r -> r.attendanceStatus /= DCR.CANCELLED && r.attendanceStatus /= DCR.ATT_ON_LEAVE) allRosters
+      completedCount = length completedRosters
+      totalNonCancelled = length nonCancelledRosters
+      onTimePct = if totalNonCancelled > 0
+                  then (fromIntegral completedCount / fromIntegral totalNonCancelled) * 100.0
+                  else 0.0
   pure $
     API.CorporateAnalyticsResp
       { totalEmployees = length employees,
         activeEmployees = length activeEmps,
-        totalTrips = 0,
-        totalSpend = 0,
+        totalTrips = totalTrips,
+        totalSpend = totalSpend,
         currency = entity.currency,
-        averageFarePerTrip = 0,
-        onTimePercentage = 0.0
+        averageFarePerTrip = averageFare,
+        onTimePercentage = onTimePct
       }
