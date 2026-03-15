@@ -299,19 +299,25 @@ createRideBasedSos ::
   Maybe Text -> -- externalReferenceId
   m CreateSosResult
 createRideBasedSos personId rideId merchantOperatingCityId merchantId flow mbExistingSos ticketId mbExternalReferenceId = do
-  -- Only one active SOS per person: if person has active SOS for another ride or non-ride, reuse it
+  -- Reuse active SOS only if it belongs to the same ride; resolve stale ones from other rides
   mbActive <- findActiveSosByPersonId personId
-  case mbActive of
+  mbReuse <- case mbActive of
     Just active
-      | active.rideId /= Just rideId ->
-        return $
-          CreateSosResult
-            { sosId = active.id,
-              wasReactivated = True,
-              sosDetails = active
-            }
-    _ -> do
-      case mbExistingSos of
+      | active.rideId == Just rideId -> pure $ Just active
+    Just stale -> do
+      void $ updateSosStatus DSos.Resolved stale.id
+      whenJust stale.rideId CQSos.clearCache
+      pure Nothing
+    Nothing -> pure Nothing
+  case mbReuse of
+    Just active ->
+      return $
+        CreateSosResult
+          { sosId = active.id,
+            wasReactivated = True,
+            sosDetails = active
+          }
+    Nothing -> case mbExistingSos of
         Just existingSos -> do
           -- Update existing SOS status to Pending
           void $ updateSosStatus DSos.Pending existingSos.id
@@ -392,13 +398,14 @@ createNonRideSos personId mbMerchantId mbMerchantOperatingCityId mbTrackingExpir
     Nothing -> do
       now <- getCurrentTime
       pid <- generateGUID
+      dummyRideId <- generateGUID
       let newSos =
             DSos.Sos
               { id = pid,
                 personId = personId,
                 status = DSos.Pending,
                 flow = flow,
-                rideId = Nothing,
+                rideId = Just dummyRideId,
                 ticketId = Nothing,
                 mediaFiles = [],
                 merchantId = mbMerchantId,
