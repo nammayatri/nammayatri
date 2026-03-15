@@ -4,6 +4,7 @@ import qualified Config.Env as Env
 import qualified Constants as C
 import Control.Monad.Trans.Except
 import DBSync.BatchCreate
+import qualified DBQuery.Functions as DBQ
 import DBSync.Create
 import DBSync.Delete
 import DBSync.Update
@@ -320,7 +321,7 @@ getAndSetKvConfigs = do
 fetchAndSetKvConfigs :: Flow ()
 fetchAndSetKvConfigs = do
   Env {..} <- ask
-  let kvConfigsQuery = "SELECT config_value FROM " <> _esqDBCfg.connectSchemaName <> ".system_configs WHERE id = 'kv_configs'" :: T.Text
+  let kvConfigsQuery = "SELECT config_value FROM " <> DBQ.validateIdentifier _esqDBCfg.connectSchemaName <> ".system_configs WHERE id = 'kv_configs'" :: T.Text
   res <- EL.runIO $ withResource _connectionPool $ \conn -> PG.query_ conn (PGS.Query $ DTE.encodeUtf8 kvConfigsQuery) :: IO [Only T.Text]
   case res of
     [Only kvConfigs] -> do

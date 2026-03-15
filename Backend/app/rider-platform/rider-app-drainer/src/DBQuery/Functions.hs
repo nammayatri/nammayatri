@@ -2,6 +2,7 @@ module DBQuery.Functions where
 
 import Config.Env (getDbConnectionRetryDelay, getDbConnectionRetryMaxAttempts)
 import Control.Exception (throwIO)
+import qualified Data.Char as Char
 import DBQuery.Types
 import qualified Data.Map.Strict as M
 import Data.Pool (Pool, destroyAllResources, withResource)
@@ -16,7 +17,7 @@ currentSchemaName = "atlas_app"
 
 generateInsertQuery :: InsertQuery -> Maybe Text
 generateInsertQuery InsertQuery {..} = do
-  let schemaName = schema.getSchemaName
+  let schemaName = validateIdentifier schema.getSchemaName
   if null termWarps
     then Nothing
     else do
@@ -26,17 +27,17 @@ generateInsertQuery InsertQuery {..} = do
                 let keyText = quote' $ replaceMappings column mappings
                 let valueText = valueToText value
                 (keyText, valueText)
-          table = schemaName <> "." <> quote' (textToSnakeCaseText dbModel.getDBModel)
+          table = schemaName <> "." <> quote' (validateIdentifier $ textToSnakeCaseText dbModel.getDBModel)
           inserts = T.intercalate ", " columnNames
           valuesList = T.intercalate ", " values
       Just $ "INSERT INTO " <> table <> " (" <> inserts <> ") VALUES (" <> valuesList <> ")" <> " ON CONFLICT DO NOTHING;"
 
 generateUpdateQuery :: UpdateQuery -> Maybe Text
 generateUpdateQuery UpdateQuery {..} = do
-  let schemaName = schema.getSchemaName
+  let schemaName = validateIdentifier schema.getSchemaName
   let correctWhereClauseText = makeWhereCondition whereClause mappings
       setQuery = makeSetConditions
-      table = schemaName <> "." <> quote' (textToSnakeCaseText dbModel.getDBModel)
+      table = schemaName <> "." <> quote' (validateIdentifier $ textToSnakeCaseText dbModel.getDBModel)
   if T.null correctWhereClauseText
     then Nothing
     else Just $ "UPDATE " <> table <> " SET " <> setQuery <> " WHERE " <> correctWhereClauseText <> ";"
@@ -44,13 +45,13 @@ generateUpdateQuery UpdateQuery {..} = do
     makeSetConditions :: Text
     makeSetConditions = do
       let correctSetClauseText = map (\(Set column value) -> (replaceMappings column mappings, valueToText value)) setClauses
-      T.intercalate "," (map (\(k, v) -> (quote' . textToSnakeCaseText) k <> "=" <> v) correctSetClauseText)
+      T.intercalate "," (map (\(k, v) -> (quote' . validateColumnName . textToSnakeCaseText) k <> "=" <> v) correctSetClauseText)
 
 generateDeleteQuery :: DeleteQuery -> Maybe Text
 generateDeleteQuery DeleteQuery {..} = do
-  let schemaName = schema.getSchemaName
+  let schemaName = validateIdentifier schema.getSchemaName
       correctWhereClauseText = makeWhereCondition whereClause mappings
-      table = schemaName <> "." <> quote' (textToSnakeCaseText dbModel.getDBModel)
+      table = schemaName <> "." <> quote' (validateIdentifier $ textToSnakeCaseText dbModel.getDBModel)
   if T.null correctWhereClauseText
     then Nothing
     else Just $ "DELETE FROM " <> table <> " WHERE " <> correctWhereClauseText <> ";"
@@ -143,12 +144,25 @@ transformException e =
 textToSnakeCaseText :: Text -> Text
 textToSnakeCaseText = T.pack . quietSnake . T.unpack
 
+-- | Validate that a SQL identifier (table name, column name, schema name) contains
+-- only safe characters: alphanumeric, underscores, and dots (for schema-qualified names).
+-- Throws a QueryError if validation fails.
+validateIdentifier :: Text -> Text
+validateIdentifier identifier
+  | T.null identifier = error "Empty SQL identifier"
+  | T.all (\c -> Char.isAlphaNum c || c == '_') identifier = identifier
+  | otherwise = error $ "Invalid SQL identifier: " <> T.unpack identifier <> " (only alphanumeric and underscore allowed)"
+
+-- | Validate a column name for safe SQL interpolation.
+validateColumnName :: Text -> Text
+validateColumnName = validateIdentifier
+
 -- | We are setting mappings in case of beamColumn name is different from the Db column name
 replaceMappings :: Column -> Mapping -> Text
 replaceMappings (Column element) (Mapping obj) =
   case M.lookup element obj of
-    Just value -> value
-    Nothing -> textToSnakeCaseText element
+    Just value -> validateColumnName value
+    Nothing -> validateColumnName $ textToSnakeCaseText element
 
 quote' :: Text -> Text
 quote' t = "\"" <> t <> "\""

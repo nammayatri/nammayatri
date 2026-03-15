@@ -5,8 +5,10 @@ module DBQuery.Types where
 
 import qualified Data.Aeson as A
 import qualified Data.Map.Strict as M
+import Data.Scientific (toBoundedInteger, toRealFloat)
 import Data.Text as T
 import qualified Data.Vector as V
+import Data.Int (Int64)
 import Kernel.Prelude
 
 data InsertQuery = InsertQuery
@@ -83,6 +85,13 @@ data Value = SqlNull | SqlString Text | SqlInteger Integer | SqlNum Double | Sql
   deriving stock (Show)
 
 instance FromJSON Value where
+  parseJSON A.Null = pure SqlNull
+  parseJSON (A.Bool True) = pure $ SqlString "true"
+  parseJSON (A.Bool False) = pure $ SqlString "false"
+  parseJSON (A.Number n) =
+    case toBoundedInteger n of
+      Just (i :: Int64) -> pure $ SqlInteger (fromIntegral i)
+      Nothing -> pure $ SqlNum (toRealFloat n)
   parseJSON (A.String "SqlNull") = pure SqlNull
   parseJSON (A.String str) | T.length str >= 2 && T.isPrefixOf "\"" str && T.isSuffixOf "\"" str = do
     case readMaybe @Text $ T.unpack str of
@@ -94,4 +103,4 @@ instance FromJSON Value where
       Just num -> pure $ SqlNum num
       Nothing -> pure $ SqlValue str
   parseJSON (A.Array ar) = SqlList . V.toList <$> (parseJSON `mapM` ar)
-  parseJSON _ = fail "Expected String or Array"
+  parseJSON val = fail $ "Unsupported JSON value type: " <> show val

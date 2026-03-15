@@ -462,13 +462,13 @@ generateBulkInsertForSignature signature createObjects = do
   guard (not $ null createObjects)
 
   let schema = SchemaName $ T.pack DBQ.currentSchemaName
-      tableName = DBQ.quote' (DBQ.textToSnakeCaseText signature.tableName.getDBModel)
-      columnNamesText = T.intercalate ", " $ map DBQ.quote' signature.columnNames
+      tableName = DBQ.quote' (DBQ.validateIdentifier $ DBQ.textToSnakeCaseText signature.tableName.getDBModel)
+      columnNamesText = T.intercalate ", " $ map (DBQ.quote' . DBQ.validateColumnName) signature.columnNames
   valueRows <- mapM (generateValueRowForSignature signature) createObjects
   let valuesText = T.intercalate ", " valueRows
 
   Just $
-    "INSERT INTO " <> schema.getSchemaName <> "." <> tableName
+    "INSERT INTO " <> DBQ.validateIdentifier schema.getSchemaName <> "." <> tableName
       <> " ("
       <> columnNamesText
       <> ") VALUES "
