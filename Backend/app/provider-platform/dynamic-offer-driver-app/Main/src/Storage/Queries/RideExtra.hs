@@ -463,6 +463,7 @@ data RideItem = RideItem
     riderDetails :: RiderDetails,
     customerName :: Maybe Text,
     fareDiff :: Maybe Price,
+    fare :: Maybe Price,
     bookingStatus :: Common.BookingStatus,
     tripCategory :: DTC.TripCategory
   }
@@ -542,7 +543,8 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
       rideDetails <- findOneWithKV [Se.Is BeamRD.id $ Se.Eq $ getId ride.id] >>= fromMaybeM (RideNotFound $ "for ride id: " <> ride.id.getId)
       riderDetails <- findOneWithKV [Se.Is BeamRDR.id $ Se.Eq $ getId $ fromJust booking.riderId | isJust booking.riderId] >>= fromMaybeM (RiderDetailsNotFound $ "for booking id: " <> booking.id.getId)
       let fareDiff = mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare
-      pure $ mkRideItem <$> [(rideShortId, ride.createdAt, rideDetails, riderDetails, booking, fareDiff, mkBookingStatus now ride)]
+          fare = mkPrice (Just ride.currency) <$> ride.fare
+      pure $ mkRideItem <$> [(rideShortId, ride.createdAt, rideDetails, riderDetails, booking, fareDiff, fare, mkBookingStatus now ride)]
     Nothing -> do
       zippedRides <- case mbTo of
         Just toDate | roundToMidnightUTCToDate toDate >= now -> do
@@ -645,8 +647,9 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
           rd <- catMaybes <$> mapM fromTType' rideDetails
           rdr <- catMaybes <$> mapM fromTType' riderDetails
           let fareDiffs = zipWith (\ride booking -> mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare) r b
+          let fares = map (\ride -> mkPrice (Just ride.currency) <$> ride.fare) r
           let z7 = zip7 (DR.shortId <$> r) (DR.createdAt <$> r) rd rdr b fareDiffs (mkBookingStatus now <$> r)
-          pure $ map (\(rideShortId, rideCreatedAt, rd', rdr', b', fareDiff, bookingStatus) -> (rideShortId, rideCreatedAt, rd', rdr', b', fareDiff, bookingStatus)) z7
+          pure $ map (\((rideShortId, rideCreatedAt, rd', rdr', b', fareDiff, bookingStatus), fare) -> (rideShortId, rideCreatedAt, rd', rdr', b', fareDiff, fare, bookingStatus)) (zip z7 fares)
         Left err -> do
           logError $ "FAILED_TO_FETCH_RIDE_LIST" <> show err
           pure []
@@ -689,12 +692,13 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
                 booking <- ride.bookingId `HMS.lookup` bookingsMap
                 riderDetail <- booking.riderId >>= (`HMS.lookup` riderDetailsMap)
                 let fareDiff = mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare
-                Just (mkRideItem (ride.shortId, ride.createdAt, rideDetail, riderDetail, booking, fareDiff, mkBookingStatus now ride))
+                    fare = mkPrice (Just ride.currency) <$> ride.fare
+                Just (mkRideItem (ride.shortId, ride.createdAt, rideDetail, riderDetail, booking, fareDiff, fare, mkBookingStatus now ride))
             )
             rides
 
-    mkRideItem :: (ShortId Ride, UTCTime, RideDetails.RideDetails, RiderDetails.RiderDetails, Booking.Booking, Maybe Price, Common.BookingStatus) -> RideItem
-    mkRideItem (rideShortId, rideCreatedAt, rideDetails, riderDetails, booking, fareDiff, bookingStatus) =
+    mkRideItem :: (ShortId Ride, UTCTime, RideDetails.RideDetails, RiderDetails.RiderDetails, Booking.Booking, Maybe Price, Maybe Price, Common.BookingStatus) -> RideItem
+    mkRideItem (rideShortId, rideCreatedAt, rideDetails, riderDetails, booking, fareDiff, fare, bookingStatus) =
       RideItem {customerName = booking.riderName, tripCategory = booking.tripCategory, ..}
 
     mkBookingStatusFilter :: [Ride.Ride] -> [Ride.Ride]

@@ -57,10 +57,10 @@ import Kernel.Utils.App (lookupCloudType)
 import Kernel.Utils.Common
 import Lib.DriverCoins.Types
 import qualified Lib.DriverCoins.Types as DCT
-import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.CancellationCoins as CancellationCoins
+import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import qualified SharedLogic.Finance.Wallet as SLFW
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.CoinsConfig as CDCQ
