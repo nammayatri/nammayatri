@@ -28,6 +28,26 @@ createMany = traverse_ create
 deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
 deleteById driverId = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateD2cReferralCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+updateD2cReferralCount d2cReferralCount totalReferralCounts driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.d2cReferralCount (Kernel.Prelude.Just d2cReferralCount),
+      Se.Set Beam.totalReferralCounts (Kernel.Prelude.Just totalReferralCounts),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+updateD2dReferralCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+updateD2dReferralCount d2dReferralCount totalReferralCounts driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.d2dReferralCount (Kernel.Prelude.Just d2dReferralCount),
+      Se.Set Beam.totalReferralCounts (Kernel.Prelude.Just totalReferralCounts),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateNumDriversOnboarded :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
 updateNumDriversOnboarded numDriversOnboarded driverId = do
   _now <- getCurrentTime
@@ -101,6 +121,8 @@ updateByPrimaryKey (Domain.Types.DriverStats.DriverStats {..}) = do
       Se.Set Beam.coinCovertedToCashLeft (Kernel.Prelude.Just coinCovertedToCashLeft),
       Se.Set Beam.coinsConvertedToDirectPayoutCash (Kernel.Prelude.Just coinsConvertedToDirectPayoutCash),
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
+      Se.Set Beam.d2cReferralCount (Kernel.Prelude.Just d2cReferralCount),
+      Se.Set Beam.d2dReferralCount (Kernel.Prelude.Just d2dReferralCount),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.earningsMissed (Kernel.Prelude.roundToIntegral earningsMissed),
       Se.Set Beam.earningsMissedAmount (Kernel.Prelude.Just earningsMissed),

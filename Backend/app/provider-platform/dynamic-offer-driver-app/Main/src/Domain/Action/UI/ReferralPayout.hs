@@ -65,23 +65,52 @@ getPayoutReferralEarnings (mbPersonId, _merchantId, merchantOpCityId) fromDate t
   payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
   let dailyEarnings = map parseDailyEarnings earnings
   mbRegistrationOrder <- maybe (return Nothing) QOrder.findById (Id <$> dInfo.payoutRegistrationOrderId)
+  let d2dEarnings = filter (\e -> e.d2dReferralCounts > 0) earnings
+      d2cEarnings = filter (\e -> e.referralCounts > 0) earnings
+      d2dDailyEarnings = map parseD2dDailyEarning d2dEarnings
+      d2cDailyEarnings = map parseD2cDailyEarning d2cEarnings
   return $
     API.Types.UI.ReferralPayout.ReferralEarningsRes
       { totalReferralCount = driverStats.totalReferralCounts,
+        d2dReferralCount = Just driverStats.d2dReferralCount,
+        d2cReferralCount = Just driverStats.d2cReferralCount,
         dailyEarnings = dailyEarnings,
         vpaId = dInfo.payoutVpa,
         orderId = dInfo.payoutRegistrationOrderId,
         orderStatus = (.status) <$> mbRegistrationOrder,
         referralRewardAmountPerRide = payoutConfig.referralRewardAmountPerRide,
-        payoutRegistrationAmount = sum [payoutConfig.payoutRegistrationFee, payoutConfig.payoutRegistrationCgst, payoutConfig.payoutRegistrationSgst]
+        payoutRegistrationAmount = sum [payoutConfig.payoutRegistrationFee, payoutConfig.payoutRegistrationCgst, payoutConfig.payoutRegistrationSgst],
+        referralRewardAmountPerRideForD2DPayout = payoutConfig.referralRewardAmountPerRideForD2DPayout,
+        d2dReferralEarnings = Just d2dDailyEarnings,
+        d2cReferralEarnings = Just d2cDailyEarnings
       }
   where
     parseDailyEarnings earning =
       API.Types.UI.ReferralPayout.DailyEarning
         { earnings = earning.referralEarnings + earning.d2dReferralEarnings,
-          activatedItems = earning.activatedValidRides,
+          activatedItems = earning.activatedValidRides + earning.d2dActivatedValidRides,
           earningDate = earning.merchantLocalDate,
           referrals = earning.referralCounts + earning.d2dReferralCounts,
+          status = if (earning.payoutStatus `elem` [DS.PendingForVpa, DS.Initialized]) then DS.Verifying else earning.payoutStatus,
+          payoutOrderId = earning.payoutOrderId
+        }
+
+    parseD2dDailyEarning earning =
+      API.Types.UI.ReferralPayout.DailyEarning
+        { earnings = earning.d2dReferralEarnings,
+          activatedItems = earning.d2dActivatedValidRides,
+          earningDate = earning.merchantLocalDate,
+          referrals = earning.d2dReferralCounts,
+          status = if (earning.payoutStatus `elem` [DS.PendingForVpa, DS.Initialized]) then DS.Verifying else earning.payoutStatus,
+          payoutOrderId = earning.payoutOrderId
+        }
+
+    parseD2cDailyEarning earning =
+      API.Types.UI.ReferralPayout.DailyEarning
+        { earnings = earning.referralEarnings,
+          activatedItems = earning.activatedValidRides,
+          earningDate = earning.merchantLocalDate,
+          referrals = earning.referralCounts,
           status = if (earning.payoutStatus `elem` [DS.PendingForVpa, DS.Initialized]) then DS.Verifying else earning.payoutStatus,
           payoutOrderId = earning.payoutOrderId
         }

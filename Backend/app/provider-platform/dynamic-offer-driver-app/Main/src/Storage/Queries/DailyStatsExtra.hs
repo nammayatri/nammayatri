@@ -100,11 +100,11 @@ updateD2dReferralStatsByDriverId ::
   Id SP.Person ->
   Day ->
   m ()
-updateD2dReferralStatsByDriverId d2dReferralEarnings d2dReferralCounts payoutStatus driverId merchantLocalDate = do
+updateD2dReferralStatsByDriverId d2dReferralEarnings d2dActivatedValidRides payoutStatus driverId merchantLocalDate = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.d2dReferralEarnings (Just d2dReferralEarnings),
-      Se.Set Beam.d2dReferralCounts (Just d2dReferralCounts),
+      Se.Set Beam.d2dActivatedValidRides (Just d2dActivatedValidRides),
       Se.Set Beam.payoutStatus (Just payoutStatus),
       Se.Set Beam.updatedAt _now
     ]

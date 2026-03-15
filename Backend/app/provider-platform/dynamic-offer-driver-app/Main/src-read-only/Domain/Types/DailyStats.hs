@@ -20,6 +20,7 @@ data DailyStats = DailyStats
     bonusEarnings :: Kernel.Types.Common.HighPrecMoney,
     cancellationCharges :: Kernel.Types.Common.HighPrecMoney,
     currency :: Kernel.Types.Common.Currency,
+    d2dActivatedValidRides :: Kernel.Prelude.Int,
     d2dReferralCounts :: Kernel.Prelude.Int,
     d2dReferralEarnings :: Kernel.Types.Common.HighPrecMoney,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,

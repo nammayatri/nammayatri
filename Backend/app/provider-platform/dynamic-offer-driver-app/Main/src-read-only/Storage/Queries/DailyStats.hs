@@ -142,6 +142,7 @@ updateByPrimaryKey (Domain.Types.DailyStats.DailyStats {..}) = do
       Se.Set Beam.bonusEarnings (Kernel.Prelude.Just bonusEarnings),
       Se.Set Beam.cancellationCharges (Kernel.Prelude.Just cancellationCharges),
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
+      Se.Set Beam.d2dActivatedValidRides (Kernel.Prelude.Just d2dActivatedValidRides),
       Se.Set Beam.d2dReferralCounts (Kernel.Prelude.Just d2dReferralCounts),
       Se.Set Beam.d2dReferralEarnings (Kernel.Prelude.Just d2dReferralEarnings),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),

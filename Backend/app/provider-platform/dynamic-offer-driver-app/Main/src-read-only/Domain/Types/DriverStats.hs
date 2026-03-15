@@ -17,6 +17,8 @@ data DriverStats = DriverStats
     coinCovertedToCashLeft :: Kernel.Types.Common.HighPrecMoney,
     coinsConvertedToDirectPayoutCash :: Kernel.Types.Common.HighPrecMoney,
     currency :: Kernel.Types.Common.Currency,
+    d2cReferralCount :: Kernel.Prelude.Int,
+    d2dReferralCount :: Kernel.Prelude.Int,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Driver,
     earningsMissed :: Kernel.Types.Common.HighPrecMoney,
