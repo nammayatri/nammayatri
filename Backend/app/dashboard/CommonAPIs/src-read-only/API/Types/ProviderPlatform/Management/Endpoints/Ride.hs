@@ -381,6 +381,7 @@ data RideListItem = RideListItem
     vehicleNo :: Kernel.Prelude.Text,
     fareDiff :: Kernel.Prelude.Maybe Kernel.Types.Common.Money,
     fareDiffWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    fareWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     bookingStatus :: BookingStatus,
     rideCreatedAt :: Kernel.Prelude.UTCTime
   }

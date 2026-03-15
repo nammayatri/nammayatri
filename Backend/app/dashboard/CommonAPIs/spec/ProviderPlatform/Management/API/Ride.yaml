@@ -223,6 +223,7 @@ types:
     - vehicleNo: Text
     - fareDiff: Maybe Money
     - fareDiffWithCurrency: Maybe PriceAPIEntity
+    - fareWithCurrency: Maybe PriceAPIEntity
     - bookingStatus: BookingStatus
     - rideCreatedAt: UTCTime
   RideListItemV2:

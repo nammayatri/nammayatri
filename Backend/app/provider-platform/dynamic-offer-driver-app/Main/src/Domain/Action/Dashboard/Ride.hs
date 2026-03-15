@@ -325,6 +325,7 @@ buildRideListItem QRide.RideItem {..} = do
         vehicleNo = rideDetails.vehicleNumber,
         fareDiff = fareDiff <&> (.amountInt),
         fareDiffWithCurrency = mkPriceAPIEntity <$> fareDiff,
+        fareWithCurrency = mkPriceAPIEntity <$> fare,
         bookingStatus,
         rideCreatedAt = rideCreatedAt
       }

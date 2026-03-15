@@ -4,6 +4,7 @@
 module API.Types.ProviderPlatform.Fleet.Endpoints.Driver where
 
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
+import qualified Beckn.Types.Core.Taxi.Common.PaymentInstrument
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Booking
 import qualified Dashboard.Common.Driver
@@ -458,7 +459,8 @@ data FleetBookingAPIEntity = FleetBookingAPIEntity
     vehicleServiceTierName :: Kernel.Prelude.Text,
     tripCategory :: Dashboard.Common.TripCategory,
     distanceToPickup :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
-    isScheduled :: Kernel.Prelude.Bool
+    isScheduled :: Kernel.Prelude.Bool,
+    paymentInstrument :: Kernel.Prelude.Maybe Beckn.Types.Core.Taxi.Common.PaymentInstrument.PaymentInstrument
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

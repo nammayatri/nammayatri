@@ -88,6 +88,7 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Dr
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Endpoints.Driver as Common
 import "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride (CancellationReasonCode (..))
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
+import qualified Beckn.Types.Core.Taxi.Common.PaymentInstrument as BecknPI
 import Control.Applicative (liftA2, optional)
 import qualified "dashboard-helper-api" Dashboard.Common as DCommonRole (Role (..))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
@@ -132,6 +133,7 @@ import qualified Domain.Types.DriverLocation as DDL
 import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.DriverRidePayoutBankAccount as DRPB
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FleetBadge as DFB
 import qualified Domain.Types.FleetBadgeType as DFBT
 import Domain.Types.FleetBookingInformation ()
@@ -4191,6 +4193,14 @@ getDriverFleetScheduledBookingList merchantShortId opCity _ mbLimit mbOffset mbF
             fareDetails = fleetFareDetails
           }
 
+    castPaymentInstrumentToCommon :: DMPM.PaymentInstrument -> BecknPI.PaymentInstrument
+    castPaymentInstrumentToCommon (DMPM.Card DMPM.DefaultCardType) = BecknPI.Card BecknPI.DefaultCardType
+    castPaymentInstrumentToCommon (DMPM.Wallet DMPM.DefaultWalletType) = BecknPI.Wallet BecknPI.DefaultWalletType
+    castPaymentInstrumentToCommon DMPM.UPI = BecknPI.UPI
+    castPaymentInstrumentToCommon DMPM.NetBanking = BecknPI.NetBanking
+    castPaymentInstrumentToCommon DMPM.Cash = BecknPI.Cash
+    castPaymentInstrumentToCommon DMPM.BoothOnline = BecknPI.BoothOnline
+
     convertBookingAPIEntity :: UIDriver.BookingAPIEntity -> Flow Common.FleetBookingAPIEntity
     convertBookingAPIEntity UIDriver.BookingAPIEntity {..} = do
       fromLoc <- convertLocation fromLocation
@@ -4209,7 +4219,8 @@ getDriverFleetScheduledBookingList merchantShortId opCity _ mbLimit mbOffset mbF
             vehicleServiceTierName = vehicleServiceTierName,
             tripCategory = tripCategory,
             distanceToPickup = distanceToPickup,
-            isScheduled = isScheduled
+            isScheduled = isScheduled,
+            paymentInstrument = castPaymentInstrumentToCommon <$> paymentInstrument
           }
 
     convertLocation :: DLoc.Location -> Flow Common.LocationAPIEntity

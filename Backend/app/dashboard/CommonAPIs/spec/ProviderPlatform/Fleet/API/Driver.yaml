@@ -26,6 +26,7 @@ imports:
   TripCategory: Dashboard.Common
   ServiceTierType: Dashboard.Common
   CancellationReasonCode: Dashboard.Common.Booking
+  PaymentInstrument: Beckn.Types.Core.Taxi.Common.PaymentInstrument
 module: Driver
 
 apis:
@@ -2213,6 +2214,7 @@ types:
     - tripCategory: TripCategory
     - distanceToPickup: Maybe Meters
     - isScheduled: Bool
+    - paymentInstrument: Maybe PaymentInstrument
   AssignScheduledBookingReq:
     - bookingId: Text
     - driverId: Id Driver
