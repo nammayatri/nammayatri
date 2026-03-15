@@ -3,11 +3,13 @@
 module Domain.Action.Dashboard.Sos where
 
 import qualified API.Types.RiderPlatform.Management.Sos
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified API.Types.UI.Sos as UISos
 import qualified Dashboard.Common
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import Data.OpenApi (ToSchema)
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Domain.Action.UI.Profile as DP
 import qualified Domain.Action.UI.Sos as Sos
@@ -22,8 +24,11 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.SOS as PoliceSOS
+import qualified Kernel.External.SOS.ERSS.Auth as ERSSAuth
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
+import qualified SharedLogic.External.LocationTrackingService.Types as LTSTypes
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
@@ -34,6 +39,7 @@ import qualified Safety.Domain.Types.Common as SafetyDCommon
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import Servant hiding (throwError)
+import Servant.Client (showBaseUrl)
 import qualified SharedLogic.Ride as SRide
 import qualified SharedLogic.SosLocationTracking as SOSLocation
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -175,6 +181,41 @@ callExternalSOS sosId = do
           whenJust initialRes.trackingId $ \trackingId -> do
             SafetyQSos.updateExternalReferenceId (Just trackingId) sosId
             Redis.del (Sos.mkExternalSOSTraceKey sosId)
+            -- Register ERSS config with LTS for location trace forwarding
+            case specificConfig of
+              SOSInterface.ERSSConfig erssCfg -> do
+                mbMobile <- Sos.getPersonMobileNo (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId)
+                whenJust mbMobile $ \mobileNo -> do
+                  erssToken <- ERSSAuth.getERSSToken erssCfg
+                  selfBaseUrl <- asks (.selfBaseUrl)
+                  locationTrackingServiceKey <- asks (.locationTrackingServiceKey)
+                  let nyReauthUrl = T.pack (showBaseUrl selfBaseUrl) <> "/internal/sos/erss-reauth"
+                      tokenExpiresAt = round (utcTimeToPOSIXSeconds erssToken.accessExpiresAt) :: Int
+                  let erssReq =
+                        LTSTypes.SosErssConfigReq
+                          { externalReferenceId = trackingId,
+                            baseUrl = T.pack (showBaseUrl erssCfg.baseUrl),
+                            accessToken = erssToken.accessToken,
+                            tokenExpiresAt = tokenExpiresAt,
+                            nyReauthUrl = nyReauthUrl,
+                            nyApiKey = locationTrackingServiceKey,
+                            merchantOperatingCityId = merchantOpCityId.getId,
+                            pollingIntervalSecs = maybe 60 (.getSeconds) (riderConfig.externalSOSConfig >>= (.tracePollingIntervalSeconds)),
+                            timeDiffSecs = riderConfig.timeDiffFromUtc.getSeconds,
+                            expiresAt = Nothing,
+                            provider =
+                              LTSTypes.SosTraceProvider
+                                { providerKind = LTSTypes.ERSS,
+                                  authId = erssCfg.authId,
+                                  authCode = erssCfg.authCode,
+                                  mobileNo = mobileNo,
+                                  traceUrlSuffix = "/public/api/sos/trace"
+                                }
+                          }
+                  fork "ltsSosEntityUpsertAndErssConfig" $ do
+                    LTS.entityUpsertForSos sosId.getId (sos.personId.getId) merchantId.getId
+                    LTS.setExternalConfig sosId.getId erssReq
+              _ -> pure ()
         _ -> throwError $ InternalError "Invalid SOS Service Config for provider"
   where
     getCustomerLocation :: Maybe (Kernel.Types.Id.Id DRide.Ride) -> Maybe DRide.Ride -> Environment.Flow (Maybe LatLong)
