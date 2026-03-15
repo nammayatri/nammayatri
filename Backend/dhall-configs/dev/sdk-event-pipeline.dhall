@@ -12,9 +12,9 @@ let hedisClusterCfg =
       , connectPort = 30001
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +5
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 

@@ -25,7 +25,7 @@ import EulerHS.Prelude
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Types.Id
 import Kernel.Types.Time
-import Kernel.Utils.Common (withTryCatch)
+import Kernel.Utils.Common (logError, withTryCatch)
 import "dynamic-offer-driver-app" Storage.Queries.MessageReport as MRQuery
 import "dynamic-offer-driver-app" Storage.Queries.Person as Person
 import "dynamic-offer-driver-app" Tools.Notifications (sendMessageToDriver)
@@ -55,4 +55,7 @@ broadcastMessage messageDict driverId = do
                 createdAt = now,
                 updatedAt = now
               }
-      void $ withTryCatch "createMessageReport" $ MRQuery.create messageReport
+      exepCreate <- withTryCatch "createMessageReport" $ MRQuery.create messageReport
+      case exepCreate of
+        Left err -> logError $ "Failed to create message report for driverId: " <> drvrId <> ", messageId: " <> messageId.getId <> ", error: " <> show err
+        Right _ -> pure ()

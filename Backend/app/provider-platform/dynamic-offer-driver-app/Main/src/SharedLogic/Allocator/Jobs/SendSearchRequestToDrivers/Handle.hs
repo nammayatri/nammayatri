@@ -28,6 +28,7 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
+import qualified Lib.SessionizerMetrics.Prometheus.Metrics as ObsMetrics
 import Lib.Scheduler.Types (ExecutionResult (..))
 import SharedLogic.CallBAPInternal as CallBAPInternal
 import SharedLogic.DriverPool
@@ -85,6 +86,7 @@ processRequestSending Handle {..} goHomeCfg transactionId = do
           return (Complete, NormalPool, Nothing)
         else do
           metrics.incrementFailedTaskCounter
+          ObsMetrics.incrementAllocationCounter transactionId "" "no_drivers"
           logInfo "No driver accepted"
           appBackendBapInternal <- asks (.appBackendBapInternal)
           let request = CallBAPInternal.RideSearchExpiredReq {transactionId = transactionId}

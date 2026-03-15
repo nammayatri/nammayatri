@@ -70,7 +70,7 @@ buildAppEnv AppCfg {..} = do
   isShuttingDown <- mkShutdown
   let requestId = Nothing
       sessionId = Nothing
-      shouldLogRequestId = False
+      shouldLogRequestId = True
   let url = Nothing
   return $ AppEnv {..}
 

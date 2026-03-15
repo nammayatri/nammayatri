@@ -26,6 +26,7 @@ import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
+import Utils.SlowQueryLog (timedRunDB)
 import qualified Storage.Queries.BookingLocation as QBBL
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.DriverOffer ()
@@ -151,7 +152,7 @@ findByIdAndMerchantId (Id bookingId) (Id merchantId) = findOneWithKV [Se.And [Se
 findCountByRiderIdAndStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> BookingStatus -> m Int
 findCountByRiderIdAndStatus (Id personId) status = do
   dbConf <- getReplicaBeamConfig
-  res <- L.runDB dbConf $
+  res <- timedRunDB "booking" "countByStatus" $ L.runDB dbConf $
     L.findRows $
       B.select $
         B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
@@ -165,7 +166,7 @@ findCountByRiderIdAndStatus (Id personId) status = do
 findCountByRideIdStatusAndTime :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> BookingStatus -> UTCTime -> UTCTime -> m Int
 findCountByRideIdStatusAndTime (Id personId) status startTime endTime = do
   dbConf <- getReplicaBeamConfig
-  res <- L.runDB dbConf $
+  res <- timedRunDB "booking" "countByStatusAndTime" $ L.runDB dbConf $
     L.findRows $
       B.select $
         B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
@@ -376,7 +377,7 @@ findAllByRiderIdAndStatusAndMOCId (Id personId) status (Id mocId) = do
 fetchRidesCount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Int)
 fetchRidesCount personId = do
   dbConf <- getReplicaBeamConfig
-  res <- L.runDB dbConf $
+  res <- timedRunDB "booking" "countRides" $ L.runDB dbConf $
     L.findRows $
       B.select $
         B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $

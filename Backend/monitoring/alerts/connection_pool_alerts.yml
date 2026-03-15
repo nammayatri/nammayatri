@@ -1,0 +1,55 @@
+# Prometheus alerting rules for connection pool health monitoring.
+# Deploy alongside your Prometheus configuration.
+
+groups:
+  - name: connection_pool_health
+    rules:
+      # PostgreSQL pool utilization > 80% for 5 minutes
+      - alert: PgPoolHighUtilization
+        expr: db_pool_utilization_ratio > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL pool utilization high ({{ $labels.service }}/{{ $labels.pool }})"
+          description: >
+            Pool utilization is {{ $value | humanizePercentage }} for
+            {{ $labels.service }}/{{ $labels.pool }}.
+            Consider increasing connectionPoolCount or investigating slow queries.
+
+      # PostgreSQL pool utilization > 95% for 2 minutes (critical)
+      - alert: PgPoolNearExhaustion
+        expr: db_pool_utilization_ratio > 0.95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL pool near exhaustion ({{ $labels.service }}/{{ $labels.pool }})"
+          description: >
+            Pool utilization is {{ $value | humanizePercentage }} for
+            {{ $labels.service }}/{{ $labels.pool }}.
+            Connection exhaustion imminent — requests will start blocking.
+
+      # No idle connections for 5 minutes
+      - alert: PgPoolNoIdleConnections
+        expr: db_pool_idle == 0 and db_pool_size > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No idle PostgreSQL connections ({{ $labels.service }}/{{ $labels.pool }})"
+          description: >
+            All {{ $labels.service }}/{{ $labels.pool }} pool connections are in use.
+            New requests may block waiting for a connection.
+
+      # Pool size unexpectedly at zero (misconfiguration or pool destroyed)
+      - alert: PgPoolEmpty
+        expr: db_pool_size == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL pool size is zero ({{ $labels.service }}/{{ $labels.pool }})"
+          description: >
+            Pool {{ $labels.service }}/{{ $labels.pool }} reports size 0.
+            This indicates a misconfiguration or pool destruction.

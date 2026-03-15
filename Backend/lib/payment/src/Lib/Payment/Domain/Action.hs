@@ -502,34 +502,37 @@ createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity
     case mbCreateWalletCall of
       Just createWalletCall -> do handleWalletOrder createOrderReq createWalletCall
       Nothing -> throwError $ InternalError "Wallet creation call not found"
-  mbExistingOrder <- QOrder.findById (Id createOrderReq.orderId)
-  case mbExistingOrder of
-    Nothing -> do
-      createOrderResp <- createOrderCall createOrderReq -- api call
-      paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType createOrderReq createOrderResp _isMockPayment mbGroupId
-      QOrder.create paymentOrder
-      return $ Just createOrderResp
-    Just existingOrder -> do
-      isOrderExpired <- maybe (pure True) (checkIfExpired existingOrder) existingOrder.clientAuthTokenExpiry
-      if isOrderExpired
-        then do
-          QOrder.updateStatusToExpired existingOrder.id
-          return Nothing
-        else do
-          sdkPayload <- buildSDKPayload createOrderReq existingOrder
-          case sdkPayload of
-            Just sdk_payload -> do
-              return $
-                Just $
-                  Payment.CreateOrderResp
-                    { status = existingOrder.status,
-                      id = existingOrder.paymentServiceOrderId,
-                      order_id = existingOrder.shortId.getShortId,
-                      payment_links = Just existingOrder.paymentLinks,
-                      sdk_payload,
-                      sdk_payload_json = existingOrder.sdkPayloadDump
-                    }
-            Nothing -> return Nothing
+  -- Use distributed lock to prevent race condition where concurrent requests
+  -- both see no existing order and both call Juspay API + create DB record
+  Redis.withLockRedisAndReturnValue (createOrderLockKey createOrderReq.orderId) 30 $ do
+    mbExistingOrder <- QOrder.findById (Id createOrderReq.orderId)
+    case mbExistingOrder of
+      Nothing -> do
+        createOrderResp <- createOrderCall createOrderReq -- api call
+        paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType createOrderReq createOrderResp _isMockPayment mbGroupId
+        QOrder.create paymentOrder
+        return $ Just createOrderResp
+      Just existingOrder -> do
+        isOrderExpired <- maybe (pure True) (checkIfExpired existingOrder) existingOrder.clientAuthTokenExpiry
+        if isOrderExpired
+          then do
+            QOrder.updateStatusToExpired existingOrder.id
+            return Nothing
+          else do
+            sdkPayload <- buildSDKPayload createOrderReq existingOrder
+            case sdkPayload of
+              Just sdk_payload -> do
+                return $
+                  Just $
+                    Payment.CreateOrderResp
+                      { status = existingOrder.status,
+                        id = existingOrder.paymentServiceOrderId,
+                        order_id = existingOrder.shortId.getShortId,
+                        payment_links = Just existingOrder.paymentLinks,
+                        sdk_payload,
+                        sdk_payload_json = existingOrder.sdkPayloadDump
+                      }
+              Nothing -> return Nothing
   where
     checkIfExpired order expiry = do
       now <- getCurrentTime
@@ -843,7 +846,7 @@ orderStatusService personId orderId orderStatusCall mbWalletPostingCall = do
                 ..
               }
       maybe
-        (updateOrderTransaction order orderTxn Nothing)
+        (Redis.whenWithLockRedis (orderWebhookProcessingKey order.shortId.getShortId) 60 $ updateOrderTransaction order orderTxn Nothing)
         ( \transactionUUID' ->
             Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn Nothing
         )
@@ -872,7 +875,7 @@ orderStatusService personId orderId orderStatusCall mbWalletPostingCall = do
                 ..
               }
       maybe
-        (updateOrderTransaction order orderTxn Nothing)
+        (Redis.whenWithLockRedis (orderWebhookProcessingKey order.shortId.getShortId) 60 $ updateOrderTransaction order orderTxn Nothing)
         ( \transactionUUID' ->
             Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $
               updateOrderTransaction order orderTxn Nothing
@@ -967,12 +970,13 @@ updateOrderTransaction order resp respDump = do
       errorCode = resp.bankErrorCode
   mbTransaction <- do
     case resp.transactionUUID of
-      -- Just transactionUUID -> runInReplica $ QTransaction.findByTxnUUID transactionUUID
       Just transactionUUID -> do
         mbTxn <- QTransaction.findByTxnUUID transactionUUID
         when (isNothing mbTxn) $ do
           transaction <- buildPaymentTransaction order resp respDump
-          QTransaction.create transaction
+          -- Wrap in try to handle potential duplicate from concurrent webhook delivery.
+          -- If another process already inserted this txnUUID, we safely ignore the error.
+          void $ try @_ @SomeException $ QTransaction.create transaction
         return mbTxn
       Nothing -> QTransaction.findNewTransactionByOrderId order.id
   let updOrder = order{status = resp.transactionStatus, isRetargeted = fromMaybe order.isRetargeted resp.isRetargeted, isRetried = fromMaybe order.isRetried resp.isRetried, retargetLink = resp.retargetLink}
@@ -1057,8 +1061,10 @@ juspayWebhookService resp respDump = do
                 applicationFeeAmount = Nothing,
                 ..
               }
+      -- Use txnUUID lock when available; fall back to order-level lock to prevent
+      -- duplicate processing when webhook is delivered without transactionUUID
       maybe
-        (updateOrderTransaction order orderTxn Nothing)
+        (Redis.whenWithLockRedis (orderWebhookProcessingKey orderShortId) 60 $ updateOrderTransaction order orderTxn Nothing)
         ( \transactionUUID' ->
             Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn $ Just respDump
         )
@@ -1080,7 +1086,7 @@ juspayWebhookService resp respDump = do
                 ..
               }
       maybe
-        (updateOrderTransaction order orderTxn Nothing)
+        (Redis.whenWithLockRedis (orderWebhookProcessingKey orderShortId) 60 $ updateOrderTransaction order orderTxn Nothing)
         ( \transactionUUID' ->
             Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn $ Just respDump
         )
@@ -1141,7 +1147,7 @@ stripeWebhookService resp respDump stripeWebhookData = do
         Just orderShortId -> do
           order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
           maybe
-            (updateOrderTransaction order orderTxn Nothing)
+            (Redis.whenWithLockRedis (orderWebhookProcessingKey orderShortId) 60 $ updateOrderTransaction order orderTxn Nothing)
             ( \transactionUUID' ->
                 Redis.whenWithLockRedis (txnStripeProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn $ Just respDump
             )
@@ -1451,6 +1457,12 @@ calculateCompletedAt status now =
 
 txnProccessingKey :: Text -> Text
 txnProccessingKey txnUUid = "Txn:Processing:TxnUuid" <> txnUUid
+
+orderWebhookProcessingKey :: Text -> Text
+orderWebhookProcessingKey orderShortId = "Webhook:Processing:OrderShortId:" <> orderShortId
+
+createOrderLockKey :: Text -> Text
+createOrderLockKey orderId = "CreateOrder:Lock:" <> orderId
 
 data InitiateStripeRefundReq = InitiateStripeRefundReq
   { orderId :: Id DOrder.PaymentOrder,

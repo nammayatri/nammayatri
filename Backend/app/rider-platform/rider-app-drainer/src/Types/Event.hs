@@ -41,3 +41,10 @@ data DBSyncMetric
   | BatchExecutionTime ModelName Double
   | BatchEntriesProcessed ModelName Int
   | SchemaVariationAlert ModelName Int
+  | DrainerBatchSize Int
+  | DrainerErrorsTotal
+  | DrainerLagSeconds Double
+  | DrainerItemsPending Double
+  | DLQItemAdded Action Int
+  | BackpressureActivated Double
+  | BatchRetryAttempt Action Int

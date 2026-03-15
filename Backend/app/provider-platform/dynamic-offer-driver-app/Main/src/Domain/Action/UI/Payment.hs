@@ -73,6 +73,7 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.SessionizerMetrics.Prometheus.Metrics as ObsMetrics
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
@@ -328,6 +329,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
     Just osr' -> pure osr'
   case osr of
     Payment.OrderStatusResp {..} -> do
+      ObsMetrics.incrementPaymentCounter (getShortId merchantShortId) "juspay" (show transactionStatus)
       order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
       mbSubscriptionPurchase <- QSP.findByPaymentOrderId (cast order.id)
       case mbSubscriptionPurchase of

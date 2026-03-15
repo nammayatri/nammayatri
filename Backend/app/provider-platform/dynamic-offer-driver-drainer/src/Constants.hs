@@ -209,3 +209,17 @@ defaultDbConnectionRetryMaxAttempts = 5
 
 defaultDbConnectionRetryDelay :: Int
 defaultDbConnectionRetryDelay = 2000000 -- 2 seconds in microseconds
+
+-- Dead Letter Queue
+ecRedisDLQStream :: [Char]
+ecRedisDLQStream = "driver-db-sync-dlq-stream"
+
+dlqMaxRetriesEnvKey :: String
+dlqMaxRetriesEnvKey = "DLQ_MAX_RETRIES"
+
+-- Backpressure
+backpressureThresholdEnvKey :: String
+backpressureThresholdEnvKey = "BACKPRESSURE_THRESHOLD"
+
+backpressureDelayEnvKey :: String
+backpressureDelayEnvKey = "BACKPRESSURE_DELAY"

@@ -14,7 +14,6 @@
 
 module SharedLogic.External.LocationTrackingService.Flow where
 
-import qualified Data.Either as Either
 import Domain.Types.DriverLocation
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -28,6 +27,8 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Utils.Common.Sanitize (sanitizeShowError)
+import qualified Lib.SessionizerMetrics.Prometheus.Metrics as ObsMetrics
 import qualified SharedLogic.External.LocationTrackingService.API.DriverBlockTill as DriverBlockTill
 import qualified SharedLogic.External.LocationTrackingService.API.DriverLocation as DriverLocationAPI
 import qualified SharedLogic.External.LocationTrackingService.API.DriversLocation as DriversLocationAPI
@@ -49,10 +50,13 @@ rideStart rideId lat lon merchantId driverId rideInfo = do
             driverId,
             rideInfo
           }
+  startTime <- getCurrentTime
   rideStartRes <-
     withShortRetry $
       callAPI url (StartRideAPI.startRide rideId req) "rideStart" StartRideAPI.locationTrackingServiceAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_START_RIDE_API") url)
+  endTime <- getCurrentTime
+  ObsMetrics.observeExternalAPILatency "lts" "rideStart" (realToFrac $ diffUTCTime endTime startTime)
   logDebug $ "lts rideStart: " <> show rideStartRes
   return rideStartRes
 
@@ -69,10 +73,13 @@ rideEnd rideId lat lon merchantId driverId mbNextRideId rideInfo = do
             nextRideId = mbNextRideId,
             rideInfo = rideInfo
           }
+  startTime <- getCurrentTime
   rideEndRes <-
     withShortRetry $
       callAPI url (EndRideAPI.endRide rideId req) "rideEnd" EndRideAPI.locationTrackingServiceAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_END_RIDE_API") url)
+  endTime <- getCurrentTime
+  ObsMetrics.observeExternalAPILatency "lts" "rideEnd" (realToFrac $ diffUTCTime endTime startTime)
   logDebug $ "lts rideEnd: " <> show rideEndRes
   return rideEndRes
 
@@ -103,7 +110,7 @@ nearBy lat lon onRide vt radius merchantId groupId groupId2 = do
             >>= \case
               Right locations -> pure locations
               Left err -> do
-                logError $ "Failed to call nearBy API for secondary url: " <> show url <> ", error: " <> show err
+                logError $ "Failed to call nearBy API for secondary url, error: " <> sanitizeShowError err
                 pure []
 
   primaryAwaitable <- awaitableFork "primaryLTS" $ callNearByAPI ltsCfg.url
@@ -112,13 +119,17 @@ nearBy lat lon onRide vt radius merchantId groupId groupId2 = do
   -- Primary call must succeed - propagate error if it fails
   primaryResult <-
     L.await Nothing primaryAwaitable >>= \case
-      Left err -> throwError $ InternalError $ "Failed to call nearBy API for primary url: " <> show ltsCfg.url <> ", error: " <> show err
+      Left _ -> throwError $ InternalError "Failed to call nearBy API for primary url"
       Right result -> pure result
   -- Secondary call is optional - gracefully handle errors
-  secondaryResult <- maybe (pure []) (fmap (Either.fromRight []) . L.await Nothing) mbSecondaryAwaitable
+  secondaryResult <- maybe (pure []) (\awaitable -> L.await Nothing awaitable >>= \case
+    Right result -> pure result
+    Left _ -> do
+      logError "Secondary LTS nearBy call failed"
+      pure []) mbSecondaryAwaitable
 
   let combinedLocations = primaryResult <> secondaryResult
-  logDebug $ "lts nearBy: " <> show combinedLocations
+  logDebug $ "lts nearBy: resultCount=" <> show (length combinedLocations)
   return combinedLocations
 
 rideDetails :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DR.Ride -> DR.RideStatus -> Id DM.Merchant -> Id DP.Person -> Double -> Double -> Maybe Bool -> Maybe RideInfo -> m APISuccess
@@ -155,7 +166,7 @@ driversLocation driverIds = do
     withShortRetry $
       callAPI url (DriversLocationAPI.driversLocation req) "driversLocation" DriversLocationAPI.locationTrackingServiceAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVERS_LOCATION_API") url)
-  logDebug $ "lts driversLocation: " <> show driversLocationRes
+  logDebug $ "lts driversLocation: resultCount=" <> show (length driversLocationRes)
   return driversLocationRes
 
 driverLocation :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DR.Ride -> Id DM.Merchant -> Id DP.Person -> m DriverLocationResp

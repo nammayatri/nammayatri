@@ -30,7 +30,7 @@ import SharedLogic.TicketUtils
 import qualified Storage.Queries.DraftTicketChange as QDTC
 import qualified Storage.Queries.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.SeatManagement as QTSM
-import qualified Storage.Queries.ServiceCategory as QSC
+import qualified Storage.CachedQueries.ServiceCategory as CQSC
 import qualified Storage.Queries.TicketPlace as QTP
 import Tools.Error
 
@@ -98,7 +98,7 @@ ticketDashboardSeatManagement _merchantShortId _opCity ticketPlaceId requestorId
   unless (reqRole == Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_ADMIN || (reqRole == Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_MERCHANT && ticketPlace.ticketMerchantId == requestorId)) $ throwError $ InvalidRequest "Requestor does not have this access"
   let serviceCategoryId = Kernel.Types.Id.Id req.serviceCategory
   let visitDate = req.date
-  tBookingSC <- QSC.findById serviceCategoryId >>= fromMaybeM (InvalidRequest "TicketBookingServiceCategory not found")
+  tBookingSC <- CQSC.findById serviceCategoryId >>= fromMaybeM (InvalidRequest "TicketBookingServiceCategory not found")
   mbSeatM <- QTSM.findByTicketServiceCategoryIdAndDate serviceCategoryId visitDate
   when (isNothing mbSeatM) $ do
     seatId <- generateGUID

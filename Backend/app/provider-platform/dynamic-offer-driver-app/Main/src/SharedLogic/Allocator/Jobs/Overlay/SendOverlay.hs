@@ -194,7 +194,7 @@ getLastScheduledJobTime merchantOpCityId vehicleCategory jobId scheduledTime tim
       Just lastScheduledTime -> pure lastScheduledTime
 
 setLastScheduledJobTime :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DVC.VehicleCategory -> Id AnyJob -> UTCTime -> m ()
-setLastScheduledJobTime merchantOpCityId vehicleCategory jobId = Hedis.set (makeLastScheduledTimeJobKey merchantOpCityId vehicleCategory jobId)
+setLastScheduledJobTime merchantOpCityId vehicleCategory jobId val = Hedis.setExp (makeLastScheduledTimeJobKey merchantOpCityId vehicleCategory jobId) val 604800 -- 7 days
 
 makeLastScheduledTimeJobKey :: Id DMOC.MerchantOperatingCity -> DVC.VehicleCategory -> Id AnyJob -> Text
 makeLastScheduledTimeJobKey merchantOpCityId vehicleCategory jobId = "SendOverlayScheduler:lastScheduledTime:merchantOpCityId-" <> merchantOpCityId.getId <> ":VehCat:-" <> show vehicleCategory <> ":jobId" <> jobId.getId

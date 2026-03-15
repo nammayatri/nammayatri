@@ -208,6 +208,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics.Types
+import qualified Lib.SessionizerMetrics.Prometheus.Metrics as ObsMetrics
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
@@ -916,6 +917,10 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
               Nothing -> throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
         when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ do
           let newFlowStatus = DDriverMode.getDriverFlowStatus (mode <|> Just DriverInfo.OFFLINE) isActive
+          when (driverInfo.active /= isActive) $
+            if isActive
+              then ObsMetrics.incrementOnlineDrivers merchantId.getId merchantOpCityId.getId
+              else ObsMetrics.decrementOnlineDrivers merchantId.getId merchantOpCityId.getId
           -- Track offline timestamp when driver goes offline
           if (mode == Just DriverInfo.OFFLINE && driverInfo.mode /= Just DriverInfo.OFFLINE)
             then do

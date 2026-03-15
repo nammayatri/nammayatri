@@ -45,8 +45,6 @@ import Kernel.Utils.Common
 import Kernel.Utils.Dhall (readDhallConfigDefault)
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Servant.SignatureAuth
-import Network.HTTP.Types (status408)
-import Network.Wai
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,
@@ -150,5 +148,5 @@ runRiderApp' appCfg = do
               ]
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         pure flowRt'
-    let timeoutMiddleware = UE.timeoutEvent flowRt appEnv (responseLBS status408 [] "") appCfg.incomingAPIResponseTimeout
-    runSettings settings $ timeoutMiddleware (App.run (App.EnvR flowRt' appEnv))
+    let timeoutMiddleware = UE.timeoutEvent flowRt appEnv appCfg.incomingAPIResponseTimeout
+    runSettings settings $ timeoutMiddleware $ UE.addRequestIdToResponse (App.run (App.EnvR flowRt' appEnv))

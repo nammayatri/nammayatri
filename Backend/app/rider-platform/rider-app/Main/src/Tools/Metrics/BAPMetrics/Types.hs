@@ -47,9 +47,9 @@ data BAPMetricsContainer = BAPMetricsContainer
 
 type SearchRequestCounterMetric = P.Vector P.Label3 P.Counter
 
-type BusScannetCounterMetric = P.Vector P.Label4 P.Counter
+type BusScannetCounterMetric = P.Vector P.Label3 P.Counter
 
-type FleetRouteMapMissingCounterMetric = P.Vector P.Label4 P.Counter
+type FleetRouteMapMissingCounterMetric = P.Vector P.Label3 P.Counter
 
 type RideCreatedCounterMetric = P.Vector P.Label4 P.Counter
 
@@ -81,10 +81,10 @@ registerSearchRequestCounterMetric :: IO SearchRequestCounterMetric
 registerSearchRequestCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId") $ P.counter $ P.Info "search_request_count" ""
 
 registerBusScannetCounterMetric :: IO BusScannetCounterMetric
-registerBusScannetCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId", "vehicle_number") $ P.counter $ P.Info "scanned_bus_counter" ""
+registerBusScannetCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId") $ P.counter $ P.Info "scanned_bus_counter" ""
 
 registerFleetRouteMapMissingCounterMetric :: IO FleetRouteMapMissingCounterMetric
-registerFleetRouteMapMissingCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId", "vehicle_number") $ P.counter $ P.Info "fleet_route_map_missing_counter" ""
+registerFleetRouteMapMissingCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId") $ P.counter $ P.Info "fleet_route_map_missing_counter" ""
 
 registerBusScanSearchRequestCounterMetric :: IO BusScanSearchRequestCounterMetric
 registerBusScanSearchRequestCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId") $ P.counter $ P.Info "bus_scan_search_request_count" ""
@@ -94,7 +94,7 @@ registerRideCreatedCounterMetric = P.register $ P.vector ("merchant_id", "versio
 
 registerSearchDurationMetric :: Seconds -> IO SearchDurationMetric
 registerSearchDurationMetric searchDurationTimeout = do
-  let bucketsCount = (getSeconds searchDurationTimeout + 1) * 2
+  let bucketsCount = min 20 $ (getSeconds searchDurationTimeout + 1) * 2
   searchDurationHistogram <- P.register . P.vector ("merchant_name", "version") . P.histogram (P.Info "beckn_search_round_trip" "") $ P.linearBuckets 0 0.5 bucketsCount
   failureCounter <- P.register . P.vector ("merchant_name", "version") $ P.counter $ P.Info "beckn_search_round_trip_failure_counter" ""
   return (searchDurationHistogram, failureCounter)
@@ -104,7 +104,7 @@ registerDurationMetricFRFS = registerDurationMetric
 
 registerDurationMetric :: Seconds -> Text -> Text -> Text -> Text -> Text -> IO DurationMetric
 registerDurationMetric durationTimeout merchantName version merchantOperatingCityId roundTrip roundTripFailureCounter = do
-  let bucketsCount = (getSeconds durationTimeout + 1) * 2
+  let bucketsCount = min 20 $ (getSeconds durationTimeout + 1) * 2
   durationHistogram <- P.register . P.vector (merchantName, version, merchantOperatingCityId) . P.histogram (P.Info roundTrip "") $ P.linearBuckets 0 0.5 bucketsCount
   failureCounter <- P.register . P.vector (merchantName, version, merchantOperatingCityId) $ P.counter $ P.Info roundTripFailureCounter ""
   return (durationHistogram, failureCounter)

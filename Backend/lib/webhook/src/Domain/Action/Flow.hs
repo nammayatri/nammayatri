@@ -45,4 +45,4 @@ nyWebhook url password userName req = do
   let proxy = Proxy @NYWebhookAPI
       eulerClient = Euler.client proxy (mkBasicAuthData userName passwordDecrypted) req
   callAPI url eulerClient "ny-ext-webhook" proxy
-    >>= fromEitherM (\err -> InternalError $ "Failed to call " <> "ny-ext-webhook" <> " API: " <> show err)
+    >>= fromEitherM (\_err -> InternalError "Failed to call ny-ext-webhook API")

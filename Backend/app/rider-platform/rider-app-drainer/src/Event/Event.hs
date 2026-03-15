@@ -28,6 +28,13 @@ mkDBSyncMetric = do
       BatchExecutionTime model time -> observe (metrics </> #batch_execution_time) time model
       BatchEntriesProcessed model count -> add (metrics </> #batch_entries_processed) (fromIntegral count) model
       SchemaVariationAlert model _ -> inc (metrics </> #schema_variation_alert) model
+      DrainerBatchSize size -> observe (metrics </> #drainer_batch_size) (fromIntegral size)
+      DrainerErrorsTotal -> inc (metrics </> #drainer_errors_total)
+      DrainerLagSeconds lag -> setGauge (metrics </> #drainer_lag_seconds) lag
+      DrainerItemsPending pending -> setGauge (metrics </> #drainer_items_pending) pending
+      DLQItemAdded action count -> add (metrics </> #dlq_item_added) (fromIntegral count) action
+      BackpressureActivated ratio -> setGauge (metrics </> #backpressure_activated) ratio
+      BatchRetryAttempt action attempt -> add (metrics </> #batch_retry_attempt) (fromIntegral attempt) action
   where
     collectionDBSyncMetric =
       peek_db_command_error
@@ -46,4 +53,11 @@ mkDBSyncMetric = do
         .> batch_execution_time
         .> batch_entries_processed
         .> schema_variation_alert
+        .> drainer_batch_size
+        .> drainer_errors_total
+        .> drainer_lag_seconds
+        .> drainer_items_pending
+        .> dlq_item_added
+        .> backpressure_activated
+        .> batch_retry_attempt
         .> MNil

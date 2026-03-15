@@ -2,14 +2,15 @@ let common = ./common.dhall
 
 let sec = ./secrets/public-transport-rider-platform.dhall
 
+-- Redis pool: 5 for low-traffic mock services (Tier 3).
 let hcfg =
       { connectHost = "localhost"
       , connectPort = 6379
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +5
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 
@@ -18,9 +19,9 @@ let hccfg =
       , connectPort = 30001
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +5
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 

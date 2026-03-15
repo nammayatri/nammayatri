@@ -537,9 +537,9 @@ instance IsHTTPError MediaFileError where
     FileFormatNotSupported _ -> "FILE_FORMAT_NOT_SUPPORTED"
     MismatchDataError _ -> "MISMATCH_DATA_ERROR"
   toHttpCode = \case
-    FileSizeExceededError _ -> E400
+    FileSizeExceededError _ -> E413
     FileDoNotExist _ -> E400
-    FileFormatNotSupported _ -> E400
+    FileFormatNotSupported _ -> E415
     MismatchDataError _ -> E400
 
 instance IsAPIError MediaFileError
@@ -942,8 +942,8 @@ instance IsHTTPError DashboardSMSError where
     VolunteerMessageSendingLimitExceeded _ -> "VOLUNTEER_MESSAGE_SENDING_LIMIT_EXCEEDED"
     DriverMessageReceivingLimitExceeded _ -> "DRIVER_MESSAGE_RECEIVING_LIMIT_EXCEEDED"
   toHttpCode = \case
-    VolunteerMessageSendingLimitExceeded _ -> E400
-    DriverMessageReceivingLimitExceeded _ -> E400
+    VolunteerMessageSendingLimitExceeded _ -> E429
+    DriverMessageReceivingLimitExceeded _ -> E429
 
 instance IsAPIError DashboardSMSError
 
@@ -979,7 +979,7 @@ instance IsHTTPError DriverCoinError where
     CoinInfoTranslationNotFound _ _ -> "COIN_INFO_TRANSLATION_NOT_FOUND"
     NoPlanAgaintsDriver _ -> "NO_PLAN_AGAINST_DRIVER"
   toHttpCode = \case
-    CoinServiceUnavailable _ -> E400
+    CoinServiceUnavailable _ -> E503
     InsufficientCoins _ _ -> E400
     CoinConversionToCash _ _ _ -> E400
     CoinUsedForConverting _ _ _ -> E400
@@ -1913,3 +1913,20 @@ instance IsHTTPError TripAlertRequestError where
     TripAlertRequestNotFound _ -> E404
 
 instance IsAPIError TripAlertRequestError
+
+data CustomAuthError = IpHitsLimitExceeded
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''CustomAuthError
+
+instance IsBaseError CustomAuthError where
+  toMessage = \case
+    IpHitsLimitExceeded -> Just "IP Rate Limit Exceeded, Too Many Requests In Short Duration"
+
+instance IsHTTPError CustomAuthError where
+  toErrorCode = \case
+    IpHitsLimitExceeded -> "IP_HITS_LIMIT_EXCEEDED"
+  toHttpCode = \case
+    IpHitsLimitExceeded -> E429
+
+instance IsAPIError CustomAuthError

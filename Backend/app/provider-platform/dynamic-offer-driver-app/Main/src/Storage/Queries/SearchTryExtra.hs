@@ -1,15 +1,19 @@
 module Storage.Queries.SearchTryExtra where
 
+import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
 import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchTry as Domain
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
+import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.SearchTry as BeamST
 import Storage.Queries.OrphanInstances.SearchTry ()
+import Utils.SlowQueryLog (timedRunDB)
 
 -- Extra code goes here --
 
@@ -47,11 +51,22 @@ findActiveTryByQuoteId quoteId =
     Nothing
     <&> listToMaybe
 
+-- | Projection query: fetches only validTill and status (2 of 31 columns).
+-- Called in allocator critical path (every batch cycle) via isSearchTryValid.
 getSearchTryStatusAndValidTill ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id SearchTry ->
   m (Maybe (UTCTime, SearchTryStatus))
-getSearchTryStatusAndValidTill (Id searchTryId) = findOneWithKV [Se.Is BeamST.id $ Se.Eq searchTryId] <&> fmap (\st -> (Domain.validTill st, Domain.status st))
+getSearchTryStatusAndValidTill (Id searchTryId) = do
+  dbConf <- getReplicaBeamConfig
+  res <- timedRunDB "search_try" "getStatusAndValidTill" $ L.runDB dbConf $
+    L.findRows $
+      B.select $ do
+        st <- B.filter_'
+          (\st -> BeamST.id st B.==?. B.val_ searchTryId)
+          (B.all_ (BeamCommon.searchTry BeamCommon.atlasDB))
+        pure (BeamST.validTill st, BeamST.status st)
+  pure $ either (const Nothing) listToMaybe res
 
 cancelActiveTriesByRequestId ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

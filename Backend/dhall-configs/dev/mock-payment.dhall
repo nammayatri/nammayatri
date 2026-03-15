@@ -13,16 +13,16 @@ in  { port = +8091
       , connectPassword = "atlas"
       , connectDatabase = "atlas_dev"
       , connectSchemaName = "atlas_app"
-      , connectionPoolCount = +10
+      , connectionPoolCount = +2
       }
     , hedisCfg =
       { connectHost = "localhost"
       , connectPort = 6379
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +5
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = False
       }
     }

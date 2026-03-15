@@ -49,6 +49,7 @@ import Kernel.Storage.Esqueleto.Config
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Utils.Common.Sanitize (sanitizeShowError)
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Person as QPerson
@@ -148,7 +149,7 @@ getFares riderId merchantId merchantOperatingCityId integrationBPPConfig fareRou
       resp <- withTryCatch "CRIS:getRouteFare" $ if config'.useRouteFareV4 == Just True then CRISRouteFare.getRouteFare config' merchantOperatingCityId routeFareReq getAllFares else CRISRouteFareV3.getRouteFare config' merchantOperatingCityId routeFareReq getAllFares
       case resp of
         Left err -> do
-          logError $ "Error while calling CRIS API: " <> show err
+          logError $ "Error while calling CRIS API: " <> sanitizeShowError err
           return []
         Right (fares, _) -> return fares
 

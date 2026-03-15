@@ -6,9 +6,11 @@ let nsdlRegistryUrl = "https://pilot-gateway-1.beckn.nsdl.co.in/"
 
 let becknOneRegistryUrl = "https://beckn-one.succinct.in/subscribers"
 
+let RoutingPreference = < ROUTING_PREFERENCE_UNSPECIFIED | TRAFFIC_UNAWARE | TRAFFIC_AWARE | TRAFFIC_AWARE_OPTIMAL >
+
 let googleRouteConfig =
       { computeAlternativeRoutes = False
-      , routePreference = "TRAFFIC_AWARE_OPTIMAL"
+      , routePreference = RoutingPreference.TRAFFIC_AWARE_OPTIMAL
       , url = "https://routes.googleapis.com/"
       }
 
@@ -20,6 +22,7 @@ let googleCfg =
       , googlePlaceNewUrl = "https://places.googleapis.com/v1/"
       , useNewPlaces = True
       , googleRouteConfig
+      , googleAutocompleteParams = None (List Text)
       }
 
 let mockGoogleCfg =
@@ -30,6 +33,7 @@ let mockGoogleCfg =
       , googlePlaceNewUrl = "http://localhost:8019/"
       , useNewPlaces = True
       , googleRouteConfig
+      , googleAutocompleteParams = None (List Text)
       }
 
 let internalEndPointMap =

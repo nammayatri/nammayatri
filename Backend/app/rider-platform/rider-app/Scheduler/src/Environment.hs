@@ -152,7 +152,7 @@ buildHandlerEnv HandlerCfg {..} = do
   eventRequestCounter <- registerEventRequestCounterMetric
   passettoContext <- (uncurry mkDefPassettoContext) encTools.service
   let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  shouldLogRequestId <- fromMaybe True . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let sessionId = Nothing
   let kafkaProducerForART = Just kafkaProducerTools
   hedisEnv <- connectHedis appCfg.hedisCfg ("rider-app-scheduler:" <>)

@@ -24,6 +24,7 @@ module Lib.Payment.Payout.Request
 where
 
 import Control.Applicative ((<|>))
+import qualified Data.Text as T
 import Data.Time.Clock (addUTCTime)
 import Kernel.External.Encryption (EncFlow)
 import qualified Kernel.External.Payout.Interface.Types as IPayout
@@ -259,8 +260,9 @@ executePayoutRequestInternal payoutRequest payoutCall = do
       result <- try $ DPayment.createPayoutService merchantId mbMocId personId (Just [payoutRequest.id.getId]) (Just entityName) city createPayoutOrderReq payoutCall
       case result of
         Left (err :: SomeException) -> do
-          logError $ "Payout service call failed for PayoutRequest " <> payoutRequest.id.getId <> ": " <> show err
-          updateStatusWithHistoryById AUTO_PAY_FAILED (Just $ "Payout service error: " <> show err) payoutRequest
+          let sanitizedErr = stripQueryParams $ T.pack $ show err
+          logError $ "Payout service call failed for PayoutRequest " <> payoutRequest.id.getId <> ": " <> sanitizedErr
+          updateStatusWithHistoryById AUTO_PAY_FAILED (Just $ "Payout service error: " <> sanitizedErr) payoutRequest
           pure Nothing
         Right (_mbResp, mbPayoutOrder) -> do
           let payoutOrderIdText = maybe "unknown" (\po -> po.id.getId) mbPayoutOrder
@@ -375,3 +377,16 @@ getStatusMessage CASH_PAID = "Payment marked as cash paid"
 getStatusMessage CASH_PENDING = "Payment marked as cash pending"
 getStatusMessage RETRYING = "Retrying payment..."
 getStatusMessage FAILED = "Payment failed/cancelled"
+
+-- | Strip query parameters from URLs in error text to prevent credential leakage
+stripQueryParams :: Text -> Text
+stripQueryParams txt =
+  let parts = T.splitOn "?" txt
+   in case parts of
+        [] -> txt
+        [single] -> single
+        (firstPart : rest) -> firstPart <> T.concat (map redactQueryPart rest)
+  where
+    redactQueryPart part =
+      let (_, afterParams) = T.break (\c -> c == ' ' || c == '"' || c == '\'' || c == ')' || c == '}') part
+       in "?<redacted>" <> afterParams

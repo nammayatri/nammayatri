@@ -115,6 +115,7 @@ library
     , mobility-core
     , pcg-random
     , postgresql-simple
+    , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
     , resource-pool
@@ -209,6 +210,7 @@ executable dynamic-offer-driver-drainer-exe
     , mobility-core
     , pcg-random
     , postgresql-simple
+    , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
     , resource-pool

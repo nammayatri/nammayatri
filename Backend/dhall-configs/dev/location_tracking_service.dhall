@@ -1,7 +1,7 @@
 let redis_cfg =
       { redis_host = "0.0.0.0"
       , redis_port = 6379
-      , redis_pool_size = 10
+      , redis_pool_size = 5
       , redis_partition = 0
       , reconnect_max_attempts = 10
       , reconnect_delay = 5000
@@ -14,7 +14,7 @@ let redis_cfg =
 let replica_redis_cfg =
       { redis_host = "0.0.0.0"
       , redis_port = 6379
-      , redis_pool_size = 10
+      , redis_pool_size = 5
       , redis_partition = 0
       , reconnect_max_attempts = 10
       , reconnect_delay = 5000

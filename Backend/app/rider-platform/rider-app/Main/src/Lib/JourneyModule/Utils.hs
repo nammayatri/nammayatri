@@ -1349,6 +1349,9 @@ makePossibleRoutesKey fromCode toCode integratedBPPConfig = "PossibleRoutes:" <>
 
 fetchPossibleRoutes :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => Text -> Text -> DIntegratedBPPConfig.IntegratedBPPConfig -> m [Text]
 fetchPossibleRoutes fromCode toCode integratedBPPConfig = do
+  when (T.null (T.strip fromCode) || T.null (T.strip toCode)) $ do
+    logError $ "Invalid stop codes in fetchPossibleRoutes - fromCode: " <> show fromCode <> ", toCode: " <> show toCode <> ", integratedBPPConfigId: " <> integratedBPPConfig.id.getId
+    throwError $ InternalError "Invalid stop codes: empty or whitespace-only stop codes"
   -- Get route mappings that contain the origin stop
   fromRouteStopMappings <- OTPRest.getRouteStopMappingByStopCode fromCode integratedBPPConfig
 

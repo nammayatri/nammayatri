@@ -20,7 +20,6 @@ module Storage.Queries.GeometryGeom
   )
 where
 
-import Data.Either (fromRight)
 import qualified Database.Beam as B
 import Database.Beam.Postgres
 import Database.Beam.Postgres.Syntax
@@ -28,11 +27,13 @@ import qualified Database.Beam.Query as BQ
 import Domain.Types.Geometry
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
+import Utils.SlowQueryLog (timedRunDB)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Types.Error (GenericError (InternalError))
+import Kernel.Utils.Common
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Geometry.Geometry as BeamG
 import qualified Storage.Beam.Geometry.GeometryGeom as BeamGeomG
@@ -50,7 +51,7 @@ findAllGeometries cityParam mbLimit mbOffset = do
       offsetVal = fromMaybe 0 mbOffset
   dbConf <- getReplicaBeamConfig
   result <-
-    L.runDB dbConf $
+    timedRunDB "geometry_geom" "findAllGeometries" $ L.runDB dbConf $
       L.findRows $
         B.select $
           B.limit_ (fromIntegral limitVal) $
@@ -62,7 +63,11 @@ findAllGeometries cityParam mbLimit mbOffset = do
                   )
                   $ B.filter_' (\BeamG.GeometryT {..} -> B.sqlBool_ (city B.==. B.val_ cityParam)) $
                     B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
-  catMaybes <$> mapM fromTType' (fromRight [] result)
+  case result of
+    Left err -> do
+      logError $ "Geometry query (findAllGeometries) failed for city " <> show cityParam <> ": " <> show err
+      throwError $ InternalError $ "Geometry query failed: " <> show err
+    Right rows -> catMaybes <$> mapM fromTType' rows
 
 -- | FromTType instance for the tuple result from the raw query
 instance FromTType' (Text, Context.City, Context.IndianState, Text, Maybe Text) Geometry where
@@ -85,7 +90,7 @@ findAllGeometriesForMerchant _merchantId mbLimit mbOffset = do
       offsetVal = fromMaybe 0 mbOffset
   dbConf <- getReplicaBeamConfig
   result <-
-    L.runDB dbConf $
+    timedRunDB "geometry_geom" "findAllGeometriesForMerchant" $ L.runDB dbConf $
       L.findRows $
         B.select $
           B.limit_ (fromIntegral limitVal) $
@@ -96,7 +101,11 @@ findAllGeometriesForMerchant _merchantId mbLimit mbOffset = do
                       (id, city, state, region, getGeomAsGeoJSON)
                   )
                   $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
-  catMaybes <$> mapM fromTType' (fromRight [] result)
+  case result of
+    Left err -> do
+      logError $ "Geometry query (findAllGeometriesForMerchant) failed: " <> show err
+      throwError $ InternalError $ "Geometry query failed: " <> show err
+    Right rows -> catMaybes <$> mapM fromTType' rows
 
 -- | Update geometry using raw Beam update that doesn't return rows.
 -- Uses L.updateRows with B.update' to avoid type mismatch error that occurs with updateWithKV
@@ -105,7 +114,7 @@ updateGeometry :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Context.City ->
 updateGeometry cityParam stateParam regionParam newGeom = do
   dbConf <- getMasterBeamConfig
   void $
-    L.runDB dbConf $
+    timedRunDB "geometry_geom" "updateGeometry" $ L.runDB dbConf $
       L.updateRows $
         B.update'
           (BeamCommon.geometryGeom BeamCommon.atlasDB)

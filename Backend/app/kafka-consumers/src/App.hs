@@ -15,7 +15,8 @@
 module App (startKafkaConsumer, runDriverHealthcheck) where
 
 import qualified Consumer.Flow as CF
-import Control.Concurrent hiding (threadDelay)
+import Control.Concurrent hiding (threadDelay, throwTo)
+import Control.Exception (AsyncException (UserInterrupt))
 import Data.Function
 import DriverTrackingHealthCheck.API
 import qualified DriverTrackingHealthCheck.Service.Runner as Service
@@ -41,6 +42,7 @@ import Kernel.Utils.Shutdown
 import Network.Wai.Handler.Warp
 import Servant
 import System.Environment (lookupEnv)
+import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
 import SystemConfigsOverride as QSC hiding (id)
 
 startKafkaConsumer :: IO ()
@@ -55,8 +57,13 @@ startKafkaConsumer = do
 startConsumerWithEnv :: AppCfg -> AppEnv -> IO ()
 startConsumerWithEnv appCfg appEnv@AppEnv {..} = do
   kafkaConsumer <- newKafkaConsumer
+  -- Install signal handlers so SIGTERM/SIGINT trigger cleanup instead of immediate exit
+  mainTid <- myThreadId
+  let shutdownHandler = Catch $ throwTo mainTid UserInterrupt
+  void $ installHandler sigTERM shutdownHandler Nothing
+  void $ installHandler sigINT shutdownHandler Nothing
   let loggerRuntime = L.getEulerLoggerRuntime appEnv.hostname appEnv.loggerConfig
-  R.withFlowRuntime (Just loggerRuntime) $ \flowRt' -> do
+  (R.withFlowRuntime (Just loggerRuntime) $ \flowRt' -> do
     managers <- managersFromManagersSettings appCfg.httpClientOptions.timeoutMs mempty -- default manager is created
     let flowRt = flowRt' {L._httpClientManagers = managers}
     runFlow
@@ -84,7 +91,8 @@ startConsumerWithEnv appCfg appEnv@AppEnv {..} = do
             threadDelay (appCfg.kvConfigUpdateFrequency * 1000000)
         )
       pure flowRt
-    CF.runConsumer flowRt'' appEnv consumerType kafkaConsumer
+    CF.runConsumer flowRt'' appEnv consumerType kafkaConsumer)
+    `finally` releaseAppEnv appEnv
   where
     newKafkaConsumer =
       either (error . ("Unable to open a kafka consumer: " <>) . show) id

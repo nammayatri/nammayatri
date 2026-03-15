@@ -2,6 +2,7 @@ let common = ./common.dhall
 
 let secUnified = ./secrets/unified-dashboard.dhall
 
+-- Pool sizing: Tier 3 (dashboard, low traffic): 2 per pool.
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434
@@ -9,7 +10,7 @@ let esqDBCfg =
       , connectPassword = secUnified.dbPassword
       , connectDatabase = "atlas_dev"
       , connectSchemaName = "atlas_dashboard"
-      , connectionPoolCount = +25
+      , connectionPoolCount = +2
       }
 
 let esqDBReplicaCfg =
@@ -22,14 +23,15 @@ let esqDBReplicaCfg =
       , connectionPoolCount = esqDBCfg.connectionPoolCount
       }
 
+-- Redis pool: 5 for low-traffic dashboards (Tier 3).
 let rcfg =
       { connectHost = "localhost"
       , connectPort = 6379
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +5
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 
@@ -40,7 +42,7 @@ let kafkaProducerCfg =
 
 let secondaryKafkaProducerCfg = Some kafkaProducerCfg
 
-let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
+let apiRateLimitOptions = { limit = +30, limitResetTimeInSec = +60 }
 
 let shareRideApiRateLimitOptions = { limit = +20, limitResetTimeInSec = +60 }
 
@@ -75,9 +77,9 @@ let rccfg =
       , connectPort = 30001
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +5
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 
@@ -86,9 +88,9 @@ let rccfgSecondary =
       , connectPort = 30002
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +5
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 

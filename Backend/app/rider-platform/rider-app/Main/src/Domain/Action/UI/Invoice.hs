@@ -1,6 +1,7 @@
 module Domain.Action.UI.Invoice where
 
 import qualified API.Types.UI.Invoice as DTInvoice
+import qualified Data.Map.Strict as Map
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
@@ -17,40 +18,46 @@ import Tools.Error
 getInvoice :: (Maybe (Id DP.Person), Id DM.Merchant) -> UTCTime -> UTCTime -> Flow [DTInvoice.InvoiceRes]
 getInvoice (mbPersonId, merchantId) from to = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  bookings <- CHB.findAllCompletedRiderBookingsByMerchantInRange merchantId personId from to
+  allBookings <- CHB.findAllCompletedRiderBookingsByMerchantInRange merchantId personId from to
+  let bookings = allBookings
   invoices <- mapM makeInvoiceResponse bookings
   return $ catMaybes invoices
   where
+    breakupTags :: [(Text, Text)]
+    breakupTags =
+      [ ("BASE_FARE", "Base Fare"),
+        ("CUSTOMER_SELECTED_FARE", "Customer Selected Fare"),
+        ("DEAD_KILOMETER_FARE", "Dead Kilometer Fare"),
+        ("DISTANCE_FARE", "Distance Fare"),
+        ("DRIVER_SELECTED_FARE", "Driver Selected Fare"),
+        ("EXTRA_TIME_FARE", "Extra Time Fare"),
+        ("FIXED_GOVERNMENT_RATE", "Fixed Government Fare"),
+        ("NIGHT_SHIFT_CHARGE", "Night Shift Charge"),
+        ("PLATFORM_FEE", "Platform Fee"),
+        ("CGST", "CGST"),
+        ("SGST", "SGST"),
+        ("SERVICE_CHARGE", "Service Charge"),
+        ("TIME_BASED_FARE", "Time Based Fare"),
+        ("DIST_BASED_FARE", "Distance Based Fare"),
+        ("EXTRA_DISTANCE_FARE", "Extra Distance Fare"),
+        ("WAITING_OR_PICKUP_CHARGES", "Wating Charge"),
+        ("PARKING_CHARGE", "Parking Charge"),
+        ("RIDE_STOP_CHARGES", "Ride Stop Charges"),
+        ("PER_STOP_CHARGES", "Per Stop Charges"),
+        ("LUGGAGE_CHARGE", "Luggage Charge"),
+        ("DRIVER_ALLOWANCE", "Driver Allowance"),
+        ("RETURN_FEE", "Return Fee"),
+        ("BOOTH_CHARGE", "Booth Charge")
+      ]
+
     makeInvoiceResponse booking = do
       mbRide <- CHR.findRideByBookingId booking.id booking.createdAt
       case mbRide of
         Just ride -> do
-          let breakupItems =
-                [ ("BASE_FARE", "Base Fare"),
-                  ("CUSTOMER_SELECTED_FARE", "Customer Selected Fare"),
-                  ("DEAD_KILOMETER_FARE", "Dead Kilometer Fare"),
-                  ("DISTANCE_FARE", "Distance Fare"),
-                  ("DRIVER_SELECTED_FARE", "Driver Selected Fare"),
-                  ("EXTRA_TIME_FARE", "Extra Time Fare"),
-                  ("FIXED_GOVERNMENT_RATE", "Fixed Government Fare"),
-                  ("NIGHT_SHIFT_CHARGE", "Night Shift Charge"),
-                  ("PLATFORM_FEE", "Platform Fee"),
-                  ("CGST", "CGST"),
-                  ("SGST", "SGST"),
-                  ("SERVICE_CHARGE", "Service Charge"),
-                  ("TIME_BASED_FARE", "Time Based Fare"),
-                  ("DIST_BASED_FARE", "Distance Based Fare"),
-                  ("EXTRA_DISTANCE_FARE", "Extra Distance Fare"),
-                  ("WAITING_OR_PICKUP_CHARGES", "Wating Charge"),
-                  ("PARKING_CHARGE", "Parking Charge"),
-                  ("RIDE_STOP_CHARGES", "Ride Stop Charges"),
-                  ("PER_STOP_CHARGES", "Per Stop Charges"),
-                  ("LUGGAGE_CHARGE", "Luggage Charge"),
-                  ("DRIVER_ALLOWANCE", "Driver Allowance"),
-                  ("RETURN_FEE", "Return Fee"),
-                  ("BOOTH_CHARGE", "Booth Charge")
-                ]
-          fareBreakups <- mapM (getFareBreakup booking) breakupItems
+          -- Fetch all fare breakups in a single query instead of 22 separate queries
+          allBreakups <- CHFB.findAllFareBreakupsByBookingId booking.id booking.createdAt
+          let breakupMap = Map.fromList [(b.description, b) | b <- allBreakups]
+              fareBreakups = mapMaybe (lookupBreakup breakupMap) breakupTags
           mbSource <- case booking.fromLocationId of
             Just fromLocId -> CHL.findLocationById fromLocId booking.createdAt
             Nothing -> return Nothing
@@ -63,7 +70,7 @@ getInvoice (mbPersonId, merchantId) from to = do
                 { date = booking.createdAt,
                   destination = maybe notAvailableText (\destination -> fromMaybe notAvailableText destination.fullAddress) mbDestination,
                   driverName = fromMaybe notAvailableText ride.driverName,
-                  faresList = catMaybes fareBreakups,
+                  faresList = fareBreakups,
                   rideEndTime = fromMaybe ride.updatedAt ride.rideEndTime,
                   rideStartTime = fromMaybe ride.createdAt ride.rideStartTime,
                   shortRideId = ride.shortId.getShortId,
@@ -74,9 +81,10 @@ getInvoice (mbPersonId, merchantId) from to = do
                   chargeableDistanceWithUnit = convertHighPrecMetersToDistance Meter <$> ride.chargeableDistance -- FIXME use proper unit
                 }
         Nothing -> return Nothing
-    getFareBreakup booking (tag, title) = do
-      fareBreakup <- CHFB.findFareBreakupByBookingIdAndDescription booking.id tag booking.createdAt
-      case fareBreakup of
-        Just breakup -> return . Just $ DTInvoice.FareBreakup {price = maybe notAvailableText show breakup.amount, title}
-        Nothing -> return Nothing
+
+    lookupBreakup breakupMap (tag, title) =
+      case Map.lookup tag breakupMap of
+        Just breakup -> Just $ DTInvoice.FareBreakup {price = maybe notAvailableText show breakup.amount, title}
+        Nothing -> Nothing
+
     notAvailableText = "N/A"

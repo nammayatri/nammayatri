@@ -25,7 +25,7 @@ import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBConfig, EsqDBEnv, prepareEsqDBEnv)
 import Kernel.Storage.Hedis.Config
 import qualified Kernel.Storage.InMem as IM
-import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerCfg, KafkaProducerTools, buildKafkaProducerTools, castCompression)
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerCfg, KafkaProducerTools, buildKafkaProducerTools, castCompression, releaseKafkaProducerTools)
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import qualified Kernel.Types.CacheFlow as CF
 import Kernel.Types.Common (Microseconds, Seconds)
@@ -197,7 +197,7 @@ buildAppEnv AppCfg {..} consumerType = do
   hedisEnv <- connectHedis hedisCfg id
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id
   let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  shouldLogRequestId <- fromMaybe True . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let sessionId = Nothing
   let kafkaProducerForART = Nothing
   hedisClusterEnv <-
@@ -229,6 +229,8 @@ buildAppEnv AppCfg {..} consumerType = do
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
+  releaseKafkaProducerTools kafkaProducerTools
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
+  disconnectHedis hedisClusterEnv
   Kernel.Prelude.maybe (pure ()) disconnectHedis secondaryHedisClusterEnv

@@ -74,4 +74,4 @@ data EventType = RideCreated | RideStarted | RideEnded | RideCancelled | Booking
 instance ToJSON EventType => ToJSON EventType where
   toJSON = genericToJSON constructorsWithSnakeCase
 
-type EventStreamFlow m r = (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasField "version" r DeploymentVersion, HasField "eventStreamMap" r [EventStreamMap], HasField "eventRequestCounter" r (Vector (Text, Text, Text) Counter))
+type EventStreamFlow m r = (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasField "version" r DeploymentVersion, HasField "eventStreamMap" r [EventStreamMap], HasField "eventRequestCounter" r (Vector (Text, Text, Text) Counter), HasField "requestId" r (Maybe Text))

@@ -15,6 +15,7 @@
 module Domain.Action.UI.Serviceability
   ( checkServiceability,
     getNearestOperatingAndCurrentCity,
+    getNearestOperatingAndCurrentCity',
     ServiceabilityRes (..),
     NearestOperatingAndCurrentCity (..),
     CityState (..),

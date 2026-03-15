@@ -36,6 +36,9 @@ apis:
       endpoint: /listOverlay
       name: getOverlayList
       auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
       response:
         type: ListOverlayResp
       migrate:

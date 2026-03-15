@@ -16,6 +16,7 @@ module SharedLogic.Analytics where
 
 import qualified Data.Map as Map
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
+import qualified EulerHS.Language as L
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.DriverFlowStatus as DDF
@@ -115,16 +116,16 @@ updateCancellationAnalyticsAndDriverStats ::
   SBCR.BookingCancellationReason ->
   m ()
 updateCancellationAnalyticsAndDriverStats transporterConfig ride bookingCReason = do
-  driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  (driverCancelCount, customerCancelCount) <- QDriverStats.findCancellationTagCounts ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   case bookingCReason.source of
     SBCR.ByDriver -> do
       when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
         updateOperatorAnalyticsCancelCount transporterConfig ride.driverId
-      QDriverStats.updateValidDriverCancellationTagCount (driverStats.validDriverCancellationTagCount + 1) ride.driverId
+      QDriverStats.updateValidDriverCancellationTagCount (fromMaybe 0 driverCancelCount + 1) ride.driverId
     SBCR.ByUser -> do
       when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
         updateFleetOwnerAnalyticsCustomerCancelCount ride.driverId transporterConfig
-      QDriverStats.updateValidCustomerCancellationTagCount (driverStats.validCustomerCancellationTagCount + 1) ride.driverId
+      QDriverStats.updateValidCustomerCancellationTagCount (fromMaybe 0 customerCancelCount + 1) ride.driverId
     _ -> pure ()
 
 -- | Update fleet owner analytics counters in Redis. Passing Nothing deletes the key.
@@ -136,8 +137,9 @@ updateFleetOwnerAnalyticsKeys ::
   Maybe Int ->
   m ()
 updateFleetOwnerAnalyticsKeys fleetOwnerId mbActiveDrivers mbActiveVehicles mbCurrentOnline = do
+  let fleetKeyTTL = 86400 -- 24 hours; refreshed from ClickHouse on cache miss
   let setOrDel key = \case
-        Just v -> Redis.set key v
+        Just v -> Redis.setExp key v fleetKeyTTL
         Nothing -> Redis.del key >> pure ()
 
   -- active driver count
@@ -725,8 +727,10 @@ fallbackToClickHouseAndUpdateRedisForAllTime operatorId allTimeKeysData = do
       dcc = operatorStats.driverCancellationCountSum
       ac = operatorStats.acceptationRequestCountSum
       trc = operatorStats.totalRequestCountSum
-  -- update redis (best-effort)
-  mapM_ (uncurry Redis.set) (zipJusts allTimeKeysData [tcr, rs, trn, dcc, ac, trc])
+  -- update redis concurrently (best-effort)
+  let allTimeTTL = 86400 -- 24 hours; keys are refreshed from ClickHouse on cache miss
+  allTimeSetForks <- mapM (\(k, v) -> awaitableFork "analyticsSet" $ Redis.setExp k v allTimeTTL) (zipJusts allTimeKeysData [tcr, rs, trn, dcc, ac, trc])
+  mapM_ (void . L.await Nothing) allTimeSetForks
   pure $ convertToAllTimeFallbackRes (zipJusts allTimeMetrics [tcr, rs, trn, dcc, ac, trc])
 
 fallbackToClickHouseAndUpdateRedisForAllTimeFleet ::
@@ -748,7 +752,8 @@ fallbackToClickHouseAndUpdateRedisForAllTimeFleet fleetOwnerId fleetAllTimeKeysD
   mbCurrentOnlineDriverCount <- getOnlineDriverCount
   logTagInfo "fallbackClickhouseAllTimeFleet" ("mbActiveDriverCount: " <> show mbActiveDriverCount <> ", mbActiveVehicleCount: " <> show mbActiveVehicleCount <> ", mbCurrentOnlineDriverCount: " <> show mbCurrentOnlineDriverCount)
 
-  mapM_ (uncurry Redis.set) (zipJusts fleetAllTimeKeysData [mbActiveDriverCount, mbActiveVehicleCount])
+  let fleetAllTimeTTL = 86400 -- 24 hours; keys are refreshed from ClickHouse on cache miss
+  mapM_ (\(k, v) -> Redis.setExp k v fleetAllTimeTTL) (zipJusts fleetAllTimeKeysData [mbActiveDriverCount, mbActiveVehicleCount])
 
   pure $ convertToFleetAllTimeFallbackRes (zipJusts fleetAllTimeMetrics [mbActiveDriverCount, mbActiveVehicleCount]) mbCurrentOnlineDriverCount
   where
@@ -806,8 +811,9 @@ fallbackToClickHouseAndUpdateRedisForPeriod transporterConfig operatorId periodK
   let now = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) nowUTCTime --Local time
   let expireTime = getPeriodExpireTime period now
 
-  -- write back to Redis using setNx with expiration
-  mapM_ (\(key, value) -> Redis.setExp key value expireTime) (zip periodKeysData [res.activeDriver, res.driverEnabled, res.greaterThanOneRide, res.greaterThanTenRide, res.greaterThanFiftyRide])
+  -- write back to Redis concurrently
+  periodSetForks <- mapM (\(key, value) -> awaitableFork "periodSet" $ Redis.setExp key value expireTime) (zip periodKeysData [res.activeDriver, res.driverEnabled, res.greaterThanOneRide, res.greaterThanTenRide, res.greaterThanFiftyRide])
+  mapM_ (void . L.await Nothing) periodSetForks
   pure res
 
 -- | Common function to handle cache miss for analytics using Person role
@@ -844,7 +850,9 @@ handleCacheMissForAnalyticsAllTimeCommon role entityId allTimeKeysData = do
     Just True -> do
       logTagInfo logTag $ "inProgress key present for " <> show role <> "Id: " <> entityId <> ". Waiting for it to clear."
       SDFStatus.waitUntilKeyGone inProgressKey
-      allTimeKeysRes <- mapM (\key -> Redis.get @Int key) allTimeKeysData
+      -- Fetch all analytics keys concurrently instead of sequentially
+      allTimeKeysForks <- mapM (\key -> awaitableFork "analyticsGet" $ Redis.get @Int key) allTimeKeysData
+      allTimeKeysRes <- mapM (\f -> L.await Nothing f <&> \case Left _ -> Nothing; Right r -> r) allTimeKeysForks
       logTagInfo logTag $ "allTimeKeysRes: " <> show allTimeKeysRes
       case role of
         DP.OPERATOR -> pure $ convertToAllTimeFallbackRes (zipJusts allTimeMetrics allTimeKeysRes)

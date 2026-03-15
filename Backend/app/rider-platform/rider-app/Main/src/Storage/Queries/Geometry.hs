@@ -20,7 +20,6 @@ module Storage.Queries.Geometry
   )
 where
 
-import Data.Either
 import qualified Database.Beam as B
 import Domain.Types.Geometry
 import qualified EulerHS.Language as L
@@ -30,11 +29,13 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id (Id (..))
+import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Geometry.Geometry as BeamG
 import qualified Storage.Beam.Geometry.GeometryGeom as BeamGeomG
+import Utils.SlowQueryLog (timedRunDB)
 
 create :: (MonadFlow m, EsqDBFlow m r) => Geometry -> m ()
 create = createWithKV
@@ -51,8 +52,12 @@ findGeometryByStateAndCity cityParam stateParam = do
 findGeometriesContaining :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LatLong -> [Text] -> m [Geometry]
 findGeometriesContaining gps regions = do
   dbConf <- getReplicaBeamConfig
-  geoms <- L.runDB dbConf $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
-  catMaybes <$> mapM fromTType' (fromRight [] geoms)
+  geoms <- timedRunDB "geometry" "findContaining" $ L.runDB dbConf $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
+  case geoms of
+    Left err -> do
+      logError $ "Geometry query failed for regions " <> show regions <> ": " <> show err
+      throwError $ InternalError $ "Geometry query failed: " <> show err
+    Right results -> catMaybes <$> mapM fromTType' results
 
 instance FromTType' BeamG.Geometry Geometry where
   fromTType' BeamG.GeometryT {..} = do

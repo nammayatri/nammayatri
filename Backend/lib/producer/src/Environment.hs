@@ -123,7 +123,7 @@ buildAppEnv AppCfg {..} producerType = do
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg secondaryKafkaProducerCfg
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg modifierFunc
   let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  shouldLogRequestId <- fromMaybe True . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let sessionId = Nothing
   let kafkaProducerForART = Just kafkaProducerTools
   hedisClusterEnv <-

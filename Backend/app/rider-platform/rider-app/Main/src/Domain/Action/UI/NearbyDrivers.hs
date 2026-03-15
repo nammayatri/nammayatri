@@ -24,7 +24,7 @@ import qualified Data.Aeson.Key as A
 import qualified Data.Aeson.KeyMap as KM
 import qualified Data.Map as Map
 import Domain.Action.UI.NearbyBuses (getSimpleNearbyBuses)
-import Domain.Action.UI.Serviceability (getNearestOperatingAndCurrentCity)
+import Domain.Action.UI.Serviceability (getNearestOperatingAndCurrentCity')
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
@@ -74,57 +74,62 @@ postNearbyDrivers (Nothing, _) _ = do
 postNearbyDrivers (Just personId, merchantId) req = withLogTag $ do
   checkRateLimit nearByDriverHitsCountKey
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound $ merchantId.getId)
-  cityRes <- getNearestOperatingAndCurrentCity (.origin) (personId, merchantId) False req.location
-  let reqCity = cityRes.currentCity.city
-  moc <- CQMOC.findByMerchantIdAndCity merchantId reqCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId:" <> merchantId.getId <> "city:" <> show reqCity)
-  riderConfig <- CQRC.findByMerchantOperatingCityId moc.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
-  case req.travelMode of
-    Just DTrip.Bus -> do
-      vehicleDataBuckets <- getNearbyBusesAsBuckets moc.id riderConfig req.location
-      return $
-        ND.NearbyDriverRes
-          { serviceTierTypeToVehicleVariant = A.Null,
-            variantLevelDriverCount = A.Null,
-            buckets = [],
-            vehicleDataBuckets = vehicleDataBuckets
-          }
-    _ -> do
-      variantListForNearByReq <- (req.vehicleVariants <|> riderConfig.variantListForNearByReq) & fromMaybeM (RiderConfigFieldIsEmpty "variantListForNearByReq" moc.id.getId)
-      ringBucketCfg' <- riderConfig.nearByDriverRingBucketCfg & fromMaybeM (RiderConfigFieldIsEmpty "nearByDriverRingBucketCfg" moc.id.getId)
-      let sortedRingBucketCfgs = sortOn (.radiusInMeters) ringBucketCfg'
-      maxRadiusBucket <- safeLast sortedRingBucketCfgs & fromMaybeM (RiderConfigFieldIsEmpty "nearByDriverRingBucketCfg list is empty" moc.id.getId)
-      nearbyDriverLocations <- LF.nearBy $ buildNearByReq merchant variantListForNearByReq (min maxRadiusBucket.radiusInMeters req.radius)
-      let vvToSttMapping = getVariantToApplicableServiceTierTypeMapping
-      let sttToVvMapping = getServiceTierTypeToVariantMapping
-      buckets <- buildBuckets vvToSttMapping sortedRingBucketCfgs nearbyDriverLocations
-      let variantLevelCountMap =
-            foldr'
-              ( \driverLoc acc -> do
-                  let variant = driverLoc.vehicleType
-                  let !existingCount = Map.findWithDefault 0 variant acc
-                  Map.insert variant (existingCount + 1) acc
-              )
-              (Map.empty :: Map DV.VehicleVariant Int)
-              nearbyDriverLocations
+  mbCityRes <- getNearestOperatingAndCurrentCity' (.origin) (personId, merchantId) False req.location
+  case mbCityRes of
+    Nothing -> do
+      logDebug "Location not serviceable, returning empty nearby drivers response"
+      return emptyNearbyDriverRes
+    Just cityRes -> do
+      let reqCity = cityRes.currentCity.city
+      moc <- CQMOC.findByMerchantIdAndCity merchantId reqCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId:" <> merchantId.getId <> "city:" <> show reqCity)
+      riderConfig <- CQRC.findByMerchantOperatingCityId moc.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
+      case req.travelMode of
+        Just DTrip.Bus -> do
+          vehicleDataBuckets <- getNearbyBusesAsBuckets moc.id riderConfig req.location
+          return $
+            ND.NearbyDriverRes
+              { serviceTierTypeToVehicleVariant = A.Null,
+                variantLevelDriverCount = A.Null,
+                buckets = [],
+                vehicleDataBuckets = vehicleDataBuckets
+              }
+        _ -> do
+          variantListForNearByReq <- (req.vehicleVariants <|> riderConfig.variantListForNearByReq) & fromMaybeM (RiderConfigFieldIsEmpty "variantListForNearByReq" moc.id.getId)
+          ringBucketCfg' <- riderConfig.nearByDriverRingBucketCfg & fromMaybeM (RiderConfigFieldIsEmpty "nearByDriverRingBucketCfg" moc.id.getId)
+          let sortedRingBucketCfgs = sortOn (.radiusInMeters) ringBucketCfg'
+          maxRadiusBucket <- safeLast sortedRingBucketCfgs & fromMaybeM (RiderConfigFieldIsEmpty "nearByDriverRingBucketCfg list is empty" moc.id.getId)
+          nearbyDriverLocations <- LF.nearBy $ buildNearByReq merchant variantListForNearByReq (min maxRadiusBucket.radiusInMeters req.radius)
+          let vvToSttMapping = getVariantToApplicableServiceTierTypeMapping
+          let sttToVvMapping = getServiceTierTypeToVariantMapping
+          buckets <- buildBuckets vvToSttMapping sortedRingBucketCfgs nearbyDriverLocations
+          let variantLevelCountMap =
+                foldr'
+                  ( \driverLoc acc -> do
+                      let variant = driverLoc.vehicleType
+                      let !existingCount = Map.findWithDefault 0 variant acc
+                      Map.insert variant (existingCount + 1) acc
+                  )
+                  (Map.empty :: Map DV.VehicleVariant Int)
+                  nearbyDriverLocations
 
-      let vehicleDataBuckets =
-            map
-              ( \bucket ->
-                  ND.VehicleDataBucket
-                    { radius = bucket.radius,
-                      travelMode = DTrip.Taxi,
-                      vehicleInfo = ND.Taxi bucket
-                    }
-              )
-              buckets
+          let vehicleDataBuckets =
+                map
+                  ( \bucket ->
+                      ND.VehicleDataBucket
+                        { radius = bucket.radius,
+                          travelMode = DTrip.Taxi,
+                          vehicleInfo = ND.Taxi bucket
+                        }
+                  )
+                  buckets
 
-      return $
-        ND.NearbyDriverRes
-          { serviceTierTypeToVehicleVariant = transformToObject sttToVvMapping,
-            variantLevelDriverCount = transformToObject variantLevelCountMap,
-            buckets,
-            vehicleDataBuckets = vehicleDataBuckets
-          }
+          return $
+            ND.NearbyDriverRes
+              { serviceTierTypeToVehicleVariant = transformToObject sttToVvMapping,
+                variantLevelDriverCount = transformToObject variantLevelCountMap,
+                buckets,
+                vehicleDataBuckets = vehicleDataBuckets
+              }
   where
     nearByDriverHitsCountKey :: Text
     nearByDriverHitsCountKey = "BAP:API:UI:NearByDriver:PersonId:" <> personId.getId <> ":hitsCount"
@@ -187,6 +192,14 @@ postNearbyDrivers (Just personId, merchantId) req = withLogTag $ do
     bucketForRadius sortedRingBucketCfgs vehVariant radius = do
       bucket <- find (\cfg -> cfg.vehVariant == vehVariant && cfg.radiusInMeters >= radius) sortedRingBucketCfgs
       return bucket
+
+    emptyNearbyDriverRes =
+      ND.NearbyDriverRes
+        { serviceTierTypeToVehicleVariant = A.Null,
+          variantLevelDriverCount = A.Null,
+          buckets = [],
+          vehicleDataBuckets = []
+        }
 
     withLogTag = Log.withLogTag ("BAP:API:UI:NearByDriver:" <> personId.getId)
 

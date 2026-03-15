@@ -37,6 +37,7 @@ import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSReq
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
+import qualified EulerHS.Language as L
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types
@@ -145,71 +146,103 @@ confirm DConfirmReq {..} = do
   now <- getCurrentTime
   when (quote.validTill < now) $ throwError (InvalidRequest $ "Quote expired " <> show quote.id) -- init validation check
   (bppQuoteId, mbEsimateId) <- getBppQuoteId now quote.quoteDetails
-  searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
-  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  when (merchant.onlinePayment && paymentInstrument `notElem` [Just DMPM.Cash, Just DMPM.BoothOnline]) $ do
-    when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
-    SPayment.updateDefaultPersonPaymentMethodId person paymentMethodId -- Make payment method as default payment method for customer
-  activeBooking <- QRideB.findLatestSelfAndPartyBookingByRiderId personId --This query also checks for booking parties
-  case activeBooking of
-    Just booking | not (isMeterRide quote.quoteDetails) -> DQuote.processActiveBooking booking (Just searchRequest.riderPreferredOption) OnConfirm
-    _ -> pure ()
-  -- when (searchRequest.validTill < now) $
-  --   throwError SearchRequestExpired
-  unless (searchRequest.riderId == personId) $ QSReq.updateRiderId personId searchRequest.id
+  -- Parallelize independent DB lookups
+  searchRequestFork <- awaitableFork "confirm->findSearchRequest" $ QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
+  personFork <- awaitableFork "confirm->findPerson" $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  activeBookingFork <- awaitableFork "confirm->findActiveBooking" $ QRideB.findLatestSelfAndPartyBookingByRiderId personId
+  isValueAddNPFork <- awaitableFork "confirm->isValueAddNP" $ CQVAN.isValueAddNP quote.providerId
+  -- Await searchRequest first to start dependent city/exophone lookups early
+  searchRequest <- L.await Nothing searchRequestFork >>= either (\_ -> throwError $ InternalError "Concurrent task failed") pure
   let fromLocation = searchRequest.fromLocation
       mbToLocation = searchRequest.toLocation
       stops = searchRequest.stops
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
-  city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
-  exophone <- findRandomExophone merchantOperatingCityId
+  -- Fork city/exophone lookups to overlap with remaining person/activeBooking awaits
+  cityFork <- awaitableFork "confirm->findCity" $ CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
+  exophoneFork <- awaitableFork "confirm->findExophone" $ findRandomExophone merchantOperatingCityId
+  -- Await remaining initial lookups
+  person <- L.await Nothing personFork >>= either (\_ -> throwError $ InternalError "Concurrent task failed") pure
+  activeBooking <- L.await Nothing activeBookingFork >>= either (\_ -> throwError $ InternalError "Concurrent task failed") pure
+  when (merchant.onlinePayment && paymentInstrument `notElem` [Just DMPM.Cash, Just DMPM.BoothOnline]) $ do
+    when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
+    SPayment.updateDefaultPersonPaymentMethodId person paymentMethodId
+  case activeBooking of
+    Just booking | not (isMeterRide quote.quoteDetails) -> DQuote.processActiveBooking booking (Just searchRequest.riderPreferredOption) OnConfirm
+    _ -> pure ()
+  unless (searchRequest.riderId == personId) $ QSReq.updateRiderId personId searchRequest.id
+  -- Await city/exophone
+  city <- L.await Nothing cityFork >>= either (\_ -> throwError $ InternalError "Concurrent task failed") pure
+  exophone <- L.await Nothing exophoneFork >>= either (\_ -> throwError $ InternalError "Concurrent task failed") pure
   let isScheduled = (maybe False not searchRequest.isMultimodalSearch) && merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
-  (booking, bookingParties) <- buildBooking merchant personId searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions person.paymentMode dashboardAgentId requiresPaymentBeforeConfirm
-  -- check also for the booking parties
-  checkIfActiveRidePresentForParties bookingParties
-  when isScheduled $ do
-    let scheduledRideReminderTime = addUTCTime (- (merchant.scheduleRideBufferTime + 10 * 60)) booking.startTime
-    let scheduleAfter = diffUTCTime scheduledRideReminderTime now
-    when (scheduleAfter > 0) $ do
-      let dfCalculationJobTs = max 2 scheduleAfter
-          scheduledRidePopupToRiderJobData = ScheduledRidePopupToRiderJobData {bookingId = booking.id}
-      createJobIn @_ @'ScheduledRidePopupToRider (Just searchRequest.merchantId) (Just merchantOperatingCityId) dfCalculationJobTs (scheduledRidePopupToRiderJobData :: ScheduledRidePopupToRiderJobData)
-  isValueAddNP <- CQVAN.isValueAddNP booking.providerId
-  riderPhone <-
-    if isValueAddNP
-      then mapM decrypt person.mobileNumber
-      else pure . Just $ prependZero booking.primaryExophone
-  let riderName = person.firstName
-  triggerBookingCreatedEvent BookingEventData {booking = booking}
-  void $ QRideB.createBooking booking
-  void $ QBPL.createMany bookingParties
-  unless isScheduled $
-    void $ QPFS.updateStatus personId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just (QTB.getFareProductType booking.bookingDetails), tripCategory = booking.tripCategory}
-  whenJust mbEsimateId $ QEstimate.updateStatus DEstimate.COMPLETED
-  confirmResDetails <- case quote.tripCategory of
-    Just (Trip.Delivery _) -> Just <$> makeDeliveryDetails booking bookingParties
+  -- Idempotency: if a non-cancelled booking already exists for this quote,
+  -- reuse it instead of creating a duplicate. This handles client retries
+  -- after the Redis init lock has expired.
+  existingBooking <- QRideB.findByQuoteId (Just quote.id)
+  (finalBooking, bookingParties, isNewBooking) <- case existingBooking of
+    Just existing | existing.status /= DRB.CANCELLED -> do
+      existingParties <- QBPL.findAllByBookingId existing.id
+      pure (existing, existingParties, False)
+    _ -> do
+      (booking, bp) <- buildBooking merchant personId searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions person.paymentMode dashboardAgentId requiresPaymentBeforeConfirm
+      pure (booking, bp, True)
+  when isNewBooking $ do
+    -- check also for the booking parties
+    checkIfActiveRidePresentForParties bookingParties
+    when isScheduled $ do
+      let scheduledRideReminderTime = addUTCTime (- (merchant.scheduleRideBufferTime + 10 * 60)) finalBooking.startTime
+      let scheduleAfter = diffUTCTime scheduledRideReminderTime now
+      when (scheduleAfter > 0) $ do
+        let dfCalculationJobTs = max 2 scheduleAfter
+            scheduledRidePopupToRiderJobData = ScheduledRidePopupToRiderJobData {bookingId = finalBooking.id}
+        createJobIn @_ @'ScheduledRidePopupToRider (Just searchRequest.merchantId) (Just merchantOperatingCityId) dfCalculationJobTs (scheduledRidePopupToRiderJobData :: ScheduledRidePopupToRiderJobData)
+    -- Fire-and-forget event trigger with error logging
+    fork "confirm->bookingCreatedEvent" $
+      try @_ @SomeException (triggerBookingCreatedEvent BookingEventData {booking = finalBooking}) >>= \case
+        Left err -> logError $ "Failed to trigger booking created event for booking " <> finalBooking.id.getId <> ": " <> show err
+        Right _ -> pure ()
+    -- Create booking and parties (sequential for FK safety)
+    void $ QRideB.createBooking finalBooking
+    void $ QBPL.createMany bookingParties
+  -- Fork independent status updates in parallel (only for new bookings)
+  flowStatusFork <- awaitableFork "confirm->updateFlowStatus" $
+    when isNewBooking $
+      unless isScheduled $
+        void $ QPFS.updateStatus personId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = finalBooking.id, validTill = searchRequest.validTill, fareProductType = Just (QTB.getFareProductType finalBooking.bookingDetails), tripCategory = finalBooking.tripCategory}
+  estimateFork <- awaitableFork "confirm->updateEstimate" $
+    when isNewBooking $
+      whenJust mbEsimateId $ QEstimate.updateStatus DEstimate.COMPLETED
+  -- Fork confirmResDetails and paymentMethodInfo in parallel with status updates
+  confirmResDetailsFork <- awaitableFork "confirm->confirmResDetails" $ case quote.tripCategory of
+    Just (Trip.Delivery _) -> Just <$> makeDeliveryDetails finalBooking bookingParties
     _ -> return Nothing
-
-  -- FIXME Currently paymentMethodId used in two different ways. Find better way to differentiate between these two
-  (paymentMethodInfo, isStripe) <- case paymentMethodId of
+  paymentMethodInfoFork <- awaitableFork "confirm->paymentMethodInfo" $ case paymentMethodId of
     Nothing -> pure (Nothing, False)
-    Just paymentMethodId' -> do
+    Just paymentMethodId' ->
       QMPM.findById (Id paymentMethodId') >>= \case
-        Just merchantPaymentMethod -> do
-          -- 1. merchantPaymentMethod.id from db
+        Just merchantPaymentMethod ->
           pure (Just $ mkPaymentMethodInfo merchantPaymentMethod, False)
-        Nothing -> do
-          -- 2. paymentMethodId which provided by Stripe SDK
+        Nothing ->
           if merchant.onlinePayment && paymentInstrument `notElem` [Just DMPM.Cash, Just DMPM.BoothOnline]
             then pure (Nothing, True)
             else pure (Nothing, False)
+  -- Compute riderPhone while forks run (isValueAddNP was forked early)
+  isValueAddNP <- L.await Nothing isValueAddNPFork >>= either (\_ -> throwError $ InternalError "Concurrent task failed") pure
+  riderPhone <-
+    if isValueAddNP
+      then mapM decrypt person.mobileNumber
+      else pure . Just $ prependZero finalBooking.primaryExophone
+  let riderName = person.firstName
+  -- Await all remaining forks
+  awaitAll [flowStatusFork, estimateFork]
+  confirmResDetails <- L.await Nothing confirmResDetailsFork >>= either (\_ -> throwError $ InternalError "Concurrent task failed") pure
+  (paymentMethodInfo, isStripe) <- L.await Nothing paymentMethodInfoFork >>= either (\_ -> throwError $ InternalError "Concurrent task failed") pure
 
   return $
     DConfirmRes
-      { booking,
+      { booking = finalBooking,
         providerId = quote.providerId,
         providerUrl = quote.providerUrl,
-        itemId = booking.bppEstimateId,
+        itemId = finalBooking.bppEstimateId,
         fromLoc = fromLocation,
         toLoc = mbToLocation,
         vehicleVariant = DV.castServiceTierToVariant quote.vehicleServiceTierType,
@@ -220,12 +253,16 @@ confirm DConfirmReq {..} = do
         paymentInstrument,
         confirmResDetails,
         isAdvanceBookingEnabled = searchRequest.isAdvanceBookingEnabled,
-        isInsured = Just $ booking.isInsured,
-        insuredAmount = booking.driverInsuredAmount,
-        paymentMode = booking.paymentMode,
+        isInsured = Just $ finalBooking.isInsured,
+        insuredAmount = finalBooking.driverInsuredAmount,
+        paymentMode = finalBooking.paymentMode,
         ..
       }
   where
+    awaitAll forks = do
+      results <- mapM (L.await Nothing) forks
+      mapM_ (either (\_ -> throwError $ InternalError "Concurrent task failed") pure) results
+
     prependZero :: Text -> Text
     prependZero str = "0" <> str
 

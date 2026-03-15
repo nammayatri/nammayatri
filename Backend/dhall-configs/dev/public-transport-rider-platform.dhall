@@ -9,7 +9,7 @@ let esqDBCfg =
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
       , connectSchemaName = "atlas_public_transport"
-      , connectionPoolCount = +25
+      , connectionPoolCount = +2
       }
 
 let esqDBReplicaCfg =
@@ -22,14 +22,15 @@ let esqDBReplicaCfg =
       , connectionPoolCount = esqDBCfg.connectionPoolCount
       }
 
+-- Redis pool: 5 for low-traffic services (Tier 3).
 let rcfg =
       { connectHost = "localhost"
       , connectPort = 6379
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +5
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 
@@ -45,9 +46,9 @@ let rccfg =
       , connectPort = 30001
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +5
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 

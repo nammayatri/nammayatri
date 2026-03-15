@@ -13,6 +13,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as BeamBCR
 import qualified Storage.Beam.Common as BeamCommon
 import Storage.Queries.OrphanInstances.BookingCancellationReason ()
+import Utils.SlowQueryLog (timedRunDB)
 
 -- Extra code goes here --
 
@@ -35,7 +36,7 @@ upsert cancellationReason = do
 countCancelledBookingsByBookingIds :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Id Booking] -> CancellationSource -> m Int
 countCancelledBookingsByBookingIds bookingIds cancellationSource = do
   dbConf <- getReplicaBeamConfig
-  res <- L.runDB dbConf $
+  res <- timedRunDB "booking_cancellation_reason" "countByBookingIds" $ L.runDB dbConf $
     L.findRows $
       B.select $
         B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $

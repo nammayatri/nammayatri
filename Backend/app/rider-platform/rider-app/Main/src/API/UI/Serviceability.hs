@@ -26,7 +26,6 @@ import Domain.Types.Person as Person
 import Environment
 import Kernel.External.Maps.Types
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -35,6 +34,7 @@ import qualified SharedLogic.CallBPPInternal as BPPInternal
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import Tools.Auth
+import Tools.Error
 
 -------- Serviceability----------
 type API =
@@ -84,9 +84,4 @@ checkForIsInterCity ::
   FlowHandler BPPInternal.IsIntercityResp
 checkForIsInterCity (personId, merchantId) req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  eitherResp <- withTryCatch "getIsInterCity:checkForIsInterCity" (BPPInternal.getIsInterCity merchant req)
-  case eitherResp of
-    Left err -> do
-      logDebug $ "Intercity API failed: " <> show err
-      throwError RideNotServiceable
-    Right resp -> return resp
+  BPPInternal.getIsInterCityCached merchant req

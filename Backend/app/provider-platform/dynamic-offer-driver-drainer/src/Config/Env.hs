@@ -58,3 +58,14 @@ getBatchCreateEnabled = fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv "BATC
 
 getInsertBatchSize :: IO Int
 getInsertBatchSize = fromMaybe 50 . (>>= readMaybe) <$> SE.lookupEnv "INSERT_BATCH_SIZE"
+
+-- DLQ Configuration
+getDlqMaxRetries :: IO Int
+getDlqMaxRetries = fromMaybe 3 . (>>= readMaybe) <$> SE.lookupEnv dlqMaxRetriesEnvKey
+
+-- Backpressure Configuration
+getBackpressureThreshold :: IO Double
+getBackpressureThreshold = fromMaybe 0.8 . (>>= readMaybe) <$> SE.lookupEnv backpressureThresholdEnvKey
+
+getBackpressureDelay :: IO Int
+getBackpressureDelay = fromMaybe 500000 . (>>= readMaybe) <$> SE.lookupEnv backpressureDelayEnvKey

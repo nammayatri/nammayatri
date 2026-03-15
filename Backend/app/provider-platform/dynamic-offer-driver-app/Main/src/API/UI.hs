@@ -78,14 +78,12 @@ import qualified API.UI.Route as Route
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Whatsapp as Whatsapp
 import Environment
-import Kernel.Prelude
+import qualified Kernel.Utils.Servant.Server as Server
 import Servant
-
-type HealthCheckAPI = Get '[JSON] Text
 
 type API =
   "ui"
-    :> ( HealthCheckAPI
+    :> ( Server.HealthCheckAPI
            :<|> Merchant.API
            :<|> Registration.API
            :<|> DemandHotspots.API
@@ -149,7 +147,7 @@ type API =
 
 handler :: FlowServer API
 handler =
-  pure "App is UP"
+  Server.healthCheck
     :<|> Merchant.handler
     :<|> Registration.handler
     :<|> DemandHotspots.handler

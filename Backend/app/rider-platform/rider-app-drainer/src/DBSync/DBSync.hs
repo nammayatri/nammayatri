@@ -141,15 +141,15 @@ runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEn
   void $
     if not (null cFail)
       then do
-        if isForcePushEnabled
+        dlqMaxRetries <- EL.runIO Env.getDlqMaxRetries
+        (recovered, stillFailed) <- pureRightExceptT $ retryFailedWithBackoff runCreate dbStreamKey createDataEntries cFail dlqMaxRetries 1
+        void $ pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) recovered
+        if not (null stillFailed)
           then do
-            EL.logError ("CREATE FAILED: Force Sync is enabled" :: Text) (show cFail :: Text)
-            void $ pureRightExceptT $ addValueToErrorQueue (T.pack C.ecRedisFailedStream) ((\(_, bts) -> ("command", bts)) <$> filter (\(id, _) -> id `elem` cFail) createDataEntries)
-            pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) cFail
-            pure (length cSucc)
-          else do
-            EL.logError ("CREATE FAILED: Force Sync is not enabled, so stopping the drainer" :: Text) (show cFail :: Text)
-            throwE (length cSucc)
+            pureRightExceptT $ addToDLQ (T.pack C.ecRedisDLQStream) createDataEntries stillFailed "Create"
+            pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) stillFailed
+            pure (length cSucc + length recovered)
+          else pure (length cSucc + length recovered)
       else pure (length cSucc)
 
   (uSucc, uFail) <- pureRightExceptT $ executeInSequence runUpdate ([], []) dbStreamKey updateEntries
@@ -163,15 +163,15 @@ runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEn
   void $
     if not (null uFail)
       then do
-        if isForcePushEnabled
+        dlqMaxRetriesU <- EL.runIO Env.getDlqMaxRetries
+        (recoveredU, stillFailedU) <- pureRightExceptT $ retryFailedWithBackoff runUpdate dbStreamKey updateEntries uFail dlqMaxRetriesU 1
+        void $ pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) recoveredU
+        if not (null stillFailedU)
           then do
-            EL.logError ("UPDATE FAILED: Force Sync is enabled" :: Text) (show uFail :: Text)
-            void $ pureRightExceptT $ addValueToErrorQueue (T.pack C.ecRedisFailedStream) ((\(_, bts) -> ("command", bts)) <$> filter (\(id, _) -> id `elem` uFail) updateEntries)
-            pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) uFail
-            pure (length cSucc + length uSucc)
-          else do
-            EL.logError ("UPDATE FAILED: Force Sync is not enabled, so stopping the drainer" :: Text) (show uFail :: Text)
-            throwE (length cSucc + length uSucc)
+            pureRightExceptT $ addToDLQ (T.pack C.ecRedisDLQStream) updateEntries stillFailedU "Update"
+            pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) stillFailedU
+            pure (length cSucc + length uSucc + length recoveredU)
+          else pure (length cSucc + length uSucc + length recoveredU)
       else pure (length cSucc + length uSucc)
 
   (dSucc, dFail) <- pureRightExceptT $ executeInSequence runDelete ([], []) dbStreamKey deleteEntries
@@ -184,15 +184,15 @@ runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEn
 
   if not (null dFail)
     then do
-      if isForcePushEnabled
+      dlqMaxRetriesD <- EL.runIO Env.getDlqMaxRetries
+      (recoveredD, stillFailedD) <- pureRightExceptT $ retryFailedWithBackoff runDelete dbStreamKey deleteEntries dFail dlqMaxRetriesD 1
+      void $ pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) recoveredD
+      if not (null stillFailedD)
         then do
-          EL.logError ("DELETE FAILED: Force Sync is enabled" :: Text) (show dFail :: Text)
-          void $ pureRightExceptT $ addValueToErrorQueue (T.pack C.ecRedisFailedStream) ((\(_, bts) -> ("command", bts)) <$> filter (\(id, _) -> id `elem` dFail) deleteEntries)
-          pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) dFail
-          pure (length cSucc + length uSucc + length dSucc)
-        else do
-          EL.logError ("DELETE FAILED: Force Sync is not enabled, so stopping the drainer" :: Text) (show dFail :: Text)
-          throwE (length cSucc + length uSucc + length dSucc)
+          pureRightExceptT $ addToDLQ (T.pack C.ecRedisDLQStream) deleteEntries stillFailedD "Delete"
+          pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) stillFailedD
+          pure (length cSucc + length uSucc + length dSucc + length recoveredD)
+        else pure (length cSucc + length uSucc + length dSucc + length recoveredD)
     else pure (length cSucc + length uSucc + length dSucc)
   where
     pureRightExceptT = ExceptT . (Right <$>)
@@ -201,15 +201,24 @@ process :: Text -> Integer -> Flow Int
 process dbStreamKey count = do
   _beforeProcess <- EL.getCurrentDateInMillis
 
+  -- Report items pending in this stream shard
+  streamLen <- RQ.getRedisStreamLength dbStreamKey
+  case streamLen of
+    Right len -> void $ publishDBSyncMetric $ Event.DrainerItemsPending (fromIntegral len)
+    Left _ -> pure ()
+
   commands <- peekDBCommand dbStreamKey count
   case commands of
     Left err -> do
       void $ publishDBSyncMetric Event.PeekDBCommandError
+      void $ publishDBSyncMetric Event.DrainerErrorsTotal
       EL.logInfo ("PEEK_DB_COMMAND_ERROR" :: Text) $ show err
       pure 0
     Right Nothing -> do
+      void $ publishDBSyncMetric $ Event.DrainerBatchSize 0
       pure 0
     Right (Just c) -> do
+      void $ publishDBSyncMetric $ Event.DrainerBatchSize (length c)
       res <- run c
       _afterProcess <- EL.getCurrentDateInMillis
       void $ publishProcessLatency "QueryExecutionTime" (int2Double (_afterProcess - _beforeProcess))
@@ -226,6 +235,7 @@ process dbStreamKey count = do
       dbsyncOperationsOutput <- runExceptT $ runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEntries
       case dbsyncOperationsOutput of
         Left cnt -> do
+          void $ publishDBSyncMetric Event.DrainerErrorsTotal
           stopDrainer
           pure cnt
         Right cnt -> pure cnt
@@ -262,12 +272,6 @@ startDBSync = do
           }
   forever $ do
     getAndSetKvConfigs
-    stopRequested <- EL.runIO $ isJust <$> tryTakeMVar readinessFlag
-    -- EL.runIO $ when stopRequested (shutDownHandler)
-    when stopRequested $ do
-      EL.logInfo ("RECEIVED SIGINT/SIGTERM" :: Text) "Stopping the rider drainer after flushing the kafka producer"
-      void flushKafkaProducerAndPublishMetrics
-      EL.runIO shutDownHandler
 
     StateRef
       { _config = config,
@@ -275,12 +279,25 @@ startDBSync = do
       } <-
       EL.runIO $ readIORef stateRef
 
+    stopRequested <- EL.runIO $ isJust <$> tryTakeMVar readinessFlag
+    when stopRequested $ do
+      EL.logInfo ("RECEIVED SIGINT/SIGTERM" :: Text) "Graceful shutdown: draining final batch before exit"
+      dbStreamKey <- getStreamName $ T.pack dbSyncStream
+      case dbStreamKey of
+        Nothing -> pure ()
+        Just streamName -> do
+          void $ try @_ @SomeException (process streamName (_streamReadCount config))
+          void $ RQ.deleteKey [streamName <> "_lock"]
+      void flushKafkaProducerAndPublishMetrics
+      EL.runIO shutDownHandler
+
     isDrainingPaused <- fromMaybe False <$> getValueFromRedis C.drainerStopKey
     history' <-
       if isDrainingPaused
         then publishDBSyncMetric (Event.DrainerStopStatus 1) >> EL.runIO ((delay =<< Env.getDrainerRetryDelay) $> history)
         else do
           void $ publishDBSyncMetric $ Event.DrainerStopStatus 0
+          checkBackpressure
           dbStreamKey <- getStreamName $ T.pack dbSyncStream
           case dbStreamKey of
             Nothing -> pure history
@@ -290,6 +307,7 @@ startDBSync = do
                 try (process streamName (_streamReadCount config)) >>= \case
                   Left (ex :: SomeException) -> do
                     EL.logError ("DB command failed: " :: Text) (T.pack (show ex))
+                    void $ publishDBSyncMetric $ Event.DrainerErrorsTotal
                     rateLimit config history 1
                   Right 0 -> EL.runIO $ delay (_emptyRetry config) $> history
                   Right n -> rateLimit config history n

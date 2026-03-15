@@ -14,13 +14,14 @@
 
 module SharedLogic.External.LocationTrackingService.Flow where
 
-import qualified Data.Either as Either
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import Utils.Common.Sanitize (sanitizeShowError)
+import qualified Lib.SessionizerMetrics.Prometheus.Metrics as ObsMetrics
 import qualified SharedLogic.External.LocationTrackingService.API.NearbyDrivers as NearByAPI
 import qualified SharedLogic.External.LocationTrackingService.API.VehicleTrackingOnRoute as VehicleTracking
 import SharedLogic.External.LocationTrackingService.Types
@@ -35,10 +36,13 @@ vehicleTrackingOnRoute vehicleTracking = do
         case vehicleTracking of
           ByRoute routeCode -> VehicleTrackingOnRouteReq (Just routeCode) Nothing
           ByTrips tripCodes -> VehicleTrackingOnRouteReq Nothing (Just tripCodes)
+  startTime <- getCurrentTime
   vehicleTrackingOnRouteResp <-
     withShortRetry $
       callAPI url (VehicleTracking.vehicleTrackingOnRoute req) "vehicleTrackingOnRoute" VehicleTracking.vehicleTrackingOnRouteAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_VEHICLE_TRACKING_API") url)
+  endTime <- getCurrentTime
+  ObsMetrics.observeExternalAPILatency "lts" "vehicleTrackingOnRoute" (realToFrac $ diffUTCTime endTime startTime)
   logDebug $ "lts vehicle tracking on route: " <> show vehicleTrackingOnRouteResp
   return vehicleTrackingOnRouteResp
 
@@ -58,7 +62,7 @@ nearBy req = do
             >>= \case
               Right locations -> pure locations
               Left err -> do
-                logError $ "Failed to call nearBy API for secondary url: " <> show url <> ", error: " <> show err
+                logError $ "Failed to call nearBy API for secondary url, error: " <> sanitizeShowError err
                 pure []
 
   primaryAwaitable <- awaitableFork "primaryLTS" $ callNearByAPI ltsCfg.url
@@ -67,10 +71,14 @@ nearBy req = do
   -- Primary call must succeed - propagate error if it fails
   primaryResult <-
     L.await Nothing primaryAwaitable >>= \case
-      Left err -> throwError $ InternalError $ "Failed to call nearBy API for primary url: " <> show ltsCfg.url <> ", error: " <> show err
+      Left _ -> throwError $ InternalError "Failed to call nearBy API for primary url"
       Right result -> pure result
   -- Secondary call is optional - gracefully handle errors
-  secondaryResult <- maybe (pure []) (fmap (Either.fromRight []) . L.await Nothing) mbSecondaryAwaitable
+  secondaryResult <- maybe (pure []) (\awaitable -> L.await Nothing awaitable >>= \case
+    Right result -> pure result
+    Left _ -> do
+      logError "Secondary LTS nearBy call failed"
+      pure []) mbSecondaryAwaitable
 
   let combinedLocations = primaryResult <> secondaryResult
   logDebug $ "lts nearBy: " <> show combinedLocations

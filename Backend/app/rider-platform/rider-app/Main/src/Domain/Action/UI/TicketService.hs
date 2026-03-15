@@ -67,12 +67,13 @@ import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.BusinessHour as CQBH
+import qualified Storage.CachedQueries.ServiceCategory as CQSC
 import qualified Storage.Queries.BusinessHour as QBH
 import qualified Storage.Queries.MerchantOperatingCity as QMO
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonExtra as PersonExtra
 import qualified Storage.Queries.SeatManagement as QTSM
-import qualified Storage.Queries.ServiceCategory as QSC
 import qualified Storage.Queries.ServicePeopleCategory as QPC
 import qualified Storage.Queries.SpecialOccasion as QSO
 import qualified Storage.Queries.TicketBooking as QTB
@@ -216,7 +217,7 @@ getTicketPlacesServices _ placeId mbDate mbSubPlaceId = do
           )
         )
     mkBusinessHoursRes service bDate mbSpecialOcc bhId = do
-      businessHour <- QBH.findById bhId >>= fromMaybeM (BusinessHourNotFound bhId.getId)
+      businessHour <- CQBH.findById bhId >>= fromMaybeM (BusinessHourNotFound bhId.getId)
       let convertedBusinessHT = convertBusinessHT businessHour.btype
           mbOperationalDay = (.dayOfWeek) =<< mbSpecialOcc
       categoriesWithBHOverrides' <- mapM (mkServiceCategories bDate) businessHour.categoryId
@@ -247,7 +248,7 @@ getTicketPlacesServices _ placeId mbDate mbSubPlaceId = do
 
     mkServiceCategories bDate_ serviceCatId = do
       context <- TicketRule.getCurrentContext 330 (Just bDate_) Nothing
-      serviceCategory' <- QSC.findById serviceCatId >>= fromMaybeM (ServiceCategoryNotFound serviceCatId.getId)
+      serviceCategory' <- CQSC.findById serviceCatId >>= fromMaybeM (ServiceCategoryNotFound serviceCatId.getId)
       let serviceCategory = TicketRule.processEntity context serviceCategory'
       isClosed <-
         QSO.findBySplDayAndEntityIdAndDate Domain.Types.SpecialOccasion.Closed (serviceCatId.getId) (Just bDate_) >>= \case
@@ -489,7 +490,7 @@ createTicketBookingService merchantOperatingCityId ticketBookingId visitDate tic
   now <- getCurrentTime
   ticketService' <- QTicketService.findById ticketServicesReq.serviceId >>= fromMaybeM (TicketServiceNotFound ticketServicesReq.serviceId.getId)
   let ticketService = TicketRule.processEntity context ticketService'
-  businessHour <- QBH.findById bHourId >>= fromMaybeM (BusinessHourNotFound bHourId.getId)
+  businessHour <- CQBH.findById bHourId >>= fromMaybeM (BusinessHourNotFound bHourId.getId)
 
   let businessHourTime = case businessHour.btype of
         Domain.Types.BusinessHour.Slot time -> time
@@ -551,7 +552,7 @@ createTicketBookingServiceCategory merchantOperatingCityId ticketBookingServiceI
   mbAnySplOccassion <- QSO.findBySplDayAndEntityIdAndDate Domain.Types.SpecialOccasion.Closed (ticketServiceCReq.categoryId.getId) (Just visitDate)
   when (maybe False (\anySplOccassion -> elem businessHour.id anySplOccassion.businessHours) mbAnySplOccassion) $ throwError $ InvalidRequest "Business hour is closed"
   let serviceCatId = ticketServiceCReq.categoryId
-  tBookingSC' <- QSC.findById serviceCatId >>= fromMaybeM (ServiceCategoryNotFound serviceCatId.getId)
+  tBookingSC' <- CQSC.findById serviceCatId >>= fromMaybeM (ServiceCategoryNotFound serviceCatId.getId)
   let tBookingSC = TicketRule.processEntity context tBookingSC'
   tBookingPCatsWithPeopleTicketQuantity <- mapM (\pcReq -> createTicketBookingPeopleCategory now merchantOperatingCityId id visitDate pcReq merchantId) ticketServiceCReq.peopleCategories
   let (tBookingPCats, peopleTicketQuantityList) = unzip tBookingPCatsWithPeopleTicketQuantity
@@ -1634,7 +1635,7 @@ postTicketBookingsUpdateSeats :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.
 postTicketBookingsUpdateSeats _ TicketBookingUpdateSeatsReq {..} = do
   -- TODO: Here we need to make redis compatible update
   mbSeatM <- QTSM.findByTicketServiceCategoryIdAndDate categoryId date
-  tBookingSC <- QSC.findById categoryId >>= fromMaybeM (InvalidRequest "TicketBookingServiceCategory not found")
+  tBookingSC <- CQSC.findById categoryId >>= fromMaybeM (InvalidRequest "TicketBookingServiceCategory not found")
   when (isNothing mbSeatM) $ do
     seatId <- generateGUID
     now <- getCurrentTime
@@ -1659,7 +1660,7 @@ postTicketBookingsUpdateSeats _ TicketBookingUpdateSeatsReq {..} = do
 postTicketServiceCancel :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> API.Types.UI.TicketService.TicketServiceCancelReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postTicketServiceCancel (_mbPersonId, merchantId) req = do
   now <- getCurrentTime
-  bHoursRes <- QBH.findById req.businessHourId >>= fromMaybeM (BusinessHourNotFound req.businessHourId.getId)
+  bHoursRes <- CQBH.findById req.businessHourId >>= fromMaybeM (BusinessHourNotFound req.businessHourId.getId)
   fork "cancel and refund:" $ do
     isLockAcquired <- tryMerchantTicketCancellationLock req.businessHourId req.date req.ticketServiceCategoryId
     unless isLockAcquired $ throwError $ InvalidRequest "This Service Category Ticket cancellation is already in progress"

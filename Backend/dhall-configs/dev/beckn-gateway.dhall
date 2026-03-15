@@ -2,14 +2,15 @@ let common = ./common.dhall
 
 let sec = ./secrets/beckn-gateway.dhall
 
+-- Redis pool: 10 for gateway (Tier 2, moderate traffic).
 let rcfg =
       { connectHost = "localhost"
       , connectPort = 6379
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +10
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 
@@ -18,9 +19,9 @@ let rccfg =
       , connectPort = 30001
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +10
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 

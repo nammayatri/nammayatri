@@ -88,6 +88,15 @@ findByDriverIdAndServiceName (Id driverId) serviceName =
         ]
     ]
 
+findAllByDriverIdsAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person] -> DPlan.ServiceNames -> m [DriverPlan]
+findAllByDriverIdsAndServiceName driverIds serviceName =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds),
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
+        ]
+    ]
+
 findAllByDriverIdsPaymentModeAndServiceName ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   [Id Person] ->

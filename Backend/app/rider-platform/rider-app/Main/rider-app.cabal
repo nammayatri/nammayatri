@@ -514,10 +514,12 @@ library
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.BppDetails
+      Storage.CachedQueries.BusinessHour
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FollowRide
       Storage.CachedQueries.FRFSConfig
       Storage.CachedQueries.FRFSGtfsStageFare
+      Storage.CachedQueries.Geometry
       Storage.CachedQueries.HotSpotConfig
       Storage.CachedQueries.IntegratedBPPConfig
       Storage.CachedQueries.Maps.LocationMapCache
@@ -549,8 +551,10 @@ library
       Storage.CachedQueries.RoutePolylines
       Storage.CachedQueries.RouteStopTimeTable
       Storage.CachedQueries.SavedReqLocationExtra
+      Storage.CachedQueries.ServiceCategory
       Storage.CachedQueries.Sos
       Storage.CachedQueries.StationsExtraInformation
+      Storage.CachedQueries.TicketPlace
       Storage.CachedQueries.Translations
       Storage.CachedQueries.UiRiderConfig
       Storage.CachedQueries.ValueAddNP
@@ -1682,6 +1686,7 @@ test-suite rider-app-test
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
+      BookingConfirm
       FRFS.DirectQR
       Paths_rider_app
   hs-source-dirs:
@@ -1733,6 +1738,7 @@ test-suite rider-app-test
     , beam-core
     , beam-mysql
     , beam-postgres
+    , beckn-spec
     , bytestring
     , casing
     , cassava

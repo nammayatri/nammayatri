@@ -120,6 +120,9 @@ import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CQMP
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.CachedQueries.BusinessHour as CQBH
+import qualified Storage.CachedQueries.Geometry as CQGeo
+import qualified Storage.CachedQueries.ServiceCategory as CQSC
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.BusinessHour as SQBH
 import qualified Storage.Queries.BusinessHourExtra as SQBHE
@@ -540,7 +543,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- geometry
   mbGeometry <-
-    QGeo.findGeometryByStateAndCity req.city req.state >>= \case
+    CQGeo.findGeometryByStateAndCity req.city req.state >>= \case
       Nothing -> do
         Just <$> buildGeometry
       _ -> return Nothing
@@ -655,7 +658,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   finally
     ( do
-        whenJust mbGeometry $ \geometry -> QGeo.create geometry
+        whenJust mbGeometry $ \geometry -> do
+          QGeo.create geometry
+          CQGeo.clearCacheByStateAndCity req.city req.state
         whenJust mbNewMerchant $ \newMerchant -> QM.create newMerchant
         whenJust mbNewOperatingCity $ \newOperatingCity -> CQMOC.create newOperatingCity
         whenJust mbMerchantMessages $ \merchantMessages -> mapM_ CQMM.create merchantMessages
@@ -1123,6 +1128,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
               return newBusinessHourId
             Just bh -> do
               SQBH.updateByPrimaryKey businessHour{id = bh.id, categoryId = processedCategories}
+              CQBH.clearCacheById bh.id
               return bh.id
 
         upsertCategory categoryIds (category, peopleCategories) = do
@@ -1138,6 +1144,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
               return newCategoryId
             Just sc -> do
               SQSC.updateByPrimaryKey category{id = sc.id, peopleCategory = processedPeopleCategories}
+              CQSC.clearCacheById sc.id
               return sc.id
 
         upsertPeopleCategory peopleCategoryIds peopleCategory = do

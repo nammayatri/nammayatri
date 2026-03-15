@@ -9,7 +9,7 @@ let esqDBCfg =
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
       , connectSchemaName = "atlas_app"
-      , connectionPoolCount = +25
+      , connectionPoolCount = +4
       }
 
 let esqDBReplicaCfg =
@@ -22,14 +22,15 @@ let esqDBReplicaCfg =
       , connectionPoolCount = esqDBCfg.connectionPoolCount
       }
 
+-- Redis pool: 10 for background processors (Tier 2).
 let hedisCfg =
       { connectHost = "localhost"
       , connectPort = 6379
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +10
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 
@@ -38,9 +39,9 @@ let hedisClusterCfg =
       , connectPort = 30001
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +10
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 
@@ -49,9 +50,9 @@ let hedisSecondaryClusterCfg =
       , connectPort = 30002
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +10
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 

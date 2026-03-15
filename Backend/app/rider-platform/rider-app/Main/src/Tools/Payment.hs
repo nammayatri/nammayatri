@@ -104,6 +104,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 import System.Environment as SE
+import Utils.CircuitBreaker (mkDefaultConfig, withCircuitBreaker)
 
 -- RideBooking (BoothOnline / Kaali-Peeli): uses Paytm EDC from shared-kernel (PaytmEDCConfig).
 rideBookingPaymentService :: Payment.PaymentService
@@ -193,14 +194,15 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
   merchantServiceConfig <-
     CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId paymentServiceName
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show rideBookingPaymentService))
+  let cbConfig = mkDefaultConfig "payment"
   case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig.serviceConfig of
-    Just (DMSC.PaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
-    Just (DMSC.MetroPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
-    Just (DMSC.BusPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
-    Just (DMSC.BbpsPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
-    Just (DMSC.MultiModalPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
-    Just (DMSC.PassPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
-    Just (DMSC.ParkingPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
+    Just (DMSC.PaymentServiceConfig vsc) -> withCircuitBreaker cbConfig $ func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
+    Just (DMSC.MetroPaymentServiceConfig vsc) -> withCircuitBreaker cbConfig $ func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
+    Just (DMSC.BusPaymentServiceConfig vsc) -> withCircuitBreaker cbConfig $ func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
+    Just (DMSC.BbpsPaymentServiceConfig vsc) -> withCircuitBreaker cbConfig $ func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
+    Just (DMSC.MultiModalPaymentServiceConfig vsc) -> withCircuitBreaker cbConfig $ func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
+    Just (DMSC.PassPaymentServiceConfig vsc) -> withCircuitBreaker cbConfig $ func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
+    Just (DMSC.ParkingPaymentServiceConfig vsc) -> withCircuitBreaker cbConfig $ func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
     _ -> throwError $ InternalError "Unknown Service Config"
   where
     overrideMockUrlIfNeeded :: Payment.PaymentServiceConfig -> Maybe Bool -> Payment.PaymentServiceConfig
@@ -254,7 +256,7 @@ runWithServiceConfig1 func getCfg merchantId merchantOperatingCityId paymentMode
     CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.PaymentService paymentService)
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show paymentService))
   case merchantPaymentServiceConfig.serviceConfig of
-    DMSC.PaymentServiceConfig msc -> func msc req
+    DMSC.PaymentServiceConfig msc -> withCircuitBreaker (mkDefaultConfig "payment") $ func msc req
     _ -> throwError $ InternalError "Unknown Service Config"
 
 runWithServiceConfig2 ::
@@ -274,7 +276,7 @@ runWithServiceConfig2 func getCfg merchantId merchantOperatingCityId paymentMode
     CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.PaymentService paymentService)
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show paymentService))
   case merchantPaymentServiceConfig.serviceConfig of
-    DMSC.PaymentServiceConfig msc -> func msc req1 req2
+    DMSC.PaymentServiceConfig msc -> withCircuitBreaker (mkDefaultConfig "payment") $ func msc req1 req2
     _ -> throwError $ InternalError "Unknown Service Config"
 
 runWithServiceConfig3 ::
@@ -295,7 +297,7 @@ runWithServiceConfig3 func getCfg merchantId merchantOperatingCityId paymentMode
     CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.PaymentService paymentService)
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show paymentService))
   case merchantPaymentServiceConfig.serviceConfig of
-    DMSC.PaymentServiceConfig msc -> func msc req1 req2 req3
+    DMSC.PaymentServiceConfig msc -> withCircuitBreaker (mkDefaultConfig "payment") $ func msc req1 req2 req3
     _ -> throwError $ InternalError "Unknown Service Config"
 
 data SplitType = FIXED | FLEXIBLE deriving (Eq, Ord, Read, Show, Generic, ToSchema, ToParamSchema)

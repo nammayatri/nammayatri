@@ -14,6 +14,10 @@ let slackNotificationConfig =
       , isForcedAWS = True
       }
 
+-- Pool sizing: pool_size = num_cores * 2 + num_disks = 8*2+1 = 17 max.
+-- Tier 1 (core API): 8 per pool. Total budget: ~124 connections across all
+-- services vs PostgreSQL max_connections (default 100). Only a subset of
+-- services run simultaneously in dev, keeping us well within limits.
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434
@@ -21,7 +25,7 @@ let esqDBCfg =
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
       , connectSchemaName = "atlas_driver_offer_bpp"
-      , connectionPoolCount = +25
+      , connectionPoolCount = +8
       }
 
 let esqDBReplicaCfg =
@@ -68,14 +72,16 @@ let driverClickhouseCfg =
 
 let dashboardClickhouseCfg = driverClickhouseCfg
 
+-- Redis pool: 20 for core API services. Redis is single-threaded so
+-- excessive connections waste memory without improving throughput.
 let rcfg =
       { connectHost = "localhost"
       , connectPort = 6379
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +20
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 
@@ -84,9 +90,9 @@ let rccfg =
       , connectPort = 30001
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +20
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 
@@ -95,9 +101,9 @@ let rccfgSecondary =
       , connectPort = 30002
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +20
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 
@@ -214,8 +220,10 @@ let slackCfg =
       , slackToken = common.slackToken
       }
 
+-- Rate limit: per-driver. Drivers send GPS every ~2-4s (15-30/min).
+-- Old value (100/1s) was effectively unlimited; 20/60s would throttle normal operation.
 let driverLocationUpdateRateLimitOptions =
-      { limit = +100, limitResetTimeInSec = +1 }
+      { limit = +120, limitResetTimeInSec = +60 }
 
 let cacheConfig = { configsExpTime = +86400 }
 
@@ -492,7 +500,7 @@ in  { esqDBCfg
     , schedulerType = common.schedulerType.RedisBased
     , ltsCfg = LocationTrackingeServiceConfig
     , modelNamesMap
-    , incomingAPIResponseTimeout = +15
+    , incomingAPIResponseTimeout = +30
     , internalEndPointMap = common.internalEndPointMap
     , _version = "2.0.0"
     , cacConfig

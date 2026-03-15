@@ -64,13 +64,42 @@ import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.MerchantClientConfig as QMCC
 import qualified Storage.Queries.Person as QPerson
 import Utils.Common.Cac.KeyNameConstants
 
-clearDeviceToken :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
-clearDeviceToken = QPerson.clearDeviceTokenByPersonId
+clearDeviceToken :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
+clearDeviceToken personId = do
+  QPerson.clearDeviceTokenByPersonId personId
+  logWarning $ "FCM_STALE_TOKEN - cleared device token for person " <> personId.getId
+  count <- Redis.incr (staleTokenCounterKey personId)
+  when (count >= staleTokenThreshold) $ do
+    logError $ "FCM_STALE_TOKEN_REPEATED - person " <> personId.getId <> " has had " <> show count <> " consecutive token failures, needs re-registration"
+    Redis.setExp (forceReRegistrationKey personId) True (60 * 60 * 24) -- 24 hours
+  Redis.expire (staleTokenCounterKey personId) (60 * 60 * 72) -- 72 hour window
+
+staleTokenThreshold :: Integer
+staleTokenThreshold = 3
+
+staleTokenCounterKey :: Id Person -> Text
+staleTokenCounterKey personId = "fcm:stale_token_count:" <> personId.getId
+
+forceReRegistrationKey :: Id Person -> Text
+forceReRegistrationKey personId = "fcm:force_re_register:" <> personId.getId
+
+resetStaleTokenCounter :: (CacheFlow m r) => Id Person -> m ()
+resetStaleTokenCounter personId = Redis.del (staleTokenCounterKey personId)
+
+pendingNotificationKey :: Id Person -> Text
+pendingNotificationKey personId = "fcm:pending_notification:" <> personId.getId
+
+-- Push a search request to the Redis fallback queue when FCM delivery is unreliable.
+-- The driver app's poll endpoint can check this to discover ride offers faster.
+pushPendingSearchNotification :: (CacheFlow m r, MonadFlow m) => Id Person -> Text -> m ()
+pushPendingSearchNotification driverId searchRequestId =
+  Redis.rPushExp (pendingNotificationKey driverId) [searchRequestId] 120 -- 2 minute TTL
 
 templateText :: Text -> Text
 templateText txt = "{#" <> txt <> "#}"
@@ -1162,8 +1191,11 @@ sendSearchRequestToDriverNotification ::
   Notification.NotificationReq SearchRequestForDriverAPIEntity EmptyDynamicParam ->
   m ()
 sendSearchRequestToDriverNotification _merchantId merchantOpCityId driverId req = do
-  --logDebug $ "DFCM - NEW_RIDE_AVAILABLE  Title -> " <> show req.title <> " body - " <> show req.body
   driver <- QPerson.findById driverId
+  let hasToken = isJust (driver >>= (.deviceToken))
+  unless hasToken $ do
+    logWarning $ "FCM_NO_TOKEN - driver " <> driverId.getId <> " has no device token, pushing to fallback queue"
+    pushPendingSearchNotification driverId req.entity.entityIds
   runWithServiceConfigForProviders merchantOpCityId (driver >>= (.clientId)) (driver >>= (.clientDevice)) req iosModifier (clearDeviceToken driverId)
   where
     iosModifier (iosFCMdata :: (FCM.FCMData SearchRequestForDriverAPIEntity)) = iosFCMdata {fcmEntityData = modifyEntity iosFCMdata.fcmEntityData}

@@ -3,9 +3,10 @@ module Main where
 -- import Config.Config as Config
 import Config.Env as Env
 import qualified Constants as C
-import Control.Concurrent (forkIO)
+import Control.Concurrent (forkIO, threadDelay)
 import Control.Concurrent.Async (async, cancel)
 import qualified DBSync.DBSync as DBSync
+import qualified Data.Foldable as F
 import qualified Data.HashSet as HS
 import qualified "unordered-containers" Data.HashSet as HashSet
 import Data.Pool
@@ -29,8 +30,10 @@ import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Types.Flow
 import Kernel.Utils.Dhall hiding (void)
 import qualified Kernel.Utils.FlowLogging as L
+import qualified Prometheus as P
 import qualified System.Directory as SD
 import System.Environment (lookupEnv)
+import System.IO.Unsafe (unsafePerformIO)
 import Types.DBSync as TDB
 import Utils.Utils
 
@@ -40,6 +43,8 @@ main = do
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let connString = getConnectionString $ appCfg.esqDBCfg
   connectionPool <- createDbPool appCfg.esqDBCfg
+  poolUtilRef <- newIORef 0.0
+  void $ startDrainerPoolMonitor connectionPool "driver-drainer" "primary" (appCfg.esqDBCfg.connectionPoolCount) poolUtilRef
   let loggerRt = L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
   kafkaProducerTools <- buildKafkaProducerTools' appCfg.kafkaProducerCfg appCfg.secondaryKafkaProducerCfg appCfg.kafkaProperties
   bracket (async NW.runMetricServer) cancel $ \_ -> do
@@ -61,7 +66,7 @@ main = do
 
           dbSyncMetric <- Event.mkDBSyncMetric
           threadPerPodCount <- Env.getThreadPerPodCount
-          let environment = Env (T.pack C.kvRedis) dbSyncMetric kafkaProducerTools appCfg.dontEnableForDb appCfg.dontEnableForKafka connectionPool appCfg.esqDBCfg
+          let environment = Env (T.pack C.kvRedis) dbSyncMetric kafkaProducerTools appCfg.dontEnableForDb appCfg.dontEnableForKafka connectionPool appCfg.esqDBCfg poolUtilRef
           R.runFlow flowRt (runReaderT DBSync.fetchAndSetKvConfigs environment)
           spawnDrainerThread threadPerPodCount flowRt environment
           R.runFlow flowRt (runReaderT DBSync.startDBSync environment)
@@ -103,3 +108,68 @@ createDbPool dbConfig = do
   noOfStripes <- Env.getThreadPerPodCount
   let poolConfig = createPoolConfig noOfStripes dbConfig
    in newPool poolConfig
+
+-- Connection pool health monitoring (Prometheus gauges)
+
+{-# NOINLINE drainerPoolSizeGauge #-}
+drainerPoolSizeGauge :: P.Vector P.Label2 P.Gauge
+drainerPoolSizeGauge = unsafePerformIO $
+  P.register $
+    P.vector ("service", "pool") $
+      P.gauge $
+        P.Info "db_pool_size" "Configured maximum connections in PostgreSQL pool"
+
+{-# NOINLINE drainerPoolInUseGauge #-}
+drainerPoolInUseGauge :: P.Vector P.Label2 P.Gauge
+drainerPoolInUseGauge = unsafePerformIO $
+  P.register $
+    P.vector ("service", "pool") $
+      P.gauge $
+        P.Info "db_pool_in_use" "PostgreSQL connections currently checked out"
+
+{-# NOINLINE drainerPoolIdleGauge #-}
+drainerPoolIdleGauge :: P.Vector P.Label2 P.Gauge
+drainerPoolIdleGauge = unsafePerformIO $
+  P.register $
+    P.vector ("service", "pool") $
+      P.gauge $
+        P.Info "db_pool_idle" "Idle PostgreSQL connections available in pool"
+
+{-# NOINLINE drainerPoolUtilizationGauge #-}
+drainerPoolUtilizationGauge :: P.Vector P.Label2 P.Gauge
+drainerPoolUtilizationGauge = unsafePerformIO $
+  P.register $
+    P.vector ("service", "pool") $
+      P.gauge $
+        P.Info "db_pool_utilization_ratio" "PostgreSQL pool utilization (in_use / size)"
+
+readDrainerPoolStats :: Pool a -> IO (Int, Int)
+readDrainerPoolStats pool = do
+  let maxPerStripe = poolMaxResources (poolConfig pool)
+  stats <- mapM (readStripe maxPerStripe) (F.toList $ localPools pool)
+  let totalInUse = sum (map fst stats)
+      totalIdle = sum (map snd stats)
+  pure (totalInUse, totalIdle)
+  where
+    readStripe maxRes lp = do
+      mbStripe <- tryReadMVar (stripeVar lp)
+      case mbStripe of
+        Nothing -> pure (0, 0)
+        Just stripe ->
+          let idle = length (cache stripe)
+              inUseCount = maxRes - available stripe - idle
+          in pure (max 0 inUseCount, idle)
+
+startDrainerPoolMonitor :: Pool a -> Text -> Text -> Int -> IORef Double -> IO ThreadId
+startDrainerPoolMonitor pool serviceName poolName maxSize utilRef = forkIO $ forever $ do
+  (currentInUse, currentIdle) <- readDrainerPoolStats pool
+  let maxD = fromIntegral maxSize :: Double
+      inUseD = fromIntegral currentInUse :: Double
+      idleD = fromIntegral currentIdle :: Double
+      utilization = if maxSize > 0 then inUseD / maxD else 0.0
+  writeIORef utilRef utilization
+  P.withLabel drainerPoolSizeGauge (serviceName, poolName) (`P.setGauge` maxD)
+  P.withLabel drainerPoolInUseGauge (serviceName, poolName) (`P.setGauge` inUseD)
+  P.withLabel drainerPoolIdleGauge (serviceName, poolName) (`P.setGauge` idleD)
+  P.withLabel drainerPoolUtilizationGauge (serviceName, poolName) (`P.setGauge` utilization)
+  threadDelay 10000000 -- 10 seconds

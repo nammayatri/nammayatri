@@ -28,6 +28,8 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.IssueManagement ()
+import qualified Storage.CachedQueries.BusinessHour as CQBusinessHour
+import qualified Storage.CachedQueries.ServiceCategory as CQServiceCategory
 import qualified Storage.Queries.BusinessHour as QBusinessHour
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.ServiceCategory as QServiceCategory
@@ -99,14 +101,16 @@ getTicketPlaceDashboardDetails placeId _requestorId _requestorRole = do
 
   services <- QTicketService.getTicketServicesByPlaceId placeId.getId
 
+  -- Fixed N+1: was querying business_hour per item, now batched
   let linkedBusinessHourIds = concatMap (.businessHours) services
-  linkedBusinessHours <- catMaybes <$> mapM QBusinessHour.findById linkedBusinessHourIds
-  unlinkedBusinessHours <- QBusinessHour.findAllByPlaceId (Just placeId.getId)
+  linkedBusinessHours <- CQBusinessHour.findAllByIds linkedBusinessHourIds
+  unlinkedBusinessHours <- CQBusinessHour.findAllByPlaceId (Just placeId.getId)
   let allBusinessHoursExceptSpecialOccasions = nubBy (\h1 h2 -> h1.id == h2.id) $ linkedBusinessHours ++ unlinkedBusinessHours
 
+  -- Fixed N+1: was querying service_category per item, now batched
   let linkedServiceCategoryIds = concatMap (.categoryId) allBusinessHoursExceptSpecialOccasions
-  linkedServiceCategories <- catMaybes <$> mapM QServiceCategory.findById linkedServiceCategoryIds
-  unlinkedServiceCategories <- QServiceCategory.findAllByPlaceId (Just placeId.getId)
+  linkedServiceCategories <- CQServiceCategory.findAllByIds linkedServiceCategoryIds
+  unlinkedServiceCategories <- CQServiceCategory.findAllByPlaceId (Just placeId.getId)
   let allServiceCategoriesExceptSpecialOccasions = nubBy (\h1 h2 -> h1.id == h2.id) $ linkedServiceCategories ++ unlinkedServiceCategories
 
   linkedSpecialOcassion <- concatMapM QSpecialOccasion.findAllByEntityId (((.id.getId) <$> allServiceCategoriesExceptSpecialOccasions) ++ ((.id.getId) <$> services))
@@ -116,16 +120,19 @@ getTicketPlaceDashboardDetails placeId _requestorId _requestorRole = do
   let alreadyFoundBusinessHourIds = allBusinessHoursExceptSpecialOccasions <&> (.id)
       allSpecialOccasionBHourIds = concatMap (.businessHours) allSpecialOccasions
       allRemainingBusinessHourIds = filter (\bh -> not $ elem bh alreadyFoundBusinessHourIds) allSpecialOccasionBHourIds
-  allRemainingBusinessHour <- catMaybes <$> mapM QBusinessHour.findById allRemainingBusinessHourIds
+  -- Fixed N+1: was querying business_hour per item, now batched
+  allRemainingBusinessHour <- CQBusinessHour.findAllByIds allRemainingBusinessHourIds
   let allBusinessHours = nubBy (\h1 h2 -> h1.id == h2.id) $ allBusinessHoursExceptSpecialOccasions ++ allRemainingBusinessHour
 
   let alreadyFoundServiceCategoryIds = allServiceCategoriesExceptSpecialOccasions <&> (.id)
       remainingServiceCategoryIds = filter (\sc -> not $ elem sc alreadyFoundServiceCategoryIds) (concatMap (.categoryId) allRemainingBusinessHour)
-  allRemainingServiceCategories <- catMaybes <$> mapM QServiceCategory.findById remainingServiceCategoryIds
+  -- Fixed N+1: was querying service_category per item, now batched
+  allRemainingServiceCategories <- CQServiceCategory.findAllByIds remainingServiceCategoryIds
   let allServiceCategories = nubBy (\h1 h2 -> h1.id == h2.id) $ allServiceCategoriesExceptSpecialOccasions ++ allRemainingServiceCategories
 
   let linkedServicePeopleCategoryIds = concatMap (.peopleCategory) allServiceCategories
-  linkedServicePeopleCategories <- concatMapM QServicePeopleCategory.findAllById linkedServicePeopleCategoryIds
+  -- Fixed N+1: was querying service_people_category per item, now batched
+  linkedServicePeopleCategories <- QServicePeopleCategory.findAllByMultipleIds linkedServicePeopleCategoryIds
   unlinkedServicePeopleCategories <- QServicePeopleCategory.findAllByPlaceId (Just placeId.getId)
   let allServicePeopleCategories = nubBy (\h1 h2 -> h1.id == h2.id && h1.timeBounds == h2.timeBounds) $ linkedServicePeopleCategories ++ unlinkedServicePeopleCategories
 
@@ -548,12 +555,13 @@ postUpsertTicketPlaceDashboardDetails (merchantId, merchantOpCityId) placeDetail
 
   -- Update or create business hours
   forM_ placeDetails.businessHours $ \bhDetails -> do
-    mbExistingBH <- QBusinessHour.findById bhDetails.id
+    mbExistingBH <- CQBusinessHour.findById bhDetails.id
     case mbExistingBH of
       Just existingBH -> do
         -- Update existing business hour
         let updatedBH = updateBusinessHour existingBH bhDetails
         QBusinessHour.updateByPrimaryKey updatedBH
+        CQBusinessHour.clearCacheById bhDetails.id
       Nothing -> do
         -- Create new business hour
         newBH <- createBusinessHour (merchantId, merchantOpCityId) bhDetails ticketPlace.id
@@ -561,12 +569,13 @@ postUpsertTicketPlaceDashboardDetails (merchantId, merchantOpCityId) placeDetail
 
   -- Update or create service categories
   forM_ placeDetails.serviceCategories $ \scDetails -> do
-    mbExistingSC <- QServiceCategory.findById scDetails.id
+    mbExistingSC <- CQServiceCategory.findById scDetails.id
     case mbExistingSC of
       Just existingSC -> do
         -- Update existing service category
         let updatedSC = updateServiceCategory existingSC scDetails
         QServiceCategory.updateByPrimaryKey updatedSC
+        CQServiceCategory.clearCacheById scDetails.id
       Nothing -> do
         -- Create new service category
         newSC <- createServiceCategory (merchantId, merchantOpCityId) scDetails ticketPlace.id
@@ -574,7 +583,8 @@ postUpsertTicketPlaceDashboardDetails (merchantId, merchantOpCityId) placeDetail
 
   -- Update or create service people categories
   let allIncomingSPCIds = concatMap (.peopleCategory) placeDetails.serviceCategories
-  existingSPCs <- concat <$> mapM QServicePeopleCategory.findAllById allIncomingSPCIds
+  -- Fixed N+1: was querying service_people_category per item, now batched
+  existingSPCs <- QServicePeopleCategory.findAllByMultipleIds allIncomingSPCIds
   let idCountMap = foldl' (\acc spc -> Map.insertWith (+) spc.id 1 acc) Map.empty existingSPCs
   let spcsToDelete =
         filter
@@ -590,7 +600,7 @@ postUpsertTicketPlaceDashboardDetails (merchantId, merchantOpCityId) placeDetail
   let finalIdCountMap = foldl' (\acc spc -> Map.insertWith (+) spc.id (-1) acc) idCountMap spcsToDelete
   forM_ spcsToDelete $ \spc -> do
     let currentCount = fromMaybe 0 $ Map.lookup spc.id finalIdCountMap :: Int
-    when (currentCount > 0) $
+    when (currentCount > 0) $ do
       QServicePeopleCategory.deleteByIdAndTimebounds spc.id spc.timeBounds
 
   forM_ placeDetails.servicePeopleCategories $ \spcDetails -> do

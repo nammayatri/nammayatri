@@ -12,6 +12,7 @@ import qualified Sequelize as Se
 import Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Exophone as Beam
 import Storage.Queries.OrphanInstances.Exophone ()
+import Utils.SlowQueryLog (timedRunDB)
 
 -- Extra code goes here --
 
@@ -21,22 +22,23 @@ updateAffectedPhones primaryPhones = do
   dbConf <- getMasterBeamConfig
   let indianMobileCode = "+91"
   void $
-    L.runDB dbConf $
-      L.updateRows $
-        B.update'
-          (BeamCommon.exophone BeamCommon.atlasDB)
-          ( \Beam.ExophoneT {..} ->
-              ( isPrimaryDown
-                  B.<-. ( B.current_ primaryPhone `B.in_` (B.val_ <$> primaryPhones)
-                            B.||. (B.concat_ [B.val_ indianMobileCode, B.current_ primaryPhone] `B.in_` (B.val_ <$> primaryPhones))
-                        )
-              )
-                <> (updatedAt B.<-. B.val_ now)
-          )
-          ( \Beam.ExophoneT {..} -> do
-              isPrimaryDown B.==?. (primaryPhone `B.in_` (B.val_ <$> primaryPhones))
-                B.||?. B.sqlBool_ (B.concat_ [B.val_ indianMobileCode, primaryPhone] `B.in_` (B.val_ <$> primaryPhones))
-          )
+    timedRunDB "exophone" "updateAffectedPhones" $
+      L.runDB dbConf $
+        L.updateRows $
+          B.update'
+            (BeamCommon.exophone BeamCommon.atlasDB)
+            ( \Beam.ExophoneT {..} ->
+                ( isPrimaryDown
+                    B.<-. ( B.current_ primaryPhone `B.in_` (B.val_ <$> primaryPhones)
+                              B.||. (B.concat_ [B.val_ indianMobileCode, B.current_ primaryPhone] `B.in_` (B.val_ <$> primaryPhones))
+                          )
+                )
+                  <> (updatedAt B.<-. B.val_ now)
+            )
+            ( \Beam.ExophoneT {..} -> do
+                isPrimaryDown B.==?. (primaryPhone `B.in_` (B.val_ <$> primaryPhones))
+                  B.||?. B.sqlBool_ (B.concat_ [B.val_ indianMobileCode, primaryPhone] `B.in_` (B.val_ <$> primaryPhones))
+            )
 
 findAllExophones :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [Domain.Types.Exophone.Exophone]
 findAllExophones = findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Not $ Se.Eq ""]

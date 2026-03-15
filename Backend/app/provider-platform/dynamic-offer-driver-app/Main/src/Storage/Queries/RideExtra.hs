@@ -34,6 +34,7 @@ import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (all, elem, forM_, id, length, null, sum, traverse_, whenJust)
+import Utils.SlowQueryLog (timedRunDB)
 import IssueManagement.Domain.Types.MediaFile as DMF
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -407,7 +408,7 @@ getCountByStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -
 getCountByStatus merchantId = do
   -- Tricky query to be able to insert meaningful Point
   dbConf <- getReplicaBeamConfig
-  resp <- L.runDB dbConf $
+  resp <- timedRunDB "ride" "getCountByStatus" $ L.runDB dbConf $
     L.findRows $
       B.select $
         B.aggregate_ (\(ride, _) -> (B.group_ (BeamR.status ride), B.as_ @Int B.countAll_)) $
@@ -594,7 +595,7 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
         _ -> pure []
 
       dbConf <- getReplicaBeamConfig
-      res <- L.runDB dbConf $
+      res <- timedRunDB "ride" "findAllRideItems" $ L.runDB dbConf $
         L.findRows $
           B.select $
             B.limit_ (fromIntegral limitVal) $
@@ -776,7 +777,7 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId
         (Just _driverPhoneDBHash, _) -> pure []
         (_, _) -> do
           dbConf <- getReplicaBeamConfig
-          res <- L.runDB dbConf $
+          res <- timedRunDB "ride" "findAllRideItemsV2" $ L.runDB dbConf $
             L.findRows $
               B.select $
                 B.limit_ (fromIntegral limitVal) $

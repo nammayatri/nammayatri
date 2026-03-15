@@ -1,12 +1,14 @@
 module Storage.Queries.DriverStatsExtra where
 
 import Control.Applicative (liftA2)
+import qualified Database.Beam as B
 import Domain.Types.DriverInformation
 import Domain.Types.DriverStats as Domain
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Domain.Types.Vehicle
+import qualified EulerHS.Language as L
 import GHC.Float (int2Double)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -16,7 +18,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import SharedLogic.DriverFee (mkCachedKeyTotalRidesByDriverId)
+import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverStats as BeamDS
+import Utils.SlowQueryLog (timedRunDB)
 import Storage.Queries.OrphanInstances.DriverStats ()
 import Storage.Queries.Person (DriverWithRidesCount (..), fetchDriverInfo)
 import Tools.Error
@@ -84,6 +88,9 @@ fetchAll = findAllWithKV [Se.Is BeamDS.driverId $ Se.Not $ Se.Eq $ getId ""]
 findAllByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Driver] -> m [DriverStats]
 findAllByDriverIds person = findAllWithKV [Se.Is BeamDS.driverId $ Se.In (getId <$> (person <&> (.id)))]
 
+findAllByIdList :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Driver] -> m [DriverStats]
+findAllByIdList driverIds = findAllWithKV [Se.Is BeamDS.driverId $ Se.In (getId <$> driverIds)]
+
 incrementTotalRidesAndTotalDistAndIdleTime :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) => Id Driver -> Meters -> m Int
 incrementTotalRidesAndTotalDistAndIdleTime (Id driverId') rideDist = do
   now <- getCurrentTime
@@ -104,10 +111,22 @@ incrementTotalRidesAndTotalDistAndIdleTime (Id driverId') rideDist = do
   pure newTotalRides
 
 findTotalRides :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Int, Meters)
-findTotalRides (Id driverId) = maybe (pure (0, 0)) (pure . (Domain.totalRides &&& Domain.totalDistance)) =<< findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId)]
+findTotalRides = findTotalRidesAndDistance
 
+-- | Projection query: fetches only totalRidesAssigned (1 of 35 columns).
 findTotalRidesAssigned :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Maybe Int)
-findTotalRidesAssigned (Id driverId) = (Domain.totalRidesAssigned =<<) <$> findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId)]
+findTotalRidesAssigned (Id driverId) = do
+  dbConf <- getReplicaBeamConfig
+  res <- timedRunDB "driver_stats" "findTotalRidesAssigned" $ L.runDB dbConf $
+    L.findRows $
+      B.select $ do
+        ds <- B.filter_'
+          (\ds -> BeamDS.driverId ds B.==?. B.val_ driverId)
+          (B.all_ (BeamCommon.driverStats BeamCommon.atlasDB))
+        pure (BeamDS.totalRidesAssigned ds)
+  pure $ case res of
+    Right (val : _) -> val
+    _ -> Nothing
 
 incrementTotalRidesAssigned :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Int -> m ()
 incrementTotalRidesAssigned (Id driverId') number = do
@@ -254,3 +273,33 @@ incSafetyPlusRiderCountAndEarnings driverId safetyPlusEarnings = do
         ]
         [Se.Is BeamDS.driverId (Se.Eq driverId.getId)]
     Nothing -> pure ()
+
+-- | Projection query: fetches only cancellation tag counts (2 of 35 columns).
+-- Used by Analytics.updateCancellationAnalyticsAndDriverStats which only needs these two fields.
+findCancellationTagCounts :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Maybe (Maybe Int, Maybe Int))
+findCancellationTagCounts (Id driverId) = do
+  dbConf <- getReplicaBeamConfig
+  res <- timedRunDB "driver_stats" "findCancellationTagCounts" $ L.runDB dbConf $
+    L.findRows $
+      B.select $ do
+        ds <- B.filter_'
+          (\ds -> BeamDS.driverId ds B.==?. B.val_ driverId)
+          (B.all_ (BeamCommon.driverStats BeamCommon.atlasDB))
+        pure (BeamDS.validDriverCancellationTagCount ds, BeamDS.validCustomerCancellationTagCount ds)
+  pure $ either (const Nothing) listToMaybe res
+
+-- | Projection query: fetches only totalRides and totalDistance (2 of 35 columns).
+-- Used by incrementTotalRidesAndTotalDistAndIdleTime in the ride completion hot path.
+findTotalRidesAndDistance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Int, Meters)
+findTotalRidesAndDistance (Id driverId) = do
+  dbConf <- getReplicaBeamConfig
+  res <- timedRunDB "driver_stats" "findTotalRidesAndDistance" $ L.runDB dbConf $
+    L.findRows $
+      B.select $ do
+        ds <- B.filter_'
+          (\ds -> BeamDS.driverId ds B.==?. B.val_ driverId)
+          (B.all_ (BeamCommon.driverStats BeamCommon.atlasDB))
+        pure (BeamDS.totalRides ds, BeamDS.totalDistance ds)
+  pure $ case res of
+    Right ((rides, dist) : _) -> (rides, Meters $ round dist)
+    _ -> (0, 0)

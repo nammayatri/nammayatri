@@ -87,7 +87,9 @@ driverDevicePingService driverId fcmNofificationSendCount = do
 
 withLock :: (Redis.HedisFlow m r, MonadMask m) => Text -> m () -> m ()
 withLock serviceName func =
-  Redis.withLockRedis key 10 (func `catch` (logError . makeLogSomeException))
+  Redis.withLockRedis key 10 $ do
+    func `catch` \(e :: SomeException) ->
+      logError $ "Exception in service " <> serviceName <> " (iteration skipped): " <> makeLogSomeException e
   where
     key = "beckn:" <> serviceName <> ":lock"
 

@@ -83,6 +83,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import qualified Lib.SessionizerMetrics.Prometheus.Metrics as ObsMetrics
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
@@ -595,6 +596,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
              estimatedEndTimeRange
             }
   triggerRideStartedEvent RideEventData {ride = updRideForStartReq, personId = booking.riderId, merchantId = booking.merchantId}
+  ObsMetrics.incrementActiveRides booking.merchantId.getId booking.merchantOperatingCityId.getId
   _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq
   QPFS.clearCache booking.riderId
   when (updRideForStartReq.isInsured) $ fork "create insurance" $ SI.createInsurance updRideForStartReq
@@ -784,6 +786,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
 
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
+  ObsMetrics.decrementActiveRides booking.merchantId.getId booking.merchantOperatingCityId.getId
   when shouldUpdateRideComplete $ void $ QP.updateHasTakenValidRide booking.riderId
   otherParties <- Notify.getAllOtherRelatedPartyPersons booking
   unless (booking.status == DRB.COMPLETED) $
@@ -996,6 +999,8 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
           DBCR.ByDriver -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
           _ -> pure ()
         triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = booking.riderId, merchantId = booking.merchantId}
+        when (ride.status == DRide.INPROGRESS) $
+          ObsMetrics.decrementActiveRides booking.merchantId.getId booking.merchantOperatingCityId.getId
       Nothing -> do
         logDebug "No ride found for the booking."
     let merchantOperatingCityId = booking.merchantOperatingCityId

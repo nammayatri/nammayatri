@@ -16,6 +16,10 @@ let slackNotificationConfig =
       , isForcedAWS = True
       }
 
+-- Pool sizing: pool_size = num_cores * 2 + num_disks = 8*2+1 = 17 max.
+-- Tier 1 (core API): 8 per pool. Total budget: ~124 connections across all
+-- services vs PostgreSQL max_connections (default 100). Only a subset of
+-- services run simultaneously in dev, keeping us well within limits.
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434
@@ -23,7 +27,7 @@ let esqDBCfg =
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
       , connectSchemaName = "atlas_app"
-      , connectionPoolCount = +10
+      , connectionPoolCount = +8
       }
 
 let esqDBReplicaCfg =
@@ -36,14 +40,16 @@ let esqDBReplicaCfg =
       , connectionPoolCount = esqDBCfg.connectionPoolCount
       }
 
+-- Redis pool: 20 for core API services. Redis is single-threaded so
+-- excessive connections waste memory without improving throughput.
 let rcfg =
       { connectHost = "localhost"
       , connectPort = 6379
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +20
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 
@@ -63,9 +69,9 @@ let ltsRedis =
       , connectPort = 6379
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +20
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 
@@ -190,9 +196,11 @@ let eventStreamMappings =
         }
       ]
 
-let apiRateLimitOptions = { limit = +8000, limitResetTimeInSec = +1 }
+-- Rate limits: per-user. Old values (8000/1s) were effectively unlimited.
+-- These values allow normal dev/test usage without false throttling.
+let apiRateLimitOptions = { limit = +4000, limitResetTimeInSec = +60 }
 
-let searchRateLimitOptions = { limit = +8000, limitResetTimeInSec = +1 }
+let searchRateLimitOptions = { limit = +600, limitResetTimeInSec = +60 }
 
 let slackCfg =
       { channelName = "#beckn-driver-onboard-test"
@@ -219,9 +227,9 @@ let hccfg =
       , connectPort = 30001
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +20
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 
@@ -230,9 +238,9 @@ let hccfgSecondary =
       , connectPort = 30002
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +20
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 
@@ -358,6 +366,8 @@ let riderClickhouseCfg =
       , retryInterval = [ +0 ]
       }
 
+let bookingStatusPollingRateLimitOptions = { limit = +60, limitResetTimeInSec = +60 }
+
 let nearByDriverAPIRateLimitOptions = { limit = +5, limitResetTimeInSec = +30 }
 
 let sosTrackingRateLimitOptions = { limit = +60, limitResetTimeInSec = +60 }
@@ -442,7 +452,7 @@ in  { esqDBCfg
     , enablePrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
     , kvConfigUpdateFrequency
-    , incomingAPIResponseTimeout = +15
+    , incomingAPIResponseTimeout = +30
     , maxShards = +5
     , jobInfoMapx
     , internalEndPointMap = common.internalEndPointMap
@@ -472,6 +482,7 @@ in  { esqDBCfg
     , nammayatriRegistryConfig = common.nammayatriRegistryConfig
     , googleSAPrivateKey = sec.googleSAPrivateKey
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
+    , bookingStatusPollingRateLimitOptions
     , nearByDriverAPIRateLimitOptions
     , sosTrackingRateLimitOptions
     , inMemConfig

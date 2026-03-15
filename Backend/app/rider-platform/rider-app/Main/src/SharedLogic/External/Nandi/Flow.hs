@@ -5,6 +5,7 @@ import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import Utils.Common.Sanitize (sanitizeShowError)
 import qualified SharedLogic.External.Nandi.API.Nandi as NandiAPI
 import SharedLogic.External.Nandi.Types
 
@@ -22,7 +23,7 @@ getRouteByRouteId baseUrl gtfsId routeId = do
     callAPI baseUrl (NandiAPI.getNandiRouteByRouteId gtfsId routeId) "getRouteByRouteId" NandiAPI.nandiRouteByRouteIdAPI >>= \case
       Right route -> pure (Just route)
       Left err -> do
-        logError $ "Error getting route by route id: " <> show err
+        logError $ "Error getting route by route id: " <> sanitizeShowError err
         pure Nothing
 
 getRoutesByRouteIds :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> [Text] -> m [RouteInfoNandi]
@@ -50,7 +51,7 @@ getRouteStopMappingInMemoryServer baseUrl gtfsId routeCode' stopCode' = do
     (Just routeCode, Nothing) -> getRouteStopMappingByRouteCode baseUrl gtfsId routeCode
     (Nothing, Just stopCode) -> getRouteStopMappingByStopCode baseUrl gtfsId stopCode
     (Nothing, Nothing) -> do
-      logError $ "routeCode or stopCode is not provided, skipping gtfs inmemory server rest api calls" <> show (baseUrl, gtfsId)
+      logError $ "routeCode or stopCode is not provided, skipping gtfs inmemory server rest api calls, gtfsId: " <> gtfsId
       throwError $ InternalError "routeCode or stopCode is not provided, skipping gtfs inmemory server rest api calls"
 
 getStationsByGtfsId :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> m [RouteStopMappingInMemoryServerWithPublicData]
@@ -85,7 +86,7 @@ getVehicleServiceType baseUrl gtfsId vehicleNumber mbPassVerifyReq = do
     callAPI baseUrl (NandiAPI.getNandiVehicleServiceType gtfsId vehicleNumber mbPassVerifyReq) "getVehicleServiceType" NandiAPI.nandiVehicleServiceTypeAPI >>= \case
       Right response -> pure (Just response)
       Left err -> do
-        logError $ "Error getting vehicle service type: " <> show err
+        logError $ "Error getting vehicle service type: " <> sanitizeShowError err
         pure Nothing
 
 getVehicleInfo :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> m (Maybe VehicleInfoResponse)
@@ -94,7 +95,7 @@ getVehicleInfo baseUrl gtfsId vehicleNumber = do
     callAPI baseUrl (NandiAPI.getNandiVehicleInfo gtfsId vehicleNumber) "getVehicleInfo" NandiAPI.nandiVehicleInfoAPI >>= \case
       Right response -> pure (Just response)
       Left err -> do
-        logError $ "Error getting vehicle info: " <> show err
+        logError $ "Error getting vehicle info: " <> sanitizeShowError err
         pure Nothing
 
 getVehicleOperationInfo :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> m (Maybe VehicleOperationInfo)
@@ -103,7 +104,7 @@ getVehicleOperationInfo baseUrl fleetNo = do
     callAPI baseUrl (NandiAPI.getNandiVehicleOperationData fleetNo) "getVehicleOperationInfo" NandiAPI.nandiVehicleOperationDataAPI >>= \case
       Right response -> pure (Just response)
       Left err -> do
-        logError $ "Error getting vehicle operation info: " <> show err
+        logError $ "Error getting vehicle operation info: " <> sanitizeShowError err
         pure Nothing
 
 postGtfsGraphQL :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> GtfsGraphQLRequest -> m Value
@@ -116,7 +117,7 @@ getStopCode baseUrl gtfsId providerStopCode = do
     callAPI baseUrl (NandiAPI.getNandiStopCode gtfsId providerStopCode) "getStopCode" NandiAPI.nandiStopCodeAPI >>= \case
       Right response -> pure (Just response)
       Left err -> do
-        logError $ "Error getting stop code: " <> show err
+        logError $ "Error getting stop code: " <> sanitizeShowError err
         pure Nothing
 
 getNandiTripInfo :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> m (Maybe TripInfoResponse)
@@ -125,7 +126,7 @@ getNandiTripInfo baseUrl tripId = do
     callAPI baseUrl (NandiAPI.getNandiTripInfo tripId) "getNandiTripInfo" NandiAPI.nandiTripInfoAPI >>= \case
       Right response -> pure (Just response)
       Left err -> do
-        logError $ "Error getting trip info: " <> show err
+        logError $ "Error getting trip info: " <> sanitizeShowError err
         pure Nothing
 
 postRouteStopMappingByStopCodes :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> [Text] -> m [RouteStopMappingInMemoryServer]
@@ -138,7 +139,7 @@ getExampleTrip baseUrl gtfsId routeId = do
     callAPI baseUrl (NandiAPI.getNandiExampleTrip gtfsId routeId) "getExampleTrip" NandiAPI.nandiExampleTripAPI >>= \case
       Right response -> pure (Just response)
       Left err -> do
-        logError $ "Error getting example trip: " <> show err
+        logError $ "Error getting example trip: " <> sanitizeShowError err
         pure Nothing
 
 getDepotNames :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> m [Text]

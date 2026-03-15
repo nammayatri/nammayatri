@@ -6,6 +6,8 @@ let sec = ./secrets/dynamic-offer-driver-app.dhall
 
 let appCfg = ./dynamic-offer-driver-app.dhall
 
+-- Pool sizing: Tier 2 (kafka consumer): 4 per pool.
+-- Consumers process events in batches, not high-concurrency request serving.
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434
@@ -13,7 +15,7 @@ let esqDBCfg =
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
       , connectSchemaName = "atlas_driver_offer_bpp"
-      , connectionPoolCount = +25
+      , connectionPoolCount = +4
       }
 
 let esqDBReplicaCfg =
@@ -26,14 +28,15 @@ let esqDBReplicaCfg =
       , connectionPoolCount = esqDBCfg.connectionPoolCount
       }
 
+-- Redis pool: 10 for background processors (Tier 2).
 let hedisCfg =
       { connectHost = "localhost"
       , connectPort = 6379
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +10
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 
@@ -42,14 +45,14 @@ let hedisClusterCfg =
       , connectPort = 30001
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +10
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 
 let consumerProperties =
-      { groupId = "groupId"
+      { groupId = "driver-availability-consumer"
       , brockers = [ "localhost:29092" ]
       , autoCommit = None Integer
       , kafkaCompression = common.kafkaCompression.LZ4

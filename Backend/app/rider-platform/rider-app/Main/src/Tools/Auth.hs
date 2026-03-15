@@ -108,7 +108,9 @@ verifyToken token =
 
 validateToken :: EsqDBFlow m r => SR.RegistrationToken -> m SR.RegistrationToken
 validateToken sr@SR.RegistrationToken {..} = do
-  let nominal = realToFrac $ tokenExpiry * 24 * 60 * 60
+  -- Add 30 min grace period to reduce INVALID_TOKEN errors from stale client polling
+  let gracePeriodSeconds = 30 * 60 :: Int
+  let nominal = realToFrac $ tokenExpiry * 24 * 60 * 60 + gracePeriodSeconds
   expired <- Utils.isExpired nominal updatedAt
   unless verified $ Utils.throwError TokenIsNotVerified
   when expired $ Utils.throwError TokenExpired

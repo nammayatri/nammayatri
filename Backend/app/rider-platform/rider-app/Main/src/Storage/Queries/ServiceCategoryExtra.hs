@@ -15,5 +15,8 @@ import qualified Storage.Beam.ServiceCategory as Beam
 import Storage.Queries.OrphanInstances.ServiceCategory
 
 -- Extra code goes here --
+findAllByIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Id ServiceCategory] -> m [ServiceCategory]
+findAllByIds ids = findAllWithKV [Se.Is Beam.id $ Se.In (map getId ids)]
+
 findByIdAndName :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Id ServiceCategory] -> Text -> m (Maybe ServiceCategory)
 findByIdAndName id name = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.In (map getId id), Se.Is Beam.name $ Se.Eq name]]

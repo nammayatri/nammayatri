@@ -97,6 +97,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
+import Utils.Common.Sanitize (sanitizeShowError)
 import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified SharedLogic.MerchantConfig as SMC
@@ -794,10 +795,13 @@ verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   isSafetyCenterDisabled <- SLP.checkSafetyCenterDisabled updPerson safetySettings
   let personAPIEntity = SP.makePersonAPIEntity decPerson tag isSafetyCenterDisabled safetySettings
   unless (decPerson.whatsappNotificationEnrollStatus == whatsappNotificationEnroll && isJust whatsappNotificationEnroll) $ do
-    fork "whatsapp_opt_api_call" $ do
-      case decPerson.mobileNumber of
-        Nothing -> throwError $ AuthBlocked "Mobile Number is null"
-        Just mobileNo -> callWhatsappOptApi mobileNo person.id person.merchantId whatsappNotificationEnroll
+    fork "whatsapp_opt_api_call" $
+      ( case decPerson.mobileNumber of
+          Nothing -> logWarning "WhatsApp opt-in skipped: mobile number is null"
+          Just mobileNo -> callWhatsappOptApi mobileNo person.id person.merchantId whatsappNotificationEnroll
+      )
+        `catch` \(e :: SomeException) ->
+          logWarning $ "WhatsApp opt-in failed (best-effort, non-critical): " <> sanitizeShowError e
   return personAPIEntity
 
 verify ::

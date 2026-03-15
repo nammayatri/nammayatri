@@ -216,3 +216,24 @@ executables:
       - beckn-services
     extra-libraries:
       - cac_client
+
+tests:
+  dynamic-offer-driver-app-test:
+    main: Main.hs
+    source-dirs: test
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - '"-with-rtsopts=-N"'
+      - -Wall
+      - -Werror
+      - -Wwarn=ambiguous-fields
+    dependencies:
+      - dynamic-offer-driver-app
+      - mobility-core
+      - hspec
+      - time
+      - beckn-spec
+      - dashboard-helper-api
+    extra-libraries:
+      - cac_client

@@ -45,7 +45,7 @@ instance defaultApiErrorHandler :: ApiErrorHandler CustomerDefaultErrorHandler G
         deleteValueFromLocalStore REGISTERATION_TOKEN
         deleteValueFromLocalStore REGISTRATION_APPROVED
         lift $ lift $ liftFlow $ stopChatListenerService
-        pure $ factoryResetApp ""
+        pure unit
       _ -> pure unit
   handleParsingError = defaultHandleParsingError
   handleUnknownError = defaultHandleUnknownError

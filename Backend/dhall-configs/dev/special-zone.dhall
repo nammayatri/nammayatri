@@ -7,7 +7,7 @@ let esqDBCfg =
       , connectPassword = "atlas"
       , connectDatabase = "atlas_dev"
       , connectSchemaName = "atlas_special_zone"
-      , connectionPoolCount = +25
+      , connectionPoolCount = +2
       }
 
 let esqDBReplicaCfg =

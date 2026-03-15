@@ -62,7 +62,9 @@ let eventType =
       | MarketingParamsPreLoginData
       >
 
-let httpClientOptions = { timeoutMs = +200000 }
+-- Global HTTP client timeout. Old value (200s) was too permissive;
+-- 30s was too aggressive for slow integrations (Idfy, payment webhooks).
+let httpClientOptions = { timeoutMs = +60000 }
 
 let shortDurationRetryCfg = { maxRetries = +3, baseCoefficient = +2 }
 

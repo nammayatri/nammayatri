@@ -4,6 +4,8 @@ let sec = ./secrets/rider-app.dhall
 
 let globalCommon = ../generic/common.dhall
 
+-- Pool sizing: Tier 2 (background processor): 4 per pool.
+-- Drainers batch writes so need fewer concurrent connections.
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434
@@ -11,7 +13,7 @@ let esqDBCfg =
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
       , connectSchemaName = "atlas_app"
-      , connectionPoolCount = +25
+      , connectionPoolCount = +4
       }
 
 let esqDBReplicaCfg =
@@ -24,14 +26,15 @@ let esqDBReplicaCfg =
       , connectionPoolCount = esqDBCfg.connectionPoolCount
       }
 
+-- Redis pool: 10 for background processors (Tier 2).
 let rcfg =
       { connectHost = "localhost"
       , connectPort = 6379
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +10
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 
@@ -40,9 +43,9 @@ let rccfg =
       , connectPort = 30001
       , connectAuth = None Text
       , connectDatabase = +0
-      , connectMaxConnections = +50
+      , connectMaxConnections = +10
       , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
+      , connectTimeout = Some +1
       , connectReadOnly = True
       }
 

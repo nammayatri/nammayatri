@@ -107,6 +107,7 @@ dependencies:
   - warp-tls
   - cereal
   - postgresql-simple
+  - prometheus-client
   - scientific
   - filepath
 

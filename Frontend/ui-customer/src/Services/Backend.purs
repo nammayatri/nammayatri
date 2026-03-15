@@ -137,8 +137,7 @@ withAPIResult url f flow = do
                 _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
                 _ <- pure $ deleteValueFromLocalStore REGISTRATION_APPROVED
                 _ <- liftFlow $ stopChatListenerService
-                _ <- pure $ factoryResetApp ""
-                pure unit -- default if it fails
+                pure unit
                 else pure unit -- default if it fails
     pure resp
 
@@ -164,7 +163,7 @@ withAPIResultBT url f errorHandler flow = do
                 deleteValueFromLocalStore REGISTERATION_TOKEN
                 deleteValueFromLocalStore REGISTRATION_APPROVED
                 lift $ lift $ liftFlow $ stopChatListenerService
-                pure $ factoryResetApp ""
+                pure unit
                 else pure unit
             errorHandler err
 

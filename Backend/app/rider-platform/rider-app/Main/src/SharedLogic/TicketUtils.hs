@@ -13,8 +13,8 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Id as Kernel.Types.Id
 import Kernel.Types.Time
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.ServiceCategory as CQSC
 import qualified Storage.Queries.SeatManagement as QTSM
-import qualified Storage.Queries.ServiceCategory as QSC
 import Tools.Error
 
 mkTicketServiceCategoryBlockedSeatKey :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> Text
@@ -43,7 +43,7 @@ setupBlockMechanismNx serviceCategoryId visitDate = do
   mbBookedCount :: Maybe Int <- Redis.get (mkTicketServiceCategoryBookedCountKey serviceCategoryId visitDate)
   mbAllowedMaxCapacity :: Maybe Int <- Redis.get (mkTicketServiceAllowedMaxCapacityKey serviceCategoryId visitDate)
   when (isNothing mbBookedCount || isNothing mbAllowedMaxCapacity) $ do
-    serviceCategory <- QSC.findById serviceCategoryId >>= fromMaybeM (InternalError $ "Setup failed: Service Category id " <> serviceCategoryId.getId <> " not found")
+    serviceCategory <- CQSC.findById serviceCategoryId >>= fromMaybeM (InternalError $ "Setup failed: Service Category id " <> serviceCategoryId.getId <> " not found")
     whenJust serviceCategory.availableSeats $ \maxSeats -> do
       mbSeatM <- QTSM.findByTicketServiceCategoryIdAndDate serviceCategoryId visitDate
       let alreadyBookedCount = maybe 0 (.booked) mbSeatM

@@ -122,6 +122,7 @@ in
               name = "run-mobility-stack-init";
               runtimeInputs = with pkgs; [
                 redis
+                apacheKafka
               ];
               text = ''
                 set -x
@@ -133,6 +134,45 @@ in
                 redis-cli XGROUP CREATE Available_Jobs_Rider myGroup_Rider 0 MKSTREAM
                 redis-cli XGROUP CREATE Available_Jobs myGroup 0 MKSTREAM
                 redis-cli XGROUP CREATE Available_Chakras myGroup_Chakras 0 MKSTREAM
+
+                # Create Kafka topics with explicit partition counts and retention.
+                # High-throughput topics get more partitions; low-volume topics use broker defaults.
+                KAFKA_BROKER="localhost:29092"
+
+                # location-updates: highest throughput (continuous driver pings), 2 consumer groups.
+                # 12 partitions, 24h retention.
+                kafka-topics.sh --bootstrap-server "$KAFKA_BROKER" --create --if-not-exists \
+                  --topic location-updates --partitions 12 \
+                  --config retention.ms=86400000 --config compression.type=lz4
+
+                # Core event topics: ride/booking lifecycle events -> ClickHouse. 6 partitions, 72h retention.
+                kafka-topics.sh --bootstrap-server "$KAFKA_BROKER" --create --if-not-exists \
+                  --topic dynamic-offer-driver-events-updates --partitions 6 \
+                  --config retention.ms=259200000 --config compression.type=lz4
+                kafka-topics.sh --bootstrap-server "$KAFKA_BROKER" --create --if-not-exists \
+                  --topic rider-app-events-updates --partitions 6 \
+                  --config retention.ms=259200000 --config compression.type=lz4
+
+                # Broadcast messages: moderate throughput. 3 partitions, 48h retention.
+                kafka-topics.sh --bootstrap-server "$KAFKA_BROKER" --create --if-not-exists \
+                  --topic broadcast-messages --partitions 3 \
+                  --config retention.ms=172800000 --config compression.type=lz4
+
+                # SDK event topics: mobile telemetry. 3 partitions, 48h retention.
+                kafka-topics.sh --bootstrap-server "$KAFKA_BROKER" --create --if-not-exists \
+                  --topic rider-sdk-events --partitions 3 \
+                  --config retention.ms=172800000 --config compression.type=lz4
+                kafka-topics.sh --bootstrap-server "$KAFKA_BROKER" --create --if-not-exists \
+                  --topic driver-sdk-events --partitions 3 \
+                  --config retention.ms=172800000 --config compression.type=lz4
+
+                # Low-volume analytics topics: 1 partition, default retention (72h from broker).
+                for topic in ExophoneData AutoCompleteData RouteCollection EventTracker \
+                             MarketingParamsData MarketingParamsPreLoginData metro-webview-events; do
+                  kafka-topics.sh --bootstrap-server "$KAFKA_BROKER" --create --if-not-exists \
+                    --topic "$topic" --partitions 1 \
+                    --config compression.type=lz4
+                done
               '';
             };
           };
@@ -275,6 +315,17 @@ in
             # Since the available brokers are only 1
             "offsets.topic.replication.factor" = 1;
             "zookeeper.connect" = [ "localhost:2181" ];
+            # Default partitions for auto-created topics (high-throughput topics
+            # like location-updates should be created explicitly with more).
+            "num.partitions" = 6;
+            # Preserve client-side LZ4 compression through the broker.
+            "compression.type" = "producer";
+            # Reduce default retention to 72h for dev. High-volume topics
+            # (location-updates) override this to 24h via topic-level config.
+            "log.retention.hours" = 72;
+            # Segment size 256MB — keeps log cleanup granular without excessive
+            # small files on a single-broker dev setup.
+            "log.segment.bytes" = 268435456;
           };
         };
 

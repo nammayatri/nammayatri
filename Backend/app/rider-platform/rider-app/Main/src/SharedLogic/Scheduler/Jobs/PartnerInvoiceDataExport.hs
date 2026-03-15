@@ -199,8 +199,10 @@ uploadToSFTP rawFileName content = withLogTag "SFTP" $ do
   result <- liftIO (Control.Exception.try $ callProcess "sftp" sftpArgs :: IO (Either SomeException ()))
 
   -- Clean up temp files
-  liftIO $ removeFile tmpContentPath `catch` \(_ :: SomeException) -> pure ()
-  liftIO $ removeFile tmpBatchPath `catch` \(_ :: SomeException) -> pure ()
+  liftIO (removeFile tmpContentPath) `catch` \(e :: SomeException) ->
+    logWarning $ "Failed to clean up temp content file " <> T.pack tmpContentPath <> ": " <> T.pack (show e)
+  liftIO (removeFile tmpBatchPath) `catch` \(e :: SomeException) ->
+    logWarning $ "Failed to clean up temp batch file " <> T.pack tmpBatchPath <> ": " <> T.pack (show e)
   logDebug "Cleaned up temp files"
 
   case result of

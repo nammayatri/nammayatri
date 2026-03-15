@@ -1,5 +1,8 @@
 global:
-  scrape_interval: "2s"
+  scrape_interval: "15s"
+
+rule_files:
+  - "/etc/prometheus/alerts/*.yml"
 
 # Replace 192.168.0.17 with your local host ip
 scrape_configs:

@@ -21,11 +21,12 @@ where
 import qualified "this" API.Types.Dashboard.RideBooking.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Revenue as Common
 import Data.Maybe
-import Data.Text hiding (drop, elem, filter, length, map)
+import Data.Text hiding (drop, elem, filter, length, map, take)
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude hiding (drop, id, take, unpack)
+import Data.List (drop, take)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow, fromMaybeM, throwError)
@@ -37,8 +38,8 @@ import qualified Storage.Clickhouse.DriverFee as CHDriverFee
 import Storage.Queries.Volunteer (findAllByPlace)
 import Tools.Error
 
-getRevenueAllFeeHistory :: ShortId DM.Merchant -> Context.City -> Maybe UTCTime -> Maybe UTCTime -> Flow [Common.AllFees]
-getRevenueAllFeeHistory merchantShortId opCity mbFrom mbTo = do
+getRevenueAllFeeHistory :: ShortId DM.Merchant -> Context.City -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Flow [Common.AllFees]
+getRevenueAllFeeHistory merchantShortId opCity mbFrom mbLimit mbOffset mbTo = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -46,8 +47,11 @@ getRevenueAllFeeHistory merchantShortId opCity mbFrom mbTo = do
   let defaultFrom = UTCTime (utctDay now) 0
       from = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
+      limit = min (fromMaybe 50 mbLimit) 200
+      offset = fromMaybe 0 mbOffset
   allFees <- CHDriverFee.findAllByStatusSubSelect merchant.id [Common.CLEARED, Common.COLLECTED_CASH, Common.EXEMPTED, Common.PAYMENT_PENDING, Common.PAYMENT_OVERDUE] (Just from) (Just to)
-  getAllFeeFromDriverFee `mapM` allFees
+  let paginatedFees = take limit . drop offset $ allFees
+  getAllFeeFromDriverFee `mapM` paginatedFees
 
 getAllFeeFromDriverFee :: MonadFlow m => CHDriverFee.DriverFeeAggregated -> m Common.AllFees
 getAllFeeFromDriverFee CHDriverFee.DriverFeeAggregated {..} = do

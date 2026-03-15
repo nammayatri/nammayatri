@@ -32,6 +32,7 @@ import Kernel.Types.App
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Types.Version
+import qualified Kernel.Utils.Servant.Server as Server
 import Servant hiding (Context)
 import Servant.Client
 
@@ -61,11 +62,9 @@ data DriverAPIs = DriverAPIs
   }
 
 -- most of apis do not used in tests, so let's simplify API type
-type HealthCheckAPI = Get '[JSON] Text
-
 type UIAPI =
   "ui"
-    :> ( HealthCheckAPI
+    :> ( Server.HealthCheckAPI
            :<|> DriverAPI.API
            :<|> RideAPI.API
        )

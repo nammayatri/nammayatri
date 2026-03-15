@@ -70,6 +70,7 @@ dependencies:
   - async
   - data-default-class
   - euler-hs
+  - vector
   - http-client
   - http-client-tls
   - http-types

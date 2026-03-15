@@ -32,7 +32,9 @@ module SharedLogic.DriverPool
     getQuotesCount,
     getPopupDelay,
     getTotalRidesCount,
+    getTotalRidesCountBatch,
     getValidSearchRequestCount,
+    getValidSearchRequestCountBatch,
     removeSearchReqIdFromMap,
     updateDriverSpeedInRedis,
     getDriverAverageSpeed,
@@ -60,6 +62,7 @@ where
 
 import Control.Monad.Extra (mapMaybeM)
 import Data.Fixed
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Geohash as DG
 import Data.List (find, length)
 import qualified Data.List.NonEmpty as NE
@@ -67,7 +70,6 @@ import qualified Data.List.NonEmpty.Extra as NE
 import qualified Data.Text as T
 import Data.Time.Clock hiding (getCurrentTime)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
-import Data.Tuple.Extra (snd3)
 import qualified Data.Vector as V
 import Domain.Types as DVST
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
@@ -276,6 +278,21 @@ getValidSearchRequestCount merchantId driverId now = Redis.withMasterRedis $
     validCount <- Redis.zCount (mkParallelSearchRequestKey merchantId driverId) ((realToFrac . utcTimeToPOSIXSeconds) $ now) ((realToFrac . utcTimeToPOSIXSeconds) (addUTCTime 5000 now))
     pure $ fromIntegral validCount
 
+getValidSearchRequestCountBatch ::
+  Redis.HedisFlow m r =>
+  Id DM.Merchant ->
+  [Id DP.Driver] ->
+  UTCTime ->
+  m (HM.HashMap Text Int)
+getValidSearchRequestCountBatch merchantId driverIds now = Redis.withMasterRedis $
+  Redis.withCrossAppRedis $ do
+    let fromScore = (realToFrac . utcTimeToPOSIXSeconds) now
+        toScore = (realToFrac . utcTimeToPOSIXSeconds) (addUTCTime 5000 now)
+    results <- forM driverIds $ \driverId -> do
+      validCount <- Redis.zCount (mkParallelSearchRequestKey merchantId driverId) fromScore toScore
+      pure (driverId.getId, fromIntegral validCount)
+    pure $ HM.fromList results
+
 removeSearchReqIdFromMap ::
   ( Redis.HedisFlow m r,
     MonadTime m
@@ -336,6 +353,20 @@ getTotalRidesCount ::
   Id DP.Driver ->
   m Int
 getTotalRidesCount merchantOpCityId driverId = fmap fromIntegral . Redis.withCrossAppRedis . withCancellationAndRideFrequencyRatioWindowOption merchantOpCityId $ SWC.getCurrentWindowCount (mkTotalRidesKey driverId.getId)
+
+getTotalRidesCountBatch ::
+  ( Redis.HedisFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  [Id DP.Driver] ->
+  m [Int]
+getTotalRidesCountBatch merchantOpCityId driverIds = do
+  windowOption <- windowFromIntelligentPoolConfig merchantOpCityId (.cancellationAndRideFrequencyRatioWindowOption)
+  Redis.withCrossAppRedis $
+    forM driverIds $ \driverId ->
+      fromIntegral <$> SWC.getCurrentWindowCount (mkTotalRidesKey driverId.getId) windowOption
 
 incrementCancellationCount ::
   ( Redis.HedisFlow m r,
@@ -457,7 +488,8 @@ updateDriverSpeedInRedis merchantOpCityId driverId points timeStamp = Redis.with
         )
       . concat
       <$> Redis.safeGet driverLocationUpdatesKey
-  Redis.set driverLocationUpdatesKey locationUpdatesList
+  let locationUpdatesTTL = locationUpdateSampleTime.getMinutes * 60 -- match the sample window
+  Redis.setExp driverLocationUpdatesKey locationUpdatesList locationUpdatesTTL
 
 getDriverAverageSpeed ::
   ( CacheFlow m r,
@@ -578,7 +610,7 @@ calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId
         approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
   randomDriverPool <- liftIO $ take goHomeCfg.numDriversForDirCheck <$> Rnd.randomizeList driversWithLessThanNParallelRequests
-  logDebug $ "random driver pool" <> show randomDriverPool
+  logDebug $ "random driver pool count: " <> show (length randomDriverPool)
   fst <$> filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool req merchantOpCityId
   where
     getParallelSearchRequestCount now dObj = getValidSearchRequestCount merchantId (dObj.driverId) now
@@ -606,7 +638,7 @@ filterOutGoHomeDriversAccordingToHomeLocation ::
   Id DMOC.MerchantOperatingCity ->
   m ([DriverPoolWithActualDistResult], [Id DP.Driver])
 filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = do
-  logDebug $ "MetroWarriorDebugging randomDriverPool -----" <> show randomDriverPool
+  logDebug $ "randomDriverPool count: " <> show (length randomDriverPool)
   now <- getCurrentTime
   goHomeRequests <-
     mapMaybeM
@@ -617,7 +649,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
       )
       randomDriverPool
   let specialLocWarriorDrivers = filter (\driver -> driver.isSpecialLocWarrior) randomDriverPool -- specialLocWarriorDriversInfo <- Int.getSpecialLocWarriorDriverInfo specialLocWarriorDrivers
-  logDebug $ "MetroWarriorDebugging specialLocWarriorDrivers -----" <> show specialLocWarriorDrivers
+  logDebug $ "specialLocWarriorDrivers count: " <> show (length specialLocWarriorDrivers)
   specialLocgoHomeRequests <-
     mapMaybeM
       ( \specialLocWarriorDriver -> runMaybeT $ do
@@ -643,7 +675,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           return (gHR, specialLocWarriorDriver)
       )
       specialLocWarriorDrivers
-  logDebug $ "MetroWarriorDebugging specialLocgoHomeRequests -----" <> show specialLocgoHomeRequests
+  logDebug $ "specialLocgoHomeRequests count: " <> show (length specialLocgoHomeRequests)
   let convertedDriverPoolRes = map (\(ghr, driver) -> (ghr,driver,) $ makeDriverPoolRes driver) (goHomeRequests <> specialLocgoHomeRequests)
   driverGoHomePoolWithActualDistance <-
     case convertedDriverPoolRes of
@@ -655,7 +687,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           Just threshold -> do
             logDebug $ "Threshold :" <> show threshold
             let res = filter (\(_, driver, dpwAD) -> filterFunc threshold dpwAD driver.distanceToDriver) driverGoHomePoolWithActualDistance
-            logDebug $ "secondly filtered go home driver pool" <> show (map snd3 res)
+            logDebug $ "secondly filtered go home driver pool count: " <> show (length res)
             return res
 
   driversRoutes' <- getRoutesForAllDrivers driverGoHomePoolWithActualDistance
@@ -668,10 +700,10 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           driversRoutes
   let goHomeDriverIdsToDest = map (\(driver, _, _, _) -> driver.driverId) driversOnWayToHome
   let goHomeDriverIdsNotToDest = map (\(_, driver, _) -> driver.driverId) $ filter (\(_, driver, _) -> driver.driverId `notElem` goHomeDriverIdsToDest) driverGoHomePoolWithActualDistance
-  logDebug $ "MetroWarriorDebugging goHomeDriverIdsToDest -----" <> show goHomeDriverIdsToDest
-  logDebug $ "MetroWarriorDebugging goHomeDriverIdsNotToDest -----" <> show goHomeDriverIdsNotToDest
+  logDebug $ "goHomeDriverIdsToDest count: " <> show (length goHomeDriverIdsToDest)
+  logDebug $ "goHomeDriverIdsNotToDest count: " <> show (length goHomeDriverIdsNotToDest)
   let goHomeDriverPoolWithActualDist = makeDriverPoolWithActualDistResult <$> driversOnWayToHome
-  logDebug $ "MetroWarriorDebugging goHomeDriverPoolWithActualDist -----" <> show goHomeDriverPoolWithActualDist
+  logDebug $ "goHomeDriverPoolWithActualDist count: " <> show (length goHomeDriverPoolWithActualDist)
   return (take (getBatchSize driverPoolCfg.dynamicBatchSize (-1) driverPoolCfg.driverBatchSize) goHomeDriverPoolWithActualDist, goHomeDriverIdsNotToDest)
   where
     filterFunc threshold estDist distanceToPickup =
@@ -804,8 +836,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
         approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
   let driverPoolResult = makeDriverPoolResult <$> driversWithLessThanNParallelRequests
-  logDebug $ "driverPoolResult: " <> show driverPoolResult
-  logDebug $ "driverPoolResult: MetroWarriorDebugging-------" <> show driverPoolResult
+  logDebug $ "driverPoolResult count: " <> show (length driverPoolResult)
   pure (driverPoolResult, approxDriverPool)
   where
     getParallelSearchRequestCount :: Redis.HedisFlow m r => QP.NearestDriversResult -> m Int
@@ -1084,7 +1115,7 @@ calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq
   (thresholdRadius, driverPoolStraightLineFiltered) <- calculateDriverPoolCurrentlyOnRide calculateReq (Just batchNum)
   let countDriversToProccess = fromMaybe 10 driverPoolCfg.batchSizeOnRideWithStraightLineDistance
   let driverPool = take countDriversToProccess $ sortOn (.distanceToPickup) driverPoolStraightLineFiltered
-  logDebug $ "driverPoolcalculateDriverCurrentlyOnRideWithActualDist" <> show driverPool
+  logDebug $ "driverPoolcalculateDriverCurrentlyOnRideWithActualDist count: " <> show (length driverPool)
   case driverPool of
     [] -> do
       logDebug "driverPool is empty"
@@ -1102,10 +1133,10 @@ calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq
             (_, SpecialZoneQueuePool) -> driverPoolWithActualDist
             (Nothing, _) -> filter (filterFunc thresholdRadius) driverPoolWithActualDist
             (Just threshold, _) -> filter (filterFunc threshold) driverPoolWithActualDist
-      logDebug $ "secondly filtered driver pool" <> show filtDriverPoolWithActualDist'
-      logDebug $ "driverPoolWithActualDist" <> show driverPoolWithActualDist
+      logDebug $ "secondly filtered driver pool count: " <> show (length filtDriverPoolWithActualDist')
+      logDebug $ "driverPoolWithActualDist count: " <> show (length driverPoolWithActualDist)
       filtDriverPoolWithActualDist <- filterM (scheduledRideFilter currentSearchInfo merchantId merchantOperatingCityId isRental isInterCity transporterConfig) filtDriverPoolWithActualDist'
-      logDebug $ "thirdly scheduled filtered driver pool" <> show filtDriverPoolWithActualDist
+      logDebug $ "thirdly scheduled filtered driver pool count: " <> show (length filtDriverPoolWithActualDist)
       return filtDriverPoolWithActualDist
   where
     filterFunc threshold estDist = getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
@@ -1188,7 +1219,7 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
             sourceDestinationMapping = Nothing,
             distanceUnit
           }
-  logDebug $ "get distance results" <> show getDistanceResults
+  logDebug $ "get distance results count: " <> show (length getDistanceResults)
   prevRideDropGeoHash <- case prevRideDropLatLn of
     Just (LatLong lat lon) -> pure $ T.pack <$> DG.encode 9 (lat, lon)
     Nothing -> pure Nothing
@@ -1239,7 +1270,7 @@ computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCity
             sourceDestinationMapping = Just Maps.OneToOne,
             distanceUnit
           }
-  logDebug $ "get distance results one to one mapping" <> show getDistanceResults
+  logDebug $ "get distance results one to one mapping count: " <> show (length getDistanceResults)
   let distanceAndDropPointsZipped = zip previousDropPoints (NE.toList getDistanceResults)
   driverPoolEntities <-
     mapM

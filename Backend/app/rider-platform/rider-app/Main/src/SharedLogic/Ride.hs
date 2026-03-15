@@ -54,7 +54,12 @@ getDriverLoc ::
   Id SRide.Ride ->
   m GetDriverLocResp
 getDriverLoc rideId = do
-  ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  mbRide <- B.runInReplica $ QRide.findById rideId
+  ride <- case mbRide of
+    Nothing -> do
+      logInfo $ "Ride not found (possibly archived), rideId: " <> rideId.getId
+      throwError $ RideInvalidStatus "Ride has ended"
+    Just r -> return r
   when
     (ride.status == COMPLETED || ride.status == CANCELLED)
     $ throwError $ RideInvalidStatus ("Cannot track this ride" <> Text.pack (show ride.status))

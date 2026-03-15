@@ -176,8 +176,12 @@ updateDriverCancellationPercentageTagsDaily mocId driverId dailyCancellationRate
     let dailyTag = Yudhishthira.mkTagNameValue (LYT.TagName "driver_cancellation_1") (LYT.NumberValue $ fromIntegral dailyCancellationRate)
         weeklyTag = Yudhishthira.mkTagNameValue (LYT.TagName "driver_cancellation_7") (LYT.NumberValue $ fromIntegral weeklyCancellationRate)
 
-    mbDailyTag <- catch (YudhishthiraFlow.verifyTag (cast mocId) dailyTag) (\(_ :: SomeException) -> pure Nothing)
-    mbWeeklyTag <- catch (YudhishthiraFlow.verifyTag (cast mocId) weeklyTag) (\(_ :: SomeException) -> pure Nothing)
+    mbDailyTag <- catch (YudhishthiraFlow.verifyTag (cast mocId) dailyTag) $ \(e :: SomeException) -> do
+      logWarning $ "Failed to verify daily cancellation tag for driver " <> driverId.getId <> ": " <> show e
+      pure Nothing
+    mbWeeklyTag <- catch (YudhishthiraFlow.verifyTag (cast mocId) weeklyTag) $ \(e :: SomeException) -> do
+      logWarning $ "Failed to verify weekly cancellation tag for driver " <> driverId.getId <> ": " <> show e
+      pure Nothing
 
     let dailyTagWithExpiry = Yudhishthira.addTagExpiry dailyTag (mbDailyTag >>= \tag -> tag.validity) now
         weeklyTagWithExpiry = Yudhishthira.addTagExpiry weeklyTag (mbWeeklyTag >>= \tag -> tag.validity) now

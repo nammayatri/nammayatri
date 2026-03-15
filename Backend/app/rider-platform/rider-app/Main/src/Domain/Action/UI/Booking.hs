@@ -61,6 +61,7 @@ import Kernel.Types.Flow
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType (GCP))
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.JourneyModule.Base (generateJourneyInfoResponse, getAllLegsInfo)
 import Lib.JourneyModule.Types (GetStateFlow)
 import qualified Lib.JourneyModule.Utils as JMU
@@ -104,20 +105,25 @@ newtype FavouriteBookingListRes = FavouriteBookingListRes
 
 bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingAPIEntity
 bookingStatus bookingId (personId, _merchantId) = runInMultiCloud $ do
+  rateLimitOptions <- asks (.bookingStatusPollingRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (bookingStatusHitsCountKey personId) rateLimitOptions
   booking <- (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   fork "booking status update" $ checkBookingsForStatus [booking]
   fork "creating cache for emergency contact SOS" $ emergencyContactSOSCache booking personId
-  logInfo $ "booking: test " <> show booking
   void $ handleConfirmTtlExpiry booking
   SRB.buildBookingAPIEntity booking booking.riderId
 
 bookingStatusPolling :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingStatusAPIEntity
-bookingStatusPolling bookingId _ = runInMultiCloud $ do
+bookingStatusPolling bookingId (personId, _merchantId) = runInMultiCloud $ do
+  rateLimitOptions <- asks (.bookingStatusPollingRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (bookingStatusHitsCountKey personId) rateLimitOptions
   booking <- (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   fork "booking status update" $ checkBookingsForStatus [booking]
-  logInfo $ "booking: test " <> show booking
   handleConfirmTtlExpiry booking
   SRB.buildBookingStatusAPIEntity booking
+
+bookingStatusHitsCountKey :: Id Person.Person -> Text
+bookingStatusHitsCountKey personId = "BAP:" <> getId personId <> ":bookingStatus"
 
 handleConfirmTtlExpiry :: SRB.Booking -> Flow ()
 handleConfirmTtlExpiry booking = do
@@ -329,7 +335,7 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
 
         (rbList, allbookings) <-
           L.await Nothing bookingListFork >>= \case
-            Left err -> throwError $ InternalError $ "Failed to get booking list: " <> show err
+            Left _ -> throwError $ InternalError "Failed to get booking list"
             Right result -> pure result
 
         -- Filter by ride type and billing category
@@ -341,7 +347,7 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
 
         allJourneys <-
           L.await Nothing journeyListFork >>= \case
-            Left err -> throwError $ InternalError $ "Failed to get journey list: " <> show err
+            Left _ -> throwError $ InternalError "Failed to get journey list"
             Right result -> pure result
 
         logDebug $ "myrides PersonId: " <> show personId <> " Limit: " <> show limit <> " offset: " <> show mbInitialJourneyOffset <> " JourneyRequest allJourneys (id, createdAt): " <> show (map (\j -> (j.id, j.createdAt)) allJourneys)
@@ -517,10 +523,16 @@ buildApiEntityForRideOrJourneyOrPassWithCounts personId finalLimit bookings jour
           bookingEntity <- SRB.buildBookingAPIEntity booking riderId'
           go riderId' ls (acc Seq.|> Ride bookingEntity)
         go riderId' (MJourney journey : ls) acc = do
-          mbJourneyEntity <- JMU.measureLatency (buildJourneyApiEntity journey) (show journey.id <> " buildJourneyApiEntity measureLatency: ")
-          case mbJourneyEntity of
-            Just journeyEntity -> go riderId' ls (acc Seq.|> MultiModalRide journeyEntity)
-            Nothing -> go riderId' ls acc
+          eitherResult <- withTryCatch ("buildJourneyApiEntity:" <> show journey.id) $
+            JMU.measureLatency (buildJourneyApiEntity journey) (show journey.id <> " buildJourneyApiEntity measureLatency: ")
+          case eitherResult of
+            Left err -> do
+              logError $ "Error building journey entity for journeyId: " <> show journey.id <> ", skipping from booking list: " <> show err
+              go riderId' ls acc
+            Right mbJourneyEntity ->
+              case mbJourneyEntity of
+                Just journeyEntity -> go riderId' ls (acc Seq.|> MultiModalRide journeyEntity)
+                Nothing -> go riderId' ls acc
         go riderId' (MPass pass' : ls) acc = do
           passEntity <- DPass.buildPurchasedPassAPIEntity Nothing person Nothing today pass'
           go riderId' ls (acc Seq.|> MultiModalPass passEntity)
@@ -539,7 +551,13 @@ buildApiEntityForRideOrJourneyOrPassWithCounts personId finalLimit bookings jour
         then do
           logError $ "No legs info for journeyId: " <> show journey.id <> ", skipping from booking list"
           return Nothing
-        else Just <$> generateJourneyInfoResponse journey legsInfo
+        else do
+          result <- withTryCatch ("generateJourneyInfoResponse:" <> show journey.id) $ generateJourneyInfoResponse journey legsInfo
+          case result of
+            Left err -> do
+              logError $ "Error generating journey response for journeyId: " <> show journey.id <> ", skipping: " <> show err
+              return Nothing
+            Right entity -> return (Just entity)
 
 favouriteBookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> DriverNo -> Flow FavouriteBookingListRes
 favouriteBookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId driver = do

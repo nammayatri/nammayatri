@@ -17,6 +17,9 @@ module Tools.Metrics.ARDUBPPMetrics.Types
     BPPMetricsContainer (..),
     module CoreMetrics,
     registerBPPMetricsContainer,
+    incrementNotificationFailure,
+    incrementNotificationSuccess,
+    incrementStaleTokenCleanup,
   )
 where
 
@@ -32,7 +35,10 @@ type SearchDurationMetric = (P.Vector P.Label2 P.Histogram, P.Vector P.Label2 P.
 data BPPMetricsContainer = BPPMetricsContainer
   { searchDurationTimeout :: Seconds,
     searchDuration :: SearchDurationMetric,
-    countingDeviation :: CountingDeviationMetric
+    countingDeviation :: CountingDeviationMetric,
+    notificationDeliveryFailure :: P.Vector P.Label2 P.Counter,
+    notificationDeliverySuccess :: P.Counter,
+    staleTokenCleanup :: P.Counter
   }
 
 data CountingDeviationMetric = CountingDeviationMetric
@@ -44,7 +50,50 @@ registerBPPMetricsContainer :: Seconds -> IO BPPMetricsContainer
 registerBPPMetricsContainer searchDurationTimeout = do
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
   countingDeviation <- registerCountingDeviationMetric
+  notificationDeliveryFailure <- registerNotificationFailureMetric
+  notificationDeliverySuccess <- registerNotificationSuccessMetric
+  staleTokenCleanup <- registerStaleTokenCleanupMetric
   return $ BPPMetricsContainer {..}
+
+registerNotificationFailureMetric :: IO (P.Vector P.Label2 P.Counter)
+registerNotificationFailureMetric =
+  P.register $
+    P.vector ("error_type", "notification_category") $
+      P.counter $
+        P.Info
+          "notification_delivery_failure_total"
+          "Total FCM notification delivery failures by error type and category"
+
+registerNotificationSuccessMetric :: IO P.Counter
+registerNotificationSuccessMetric =
+  P.register $
+    P.counter $
+      P.Info
+        "notification_delivery_success_total"
+        "Total FCM notification deliveries attempted"
+
+registerStaleTokenCleanupMetric :: IO P.Counter
+registerStaleTokenCleanupMetric =
+  P.register $
+    P.counter $
+      P.Info
+        "fcm_stale_token_cleanup_total"
+        "Total stale FCM device tokens cleaned up"
+
+incrementNotificationFailure :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> m ()
+incrementNotificationFailure errorType category = do
+  bmContainer <- asks (.bppMetrics)
+  liftIO $ P.withLabel bmContainer.notificationDeliveryFailure (errorType, category) P.incCounter
+
+incrementNotificationSuccess :: (MonadIO m, HasBPPMetrics m r) => m ()
+incrementNotificationSuccess = do
+  bmContainer <- asks (.bppMetrics)
+  liftIO $ P.incCounter bmContainer.notificationDeliverySuccess
+
+incrementStaleTokenCleanup :: (MonadIO m, HasBPPMetrics m r) => m ()
+incrementStaleTokenCleanup = do
+  bmContainer <- asks (.bppMetrics)
+  liftIO $ P.incCounter bmContainer.staleTokenCleanup
 
 registerCountingDeviationMetric :: IO CountingDeviationMetric
 registerCountingDeviationMetric =
@@ -88,4 +137,4 @@ registerSearchDurationMetric searchDurationTimeout = do
         0
         0.5
         searchDurationBucketCount
-    searchDurationBucketCount = (getSeconds searchDurationTimeout + 1) * 2
+    searchDurationBucketCount = min 20 $ (getSeconds searchDurationTimeout + 1) * 2

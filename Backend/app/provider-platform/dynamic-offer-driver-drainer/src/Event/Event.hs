@@ -28,6 +28,13 @@ mkDBSyncMetric = do
       BatchExecutionTime model time -> observe (metrics </> #driver_batch_execution_time) time model
       BatchEntriesProcessed model count -> add (metrics </> #driver_batch_entries_processed) (fromIntegral count) model
       SchemaVariationAlert model _ -> inc (metrics </> #driver_schema_variation_alert) model
+      DrainerBatchSize size -> observe (metrics </> #driver_drainer_batch_size) (fromIntegral size)
+      DrainerErrorsTotal -> inc (metrics </> #driver_drainer_errors_total)
+      DrainerLagSeconds lag -> setGauge (metrics </> #driver_drainer_lag_seconds) lag
+      DrainerItemsPending pending -> setGauge (metrics </> #driver_drainer_items_pending) pending
+      DLQItemAdded action count -> add (metrics </> #driver_dlq_item_added) (fromIntegral count) action
+      BackpressureActivated ratio -> setGauge (metrics </> #driver_backpressure_activated) ratio
+      BatchRetryAttempt action attempt -> add (metrics </> #driver_batch_retry_attempt) (fromIntegral attempt) action
   where
     collectionDBSyncMetric =
       driver_peek_db_command_error
@@ -46,4 +53,11 @@ mkDBSyncMetric = do
         .> driver_batch_execution_time
         .> driver_batch_entries_processed
         .> driver_schema_variation_alert
+        .> driver_drainer_batch_size
+        .> driver_drainer_errors_total
+        .> driver_drainer_lag_seconds
+        .> driver_drainer_items_pending
+        .> driver_dlq_item_added
+        .> driver_backpressure_activated
+        .> driver_batch_retry_attempt
         .> MNil

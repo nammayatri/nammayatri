@@ -36,6 +36,7 @@ library
       Mobility.ARDU.APICalls
       Mobility.ARDU.CancelFlow
       Mobility.ARDU.DriverAcceptsNonrelevantQuote
+      Mobility.ARDU.DriverAllocation
       Mobility.ARDU.DriverOffersTwice
       Mobility.ARDU.Fixtures
       Mobility.ARDU.HealthCheck
@@ -144,6 +145,7 @@ library
     , unix
     , utf8-string
     , uuid
+    , vector
     , wai
     , warp
   default-language: Haskell2010
@@ -242,6 +244,7 @@ test-suite beckn-integ-test
     , unix
     , utf8-string
     , uuid
+    , vector
     , wai
     , warp
   default-language: Haskell2010
