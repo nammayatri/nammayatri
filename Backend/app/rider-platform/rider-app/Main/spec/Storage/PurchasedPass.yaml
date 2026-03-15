@@ -210,6 +210,16 @@ PurchasedPassPayment:
           - in:
             - status
 
+    findAllByPersonIdWithFilters:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - personId
+          - merchantId
+          - in:
+            - status
+          - passCode
+
   extraOperations:
     - EXTRA_QUERY_FILE
 
