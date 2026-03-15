@@ -1454,7 +1454,7 @@ mapInspectionHubRequestStatusToResponseStatus mbRequestStatus = case mbRequestSt
   Just DOHR.APPROVED -> Just VALID
   Just DOHR.PENDING -> Just VALID
   Just DOHR.REJECTED -> Just INVALID
-  Nothing -> Just INVALID
+  Nothing -> Just NO_DOC_AVAILABLE
 
 getInspectionHubStatusForResponseStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DOHR.RequestType -> Maybe (Id DP.Person) -> Maybe Text -> m (Maybe ResponseStatus)
 getInspectionHubStatusForResponseStatus requestType mbDriverId mbRegistrationNo = do
