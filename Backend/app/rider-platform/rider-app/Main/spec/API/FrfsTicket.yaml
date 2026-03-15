@@ -354,6 +354,9 @@ types:
     routeNumber: Text
     routeName: Text
     isActiveTrip: Bool
+    dutyDate: Maybe Text
+    startTime: Maybe Text
+    endTime: Maybe Text
     derive: "Show"
 
   FleetOperatorCurrentOperationResp:
