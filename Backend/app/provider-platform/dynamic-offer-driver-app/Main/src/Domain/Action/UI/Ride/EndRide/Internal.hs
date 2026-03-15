@@ -646,6 +646,7 @@ sendReferralFCM validRide ride booking mbRiderDetails transporterConfig = do
                     referralCounts = 1,
                     d2dReferralEarnings = 0.0,
                     d2dReferralCounts = 0,
+                    d2dActivatedValidRides = 0,
                     payoutStatus = DDS.Verifying,
                     payoutOrderId = Nothing,
                     payoutOrderStatus = Nothing,
@@ -743,10 +744,11 @@ sendDriverToDriverReferralReward validRide ride _booking mbRiderDetails transpor
           DPC.NO_PAYOUT -> pure 0.0
       driverStats <- QDriverStats.findByPrimaryKey referringDriverId >>= fromMaybeM (PersonNotFound referringDriverId.getId)
       QDriverStats.updateTotalValidRidesAndPayoutEarnings (driverStats.totalValidActivatedRides + 1) (driverStats.totalPayoutEarnings + d2dRewardAmount) referringDriverId
+      QDriverStats.updateD2dReferralCount (driverStats.d2dReferralCount + 1) (driverStats.totalReferralCounts + 1) referringDriverId
       case mbDailyStats of
         Just stats ->
           Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey referringDriverId.getId) 3 3 $
-            QDailyStats.updateD2dReferralStatsByDriverId (stats.d2dReferralEarnings + d2dRewardAmount) (stats.d2dReferralCounts + 1) DDS.Verifying referringDriverId (utctDay localTime)
+            QDailyStats.updateD2dReferralStatsByDriverId (stats.d2dReferralEarnings + d2dRewardAmount) (stats.d2dActivatedValidRides + 1) DDS.Verifying referringDriverId (utctDay localTime)
         Nothing -> do
           newId <- generateGUIDText
           now <- getCurrentTime
@@ -767,6 +769,7 @@ sendDriverToDriverReferralReward validRide ride _booking mbRiderDetails transpor
                     referralCounts = 0,
                     d2dReferralEarnings = d2dRewardAmount,
                     d2dReferralCounts = 1,
+                    d2dActivatedValidRides = 1,
                     payoutStatus = DDS.Verifying,
                     payoutOrderId = Nothing,
                     payoutOrderStatus = Nothing,

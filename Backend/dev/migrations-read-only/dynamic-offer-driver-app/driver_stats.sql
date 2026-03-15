@@ -117,3 +117,10 @@ ALTER TABLE atlas_driver_offer_bpp.driver_stats ALTER COLUMN coins_converted_to_
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN d2d_referral_count integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN d2c_referral_count integer ;

@@ -25,11 +25,16 @@ data DailyEarning = DailyEarning
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data ReferralEarningsRes = ReferralEarningsRes
-  { dailyEarnings :: [DailyEarning],
+  { d2cReferralCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    d2cReferralEarnings :: Kernel.Prelude.Maybe [DailyEarning],
+    d2dReferralCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    d2dReferralEarnings :: Kernel.Prelude.Maybe [DailyEarning],
+    dailyEarnings :: [DailyEarning],
     orderId :: Kernel.Prelude.Maybe Data.Text.Text,
     orderStatus :: Kernel.Prelude.Maybe Kernel.External.Payment.Juspay.Types.Common.TransactionStatus,
     payoutRegistrationAmount :: Kernel.Types.Common.HighPrecMoney,
     referralRewardAmountPerRide :: Kernel.Types.Common.HighPrecMoney,
+    referralRewardAmountPerRideForD2DPayout :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     totalReferralCount :: Kernel.Prelude.Int,
     vpaId :: Kernel.Prelude.Maybe Data.Text.Text
   }

@@ -21,6 +21,11 @@ types:
     orderStatus: Maybe TransactionStatus
     referralRewardAmountPerRide: HighPrecMoney
     payoutRegistrationAmount: HighPrecMoney
+    d2dReferralEarnings: Maybe [DailyEarning]
+    d2dReferralCount: Maybe Int
+    d2cReferralEarnings: Maybe [DailyEarning]
+    d2cReferralCount: Maybe Int
+    referralRewardAmountPerRideForD2DPayout: Maybe HighPrecMoney
 
   DailyEarning:
     earnings: HighPrecMoney

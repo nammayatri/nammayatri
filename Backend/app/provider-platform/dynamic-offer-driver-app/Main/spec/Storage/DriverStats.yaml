@@ -46,6 +46,8 @@ DriverStats:
     onlineDuration : Seconds
     blacklistCoinEvents: Maybe [DriverCoinsFunctionType]
     coinsConvertedToDirectPayoutCash: HighPrecMoney
+    d2dReferralCount: Int
+    d2cReferralCount: Int
 
   beamFields:
     totalEarnings:
@@ -81,7 +83,8 @@ DriverStats:
     safetyPlusEarnings:  Maybe HighPrecMoney
     onlineDuration: Maybe Seconds
     coinsConvertedToDirectPayoutCash: Maybe HighPrecMoney
-
+    d2dReferralCount: Maybe Int
+    d2cReferralCount: Maybe Int
   fromTType:
     totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E
     bonusEarned: Kernel.Types.Common.mkAmountWithDefault bonusEarnedAmount bonusEarned|E
@@ -103,7 +106,8 @@ DriverStats:
     safetyPlusEarnings: Kernel.Prelude.fromMaybe 0|I
     onlineDuration: Kernel.Prelude.fromMaybe 0|I
     coinsConvertedToDirectPayoutCash: Kernel.Prelude.fromMaybe 0|I
-
+    d2dReferralCount: Kernel.Prelude.fromMaybe 0|I
+    d2cReferralCount: Kernel.Prelude.fromMaybe 0|I
   toTType:
     totalDistance: getTotalDistance
     totalEarnings: Kernel.Prelude.roundToIntegral totalEarnings|E
@@ -128,7 +132,8 @@ DriverStats:
     safetyPlusEarnings: Kernel.Prelude.Just|I
     onlineDuration: Kernel.Prelude.Just|I
     coinsConvertedToDirectPayoutCash: Kernel.Prelude.Just|I
-
+    d2dReferralCount: Kernel.Prelude.Just|I
+    d2cReferralCount: Kernel.Prelude.Just|I
   constraints:
     driverId: PrimaryKey
 
@@ -184,6 +189,16 @@ DriverStats:
       params: [onlineDuration]
       where: driverId
 
+    updateD2dReferralCount:
+      kvFunction: updateOneWithKV
+      params: [d2dReferralCount, totalReferralCounts]
+      where: driverId
+
+    updateD2cReferralCount:
+      kvFunction: updateOneWithKV
+      params: [d2cReferralCount, totalReferralCounts]
+      where: driverId
+
     # setMissedEarnings: -- beam Field checkUp DSL Fix needed
     #   kvFunction: updateOneWithKV
     #   params: [earningsMissedAmount,earningsMissed]
@@ -218,4 +233,5 @@ DriverStats:
     - EXTRA_QUERY_FILE
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+
 

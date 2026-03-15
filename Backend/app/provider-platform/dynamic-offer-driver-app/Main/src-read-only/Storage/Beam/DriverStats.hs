@@ -19,6 +19,8 @@ data DriverStatsT f = DriverStatsT
     coinCovertedToCashLeft :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     coinsConvertedToDirectPayoutCash :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    d2cReferralCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    d2dReferralCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverId :: B.C f Kernel.Prelude.Text,
     earningsMissed :: B.C f Kernel.Types.Common.Money,
