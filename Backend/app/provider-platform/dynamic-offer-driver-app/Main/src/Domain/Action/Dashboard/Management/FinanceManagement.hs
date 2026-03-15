@@ -4,8 +4,6 @@ module Domain.Action.Dashboard.Management.FinanceManagement
   ( getFinanceManagementSubscriptionPurchaseList,
     getFinanceManagementInvoiceList,
     getFinanceManagementFinanceInvoiceList,
-    getReconciliation,
-    getFinanceManagementReconciliation,
     getFinanceManagementFinanceReconciliation,
     postFinanceManagementReconciliationTrigger,
     getFinanceManagementFinancePaymentSettlementList,
@@ -17,7 +15,7 @@ where
 import qualified API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement as API
 import Control.Monad (forM)
 import qualified Dashboard.Common
-import Data.List (nub)
+import Data.List (nub, partition)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time (addUTCTime)
@@ -59,9 +57,7 @@ import qualified Lib.Finance.Storage.Queries.InvoiceLedgerLink as QInvoiceLedger
 import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedgerEntry
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntryExtra
 import qualified Lib.Finance.Storage.Queries.PgPaymentSettlementReportExtra as QPgPaymentSettlementReport
-import qualified Lib.Finance.Storage.Queries.ReconciliationEntry as QReconEntry
 import qualified Lib.Finance.Storage.Queries.ReconciliationEntryExtra as QReconEntryExtra
-import qualified Lib.Finance.Storage.Queries.ReconciliationSummary as QReconSummary
 import qualified Lib.Finance.Storage.Queries.ReconciliationSummaryExtra as QReconSummaryExtra
 import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as PaymentTransaction
@@ -488,115 +484,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFrom mbInvoiceId mbInvo
         "SubscriptionPurchase" -> (rides, entry.referenceId : subs)
         _ -> (rides, subs)
 
--- | Get reconciliation data - just fetch from tables
-getReconciliation ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Maybe UTCTime ->
-  Maybe Int ->
-  Maybe Int ->
-  Maybe Text ->
-  Maybe UTCTime ->
-  Flow API.ReconciliationRes
-getReconciliation merchantShortId opCity mbFromDate mbLimit mbOffset mbReconciliationType mbToDate = do
-  merchant <- SMerchant.findMerchantByShortId merchantShortId
-  _merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-
-  let limit = mkPageLimit mbLimit
-      offset = mkPageOffset mbOffset
-
-  -- Subtract IST offset (5h 30m = 19800 seconds) from the incoming dates before querying.
-  let istOffset = secondsToNominalDiffTime 19800
-      adjustedFromDate = fmap (addUTCTime (- istOffset)) mbFromDate
-      adjustedToDate = fmap (addUTCTime (- istOffset)) mbToDate
-
-  -- Fetch summaries filtered by reconciliation date range and type
-  summaries <- case mbReconciliationType of
-    Just rType -> QReconSummaryExtra.findByDateRangeAndType adjustedFromDate adjustedToDate (caseToReconciliationType rType)
-    Nothing -> do
-      allSummaries <- QReconSummary.findByMerchantId merchant.id.getId
-      pure $ filter (\s -> maybe True (s.reconciliationDate >=) adjustedFromDate && maybe True (s.reconciliationDate <=) adjustedToDate) allSummaries
-
-  let latestSummary = listToMaybe summaries
-
-  -- Build summary from latest summary (domain has totalDiscrepancies, matchedRecords, matchRate)
-  let summaryRes = case latestSummary of
-        Just s ->
-          API.ReconciliationSummary
-            { totalDiscrepancies = s.totalDiscrepancies,
-              matchedRecords = s.matchedRecords,
-              matchRate = s.matchRate,
-              sourceTotal = s.sourceTotal,
-              targetTotal = s.targetTotal,
-              varianceAmount = s.varianceAmount
-            }
-        Nothing ->
-          API.ReconciliationSummary
-            { totalDiscrepancies = 0,
-              matchedRecords = 0,
-              matchRate = "0%",
-              sourceTotal = 0,
-              targetTotal = 0,
-              varianceAmount = 0
-            }
-
-  -- Fetch entries from latest summary; paginate in memory (findBySummaryId returns list)
-  entries <- case latestSummary of
-    Just summary -> do
-      allEntries <- QReconEntry.findBySummaryId summary.id
-      pure $ take limit $ drop offset allEntries
-    Nothing -> pure []
-
-  entriesItems <- mapM buildReconciliationEntry entries
-  pure $
-    API.ReconciliationRes
-      { summary = summaryRes,
-        exceptions = entriesItems, -- Return all entries
-        completed = [] -- Already included in entries
-      }
-  where
-    buildReconciliationEntry :: ReconciliationEntry.ReconciliationEntry -> Flow API.ReconciliationEntry
-    buildReconciliationEntry entry =
-      let subscriptionPurchaseIdValue =
-            case entry.reconciliationType of
-              ReconciliationEntry.PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST -> Nothing
-              _ -> entry.sourceId
-       in pure
-            API.ReconciliationEntry
-              { bookingId = entry.bookingId,
-                dcoId = entry.dcoId,
-                status = fmap show entry.status,
-                mode = fmap show entry.mode,
-                expectedDsrValue = Just entry.expectedDsrValue,
-                actualLedgerValue = Just entry.actualLedgerValue,
-                variance = Just entry.variance,
-                reconStatus = Just (show entry.reconStatus),
-                mismatchReason = entry.mismatchReason,
-                timestamp = Just entry.timestamp,
-                settlementId = entry.settlementId,
-                subscriptionPurchaseId = subscriptionPurchaseIdValue,
-                sourceId = entry.sourceId,
-                targetId = entry.targetId,
-                settlementDate = entry.settlementDate,
-                transactionDate = entry.transactionDate,
-                transactionAmount = Just entry.actualLedgerValue,
-                subscriptionPurchaseAmount = Just entry.expectedDsrValue,
-                rrn = entry.rrn,
-                settlementMode = entry.settlementMode,
-                financeComponent = fmap show entry.financeComponent
-              }
-    caseToReconciliationType :: Text -> ReconSummary.ReconciliationType
-    caseToReconciliationType "DSR_VS_LEDGER" = ReconSummary.DSR_VS_LEDGER
-    caseToReconciliationType "DSR_VS_SUBSCRIPTION" = ReconSummary.DSR_VS_SUBSCRIPTION
-    caseToReconciliationType "DSSR_VS_SUBSCRIPTION" = ReconSummary.DSSR_VS_SUBSCRIPTION
-    caseToReconciliationType "PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION" = ReconSummary.PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION
-    caseToReconciliationType "PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST" = ReconSummary.PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST
-    caseToReconciliationType _ = error "Invalid reconciliation type"
-
-getFinanceManagementReconciliation :: ShortId DM.Merchant -> Context.City -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe UTCTime -> Flow API.ReconciliationRes
-getFinanceManagementReconciliation = getReconciliation
-
--- Aliases for generated API (Dashboard Management uses FinanceInvoiceList / FinanceReconciliation naming)
+-- Alias for generated API
 getFinanceManagementFinanceInvoiceList ::
   ShortId DM.Merchant ->
   Context.City ->
@@ -611,8 +499,80 @@ getFinanceManagementFinanceInvoiceList ::
   Flow API.InvoiceListRes
 getFinanceManagementFinanceInvoiceList = getFinanceManagementInvoiceList
 
-getFinanceManagementFinanceReconciliation :: ShortId DM.Merchant -> Context.City -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe UTCTime -> Flow API.ReconciliationRes
-getFinanceManagementFinanceReconciliation = getFinanceManagementReconciliation
+-- | Get reconciliation data
+getFinanceManagementFinanceReconciliation ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe UTCTime ->
+  ReconSummary.ReconciliationType ->
+  Flow API.ReconciliationRes
+getFinanceManagementFinanceReconciliation merchantShortId opCity mbFromDate mbLimit mbOffset mbToDate reconciliationType = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  _merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+
+  let limit = mkPageLimit mbLimit
+      offset = mkPageOffset mbOffset
+      -- Subtract IST offset (5h 30m) from incoming dates before querying (DB stores UTC)
+      istOffset = secondsToNominalDiffTime 19800
+      adjustedFromDate = addUTCTime (- istOffset) <$> mbFromDate
+      adjustedToDate = addUTCTime (- istOffset) <$> mbToDate
+
+  summaries <- QReconSummaryExtra.findByDateRangeAndType adjustedFromDate adjustedToDate reconciliationType
+
+  let latestSummary = listToMaybe summaries
+      summaryRes = maybe defaultSummary toSummary latestSummary
+
+  entries <- case latestSummary of
+    Just summary -> QReconEntryExtra.findBySummaryIdWithPagination summary.id limit offset
+    Nothing -> pure []
+
+  let (matched, mismatched) = partition (\e -> e.reconStatus == ReconciliationEntry.MATCHED) entries
+  pure
+    API.ReconciliationRes
+      { summary = summaryRes,
+        exceptions = map toReconEntry mismatched,
+        completed = map toReconEntry matched
+      }
+  where
+    defaultSummary :: API.ReconciliationSummary
+    defaultSummary = API.ReconciliationSummary 0 0 "0%" 0 0 0
+
+    toSummary :: ReconSummary.ReconciliationSummary -> API.ReconciliationSummary
+    toSummary s =
+      API.ReconciliationSummary
+        { totalDiscrepancies = s.totalDiscrepancies,
+          matchedRecords = s.matchedRecords,
+          matchRate = s.matchRate,
+          sourceTotal = s.sourceTotal,
+          targetTotal = s.targetTotal,
+          varianceAmount = s.varianceAmount
+        }
+
+    toReconEntry :: ReconciliationEntry.ReconciliationEntry -> API.ReconciliationEntry
+    toReconEntry entry =
+      API.ReconciliationEntry
+        { bookingId = entry.bookingId,
+          dcoId = entry.dcoId,
+          status = show <$> entry.status,
+          mode = show <$> entry.mode,
+          expectedValue = Just entry.expectedDsrValue,
+          actualValue = Just entry.actualLedgerValue,
+          variance = Just entry.variance,
+          reconStatus = Just (show entry.reconStatus),
+          mismatchReason = entry.mismatchReason,
+          timestamp = Just entry.timestamp,
+          financeComponent = show <$> entry.financeComponent,
+          sourceId = entry.sourceId,
+          targetId = entry.targetId,
+          settlementId = entry.settlementId,
+          settlementDate = entry.settlementDate,
+          settlementMode = entry.settlementMode,
+          transactionDate = entry.transactionDate,
+          rrn = entry.rrn
+        }
 
 -- | Trigger a reconciliation job on-demand
 postFinanceManagementReconciliationTrigger ::

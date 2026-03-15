@@ -11,6 +11,7 @@ imports:
   PGPaymentSettlementReport: Dashboard.Common
   InvoiceStatus: Lib.Finance.Domain.Types.Invoice
   InvoiceType: Lib.Finance.Domain.Types.Invoice
+  ReconciliationType: Lib.Finance.Domain.Types.ReconciliationSummary
   Value: Data.Aeson
 
 module: FinanceManagement
@@ -55,10 +56,11 @@ apis:
   # ----- Reconciliation -----
   - GET: # ReconciliationAPI
       endpoint: /finance/reconciliation
+      mandatoryQuery:
+        reconciliationType: ReconciliationType
       query:
         fromDate: UTCTime
         toDate: UTCTime
-        reconciliationType: Text
         limit: Int
         offset: Int
       auth: ApiAuthV2
@@ -266,12 +268,6 @@ types:
     - summary: ReconciliationSummary
     - exceptions: [ReconciliationEntry]
     - completed: [ReconciliationEntry]
-  ReconciliationSummariesRes:
-    - summaries: [ReconciliationSummary]
-    - totalCount: Int
-  ReconciliationEntriesRes:
-    - entries: [ReconciliationEntry]
-    - pagination: PaginationInfo
   ReconciliationTriggerReq:
     - fromDate: UTCTime
     - toDate: UTCTime
@@ -279,8 +275,6 @@ types:
   ReconciliationTriggerRes:
     - success: Bool
     - message: Text
-  ReconciliationStatusRes:
-    - statuses: [ReconciliationStatusItem]
   ReconciliationSummary:
     - totalDiscrepancies: Int
     - matchedRecords: Int
@@ -293,33 +287,20 @@ types:
     - dcoId: Maybe Text
     - status: Maybe Text
     - mode: Maybe Text
-    - expectedDsrValue: Maybe HighPrecMoney
-    - actualLedgerValue: Maybe HighPrecMoney
+    - expectedValue: Maybe HighPrecMoney
+    - actualValue: Maybe HighPrecMoney
     - variance: Maybe HighPrecMoney
     - reconStatus: Maybe Text
     - mismatchReason: Maybe Text
     - timestamp: Maybe UTCTime
-    - settlementId: Maybe Text
-    - subscriptionPurchaseId: Maybe Text
+    - financeComponent: Maybe Text
     - sourceId: Maybe Text
     - targetId: Maybe Text
+    - settlementId: Maybe Text
     - settlementDate: Maybe UTCTime
-    - transactionDate: Maybe UTCTime
-    - transactionAmount: Maybe HighPrecMoney
-    - subscriptionPurchaseAmount: Maybe HighPrecMoney
-    - rrn: Maybe Text
     - settlementMode: Maybe Text
-    - financeComponent: Maybe Text
-  PaginationInfo:
-    - total: Int
-    - limit: Int
-    - offset: Int
-    - hasMore: Bool
-  ReconciliationStatusItem:
-    - reconciliationType: Text
-    - status: Text
-    - lastCompletedDate: Maybe UTCTime
-    - errorMessage: Maybe Text
+    - transactionDate: Maybe UTCTime
+    - rrn: Maybe Text
 
   # ----- Payout list -----
   PayoutListRes:

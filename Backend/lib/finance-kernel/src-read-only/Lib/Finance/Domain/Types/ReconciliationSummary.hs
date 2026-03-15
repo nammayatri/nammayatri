@@ -8,6 +8,7 @@ import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 
 data ReconciliationSummary = ReconciliationSummary
   { createdAt :: Kernel.Prelude.UTCTime,
@@ -45,3 +46,5 @@ $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationType))
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationStatus))
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''JobStatus))
+
+$(mkHttpInstancesForEnum ''ReconciliationType)

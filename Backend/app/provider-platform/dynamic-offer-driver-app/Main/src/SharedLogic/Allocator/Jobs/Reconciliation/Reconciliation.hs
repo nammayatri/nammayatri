@@ -17,13 +17,11 @@ module SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation
   )
 where
 
-import Control.Applicative ((<|>))
 import Data.IORef (newIORef, readIORef, writeIORef)
 import qualified Data.Map.Strict as M
 import Data.Time.Calendar (addDays)
 import Data.Time.Clock (UTCTime (UTCTime), secondsToDiffTime, utctDay)
 import qualified Domain.Types.Booking as DB
-import qualified Domain.Types.Extra.MerchantPaymentMethod as MP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.SubscriptionPurchase as DSP
@@ -41,6 +39,7 @@ import qualified Lib.Finance.Domain.Types.ReconciliationSummary as ReconSummary
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedger
+import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerExtra
 import qualified Lib.Finance.Storage.Queries.PgPaymentSettlementReportExtra as QPgPaymentSettlement
 import qualified Lib.Finance.Storage.Queries.PgPayoutSettlementReportExtra as QPgPayoutSettlement
 import qualified Lib.Finance.Storage.Queries.ReconciliationEntry as QReconEntry
@@ -51,11 +50,24 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator (AllocatorJobType (..), ReconciliationJobData (..))
+import SharedLogic.Finance.Prepaid (prepaidRideDebitReferenceType, subscriptionCreditReferenceType)
 import qualified SharedLogic.Finance.Reconciliation as DomainRecon
-  ( ReconciliationJobType (..),
+  ( ReconEntryInput (..),
+    ReconciliationJobType (..),
+    determineRideMode,
+    dsrVsLedgerRefTypes,
     getReconStatusForJob,
     getReconciliationStatus,
+    mapBookingStatus,
+    mkDefaultReconEntryInput,
+    mkReconEntry,
     mkReconciliationStatusValue,
+    reasonAmountMismatch,
+    reasonDriverTakeHomeMismatch,
+    reasonNoMatchingPayoutRequest,
+    reasonNoMatchingSubscription,
+    reasonSubscriptionCreditMismatch,
+    runDsrVsLedgerComparison,
     updateReconStatus,
   )
 import Storage.Beam.Payment ()
@@ -181,11 +193,9 @@ doReconciliationDsrVsLedger merchantId merchantOpCityId startTime endTime now = 
 
   -- Process each booking and update reconciliation status
   entries <- forM bookings $ \booking -> do
-    -- Get ledger entries for this booking (multiple reference types) in date range
     ledgerEntries <- ledgerEntriesForBookingInRange booking.id.getId startTime endTime
-
-    -- Process and create reconciliation entry
-    mEntry <- processDsrVsLedger booking ledgerEntries now
+    indirectTaxTxns <- QIndirectTax.findByReferenceId booking.id.getId
+    mEntry <- processDsrVsLedger booking ledgerEntries indirectTaxTxns now
     return mEntry
 
   -- Filter valid entries - only include entries where domain reconciliation hasn't already set a status
@@ -213,14 +223,8 @@ doReconciliationDsrVsLedger merchantId merchantOpCityId startTime endTime now = 
                     jsonValue = DomainRecon.mkReconciliationStatusValue updatedMap
                 QBooking.updateReconciliationStatus (Id bookingId) (Just jsonValue)
 
-  -- Create summary
-  summaryId <- cast <$> generateGUID
-  let summary = createSummary ReconSummary.DSR_VS_LEDGER validEntries startTime now merchantId.getId merchantOpCityId summaryId
-  QReconSummary.create summary
-
-  -- Create entries linked to summary
-  let entriesWithSummary = map (\e -> e {ReconEntry.summaryId = summaryId}) validEntries
-  mapM_ QReconEntry.create entriesWithSummary
+  -- Persist summaries and entries
+  saveSummaryAndEntries ReconSummary.DSR_VS_LEDGER validEntries startTime now merchantId.getId merchantOpCityId
 
   logInfo $
     "DSR vs Ledger reconciliation completed. Total: " <> show (length validEntries)
@@ -229,6 +233,23 @@ doReconciliationDsrVsLedger merchantId merchantOpCityId startTime endTime now = 
   return Complete
   where
     countMatched = length . filter (\e -> e.reconStatus == ReconEntry.MATCHED)
+
+-- | Shared helper: create summary, persist entries, link to summary.
+saveSummaryAndEntries ::
+  (BeamFlow m r, MonadFlow m) =>
+  ReconSummary.ReconciliationType ->
+  [ReconEntry.ReconciliationEntry] ->
+  UTCTime ->
+  UTCTime ->
+  Text ->
+  Id DMOC.MerchantOperatingCity ->
+  m ()
+saveSummaryAndEntries reconType entries startTime now merchantId merchantOpCityId = do
+  summaryId <- cast <$> generateGUID
+  let summary = createSummary reconType entries startTime now merchantId merchantOpCityId summaryId
+  QReconSummary.create summary
+  let entriesWithSummary = map (\e -> e {ReconEntry.summaryId = summaryId}) entries
+  mapM_ QReconEntry.create entriesWithSummary
 
 -- 2. DSR vs Subscription Transaction Reconciliation
 doReconciliationDsrVsSubscription ::
@@ -251,8 +272,7 @@ doReconciliationDsrVsSubscription merchantId merchantOpCityId startTime endTime 
 
   -- Process each booking with subscription rides
   entries <- forM bookings $ \booking -> do
-    -- Get RideSubscriptionDebit ledger entries in date range
-    ledgerEntries <- ledgerEntriesByReferenceInRange "RideSubscriptionDebit" booking.id.getId startTime endTime
+    ledgerEntries <- QLedger.findByReference prepaidRideDebitReferenceType booking.id.getId
 
     case ledgerEntries of
       [] -> return Nothing -- No subscription debit for this booking
@@ -265,14 +285,9 @@ doReconciliationDsrVsSubscription merchantId merchantOpCityId startTime endTime 
         QBooking.updateReconciliationStatus booking.id (Just jsonValue)
         return $ Just entry
 
-  -- Create summary
+  -- Persist summaries and entries
   let validEntries = catMaybes entries
-  summaryId <- cast <$> generateGUID
-  let summary = createSummary ReconSummary.DSR_VS_SUBSCRIPTION validEntries startTime now merchantId.getId merchantOpCityId summaryId
-  QReconSummary.create summary
-
-  let entriesWithSummary = map (\e -> e {ReconEntry.summaryId = summaryId}) validEntries
-  mapM_ QReconEntry.create entriesWithSummary
+  saveSummaryAndEntries ReconSummary.DSR_VS_SUBSCRIPTION validEntries startTime now merchantId.getId merchantOpCityId
 
   logInfo $ "DSR vs Subscription reconciliation completed. Total: " <> show (length validEntries)
   return Complete
@@ -298,8 +313,7 @@ doReconciliationDssrVsSubscription merchantId merchantOpCityId startTime endTime
 
   -- Process each subscription
   entries <- forM subscriptions $ \subscription -> do
-    -- Get SubscriptionCredit ledger entries in date range (plan credit; purchase-related entries use "SubscriptionPurchase")
-    ledgerEntries <- ledgerEntriesByReferenceInRange "SubscriptionCredit" subscription.id.getId startTime endTime
+    ledgerEntries <- QLedger.findByReference subscriptionCreditReferenceType subscription.id.getId
 
     case ledgerEntries of
       [] -> return Nothing -- No credit entry for this subscription
@@ -312,14 +326,9 @@ doReconciliationDssrVsSubscription merchantId merchantOpCityId startTime endTime
         QSubPurchase.updateReconciliationStatus (Just jsonValue) subscription.id
         return $ Just entry
 
-  -- Create summary
+  -- Persist summaries and entries
   let validEntries = catMaybes entries
-  summaryId <- cast <$> generateGUID
-  let summary = createSummary ReconSummary.DSSR_VS_SUBSCRIPTION validEntries startTime now merchantId.getId merchantOpCityId summaryId
-  QReconSummary.create summary
-
-  let entriesWithSummary = map (\e -> e {ReconEntry.summaryId = summaryId}) validEntries
-  mapM_ QReconEntry.create entriesWithSummary
+  saveSummaryAndEntries ReconSummary.DSSR_VS_SUBSCRIPTION validEntries startTime now merchantId.getId merchantOpCityId
 
   logInfo $ "DSSR vs Subscription reconciliation completed. Total: " <> show (length validEntries)
   return Complete
@@ -340,122 +349,73 @@ doReconciliationPgPaymentVsSubscription ::
 doReconciliationPgPaymentVsSubscription merchantId merchantOpCityId startTime endTime now = do
   logInfo "Starting PG-Payment Settlement vs Subscription reconciliation"
 
-  summaryId <- cast <$> generateGUID
-
-  -- Fetch all SUCCESS pg_payment_settlement_report records in date range
   pgReports <- QPgPaymentSettlement.findByTxnDateRangeAndStatus merchantId.getId merchantOpCityId.getId startTime endTime
 
-  -- Process each settlement report entry
   entries <- forM pgReports $ \report -> do
-    -- Match by referenceId = subscription.id; only ACTIVE/EXPIRED subscriptions are valid
     mSubscription <- case report.referenceId of
       Nothing -> return Nothing
       Just refId -> do
         mSub <- QSubPurchase.findByPrimaryKey (Id refId)
         return $
           mSub >>= \s ->
-            let okStatus = s.status `elem` [DSP.ACTIVE, DSP.EXPIRED]
+            let okStatus = s.status `elem` [DSP.ACTIVE, DSP.EXPIRED, DSP.EXHAUSTED]
                 okDate = case report.txnDate of
                   Just txnT -> utctDay txnT == utctDay s.purchaseTimestamp
                   Nothing -> False
              in if okStatus && okDate then Just s else Nothing
 
+    entryId <- generateGUID
+
     case mSubscription of
       Nothing -> do
-        -- No matching active/expired subscription found
-        entryId <- generateGUID
-        return $
-          Just $
-            ReconEntry.ReconciliationEntry
-              { id = entryId,
-                summaryId = summaryId,
-                reconciliationDate = now,
-                reconciliationType = ReconEntry.PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION,
-                bookingId = Nothing,
-                dcoId = Nothing,
-                status = Nothing,
-                mode = Nothing,
-                expectedDsrValue = 0,
-                actualLedgerValue = report.txnAmount,
-                variance = report.txnAmount,
-                reconStatus = ReconEntry.MISSING_IN_TARGET,
-                mismatchReason = Just "No matching subscription purchase found",
-                timestamp = now,
-                financeComponent = Just ReconEntry.PG_PAYMENT_SETTLEMENT,
-                settlementId = report.settlementId,
-                sourceId = report.referenceId,
-                targetId = Just report.id.getId,
-                settlementDate = report.settlementDate,
-                transactionDate = report.txnDate,
-                rrn = report.rrn,
-                settlementMode = fmap show report.paymentMethod,
-                sourceDetails = Nothing,
-                targetDetails = Nothing,
-                merchantId = Just merchantId.getId,
-                createdAt = now,
-                updatedAt = now,
-                merchantOperatingCityId = Just merchantOpCityId.getId
-              }
+        let inp =
+              (DomainRecon.mkDefaultReconEntryInput ReconEntry.PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION)
+                { DomainRecon.actual = report.txnAmount,
+                  DomainRecon.reason = Just DomainRecon.reasonNoMatchingSubscription,
+                  DomainRecon.component = Just ReconEntry.PG_PAYMENT_SETTLEMENT,
+                  DomainRecon.settlementId = report.settlementId,
+                  DomainRecon.sourceId = report.referenceId,
+                  DomainRecon.targetId = Just report.id.getId,
+                  DomainRecon.settlementDate = report.settlementDate,
+                  DomainRecon.transactionDate = report.txnDate,
+                  DomainRecon.rrn = report.rrn,
+                  DomainRecon.settlementMode = fmap show report.paymentMethod,
+                  DomainRecon.merchantId = Just merchantId.getId,
+                  DomainRecon.merchantOperatingCityId = Just merchantOpCityId.getId
+                }
+        return $ Just $ DomainRecon.mkReconEntry inp now entryId
       Just subscription -> do
-        -- Compare txnAmount with subscription planFee (includes GST)
-        let expectedValue = subscription.planFee
-            actualValue = report.txnAmount
-            variance = expectedValue - actualValue
-            reconStatus =
-              if expectedValue == actualValue
-                then ReconEntry.MATCHED
-                else
-                  if actualValue > expectedValue
-                    then ReconEntry.HIGHER_IN_TARGET
-                    else ReconEntry.LOWER_IN_TARGET
-
-        entryId <- generateGUID
+        let inp =
+              (DomainRecon.mkDefaultReconEntryInput ReconEntry.PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION)
+                { DomainRecon.bookingId = Just subscription.id.getId,
+                  DomainRecon.dcoId = Just subscription.ownerId,
+                  DomainRecon.status = Just ReconEntry.COMPLETED,
+                  DomainRecon.expected = subscription.planFee,
+                  DomainRecon.actual = report.txnAmount,
+                  DomainRecon.reason = Just DomainRecon.reasonAmountMismatch,
+                  DomainRecon.component = Just ReconEntry.PG_PAYMENT_SETTLEMENT,
+                  DomainRecon.settlementId = report.settlementId,
+                  DomainRecon.sourceId = Just subscription.id.getId,
+                  DomainRecon.targetId = Just report.id.getId,
+                  DomainRecon.settlementDate = report.settlementDate,
+                  DomainRecon.transactionDate = Just subscription.purchaseTimestamp,
+                  DomainRecon.rrn = report.rrn,
+                  DomainRecon.settlementMode = fmap show report.paymentMethod,
+                  DomainRecon.merchantId = Just merchantId.getId,
+                  DomainRecon.merchantOperatingCityId = Just merchantOpCityId.getId
+                }
+            entry = DomainRecon.mkReconEntry inp now entryId
 
         -- Update subscription reconciliation status
         let existingStatusMap = DomainRecon.getReconciliationStatus subscription.reconciliationStatus
-            updatedMap = DomainRecon.updateReconStatus existingStatusMap DomainRecon.PgPaymentVsSubscription (toReconSummaryStatus reconStatus)
+            updatedMap = DomainRecon.updateReconStatus existingStatusMap DomainRecon.PgPaymentVsSubscription (toReconSummaryStatus entry.reconStatus)
             jsonValue = DomainRecon.mkReconciliationStatusValue updatedMap
         QSubPurchase.updateReconciliationStatus (Just jsonValue) subscription.id
 
-        return $
-          Just $
-            ReconEntry.ReconciliationEntry
-              { id = entryId,
-                summaryId = summaryId,
-                reconciliationDate = now,
-                reconciliationType = ReconEntry.PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION,
-                bookingId = Just subscription.id.getId,
-                dcoId = Just subscription.ownerId,
-                status = Just ReconEntry.COMPLETED,
-                mode = Nothing,
-                expectedDsrValue = expectedValue,
-                actualLedgerValue = actualValue,
-                variance = variance,
-                reconStatus = reconStatus,
-                mismatchReason = if reconStatus /= ReconEntry.MATCHED then Just "Amount mismatch" else Nothing,
-                timestamp = now,
-                financeComponent = Just ReconEntry.PG_PAYMENT_SETTLEMENT,
-                settlementId = report.settlementId,
-                sourceId = Just subscription.id.getId,
-                targetId = Just report.id.getId,
-                settlementDate = report.settlementDate,
-                transactionDate = Just subscription.purchaseTimestamp,
-                rrn = report.rrn,
-                settlementMode = fmap show report.paymentMethod,
-                sourceDetails = Nothing,
-                targetDetails = Nothing,
-                merchantId = Just merchantId.getId,
-                createdAt = now,
-                updatedAt = now,
-                merchantOperatingCityId = Just merchantOpCityId.getId
-              }
+        return $ Just entry
 
-  -- Create summary
   let validEntries = catMaybes entries
-  let summary = createSummary ReconSummary.PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION validEntries startTime now merchantId.getId merchantOpCityId summaryId
-  QReconSummary.create summary
-
-  mapM_ QReconEntry.create validEntries
+  saveSummaryAndEntries ReconSummary.PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION validEntries startTime now merchantId.getId merchantOpCityId
 
   logInfo $ "PG-Payment Settlement vs Subscription reconciliation completed. Total: " <> show (length validEntries)
   return Complete
@@ -476,14 +436,9 @@ doReconciliationPgPayoutVsPayoutRequest ::
 doReconciliationPgPayoutVsPayoutRequest merchantId merchantOpCityId startTime endTime now = do
   logInfo "Starting PG-Payout Settlement vs Payout Request reconciliation"
 
-  summaryId <- cast <$> generateGUID
-
-  -- Fetch all SUCCESS pg_payout_settlement_report records in date range
   pgReports <- QPgPayoutSettlement.findByTxnDateRangeAndStatus merchantId.getId merchantOpCityId.getId startTime endTime
 
-  -- Process each settlement report entry
   entries <- forM pgReports $ \report -> do
-    -- Match by payoutRequestId; only CREDITED payout requests are valid
     mPayoutRequest <- case report.payoutRequestId of
       Nothing -> return Nothing
       Just prId -> do
@@ -496,96 +451,50 @@ doReconciliationPgPayoutVsPayoutRequest merchantId merchantOpCityId startTime en
                   Nothing -> False
              in if okStatus && okDate then Just pr else Nothing
 
+    entryId <- generateGUID
+
     case mPayoutRequest of
       Nothing -> do
-        -- No matching credited payout request found
-        entryId <- generateGUID
-        return $
-          Just $
-            ReconEntry.ReconciliationEntry
-              { id = entryId,
-                summaryId = summaryId,
-                reconciliationDate = now,
-                reconciliationType = ReconEntry.PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST,
-                bookingId = Nothing,
-                dcoId = Nothing,
-                status = Nothing,
-                mode = Nothing,
-                expectedDsrValue = 0,
-                actualLedgerValue = report.txnAmount,
-                variance = report.txnAmount,
-                reconStatus = ReconEntry.MISSING_IN_TARGET,
-                mismatchReason = Just "No matching credited payout request found",
-                timestamp = now,
-                financeComponent = Just ReconEntry.PG_PAYOUT_SETTLEMENT,
-                settlementId = report.settlementId,
-                sourceId = report.payoutRequestId,
-                targetId = Just report.id.getId,
-                settlementDate = report.settlementDate,
-                transactionDate = report.txnDate,
-                rrn = report.rrn,
-                settlementMode = fmap show report.settlementMode,
-                sourceDetails = Nothing,
-                targetDetails = Nothing,
-                merchantId = Just merchantId.getId,
-                createdAt = now,
-                updatedAt = now,
-                merchantOperatingCityId = Just merchantOpCityId.getId
-              }
+        let inp =
+              (DomainRecon.mkDefaultReconEntryInput ReconEntry.PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST)
+                { DomainRecon.actual = report.txnAmount,
+                  DomainRecon.reason = Just DomainRecon.reasonNoMatchingPayoutRequest,
+                  DomainRecon.component = Just ReconEntry.PG_PAYOUT_SETTLEMENT,
+                  DomainRecon.settlementId = report.settlementId,
+                  DomainRecon.sourceId = report.payoutRequestId,
+                  DomainRecon.targetId = Just report.id.getId,
+                  DomainRecon.settlementDate = report.settlementDate,
+                  DomainRecon.transactionDate = report.txnDate,
+                  DomainRecon.rrn = report.rrn,
+                  DomainRecon.settlementMode = fmap show report.settlementMode,
+                  DomainRecon.merchantId = Just merchantId.getId,
+                  DomainRecon.merchantOperatingCityId = Just merchantOpCityId.getId
+                }
+        return $ Just $ DomainRecon.mkReconEntry inp now entryId
       Just payoutRequest -> do
-        -- Compare txnAmount with payoutRequest amount
-        let expectedValue = fromMaybe 0 payoutRequest.amount
-            actualValue = report.txnAmount
-            variance = expectedValue - actualValue
-            reconStatus =
-              if expectedValue == actualValue
-                then ReconEntry.MATCHED
-                else
-                  if actualValue > expectedValue
-                    then ReconEntry.HIGHER_IN_TARGET
-                    else ReconEntry.LOWER_IN_TARGET
+        let inp =
+              (DomainRecon.mkDefaultReconEntryInput ReconEntry.PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST)
+                { DomainRecon.bookingId = Just payoutRequest.id.getId,
+                  DomainRecon.dcoId = Just payoutRequest.beneficiaryId,
+                  DomainRecon.status = Just ReconEntry.COMPLETED,
+                  DomainRecon.expected = fromMaybe 0 payoutRequest.amount,
+                  DomainRecon.actual = report.txnAmount,
+                  DomainRecon.reason = Just DomainRecon.reasonAmountMismatch,
+                  DomainRecon.component = Just ReconEntry.PG_PAYOUT_SETTLEMENT,
+                  DomainRecon.settlementId = report.settlementId,
+                  DomainRecon.sourceId = Just payoutRequest.id.getId,
+                  DomainRecon.targetId = Just report.id.getId,
+                  DomainRecon.settlementDate = report.settlementDate,
+                  DomainRecon.transactionDate = Just payoutRequest.createdAt,
+                  DomainRecon.rrn = report.rrn,
+                  DomainRecon.settlementMode = fmap show report.settlementMode,
+                  DomainRecon.merchantId = Just merchantId.getId,
+                  DomainRecon.merchantOperatingCityId = Just merchantOpCityId.getId
+                }
+        return $ Just $ DomainRecon.mkReconEntry inp now entryId
 
-        entryId <- generateGUID
-
-        return $
-          Just $
-            ReconEntry.ReconciliationEntry
-              { id = entryId,
-                summaryId = summaryId,
-                reconciliationDate = now,
-                reconciliationType = ReconEntry.PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST,
-                bookingId = Just payoutRequest.id.getId,
-                dcoId = Just payoutRequest.beneficiaryId,
-                status = Just ReconEntry.COMPLETED,
-                mode = Nothing,
-                expectedDsrValue = expectedValue,
-                actualLedgerValue = actualValue,
-                variance = variance,
-                reconStatus = reconStatus,
-                mismatchReason = if reconStatus /= ReconEntry.MATCHED then Just "Amount mismatch" else Nothing,
-                timestamp = now,
-                financeComponent = Just ReconEntry.PG_PAYOUT_SETTLEMENT,
-                settlementId = report.settlementId,
-                sourceId = Just payoutRequest.id.getId,
-                targetId = Just report.id.getId,
-                settlementDate = report.settlementDate,
-                transactionDate = Just payoutRequest.createdAt,
-                rrn = report.rrn,
-                settlementMode = fmap show report.settlementMode,
-                sourceDetails = Nothing,
-                targetDetails = Nothing,
-                merchantId = Just merchantId.getId,
-                createdAt = now,
-                updatedAt = now,
-                merchantOperatingCityId = Just merchantOpCityId.getId
-              }
-
-  -- Create summary
   let validEntries = catMaybes entries
-  let summary = createSummary ReconSummary.PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST validEntries startTime now merchantId.getId merchantOpCityId summaryId
-  QReconSummary.create summary
-
-  mapM_ QReconEntry.create validEntries
+  saveSummaryAndEntries ReconSummary.PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST validEntries startTime now merchantId.getId merchantOpCityId
 
   logInfo $ "PG-Payout Settlement vs Payout Request reconciliation completed. Total: " <> show (length validEntries)
   return Complete
@@ -593,15 +502,8 @@ doReconciliationPgPayoutVsPayoutRequest merchantId merchantOpCityId startTime en
 -- | Fetch all ledger entries for a booking (all reference types) within date range
 ledgerEntriesForBookingInRange :: (BeamFlow m r, MonadFlow m) => Text -> UTCTime -> UTCTime -> m [LedgerEntry.LedgerEntry]
 ledgerEntriesForBookingInRange bookingId startTime endTime = do
-  refTypes <- sequence [QLedger.findByReference "BaseRide" bookingId, QLedger.findByReference "GSTOnline" bookingId, QLedger.findByReference "GSTCash" bookingId, QLedger.findByReference "UserCancellation" bookingId, QLedger.findByReference "DriverCancellation" bookingId]
-  let allEntries = concat refTypes
+  allEntries <- QLedgerExtra.findByReferenceIn DomainRecon.dsrVsLedgerRefTypes bookingId
   pure $ filter (\e -> e.timestamp >= startTime && e.timestamp <= endTime) allEntries
-
--- | Fetch ledger entries by referenceType and referenceId in date range
-ledgerEntriesByReferenceInRange :: (BeamFlow m r, MonadFlow m) => Text -> Text -> UTCTime -> UTCTime -> m [LedgerEntry.LedgerEntry]
-ledgerEntriesByReferenceInRange refType refId startTime endTime = do
-  entries <- QLedger.findByReference refType refId
-  pure $ filter (\e -> e.timestamp >= startTime && e.timestamp <= endTime) entries
 
 -- Process DSR vs Ledger reconciliation for a single booking
 processDsrVsLedger ::
@@ -612,95 +514,36 @@ processDsrVsLedger ::
   ) =>
   DB.Booking ->
   [LedgerEntry.LedgerEntry] ->
+  [IndirectTax.IndirectTaxTransaction] ->
   UTCTime ->
   m (Maybe ReconEntry.ReconciliationEntry)
-processDsrVsLedger booking ledgerEntries now = do
-  let rideMode = determineRideMode booking.paymentInstrument
-
-  -- Look up driver (DCO) from Ride table by bookingId
+processDsrVsLedger booking ledgerEntries indirectTaxTxns now = do
   rides <- QRide.findRidesByBookingId [booking.id]
   let dcoId = (.driverId.getId) <$> listToMaybe rides
-
-  -- Expected GST from indirect_tax_transaction (referenceId = booking id); use totalGstAmount directly, no recalculation
-  indirectTaxTxns <- QIndirectTax.findByReferenceId booking.id.getId
-  let relevantType = case booking.status of
-        DB.COMPLETED -> IndirectTax.RideFare
-        _ -> IndirectTax.Cancellation
-      mbIndirectTxn = find (\t -> t.transactionType == relevantType) indirectTaxTxns
-      expectedGstFromTax = (.totalGstAmount) <$> mbIndirectTxn
-      expectedGst = expectedGstFromTax
-
-  -- Get expected values from booking (DSR)
-  let expectedGross = calculateExpectedGross booking
-
-  -- Find corresponding ledger entries
-  let baseRideEntry = find (\e -> e.referenceType == "BaseRide") ledgerEntries
-      gstOnlineEntry = find (\e -> e.referenceType == "GSTOnline") ledgerEntries
-      gstCashEntry = find (\e -> e.referenceType == "GSTCash") ledgerEntries
-      userCancellationEntry = find (\e -> e.referenceType == "UserCancellation") ledgerEntries
-      driverCancellationEntry = find (\e -> e.referenceType == "DriverCancellation") ledgerEntries
-
-  -- Determine status based on booking status and payment mode
-  let (reconStatusSum, mismatchReason) = case booking.status of
-        DB.COMPLETED -> case rideMode of
-          Just ReconEntry.ONLINE -> processOnlineCompleted expectedGross baseRideEntry expectedGst gstOnlineEntry
-          Just ReconEntry.CASH -> processCashCompleted expectedGst gstCashEntry
-          Nothing -> (ReconSummary.MISSING_IN_TARGET, Just "Unknown ride mode")
-        DB.CANCELLED -> processCancelled expectedGross userCancellationEntry driverCancellationEntry expectedGst gstOnlineEntry
-        _ -> (ReconSummary.MISSING_IN_TARGET, Just "Unsupported booking status")
-      reconStatus = toReconEntryStatus reconStatusSum
-
-  -- Calculate variance; for CASH completed we compare GST, so store GST-aligned values
-  let actualValue = getActualValue baseRideEntry gstOnlineEntry gstCashEntry userCancellationEntry driverCancellationEntry rideMode booking.status
-      (expectedStored, actualStored, variance) =
-        case (booking.status, rideMode) of
-          (DB.COMPLETED, Just ReconEntry.CASH) ->
-            ( fromMaybe 0 expectedGst,
-              fromMaybe 0 actualValue,
-              maybe 0 (\expG -> expG - fromMaybe 0 actualValue) expectedGst
-            )
-          _ ->
-            ( fromMaybe 0 expectedGross,
-              fromMaybe 0 actualValue,
-              case (expectedGross, actualValue) of
-                (Just expV, Just act) -> expV - act
-                _ -> 0
-            )
+      mbRide = listToMaybe rides
+      dsrResult = DomainRecon.runDsrVsLedgerComparison booking mbRide ledgerEntries indirectTaxTxns
 
   entryId <- generateGUID
-
-  return $
-    Just $
-      ReconEntry.ReconciliationEntry
-        { id = entryId,
-          summaryId = Id "", -- Will be set by caller
-          reconciliationDate = now,
-          reconciliationType = ReconEntry.DSR_VS_LEDGER,
-          bookingId = Just booking.id.getId,
-          dcoId = dcoId,
-          status = Just $ mapBookingStatus booking.status,
-          mode = rideMode,
-          expectedDsrValue = expectedStored,
-          actualLedgerValue = actualStored,
-          variance = variance,
-          reconStatus = reconStatus,
-          mismatchReason = mismatchReason,
-          timestamp = now,
-          financeComponent = Just ReconEntry.GROSS_RIDE_FARE,
-          sourceDetails = Nothing,
-          targetDetails = Nothing,
-          merchantId = Just booking.providerId.getId,
-          createdAt = now,
-          updatedAt = now,
-          merchantOperatingCityId = Just booking.merchantOperatingCityId.getId,
-          rrn = Nothing,
-          settlementDate = Nothing,
-          settlementId = Nothing,
-          settlementMode = Nothing,
-          sourceId = Nothing,
-          targetId = Nothing,
-          transactionDate = Nothing
-        }
+  let inp =
+        (DomainRecon.mkDefaultReconEntryInput ReconEntry.DSR_VS_LEDGER)
+          { DomainRecon.bookingId = Just booking.id.getId,
+            DomainRecon.dcoId = dcoId,
+            DomainRecon.status = Just $ DomainRecon.mapBookingStatus booking.status,
+            DomainRecon.mode = dsrResult.rideMode,
+            DomainRecon.expected = dsrResult.expectedStored,
+            DomainRecon.actual = dsrResult.actualStored,
+            DomainRecon.reason = dsrResult.mismatchReason,
+            DomainRecon.component = Just dsrResult.financeComponent,
+            DomainRecon.merchantId = Just booking.providerId.getId,
+            DomainRecon.merchantOperatingCityId = Just booking.merchantOperatingCityId.getId
+          }
+      -- Override reconStatus with the multi-component comparison result
+      entry =
+        (DomainRecon.mkReconEntry inp now entryId)
+          { ReconEntry.reconStatus = toReconEntryStatus dsrResult.reconStatus,
+            ReconEntry.mismatchReason = dsrResult.mismatchReason
+          }
+  return $ Just entry
 
 -- Process DSR vs Subscription reconciliation
 processDsrVsSubscription ::
@@ -713,61 +556,30 @@ processDsrVsSubscription ::
   UTCTime ->
   m ReconEntry.ReconciliationEntry
 processDsrVsSubscription booking ledgerEntry now = do
-  -- Look up driver (DCO) from Ride table by bookingId
   rides <- QRide.findRidesByBookingId [booking.id]
   let dcoId = (.driverId.getId) <$> listToMaybe rides
-
-  -- Calculate driver take home: ride.fare - parkingCharge - govtCharges - tollCharges
-  let mbRide = listToMaybe rides
+      mbRide = listToMaybe rides
       rideFare = fromMaybe booking.estimatedFare (mbRide >>= (.fare))
       parkingCharge = fromMaybe 0 booking.fareParams.parkingCharge
       govtCharges = fromMaybe 0 booking.fareParams.govtCharges
       tollCharges = fromMaybe 0 booking.tollCharges
       expectedValue = rideFare - parkingCharge - govtCharges - tollCharges
-      actualValue = ledgerEntry.amount
-      variance = expectedValue - actualValue
-
-      reconStatus =
-        if expectedValue == actualValue
-          then ReconEntry.MATCHED
-          else
-            if actualValue > expectedValue
-              then ReconEntry.HIGHER_IN_TARGET
-              else ReconEntry.LOWER_IN_TARGET
 
   entryId <- generateGUID
-
-  return $
-    ReconEntry.ReconciliationEntry
-      { id = entryId,
-        summaryId = Id "", -- Will be set by caller
-        reconciliationDate = now,
-        reconciliationType = ReconEntry.DSR_VS_SUBSCRIPTION,
-        bookingId = Just booking.id.getId,
-        dcoId = dcoId,
-        status = Just $ mapBookingStatus booking.status,
-        mode = determineRideMode booking.paymentInstrument,
-        expectedDsrValue = expectedValue,
-        actualLedgerValue = actualValue,
-        variance = variance,
-        reconStatus = reconStatus,
-        mismatchReason = if reconStatus /= ReconEntry.MATCHED then Just "Driver take home mismatch" else Nothing,
-        timestamp = now,
-        financeComponent = Just ReconEntry.DRIVER_TAKE_HOME_EARNINGS,
-        sourceDetails = Nothing,
-        targetDetails = Nothing,
-        merchantId = Just booking.providerId.getId,
-        createdAt = now,
-        updatedAt = now,
-        merchantOperatingCityId = Just booking.merchantOperatingCityId.getId,
-        rrn = Nothing,
-        settlementDate = Nothing,
-        settlementId = Nothing,
-        settlementMode = Nothing,
-        sourceId = Nothing,
-        targetId = Nothing,
-        transactionDate = Nothing
-      }
+  let inp =
+        (DomainRecon.mkDefaultReconEntryInput ReconEntry.DSR_VS_SUBSCRIPTION)
+          { DomainRecon.bookingId = Just booking.id.getId,
+            DomainRecon.dcoId = dcoId,
+            DomainRecon.status = Just $ DomainRecon.mapBookingStatus booking.status,
+            DomainRecon.mode = DomainRecon.determineRideMode booking.ledgerWriteMode booking.paymentInstrument,
+            DomainRecon.expected = expectedValue,
+            DomainRecon.actual = ledgerEntry.amount,
+            DomainRecon.reason = Just DomainRecon.reasonDriverTakeHomeMismatch,
+            DomainRecon.component = Just ReconEntry.DRIVER_TAKE_HOME_EARNINGS,
+            DomainRecon.merchantId = Just booking.providerId.getId,
+            DomainRecon.merchantOperatingCityId = Just booking.merchantOperatingCityId.getId
+          }
+  return $ DomainRecon.mkReconEntry inp now entryId
 
 -- Process DSSR vs Subscription reconciliation
 processDssrVsSubscription ::
@@ -778,51 +590,20 @@ processDssrVsSubscription ::
   UTCTime ->
   m ReconEntry.ReconciliationEntry
 processDssrVsSubscription subscription ledgerEntry now = do
-  let expectedValue = subscription.planRideCredit
-      actualValue = ledgerEntry.amount
-      variance = expectedValue - actualValue
-
-      reconStatus =
-        if expectedValue == actualValue
-          then ReconEntry.MATCHED
-          else
-            if actualValue > expectedValue
-              then ReconEntry.HIGHER_IN_TARGET
-              else ReconEntry.LOWER_IN_TARGET
-
   entryId <- generateGUID
-
-  return $
-    ReconEntry.ReconciliationEntry
-      { id = entryId,
-        summaryId = Id "", -- Will be set by caller
-        reconciliationDate = now,
-        reconciliationType = ReconEntry.DSSR_VS_SUBSCRIPTION,
-        bookingId = Just subscription.id.getId,
-        dcoId = Just subscription.ownerId,
-        status = Just ReconEntry.COMPLETED,
-        mode = Nothing,
-        expectedDsrValue = expectedValue,
-        actualLedgerValue = actualValue,
-        variance = variance,
-        reconStatus = reconStatus,
-        mismatchReason = if reconStatus /= ReconEntry.MATCHED then Just "Subscription credit mismatch" else Nothing,
-        timestamp = now,
-        financeComponent = Just ReconEntry.SUBSCRIPTION_PURCHASE,
-        sourceDetails = Nothing,
-        targetDetails = Nothing,
-        merchantId = Just subscription.merchantId.getId,
-        createdAt = now,
-        updatedAt = now,
-        merchantOperatingCityId = Just subscription.merchantOperatingCityId.getId,
-        rrn = Nothing,
-        settlementDate = Nothing,
-        settlementId = Nothing,
-        settlementMode = Nothing,
-        sourceId = Nothing,
-        targetId = Nothing,
-        transactionDate = Nothing
-      }
+  let inp =
+        (DomainRecon.mkDefaultReconEntryInput ReconEntry.DSSR_VS_SUBSCRIPTION)
+          { DomainRecon.bookingId = Just subscription.id.getId,
+            DomainRecon.dcoId = Just subscription.ownerId,
+            DomainRecon.status = Just ReconEntry.COMPLETED,
+            DomainRecon.expected = subscription.planRideCredit,
+            DomainRecon.actual = ledgerEntry.amount,
+            DomainRecon.reason = Just DomainRecon.reasonSubscriptionCreditMismatch,
+            DomainRecon.component = Just ReconEntry.SUBSCRIPTION_PURCHASE,
+            DomainRecon.merchantId = Just subscription.merchantId.getId,
+            DomainRecon.merchantOperatingCityId = Just subscription.merchantOperatingCityId.getId
+          }
+  return $ DomainRecon.mkReconEntry inp now entryId
 
 -- Helper: ReconSummary and ReconEntry both define ReconciliationStatus; convert for entry records.
 toReconEntryStatus :: ReconSummary.ReconciliationStatus -> ReconEntry.ReconciliationStatus
@@ -837,96 +618,6 @@ toReconSummaryStatus ReconEntry.MATCHED = ReconSummary.MATCHED
 toReconSummaryStatus ReconEntry.HIGHER_IN_TARGET = ReconSummary.HIGHER_IN_TARGET
 toReconSummaryStatus ReconEntry.LOWER_IN_TARGET = ReconSummary.LOWER_IN_TARGET
 toReconSummaryStatus ReconEntry.MISSING_IN_TARGET = ReconSummary.MISSING_IN_TARGET
-
--- Helper functions
-
-determineRideMode :: Maybe MP.PaymentInstrument -> Maybe ReconEntry.RideMode
-determineRideMode (Just MP.Cash) = Just ReconEntry.CASH
-determineRideMode (Just (MP.Card _)) = Just ReconEntry.ONLINE
-determineRideMode (Just (MP.Wallet _)) = Just ReconEntry.ONLINE
-determineRideMode (Just MP.UPI) = Just ReconEntry.ONLINE
-determineRideMode (Just MP.BoothOnline) = Just ReconEntry.ONLINE
-determineRideMode (Just MP.NetBanking) = Just ReconEntry.ONLINE
-determineRideMode _ = Nothing
-
-mapBookingStatus :: DB.BookingStatus -> ReconEntry.RideStatus
-mapBookingStatus DB.COMPLETED = ReconEntry.COMPLETED
-mapBookingStatus DB.CANCELLED = ReconEntry.CANCELLED
-mapBookingStatus _ = ReconEntry.CANCELLED
-
-calculateExpectedGross :: DB.Booking -> Maybe HighPrecMoney
-calculateExpectedGross booking =
-  let estimatedFare = booking.estimatedFare
-      tollCharges = fromMaybe 0 booking.tollCharges
-      parkingCharge = fromMaybe 0 booking.fareParams.parkingCharge
-   in Just $ estimatedFare - tollCharges - parkingCharge
-
--- | HIGHER_IN_TARGET when actual > expected, LOWER_IN_TARGET when actual < expected (per doc semantics).
-mismatchStatus :: Maybe HighPrecMoney -> Maybe HighPrecMoney -> ReconSummary.ReconciliationStatus
-mismatchStatus expected actual = case (expected, actual) of
-  (Just e, Just a) | a > e -> ReconSummary.HIGHER_IN_TARGET
-  (Just _e, Just _a) -> ReconSummary.LOWER_IN_TARGET
-  _ -> ReconSummary.LOWER_IN_TARGET
-
-processOnlineCompleted :: Maybe HighPrecMoney -> Maybe LedgerEntry.LedgerEntry -> Maybe HighPrecMoney -> Maybe LedgerEntry.LedgerEntry -> (ReconSummary.ReconciliationStatus, Maybe Text)
-processOnlineCompleted expectedGross baseRideEntry expectedGst gstOnlineEntry =
-  let actualGross = baseRideEntry <&> (.amount)
-      actualGst = gstOnlineEntry <&> (.amount)
-      grossMatch = case (expectedGross, actualGross) of
-        (Just expV, Just act) -> expV == act
-        _ -> False
-      gstMatch = case (expectedGst, actualGst) of
-        (Just expV, Just act) -> expV == act
-        _ -> False
-   in if grossMatch && gstMatch
-        then (ReconSummary.MATCHED, Nothing)
-        else
-          if not grossMatch
-            then (mismatchStatus expectedGross actualGross, Just "BaseRide mismatch - expected vs actual gross differs")
-            else (mismatchStatus expectedGst actualGst, Just "GST mismatch - expected vs actual GST differs")
-
-processCashCompleted :: Maybe HighPrecMoney -> Maybe LedgerEntry.LedgerEntry -> (ReconSummary.ReconciliationStatus, Maybe Text)
-processCashCompleted expectedGst gstCashEntry =
-  case (expectedGst, gstCashEntry <&> (.amount)) of
-    (Just expV, Just act) ->
-      if expV == act
-        then (ReconSummary.MATCHED, Nothing)
-        else (mismatchStatus (Just expV) (Just act), Just "GSTCash mismatch")
-    (Nothing, Just _) -> (ReconSummary.MISSING_IN_TARGET, Just "Expected GST missing for cash ride")
-    (Just _, Nothing) -> (ReconSummary.MISSING_IN_TARGET, Just "GSTCash entry missing in ledger")
-    _ -> (ReconSummary.MISSING_IN_TARGET, Just "Both expected and actual GST missing")
-
-processCancelled :: Maybe HighPrecMoney -> Maybe LedgerEntry.LedgerEntry -> Maybe LedgerEntry.LedgerEntry -> Maybe HighPrecMoney -> Maybe LedgerEntry.LedgerEntry -> (ReconSummary.ReconciliationStatus, Maybe Text)
-processCancelled expectedGross userCancellationEntry driverCancellationEntry expectedGst gstOnlineEntry =
-  case (userCancellationEntry <&> (.amount), driverCancellationEntry <&> (.amount)) of
-    (Just userAmt, _) -> case expectedGross of
-      Just expV ->
-        if expV == userAmt
-          then (ReconSummary.MATCHED, Nothing)
-          else (mismatchStatus (Just expV) (Just userAmt), Just "User cancellation amount mismatch")
-      Nothing -> (ReconSummary.MISSING_IN_TARGET, Just "Expected value missing")
-    (_, Just driverAmt) -> case (expectedGross, expectedGst, gstOnlineEntry <&> (.amount)) of
-      (Just expGross, Just expGst, Just actGst) ->
-        if expGross == driverAmt && expGst == actGst
-          then (ReconSummary.MATCHED, Nothing)
-          else
-            if expGross /= driverAmt
-              then (mismatchStatus (Just expGross) (Just driverAmt), Just "Driver cancellation amount mismatch")
-              else (mismatchStatus (Just expGst) (Just actGst), Just "GST mismatch for driver cancellation")
-      (Nothing, _, _) -> (ReconSummary.MISSING_IN_TARGET, Just "Expected gross missing")
-      (_, Nothing, _) -> (ReconSummary.MISSING_IN_TARGET, Just "Expected GST missing")
-      (_, _, Nothing) -> (ReconSummary.MISSING_IN_TARGET, Just "GSTOnline entry missing")
-    _ -> (ReconSummary.MISSING_IN_TARGET, Just "No cancellation entry found")
-
-getActualValue :: Maybe LedgerEntry.LedgerEntry -> Maybe LedgerEntry.LedgerEntry -> Maybe LedgerEntry.LedgerEntry -> Maybe LedgerEntry.LedgerEntry -> Maybe LedgerEntry.LedgerEntry -> Maybe ReconEntry.RideMode -> DB.BookingStatus -> Maybe HighPrecMoney
-getActualValue baseRideEntry _gstOnlineEntry gstCashEntry userCancellationEntry driverCancellationEntry mode status =
-  case status of
-    DB.COMPLETED -> case mode of
-      Just ReconEntry.ONLINE -> baseRideEntry <&> (.amount)
-      Just ReconEntry.CASH -> gstCashEntry <&> (.amount)
-      _ -> Nothing
-    DB.CANCELLED -> (userCancellationEntry <&> (.amount)) <|> (driverCancellationEntry <&> (.amount))
-    _ -> Nothing
 
 createSummary :: ReconSummary.ReconciliationType -> [ReconEntry.ReconciliationEntry] -> UTCTime -> UTCTime -> Text -> Id DMOC.MerchantOperatingCity -> Id ReconSummary.ReconciliationSummary -> ReconSummary.ReconciliationSummary
 createSummary reconType entries startTime now merchantId merchantOpCityId summaryId =

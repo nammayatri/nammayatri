@@ -9,8 +9,13 @@
 -}
 
 module SharedLogic.Finance.Reconciliation
-  ( reconcileBookingWithLedgerEntries,
+  ( -- Domain-level entry point
+    reconcileBookingWithLedgerEntries,
     ReconciliationResult (..),
+    -- DSR vs Ledger shared computation (used by job runner)
+    DsrVsLedgerResult (..),
+    runDsrVsLedgerComparison,
+    -- Status map types & helpers
     ReconciliationJobType (..),
     ReconciliationStatusMap (..),
     getReconciliationStatus,
@@ -18,9 +23,29 @@ module SharedLogic.Finance.Reconciliation
     mkReconciliationStatusValue,
     getReconStatusForJob,
     updateReconStatus,
+    -- Shared pure helpers
+    determineRideMode,
+    mapBookingStatus,
+    dsrVsLedgerRefTypes,
+    findLedgerEntry,
+    -- Entry construction helpers
+    computeReconStatus,
+    ReconEntryInput (..),
+    mkDefaultReconEntryInput,
+    mkReconEntry,
+    -- Standardised mismatch reason strings
+    reasonUnknownRideMode,
+    reasonUnsupportedBookingStatus,
+    reasonNoCancellationEntry,
+    reasonDriverTakeHomeMismatch,
+    reasonSubscriptionCreditMismatch,
+    reasonNoMatchingSubscription,
+    reasonAmountMismatch,
+    reasonNoMatchingPayoutRequest,
   )
 where
 
+import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.HashMap.Strict as HM
@@ -37,10 +62,23 @@ import qualified Lib.Finance.Domain.Types.ReconciliationEntry as ReconEntry
 import qualified Lib.Finance.Domain.Types.ReconciliationSummary as ReconSummary
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTax
-import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedger
+import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerExtra
+import SharedLogic.Finance.Wallet
+  ( walletReferenceBaseRide,
+    walletReferenceCustomerCancellationCharges,
+    walletReferenceCustomerCancellationGST,
+    walletReferenceDriverCancellationCharges,
+    walletReferenceGSTCash,
+    walletReferenceGSTOnline,
+    walletReferenceParkingCharges,
+    walletReferenceTollCharges,
+  )
 import qualified Storage.Queries.Booking as QBooking
 
--- | Types of reconciliation jobs that can update the status
+-- ────────────────────────────────────────────────────────────────────
+-- Reconciliation job type (status map key)
+-- ────────────────────────────────────────────────────────────────────
+
 data ReconciliationJobType
   = DSRvsLedger
   | SubscriptionRecon
@@ -52,13 +90,7 @@ data ReconciliationJobType
   deriving (Show, Eq, Generic)
 
 instance ToJSON ReconciliationJobType where
-  toJSON DSRvsLedger = A.String "DSRvsLedger"
-  toJSON SubscriptionRecon = A.String "SubscriptionRecon"
-  toJSON DSSRvsSubscription = A.String "DSSRvsSubscription"
-  toJSON PayoutRecon = A.String "PayoutRecon"
-  toJSON PgPaymentVsSubscription = A.String "PgPaymentVsSubscription"
-  toJSON PgPayoutVsPayoutRequest = A.String "PgPayoutVsPayoutRequest"
-  toJSON (OtherRecon t) = A.String t
+  toJSON = A.String . jobTypeKey
 
 instance FromJSON ReconciliationJobType where
   parseJSON (A.String "DSRvsLedger") = pure DSRvsLedger
@@ -70,7 +102,19 @@ instance FromJSON ReconciliationJobType where
   parseJSON (A.String t) = pure $ OtherRecon t
   parseJSON _ = fail "Invalid ReconciliationJobType"
 
--- | Map of reconciliation job type to status
+jobTypeKey :: ReconciliationJobType -> Text
+jobTypeKey DSRvsLedger = "DSRvsLedger"
+jobTypeKey SubscriptionRecon = "SubscriptionRecon"
+jobTypeKey DSSRvsSubscription = "DSSRvsSubscription"
+jobTypeKey PayoutRecon = "PayoutRecon"
+jobTypeKey PgPaymentVsSubscription = "PgPaymentVsSubscription"
+jobTypeKey PgPayoutVsPayoutRequest = "PgPayoutVsPayoutRequest"
+jobTypeKey (OtherRecon t) = t
+
+-- ────────────────────────────────────────────────────────────────────
+-- Status map (stored as JSON in booking.reconciliationStatus)
+-- ────────────────────────────────────────────────────────────────────
+
 newtype ReconciliationStatusMap = ReconciliationStatusMap
   { unReconciliationStatusMap :: HM.HashMap Text ReconSummary.ReconciliationStatus
   }
@@ -84,7 +128,26 @@ instance FromJSON ReconciliationStatusMap where
     ReconciliationStatusMap <$> traverse parseJSON (KeyMap.toHashMapText o)
   parseJSON _ = fail "ReconciliationStatusMap must be a JSON object"
 
--- | Result of reconciliation at domain level
+getReconciliationStatus :: Maybe A.Value -> ReconciliationStatusMap
+getReconciliationStatus Nothing = ReconciliationStatusMap HM.empty
+getReconciliationStatus (Just v) =
+  case A.fromJSON v of
+    A.Success m -> m
+    A.Error _ -> ReconciliationStatusMap HM.empty
+
+getReconStatusForJob :: ReconciliationStatusMap -> ReconciliationJobType -> Maybe ReconSummary.ReconciliationStatus
+getReconStatusForJob (ReconciliationStatusMap m) jt = HM.lookup (jobTypeKey jt) m
+
+updateReconStatus :: ReconciliationStatusMap -> ReconciliationJobType -> ReconSummary.ReconciliationStatus -> ReconciliationStatusMap
+updateReconStatus (ReconciliationStatusMap m) jt s = ReconciliationStatusMap $ HM.insert (jobTypeKey jt) s m
+
+mkReconciliationStatusValue :: ReconciliationStatusMap -> A.Value
+mkReconciliationStatusValue = toJSON
+
+-- ────────────────────────────────────────────────────────────────────
+-- Domain-level result (simple)
+-- ────────────────────────────────────────────────────────────────────
+
 data ReconciliationResult = ReconciliationResult
   { reconStatus :: ReconSummary.ReconciliationStatus,
     mismatchReason :: Maybe Text,
@@ -93,47 +156,332 @@ data ReconciliationResult = ReconciliationResult
   }
   deriving (Show)
 
--- | Parse reconciliation status from JSON Value
-getReconciliationStatus :: Maybe A.Value -> ReconciliationStatusMap
-getReconciliationStatus Nothing = ReconciliationStatusMap HM.empty
-getReconciliationStatus (Just v) =
-  case A.fromJSON v of
-    A.Success m -> m
-    A.Error _ -> ReconciliationStatusMap HM.empty
+-- ────────────────────────────────────────────────────────────────────
+-- DSR vs Ledger comparison result (richer, used by both modules)
+-- ────────────────────────────────────────────────────────────────────
 
--- | Get status for a specific job type
-getReconStatusForJob :: ReconciliationStatusMap -> ReconciliationJobType -> Maybe ReconSummary.ReconciliationStatus
-getReconStatusForJob (ReconciliationStatusMap m) jobType =
-  HM.lookup (getJobTypeKey jobType) m
-  where
-    getJobTypeKey DSRvsLedger = "DSRvsLedger"
-    getJobTypeKey SubscriptionRecon = "SubscriptionRecon"
-    getJobTypeKey DSSRvsSubscription = "DSSRvsSubscription"
-    getJobTypeKey PayoutRecon = "PayoutRecon"
-    getJobTypeKey PgPaymentVsSubscription = "PgPaymentVsSubscription"
-    getJobTypeKey PgPayoutVsPayoutRequest = "PgPayoutVsPayoutRequest"
-    getJobTypeKey (OtherRecon t) = t
+data DsrVsLedgerResult = DsrVsLedgerResult
+  { reconStatus :: ReconSummary.ReconciliationStatus,
+    mismatchReason :: Maybe Text,
+    expectedStored :: HighPrecMoney,
+    actualStored :: HighPrecMoney,
+    rideMode :: Maybe ReconEntry.RideMode,
+    financeComponent :: ReconEntry.FinanceComponent
+  }
+  deriving (Show)
 
--- | Update status for a specific job type
-updateReconStatus :: ReconciliationStatusMap -> ReconciliationJobType -> ReconSummary.ReconciliationStatus -> ReconciliationStatusMap
-updateReconStatus (ReconciliationStatusMap m) jobType status =
-  ReconciliationStatusMap $ HM.insert (getJobTypeKey jobType) status m
-  where
-    getJobTypeKey DSRvsLedger = "DSRvsLedger"
-    getJobTypeKey SubscriptionRecon = "SubscriptionRecon"
-    getJobTypeKey DSSRvsSubscription = "DSSRvsSubscription"
-    getJobTypeKey PayoutRecon = "PayoutRecon"
-    getJobTypeKey PgPaymentVsSubscription = "PgPaymentVsSubscription"
-    getJobTypeKey PgPayoutVsPayoutRequest = "PgPayoutVsPayoutRequest"
-    getJobTypeKey (OtherRecon t) = t
+-- ────────────────────────────────────────────────────────────────────
+-- Standardised mismatch reason strings
+-- ────────────────────────────────────────────────────────────────────
 
--- | Create a JSON Value from status map
-mkReconciliationStatusValue :: ReconciliationStatusMap -> A.Value
-mkReconciliationStatusValue = toJSON
+reasonUnknownRideMode :: Text
+reasonUnknownRideMode = "Unknown ride mode"
 
--- | Main function to reconcile a booking with its ledger entries
--- This should be called after ledger entries are created for a booking
--- Note: Only updates reconciliationStatus if it's not already set for this job type (idempotent)
+reasonUnsupportedBookingStatus :: Text
+reasonUnsupportedBookingStatus = "Unsupported booking status"
+
+reasonNoCancellationEntry :: Text
+reasonNoCancellationEntry = "No cancellation entry found"
+
+reasonDriverTakeHomeMismatch :: Text
+reasonDriverTakeHomeMismatch = "Driver take home mismatch"
+
+reasonSubscriptionCreditMismatch :: Text
+reasonSubscriptionCreditMismatch = "Subscription credit mismatch"
+
+reasonNoMatchingSubscription :: Text
+reasonNoMatchingSubscription = "No matching subscription purchase found"
+
+reasonAmountMismatch :: Text
+reasonAmountMismatch = "Amount mismatch"
+
+reasonNoMatchingPayoutRequest :: Text
+reasonNoMatchingPayoutRequest = "No matching credited payout request found"
+
+-- ────────────────────────────────────────────────────────────────────
+-- Shared pure helpers
+-- ────────────────────────────────────────────────────────────────────
+
+-- | Compute reconciliation status from expected and actual values.
+computeReconStatus :: HighPrecMoney -> HighPrecMoney -> ReconEntry.ReconciliationStatus
+computeReconStatus expected actual
+  | expected == actual = ReconEntry.MATCHED
+  | actual > expected = ReconEntry.HIGHER_IN_TARGET
+  | otherwise = ReconEntry.LOWER_IN_TARGET
+
+-- | All reference types relevant for DSR vs Ledger reconciliation.
+dsrVsLedgerRefTypes :: [Text]
+dsrVsLedgerRefTypes =
+  [ walletReferenceBaseRide,
+    walletReferenceGSTOnline,
+    walletReferenceGSTCash,
+    walletReferenceCustomerCancellationCharges,
+    walletReferenceDriverCancellationCharges,
+    walletReferenceCustomerCancellationGST,
+    walletReferenceTollCharges,
+    walletReferenceParkingCharges
+  ]
+
+-- | Find a ledger entry by reference type.
+findLedgerEntry :: Text -> [LedgerEntry.LedgerEntry] -> Maybe LedgerEntry.LedgerEntry
+findLedgerEntry refType = find (\e -> e.referenceType == refType)
+
+-- | Determine ride mode: ledgerWriteMode takes precedence, then paymentInstrument.
+determineRideMode :: Maybe Bool -> Maybe MP.PaymentInstrument -> Maybe ReconEntry.RideMode
+determineRideMode (Just True) _ = Just ReconEntry.ONLINE
+determineRideMode (Just False) _ = Just ReconEntry.CASH
+determineRideMode Nothing (Just MP.Cash) = Just ReconEntry.CASH
+determineRideMode Nothing (Just (MP.Card _)) = Just ReconEntry.ONLINE
+determineRideMode Nothing (Just (MP.Wallet _)) = Just ReconEntry.ONLINE
+determineRideMode Nothing (Just MP.UPI) = Just ReconEntry.ONLINE
+determineRideMode Nothing (Just MP.BoothOnline) = Just ReconEntry.ONLINE
+determineRideMode Nothing (Just MP.NetBanking) = Just ReconEntry.ONLINE
+determineRideMode _ _ = Nothing
+
+-- | Map booking status to reconciliation entry status.
+mapBookingStatus :: DB.BookingStatus -> ReconEntry.RideStatus
+mapBookingStatus DB.COMPLETED = ReconEntry.COMPLETED
+mapBookingStatus DB.CANCELLED = ReconEntry.CANCELLED
+mapBookingStatus _ = ReconEntry.CANCELLED
+
+-- ────────────────────────────────────────────────────────────────────
+-- ReconEntry construction helper (eliminates boilerplate)
+-- ────────────────────────────────────────────────────────────────────
+
+data ReconEntryInput = ReconEntryInput
+  { reconType :: ReconEntry.ReconciliationType,
+    bookingId :: Maybe Text,
+    dcoId :: Maybe Text,
+    status :: Maybe ReconEntry.RideStatus,
+    mode :: Maybe ReconEntry.RideMode,
+    expected :: HighPrecMoney,
+    actual :: HighPrecMoney,
+    reason :: Maybe Text,
+    component :: Maybe ReconEntry.FinanceComponent,
+    merchantId :: Maybe Text,
+    merchantOperatingCityId :: Maybe Text,
+    settlementId :: Maybe Text,
+    sourceId :: Maybe Text,
+    targetId :: Maybe Text,
+    settlementDate :: Maybe UTCTime,
+    transactionDate :: Maybe UTCTime,
+    rrn :: Maybe Text,
+    settlementMode :: Maybe Text
+  }
+
+mkDefaultReconEntryInput :: ReconEntry.ReconciliationType -> ReconEntryInput
+mkDefaultReconEntryInput rt =
+  ReconEntryInput
+    { reconType = rt,
+      bookingId = Nothing,
+      dcoId = Nothing,
+      status = Nothing,
+      mode = Nothing,
+      expected = 0,
+      actual = 0,
+      reason = Nothing,
+      component = Nothing,
+      merchantId = Nothing,
+      merchantOperatingCityId = Nothing,
+      settlementId = Nothing,
+      sourceId = Nothing,
+      targetId = Nothing,
+      settlementDate = Nothing,
+      transactionDate = Nothing,
+      rrn = Nothing,
+      settlementMode = Nothing
+    }
+
+mkReconEntry :: ReconEntryInput -> UTCTime -> Id ReconEntry.ReconciliationEntry -> ReconEntry.ReconciliationEntry
+mkReconEntry inp now entryId =
+  let variance = inp.expected - inp.actual
+      reconSt = computeReconStatus inp.expected inp.actual
+      mismatchRsn = if reconSt /= ReconEntry.MATCHED then inp.reason else Nothing
+   in ReconEntry.ReconciliationEntry
+        { id = entryId,
+          summaryId = Id "",
+          reconciliationDate = now,
+          reconciliationType = inp.reconType,
+          bookingId = inp.bookingId,
+          dcoId = inp.dcoId,
+          status = inp.status,
+          mode = inp.mode,
+          expectedDsrValue = inp.expected,
+          actualLedgerValue = inp.actual,
+          variance = variance,
+          reconStatus = reconSt,
+          mismatchReason = mismatchRsn,
+          timestamp = now,
+          financeComponent = inp.component,
+          sourceDetails = Nothing,
+          targetDetails = Nothing,
+          merchantId = inp.merchantId,
+          createdAt = now,
+          updatedAt = now,
+          merchantOperatingCityId = inp.merchantOperatingCityId,
+          settlementId = inp.settlementId,
+          sourceId = inp.sourceId,
+          targetId = inp.targetId,
+          settlementDate = inp.settlementDate,
+          transactionDate = inp.transactionDate,
+          rrn = inp.rrn,
+          settlementMode = inp.settlementMode
+        }
+
+-- ────────────────────────────────────────────────────────────────────
+-- DSR vs Ledger comparison (pure, shared by BOTH modules)
+-- ────────────────────────────────────────────────────────────────────
+
+-- Internal: compare expected vs actual, return mismatch info if different.
+compareMaybe :: Text -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe (ReconSummary.ReconciliationStatus, Text)
+compareMaybe _label (Just expV) (Just act) | expV == act = Nothing
+compareMaybe label (Just e) (Just a)
+  | a > e = Just (ReconSummary.HIGHER_IN_TARGET, label <> " mismatch")
+  | otherwise = Just (ReconSummary.LOWER_IN_TARGET, label <> " mismatch")
+compareMaybe label _ _ = Just (ReconSummary.MISSING_IN_TARGET, label <> " missing")
+
+-- | Find first mismatch from a list of comparison results.
+firstMismatch :: [Maybe (ReconSummary.ReconciliationStatus, Text)] -> (ReconSummary.ReconciliationStatus, Maybe Text)
+firstMismatch [] = (ReconSummary.MATCHED, Nothing)
+firstMismatch (Nothing : rest) = firstMismatch rest
+firstMismatch (Just (st, reason) : _) = (st, Just reason)
+
+-- | Online completed ride: compare BaseRide, GSTOnline, TollCharges, and ParkingCharges.
+processOnlineCompleted ::
+  Maybe HighPrecMoney ->
+  Maybe LedgerEntry.LedgerEntry ->
+  Maybe HighPrecMoney ->
+  Maybe LedgerEntry.LedgerEntry ->
+  Maybe HighPrecMoney ->
+  Maybe LedgerEntry.LedgerEntry ->
+  Maybe HighPrecMoney ->
+  Maybe LedgerEntry.LedgerEntry ->
+  (ReconSummary.ReconciliationStatus, Maybe Text)
+processOnlineCompleted expectedGross baseRideEntry expectedGst gstOnlineEntry expectedToll tollEntry expectedParking parkingEntry =
+  firstMismatch
+    [ compareMaybe "BaseRide" expectedGross (baseRideEntry <&> (.amount)),
+      compareMaybe "GSTOnline" expectedGst (gstOnlineEntry <&> (.amount)),
+      compareMaybe "TollCharges" expectedToll (tollEntry <&> (.amount)),
+      compareMaybe "ParkingCharges" expectedParking (parkingEntry <&> (.amount))
+    ]
+
+-- | Cash completed ride: compare GSTCash vs expectedGst only.
+processCashCompleted ::
+  Maybe HighPrecMoney ->
+  Maybe LedgerEntry.LedgerEntry ->
+  (ReconSummary.ReconciliationStatus, Maybe Text)
+processCashCompleted expectedGst gstCashEntry =
+  case (expectedGst, gstCashEntry <&> (.amount)) of
+    (Nothing, Nothing) -> (ReconSummary.MATCHED, Nothing)
+    _ -> case compareMaybe "GSTCash" expectedGst (gstCashEntry <&> (.amount)) of
+      Just (st, reason) -> (st, Just reason)
+      Nothing -> (ReconSummary.MATCHED, Nothing)
+
+-- | Cancelled ride: compare cancellation charges.
+-- Customer: ride.cancellationChargesOnCancel vs (custCancelEntry + custCancelGstEntry), expectedGst vs custCancelGstEntry
+-- Driver: ride.driverCancellationPenaltyAmount vs driverCancelEntry
+processCancelled ::
+  Maybe HighPrecMoney -> -- expectedCustCancelTotal (ride.cancellationChargesOnCancel)
+  Maybe LedgerEntry.LedgerEntry -> -- custCancelEntry
+  Maybe LedgerEntry.LedgerEntry -> -- custCancelGstEntry
+  Maybe HighPrecMoney -> -- expectedDriverCancelPenalty (ride.driverCancellationPenaltyAmount)
+  Maybe LedgerEntry.LedgerEntry -> -- driverCancelEntry
+  Maybe HighPrecMoney -> -- expectedGst (for customer cancellation GST check)
+  (ReconSummary.ReconciliationStatus, Maybe Text)
+processCancelled expectedCustTotal custCancelEntry custCancelGstEntry expectedDriverPenalty driverCancelEntry expectedGst =
+  case (custCancelEntry <&> (.amount), driverCancelEntry <&> (.amount)) of
+    (Just custAmt, _) ->
+      let actualTotal = custAmt + fromMaybe 0 (custCancelGstEntry <&> (.amount))
+       in firstMismatch
+            [ compareMaybe "CustomerCancellationTotal" expectedCustTotal (Just actualTotal),
+              compareMaybe "CustomerCancellationGST" expectedGst (custCancelGstEntry <&> (.amount))
+            ]
+    (_, Just driverAmt) ->
+      firstMismatch
+        [ compareMaybe "DriverCancellationCharges" expectedDriverPenalty (Just driverAmt)
+        ]
+    _ -> (ReconSummary.MISSING_IN_TARGET, Just reasonNoCancellationEntry)
+
+-- ────────────────────────────────────────────────────────────────────
+-- Unified DSR vs Ledger comparison (single source of truth)
+--   Used by both domain (reconcileBookingWithLedgerEntries) and
+--   job runner (processDsrVsLedger).
+-- ────────────────────────────────────────────────────────────────────
+
+-- | Core comparison logic for DSR vs Ledger. Accepts booking, optional ride,
+--   and pre-fetched ledger entries + indirect tax transactions.
+runDsrVsLedgerComparison ::
+  DB.Booking ->
+  Maybe DR.Ride ->
+  [LedgerEntry.LedgerEntry] ->
+  [IndirectTax.IndirectTaxTransaction] ->
+  DsrVsLedgerResult
+runDsrVsLedgerComparison booking mbRide ledgerEntries indirectTaxTxns =
+  let mode = determineRideMode booking.ledgerWriteMode booking.paymentInstrument
+
+      -- Ledger entries by reference type
+      baseRideEntry = findLedgerEntry walletReferenceBaseRide ledgerEntries
+      gstOnlineEntry = findLedgerEntry walletReferenceGSTOnline ledgerEntries
+      gstCashEntry = findLedgerEntry walletReferenceGSTCash ledgerEntries
+      custCancelEntry = findLedgerEntry walletReferenceCustomerCancellationCharges ledgerEntries
+      driverCancelEntry = findLedgerEntry walletReferenceDriverCancellationCharges ledgerEntries
+      custCancelGstEntry = findLedgerEntry walletReferenceCustomerCancellationGST ledgerEntries
+      tollEntry = findLedgerEntry walletReferenceTollCharges ledgerEntries
+      parkingEntry = findLedgerEntry walletReferenceParkingCharges ledgerEntries
+
+      -- Expected values from DSR
+      relevantType = case booking.status of
+        DB.COMPLETED -> IndirectTax.RideFare
+        _ -> IndirectTax.Cancellation
+      expectedGst = (.totalGstAmount) <$> find (\t -> t.transactionType == relevantType) indirectTaxTxns
+
+      baseFare = fromMaybe booking.estimatedFare (mbRide >>= (.fare))
+      tollCharges = fromMaybe 0 $ (mbRide >>= (.tollCharges)) <|> booking.tollCharges
+      parkingCharges = fromMaybe 0 booking.fareParams.parkingCharge
+      govtCharges = fromMaybe 0 booking.fareParams.govtCharges
+      expectedGross = Just $ baseFare - tollCharges - parkingCharges - govtCharges
+      expectedToll = Just tollCharges
+      expectedParking = Just parkingCharges
+
+      -- Cancellation expected values
+      expectedCustTotal = mbRide >>= (.cancellationChargesOnCancel)
+      expectedDriverPenalty = mbRide >>= (.driverCancellationPenaltyAmount)
+
+      -- Run comparison
+      (st, reason) = case booking.status of
+        DB.COMPLETED -> case mode of
+          Just ReconEntry.ONLINE -> processOnlineCompleted expectedGross baseRideEntry expectedGst gstOnlineEntry expectedToll tollEntry expectedParking parkingEntry
+          Just ReconEntry.CASH -> processCashCompleted expectedGst gstCashEntry
+          Nothing -> (ReconSummary.MISSING_IN_TARGET, Just reasonUnknownRideMode)
+        DB.CANCELLED -> processCancelled expectedCustTotal custCancelEntry custCancelGstEntry expectedDriverPenalty driverCancelEntry expectedGst
+        _ -> (ReconSummary.MISSING_IN_TARGET, Just reasonUnsupportedBookingStatus)
+
+      -- Determine finance component based on booking status and cancellation type
+      component = case booking.status of
+        DB.COMPLETED -> ReconEntry.GROSS_RIDE_FARE
+        DB.CANCELLED
+          | isJust (custCancelEntry <&> (.amount)) -> ReconEntry.USER_CANCELLATION
+          | isJust (driverCancelEntry <&> (.amount)) -> ReconEntry.DRIVER_CANCELLATION
+          | otherwise -> ReconEntry.GROSS_RIDE_FARE
+        _ -> ReconEntry.GROSS_RIDE_FARE
+
+      -- Stored values for entry
+      (expStored, actStored) = case (booking.status, mode) of
+        (DB.COMPLETED, Just ReconEntry.CASH) ->
+          (fromMaybe 0 expectedGst, fromMaybe 0 $ gstCashEntry <&> (.amount))
+        (DB.CANCELLED, _) ->
+          let custTotal = (+ fromMaybe 0 (custCancelGstEntry <&> (.amount))) <$> (custCancelEntry <&> (.amount))
+           in ( fromMaybe 0 $ expectedCustTotal <|> expectedDriverPenalty,
+                fromMaybe 0 $ custTotal <|> (driverCancelEntry <&> (.amount))
+              )
+        _ ->
+          (fromMaybe 0 expectedGross, fromMaybe 0 $ baseRideEntry <&> (.amount))
+   in DsrVsLedgerResult st reason expStored actStored mode component
+
+-- ────────────────────────────────────────────────────────────────────
+-- Domain-level entry point
+-- ────────────────────────────────────────────────────────────────────
+
 reconcileBookingWithLedgerEntries ::
   ( BeamFlow m r,
     CacheFlow m r,
@@ -147,16 +495,11 @@ reconcileBookingWithLedgerEntries ::
 reconcileBookingWithLedgerEntries jobType booking mbRide = do
   let lockKey = "Reconciliation:Booking:" <> booking.id.getId
 
-  -- Use Redis lock to prevent concurrent reconciliation
   Hedis.withLockRedisAndReturnValue lockKey 60 $ do
-    -- Parse existing reconciliation status
     let existingStatusMap = getReconciliationStatus booking.reconciliationStatus
-
-    -- Check if this job type already has a status (idempotency check)
     case getReconStatusForJob existingStatusMap jobType of
       Just existingStatus -> do
-        logInfo $ "Booking " <> booking.id.getId <> " already has reconciliation status for " <> show jobType <> ": " <> show existingStatus <> ". Skipping reconciliation."
-        -- Return a result reflecting the existing status
+        logInfo $ "Booking " <> booking.id.getId <> " already reconciled for " <> show jobType <> ": " <> show existingStatus
         pure $
           ReconciliationResult
             { reconStatus = existingStatus,
@@ -165,291 +508,20 @@ reconcileBookingWithLedgerEntries jobType booking mbRide = do
               actualValue = booking.estimatedFare
             }
       Nothing -> do
-        -- Get all ledger entries for this booking
-        ledgerEntries <- getLedgerEntriesForBooking booking.id.getId
-
-        -- Perform reconciliation based on booking status and payment mode
-        result <- performReconciliation booking mbRide ledgerEntries
-
-        -- Update the status map with the new status for this job type
+        ledgerEntries <- QLedgerExtra.findByReferenceIn dsrVsLedgerRefTypes booking.id.getId
+        indirectTaxTxns <- QIndirectTax.findByReferenceId booking.id.getId
+        let dsrResult = runDsrVsLedgerComparison booking mbRide ledgerEntries indirectTaxTxns
+            result = ReconciliationResult dsrResult.reconStatus dsrResult.mismatchReason dsrResult.expectedStored dsrResult.actualStored
         let updatedStatusMap = updateReconStatus existingStatusMap jobType result.reconStatus
             newStatusValue = Just $ mkReconciliationStatusValue updatedStatusMap
-
-        -- Update booking's reconciliation status
         QBooking.updateReconciliationStatus booking.id newStatusValue
-
         logInfo $ "Booking " <> booking.id.getId <> " reconciled for " <> show jobType <> " with status: " <> show result.reconStatus
         pure result
 
--- | Fetch all ledger entries for a booking
-getLedgerEntriesForBooking ::
-  ( BeamFlow m r,
-    MonadFlow m
-  ) =>
-  Text ->
-  m [LedgerEntry.LedgerEntry]
-getLedgerEntriesForBooking bookingId = do
-  refTypes <-
-    sequence
-      [ QLedger.findByReference "BaseRide" bookingId,
-        QLedger.findByReference "GSTOnline" bookingId,
-        QLedger.findByReference "GSTCash" bookingId,
-        QLedger.findByReference "UserCancellation" bookingId,
-        QLedger.findByReference "DriverCancellation" bookingId
-      ]
-  pure $ concat refTypes
+-- ────────────────────────────────────────────────────────────────────
+-- Convenience: update booking's reconciliation status
+-- ────────────────────────────────────────────────────────────────────
 
--- | Perform the actual reconciliation logic
-performReconciliation ::
-  ( BeamFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m
-  ) =>
-  DB.Booking ->
-  Maybe DR.Ride ->
-  [LedgerEntry.LedgerEntry] ->
-  m ReconciliationResult
-performReconciliation booking _mbRide ledgerEntries = do
-  let rideMode = determineRideMode booking.paymentInstrument
-
-  -- Find corresponding ledger entries
-  let baseRideEntry = find (\e -> e.referenceType == "BaseRide") ledgerEntries
-      gstOnlineEntry = find (\e -> e.referenceType == "GSTOnline") ledgerEntries
-      gstCashEntry = find (\e -> e.referenceType == "GSTCash") ledgerEntries
-      userCancellationEntry = find (\e -> e.referenceType == "UserCancellation") ledgerEntries
-      driverCancellationEntry = find (\e -> e.referenceType == "DriverCancellation") ledgerEntries
-
-  -- Get expected GST from indirect_tax_transaction
-  indirectTaxTxns <- QIndirectTax.findByReferenceId booking.id.getId
-  let relevantType = case booking.status of
-        DB.COMPLETED -> IndirectTax.RideFare
-        _ -> IndirectTax.Cancellation
-      mbIndirectTxn = find (\t -> t.transactionType == relevantType) indirectTaxTxns
-      expectedGstFromTax = (.totalGstAmount) <$> mbIndirectTxn
-      expectedGst = expectedGstFromTax
-
-  -- Get expected gross value
-  let expectedGross = calculateExpectedGross booking
-
-  -- Determine status based on booking status and payment mode
-  case booking.status of
-    DB.COMPLETED ->
-      case rideMode of
-        Just ReconEntry.ONLINE ->
-          reconcileOnlineCompleted expectedGross baseRideEntry expectedGst gstOnlineEntry
-        Just ReconEntry.CASH ->
-          reconcileCashCompleted expectedGst gstCashEntry
-        Nothing ->
-          pure $ mkMissingResult "Unknown ride mode"
-    DB.CANCELLED ->
-      reconcileCancelled expectedGross userCancellationEntry driverCancellationEntry expectedGst gstOnlineEntry
-    _ ->
-      pure $ mkMissingResult "Unsupported booking status"
-  where
-    mkMissingResult reason =
-      ReconciliationResult
-        { reconStatus = ReconSummary.MISSING_IN_TARGET,
-          mismatchReason = Just reason,
-          expectedValue = 0,
-          actualValue = 0
-        }
-
--- | Reconcile online completed ride
-reconcileOnlineCompleted ::
-  Applicative m =>
-  Maybe HighPrecMoney ->
-  Maybe LedgerEntry.LedgerEntry ->
-  Maybe HighPrecMoney ->
-  Maybe LedgerEntry.LedgerEntry ->
-  m ReconciliationResult
-reconcileOnlineCompleted expectedGross baseRideEntry expectedGst gstOnlineEntry = do
-  let actualGross = baseRideEntry <&> (.amount)
-      actualGst = gstOnlineEntry <&> (.amount)
-
-      grossMatch = case (expectedGross, actualGross) of
-        (Just expV, Just act) -> expV == act
-        _ -> False
-
-      gstMatch = case (expectedGst, actualGst) of
-        (Just expV, Just act) -> expV == act
-        _ -> False
-
-  if grossMatch && gstMatch
-    then
-      pure $
-        ReconciliationResult
-          ReconSummary.MATCHED
-          Nothing
-          (fromMaybe 0 expectedGross)
-          (fromMaybe 0 actualGross)
-    else
-      if not grossMatch
-        then
-          pure $
-            ReconciliationResult
-              (mismatchStatus expectedGross actualGross)
-              (Just "BaseRide mismatch - expected vs actual gross differs")
-              (fromMaybe 0 expectedGross)
-              (fromMaybe 0 actualGross)
-        else
-          pure $
-            ReconciliationResult
-              (mismatchStatus expectedGst actualGst)
-              (Just "GST mismatch - expected vs actual GST differs")
-              (fromMaybe 0 expectedGst)
-              (fromMaybe 0 actualGst)
-
--- | Reconcile cash completed ride
-reconcileCashCompleted ::
-  Applicative m =>
-  Maybe HighPrecMoney ->
-  Maybe LedgerEntry.LedgerEntry ->
-  m ReconciliationResult
-reconcileCashCompleted expectedGst gstCashEntry = do
-  case (expectedGst, gstCashEntry <&> (.amount)) of
-    (Just expV, Just act) ->
-      if expV == act
-        then pure $ ReconciliationResult ReconSummary.MATCHED Nothing expV act
-        else
-          pure $
-            ReconciliationResult
-              (mismatchStatus (Just expV) (Just act))
-              (Just "GSTCash mismatch")
-              expV
-              act
-    (Nothing, Just act) ->
-      pure $
-        ReconciliationResult
-          ReconSummary.MISSING_IN_TARGET
-          (Just "Expected GST missing for cash ride")
-          0
-          act
-    (Just expV, Nothing) ->
-      pure $
-        ReconciliationResult
-          ReconSummary.MISSING_IN_TARGET
-          (Just "GSTCash entry missing in ledger")
-          expV
-          0
-    _ ->
-      pure $
-        ReconciliationResult
-          ReconSummary.MATCHED
-          Nothing
-          0
-          0
-
--- | Reconcile cancelled ride
-reconcileCancelled ::
-  Applicative m =>
-  Maybe HighPrecMoney ->
-  Maybe LedgerEntry.LedgerEntry ->
-  Maybe LedgerEntry.LedgerEntry ->
-  Maybe HighPrecMoney ->
-  Maybe LedgerEntry.LedgerEntry ->
-  m ReconciliationResult
-reconcileCancelled expectedGross userCancellationEntry driverCancellationEntry expectedGst gstOnlineEntry =
-  case (userCancellationEntry <&> (.amount), driverCancellationEntry <&> (.amount)) of
-    (Just userAmt, _) ->
-      case expectedGross of
-        Just expV ->
-          if expV == userAmt
-            then pure $ ReconciliationResult ReconSummary.MATCHED Nothing expV userAmt
-            else
-              pure $
-                ReconciliationResult
-                  (mismatchStatus (Just expV) (Just userAmt))
-                  (Just "User cancellation amount mismatch")
-                  expV
-                  userAmt
-        Nothing ->
-          pure $
-            ReconciliationResult
-              ReconSummary.MISSING_IN_TARGET
-              (Just "Expected value missing")
-              0
-              userAmt
-    (_, Just driverAmt) ->
-      case (expectedGross, expectedGst, gstOnlineEntry <&> (.amount)) of
-        (Just expGross, Just expGst, Just actGst) ->
-          if expGross == driverAmt && expGst == actGst
-            then pure $ ReconciliationResult ReconSummary.MATCHED Nothing expGross driverAmt
-            else
-              if expGross /= driverAmt
-                then
-                  pure $
-                    ReconciliationResult
-                      (mismatchStatus (Just expGross) (Just driverAmt))
-                      (Just "Driver cancellation amount mismatch")
-                      expGross
-                      driverAmt
-                else
-                  pure $
-                    ReconciliationResult
-                      (mismatchStatus (Just expGst) (Just actGst))
-                      (Just "GST mismatch for driver cancellation")
-                      expGst
-                      actGst
-        (Nothing, _, _) ->
-          pure $
-            ReconciliationResult
-              ReconSummary.MISSING_IN_TARGET
-              (Just "Expected gross missing")
-              0
-              driverAmt
-        (_, Nothing, _) ->
-          pure $
-            ReconciliationResult
-              ReconSummary.MISSING_IN_TARGET
-              (Just "Expected GST missing")
-              0
-              driverAmt
-        (_, _, Nothing) ->
-          pure $
-            ReconciliationResult
-              ReconSummary.MISSING_IN_TARGET
-              (Just "GSTOnline entry missing")
-              (fromMaybe 0 expectedGross)
-              driverAmt
-    _ ->
-      pure $
-        ReconciliationResult
-          ReconSummary.MISSING_IN_TARGET
-          (Just "No cancellation entry found")
-          0
-          0
-
--- Helper functions
-
-determineRideMode :: Maybe MP.PaymentInstrument -> Maybe ReconEntry.RideMode
-determineRideMode (Just MP.Cash) = Just ReconEntry.CASH
-determineRideMode (Just (MP.Card _)) = Just ReconEntry.ONLINE
-determineRideMode (Just (MP.Wallet _)) = Just ReconEntry.ONLINE
-determineRideMode (Just MP.UPI) = Just ReconEntry.ONLINE
-determineRideMode (Just MP.BoothOnline) = Just ReconEntry.ONLINE
-determineRideMode (Just MP.NetBanking) = Just ReconEntry.ONLINE
-determineRideMode _ = Nothing
-
-calculateExpectedGross :: DB.Booking -> Maybe HighPrecMoney
-calculateExpectedGross booking =
-  let estimatedFare = booking.estimatedFare
-      tollCharges = fromMaybe 0 booking.tollCharges
-      parkingCharges = fromMaybe 0 (booking.fareParams.parkingCharge)
-   in Just $ estimatedFare - tollCharges - parkingCharges
-
-mismatchStatus :: Maybe HighPrecMoney -> Maybe HighPrecMoney -> ReconSummary.ReconciliationStatus
-mismatchStatus expected actual = case (expected, actual) of
-  (Just e, Just a) | a > e -> ReconSummary.HIGHER_IN_TARGET
-  (Just _e, Just _a) -> ReconSummary.LOWER_IN_TARGET
-  _ -> ReconSummary.LOWER_IN_TARGET
-
--- -- | Convenience function to get reconciliation status for a specific job type from a booking's reconciliation field
--- getReconciliationStatusFromBooking :: DB.Booking -> ReconciliationJobType -> Maybe ReconSummary.ReconciliationStatus
--- getReconciliationStatusFromBooking booking jobType =
---   getReconStatusForJob (getReconciliationStatus booking.reconciliationStatus) jobType
-
--- | Convenience function to update reconciliation status for a specific job type
 updateReconciliationStatus ::
   ( BeamFlow m r,
     EsqDBFlow m r,

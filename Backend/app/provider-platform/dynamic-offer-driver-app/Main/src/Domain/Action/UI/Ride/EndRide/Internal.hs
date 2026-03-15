@@ -452,6 +452,8 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
     isOnline <- do
       let forceOnline = fromMaybe False transporterConfig.driverWalletConfig.forceOnlineLedger
+      -- Persist the computed ledger write mode on the booking for reconciliation
+      QRB.updateLedgerWriteMode booking.id (Just forceOnline)
       if forceOnline
         then pure True
         else do

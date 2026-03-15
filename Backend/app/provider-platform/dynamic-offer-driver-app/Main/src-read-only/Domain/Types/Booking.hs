@@ -67,6 +67,7 @@ data Booking = Booking
     isReferredRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isSafetyPlus :: Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,
+    ledgerWriteMode :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     maxEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     numberOfLuggages :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

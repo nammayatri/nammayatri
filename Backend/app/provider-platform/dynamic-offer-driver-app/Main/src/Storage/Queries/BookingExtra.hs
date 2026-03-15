@@ -272,3 +272,10 @@ updateDqDurationToPickup bookingId durationToPickup = do
   updateOneWithKV
     [Se.Set BeamB.dqDurationToPickup $ Just durationToPickup, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+updateLedgerWriteMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> Maybe Bool -> m ()
+updateLedgerWriteMode bookingId ledgerWriteMode = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamB.ledgerWriteMode ledgerWriteMode, Se.Set BeamB.updatedAt now]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]

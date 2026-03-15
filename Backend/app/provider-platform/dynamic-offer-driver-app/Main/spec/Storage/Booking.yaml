@@ -111,6 +111,7 @@ Booking:
     searchTryId: Maybe (Id SearchTry)
     dqDurationToPickup: Maybe Seconds
     reconciliationStatus: Maybe Value
+    ledgerWriteMode: Maybe Bool
     emailDomain: Maybe Text
 
   excludedFields:

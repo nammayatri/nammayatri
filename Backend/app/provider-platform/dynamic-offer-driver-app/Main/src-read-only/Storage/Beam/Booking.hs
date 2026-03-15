@@ -60,6 +60,7 @@ data BookingT f = BookingT
     isReferredRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isSafetyPlus :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isScheduled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    ledgerWriteMode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     maxEstimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     numberOfLuggages :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
@@ -76,6 +77,7 @@ data BookingT f = BookingT
     receiverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     receiverName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     receiverPrimaryExophone :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    reconciliationStatus :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     returnTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     riderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     riderName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -102,8 +104,7 @@ data BookingT f = BookingT
     vehicleVariant :: B.C f Domain.Types.Common.ServiceTierType,
     vehicleServiceTierAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     vehicleServiceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    vehicleServiceTierSeatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    reconciliationStatus :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)
+    vehicleServiceTierSeatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)
   }
   deriving (Generic, B.Beamable)
 
