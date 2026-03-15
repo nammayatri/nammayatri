@@ -68,7 +68,12 @@ updateStatusAndErrorAndVpa order bankErrorMessage bankErrorCode vpa = do
         <> [Se.Set BeamPO.retargetLink order.retargetLink | isJust order.retargetLink]
         <> [Se.Set BeamPO.vpa vpa | isJust vpa]
     )
-    [Se.Is BeamPO.id $ Se.Eq $ getId order.id]
+    -- Atomic status guard: only update if current status is not in a terminal state.
+    -- This prevents concurrent webhook callbacks (e.g., Authorized vs Captured) from
+    -- overwriting a CHARGED or AUTO_REFUNDED status due to race conditions.
+    [ Se.Is BeamPO.id $ Se.Eq $ getId order.id,
+      Se.Is BeamPO.status $ Se.Not $ Se.In [Payment.CHARGED, Payment.AUTO_REFUNDED]
+    ]
 
 updateStatusAndError :: BeamFlow m r => DOrder.PaymentOrder -> Maybe Text -> Maybe Text -> m ()
 updateStatusAndError order bankErrorMessage bankErrorCode = updateStatusAndErrorAndVpa order bankErrorMessage bankErrorCode Nothing

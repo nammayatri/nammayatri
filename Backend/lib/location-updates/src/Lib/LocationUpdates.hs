@@ -23,6 +23,7 @@ module Lib.LocationUpdates
     clearInterpolatedPoints,
     isPassedThroughDrop,
     getTravelledDistanceOutsideThreshold,
+    I.removeStaleLocationEntries,
   )
 where
 

@@ -42,6 +42,7 @@ module Lib.LocationUpdates.Internal
     getEditDestinationSnappedWaypoints,
     deleteEditDestinationSnappedWaypoints,
     getTravelledDistance,
+    removeStaleLocationEntries,
   )
 where
 
@@ -520,3 +521,33 @@ updatePassedThroughDrop driverId = do
     Redis.safeGet (onRideSnapToRoadStateKey driverId)
       <&> fromMaybe (SnapToRoadState 0 (Just 0) 0 0 (Just 0) (Just False) (Just False) Nothing)
   Redis.setExp (onRideSnapToRoadStateKey driverId) prevSnapToRoadState {passThroughDropThreshold = Just False} 86400 -- 24 hours
+
+-- | Remove stale driver location entries from Redis.
+-- Cleans up waypoint and interpolation data for drivers who haven't sent
+-- a heartbeat within @staleThresholdSec@ seconds.
+-- This enables incremental location updates instead of requiring full rebuilds.
+removeStaleLocationEntries ::
+  forall person m env.
+  (HedisFlow m env, Log m) =>
+  [Id person] ->  -- ^ Driver IDs to check for staleness
+  NominalDiffTime -> -- ^ staleThresholdSec: duration after which a driver is considered stale
+  (Id person -> m (Maybe UTCTime)) -> -- ^ Function to get the last heartbeat time for a driver
+  m [Id person]   -- ^ Returns list of removed (stale) driver IDs
+removeStaleLocationEntries driverIds staleThreshold getLastHeartbeat = do
+  now <- getCurrentTime
+  let cutoffTime = addUTCTime (negate staleThreshold) now
+  staleDriverIds <- filterM (\dId -> do
+    mbLastBeat <- getLastHeartbeat dId
+    pure $ case mbLastBeat of
+      Nothing -> True  -- No heartbeat ever recorded: considered stale
+      Just lastBeat -> lastBeat < cutoffTime
+    ) driverIds
+  unless (null staleDriverIds) $ do
+    logInfo $ "Removing " <> show (length staleDriverIds) <> " stale driver location entries"
+    mapM_ (\dId -> do
+      Redis.del (makeWaypointsRedisKey dId)
+      Redis.del (makeInterpolatedPointsRedisKey dId)
+      Redis.del (lastTwoOnRidePointsRedisKey dId)
+      Redis.del (onRideSnapToRoadStateKey dId)
+      ) staleDriverIds
+  pure staleDriverIds

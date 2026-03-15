@@ -59,13 +59,16 @@ updateCustomerStatsConsumer flowRt appEnv kafkaConsumer = do
   where
     addToList = SF.mkFold step start extract
       where
-        step !acc (!val, !key, _) = SF.Partial ((val, key) : acc)
+        step !acc (!val, !key, !cr) = SF.Partial ((val, key, cr) : acc)
         start = SF.Partial []
         extract = reverse
     updateCustomerStatsWithFlow events = do
+      let eventsData = map (\(v, k, _) -> (v, k)) events
       runFlowR flowRt appEnv $
         generateGUID
-          >>= flip withLogTag (mapM (\(eventPayload, personId) -> withLogTag ("updating-person-stats-personId:" <> personId) $ PSProcessor.updateCustomerStats eventPayload personId) events)
+          >>= flip withLogTag (mapM (\(eventPayload, personId) -> withLogTag ("updating-person-stats-personId:" <> personId) $ PSProcessor.updateCustomerStats eventPayload personId) eventsData)
+      -- Explicitly commit offsets after successfully processing the batch
+      mapM_ (\(_, _, cr) -> void $ Consumer.commitOffsetMessage Consumer.OffsetCommit kafkaConsumer cr) events
 
 broadcastMessageConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
 broadcastMessageConsumer flowRt appEnv kafkaConsumer =
@@ -73,10 +76,11 @@ broadcastMessageConsumer flowRt appEnv kafkaConsumer =
     & S.mapM broadcastMessageWithFlow
     & S.drain
   where
-    broadcastMessageWithFlow (messagePayload, driverId, _) =
+    broadcastMessageWithFlow (messagePayload, driverId, cr) = do
       runFlowR flowRt appEnv . withLogTag driverId $
         generateGUID
           >>= flip withLogTag (BMProcessor.broadcastMessage messagePayload driverId)
+      void $ Consumer.commitOffsetMessage Consumer.OffsetCommit kafkaConsumer cr
 
 fleetCommunicationDispatchConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
 fleetCommunicationDispatchConsumer flowRt appEnv kafkaConsumer =
@@ -85,8 +89,9 @@ fleetCommunicationDispatchConsumer flowRt appEnv kafkaConsumer =
     & S.drain
   where
     processOne :: (CommunicationDeliveryDispatchPayload, Text, ConsumerRecordD) -> IO ()
-    processOne (payload, _key, _cr) =
+    processOne (payload, _key, cr) = do
       runFlowR flowRt appEnv $ FCProcessor.processFleetCommunicationDelivery payload
+      void $ Consumer.commitOffsetMessage Consumer.OffsetCommit kafkaConsumer cr
 
 availabilityConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
 availabilityConsumer flowRt appEnv kafkaConsumer =
@@ -148,16 +153,21 @@ locationUpdateConsumer flowRt appEnv kafkaConsumer = do
       SF.Fold
         m
         (T.LocationUpdates, T.DriverId, ConsumerRecordD)
-        [(T.LocationUpdates, T.DriverId)]
+        [(T.LocationUpdates, T.DriverId, ConsumerRecordD)]
     addToList = SF.mkFold step start extract
       where
-        step !acc (!val, !key, _) = SF.Partial ((val, key) : acc)
+        step !acc (!val, !key, !cr) = SF.Partial ((val, key, cr) : acc)
         start = SF.Partial []
-        extract = reverse . DL.nubBy ((==) `on` snd)
-    processRealtimeLocationUpdates' enabledMerchantCityIds locationUpdate =
+        extract = reverse
+    processRealtimeLocationUpdates' enabledMerchantCityIds locationUpdates = do
+      let deduped = DL.nubBy ((==) `on` (\(_, k, _) -> k)) locationUpdates
+      let locData = map (\(v, k, _) -> (v, k)) deduped
       runFlowR flowRt appEnv . withLogTag "pushing location batch to redis" $
         generateGUID
-          >>= flip withLogTag (LCProcessor.processLocationData enabledMerchantCityIds locationUpdate)
+          >>= flip withLogTag (LCProcessor.processLocationData enabledMerchantCityIds locData)
+      -- Explicitly commit offsets after successfully processing the batch
+      let allCrs = map (\(_, _, cr) -> cr) locationUpdates
+      mapM_ (void . Consumer.commitOffsetMessage Consumer.OffsetCommit kafkaConsumer) allCrs
 
 readMessages ::
   (FromJSON message, ConvertUtf8 messageKey ByteString) =>

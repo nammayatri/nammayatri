@@ -32,8 +32,18 @@ create :: BeamFlow m r => PaymentTransaction -> m ()
 create = createWithKV
 
 updateMultiple :: BeamFlow m r => PaymentTransaction -> m ()
-updateMultiple transaction = do
+updateMultiple = updateMultipleWithStatusGuard Nothing
+
+-- | Update transaction fields, but only if the current DB status is not in a terminal
+-- state (CHARGED / AUTO_REFUNDED). This prevents concurrent webhook callbacks from
+-- racing past each other (e.g., Authorized arriving after Captured has already been written).
+-- The status guard is pushed into the WHERE clause so the check-and-update is atomic at the DB level.
+updateMultipleWithStatusGuard :: BeamFlow m r => Maybe [KPayment.TransactionStatus] -> PaymentTransaction -> m ()
+updateMultipleWithStatusGuard mbExcludedStatuses transaction = do
   now <- getCurrentTime
+  let statusGuard = case mbExcludedStatuses of
+        Just excludedStatuses -> [Se.Is BeamPT.status $ Se.Not $ Se.In excludedStatuses]
+        Nothing -> []
   updateWithKV
     [ Se.Set BeamPT.statusId transaction.statusId,
       Se.Set BeamPT.status transaction.status,
@@ -68,7 +78,7 @@ updateMultiple transaction = do
       Se.Set BeamPT.captureDateTime transaction.captureDateTime,
       Se.Set BeamPT.updatedAt now
     ]
-    [Se.Is BeamPT.id $ Se.Eq $ getId transaction.id]
+    ([Se.Is BeamPT.id $ Se.Eq $ getId transaction.id] <> statusGuard)
 
 findByTxnUUID :: BeamFlow m r => Text -> m (Maybe PaymentTransaction)
 findByTxnUUID txnUUID = findOneWithKV [Se.Is BeamPT.txnUUID $ Se.Eq $ Just txnUUID]

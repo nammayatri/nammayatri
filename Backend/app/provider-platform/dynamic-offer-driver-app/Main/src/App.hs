@@ -126,6 +126,8 @@ runDynamicOfferDriverApp' appCfg = do
 
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
+        when (appCfg.autoMigrate && null appCfg.migrationPath) $
+          logError "autoMigrate is enabled but migrationPath is empty -- migrations will be skipped. Set migrationPath in service configuration."
         migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
         logInfo "Setting up for signature auth..."

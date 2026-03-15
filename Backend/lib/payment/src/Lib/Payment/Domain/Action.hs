@@ -1139,9 +1139,11 @@ updateOrderTransaction merchantOpCityId order resp respDump = do
                         captureDateTime = resp.captureDateTime
                        }
 
-      -- Avoid updating status if already in CHARGED state to handle race conditions
+      -- Use atomic conditional update to prevent race conditions between concurrent webhooks.
+      -- The status guard is pushed into the DB WHERE clause, so CHARGED/AUTO_REFUNDED
+      -- transactions cannot be overwritten even if two webhooks arrive simultaneously.
       when (transaction.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED]) $ do
-        QTransaction.updateMultiple updTransaction
+        QTransaction.updateMultipleWithStatusGuard (Just [Payment.CHARGED, Payment.AUTO_REFUNDED]) updTransaction
         PaymentHistory.recordPaymentHistory merchantOpCityId (Just transaction.status) updTransaction.status (Just "Update multiple transaction info in order status response or webhook") updTransaction
       when (order.status /= updOrder.status && order.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED]) $ QOrder.updateStatusAndErrorAndVpa updOrder errorMessage errorCode vpa
 

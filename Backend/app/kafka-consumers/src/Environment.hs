@@ -68,9 +68,15 @@ instance FromDhall ConsumerConfig where
                 <*> (brokersList <$> bs)
                 <*> kc
 
+      -- Default to manual commit (noAutoCommit) for safer message processing.
+      -- Auto-commit risks losing messages on consumer crash before processing completes.
+      -- When auto-commit is disabled, consumers must explicitly commit offsets after
+      -- successfully processing each batch.
       shouldAutoCommit = \case
         Nothing -> noAutoCommit
-        Just v -> autoCommit (Millis $ fromIntegral v)
+        Just v
+          | v <= 0 -> noAutoCommit -- Treat non-positive values as manual commit
+          | otherwise -> autoCommit (Millis $ fromIntegral v)
 
 data ConsumerType = LOCATION_UPDATE | AVAILABILITY_TIME | BROADCAST_MESSAGE | PERSON_STATS | FLEET_COMMUNICATION_DISPATCH deriving (Generic, FromDhall, Read, Eq)
 
