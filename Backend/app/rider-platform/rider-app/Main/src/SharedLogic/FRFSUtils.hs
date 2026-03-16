@@ -471,13 +471,17 @@ getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchan
               let stage = abs (endStageNum - startStageNum)
               logDebug $ "isStageStop flags: startStop=" <> show startIsStageStop <> " endStop=" <> show endIsStageStop
               let adjustedStage = case endIsStageStop of
-                    Just True -> stage - 1 -- Reduce stage by 1 if found, but ensure minimum is 1
+                    Just True -> stage - 1 -- Reduce stage by 1 if end stop is a stage boundary
                     _ -> stage -- Use original stage if not found or Nothing
+              -- Ensure minimum stage is 1 (consistent with StageBased fare calculation).
+              -- Stage 0 means same-stage journey which should use the minimum fare (stage 1).
+              let clampedStage = max 1 adjustedStage
+              logDebug $ "Fare calc: raw stage=" <> show stage <> " adjusted=" <> show adjustedStage <> " clamped=" <> show clampedStage
               fares <- case serviceTier of
                 Just serviceTier' -> do
                   vehicleServiceTier <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier' merchantOperatingCityId integratedBPPConfig.id >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> show serviceTier')
-                  maybeToList <$> QQFRFSGtfsStageFare.findOneByVehicleTypeAndStageAndMerchantOperatingCityIdAndVehicleServiceTierId vehicleType (max 0 adjustedStage) merchantOperatingCityId vehicleServiceTier.id
-                Nothing -> QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType (max 0 adjustedStage) merchantOperatingCityId
+                  maybeToList <$> QQFRFSGtfsStageFare.findOneByVehicleTypeAndStageAndMerchantOperatingCityIdAndVehicleServiceTierId vehicleType clampedStage merchantOperatingCityId vehicleServiceTier.id
+                Nothing -> QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType clampedStage merchantOperatingCityId
               forM fares $ \fare -> do
                 vehicleServiceTier <- QFRFSVehicleServiceTier.findById fare.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> fare.vehicleServiceTierId.getId)
                 let price = Price {amountInt = roundToIntegral (fare.amount + fromMaybe 0 fare.cessCharge), amount = fare.amount + fromMaybe 0 fare.cessCharge, currency = fare.currency}
