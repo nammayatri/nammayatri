@@ -24,6 +24,7 @@ import qualified Domain.Types.Ride as Ride
 import Domain.Types.Vehicle
 import qualified EulerHS.Language as L
 import IssueManagement.Domain.Types.MediaFile
+import Utils.SlowQueryLog (timedRunDB)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -171,7 +172,7 @@ findAllDriversWithInfoAndVehicle ::
   m [(Person, DriverInformation, Maybe Vehicle)]
 findAllDriversWithInfoAndVehicle merchant opCity limitVal offsetVal mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString mbNameSearchString = do
   dbConf <- getReplicaBeamConfig
-  result <- L.runDB dbConf $
+  result <- timedRunDB "person" "findAllDriversWithInfoAndVehicle" $ L.runDB dbConf $
     L.findRows $
       B.select $
         B.limit_ (fromIntegral limitVal) $
@@ -328,7 +329,7 @@ fetchDriverInfo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DM
 fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash mbEmail mbPersonId = do
   dbConf <- getReplicaBeamConfig
   now <- getCurrentTime
-  result <- L.runDB dbConf $
+  result <- timedRunDB "person" "fetchDriverInfo" $ L.runDB dbConf $
     L.findRows $
       B.select $
         B.filter_'
@@ -520,7 +521,7 @@ findAllPersonAndDriverInfoWithDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlo
 findAllPersonAndDriverInfoWithDriverIds driverIds = do
   let allDriverIds = map (\driverId -> driverId.getId) driverIds
   dbConf <- getReplicaBeamConfig
-  result <- L.runDB dbConf $
+  result <- timedRunDB "person" "findAllPersonAndDriverInfoWithDriverIds" $ L.runDB dbConf $
     L.findRows $
       B.select $
         B.filter_'

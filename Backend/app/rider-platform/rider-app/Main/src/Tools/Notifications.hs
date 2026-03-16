@@ -1619,7 +1619,8 @@ getAllOtherRelatedPartyPersons booking = do
     Just (Trip.Delivery _) -> do
       allBookingParties <- QBPL.findAllActiveByBookingId booking.id
       let allBookingPartyIds = filter (booking.riderId /=) $ map (.partyId) allBookingParties
-      allParty <- catMaybes <$> mapM Person.findById allBookingPartyIds
+      -- Fixed N+1: was querying person per item, now batched
+      allParty <- Person.findAllByIds allBookingPartyIds
       pure $ filter (isJust . (.deviceToken)) allParty
     _ -> pure []
 

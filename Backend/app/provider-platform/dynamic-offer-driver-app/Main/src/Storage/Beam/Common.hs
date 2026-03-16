@@ -18,6 +18,8 @@ import qualified Database.Beam as B
 import Kernel.Prelude (Generic)
 import Storage.Beam.Booking
 import Storage.Beam.BookingCancellationReason
+import Storage.Beam.DriverStats
+import Storage.Beam.SearchTry
 import Storage.Beam.CallStatus
 import Storage.Beam.CommonDriverOnboardingDocuments
 import Storage.Beam.DriverFee
@@ -106,7 +108,9 @@ atlasDB =
         fleetBookingAssignments = fleetBookingAssignmentsTable,
         fleetBookingInformation = fleetBookingInformationTable,
         fleetRcDailyStats = fleetRcDailyStatsTable,
-        commonDriverOnboardingDocuments = commonDriverOnboardingDocumentsTable
+        commonDriverOnboardingDocuments = commonDriverOnboardingDocumentsTable,
+        searchTry = searchTryTable,
+        driverStats = driverStatsTable
       }
 
 data AtlasDB f = AtlasDB
@@ -152,6 +156,8 @@ data AtlasDB f = AtlasDB
     fleetBookingAssignments :: f (B.TableEntity FleetBookingAssignmentsT),
     fleetBookingInformation :: f (B.TableEntity FleetBookingInformationT),
     fleetRcDailyStats :: f (B.TableEntity FleetRcDailyStatsT),
-    commonDriverOnboardingDocuments :: f (B.TableEntity CommonDriverOnboardingDocumentsT)
+    commonDriverOnboardingDocuments :: f (B.TableEntity CommonDriverOnboardingDocumentsT),
+    searchTry :: f (B.TableEntity SearchTryT),
+    driverStats :: f (B.TableEntity DriverStatsT)
   }
   deriving (Generic, B.Database be)

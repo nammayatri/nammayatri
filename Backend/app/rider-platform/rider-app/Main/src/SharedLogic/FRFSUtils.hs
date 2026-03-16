@@ -193,6 +193,9 @@ data RouteStopInfo = RouteStopInfo
 
 getPossibleRoutesBetweenTwoStops :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => Text -> Text -> IntegratedBPPConfig -> m [RouteStopInfo]
 getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPConfig = IM.withInMemCache ["POSSIBLEROUTES", startStationCode, endStationCode, integratedBPPConfig.id.getId] 7200 $ do
+  when (T.null (T.strip startStationCode) || T.null (T.strip endStationCode)) $ do
+    logError $ "Invalid stop codes in getPossibleRoutesBetweenTwoStops - startStationCode: " <> show startStationCode <> ", endStationCode: " <> show endStationCode <> ", integratedBPPConfigId: " <> integratedBPPConfig.id.getId
+    throwError $ InternalError "Invalid stop codes: empty or whitespace-only stop codes"
   routesWithStop <- OTPRest.getRouteStopMappingByStopCode startStationCode integratedBPPConfig
   let routeCodes = nub $ map (.routeCode) routesWithStop
   routeStops <-

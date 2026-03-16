@@ -138,7 +138,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
   previousBatchesDrivers <- getPreviousBatchesDrivers Nothing
   previousBatchesDriversOnRide <- getPreviousBatchesDrivers (Just True)
   let merchantOpCityId = searchReq.merchantOperatingCityId
-  logDebug $ "PreviousBatchesDrivers-" <> show previousBatchesDrivers
+  logDebug $ "PreviousBatchesDrivers count: " <> show (length previousBatchesDrivers)
   PrepareDriverPoolBatchEntity {..} <- prepareDriverPoolBatch' previousBatchesDrivers startingbatchNum True merchantOpCityId searchReq.transactionId isValueAddNP
   let finalPool = currentDriverPoolBatch <> currentDriverPoolBatchOnRide
   incrementDriverRequestCount finalPool searchTry.id
@@ -179,7 +179,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
       blockListedDriversForSearch <- Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversKey searchReq.id)
       blockListedDriversForRider <- maybe (pure []) (\riderId -> Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversForRiderKey riderId)) searchReq.riderId
       let blockListedDrivers = blockListedDriversForSearch <> blockListedDriversForRider
-      logDebug $ "Blocked Driver List-" <> show blockListedDrivers
+      logDebug $ "Blocked Driver List count: " <> show (length blockListedDrivers)
       let poolTypesWithFallback =
             case batchNum of
               (-1) | goHomeConfig.enableGoHome && doSpecialPooling && maybe False (\tag -> tag `elem` transporterConfig.specialLocationTags) searchReq.specialLocationTag && not (null transporterConfig.specialDrivers) -> [SpecialDriversPool, GoHomePool, NormalPool]
@@ -198,7 +198,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               prepareDriverPoolBatch' previousBatchesDrivers (batchNum + 1) True merchantOpCityId_ txnId isValueAddNP
             SpecialZoneQueuePool -> do
               (driversInQueue, _) <- splitDriverFromGateAndRest allDriversNotOnRide
-              logDebug $ "SpecialPickupZonePoolBatch DriversInQueue -" <> show driversInQueue
+              logDebug $ "SpecialPickupZonePoolBatch DriversInQueue count: " <> show (length driversInQueue)
               (goHomeDriversInQueue, goHomeInQueueNotToDestination) <-
                 case searchReq.toLocation of
                   Just toLoc | isGoHomeAvailable searchTry.tripCategory -> do
@@ -228,7 +228,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                             }
                     filterOutGoHomeDriversAccordingToHomeLocation (map (convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult False True) driversInQueue) goHomeReq merchantOpCityId_
                   _ -> pure ([], [])
-              logDebug $ "SpecialPickupZonePoolBatch goHomeDriversInQueue -" <> show goHomeDriversInQueue
+              logDebug $ "SpecialPickupZonePoolBatch goHomeDriversInQueue count: " <> show (length goHomeDriversInQueue)
               let goHomeDriversInQueueId = map (\d -> d.driverPoolResult.driverId) goHomeDriversInQueue
               let normalDriversInQueue = filter (\d -> d.driverPoolResult.driverId `notElem` goHomeDriversInQueueId) driversInQueue
               let normalDriversInQueue' = bookAnyFilters transporterConfig normalDriversInQueue []
@@ -238,15 +238,15 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                       then (addKeepHiddenInSeconds goHomeConfig.goHomeBatchDelay normalDriversInQueueBatch, Seconds 2 * goHomeConfig.goHomeBatchDelay)
                       else (normalDriversInQueueBatch, goHomeConfig.goHomeBatchDelay)
                   specialPickupZonePoolBatch = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` (blockListedDrivers <> goHomeInQueueNotToDestination)) $ goHomeDriversInQueue <> finalNormalDriversInQueue
-              logDebug $ "SpecialPickupZonePoolBatch-" <> show specialPickupZonePoolBatch
+              logDebug $ "SpecialPickupZonePoolBatch count: " <> show (length specialPickupZonePoolBatch)
               pure $ PrepareDriverPoolBatchEntity (addSpecialZoneInfo searchReq.driverDefaultExtraFee $ specialPickupZonePoolBatch) poolType (Just scheduleIn) []
             SpecialDriversPool -> do
-              logDebug $ "SpecialCase-allDriversNotOnRide-" <> show allDriversNotOnRide
+              logDebug $ "SpecialCase-allDriversNotOnRide count: " <> show (length allDriversNotOnRide)
               let onlySpecialDrivers = filter (\dpr -> (getId dpr.driverPoolResult.driverId) `elem` transporterConfig.specialDrivers) allDriversNotOnRide
               let onlySpecialDriversNotBlocked = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` blockListedDrivers) onlySpecialDrivers
-              logDebug $ "SpecialCase-onlySpecialDriversNotBlocked-" <> show onlySpecialDriversNotBlocked
+              logDebug $ "SpecialCase-onlySpecialDriversNotBlocked count: " <> show (length onlySpecialDriversNotBlocked)
               (_, specialDriversPool) <- mkDriverPoolBatch merchantOpCityId_ onlySpecialDriversNotBlocked intelligentPoolConfig transporterConfig batchSize False
-              logDebug $ "SpecialDriversPool-" <> show specialDriversPool
+              logDebug $ "SpecialDriversPool count: " <> show (length specialDriversPool)
               pure $ PrepareDriverPoolBatchEntity specialDriversPool poolType (Just goHomeConfig.goHomeBatchDelay) []
             GoHomePool -> do
               goHomePool <- calcGoHomeDriverPool transporterConfig.specialDrivers merchantOpCityId_ transporterConfig
@@ -254,8 +254,8 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               pure $ PrepareDriverPoolBatchEntity goHomePoolPostCalc poolType (Just goHomeConfig.goHomeBatchDelay) []
             NormalPool -> do
               (normalBatchNotOnRide, normalBatchOnRide) <- calculateNormalBatch merchantOpCityId_ transporterConfig intelligentPoolConfig allDriversNotOnRide radiusStep blockListedDrivers txnId poolType
-              logDebug $ "NormalBatchNotOnRide-" <> show normalBatchNotOnRide
-              logDebug $ "NormalBatchOnRide-" <> show normalBatchOnRide
+              logDebug $ "NormalBatchNotOnRide count: " <> show (length normalBatchNotOnRide)
+              logDebug $ "NormalBatchOnRide count: " <> show (length normalBatchOnRide)
               pure $ PrepareDriverPoolBatchEntity normalBatchNotOnRide poolType Nothing normalBatchOnRide
       cacheBatch prepareDriverPoolBatchEntity.currentDriverPoolBatch Nothing
       cacheBatch prepareDriverPoolBatchEntity.currentDriverPoolBatchOnRide (Just True)
@@ -840,9 +840,10 @@ fetchScore merchantOpCityId driverActualDistanceList driverIds intelligentPoolCo
     ActualPickupDistance | intelligentPoolConfig.actualPickupDistanceWeightage /= 0 -> do
       pure $ map (bimap (.getId) ((* (fromIntegral intelligentPoolConfig.actualPickupDistanceWeightage)) . fromIntegral . flip div (fromMaybe (Meters 1) (if isOnRidePool then driverPoolCfg.actualDistanceThresholdOnRide else driverPoolCfg.actualDistanceThreshold)))) driverActualDistanceList
     RideFrequency | intelligentPoolConfig.numRidesWeightage /= 0 -> do
-      driverIdAndNumRides <- mapM (getTotalRidesCount merchantOpCityId) driverIds <&> zip (getId <$> driverIds)
+      numRides <- getTotalRidesCountBatch merchantOpCityId driverIds
+      let driverIdAndNumRides = zip (getId <$> driverIds) numRides
       logDebug $ "Intelligent pool :- [(DriverId, numRides)] - " <> show driverIdAndNumRides
-      return $ second (\numRides -> fromIntegral intelligentPoolConfig.numRidesWeightage * fromIntegral numRides / fromIntegral intelligentPoolConfig.maxNumRides) <$> driverIdAndNumRides
+      return $ second (\nr -> fromIntegral intelligentPoolConfig.numRidesWeightage * fromIntegral nr / fromIntegral intelligentPoolConfig.maxNumRides) <$> driverIdAndNumRides
     _ -> pure []
   where
     getSpeedScore weight driverSpeeds = pure $ map (\(driverId, driverSpeed) -> (driverId, (1 - driverSpeed / intelligentPoolConfig.speedNormalizer) * fromIntegral weight)) driverSpeeds

@@ -37,4 +37,4 @@ incrementCounter entityId event deploymentVersion = do
 type EventCounterMetric = P.Vector P.Label3 P.Counter
 
 registerEventRequestCounterMetric :: IO EventCounterMetric
-registerEventRequestCounterMetric = P.register $ P.vector ("event", "entityId", "version") $ P.counter $ P.Info "event_count" ""
+registerEventRequestCounterMetric = P.register $ P.vector ("event", "merchant_id", "version") $ P.counter $ P.Info "event_count" ""

@@ -23,6 +23,7 @@ library
   exposed-modules:
       Tools.DynamicLogic
       Tools.SharedRedisKeys
+      Utils.CircuitBreaker
       Utils.Common.Cac.ContextConstants
       Utils.Common.Cac.KeyNameConstants
       Utils.Common.Cac.PrefixConstants
@@ -32,7 +33,10 @@ library
       Utils.Common.Events
       Utils.Common.JWT.Config
       Utils.Common.JWT.TransitClaim
+      Utils.Common.Sanitize
       Utils.QRCode.Scanner
+      Utils.Retry
+      Utils.SlowQueryLog
   other-modules:
       Paths_utils
   hs-source-dirs:

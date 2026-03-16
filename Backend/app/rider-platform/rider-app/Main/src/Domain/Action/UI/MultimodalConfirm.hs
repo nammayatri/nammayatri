@@ -924,8 +924,8 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
           Just SUBWAY -> [Enums.SUBWAY]
           _ -> [Enums.BUS, Enums.METRO, Enums.SUBWAY]
   fork "incrementBusScannetCounterMetric" $
-    whenJust mbVehicleNumber $ \vehicleNumber -> do
-      Metrics.incrementBusScannetCounterMetric merchant.shortId.getShortId merchantOperatingCityId.getId vehicleNumber
+    whenJust mbVehicleNumber $ \_vehicleNumber -> do
+      Metrics.incrementBusScannetCounterMetric merchant.shortId.getShortId merchantOperatingCityId.getId
 
   integratedBPPConfigs <-
     concatMapM
@@ -1128,7 +1128,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
         Nothing -> do
           let vehicleNumber = (snd vehicleLiveRouteInfo).vehicleNumber
           fork "incrementFleetRouteMapMissingCounter" $
-            Metrics.incrementFleetRouteMapMissingCounter merchant.shortId.getShortId merchantOperatingCityId.getId vehicleNumber
+            Metrics.incrementFleetRouteMapMissingCounter merchant.shortId.getShortId merchantOperatingCityId.getId
           throwError (FleetRouteMapMissing $ "Route code not found for fleetId: " <> show vehicleNumber)
 
 getMultimodalOrderGetLegTierOptions ::

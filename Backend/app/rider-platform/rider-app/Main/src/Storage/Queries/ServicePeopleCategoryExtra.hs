@@ -13,6 +13,9 @@ import qualified Storage.Beam.ServicePeopleCategory as BeamR
 import Storage.Queries.OrphanInstances.ServicePeopleCategory ()
 
 -- Extra code goes here --
+findAllByMultipleIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Id ServicePeopleCategory] -> m [ServicePeopleCategory]
+findAllByMultipleIds ids = findAllWithKV [Se.Is BeamR.id $ Se.In (map getId ids)]
+
 findServicePeopleCategoryById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id ServicePeopleCategory -> Day -> m (Maybe ServicePeopleCategory)
 findServicePeopleCategoryById id day = do
   servicePeopleCategories :: [ServicePeopleCategory] <- findAllWithKV [Se.Is BeamR.id $ Se.Eq $ getId id]

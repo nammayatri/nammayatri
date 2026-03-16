@@ -35,24 +35,31 @@ triggerEvent event = do
       KAFKA_STREAM -> do
         case stream.streamConfig of
           KafkaStream matchedConfig -> do
-            fork "updating in kafka" $ streamUpdates event matchedConfig
+            fork "updating in kafka" $
+              streamUpdates event matchedConfig
+                `catch` \(e :: SomeException) ->
+                  logError $ "Failed to stream event to Kafka: " <> show e
           _ -> logDebug "Default stream"
       PROMETHEUS_STREAM -> do
         let merchantId = event.merchantId
         let eventType = show event.eventType
         let deploymentVersion = event.deploymentVersion
-        fork "updating in prometheus" $ incrementCounter merchantId eventType deploymentVersion
+        fork "updating in prometheus" $
+          incrementCounter merchantId eventType deploymentVersion
+            `catch` \(e :: SomeException) ->
+              logError $ "Failed to increment Prometheus counter: " <> show e
       _ -> logDebug "Default stream"
 
-createEvent :: (MonadReader r1 m, MonadGuid m, MonadTime m, HasField "getDeploymentVersion" r2 Text, HasField "version" r1 r2) => Maybe Text -> Text -> EventType -> Service -> EventTriggeredBy -> Maybe p -> Maybe Text -> Maybe Text -> m (Event p)
+createEvent :: (MonadReader r1 m, MonadGuid m, MonadTime m, HasField "getDeploymentVersion" r2 Text, HasField "version" r1 r2, HasField "requestId" r1 (Maybe Text)) => Maybe Text -> Text -> EventType -> Service -> EventTriggeredBy -> Maybe p -> Maybe Text -> Maybe Text -> m (Event p)
 createEvent personId merchantId eventType service triggredBy payload primaryId merchantOperatingCityId = do
   version <- asks (.version)
+  traceId <- asks (.requestId)
   uid <- generateGUID
   now <- getCurrentTime
   let ev =
         Event
           { id = uid,
-            traceId = Nothing,
+            traceId = traceId,
             sessionId = Nothing,
             personId = personId,
             merchantId = merchantId,

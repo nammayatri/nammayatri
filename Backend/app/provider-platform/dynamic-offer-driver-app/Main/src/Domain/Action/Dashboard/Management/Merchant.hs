@@ -195,6 +195,7 @@ import qualified Storage.Queries.FarePolicy.FarePolicyAmbulanceDetailsSlab as Qu
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFPPDEKM
 import qualified Storage.Queries.FareProduct as SQF
+import qualified Storage.CachedQueries.Geometry as CQGeo
 import qualified Storage.Queries.Geometry as QGeo
 import qualified Storage.Queries.GeometryGeom as QGEO
 import qualified Storage.Queries.Merchant as QM
@@ -3045,7 +3046,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- geometry
   mbGeometry <-
-    QGeo.findGeometryByStateAndCity req.city req.state >>= \case
+    CQGeo.findGeometryByStateAndCity req.city req.state >>= \case
       Nothing -> do
         Just <$> buildGeometry
       _ -> return Nothing
@@ -3132,7 +3133,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   finally
     ( do
-        whenJust mbGeometry $ \geometry -> QGeo.create geometry
+        whenJust mbGeometry $ \geometry -> do
+          QGeo.create geometry
+          CQGeo.clearCacheByStateAndCity req.city req.state
         whenJust mbNewMerchant $ \newMerchant -> QM.create newMerchant
         whenJust mbNewOperatingCity $ \newOperatingCity -> CQMOC.create newOperatingCity
         whenJust mbInteglligentPoolConfig $ \newIntelligentPoolConfig -> CQDIPC.create newIntelligentPoolConfig
@@ -3960,6 +3963,7 @@ putMerchantConfigGeometryUpdate merchantShortId opCity req = do
       stateParam = merchantOpCity.state
   newGeom <- getGeomFromKML req.file >>= fromMaybeM (InvalidRequest "Not able to convert the given KML to PostGis geom")
   QGEO.updateGeometry cityParam stateParam req.region (T.pack newGeom)
+  CQGeo.clearCacheByStateAndCity cityParam stateParam
   return Success
 
 postMerchantConfigVehicleServiceTierCreate ::

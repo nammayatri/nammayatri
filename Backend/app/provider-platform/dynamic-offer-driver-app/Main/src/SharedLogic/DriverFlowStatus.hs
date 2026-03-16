@@ -64,7 +64,7 @@ handleCacheMissForDriverFlowStatus entityRole entityId allKeys = do
             forM_ driverModeInfo $ \(mbStatus, count) -> do
               let k = DDF.getStatusKey entityId (fromMaybe DDF.INACTIVE mbStatus)
               logTagInfo "DriverStatus" $ "Redis.set " <> k <> " = " <> show count
-              Redis.set @Int k count
+              Redis.setExp @Int k count 1800 -- 30 minutes; refreshed from ClickHouse on cache miss
             pure $ toDriverStatusRes driverModeInfo
           Redis.del inProgressKey
           case res of

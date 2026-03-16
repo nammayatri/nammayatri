@@ -50,6 +50,7 @@ import Tools.Error
 import Tools.Metrics (CoreMetrics)
 import TransactionLogs.PushLogs
 import TransactionLogs.Types
+import Utils.CircuitBreaker (mkDefaultConfig, withCircuitBreakerAndRetry)
 
 searchV2 ::
   ( MonadFlow m,
@@ -345,7 +346,8 @@ callBecknAPIWithSignature' ::
 callBecknAPIWithSignature' merchantId a b c d e req' = do
   fork ("sending " <> show b <> ", pushing ondc logs") do
     void $ pushLogs b (toJSON req') merchantId.getId "MOBILITY"
-  callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing b c d e req'
+  withCircuitBreakerAndRetry (mkDefaultConfig "beckn-gateway") $
+    callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing b c d e req'
 
 callBecknAPIWithSignatureMetro ::
   ( MonadFlow m,

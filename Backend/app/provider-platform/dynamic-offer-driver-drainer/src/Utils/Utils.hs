@@ -106,6 +106,7 @@ publishDrainLatency action (L.KVDBStreamEntryID id _) = do
   let latency = int2Double time - int2Double (fromIntegral id)
   L.logInfo (("LATENCY: " :: Text) <> action) (show latency)
   void $ publishDBSyncMetric $ QueryDrainLatency action latency
+  void $ publishDBSyncMetric $ DrainerLagSeconds (latency / 1000)
 
 publishProcessLatency :: Text -> Double -> Flow ()
 publishProcessLatency processName latency = do
@@ -209,3 +210,50 @@ shouldPushToKafkaOnly model _dontEnableDbTables = textToSnakeCaseText model.getD
 
 shouldPushToDbOnly :: DBModel -> [Text] -> Bool
 shouldPushToDbOnly model _dontEnableForKafka = textToSnakeCaseText model.getDBModel `elem` _dontEnableForKafka || model.getDBModel `elem` _dontEnableForKafka
+
+-- Retry failed items with exponential backoff before sending to DLQ
+retryFailedWithBackoff ::
+  ((L.KVDBStreamEntryID, ByteString) -> Text -> Flow (Either L.KVDBStreamEntryID L.KVDBStreamEntryID)) ->
+  Text ->
+  [(L.KVDBStreamEntryID, ByteString)] ->
+  [L.KVDBStreamEntryID] ->
+  Int ->
+  Int ->
+  Flow ([L.KVDBStreamEntryID], [L.KVDBStreamEntryID])
+retryFailedWithBackoff _ _ _ failedIds maxRetries attempt
+  | attempt > maxRetries || null failedIds = pure ([], failedIds)
+retryFailedWithBackoff runFn dbStreamKey allEntries failedIds maxRetries attempt = do
+  let failedEntries = filter (\(entryId, _) -> entryId `elem` failedIds) allEntries
+      backoffUs = min 10000000 (1000000 * (2 ^ (attempt - 1))) -- 1s, 2s, 4s... max 10s
+  L.logWarning ("BATCH_RETRY" :: Text) $
+    "Retrying " <> show (length failedEntries) <> " failed items, attempt " <> show attempt <> "/" <> show maxRetries
+  void $ publishDBSyncMetric $ BatchRetryAttempt "Retry" attempt
+  L.runIO $ delay backoffUs
+  (retrySucc, retryFail) <- executeInSequence runFn ([], []) dbStreamKey failedEntries
+  if null retryFail
+    then pure (retrySucc, [])
+    else do
+      (moreSucc, stillFailed) <- retryFailedWithBackoff runFn dbStreamKey allEntries retryFail maxRetries (attempt + 1)
+      pure (retrySucc ++ moreSucc, stillFailed)
+
+-- Add failed items to the dead letter queue after exhausting retries
+addToDLQ :: Text -> [(L.KVDBStreamEntryID, ByteString)] -> [L.KVDBStreamEntryID] -> Text -> Flow ()
+addToDLQ dlqStreamKey allEntries failedIds action = do
+  let failedEntries = filter (\(entryId, _) -> entryId `elem` failedIds) allEntries
+  void $ RQ.addValueToErrorQueue dlqStreamKey ((\(_, bts) -> ("command", bts)) <$> failedEntries)
+  void $ publishDBSyncMetric $ DLQItemAdded action (length failedEntries)
+  L.logError ("DLQ_ITEMS_ADDED" :: Text) $
+    "Added " <> show (length failedEntries) <> " " <> action <> " items to DLQ after max retries"
+
+-- Check pool utilization and apply backpressure delay if threshold exceeded
+checkBackpressure :: Flow ()
+checkBackpressure = do
+  Env {..} <- ask
+  utilization <- L.runIO $ readIORef _poolUtilization
+  threshold <- L.runIO getBackpressureThreshold
+  when (utilization > threshold) $ do
+    backpressureDelayUs <- L.runIO getBackpressureDelay
+    L.logWarning ("BACKPRESSURE" :: Text) $
+      "Pool utilization " <> show utilization <> " exceeds threshold " <> show threshold <> ", delaying " <> show (backpressureDelayUs `div` 1000) <> "ms"
+    void $ publishDBSyncMetric $ BackpressureActivated utilization
+    L.runIO $ delay backpressureDelayUs

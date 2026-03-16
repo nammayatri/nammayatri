@@ -15,24 +15,21 @@
 
 module Utils.Common.Events where
 
--- import Network.HTTP.Types (status503)
-
--- import Data.List (lookup)
-
 import qualified Control.Concurrent as TD
 import Control.Concurrent.Async
+import Data.UUID (UUID)
 import Data.UUID.V4 (nextRandom)
 import qualified EulerHS.Runtime as R
 import Kernel.Prelude hiding (app)
 import Kernel.Types.Flow
 import Kernel.Utils.Common
 import Kernel.Utils.IOLogging (HasLog)
+import Network.HTTP.Types (status408)
 import Network.Wai
 import qualified Network.Wai as Wai
-import qualified Network.Wai.Internal as NWI
 
-timeoutEvent :: HasLog env => R.FlowRuntime -> env -> NWI.Response -> Int -> Middleware
-timeoutEvent flowRt appEnv timeoutResponse seconds app req respond = do
+timeoutEvent :: HasLog env => R.FlowRuntime -> env -> Int -> Middleware
+timeoutEvent flowRt appEnv seconds app req respond = do
   result <- race (app req respond) (TD.threadDelay (seconds * 1000000))
   case result of
     Left response -> pure response
@@ -41,13 +38,13 @@ timeoutEvent flowRt appEnv timeoutResponse seconds app req respond = do
       let path = Wai.rawPathInfo req
           query = Wai.rawQueryString req
       runFlowR flowRt appEnv $ timeoutLog requestId path query
-      respond timeoutResponse
+      respond $ responseLBS status408 [] ""
   where
     getRequestId headers = do
       let value = lookup "x-request-id" headers
       case value of
         Just val -> pure ("requestId-" <> decodeUtf8 val)
-        Nothing -> pure "randomRequestId-" <> show <$> nextRandom
+        Nothing -> ("randomRequestId-" <>) . show <$> nextRandom
     timeoutLog logRequestId path query =
       logError $
         "Request timed out! "
@@ -59,3 +56,12 @@ timeoutEvent flowRt appEnv timeoutResponse seconds app req respond = do
           <> " | Timeout: "
           <> show seconds
           <> " seconds"
+
+addRequestIdToResponse :: Middleware
+addRequestIdToResponse app req respond = do
+  reqId <- case lookup "x-request-id" (Wai.requestHeaders req) of
+    Just val -> pure val
+    Nothing -> encodeUtf8 . (show :: UUID -> Text) <$> nextRandom
+  app req $ \response -> do
+    let headers = ("x-request-id", reqId) : responseHeaders response
+    respond $ mapResponseHeaders (const headers) response

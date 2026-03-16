@@ -276,6 +276,7 @@ getUpcomingStopsForBus mbRouteStopMapping now mbTargetStation busData filterFrom
     _ -> []
 
 getVehicleMetadata :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv), HasShortDurationRetryCfg r c, HasKafkaProducer r) => [Text] -> DIBC.IntegratedBPPConfig -> m [Maybe BusDataWithRoutesInfo]
+getVehicleMetadata [] _ = pure []
 getVehicleMetadata vehicleNumbers integratedBppConfig = do
   let redisPrefix = case integratedBppConfig.providerConfig of
         DIBC.ONDC config -> config.redisPrefix

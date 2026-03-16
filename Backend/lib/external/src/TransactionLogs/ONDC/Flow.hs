@@ -47,7 +47,7 @@ pushTxnLogsAPI config req = do
           npToken = config.apiToken
           url = config.url
       logDebug $ "Pushing txn logs to ONDC: " <> show req
-      void $ callAPI url (eulerClient (Just npToken) req) "pushTxnLogsAPI" (Proxy @ONDCPushLogAPI) >>= fromEitherM (\err -> InternalError $ "Failed to push txn logs: " <> show err)
+      void $ callAPI url (eulerClient (Just npToken) req) "pushTxnLogsAPI" (Proxy @ONDCPushLogAPI) >>= fromEitherM (\_err -> InternalError "Failed to push txn logs to ONDC")
 
 instance ToJSON NoContent where
   toJSON _ = A.Null

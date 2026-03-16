@@ -40,23 +40,27 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 
 whatsAppOptAPI :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Whatsapp.OptApiReq -> m APISuccess
 whatsAppOptAPI _merchantId merchantOpCityId req = do
-  void $ Whatsapp.whatsAppOptApi handler req
-  return Success
+  merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  let whatsappServiceProviders = merchantConfig.whatsappProvidersPriorityList
+  if null whatsappServiceProviders
+    then do
+      logWarning $ "WhatsApp opt-in disabled: no providers configured for merchantOpCityId:" <> merchantOpCityId.getId
+      return Success
+    else do
+      logDebug $ "whatsappServiceProviders: " <> show whatsappServiceProviders
+      void $ Whatsapp.whatsAppOptApi handler req
+      return Success
   where
     handler = Whatsapp.WhatsappHandler {..}
 
     getProvidersPriorityList = do
       merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
-      let whatsappServiceProviders = merchantConfig.whatsappProvidersPriorityList
-      when (null whatsappServiceProviders) $ throwError $ InternalError ("No whatsapp service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId)
-      logDebug $ "whatsappServiceProviders: " <> show whatsappServiceProviders
-      pure whatsappServiceProviders
+      pure merchantConfig.whatsappProvidersPriorityList
 
     getProviderConfig provider = do
       merchantWhatsappServiceConfig <-
         QMSC.findByServiceAndCity (DMSC.WhatsappService provider) merchantOpCityId
           >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
-      logDebug $ "merchantWhatsappServiceConfig.serviceConfig: " <> show merchantWhatsappServiceConfig
       case merchantWhatsappServiceConfig.serviceConfig of
         DMSC.WhatsappServiceConfig msc -> pure msc
         _ -> throwError $ InternalError "Unknown Service Config"

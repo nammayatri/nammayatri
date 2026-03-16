@@ -15,16 +15,17 @@
 
 module Storage.Queries.Geometry where
 
-import Data.Either
 import qualified Database.Beam as B
 import Domain.Types.Geometry
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
+import Utils.SlowQueryLog (timedRunDB)
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
@@ -46,8 +47,12 @@ findGeometryByStateAndCity cityParam stateParam = do
 findGeometriesContaining :: forall m r. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LatLong -> [Text] -> m [Geometry]
 findGeometriesContaining gps regions = do
   dbConf <- getReplicaBeamConfig
-  geoms <- L.runDB dbConf $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
-  catMaybes <$> mapM fromTType' (fromRight [] geoms)
+  geoms <- timedRunDB "geometry" "findGeometriesContaining" $ L.runDB dbConf $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
+  case geoms of
+    Left err -> do
+      logError $ "Geometry query (findGeometriesContaining) failed for regions " <> show regions <> ": " <> show err
+      throwError $ InternalError $ "Geometry query failed: " <> show err
+    Right results -> catMaybes <$> mapM fromTType' results
 
 someGeometriesContain :: forall m r. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LatLong -> [Text] -> m Bool
 someGeometriesContain gps regions = do
@@ -58,7 +63,7 @@ findGeometriesContainingGps :: forall m r. (MonadFlow m, EsqDBFlow m r, CacheFlo
 findGeometriesContainingGps gps = do
   dbConf <- getReplicaBeamConfig
   geoms <-
-    L.runDB dbConf $
+    timedRunDB "geometry" "findGeometriesContainingGps" $ L.runDB dbConf $
       L.findRows $
         B.select $
           B.filter_'
@@ -66,7 +71,11 @@ findGeometriesContainingGps gps = do
                 containsPoint' (gps.lon, gps.lat)
             )
             $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
-  catMaybes <$> mapM fromTType' (fromRight [] geoms)
+  case geoms of
+    Left err -> do
+      logError $ "Geometry query (findGeometriesContainingGps) failed: " <> show err
+      throwError $ InternalError $ "Geometry query failed: " <> show err
+    Right results -> catMaybes <$> mapM fromTType' results
 
 instance FromTType' BeamG.Geometry Geometry where
   fromTType' BeamG.GeometryT {..} = do

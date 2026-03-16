@@ -67,7 +67,7 @@ runProducer = do
           currentJobs <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRangeByScoreByCount myShardSetKey startTime endTime 0 10000 -- 10,000 limit is good enough for a poor pod
           logDebug $ "Job chunks produced to be inserted into stream : " <> show currentJobs
           result <- insertIntoStream currentJobs
-          Hedis.set producerTimestampKey endTime
+          Hedis.setExp producerTimestampKey endTime 3600 -- 1 hour; overwritten every producer cycle
           logDebug $ "Jobs inserted into stream with timeStamp :" <> show result
           Hedis.withNonCriticalCrossAppRedis $ Hedis.zRemRangeByScore myShardSetKey startTime endTime
         waitTimeMilliSec <- asks (.waitTimeMilliSec)

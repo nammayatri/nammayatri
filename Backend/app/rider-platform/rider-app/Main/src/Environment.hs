@@ -188,6 +188,7 @@ data AppCfg = AppCfg
     ltsCfg :: LocationTrackingeServiceConfig,
     locationTrackingServiceKey :: Text,
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
+    bookingStatusPollingRateLimitOptions :: APIRateLimitOptions,
     nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
     sosTrackingRateLimitOptions :: APIRateLimitOptions,
     erssStatusUpdateRateLimitOptions :: APIRateLimitOptions,
@@ -305,6 +306,7 @@ data AppEnv = AppEnv
     ltsCfg :: LocationTrackingeServiceConfig,
     locationTrackingServiceKey :: Text,
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
+    bookingStatusPollingRateLimitOptions :: APIRateLimitOptions,
     nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
     sosTrackingRateLimitOptions :: APIRateLimitOptions,
     erssStatusUpdateRateLimitOptions :: APIRateLimitOptions,
@@ -353,7 +355,7 @@ buildAppEnv cfg@AppCfg {..} = do
   hedisEnv <- connectHedis hedisCfg riderAppPrefix
   let requestId = Nothing
   let sessionId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv "SHOULD_LOG_REQUEST_ID"
+  shouldLogRequestId <- fromMaybe True . (>>= readMaybe) <$> SE.lookupEnv "SHOULD_LOG_REQUEST_ID"
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg nonCriticalModifierFunc
   let kafkaProducerForART = Just kafkaProducerTools
   hedisClusterEnv <-

@@ -19,6 +19,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Beckn
 import Control.Applicative ((<|>))
 import Control.Monad
+import qualified EulerHS.Language as L
 import Data.Aeson
 import qualified Data.Aeson.Text as AT
 import Data.Default.Class
@@ -332,23 +333,35 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   let isDashboardRequest = isDashboardRequest_ || isNothing quotesUnifiedFlow -- Don't get confused with this, it is done to handle backward compatibility so that in both dashboard request or mobile app request without quotesUnifiedFlow can be consider same
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   let phoneNumber = fmap encryptedHashedToText person.mobileNumber
-  logDebug $ "phoneNumber: to debug" <> fromMaybe "No Mobile Number" phoneNumber
-  tag <- case person.hasDisability of
+  let sourceLatLong = origin.gps
+  let stopsLatLong = if isJust fromSpecialLocationId then [] else map (.gps) stops
+
+  -- Merchant lookup is a cached Redis GET; no need to fork
+  merchant <- QMerc.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+  tagFork <- awaitableFork "search->getDisabilityTag" $ case person.hasDisability of
     Just True -> B.runInReplica $ fmap (.tag) <$> PD.findByPersonId personId
     _ -> return Nothing
 
+  -- Fork email decryptions to run concurrently with serviceability check
   let parseDomain mbEmail = T.drop 1 . T.strip . snd <$> (mbEmail >>= (\e -> if T.isInfixOf "@" e then Just (T.breakOn "@" e) else Nothing))
-  decryptedEmail <- mapM decrypt person.email
-  decryptedBusinessEmail <- mapM decrypt person.businessEmail
+  emailFork <- awaitableFork "search->decryptEmails" $ do
+    decEmail <- mapM decrypt person.email
+    decBizEmail <- mapM decrypt person.businessEmail
+    pure (decEmail, decBizEmail)
+  originCity <- Serviceability.validateServiceability sourceLatLong stopsLatLong person
+
+  -- Await forked results (should be ready since they overlapped with serviceability check)
+  let txnCity = show merchant.defaultCity
+  tag <-
+    L.await Nothing tagFork >>= \case
+      Left _ -> throwError $ InternalError "search: getDisabilityTag failed"
+      Right result -> pure result
+  (decryptedEmail, decryptedBusinessEmail) <-
+    L.await Nothing emailFork >>= \case
+      Left _ -> throwError $ InternalError "search: decryptEmails failed"
+      Right result -> pure result
   let emailDomain = parseDomain decryptedEmail
       businessEmailDomain = parseDomain decryptedBusinessEmail
-
-  merchant <- QMerc.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-  let txnCity = show merchant.defaultCity
-
-  let sourceLatLong = origin.gps
-  let stopsLatLong = if isJust fromSpecialLocationId then [] else map (.gps) stops
-  originCity <- Serviceability.validateServiceability sourceLatLong stopsLatLong person
 
   unless (justMultimodalSearch || null stopsLatLong) $ updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation
 
@@ -780,10 +793,10 @@ calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person sea
       case mmiConfigs.serviceConfig of
         DMSC.MapsServiceConfig mapsCfg -> do
           routeResp <- MapsRoutes.getRoutes (Just searchRequestId.getId) True mapsCfg request
-          logInfo $ "MMI route response: " <> show routeResp
+          logDebug $ "MMI route response count: " <> show (length routeResp)
           let routeData = RouteDataEvent (Just $ show MapsK.MMI) (map show routeResp) (Just searchRequestId) merchant.id merchantOperatingCity.id now now
           triggerRouteDataEvent routeData
-        _ -> logInfo "MapsServiceConfig config not found for MMI"
+        _ -> logDebug "MapsServiceConfig config not found for MMI"
 
   shouldCollectRouteData <- asks (.collectRouteData)
   when shouldCollectRouteData $ do
@@ -797,13 +810,13 @@ calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person sea
               let nbShortestReq = NBT.GetRoutesRequest request.waypoints (Just True) (Just 3) (Just "shortest") (Just "flexible")
               nbFastestRouteResponse <- NextBillion.getRoutesWithExtraParameters (Just searchRequestId.getId) msc nbFastestReq
               nbShortestRouteResponse <- NextBillion.getRoutesWithExtraParameters (Just searchRequestId.getId) msc nbShortestReq
-              logInfo $ "NextBillion route responses: " <> show nbFastestRouteResponse <> "\n" <> show nbShortestRouteResponse
+              logDebug $ "NextBillion route responses: fastestCount=" <> show (length nbFastestRouteResponse) <> ", shortestCount=" <> show (length nbShortestRouteResponse)
               let fastRouteData = RouteDataEvent (Just "NB_Fastest") (map show nbFastestRouteResponse) (Just searchRequestId) (merchant.id) (merchantOperatingCity.id) now now
               let shortRouteData = RouteDataEvent (Just "NB_Shortest") (map show nbShortestRouteResponse) (Just searchRequestId) (merchant.id) (merchantOperatingCity.id) now now
               triggerRouteDataEvent fastRouteData
               triggerRouteDataEvent shortRouteData
-            _ -> logInfo "No NextBillion config"
-        _ -> logInfo "NextBillion route not found"
+            _ -> logDebug "No NextBillion config"
+        _ -> logDebug "NextBillion route not found"
 
   let distanceWeightage = riderConfig.distanceWeightage
       durationWeightage = 100 - distanceWeightage
@@ -830,8 +843,8 @@ autoCompleteEvent riderConfig searchRequestId sessionToken isSourceManuallyMoved
       fork "Updating autocomplete data in search" $ do
         let pickUpKey = makeAutoCompleteKey token (show DMaps.PICKUP)
         let dropKey = makeAutoCompleteKey token (show DMaps.DROP)
-        pickupRecord :: Maybe AutoCompleteEventData <- Redis.safeGet pickUpKey
-        dropRecord :: Maybe AutoCompleteEventData <- Redis.safeGet dropKey
+        pickupRecord <- Redis.safeGet @AutoCompleteEventData pickUpKey
+        dropRecord <- Redis.safeGet @AutoCompleteEventData dropKey
         whenJust pickupRecord $ \record -> do
           let updatedRecord = AutoCompleteEventData record.autocompleteInputs record.customerId record.id isSourceManuallyMoved (Just searchRequestId) record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.originLat record.originLon record.createdAt now
           -- let updatedRecord = record {DTA.searchRequestId = Just searchRequestId, DTA.isLocationSelectedOnMap = isSourceManuallyMoved, DTA.updatedAt = now}

@@ -51,7 +51,8 @@ data Env = Env
     _dontEnableDbTables :: [Text],
     _dontEnableForKafka :: [Text],
     _connectionPool :: Pool Connection,
-    _esqDBCfg :: EsqDBConfig
+    _esqDBCfg :: EsqDBConfig,
+    _poolUtilization :: IORef Double
   }
 
 data AppCfg = AppCfg

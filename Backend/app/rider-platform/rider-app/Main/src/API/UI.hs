@@ -88,12 +88,12 @@ import qualified API.UI.Support as Support
 import qualified API.UI.Whatsapp as Whatsapp
 import Environment
 import EulerHS.Prelude
-import Kernel.Utils.Servant.Server (healthCheck)
+import qualified Kernel.Utils.Servant.Server as Server
 import Servant
 
 type API =
   "v2"
-    :> ( Get '[JSON] Text
+    :> ( Server.HealthCheckAPI
            :<|> Registration.API
            :<|> Profile.API
            :<|> RidePayment.API
@@ -167,7 +167,7 @@ type API =
 
 handler :: FlowServer API
 handler =
-  healthCheck
+  Server.healthCheck
     :<|> Registration.handler
     :<|> Profile.handler
     :<|> RidePayment.handler

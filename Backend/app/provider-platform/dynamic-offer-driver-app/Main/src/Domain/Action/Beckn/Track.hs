@@ -33,6 +33,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.API.DriversLocation as DriversLocationAPI
+import Utils.Common.Sanitize (sanitizeShowError)
 import SharedLogic.External.LocationTrackingService.Types
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -102,14 +103,14 @@ callMultiCloudDriverLocation ride = do
       mbSecondaryAwaitable <- forM mbSecondaryUrl $ \url -> awaitableFork "secondaryLTS" $ callDriverLocationAPI url req
       primaryRes <-
         L.await Nothing primaryAwaitable >>= \case
-          Left err -> throwError $ InternalError $ "Failed to call driversLocation API for primary url: " <> show primaryUrl <> ", error: " <> show err
+          Left err -> throwError $ InternalError $ "Failed to call driversLocation API for primary url, error: " <> sanitizeShowError err
           Right result -> pure result
       secondaryRes <- maybe (pure []) handleSecondaryResult mbSecondaryAwaitable
       pure $ primaryRes <> secondaryRes
       where
         handleSecondaryResult awaitable =
           L.await Nothing awaitable >>= \case
-            Left err -> logError ("Failed to call driversLocation API for secondary url, error: " <> show err) >> pure []
+            Left err -> logError ("Failed to call driversLocation API for secondary url, error: " <> sanitizeShowError err) >> pure []
             Right result -> pure result
 
     callDriverLocationAPI url req =

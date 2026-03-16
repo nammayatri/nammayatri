@@ -31,13 +31,14 @@ import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.ConditionalCharges as DCC
 import Domain.Types.DriverPoolConfig
 import Domain.Types.EmptyDynamicParam
+import qualified Domain.Types.DriverPlan
+import qualified Domain.Types.DriverStats
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Plan as DPlan
-import Domain.Types.RiderDetails
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
@@ -113,7 +114,7 @@ sendSearchRequestToDrivers ::
   GoHomeConfig ->
   m ()
 sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq searchTry driverPoolConfig driverPool prevBatchDrivers goHomeConfig = do
-  logInfo $ "Send search requests to driver pool batch-" <> show driverPool
+  logDebug $ "Send search requests to driver pool batch, driverCount=" <> show (length driverPool)
 
   -- We update few things during 1st batch in searchReq table which is not being passed in above Search request, hence fetch search request again if it is first batch
   -- isAllocatorBatch is false if it is first batch because 1st batch is always triggered from application, not allocator
@@ -154,7 +155,30 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
       else return M.empty
 
   transporterConfig <- SCTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache) driverPool
+
+  -- Batch pre-fetch per-driver data to eliminate N+1 queries in buildSearchRequestForDriver
+  let allDriverIds = map (.driverPoolResult.driverId) driverPool
+  now <- getCurrentTime
+
+  -- FIX 1: Single DB query for all driver stats (was: N individual findById calls)
+  allDriverStats <- runInReplica $ QDriverStats.findAllByIdList allDriverIds
+  let driverStatsMap = HM.fromList $ map (\ds -> (ds.driverId.getId, ds)) allDriverStats
+
+  -- FIX 2: Single DB query for all driver plans (was: N individual findByDriverIdWithServiceName calls)
+  allDriverPlans <- QDP.findAllByDriverIdsAndServiceName allDriverIds (DPlan.DASHCAM_RENTAL DPlan.CAUTIO)
+  let driverPlanMap = HM.fromList $ map (\dp -> (dp.driverId.getId, dp)) allDriverPlans
+
+  -- FIX 3: Single DB query for favourite drivers (was: N individual findByRiderIdAndDriverId calls)
+  favouriteDriverIdMap <- case searchReq.riderId of
+    Just rid -> do
+      favCorrelations <- findFavDriversForRider rid True
+      pure $ HM.fromList $ map (\c -> (c.driverId.getId, True)) favCorrelations
+    Nothing -> pure HM.empty
+
+  -- FIX 4: Batch Redis ZCOUNT in single connection context (was: N separate Redis calls)
+  searchReqCountMap <- SDP.getValidSearchRequestCountBatch searchReq.providerId allDriverIds now
+
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig coinConfigCache driverStatsMap driverPlanMap favouriteDriverIdMap searchReqCountMap now) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
@@ -183,8 +207,8 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
 
   -- Update operator/fleet analytics: batch increment total request count for all drivers at once
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
-    let allDriverIds = map (.driverId) searchRequestsForDrivers
-    Analytics.updateOperatorAnalyticsTotalRequestCountBatch allDriverIds transporterConfig
+    let analyticsDriverIds = map (.driverId) searchRequestsForDrivers
+    Analytics.updateOperatorAnalyticsTotalRequestCountBatch analyticsDriverIds transporterConfig
   where
     getBaseFare ::
       ( MonadFlow m,
@@ -266,27 +290,30 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
       Int ->
       UTCTime ->
       DTR.TransporterConfig ->
-      Maybe (Id RiderDetails) ->
       M.Map DTV.VehicleCategory (Maybe Int) ->
+      HM.HashMap Text Domain.Types.DriverStats.DriverStats ->
+      HM.HashMap Text Domain.Types.DriverPlan.DriverPlan ->
+      HM.HashMap Text Bool ->
+      HM.HashMap Text Int ->
+      UTCTime ->
       SDP.DriverPoolWithActualDistResult ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig riderId coinConfigCache dpwRes = do
+    buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig coinConfigCache driverStatsMap driverPlanMap favouriteDriverIdMap searchReqCountMap now dpwRes = do
       let currency = searchTry.currency
       guid <- generateGUID
-      now <- getCurrentTime
       let dpRes = dpwRes.driverPoolResult
-      driverStats <- runInReplica $ QDriverStats.findById dpRes.driverId
-      driverPlanSafetyPlus <- QDP.findByDriverIdWithServiceName dpwRes.driverPoolResult.driverId (DPlan.DASHCAM_RENTAL DPlan.CAUTIO)
+      let driverStats = HM.lookup dpRes.driverId.getId driverStatsMap
+      let driverPlanSafetyPlus = HM.lookup dpRes.driverId.getId driverPlanMap
       tripQuoteDetail <- HashMap.lookup dpRes.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dpRes.serviceTier)
       let isEligibleForSafetyPlusCharge = maybe False (.enableServiceUsageCharge) driverPlanSafetyPlus && searchReq.preferSafetyPlus
           additionalChargesEligiblFor = additionalChargeConditional isEligibleForSafetyPlusCharge tripQuoteDetail.conditionalCharges
           additionalCharges = sum $ map (\ac -> if ac.chargeCategory `elem` additionalChargesEligiblFor then ac.charge else 0.0) tripQuoteDetail.conditionalCharges
-      parallelSearchRequestCount <- Just <$> SDP.getValidSearchRequestCount searchReq.providerId dpRes.driverId now
+      let parallelSearchRequestCount = Just $ fromMaybe 0 $ HM.lookup dpRes.driverId.getId searchReqCountMap
 
       let vehicleCategory = BecknUtils.castVehicleCategoryToDomain $ BecknUtils.mapVariantToVehicle dpRes.variant
       let driverCoinsRewardedOnGoldTierRideRequest = join $ M.lookup vehicleCategory coinConfigCache
 
-      logInfo $ "Coins rewarded on gold tier ride request: " <> show driverCoinsRewardedOnGoldTierRideRequest
+      logDebug $ "Coins rewarded on gold tier ride request: " <> show driverCoinsRewardedOnGoldTierRideRequest
 
       baseFare <- case tripQuoteDetail.tripCategory of
         DTC.Ambulance _ -> do
@@ -294,7 +321,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
           getBaseFare searchReq farePolicy dpRes.vehicleAge tripQuoteDetail transporterConfig
         _ -> pure $ tripQuoteDetail.baseFare + additionalCharges
       deploymentVersion <- asks (.version)
-      isFavourite <- maybe (pure Nothing) (\riderid -> findByRiderIdAndDriverId riderid (cast dpRes.driverId) <&> fmap (.favourite)) riderId
+      let isFavourite = HM.lookup dpRes.driverId.getId favouriteDriverIdMap
       let searchRequestForDriver =
             SearchRequestForDriver
               { id = guid,

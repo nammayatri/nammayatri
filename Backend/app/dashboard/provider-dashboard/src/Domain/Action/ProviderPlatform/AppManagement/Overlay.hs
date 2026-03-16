@@ -72,10 +72,12 @@ getOverlayList ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   ApiTokenInfo ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Environment.Flow API.Types.Dashboard.AppManagement.Overlay.ListOverlayResp
-getOverlayList merchantShortId opCity apiTokenInfo = do
+getOverlayList merchantShortId opCity apiTokenInfo limit offset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.overlayDSL.getOverlayList)
+  API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.overlayDSL.getOverlayList) limit offset
 
 getOverlayInfo ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

@@ -56,6 +56,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Person as CQP
 import Tools.Error
+import Utils.CircuitBreaker (mkDefaultConfig, withCircuitBreakerAndRetry)
 
 getDistance ::
   ( ServiceFlow m r,
@@ -214,7 +215,7 @@ runWithServiceConfig func getCfg merchantId merchantOperatingCityId entityId req
     QMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.MapsService $ getCfg merchantConfig)
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show $ getCfg merchantConfig))
   case merchantMapsServiceConfig.serviceConfig of
-    DMSC.MapsServiceConfig msc -> func entityId msc req
+    DMSC.MapsServiceConfig msc -> withCircuitBreakerAndRetry (mkDefaultConfig "maps") $ func entityId msc req
     _ -> throwError $ InternalError "Unknown Service Config"
 
 getMerchantOperatingCityId :: ServiceFlow m r => Id Person -> Maybe (Id MerchantOperatingCity) -> m (Id MerchantOperatingCity)

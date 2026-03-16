@@ -35,7 +35,7 @@ getRevenueCollectionHistory merchantShortId opCity apiTokenInfo a1 a2 a3 a4 = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.revenueDSL.getRevenueCollectionHistory) a1 a2 a3 a4
 
-getRevenueAllFeeHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.Flow [API.Types.ProviderPlatform.Management.Revenue.AllFees])
-getRevenueAllFeeHistory merchantShortId opCity apiTokenInfo a1 a2 = do
+getRevenueAllFeeHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.Flow [API.Types.ProviderPlatform.Management.Revenue.AllFees])
+getRevenueAllFeeHistory merchantShortId opCity apiTokenInfo a1 a2 a3 a4 = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.revenueDSL.getRevenueAllFeeHistory) a1 a2
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.revenueDSL.getRevenueAllFeeHistory) a1 a2 a3 a4

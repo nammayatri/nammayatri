@@ -71,6 +71,7 @@ import System.Environment (lookupEnv)
 import Tools.Metrics
 import TransactionLogs.Types hiding (ONDC)
 import qualified UrlShortner.Common as UrlShortner
+import Utils.ConnectionPoolMetrics (recordRedisPoolConfig, startPgPoolMonitor)
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -346,7 +347,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
         pure Nothing
       Right env -> pure (Just env)
   let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  shouldLogRequestId <- fromMaybe True . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let sessionId = Nothing
   let kafkaProducerForART = Just kafkaProducerTools
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
@@ -365,6 +366,12 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
       serviceClickhouseCfg = driverClickhouseCfg
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
+  -- Connection pool health monitoring
+  void $ startPgPoolMonitor (connPool esqDBEnv) "driver-app" "primary" esqDBCfg.connectionPoolCount
+  void $ startPgPoolMonitor (connPool esqDBReplicaEnv) "driver-app" "replica" esqDBReplicaCfg.connectionPoolCount
+  recordRedisPoolConfig "driver-app" "critical" hedisCfg.connectMaxConnections
+  recordRedisPoolConfig "driver-app" "cluster" hedisClusterCfg.connectMaxConnections
+  recordRedisPoolConfig "driver-app" "non-critical" hedisNonCriticalCfg.connectMaxConnections
   let url = Nothing
   return AppEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, ..}
 

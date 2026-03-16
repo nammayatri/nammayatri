@@ -57,6 +57,8 @@ import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as TB
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.BusinessHour as CQBusinessHour
+import qualified Storage.CachedQueries.ServiceCategory as CQServiceCategory
 import qualified Storage.Queries.BusinessHour as QBusinessHour
 import qualified Storage.Queries.DraftTicketChange as QDTC
 import qualified Storage.Queries.DraftTicketChangeHistory as QDTCH
@@ -239,9 +241,9 @@ getLiveTicketDef placeId = do
     Just ticketPlace -> do
       services <- QTicketService.getTicketServicesByPlaceId placeId.getId
       let linkedBusinessHourIds = concatMap (.businessHours) services
-      linkedBusinessHours <- catMaybes <$> mapM QBusinessHour.findById linkedBusinessHourIds
+      linkedBusinessHours <- catMaybes <$> mapM CQBusinessHour.findById linkedBusinessHourIds
       let linkedServiceCategoryIds = concatMap (.categoryId) linkedBusinessHours
-      linkedServiceCategories <- catMaybes <$> mapM QServiceCategory.findById linkedServiceCategoryIds
+      linkedServiceCategories <- catMaybes <$> mapM CQServiceCategory.findById linkedServiceCategoryIds
       let linkedServicePeopleCategoryIds = concatMap (.peopleCategory) linkedServiceCategories
       linkedServicePeopleCategories <- concatMapM QServicePeopleCategory.findAllById linkedServicePeopleCategoryIds
       let basicInfo =
@@ -619,7 +621,7 @@ applyDraftChanges draftChange = do
 
   mapM_ processServiceCategory ticketDef.serviceCategories
 
-  existingBusinessHours <- QBusinessHour.findAllByPlaceId (Just $ draftChange.id.getId)
+  existingBusinessHours <- CQBusinessHour.findAllByPlaceId (Just $ draftChange.id.getId)
 
   usedBhIds <- concatMapM (processTicketService ticketDef) ticketDef.services
 
@@ -634,12 +636,12 @@ applyDraftChanges draftChange = do
     cleanUpBusinessHours :: [Id DBusinessHour.BusinessHour] -> [Id DBusinessHour.BusinessHour] -> Environment.Flow ()
     cleanUpBusinessHours existingBhIds usedBhIds = do
       let unusedBhIds = existingBhIds \\ usedBhIds
-      mapM_ (QBusinessHour.deleteById) unusedBhIds
+      mapM_ (\bhId -> QBusinessHour.deleteById bhId >> CQBusinessHour.clearCacheById bhId) unusedBhIds
 
     processServicePeopleCategory :: DEM.ServicePeopleCategoryDef -> Environment.Flow ()
     processServicePeopleCategory spcDef = do
       now <- getCurrentTime
-      existingSPC <- QServicePeopleCategory.findByIdAndTimebounds spcDef.id TB.Unbounded
+      existingSPC <- QServicePeopleCategory.findByIdAndTimebounds spcDef.id TB.Unbounded -- uses Queries directly for timebounds lookup
       let servicePC =
             DServicePeopleCategory.ServicePeopleCategory
               { id = spcDef.id,
@@ -666,7 +668,7 @@ applyDraftChanges draftChange = do
     processServiceCategory :: DEM.ServiceCategoryDef -> Environment.Flow ()
     processServiceCategory scDef = do
       now <- getCurrentTime
-      existingSC <- QServiceCategory.findById scDef.id
+      existingSC <- CQServiceCategory.findById scDef.id
       let serviceCategory =
             DServiceCategory.ServiceCategory
               { id = scDef.id,
@@ -687,7 +689,9 @@ applyDraftChanges draftChange = do
                 maxSelection = scDef.maxSelection
               }
       case existingSC of
-        Just _ -> QServiceCategory.updateByPrimaryKey serviceCategory
+        Just _ -> do
+          QServiceCategory.updateByPrimaryKey serviceCategory
+          CQServiceCategory.clearCacheById scDef.id
         Nothing -> QServiceCategory.create serviceCategory
 
     groupServiceCategoriesByBusinessHours :: [DEM.ServiceCategoryDef] -> Map DEM.BusinessHourDef [Id DServiceCategory.ServiceCategory]

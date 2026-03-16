@@ -35,11 +35,13 @@ import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common hiding (Error)
+import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Utils.Servant.Client as EC
 import Lib.Queries.SpecialLocation (SpecialLocationFull)
 import qualified Lib.Types.SpecialLocation as SL
 import Servant hiding (throwError)
 import Tools.Metrics (CoreMetrics)
+import Utils.CircuitBreaker (CircuitBreakerConfig (..), withCircuitBreaker)
 
 -- import Kernel.Types.Common
 -- import Domain.Types.ServiceTierType
@@ -796,6 +798,53 @@ getIsInterCity merchant req = do
   let merchantId = merchant.driverOfferMerchantId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getIsInterCityClient merchantId (Just apiKey) req) "GetIsInterCity" getIsInterCityApi
+
+-- | Cached + circuit-breaker wrapper around getIsInterCity.
+-- On BPP failure or circuit-breaker open, defaults to non-intercity.
+getIsInterCityCached ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    CoreMetrics m,
+    Hedis.HedisFlow m r,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Merchant ->
+  IsIntercityReq ->
+  m IsIntercityResp
+getIsInterCityCached merchant req = do
+  let cacheKey = mkInterCityCacheKey req
+  Hedis.safeGet cacheKey >>= \case
+    Just cached -> pure cached
+    Nothing -> do
+      eitherResp <- withTryCatch "getIsInterCityCached" $
+        withCircuitBreaker intercityCBConfig (getIsInterCity merchant req)
+      case eitherResp of
+        Right resp -> do
+          Hedis.setExp cacheKey resp (3600 :: Int) -- 1 hour; geographic data changes rarely
+          pure resp
+        Left err -> do
+          logWarning $ "Intercity check failed, defaulting to non-intercity: " <> show err
+          pure defaultIntercityResp
+
+intercityCBConfig :: CircuitBreakerConfig
+intercityCBConfig =
+  CircuitBreakerConfig
+    { serviceName = "bpp-isInterCity",
+      failureThreshold = 5,
+      halfOpenAfterSec = 30,
+      enabled = True
+    }
+
+defaultIntercityResp :: IsIntercityResp
+defaultIntercityResp = IsIntercityResp {isInterCity = False, isCrossCity = False}
+
+mkInterCityCacheKey :: IsIntercityReq -> Text
+mkInterCityCacheKey req =
+  "CachedQueries:IsInterCity:pickup-"
+    <> show req.pickupLatLong.lat <> "," <> show req.pickupLatLong.lon
+    <> ":drop-"
+    <> maybe "none" (\ll -> show ll.lat <> "," <> show ll.lon) req.mbDropLatLong
 
 -- Fleet Booking Information (Create/Update) - provider internal "fleet" APIs
 

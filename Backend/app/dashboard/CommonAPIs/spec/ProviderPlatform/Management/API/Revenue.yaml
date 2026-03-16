@@ -42,6 +42,8 @@ apis:
       query:
         from: UTCTime
         to: UTCTime
+        limit: Int
+        offset: Int
       auth: ApiAuthV2
       response:
         type: '[AllFees]'

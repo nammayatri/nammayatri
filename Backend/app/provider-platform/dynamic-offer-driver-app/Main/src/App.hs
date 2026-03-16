@@ -33,6 +33,7 @@ import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
 import Kernel.Beam.Types (KafkaConn (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
+import ChatCompletion.Gemini.API (chatCompletionManagerKey)
 import Kernel.External.AadhaarVerification.Gridline.Config
 import Kernel.External.SharedLogic.HyperVerge.Functions (prepareHyperVergeHttpManager)
 import Kernel.External.Tokenize (prepareJourneyMonitoringHttpManager)
@@ -52,9 +53,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.Dhall hiding (maybe)
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt, prepareAuthManagers)
-import Network.HTTP.Client as Http
-import Network.HTTP.Types (status408)
-import Network.Wai
+import qualified Network.HTTP.Client as Http
+import qualified Network.HTTP.Client.TLS as Http
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,
@@ -150,13 +150,19 @@ runDynamicOfferDriverApp' appCfg = do
                 Just (Just 10000, prepareSafetyPortalHttpManager 10000),
                 Just (Just 150000, prepareGridlineHttpManager 150000),
                 Just (Just 10000, prepareHyperVergeHttpManager 10000),
-                Just (Just 10000, prepareJourneyMonitoringHttpManager 10000)
+                Just (Just 10000, prepareJourneyMonitoringHttpManager 10000),
+                Just (Just 60000, prepareChatCompletionHttpManager 60000)
               ]
 
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         pure flowRt'
-    let timeoutMiddleware = UE.timeoutEvent flowRt appEnv (responseLBS status408 [] "") appCfg.incomingAPIResponseTimeout
-    runSettings settings $ timeoutMiddleware (App.run (App.EnvR flowRt' appEnv))
+    let timeoutMiddleware = UE.timeoutEvent flowRt appEnv appCfg.incomingAPIResponseTimeout
+    runSettings settings $ timeoutMiddleware $ UE.addRequestIdToResponse (App.run (App.EnvR flowRt' appEnv))
+
+prepareChatCompletionHttpManager :: Int -> HashMap.HashMap Text Http.ManagerSettings
+prepareChatCompletionHttpManager timeout =
+  HashMap.singleton chatCompletionManagerKey $
+    Http.tlsManagerSettings {Http.managerResponseTimeout = Http.responseTimeoutMicro (timeout * 1000)}
 
 convertToHashMap :: Map.Map String Http.ManagerSettings -> HashMap.HashMap Text Http.ManagerSettings
 convertToHashMap = HashMap.fromList . map convert . Map.toList

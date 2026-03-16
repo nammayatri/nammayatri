@@ -275,7 +275,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
               throwImageError req.imageId $ ImageDocumentNumberMismatch (maybe "null" maskText extractRCNumber) (maybe "null" maskText rcNumber)
           Nothing -> throwImageError req.imageId ImageExtractionFailed
   whenJust mbFleetOwnerId $ \fleetOwnerId -> do
-    Redis.set (makeFleetOwnerKey req.vehicleRegistrationCertNumber) fleetOwnerId.getId
+    Redis.setExp (makeFleetOwnerKey req.vehicleRegistrationCertNumber) fleetOwnerId.getId 3600 -- 1 hour; temporary mapping for async RC verification callback
     -- Optionally update existing RC's fleetOwnerId in DB if enabled via transporterConfig
     updateExistingRCFleetOwnerIfEnabled transporterConfig req.vehicleRegistrationCertNumber fleetOwnerId
   encryptedRC <- encrypt req.vehicleRegistrationCertNumber

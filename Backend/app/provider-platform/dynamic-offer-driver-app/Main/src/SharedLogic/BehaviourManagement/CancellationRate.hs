@@ -184,10 +184,18 @@ updateDriverCancellationPercentageTagsDaily mocId driverId cancellationRates = d
         fortnightlyTag = Yudhishthira.mkTagNameValue (LYT.TagName "driver_cancellation_14") (LYT.NumberValue $ fromIntegral cancellationRates.fortnightly)
         monthlyTag = Yudhishthira.mkTagNameValue (LYT.TagName "driver_cancellation_28") (LYT.NumberValue $ fromIntegral cancellationRates.monthly)
 
-    mbDailyTag <- catch (YudhishthiraFlow.verifyTag (cast mocId) dailyTag) (\(_ :: SomeException) -> pure Nothing)
-    mbWeeklyTag <- catch (YudhishthiraFlow.verifyTag (cast mocId) weeklyTag) (\(_ :: SomeException) -> pure Nothing)
-    mbFortnightlyTag <- catch (YudhishthiraFlow.verifyTag (cast mocId) fortnightlyTag) (\(_ :: SomeException) -> pure Nothing)
-    mbMonthlyTag <- catch (YudhishthiraFlow.verifyTag (cast mocId) monthlyTag) (\(_ :: SomeException) -> pure Nothing)
+    mbDailyTag <- catch (YudhishthiraFlow.verifyTag (cast mocId) dailyTag) $ \(e :: SomeException) -> do
+      logWarning $ "Failed to verify daily cancellation tag for driver " <> driverId.getId <> ": " <> show e
+      pure Nothing
+    mbWeeklyTag <- catch (YudhishthiraFlow.verifyTag (cast mocId) weeklyTag) $ \(e :: SomeException) -> do
+      logWarning $ "Failed to verify weekly cancellation tag for driver " <> driverId.getId <> ": " <> show e
+      pure Nothing
+    mbFortnightlyTag <- catch (YudhishthiraFlow.verifyTag (cast mocId) fortnightlyTag) $ \(e :: SomeException) -> do
+      logWarning $ "Failed to verify fortnightly cancellation tag for driver " <> driverId.getId <> ": " <> show e
+      pure Nothing
+    mbMonthlyTag <- catch (YudhishthiraFlow.verifyTag (cast mocId) monthlyTag) $ \(e :: SomeException) -> do
+      logWarning $ "Failed to verify monthly cancellation tag for driver " <> driverId.getId <> ": " <> show e
+      pure Nothing
 
     let dailyTagWithExpiry = Yudhishthira.addTagExpiry dailyTag (mbDailyTag >>= \tag -> tag.validity) now
         weeklyTagWithExpiry = Yudhishthira.addTagExpiry weeklyTag (mbWeeklyTag >>= \tag -> tag.validity) now

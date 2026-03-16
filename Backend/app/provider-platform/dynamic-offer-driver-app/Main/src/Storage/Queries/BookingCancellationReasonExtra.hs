@@ -8,6 +8,7 @@ import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import Domain.Types.Person
 import qualified EulerHS.Language as L
 import EulerHS.Prelude as P hiding (null, (^.))
+import Utils.SlowQueryLog (timedRunDB)
 import Kernel.Beam.Functions
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -22,7 +23,7 @@ import Storage.Queries.OrphanInstances.BookingCancellationReason ()
 findAllCancelledByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m Int
 findAllCancelledByDriverId driverId = do
   dbConf <- getReplicaBeamConfig
-  res <- L.runDB dbConf $
+  res <- timedRunDB "booking_cancellation_reason" "findAllCancelledByDriverId" $ L.runDB dbConf $
     L.findRows $
       B.select $
         B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $

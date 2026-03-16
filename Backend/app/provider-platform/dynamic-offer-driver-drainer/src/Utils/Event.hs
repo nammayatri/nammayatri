@@ -100,3 +100,40 @@ driver_schema_variation_alert =
   counter #driver_schema_variation_alert
     .& lbl @"model" @Text
     .& build
+
+driver_drainer_batch_size :: PromRep 'Histogram "driver_drainer_batch_size" '[]
+driver_drainer_batch_size =
+  histogram #driver_drainer_batch_size
+    .& build
+
+driver_drainer_errors_total :: PromRep 'Counter "driver_drainer_errors_total" '[]
+driver_drainer_errors_total =
+  counter #driver_drainer_errors_total
+    .& build
+
+driver_drainer_lag_seconds :: PromRep 'Gauge "driver_drainer_lag_seconds" '[]
+driver_drainer_lag_seconds =
+  gauge #driver_drainer_lag_seconds
+    .& build
+
+driver_drainer_items_pending :: PromRep 'Gauge "driver_drainer_items_pending" '[]
+driver_drainer_items_pending =
+  gauge #driver_drainer_items_pending
+    .& build
+
+driver_dlq_item_added :: PromRep 'Counter "driver_dlq_item_added" '[ '("action", Text)]
+driver_dlq_item_added =
+  counter #driver_dlq_item_added
+    .& lbl @"action" @Text
+    .& build
+
+driver_backpressure_activated :: PromRep 'Gauge "driver_backpressure_activated" '[]
+driver_backpressure_activated =
+  gauge #driver_backpressure_activated
+    .& build
+
+driver_batch_retry_attempt :: PromRep 'Counter "driver_batch_retry_attempt" '[ '("action", Text)]
+driver_batch_retry_attempt =
+  counter #driver_batch_retry_attempt
+    .& lbl @"action" @Text
+    .& build

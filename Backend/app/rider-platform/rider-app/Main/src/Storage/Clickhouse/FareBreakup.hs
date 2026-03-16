@@ -64,3 +64,18 @@ findFareBreakupByBookingIdAndDescription bookingId description createdAt = do
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fareBreakupTTable)
   return $ listToMaybe fareBreakup
+
+findAllFareBreakupsByBookingId ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DB.Booking ->
+  UTCTime ->
+  m [FareBreakup]
+findAllFareBreakupsByBookingId bookingId createdAt =
+  CH.findAll $
+    CH.select $
+      CH.filter_
+        ( \fareBreakup ->
+            fareBreakup.bookingId CH.==. bookingId
+              CH.&&. fareBreakup.date >=. addUTCTime (-120) createdAt
+        )
+        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fareBreakupTTable)

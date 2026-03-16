@@ -40,8 +40,17 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QM
 
 whatsAppOptAPI :: ServiceFlow m r => Id Merchant -> Id DMOC.MerchantOperatingCity -> Whatsapp.OptApiReq -> m APISuccess
 whatsAppOptAPI merchantId merchantOperatingCityId req = do
-  void $ Whatsapp.whatsAppOptApi handler req
-  return Success
+  merchantConfig <-
+    QMSUC.findByMerchantOperatingCityId merchantOperatingCityId
+      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+  let whatsappServiceProviders = merchantConfig.whatsappProvidersPriorityList
+  if null whatsappServiceProviders
+    then do
+      logWarning $ "WhatsApp opt-in disabled: no providers configured for merchantOperatingCityId:" <> merchantOperatingCityId.getId
+      return Success
+    else do
+      void $ Whatsapp.whatsAppOptApi handler req
+      return Success
   where
     handler = Whatsapp.WhatsappHandler {..}
 
@@ -49,9 +58,7 @@ whatsAppOptAPI merchantId merchantOperatingCityId req = do
       merchantConfig <-
         QMSUC.findByMerchantOperatingCityId merchantOperatingCityId
           >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
-      let whatsappServiceProviders = merchantConfig.whatsappProvidersPriorityList
-      when (null whatsappServiceProviders) $ throwError $ InternalError ("No whatsapp service provider configured for the merchant, merchantOperatingCityId:" <> merchantOperatingCityId.getId)
-      pure whatsappServiceProviders
+      pure merchantConfig.whatsappProvidersPriorityList
 
     getProviderConfig provider = do
       merchantWhatsappServiceConfig <-

@@ -32,4 +32,4 @@ cautioInstallationStatus url req = do
   let proxy = Proxy @CautioInstallationStatus
       eulerClient = Euler.client proxy req
   callAPI url eulerClient "installation-status" proxy
-    >>= fromEitherM (\err -> InternalError $ "Failed to call " <> "cautio installation" <> " API: " <> show err)
+    >>= fromEitherM (\_err -> InternalError "Failed to call cautio installation API")

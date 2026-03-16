@@ -47,6 +47,7 @@ where
 
 import qualified Control.Monad.Catch as C
 import qualified Data.List.NonEmpty as NE
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import Kernel.External.Maps as Maps
@@ -91,7 +92,7 @@ data RideInterpolationHandler person m = RideInterpolationHandler
 wrapDistanceCalculationImplementation :: (C.MonadMask m, Log m, HedisFlow m r) => Id person -> m () -> m ()
 wrapDistanceCalculationImplementation driverId action =
   action `C.catchAll` \e -> C.mask_ $ do
-    logError $ "failed distance calculation: " <> show e
+    logError $ "failed distance calculation for driverId=" <> driverId.getId <> ": " <> show e
     let oneDayInSeconds = 60 * 60 * 24
     Hedis.setExp (getFailedDistanceCalculationKey driverId) () oneDayInSeconds
 
@@ -206,9 +207,7 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
           currSnapToRoadState <- processSnapToRoadCall
           updateDistance driverId currSnapToRoadState.distanceTravelled currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls currSnapToRoadState.numberOfSelfTuned calculationFailed
           when isTollApplicable $ do
-            mbTollCharges :: Maybe HighPrecMoney <- Redis.safeGet (onRideTollChargesKey driverId)
-            tollNames :: [Text] <- Redis.lRange (onRideTollNamesKey driverId) 0 (-1)
-            tollIds :: [Text] <- Redis.lRange (onRideTollIdsKey driverId) 0 (-1)
+            (mbTollCharges, tollNames, tollIds) <- fetchTollDataConcurrently driverId
             whenJust mbTollCharges $ \tollCharges -> updateTollChargesAndNamesAndIds driverId tollCharges tollNames tollIds
         else do
           (distanceToBeUpdated, tollChargesInfo) <- getTravelledDistanceAndTollInfo driverId estDist ((,,,False,Just False) <$> estTollCharges <*> estTollNames <*> estTollIds)
@@ -283,10 +282,15 @@ recalcDistanceBatchStep RideInterpolationHandler {..} isMeterRide distanceCalcRe
   batchWaypoints <- getFirstNwaypoints driverId (maxSnapToRoadReqPoints + 1)
   (distance, interpolatedWps, servicesUsed, snapToRoadFailed, mbTollChargesAndNames) <- interpolatePointsAndCalculateDistanceAndToll distanceCalcReferencePoint' rectifyDistantPointsFailureUsing isTollApplicable driverId batchWaypoints
   whenJust mbTollChargesAndNames $ \(tollCharges, tollNames, tollIds, _, _) -> do
-    void $ Redis.rPushExp (onRideTollNamesKey driverId) tollNames 21600
-    void $ Redis.rPushExp (onRideTollIdsKey driverId) tollIds 21600
-    void $ Redis.incrby (onRideTollChargesKey driverId) (round tollCharges.getHighPrecMoney)
-    Redis.expire (onRideTollChargesKey driverId) 21600 -- 6 hours
+    -- Fire all 3 independent toll Redis writes concurrently, then await
+    namesFork <- awaitableFork "tollNamesWrite" $ Redis.rPushExp (onRideTollNamesKey driverId) tollNames 21600
+    idsFork <- awaitableFork "tollIdsWrite" $ Redis.rPushExp (onRideTollIdsKey driverId) tollIds 21600
+    chargesFork <- awaitableFork "tollChargesWrite" $ do
+      void $ Redis.incrby (onRideTollChargesKey driverId) (round tollCharges.getHighPrecMoney)
+      Redis.expire (onRideTollChargesKey driverId) 21600 -- 6 hours
+    void $ L.await Nothing namesFork
+    void $ L.await Nothing idsFork
+    void $ L.await Nothing chargesFork
   whenJust (nonEmpty interpolatedWps) $ \nonEmptyInterpolatedWps -> do
     addInterpolatedPoints driverId nonEmptyInterpolatedWps
   when snapToRoadFailed $ do
@@ -294,18 +298,42 @@ recalcDistanceBatchStep RideInterpolationHandler {..} isMeterRide distanceCalcRe
       addInterpolatedPoints driverId nonEmptyBatchWaypoints
   unless isMeterRide $ deleteFirstNwaypoints driverId maxSnapToRoadReqPoints -- delete the batch irrespective of the snapToRoadFailed
   unless snapToRoadFailed $ do
-    logInfo $ mconcat ["points interpolation: input=", show batchWaypoints, "; output=", show interpolatedWps]
-    logInfo $ mconcat ["calculated distance for ", show (length interpolatedWps), " points, ", "distance is ", show distance]
+    logDebug $ mconcat ["points interpolation: inputCount=", show (length batchWaypoints), "; outputCount=", show (length interpolatedWps)]
+    logDebug $ mconcat ["calculated distance for ", show (length interpolatedWps), " points, ", "distance is ", show distance]
     when isTollApplicable $ do
-      mbTollCharges :: Maybe HighPrecMoney <- Redis.safeGet (onRideTollChargesKey driverId)
-      tollNames :: [Text] <- Redis.lRange (onRideTollNamesKey driverId) 0 (-1)
-      tollIds :: [Text] <- Redis.lRange (onRideTollIdsKey driverId) 0 (-1)
+      (mbTollCharges, tollNames, tollIds) <- fetchTollDataConcurrently driverId
       whenJust mbTollCharges $ \tollCharges -> updateTollChargesAndNamesAndIds driverId tollCharges tollNames tollIds
   let newReferencePoint = if snapToRoadFailed then Nothing else lastMaybe interpolatedWps
   pure (distance, newReferencePoint, startPatching, servicesUsed, snapToRoadFailed)
   where
     lastMaybe [] = Nothing
     lastMaybe xs = Just $ last xs
+
+-- | Fetch toll charges, names, and IDs concurrently (3 Redis calls in parallel instead of sequential)
+fetchTollDataConcurrently :: (CacheFlow m r, MonadFlow m) => Id person -> m (Maybe HighPrecMoney, [Text], [Text])
+fetchTollDataConcurrently driverId = do
+  tollChargesFork <- awaitableFork "tollCharges" $ do
+    res :: Maybe HighPrecMoney <- Redis.safeGet (onRideTollChargesKey driverId)
+    pure res
+  tollNamesFork <- awaitableFork "tollNames" $ do
+    res :: [Text] <- Redis.lRange (onRideTollNamesKey driverId) 0 (-1)
+    pure res
+  tollIdsFork <- awaitableFork "tollIds" $ do
+    res :: [Text] <- Redis.lRange (onRideTollIdsKey driverId) 0 (-1)
+    pure res
+  mbTollCharges <-
+    L.await Nothing tollChargesFork >>= \case
+      Left err -> logWarning ("Redis error fetching toll charges: " <> show err) >> pure Nothing
+      Right val -> pure val
+  tollNames <-
+    L.await Nothing tollNamesFork >>= \case
+      Left err -> logWarning ("Redis error fetching toll names: " <> show err) >> pure []
+      Right val -> pure val
+  tollIds <-
+    L.await Nothing tollIdsFork >>= \case
+      Left err -> logWarning ("Redis error fetching toll IDs: " <> show err) >> pure []
+      Right val -> pure val
+  pure (mbTollCharges, tollNames, tollIds)
 
 redisOnRideKeysCleanup :: (HedisFlow m env) => Id person -> m ()
 redisOnRideKeysCleanup driverId = do

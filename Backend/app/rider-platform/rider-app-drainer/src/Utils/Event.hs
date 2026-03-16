@@ -100,3 +100,40 @@ schema_variation_alert =
   counter #schema_variation_alert
     .& lbl @"model" @Text
     .& build
+
+drainer_batch_size :: PromRep 'Histogram "drainer_batch_size" '[]
+drainer_batch_size =
+  histogram #drainer_batch_size
+    .& build
+
+drainer_errors_total :: PromRep 'Counter "drainer_errors_total" '[]
+drainer_errors_total =
+  counter #drainer_errors_total
+    .& build
+
+drainer_lag_seconds :: PromRep 'Gauge "drainer_lag_seconds" '[]
+drainer_lag_seconds =
+  gauge #drainer_lag_seconds
+    .& build
+
+drainer_items_pending :: PromRep 'Gauge "drainer_items_pending" '[]
+drainer_items_pending =
+  gauge #drainer_items_pending
+    .& build
+
+dlq_item_added :: PromRep 'Counter "dlq_item_added" '[ '("action", Text)]
+dlq_item_added =
+  counter #dlq_item_added
+    .& lbl @"action" @Text
+    .& build
+
+backpressure_activated :: PromRep 'Gauge "backpressure_activated" '[]
+backpressure_activated =
+  gauge #backpressure_activated
+    .& build
+
+batch_retry_attempt :: PromRep 'Counter "batch_retry_attempt" '[ '("action", Text)]
+batch_retry_attempt =
+  counter #batch_retry_attempt
+    .& lbl @"action" @Text
+    .& build

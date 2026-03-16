@@ -17,6 +17,7 @@ module Main where
 
 import API
 import qualified "mock-google" App as MockGoogle
+import HedisSpec
 import Control.Lens ((.~))
 import EulerHS.Prelude hiding ((.~))
 import Kernel.Utils.Common
@@ -46,6 +47,7 @@ specs appCfg appEnv = do
     testGroup
       "Unit tests"
       [ locationUpdatesTree appEnv,
+        hedisTests appEnv,
         apiTreeSnap,
         apiTreeOsrm
       ]

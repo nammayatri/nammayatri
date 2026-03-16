@@ -36,7 +36,8 @@ findOneConfig merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDimen
       allLogics <- getConfigLogic merchantOpCityId mbVersion cfgDomain
       mbConfig <- getConfigFromDBFunc
       config <- maybe (return Nothing) (\cfg -> Just <$> processConfig allLogics mbVersion extraDimensionsWithTime cfg) mbConfig
-      cacheConfig (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion) config
+      whenJust config $ \c ->
+        cacheConfig (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion) c
       return config
 
 findAllConfigs :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> m [a] -> m [a]
@@ -70,7 +71,8 @@ findOneConfigWithCacheKey merchantOpCityId cfgDomain mbConfigInExperimentVersion
       allLogics <- getConfigLogic merchantOpCityId mbVersion cfgDomain
       mbConfig <- getConfigFromDBFunc
       config <- maybe (return Nothing) (\cfg -> Just <$> processConfig allLogics mbVersion extraDimensionsWithTime cfg) mbConfig
-      cacheConfig (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfigWithPrefix cacheKey mbVersion) config
+      whenJust config $ \c ->
+        cacheConfig (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfigWithPrefix cacheKey mbVersion) c
       return config
 
 findAllConfigsWithCacheKey :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> m [a] -> Text -> m [a]
@@ -304,5 +306,6 @@ findOneUiConfig merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDim
         (Just oldCfg, Just newValue) -> do
           return $ Just $ setField @"config" oldCfg newValue
         _ -> return Nothing
-      cacheConfig (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion) finalConfig
+      whenJust finalConfig $ \c ->
+        cacheConfig (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion) c
       return $ (,) <$> finalConfig <*> mbVersion

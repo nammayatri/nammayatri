@@ -14,6 +14,7 @@ import Domain.Types.Person as Person
 import Domain.Types.Plan as P
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (find, foldl, foldl', id, map)
+import Utils.SlowQueryLog (timedRunDB)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Types as Maps
@@ -44,7 +45,7 @@ getEnabledAt driverId = do
 findAllDriverIdExceptProvided :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> [Id Driver] -> m [Id Driver]
 findAllDriverIdExceptProvided merchant opCity driverIdsToBeExcluded = do
   dbConf <- getReplicaBeamConfig
-  result <- L.runDB dbConf $
+  result <- timedRunDB "driver_information" "findAllDriverIdExceptProvided" $ L.runDB dbConf $
     L.findRows $
       B.select $
         B.filter_'
@@ -245,7 +246,7 @@ findAllWithLimitOffsetByMerchantId ::
   m [(Person, DriverInformation)]
 findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset merchantId = do
   dbConf <- getReplicaBeamConfig
-  res <- L.runDB dbConf $
+  res <- timedRunDB "driver_information" "findAllWithLimitOffsetByMerchantId" $ L.runDB dbConf $
     L.findRows $
       B.select $
         B.limit_ (fromMaybe 100 mbLimit) $
@@ -297,7 +298,7 @@ countDrivers :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m 
 countDrivers merchantID =
   getResults <$> do
     dbConf <- getReplicaBeamConfig
-    res <- L.runDB dbConf $
+    res <- timedRunDB "driver_information" "countDrivers" $ L.runDB dbConf $
       L.findRows $
         B.select $
           B.aggregate_ (\(driverInformation, _) -> (B.group_ (BeamDI.active driverInformation), B.as_ @Int B.countAll_)) $
@@ -471,7 +472,7 @@ findAllByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m
 findAllByDriverIds driverIds = do
   dbConf <- getReplicaBeamConfig
   res <-
-    L.runDB dbConf $
+    timedRunDB "driver_information" "findAllByDriverIds" $ L.runDB dbConf $
       L.findRows $
         B.select $
           B.filter_'

@@ -83,6 +83,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.SessionizerMetrics.Prometheus.Metrics as ObsMetrics
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PersonWallet as DPersonWallet
@@ -534,6 +535,8 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
     Nothing -> throwError $ InternalError "Order Contents not found."
     Just osr' -> pure osr'
   (orderShortId, status) <- getOrderData osr
+  let statusLabel = show status
+  ObsMetrics.incrementPaymentCounter (getShortId merchantShortId) "juspay" statusLabel
   logDebug $ "order short Id from Response bap webhook: " <> show orderShortId
   whenJust mbServiceType $ \paymentServiceType -> do
     Redis.whenWithLockRedis (mkOrderStatusCheckKey orderShortId status) 60 $ do

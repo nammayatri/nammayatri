@@ -136,6 +136,7 @@ import Tools.Metrics (CoreMetrics)
 import qualified Tools.Notifications as Notify
 import TransactionLogs.PushLogs
 import TransactionLogs.Types
+import Utils.CircuitBreaker (mkDefaultConfig, withCircuitBreakerAndRetry)
 import Utils.Common.Cac.KeyNameConstants
 
 callOnSelectV2 ::
@@ -712,8 +713,8 @@ sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
       m ACL.DOnSelectReq
     buildOnSelectReq org vehicleServiceTierItem searchRequest quotes isValueAddNP = do
       now <- getCurrentTime
-      logDebug $ "on_select: searchRequest " <> show searchRequest
-      logDebug $ "on_select: quotes " <> show quotes
+      logDebug $ "on_select: searchRequestId=" <> searchRequest.id.getId
+      logDebug $ "on_select: quoteId=" <> quotes.id.getId
       let transporterInfo =
             ACL.TransporterInfo
               { merchantShortId = org.shortId,
@@ -1250,4 +1251,5 @@ callBecknAPIWithSignature' ::
 callBecknAPIWithSignature' merchantId a b c d e req' = do
   fork ("sending " <> show b <> ", pushing ondc logs") do
     void $ pushLogs b (toJSON req') merchantId.getId "MOBILITY"
-  Beckn.callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing b c d e req'
+  withCircuitBreakerAndRetry (mkDefaultConfig "beckn-bap") $
+    Beckn.callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing b c d e req'

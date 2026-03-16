@@ -134,7 +134,7 @@ findFullSpecialLocationsByMerchantOperatingCityId mocId = do
     Just a -> pure a
     Nothing -> do
       specialLocations <- findFullSpecialLocationsByMerchantOperatingCityId' mocId
-      Hedis.set fullSpecialLocationRedisKey specialLocations
+      Hedis.setExp fullSpecialLocationRedisKey specialLocations 1800 -- 30 minutes; config cache
       pure specialLocations
 
 findFullSpecialLocationsByMerchantOperatingCityId' :: (Transactionable m, CacheFlow m r) => Text -> m [SpecialLocationFull]
@@ -182,7 +182,7 @@ findSpecialLocationsWarriorByMerchantOperatingCityId mocId category = do
     Just a -> pure a
     Nothing -> do
       specialLocations <- findSpecialLocationsWarriorByMerchantOperatingCityId' mocId category
-      Hedis.set (specialLocationWarriorRedisKey category) specialLocations
+      Hedis.setExp (specialLocationWarriorRedisKey category) specialLocations 1800 -- 30 minutes; config cache
       pure specialLocations
 
 findSpecialLocationsWarriorByMerchantOperatingCityId' :: (Transactionable m, CacheFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> m [D.SpecialLocation]

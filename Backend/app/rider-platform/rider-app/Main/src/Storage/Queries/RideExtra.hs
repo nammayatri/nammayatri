@@ -49,6 +49,7 @@ import qualified Storage.Queries.LocationMapping as QLM
 import Storage.Queries.OrphanInstances.Ride ()
 import Storage.Queries.Person ()
 import Tools.Metrics (CoreMetrics)
+import Utils.SlowQueryLog (timedRunDB)
 
 createRide' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int) => Ride -> m ()
 createRide' ride = createWithKV ride >> appendByDriverPhoneNumber ride
@@ -275,7 +276,7 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
             _ -> pure []
         _ -> pure []
       dbConf <- getReplicaBeamConfig
-      res <- L.runDB dbConf $
+      res <- timedRunDB "ride" "findAllRideItems" $ L.runDB dbConf $
         L.findRows $
           B.select $
             B.limit_ (fromIntegral limitVal) $

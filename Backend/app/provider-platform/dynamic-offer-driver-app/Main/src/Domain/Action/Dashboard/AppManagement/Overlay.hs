@@ -90,11 +90,15 @@ postOverlayDelete merchantShortId opCity req = do
 -- ============================================
 -------------- list overlay -------------------
 
-getOverlayList :: ShortId DM.Merchant -> Context.City -> Flow DAO.ListOverlayResp
-getOverlayList merchantShortId opCity = do
+getOverlayList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow DAO.ListOverlayResp
+getOverlayList merchantShortId opCity mbLimit mbOffset = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  SQMO.findAllByLanguage merchantOpCityId ENGLISH >>= mapM buildListOverlayResp
+  allOverlays <- SQMO.findAllByLanguage merchantOpCityId ENGLISH
+  let limit = min (fromMaybe 50 mbLimit) 500
+      offset = fromMaybe 0 mbOffset
+      paginatedOverlays = take limit . drop offset $ allOverlays
+  mapM buildListOverlayResp paginatedOverlays
   where
     buildListOverlayResp _overlay@DTMO.Overlay {..} = do
       return DAO.OverlayItem {..}

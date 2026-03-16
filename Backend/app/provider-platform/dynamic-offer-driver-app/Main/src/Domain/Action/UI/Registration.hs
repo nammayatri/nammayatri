@@ -76,6 +76,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
+import Utils.Common.Sanitize (sanitizeShowError)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
@@ -91,6 +92,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
+import qualified Tools.Notifications as Notify
 import qualified Tools.Event as TE
 import Tools.MarketingEvents as TM
 import Tools.Whatsapp as Whatsapp
@@ -547,15 +549,19 @@ verify tokenId req = do
   QR.deleteByPersonIdExceptNew person.id tokenId
   _ <- QR.setVerified True tokenId
   _ <- QP.updateDeviceToken deviceToken person.id
+  Notify.resetStaleTokenCounter person.id
   when isNewPerson $
     QP.setIsNewFalse False person.id
   updPers <- QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
   decPerson <- decrypt updPers
   unless (decPerson.whatsappNotificationEnrollStatus == req.whatsappNotificationEnroll && isJust req.whatsappNotificationEnroll) $ do
-    fork "whatsapp_opt_api_call" $ do
-      case decPerson.mobileNumber of
-        Nothing -> throwError $ AuthBlocked "Mobile Number is null"
-        Just mobileNo -> callWhatsappOptApi mobileNo person.id req.whatsappNotificationEnroll person.merchantId (Id merchantOperatingCityId)
+    fork "whatsapp_opt_api_call" $
+      ( case decPerson.mobileNumber of
+          Nothing -> logWarning "WhatsApp opt-in skipped: mobile number is null"
+          Just mobileNo -> callWhatsappOptApi mobileNo person.id req.whatsappNotificationEnroll person.merchantId (Id merchantOperatingCityId)
+      )
+        `catch` \(e :: SomeException) ->
+          logWarning $ "WhatsApp opt-in failed (best-effort, non-critical): " <> sanitizeShowError e
   let personAPIEntity = SP.makePersonAPIEntity decPerson
   return $ AuthVerifyRes token personAPIEntity
   where

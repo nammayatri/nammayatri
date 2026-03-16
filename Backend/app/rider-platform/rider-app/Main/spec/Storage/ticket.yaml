@@ -172,6 +172,14 @@ TicketPlace:
       params: [recommend]
       where: id
 
+  cachedQueries:
+    getTicketPlaces:
+      keyParams:
+        - merchantOperatingCityId: Id MerchantOperatingCity
+      dbQuery: getTicketPlaces
+      dbQueryParams:
+        - merchantOperatingCityId
+
 TicketService:
   tableName: ticket_service
 

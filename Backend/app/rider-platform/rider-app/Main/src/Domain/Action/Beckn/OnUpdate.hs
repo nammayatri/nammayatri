@@ -573,8 +573,10 @@ onUpdate = \case
     QRide.updateDestinationReachedAt (Just destinationReachedTime) ride.id
     allBookingParty <- QBPL.findAllActiveByBookingId booking.id
     let allBookingPartyIds = map (.partyId) allBookingParty
-    allParty <- catMaybes <$> mapM QPerson.findById (nub $ booking.riderId : allBookingPartyIds)
-    mapM_ QPFS.clearCache (nub $ booking.riderId : allBookingPartyIds)
+    -- Fixed N+1: was querying person per item, now batched
+    let uniquePartyIds = nub $ booking.riderId : allBookingPartyIds
+    allParty <- QPerson.findAllByIds uniquePartyIds
+    mapM_ QPFS.clearCache uniquePartyIds
     Notify.notifyToAllBookingParties allParty booking.tripCategory "DRIVER_HAS_REACHED_DESTINATION"
   OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq {..} -> do
     QRide.updateEstimatedEndTimeRange (Just estimatedEndTimeRange) ride.id
@@ -582,7 +584,8 @@ onUpdate = \case
     when isParcelImageUploaded $ do
       allBookingParty <- QBPL.findAllActiveByBookingId booking.id
       let allBookingPartyIds = map (.partyId) allBookingParty
-      allParty <- catMaybes <$> mapM QPerson.findById (nub $ booking.riderId : allBookingPartyIds)
+      -- Fixed N+1: was querying person per item, now batched
+      allParty <- QPerson.findAllByIds (nub $ booking.riderId : allBookingPartyIds)
       Notify.notifyToAllBookingParties allParty booking.tripCategory "PARCEL_IMAGE_UPLOADED"
 
 validateRequest ::
