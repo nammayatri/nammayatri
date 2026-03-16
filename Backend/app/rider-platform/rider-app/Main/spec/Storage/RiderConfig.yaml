@@ -57,7 +57,7 @@ RiderConfig:
       notificationTitle: Text
       notificationMessage: Text
     ExternalSOSFlow:
-      enum: "ERSS,GJ112"
+      enum: "ERSS,GJ112,Trinity"
     ExternalSOSTriggerSource:
       enum: "FRONTEND,DASHBOARD"
     ExternalSOSConfig:

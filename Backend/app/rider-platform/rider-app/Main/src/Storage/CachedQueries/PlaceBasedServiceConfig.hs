@@ -144,3 +144,4 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
   SOSServiceConfig sosCfg -> case sosCfg of
     SOSInterface.ERSSConfig _ -> SOSService SOS.ERSS
     SOSInterface.GJ112Config _ -> SOSService SOS.GJ112
+    SOSInterface.TrinityConfig _ -> SOSService SOS.Trinity
