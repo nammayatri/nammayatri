@@ -66,6 +66,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Offer as SOffer
 import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
 import qualified SharedLogic.Utils as SLUtils
+import Tools.Metrics.BAPMetrics (HasBAPMetrics, incrementPassWebhookDuplicateCounter)
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -631,7 +632,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
 
 -- Webhook Handler for Pass Payment Status Updates
 passOrderStatusHandler ::
-  (HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools], MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
+  (HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools], HasBAPMetrics m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
   Id.Id DOrder.PaymentOrder ->
   Id.Id DM.Merchant ->
   Payment.TransactionStatus ->
@@ -644,6 +645,7 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
     Just existingPayment
       | existingPayment.status `elem` terminalPassStatuses -> do
           logInfo $ "Duplicate webhook detected for orderId: " <> paymentOrderId.getId <> " — already in terminal status: " <> show existingPayment.status
+          incrementPassWebhookDuplicateCounter (show existingPayment.status)
           mbPass <- QPurchasedPass.findById existingPayment.purchasedPassId
           let passId = maybe Nothing (Just . (.id.getId)) mbPass
               paymentId = Just existingPayment.id.getId
