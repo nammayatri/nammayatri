@@ -14,7 +14,6 @@
 
 module SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout where
 
-import qualified Data.Aeson as A
 import Data.Time (addDays, utctDay)
 import qualified Domain.Action.UI.Payout as DAP
 import qualified Domain.Types.DailyStats as DS
@@ -40,8 +39,6 @@ import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobInWithCheck)
 import SharedLogic.Allocator
-import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
-import SharedLogic.Finance.Wallet (createWalletEntryDelta, walletReferenceD2DReferral)
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -51,7 +48,6 @@ import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DailyStatsExtra as QDSE
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.FleetDriverAssociationExtra as QFDAE
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QV
 import qualified Tools.Payout as TP
@@ -189,6 +185,8 @@ callPayoutHandler DS.DailyStats {..} driverInfo payoutVpa payoutConfigList statu
   let payoutConfig' = find (\payoutConfig -> payoutConfig.vehicleCategory == vehicleCategory) payoutConfigList
   case payoutConfig' of
     Just payoutConfig -> do
+      when (payoutConfig.d2dPayoutType /= DPC.DIRECT_PAYOUT) $ do
+        throwError $ InternalError "DriverReferralPayout: d2dPayoutType must be DIRECT_PAYOUT for scheduler job"
       uid <- generateGUID
       person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       merchantOperatingCity <- CQMOC.findById (cast person.merchantOperatingCityId) >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
@@ -216,42 +214,7 @@ callPayoutHandler DS.DailyStats {..} driverInfo payoutVpa payoutConfigList statu
                         pure registrationAmount
                       _ -> pure 0.0
                   else pure 0.0
-              let d2dAmount = d2dReferralEarnings
-                  customerAmount = referralEarnings
-              -- Handle d2d rewards based on d2dPayoutType
-              when (payoutConfig.d2dPayoutType == DPC.WALLET && d2dAmount > 0) $ do
-                -- Credit d2d earnings to driver wallet, not via bank payout
-                merchantOpCityId <-
-                  fromMaybeM
-                    (InternalError "merchantOperatingCityId missing in DailyStats for d2d wallet entry")
-                    dailyStat.merchantOperatingCityId
-                let metadata =
-                      A.object
-                        [ "d2dReferralEarnings" A..= d2dAmount,
-                          "dailyStatsId" A..= id
-                        ]
-                mbFleetDriverAssociation <- QFDAE.findByDriverId driverId True
-                let (counterparty, walletOwnerId) = case mbFleetDriverAssociation of
-                      Just fda -> (counterpartyFleetOwner, fda.fleetOwnerId)
-                      Nothing -> (counterpartyDriver, driverId.getId)
-                void $
-                  createWalletEntryDelta
-                    counterparty
-                    walletOwnerId
-                    d2dAmount
-                    dailyStat.currency
-                    person.merchantId.getId
-                    merchantOpCityId.getId
-                    walletReferenceD2DReferral
-                    id
-                    (Just metadata)
-                    >>= fromEitherM (\err -> InternalError ("Failed to create d2d wallet entry: " <> show err))
-
-              let directBase =
-                    case payoutConfig.d2dPayoutType of
-                      DPC.NO_PAYOUT -> customerAmount
-                      DPC.DIRECT_PAYOUT -> customerAmount + d2dAmount
-                      DPC.WALLET -> customerAmount
+              let directBase = d2dReferralEarnings + referralEarnings
                   entityName = DLP.DRIVER_DAILY_STATS
                   amount = directBase + refundRegistrationAmt
               if directBase <= payoutConfig.thresholdPayoutAmountPerPerson

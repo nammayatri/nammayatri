@@ -138,6 +138,12 @@ DailyStats:
       where:
         and: [driverId, merchantLocalDate]
 
+    updateD2dReferralCount:
+      kvFunction: updateOneWithKV
+      params: [d2dReferralCounts]
+      where:
+        and: [driverId, merchantLocalDate]
+
     updatePayoutStatusById:
       kvFunction: updateOneWithKV
       params: [payoutStatus]
