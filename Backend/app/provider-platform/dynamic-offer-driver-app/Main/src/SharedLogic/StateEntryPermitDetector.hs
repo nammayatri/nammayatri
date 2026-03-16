@@ -30,8 +30,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.ComputeIntersection
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantState as CQMS
+import qualified Domain.Types.Ride as DRide
 import Storage.Queries.Geometry (findGeometriesContainingGps, findGeometryById)
-import Storage.Queries.StateEntryPermitCharges (findByPrimaryKey)
 import Storage.Queries.StateEntryPermitChargesExtra (findAllStateEntryPermitCharges)
 
 -- | Convert stored bbox points (topLeft, topRight, bottomRight, bottomLeft) into four sides.
@@ -220,33 +220,41 @@ getStateEntryPermitInfoOnRoute merchantOperatingCityId _mbDriverId route =
                 then pure $ Just (total, names, ids)
                 else pure Nothing
 
--- | At end ride: compare estimated SEPC IDs vs detected IDs. For any estimated ID not in detected,
--- look up SEPC by ID and include in the result (so we can apply estimated-for-missing logic upstream).
--- No Redis pending key for SEPC; this is pure comparison + DB lookup.
+-- | At end ride: reconcile estimated vs detected SEPC IDs and log the diff for debugging.
+-- Returns (pendingIds, extraIds) where:
+--   pendingIds = in estimate but NOT detected (expected state crossings that were missed)
+--   extraIds   = detected but NOT in estimate (unexpected extra state crossings)
+-- No charge amounts are computed here; charge decisions use ride fields directly
+-- (estimatedStateEntryPermitCharges / stateEntryPermitCharges set during ride).
+-- No Redis pending key for SEPC (unlike toll).
 checkAndValidatePendingStateEntryPermits ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HasField "hedisMigrationStage" r Bool) =>
-  Maybe [Text] ->
-  Maybe [Text] ->
-  m (Maybe (HighPrecMoney, [Text], [Text]))
-checkAndValidatePendingStateEntryPermits estimatedIds alreadyDetectedIds = do
+  (MonadFlow m) =>
+  Id DRide.Ride ->
+  Maybe [Text] -> -- estimatedIds (from booking)
+  Maybe [Text] -> -- detectedIds (accumulated during ride)
+  m ([Text], [Text])
+checkAndValidatePendingStateEntryPermits rideId estimatedIds alreadyDetectedIds = do
+  let estIds = fromMaybe [] estimatedIds
+      detIds = fromMaybe [] alreadyDetectedIds
+      pendingIds = filter (`notElem` detIds) estIds -- estimated but not detected
+      extraIds = filter (`notElem` estIds) detIds -- detected but not in estimate
   case (estimatedIds, alreadyDetectedIds) of
-    (Just estIds, Just detectedIds) -> do
-      let missingIds = filter (`notElem` detectedIds) estIds
-      if null missingIds
-        then pure Nothing
-        else lookupAndSum missingIds
-    (Just estIds, Nothing) -> lookupAndSum estIds
-    _ -> pure Nothing
-  where
-    lookupAndSum ids = do
-      mbSEPCs <- mapM (findByPrimaryKey . Id) ids
-      let listOfSEPCs = catMaybes mbSEPCs
-      if null listOfSEPCs
-        then pure Nothing
-        else
-          pure $
-            Just
-              ( sum $ map (.amount) listOfSEPCs,
-                map (fromMaybe "" . (.name)) listOfSEPCs,
-                map (getId . (.id)) listOfSEPCs
-              )
+    (Nothing, Just _) ->
+      logWarning $
+        "Detected state entry permit(s) but NO estimated IDs. NOT charging for safety. RideId: "
+          <> rideId.getId
+          <> " | Detected: "
+          <> show detIds
+    _ ->
+      logInfo $
+        "SEPC ID reconciliation. RideId: "
+          <> rideId.getId
+          <> " | Estimated: "
+          <> show estIds
+          <> " | Detected: "
+          <> show detIds
+          <> " | Pending (missed): "
+          <> show pendingIds
+          <> " | Extra (unexpected): "
+          <> show extraIds
+  pure (pendingIds, extraIds)

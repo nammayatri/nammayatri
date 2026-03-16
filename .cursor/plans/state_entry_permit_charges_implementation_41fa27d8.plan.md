@@ -396,7 +396,7 @@ flowchart LR
     - **Action**: include dynamic SEPC in `FareParameters` alongside toll, using detector output and Redis keys as defined in Phase 3–4.
 - **FarePolicy selection vs toll route (Phase 5.1)**  
   - `Domain.Action.Beckn.Search`:  
-    - `-- TODO: @Himanshu check this toll-based vehicleAllowedOnTollRoute logic with Khuzema (toll-only vs SEPC-enabled behaviour).`  
+    - `-- TODO: @Himanshu check this toll-based vehicleAllowedOnTollRoute logic with Khuzema (toll-only vs SEPC-enabled behaviour).`
   - **Action**: align fare policy selection rules (auto/bike on toll routes) with product decision for SEPC-enabled flows; keep current behaviour until clarified.
 - **Geometry bbox: DB load + backfill (Phase 2.1 / geometry bbox)**  
   - `Storage.Queries.GeometryGeom`:  
@@ -406,6 +406,20 @@ flowchart LR
   - `Domain.Action.Dashboard.Management.Merchant`:  
     - `bbox = Nothing -- TODO: @Himanshu compute and persist bbox for this geometry (Phase: geometry bbox backfill)`
   - **Action**: once bbox backfill is done and Kernel bbox helpers are wired, (a) compute bbox at geometry creation time, and (b) make all geometry queries load `bbox` as `BoundingBoxPoints` for SEPC/toll pre-filtering.
+- 
+
+```haskell
+  TODO (@himanshu): add SEPC crossed update to BAP or not check with Khuzema
+
+  ~/files/nammayatri/Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/Lib/LocationUpdates.hs
+
+```
+
+- Migration for adding notification (Check if these or any other function expects kigration in this PR) :  
+mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "STATE_CROSSED" Nothing Nothing person.language Nothing
+ACL.buildOnUpdateMessageV2 merchant booking Nothing sepcCrossedUpdateBuildReq
+transportConfig.enableTollCrossedNotifications
+sendStateEntryPermitCrossedUpdateToBAP
 
 ---
 

@@ -794,3 +794,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_coins_to
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN tax_config TYPE text;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_number_of_luggages integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN tax_config json ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_sepc_crossed_notifications boolean  default false;

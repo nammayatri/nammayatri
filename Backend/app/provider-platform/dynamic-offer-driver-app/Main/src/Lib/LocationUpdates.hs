@@ -48,6 +48,7 @@ import "location-updates" Lib.LocationUpdates as Reexport
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified SharedLogic.CallBAP as BP
+import qualified SharedLogic.StateEntryPermitDetector as StateEntryPermitDetector
 import qualified SharedLogic.CallInternalMLPricing as ML
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Ride
@@ -274,6 +275,31 @@ getTravelledDistanceAndTollInfo merchantOperatingCityId (Just ride) estimatedDis
       logInfo $ "MultipleRoutes not found for ride" <> show rideId
       return (estimatedDistance, estimatedTollInfo)
 
+getTravelledDistanceAndSepcInfo :: LocationUpdateFlow m r c => Id DMOC.MerchantOperatingCity -> Maybe Ride -> Meters -> Maybe (HighPrecMoney, [Text], [Text]) -> m (Meters, Maybe (HighPrecMoney, [Text], [Text]))
+getTravelledDistanceAndSepcInfo _ Nothing _ estimatedSepcInfo = do
+  logInfo "No ride found to get travelled distance (SEPC)"
+  return (0, estimatedSepcInfo)
+getTravelledDistanceAndSepcInfo merchantOperatingCityId (Just ride) estimatedDistance estimatedSepcInfo = do
+  let rideId = ride.id
+  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  let key = multipleRouteKey booking.transactionId
+  multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.runInMultiCloudRedisMaybeResult $ Redis.withMasterRedis $ Redis.get key
+  case multipleRoutes of
+    Just routes -> do
+      let undeviatedRoute = find (not . RI.deviation . RI.deviationInfo) routes
+      case undeviatedRoute of
+        Just route -> do
+          let distance = RI.distance $ RI.routeInfo route
+              routePoints = RI.points $ RI.routeInfo route
+          sepcInfo <- join <$> mapM (StateEntryPermitDetector.getStateEntryPermitInfoOnRoute merchantOperatingCityId (Just ride.driverId)) routePoints
+          return (fromMaybe estimatedDistance distance, sepcInfo <|> estimatedSepcInfo)
+        Nothing -> do
+          logInfo $ "UndeviatedRoute not found for ride" <> show rideId
+          return (estimatedDistance, estimatedSepcInfo)
+    Nothing -> do
+      logInfo $ "MultipleRoutes not found for ride" <> show rideId
+      return (estimatedDistance, estimatedSepcInfo)
+
 buildRideInterpolationHandler :: LocationUpdateFlow m r c => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id Ride) -> Bool -> Maybe Integer -> m (RideInterpolationHandler Person m)
 buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBatchSize = do
   transportConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -292,17 +318,28 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
       isEndRide
       (\driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned isDistCalcFailed -> QRide.updateDistance driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned isDistCalcFailed)
       (\driverId tollCharges tollNames tollIds -> void (QRide.updateTollChargesAndNamesAndIds driverId tollCharges tollNames tollIds))
+      (\driverId sepcCharges sepcNames sepcIds -> void (QRide.updateStateEntryPermitChargesAndNamesAndIds driverId sepcCharges sepcNames sepcIds))
       ( \driverId batchWaypoints -> do
+          -- NOTE (@himanshu): we don't add a SEPC-specific route deviation flag analogous to tollRouteDeviation
+          -- because SEPC only needs overall route deviation; we intentionally keep snapToRoadCallCondition logic
+          -- in the library exactly as it was before.
+          -- isSepcPresentOnCurrentRoute mirrors isTollPresentOnCurrentRoute but for state entry permits.
           ride <- QRide.getActiveByDriverId driverId
           let isSafetyCheckEnabledForTripCategory = maybe True (enableSafetyCheckWrtTripCategory . (.tripCategory)) ride
           routeDeviation <- updateDeviation transportConfig (enableNightSafety && isSafetyCheckEnabledForTripCategory) ride batchWaypoints
           (tollRouteDeviation, isTollPresentOnCurrentRoute) <- updateTollRouteDeviation merchantOpCityId driverId ride batchWaypoints
-          return (routeDeviation, tollRouteDeviation, isTollPresentOnCurrentRoute)
+          isSepcPresentOnCurrentRoute <- isJust <$> StateEntryPermitDetector.getStateEntryPermitInfoOnRoute merchantOpCityId (Just driverId) batchWaypoints
+          return (routeDeviation, tollRouteDeviation, isTollPresentOnCurrentRoute, isSepcPresentOnCurrentRoute)
       )
       (TollsDetector.getTollInfoOnRoute merchantOpCityId)
+      (StateEntryPermitDetector.getStateEntryPermitInfoOnRoute merchantOpCityId)
       ( \driverId estimatedDistance estimatedTollInfo -> do
           ride <- QRide.getActiveByDriverId driverId
           getTravelledDistanceAndTollInfo merchantOpCityId ride estimatedDistance estimatedTollInfo
+      )
+      ( \driverId estimatedDistance estimatedSepcInfo -> do
+          ride <- QRide.getActiveByDriverId driverId
+          getTravelledDistanceAndSepcInfo merchantOpCityId ride estimatedDistance estimatedSepcInfo
       )
       transportConfig.recomputeIfPickupDropNotOutsideOfThreshold
       snapToRoad'
@@ -320,6 +357,22 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
           mbBooking <- maybe (return Nothing) (QBooking.findById . bookingId) mbRide
           vehicle <- QVeh.findById driver.id >>= fromMaybeM (DriverWithoutVehicle driver.id.getId)
           BP.sendTollCrossedUpdateToBAP mbBooking mbRide driver driverStats vehicle
+      )
+      ( \driverId -> do
+          -- SEPC crossed notification to driver: uses its own MerchantPN key; ensure STATE_CROSSED exists in merchant_push_notification.
+          person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+          mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "STATE_CROSSED" Nothing Nothing person.language Nothing
+          whenJust mbMerchantPN $ \merchantPN -> do
+            let entityData = TN.NotifReq {entityId = person.id.getId, title = merchantPN.title, message = merchantPN.body}
+            TN.notifyDriverOnEvents person.merchantOperatingCityId person.id person.deviceToken entityData merchantPN.fcmNotificationType
+      )
+      ( \driverId -> do
+          driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+          driverStats <- QDriverStats.findById driver.id >>= fromMaybeM DriverInfoNotFound
+          mbRide <- QRide.getActiveByDriverId driverId
+          mbBooking <- maybe (return Nothing) (QBooking.findById . bookingId) mbRide
+          vehicle <- QVeh.findById driver.id >>= fromMaybeM (DriverWithoutVehicle driver.id.getId)
+          BP.sendStateEntryPermitCrossedUpdateToBAP mbBooking mbRide driver driverStats vehicle
       )
   where
     snapToRoadWithService rideId' req = do

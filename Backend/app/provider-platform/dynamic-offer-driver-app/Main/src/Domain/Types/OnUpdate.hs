@@ -44,6 +44,7 @@ data OnUpdateBuildReq
   | StopArrivedBuildReq DStopArrivedBuildReq
   | EditDestinationUpdate DEditDestinationUpdateReq
   | TollCrossedBuildReq DTollCrossedBuildReq
+  | StateEntryPermitCrossedBuildReq DStateEntryPermitCrossedBuildReq
   | DriverReachedDestinationBuildReq DDriverReachedDestinationReq
   | RideEstimatedEndTimeRangeBuildReq DRideEstimatedEndTimeRangeReq
   | ParcelImageUploadedBuildReq DParcelImageUploadedReq
@@ -100,6 +101,10 @@ data DEditDestinationUpdateReq = DEditDestinationUpdateReq
   }
 
 newtype DTollCrossedBuildReq = DTollCrossedBuildReq
+  { bookingDetails :: BookingDetails
+  }
+
+newtype DStateEntryPermitCrossedBuildReq = DStateEntryPermitCrossedBuildReq
   { bookingDetails :: BookingDetails
   }
 
