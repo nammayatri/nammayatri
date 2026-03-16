@@ -1,10 +1,7 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.ProviderPlatform.AppManagement.Penalty (postPenaltyTriggerJobCancellationPenaltyServiceName) where
 
 import qualified API.Client.ProviderPlatform.AppManagement
 import qualified Dashboard.Common
-import qualified Dashboard.Common as Common
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
@@ -13,7 +10,6 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api

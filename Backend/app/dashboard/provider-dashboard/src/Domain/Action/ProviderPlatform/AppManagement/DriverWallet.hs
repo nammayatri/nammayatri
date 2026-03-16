@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.ProviderPlatform.AppManagement.DriverWallet
   ( getDriverWalletWalletTransactions,
     postDriverWalletWalletPayout,
@@ -22,7 +20,6 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common
 import qualified "payment" Lib.Payment.Domain.Types.PayoutRequest
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()

@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.ProviderPlatform.RideBooking.SearchRequest (postSearchRequestSearchrequests, getSearchRequestList, getSearchRequestInfo) where
 
 import qualified API.Client.ProviderPlatform.RideBooking

@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.Management.Role
   ( postRoleCreate,
     postRoleAssignAccessLevel,
@@ -9,7 +7,6 @@ where
 
 import qualified API.Types.Management.Role
 import qualified Data.Text
-import qualified Data.Text as T
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Role as DRole
@@ -22,7 +19,6 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as City
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Beam.BeamFlow
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Role as QRole
 import qualified Storage.Queries.RoleExtra as QRoleExtra
