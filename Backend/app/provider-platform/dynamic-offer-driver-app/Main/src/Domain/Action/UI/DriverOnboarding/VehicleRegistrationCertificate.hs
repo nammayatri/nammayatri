@@ -33,6 +33,7 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     convertTextToUTC,
     mkIdfyVerificationEntity,
     mkHyperVergeVerificationEntity,
+    mkMorthVerificationEntity,
     validateRCResponse,
     VerificationReqRecord (..),
     DriverDocument (..),
@@ -67,7 +68,6 @@ import qualified Domain.Types.IdfyVerification as Domain
 import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MorthVerification as MorthDomain
 import qualified Domain.Types.Person as Person
 import Domain.Types.RCValidationRules
@@ -103,7 +103,6 @@ import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as SCO
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverGstin as DGQuery
@@ -376,23 +375,14 @@ getDocumentImage personId imageId_ expectedDocType = do
   Redis.withLockRedisAndReturnValue (imageS3Lock (imageMetadata.s3Path)) 5 $
     S3.get $ T.unpack imageMetadata.s3Path
 
-getMorthApplicantMobile :: Id DMOC.MerchantOperatingCity -> Flow (Maybe Text)
-getMorthApplicantMobile merchantOpCityId = do
-  msc <- CQMSC.findByServiceAndCity (DMSC.VerificationService Verification.Morth) merchantOpCityId
-  return $
-    msc >>= \c -> case c.serviceConfig of
-      DMSC.VerificationServiceConfig (Verification.MorthConfig _) -> Nothing
-      _ -> Nothing
-
 verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Domain.ImageExtractionValidation -> Maybe Text -> Maybe Text -> Maybe Text -> Flow ()
 verifyRCFlow person merchantOpCityId rcNumber imageId dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation mbUdinNumber mbEngineNumber mbChassisNumber = do
-  mbApplicantMobile <- getMorthApplicantMobile merchantOpCityId
   now <- getCurrentTime
   verifyRes <-
     Verification.verifyRC person.merchantId
       merchantOpCityId
       Nothing
-      Verification.VerifyRCReq {rcNumber = rcNumber, driverId = person.id.getId, token = Nothing, udinNo = mbUdinNumber, engineNumber = mbEngineNumber, chassisNumber = mbChassisNumber, applicantMobile = mbApplicantMobile}
+      Verification.VerifyRCReq {rcNumber = rcNumber, driverId = person.id.getId, token = Nothing, udinNo = mbUdinNumber, engineNumber = mbEngineNumber, chassisNumber = mbChassisNumber, applicantMobile = Nothing}
   case verifyRes.verifyRCResp of
     Verification.AsyncResp res -> do
       case res.requestor of
