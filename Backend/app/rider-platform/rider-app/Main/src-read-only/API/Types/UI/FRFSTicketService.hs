@@ -340,11 +340,7 @@ data FRFSVehicleServiceTierAPI = FRFSVehicleServiceTierAPI
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FleetOperatorCurrentOperationReq = FleetOperatorCurrentOperationReq
-  { conductorToken :: Data.Maybe.Maybe Data.Text.Text,
-    driverToken :: Data.Maybe.Maybe Data.Text.Text,
-    vehicleNumber :: Data.Maybe.Maybe Data.Text.Text
-  }
+data FleetOperatorCurrentOperationReq = FleetOperatorCurrentOperationReq {conductorToken :: Data.Maybe.Maybe Data.Text.Text, driverToken :: Data.Maybe.Maybe Data.Text.Text, vehicleNumber :: Data.Maybe.Maybe Data.Text.Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -387,7 +383,7 @@ data PassengerInfo = PassengerInfo
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PassengerStopManifest = PassengerStopManifest {alightingPassengers :: [PassengerInfo], boardingPassengers :: [PassengerInfo], stopCode :: Data.Text.Text}
+data PassengerStopManifest = PassengerStopManifest {alightingPassengers :: [PassengerInfo], boardingPassengers :: [PassengerInfo], stopCode :: Data.Text.Text, stopName :: Data.Maybe.Maybe Data.Text.Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

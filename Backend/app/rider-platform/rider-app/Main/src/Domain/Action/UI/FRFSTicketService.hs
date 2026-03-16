@@ -1384,6 +1384,7 @@ getFrfsTripRouteManifest (mbPersonId, _merchantId) tripId routeId = do
                   alighting = [p | (_, toStop, p) <- validPassengerData, toStop == sCode]
                in PassengerStopManifest
                     { stopCode = sCode,
+                      stopName = stop.stopName,
                       boardingPassengers = boarding,
                       alightingPassengers = alighting
                     }
