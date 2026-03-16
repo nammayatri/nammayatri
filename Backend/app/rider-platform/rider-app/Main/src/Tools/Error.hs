@@ -289,6 +289,13 @@ data PassError
   | PassTypeNotFound Text
   | PurchasedPassNotFound Text
   | PurchasedPassPaymentNotFound Text
+  | PassNotEnabled Text
+  | PassActivationNotReady Text Text -- passId, reason
+  | PassActivationOverlap Text -- passId
+  | PassNoBusesNearby Text -- passId
+  | PassInvalidVehicle Text Text -- passId, vehicleNumber
+  | PassVerificationFailed Text Text -- passId, reason
+  | PassAlreadyInProgress Text -- passId
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''PassError
@@ -299,6 +306,13 @@ instance IsBaseError PassError where
   toMessage (PassTypeNotFound typeId) = Just $ "Pass type not found: " <> show typeId
   toMessage (PurchasedPassNotFound purchasedPassId) = Just $ "Purchased pass not found: " <> show purchasedPassId
   toMessage (PurchasedPassPaymentNotFound purchasedPassPaymentId) = Just $ "Purchased pass payment not found: " <> show purchasedPassPaymentId
+  toMessage (PassNotEnabled passId) = Just $ "Pass is not enabled: " <> show passId
+  toMessage (PassActivationNotReady _passId reason) = Just reason
+  toMessage (PassActivationOverlap _passId) = Just "Cannot activate pass: date range overlaps with another active or prebooked pass"
+  toMessage (PassNoBusesNearby _passId) = Just "No nearby buses found for auto activation. Please try again when closer to a bus stop."
+  toMessage (PassInvalidVehicle _passId vehicleNumber) = Just $ "Entered Bus OTP: " <> vehicleNumber <> " is invalid. Please check again."
+  toMessage (PassVerificationFailed _passId reason) = Just reason
+  toMessage (PassAlreadyInProgress _passId) = Just "Pass purchase already in progress, please try again."
 
 instance IsHTTPError PassError where
   toErrorCode = \case
@@ -307,12 +321,26 @@ instance IsHTTPError PassError where
     PassTypeNotFound _ -> "PASS_TYPE_NOT_FOUND"
     PurchasedPassNotFound _ -> "PURCHASED_PASS_NOT_FOUND"
     PurchasedPassPaymentNotFound _ -> "PURCHASED_PASS_PAYMENT_NOT_FOUND"
+    PassNotEnabled _ -> "PASS_NOT_ENABLED"
+    PassActivationNotReady _ _ -> "PASS_ACTIVATION_NOT_READY"
+    PassActivationOverlap _ -> "PASS_ACTIVATION_OVERLAP"
+    PassNoBusesNearby _ -> "PASS_NO_BUSES_NEARBY"
+    PassInvalidVehicle _ _ -> "PASS_INVALID_VEHICLE"
+    PassVerificationFailed _ _ -> "PASS_VERIFICATION_FAILED"
+    PassAlreadyInProgress _ -> "PASS_ALREADY_IN_PROGRESS"
   toHttpCode = \case
     PassNotFound _ -> E500
     PassCategoryNotFound _ -> E500
     PassTypeNotFound _ -> E500
     PurchasedPassNotFound _ -> E500
     PurchasedPassPaymentNotFound _ -> E500
+    PassNotEnabled _ -> E400
+    PassActivationNotReady _ _ -> E400
+    PassActivationOverlap _ -> E409
+    PassNoBusesNearby _ -> E400
+    PassInvalidVehicle _ _ -> E400
+    PassVerificationFailed _ _ -> E400
+    PassAlreadyInProgress _ -> E409
 
 instance IsAPIError PassError
 
