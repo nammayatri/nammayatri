@@ -1,5 +1,6 @@
 module Lib.Payment.Payment.History
   ( recordPaymentHistory,
+    getStatusMessage,
   )
 where
 

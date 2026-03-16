@@ -13,7 +13,12 @@
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Lib.Payment.Storage.Queries.PaymentTransaction where
+module Lib.Payment.Storage.Queries.PaymentTransaction
+  {-# WARNING
+    "This module contains direct calls to the table. \
+  \ But most likely you need a version from HistoryQueries with store history feature."
+    #-}
+where
 
 import qualified Data.Aeson as A
 import Kernel.Beam.Functions
