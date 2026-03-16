@@ -638,6 +638,51 @@ passOrderStatusHandler ::
   m (DPayment.PaymentFulfillmentStatus, Maybe Text, Maybe Text)
 passOrderStatusHandler paymentOrderId _merchantId status = do
   logInfo $ "Pass payment webhook handler called for paymentOrderId: " <> paymentOrderId.getId
+  -- Idempotency check: if payment is already in a terminal state, return immediately
+  mbExistingPayment <- QPurchasedPassPayment.findOneByPaymentOrderId paymentOrderId
+  case mbExistingPayment of
+    Just existingPayment
+      | existingPayment.status `elem` terminalPassStatuses -> do
+          logInfo $ "Duplicate webhook detected for orderId: " <> paymentOrderId.getId <> " — already in terminal status: " <> show existingPayment.status
+          mbPass <- QPurchasedPass.findById existingPayment.purchasedPassId
+          let passId = maybe Nothing (Just . (.id.getId)) mbPass
+              paymentId = Just existingPayment.id.getId
+          return (statusToFulfillment existingPayment.status, passId, paymentId)
+    _ -> do
+      -- Acquire Redis lock to prevent concurrent processing of the same webhook
+      let lockKey = "passWebhook:" <> paymentOrderId.getId
+      lockAcquired <- Redis.setNxExpire lockKey 30 True
+      if lockAcquired
+        then processPassWebhook paymentOrderId _merchantId status
+        else do
+          logWarning $ "Could not acquire lock for pass webhook orderId: " <> paymentOrderId.getId <> " — concurrent processing in progress"
+          return (DPayment.FulfillmentPending, Nothing, Nothing)
+
+-- Terminal statuses that indicate the webhook has already been fully processed
+terminalPassStatuses :: [DPurchasedPass.StatusType]
+terminalPassStatuses = [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending, DPurchasedPass.Failed, DPurchasedPass.Refunded, DPurchasedPass.Expired, DPurchasedPass.RefundFailed]
+
+-- Map a PurchasedPass status to the corresponding PaymentFulfillmentStatus
+statusToFulfillment :: DPurchasedPass.StatusType -> DPayment.PaymentFulfillmentStatus
+statusToFulfillment = \case
+  DPurchasedPass.Active -> DPayment.FulfillmentSucceeded
+  DPurchasedPass.PreBooked -> DPayment.FulfillmentSucceeded
+  DPurchasedPass.PhotoPending -> DPayment.FulfillmentSucceeded
+  DPurchasedPass.Expired -> DPayment.FulfillmentSucceeded
+  DPurchasedPass.Failed -> DPayment.FulfillmentFailed
+  DPurchasedPass.RefundPending -> DPayment.FulfillmentRefundPending
+  DPurchasedPass.RefundInitiated -> DPayment.FulfillmentRefundInitiated
+  DPurchasedPass.RefundFailed -> DPayment.FulfillmentRefundFailed
+  DPurchasedPass.Refunded -> DPayment.FulfillmentRefunded
+  _ -> DPayment.FulfillmentPending
+
+processPassWebhook ::
+  (HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools], MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
+  Id.Id DOrder.PaymentOrder ->
+  Id.Id DM.Merchant ->
+  Payment.TransactionStatus ->
+  m (DPayment.PaymentFulfillmentStatus, Maybe Text, Maybe Text)
+processPassWebhook paymentOrderId _merchantId status = do
   mbPurchasedPassPayment <- QPurchasedPassPayment.findOneByPaymentOrderId paymentOrderId
   mbPurchasedPass <- maybe (pure Nothing) (QPurchasedPass.findById . (.purchasedPassId)) mbPurchasedPassPayment
   istTime <- getLocalCurrentTime (19800 :: Seconds)
