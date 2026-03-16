@@ -1039,7 +1039,7 @@ postMultimodalPassActivateToday ::
     Maybe DT.Day ->
     Environment.Flow APISuccess.APISuccess
   )
-postMultimodalPassActivateToday = postMultimodalPassActivateTodayUtil False
+postMultimodalPassActivateToday args passNumber mbStartDate = postMultimodalPassActivateTodayUtil False args passNumber mbStartDate Nothing
 
 postMultimodalPassActivateTodayUtil ::
   Bool ->
@@ -1048,9 +1048,10 @@ postMultimodalPassActivateTodayUtil ::
     ) ->
     Int ->
     Maybe DT.Day ->
+    Maybe (Id.Id DPurchasedPassPayment.PurchasedPassPayment) ->
     Environment.Flow APISuccess.APISuccess
   )
-postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) passNumber mbStartDate = do
+postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) passNumber mbStartDate mbPurchasedPassPaymentId = do
   purchasedPass <- QPurchasedPass.findByPassNumber passNumber >>= fromMaybeM (PurchasedPassNotFound (show passNumber))
   unless isDashboard $ do
     personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
@@ -1075,17 +1076,25 @@ postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) 
         Just date -> (date, DPurchasedPass.PreBooked)
       newEndDate = calculatePassEndDate newStartDate purchasedPass.maxValidDays
 
-  allPasses <- QPurchasedPass.findAllByPersonIdWithFilters purchasedPass.personId purchasedPass.merchantId (Just [DPurchasedPass.Active, DPurchasedPass.PreBooked]) Nothing Nothing
-  let otherPasses = filter (\p -> p.id /= purchasedPass.id) allPasses
-      overlappingPasses = filter (\p -> hasDateOverlap (newStartDate, newEndDate) (p.startDate, p.endDate)) otherPasses
+  allPaymentsForPassCode <- QPurchasedPassPayment.findAllByPersonIdWithFilters Nothing Nothing purchasedPass.personId purchasedPass.merchantId [DPurchasedPass.Active, DPurchasedPass.PreBooked] purchasedPass.passCode
+  let otherPassPayments = filter (\p -> p.purchasedPassId /= purchasedPass.id && p.startDate /= purchasedPass.startDate) allPaymentsForPassCode
+      overlappingPasses = filter (\p -> hasDateOverlap (newStartDate, newEndDate) (p.startDate, p.endDate)) otherPassPayments
 
   unless (null overlappingPasses) $
     throwError (PassActivationOverlap purchasedPass.id.getId)
 
-  QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate newStatus purchasedPass.benefitDescription purchasedPass.benefitType purchasedPass.benefitValue purchasedPass.passAmount
-  allPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatusAndStartDate (Just 1) Nothing purchasedPass.id [DPurchasedPass.Active, DPurchasedPass.PreBooked] purchasedPass.startDate
-  whenJust (listToMaybe allPayments) $ \payment -> do
-    QPurchasedPassPayment.updateStatusAndDatesById newStartDate newEndDate newStatus payment.id
+  case mbPurchasedPassPaymentId of
+    Just paymentId -> do
+      payment <- QPurchasedPassPayment.findByPrimaryKey paymentId >>= fromMaybeM (InvalidRequest "Payment not found")
+      unless (payment.purchasedPassId == purchasedPass.id) $ throwError (InvalidRequest "Payment does not belong to this pass")
+      unless (payment.status `elem` [DPurchasedPass.PreBooked, DPurchasedPass.Active]) $
+        throwError (InvalidRequest "Cannot update payment dates: payment is not in PreBooked or Active status")
+      QPurchasedPassPayment.updateStatusAndDatesById newStartDate newEndDate newStatus payment.id
+    Nothing -> do
+      QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate newStatus purchasedPass.benefitDescription purchasedPass.benefitType purchasedPass.benefitValue purchasedPass.passAmount
+      allPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatusAndStartDate (Just 1) Nothing purchasedPass.id [DPurchasedPass.Active, DPurchasedPass.PreBooked] purchasedPass.startDate
+      whenJust (listToMaybe allPayments) $ \payment -> do
+        QPurchasedPassPayment.updateStatusAndDatesById newStartDate newEndDate newStatus payment.id
   return APISuccess.Success
 
 postMultimodalPassUploadProfilePicture ::
