@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Route where
 
@@ -12,7 +11,6 @@ import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound
-import qualified Tools.Beam.UtilsTH
 
 data Route = Route
   { code :: Kernel.Prelude.Text,
