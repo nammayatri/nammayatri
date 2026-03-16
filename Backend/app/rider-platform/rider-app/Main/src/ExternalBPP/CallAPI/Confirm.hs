@@ -80,12 +80,30 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
       mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing
       let circuitOpen = CB.isCircuitOpen ptMode CB.BookingAPI mRiderConfig
       let cbConfig = CB.parseCircuitBreakerConfig (mRiderConfig >>= (.ptCircuitBreakerConfig))
+          apiConfig = cbConfig.booking
 
+      if circuitOpen
+        then do
+          -- Circuit is OPEN: only allow canary requests through to probe recovery.
+          -- All other requests get a fast-fail with user-facing message.
+          let canaryAllowed = maybe 2 (.canaryAllowedPerWindow) apiConfig
+              canaryWindow = maybe 60 (.canaryWindowSeconds) apiConfig
+          canarySlot <- CB.tryAcquireOrCheckCanarySlot booking.searchId.getId ptMode CB.BookingAPI merchantOperatingCity.id canaryAllowed canaryWindow
+          if canarySlot
+            then do
+              logInfo $ "PT Circuit Breaker: Canary booking request for " <> show ptMode
+              attemptConfirm integratedBPPConfig ptMode cbConfig True
+            else do
+              logWarning $ "PT Circuit Breaker: Booking circuit OPEN for " <> show ptMode <> ", rejecting request"
+              return $ Left "Booking service temporarily unavailable. Please try again in a few minutes."
+        else attemptConfirm integratedBPPConfig ptMode cbConfig False
+  where
+    attemptConfirm integratedBPPConfig' ptMode cbConfig isCanary = do
       result <- withTryCatch "callExternalBPP:confirmFlow" $ do
         frfsConfig <-
           CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
             >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
-        onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories mbIsSingleMode
+        onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig integratedBPPConfig' bapConfig (mRiderName, mRiderNumber) booking quoteCategories mbIsSingleMode
         processOnConfirm onConfirmReq
       case result of
         Left err -> do
@@ -95,10 +113,10 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
           logError $ "FRFS External Confirm failed with error: " <> errorMessage
           return $ Left errorMessage
         Right _ -> do
-          when circuitOpen $ CB.reEnableCircuit ptMode CB.BookingAPI merchantOperatingCity.id
+          when isCanary $ CB.reEnableCircuit ptMode CB.BookingAPI merchantOperatingCity.id
           CB.recordSuccess ptMode CB.BookingAPI merchantOperatingCity.id
           return $ Right ()
-  where
+
     someExceptionToErrorMessage exc
       | Just (CRISError err) <- fromException exc = err
       | Just (HTTPException err) <- fromException exc = show err

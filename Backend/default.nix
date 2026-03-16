@@ -134,6 +134,7 @@
               "--ghc-options=-fno-cse"
               "--ghc-options=-fmax-simplifier-iterations1"
               "--ghc-options=-fno-specialise-aggressively"
+              "--ghc-options=-j8"
             ]);
         };
         packages = {
