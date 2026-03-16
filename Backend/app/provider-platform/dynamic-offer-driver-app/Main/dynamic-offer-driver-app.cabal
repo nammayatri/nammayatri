@@ -1142,6 +1142,7 @@ library
       Domain.Types.MetaData
       Domain.Types.ModuleCompletionInformation
       Domain.Types.MonetaryRewardConfig
+      Domain.Types.MorthVerification
       Domain.Types.Notification
       Domain.Types.OperationHub
       Domain.Types.OperationHubRequests
@@ -1317,6 +1318,7 @@ library
       Storage.Beam.MetaData
       Storage.Beam.ModuleCompletionInformation
       Storage.Beam.MonetaryRewardConfig
+      Storage.Beam.MorthVerification
       Storage.Beam.Notification
       Storage.Beam.OperationHub
       Storage.Beam.OperationHubRequests
@@ -1497,6 +1499,7 @@ library
       Storage.Queries.MetaData
       Storage.Queries.ModuleCompletionInformation
       Storage.Queries.MonetaryRewardConfig
+      Storage.Queries.MorthVerification
       Storage.Queries.Notification
       Storage.Queries.OperationHub
       Storage.Queries.OperationHubRequests
