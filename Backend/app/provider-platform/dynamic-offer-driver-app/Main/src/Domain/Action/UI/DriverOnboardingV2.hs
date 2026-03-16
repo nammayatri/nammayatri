@@ -146,6 +146,7 @@ getOnboardingConfigs' ::
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Environment.Flow API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
 getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandatory mbOnlyVehicle = do
+  mbMerchantServiceUsageConfig <- CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
   cabConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.CAR Nothing
   autoConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.AUTO_CATEGORY Nothing
   bikeConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.MOTORCYCLE Nothing
@@ -171,7 +172,8 @@ getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandat
         trucks = SDO.toMaybe truckConfigs,
         bus = SDO.toMaybe busConfigs,
         boat = SDO.toMaybe boatConfigs,
-        toto = SDO.toMaybe totoConfigs
+        toto = SDO.toMaybe totoConfigs,
+        verificationProvidersPriorityList = (.verificationProvidersPriorityList) <$> mbMerchantServiceUsageConfig
       }
 
 getDriverVehiclePhotos ::

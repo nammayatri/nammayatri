@@ -144,6 +144,8 @@ DriverInformation:
     dailyExtraKms: Maybe HighPrecMeters
     weeklyExtraKms: Maybe HighPrecMeters
     onboardingAs: Maybe OnboardingAs
+    nomineeName: Maybe Text
+    nomineeRelationship: Maybe Text
 
   default:
     active: "false"
@@ -308,6 +310,8 @@ DriverInformation:
           isHighAccuracyLocationEnabled,
           rideRequestVolumeEnabled,
           onboardingAs,
+          nomineeName,
+          nomineeRelationship,
         ]
       where: driverId
     updateRentalInterCityAndIntraCitySwitch:

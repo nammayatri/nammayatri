@@ -301,3 +301,7 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN onboarding_as c
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN toll_route_blocked_till timestamp with time zone ;
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN nominee_relationship text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN nominee_name text ;

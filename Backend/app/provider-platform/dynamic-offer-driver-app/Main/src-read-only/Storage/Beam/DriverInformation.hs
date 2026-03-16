@@ -75,6 +75,8 @@ data DriverInformationT f = DriverInformationT
     latestScheduledPickupLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     maxPickupRadius :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     mode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.DriverMode),
+    nomineeName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    nomineeRelationship :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     numOfLocks :: B.C f Kernel.Prelude.Int,
     onRide :: B.C f Kernel.Prelude.Bool,
     onRideTripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory),
