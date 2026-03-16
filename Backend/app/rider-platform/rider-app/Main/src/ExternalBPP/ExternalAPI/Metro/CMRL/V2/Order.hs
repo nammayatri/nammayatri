@@ -280,7 +280,6 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
 
   when (ticketRes.returnCode /= "0") $ do
     logError $ "[CMRLV2:Order] Ticket generation failed: returnCode=" <> ticketRes.returnCode <> ", message=" <> ticketRes.returnMessage
-    -- Handle specific CMRL error codes with user-facing messages
     let isAuthCodeError = T.isInfixOf "Authorization" ticketRes.returnMessage
                        || T.isInfixOf "authorization" ticketRes.returnMessage
                        || ticketRes.returnCode == "-1"
@@ -288,12 +287,28 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
       then throwError $ InternalError "Metro ticket booking authorization expired. Please try booking again."
       else throwError $ InternalError $ "Metro ticket generation failed (code: " <> ticketRes.returnCode <> "). Please retry."
 
+  -- Validate non-empty ticket response
+  when (null ticketRes.ticket_Response) $ do
+    logError "[CMRLV2:Order] CMRL returned success but empty ticket list"
+    throwError $ InternalError "CMRL V2 returned no tickets in response"
+
   logInfo $ "[CMRLV2:Order] Ticket generation successful, tickets count: " <> show (length ticketRes.ticket_Response)
 
   tickets <-
     ticketRes.ticket_Response `forM` \ticketResp -> do
       let qrPayload = ticketResp.qR_Payload
           qrData = "#" <> qrPayload.qR_Signature <> "#" <> qrPayload.qR_SVC <> "#" <> qrPayload.qR_Tkt_Block <> "#"
+
+      -- Validate QR payload fields are non-empty
+      when (T.null qrPayload.qR_Signature || T.null qrPayload.qR_SVC || T.null qrPayload.qR_Tkt_Block) $ do
+        logError $ "[CMRLV2:Order] Empty QR payload field detected - Signature: " <> show (T.length qrPayload.qR_Signature)
+          <> ", SVC: " <> show (T.length qrPayload.qR_SVC) <> ", TktBlock: " <> show (T.length qrPayload.qR_Tkt_Block)
+        throwError $ InternalError "CMRL V2 returned ticket with empty QR payload"
+
+      -- Validate ticket serial number
+      when (T.null ticketResp.qR_Tkt_Sl_No) $ do
+        logError "[CMRLV2:Order] Empty ticket serial number in CMRL response"
+        throwError $ InternalError "CMRL V2 returned ticket with empty serial number"
 
       validityTime <- case parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%S" (T.unpack ticketResp.ticket_Validity_Time) of
         Just time -> return time
