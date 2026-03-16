@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.RiderPlatform.AppManagement.Pass
   ( getPassCustomerAvailablePasses,
     getPassCustomerPurchasedPasses,
@@ -28,7 +26,6 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common
 import qualified "payment" Lib.Payment.Domain.Action
 import qualified "payment" Lib.Payment.Domain.Types.PaymentOrder
 import qualified SharedLogic.Transaction

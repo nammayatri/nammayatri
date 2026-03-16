@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.RiderPlatform.Management.Media (getMediaFile) where
 
 import qualified API.Client.RiderPlatform.Management
@@ -10,7 +8,6 @@ import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 import Tools.Auth.Merchant

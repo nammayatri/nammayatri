@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.Management.Registration
   ( postUserLogin,
     postUserLoginVerifyOtp,
@@ -12,15 +10,12 @@ where
 import qualified API.Types.Management.Registration
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DMerchant
-import qualified Domain.Types.MerchantAccess as DMerchantAccess
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.RegistrationToken as DR
 import qualified Environment
 import EulerHS.Prelude
-import qualified Kernel.Beam.Functions as B
-import Kernel.External.Encryption (EncFlow, getDbHash)
+import Kernel.External.Encryption (getDbHash)
 import qualified Kernel.Storage.Hedis as Redis
-import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as City
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
@@ -30,7 +25,6 @@ import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Tools.Auth.Common as Auth
-import Tools.Auth.Merchant
 import Tools.Error
 import qualified Tools.Utils
 

@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.Management.Person
   ( getPersonList,
     postPersonAssignRole,
@@ -20,8 +18,8 @@ module Domain.Action.Management.Person
 where
 
 import qualified API.Types.Management.Person
-import Data.List (groupBy, nub, sortOn)
-import Data.Maybe (listToMaybe, mapMaybe)
+import Data.List (groupBy, nub)
+import Data.Maybe (listToMaybe)
 import qualified Data.Text
 import qualified Data.Text as T
 import qualified Domain.Types.AccessMatrix as DMatrix
@@ -29,19 +27,17 @@ import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Role as DRole
-import qualified Domain.Types.ServerName
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (Encrypted (..), EncryptedHashed (..), decrypt, encrypt, getDbHash, unEncrypted)
+import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import qualified Kernel.External.Verification.SafetyPortal.Types
 import qualified Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as City
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Beam.BeamFlow
+import Storage.Beam.BeamFlow ()
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess

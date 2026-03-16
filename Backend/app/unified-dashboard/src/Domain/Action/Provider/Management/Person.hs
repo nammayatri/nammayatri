@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.Provider.Management.Person
   ( postPersonCreate,
     postUserLoginSendOtp,
@@ -13,13 +11,10 @@ import qualified Data.Text as T
 import qualified Domain.Action.Management.Transaction
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Merchant as DMerchant
-import qualified Domain.Types.MerchantAccess as DMerchantAccess
 import qualified Domain.Types.Person as DPerson
-import qualified Domain.Types.Role as DRole
 import qualified Environment
 import EulerHS.Prelude
 import Kernel.External.Encryption (encrypt, getDbHash)
-import qualified Kernel.External.Encryption
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess

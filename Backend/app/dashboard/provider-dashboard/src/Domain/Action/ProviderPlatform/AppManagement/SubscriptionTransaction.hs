@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.ProviderPlatform.AppManagement.SubscriptionTransaction (getSubscriptionTransactionSubscriptionTransactions) where
 
 import qualified API.Client.ProviderPlatform.AppManagement

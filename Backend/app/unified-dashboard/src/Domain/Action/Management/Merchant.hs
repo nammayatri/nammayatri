@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.Management.Merchant
   ( createMerchantWithAdmin,
     createMerchant,
@@ -9,7 +7,6 @@ module Domain.Action.Management.Merchant
 where
 
 import qualified API.Types.Management.Merchant
-import qualified API.Types.Management.Person
 import Data.List (nub)
 import qualified Data.Text
 import qualified Data.Text as T
@@ -17,14 +14,12 @@ import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Role as DRole
-import qualified Domain.Types.ServerName
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (decrypt, encrypt, encrypted, getDbHash, unEncrypted)
+import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import qualified Kernel.External.Verification.SafetyPortal.Types
 import qualified Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as City
 import qualified Kernel.Types.Id
@@ -38,7 +33,7 @@ import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth.Api
 import Tools.Auth.Common as Auth
-import Tools.Auth.Merchant
+import Tools.Auth.Merchant ()
 import Tools.Error
 
 createMerchantWithAdmin ::

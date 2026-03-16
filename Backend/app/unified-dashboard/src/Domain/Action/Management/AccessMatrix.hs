@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.Management.AccessMatrix
   ( getAccessMatrix,
     getMerchantWithCityList,

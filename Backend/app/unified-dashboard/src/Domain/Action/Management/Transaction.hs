@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.Management.Transaction
   ( getTransactionList,
     buildTransaction,
@@ -8,11 +6,7 @@ module Domain.Action.Management.Transaction
 where
 
 import qualified API.Types.Management.Transaction
-import qualified Data.Aeson as A
-import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DTE
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DPerson
@@ -21,15 +15,12 @@ import qualified Environment
 import EulerHS.Prelude hiding (id, length)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
-import qualified Kernel.External.Encryption
 import qualified Kernel.External.Verification.SafetyPortal.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as City
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow, encodeToText, generateGUID, getCurrentTime, throwError)
 import Storage.Beam.BeamFlow (BeamFlow)
-import qualified Storage.Beam.BeamFlow
-import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Transaction as QTransaction
 import qualified Storage.Queries.TransactionExtra as QTransactionExtra
 import Tools.Auth.Api
