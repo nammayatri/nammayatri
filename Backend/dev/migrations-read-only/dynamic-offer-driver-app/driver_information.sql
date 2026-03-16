@@ -326,3 +326,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN tds_rate double
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_blocked_for_scheduled_payout boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN nominee_relationship text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN nominee_name text ;
