@@ -75,3 +75,12 @@ updatePurchasedPassIdByOldPurchasedPassId newPurchasedPassId oldPurchasedPassId 
   updateWithKV
     [Se.Set Beam.purchasedPassId (getId newPurchasedPassId), Se.Set Beam.updatedAt _now]
     [Se.Is Beam.purchasedPassId $ Se.Eq (getId oldPurchasedPassId)]
+
+-- | Find all payment records for a given orderId. Useful for detecting duplicate
+-- payments and webhook idempotency checks where multiple records may exist.
+findByOrderId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DOrder.PaymentOrder ->
+  m [DPurchasedPassPayment.PurchasedPassPayment]
+findByOrderId orderId = do
+  findAllWithKV [Se.Is Beam.orderId $ Se.Eq (getId orderId)]
