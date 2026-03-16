@@ -17,7 +17,6 @@ import Domain.Types.BBPS
 import qualified Domain.Types.BBPS as DBBPS
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.MerchantOperatingCity as MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.Person as DP
 import Environment
