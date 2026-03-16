@@ -3,7 +3,6 @@
 
 module Lib.Yudhishthira.SchemaInstances where
 
-import Data.OpenApi
 import Kernel.Prelude
 
 -- This module is intended to house orphan ToSchema instances for types

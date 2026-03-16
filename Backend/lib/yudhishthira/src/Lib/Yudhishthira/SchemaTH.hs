@@ -1,15 +1,14 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Lib.Yudhishthira.SchemaTH (genToSchema) where
 
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
 import qualified Data.Map.Strict as Map
-import Data.OpenApi (ToSchema)
+import Data.OpenApi ()
 import qualified Data.Set as Set
-import Data.Time.LocalTime (TimeOfDay)
+import Data.Time.LocalTime ()
 import qualified Data.Vector as Vector
 import Kernel.Prelude hiding (Type)
 import qualified Kernel.Types.Id
