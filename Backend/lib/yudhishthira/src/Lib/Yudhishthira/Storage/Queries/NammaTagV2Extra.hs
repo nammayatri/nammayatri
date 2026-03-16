@@ -1,17 +1,13 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Lib.Yudhishthira.Storage.Queries.NammaTagV2Extra where
 
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.Beam.NammaTagV2 as Beam
-import Lib.Yudhishthira.Storage.Queries.OrphanInstances.NammaTagV2
+import Lib.Yudhishthira.Storage.Queries.OrphanInstances.NammaTagV2 ()
 import qualified Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types.NammaTagV2
 import Sequelize as Se

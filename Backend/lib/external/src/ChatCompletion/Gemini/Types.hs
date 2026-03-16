@@ -1,9 +1,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module ChatCompletion.Gemini.Types where
 
-import Data.Text as T
 import Kernel.Prelude
 import Kernel.Utils.JSON
 
