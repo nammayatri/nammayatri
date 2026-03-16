@@ -21,6 +21,7 @@ import qualified Kernel.Types.Id
 import Servant
 import qualified Servant.Client.Core
 import Tools.Auth
+import qualified Kernel.External.Verification.Types
 
 data AadhaarCardReq = AadhaarCardReq
   { aadhaarBackImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
@@ -105,7 +106,8 @@ data DocumentVerificationConfigList = DocumentVerificationConfigList
     bus :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     cabs :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     toto :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
-    trucks :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity]
+    trucks :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
+    verificationProvidersPriorityList :: Kernel.Prelude.Maybe [Kernel.External.Verification.Types.VerificationService]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

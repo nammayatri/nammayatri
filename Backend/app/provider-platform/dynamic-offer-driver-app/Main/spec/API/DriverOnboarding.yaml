@@ -29,6 +29,7 @@ imports:
   FarePolicy: Domain.Types.FarePolicy
   FareParameters: Domain.Types.FareParameters
   PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
+  VerificationService: Kernel.External.Verification.Types
 
 module: DriverOnboardingV2
 types:
@@ -44,6 +45,7 @@ types:
     bus: Maybe [DocumentVerificationConfigAPIEntity]
     boat: Maybe [DocumentVerificationConfigAPIEntity]
     toto: Maybe [DocumentVerificationConfigAPIEntity]
+    verificationProvidersPriorityList: Maybe [VerificationService]
   DocumentVerificationConfigAPIEntity:
     documentType: DocumentType
     documentCategory: Maybe DocumentCategory
