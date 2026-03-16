@@ -1,6 +1,5 @@
 module Storage.Queries.FRFSTicketBookingExtra where
 
-import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.JourneyLeg as DJL
@@ -40,42 +39,6 @@ updateOnInitFieldsById mbValidTill totalPrice isFareChanged mbBankAccNum mbBankC
         <> maybe [] (\bppOId -> [Se.Set Beam.bppOrderId (Just bppOId)]) mbBppOrderId
     )
     [Se.Is Beam.id $ Se.Eq (getId id)]
-
-updateFRFSTicketBookingVehicleDataBySearchId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Maybe Text ->
-  Maybe DJL.BusBoardingMethod ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Spec.ServiceTierType ->
-  Maybe Text ->
-  Maybe Text ->
-  Text ->
-  m ()
-updateFRFSTicketBookingVehicleDataBySearchId
-  finalBoardedVehicleNumber
-  finalBoardedVehicleNumberSource
-  finalBoardedWaybillId
-  finalBoardedScheduleNo
-  finalBoardedDepotNo
-  finalBoardedVehicleServiceTierType
-  conductorId
-  driverId
-  searchId = do
-    now <- getCurrentTime
-    updateOneWithKV
-      [ Se.Set Beam.finalBoardedVehicleNumber finalBoardedVehicleNumber,
-        Se.Set Beam.finalBoardedVehicleNumberSource finalBoardedVehicleNumberSource,
-        Se.Set Beam.finalBoardedWaybillId finalBoardedWaybillId,
-        Se.Set Beam.finalBoardedScheduleNo finalBoardedScheduleNo,
-        Se.Set Beam.finalBoardedDepotNo finalBoardedDepotNo,
-        Se.Set Beam.finalBoardedVehicleServiceTierType finalBoardedVehicleServiceTierType,
-        Se.Set Beam.conductorId conductorId,
-        Se.Set Beam.driverId driverId,
-        Se.Set Beam.updatedAt now
-      ]
-      [Se.Is Beam.searchId $ Se.Eq searchId]
 
 updateBookingAuthCodeById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Text -> Id FRFSTicketBooking -> m ()
 updateBookingAuthCodeById bookingAuthCode id = do
