@@ -4,7 +4,7 @@ module ExternalBPP.ExternalAPI.Metro.CMRL.V2.Auth where
 
 import Data.Aeson
 import Domain.Types.Extra.IntegratedBPPConfig
-import EulerHS.Prelude hiding (threadDelay)
+import EulerHS.Prelude hiding (elem, threadDelay)
 import EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Metro.CMRL.V2.Error
 import Kernel.External.Encryption
