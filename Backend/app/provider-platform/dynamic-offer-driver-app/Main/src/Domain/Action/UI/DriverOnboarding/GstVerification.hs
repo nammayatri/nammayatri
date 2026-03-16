@@ -55,6 +55,7 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverGstin as DGQuery
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
@@ -179,10 +180,17 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
     callIdfy :: Person.Person -> Maybe DGst.DriverGstin -> DVRC.DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
     callIdfy person mdriverGstInformation driverDocument transporterConfig = do
       logDebug $ "callIdfy: " <> show req
-      documentVerificationConfig <-
-        CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.GSTCertificate Nothing
-          >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.GSTCertificate))
-            . listToMaybe
+      checkExtraction <-
+        if DCommon.checkFleetOwnerRole person.role
+          then do
+            fodvc <- CQFODVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.GSTCertificate Nothing
+              >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.GSTCertificate))
+            pure fodvc.checkExtraction
+          else do
+            dvc <- CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.GSTCertificate Nothing
+              >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.GSTCertificate))
+                . listToMaybe
+            pure dvc.checkExtraction
       image1 <- DVRC.getDocumentImage person.id req.imageId ODC.GSTCertificate
       let extractReq =
             Verification.ExtractImageReq
@@ -199,7 +207,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
                   ImageDocumentNumberMismatch
                     (maybe "null" maskText extractedGstNo)
                     (maskText req.gstin)
-              verifyGstFlow person merchantOpCityId documentVerificationConfig (fromMaybe "" extractedGstNo) (Id req.imageId)
+              verifyGstFlow person merchantOpCityId checkExtraction (fromMaybe "" extractedGstNo) (Id req.imageId)
               pure extractedGST
             Nothing -> throwImageError (Id req.imageId) ImageExtractionFailed
 
@@ -223,13 +231,13 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
           DGQuery.create gstCardDetails
       pure Success
 
-verifyGstFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> ODC.DocumentVerificationConfig -> Text -> Id Image.Image -> Flow ()
-verifyGstFlow person merchantOpCityId documentVerificationConfig gstNumber imageId1 = do
+verifyGstFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Id Image.Image -> Flow ()
+verifyGstFlow person merchantOpCityId checkExtraction gstNumber imageId1 = do
   logDebug $ "verifyGstFlow: " <> show gstNumber
   now <- getCurrentTime
   encryptedGst <- encrypt gstNumber
   let imageExtractionValidation =
-        if documentVerificationConfig.checkExtraction
+        if checkExtraction
           then DIdfy.Success
           else DIdfy.Skipped
   verifyRes <-
