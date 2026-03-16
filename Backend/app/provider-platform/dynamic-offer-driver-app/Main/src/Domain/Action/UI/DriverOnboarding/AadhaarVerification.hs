@@ -286,7 +286,6 @@ unVerifiedAadhaarData personId merchantId merchantOpCityId req = do
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   mbAadhaarNumber <- traverse decrypt driverInfo.aadhaarNumber
   PanVerification.triggerPanAadhaarLinkageWhenPanAndAadhaarExist person merchantOpCityId mbAadhaarNumber
-
   return Success
 
 makeTransactionIdAndAadhaarHashKey :: Id Person.Person -> Text
