@@ -197,6 +197,22 @@ findAllByPersonIdAndPassTypeIdAndStatus personId merchantId passTypeId statuses 
         ]
     ]
 
+findAllPendingOlderThan ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  UTCTime ->
+  Maybe Int ->
+  m [DPurchasedPass.PurchasedPass]
+findAllPendingOlderThan cutoffTime mbLimit =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.status $ Se.Eq DPurchasedPass.Pending,
+          Se.Is Beam.createdAt $ Se.LessThanOrEq cutoffTime
+        ]
+    ]
+    (Se.Asc Beam.createdAt)
+    mbLimit
+    (Just 0)
+
 findAllActiveByPersonIdWithFiltersV2 ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DP.Person ->
