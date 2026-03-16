@@ -299,7 +299,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
           (tollRouteDeviation, isTollPresentOnCurrentRoute) <- updateTollRouteDeviation merchantOpCityId driverId ride batchWaypoints
           fork "Check driver stagnation" $ whenJust ride $ \r ->
             case batchWaypoints of
-              (wp : _) | r.status == NEW -> checkDriverStagnation r wp
+              (wp : _) | r.status == Domain.Types.Ride.NEW -> checkDriverStagnation r wp
               _ -> pure ()
           return (routeDeviation, tollRouteDeviation, isTollPresentOnCurrentRoute)
       )
