@@ -1310,7 +1310,7 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
       seatManagement <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId visitDate >>= fromMaybeM (TicketSeatManagementNotFound serviceCatId.getId (show visitDate))
       QTSM.updateBlockedSeats (seatManagement.blocked - tbsc.bookedSeats) serviceCatId visitDate
       let newBookedCount = seatManagement.booked + tbsc.bookedSeats
-      QTSM.safeUpdateBookedSeats newBookedCount (Just newBookedCount) serviceCatId visitDate
+      QTSM.safeUpdateBookedSeats newBookedCount serviceCatId visitDate
 
     updateBlockedSeats :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> DTB.TicketBookingServiceCategory -> Data.Time.Calendar.Day -> Environment.Flow ()
     updateBlockedSeats serviceCatId tbsc visitDate = do
@@ -1539,7 +1539,7 @@ createDirectBookingForCash (personId, merchantId) mbRequestorId placeId req = do
       seatManagement <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId visitDate >>= fromMaybeM (TicketSeatManagementNotFound serviceCatId.getId (show visitDate))
       QTSM.updateBlockedSeats (seatManagement.blocked - tbsc.bookedSeats) serviceCatId visitDate
       let newBookedCount = seatManagement.booked + tbsc.bookedSeats
-      QTSM.safeUpdateBookedSeats newBookedCount (Just newBookedCount) serviceCatId visitDate
+      QTSM.safeUpdateBookedSeats newBookedCount serviceCatId visitDate
 
 -- Cash collection handler that mimics the success flow of getTicketBookingsStatus
 postTicketBookingsCashCollect :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow Kernel.Types.APISuccess.APISuccess
@@ -1631,7 +1631,7 @@ postTicketBookingsCashCollect (mbPersonId, merchantId) _shortId@(Kernel.Types.Id
       seatManagement <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId visitDate >>= fromMaybeM (TicketSeatManagementNotFound serviceCatId.getId (show visitDate))
       QTSM.updateBlockedSeats (seatManagement.blocked - tbsc.bookedSeats) serviceCatId visitDate
       let newBookedCount = seatManagement.booked + tbsc.bookedSeats
-      QTSM.safeUpdateBookedSeats newBookedCount (Just newBookedCount) serviceCatId visitDate
+      QTSM.safeUpdateBookedSeats newBookedCount serviceCatId visitDate
 
     updateBlockedSeats :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> DTB.TicketBookingServiceCategory -> Data.Time.Calendar.Day -> Environment.Flow ()
     updateBlockedSeats serviceCatId tbsc visitDate = do
@@ -2012,7 +2012,7 @@ tryChangeBookedSeats categoryId newBookedSeats visitDate = do
               _ <- Redis.decrby (mkTicketServiceCategoryBookedCountKey categoryId visitDate) change
               throwError $ InvalidRequest "Cannot change max capacity as there might be more blocked + booked seats than the new max capacity"
             else do
-              QTSM.safeUpdateBookedSeats newBookedSeats (Just newBookedSeats) categoryId visitDate
+              QTSM.safeUpdateBookedSeats newBookedSeats categoryId visitDate
 
 tryBlockSeat :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory, Int) -> Environment.Flow BlockResult
 tryBlockSeat personId visitDate (categoryId, numberOfUnits) = withActiveRequestCounter tryBlockServiceCategory
