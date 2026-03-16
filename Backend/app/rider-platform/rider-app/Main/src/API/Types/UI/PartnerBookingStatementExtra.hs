@@ -1,5 +1,4 @@
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 {-
@@ -18,7 +17,7 @@
 
 module API.Types.UI.PartnerBookingStatementExtra
   ( module API.Types.UI.PartnerBookingStatement,
-    module API.Types.UI.PartnerBookingStatementExtra,
+
   )
 where
 

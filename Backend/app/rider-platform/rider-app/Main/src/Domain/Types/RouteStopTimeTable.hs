@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.RouteStopTimeTable where
 
