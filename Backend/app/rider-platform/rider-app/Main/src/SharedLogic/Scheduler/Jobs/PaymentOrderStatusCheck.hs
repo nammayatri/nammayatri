@@ -142,24 +142,21 @@ processPaymentOrder merchantId merchantOperatingCityId paymentOrder = do
   -- Auto-refund for "payment deducted, no ticket" cases:
   -- If payment is CHARGED but FRFS booking is FAILED, auto-initiate refund
   when (isFRFSPaymentType paymentServiceType) $ do
-    autoRefundPaymentWithNoTicket merchantId paymentOrder person
+    bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId paymentOrder.id
+    forM_ bookingPayments $ \bookingPayment -> do
+      when (bookingPayment.status == DFRFSTicketBookingPayment.SUCCESS) $ do
+        booking <- QFRFSTicketBooking.findById bookingPayment.frfsTicketBookingId
+        case booking of
+          Just b | b.status == DFRFSTicketBookingStatus.FAILED -> do
+            logWarning $ "Auto-refund: payment SUCCESS but booking FAILED for bookingId=" <> b.id.getId <> " orderId=" <> paymentOrder.id.getId
+            void $ SPayment.markRefundPendingAndSyncOrderStatus merchantId person.id paymentOrder.id
+          _ -> pure ()
   where
     isFRFSPaymentType :: Payment.PaymentServiceType -> Bool
     isFRFSPaymentType Payment.FRFSBooking = True
     isFRFSPaymentType Payment.FRFSBusBooking = True
     isFRFSPaymentType Payment.FRFSMultiModalBooking = True
     isFRFSPaymentType _ = False
-
-    autoRefundPaymentWithNoTicket mId order person = do
-      bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId order.id
-      forM_ bookingPayments $ \bookingPayment -> do
-        when (bookingPayment.status == DFRFSTicketBookingPayment.SUCCESS) $ do
-          booking <- QFRFSTicketBooking.findById bookingPayment.frfsTicketBookingId
-          case booking of
-            Just b | b.status == DFRFSTicketBookingStatus.FAILED -> do
-              logWarning $ "Auto-refund: payment SUCCESS but booking FAILED for bookingId=" <> b.id.getId <> " orderId=" <> order.id.getId
-              void $ SPayment.markRefundPendingAndSyncOrderStatus mId person.id order.id
-            _ -> pure ()
 
     -- Helper to create fulfillment handler based on payment service type
     mkFulfillmentHandler :: Payment.PaymentServiceType -> Id DM.Merchant -> Id DOrder.PaymentOrder -> DPayment.PaymentStatusResp -> m (DPayment.PaymentFulfillmentStatus, Maybe Text, Maybe Text)
