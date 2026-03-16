@@ -77,22 +77,23 @@ data CircuitBreakerConfig = CircuitBreakerConfig
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | Default configuration if none is provided
+-- Thresholds tuned down from 120/60s to 20/30s to catch degradations 2.5x earlier
 defaultCircuitBreakerConfig :: CircuitBreakerConfig
 defaultCircuitBreakerConfig =
   CircuitBreakerConfig
     { fare =
         Just
           APICircuitBreakerConfig
-            { thresholds = [ThresholdConfig 120 60],
-              canaryAllowedPerWindow = 120,
-              canaryWindowSeconds = 60
+            { thresholds = [ThresholdConfig 20 30],
+              canaryAllowedPerWindow = 10,
+              canaryWindowSeconds = 30
             },
       booking =
         Just
           APICircuitBreakerConfig
-            { thresholds = [ThresholdConfig 120 60],
-              canaryAllowedPerWindow = 120,
-              canaryWindowSeconds = 60
+            { thresholds = [ThresholdConfig 20 30],
+              canaryAllowedPerWindow = 10,
+              canaryWindowSeconds = 30
             }
     }
 
