@@ -278,6 +278,12 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             updatedAt = now
           }
 
+  -- CRITICAL: Create payment record BEFORE calling Juspay API.
+  -- The Juspay webhook can fire immediately after order creation.
+  -- If the payment record doesn't exist yet, the webhook handler
+  -- (passOrderStatusHandler) won't find it, leaving the pass stuck in Pending.
+  QPurchasedPassPayment.create purchasedPassPayment
+
   mbPaymentOrder <-
     if pass.amount > 0
       then do
@@ -325,9 +331,20 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         mbPaymentOrderValidity <- TPayment.getPaymentOrderValidity merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
         isMetroTestTransaction <- asks (.isMetroTestTransaction)
         let createWalletCall = TWallet.createWallet merchantId person.merchantOperatingCityId
-        DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False (Just purchasedPassId.getId)
+        -- Wrap Juspay order creation in try-catch. If it fails, mark both pass and payment as Failed
+        -- to prevent orphaned records (pass exists but no payment order at Juspay).
+        eitherPaymentOrder <-
+          withTryCatch "purchasePassWithPayment:createJuspayOrder" $
+            DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False (Just purchasedPassId.getId)
+        case eitherPaymentOrder of
+          Left err -> do
+            logError $ "Juspay order creation failed for purchasedPassId: " <> purchasedPassId.getId <> ", error: " <> show err
+            -- Rollback: mark pass and payment as Failed since Juspay order was never created
+            QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.Failed paymentOrderId
+            QPurchasedPass.updateStatusById DPurchasedPass.Failed purchasedPassId
+            throwError (InvalidRequest "Payment order creation failed, please try again")
+          Right paymentOrder -> return paymentOrder
       else return Nothing
-  QPurchasedPassPayment.create purchasedPassPayment
   return $
     PassAPI.PassSelectionAPIEntity
       { purchasedPassId = purchasedPassId,
