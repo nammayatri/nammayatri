@@ -7,7 +7,6 @@ module DriverOperationHubUnitTests where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Operator.Endpoints.Driver as Common
 import Control.Exception (evaluate, try)
-import qualified Data.Text as T
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Operator.Driver as DDriverOp
 import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as DM
 import qualified "dynamic-offer-driver-app" Environment (Flow)
@@ -15,7 +14,7 @@ import qualified "mobility-core" Kernel.Prelude
 import qualified "mobility-core" Kernel.Types.Beckn.Context as Context
 import qualified "mobility-core" Kernel.Types.Id
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase, (@?), (@?=))
+import Test.Tasty.HUnit (testCase, (@?), (@?=))
 import Prelude
 
 -- =============================================================================

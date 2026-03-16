@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Clickhouse.AlertIncident where
 
@@ -7,7 +6,6 @@ import qualified Domain.Types.AlertIncident as Domain
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
-import Kernel.Types.Common
 import Kernel.Types.Id
 
 data AlertIncidentT f = AlertIncidentT

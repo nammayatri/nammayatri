@@ -1,6 +1,4 @@
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.CachedQueries.Translations where
 
@@ -8,19 +6,13 @@ import qualified Data.Text
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantOperatingCity as DMerchantOperatingCity
 import qualified Domain.Types.Translations
-import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import qualified Kernel.External.Types as Lang
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Storage.InMem as IM
-import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Sequelize as Se
-import qualified Storage.Beam.Translations as Beam
 import Storage.Queries.OrphanInstances.Translations
 import qualified Storage.Queries.Translations as Queries
 

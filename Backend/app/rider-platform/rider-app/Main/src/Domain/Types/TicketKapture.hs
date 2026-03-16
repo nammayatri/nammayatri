@@ -1,9 +1,7 @@
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.TicketKapture where
 
-import Data.Aeson (FromJSON, ToJSON, object, (.=))
-import qualified Data.Aeson as A
+import Data.Aeson (FromJSON, ToJSON)
 import Data.OpenApi (ToSchema)
 import Data.Text (Text)
 import EulerHS.Prelude (Generic, Show)

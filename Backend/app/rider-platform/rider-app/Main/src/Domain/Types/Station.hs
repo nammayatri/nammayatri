@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Station where
 
@@ -13,7 +12,6 @@ import Kernel.External.Maps (HasCoordinates (..))
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound
-import qualified Tools.Beam.UtilsTH
 
 data Gate = Gate
   { gateName :: String,

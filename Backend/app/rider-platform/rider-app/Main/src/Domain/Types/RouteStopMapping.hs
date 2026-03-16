@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.RouteStopMapping where
 
@@ -13,7 +12,6 @@ import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Time
 import qualified Kernel.Types.TimeBound
-import qualified Tools.Beam.UtilsTH
 
 data RouteStopMapping = RouteStopMapping
   { estimatedTravelTimeFromPreviousStop :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
