@@ -153,6 +153,8 @@ DriverInformation:
     approved: Maybe Bool
     address: Maybe Text
     addressDocumentType: Maybe AddressDocumentType
+    nomineeName: Maybe Text
+    nomineeRelationship: Maybe Text
 
   default:
     active: "false"
@@ -328,6 +330,8 @@ DriverInformation:
           onboardingAs,
           address,
           addressDocumentType,
+          nomineeName,
+          nomineeRelationship,
         ]
       where: driverId
     updateRentalInterCityAndIntraCitySwitch:

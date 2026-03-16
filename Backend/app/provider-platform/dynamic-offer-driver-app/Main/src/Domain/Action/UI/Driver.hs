@@ -453,6 +453,8 @@ data DriverInformationRes = DriverInformationRes
     isTTSEnabled :: Maybe Bool,
     isHighAccuracyLocationEnabled :: Maybe Bool,
     rideRequestVolumeEnabled :: Maybe Bool,
+    nomineeName :: Maybe Text,
+    nomineeRelationship :: Maybe Text,
     profilePhotoUploadedAt :: Maybe UTCTime,
     activeFleet :: Maybe FleetInfo,
     onboardingAs :: Maybe DriverInfo.OnboardingAs,
@@ -549,6 +551,8 @@ data DriverEntityRes = DriverEntityRes
     isTTSEnabled :: Maybe Bool,
     isHighAccuracyLocationEnabled :: Maybe Bool,
     rideRequestVolumeEnabled :: Maybe Bool,
+    nomineeName :: Maybe Text,
+    nomineeRelationship :: Maybe Text,
     profilePhotoUploadedAt :: Maybe UTCTime,
     vehicleImageUploadedAt :: Maybe UTCTime,
     subscriptionCreditBalance :: Maybe HighPrecMoney
@@ -586,7 +590,9 @@ data UpdateDriverReq = UpdateDriverReq
     rideRequestVolumeEnabled :: Maybe Bool,
     onboardingAs :: Maybe DriverInfo.OnboardingAs,
     address :: Maybe Text,
-    addressDocumentType :: Maybe DriverInfo.AddressDocumentType
+    addressDocumentType :: Maybe DriverInfo.AddressDocumentType,
+    nomineeName :: Maybe Text,
+    nomineeRelationship :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -1248,6 +1254,8 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         isTTSEnabled = driverInfo.isTTSEnabled,
         isHighAccuracyLocationEnabled = driverInfo.isHighAccuracyLocationEnabled,
         rideRequestVolumeEnabled = driverInfo.rideRequestVolumeEnabled,
+        nomineeName = driverInfo.nomineeName,
+        nomineeRelationship = driverInfo.nomineeRelationship,
         subscriptionCreditBalance = subsCreditBalance,
         ..
       }
@@ -1335,6 +1343,8 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
       onboardingAs = req.onboardingAs <|> driverInfo.onboardingAs
       address = req.address <|> driverInfo.address
       addressDocumentType = req.addressDocumentType <|> driverInfo.addressDocumentType
+      nomineeName = req.nomineeName <|> driverInfo.nomineeName
+      nomineeRelationship = req.nomineeRelationship <|> driverInfo.nomineeRelationship
   -- Compute vehicle-related fields (use existing values if no vehicle or no request)
   (canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, canSwitchToRental, canSwitchToInterCity, canSwitchToIntraCity, availableUpiApps) <-
     case mVehicle of
@@ -1393,8 +1403,8 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.PINK_AUTO -> [DVST.PINK_AUTO]
       QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
   -- Update driver information (works for both cases: with or without vehicle)
-  when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity || isJust req.availableUpiApps || isJust req.isPetModeEnabled || isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold || isJust req.maxPickupRadius || isJust req.isSilentModeEnabled || isJust req.rideRequestVolume || isJust req.isTTSEnabled || isJust req.isHighAccuracyLocationEnabled || isJust req.rideRequestVolumeEnabled || isJust req.onboardingAs || isJust req.address || isJust req.addressDocumentType) $ do
-    QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled isHighAccuracyLocationEnabled rideRequestVolumeEnabled onboardingAs address addressDocumentType person.id
+  when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity || isJust req.availableUpiApps || isJust req.isPetModeEnabled || isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold || isJust req.maxPickupRadius || isJust req.isSilentModeEnabled || isJust req.rideRequestVolume || isJust req.isTTSEnabled || isJust req.isHighAccuracyLocationEnabled || isJust req.rideRequestVolumeEnabled || isJust req.onboardingAs || isJust req.address || isJust req.addressDocumentType || isJust req.nomineeName || isJust req.nomineeRelationship) $ do
+    QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled isHighAccuracyLocationEnabled rideRequestVolumeEnabled onboardingAs address addressDocumentType nomineeName nomineeRelationship person.id
 
   let petTag = Yudhishthira.TagNameValue "PetDriver#\"true\""
   when (isPetModeEnabled && maybe False (Yudhishthira.elemTagNameValue petTag) person.driverTag) $

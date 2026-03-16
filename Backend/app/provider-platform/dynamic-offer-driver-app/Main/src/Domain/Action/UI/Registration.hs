@@ -366,6 +366,8 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             approved = Nothing,
             address = Nothing,
             addressDocumentType = Nothing,
+            nomineeName = Nothing,
+            nomineeRelationship = Nothing,
             driverBankAccountDetails = Nothing,
             isBlockedForScheduledPayout = Nothing
           }
