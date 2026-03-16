@@ -866,7 +866,24 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
   purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
   unless (purchasedPass.personId == personId) $ throwError AccessDenied
   istTime <- getLocalCurrentTime (19800 :: Seconds)
-  unless (purchasedPass.startDate <= DT.utctDay istTime) $ throwError (PassActivationNotReady purchasedPassId.getId $ "Pass will be active from " <> show purchasedPass.startDate)
+  let today = DT.utctDay istTime
+      -- 24-hour grace period: pass remains valid for 1 day after endDate
+      gracePeriodDays = 1
+      gracePeriodEndDate = DT.addDays gracePeriodDays purchasedPass.endDate
+      isInGracePeriod = purchasedPass.endDate < today && gracePeriodEndDate >= today
+
+  -- Check pass is in a usable state (Active, PreBooked, or Expired within grace period)
+  unless (purchasedPass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]
+          || (purchasedPass.status == DPurchasedPass.Expired && isInGracePeriod)) $
+    throwError (InvalidRequest "Pass is not in an active state")
+
+  -- Check start date
+  unless (purchasedPass.startDate <= today) $
+    throwError (InvalidRequest $ "Pass will be active from " <> show purchasedPass.startDate)
+
+  -- Check expiry with grace period
+  when (today > gracePeriodEndDate) $
+    throwError (InvalidRequest "Pass has expired. Renew your pass to continue travelling.")
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
 
   -- If autoActivated is requested, find the nearest fleet (vehicle number) from user location
