@@ -15,6 +15,7 @@
 module Storage.Beam.Geometry.Geometry where
 
 import qualified Database.Beam as B
+import Domain.Types.BoundingBoxPoints (BoundingBoxPoints)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Tools.Beam.UtilsTH
@@ -23,7 +24,8 @@ data GeometryT f = GeometryT
   { id :: B.C f Text,
     city :: B.C f Context.City,
     state :: B.C f Context.IndianState,
-    region :: B.C f Text
+    region :: B.C f Text,
+    bbox :: B.C f (Maybe BoundingBoxPoints)
   }
   deriving (Generic, B.Beamable)
 

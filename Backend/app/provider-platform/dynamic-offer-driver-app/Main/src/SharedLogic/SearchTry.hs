@@ -333,8 +333,8 @@ buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceT
         let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
         return $
           ( farePolicy.parkingCharge,
-            Nothing, -- TODO: @Himanshu Fallback to searchReq.tollCharges (and SEPC when added) once Step 2+ of plan.
-            Nothing,
+            searchReq.tollCharges,
+            searchReq.stateEntryPermitCharges,
             USRD.extractDriverPickupCharges farePolicy.farePolicyDetails,
             mbDriverExtraFeeBounds <&> (.minFee),
             mbDriverExtraFeeBounds <&> (.maxFee),

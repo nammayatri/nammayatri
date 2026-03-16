@@ -406,20 +406,17 @@ flowchart LR
   - `Domain.Action.Dashboard.Management.Merchant`:  
     - `bbox = Nothing -- TODO: @Himanshu compute and persist bbox for this geometry (Phase: geometry bbox backfill)`
   - **Action**: once bbox backfill is done and Kernel bbox helpers are wired, (a) compute bbox at geometry creation time, and (b) make all geometry queries load `bbox` as `BoundingBoxPoints` for SEPC/toll pre-filtering.
-- 
-
-```haskell
-  TODO (@himanshu): add SEPC crossed update to BAP or not check with Khuzema
-
-  ~/files/nammayatri/Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/Lib/LocationUpdates.hs
-
-```
-
-- Migration for adding notification (Check if these or any other function expects kigration in this PR) :  
-mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "STATE_CROSSED" Nothing Nothing person.language Nothing
-ACL.buildOnUpdateMessageV2 merchant booking Nothing sepcCrossedUpdateBuildReq
-transportConfig.enableTollCrossedNotifications
-sendStateEntryPermitCrossedUpdateToBAP
+- **SEPC crossed update to BAP (check with Khuzema)**  
+  - `Lib.LocationUpdates`:  
+    - `TODO (@Himanshu): add SEPC crossed update to BAP or not check with Khuzema`  
+    - File: `Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/Lib/LocationUpdates.hs`  
+  - **Action**: confirm with Khuzema whether to add SEPC crossed update to BAP; if yes, implement in LocationUpdates.
+- **Migration for adding notification**  
+  - Check if these or any other function expects migration in this PR:  
+    - `mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "STATE_CROSSED" Nothing Nothing person.language Nothing`
+    - `ACL.buildOnUpdateMessageV2 merchant booking Nothing sepcCrossedUpdateBuildReq`
+    - `transportConfig.enableTollCrossedNotifications`
+    - `sendStateEntryPermitCrossedUpdateToBAP`
 
 ---
 

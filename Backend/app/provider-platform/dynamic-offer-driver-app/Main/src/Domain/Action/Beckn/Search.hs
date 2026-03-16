@@ -521,7 +521,6 @@ handler ValidatedDSearchReq {..} sReq = do
         isValid farePolicy Nothing = checkDistanceBounds farePolicy && checkExtendUpto farePolicy && vehicleAllowedOnTollRoute farePolicy
         isValid farePolicy (Just vehicleServiceTier) = farePolicy.vehicleServiceTier == vehicleServiceTier && checkDistanceBounds farePolicy && checkExtendUpto farePolicy && vehicleAllowedOnTollRoute farePolicy
 
-        -- TODO: @Himanshu check this toll-based vehicleAllowedOnTollRoute logic with Khuzema if this is required for SEPC
         vehicleAllowedOnTollRoute farePolicy = case farePolicy.vehicleServiceTier of
           AUTO_RICKSHAW -> fromMaybe True mbIsAutoRickshawAllowed
           BIKE -> fromMaybe True mbIsTwoWheelerAllowed

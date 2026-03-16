@@ -78,14 +78,16 @@ instance FromTType' BeamG.Geometry Geometry where
         Geometry
           { id = Id id,
             geom = Nothing,
-            bbox = Nothing, -- TODO: @Himanshu load bbox from Beam geometry row once bbox is populated in DB
+            bbox = bbox,
             ..
           }
 
 instance ToTType' BeamGeomG.GeometryGeom Geometry where
-  toTType' Geometry {..} = do
+  toTType' Geometry {..} =
     BeamGeomG.GeometryGeomT
       { BeamGeomG.id = getId id,
         BeamGeomG.geom = geom,
+        BeamGeomG.bbox = bbox,
         ..
       }
+
