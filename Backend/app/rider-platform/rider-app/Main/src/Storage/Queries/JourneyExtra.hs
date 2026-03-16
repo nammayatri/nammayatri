@@ -1,27 +1,20 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.JourneyExtra where
 
-import Control.Monad.Extra (mapMaybeM)
-import Data.List (maximumBy, sortBy)
+import Data.List (maximumBy)
 import Data.Ord (comparing)
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.FRFSTicket as DTicket
 import qualified Domain.Types.Journey as DJ
-import qualified Domain.Types.JourneyLeg as JL
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime, logDebug)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime, logDebug)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Journey as Beam
-import qualified Storage.Queries.FRFSTicket as QTicket
-import qualified Storage.Queries.FRFSTicketBooking as QTicketBooking
 import Storage.Queries.OrphanInstances.Journey
 
 -- Extra code goes here --

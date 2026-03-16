@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveGeneric #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.Dashboard.Management.PlanManagement
   ( postPlanManagementCreate,
@@ -10,12 +9,8 @@ module Domain.Action.Dashboard.Management.PlanManagement
 where
 
 import qualified API.Types.ProviderPlatform.Management.Endpoints.PlanManagement as Common
-import qualified Domain.Types.Extra.Plan as DExtra
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Plan as DPlan
-import qualified Domain.Types.VehicleCategory as DVC
-import qualified Domain.Types.VehicleVariant as DVV
 import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess

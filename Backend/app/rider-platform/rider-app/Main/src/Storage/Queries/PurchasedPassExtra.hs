@@ -1,26 +1,20 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.PurchasedPassExtra where
 
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Extra.PurchasedPass ()
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Pass as DPass
 import qualified Domain.Types.PassType as DPassType
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Sequelize as Se
 import qualified Storage.Beam.PurchasedPass as Beam
 import Storage.Queries.OrphanInstances.PurchasedPass ()
-import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.BBPSExtra where
 
@@ -7,11 +6,9 @@ import Domain.Types.BBPS
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import Sequelize as Se
 import qualified Storage.Beam.BBPS as BeamT
 import Storage.Queries.OrphanInstances.BBPS

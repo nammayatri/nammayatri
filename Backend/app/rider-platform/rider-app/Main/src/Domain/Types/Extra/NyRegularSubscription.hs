@@ -1,8 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 -- Added for orphan instance
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Extra.NyRegularSubscription where
 

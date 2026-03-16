@@ -1,10 +1,7 @@
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.Dashboard.AppManagement.MerchantOnboarding.TicketHandlers where
 
 import Data.Aeson
 import qualified Data.Text as T
-import qualified Domain.Types.MerchantOnboarding as MO
 import qualified Domain.Types.MerchantOnboarding.Handler as H
 import qualified Domain.Types.MerchantOnboardingStep as MOS
 import qualified Domain.Types.TicketMerchantDetails as DTMD
@@ -16,12 +13,10 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Predicate as P
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
-import Kernel.Utils.TH
 import Kernel.Utils.Validation
 import qualified Storage.Queries.MerchantOnboarding as QMO
 import qualified Storage.Queries.MerchantOnboardingStep as QMOS
 import qualified Storage.Queries.TicketMerchantDetails as QTMD
-import Tools.Error
 
 data TicketMerchantInfoPayload = TicketMerchantInfoPayload
   { agreementLetter :: Maybe Text,

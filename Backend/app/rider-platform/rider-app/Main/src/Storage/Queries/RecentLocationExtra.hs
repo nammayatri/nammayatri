@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.RecentLocationExtra where
 
@@ -7,13 +6,9 @@ import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as Person
 import Domain.Types.RecentLocation as DRecentLocation
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude hiding (isNothing)
-import Kernel.Storage.Esqueleto as Esq
-import qualified Kernel.Storage.Esqueleto.Functions as F
-import Kernel.Types.Error
 import qualified Kernel.Types.Id as Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import Sequelize as Se
 import qualified Storage.Beam.RecentLocation as Beam
 import Storage.Queries.OrphanInstances.RecentLocation

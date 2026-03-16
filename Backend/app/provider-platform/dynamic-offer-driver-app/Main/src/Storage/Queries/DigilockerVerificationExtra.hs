@@ -1,9 +1,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.DigilockerVerificationExtra where
 
-import qualified Domain.Types.DigilockerVerification as DDV
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude

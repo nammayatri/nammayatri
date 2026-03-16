@@ -1,22 +1,18 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.JourneyLegExtra where
 
 import Control.Monad.Extra (mapMaybeM)
-import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Journey as Journey
 import qualified Domain.Types.JourneyLeg as JL
 import qualified Domain.Types.JourneyLegMapping as DJLM
 import qualified Domain.Types.RouteDetails as RouteDetails
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
-import Kernel.External.MultiModal.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM)
 import qualified Sequelize as Se
 import qualified Storage.Beam.JourneyLeg as Beam
 import qualified Storage.Queries.JourneyLegMapping as QJourneyLegMapping

@@ -1,6 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.EventManagement where
 
@@ -9,16 +8,13 @@ import qualified Data.Time as Time
 import qualified Domain.Types.BusinessHour as DBusinessHour
 import qualified Domain.Types.ServiceCategory as DServiceCategory
 import qualified Domain.Types.ServicePeopleCategory as DServicePeopleCategory
-import qualified Domain.Types.SpecialOccasion as DSpecialOccasion
 import qualified Domain.Types.TicketPlace as DTicketPlace
 import qualified Domain.Types.TicketService as DTicketService
 import qualified Domain.Types.TicketSubPlace as DTicketSubPlace
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.TimeBound (TimeBound (..))
 import SharedLogic.TicketRule.Core (Rule)
-import qualified Tools.Payment as Payment
 
 data TicketPlaceDef = TicketPlaceDef
   { id :: Id DTicketPlace.TicketPlace,
