@@ -1,4 +1,6 @@
 
+import { startPaymentPageLoad, onPaymentPageVisible, onPaymentAttemptComplete } from "../Engineering/Helpers/MetricsTracking.js";
+
 const { JOS, JBridge } = window;
 const microapps = ["in.juspay.hyperpay", "in.juspay.ec", "in.juspay.upiintent"];
 
@@ -62,6 +64,7 @@ export const  killPP = function (services) {
 }
 
 export const initiatePP = function () {
+  try { startPaymentPageLoad(); } catch(_) {}
   if (ppInitiateStatus()) {
     window.isPPInitiated = true;
     return;
@@ -168,6 +171,7 @@ export const consumeBP = function (unit){
 export const checkPPInitiateStatus = function (cb,services = microapps) {
   if (ppInitiateStatus() && window.isPPInitiated || (window.isPPInitiated && checkPPLoadStatus(services))) {
     cb()();
+    try { onPaymentPageVisible(window.__OS || "unknown")(); } catch(_) {}
   } else {
     waitTillSeviceLoad(cb,services,checkPPInitiateStatus);
   }
@@ -180,7 +184,8 @@ export const startPP = function (payload) {
         return function (_response) {
           return function () {
             const response = JSON.parse(_response);
-            console.log("%cHyperpay Response ","background:darkblue;color:white;font-size:13px;padding:2px", response);                                                        
+            console.log("%cHyperpay Response ","background:darkblue;color:white;font-size:13px;padding:2px", response);
+            try { onPaymentAttemptComplete("unknown")(window.__transitMode || "unknown")(response.payload.status)(); } catch(_) {}
             sc(response.payload.status)();
             if ((window.__OS).toUpperCase() == "ANDROID") {
               const ppServices = Object.keys(top.JOSHolder).filter((key) => { return key != JOS.self });
