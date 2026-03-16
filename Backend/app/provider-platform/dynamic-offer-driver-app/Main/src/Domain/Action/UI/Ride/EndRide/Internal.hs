@@ -57,7 +57,6 @@ import qualified Domain.Types.ConditionalCharges as DAC
 import Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
-import qualified Domain.Types.DriverPanCard as DPan
 import Domain.Types.DriverPlan
 import Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.FareParameters as DFare
@@ -94,7 +93,6 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common hiding (getCurrentTime)
-import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as DC
@@ -489,18 +487,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         pure (currentRate <|> configTdsRate)
 
     mbPanCard <- QPanCard.findByDriverId driverOrFleetPersonId
-    let hasValidPan = maybe False (\pan -> pan.verificationStatus == Documents.VALID) mbPanCard
-        panType = mbPanCard >>= (.docType)
-        earningsEligible = True
-        panTypeEligible = case panType of
-          Just DPan.BUSINESS -> True
-          _ -> earningsEligible
-        isPanValid = hasValidPan && panTypeEligible
-        defaultTdsRateForInvalidPan = transporterConfig.taxConfig.invalidPanTdsRate
-        effectiveTdsRate =
-          if isPanValid
-            then mbTdsRate -- use configured rate for valid PAN
-            else Just defaultTdsRateForInvalidPan -- use configured rate for invalid/missing PAN
+    let effectiveTdsRate = computeEffectiveTdsRate mbPanCard mbTdsRate (transporterConfig.taxConfig.defaultTdsRate) (transporterConfig.taxConfig.invalidPanTdsRate)
         baseFareForTds = max 0 baseFare
         mbTdsAmount = do
           rate <- effectiveTdsRate

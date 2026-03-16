@@ -17,6 +17,7 @@ module Mobility.ARDU.NearestDrivers (spec) where
 -- import qualified Kernel.Storage.Esqueleto as Esq
 import qualified "dynamic-offer-driver-app" Domain.Action.Internal.DriverMode as DDriverMode
 import qualified "dynamic-offer-driver-app" Domain.Types.Common as DI
+import qualified "dynamic-offer-driver-app" Domain.Types.TransporterConfig as DTC
 import qualified "dynamic-offer-driver-app" Environment as ARDUEnv
 import EulerHS.Prelude
 import Kernel.External.Maps.Types (LatLong (..))
@@ -64,8 +65,19 @@ createNearestDriverReq nearestRadius now =
       prepaidSubscriptionThreshold = Nothing,
       fleetPrepaidSubscriptionThreshold = Nothing,
       rideFare = Nothing,
+      govtCharges = Nothing,
+      tollCharges = Nothing,
+      parkingCharge = Nothing,
       paymentInstrument = Nothing,
       paymentMode = Nothing,
+      taxConfig =
+        DTC.TaxConfig
+          { defaultTdsRate = Nothing,
+            invalidPanTdsRate = 0,
+            rideGst = DTC.GstBreakup Nothing Nothing Nothing,
+            securityDepositGst = Nothing,
+            subscriptionTdsRate = Nothing
+          },
       minWalletAmountForCashRides = Nothing,
       ..
     }

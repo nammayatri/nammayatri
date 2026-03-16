@@ -31,6 +31,8 @@ module SharedLogic.Finance.Wallet
     settleWalletEntries,
     getPayoutEligibilityData,
     computeTdsRateReason,
+    computeEffectiveTdsRate,
+    estimateWalletDeductions,
   )
 where
 
@@ -425,3 +427,38 @@ settleWalletEntries ::
   m ()
 settleWalletEntries entryIds payoutRequestId =
   markEntriesAsPaidOut entryIds payoutRequestId
+
+-- | Resolve the effective TDS rate for a driver/fleet owner.
+--   If PAN is invalid/missing → invalidPanTdsRate.
+--   If PAN is valid → custom rate (from driverInfo/fleetOwnerInfo) or config default.
+computeEffectiveTdsRate ::
+  Maybe DPanCard.DriverPanCard -> -- PAN card info
+  Maybe Double -> -- custom TDS rate (driverInfo.tdsRate or fleetOwnerInfo.tdsRate)
+  Maybe Double -> -- config defaultTdsRate
+  Double -> -- invalidPanTdsRate
+  Maybe Double -- effective rate
+computeEffectiveTdsRate mbPanCard mbCustomRate configDefaultTdsRate invalidPanTdsRate_ =
+  let hasValidPan = maybe False (\pan -> pan.verificationStatus == Documents.VALID) mbPanCard
+      panType = mbPanCard >>= (.docType)
+      panTypeEligible = case panType of
+        Just DPanCard.BUSINESS -> True
+        _ -> True
+      isPanValid = hasValidPan && panTypeEligible
+   in if isPanValid
+        then case mbCustomRate of
+          Just _ -> mbCustomRate
+          Nothing -> configDefaultTdsRate
+        else Just invalidPanTdsRate_
+
+-- | Estimate wallet deductions (TDS only) for a given baseFare.
+--   GST (govtCharges) comes from fareParams at ride end, not recalculated here.
+--   At allocation time, rideFare = searchTry.baseFare (already excludes GST).
+--   tdsRate is a fractional Double (e.g. 0.01 for 1%).
+estimateWalletDeductions ::
+  Maybe Double -> -- effective TDS rate
+  HighPrecMoney -> -- baseFare (rideFare at allocation time, which is already baseFare)
+  HighPrecMoney -- estimated TDS deduction
+estimateWalletDeductions mbTdsRate baseFare =
+  case mbTdsRate of
+    Just rate | rate > 0 -> max 0 baseFare * realToFrac rate
+    _ -> 0

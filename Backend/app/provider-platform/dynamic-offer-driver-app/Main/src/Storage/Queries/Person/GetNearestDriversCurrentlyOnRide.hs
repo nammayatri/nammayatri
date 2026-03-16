@@ -11,6 +11,7 @@ import qualified Domain.Types.Driver.DriverInformation as DIAPI
 import qualified Domain.Types.Extra.MerchantPaymentMethod as MP
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
+import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.VehicleServiceTier as DVST
 import Domain.Types.VehicleVariant as DV
 import Domain.Utils
@@ -88,8 +89,12 @@ data NearestDriversOnRideReq = NearestDriversOnRideReq
     prepaidSubscriptionThreshold :: Maybe HighPrecMoney,
     fleetPrepaidSubscriptionThreshold :: Maybe HighPrecMoney,
     rideFare :: Maybe HighPrecMoney,
+    govtCharges :: Maybe HighPrecMoney,
+    tollCharges :: Maybe HighPrecMoney,
+    parkingCharge :: Maybe HighPrecMoney,
     minWalletAmountForCashRides :: Maybe HighPrecMoney,
     paymentInstrument :: Maybe MP.PaymentInstrument,
+    taxConfig :: DTC.TaxConfig,
     onlinePayment :: Bool,
     now :: UTCTime,
     paymentMode :: Maybe MP.PaymentMode
@@ -110,7 +115,7 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
   logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show driverLocs
   driverInfos_ <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True isRental isInterCity
   driverInfosPrepaid <- QGND.filterDriversBySufficientBalance merchant rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_
-  driverInfos <- QGND.filterDriversByMinWalletBalance merchant minWalletAmountForCashRides paymentInstrument driverInfosPrepaid
+  driverInfos <- QGND.filterDriversByMinWalletBalance merchant minWalletAmountForCashRides paymentInstrument rideFare govtCharges tollCharges parkingCharge taxConfig driverInfosPrepaid
   logDebug $ "GetNearestDriversCurrentlyOnRide - DInfo:- " <> show (DIAPI.convertToDriverInfoAPIEntity <$> driverInfos)
   vehicles <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicles

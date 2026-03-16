@@ -533,6 +533,9 @@ selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocat
             isRental = False,
             isInterCity = False,
             rideFare = Nothing,
+            govtCharges = Nothing,
+            tollCharges = Nothing,
+            parkingCharge = Nothing,
             paymentInstrument = Nothing,
             ..
           }

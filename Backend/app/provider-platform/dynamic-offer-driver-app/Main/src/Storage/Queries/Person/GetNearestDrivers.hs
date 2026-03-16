@@ -5,6 +5,7 @@ module Storage.Queries.Person.GetNearestDrivers
     hasSufficientBalance,
     filterDriversBySufficientBalance,
     filterDriversByMinWalletBalance,
+    estimateDeductionsFromConfig,
   )
 where
 
@@ -20,6 +21,7 @@ import qualified Domain.Types.FleetDriverAssociation as FDA
 import qualified Domain.Types.FleetOwnerInformation as FOI
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
+import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.VehicleServiceTier as DVST
 import Domain.Types.VehicleVariant as DV
 import Domain.Utils
@@ -95,8 +97,12 @@ data NearestDriversReq = NearestDriversReq
     prepaidSubscriptionThreshold :: Maybe HighPrecMoney,
     fleetPrepaidSubscriptionThreshold :: Maybe HighPrecMoney,
     rideFare :: Maybe HighPrecMoney,
+    govtCharges :: Maybe HighPrecMoney,
+    tollCharges :: Maybe HighPrecMoney,
+    parkingCharge :: Maybe HighPrecMoney,
     minWalletAmountForCashRides :: Maybe HighPrecMoney,
     paymentInstrument :: Maybe MP.PaymentInstrument,
+    taxConfig :: DTC.TaxConfig,
     isValueAddNP :: Bool,
     onlinePayment :: Bool,
     now :: UTCTime,
@@ -114,7 +120,7 @@ getNearestDrivers NearestDriversReq {..} = do
   driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong nearestRadius (bool (Just allowedVehicleVariant) Nothing (null allowedVehicleVariant))
   driverInfos_ <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) True False isRental isInterCity
   driverInfosPrepaid <- filterDriversBySufficientBalance merchant rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_
-  driverInfos <- filterDriversByMinWalletBalance merchant minWalletAmountForCashRides paymentInstrument driverInfosPrepaid
+  driverInfos <- filterDriversByMinWalletBalance merchant minWalletAmountForCashRides paymentInstrument rideFare govtCharges tollCharges parkingCharge taxConfig driverInfosPrepaid
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle
   -- driverStats <- QDriverStats.findAllByDriverIds drivers
@@ -271,14 +277,22 @@ filterDriversByMinWalletBalance ::
   Merchant ->
   Maybe HighPrecMoney ->
   Maybe MP.PaymentInstrument ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  DTC.TaxConfig ->
   [DI.DriverInformation] ->
   m [DI.DriverInformation]
-filterDriversByMinWalletBalance merchant minWalletAmountForCashRides paymentInstrument driverInfos_ = do
+filterDriversByMinWalletBalance merchant minWalletAmountForCashRides paymentInstrument rideFare govtCharges tollCharges parkingCharge taxConfig driverInfos_ = do
   let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
   if not isPrepaidSubscriptionAndWalletEnabled
     then pure driverInfos_
     else case minWalletAmountForCashRides of
-      Just minAmt | shouldCheckWalletBalance paymentInstrument -> filterM (hasMinWalletBalance minAmt) driverInfos_
+      Just minAmt | shouldCheckWalletBalance paymentInstrument -> do
+        let estimatedDeductions = estimateDeductionsFromConfig taxConfig rideFare govtCharges tollCharges parkingCharge
+            requiredBalance = minAmt + estimatedDeductions
+        filterM (hasMinWalletBalance requiredBalance) driverInfos_
       _ -> pure driverInfos_
   where
     shouldCheckWalletBalance = \case
@@ -287,6 +301,22 @@ filterDriversByMinWalletBalance merchant minWalletAmountForCashRides paymentInst
       Just MP.BoothOnline -> True
       _ -> False
 
-    hasMinWalletBalance minAmt driver = do
+    hasMinWalletBalance requiredAmt driver = do
       mbBalance <- getWalletBalanceByOwner counterpartyDriver driver.driverId.getId
-      pure $ maybe False (>= minAmt) mbBalance
+      pure $ maybe False (>= requiredAmt) mbBalance
+
+-- | Estimate deductions (govtCharges + TDS) from fare components.
+--   baseFare = rideFare - govtCharges - tollCharges - parkingCharge (same as EndRide).
+--   Uses invalidPanTdsRate as conservative upper bound for TDS.
+estimateDeductionsFromConfig :: DTC.TaxConfig -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney
+estimateDeductionsFromConfig taxConfig rideFare govtCharges_ tollCharges_ parkingCharge_ =
+  case rideFare of
+    Nothing -> 0
+    Just totalFare ->
+      let gstAmount = fromMaybe 0 govtCharges_
+          tollAmount = fromMaybe 0 tollCharges_
+          parkingAmount = fromMaybe 0 parkingCharge_
+          baseFare = totalFare - gstAmount - tollAmount - parkingAmount
+          -- Use invalidPanTdsRate as conservative upper bound for pool filtering
+          tdsRate = Just taxConfig.invalidPanTdsRate
+       in gstAmount + estimateWalletDeductions tdsRate baseFare

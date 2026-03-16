@@ -67,6 +67,9 @@ data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
     isValueAddNP :: Bool,
     onlinePayment :: Bool,
     rideFare :: Maybe HighPrecMoney,
+    govtCharges :: Maybe HighPrecMoney,
+    tollCharges :: Maybe HighPrecMoney,
+    parkingCharge :: Maybe HighPrecMoney,
     paymentInstrument :: Maybe DMPM.PaymentInstrument,
     currentSearchInfo :: DTS.CurrentSearchInfo,
     transporterConfig :: DTC.TransporterConfig,
@@ -279,6 +282,7 @@ data TripQuoteDetail = TripQuoteDetail
     congestionCharges :: Maybe HighPrecMoney,
     petCharges :: Maybe HighPrecMoney,
     priorityCharges :: Maybe HighPrecMoney,
+    govtCharges :: Maybe HighPrecMoney,
     estimateOrQuoteId :: Text,
     eligibleForUpgrade :: Bool,
     commissionCharges :: Maybe HighPrecMoney

@@ -41,6 +41,7 @@ import Data.Foldable.Extra (notNull)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import qualified Data.Map as Map
+import Data.Maybe (listToMaybe)
 import qualified Domain.Types as DVST
 import Domain.Types.Common
 import qualified Domain.Types.Common as DriverInfo
@@ -217,7 +218,10 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                               isInterCity = isInterCityTrip searchTry.tripCategory,
                               onlinePayment = merchant.onlinePayment,
                               configsInExperimentVersions = searchReq.configInExperimentVersions,
-                              rideFare = Just searchTry.baseFare, -- TODO: add walletBalance check
+                              rideFare = Just searchTry.baseFare,
+                              govtCharges = listToMaybe tripQuoteDetails >>= (.govtCharges),
+                              tollCharges = listToMaybe tripQuoteDetails >>= (.tollCharges),
+                              parkingCharge = listToMaybe tripQuoteDetails >>= (.driverParkingCharge),
                               paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                               paymentMode = searchReq.paymentMode,
                               ..
@@ -463,6 +467,9 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         onlinePayment = merchant.onlinePayment,
                         configsInExperimentVersions = searchReq.configInExperimentVersions,
                         rideFare = Just searchTry.baseFare,
+                        govtCharges = listToMaybe tripQuoteDetails >>= (.govtCharges),
+                        tollCharges = listToMaybe tripQuoteDetails >>= (.tollCharges),
+                        parkingCharge = listToMaybe tripQuoteDetails >>= (.driverParkingCharge),
                         paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                         paymentMode = searchReq.paymentMode,
                         ..
@@ -485,6 +492,9 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
           let dropLocation = searchReq.toLocation <&> (\loc -> LatLong loc.lat loc.lon)
               routeDistance = searchReq.estimatedDistance
           let currentSearchInfo = DTS.CurrentSearchInfo {..}
+          let govtCharges = listToMaybe tripQuoteDetails >>= (.govtCharges)
+              tollCharges_ = listToMaybe tripQuoteDetails >>= (.tollCharges)
+              parkingCharge = listToMaybe tripQuoteDetails >>= (.driverParkingCharge)
           let driverPoolReq =
                 CalculateDriverPoolReq
                   { poolStage = DriverSelection,
@@ -495,6 +505,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                     isInterCity = isInterCityTrip searchTry.tripCategory,
                     onlinePayment = merchant.onlinePayment,
                     rideFare = Just searchTry.baseFare,
+                    tollCharges = tollCharges_,
                     paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                     paymentMode = searchReq.paymentMode,
                     ..
@@ -511,6 +522,9 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               let dropLocation = searchReq.toLocation <&> (\loc -> LatLong loc.lat loc.lon)
                   routeDistance = searchReq.estimatedDistance
               let currentSearchInfo = DTS.CurrentSearchInfo {..}
+              let govtCharges = listToMaybe tripQuoteDetails >>= (.govtCharges)
+                  tollCharges_ = listToMaybe tripQuoteDetails >>= (.tollCharges)
+                  parkingCharge = listToMaybe tripQuoteDetails >>= (.driverParkingCharge)
               let driverPoolReq =
                     CalculateDriverPoolReq
                       { poolStage = DriverSelection,
@@ -521,6 +535,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         isInterCity = isInterCityTrip searchTry.tripCategory,
                         onlinePayment = merchant.onlinePayment,
                         rideFare = Just searchTry.baseFare,
+                        tollCharges = tollCharges_,
                         paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                         paymentMode = searchReq.paymentMode,
                         ..

@@ -6,6 +6,7 @@ import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.List as DL
 import qualified Data.Map as Map
+import Data.Maybe (listToMaybe)
 import Domain.Types.Common
 import Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverPoolConfig
@@ -209,6 +210,9 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               dropLocation = searchReq.toLocation <&> (\loc -> LatLong loc.lat loc.lon)
               routeDistance = searchReq.estimatedDistance
               currentSearchInfo = DTS.CurrentSearchInfo {..}
+              govtCharges = listToMaybe tripQuoteDetails >>= (.govtCharges)
+              tollCharges_ = listToMaybe tripQuoteDetails >>= (.tollCharges)
+              parkingCharge = listToMaybe tripQuoteDetails >>= (.driverParkingCharge)
               driverPoolReq =
                 CalculateDriverPoolReq
                   { poolStage = DriverSelection,
@@ -218,7 +222,8 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                     isRental = isRentalTrip searchTry.tripCategory,
                     isInterCity = isInterCityTrip searchTry.tripCategory,
                     onlinePayment = merchant.onlinePayment,
-                    rideFare = Just searchTry.baseFare, -- TODO: add walletBalance check
+                    rideFare = Just searchTry.baseFare,
+                    tollCharges = tollCharges_,
                     paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                     paymentMode = searchReq.paymentMode,
                     ..
@@ -338,6 +343,9 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               let dropLocation = searchReq.toLocation <&> (\loc -> LatLong loc.lat loc.lon)
                   routeDistance = searchReq.estimatedDistance
               let currentSearchInfo = DTS.CurrentSearchInfo {..}
+              let govtCharges = listToMaybe tripQuoteDetails >>= (.govtCharges)
+                  tollCharges_ = listToMaybe tripQuoteDetails >>= (.tollCharges)
+                  parkingCharge = listToMaybe tripQuoteDetails >>= (.driverParkingCharge)
               let driverPoolReq =
                     CalculateDriverPoolReq
                       { poolStage = DriverSelection,
@@ -348,6 +356,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         isInterCity = isInterCityTrip searchTry.tripCategory,
                         onlinePayment = merchant.onlinePayment,
                         rideFare = Just searchTry.baseFare,
+                        tollCharges = tollCharges_,
                         paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                         paymentMode = searchReq.paymentMode,
                         ..
@@ -499,6 +508,9 @@ assignDriverGoHomeTags pool searchReq searchTry tripQuoteDetails driverPoolCfg m
                   onlinePayment = merchant.onlinePayment,
                   configsInExperimentVersions = searchReq.configInExperimentVersions,
                   rideFare = Just searchTry.baseFare,
+                  govtCharges = listToMaybe tripQuoteDetails >>= (.govtCharges),
+                  tollCharges = listToMaybe tripQuoteDetails >>= (.tollCharges),
+                  parkingCharge = listToMaybe tripQuoteDetails >>= (.driverParkingCharge),
                   paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                   paymentMode = searchReq.paymentMode,
                   ..

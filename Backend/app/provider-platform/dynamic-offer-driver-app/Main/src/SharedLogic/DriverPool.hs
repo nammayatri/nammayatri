@@ -561,8 +561,12 @@ calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId
             prepaidSubscriptionThreshold = transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold,
             fleetPrepaidSubscriptionThreshold = transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold,
             rideFare,
+            govtCharges,
+            tollCharges,
+            parkingCharge,
             minWalletAmountForCashRides = transporterConfig.driverWalletConfig.minWalletAmountForCashRides,
             paymentInstrument,
+            taxConfig = transporterConfig.taxConfig,
             isRental,
             isInterCity,
             onlinePayment,
@@ -756,6 +760,9 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
     transporterConfig :: DTC.TransporterConfig,
     mRadiusStep :: Maybe PoolRadiusStep,
     rideFare :: Maybe HighPrecMoney,
+    govtCharges :: Maybe HighPrecMoney,
+    tollCharges :: Maybe HighPrecMoney,
+    parkingCharge :: Maybe HighPrecMoney,
     paymentInstrument :: Maybe MP.PaymentInstrument,
     isRental :: Bool,
     isInterCity :: Bool,
@@ -795,6 +802,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
             minWalletAmountForCashRides = transporterConfig.driverWalletConfig.minWalletAmountForCashRides,
             paymentInstrument,
             rideFare,
+            taxConfig = transporterConfig.taxConfig,
             ..
           }
   driversWithLessThanNParallelRequests <- case poolStage of
@@ -1028,6 +1036,7 @@ calculateDriverPoolCurrentlyOnRide CalculateDriverPoolReq {..} mbBatchNum = do
               rideFare,
               minWalletAmountForCashRides = transporterConfig.driverWalletConfig.minWalletAmountForCashRides,
               paymentInstrument,
+              taxConfig = transporterConfig.taxConfig,
               ..
             }
   driversWithLessThanNParallelRequests <- case poolStage of
