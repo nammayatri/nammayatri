@@ -358,28 +358,36 @@ refundStatusHandler paymentOrder paymentServiceType = do
     passesRefundStatusHandler refund = do
       purchasedPassPayment <- QPurchasedPassPayment.findOneByPaymentOrderId paymentOrder.id >>= fromMaybeM (PurchasedPassPaymentNotFound paymentOrder.id.getId)
       purchasedPass <- QPurchasedPass.findById purchasedPassPayment.purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassPayment.purchasedPassId.getId)
+      -- Update pass status for refunds regardless of current pass status.
+      -- Previously, only Pending passes were updated, leaving Active passes
+      -- functional even after a successful refund (user keeps pass + gets money back).
+      let shouldUpdatePassStatus =
+            purchasedPass.status `notElem` [DPurchasedPass.Refunded, DPurchasedPass.Expired]
+            && purchasedPass.startDate == purchasedPassPayment.startDate
+            && purchasedPass.endDate == purchasedPassPayment.endDate
       case refund.status of
         Payment.REFUND_SUCCESS -> do
           QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.Refunded paymentOrder.id
-          when (purchasedPass.status == DPurchasedPass.Pending && purchasedPass.startDate == purchasedPassPayment.startDate && purchasedPass.endDate == purchasedPassPayment.endDate) $ do
+          when shouldUpdatePassStatus $ do
             QPurchasedPass.updateStatusById DPurchasedPass.Refunded purchasedPass.id
+            logInfo $ "Pass " <> purchasedPass.id.getId <> " marked Refunded (was " <> show purchasedPass.status <> ")"
         Payment.REFUND_FAILURE -> do
           QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundFailed paymentOrder.id
-          when (purchasedPass.status == DPurchasedPass.Pending && purchasedPass.startDate == purchasedPassPayment.startDate && purchasedPass.endDate == purchasedPassPayment.endDate) $ do
+          when shouldUpdatePassStatus $
             QPurchasedPass.updateStatusById DPurchasedPass.RefundFailed purchasedPass.id
         _ ->
           case refund.isApiCallSuccess of
             Nothing -> do
               QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundPending paymentOrder.id
-              when (purchasedPass.status == DPurchasedPass.Pending && purchasedPass.startDate == purchasedPassPayment.startDate && purchasedPass.endDate == purchasedPassPayment.endDate) $ do
+              when shouldUpdatePassStatus $
                 QPurchasedPass.updateStatusById DPurchasedPass.RefundPending purchasedPass.id
             Just True -> do
               QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundInitiated paymentOrder.id
-              when (purchasedPass.status == DPurchasedPass.Pending && purchasedPass.startDate == purchasedPassPayment.startDate && purchasedPass.endDate == purchasedPassPayment.endDate) $ do
+              when shouldUpdatePassStatus $
                 QPurchasedPass.updateStatusById DPurchasedPass.RefundInitiated purchasedPass.id
             Just False -> do
               QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundFailed paymentOrder.id
-              when (purchasedPass.status == DPurchasedPass.Pending && purchasedPass.startDate == purchasedPassPayment.startDate && purchasedPass.endDate == purchasedPassPayment.endDate) $ do
+              when shouldUpdatePassStatus $
                 QPurchasedPass.updateStatusById DPurchasedPass.RefundFailed purchasedPass.id
 
     parkingBookingRefundStatusHandler ::
