@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.PayoutConfigExtra where
 
@@ -7,11 +6,9 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Me
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PayoutConfig as DPC
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import Storage.Beam.PayoutConfig as Beam
 import Storage.Queries.OrphanInstances.PayoutConfig

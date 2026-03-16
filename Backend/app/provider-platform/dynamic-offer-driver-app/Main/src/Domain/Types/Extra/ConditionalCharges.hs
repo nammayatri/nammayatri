@@ -1,7 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DerivingVia #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Extra.ConditionalCharges where
 

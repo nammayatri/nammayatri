@@ -1,33 +1,20 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.FleetRcDailyStatsExtra where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
-import Control.Applicative ((<|>))
-import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Time.Calendar (Day)
 import qualified Database.Beam as B
-import qualified Domain.Types.FleetRcDailyStats as DFRDS
-import qualified Domain.Types.TransporterConfig as DTC
-import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
-import Kernel.Types.Id
 import Kernel.Types.Price
 import Kernel.Utils.Common (CacheFlow, EncFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import Kernel.Utils.Logging
-import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.FleetRcDailyStats as Beam
-import qualified Storage.Beam.VehicleRegistrationCertificate as BeamVRC
 import Storage.Queries.OrphanInstances.FleetRcDailyStats
-import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCExtra
 
 data FleetRcDailyStatsAggregated = FleetRcDailyStatsAggregated
   { fleetOwnerId' :: Text,

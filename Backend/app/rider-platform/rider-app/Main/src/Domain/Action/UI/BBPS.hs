@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
 module Domain.Action.UI.BBPS
   ( postBbpsSession,
@@ -15,14 +13,12 @@ where
 import qualified API.Types.UI.BBPS
 import qualified API.Types.UI.BBPS as API
 import Control.Monad.Extra (maybeM)
-import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Domain.Types.BBPS
 import qualified Domain.Types.BBPS
 import qualified Domain.Types.BBPS as DBBPS
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.MerchantOperatingCity as MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.Person as DP
 import Environment
@@ -32,27 +28,21 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payment.Types as Payment
-import Kernel.External.Wallet as Wallet
 import qualified Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Error
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
-import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
-import Servant hiding (throwError)
 import SharedLogic.External.BbpsService.Flow
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.BBPS as QBBPS
 import qualified Storage.Queries.BBPSConfig as QBBPSC
 import qualified Storage.Queries.Person as QP
-import Tools.Auth
 import Tools.Error
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
@@ -226,7 +216,25 @@ getBbpsOrders (mbPersonId, merchantId) mbLimit mbOffset mbActive mbStatus = do
   return $ map mkBBPSInfoApiRes allBBPSInfos
 
 mkBBPSInfoApiRes :: DBBPS.BBPS -> API.BBPSInfoAPIRes
-mkBBPSInfoApiRes DBBPS.BBPS {..} = API.BBPSInfoAPIRes {billDetails = API.BBPSBillDetails {txnAmount = highPrecMoneyToText amount, ..}, ..}
+mkBBPSInfoApiRes bbps =
+  API.BBPSInfoAPIRes
+    { billDetails =
+        API.BBPSBillDetails
+          { txnAmount = highPrecMoneyToText bbps.amount,
+            billerId = bbps.billerId,
+            customerParams = bbps.customerParams
+          },
+      createdAt = bbps.createdAt,
+      errorMessage = bbps.errorMessage,
+      paymentInformation = bbps.paymentInformation,
+      paymentMode = bbps.paymentMode,
+      paymentTxnId = bbps.paymentTxnId,
+      refId = bbps.refId,
+      refShortId = bbps.refShortId,
+      status = bbps.status,
+      transType = bbps.transType,
+      updatedAt = bbps.updatedAt
+    }
 
 bbpsOrderStatusHandler :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, EsqDBReplicaFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> DPayment.PaymentStatusResp -> m DPayment.PaymentFulfillmentStatus
 bbpsOrderStatusHandler _merchantId paymentStatusResponse = do
