@@ -253,10 +253,14 @@ verifyGstFlow person merchantOpCityId checkExtraction gstNumber imageId1 = do
 
 onVerifyGst :: VerificationReqRecord -> VT.GstVerificationResponse -> VT.VerificationService -> Flow AckResponse
 onVerifyGst verificationReq output serviceName = do
+  logDebug $ "onVerifyGst: verificationReqId: " <> verificationReq.id <> ", driverId: " <> verificationReq.driverId.getId <> ", docType: " <> show verificationReq.docType <> ", status: " <> verificationReq.status
+  logDebug $ "output: " <> show output
+  logDebug $ "serviceName: " <> show serviceName
   person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
   if verificationReq.imageExtractionValidation == Domain.Skipped
     && (output.gstinStatus /= Just "Active")
     then do
+      logDebug $ "onVerifyGst: imageExtractionValidation == Domain.Skipped && output.gstinStatus /= Just \"Active\""
       case serviceName of
         VT.Idfy -> do
           IVQuery.updateExtractValidationStatus Domain.Failed verificationReq.requestId
@@ -269,6 +273,7 @@ onVerifyGst verificationReq output serviceName = do
 
 onVerifyGstHandler :: Person.Person -> Id Image.Image -> Maybe (Id Image.Image) -> VT.GstVerificationResponse -> Flow ()
 onVerifyGstHandler person imageId1 imageId2 output = do
+  logDebug $ "onVerifyGstHandler: " <> show output
   mEncryptedGstinNumber <- encrypt `mapM` output.gstin
   let isValidGst = output.gstinStatus == Just "Active"
   DGQuery.updateVerificationStatus (if isValidGst then Documents.VALID else Documents.INVALID) person.id
