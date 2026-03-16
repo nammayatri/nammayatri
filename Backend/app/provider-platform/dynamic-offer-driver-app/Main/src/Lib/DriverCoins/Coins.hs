@@ -350,7 +350,12 @@ updateEventAndGetCoinsvalue :: EventFlow m r => Id DP.Person -> Id DM.Merchant -
 updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory = do
   now <- getCurrentTime
   uuid <- generateGUIDText
-  let expiryTime = fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  currentBalance <- getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
+  let expiryTime =
+        if currentBalance < 0
+          then Nothing -- if current balance is negative we dont expire the coins.
+          else fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
       status_ = if numCoins > 0 then Remaining else Used
   let driverCoinEvent =
         DTCC.CoinHistory
