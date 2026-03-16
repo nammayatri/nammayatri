@@ -620,7 +620,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         status = purchasedPass.status,
         startDate = purchasedPass.startDate,
         deviceMismatch,
-        deviceSwitchAllowed = purchasedPass.deviceSwitchCount == 0,
+        deviceSwitchAllowed = purchasedPass.deviceSwitchCount < 5, -- Allow up to 5 switches for server-backed recovery (was == 0)
         profilePicture = purchasedPass.profilePicture <|> person.profilePicture,
         daysToExpire = daysToExpire,
         purchaseDate = DT.utctDay purchasedPass.createdAt,
@@ -965,6 +965,10 @@ postMultimodalPassResetDeviceSwitchCount (mbCallerPersonId, merchantId) purchase
   purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
   unless (purchasedPass.personId == personId) $ throwError AccessDenied
   unless (purchasedPass.merchantId == merchantId) $ throwError AccessDenied
+  -- Reset device switch count to 0, enabling the pass to be linked to a new device.
+  -- The pass remains bound to the authenticated user (personId), so this is safe:
+  -- only the account owner can trigger recovery after factory reset or device change.
+  logInfo $ "Pass recovery: resetting deviceSwitchCount for pass " <> purchasedPassId.getId <> " owned by person " <> personId.getId
   QPurchasedPass.updateDeviceIdById purchasedPass.deviceId 0 purchasedPass.id
   return APISuccess.Success
 
