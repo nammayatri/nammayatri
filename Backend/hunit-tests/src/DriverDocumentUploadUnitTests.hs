@@ -19,7 +19,7 @@ import qualified "mobility-core" Kernel.Types.APISuccess
 import qualified "mobility-core" Kernel.Types.Beckn.Context as Context
 import qualified "mobility-core" Kernel.Types.Id
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase, (@?), (@?=))
+import Test.Tasty.HUnit (testCase, (@?), (@?=))
 import Prelude
 
 -- =============================================================================
@@ -83,7 +83,7 @@ testPostDriverRegistrationDocumentUploadWithRealExecution =
         isJust requestorId @? "Requestor ID should be present"
 
         -- Test that the function signature expects UploadDocumentResp response
-        let expectedResponseType =
+        let _expectedResponseType =
               DDriverReg.postDriverRegistrationDocumentUpload ::
                 Kernel.Types.Id.ShortId DM.Merchant ->
                 Context.City ->
@@ -185,7 +185,7 @@ testPostDriverRegistrationRegisterDlWithRealExecution =
         isJust imageId2 @? "Second image ID should be present"
         isNothing vehicleCategory @? "Vehicle category should be nothing"
         -- Test that the function signature expects APISuccess response
-        let expectedResponseType =
+        let _expectedResponseType =
               DDriverReg.postDriverRegistrationRegisterDl ::
                 Kernel.Types.Id.ShortId DM.Merchant ->
                 Context.City ->
@@ -270,7 +270,7 @@ testPostDriverRegistrationRegisterAadhaarWithRealExecution =
         (T.length transactionId > 0) @? "Transaction ID should not be empty"
 
         -- Test that the function signature expects APISuccess response
-        let expectedResponseType =
+        let _expectedResponseType =
               DDriverReg.postDriverRegistrationRegisterAadhaar ::
                 Kernel.Types.Id.ShortId DM.Merchant ->
                 Context.City ->
@@ -355,7 +355,7 @@ testPostDriverRegistrationRegisterRcWithRealExecution =
         isJust ventilator @? "Ventilator status should be specified"
 
         -- Test that the function signature expects APISuccess response
-        let expectedResponseType =
+        let _expectedResponseType =
               DDriverReg.postDriverRegistrationRegisterRc ::
                 Kernel.Types.Id.ShortId DM.Merchant ->
                 Context.City ->

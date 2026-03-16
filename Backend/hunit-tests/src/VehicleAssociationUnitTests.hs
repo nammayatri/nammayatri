@@ -6,30 +6,18 @@ module VehicleAssociationUnitTests where
 -- Import the REAL functions from the codebase
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Endpoints.Driver as Common
-import Control.Applicative ((<|>))
 import Control.Exception (evaluate, try)
-import qualified "dashboard-helper-api" Dashboard.Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.KeyMap as KeyMap
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import qualified Data.Text as T
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Driver as DDriver
-import qualified "beckn-spec" Domain.Types.Alert.AlertRequestData
-import qualified "beckn-spec" Domain.Types.Alert.AlertRequestStatus
 import qualified "dynamic-offer-driver-app" Domain.Types.Common as DCommon
-import qualified "beckn-spec" Domain.Types.FleetBadgeType
 import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as DM
 import qualified "dynamic-offer-driver-app" Environment (Flow)
-import qualified "mobility-core" Kernel.External.Encryption (decrypt, encrypt)
-import qualified "mobility-core" Kernel.External.Maps.Types
 import qualified "mobility-core" Kernel.Prelude
-import qualified "mobility-core" Kernel.Types.APISuccess
 import qualified "mobility-core" Kernel.Types.Beckn.Context as Context
-import qualified "mobility-core" Kernel.Types.Common
 import qualified "mobility-core" Kernel.Types.Id
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase, (@?), (@?=))
+import Test.Tasty.HUnit (testCase, (@?), (@?=))
 import Prelude
 
 -- =============================================================================
@@ -106,7 +94,7 @@ testGetDriverFleetVehicleAssociationWithRealExecution =
         (T.length requestorId > 0) @? "Requestor ID should not be empty"
 
         -- Test that the function signature expects DrivertoVehicleAssociationResT response
-        let expectedResponseType =
+        let _expectedResponseType =
               DDriver.getDriverFleetVehicleAssociation ::
                 Kernel.Types.Id.ShortId DM.Merchant ->
                 Context.City ->
@@ -200,7 +188,7 @@ testGetDriverFleetDriverVehicleAssociationWithRealExecution =
         (T.length phoneNo >= 10) @? "Phone number should be at least 10 digits"
 
         -- Test that the function signature expects DrivertoVehicleAssociationRes response
-        let expectedResponseType =
+        let _expectedResponseType =
               DDriver.getDriverFleetDriverVehicleAssociation ::
                 Kernel.Types.Id.ShortId DM.Merchant ->
                 Context.City ->

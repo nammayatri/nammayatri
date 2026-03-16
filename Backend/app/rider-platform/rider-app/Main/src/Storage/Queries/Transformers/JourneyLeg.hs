@@ -1,18 +1,14 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.Transformers.JourneyLeg where
 
 import Control.Applicative ((<|>))
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyLegMapping as DJLM
-import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (MonadFlow, fromMaybeM)
 
 getIsDeleted :: MonadFlow m => Maybe DJLM.JourneyLegMapping -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> m (Kernel.Prelude.Maybe Kernel.Prelude.Bool)
 getIsDeleted mbJourneyLegMapping isDeleted = return $ (mbJourneyLegMapping <&> (.isDeleted)) <|> isDeleted

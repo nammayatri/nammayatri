@@ -8,7 +8,6 @@ module CreateRequestUnitTests where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Operator.Endpoints.Driver as Common
 import Control.Exception (evaluate, try)
-import Data.Maybe (fromMaybe, isJust, isNothing)
 import qualified Data.Text as T
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Operator.Driver as DDriverOp
 import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as DM
@@ -68,7 +67,7 @@ testPostDriverOperatorCreateRequestWithRealExecution =
             (T.length regNo >= 10) @? "Registration number should be at least 10 characters"
             T.isPrefixOf "DL" regNo @? "Registration number should start with DL"
           Nothing -> assertFailure "Registration number should not be Nothing"
-        let expectedResponseType =
+        let _expectedResponseType =
               DDriverOp.postDriverOperatorCreateRequest ::
                 Kernel.Types.Id.ShortId DM.Merchant ->
                 Context.City ->

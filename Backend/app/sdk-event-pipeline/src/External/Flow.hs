@@ -28,8 +28,7 @@ getDriverId ::
     MonadFlow m,
     MonadReader r m,
     HasField "driverAppConfig" r DriverAppConfig,
-    HasRequestId r,
-    MonadReader r m
+    HasRequestId r
   ) =>
   Text ->
   m (Either ClientError Text)

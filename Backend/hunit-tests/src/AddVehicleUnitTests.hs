@@ -8,26 +8,21 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Endpoin
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Endpoints.Driver as FleetAPI
 import Control.Exception (SomeException, evaluate, try)
 import qualified "dashboard-helper-api" Dashboard.Common
-import qualified "dashboard-helper-api" Dashboard.Common.Driver as DDriverCommon
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import qualified Data.Text as T
 import Data.Time (UTCTime (..), fromGregorian)
-import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Driver as DDriverFleet
 import qualified "provider-dashboard" Domain.Action.ProviderPlatform.Fleet.Driver as DDriver
 import qualified "lib-dashboard" Domain.Types.AccessMatrix as DMatrix
-import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as DDM
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Person as DP
 import qualified "lib-dashboard" Domain.Types.Role as DRole
-import qualified "dynamic-offer-driver-app" Environment as EnvDynamic
 import qualified "lib-dashboard" Environment as EnvDashboard
 import qualified "mobility-core" Kernel.External.Encryption
-import qualified "mobility-core" Kernel.Prelude
 import qualified "mobility-core" Kernel.Types.APISuccess
 import qualified "mobility-core" Kernel.Types.Beckn.Context as Context
 import qualified "mobility-core" Kernel.Types.Id
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase, (@?), (@?=))
+import Test.Tasty.HUnit (testCase, (@?), (@?=))
 import qualified "lib-dashboard" Tools.Auth.Api
 import Prelude
 
@@ -313,7 +308,7 @@ testPostDriverFleetAddVehicleWithRealExecution =
           req
 
         -- Test that the function signature expects APISuccess response
-        let expectedResponseType =
+        let _expectedResponseType =
               DDriver.postDriverFleetAddVehicle ::
                 Kernel.Types.Id.ShortId DM.Merchant ->
                 Context.City ->

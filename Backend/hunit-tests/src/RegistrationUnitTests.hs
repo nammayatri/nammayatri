@@ -7,27 +7,20 @@ module RegistrationUnitTests where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet as FleetAPI
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2 as Common
-import Control.Applicative ((<|>))
 import Control.Exception (evaluate, try)
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.KeyMap as KeyMap
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import qualified Data.Text as T
 import Data.Time (UTCTime (..), fromGregorian)
 import qualified "provider-dashboard" Domain.Action.ProviderPlatform.Fleet.RegistrationV2 as DRegistrationV2
 import qualified "lib-dashboard" Domain.Types.AccessMatrix as DMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified "lib-dashboard" Domain.Types.Person as DP
-import qualified "lib-dashboard" Domain.Types.Role as DRole
 import qualified "lib-dashboard" Environment (Flow)
-import Kernel.External.Encryption (decrypt, encrypt)
 import qualified "mobility-core" Kernel.Prelude
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase, (@?), (@?=))
+import Test.Tasty.HUnit (testCase, (@?), (@?=))
 import qualified "lib-dashboard" Tools.Auth.Api
 import Prelude
 
@@ -82,7 +75,7 @@ testPostRegistrationV2LoginOtpWithRealExecution =
         (T.head countryCode == '+') @? "Country code should start with +"
 
         -- Test that the function signature expects APISuccess response
-        let expectedResponseType = DRegistrationV2.postRegistrationV2LoginOtp :: ShortId DM.Merchant -> Context.City -> Common.FleetOwnerLoginReqV2 -> Environment.Flow APISuccess
+        let _expectedResponseType = DRegistrationV2.postRegistrationV2LoginOtp :: ShortId DM.Merchant -> Context.City -> Common.FleetOwnerLoginReqV2 -> Environment.Flow APISuccess
         True @? "Function should return APISuccess",
       testCase "Executes with different mobile numbers and validates request handling" $ do
         let req1 = Common.FleetOwnerLoginReqV2 "9876543210" "+91"
@@ -138,7 +131,7 @@ testPostRegistrationV2VerifyOtpWithRealExecution =
         (T.length otpValue == 6) @? "OTP should be exactly 6 digits"
 
         -- Test that the function signature expects FleetOwnerVerifyResV2 response
-        let expectedResponseType = DRegistrationV2.postRegistrationV2VerifyOtp :: ShortId DM.Merchant -> Context.City -> Common.FleetOwnerVerifyReqV2 -> Environment.Flow Common.FleetOwnerVerifyResV2
+        let _expectedResponseType = DRegistrationV2.postRegistrationV2VerifyOtp :: ShortId DM.Merchant -> Context.City -> Common.FleetOwnerVerifyReqV2 -> Environment.Flow Common.FleetOwnerVerifyResV2
         True @? "Function should return FleetOwnerVerifyResV2",
       testCase "Executes with different OTP values and validates request handling" $ do
         let req1 = Common.FleetOwnerVerifyReqV2 "6123456789" "+91" (Just "123456")
@@ -238,7 +231,7 @@ testPostRegistrationV2RegisterWithRealExecution =
         isJust fleetType @? "Fleet type should be specified"
 
         -- Test that the function signature expects APISuccess response
-        let expectedResponseType = DRegistrationV2.postRegistrationV2Register :: ShortId DM.Merchant -> Context.City -> Tools.Auth.Api.ApiTokenInfo -> Common.FleetOwnerRegisterReqV2 -> Environment.Flow APISuccess
+        let _expectedResponseType = DRegistrationV2.postRegistrationV2Register :: ShortId DM.Merchant -> Context.City -> Tools.Auth.Api.ApiTokenInfo -> Common.FleetOwnerRegisterReqV2 -> Environment.Flow APISuccess
         True @? "Function should return APISuccess",
       testCase "Executes with different fleet types and validates request handling" $ do
         let req1 = Common.FleetOwnerRegisterReqV2 "John" "Doe" Nothing Nothing (Just Common.RENTAL_FLEET) Nothing Nothing Nothing Nothing Nothing

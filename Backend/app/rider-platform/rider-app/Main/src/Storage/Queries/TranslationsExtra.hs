@@ -1,18 +1,14 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.TranslationsExtra where
 
 import qualified Domain.Types.MerchantOperatingCity as DMerchantOperatingCity
 import qualified Domain.Types.Translations
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import qualified Kernel.External.Types as Lang
 import Kernel.Prelude
-import Kernel.Storage.InMem as IM
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Translations as Beam
 import Storage.Queries.OrphanInstances.Translations

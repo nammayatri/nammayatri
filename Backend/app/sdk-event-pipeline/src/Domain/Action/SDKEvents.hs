@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Action.SDKEvents where
 
 import qualified Data.Aeson as A
