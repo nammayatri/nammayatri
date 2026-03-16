@@ -43,10 +43,9 @@ import Kernel.Utils.Common hiding (mkPrice)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
-import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
+import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Yudhishthira.Types as LYT
-import SharedLogic.FRFSUtils
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.FRFSUtils as Utils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -152,7 +151,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                 let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
                 buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
               else do
-                txn <- QPaymentTransaction.findNewTransactionByOrderId paymentOrder.id
+                txn <- HQPaymentTransaction.findNewTransactionByOrderId paymentOrder.id
                 let paymentStatus_ = if isNothing txn then FRFSTicketService.NEW else paymentBookingStatus
                 void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.PAYMENT_PENDING bookingId
                 let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.PAYMENT_PENDING Nothing Nothing
@@ -200,7 +199,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                     then do
                       -- Add default TTL of 1 min or the value provided in the config
                       let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
-                      transactions <- QPaymentTransaction.findAllByOrderId paymentOrder.id
+                      transactions <- HQPaymentTransaction.findAllByOrderId paymentOrder.id
                       txnId <- getSuccessTransactionId transactions
                       isLockAcquired <- Hedis.tryLockRedis (mkPaymentSuccessLockKey bookingId) 60
                       if isLockAcquired
@@ -246,7 +245,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                         else do
                           logInfo $ "payment success in payment pending: " <> show booking
                           paymentOrder_ <- buildCreateOrderResp paymentOrder commonPersonId merchantOperatingCity.id booking
-                          txn <- QPaymentTransaction.findNewTransactionByOrderId paymentOrder.id
+                          txn <- HQPaymentTransaction.findNewTransactionByOrderId paymentOrder.id
                           let paymentStatus_ = if isNothing txn then FRFSTicketService.NEW else paymentBookingStatus
                               paymentObj =
                                 Just
