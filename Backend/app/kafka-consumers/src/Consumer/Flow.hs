@@ -21,11 +21,11 @@ import qualified Consumer.BroadcastMessage.Processor as BMProcessor
 import qualified Consumer.CustomerStats.Processor as PSProcessor
 import qualified Consumer.FleetCommunication.Processor as FCProcessor
 import qualified Consumer.LocationUpdate.Processor as LCProcessor
-import Control.Error.Util
 import qualified Data.Aeson as A
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Function
+import qualified System.IO as SIO
 import qualified Data.List as DL
 import qualified Data.Map.Strict as Map
 import qualified Data.Time as T
@@ -165,10 +165,16 @@ readMessages ::
   SerialT IO (message, messageKey, ConsumerRecordD)
 readMessages kafkaConsumer = do
   let eitherRecords = S.bracket (pure kafkaConsumer) Consumer.closeConsumer pollMessageR
-  let records = S.mapMaybe hush eitherRecords
-  S.mapMaybe (removeMaybeFromTuple . decodeRecord) records
+  let records = S.mapMaybe (either (const Nothing) Just) eitherRecords
+  S.mapMaybe id $ S.mapM decodeRecordWithLog records
   where
     pollMessageR kc = S.repeatM (Consumer.pollMessage kc (Consumer.Timeout 500))
+
+    decodeRecordWithLog cr = do
+      let result = removeMaybeFromTuple (decodeRecord cr)
+      when (isNothing result) $
+        SIO.hPutStrLn SIO.stderr "[ERROR] kafka-consumer: failed to decode message (bad JSON or missing key)"
+      pure result
 
     -- convert ConsumerRecord into domain types of (Message, (MessageKey, ConsumerRecord))
     decodeRecord =
@@ -187,8 +193,8 @@ readMesssageWithWaitAndTimeRange ::
   SerialT IO (message, messageKey, ConsumerRecordD)
 readMesssageWithWaitAndTimeRange kafkaConsumer appEnv = do
   let eitherRecords = S.bracket (pure kafkaConsumer) Consumer.closeConsumer pollMessageR
-  let records = S.mapMaybe hush eitherRecords
-  S.mapMaybe (removeMaybeFromTuple . decodeRecord) records
+  let records = S.mapMaybe (either (const Nothing) Just) eitherRecords
+  S.mapMaybe id $ S.mapM decodeRecordWithLog records
   where
     pollMessageR kc = S.repeatM $ do
       currentHour <- liftIO getCurrentHour
@@ -202,6 +208,12 @@ readMesssageWithWaitAndTimeRange kafkaConsumer appEnv = do
     getCurrentHour = do
       (T.UTCTime _date secTillNow) <- T.getCurrentTime
       return $ div (T.diffTimeToPicoseconds secTillNow) 3600000000000000
+
+    decodeRecordWithLog cr = do
+      let result = removeMaybeFromTuple (decodeRecord cr)
+      when (isNothing result) $
+        SIO.hPutStrLn SIO.stderr "[ERROR] kafka-consumer: failed to decode message (bad JSON or missing key)"
+      pure result
 
     -- convert ConsumerRecord into domain types of (Message, (MessageKey, ConsumerRecord))
     decodeRecord =
