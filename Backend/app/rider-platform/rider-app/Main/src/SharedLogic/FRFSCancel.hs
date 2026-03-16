@@ -103,11 +103,19 @@ checkRefundAndCancellationCharges bookingId refundAmount cancellationCharges = d
   booking <- runInReplica $ QTBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   case booking of
     DFRFSTicketBooking.FRFSTicketBooking {refundAmount = Just rfAmount, cancellationCharges = Just charges} -> do
-      when (Just rfAmount /= Just refundAmount) $
-        throwError $ InternalError $ "Refund Amount mismatch in onCancel Req " <> "refundAmount: " <> show refundAmount <> " rfAmount: " <> show rfAmount
-      when (Just charges /= Just cancellationCharges) $
-        throwError $ InternalError $ "Cancellation Charges mismatch in onCancel Req " <> "cancellationCharges: " <> show cancellationCharges <> " charges: " <> show charges
-    _ -> throwError $ InternalError "Refund Amount or Cancellation Charges not found in booking"
+      unless (isWithinTolerance rfAmount refundAmount) $
+        logWarning $ "Refund Amount mismatch in onCancel Req (using BPP amount) " <> "refundAmount: " <> show refundAmount <> " rfAmount: " <> show rfAmount
+      unless (isWithinTolerance charges cancellationCharges) $
+        logWarning $ "Cancellation Charges mismatch in onCancel Req (using BPP amount) " <> "cancellationCharges: " <> show cancellationCharges <> " charges: " <> show charges
+    _ -> logWarning $ "Refund Amount or Cancellation Charges not found in booking for bookingId: " <> bookingId.getId
+  void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just refundAmount) (Just cancellationCharges) Nothing bookingId
+  where
+    isWithinTolerance :: HighPrecMoney -> HighPrecMoney -> Bool
+    isWithinTolerance expected actual =
+      let diff = abs (expected - actual)
+          percentTolerance = abs expected * 0.01
+          tolerance = max percentTolerance 1
+       in diff <= tolerance
 
 sendTicketCancelSMS :: Maybe Text -> Maybe Text -> DFRFSTicketBooking.FRFSTicketBooking -> FRFSUtils.FRFSFareParameters -> Flow ()
 sendTicketCancelSMS mRiderNumber mRiderMobileCountryCode booking fareParameters =
