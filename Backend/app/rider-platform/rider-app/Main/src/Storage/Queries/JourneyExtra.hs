@@ -2,6 +2,7 @@
 
 module Storage.Queries.JourneyExtra where
 
+import Data.List (maximumBy)
 import Data.Ord (comparing)
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.FRFSTicket as DTicket
