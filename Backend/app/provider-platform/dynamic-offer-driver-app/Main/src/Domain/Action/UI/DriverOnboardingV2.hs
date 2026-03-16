@@ -937,6 +937,7 @@ createAadhaarRecord ::
 createAadhaarRecord personId merchantId merchantOperatingCityId API.Types.UI.DriverOnboardingV2.AadhaarCardReq {..} = do
   currTime <- getCurrentTime
   let verificationStatus = Image.convertValidationStatusToVerificationStatus validationStatus
+      maskedAadhaarNumber' = maskText <$> maskedAadhaarNumber
   let aadhaarCard =
         Domain.Types.AadhaarCard.AadhaarCard
           { driverId = personId,
@@ -946,13 +947,12 @@ createAadhaarRecord personId merchantId merchantOperatingCityId API.Types.UI.Dri
             createdAt = currTime,
             updatedAt = currTime,
             aadhaarNumberHash = Nothing,
+            maskedAadhaarNumber = maskedAadhaarNumber',
             driverGender = Nothing,
             driverImage = Nothing,
             driverImagePath = Nothing,
             ..
           }
-  -- Uses fields from AadhaarCardReq: aadhaarFrontImageId, aadhaarBackImageId, maskedAadhaarNumber, nameOnCard, dateOfBirth, address, consent, consentTimestamp
-
   QAadhaarCard.upsertAadhaarRecord aadhaarCard
 
 getDriverRegisterBankAccountLink ::
