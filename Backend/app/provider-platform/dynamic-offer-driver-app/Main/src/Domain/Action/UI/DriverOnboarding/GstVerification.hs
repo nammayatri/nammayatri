@@ -183,13 +183,15 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
       checkExtraction <-
         if DCommon.checkFleetOwnerRole person.role
           then do
-            fodvc <- CQFODVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.GSTCertificate Nothing
-              >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.GSTCertificate))
+            fodvc <-
+              CQFODVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.GSTCertificate Nothing
+                >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.GSTCertificate))
             pure fodvc.checkExtraction
           else do
-            dvc <- CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.GSTCertificate Nothing
-              >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.GSTCertificate))
-                . listToMaybe
+            dvc <-
+              CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.GSTCertificate Nothing
+                >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.GSTCertificate))
+                  . listToMaybe
             pure dvc.checkExtraction
       image1 <- DVRC.getDocumentImage person.id req.imageId ODC.GSTCertificate
       let extractReq =

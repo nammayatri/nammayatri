@@ -428,6 +428,7 @@ data JobName
   | SupplyDemandCalculation
   | CongestionChargeCalculation
   | ReconciliationTrigger
+  | ScheduledBatchPayoutTrigger
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
