@@ -41,7 +41,7 @@ import qualified Lib.Payment.Storage.Beam.Refunds as BeamRF
 import qualified Lib.Payment.Storage.Beam.WalletRewardPosting as BeamWRP
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrderOffer as QOffer
-import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QTxn
+import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQTxn
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import qualified Network.HTTP.Client as HTTP
 import qualified Network.HTTP.Client.TLS as TLS
@@ -130,7 +130,7 @@ externalPaymentHandler merchantShortId mCity mServiceType paymentStatusResp =
         mOrder <- QOrder.findByShortId orderShortId
         (mTxn, dateCreated) <- case mOrder of
           Just order -> do
-            txn <- QTxn.findNewTransactionByOrderId order.id
+            txn <- HQTxn.findNewTransactionByOrderId order.id
             pure (txn, Just order.createdAt)
           Nothing -> pure (Nothing, Nothing)
 
@@ -330,7 +330,7 @@ internalOrderStatusHandler orderShortId =
     case mOrder of
       Just order -> do
         let DOrder.PaymentOrder {id = orderId, shortId = orderShortId'} = order
-        mTxn <- QTxn.findNewTransactionByOrderId orderId
+        mTxn <- HQTxn.findNewTransactionByOrderId orderId
         refunds <- QRefunds.findAllByOrderId orderShortId'
         offers <- QOffer.findByPaymentOrder orderId
         buildJuspayOrderData order mTxn refunds offers

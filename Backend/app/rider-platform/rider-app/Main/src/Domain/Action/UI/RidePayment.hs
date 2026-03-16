@@ -35,8 +35,8 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as DPaymentTransaction
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
+import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
-import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.PaymentInvoice as SPInvoice
@@ -404,7 +404,7 @@ postPaymentRefundRequestCreate (mbPersonId, _) rideId req = do
 
     -- We need earliest transaction in case if we have more than one transaction (ride fare and ride tip)
     -- Later we can add transactions differentiation based on purpose: RIDE_FARE | RIDE_TIP | CANCELLATION_FEE
-    transaction <- QPaymentTransaction.findEarliestChargedTransactionByOrderId orderId >>= fromMaybeM (InvalidRequest "No transaction found for refund")
+    transaction <- HQPaymentTransaction.findEarliestChargedTransactionByOrderId orderId >>= fromMaybeM (InvalidRequest "No transaction found for refund")
 
     whenJust req.requestedAmount $ \requestedAmount -> do
       unless (requestedAmount.currency == transaction.currency) $

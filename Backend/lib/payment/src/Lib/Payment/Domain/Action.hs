@@ -94,12 +94,11 @@ import qualified Lib.Payment.Domain.Types.PersonWallet as DPersonWallet
 import Lib.Payment.Domain.Types.Refunds (Refunds (..))
 import qualified Lib.Payment.Domain.Types.WalletRewardPosting as DWalletRewardPosting
 import Lib.Payment.PGFee (PGFeeConfig (..), PGFeeType (..), recordPGFeeLedgerEntries)
-import qualified Lib.Payment.Payment.History as PaymentHistory
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
+import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQTransaction
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrderOffer as QPaymentOrderOffer
 import qualified Lib.Payment.Storage.Queries.PaymentOrderSplit as QPaymentOrderSplit
-import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QTransaction
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutTransaction as QPayoutTransaction
 import qualified Lib.Payment.Storage.Queries.PersonWallet as QPersonWallet
@@ -220,11 +219,10 @@ createPaymentIntentService merchantId merchantOpCityId personId mbExistingOrderI
       transaction <- buildTransaction paymentOrder createPaymentIntentResp
       logInfo $ "Created new order and payment intent: " <> createPaymentIntentResp.paymentIntentId <> "; amount: " <> show createPaymentIntentReq.amount <> "; applicationFeeAmount: " <> show createPaymentIntentReq.applicationFeeAmount
       QOrder.create paymentOrder
-      QTransaction.create transaction
-      PaymentHistory.recordPaymentHistory merchantOpCityId Nothing transaction.status Nothing transaction
+      HQTransaction.create merchantOpCityId transaction (Just "create payment intent service")
       return CreatePaymentIntentServiceResp {paymentIntentId = createPaymentIntentResp.paymentIntentId, orderId = newOrderId}
     Just existingOrder -> do
-      transactions <- QTransaction.findAllByOrderId existingOrder.id
+      transactions <- HQTransaction.findAllByOrderId existingOrder.id
       let mbInProgressTransaction = find (isInProgress . (.status)) transactions
       case mbInProgressTransaction of
         Nothing -> createNewTransaction existingOrder -- if previous all payment intents are already charged or cancelled, then create a new payment intent
@@ -261,8 +259,7 @@ createPaymentIntentService merchantId merchantOpCityId personId mbExistingOrderI
             logError $ "Invalid payment intent status: " <> show paymentIntentResp.status <> "; paymentIntentId: " <> paymentIntentId <> "; should be: canceled"
           pure (Nothing, Nothing)
       -- no need to update order status, because we will create new payment intent linked to this order
-      QTransaction.updateStatusAndError transaction.id Payment.CANCELLED errorCode' errorMessage'
-      PaymentHistory.recordPaymentHistory merchantOpCityId (Just transaction.status) Payment.CANCELLED Nothing transaction
+      HQTransaction.updateStatusAndError merchantOpCityId transaction Payment.CANCELLED errorCode' errorMessage' (Just "cancel old transaction")
 
     createNewTransaction :: (EncFlow m r, PaymentBeamFlow.BeamFlow m r) => DOrder.PaymentOrder -> m CreatePaymentIntentServiceResp
     createNewTransaction existingOrder = do
@@ -273,8 +270,7 @@ createPaymentIntentService merchantId merchantOpCityId personId mbExistingOrderI
       logInfo $ "Updated order amount with new payment intent: " <> createPaymentIntentResp.paymentIntentId <> "; amount: " <> show newOrderAmount
       logInfo $ "Created new payment intent: " <> createPaymentIntentResp.paymentIntentId
       QOrder.updateAmountAndPaymentIntentId existingOrder.id newOrderAmount createPaymentIntentResp.paymentIntentId
-      QTransaction.create transaction
-      PaymentHistory.recordPaymentHistory merchantOpCityId Nothing transaction.status Nothing transaction
+      HQTransaction.create merchantOpCityId transaction (Just "create new transaction for existing order")
       return CreatePaymentIntentServiceResp {paymentIntentId = createPaymentIntentResp.paymentIntentId, orderId = existingOrder.id}
 
     updateOldTransaction paymentIntentId newTransactionAmount newApplicationFeeAmount existingOrder existingTransaction = do
@@ -284,17 +280,7 @@ createPaymentIntentService merchantId merchantOpCityId personId mbExistingOrderI
         QOrder.updateAmountAndPaymentIntentId existingOrder.id newOrderAmount paymentIntentId
       when (newTransactionAmount /= existingTransaction.amount || newApplicationFeeAmount /= existingTransaction.applicationFeeAmount) $ do
         logInfo $ "Updated transaction amount: " <> paymentIntentId <> "; amount: " <> show newTransactionAmount <> "; applicationFeeAmount: " <> show newApplicationFeeAmount
-        QTransaction.updateAmount existingTransaction.id newTransactionAmount newApplicationFeeAmount
-        let historyMessage =
-              "Update amount: "
-                <> show newTransactionAmount
-                <> "; applicationFeeAmount: "
-                <> show newApplicationFeeAmount
-                <> "; old amount: "
-                <> show existingTransaction.amount
-                <> "; old applicationFeeAmount: "
-                <> show existingTransaction.applicationFeeAmount
-        PaymentHistory.recordPaymentHistory merchantOpCityId (Just existingTransaction.status) existingTransaction.status (Just historyMessage) existingTransaction
+        HQTransaction.updateAmount merchantOpCityId existingTransaction newTransactionAmount newApplicationFeeAmount (Just "update old transaction")
       return CreatePaymentIntentServiceResp {paymentIntentId = existingOrder.paymentServiceOrderId, orderId = existingOrder.id}
 
     buildPaymentOrder_ ::
@@ -439,11 +425,10 @@ cancelPaymentIntentService merchantOpCityId rideId cancelPaymentIntentCall = do
               errorMessage = err >>= toMessage
           logError $ "Error while cancelling payment intent : " <> show err <> "error code : " <> show errorCode <> "error message : " <> show errorMessage
         Right paymentIntentResp -> do
-          transaction <- QTransaction.findByTxnId existingOrder.paymentServiceOrderId >>= fromMaybeM (InternalError $ "No transaction found while cancel payment intent: " <> existingOrder.paymentServiceOrderId)
+          transaction <- HQTransaction.findByTxnId existingOrder.paymentServiceOrderId >>= fromMaybeM (InternalError $ "No transaction found while cancel payment intent: " <> existingOrder.paymentServiceOrderId)
           let updStatus = Payment.castToTransactionStatus paymentIntentResp.status
           QOrder.updateStatus existingOrder.id existingOrder.paymentServiceOrderId updStatus
-          QTransaction.updateStatusAndError transaction.id updStatus Nothing Nothing
-          PaymentHistory.recordPaymentHistory merchantOpCityId (Just transaction.status) updStatus Nothing transaction
+          HQTransaction.updateStatusAndError merchantOpCityId transaction updStatus Nothing Nothing (Just "cancel payment intent service")
 
 updateForCXCancelPaymentIntentService ::
   forall m r c.
@@ -458,7 +443,7 @@ updateForCXCancelPaymentIntentService ::
   HighPrecMoney ->
   m Bool
 updateForCXCancelPaymentIntentService merchantOpCityId paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancelTransactionAmount = do
-  transaction <- QTransaction.findByTxnId paymentIntentId >>= fromMaybeM (InternalError $ "No transaction found while update payment intent: " <> paymentIntentId)
+  transaction <- HQTransaction.findByTxnId paymentIntentId >>= fromMaybeM (InternalError $ "No transaction found while update payment intent: " <> paymentIntentId)
   let newApplicationFeeAmount = transaction.applicationFeeAmount -- not changing application fee amount
   updateOldTransaction newApplicationFeeAmount transaction
   chargePaymentIntentService merchantOpCityId paymentIntentId capturePaymentIntentCall getPaymentIntentCall
@@ -468,17 +453,7 @@ updateForCXCancelPaymentIntentService merchantOpCityId paymentIntentId capturePa
       logInfo $ "Updated order amount on cancel: " <> paymentIntentId <> "; amount: " <> show newOrderAmount
       logInfo $ "Updated transaction amount on cancel: " <> paymentIntentId <> "; amount: " <> show cancelTransactionAmount <> "; applicationFeeAmount: " <> show newApplicationFeeAmount
       QOrder.updateAmountAndPaymentIntentId transaction.orderId newOrderAmount paymentIntentId
-      QTransaction.updateAmount transaction.id cancelTransactionAmount newApplicationFeeAmount
-      let historyMessage =
-            "Update amount on cancel: "
-              <> show cancelTransactionAmount
-              <> "; applicationFeeAmount: "
-              <> show newApplicationFeeAmount
-              <> "; old amount: "
-              <> show transaction.amount
-              <> "; old applicationFeeAmount: "
-              <> show transaction.applicationFeeAmount
-      PaymentHistory.recordPaymentHistory merchantOpCityId (Just transaction.status) transaction.status (Just historyMessage) transaction
+      HQTransaction.updateAmount merchantOpCityId transaction cancelTransactionAmount newApplicationFeeAmount (Just "update for cancel payment intent service")
 
 chargePaymentIntentService ::
   forall m r c.
@@ -492,7 +467,7 @@ chargePaymentIntentService ::
   (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
   m Bool
 chargePaymentIntentService merchantOpCityId paymentIntentId capturePaymentIntentCall getPaymentIntentCall = do
-  transaction <- QTransaction.findByTxnId paymentIntentId >>= fromMaybeM (InternalError $ "No transaction found while charge payment intent: " <> paymentIntentId)
+  transaction <- HQTransaction.findByTxnId paymentIntentId >>= fromMaybeM (InternalError $ "No transaction found while charge payment intent: " <> paymentIntentId)
   if transaction.status `notElem` [Payment.CHARGED, Payment.CANCELLED, Payment.AUTO_REFUNDED] -- if not already charged or cancelled or auto refunded
     then do
       logInfo $ "Capture payment intent: " <> paymentIntentId <> "; amount: " <> show transaction.amount <> "; applicationFeeAmount: " <> show transaction.applicationFeeAmount
@@ -507,32 +482,15 @@ chargePaymentIntentService merchantOpCityId paymentIntentId capturePaymentIntent
             then do
               logError "Max retries reached, cancelling payment intent"
               -- should we cancel the payment intent from stripe?
-              QTransaction.updateStatusAndError transaction.id Payment.CANCELLED errorCode errorMessage
-              let historyMessage =
-                    "Payment service error code: "
-                      <> show errorCode
-                      <> "; error message: "
-                      <> show errorMessage
-                      <> "; status: "
-                      <> show Payment.CANCELLED
-              PaymentHistory.recordPaymentHistory merchantOpCityId (Just transaction.status) Payment.CANCELLED (Just historyMessage) transaction
+              HQTransaction.updateStatusAndError merchantOpCityId transaction Payment.CANCELLED errorCode errorMessage (Just "max retries reached in charge payment intent service")
             else do
               -- should we retry on basis of error?
-              QTransaction.updateRetryCountAndError transaction.id (transaction.retryCount + 1) errorCode errorMessage -- retry
-              let historyMessage =
-                    "Payment service error code: "
-                      <> show errorCode
-                      <> "; error message: "
-                      <> show errorMessage
-                      <> "; retry count increment: "
-                      <> show (transaction.retryCount + 1)
-              PaymentHistory.recordPaymentHistory merchantOpCityId (Just transaction.status) transaction.status (Just historyMessage) transaction
+              HQTransaction.incrementRetryCountAndError merchantOpCityId transaction errorCode errorMessage (Just "retry in charge payment intent service")
           pure False
         Right () -> do
           paymentIntentResp <- getPaymentIntentCall paymentIntentId
           let updStatus = Payment.castToTransactionStatus paymentIntentResp.status
-          QTransaction.updateStatusAndError transaction.id updStatus Nothing Nothing
-          PaymentHistory.recordPaymentHistory merchantOpCityId (Just transaction.status) updStatus Nothing transaction
+          HQTransaction.updateStatusAndError merchantOpCityId transaction updStatus Nothing Nothing (Just "charge payment intent service")
           QOrder.updateStatus transaction.orderId paymentIntentId updStatus
           pure True
     else pure False -- if already charged or cancelled or auto refunded no need to charge again
@@ -1090,19 +1048,18 @@ updateOrderTransaction merchantOpCityId order resp respDump = do
       vpa = resp.vpa
   mbTransaction <- do
     case resp.transactionUUID of
-      -- Just transactionUUID -> runInReplica $ QTransaction.findByTxnUUID transactionUUID
+      -- Just transactionUUID -> runInReplica $ HQTransaction.findByTxnUUID transactionUUID
       Just transactionUUID -> do
-        mbTxn <- QTransaction.findByTxnUUID transactionUUID
+        mbTxn <- HQTransaction.findByTxnUUID transactionUUID
         when (isNothing mbTxn) $ do
           transaction <- buildPaymentTransaction order resp respDump
-          QTransaction.create transaction
-          PaymentHistory.recordPaymentHistory merchantOpCityId Nothing transaction.status Nothing transaction
+          HQTransaction.create merchantOpCityId transaction (Just "order status response or webhook")
         return mbTxn
-      Nothing -> QTransaction.findNewTransactionByOrderId order.id
+      Nothing -> HQTransaction.findNewTransactionByOrderId order.id
   let updOrder = order{status = resp.transactionStatus, isRetargeted = fromMaybe order.isRetargeted resp.isRetargeted, isRetried = fromMaybe order.isRetried resp.isRetried, retargetLink = resp.retargetLink}
   case mbTransaction of
     Nothing -> when (order.status /= updOrder.status && order.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED]) $ QOrder.updateStatusAndErrorAndVpa updOrder errorMessage errorCode vpa
-    -- Nothing -> runInReplica $ QTransaction.findNewTransactionByOrderId order.id
+    -- Nothing -> runInReplica $ HQTransaction.findNewTransactionByOrderId order.id
     Just transaction -> do
       let updTransaction =
             transaction{statusId = resp.transactionStatusId,
@@ -1141,8 +1098,7 @@ updateOrderTransaction merchantOpCityId order resp respDump = do
 
       -- Avoid updating status if already in CHARGED state to handle race conditions
       when (transaction.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED]) $ do
-        QTransaction.updateMultiple updTransaction
-        PaymentHistory.recordPaymentHistory merchantOpCityId (Just transaction.status) updTransaction.status (Just "Update multiple transaction info in order status response or webhook") updTransaction
+        HQTransaction.updateMultiple merchantOpCityId transaction updTransaction (Just "order status response or webhook")
       when (order.status /= updOrder.status && order.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED]) $ QOrder.updateStatusAndErrorAndVpa updOrder errorMessage errorCode vpa
 
 buildPaymentTransaction :: MonadFlow m => DOrder.PaymentOrder -> OrderTxn -> Maybe Text -> m DTransaction.PaymentTransaction
@@ -1701,7 +1657,7 @@ initiateStripeRefundService req createRefundsCall getRefundsCall = do
     initiateNewRefund :: DOrder.PaymentOrder -> m InitiateStripeRefundResp
     initiateNewRefund order = do
       transaction <-
-        QTransaction.findById req.transactionId
+        HQTransaction.findById req.transactionId
           >>= fromMaybeM (InvalidRequest $ "PaymentTransaction with transactionId \"" <> req.transactionId.getId <> "\"not found.") -- FIXME error code
       let updRefundsAmount = fromMaybe transaction.amount req.amount
       when (updRefundsAmount > transaction.amount) $ do
