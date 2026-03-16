@@ -67,6 +67,7 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dummy_to_locati
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN edit_loc_driver_permission_needed boolean NOT NULL default true;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN edit_loc_time_threshold integer NOT NULL default 120;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN email_otp_config text ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_cancellation_penalties boolean ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_dashboard_sms boolean NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_face_verification boolean NOT NULL default false;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_udf_for_offers boolean NOT NULL default false;
