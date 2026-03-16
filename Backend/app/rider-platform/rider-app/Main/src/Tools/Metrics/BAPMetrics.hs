@@ -77,6 +77,13 @@ incrementRideCreatedRequestCount' bmContainer merchantId merchantOperatingCityId
   let rideCreatedCounter = bmContainer.rideCreatedCounter
   liftIO $ P.withLabel rideCreatedCounter (merchantId, version.getDeploymentVersion, category, merchantOperatingCityId) P.incCounter
 
+incrementServiceabilityCheckCount :: HasBAPMetrics m r => Text -> Text -> Text -> m ()
+incrementServiceabilityCheckCount city result source = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  let counter = bmContainer.serviceabilityCheckCounter
+  liftIO $ P.withLabel counter (city, version.getDeploymentVersion, result, source) P.incCounter
+
 incrementSearchRequestCount :: HasBAPMetrics m r => Text -> Text -> m ()
 incrementSearchRequestCount merchantName merchantOperatingCityId = do
   bmContainer <- asks (.bapMetrics)

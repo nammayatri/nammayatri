@@ -17,11 +17,16 @@ module Storage.Queries.Geometry
   ( create,
     findGeometryByStateAndCity,
     findGeometriesContaining,
+    findGeometriesWithinBuffer,
   )
 where
 
 import Data.Either
+import qualified Data.ByteString.Char8 as BS8
 import qualified Database.Beam as B
+import Database.Beam.Postgres
+import Database.Beam.Postgres.Syntax
+import qualified Database.Beam.Query as BQ
 import Domain.Types.Geometry
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
@@ -53,6 +58,39 @@ findGeometriesContaining gps regions = do
   dbConf <- getReplicaBeamConfig
   geoms <- L.runDB dbConf $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
   catMaybes <$> mapM fromTType' (fromRight [] geoms)
+
+-- | Find geometries within a buffer distance (in meters) of a point.
+-- Uses PostGIS ST_DWithin with geography cast for meter-based distance.
+-- Fallback when strict ST_Contains fails due to GPS inaccuracy at polygon edges.
+findGeometriesWithinBuffer :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LatLong -> [Text] -> Int -> m [Geometry]
+findGeometriesWithinBuffer gps regions bufferMeters = do
+  dbConf <- getReplicaBeamConfig
+  geoms <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.filter_'
+            ( \BeamG.GeometryT {..} ->
+                B.sqlBool_ (dWithinPoint' (gps.lon, gps.lat) bufferMeters)
+                  B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))
+            )
+            $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
+  catMaybes <$> mapM fromTType' (fromRight [] geoms)
+
+-- | Raw PostGIS ST_DWithin expression for geography-based distance check.
+dWithinPoint' :: (Double, Double) -> Int -> BQ.QGenExpr ctxt Postgres s Bool
+dWithinPoint' (lon, lat) bufferM =
+  BQ.QExpr (\_ -> PgExpressionSyntax (emit sqlBS))
+  where
+    sqlBS =
+      BS8.pack $
+        "ST_DWithin(geom::geography, ST_SetSRID(ST_Point("
+          ++ show lon
+          ++ ", "
+          ++ show lat
+          ++ "), 4326)::geography, "
+          ++ show bufferM
+          ++ ")"
 
 instance FromTType' BeamG.Geometry Geometry where
   fromTType' BeamG.GeometryT {..} = do

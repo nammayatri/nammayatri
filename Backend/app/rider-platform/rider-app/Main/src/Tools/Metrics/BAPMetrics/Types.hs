@@ -31,6 +31,7 @@ data BAPMetricsContainer = BAPMetricsContainer
   { searchRequestCounter :: SearchRequestCounterMetric,
     rideCreatedCounter :: RideCreatedCounterMetric,
     busScanSearchRequestCounter :: BusScanSearchRequestCounterMetric,
+    serviceabilityCheckCounter :: ServiceabilityCheckCounterMetric,
     searchDurationTimeout :: Seconds,
     searchDuration :: SearchDurationMetric,
     searchDurationFRFS :: DurationMetric,
@@ -62,6 +63,11 @@ type VehicleNoEtaCounterMetric = P.Vector P.Label4 P.Counter
 
 type BusScanSearchRequestCounterMetric = P.Vector P.Label3 P.Counter
 
+-- | Counter for serviceability checks with labels: (city, version, result, source)
+-- result: "serviceable" | "unserviceable" | "buffer_match"
+-- source: "origin" | "destination"
+type ServiceabilityCheckCounterMetric = P.Vector P.Label4 P.Counter
+
 registerBAPMetricsContainer :: Seconds -> IO BAPMetricsContainer
 registerBAPMetricsContainer searchDurationTimeout = do
   searchRequestCounter <- registerSearchRequestCounterMetric
@@ -69,6 +75,7 @@ registerBAPMetricsContainer searchDurationTimeout = do
   fleetRouteMapMissingCounter <- registerFleetRouteMapMissingCounterMetric
   vehicleNoEtaCounter <- registerVehicleNoEtaCounterMetric
   busScanSearchRequestCounter <- registerBusScanSearchRequestCounterMetric
+  serviceabilityCheckCounter <- registerServiceabilityCheckCounterMetric
   rideCreatedCounter <- registerRideCreatedCounterMetric
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
   searchDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_search_frfs_round_trip" "beckn_search_frfs_round_trip_failure_counter"
@@ -115,3 +122,6 @@ registerDurationMetric durationTimeout merchantName version merchantOperatingCit
   durationHistogram <- P.register . P.vector (merchantName, version, merchantOperatingCityId) . P.histogram (P.Info roundTrip "") $ P.linearBuckets 0 0.5 bucketsCount
   failureCounter <- P.register . P.vector (merchantName, version, merchantOperatingCityId) $ P.counter $ P.Info roundTripFailureCounter ""
   return (durationHistogram, failureCounter)
+
+registerServiceabilityCheckCounterMetric :: IO ServiceabilityCheckCounterMetric
+registerServiceabilityCheckCounterMetric = P.register $ P.vector ("city", "version", "result", "source") $ P.counter $ P.Info "serviceability_check_total" ""
