@@ -207,6 +207,7 @@ data DriverError
   | AccountBlocked
   | DriverActivityUpdateInProgress Text
   | InsufficientAirportBalance HighPrecMoney HighPrecMoney
+  | DriverNotAtPickupLocation Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverError
@@ -228,6 +229,7 @@ instance IsBaseError DriverError where
   toMessage AccountBlocked = Just "Account has been blocked."
   toMessage (DriverActivityUpdateInProgress driverId) = Just $ "Driver activity update is already in progress for driverId: " <> driverId <> ". Please try again later."
   toMessage (InsufficientAirportBalance required available) = Just $ "Insufficient airport entry fee balance. Required: " <> show required <> ", Available: " <> show available <> ". Please recharge before starting this ride."
+  toMessage (DriverNotAtPickupLocation _) = Just "Please get closer to the pickup point"
 
 instance IsHTTPError DriverError where
   toErrorCode = \case
@@ -247,6 +249,7 @@ instance IsHTTPError DriverError where
     AccountBlocked -> "ACCOUNT_BLOCKED"
     DriverActivityUpdateInProgress _ -> "DRIVER_ACTIVITY_UPDATE_IN_PROGRESS"
     InsufficientAirportBalance _ _ -> "INSUFFICIENT_AIRPORT_BALANCE"
+    DriverNotAtPickupLocation _ -> "DRIVER_NOT_AT_PICKUP_LOCATION"
   toHttpCode = \case
     DriverAccountDisabled -> E403
     DriverWithoutVehicle _ -> E400
@@ -264,6 +267,7 @@ instance IsHTTPError DriverError where
     AccountBlocked -> E403
     DriverActivityUpdateInProgress _ -> E409
     InsufficientAirportBalance _ _ -> E402
+    DriverNotAtPickupLocation _ -> E400
 
 instance IsAPIError DriverError where
   toPayload (DriverAccountBlocked errorPayload) = toJSON errorPayload

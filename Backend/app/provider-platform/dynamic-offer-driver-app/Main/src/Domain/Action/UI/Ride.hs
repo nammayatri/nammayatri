@@ -494,9 +494,16 @@ getRiderMobileNumber booking option = do
           mbRider <- QRID.findById riderId
           case mbRider of
             Nothing -> pure Nothing
-            Just rider -> Just <$> decrypt rider.mobileNumber
+            Just rider -> Just . maskPhone <$> decrypt rider.mobileNumber
       else pure Nothing
   pure mbRiderNumber
+  where
+    maskPhone phone =
+      let visibleDigits = 4
+          phoneLen = T.length phone
+       in if phoneLen <= visibleDigits
+            then phone
+            else T.replicate (phoneLen - visibleDigits) "*" <> T.drop (phoneLen - visibleDigits) phone
 
 setDriverGpsTurnedOff :: Id DRide.Ride -> Flow APISuccess
 setDriverGpsTurnedOff rideId = do

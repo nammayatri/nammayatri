@@ -297,6 +297,10 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
           let isSafetyCheckEnabledForTripCategory = maybe True (enableSafetyCheckWrtTripCategory . (.tripCategory)) ride
           routeDeviation <- updateDeviation transportConfig (enableNightSafety && isSafetyCheckEnabledForTripCategory) ride batchWaypoints
           (tollRouteDeviation, isTollPresentOnCurrentRoute) <- updateTollRouteDeviation merchantOpCityId driverId ride batchWaypoints
+          fork "Check driver stagnation" $ whenJust ride $ \r ->
+            case batchWaypoints of
+              (wp : _) | r.status == NEW -> checkDriverStagnation r wp
+              _ -> pure ()
           return (routeDeviation, tollRouteDeviation, isTollPresentOnCurrentRoute)
       )
       (TollsDetector.getTollInfoOnRoute merchantOpCityId)
@@ -343,6 +347,43 @@ whenWithLocationUpdatesLock driverId f = do
       throwError (HitsLimitError 5)
   where
     lockKey = "DriverLocationUpdate:DriverId-" <> driverId.getId
+
+stagnationRefKey :: Id Ride -> Text
+stagnationRefKey rideId = "DriverStagnation:RideId-" <> getId rideId
+
+stagnationNotifiedKey :: Id Ride -> Text
+stagnationNotifiedKey rideId = "DriverStagnationNotified:RideId-" <> getId rideId
+
+stagnationThresholdSeconds :: NominalDiffTime
+stagnationThresholdSeconds = 300 -- 5 minutes
+
+stagnationDistanceThresholdMeters :: HighPrecMeters
+stagnationDistanceThresholdMeters = 50
+
+checkDriverStagnation :: LocationUpdateFlow m r c => Ride -> LatLong -> m ()
+checkDriverStagnation ride currentLoc = do
+  let rideId = ride.id
+  alreadyNotified <- Redis.runInMultiCloudRedisMaybeResult $ Redis.withMasterRedis $ Redis.get (stagnationNotifiedKey rideId)
+  when (isNothing (alreadyNotified :: Maybe Bool)) $ do
+    mbRef <- Redis.runInMultiCloudRedisMaybeResult $ Redis.withMasterRedis $ Redis.get (stagnationRefKey rideId)
+    case (mbRef :: Maybe (LatLong, UTCTime)) of
+      Nothing -> do
+        now <- getCurrentTime
+        Redis.setExp (stagnationRefKey rideId) (currentLoc, now) 3600
+      Just (refLoc, refTime) -> do
+        let dist = distanceBetweenInMeters currentLoc refLoc
+        if dist > stagnationDistanceThresholdMeters
+          then do
+            now <- getCurrentTime
+            Redis.setExp (stagnationRefKey rideId) (currentLoc, now) 3600
+          else do
+            now <- getCurrentTime
+            let elapsed = diffUTCTime now refTime
+            when (elapsed >= stagnationThresholdSeconds) $ do
+              logInfo $ "Driver stagnation detected for rideId: " <> getId rideId <> ", not moved for " <> show elapsed <> " seconds"
+              booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+              BP.sendNewMessageToBAP booking ride "Your driver hasn't moved for 5 minutes. You can cancel without penalty."
+              Redis.setExp (stagnationNotifiedKey rideId) True 3600
 
 performSafetyCheck :: LocationUpdateFlow m r c => Ride -> Booking -> m ()
 performSafetyCheck ride booking = do
