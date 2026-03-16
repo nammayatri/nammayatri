@@ -226,3 +226,11 @@ apis:
         type: SetPassPrefSrcAndDestReq
       response:
         type: APISuccess
+
+  - POST:
+      endpoint: /multimodal/pass/{purchasedPassId}/refund
+      auth: TokenAuth
+      params:
+        purchasedPassId: Id PurchasedPass
+      response:
+        type: APISuccess

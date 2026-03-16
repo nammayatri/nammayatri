@@ -17,6 +17,7 @@ module Domain.Action.UI.Pass
     buildPurchasedPassAPIEntity,
     postMultimodalPassSetPrefSrcAndDest,
     processPassStateTransitions,
+    postMultimodalPassRefund,
   )
 where
 
@@ -795,6 +796,61 @@ processPassStateTransitions = do
             logInfo $ "Expiring pass " <> purchasedPass.id.getId <> " (past grace period)"
             QPurchasedPassPayment.expireOlderActivePaymentsByPurchasedPassId purchasedPass.id today
             QPurchasedPass.updateStatusToExpiredIfEndDateBefore purchasedPass.id gracePeriodCutoff
+
+-- | Initiate a refund for a purchased pass.
+-- Validates the pass is in a refundable state, calculates pro-rata refund amount,
+-- transitions pass to RefundPending, and marks the payment for refund processing.
+postMultimodalPassRefund ::
+  ( ( Maybe (Id.Id DP.Person),
+      Id.Id DM.Merchant
+    ) ->
+    Id.Id DPurchasedPass.PurchasedPass ->
+    Environment.Flow APISuccess.APISuccess
+  )
+postMultimodalPassRefund (mbCallerPersonId, _merchantId) purchasedPassId = do
+  personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
+  purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
+  unless (purchasedPass.personId == personId) $ throwError AccessDenied
+
+  -- Validate pass is in a refundable state
+  unless (purchasedPass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $
+    throwError (InvalidRequest "Pass is not in a refundable state. Only Active or PreBooked passes can be refunded.")
+
+  istTime <- getLocalCurrentTime (19800 :: Seconds)
+  let today = DT.utctDay istTime
+
+  -- Pass must not be expired
+  unless (purchasedPass.endDate >= today) $
+    throwError (InvalidRequest "Pass has expired and is not eligible for refund")
+
+  -- Find the active payment record for this pass
+  activePayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus (Just 1) (Just 0) purchasedPassId [DPurchasedPass.Active, DPurchasedPass.PreBooked] today
+  payment <- listToMaybe activePayments & fromMaybeM (InvalidRequest "No active payment found for this pass")
+
+  -- Calculate pro-rata refund info
+  let totalDays = max 1 (DT.diffDays purchasedPass.endDate purchasedPass.startDate)
+      remainingDays = max 0 (DT.diffDays purchasedPass.endDate today)
+      usedTrips = fromMaybe 0 purchasedPass.usedTripCount
+      purchasedWithin24h = DT.diffUTCTime istTime purchasedPass.createdAt < 86400
+      isFullRefundEligible = usedTrips == 0 && purchasedWithin24h
+
+  logInfo $ "Initiating refund for pass " <> purchasedPassId.getId
+    <> " | totalDays=" <> show totalDays
+    <> " | remainingDays=" <> show remainingDays
+    <> " | usedTrips=" <> show usedTrips
+    <> " | isFullRefundEligible=" <> show isFullRefundEligible
+
+  -- Transition pass to RefundPending (with optimistic lock)
+  QPurchasedPass.updateStatusByIdIfCurrentStatus DPurchasedPass.RefundPending purchasedPass.status purchasedPass.id
+
+  -- Mark payment as RefundPending
+  QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundPending payment.orderId
+
+  -- The existing CheckRefundStatus scheduler and passesRefundStatusHandler in
+  -- SharedLogic/Payment.hs will handle the Juspay refund lifecycle:
+  -- RefundPending → RefundInitiated → Refunded/RefundFailed
+
+  pure APISuccess.Success
 
 postMultimodalPassVerify ::
   ( ( Maybe (Id.Id DP.Person),

@@ -166,10 +166,20 @@ type API =
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "multimodal"
+      :> "pass"
+      :> Capture
+           "purchasedPassId"
+           (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass)
+      :> "refund"
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = getMultimodalPassAvailablePasses :<|> postMultimodalPassSelect :<|> postMultimodalPassV2Select :<|> getMultimodalPassList :<|> postMultimodalPassVerify :<|> postMultimodalPassSwitchDeviceId :<|> getMultimodalPassTransactions :<|> postMultimodalPassActivateToday :<|> postMultimodalPassUploadProfilePicture :<|> postMultimodalPassSetPrefSrcAndDest
+handler = getMultimodalPassAvailablePasses :<|> postMultimodalPassSelect :<|> postMultimodalPassV2Select :<|> getMultimodalPassList :<|> postMultimodalPassVerify :<|> postMultimodalPassSwitchDeviceId :<|> getMultimodalPassTransactions :<|> postMultimodalPassActivateToday :<|> postMultimodalPassUploadProfilePicture :<|> postMultimodalPassSetPrefSrcAndDest :<|> postMultimodalPassRefund
 
 getMultimodalPassAvailablePasses ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -274,3 +284,12 @@ postMultimodalPassSetPrefSrcAndDest ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postMultimodalPassSetPrefSrcAndDest a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassSetPrefSrcAndDest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+postMultimodalPassRefund ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postMultimodalPassRefund a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassRefund (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
