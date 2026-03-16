@@ -8,7 +8,6 @@ where
 
 import qualified API.Action.UI.Pass
 import Environment
-import EulerHS.Prelude
 import Storage.Beam.SystemConfigs ()
 
 type API = API.Action.UI.Pass.API

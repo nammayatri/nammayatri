@@ -12,10 +12,10 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.FleetBadge as BeamFB
-import Storage.Queries.OrphanInstances.FleetBadge
+import Storage.Queries.OrphanInstances.FleetBadge ()
 
 findAllMatchingBadges :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe Integer -> Maybe Integer -> Id MerchantOperatingCity -> Text -> Maybe FleetBadgeType -> m [FleetBadge]
 findAllMatchingBadges mbSearchStr (Just limitVal) (Just offsetVal) (Id merchantOperatingCityId') fleetOwnerId' mbBadgeType = do

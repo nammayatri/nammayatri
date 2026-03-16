@@ -8,7 +8,7 @@ import Kernel.Prelude
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.VehicleRouteMapping as Beam
-import Storage.Queries.OrphanInstances.VehicleRouteMapping
+import Storage.Queries.OrphanInstances.VehicleRouteMapping ()
 
 -- Extra code goes here --
 

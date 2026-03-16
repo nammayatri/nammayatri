@@ -12,7 +12,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.TypesTH as YTH
 import qualified Sequelize as Se
 import Storage.Beam.UiRiderConfig as Beam
-import Storage.Queries.OrphanInstances.UiRiderConfig
+import Storage.Queries.OrphanInstances.UiRiderConfig ()
 
 getUiConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => LYT.UiConfigRequest -> Id MerchantOperatingCity -> m (Maybe URC.UiRiderConfig)
 getUiConfig LYT.UiConfigRequest {..} merchantOperatingCityId =

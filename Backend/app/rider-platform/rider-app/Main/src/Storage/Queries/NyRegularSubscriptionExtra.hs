@@ -15,7 +15,6 @@ import qualified Data.Time as Time
 import qualified Domain.Types.MerchantOperatingCity as MerchantOperatingCity
 import Domain.Types.NyRegularSubscription
   ( NyRegularSubscription,
-    NyRegularSubscriptionStatus,
   )
 import qualified Domain.Types.NyRegularSubscription as NySub
 import Domain.Types.Person (Person)

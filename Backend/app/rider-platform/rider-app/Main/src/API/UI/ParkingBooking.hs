@@ -8,7 +8,6 @@ where
 
 import qualified API.Action.UI.ParkingBooking
 import Environment
-import EulerHS.Prelude
 import Storage.Beam.SystemConfigs ()
 
 type API = API.Action.UI.ParkingBooking.API

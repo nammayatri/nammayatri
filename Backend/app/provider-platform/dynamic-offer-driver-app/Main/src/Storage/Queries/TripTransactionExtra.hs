@@ -10,7 +10,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.TripTransaction as BeamT
-import Storage.Queries.OrphanInstances.TripTransaction
+import Storage.Queries.OrphanInstances.TripTransaction ()
 
 data SortType = SortAsc | SortDesc
 

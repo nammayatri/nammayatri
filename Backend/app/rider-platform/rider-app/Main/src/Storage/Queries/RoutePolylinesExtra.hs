@@ -10,7 +10,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.RoutePolylines as Beam
-import Storage.Queries.OrphanInstances.RoutePolylines
+import Storage.Queries.OrphanInstances.RoutePolylines ()
 
 -- Extra code goes here --
 

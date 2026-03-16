@@ -11,9 +11,9 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Storage.InMem as IM
 import Kernel.Types.Id
-import qualified Kernel.Types.Id
+import Kernel.Types.Id ()
 import Kernel.Utils.Common
-import Storage.Queries.OrphanInstances.Translations
+import Storage.Queries.OrphanInstances.Translations ()
 import qualified Storage.Queries.Translations as Queries
 
 findByMerchantOpCityIdMessageKeyLanguage ::

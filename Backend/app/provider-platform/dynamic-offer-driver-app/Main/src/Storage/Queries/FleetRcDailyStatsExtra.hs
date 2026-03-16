@@ -2,19 +2,17 @@
 
 module Storage.Queries.FleetRcDailyStatsExtra where
 
-import qualified Data.Text as T
 import Data.Time.Calendar (Day)
 import qualified Database.Beam as B
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Price
-import Kernel.Utils.Common (CacheFlow, EncFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow)
 import Kernel.Utils.Logging
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.FleetRcDailyStats as Beam
-import Storage.Queries.OrphanInstances.FleetRcDailyStats
+import Storage.Queries.OrphanInstances.FleetRcDailyStats ()
 
 data FleetRcDailyStatsAggregated = FleetRcDailyStatsAggregated
   { fleetOwnerId' :: Text,

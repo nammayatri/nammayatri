@@ -11,7 +11,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import Sequelize as Se
 import qualified Storage.Beam.BBPS as BeamT
-import Storage.Queries.OrphanInstances.BBPS
+import Storage.Queries.OrphanInstances.BBPS ()
 
 -- Extra code goes here --
 

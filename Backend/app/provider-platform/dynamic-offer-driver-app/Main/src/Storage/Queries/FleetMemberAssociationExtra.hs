@@ -5,10 +5,10 @@ module Storage.Queries.FleetMemberAssociationExtra where
 import qualified Domain.Types.FleetMemberAssociation
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FleetMemberAssociation as Beam
-import Storage.Queries.OrphanInstances.FleetMemberAssociation
+import Storage.Queries.OrphanInstances.FleetMemberAssociation ()
 
 -- Extra code goes here --
 

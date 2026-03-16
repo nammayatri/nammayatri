@@ -11,7 +11,7 @@ import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import Sequelize as Se
 import qualified Storage.Beam.RecentLocation as Beam
-import Storage.Queries.OrphanInstances.RecentLocation
+import Storage.Queries.OrphanInstances.RecentLocation ()
 
 findByPersonIdAndRouteCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id Person.Person -> Id.Id MerchantOperatingCity -> Text -> m [RecentLocation]
 findByPersonIdAndRouteCode personId mocId routeCode = do

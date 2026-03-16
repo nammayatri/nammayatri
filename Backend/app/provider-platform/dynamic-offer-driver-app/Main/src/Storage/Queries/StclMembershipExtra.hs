@@ -7,10 +7,10 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.StclMembership as Beam
-import Storage.Queries.OrphanInstances.StclMembership
+import Storage.Queries.OrphanInstances.StclMembership ()
 
 -- Redis keys for STCL membership application and share count tracking
 stclApplicationCountKey :: Text

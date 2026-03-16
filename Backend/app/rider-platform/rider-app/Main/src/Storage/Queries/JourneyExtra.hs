@@ -2,7 +2,6 @@
 
 module Storage.Queries.JourneyExtra where
 
-import Data.List (maximumBy)
 import Data.Ord (comparing)
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.FRFSTicket as DTicket
@@ -15,7 +14,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime, logDebug)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Journey as Beam
-import Storage.Queries.OrphanInstances.Journey
+import Storage.Queries.OrphanInstances.Journey ()
 
 -- Extra code goes here --
 findAllActiveByRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m [DJ.Journey]

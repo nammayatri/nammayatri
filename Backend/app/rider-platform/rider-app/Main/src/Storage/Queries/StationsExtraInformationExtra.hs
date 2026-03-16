@@ -10,7 +10,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.StationsExtraInformation as Beam
-import Storage.Queries.OrphanInstances.StationsExtraInformation
+import Storage.Queries.OrphanInstances.StationsExtraInformation ()
 
 -- Extra code goes here --
 

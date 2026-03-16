@@ -2,6 +2,6 @@
 
 module Storage.Queries.StationExtra where
 
-import Storage.Queries.OrphanInstances.Station
+import Storage.Queries.OrphanInstances.Station ()
 
 -- Extra code goes here --

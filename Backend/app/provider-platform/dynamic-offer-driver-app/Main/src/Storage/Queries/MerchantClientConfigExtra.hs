@@ -5,10 +5,11 @@ module Storage.Queries.MerchantClientConfigExtra where
 import Domain.Types.MerchantClientConfig
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Types.Version (DeviceType)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantClientConfig as BeamMCC
-import Storage.Queries.OrphanInstances.MerchantClientConfig
+import Storage.Queries.OrphanInstances.MerchantClientConfig ()
 
 -- Extra code goes here --
 findByPackageOSAndService :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ClientService -> Maybe DeviceType -> Text -> m (Maybe MerchantClientConfig)
