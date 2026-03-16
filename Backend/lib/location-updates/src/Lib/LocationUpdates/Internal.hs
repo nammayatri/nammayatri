@@ -389,7 +389,7 @@ mkRideInterpolationHandler ::
   (Id person -> HighPrecMeters -> Int -> Int -> Maybe Int -> Bool -> m ()) ->
   (Id person -> HighPrecMoney -> [Text] -> [Text] -> m ()) ->
   (Id person -> HighPrecMoney -> [Text] -> [Text] -> m ()) ->
-    (Id person -> [LatLong] -> m (Bool, Bool, Bool, Bool)) ->
+  (Id person -> [LatLong] -> m (Bool, Bool, Bool, Bool)) ->
   (Maybe (Id person) -> RoutePoints -> m (Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool))) ->
   (Maybe (Id person) -> RoutePoints -> m (Maybe (HighPrecMoney, [Text], [Text]))) ->
   (Id person -> Meters -> Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool) -> m (Meters, Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool))) ->

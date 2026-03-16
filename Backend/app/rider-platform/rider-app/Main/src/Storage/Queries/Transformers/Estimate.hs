@@ -47,6 +47,15 @@ mkTollChargesInfo tollCharges tollNames currency =
           tollNames = tollNames'
         }
 
+mkStateEntryPermitChargesInfo :: (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Domain.Types.Estimate.StateEntryPermitChargesInfo)
+mkStateEntryPermitChargesInfo stateEntryPermitCharges stateEntryPermitNames currency =
+  ((,) <$> stateEntryPermitCharges <*> stateEntryPermitNames)
+    <&> \(sepcCharges', sepcNames') ->
+      DE.StateEntryPermitChargesInfo
+        { stateEntryPermitCharges = mkPriceWithDefault (Just sepcCharges') currency (round sepcCharges' :: Money),
+          stateEntryPermitNames = sepcNames'
+        }
+
 mkFareRange :: (Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Common.HighPrecMoney -> Domain.Types.Estimate.FareRange)
 mkFareRange currency maxTotalFare minTotalFare =
   DE.FareRange

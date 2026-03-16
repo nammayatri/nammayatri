@@ -68,6 +68,11 @@ Estimate:
       tollNames: "[Text]"
       derive': "Generic, Show"
 
+    StateEntryPermitChargesInfo:
+      stateEntryPermitCharges: Price
+      stateEntryPermitNames: "[Text]"
+      derive': "Generic, Show"
+
     WaitingCharges:
       waitingChargePerMin: Maybe Price
       derive': "Generic, Show"
@@ -117,6 +122,7 @@ Estimate:
     backendAppVersion: Maybe Text
     clientDevice: Maybe Device
     tollChargesInfo: Maybe TollChargesInfo
+    stateEntryPermitChargesInfo: Maybe StateEntryPermitChargesInfo
     isCustomerPrefferedSearchRoute: Maybe Bool
     isBlockedRoute: Maybe Bool
     distanceUnit: DistanceUnit
@@ -182,6 +188,10 @@ Estimate:
       tollCharges : Maybe HighPrecMoney
       tollNames : Maybe [Text]
 
+    stateEntryPermitChargesInfo:
+      stateEntryPermitCharges : Maybe HighPrecMoney
+      stateEntryPermitNames : Maybe [Text]
+
     waitingCharges:
       waitingChargePerMin: Maybe Money
       waitingChargePerMinAmount: Maybe HighPrecMoney
@@ -208,6 +218,7 @@ Estimate:
     businessDiscountInfo: mkBusinessDiscountInfo businessDiscount businessDiscountPercentage currency|E
     personalDiscountInfo: mkPersonalDiscountInfo personalDiscount personalDiscountPercentage currency|E
     tollChargesInfo: mkTollChargesInfo tollCharges tollNames currency|E
+    stateEntryPermitChargesInfo: mkStateEntryPermitChargesInfo stateEntryPermitCharges stateEntryPermitNames currency|E
     estimateBreakupList: Storage.Queries.EstimateBreakup.findAllByEstimateIdT (Kernel.Types.Id.Id id)|EM
     waitingCharges: Domain.Types.Estimate.WaitingCharges $ Kernel.Types.Common.mkPriceWithDefault waitingChargePerMinAmount currency <$> waitingChargePerMin|E
     tripTerms: mKTripTerms|M
@@ -238,6 +249,8 @@ Estimate:
     tripTermsId: (Kernel.Types.Id.getId <$> (tripTerms <&> (.id)))|E
     tollCharges: (tollChargesInfo <&> ((.amount) . (.tollCharges)))|E
     tollNames: (tollChargesInfo <&> (.tollNames))|E
+    stateEntryPermitCharges: (stateEntryPermitChargesInfo <&> ((.amount) . (.stateEntryPermitCharges)))|E
+    stateEntryPermitNames: (stateEntryPermitChargesInfo <&> (.stateEntryPermitNames))|E
     businessDiscount: (businessDiscountInfo <&> ((.amount) . (.businessDiscount)))|E
     personalDiscount: (personalDiscountInfo <&> ((.amount) . (.personalDiscount)))|E
     personalDiscountPercentage: (personalDiscountInfo <&> (.personalDiscountPercentage))|E

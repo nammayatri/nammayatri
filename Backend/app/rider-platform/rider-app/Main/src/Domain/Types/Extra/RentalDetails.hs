@@ -38,6 +38,7 @@ data RentalDetailsAPIEntity = RentalDetailsAPIEntity
     perExtraKmRateWithCurrency :: PriceAPIEntity,
     nightShiftInfo :: Maybe NightShiftInfoAPIEntity,
     tollCharges :: Maybe PriceAPIEntity,
+    stateEntryPermitCharges :: Maybe PriceAPIEntity,
     deadKmFare :: PriceAPIEntity
   }
   deriving (Generic, FromJSON, Show, ToSchema)

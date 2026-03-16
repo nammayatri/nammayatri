@@ -115,6 +115,7 @@ Ride:
     driverAccountId: Maybe AccountId
     onlinePayment: Bool
     tollConfidence: Maybe Confidence
+    stateEntryPermitConfidence: Maybe Confidence
     cancellationFeeIfCancelled: Maybe HighPrecMoney
     isAlreadyFav: Maybe Bool
     favCount: Maybe Int

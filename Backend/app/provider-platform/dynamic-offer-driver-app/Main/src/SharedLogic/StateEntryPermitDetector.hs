@@ -18,6 +18,7 @@ import qualified Domain.Types.Geometry as DGeo
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Ride as DRide
 import Domain.Types.StateEntryPermitCharges
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
@@ -30,7 +31,6 @@ import Kernel.Utils.Common
 import Kernel.Utils.ComputeIntersection
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantState as CQMS
-import qualified Domain.Types.Ride as DRide
 import Storage.Queries.Geometry (findGeometriesContainingGps, findGeometryById)
 import Storage.Queries.StateEntryPermitChargesExtra (findAllStateEntryPermitCharges)
 

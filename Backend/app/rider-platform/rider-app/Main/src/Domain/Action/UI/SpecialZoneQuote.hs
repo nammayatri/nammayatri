@@ -19,6 +19,7 @@ import Kernel.Types.Common
 
 data SpecialZoneQuoteAPIEntity = SpecialZoneQuoteAPIEntity
   { quoteId :: Text,
-    tollCharges :: Maybe PriceAPIEntity
+    tollCharges :: Maybe PriceAPIEntity,
+    stateEntryPermitCharges :: Maybe PriceAPIEntity
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

@@ -48,10 +48,10 @@ import "location-updates" Lib.LocationUpdates as Reexport
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified SharedLogic.CallBAP as BP
-import qualified SharedLogic.StateEntryPermitDetector as StateEntryPermitDetector
 import qualified SharedLogic.CallInternalMLPricing as ML
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Ride
+import qualified SharedLogic.StateEntryPermitDetector as StateEntryPermitDetector
 import qualified SharedLogic.TollsDetector as TollsDetector
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN

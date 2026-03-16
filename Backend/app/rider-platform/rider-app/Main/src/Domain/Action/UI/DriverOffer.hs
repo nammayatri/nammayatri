@@ -28,6 +28,7 @@ data DriverOfferAPIEntity = DriverOfferAPIEntity
     validTill :: UTCTime,
     rating :: Maybe Centesimal,
     isUpgradedToCab :: Bool,
-    tollCharges :: Maybe PriceAPIEntity
+    tollCharges :: Maybe PriceAPIEntity,
+    stateEntryPermitCharges :: Maybe PriceAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

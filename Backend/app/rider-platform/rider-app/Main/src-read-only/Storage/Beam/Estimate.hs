@@ -74,6 +74,8 @@ data EstimateT f = EstimateT
     smartTipSuggestion :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     specialLocationName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     specialLocationTag :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    stateEntryPermitCharges :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    stateEntryPermitNames :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
     status :: (B.C f Domain.Types.EstimateStatus.EstimateStatus),
     tipOptions :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Int])),
     tollCharges :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),

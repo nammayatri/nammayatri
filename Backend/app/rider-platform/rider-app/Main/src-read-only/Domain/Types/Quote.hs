@@ -55,6 +55,7 @@ data Quote = Quote
     serviceTierShortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    stateEntryPermitChargesInfo :: Kernel.Prelude.Maybe Domain.Types.Quote.StateEntryPermitChargesInfo,
     tollChargesInfo :: Kernel.Prelude.Maybe Domain.Types.Quote.TollChargesInfo,
     tripCategory :: Kernel.Prelude.Maybe Domain.Types.Common.TripCategory,
     tripTerms :: Kernel.Prelude.Maybe Domain.Types.TripTerms.TripTerms,
@@ -65,7 +66,7 @@ data Quote = Quote
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleServiceTierType :: Domain.Types.ServiceTierType.ServiceTierType
   }
-  deriving (Generic, Show)
+  deriving (Generic, (Show))
 
 data MeterRideQuoteAPIDetails = MeterRideQuoteAPIDetails {quoteId :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -75,6 +76,7 @@ data OneWayQuoteAPIDetails = OneWayQuoteAPIDetails
   { distanceToNearestDriver :: Kernel.Types.Common.HighPrecMeters,
     distanceToNearestDriverWithUnit :: Kernel.Types.Common.Distance,
     quoteId :: Kernel.Prelude.Text,
+    stateEntryPermitCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
@@ -106,4 +108,6 @@ data QuoteDetails
   | MeterRideDetails Domain.Types.Quote.MeterRideQuoteDetails
   deriving (Generic, Show)
 
-data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, Show)
+data StateEntryPermitChargesInfo = StateEntryPermitChargesInfo {stateEntryPermitCharges :: Kernel.Types.Common.Price, stateEntryPermitNames :: [Kernel.Prelude.Text]} deriving (Generic, (Show))
+
+data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, (Show))

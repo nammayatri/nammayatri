@@ -142,3 +142,12 @@ mkTollChargesInfo tollCharges tollNames currency =
         { tollCharges = mkPriceWithDefault (Just tollCharges') currency (round tollCharges' :: Money),
           tollNames = tollNames'
         }
+
+mkStateEntryPermitChargesInfo :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Domain.Types.Quote.StateEntryPermitChargesInfo
+mkStateEntryPermitChargesInfo stateEntryPermitCharges stateEntryPermitNames currency =
+  ((,) <$> stateEntryPermitCharges <*> stateEntryPermitNames)
+    <&> \(sepcCharges', sepcNames') ->
+      DQ.StateEntryPermitChargesInfo
+        { stateEntryPermitCharges = mkPriceWithDefault (Just sepcCharges') currency (round sepcCharges' :: Money),
+          stateEntryPermitNames = sepcNames'
+        }
