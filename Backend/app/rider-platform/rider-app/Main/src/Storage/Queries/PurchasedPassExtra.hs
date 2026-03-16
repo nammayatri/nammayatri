@@ -197,6 +197,103 @@ findAllByPersonIdAndPassTypeIdAndStatus personId merchantId passTypeId statuses 
         ]
     ]
 
+-- | Optimistic locking: only update status if current status matches expected.
+-- Prevents concurrent requests from double-transitioning.
+updateStatusByIdIfCurrentStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  DPurchasedPass.StatusType ->
+  DPurchasedPass.StatusType ->
+  Id DPurchasedPass.PurchasedPass ->
+  m ()
+updateStatusByIdIfCurrentStatus newStatus expectedCurrentStatus purchasedPassId = do
+  now <- getCurrentTime
+  updateWithKV
+    ( [ Se.Set Beam.status newStatus,
+        Se.Set Beam.updatedAt now
+      ]
+        <> (if newStatus == DPurchasedPass.Active then [Se.Set Beam.deviceSwitchCount (Just 0)] else [])
+    )
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq (getId purchasedPassId),
+          Se.Is Beam.status $ Se.Eq expectedCurrentStatus
+        ]
+    ]
+
+-- | Optimistic locking: only expire if status is Active/PreBooked and endDate
+-- is before the cutoff. Prevents expiring a pass that was just renewed.
+updateStatusToExpiredIfEndDateBefore ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DPurchasedPass.PurchasedPass ->
+  Day ->
+  m ()
+updateStatusToExpiredIfEndDateBefore purchasedPassId cutoffDate = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.status DPurchasedPass.Expired,
+      Se.Set Beam.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq (getId purchasedPassId),
+          Se.Is Beam.status $ Se.In [DPurchasedPass.Active, DPurchasedPass.PreBooked],
+          Se.Is Beam.endDate $ Se.LessThan cutoffDate
+        ]
+    ]
+
+-- | Optimistic locking: only update purchase data if current status matches
+-- one of the expected statuses. Prevents double-renewal from concurrent requests.
+updatePurchaseDataIfCurrentStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DPurchasedPass.PurchasedPass ->
+  Day ->
+  Day ->
+  DPurchasedPass.StatusType ->
+  Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe DPurchasedPass.BenefitType ->
+  Kernel.Prelude.Maybe HighPrecMoney ->
+  HighPrecMoney ->
+  [DPurchasedPass.StatusType] ->
+  m ()
+updatePurchaseDataIfCurrentStatus purchasedPassId startDate endDate status benefitDescription mbBenefitType mbBenefitValue amount expectedCurrentStatuses = do
+  now <- getCurrentTime
+  updateWithKV
+    ( [ Se.Set Beam.startDate startDate,
+        Se.Set Beam.endDate endDate,
+        Se.Set Beam.status status,
+        Se.Set Beam.usedTripCount (Just 0),
+        Se.Set Beam.benefitDescription benefitDescription,
+        Se.Set Beam.benefitType mbBenefitType,
+        Se.Set Beam.benefitValue mbBenefitValue,
+        Se.Set Beam.passAmount amount,
+        Se.Set Beam.updatedAt now
+      ]
+        <> (if status == DPurchasedPass.Active then [Se.Set Beam.deviceSwitchCount (Just 0)] else [])
+    )
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq (getId purchasedPassId),
+          Se.Is Beam.status $ Se.In expectedCurrentStatuses
+        ]
+    ]
+
+-- | Find all passes that need state transitions (for periodic scheduler job).
+-- Returns PreBooked passes past start date, and Active/PreBooked/Expired passes past end date.
+findAllPassesNeedingTransition ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Day ->
+  m [DPurchasedPass.PurchasedPass]
+findAllPassesNeedingTransition today = do
+  findAllWithKV
+    [ Se.Or
+        [ Se.And
+            [ Se.Is Beam.status $ Se.Eq DPurchasedPass.PreBooked,
+              Se.Is Beam.startDate $ Se.LessThanOrEq today
+            ],
+          Se.And
+            [ Se.Is Beam.status $ Se.In [DPurchasedPass.Active, DPurchasedPass.PreBooked],
+              Se.Is Beam.endDate $ Se.LessThan today
+            ]
+        ]
+    ]
+
 findAllActiveByPersonIdWithFiltersV2 ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DP.Person ->

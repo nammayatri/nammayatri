@@ -16,6 +16,7 @@ module Domain.Action.UI.Pass
     postMultimodalPassUpdateProfilePictureUtil,
     buildPurchasedPassAPIEntity,
     postMultimodalPassSetPrefSrcAndDest,
+    processPassStateTransitions,
   )
 where
 
@@ -738,35 +739,62 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
         Just s -> Just [s]
         Nothing -> Nothing
 
-  passEntities <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
+  allPurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
   istTime <- getLocalCurrentTime (19800 :: Seconds)
   let today = DT.utctDay istTime
-  forM_ passEntities $ \purchasedPass -> do
-    when (purchasedPass.status == DPurchasedPass.PreBooked && purchasedPass.startDate <= today) $ do
-      QPurchasedPass.updateStatusById DPurchasedPass.Active purchasedPass.id
 
-    when (purchasedPass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired] && purchasedPass.endDate < today) $ do
-      -- check if user has already renewed the pass
-      allPreBookedPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus (Just 1) (Just 0) purchasedPass.id [DPurchasedPass.PreBooked, DPurchasedPass.Active] today
-      let mbFirstPreBookedPayment = listToMaybe allPreBookedPayments
-      case mbFirstPreBookedPayment of
-        Just firstPreBookedPayment -> do
-          let newStatus = if firstPreBookedPayment.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
-          QPurchasedPassPayment.updateStatusByOrderId newStatus firstPreBookedPayment.orderId
-          QPurchasedPass.updatePurchaseData purchasedPass.id firstPreBookedPayment.startDate firstPreBookedPayment.endDate newStatus firstPreBookedPayment.benefitDescription firstPreBookedPayment.benefitType firstPreBookedPayment.benefitValue firstPreBookedPayment.amount
-        Nothing -> do
-          QPurchasedPassPayment.expireOlderActivePaymentsByPurchasedPassId purchasedPass.id today
-          QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id
+  -- State transitions (PreBooked→Active, Active→Expired, renewal promotion) have been
+  -- moved to processPassStateTransitions, which should be called from a periodic
+  -- scheduler job or explicit endpoint. Reads should not have side effects.
 
-  allActivePurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
-
-  -- Always show all passes regardless of device. The deviceMismatch flag in
-  -- PurchasedPassAPIEntity will inform the UI which passes need device switching.
-  -- Previously, passes from other devices were hidden if any pass (even Pending)
-  -- existed for the current device, preventing users from switching older active passes.
-  purchasedPassAPIEntities <- mapM (buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today) allActivePurchasedPasses
+  purchasedPassAPIEntities <- mapM (buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today) allPurchasedPasses
   let isInactiveTouristPass p = p.passEntity.passType.passEnum == Just DPassType.TouristPass && p.status /= DPurchasedPass.Active
   pure $ filter (not . isInactiveTouristPass) purchasedPassAPIEntities
+
+-- | Process pass state transitions. Should be called from a periodic scheduler job
+-- or explicit endpoint — NOT from the list read path (reads must not have side effects).
+-- Uses optimistic locking (WHERE status = ?) to prevent concurrent state corruption.
+processPassStateTransitions ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  m ()
+processPassStateTransitions = do
+  istTime <- getLocalCurrentTime (19800 :: Seconds)
+  let today = DT.utctDay istTime
+  passEntities <- QPurchasedPass.findAllPassesNeedingTransition today
+  logInfo $ "processPassStateTransitions: found " <> show (length passEntities) <> " passes needing transition"
+  forM_ passEntities $ \purchasedPass -> do
+    -- PreBooked → Active transition (optimistic lock: only if still PreBooked)
+    when (purchasedPass.status == DPurchasedPass.PreBooked && purchasedPass.startDate <= today) $ do
+      logInfo $ "Activating PreBooked pass " <> purchasedPass.id.getId
+      QPurchasedPass.updateStatusByIdIfCurrentStatus DPurchasedPass.Active DPurchasedPass.PreBooked purchasedPass.id
+
+    -- Expiry / renewal transitions
+    when (purchasedPass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired] && purchasedPass.endDate < today) $ do
+      -- Check if user has already renewed the pass
+      allPreBookedPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus (Just 1) (Just 0) purchasedPass.id [DPurchasedPass.PreBooked, DPurchasedPass.Active] today
+      case listToMaybe allPreBookedPayments of
+        Just firstPreBookedPayment -> do
+          let newStatus = if firstPreBookedPayment.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
+          logInfo $ "Promoting renewal for pass " <> purchasedPass.id.getId <> " to " <> show newStatus
+          QPurchasedPassPayment.updateStatusByOrderId newStatus firstPreBookedPayment.orderId
+          QPurchasedPass.updatePurchaseDataIfCurrentStatus
+            purchasedPass.id
+            firstPreBookedPayment.startDate
+            firstPreBookedPayment.endDate
+            newStatus
+            firstPreBookedPayment.benefitDescription
+            firstPreBookedPayment.benefitType
+            firstPreBookedPayment.benefitValue
+            firstPreBookedPayment.amount
+            [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired]
+        Nothing -> do
+          -- No renewal: apply 24-hour grace period before truly expiring
+          let gracePeriodDays = 1
+              gracePeriodCutoff = DT.addDays (negate gracePeriodDays) today
+          when (purchasedPass.endDate < gracePeriodCutoff) $ do
+            logInfo $ "Expiring pass " <> purchasedPass.id.getId <> " (past grace period)"
+            QPurchasedPassPayment.expireOlderActivePaymentsByPurchasedPassId purchasedPass.id today
+            QPurchasedPass.updateStatusToExpiredIfEndDateBefore purchasedPass.id gracePeriodCutoff
 
 postMultimodalPassVerify ::
   ( ( Maybe (Id.Id DP.Person),
