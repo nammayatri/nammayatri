@@ -19,8 +19,8 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.FleetBadge as BeamFB
 import qualified Storage.Beam.FleetBadgeAssociation as BeamFBA
-import Storage.Queries.OrphanInstances.FleetBadge
-import Storage.Queries.OrphanInstances.FleetBadgeAssociation
+import Storage.Queries.OrphanInstances.FleetBadge ()
+import Storage.Queries.OrphanInstances.FleetBadgeAssociation ()
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => FleetBadgeAssociation -> m ()
 create = createWithKV

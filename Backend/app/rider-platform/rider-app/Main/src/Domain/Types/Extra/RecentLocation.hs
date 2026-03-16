@@ -2,6 +2,6 @@
 
 module Domain.Types.Extra.RecentLocation where
 
-import Kernel.Prelude
+import Kernel.Prelude ()
 
 -- Extra code goes here --

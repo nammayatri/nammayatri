@@ -11,7 +11,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import Storage.Beam.PayoutConfig as Beam
-import Storage.Queries.OrphanInstances.PayoutConfig
+import Storage.Queries.OrphanInstances.PayoutConfig ()
 
 -- Extra code goes here --
 

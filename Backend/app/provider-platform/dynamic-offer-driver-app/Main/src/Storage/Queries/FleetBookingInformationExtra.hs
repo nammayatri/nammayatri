@@ -8,11 +8,11 @@ import qualified Domain.Types.FleetBookingInformation
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.FleetBookingInformation as Beam
-import Storage.Queries.OrphanInstances.FleetBookingInformation
+import Storage.Queries.OrphanInstances.FleetBookingInformation ()
 
 -- Extra code goes here --
 findAllByFleetOwnerIdsAndFilters :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> Maybe Kernel.Prelude.UTCTime -> Maybe Kernel.Prelude.UTCTime -> Maybe Int -> Maybe Int -> Bool -> Maybe Text -> Maybe Text -> m [Domain.Types.FleetBookingInformation.FleetBookingInformation]

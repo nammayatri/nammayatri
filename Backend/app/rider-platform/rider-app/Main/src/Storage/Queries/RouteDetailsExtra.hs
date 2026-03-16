@@ -10,7 +10,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Lib.JourneyModule.State.Types
 import qualified Sequelize as Se
 import qualified Storage.Beam.RouteDetails as Beam
-import Storage.Queries.OrphanInstances.RouteDetails
+import Storage.Queries.OrphanInstances.RouteDetails ()
 
 -- Update tracking status with leg start and end time
 updateTrackingStatusWithTime ::

@@ -12,7 +12,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Sequelize as Se
 import qualified Storage.Beam.EDCMachineMapping as BeamT
-import Storage.Queries.OrphanInstances.EDCMachineMapping
+import Storage.Queries.OrphanInstances.EDCMachineMapping ()
 
 -- | Find active EDC machine mapping for a person, merchant, and operating city
 findActiveByPersonIdAndMerchant ::

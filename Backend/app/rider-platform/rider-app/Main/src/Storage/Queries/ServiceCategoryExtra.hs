@@ -9,7 +9,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import Sequelize as Se
 import qualified Storage.Beam.ServiceCategory as Beam
-import Storage.Queries.OrphanInstances.ServiceCategory
+import Storage.Queries.OrphanInstances.ServiceCategory ()
 
 -- Extra code goes here --
 findAllByIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Id ServiceCategory] -> m [ServiceCategory]

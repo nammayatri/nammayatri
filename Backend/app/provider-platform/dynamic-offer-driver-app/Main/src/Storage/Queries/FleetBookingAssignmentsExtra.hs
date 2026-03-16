@@ -8,11 +8,11 @@ import qualified Domain.Types.FleetBookingAssignments as DBFBA
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.FleetBookingAssignments as Beam
-import Storage.Queries.OrphanInstances.FleetBookingAssignments
+import Storage.Queries.OrphanInstances.FleetBookingAssignments ()
 
 -- Extra code goes here --
 

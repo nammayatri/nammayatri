@@ -1,6 +1,6 @@
 module API.Types.UI.Payment where
 
-import Data.OpenApi (ToSchema)
+import Data.OpenApi ()
 import Kernel.Prelude
 
 data WalletRechargeReq = WalletRechargeReq

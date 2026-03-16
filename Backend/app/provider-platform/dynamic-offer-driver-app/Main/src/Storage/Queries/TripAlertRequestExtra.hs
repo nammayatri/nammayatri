@@ -14,7 +14,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.TripAlertRequest as Beam
-import Storage.Queries.OrphanInstances.TripAlertRequest
+import Storage.Queries.OrphanInstances.TripAlertRequest ()
 
 findTripAlertRequestsByFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe AlertRequestType -> Maybe Text -> Maybe (Id DFB.FleetBadge) -> Maybe Text -> Maybe Int -> Maybe Int -> m [TripAlertRequest]
 findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo mbAlertRequestType mbDriverId mbFleetBadgeId mbRouteCode mbLimit mbOffset = do

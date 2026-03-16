@@ -6,7 +6,7 @@ module Domain.Types.Extra.NyRegularSubscription where
 
 -- For Data.Aeson.String
 -- Assuming this exports Text, pure, $, Maybe(..), mempty, map, show, (.)
-import Control.Lens ((&), (?~)) -- For lens operators
+import Control.Lens ((?~)) -- For lens operators
 import Data.Aeson (Value (String))
 import Data.OpenApi (NamedSchema (..), OpenApiType (OpenApiString), ToSchema (..), enum_, type_)
 -- Make sure DayOfWeek constructors (Monday..) are in scope

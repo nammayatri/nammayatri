@@ -7,10 +7,10 @@ import qualified Domain.Types.Volunteer as DV
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Types.Id as Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Volunteer as Beam
-import Storage.Queries.OrphanInstances.Volunteer
+import Storage.Queries.OrphanInstances.Volunteer ()
 
 -- Extra code goes here --
 

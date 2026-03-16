@@ -11,7 +11,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Sequelize as Se
 import qualified Storage.Beam.PurchasedPassPayment as Beam
-import Storage.Queries.OrphanInstances.PurchasedPassPayment
+import Storage.Queries.OrphanInstances.PurchasedPassPayment ()
 
 expireOlderActivePaymentsByPurchasedPassId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

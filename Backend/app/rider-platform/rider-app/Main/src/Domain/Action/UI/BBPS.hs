@@ -13,21 +13,17 @@ where
 import qualified API.Types.UI.BBPS
 import qualified API.Types.UI.BBPS as API
 import Control.Monad.Extra (maybeM)
-import qualified Data.Text as T
 import Domain.Types.BBPS
-import qualified Domain.Types.BBPS
 import qualified Domain.Types.BBPS as DBBPS
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.Person as DP
 import Environment
-import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
-import qualified Kernel.External.Payment.Types as Payment
 import qualified Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis

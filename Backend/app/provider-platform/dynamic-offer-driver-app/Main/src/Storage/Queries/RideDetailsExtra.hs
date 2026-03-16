@@ -7,11 +7,11 @@ import qualified Domain.Types.RideDetails
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.RideDetails as Beam
-import Storage.Queries.OrphanInstances.RideDetails
+import Storage.Queries.OrphanInstances.RideDetails ()
 
 -- Extra code goes here --
 

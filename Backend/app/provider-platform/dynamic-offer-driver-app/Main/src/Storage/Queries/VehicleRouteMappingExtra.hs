@@ -7,11 +7,10 @@ import Domain.Types.VehicleRouteMapping
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.VehicleRouteMapping as Beam
-import Storage.Queries.OrphanInstances.VehicleRouteMapping
+import Storage.Queries.OrphanInstances.VehicleRouteMapping ()
 
 findAllRouteMappings :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.External.Encryption.DbHash -> m [Domain.Types.VehicleRouteMapping.VehicleRouteMapping])
 findAllRouteMappings vehicleNumberHash = do findAllWithKV [Se.Is Beam.vehicleNumberHash $ Se.Eq vehicleNumberHash, Se.Is Beam.blocked $ Se.Eq False]

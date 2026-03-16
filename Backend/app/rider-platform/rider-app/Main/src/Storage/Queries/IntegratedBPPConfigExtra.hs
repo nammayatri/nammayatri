@@ -12,7 +12,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.IntegratedBPPConfig as Beam
-import Storage.Queries.OrphanInstances.IntegratedBPPConfig
+import Storage.Queries.OrphanInstances.IntegratedBPPConfig ()
 
 findAllByDomainAndCityAndVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

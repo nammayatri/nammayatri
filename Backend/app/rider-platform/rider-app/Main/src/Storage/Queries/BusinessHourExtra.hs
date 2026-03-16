@@ -9,7 +9,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.BusinessHour as Beam
-import Storage.Queries.OrphanInstances.BusinessHour
+import Storage.Queries.OrphanInstances.BusinessHour ()
 
 -- Extra code goes here --
 findAllByIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Id BusinessHour] -> m [BusinessHour]

@@ -7,12 +7,12 @@ import qualified Domain.Types.UiDriverConfig as Domain
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Lib.Yudhishthira.Types as YType
 import qualified Lib.Yudhishthira.TypesTH as YTH
 import qualified Sequelize as Se
 import qualified Storage.Beam.UiDriverConfig as Beam
-import Storage.Queries.OrphanInstances.UiDriverConfig
+import Storage.Queries.OrphanInstances.UiDriverConfig ()
 
 -- Extra code goes here --
 findUIConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => YType.UiConfigRequest -> Id MerchantOperatingCity -> m (Maybe Domain.UiDriverConfig)

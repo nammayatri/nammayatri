@@ -6,7 +6,6 @@ import Control.Monad.Extra (mapMaybeM)
 import qualified Domain.Types.Journey as Journey
 import qualified Domain.Types.JourneyLeg as JL
 import qualified Domain.Types.JourneyLegMapping as DJLM
-import qualified Domain.Types.RouteDetails as RouteDetails
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Types.Common as Common
@@ -16,7 +15,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM)
 import qualified Sequelize as Se
 import qualified Storage.Beam.JourneyLeg as Beam
 import qualified Storage.Queries.JourneyLegMapping as QJourneyLegMapping
-import Storage.Queries.OrphanInstances.JourneyLeg
+import Storage.Queries.OrphanInstances.JourneyLeg ()
 import qualified Storage.Queries.RouteDetails as RD
 
 -- Extra code goes here --
