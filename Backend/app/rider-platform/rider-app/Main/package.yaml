@@ -235,5 +235,3 @@ tests:
       - time
       - text
       - bytestring
-      - aeson
-      - euler-hs

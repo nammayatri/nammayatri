@@ -1828,8 +1828,6 @@ test-suite rider-app-test
     , singletons-th
     , split
     , string-conversions
-    , aeson
-    , euler-hs
     , tasty
     , tasty-hunit
     , tasty-quickcheck
