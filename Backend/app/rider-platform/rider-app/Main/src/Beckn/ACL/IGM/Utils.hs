@@ -138,7 +138,11 @@ buildIGMIssue now issueId booking rider transactionId domain = do
       customerName = Nothing,
       customerPhone = Nothing,
       issueRaisedByMerchant = Nothing,
-      merchantId = Nothing
+      merchantId = Nothing,
+      resolutionShortDesc = Nothing,
+      resolutionLongDesc = Nothing,
+      resolutionActionTriggered = Nothing,
+      resolutionRefundAmount = Nothing
     }
 
 updateIGMIssue :: Maybe IGMIssueCommon.IGMIssue -> Maybe Common.CustomerResponse -> UTCTime -> Maybe IGMIssueCommon.IGMIssue

@@ -31,15 +31,21 @@ module Domain.Action.Dashboard.IssueManagement.Issue
     postIssueCategoryReorder,
     postIssueOptionReorder,
     postIssueMessageReorder,
+    -- IGM Dashboard APIs (BAP)
+    postIGMIssueRaise,
+    getIGMIssueTrail,
+    postIGMIssueTriggerAction,
   )
 where
 
 import qualified API.Types.RiderPlatform.IssueManagement.Issue
 import qualified API.UI.Issue as AUI
+import qualified Beckn.ACL.IGM.Issue as ACL
 import qualified Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import qualified IGM.Enums as IGMSpec
 import qualified IssueManagement.Common
 import qualified IssueManagement.Common as Common
 import qualified IssueManagement.Common.Dashboard.Issue
@@ -49,11 +55,25 @@ import qualified IssueManagement.Domain.Types.Issue.IssueCategory
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage
 import qualified IssueManagement.Domain.Types.Issue.IssueOption
 import qualified IssueManagement.Domain.Types.Issue.IssueReport
+import qualified IssueManagement.Storage.Queries.Issue.IssueCategory as QIC
+import qualified IssueManagement.Storage.Queries.Issue.IGMConfig as QIGMConfig
+import qualified IssueManagement.Storage.Queries.Issue.IGMIssue as QIGM
 import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
+import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import Kernel.Utils.Common
+import qualified SharedLogic.CallIGMBPP as CallBPP
+import SharedLogic.FRFSUtils
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.Booking as QB
+import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
+import qualified Storage.Queries.FRFSTicketBooking as QFTB
+import qualified Storage.Queries.Merchant as QMerchant
+import qualified Storage.Queries.Person as QP
+import Tools.Error
 
 dashboardIssueHandle :: DAI.ServiceHandle Environment.Flow
 dashboardIssueHandle = AUI.customerIssueHandle
@@ -80,8 +100,9 @@ getIssueList ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow API.Types.RiderPlatform.IssueManagement.Issue.IssueReportListResponse
-getIssueList (Kernel.Types.Id.ShortId merchantShortId) opCity mbLimit mbOffset mbStatus mbCategoryId mbCategoryName mbAssignee mbCountryCode mbMobileNumber mbRideShortId mbDescriptionSearch mbFromDate mbToDate =
+getIssueList (Kernel.Types.Id.ShortId merchantShortId) opCity mbLimit mbOffset mbStatus mbCategoryId mbCategoryName mbAssignee mbCountryCode mbMobileNumber mbRideShortId mbDescriptionSearch mbFromDate mbToDate mbSource =
   DIssue.issueList
     (Kernel.Types.Id.ShortId merchantShortId)
     opCity
@@ -97,6 +118,7 @@ getIssueList (Kernel.Types.Id.ShortId merchantShortId) opCity mbLimit mbOffset m
     mbDescriptionSearch
     mbFromDate
     mbToDate
+    mbSource
     dashboardIssueHandle
     Common.CUSTOMER
 
@@ -358,3 +380,72 @@ postIssueMessageReorder ::
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postIssueMessageReorder (Kernel.Types.Id.ShortId merchantShortId) city req =
   DIssue.reorderMessages (Kernel.Types.Id.ShortId merchantShortId) city req dashboardIssueHandle Common.CUSTOMER
+
+---------------------------------------------------------
+-- IGM Dashboard APIs (BAP) ----------------------------
+---------------------------------------------------------
+
+postIGMIssueRaise ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  IssueManagement.Common.Dashboard.Issue.RaiseIssuePayload ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postIGMIssueRaise (Kernel.Types.Id.ShortId merchantShortId) opCity req = do
+  -- Step 1: Create DB records (IssueReport + IGMIssue) via shared-services
+  _ <- DIssue.igmIssueDashboardRaise (Kernel.Types.Id.ShortId merchantShortId) opCity dashboardIssueHandle Common.CUSTOMER req
+  -- Step 2: If external issue, send Beckn issue API to provider
+  let isExternal = req.source == "BAP" || req.source == "BPP"
+  when isExternal $ do
+    let parsedDomain = case req.domain of
+          "MOBILITY" -> IGMSpec.ON_DEMAND
+          "PUBLIC_TRANSPORT" -> IGMSpec.PUBLIC_TRANSPORT
+          _ -> IGMSpec.ON_DEMAND
+    merchantOpCity <- CQMOC.findByMerchantShortIdAndCity (Kernel.Types.Id.ShortId merchantShortId) opCity
+                        >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId <> "-city-" <> show opCity)
+    merchant <- QMerchant.findById merchantOpCity.merchantId >>= fromMaybeM (MerchantNotFound merchantOpCity.merchantId.getId)
+    igmConfig <- QIGMConfig.findByMerchantId (Kernel.Types.Id.cast merchantOpCity.merchantId)
+                   >>= fromMaybeM (InternalError $ "IGMConfig not found for merchant: " <> merchantOpCity.merchantId.getId)
+    -- Lookup booking and build RideBooking
+    (rideBooking, providerUrl, riderId) <- case parsedDomain of
+      IGMSpec.ON_DEMAND -> do
+        booking <- QB.findById (Kernel.Types.Id.Id req.orderId) >>= fromMaybeM (BookingNotFound req.orderId)
+        pure (AUI.fromBooking booking, booking.providerUrl, Kernel.Types.Id.cast booking.riderId)
+      IGMSpec.PUBLIC_TRANSPORT -> do
+        ticketBooking <- QFTB.findById (Kernel.Types.Id.Id req.orderId) >>= fromMaybeM (TicketBookingNotFound req.orderId)
+        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId ticketBooking.quoteId
+        let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
+        rb <- AUI.fromFRFSTicketBooking ticketBooking fareParameters
+        pUrl <- Kernel.Prelude.parseBaseUrl ticketBooking.bppSubscriberUrl
+        pure (rb, pUrl, Kernel.Types.Id.cast ticketBooking.riderId)
+    -- Lookup person from booking's riderId
+    person <- QP.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
+    -- Lookup IGM category
+    category <- QIC.findByIGMIssueCategory req.category >>= fromMaybeM (InvalidRequest $ "IGM IssueCategory not found for: " <> req.category)
+    -- Read back IGMIssue created by shared-services (find latest by bookingId)
+    mbIgmIssues <- QIGM.findByBookingId req.orderId
+    igmIssue <- case mbIgmIssues of
+      [] -> throwError $ InvalidRequest "IGMIssue not created for this booking"
+      issues -> pure $ Kernel.Prelude.last $ sortBy (comparing (.createdAt)) issues
+    -- Build Beckn issue request reusing existing ACL function
+    (becknIssueReq, _, updatedIgmIssue) <- ACL.buildIssueReq rideBooking category Nothing req.shortDesc merchant person igmConfig merchantOpCity Nothing Nothing (Just igmIssue)
+    QIGM.updateByPrimaryKey updatedIgmIssue
+    fork "sending beckn issue from dashboard" . withShortRetry $ do
+      void $ CallBPP.issue providerUrl becknIssueReq
+  pure Kernel.Types.APISuccess.Success
+
+getIGMIssueTrail ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport ->
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.IgmIssueData
+getIGMIssueTrail (Kernel.Types.Id.ShortId merchantShortId) opCity issueReportId =
+  DIssue.igmIssueDashboardGetTrail (Kernel.Types.Id.ShortId merchantShortId) opCity issueReportId dashboardIssueHandle Common.CUSTOMER
+
+postIGMIssueTriggerAction ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport ->
+  IssueManagement.Common.Dashboard.Issue.IgmRespondentActionPayload ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postIGMIssueTriggerAction (Kernel.Types.Id.ShortId merchantShortId) opCity issueReportId req =
+  DIssue.igmIssueDashboardTriggerAction (Kernel.Types.Id.ShortId merchantShortId) opCity (Kernel.Types.Id.cast issueReportId) dashboardIssueHandle req

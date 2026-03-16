@@ -7,6 +7,7 @@ import IGM.Utils (mkOrgName)
 import qualified IGM.Utils as Utils
 import qualified IssueManagement.Beckn.ACL.IGM.Utils as Utils
 import qualified IssueManagement.Domain.Action.Beckn.Issue as DIssue
+import qualified IssueManagement.Domain.Types.Issue.IGMIssue as IGMIssue
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.TimeRFC339
@@ -23,6 +24,8 @@ buildIssueReq req = do
   issueStatusText <- req.issueReqMessage.issueReqMessageIssue.issueStatus & fromMaybeM (InvalidRequest "IssueStatus not found")
   bookingId <- req.issueReqMessage.issueReqMessageIssue.issueOrderDetails >>= (.orderDetailsId) & fromMaybeM (InvalidRequest "BookingId not found")
   bapId <- req.context.contextBapId & fromMaybeM (InvalidRequest "BapId not found")
+  domainText <- req.context.contextDomain & fromMaybeM (InvalidRequest "Domain not found")
+  let domain = IGMIssue.mkStringToDomainType domainText
   let issueRaisedBy = req.issueReqMessage.issueReqMessageIssue.issueIssueActions >>= (.issueActionsComplainantActions) >>= listToMaybe >>= (.complainantActionUpdatedBy) >>= (.organizationOrg) >>= (.organizationOrgName)
       issueId = req.issueReqMessage.issueReqMessageIssue.issueId
       customerContact = req.issueReqMessage.issueReqMessageIssue.issueIssueActions >>= (.issueActionsComplainantActions) >>= listToMaybe >>= (.complainantActionUpdatedBy) >>= (.organizationContact)
@@ -47,7 +50,7 @@ buildOnIssueReq ::
   DIssue.IssueRes ->
   m Spec.OnIssueReq
 buildOnIssueReq txnId msgId bapId bapUri issueRes = do
-  context <- Utils.buildContext Spec.ON_ISSUE Spec.PUBLIC_TRANSPORT issueRes.bppId issueRes.merchant txnId msgId issueRes.merchantOperatingCity.city (Just $ Utils.BapData bapId bapUri) (Utils.buildTTL 30 (convertRFC3339ToUTC issueRes.updatedAt))
+  context <- Utils.buildContext Spec.ON_ISSUE issueRes.domain issueRes.bppId issueRes.merchant txnId msgId issueRes.merchantOperatingCity.city (Just $ Utils.BapData bapId bapUri) (Utils.buildTTL 30 (convertRFC3339ToUTC issueRes.updatedAt))
   let message = tfOnIssueMessage issueRes
   pure $
     Spec.OnIssueReq
@@ -125,7 +128,7 @@ tfOrganzationOrg :: DIssue.IssueRes -> Maybe Spec.OrganizationOrg
 tfOrganzationOrg issueRes =
   Just $
     Spec.OrganizationOrg
-      { organizationOrgName = mkOrgName issueRes.bppId Spec.PUBLIC_TRANSPORT
+      { organizationOrgName = mkOrgName issueRes.bppId issueRes.domain
       }
 
 tfOrganizationPerson :: DIssue.IssueRes -> Maybe Spec.ComplainantPerson
