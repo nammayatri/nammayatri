@@ -72,6 +72,7 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoType :: Text,
     gateInfoGateTags :: Text,
     gateInfoWalkDescription :: Text,
+    gateInfoEntryFeeAmount :: Text,
     priority :: Text,
     pickupPriority :: Text,
     dropPriority :: Text,
@@ -99,6 +100,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> r .: "gate_info_type"
       <*> r .: "gate_info_tags"
       <*> r .: "gate_info_walk_description"
+      <*> r .: "gate_info_entry_fee_amount"
       <*> r .: "priority"
       <*> r .: "pickup_priority"
       <*> r .: "drop_priority"
@@ -210,6 +212,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
       gateInfoAddress :: Maybe Text = cleanMaybeCSVField idx row.gateInfoAddress "Gate Info (address)"
       gateInfoGateTags :: Maybe [Text] = parseGateTags row.gateInfoGateTags
       gateInfoWalkDescription :: Maybe Text = cleanMaybeCSVField idx row.gateInfoWalkDescription "Gate Info (walk_description)"
+      gateInfoEntryFeeAmount :: Maybe Double = readMaybeCSVField idx row.gateInfoEntryFeeAmount "Gate Info (entry_fee_amount)"
   gateInfoType :: DGI.GateType <- readCSVField idx row.gateInfoType "Gate Info (type)"
   gateInfoHasGeom :: Bool <- readCSVField idx row.gateInfoHasGeom "Gate Info (geom)"
   gateInfoCanQueueUpOnGate :: Bool <- readCSVField idx row.gateInfoCanQueueUpOnGate "Gate Info (can_queue_up_on_gate)"
@@ -254,7 +257,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             updatedAt = now,
             gateTags = gateInfoGateTags,
             walkDescription = gateInfoWalkDescription,
-            entryFeeAmount = Nothing
+            entryFeeAmount = gateInfoEntryFeeAmount
           }
   return (city, locationName, (specialLocation, gateInfo), pickupPriority, dropPriority, mbSpecialLocationId)
 
