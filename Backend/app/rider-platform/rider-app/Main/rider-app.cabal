@@ -1717,6 +1717,7 @@ test-suite rider-app-test
   main-is: Main.hs
   other-modules:
       FRFS.DirectQR
+      FRFS.UnitTests
       Paths_rider_app
   hs-source-dirs:
       test
@@ -1827,6 +1828,8 @@ test-suite rider-app-test
     , singletons-th
     , split
     , string-conversions
+    , aeson
+    , euler-hs
     , tasty
     , tasty-hunit
     , tasty-quickcheck
