@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.RoleExtra where
 
 import qualified Data.Text
@@ -8,12 +6,9 @@ import qualified Domain.Types.Role
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import qualified Kernel.Types.Id
-import Kernel.Utils.Common
 import Storage.Beam.BeamFlow
 import qualified Storage.Beam.Common as SBC
-import qualified Storage.Beam.Role as BeamR
-import Storage.Queries.OrphanInstances.Role
+import Storage.Queries.OrphanInstances.Role ()
 
 -- Beam query for listing roles with search and pagination
 findAllRolesWithLimitOffset ::
