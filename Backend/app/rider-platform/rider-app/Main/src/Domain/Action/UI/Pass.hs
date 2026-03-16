@@ -61,7 +61,10 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
+import Kernel.External.Types (SchedulerFlow)
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import SharedLogic.JobScheduler
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Offer as SOffer
 import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
@@ -149,7 +152,22 @@ postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDevic
     Left _ -> do
       logError $ "Pass purchase already in progress for personId: " <> personId.getId <> " and passTypeId: " <> pass.passTypeId.getId
       throwError (InvalidRequest "Pass purchase already in progress, please try again")
-    Right result -> return result
+    Right result -> do
+      -- Transactional Outbox Pattern: schedule a reconciliation check for this purchase.
+      -- If the payment webhook is lost or the pass is stuck in Pending, this job will
+      -- detect and reconcile it after 35 minutes (same pattern as CheckMultimodalConfirmFail
+      -- for tickets). The periodic CheckOrphanedPassPayment job also catches these, but
+      -- the per-purchase schedule provides faster recovery.
+      when (pass.amount > 0) $ do
+        let scheduleAfter = intToNominalDiffTime 2100 -- 35 minutes
+            jobData =
+              CheckOrphanedPassPaymentJobData
+                { merchantId = merchantId,
+                  merchantOperatingCityId = person.merchantOperatingCityId
+                }
+        createJobIn @_ @'CheckOrphanedPassPayment (Just merchantId) (Just person.merchantOperatingCityId) scheduleAfter jobData
+        logInfo $ "Scheduled orphaned pass payment check for purchasedPassId: " <> result.purchasedPassId.getId <> " in 35 minutes"
+      return result
 
 purchasePassWithPayment ::
   ( CacheFlow m r,
