@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.TransactionExtra where
 
 import qualified Data.Text
@@ -12,13 +10,12 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common
 import Storage.Beam.BeamFlow
 import qualified Storage.Beam.Common as SBC
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Transaction as BeamT
-import Storage.Queries.OrphanInstances.Person
-import Storage.Queries.OrphanInstances.Transaction
+import Storage.Queries.OrphanInstances.Person ()
+import Storage.Queries.OrphanInstances.Transaction ()
 
 -- Beam query for listing transactions with Person join and filters
 findAllTransactionsByLimitOffset ::

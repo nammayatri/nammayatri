@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.PersonExtra where
 
@@ -14,9 +13,8 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as City
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime, logTagError)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, logTagError)
 import Sequelize as Se
 import Storage.Beam.BeamFlow
 import qualified Storage.Beam.Common as SBC
@@ -25,8 +23,8 @@ import qualified Storage.Beam.Person as Beam
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Role as BeamR
 import Storage.Queries.MerchantAccess ()
-import Storage.Queries.OrphanInstances.Person
-import Storage.Queries.OrphanInstances.Role
+import Storage.Queries.OrphanInstances.Person ()
+import Storage.Queries.OrphanInstances.Role ()
 import Storage.Queries.Role ()
 
 -- Extra code goes here --
