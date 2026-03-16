@@ -88,7 +88,6 @@ onInit ::
 onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
   Metrics.finishMetrics Metrics.INIT_FRFS merchant.name onInitReq.transactionId oldBooking.merchantOperatingCityId.getId
   person <- QP.findById oldBooking.riderId >>= fromMaybeM (PersonNotFound oldBooking.riderId.getId)
-  whenJust (onInitReq.validTill) (\validity -> void $ QFRFSTicketBooking.updateValidTillById validity oldBooking.id)
   let totalPrice = onInitReq.totalPrice
   (updatedQuoteCategories, isFareChanged) <-
     updateQuoteCategoriesWithFinalPrice
@@ -105,21 +104,24 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
   when (totalPrice /= fareParameters.totalPrice) $ do
     throwError $ CategoriesAndTotalPriceMismatch (show fareParameters.totalPrice) (show totalPrice)
 
-  -- TODO :: Remove Quantity update Booking Table post release of FRFSQuoteCategory
-  void $ QFRFSTicketBooking.updateTotalPriceById totalPrice oldBooking.id
-  void $ QFRFSTicketBooking.updateIsFareChangedById (Just isFareChanged) oldBooking.id -- Full Ticket Price (Multiplied By Quantity)
-  void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) oldBooking.id
+  -- Single atomic update for all on_init booking fields
+  QFRFSTicketBooking.updateOnInitFieldsById
+    onInitReq.validTill
+    totalPrice
+    (Just isFareChanged)
+    (Just onInitReq.bankAccNum)
+    (Just onInitReq.bankCode)
+    onInitReq.bppOrderId
+    oldBooking.id
   frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId oldBooking.merchantOperatingCityId Nothing >>= fromMaybeM (FRFSConfigNotFound oldBooking.merchantOperatingCityId.getId)
-  whenJust onInitReq.bppOrderId (\bppOrderId -> void $ QFRFSTicketBooking.updateBPPOrderIdById (Just bppOrderId) oldBooking.id)
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let booking = oldBooking {FTBooking.totalPrice = totalPrice, FTBooking.journeyOnInitDone = Just True}
-  QFRFSTicketBooking.updateOnInitDone (Just True) booking.id
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   (mbJourneyId, allJourneyBookings) <- getAllJourneyFrfsBookings booking
 
   let allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyBookings
   when allLegsOnInitDone $ do
-    Redis.withLockRedis (key (maybe booking.id.getId (.getId) mbJourneyId)) 60 $ do
+    Redis.withLockRedis (key (maybe booking.id.getId (.getId) mbJourneyId)) 120 $ do
       let paymentType = getPaymentType (integratedBPPConfig.platformType == DIBC.MULTIMODAL) booking.vehicleType
       (vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
       baskets <- case mbJourneyId of

@@ -15,6 +15,32 @@ import Storage.Queries.OrphanInstances.FRFSTicketBooking ()
 
 -- Extra code goes here --
 
+updateOnInitFieldsById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe UTCTime ->
+  Price ->
+  Maybe Bool ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Id FRFSTicketBooking ->
+  m ()
+updateOnInitFieldsById mbValidTill totalPrice isFareChanged mbBankAccNum mbBankCode mbBppOrderId id = do
+  now <- getCurrentTime
+  updateOneWithKV
+    ( [ Se.Set Beam.currency (Just totalPrice.currency),
+        Se.Set Beam.price totalPrice.amount,
+        Se.Set Beam.isFareChanged isFareChanged,
+        Se.Set Beam.bppBankAccountNumber mbBankAccNum,
+        Se.Set Beam.bppBankCode mbBankCode,
+        Se.Set Beam.journeyOnInitDone (Just True),
+        Se.Set Beam.updatedAt now
+      ]
+        <> maybe [] (\vt -> [Se.Set Beam.validTill vt]) mbValidTill
+        <> maybe [] (\bppOId -> [Se.Set Beam.bppOrderId (Just bppOId)]) mbBppOrderId
+    )
+    [Se.Is Beam.id $ Se.Eq (getId id)]
+
 updateFRFSTicketBookingVehicleDataBySearchId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe Text ->
