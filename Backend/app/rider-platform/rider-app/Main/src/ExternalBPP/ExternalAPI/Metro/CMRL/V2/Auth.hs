@@ -190,7 +190,7 @@ callCMRLV2APIWithRetry config eulerClientFunc description proxy attempt authRefr
               recordCMRLV2Failure config.merchantId
               throwError $ InternalError "CMRL V2 authentication failed after token refresh"
         Just code
-          | code `elem` ["INTERNAL_ERROR", "SERVICE_UNAVAILABLE", "GATEWAY_TIMEOUT"] && attempt < maxRetries -> do
+          | code `elem` (["INTERNAL_ERROR", "SERVICE_UNAVAILABLE", "GATEWAY_TIMEOUT"] :: [Text]) && attempt < maxRetries -> do
               let delayMs = 1000000 * (2 ^ attempt) -- 1s, 2s, 4s exponential backoff
               logWarning $ "[CMRLV2:API] Transient error (" <> code <> "), retrying in " <> show (delayMs `div` 1000000) <> "s..."
               threadDelay delayMs
