@@ -166,6 +166,11 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
       rider <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       now <- getCurrentTime
       unless (quote.validTill > now) $ throwError $ FRFSQuoteExpired quote.id.getId
+      when (quote.vehicleType == Spec.BUS) $ do
+        let minimumBookingWindowSeconds = 600 :: NominalDiffTime -- 10 minutes
+            minimumBookingDeadline = addUTCTime minimumBookingWindowSeconds now
+        unless (quote.validTill > minimumBookingDeadline) $
+          throwError $ FRFSBusDepartureTooClose quote.id.getId
       unless (personId == quote.riderId) $ throwError AccessDenied
       maybeM
         (buildAndCreateBooking rider quote fareParameters mbIsMockPayment mbHoldCtxForAll firstTripId)

@@ -626,6 +626,7 @@ data FRFSTicketBookingError
   | FRFSTicketsForBookingExpired Text
   | FRFSTicketsForBookingDoesNotExist Text
   | FRFSQuoteExpired Text
+  | FRFSBusDepartureTooClose Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''FRFSTicketBookingError
@@ -637,6 +638,7 @@ instance IsBaseError FRFSTicketBookingError where
     FRFSTicketsForBookingExpired bookingId -> Just $ "FRFS Tickets for booking with bookingId:" +|| bookingId ||+ " has expired."
     FRFSTicketsForBookingDoesNotExist bookingId -> Just $ "FRFS Tickets for booking with bookingId:" +|| bookingId ||+ " does not exist."
     FRFSQuoteExpired _ -> Just $ "Quote expired"
+    FRFSBusDepartureTooClose quoteId -> Just $ "Bus departure is too close or has already passed for quoteId:" +|| quoteId ||+ ". Please select a later departure."
 
 instance IsHTTPError FRFSTicketBookingError where
   toErrorCode = \case
@@ -645,6 +647,7 @@ instance IsHTTPError FRFSTicketBookingError where
     FRFSTicketsForBookingExpired _ -> "FRFS_TICKETS_FOR_BOOKING_EXPIRED"
     FRFSTicketsForBookingDoesNotExist _ -> "FRFS_TICKETS_FOR_BOOKING_DOES_NOT_EXIST"
     FRFSQuoteExpired _ -> "FRFS_QUOTE_EXPIRED"
+    FRFSBusDepartureTooClose _ -> "FRFS_BUS_DEPARTURE_TOO_CLOSE"
 
   toHttpCode = \case
     FRFSTicketBookingNotFound _ -> E500
@@ -652,6 +655,7 @@ instance IsHTTPError FRFSTicketBookingError where
     FRFSTicketsForBookingExpired _ -> E400
     FRFSTicketsForBookingDoesNotExist _ -> E400
     FRFSQuoteExpired _ -> E400
+    FRFSBusDepartureTooClose _ -> E400
 
 instance IsAPIError FRFSTicketBookingError
 

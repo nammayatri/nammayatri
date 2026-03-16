@@ -574,6 +574,8 @@ SeatManagement:
          - date
          - lt:
             - booked
+         - gte:
+            - maxCapacity
     updateBlockedSeats:
       kvFunction: updateWithKV
       params: [blocked]
