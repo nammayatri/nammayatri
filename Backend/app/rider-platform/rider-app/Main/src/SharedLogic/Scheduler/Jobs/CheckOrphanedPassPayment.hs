@@ -18,6 +18,7 @@ import qualified Domain.Action.UI.Pass as Pass
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
+import qualified Domain.Types.PurchasedPassPayment as DPurchasedPassPayment
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
@@ -38,19 +39,18 @@ import SharedLogic.JobScheduler
 import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.Payment ()
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import qualified Tools.Metrics.BAPMetrics as Metrics
 import qualified Tools.Payment as Payment
 import qualified UrlShortner.Common as UrlShortner
 
--- | Scheduled job that finds passes stuck in PENDING state for > 30 minutes
+-- | Scheduled job that finds payment attempts stuck in PENDING state for > 30 minutes
 -- and reconciles them by checking payment status at Juspay.
 --
--- For each orphaned pass:
+-- For each orphaned payment:
 --   - If payment succeeded at Juspay → activate the pass (via passOrderStatusHandler)
---   - If payment failed at Juspay → mark pass as Failed
---   - If payment not found → mark pass as Failed
+--   - If payment failed at Juspay → mark payment as Failed
+--   - If payment not found → mark payment as Failed
 --
 -- This is the pass equivalent of CheckMultimodalConfirmFail for tickets.
 -- Runs every 30 minutes and self-schedules the next run.
@@ -83,13 +83,13 @@ checkOrphanedPassPaymentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
       merchantOperatingCityId' = jobData.merchantOperatingCityId
 
   now <- getCurrentTime
-  -- Find passes in PENDING state created more than 30 minutes ago
+  -- Find payment attempts in PENDING state created more than 30 minutes ago
   let cutoffTime = addUTCTime (intToNominalDiffTime (-1800)) now
-  orphanedPasses <- QPurchasedPass.findAllPendingOlderThan cutoffTime (Just 100)
+  orphanedPayments <- QPurchasedPassPayment.findAllPendingPaymentsOlderThan cutoffTime (Just 100)
 
-  logInfo $ "Found " <> show (length orphanedPasses) <> " orphaned passes in PENDING state older than 30 minutes"
+  logInfo $ "Found " <> show (length orphanedPayments) <> " orphaned pass payments in PENDING state older than 30 minutes"
 
-  mapM_ (processOrphanedPass merchantId' merchantOperatingCityId') orphanedPasses
+  mapM_ (processOrphanedPayment merchantId' merchantOperatingCityId') orphanedPayments
 
   -- Self-schedule next run in 30 minutes
   let newJobData =
@@ -101,7 +101,7 @@ checkOrphanedPassPaymentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
   logInfo "Scheduled next orphaned pass payment check job in 30 minutes"
   return Complete
 
-processOrphanedPass ::
+processOrphanedPayment ::
   forall m r c.
   ( EncFlow m r,
     CacheFlow m r,
@@ -125,37 +125,28 @@ processOrphanedPass ::
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
-  DPurchasedPass.PurchasedPass ->
+  DPurchasedPassPayment.PurchasedPassPayment ->
   m ()
-processOrphanedPass merchantId merchantOperatingCityId purchasedPass = do
+processOrphanedPayment merchantId merchantOperatingCityId payment = do
   result <-
-    withTryCatch "checkOrphanedPassPayment:processOrphanedPass" $ do
-      -- Find associated payment record
-      payments <- QPurchasedPassPayment.findAllByPurchasedPassId purchasedPass.id
-      case listToMaybe payments of
+    withTryCatch "checkOrphanedPassPayment:processOrphanedPayment" $ do
+      -- Check status at payment gateway via the payment order
+      mbPaymentOrder <- QPaymentOrder.findById payment.orderId
+      case mbPaymentOrder of
         Nothing -> do
-          -- No payment record at all — mark pass as Failed
-          logWarning $ "No payment record found for orphaned pass " <> purchasedPass.id.getId <> ", marking as Failed"
-          QPurchasedPass.updateStatusById DPurchasedPass.Failed purchasedPass.id
-        Just payment -> do
-          -- Payment record exists — check status at payment gateway
-          mbPaymentOrder <- QPaymentOrder.findById payment.orderId
-          case mbPaymentOrder of
-            Nothing -> do
-              logWarning $ "No payment order found for orphaned pass " <> purchasedPass.id.getId <> " orderId " <> payment.orderId.getId <> ", marking as Failed"
-              QPurchasedPass.updateStatusById DPurchasedPass.Failed purchasedPass.id
-              QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.Failed payment.orderId
-            Just paymentOrder -> do
-              -- Use the existing payment order status handler to reconcile
-              -- This will call passOrderStatusHandler which updates both pass and payment
-              person <- QPerson.findById (cast paymentOrder.personId) >>= fromMaybeM (PersonNotFound paymentOrder.personId.getId)
-              let orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing Payment.FRFSPassPurchase (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
-                  fulfillmentHandler paymentStatusResp = do
-                    status <- DPayment.getTransactionStatus paymentStatusResp
-                    Pass.passOrderStatusHandler (cast merchantId) paymentOrder.id status
-              void $ SPayment.orderStatusHandler merchantOperatingCityId fulfillmentHandler Payment.FRFSPassPurchase paymentOrder orderStatusCall
-              logInfo $ "Reconciled orphaned pass " <> purchasedPass.id.getId <> " via payment order status check"
+          logWarning $ "No payment order found for orphaned payment " <> payment.id.getId <> " orderId " <> payment.orderId.getId <> ", marking payment as Failed"
+          QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.Failed payment.orderId
+        Just paymentOrder -> do
+          -- Use the existing payment order status handler to reconcile
+          -- This will call passOrderStatusHandler which updates both pass and payment
+          person <- QPerson.findById (cast paymentOrder.personId) >>= fromMaybeM (PersonNotFound paymentOrder.personId.getId)
+          let orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing Payment.FRFSPassPurchase (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
+              fulfillmentHandler paymentStatusResp = do
+                status <- DPayment.getTransactionStatus paymentStatusResp
+                Pass.passOrderStatusHandler (cast merchantId) paymentOrder.id status
+          void $ SPayment.orderStatusHandler merchantOperatingCityId fulfillmentHandler Payment.FRFSPassPurchase paymentOrder orderStatusCall
+          logInfo $ "Reconciled orphaned payment " <> payment.id.getId <> " via payment order status check"
   case result of
     Left err ->
-      logError $ "Failed to process orphaned pass " <> purchasedPass.id.getId <> ": " <> show err
+      logError $ "Failed to process orphaned payment " <> payment.id.getId <> ": " <> show err
     Right _ -> pure ()

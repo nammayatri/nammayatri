@@ -62,9 +62,9 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import Kernel.External.Types (SchedulerFlow)
-import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
-import SharedLogic.JobScheduler
+
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Offer as SOffer
 import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
@@ -152,22 +152,7 @@ postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDevic
     Left _ -> do
       logError $ "Pass purchase already in progress for personId: " <> personId.getId <> " and passTypeId: " <> pass.passTypeId.getId
       throwError (InvalidRequest "Pass purchase already in progress, please try again")
-    Right result -> do
-      -- Transactional Outbox Pattern: schedule a reconciliation check for this purchase.
-      -- If the payment webhook is lost or the pass is stuck in Pending, this job will
-      -- detect and reconcile it after 35 minutes (same pattern as CheckMultimodalConfirmFail
-      -- for tickets). The periodic CheckOrphanedPassPayment job also catches these, but
-      -- the per-purchase schedule provides faster recovery.
-      when (pass.amount > 0) $ do
-        let scheduleAfter = intToNominalDiffTime 2100 -- 35 minutes
-            jobData =
-              CheckOrphanedPassPaymentJobData
-                { merchantId = merchantId,
-                  merchantOperatingCityId = person.merchantOperatingCityId
-                }
-        createJobIn @_ @'CheckOrphanedPassPayment (Just merchantId) (Just person.merchantOperatingCityId) scheduleAfter jobData
-        logInfo $ "Scheduled orphaned pass payment check for purchasedPassId: " <> result.purchasedPassId.getId <> " in 35 minutes"
-      return result
+    Right result -> return result
 
 purchasePassWithPayment ::
   ( CacheFlow m r,
@@ -357,9 +342,9 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         case eitherPaymentOrder of
           Left err -> do
             logError $ "Juspay order creation failed for purchasedPassId: " <> purchasedPassId.getId <> ", error: " <> show err
-            -- Rollback: mark pass and payment as Failed since Juspay order was never created
+            -- Only mark the payment attempt as Failed; leave the PurchasedPass untouched
+            -- because it may be a reused row for renewals and we must not break the existing pass.
             QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.Failed paymentOrderId
-            QPurchasedPass.updateStatusById DPurchasedPass.Failed purchasedPassId
             throwError (InvalidRequest "Payment order creation failed, please try again")
           Right paymentOrder -> return paymentOrder
       else return Nothing
@@ -695,7 +680,7 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
               QPurchasedPass.updateStatusById DPurchasedPass.Failed purchasedPass.id
               logInfo $ "Pass " <> purchasedPass.id.getId <> " marked Failed due to payment cancellation"
           else
-            when (purchasedPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
+            unless (purchasedPass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
               QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount
         -- If payment results in an active/prebooked pass, update purchased_pass.profilePicture from payment
         when (passStatus `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do

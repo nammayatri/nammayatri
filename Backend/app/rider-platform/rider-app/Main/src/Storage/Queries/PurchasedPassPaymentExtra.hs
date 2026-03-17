@@ -65,6 +65,22 @@ updateStatusAndProfilePictureByOrderId status profilePicture orderId = do
     [Se.Set Beam.status status, Se.Set Beam.profilePicture profilePicture, Se.Set Beam.updatedAt _now]
     [Se.Is Beam.orderId $ Se.Eq orderId.getId]
 
+findAllPendingPaymentsOlderThan ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  UTCTime ->
+  Maybe Int ->
+  m [DPurchasedPassPayment.PurchasedPassPayment]
+findAllPendingPaymentsOlderThan cutoffTime mbLimit =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.status $ Se.Eq DPurchasedPass.Pending,
+          Se.Is Beam.createdAt $ Se.LessThanOrEq cutoffTime
+        ]
+    ]
+    (Se.Asc Beam.createdAt)
+    mbLimit
+    (Just 0)
+
 updatePurchasedPassIdByOldPurchasedPassId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DPurchasedPass.PurchasedPass ->
