@@ -14,8 +14,11 @@
 
 module SharedLogic.External.LocationTrackingService.API.NearBy where
 
+import Data.Text (Text)
 import Domain.Types.DriverLocation
+import qualified Domain.Types.Person as DP
 import qualified EulerHS.Types as ET
+import Kernel.Types.Id
 import Servant
 import SharedLogic.External.LocationTrackingService.Types
 
@@ -31,3 +34,19 @@ locationTrackingServiceAPI = Proxy
 
 nearBy :: NearByReq -> ET.EulerClient [DriverLocation]
 nearBy = ET.client locationTrackingServiceAPI
+
+type QueueDriverPositionAPI =
+  "internal"
+    :> "special-locations"
+    :> Capture "specialLocationId" Text
+    :> "queue"
+    :> "drivers"
+    :> Capture "driverId" (Id DP.Person)
+    :> "position"
+    :> Get '[JSON] QueueDriverPositionResp
+
+queueDriverPositionAPI :: Proxy QueueDriverPositionAPI
+queueDriverPositionAPI = Proxy
+
+queueDriverPosition :: Text -> Id DP.Person -> ET.EulerClient QueueDriverPositionResp
+queueDriverPosition = ET.client queueDriverPositionAPI
