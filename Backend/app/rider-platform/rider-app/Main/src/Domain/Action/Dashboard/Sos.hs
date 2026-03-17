@@ -245,7 +245,7 @@ callExternalSOS sosId mbComments = do
           sendPNOnPostRideSOS = Nothing,
           notifyAllContacts = Nothing,
           customerLocation = customerLoc,
-          isKaptureTicketRequired = Nothing
+          triggerApiList = Nothing
         }
 
 flowToSOSService :: DRC.ExternalSOSFlow -> SOS.SOSService
