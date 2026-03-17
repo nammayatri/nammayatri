@@ -29,6 +29,7 @@ import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.DriverGstin as DGST
 import qualified Domain.Types.DriverPanCard as DPC
 import Domain.Types.DriverSSN
+import qualified Domain.Types.IdfyVerification as DIV
 import Domain.Types.FarePolicy
 import qualified Domain.Types.HyperVergeSdkLogs as DomainHVSdkLogs
 import qualified Domain.Types.Image as Image
@@ -88,6 +89,7 @@ import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.DriverGstin as QDGTIN
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLicense as QDL
+import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.DriverPanCard as QDPC
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverSSN as QDriverSSN
@@ -685,6 +687,24 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
         _ -> pure Documents.VALID
 
   QDPC.upsertPanRecord =<< buildPanCard merchantId person req verificationStatus (Just merchantOpCityId)
+  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  when (fromMaybe True transporterConfig.allowPanAadhaarLinkage) $ do
+    mdriverPanCard <- QDPC.findByDriverId personId
+    whenJust mdriverPanCard $ \driverPanCard -> do
+      panNumber <- decrypt driverPanCard.panCardNumber
+      mbAadhaarCard <- QAadhaarCard.findByPrimaryKey person.id
+      let mbAadhaarNumber = mbAadhaarCard >>= (.maskedAadhaarNumber)
+      whenJust mbAadhaarNumber $ \aadhaarNumber -> do
+        verifyRes <-
+          Verification.verifyPanAadhaarLinkAsync person.merchantId merchantOpCityId $
+            VI.VerifyPanAadhaarLinkAsyncReq {panNumber, aadhaarNumber, driverId = person.id.getId}
+        case verifyRes.requestor of
+          VerificationTypes.Idfy -> do
+            encPan <- encrypt panNumber
+            now <- getCurrentTime
+            ivEntity <- mkIdfyVerificationEntityPanAadhaarLink person driverPanCard.documentImageId1 verifyRes.requestId now encPan
+            IVQuery.create ivEntity
+          _ -> throwError $ InternalError ("Service provider not configured for PAN-Aadhaar linkage. Provider: " <> show verifyRes.requestor)
   return Success
   where
     getImage :: Id Image.Image -> Flow Text
@@ -900,6 +920,27 @@ postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) 
 
   -- Create and store Aadhaar record
   createAadhaarRecord personId merchantId merchantOperatingCityId req
+
+  -- Trigger PAN-Aadhaar linkage if PAN card already exists
+  person <- PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mbAadhaarCard <- QAadhaarCard.findByPrimaryKey personId
+  let mbAadhaarNumber = mbAadhaarCard >>= (.maskedAadhaarNumber)
+  whenJust mbAadhaarNumber $ \aadhaarNumber -> do
+    transporterConfig <- CQTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+    when (fromMaybe True transporterConfig.allowPanAadhaarLinkage) $ do
+      mdriverPanCard <- QDPC.findByDriverId personId
+      whenJust mdriverPanCard $ \driverPanCard -> do
+        panNumber <- decrypt driverPanCard.panCardNumber
+        verifyRes <-
+          Verification.verifyPanAadhaarLinkAsync person.merchantId merchantOperatingCityId $
+            VI.VerifyPanAadhaarLinkAsyncReq {panNumber, aadhaarNumber, driverId = person.id.getId}
+        case verifyRes.requestor of
+          VerificationTypes.Idfy -> do
+            encPan <- encrypt panNumber
+            now <- getCurrentTime
+            ivEntity <- mkIdfyVerificationEntityPanAadhaarLink person driverPanCard.documentImageId1 verifyRes.requestId now encPan
+            IVQuery.create ivEntity
+          _ -> throwError $ InternalError ("Service provider not configured for PAN-Aadhaar linkage. Provider: " <> show verifyRes.requestor)
 
   return Success
   where
@@ -1459,3 +1500,32 @@ postDriverDeleteBankAccount (mbPersonId, merchantId, merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   _ <- BankAccountVerification.deleteBankAccount (personId, merchantId, merchantOpCityId)
   pure Kernel.Types.APISuccess.Success
+
+mkIdfyVerificationEntityPanAadhaarLink :: (MonadFlow m) => Domain.Types.Person.Person -> Id Image.Image -> Text -> UTCTime -> EncryptedHashedField 'AsEncrypted Text -> m DIV.IdfyVerification
+mkIdfyVerificationEntityPanAadhaarLink person imageId1 requestId now encryptedPan = do
+  entityId <- generateGUID
+  return $
+    DIV.IdfyVerification
+      { id = Id entityId,
+        driverId = person.id,
+        documentImageId1 = imageId1,
+        documentImageId2 = Nothing,
+        requestId,
+        imageExtractionValidation = DIV.Skipped,
+        documentNumber = encryptedPan,
+        issueDateOnDoc = Nothing,
+        driverDateOfBirth = Nothing,
+        docType = DTO.PanCard,
+        status = "pending",
+        idfyResponse = Nothing,
+        retryCount = Just 0,
+        nameOnCard = Nothing,
+        vehicleCategory = Nothing,
+        merchantId = Just person.merchantId,
+        merchantOperatingCityId = Just person.merchantOperatingCityId,
+        airConditioned = Nothing,
+        oxygen = Nothing,
+        ventilator = Nothing,
+        createdAt = now,
+        updatedAt = now
+      }

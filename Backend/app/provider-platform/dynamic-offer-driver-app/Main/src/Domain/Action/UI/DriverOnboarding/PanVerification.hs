@@ -18,6 +18,7 @@ module Domain.Action.UI.DriverOnboarding.PanVerification
     verifyPan,
     onVerifyPan,
     onVerifyPanAadhaarLink,
+    verifyPanAadhaarLinkageIfAadhaarExists,
     verifyPanAadhaarLinkageIfPanExists,
     triggerPanAadhaarLinkageWhenPanAndAadhaarExist,
   )
