@@ -109,6 +109,21 @@ resetAuthToken config = do
       threadDelay 2000000
       getAuthToken config
 
+-- | Circuit breaker Redis key for CMRL V2 API failure tracking
+cmrlV2CircuitBreakerKey :: Text -> Text
+cmrlV2CircuitBreakerKey merchantId = "CMRLV2:CircuitBreaker:" <> merchantId
+
+-- | Circuit breaker: window in seconds, failure threshold
+cmrlV2CBWindowSec :: Int
+cmrlV2CBWindowSec = 60
+
+cmrlV2CBThreshold :: Int
+cmrlV2CBThreshold = 10
+
+-- | Call CMRL V2 API with retry, exponential backoff, and circuit breaker.
+-- Circuit breaker: fails fast if >=10 failures in 60s window.
+-- Retries up to 3 times for 500/503/504 errors with delays of 1s, 2s, 4s.
+-- Auth token refresh is attempted once on 401.
 callCMRLV2API ::
   ( HasCallStack,
     CoreMetrics m,
@@ -126,23 +141,80 @@ callCMRLV2API ::
   Proxy api ->
   m res
 callCMRLV2API config eulerClientFunc description proxy = do
-  logInfo $ "[CMRLV2:API] Calling API: " <> description <> " at " <> showBaseUrl config.networkHostUrl
+  -- Circuit breaker: fail fast if CMRL V2 API has been consistently failing
+  let cbKey = cmrlV2CircuitBreakerKey config.merchantId
+  failureCount <- fromMaybe 0 <$> Hedis.get @Int cbKey
+  when (failureCount >= cmrlV2CBThreshold) $ do
+    logError $ "[CMRLV2:CircuitBreaker] Circuit OPEN for merchantId: " <> config.merchantId
+      <> " (" <> show failureCount <> " failures in last " <> show cmrlV2CBWindowSec <> "s)"
+      <> " — rejecting " <> description
+    throwError $ InternalError $ "CMRL V2 API circuit breaker open: too many recent failures for " <> description
+  callCMRLV2APIWithRetry config eulerClientFunc description proxy 0 False
+
+callCMRLV2APIWithRetry ::
+  ( HasCallStack,
+    CoreMetrics m,
+    SanitizedUrl api,
+    MonadFlow m,
+    ToJSON res,
+    CacheFlow m r,
+    EncFlow m r,
+    HasRequestId r,
+    MonadReader r m
+  ) =>
+  CMRLV2Config ->
+  (Text -> ET.EulerClient res) ->
+  Text ->
+  Proxy api ->
+  Int ->  -- retry attempt (0-based)
+  Bool -> -- whether auth has already been refreshed
+  m res
+callCMRLV2APIWithRetry config eulerClientFunc description proxy attempt authRefreshed = do
+  let maxRetries = 3
+  logInfo $ "[CMRLV2:API] Calling API: " <> description <> " at " <> showBaseUrl config.networkHostUrl <> " (attempt " <> show (attempt + 1) <> ")"
   token <- getAuthToken config
   eitherResp <- withTryCatch "CMRLV2:auth" $ callApiUnwrappingApiError (identity @CMRLV2Error) Nothing Nothing Nothing config.networkHostUrl (eulerClientFunc token) description proxy
   case eitherResp of
     Left exec -> do
       let mbError = fromException @CMRLV2Error exec
           errorCode = mbError <&> toErrorCode
-      logError $ "[CMRLV2:API] API call failed: " <> description <> ", errorCode: " <> show errorCode
+      logError $ "[CMRLV2:API] API call failed: " <> description <> ", errorCode: " <> show errorCode <> ", attempt: " <> show (attempt + 1)
       case errorCode of
-        Just "UNAUTHORIZED" -> do
-          logInfo "[CMRLV2:API] Token expired, refreshing and retrying..."
-          void $ resetAuthToken config
-          callCMRLV2API config eulerClientFunc description proxy
+        Just "UNAUTHORIZED"
+          | not authRefreshed -> do
+              logInfo "[CMRLV2:API] Token expired, refreshing and retrying (once)..."
+              void $ resetAuthToken config
+              callCMRLV2APIWithRetry config eulerClientFunc description proxy attempt True
+          | otherwise -> do
+              logError "[CMRLV2:API] Auth retry already attempted, failing"
+              recordCMRLV2Failure config.merchantId
+              throwError $ InternalError "CMRL V2 authentication failed after token refresh"
+        Just code
+          | code `elem` ["INTERNAL_ERROR", "SERVICE_UNAVAILABLE", "GATEWAY_TIMEOUT"] && attempt < maxRetries -> do
+              let delayMs = 1000000 * (2 ^ attempt) -- 1s, 2s, 4s exponential backoff
+              logWarning $ "[CMRLV2:API] Transient error (" <> code <> "), retrying in " <> show (delayMs `div` 1000000) <> "s..."
+              threadDelay delayMs
+              callCMRLV2APIWithRetry config eulerClientFunc description proxy (attempt + 1) authRefreshed
         _ -> do
+          recordCMRLV2Failure config.merchantId
           case mbError of
             Just err -> throwError err
             Nothing -> throwError $ InternalError "CMRL V2 API Failed"
     Right resp -> do
       logInfo $ "[CMRLV2:API] API call successful: " <> description
+      -- Clear circuit breaker on success
+      let cbKey = cmrlV2CircuitBreakerKey config.merchantId
+      void $ Hedis.del cbKey
       return resp
+
+-- | Record a CMRL V2 API failure for circuit breaker tracking
+recordCMRLV2Failure ::
+  (MonadFlow m, CacheFlow m r) =>
+  Text -> -- merchantId
+  m ()
+recordCMRLV2Failure merchantId = do
+  let cbKey = cmrlV2CircuitBreakerKey merchantId
+  count <- Hedis.incr cbKey
+  when (count == 1) $ void $ Hedis.expire cbKey cmrlV2CBWindowSec
+  when (count >= fromIntegral cmrlV2CBThreshold) $
+    logError $ "[CMRLV2:CircuitBreaker] Threshold reached for merchantId: " <> merchantId <> " (" <> show count <> " failures)"
