@@ -362,7 +362,7 @@ refundStatusHandler paymentOrder paymentServiceType = do
       -- Previously, Active/PreBooked passes retained their status after refund,
       -- allowing continued use of a refunded pass.
       let shouldUpdatePassStatus =
-            purchasedPass.status `elem` [DPurchasedPass.Pending, DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.RefundPending]
+            purchasedPass.status `elem` [DPurchasedPass.Pending, DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.RefundPending, DPurchasedPass.RefundInitiated]
               && purchasedPass.startDate == purchasedPassPayment.startDate
               && purchasedPass.endDate == purchasedPassPayment.endDate
       case refund.status of

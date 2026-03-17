@@ -288,7 +288,7 @@ findAllPassesNeedingTransition today = do
               Se.Is Beam.startDate $ Se.LessThanOrEq today
             ],
           Se.And
-            [ Se.Is Beam.status $ Se.In [DPurchasedPass.Active, DPurchasedPass.PreBooked],
+            [ Se.Is Beam.status $ Se.In [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired],
               Se.Is Beam.endDate $ Se.LessThan today
             ]
         ]

@@ -66,6 +66,7 @@ import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Offer as SOffer
+import qualified SharedLogic.Payment as SLPayment
 import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
@@ -649,11 +650,11 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
       let isDashboard = fromMaybe False purchasedPassPayment.isDashboard
       let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (isJust purchasedPass.profilePicture) (purchasedPassPayment.startDate > DT.utctDay istTime) status
       whenJust mbPassStatus $ \passStatus -> do
-        when (purchasedPassPayment.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
+        when (purchasedPassPayment.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending, DPurchasedPass.RefundPending, DPurchasedPass.RefundInitiated, DPurchasedPass.Refunded]) $ do
           QPurchasedPassPayment.updateStatusByOrderId passStatus paymentOrderId
           when (passStatus `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending] && isDashboard) $ do
             sendPassPurchasedSuccessMessage purchasedPass.personId purchasedPass.merchantId purchasedPass.merchantOperatingCityId (fromMaybe "" purchasedPass.passName)
-        when (purchasedPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
+        when (purchasedPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending, DPurchasedPass.RefundPending, DPurchasedPass.RefundInitiated, DPurchasedPass.Refunded]) $ do
           QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount
         -- If payment results in an active/prebooked pass, update purchased_pass.profilePicture from payment
         when (passStatus `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
@@ -752,9 +753,11 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
   let isInactiveTouristPass p = p.passEntity.passType.passEnum == Just DPassType.TouristPass && p.status /= DPurchasedPass.Active
   pure $ filter (not . isInactiveTouristPass) purchasedPassAPIEntities
 
--- | Process pass state transitions. Should be called from a periodic scheduler job
--- or explicit endpoint — NOT from the list read path (reads must not have side effects).
--- Uses optimistic locking (WHERE status = ?) to prevent concurrent state corruption.
+-- | Process pass state transitions. Uses optimistic locking (WHERE status = ?)
+-- to prevent concurrent state corruption.
+-- TODO: Wire this to a periodic scheduler job (e.g. a new PassStateTransition
+-- RiderJobType) or a dashboard admin endpoint. Must NOT be called from the
+-- list read path (reads must not have side effects).
 processPassStateTransitions ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   m ()
@@ -807,7 +810,7 @@ postMultimodalPassRefund ::
     Id.Id DPurchasedPass.PurchasedPass ->
     Environment.Flow APISuccess.APISuccess
   )
-postMultimodalPassRefund (mbCallerPersonId, _merchantId) purchasedPassId = do
+postMultimodalPassRefund (mbCallerPersonId, merchantId) purchasedPassId = do
   personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
   purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
   unless (purchasedPass.personId == personId) $ throwError AccessDenied
@@ -843,12 +846,12 @@ postMultimodalPassRefund (mbCallerPersonId, _merchantId) purchasedPassId = do
   -- Transition pass to RefundPending (with optimistic lock)
   QPurchasedPass.updateStatusByIdIfCurrentStatus DPurchasedPass.RefundPending purchasedPass.status purchasedPass.id
 
-  -- Mark payment as RefundPending
-  QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundPending payment.orderId
-
-  -- The existing CheckRefundStatus scheduler and passesRefundStatusHandler in
-  -- SharedLogic/Payment.hs will handle the Juspay refund lifecycle:
+  -- Trigger the Juspay refund flow via markRefundPendingAndSyncOrderStatus.
+  -- This marks the payment as RefundPending and calls syncOrderStatus which
+  -- initiates the actual refund with Juspay and schedules the CheckRefundStatus
+  -- job to track the refund lifecycle:
   -- RefundPending → RefundInitiated → Refunded/RefundFailed
+  void $ SLPayment.markRefundPendingAndSyncOrderStatus merchantId personId payment.orderId
 
   pure APISuccess.Success
 
