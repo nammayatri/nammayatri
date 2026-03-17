@@ -16,6 +16,10 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
+data CallExternalSOSReq = CallExternalSOSReq {comments :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data ErssStatusUpdateReq = ErssStatusUpdateReq
   { idSource :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     idErss :: Kernel.Prelude.Text,
@@ -118,14 +122,19 @@ type GetSosTracking = (Capture "sosId" (Kernel.Types.Id.Id Dashboard.Common.Sos)
 
 type GetSosDetails = (Capture "sosId" (Kernel.Types.Id.Id Dashboard.Common.Sos) :> "details" :> Get '[JSON] SosDetailsMaybeRes)
 
-type PostSosCallExternalSOS = (Capture "sosId" (Kernel.Types.Id.Id Dashboard.Common.Sos) :> "callExternalSOS" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostSosCallExternalSOS =
+  ( Capture "sosId" (Kernel.Types.Id.Id Dashboard.Common.Sos) :> "callExternalSOS" :> ReqBody '[JSON] CallExternalSOSReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
 
 type PostSosErssStatusUpdate = ("erss" :> "statusUpdate" :> ReqBody '[JSON] ErssStatusUpdateReq :> Post '[JSON] ErssStatusUpdateRes)
 
 data SosAPIs = SosAPIs
   { getSosTracking :: Kernel.Types.Id.Id Dashboard.Common.Sos -> EulerHS.Types.EulerClient SosTrackingRes,
     getSosDetails :: Kernel.Types.Id.Id Dashboard.Common.Sos -> EulerHS.Types.EulerClient SosDetailsMaybeRes,
-    postSosCallExternalSOS :: Kernel.Types.Id.Id Dashboard.Common.Sos -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postSosCallExternalSOS :: Kernel.Types.Id.Id Dashboard.Common.Sos -> CallExternalSOSReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postSosErssStatusUpdate :: ErssStatusUpdateReq -> EulerHS.Types.EulerClient ErssStatusUpdateRes
   }
 

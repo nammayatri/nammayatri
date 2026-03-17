@@ -29,8 +29,8 @@ getSosTracking a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.
 getSosDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Sos -> Environment.FlowHandler API.Types.RiderPlatform.Management.Sos.SosDetailsMaybeRes)
 getSosDetails a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Sos.getSosDetails a3 a2 a1
 
-postSosCallExternalSOS :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Sos -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postSosCallExternalSOS a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Sos.postSosCallExternalSOS a3 a2 a1
+postSosCallExternalSOS :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Sos -> API.Types.RiderPlatform.Management.Sos.CallExternalSOSReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postSosCallExternalSOS a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Sos.postSosCallExternalSOS a4 a3 a2 a1
 
 postSosErssStatusUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.Sos.ErssStatusUpdateReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Sos.ErssStatusUpdateRes)
 postSosErssStatusUpdate a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Sos.postSosErssStatusUpdate a3 a2 a1

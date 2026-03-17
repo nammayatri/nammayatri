@@ -7,9 +7,7 @@ imports:
   APISuccess: Kernel.Types.APISuccess
   UTCTime: Kernel.Prelude
   Integer: EulerHS.Prelude
-
 module: Sos
-
 apis:
   - GET:
       endpoint: /{sosId}/tracking
@@ -19,7 +17,6 @@ apis:
         sosId: Id Sos
       response:
         type: SosTrackingRes
-
   - GET:
       endpoint: /{sosId}/details
       name: GetSosDetails
@@ -28,16 +25,16 @@ apis:
         sosId: Id Sos
       response:
         type: SosDetailsMaybeRes
-
   - POST:
       endpoint: /{sosId}/callExternalSOS
       name: PostSosCallExternalSOS
       auth: ApiAuthV2
       params:
         sosId: Id Sos
+      request:
+        type: CallExternalSOSReq
       response:
         type: APISuccess
-
   # POST /sos/erss/statusUpdate (Webhook for external SOS status update from Police)
   - POST:
       endpoint: /erss/statusUpdate
@@ -46,33 +43,25 @@ apis:
         type: ErssStatusUpdateReq
       response:
         type: ErssStatusUpdateRes
-
 types:
   SosLocationRes:
     - lat: Double
     - lon: Double
     - accuracy: Maybe Double
-
   SosState:
     - enum: LiveTracking, SosActive
-
   SosStatus:
     - enum: NotResolved, Pending, Resolved, MockPending, MockResolved
-
   SosType:
     - enum: Police, CustomerCare, SafetyFlow, CSAlertSosTicket, AudioRecording, KaptureDashboard
-
   SosEntityType:
     - enum: Ride, NonRide
-
   ExternalSOSTriggerSource:
     - enum: FRONTEND, DASHBOARD
-
   SosDetailsMaybeRes:
     - details: Maybe SosDetailsRes
     - triggerSource: Maybe ExternalSOSTriggerSource
     - riderDetails: Maybe RiderDetailsRes
-
   SosDetailsRes:
     - id: Id Sos
     - personId: Id Customer
@@ -91,17 +80,14 @@ types:
     - merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     - createdAt: UTCTime
     - updatedAt: UTCTime
-
   SosTrackingRes:
     - currentLocation: Maybe SosLocationRes
     - sosState: Maybe SosState
     - status: SosStatus
-
   RiderDetailsRes:
     - firstName: Maybe Text
     - middleName: Maybe Text
     - lastName: Maybe Text
-
   ErssStatusUpdateReq:
     - idSource: Maybe Text
     - idErss: Text
@@ -109,10 +95,12 @@ types:
     - statusDesc: Maybe Text
     - comments: Maybe Text
     - lastUpdatedTime: Maybe Integer
-
   ErssStatusUpdateRes:
     - resultCode: Text
     - resultString: Maybe Text
     - errorMsg: Maybe Text
     - message: Maybe Text
     - payLoad: Maybe Text
+
+  CallExternalSOSReq:
+    - comments: Maybe Text

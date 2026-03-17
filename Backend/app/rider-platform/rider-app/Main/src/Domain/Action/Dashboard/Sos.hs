@@ -151,8 +151,8 @@ convertSosStatus SafetyDSos.MockResolved = API.Types.RiderPlatform.Management.So
 
 -- | Called from the dashboard when triggerSource is DASHBOARD.
 --   Fetches the SOS record and dispatches the external SOS API call.
-callExternalSOS :: Kernel.Types.Id.Id SafetyDSos.Sos -> Environment.Flow ()
-callExternalSOS sosId = do
+callExternalSOS :: Kernel.Types.Id.Id SafetyDSos.Sos -> Maybe Text -> Environment.Flow ()
+callExternalSOS sosId mbComments = do
   sos <- SafetyQSos.findById sosId >>= fromMaybeM (InvalidRequest "SOS record not found")
   merchantOpCityId <- Kernel.Types.Id.cast @SafetyDCommon.MerchantOperatingCity @DMOC.MerchantOperatingCity <$> sos.merchantOperatingCityId & fromMaybeM (InvalidRequest "SOS record missing merchantOperatingCityId")
   merchantId <- Kernel.Types.Id.cast @SafetyDCommon.Merchant @Domain.Types.Merchant.Merchant <$> sos.merchantId & fromMaybeM (InvalidRequest "SOS record missing merchantId")
@@ -174,7 +174,7 @@ callExternalSOS sosId = do
           customerLocation <- getCustomerLocation rideIdForLoc mbRide
           emergencyContacts <- DP.getDefaultEmergencyNumbers (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId, merchantId)
           merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-          externalSOSDetails <- Sos.buildExternalSOSDetails (mkSosReq sos customerLocation) person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig
+          externalSOSDetails <- Sos.buildExternalSOSDetails (mkSosReq sos customerLocation) person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig mbComments
           initialRes <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
           unless initialRes.success $
             throwError $ InternalError (fromMaybe "External SOS call failed" initialRes.errorMessage)
@@ -252,10 +252,10 @@ flowToSOSService :: DRC.ExternalSOSFlow -> SOS.SOSService
 flowToSOSService DRC.ERSS = SOS.ERSS
 flowToSOSService DRC.GJ112 = SOS.GJ112
 
-postSosCallExternalSOS :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Sos -> Environment.Flow Kernel.Types.APISuccess.APISuccess
-postSosCallExternalSOS _merchantShortId _opCity sosId = do
+postSosCallExternalSOS :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Sos -> API.Types.RiderPlatform.Management.Sos.CallExternalSOSReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postSosCallExternalSOS _merchantShortId _opCity sosId req = do
   let sosId' = Kernel.Types.Id.cast @Dashboard.Common.Sos @SafetyDSos.Sos sosId
-  callExternalSOS sosId'
+  callExternalSOS sosId' req.comments
   pure Kernel.Types.APISuccess.Success
 
 sosDashboardHitsCountKey :: Kernel.Types.Id.Id Dashboard.Common.Sos -> Text

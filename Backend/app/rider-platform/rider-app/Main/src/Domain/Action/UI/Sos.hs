@@ -192,7 +192,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
   let existingExternalRef = mbExistingSos >>= (.externalReferenceId)
 
   (mbExternalReferenceId, mbSosServiceConfig, externalApiCalledStatus) <- case (existingExternalRef, riderConfig.externalSOSConfig) of
-    (Just refId, _, _) -> pure (Just refId, Nothing, Just True)
+    (Just refId, _) -> pure (Just refId, Nothing, Just True)
     (Nothing, Just sosConfig)
       | sosConfig.triggerSource == DRC.FRONTEND -> do
         (mbTrackingId, mbSpecificConfig) <- handleExternalSOS person sosConfig req personId riderConfig
@@ -1025,9 +1025,7 @@ handleExternalSOS person sosConfig req personId riderConfig = do
         mbRide <- maybe (pure Nothing) (\rideId -> QRide.findById rideId) req.rideId
         emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
         merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
-        externalSOSDetails <- buildExternalSOSDetails req person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig
-        logDebug $ "sendInitialSOS specificConfig: " <> show specificConfig
-        logDebug $ "sendInitialSOS externalSOSDetails: " <> show externalSOSDetails
+        externalSOSDetails <- buildExternalSOSDetails req person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig Nothing
         initialRes <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
         if initialRes.success
           then return (initialRes.trackingId, Just specificConfig)
@@ -1047,8 +1045,9 @@ buildExternalSOSDetails ::
   [DPDEN.PersonDefaultEmergencyNumberAPIEntity] ->
   DMOC.MerchantOperatingCity ->
   DRC.RiderConfig ->
+  Maybe Text ->
   Flow SOSInterface.InitialSOSReq
-buildExternalSOSDetails req person sosConfig _serviceConfig mbRide emergencyContacts merchantOpCity riderConfig = do
+buildExternalSOSDetails req person sosConfig _serviceConfig mbRide emergencyContacts merchantOpCity riderConfig mbComments = do
   now <- getCurrentTime
   mobileNo <- fmap (fromMaybe "0000000000") $ traverse decrypt person.mobileNumber
   emailText <- traverse decrypt person.email
@@ -1085,7 +1084,7 @@ buildExternalSOSDetails req person sosConfig _serviceConfig mbRide emergencyCont
         gpsAccuracy = Nothing,
         stateCode = sosConfig.stateCode,
         silentCommunication = Nothing,
-        specialNeeds = specialNeedsText,
+        specialNeeds = mbComments <|> specialNeedsText,
         dob = dobStr,
         gender = Just $ T.pack $ show person.gender,
         attachmentFileName = Nothing,
