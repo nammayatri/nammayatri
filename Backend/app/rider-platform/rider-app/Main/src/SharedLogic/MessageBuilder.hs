@@ -153,7 +153,7 @@ data BuildSOSAlertMessageReq = BuildSOSAlertMessageReq
   }
   deriving (Generic)
 
-buildSOSAlertMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig], Log m) => Id DMOC.MerchantOperatingCity -> BuildSOSAlertMessageReq -> m SmsReqBuilder
+buildSOSAlertMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> BuildSOSAlertMessageReq -> m SmsReqBuilder
 buildSOSAlertMessage merchantOperatingCityId req = do
   shortenedTrackingUrl <-
     withTryCatch "shortenTrackingUrl" (shortenTrackingUrl req.rideLink) >>= \case
@@ -298,10 +298,8 @@ shortenTrackingUrl url = do
             expiryInHours = Just 24,
             urlCategory = UrlShortner.RIDE_TRACKING
           }
-  result <- withTryCatch "shortenTrackingUrl:generateShortUrl" (UrlShortner.generateShortUrl shortUrlReq)
-  case result of
-    Left _ -> return url
-    Right res -> return res.shortUrl
+  res <- UrlShortner.generateShortUrl shortUrlReq
+  return res.shortUrl
 
 data DeliveryMessageRequestType = SenderReq | ReceiverReq
 
