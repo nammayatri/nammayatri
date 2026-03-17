@@ -5,6 +5,7 @@ module API.Types.UI.Sos where
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.Ride
+import qualified Domain.Types.RiderConfig
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
@@ -30,7 +31,7 @@ data MockSosReq = MockSosReq {onRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SosDetailsRes = SosDetailsRes {sos :: Kernel.Prelude.Maybe Safety.Domain.Types.Sos.Sos}
+data SosDetailsRes = SosDetailsRes {externalSOSConfig :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.ExternalSOSConfig, sos :: Kernel.Prelude.Maybe Safety.Domain.Types.Sos.Sos}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -45,6 +46,7 @@ data SosLocationUpdateReq = SosLocationUpdateReq {accuracy :: Kernel.Prelude.May
 data SosReq = SosReq
   { customerLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     flow :: Safety.Domain.Types.Sos.SosType,
+    isKaptureTicketRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isRideEnded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     notifyAllContacts :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
@@ -53,7 +55,7 @@ data SosReq = SosReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SosRes = SosRes {externalSOSSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, sosId :: Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos}
+data SosRes = SosRes {externalSOSSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, kaptureTicketId :: Kernel.Prelude.Maybe Data.Text.Text, sosId :: Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
