@@ -32,12 +32,13 @@ import qualified Data.Map as M
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
-import qualified Domain.Types.CancellationReason as DTCR
-import Domain.Types.DriverLocation
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
 
 -- import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 
+import qualified Domain.Types.CancellationDuesDetails as DCDD
+import qualified Domain.Types.CancellationReason as DTCR
+import Domain.Types.DriverLocation
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DRide
@@ -87,6 +88,7 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.CallStatus as QCallStatus
+import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverQuote as QDQ
@@ -266,6 +268,24 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
       riderDetails <- QRiderDetails.findById rid >>= fromMaybeM (RiderDetailsNotFound rid.getId)
       void $ QRiderDetails.updateCancellationDues (fee.amount + riderDetails.cancellationDues) rid
       QRiderDetails.updateValidCancellationsCount rid.getId
+      -- Track cancellation dues per ride for waive-off correctness
+      when (fee.amount > 0) $ do
+        cancellationDuesDetailsId <- generateGUID
+        now <- getCurrentTime
+        let cancellationDuesDetails =
+              DCDD.CancellationDuesDetails
+                { id = cancellationDuesDetailsId,
+                  rideId = ride.id,
+                  riderId = rid,
+                  cancellationAmount = fee.amount,
+                  currency = fee.currency,
+                  paymentStatus = DCDD.PENDING,
+                  createdAt = now,
+                  updatedAt = now,
+                  merchantId = ride.merchantId,
+                  merchantOperatingCityId = Just ride.merchantOperatingCityId
+                }
+        QCDD.create cancellationDuesDetails
       -- Customer cancellation ledger entries (wallet path)
       when (isPrepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableDriverWallet && fee.amount > 0) $ do
         let rideGst = transporterConfig.taxConfig.rideGst

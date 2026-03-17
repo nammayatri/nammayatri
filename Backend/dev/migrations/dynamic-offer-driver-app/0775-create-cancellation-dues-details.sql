@@ -1,0 +1,3 @@
+CREATE INDEX idx_cancellation_dues_details_ride_id ON atlas_driver_offer_bpp.cancellation_dues_details USING btree (ride_id);
+CREATE INDEX idx_cancellation_dues_details_rider_id ON atlas_driver_offer_bpp.cancellation_dues_details USING btree (rider_id);
+CREATE INDEX idx_cancellation_dues_details_rider_id_status ON atlas_driver_offer_bpp.cancellation_dues_details USING btree (rider_id, payment_status);

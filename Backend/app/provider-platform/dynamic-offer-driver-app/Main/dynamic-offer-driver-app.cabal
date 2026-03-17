@@ -655,6 +655,7 @@ library
       Storage.Queries.BookingExtra
       Storage.Queries.BusinessEventExtra
       Storage.Queries.CallStatusExtra
+      Storage.Queries.CancellationDuesDetailsExtra
       Storage.Queries.Coins.CoinHistory
       Storage.Queries.Coins.CoinsConfig
       Storage.Queries.CommonDriverOnboardingDocumentsExtra
@@ -1048,6 +1049,7 @@ library
       Domain.Types.CallFeedbackOptions
       Domain.Types.CallStatus
       Domain.Types.CancellationCharges
+      Domain.Types.CancellationDuesDetails
       Domain.Types.CancellationFarePolicy
       Domain.Types.CancellationReason
       Domain.Types.Client
@@ -1224,6 +1226,7 @@ library
       Storage.Beam.CallFeedbackOptions
       Storage.Beam.CallStatus
       Storage.Beam.CancellationCharges
+      Storage.Beam.CancellationDuesDetails
       Storage.Beam.CancellationFarePolicy
       Storage.Beam.CancellationReason
       Storage.Beam.Client
@@ -1405,6 +1408,7 @@ library
       Storage.Queries.CallFeedbackOptions
       Storage.Queries.CallStatus
       Storage.Queries.CancellationCharges
+      Storage.Queries.CancellationDuesDetails
       Storage.Queries.CancellationFarePolicy
       Storage.Queries.CancellationReason
       Storage.Queries.Client
@@ -1512,6 +1516,7 @@ library
       Storage.Queries.OrphanInstances.BookingCancellationReason
       Storage.Queries.OrphanInstances.BusinessEvent
       Storage.Queries.OrphanInstances.CallStatus
+      Storage.Queries.OrphanInstances.CancellationDuesDetails
       Storage.Queries.OrphanInstances.CancellationReason
       Storage.Queries.OrphanInstances.Communication
       Storage.Queries.OrphanInstances.CommunicationDelivery
