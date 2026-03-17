@@ -41,10 +41,12 @@ library
       Lib.Payment.Payout.Request
       Lib.Payment.Payout.Status
       Lib.Payment.PGFee
+      Lib.Payment.Refunds.History
       Lib.Payment.Storage.Beam.BeamFlow
       Lib.Payment.Storage.Beam.PaymentOrder
       Lib.Payment.Storage.Beam.PaymentTransaction
       Lib.Payment.Storage.HistoryQueries.PaymentTransaction
+      Lib.Payment.Storage.HistoryQueries.Refunds
       Lib.Payment.Storage.Queries.PaymentOrder
       Lib.Payment.Storage.Queries.PaymentTransaction
       Lib.Payment.Storage.Queries.PayoutOrderExtra
