@@ -1118,6 +1118,7 @@ TransporterConfig:
     disableListScheduledBookingAPI: Bool
     issueBreachConfig: Maybe [IssueBreachConfig]
     gpsTollBehaviorWindowDays: Maybe Int
+    enableGpsTollBehavior: Bool
     recentScheduledBookingsSafeLimit: Int
     minDistanceForStopFcm: HighPrecMeters
     recomputeDistanceThresholds: Maybe [DistanceRecomputeConfigs]
@@ -1241,6 +1242,7 @@ TransporterConfig:
     disableListScheduledBookingAPI: Maybe Bool
     issueBreachConfig: Maybe Value
     gpsTollBehaviorWindowDays: Maybe Int
+    enableGpsTollBehavior: Maybe Bool
     recentScheduledBookingsSafeLimit: Maybe Int
     minDistanceForStopFcm: Maybe HighPrecMeters
     recomputeDistanceThresholds: Maybe Value
@@ -1328,6 +1330,7 @@ TransporterConfig:
     dynamicReferralCodeEnabled: Just dynamicReferralCodeEnabled|E
     issueBreachConfig: Kernel.Prelude.toJSON <$> issueBreachConfig|E
     gpsTollBehaviorWindowDays: gpsTollBehaviorWindowDays|E
+    enableGpsTollBehavior: Just enableGpsTollBehavior|E
     recentScheduledBookingsSafeLimit: Just recentScheduledBookingsSafeLimit|E
     minDistanceForStopFcm: Just minDistanceForStopFcm|E
     recomputeDistanceThresholds: Kernel.Prelude.toJSON <$> recomputeDistanceThresholds|E
@@ -1412,6 +1415,7 @@ TransporterConfig:
     issueBreachConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachConfig|E
     gpsTollBehaviorWindowDays: gpsTollBehaviorWindowDays|E
+    enableGpsTollBehavior: fromMaybe False enableGpsTollBehavior|E
     recentScheduledBookingsSafeLimit: fromMaybe 50 recentScheduledBookingsSafeLimit|E
     minDistanceForStopFcm: fromMaybe 100 minDistanceForStopFcm|E
     recomputeDistanceThresholds: |-
@@ -1483,6 +1487,7 @@ TransporterConfig:
     demandHotspotsConfig: json
     issueBreachConfig: json
     gpsTollBehaviorWindowDays: int
+    enableGpsTollBehavior: boolean
     minDistanceForStopFcm: double precision
     recomputeDistanceThresholds: json
     minThresholdForPassThroughDestination: int

@@ -23,7 +23,6 @@ import Kernel.Prelude
 import Kernel.Utils.Common
 import Lib.CommunicationEngine.Parser (parseDirective)
 import Lib.CommunicationEngine.Types
-import Lib.RuleOrchestrator.Types (CommunicationDirective)
 
 -- | Dispatch all communication directives for a given entity.
 --

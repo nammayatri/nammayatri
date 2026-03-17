@@ -72,8 +72,10 @@ library
       aeson
     , base >=4.7 && <5
     , containers
+    , data-default-class
     , euler-hs
     , mobility-core
+    , openapi3
     , record-dot-preprocessor
     , record-hasfield
     , text

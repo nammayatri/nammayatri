@@ -13,7 +13,8 @@
 -}
 
 module Lib.ConsequenceEngine.Types
-  ( ConsequenceAction (..),
+  ( ConsequenceDirective (..),
+    ConsequenceAction (..),
     HardBlockParams (..),
     SoftBlockParams (..),
     FeatureBlockParams (..),
@@ -28,6 +29,17 @@ where
 
 import Data.Aeson (Value)
 import Kernel.Prelude
+import Kernel.Types.App ()
+
+-- orphan ToSchema Value instance
+
+-- | Input directive — can come from behavior-engine, dashboard, or any app flow
+data ConsequenceDirective = ConsequenceDirective
+  { consequenceType :: Text, -- "NUDGE", "SOFT_BLOCK", "CHARGE_FEE", "HARD_BLOCK", etc.
+    params :: Value, -- type-specific params (blockDuration, chargeAmount, etc.)
+    requiresResolution :: Bool
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Parsed, typed consequence from rule engine output
 data ConsequenceAction
@@ -39,20 +51,20 @@ data ConsequenceAction
   | HardBlock HardBlockParams
   | PermanentBlock PermanentBlockParams
   | ChargeFee ChargeFeeParams
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Parameters for a nudge (warning only, no restrictions)
 data NudgeParams = NudgeParams
   { nudgeKey :: Text -- template key for the nudge message
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Parameters for a stronger warning (may show on profile)
 data WarnParams = WarnParams
   { warnKey :: Text,
     showOnProfile :: Bool
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Parameters for soft block (blocked from specific service tiers/features)
 data SoftBlockParams = SoftBlockParams
@@ -60,7 +72,7 @@ data SoftBlockParams = SoftBlockParams
     blockedFeatures :: [Text], -- service tier names
     blockReason :: Text
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Parameters for feature-specific block (e.g. toll routes, AC)
 data FeatureBlockParams = FeatureBlockParams
@@ -68,7 +80,7 @@ data FeatureBlockParams = FeatureBlockParams
     featureName :: Text, -- "TOLL_ROUTES", "AC", etc.
     blockReason :: Text
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Parameters for hard block (fully blocked from going online)
 data HardBlockParams = HardBlockParams
@@ -76,13 +88,13 @@ data HardBlockParams = HardBlockParams
     blockReason :: Text,
     cooldownHours :: Maybe Int
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Parameters for permanent block (requires manual review)
 data PermanentBlockParams = PermanentBlockParams
   { blockReason :: Text
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Parameters for monetary penalty
 data ChargeFeeParams = ChargeFeeParams
@@ -90,7 +102,7 @@ data ChargeFeeParams = ChargeFeeParams
     currency :: Text,
     chargeReason :: Text
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Result of executing a consequence
 data ConsequenceResult = ConsequenceResult
@@ -98,7 +110,7 @@ data ConsequenceResult = ConsequenceResult
     success :: Bool,
     errorMessage :: Maybe Text
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Typeclass for apps to implement consequence handling.
 --

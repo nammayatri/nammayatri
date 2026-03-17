@@ -318,63 +318,63 @@ createRideBasedSos personId rideId merchantOperatingCityId merchantId flow mbExi
             sosDetails = active
           }
     Nothing -> case mbExistingSos of
-        Just existingSos -> do
-          -- Update existing SOS status to Pending
-          void $ updateSosStatus DSos.Pending existingSos.id
+      Just existingSos -> do
+        -- Update existing SOS status to Pending
+        void $ updateSosStatus DSos.Pending existingSos.id
 
-          -- Fetch updated SOS from DB after update
-          -- NOTE: Read from primary after writes to avoid replica staleness.
-          updatedSos <- QSos.findById existingSos.id >>= fromMaybeM (InvalidRequest $ "Failed to fetch updated SOS: " <> existingSos.id.getId)
+        -- Fetch updated SOS from DB after update
+        -- NOTE: Read from primary after writes to avoid replica staleness.
+        updatedSos <- QSos.findById existingSos.id >>= fromMaybeM (InvalidRequest $ "Failed to fetch updated SOS: " <> existingSos.id.getId)
 
-          -- Cache updated SOS
-          CQSos.cacheSosIdByRideId rideId updatedSos
+        -- Cache updated SOS
+        CQSos.cacheSosIdByRideId rideId updatedSos
 
-          return $
-            CreateSosResult
-              { sosId = existingSos.id,
-                wasReactivated = True,
-                sosDetails = updatedSos
-              }
-        Nothing -> do
-          -- Create new SOS
-          now <- getCurrentTime
-          pid <- generateGUID
-          let eightHoursInSeconds :: Int = 8 * 60 * 60
-          let trackingExpiresAt = addUTCTime (fromIntegral eightHoursInSeconds) now
-          let newSos =
-                DSos.Sos
-                  { id = pid,
-                    personId = personId,
-                    status = DSos.Pending,
-                    flow = flow,
-                    rideId = Just rideId,
-                    ticketId = ticketId,
-                    mediaFiles = [],
-                    merchantId = Just merchantId,
-                    merchantOperatingCityId = Just merchantOperatingCityId,
-                    trackingExpiresAt = Just trackingExpiresAt,
-                    entityType = Just DSos.Ride,
-                    sosState = Just DSos.SosActive,
-                    createdAt = now,
-                    updatedAt = now,
-                    externalReferenceId = mbExternalReferenceId,
-                    externalReferenceStatus = Nothing,
-                    externalStatusHistory = Nothing
-                  }
+        return $
+          CreateSosResult
+            { sosId = existingSos.id,
+              wasReactivated = True,
+              sosDetails = updatedSos
+            }
+      Nothing -> do
+        -- Create new SOS
+        now <- getCurrentTime
+        pid <- generateGUID
+        let eightHoursInSeconds :: Int = 8 * 60 * 60
+        let trackingExpiresAt = addUTCTime (fromIntegral eightHoursInSeconds) now
+        let newSos =
+              DSos.Sos
+                { id = pid,
+                  personId = personId,
+                  status = DSos.Pending,
+                  flow = flow,
+                  rideId = Just rideId,
+                  ticketId = ticketId,
+                  mediaFiles = [],
+                  merchantId = Just merchantId,
+                  merchantOperatingCityId = Just merchantOperatingCityId,
+                  trackingExpiresAt = Just trackingExpiresAt,
+                  entityType = Just DSos.Ride,
+                  sosState = Just DSos.SosActive,
+                  createdAt = now,
+                  updatedAt = now,
+                  externalReferenceId = mbExternalReferenceId,
+                  externalReferenceStatus = Nothing,
+                  externalStatusHistory = Nothing
+                }
 
-          logDebug $ "createRideBasedSos: about to createSos, sosId=" <> getId pid <> ", rideId=" <> rideId.getId
-          void $ createSos newSos
-          logDebug $ "createRideBasedSos: createSos returned, sosId=" <> getId pid
+        logDebug $ "createRideBasedSos: about to createSos, sosId=" <> getId pid <> ", rideId=" <> rideId.getId
+        void $ createSos newSos
+        logDebug $ "createRideBasedSos: createSos returned, sosId=" <> getId pid
 
-          -- Cache new SOS
-          CQSos.cacheSosIdByRideId rideId newSos
+        -- Cache new SOS
+        CQSos.cacheSosIdByRideId rideId newSos
 
-          return $
-            CreateSosResult
-              { sosId = newSos.id,
-                wasReactivated = False,
-                sosDetails = newSos
-              }
+        return $
+          CreateSosResult
+            { sosId = newSos.id,
+              wasReactivated = False,
+              sosDetails = newSos
+            }
 
 -- | Core logic for creating non-ride SOS
 -- Handles SOS DB operations

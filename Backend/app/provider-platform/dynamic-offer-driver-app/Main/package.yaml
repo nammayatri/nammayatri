@@ -134,6 +134,10 @@ dependencies:
   - hashable
   - json-logic-hs
   - yudhishthira
+  - behavior-tracker
+  - behavior-engine
+  - consequence-engine
+  - communication-engine
   - network-uri
   - memory
   - text-format

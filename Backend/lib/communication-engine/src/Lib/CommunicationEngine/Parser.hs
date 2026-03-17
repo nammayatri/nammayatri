@@ -24,7 +24,6 @@ import qualified Data.Aeson.KeyMap as KM
 import qualified Data.Text as T
 import Kernel.Prelude
 import Lib.CommunicationEngine.Types
-import Lib.RuleOrchestrator.Types (CommunicationDirective (..))
 
 -- | Parse a single CommunicationDirective (from rule-orchestrator) into a typed CommunicationAction.
 --

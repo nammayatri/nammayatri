@@ -29,6 +29,7 @@ module Domain.Action.UI.Ride.EndRide
 where
 
 import qualified Beckn.OnDemand.Utils.Common as BODUC
+import qualified Data.Aeson as A
 import Data.Either.Extra (eitherToMaybe)
 import Data.Maybe (listToMaybe)
 import Data.OpenApi.Internal.Schema (ToSchema)
@@ -76,6 +77,9 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Days)
 import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
+import qualified Lib.BehaviorEngine.Orchestrator as BEOrch
+import qualified Lib.BehaviorTracker.Snapshot as BTSnap
+import qualified Lib.BehaviorTracker.Types as BTT
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.LocationUpdates as LocUpd
@@ -84,7 +88,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
-import qualified SharedLogic.BehaviourManagement.GpsTollBehavior as GpsTollBehavior
+import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -579,41 +583,53 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
 
     -- GPS Toll Behavior Check - evaluate if driver intentionally turned off GPS on toll route
-    fork "GpsTollBehavior Check" $ do
-      let isTollRide = isJust updRide.estimatedTollCharges || isJust updRide.tollCharges
-          gpsTurnedOff = fromMaybe False updRide.driverGpsTurnedOff
-      when (isTollRide) $ do
-        logInfo $ "Driver turned off GPS on toll ride. DriverId: " <> driverId.getId <> ", RideId: " <> updRide.id.getId
-        -- Get window days from config (default 15 days if not configured)
-        let windowDays = fromMaybe 15 thresholdConfig.gpsTollBehaviorWindowDays
-        -- Get historical bad behavior count from sliding window for configured days
-        badBehaviorCount <- GpsTollBehavior.getGpsTollBadBehaviorCount windowDays driverId
-        -- Build input data for JSON logic evaluation
-        let gpsTollBehaviorData =
-              GpsTollBehavior.GpsTollBehaviorData
-                { estimatedTollCharges = updRide.estimatedTollCharges,
-                  estimatedTollNames = updRide.estimatedTollNames,
-                  estimatedTollIds = updRide.estimatedTollIds,
-                  detectedTollCharges = updRide.tollCharges,
-                  detectedTollNames = updRide.tollNames,
-                  detectedTollIds = updRide.tollIds,
-                  gpsTurnedOffInCurrentRide = gpsTurnedOff,
-                  badBehaviorInTollRouteCount = badBehaviorCount
-                }
-        -- Fetch rules from App Dynamic Logic (GPS_TOLL_BEHAVIOR domain)
-        localTime <- getLocalCurrentTime thresholdConfig.timeDiffFromUtc
-        (allLogics, _mbVersion) <- getAppDynamicLogic (cast booking.merchantOperatingCityId) LYT.GPS_TOLL_BEHAVIOR localTime Nothing Nothing
-        -- Evaluate behavior using App Dynamic Logic
-        output <- GpsTollBehavior.evaluateGpsTollBehavior (cast booking.merchantOperatingCityId) LYT.GPS_TOLL_BEHAVIOR allLogics gpsTollBehaviorData
-        logInfo $ "GPS Toll Behavior evaluation result: " <> show output
-        -- Increment bad behavior counter if needed
-        when output.shouldIncrementBadBehaviorTollCounter $ do
-          logInfo $ "Incrementing GPS toll bad behavior counter for driver: " <> driverId.getId
-          GpsTollBehavior.incrementGpsTollBadBehaviorCount driverId
-        -- Block driver for future toll rides if needed
-        when output.shouldBlockForFutureTollRide $ do
-          logWarning $ "Blocking driver for future toll rides: " <> driverId.getId <> ", duration: " <> show output.blockDurationInHours <> " hours"
-          GpsTollBehavior.blockDriverForTollRoutes driverId output.blockDurationInHours
+    when thresholdConfig.enableGpsTollBehavior $ do
+      fork "GpsTollBehavior Check" $ do
+        let isTollRide = isJust updRide.estimatedTollCharges || isJust updRide.tollCharges
+            gpsTurnedOff = fromMaybe False updRide.driverGpsTurnedOff
+        when isTollRide $ do
+          logInfo $ "GPS toll behavior check for DriverId: " <> driverId.getId <> ", RideId: " <> updRide.id.getId
+          let windowDays = fromMaybe 15 thresholdConfig.gpsTollBehaviorWindowDays
+              counterConfig =
+                BTT.CounterConfig
+                  { windowSizeDays = 30,
+                    counters = [BTT.ACTION_COUNT],
+                    periods = [BTT.mkPeriodConfig "window" (toInteger windowDays)]
+                  }
+          eventTime <- getCurrentTime
+          let actionEvent =
+                BTT.ActionEvent
+                  { entityType = BTT.DRIVER,
+                    entityId = driverId.getId,
+                    actionType = "GPS_TOLL_BAD_BEHAVIOR",
+                    merchantOperatingCityId = booking.merchantOperatingCityId.getId,
+                    flowContext = A.object [],
+                    eventData =
+                      A.object
+                        [ "estimatedTollCharges" A..= updRide.estimatedTollCharges,
+                          "estimatedTollNames" A..= updRide.estimatedTollNames,
+                          "estimatedTollIds" A..= updRide.estimatedTollIds,
+                          "detectedTollCharges" A..= updRide.tollCharges,
+                          "detectedTollNames" A..= updRide.tollNames,
+                          "detectedTollIds" A..= updRide.tollIds,
+                          "gpsTurnedOffInCurrentRide" A..= gpsTurnedOff
+                        ],
+                    timestamp = eventTime
+                  }
+              entityState = A.object []
+              fetchRules = \domain -> do
+                localTime <- getLocalCurrentTime thresholdConfig.timeDiffFromUtc
+                getAppDynamicLogic (cast booking.merchantOperatingCityId) domain localTime Nothing Nothing
+          output <-
+            if gpsTurnedOff
+              then BEOrch.recordAndOrchestrate counterConfig actionEvent entityState LYDL.Driver (cast booking.merchantOperatingCityId) LYT.GPS_TOLL_BEHAVIOR fetchRules
+              else do
+                snapshot <- BTSnap.buildSnapshot counterConfig actionEvent entityState
+                BEOrch.orchestrate snapshot LYDL.Driver (cast booking.merchantOperatingCityId) LYT.GPS_TOLL_BEHAVIOR fetchRules
+          logInfo $ "GPS Toll Behavior evaluation result: consequences=" <> show (length output.consequences) <> ", communications=" <> show (length output.communications)
+          let dispatchCtx = BehaviorDispatch.DispatchContext {merchantId = booking.providerId, merchantOperatingCityId = booking.merchantOperatingCityId}
+          BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
+          BehaviorDispatch.handleCommunications driverId output.communications
 
     computeEligibleUpgradeTiers ride thresholdConfig
     mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do

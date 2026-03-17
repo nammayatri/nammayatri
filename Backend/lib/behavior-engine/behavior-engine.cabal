@@ -4,9 +4,9 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 
-name:           rule-orchestrator
+name:           behavior-engine
 version:        0.1.0.0
-description:    Rule orchestration library - builds multi-step rule execution plans and wraps Yudhishthira for focused rule evaluation
+description:    Behavior engine - orchestrates rule evaluation via Yudhishthira and delegates to consequence-engine and communication-engine
 homepage:       https://github.com/nammayatri/nammayatri#readme
 bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
@@ -26,13 +26,11 @@ flag Local
 
 library
   exposed-modules:
-      Lib.RuleOrchestrator.Executor
-      Lib.RuleOrchestrator.Orchestrator
-      Lib.RuleOrchestrator.OutputMerger
-      Lib.RuleOrchestrator.PlanBuilder
-      Lib.RuleOrchestrator.Types
+      Lib.BehaviorEngine.Orchestrator
+      Lib.BehaviorEngine.RuleEvaluator
+      Lib.BehaviorEngine.Types
   other-modules:
-      Paths_rule_orchestrator
+      Paths_behavior_engine
   hs-source-dirs:
       src
   default-extensions:
@@ -76,15 +74,17 @@ library
       aeson
     , base >=4.7 && <5
     , behavior-tracker
+    , communication-engine
+    , consequence-engine
     , containers
+    , data-default-class
     , euler-hs
     , mobility-core
+    , openapi3
     , record-dot-preprocessor
     , record-hasfield
-    , shared-services
     , text
     , time
-    , utils
     , yudhishthira
   default-language: Haskell2010
   if flag(Local)

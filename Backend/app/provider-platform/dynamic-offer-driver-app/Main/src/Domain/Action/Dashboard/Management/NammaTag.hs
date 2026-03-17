@@ -63,6 +63,8 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.BehaviorEngine.Types as BET
+import qualified Lib.BehaviorTracker.Types as BTT
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
 import Lib.Scheduler.Types (AnyJob (..))
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
@@ -75,7 +77,6 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types.Common as C
 import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.Allocator (AllocatorJobType (..))
-import qualified SharedLogic.BehaviourManagement.GpsTollBehavior as GpsTollBehavior
 import SharedLogic.CancellationCoins
 import SharedLogic.DriverPool.Config (Config (..))
 import SharedLogic.DriverPool.Types
@@ -107,7 +108,6 @@ $(genToSchema ''TaggedDriverPoolInput)
 $(genToSchema ''CancellationCoinData)
 $(genToSchema ''DynamicPricingData)
 $(genToSchema ''UserCancellationDuesData)
-$(genToSchema ''GpsTollBehavior.GpsTollBehaviorData)
 $(genToSchema ''UserCancellationDuesWaiveOffData)
 
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.CreateNammaTagRequest -> Environment.Flow LYT.CreateNammaTagResponse)
@@ -212,8 +212,8 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       logicData :: UserCancellationDuesData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy UserCancellationDuesResult) transporterConfig.referralLinkPassword req logicData
     LYT.GPS_TOLL_BEHAVIOR -> do
-      logicData :: GpsTollBehavior.GpsTollBehaviorData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy GpsTollBehavior.GpsTollBehaviorOutput) transporterConfig.referralLinkPassword req logicData
+      logicData :: BTT.BehaviorSnapshot <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy BET.OrchestratedOutput) transporterConfig.referralLinkPassword req logicData
     LYT.USER_CANCELLATION_DUES_WAIVE_OFF -> do
       logicData :: UserCancellationDuesWaiveOffData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy UserCancellationDuesWaiveOffResult) transporterConfig.referralLinkPassword req logicData
@@ -382,8 +382,8 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
     LYT.GPS_TOLL_BEHAVIOR ->
       return $
         LYT.DomainSchemaResp
-          { LYT.defaultValue = A.toJSON (def :: GpsTollBehavior.GpsTollBehaviorData),
-            LYT.schema = toInlinedSchemaValue (Proxy @GpsTollBehavior.GpsTollBehaviorData)
+          { LYT.defaultValue = A.toJSON (def :: BTT.BehaviorSnapshot),
+            LYT.schema = toInlinedSchemaValue (Proxy @BTT.BehaviorSnapshot)
           }
     LYT.USER_CANCELLATION_DUES_WAIVE_OFF ->
       return $

@@ -23,7 +23,6 @@ import Kernel.Prelude
 import Kernel.Utils.Common
 import Lib.ConsequenceEngine.Parser (parseDirective)
 import Lib.ConsequenceEngine.Types
-import Lib.RuleOrchestrator.Types (ConsequenceDirective)
 
 -- | Execute all consequence directives for a given entity.
 --

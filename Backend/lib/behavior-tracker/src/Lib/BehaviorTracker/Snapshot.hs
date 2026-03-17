@@ -37,26 +37,21 @@ buildSnapshot ::
     MonadFlow m
   ) =>
   CounterConfig ->
-  EntityType ->
-  Text -> -- entityId
-  ActionType ->
-  Text -> -- merchantOperatingCityId
-  Value -> -- flowContext
-  Value -> -- eventData
-  Value -> -- entityState
+  ActionEvent ->
+  Value -> -- entityState: caller-provided entity data
   m BehaviorSnapshot
-buildSnapshot config entityType entityId actionType merchantOperatingCityId flowContext eventData entityState = do
-  counterMap <- buildCounterMapForEntity config entityType actionType entityId
+buildSnapshot config event entityState = do
+  counterMap <- buildCounterMapForEntity config event.entityType event.actionType event.entityId
   now <- getCurrentTime
   return $
     BehaviorSnapshot
-      { entityType = entityType,
-        entityId = entityId,
-        actionType = actionType,
-        merchantOperatingCityId = merchantOperatingCityId,
+      { entityType = event.entityType,
+        entityId = event.entityId,
+        actionType = event.actionType,
+        merchantOperatingCityId = event.merchantOperatingCityId,
         counters = counterMap,
-        flowContext = flowContext,
-        eventData = eventData,
+        flowContext = event.flowContext,
+        eventData = event.eventData,
         entityState = entityState,
         snapshotAt = now
       }
@@ -70,7 +65,7 @@ buildCounterMapForEntity ::
   ) =>
   CounterConfig ->
   EntityType ->
-  ActionType ->
+  Text -> -- actionType
   Text -> -- entityId
   m (Map.Map Text CounterValues)
 buildCounterMapForEntity config entityType actionType entityId = do

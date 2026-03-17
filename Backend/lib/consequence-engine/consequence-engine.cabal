@@ -73,9 +73,9 @@ library
     , containers
     , euler-hs
     , mobility-core
+    , openapi3
     , record-dot-preprocessor
     , record-hasfield
-    , rule-orchestrator
     , text
     , time
   default-language: Haskell2010

@@ -89,3 +89,5 @@ library:
           - -j4
   dependencies:
     - mobility-core
+    - openapi3
+    - data-default-class
