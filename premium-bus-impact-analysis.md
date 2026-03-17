@@ -7,20 +7,49 @@
 
 ---
 
-## Executive Impact Summary
+## Baseline Data (as of 2026-03-17, ClickHouse `atlas_app`)
 
-| Issue | Finding ID | Est. % Users Affected | Revenue Impact | Confidence |
+### Overall Booking Funnel (Mar 11-17, 2026)
+
+| Status | Bookings | Unique Riders | % of Total |
+|---|---|---|---|
+| CONFIRMED | 421,067 | 148,443 | 84.06% |
+| PAYMENT_PENDING | 65,381 | 46,357 | 13.05% |
+| NEW | 14,029 | 12,829 | 2.80% |
+| FAILED | 327 | 324 | 0.07% |
+| APPROVED | 106 | 104 | 0.02% |
+
+**Total: 500,912 bookings across 152,537 unique riders**
+
+### Daily Trend
+
+| Date | Total | Confirmed | Failed | Pending | Success % | Riders |
+|---|---|---|---|---|---|---|
+| Mar 11 | 92,030 | 76,349 | 56 | 15,601 | 83.0% | 58,804 |
+| Mar 12 | 97,270 | 80,444 | 77 | 16,709 | 82.7% | 61,860 |
+| Mar 13 | 94,147 | 79,853 | 55 | 14,232 | 84.8% | 60,075 |
+| Mar 14 | 64,542 | 53,792 | 26 | 10,712 | 83.3% | 40,741 |
+| Mar 15 | 44,262 | 36,902 | 33 | 7,317 | 83.4% | 28,660 |
+| Mar 16 | 93,997 | 80,760 | 69 | 13,156 | 85.9% | 60,217 |
+| Mar 17 | 15,256 | 13,506 | 11 | 1,736 | 88.5% | 13,184 |
+
+### Impact by Issue
+
+| Issue | Finding ID | Actual Count | Riders Affected | % of Total Riders |
 |---|---|---|---|---|
-| Payment deducted, no ticket | F14, F16 | ~30% of bus booking attempts | Rs 50-200/incident | High — from review analysis + fix-plan-booking.md |
-| Stuck cancellations (refund deadlock) | F7 | ~5-10% of cancellation attempts | Rs 50-200/incident (locked funds) | Medium — from RCA, no live data |
-| Bookings for departed buses | PB-3 | ~3-5% of premium bus bookings | Rs 50-200/incident | Medium — from user reviews |
-| Duplicate tickets on BPP retry | F14 | ~1-3% of confirmed bookings | Double-charge risk | Medium — from code analysis |
-| Pass verification rejects valid passes | BUG-14 | Unknown (PreBooked → Active gap) | Pass holders blocked at boarding | Low — needs live data |
-| OnInit partial-update crash | F16 | ~2-5% of bookings during peak | Booking stuck in inconsistent state | Medium — from code analysis |
-| Wrong direction QR (frontend) | Bug 2 | Reported in multiple 1-star reviews | Trust erosion | High — from review data |
-| Test OTPs in production (frontend) | Bug 1 | Low (5 specific OTPs affected) | Data integrity risk | High — confirmed in code |
+| Orphaned payments (charged, no ticket) | F14/F16 | 97 payments | 96 riders | 0.06% |
+| Post-departure bookings (<10min validity) | PB-3 | 6,066 bookings | 2,976 riders | 1.95% |
+| Pending/abandoned bookings | — | 79,410 bookings | 59,186 riders | 15.85% |
+| Zero cancellations processed | F7 | 0 cancelled | — | Cancellation flow may be broken entirely |
+| Refunds completed | — | 0 refunded | — | No refunds processed since launch |
 
-**Estimated overall premium bus booking success rate: ~30-40%** (based on review complaint rate of 19.1% in Mar 2026 + payment failure analysis in reports/fix-plan-booking.md showing `postFrfsQuotePaymentRetry = error "Logic yet to be decided"`)
+### Key Findings
+
+1. **Success rate is ~84%, not ~30%** — the 30% estimate from reviews was overstated. However, **15.85% of riders (59K people)** have at least one stuck PAYMENT_PENDING booking
+2. **Zero cancellations and zero refunds** — this is critical. The cancellation flow appears completely non-functional for bus bookings since launch. The refund deadlock fix (F7) and cancellation flow are essential
+3. **6,066 post-departure bookings** affecting 2,976 riders — departure time validation (PB-3) will prevent these
+4. **97 orphaned payments** — users charged but booking stuck in FAILED/NEW/PENDING. Small count but high trust impact
+5. **Trend is improving** — success rate climbed from 83.0% (Mar 11) to 88.5% (Mar 17), likely from PR #13916 (seat hold config fix deployed Mar 12)
 
 ---
 
@@ -63,15 +92,10 @@ SELECT
             THEN tb.rider_id
         END) * 100.0 / nullIf(count(DISTINCT tb.rider_id), 0),
     2) AS pct_affected
-FROM atlas_app.frfs_ticket_booking FINAL AS tb
-INNER JOIN atlas_app.frfs_ticket_booking_payment FINAL AS tbp
-    ON tb.id = tbp.frfs_ticket_booking_id
-INNER JOIN atlas_app.payment_order FINAL AS po
-    ON tbp.payment_order_id = po.id
-INNER JOIN atlas_app.payment_transaction FINAL AS pt
-    ON po.id = pt.payment_order_id
-WHERE tb.vehicle_type = 'BUS'
-  AND tb.created_at >= '2026-03-11'
+FROM (SELECT * FROM atlas_app.frfs_ticket_booking FINAL WHERE vehicle_type = 'BUS' AND created_at >= '2026-03-11') AS tb
+INNER JOIN atlas_app.frfs_ticket_booking_payment AS tbp ON tb.id = tbp.frfs_ticket_booking_id
+INNER JOIN atlas_app.payment_order AS po ON tbp.payment_order_id = po.id
+INNER JOIN atlas_app.payment_transaction AS pt ON po.id = pt.order_id
 ```
 
 **Expected baseline:** ~30% affected (from reports/fix-plan-booking.md analysis)
@@ -88,13 +112,16 @@ SELECT
     count(t.id) AS actual_ticket_count,
     tb.quantity AS expected_ticket_count,
     tb.created_at
-FROM atlas_app.frfs_ticket_booking FINAL AS tb
-INNER JOIN atlas_app.frfs_ticket FINAL AS t
-    ON t.frfs_ticket_booking_id = tb.id
-WHERE tb.vehicle_type = 'BUS'
-  AND tb.created_at >= '2026-03-11'
-GROUP BY tb.id, tb.rider_id, tb.quantity, tb.created_at
-HAVING count(t.id) > tb.quantity
+FROM (
+    SELECT frfs_ticket_booking_id AS booking_id, countDistinct(id) AS actual_tickets
+    FROM atlas_app.frfs_ticket GROUP BY frfs_ticket_booking_id
+) AS tkt
+INNER JOIN (
+    SELECT id, rider_id, quantity, created_at
+    FROM atlas_app.frfs_ticket_booking FINAL
+    WHERE vehicle_type = 'BUS' AND created_at >= '2026-03-11' AND quantity > 0
+) AS tb ON tkt.booking_id = tb.id
+WHERE tkt.actual_tickets > tb.quantity
 ORDER BY tb.created_at DESC
 ```
 
@@ -160,12 +187,8 @@ SELECT
         WHEN tbp.status = 'REFUNDED'
         THEN dateDiff('hour', tb.updated_at, tbp.updated_at)
     END) AS max_refund_hours
-FROM atlas_app.frfs_ticket_booking FINAL AS tb
-INNER JOIN atlas_app.frfs_ticket_booking_payment FINAL AS tbp
-    ON tb.id = tbp.frfs_ticket_booking_id
-WHERE tb.vehicle_type = 'BUS'
-  AND tb.status = 'CANCELLED'
-  AND tb.created_at >= '2026-03-11'
+FROM (SELECT * FROM atlas_app.frfs_ticket_booking FINAL WHERE vehicle_type = 'BUS' AND status = 'CANCELLED' AND created_at >= '2026-03-11') AS tb
+INNER JOIN atlas_app.frfs_ticket_booking_payment AS tbp ON tb.id = tbp.frfs_ticket_booking_id
 ```
 
 **Expected baseline:** avg > 48h (from reports: "6+ day processing time")
