@@ -832,7 +832,7 @@ mkLegInfoFromFrfsBooking ::
 mkLegInfoFromFrfsBooking booking journeyLeg = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   tickets <- QFRFSTicket.findAllByTicketBookingId (booking.id)
-  frfsQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+  frfsQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing booking.quoteId
   let categories = map mkCategoryInfoResponse frfsQuoteCategories
   let categoryBookingDetails =
         mapMaybe
@@ -940,7 +940,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
           let routeCode = journeyLegDetail.routeCode
 
           mbQuote <- QFRFSQuote.findById booking.quoteId
-          quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+          quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing booking.quoteId
           let mbSelectedServiceTier = getServiceTierFromQuote quoteCategories =<< mbQuote
 
           (mTripStartTime, mBookedStopETA) <- case (booking.tripId, booking.routeCode) of
@@ -1006,7 +1006,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                 }
         Spec.SUBWAY -> do
           mbQuote <- QFRFSQuote.findById booking.quoteId
-          quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+          quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing booking.quoteId
           let mbSelectedServiceTier = getServiceTierFromQuote quoteCategories =<< mbQuote
           mbPerson <- QPerson.findById booking.riderId
           imeiNumber <- decrypt `mapM` (mbPerson >>= (.imeiNumber))
@@ -1092,7 +1092,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
   (mbServiceTier, mbQuote, quoteCategories, mbFareParameters) <- case journeyLeg.legPricingId of
     Just quoteId -> do
       mbQuote <- QFRFSQuote.findById (Id quoteId)
-      frfsQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId (Id quoteId)
+      frfsQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing (Id quoteId)
       let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories frfsQuoteCategories)
       let mbSelectedServiceTier = getServiceTierFromQuote frfsQuoteCategories =<< mbQuote
       pure (mbSelectedServiceTier, mbQuote, frfsQuoteCategories, Just fareParameters)

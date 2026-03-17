@@ -687,7 +687,7 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                   price = frfsCachedData.price, -- Single Ticket Price
                   offeredPrice = frfsCachedData.price, -- Single Ticket Offered Price (Should be less than or equal to price)
                   finalPrice = Nothing,
-                  categoryMeta = TFQC.mkQuoteCategoryMetadata (ticketCategoryMetadataConfig' <&> (.code)) (ticketCategoryMetadataConfig' <&> (.title)) (ticketCategoryMetadataConfig' <&> (.description)) (ticketCategoryMetadataConfig' <&> (.tnc)),
+                  categoryMeta = TFQC.mkQuoteCategoryMetadataWithOrder (ticketCategoryMetadataConfig' <&> (.code)) (ticketCategoryMetadataConfig' <&> (.title)) (ticketCategoryMetadataConfig' <&> (.description)) (ticketCategoryMetadataConfig' <&> (.tnc)) ((.categoryOrder) =<< ticketCategoryMetadataConfig'),
                   merchantId = fromStation'.merchantId,
                   merchantOperatingCityId = fromStation.merchantOperatingCityId,
                   selectedQuantity = 1,
@@ -703,7 +703,7 @@ cretateBookingResIfBookingAlreadyCreated :: PartnerOrganization -> DFTB.FRFSTick
 cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg = do
   merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show booking.merchantOperatingCityId)
   stations <- decodeFromText booking.stationsJson & fromMaybeM (InvalidStationJson (show booking.stationsJson))
-  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing booking.quoteId
   let fareParameters = Utils.mkFareParameters (Utils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
   let routeStations = decodeFromText =<< booking.routeStationsJson
   let bookingRes =
@@ -747,7 +747,7 @@ cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg = do
 createNewBookingAndTriggerInit :: PartnerOrganization -> UpsertPersonAndQuoteConfirmReq -> DPOC.RegistrationConfig -> Flow UpsertPersonAndQuoteConfirmRes
 createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
   quote <- QQuote.findById req.quoteId >>= fromMaybeM (FRFSQuoteNotFound req.quoteId.getId)
-  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId req.quoteId
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing req.quoteId
   let selections =
         map
           ( \category ->
