@@ -2,12 +2,10 @@ module Components.TimeModeSelector.View where
 
 import Prelude
 import Effect (Effect)
-import PrestoDOM (PrestoDOM, linearLayout, textView, onClick, text, height, width, padding, cornerRadius, background, color, gravity, weight, orientation, margin, visibility)
-import PrestoDOM.Properties (Padding(..), Gravity(..), Length(..), Orientation(..), Visibility(..), Margin(..))
+import PrestoDOM (PrestoDOM, linearLayout, textView, onClick, text, height, width, padding, cornerRadius, background, color, gravity, weight, orientation, margin)
+import PrestoDOM.Properties (Padding(..), Gravity(..), Length(..), Orientation(..), Margin(..))
 import Components.TimeModeSelector.Controller (Action(..), Config, TimeMode(..), timeModeToLabel)
 import Styles.Colors as Color
-import Font.Size as FontSize
-import Font.Style as FontStyle
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -15,7 +13,7 @@ view push config =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadius 24.0
-    , background Color.grey100
+    , background Color.grey92
     , padding (PaddingVertical 4 4)
     , margin (Margin 16 8 16 8)
     , orientation HORIZONTAL
