@@ -3,6 +3,7 @@
 
 module API.Types.ProviderPlatform.Management.Endpoints.Ride where
 
+import qualified Beckn.Types.Core.Taxi.Common.PaymentInstrument
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Booking
 import qualified Dashboard.Common.Ride
@@ -382,6 +383,8 @@ data RideListItem = RideListItem
     fareDiff :: Kernel.Prelude.Maybe Kernel.Types.Common.Money,
     fareDiffWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     fareWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    estimatedFareWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    paymentInstrument :: Kernel.Prelude.Maybe Beckn.Types.Core.Taxi.Common.PaymentInstrument.PaymentInstrument,
     bookingStatus :: BookingStatus,
     rideCreatedAt :: Kernel.Prelude.UTCTime
   }

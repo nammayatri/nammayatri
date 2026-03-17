@@ -1892,7 +1892,7 @@ PayoutConfig:
     d2dPayoutType: Just d2dPayoutType|E
   fromTType:
     timeDiff: Kernel.Utils.Common.secondsToNominalDiffTime|I
-    d2dPayoutType: fromMaybe NO_PAYOUT d2dPayoutType|E
+    d2dPayoutType: fromMaybe Domain.Types.PayoutConfig.NO_PAYOUT d2dPayoutType|E
   default:
     referralRewardAmountPerRide: "100.0"
     timeDiff: "86400"

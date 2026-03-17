@@ -21,7 +21,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FeedbackBadge.FeedbackBadge] -> m ())
 createMany = traverse_ create
 
-findByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.FeedbackBadge.FeedbackBadge]))
+findByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.FeedbackBadge.FeedbackBadge])
 findByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FeedbackBadge.FeedbackBadge -> m (Maybe Domain.Types.FeedbackBadge.FeedbackBadge))
@@ -34,7 +34,6 @@ updateByPrimaryKey (Domain.Types.FeedbackBadge.FeedbackBadge {..}) = do
     [ Se.Set Beam.badge badge,
       Se.Set Beam.badgeCount badgeCount,
       Se.Set Beam.badgeKey badgeKey,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),

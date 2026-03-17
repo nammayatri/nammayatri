@@ -5,7 +5,6 @@
 module Storage.Queries.Booking (module Storage.Queries.Booking, module ReExport) where
 
 import qualified Domain.Types.Booking
-import qualified Domain.Types.Person
 import qualified Domain.Types.Quote
 import Kernel.Beam.Functions
 import Kernel.External.Encryption

@@ -35,5 +35,9 @@ DriverProfileQuestions:
     findByPersonId:
       kvFunction: findOneWithKV
       where: driverId
+    updateMerchantOperatingCityIdByDriverId:
+      kvFunction: updateWithKV
+      params: [merchantOperatingCityId]
+      where: driverId
 
   excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]

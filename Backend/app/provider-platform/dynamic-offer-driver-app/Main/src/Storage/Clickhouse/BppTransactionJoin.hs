@@ -305,6 +305,8 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
           customerName = bppTxn.bookingCustomerName,
           fareDiff = mkPrice bppTxn.rideCurrency <$> (bppTxn.rideFare - bppTxn.bookingEstimatedFare),
           fare = mkPrice bppTxn.rideCurrency <$> bppTxn.rideFare,
+          estimatedFare = mkPrice bppTxn.rideCurrency <$> bppTxn.bookingEstimatedFare,
+          paymentInstrument = Nothing,
           bookingStatus = mkBookingStatus bppTxn,
           tripCategory = bppTxn.bookingTripCategory,
           ..

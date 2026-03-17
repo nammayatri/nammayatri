@@ -22,6 +22,7 @@ import Domain.Types.Booking as Booking
 import Domain.Types.Booking as DBooking
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverInformation
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity as DMOC
@@ -464,6 +465,8 @@ data RideItem = RideItem
     customerName :: Maybe Text,
     fareDiff :: Maybe Price,
     fare :: Maybe Price,
+    estimatedFare :: Maybe Price,
+    paymentInstrument :: Maybe DMPM.PaymentInstrument,
     bookingStatus :: Common.BookingStatus,
     tripCategory :: DTC.TripCategory
   }
@@ -544,7 +547,8 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
       riderDetails <- findOneWithKV [Se.Is BeamRDR.id $ Se.Eq $ getId $ fromJust booking.riderId | isJust booking.riderId] >>= fromMaybeM (RiderDetailsNotFound $ "for booking id: " <> booking.id.getId)
       let fareDiff = mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare
           fare = mkPrice (Just ride.currency) <$> ride.fare
-      pure $ mkRideItem <$> [(rideShortId, ride.createdAt, rideDetails, riderDetails, booking, fareDiff, fare, mkBookingStatus now ride)]
+          estimatedFare = Just $ mkPrice (Just booking.currency) booking.estimatedFare
+      pure $ mkRideItem <$> [(rideShortId, ride.createdAt, rideDetails, riderDetails, booking, fareDiff, fare, estimatedFare, booking.paymentInstrument, mkBookingStatus now ride)]
     Nothing -> do
       zippedRides <- case mbTo of
         Just toDate | roundToMidnightUTCToDate toDate >= now -> do
@@ -648,8 +652,10 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
           rdr <- catMaybes <$> mapM fromTType' riderDetails
           let fareDiffs = zipWith (\ride booking -> mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare) r b
           let fares = map (\ride -> mkPrice (Just ride.currency) <$> ride.fare) r
-          let z7 = zip7 (DR.shortId <$> r) (DR.createdAt <$> r) rd rdr b fareDiffs (mkBookingStatus now <$> r)
-          pure $ map (\((rideShortId, rideCreatedAt, rd', rdr', b', fareDiff, bookingStatus), fare) -> (rideShortId, rideCreatedAt, rd', rdr', b', fareDiff, fare, bookingStatus)) (zip z7 fares)
+          let estimatedFares = map (\booking -> Just $ mkPrice (Just booking.currency) booking.estimatedFare) b
+          let paymentInstruments = map (.paymentInstrument) b
+          let z8 = zip (zip7 (DR.shortId <$> r) (DR.createdAt <$> r) rd rdr b fareDiffs (mkBookingStatus now <$> r)) (zip estimatedFares paymentInstruments)
+          pure $ map (\(((rideShortId, rideCreatedAt, rd', rdr', b', fareDiff, bookingStatus), (estimatedFare, paymentInstrument)), fare) -> (rideShortId, rideCreatedAt, rd', rdr', b', fareDiff, fare, estimatedFare, paymentInstrument, bookingStatus)) (zip z8 fares)
         Left err -> do
           logError $ "FAILED_TO_FETCH_RIDE_LIST" <> show err
           pure []
@@ -693,12 +699,13 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
                 riderDetail <- booking.riderId >>= (`HMS.lookup` riderDetailsMap)
                 let fareDiff = mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare
                     fare = mkPrice (Just ride.currency) <$> ride.fare
-                Just (mkRideItem (ride.shortId, ride.createdAt, rideDetail, riderDetail, booking, fareDiff, fare, mkBookingStatus now ride))
+                    estimatedFare = Just $ mkPrice (Just booking.currency) booking.estimatedFare
+                Just (mkRideItem (ride.shortId, ride.createdAt, rideDetail, riderDetail, booking, fareDiff, fare, estimatedFare, booking.paymentInstrument, mkBookingStatus now ride))
             )
             rides
 
-    mkRideItem :: (ShortId Ride, UTCTime, RideDetails.RideDetails, RiderDetails.RiderDetails, Booking.Booking, Maybe Price, Maybe Price, Common.BookingStatus) -> RideItem
-    mkRideItem (rideShortId, rideCreatedAt, rideDetails, riderDetails, booking, fareDiff, fare, bookingStatus) =
+    mkRideItem :: (ShortId Ride, UTCTime, RideDetails.RideDetails, RiderDetails.RiderDetails, Booking.Booking, Maybe Price, Maybe Price, Maybe Price, Maybe DMPM.PaymentInstrument, Common.BookingStatus) -> RideItem
+    mkRideItem (rideShortId, rideCreatedAt, rideDetails, riderDetails, booking, fareDiff, fare, estimatedFare, paymentInstrument, bookingStatus) =
       RideItem {customerName = booking.riderName, tripCategory = booking.tripCategory, ..}
 
     mkBookingStatusFilter :: [Ride.Ride] -> [Ride.Ride]

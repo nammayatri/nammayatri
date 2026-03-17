@@ -19,7 +19,7 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN pulled_
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN rejected_request_count integer ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN ride_duration integer ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN total_completed_rides integer ;
-ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN total_distance integer ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN total_distance double precision ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN total_rating_count integer ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN total_rating_score integer ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN total_request_count integer ;
@@ -28,9 +28,3 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN merchan
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD PRIMARY KEY ( fleet_driver_id, fleet_operator_id, merchant_local_date);
-
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ALTER COLUMN total_distance TYPE double precision USING total_distance::double precision;

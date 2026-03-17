@@ -168,7 +168,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.specialLocationTag = specialLocationTag,
         Beam.startTime = Just startTime,
         Beam.toLocGeohash = toLocGeohash,
-        Beam.toLocationId = (Kernel.Types.Id.getId . (.id)) <$> toLocation,
+        Beam.toLocationId = Kernel.Types.Id.getId . (.id) <$> toLocation,
         Beam.tollCharges = tollCharges,
         Beam.tollIds = tollIds,
         Beam.tollNames = tollNames,

@@ -68,6 +68,9 @@ $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutRequestStatus)
 
 $(Kernel.Utils.TH.mkHttpInstancesForEnum ''PayoutRequestStatus)
 
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutType)
+
+
 instance FromHttpApiData [PayoutRequestStatus] where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
@@ -77,7 +80,5 @@ instance ToHttpApiData [PayoutRequestStatus] where
   toUrlPiece = DT.decodeUtf8 . toHeader
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
-
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutType)
 
 $(Kernel.Utils.TH.mkHttpInstancesForEnum ''PayoutType)

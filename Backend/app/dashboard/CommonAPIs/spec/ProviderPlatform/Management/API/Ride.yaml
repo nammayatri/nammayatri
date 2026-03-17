@@ -9,6 +9,7 @@ imports:
   VehicleVariant: Dashboard.Common
   Classification: Kernel.External.Ticket.Interface.Types
   TripCategory: Domain.Types
+  PaymentInstrument: Beckn.Types.Core.Taxi.Common.PaymentInstrument
 
 module: Ride
 
@@ -224,6 +225,8 @@ types:
     - fareDiff: Maybe Money
     - fareDiffWithCurrency: Maybe PriceAPIEntity
     - fareWithCurrency: Maybe PriceAPIEntity
+    - estimatedFareWithCurrency: Maybe PriceAPIEntity
+    - paymentInstrument: Maybe PaymentInstrument
     - bookingStatus: BookingStatus
     - rideCreatedAt: UTCTime
   RideListItemV2:

@@ -52,6 +52,7 @@ library
       Lib.Finance.Storage.Queries.ReconciliationSummaryExtra
       Lib.Finance.Tax.Interface
       Lib.Finance.Tax.Types
+      Tools.Beam.UtilsTH
       Lib.Finance.Domain.Types.Account
       Lib.Finance.Domain.Types.AuditEntry
       Lib.Finance.Domain.Types.CurrentState
