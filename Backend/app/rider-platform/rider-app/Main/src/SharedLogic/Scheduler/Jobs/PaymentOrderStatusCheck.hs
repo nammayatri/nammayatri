@@ -40,6 +40,10 @@ import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.JobScheduler
 import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.Payment ()
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
+import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
+import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Metrics.BAPMetrics as Metrics
 import qualified Tools.Payment as Payment
@@ -134,7 +138,29 @@ processPaymentOrder merchantId merchantOperatingCityId paymentOrder = do
       orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
       fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast merchantId) paymentOrder.id
   void $ SPayment.orderStatusHandler merchantOperatingCityId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
+
+  -- Auto-refund for "payment deducted, no ticket" cases:
+  -- If payment is CHARGED but FRFS booking is FAILED, auto-initiate refund
+  when (isFRFSPaymentType paymentServiceType) $ do
+    autoRefundPaymentWithNoTicket merchantId paymentOrder person
   where
+    isFRFSPaymentType :: Payment.PaymentServiceType -> Bool
+    isFRFSPaymentType Payment.FRFSBooking = True
+    isFRFSPaymentType Payment.FRFSBusBooking = True
+    isFRFSPaymentType Payment.FRFSMultiModalBooking = True
+    isFRFSPaymentType _ = False
+
+    autoRefundPaymentWithNoTicket mId order person = do
+      bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId order.id
+      forM_ bookingPayments $ \bookingPayment -> do
+        when (bookingPayment.status == DFRFSTicketBookingPayment.SUCCESS) $ do
+          booking <- QFRFSTicketBooking.findById bookingPayment.frfsTicketBookingId
+          case booking of
+            Just b | b.status == DFRFSTicketBookingStatus.FAILED -> do
+              logWarning $ "Auto-refund: payment SUCCESS but booking FAILED for bookingId=" <> b.id.getId <> " orderId=" <> order.id.getId
+              void $ SPayment.markRefundPendingAndSyncOrderStatus mId person.id order.id
+            _ -> pure ()
+
     -- Helper to create fulfillment handler based on payment service type
     mkFulfillmentHandler :: Payment.PaymentServiceType -> Id DM.Merchant -> Id DOrder.PaymentOrder -> DPayment.PaymentStatusResp -> m (DPayment.PaymentFulfillmentStatus, Maybe Text, Maybe Text)
     mkFulfillmentHandler serviceType mId orderId paymentStatusResp = case serviceType of
