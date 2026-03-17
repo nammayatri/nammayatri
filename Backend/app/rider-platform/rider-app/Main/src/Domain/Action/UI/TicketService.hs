@@ -55,8 +55,8 @@ import Kernel.Utils.SlidingWindowLimiter
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import Lib.Payment.Domain.Types.Refunds (Refunds (..))
+import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
-import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.TicketRule.Apply as TicketRule
@@ -664,7 +664,7 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
   mkTicketBookingDetails ticketBooking services
   where
     mkTicketBookingDetails DTTB.TicketBooking {..} services = do
-      refunds <- QRefunds.findAllByOrderId (Kernel.Types.Id.ShortId shortId.getShortId)
+      refunds <- HQRefunds.findAllByOrderId (Kernel.Types.Id.ShortId shortId.getShortId)
       person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
       let isAnyRefundPending = any (\refund -> refund.status == Kernel.External.Payment.Interface.Types.REFUND_PENDING) refunds
       refundDetails <-
@@ -1907,7 +1907,8 @@ updateCancelledSeatsInSeatManagement categoryId noOfSeatsToCancel date = do
 intializeRefundProcess :: Kernel.Types.Id.ShortId DTTB.TicketBooking -> Maybe $ Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> HighPrecMoney -> Kernel.Types.Id.Id Merchant.Merchant -> Kernel.Types.Id.Id MerchantOperatingCity.MerchantOperatingCity -> Maybe Text -> Maybe Version -> Environment.Flow ()
 intializeRefundProcess ticketBookingShortId ticketPlaceId _amountToRefund personMerchantId personMerchantOperatingCityId mRoutingId mSdkVersion = do
   let createRefundCall = Payment.refundOrder personMerchantId personMerchantOperatingCityId ticketPlaceId Payment.Normal mRoutingId mSdkVersion
-  void $ DPayment.createRefundService (Kernel.Types.Id.ShortId ticketBookingShortId.getShortId) createRefundCall
+  let commonMerchantOperatingCityId = Kernel.Types.Id.cast @MerchantOperatingCity.MerchantOperatingCity @DPayment.MerchantOperatingCity personMerchantOperatingCityId
+  void $ DPayment.createRefundService commonMerchantOperatingCityId (Kernel.Types.Id.ShortId ticketBookingShortId.getShortId) createRefundCall
 
 tryUserTicketCancellationLock :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Environment.Flow () -> Environment.Flow ()
 tryUserTicketCancellationLock businessHourId date serviceCategoryId executeFunction = do
