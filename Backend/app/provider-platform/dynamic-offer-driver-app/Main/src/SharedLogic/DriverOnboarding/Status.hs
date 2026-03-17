@@ -84,6 +84,7 @@ import qualified Storage.Queries.VehicleNOC as VNOCQuery
 import qualified Storage.Queries.VehiclePUC as VPUCQuery
 import qualified Storage.Queries.VehiclePermit as VPQuery
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
+import qualified Storage.Queries.DriverUdyam as QUDYAM
 import qualified Tools.BackgroundVerification as BackgroundVerification
 import Tools.Error (DriverOnboardingError (ImageNotValid))
 import qualified Tools.Plasma as TPlasma
@@ -866,6 +867,9 @@ getProcessedDriverDocuments driverId entityImagesInfo docType useHVSdkForDL = do
     DVC.DriverInspectionHub -> do
       status <- getInspectionHubStatusForResponseStatus DOHR.DRIVER_ONBOARDING_INSPECTION (Just driverId) Nothing
       return (status, Nothing, Nothing, Nothing, Nothing)
+    DVC.UDYAMCertificate -> do
+      mbUdyamCertificate <- QUDYAM.findByDriverId driverId
+      return (mapStatus <$> (mbUdyamCertificate <&> (.verificationStatus)), Nothing, Nothing, Nothing, mbS3Path)
     _ -> return (Nothing, Nothing, Nothing, Nothing, mbS3Path)
 
 callGetDLGetStatus :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()
