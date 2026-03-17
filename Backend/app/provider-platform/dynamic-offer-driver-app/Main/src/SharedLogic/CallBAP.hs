@@ -1182,6 +1182,7 @@ sendStateEntryPermitCrossedUpdateToBAP ::
   DVeh.Vehicle ->
   m ()
 sendStateEntryPermitCrossedUpdateToBAP (Just booking) (Just ride) driver driverStats vehicle = do
+  logInfo $ "SEPC: Sending crossed update to BAP, rideId: " <> getId ride.id <> ", bookingId: " <> getId booking.id
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   when isValueAddNP $ do
     merchant <-
@@ -1199,6 +1200,7 @@ sendStateEntryPermitCrossedUpdateToBAP (Just booking) (Just ride) driver driverS
     sepcCrossedMsg <- ACL.buildOnUpdateMessageV2 merchant booking Nothing sepcCrossedUpdateBuildReq
     retryConfig <- asks (.shortDurationRetryCfg)
     void $ callOnUpdateV2 sepcCrossedMsg retryConfig merchant.id
+    logInfo $ "SEPC: Successfully sent crossed update to BAP, rideId: " <> getId ride.id
 sendStateEntryPermitCrossedUpdateToBAP _ _ _ _ _ = do
   logTagError "on_update_req" "on_update_err - Could not send state entry permit crossed update to BPP : booking or ride not found"
   pure ()

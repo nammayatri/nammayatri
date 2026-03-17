@@ -60,7 +60,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
 import Kernel.Types.Error (GenericError (InternalError))
-import Kernel.Types.Id (Id)
+import Kernel.Types.Id (Id, getId)
 import Kernel.Utils.Common
 import Kernel.Utils.ComputeIntersection
 
@@ -332,6 +332,7 @@ recalcDistanceBatchStep RideInterpolationHandler {..} isMeterRide distanceCalcRe
     void $ Redis.incrby (onRideTollChargesKey driverId) (round tollCharges.getHighPrecMoney)
     Redis.expire (onRideTollChargesKey driverId) 21600 -- 6 hours
   whenJust mbSepcInfo $ \(sepcCharges, sepcNames, sepcIds) -> do
+    logInfo $ "SEPC: Accumulating charges for driverId: " <> getId driverId <> ", batchCharges: " <> show sepcCharges <> ", names: " <> show sepcNames <> ", ids: " <> show sepcIds
     void $ Redis.rPushExp (onRideStateEntryPermitNamesKey driverId) sepcNames 21600
     void $ Redis.rPushExp (onRideStateEntryPermitIdsKey driverId) sepcIds 21600
     void $ Redis.incrby (onRideStateEntryPermitChargesKey driverId) (round sepcCharges.getHighPrecMoney)
@@ -354,6 +355,7 @@ recalcDistanceBatchStep RideInterpolationHandler {..} isMeterRide distanceCalcRe
       mbSepcCharges :: Maybe HighPrecMoney <- Redis.safeGet (onRideStateEntryPermitChargesKey driverId)
       sepcNames :: [Text] <- Redis.lRange (onRideStateEntryPermitNamesKey driverId) 0 (-1)
       sepcIds :: [Text] <- Redis.lRange (onRideStateEntryPermitIdsKey driverId) 0 (-1)
+      logInfo $ "SEPC: Persisting to ride for driverId: " <> getId driverId <> ", totalCharges: " <> show mbSepcCharges <> ", namesCount: " <> show (length sepcNames) <> ", idsCount: " <> show (length sepcIds)
       whenJust mbSepcCharges $ \sepcCharges -> updateStateEntryPermitChargesAndNamesAndIds driverId sepcCharges sepcNames sepcIds
   let newReferencePoint = if snapToRoadFailed then Nothing else lastMaybe interpolatedWps
   pure (distance, newReferencePoint, startPatching, servicesUsed, snapToRoadFailed)

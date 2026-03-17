@@ -294,7 +294,13 @@ handler ValidatedDSearchReq {..} sReq = do
               )
         logDebug $ "Route serviceability: " <> show serviceableRoute.multipleRoutes
         mbTollChargesAndNames <- getTollInfoOnRoute merchantOpCityId Nothing serviceableRoute.routePoints
+        logDebug $ "SEPC: Calling detector for search request, merchantOpCityId: " <> getId merchantOpCityId
         mbStateEntryPermitInfo <- getStateEntryPermitInfoOnRoute merchantOpCityId Nothing serviceableRoute.routePoints
+        case mbStateEntryPermitInfo of
+          Just (charges, names, ids) ->
+            logInfo $ "SEPC: Detected during search - charges: " <> show charges <> ", names: " <> show names <> ", ids: " <> show ids
+          Nothing ->
+            logDebug "SEPC: No charges detected during search"
         return
           ( Just setRouteInfo,
             Just toLocation,
@@ -807,6 +813,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
   let validTill = searchRequestExpirationSeconds `addUTCTime` now
       isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
       isStateEntryPermitApplicable = isStateEntryPermitApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
+  logInfo $ "SEPC: Building quote, quoteId: " <> getId quoteId <> ", searchReqId: " <> getId searchRequest.id <> ", isStateEntryPermitApplicable: " <> show isStateEntryPermitApplicable <> ", sepcCharges: " <> show stateEntryPermitCharges
   pure
     DQuote.Quote
       { id = quoteId,
@@ -914,6 +921,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
       maxFare = fareSum maxFareParams (Just []) + maybe 0.0 (.maxFee) mbDriverExtraFeeBounds + pickupChargesMaxx
   let isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
       isStateEntryPermitApplicable = isStateEntryPermitApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
+  logInfo $ "SEPC: Building estimate, estimateId: " <> getId estimateId <> ", isStateEntryPermitApplicable: " <> show isStateEntryPermitApplicable <> ", sepcCharges: " <> show stateEntryPermitCharges <> ", sepcNames: " <> show stateEntryPermitNames
   pure
     DEst.Estimate
       { id = estimateId,

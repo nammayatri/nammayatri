@@ -192,6 +192,7 @@ handler merchantId req validatedReq = do
           stops = searchRequest.stops
           isTollApplicable = isTollApplicableForTrip driverQuote.vehicleServiceTier tripCategory
           isStateEntryPermitApplicable = isStateEntryPermitApplicableForTrip driverQuote.vehicleServiceTier tripCategory
+      logInfo $ "SEPC: Building booking, quoteId: " <> quoteId <> ", isStateEntryPermitApplicable: " <> show isStateEntryPermitApplicable <> ", sepcCharges: " <> show searchRequest.stateEntryPermitCharges
       exophone <- findRandomExophone searchRequest.merchantOperatingCityId searchRequest DExophone.CALL_RIDE
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId configInExperimentVersions >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
       mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback quoteId

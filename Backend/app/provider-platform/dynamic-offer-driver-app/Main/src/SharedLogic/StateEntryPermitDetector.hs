@@ -74,12 +74,16 @@ sepcGeomCacheKeyVersion = "geom:v1"
 loadCachedSEPCEntriesWithGeometries ::
   (MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasInMemEnv r) =>
   m ([StateEntryPermitCharges], Map.Map (Id DGeo.Geometry) DGeo.Geometry)
-loadCachedSEPCEntriesWithGeometries =
+loadCachedSEPCEntriesWithGeometries = do
+  logDebug "SEPC: Loading cached SEPC entries with geometries from in-mem cache"
   IM.withInMemCache ["CACHED_SEPC_GEOMS", sepcGeomCacheKeyVersion] 43200 $ do
     allSEPCEntries <- findAllStateEntryPermitCharges
+    logInfo $ "SEPC: Loaded " <> show (length allSEPCEntries) <> " SEPC entries from DB"
     let uniqueGeomIds = nub $ map (.geomId) allSEPCEntries
+    logDebug $ "SEPC: Unique geometry IDs to fetch: " <> show (length uniqueGeomIds)
     geomsMaybe <- mapM findGeometryById uniqueGeomIds
     let geometryByGeomId = Map.fromList [(g.id, g) | Just g <- geomsMaybe]
+    logInfo $ "SEPC: Loaded " <> show (Map.size geometryByGeomId) <> " geometries for SEPC entries"
     pure (allSEPCEntries, geometryByGeomId :: Map.Map (Id DGeo.Geometry) DGeo.Geometry)
 
 -- | Derive the source state from the first route point (which geometries contain it), or use fallback if none.
@@ -89,8 +93,11 @@ getSourceStateFromFirstPoint ::
   Context.IndianState ->
   m Context.IndianState
 getSourceStateFromFirstPoint firstPoint fallbackState = do
+  logDebug $ "SEPC: Finding source state from first point: " <> show firstPoint
   geoms <- findGeometriesContainingGps firstPoint
-  pure $ fromMaybe fallbackState (DGeo.state <$> listToMaybe geoms)
+  let detectedState = DGeo.state <$> listToMaybe geoms
+  logInfo $ "SEPC: Source point detected in state: " <> show detectedState <> ", fallback state: " <> show fallbackState
+  pure $ fromMaybe fallbackState detectedState
 
 -- | Allowed destination states for a given source state (from MerchantState config, or just source if not configured).
 getAllowedDestinationStates ::
@@ -99,8 +106,11 @@ getAllowedDestinationStates ::
   Context.IndianState ->
   m [Context.IndianState]
 getAllowedDestinationStates merchantId sourceState = do
+  logDebug $ "SEPC: Getting allowed destination states for merchantId: " <> getId merchantId <> ", sourceState: " <> show sourceState
   mbMerchantState <- CQMS.findByMerchantIdAndState merchantId sourceState
-  pure $ maybe [sourceState] (.allowedDestinationStates) mbMerchantState
+  let allowedStates = maybe [sourceState] (.allowedDestinationStates) mbMerchantState
+  logInfo $ "SEPC: Allowed destination states from " <> show sourceState <> ": " <> show allowedStates
+  pure allowedStates
 
 -- | Keep only SEPC entries whose geometry's state is in the allowed destination states list.
 filterSEPCsByAllowedState ::
@@ -109,7 +119,8 @@ filterSEPCsByAllowedState ::
   [Context.IndianState] ->
   [StateEntryPermitCharges]
 filterSEPCsByAllowedState allSEPCEntries geometryByGeomId allowedStates =
-  filter hasAllowedState allSEPCEntries
+  let result = filter hasAllowedState allSEPCEntries
+   in result
   where
     hasAllowedState sepcRow =
       case Map.lookup sepcRow.geomId geometryByGeomId of
@@ -185,10 +196,15 @@ getStateEntryPermitInfoOnRoute ::
   Maybe (Id DP.Driver) ->
   RoutePoints ->
   m (Maybe (HighPrecMoney, [Text], [Text]))
-getStateEntryPermitInfoOnRoute merchantOperatingCityId _mbDriverId route =
+getStateEntryPermitInfoOnRoute merchantOperatingCityId mbDriverId route = do
+  logInfo $ "SEPC: Starting SEPC detection for merchantOpCityId: " <> getId merchantOperatingCityId <> ", route points: " <> show (length route) <> ", driverId: " <> maybe "N/A" getId mbDriverId
   case route of
-    [] -> pure Nothing
-    [_] -> pure Nothing
+    [] -> do
+      logDebug "SEPC: Empty route, no SEPC charges"
+      pure Nothing
+    [_] -> do
+      logDebug "SEPC: Single point route, no SEPC charges"
+      pure Nothing
     firstPoint : _ -> do
       merchantOpCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (InternalError "MerchantOperatingCity not found")
 
@@ -198,27 +214,40 @@ getStateEntryPermitInfoOnRoute merchantOperatingCityId _mbDriverId route =
       (allSEPCEntries, geometryByGeomId) <- loadCachedSEPCEntriesWithGeometries
 
       let candidateSEPCsWithState = filterSEPCsByAllowedState allSEPCEntries geometryByGeomId allowedStates
+      logInfo $ "SEPC: After allowed-state filter: " <> show (length candidateSEPCsWithState) <> " candidates from " <> show (length allowedStates) <> " allowed states"
 
       if null candidateSEPCsWithState
-        then pure Nothing
+        then do
+          logInfo "SEPC: No candidates after allowed-state filter, returning Nothing"
+          pure Nothing
         else do
           let routeBoundingBox = getBoundingBox route
+          logDebug $ "SEPC: Route bounding box calculated"
           let eligibleCandidates =
                 filterSEPCsByRouteBboxIntersection candidateSEPCsWithState geometryByGeomId routeBoundingBox
 
+          logInfo $ "SEPC: After bbox intersection filter: " <> show (length eligibleCandidates) <> " eligible candidates"
+
           if null eligibleCandidates
-            then pure Nothing
+            then do
+              logInfo "SEPC: No candidates after bbox filter, returning Nothing"
+              pure Nothing
             else do
               let candidateGeomIds = Set.fromList $ map (getId . (.geomId)) eligibleCandidates
               let stateToSEPC = buildStateToSEPCMap eligibleCandidates geometryByGeomId
               let routeSegments = zip route (tail route)
+              logDebug $ "SEPC: Analyzing " <> show (length routeSegments) <> " route segments for state transitions"
 
               (total, names, ids) <-
                 computeChargesAlongRouteSegments routeSegments candidateGeomIds stateToSEPC
 
               if total > 0 && not (null names)
-                then pure $ Just (total, names, ids)
-                else pure Nothing
+                then do
+                  logInfo $ "SEPC: Charges detected - total: " <> show total <> ", names: " <> show names <> ", ids: " <> show ids
+                  pure $ Just (total, names, ids)
+                else do
+                  logInfo "SEPC: No charges detected after segment analysis"
+                  pure Nothing
 
 -- | At end ride: reconcile estimated vs detected SEPC IDs and log the diff for debugging.
 -- Returns (pendingIds, extraIds) where:

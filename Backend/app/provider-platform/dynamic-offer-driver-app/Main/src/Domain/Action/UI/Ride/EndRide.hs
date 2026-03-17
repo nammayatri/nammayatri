@@ -490,11 +490,13 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                   logWarning $ "Validated pending toll found but NOT applying due to pickup/drop outside threshold. RideId: " <> rideId.getId
 
                 -- Reconcile SEPC IDs: get pending (missed) and extra (unexpected) for logging
-                (_sepcPendingIds, _sepcExtraIds) <-
+                logInfo $ "SEPC: End ride validation for rideId: " <> rideId.getId <> ", estimatedIds: " <> show updRide.estimatedStateEntryPermitIds <> ", detectedIds: " <> show updRide.stateEntryPermitIds
+                (sepcPendingIds, sepcExtraIds) <-
                   StateEntryPermitDetector.checkAndValidatePendingStateEntryPermits
                     updRide.id
                     updRide.estimatedStateEntryPermitIds
                     updRide.stateEntryPermitIds
+                logInfo $ "SEPC: Validation result for rideId: " <> rideId.getId <> ", pendingIds: " <> show sepcPendingIds <> ", extraIds: " <> show sepcExtraIds
 
                 let (tollCharges, tollNames, tollIds, tollConfidence) = do
                       let distanceCalculationFailure = distanceCalculationFailed || (maybe False (> 0) updRide.numberOfSelfTuned)
@@ -553,6 +555,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                         distanceCalculationFailed
                         pickupDropOutsideOfThreshold
                         updRide
+                logInfo $ "SEPC: Final confidence for rideId: " <> rideId.getId <> ", charges: " <> show sepcCharges <> ", confidence: " <> show sepcConfidence <> ", names: " <> show sepcNames
 
                 fork "ride-interpolation" $ do
                   interpolatedPoints <- getInterpolatedPoints updRide.driverId
