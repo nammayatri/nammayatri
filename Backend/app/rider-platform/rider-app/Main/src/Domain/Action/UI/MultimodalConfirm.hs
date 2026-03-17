@@ -2744,12 +2744,12 @@ getMultimodalAdvisory journeyId = do
         (_, Just _endTime) -> SQ.ArriveBy
         (Just _startTime, _) -> SQ.DepartAt
         _ -> SQ.LeaveNow
-  -- Compute crowding buffer for peak hours
-  let mbCrowdingBuffer = Advisor.computeCrowdingBufferSeconds now
-  -- Compute advisory based on time mode
+  -- Compute advisory based on time mode; crowding buffer based on planned departure
   let advisory = case timeMode of
         SQ.ArriveBy ->
           let targetArrival = fromMaybe now journey.endTime
+              estimatedDep = addUTCTime (negate $ fromIntegral totalDurationSec) targetArrival
+              mbCrowdingBuffer = Advisor.computeCrowdingBufferSeconds estimatedDep
            in Advisor.computeArriveByAdvisory targetArrival totalDurationSec 10 now mbCrowdingBuffer
         SQ.DepartAt ->
           let departTime = fromMaybe now journey.startTime
@@ -2772,6 +2772,11 @@ postMultimodalSavedTrip ::
 postMultimodalSavedTrip (mbPersonId, merchantId) req = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
+  -- Validate input ranges
+  when (req.bufferMinutes < 0 || req.bufferMinutes > 60) $
+    throwError $ InvalidRequest "bufferMinutes must be between 0 and 60"
+  when (req.notifyBeforeMinutes < 0 || req.notifyBeforeMinutes > 120) $
+    throwError $ InvalidRequest "notifyBeforeMinutes must be between 0 and 120"
   newId <- generateGUID
   now <- getCurrentTime
   let timeMode = parseSavedTripTimeMode req.timeMode
@@ -2816,8 +2821,8 @@ getMultimodalSavedTrips ::
   )
 getMultimodalSavedTrips (mbPersonId, _merchantId) mbLimit mbOffset = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
-  let limitVal = fromMaybe 10 mbLimit
-      offsetVal = fromMaybe 0 mbOffset
+  let limitVal = min 50 (fromMaybe 10 mbLimit)
+      offsetVal = max 0 (fromMaybe 0 mbOffset)
   trips <- QSavedTrip.findAllByRiderIdWithLimitOffset personId limitVal offsetVal
   pure $ map convertSavedTripToResp trips
 
