@@ -15,13 +15,13 @@ import qualified Domain.Types.Image
 import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleCategory
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.External.Verification.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Servant
 import qualified Servant.Client.Core
 import Tools.Auth
-import qualified Kernel.External.Verification.Types
 
 data AadhaarCardReq = AadhaarCardReq
   { aadhaarBackImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),

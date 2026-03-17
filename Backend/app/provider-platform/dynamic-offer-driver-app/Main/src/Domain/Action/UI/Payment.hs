@@ -29,6 +29,7 @@ import Control.Applicative ((<|>))
 import qualified Data.Tuple.Extra as Tuple
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.UI.Driver as DADriver
+import Domain.Action.UI.DriverWallet (mkDriverWalletFinanceCtx)
 import qualified Domain.Action.UI.Payout as PayoutA
 import qualified Domain.Action.UI.Plan as ADPlan
 import Domain.Action.UI.Ride.EndRide.Internal
@@ -81,8 +82,8 @@ import Lib.Finance
     runFinance,
     transfer,
   )
-import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import Lib.Finance.Domain.Types.Account ()
+import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import Lib.Finance.Ledger.Service ()
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -129,7 +130,6 @@ import Tools.Notifications
 import qualified Tools.Payment as Payment
 import qualified Tools.PaymentNudge as PaymentNudge
 import Utils.Common.Cac.KeyNameConstants
-import Domain.Action.UI.DriverWallet (mkDriverWalletFinanceCtx)
 
 -- create order -----------------------------------------------------
 createOrder :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id INV.Invoice -> Flow Payment.CreateOrderResp

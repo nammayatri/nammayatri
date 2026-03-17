@@ -51,7 +51,6 @@ import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import qualified SharedLogic.FareCalculator as FC
 import qualified Storage.Cac.TransporterConfig as SCTC
 
-
 -- | Map of fare components to their monetary values
 -- Used to compute charges on specific components (e.g., VAT on RideFare + CongestionChargeComponent)
 type ComponentMap = Map.Map FareChargeComponent HighPrecMoney

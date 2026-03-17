@@ -231,3 +231,8 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN email_domain text ;
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN ledger_write_mode boolean ;
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN email_domain text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN finance_invoice_id text ;

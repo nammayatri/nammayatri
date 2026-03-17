@@ -28,7 +28,7 @@ module Domain.Action.UI.DriverWallet
     resolvePayoutVpa,
     initiateWalletPayout,
     makePayoutEntryIdsKey,
-    mkDriverWalletFinanceCtx
+    mkDriverWalletFinanceCtx,
   )
 where
 

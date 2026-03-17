@@ -22,10 +22,12 @@ import Servant.Client
 
 data AirportCashRechargeRequest = AirportCashRechargeRequest {amount :: Kernel.Types.Common.HighPrecMoney, referenceId :: Kernel.Prelude.Text}
   deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)  deriving Show
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving (Show)
 
 instance Kernel.Types.HideSecrets.HideSecrets AirportCashRechargeRequest where
   hideSecrets = Kernel.Prelude.identity
+
 type API = ("driverWallet" :> (GetDriverWalletWalletTransactions :<|> PostDriverWalletWalletPayout :<|> PostDriverWalletWalletTopup :<|> PostDriverWalletWalletAirportCashRecharge :<|> GetDriverWalletWalletPayoutHistory))
 
 type GetDriverWalletWalletTransactions =

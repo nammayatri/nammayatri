@@ -279,3 +279,10 @@ updateLedgerWriteMode bookingId ledgerWriteMode = do
   updateOneWithKV
     [Se.Set BeamB.ledgerWriteMode ledgerWriteMode, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+updateFinanceInvoiceId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> Maybe Text -> m ()
+updateFinanceInvoiceId bookingId financeInvoiceId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamB.financeInvoiceId financeInvoiceId, Se.Set BeamB.updatedAt now]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]

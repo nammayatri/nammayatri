@@ -47,6 +47,7 @@ data BookingT f = BookingT
     estimatedFare :: B.C f Kernel.Types.Common.HighPrecMoney,
     exotelDeclinedCallStatusReceivingTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     fareParametersId :: B.C f Kernel.Prelude.Text,
+    financeInvoiceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromLocGeohash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     hasStops :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

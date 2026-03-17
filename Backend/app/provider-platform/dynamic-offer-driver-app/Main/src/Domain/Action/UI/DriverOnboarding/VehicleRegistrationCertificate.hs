@@ -60,7 +60,6 @@ import Data.Text as T hiding (elem, find, length, map, null, zip)
 import Data.Time (Day, utctDay)
 import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.DocumentVerificationConfig as ODC
-import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.HyperVergeVerification as Domain
@@ -68,6 +67,8 @@ import qualified Domain.Types.IdfyVerification as Domain
 import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantServiceConfig as DMSC
+import qualified Domain.Types.MorthVerification as MorthDomain
 import qualified Domain.Types.Person as Person
 import Domain.Types.RCValidationRules
 import qualified Domain.Types.TransporterConfig as DTC
@@ -100,9 +101,9 @@ import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.DriverOnboarding
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.Cac.TransporterConfig as SCTC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as SCO
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverGstin as DGQuery
@@ -114,11 +115,10 @@ import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.FleetDriverAssociationExtra as FDA
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
-import qualified Domain.Types.MorthVerification as MorthDomain
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
-import qualified Storage.Queries.MorthVerification as MorthQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as ImageQuery
+import qualified Storage.Queries.MorthVerification as MorthQuery
 import qualified Storage.Queries.Person as Person
 import Storage.Queries.RCValidationRules
 import Storage.Queries.Ride as RQuery

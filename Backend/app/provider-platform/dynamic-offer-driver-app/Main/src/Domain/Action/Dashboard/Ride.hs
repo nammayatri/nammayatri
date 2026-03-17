@@ -155,6 +155,7 @@ data RideListCommonParams = RideListCommonParams
     mbToAmount :: Maybe HighPrecMoney,
     mbVehicleNo :: Maybe Text,
     mbFleetOwnerId :: Maybe Text,
+    mbBookingStatus :: Maybe Common.BookingStatus,
     now :: UTCTime,
     from :: UTCTime,
     to :: UTCTime,
@@ -180,9 +181,10 @@ withRideListCommonParams ::
   Maybe HighPrecMoney ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Common.BookingStatus ->
   (RideListCommonParams -> Flow a) ->
   Flow a
-withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto mbDriverId mbFromAmount mbToAmount mbVehicleNo mbFleetOwnerId cont = do
+withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto mbDriverId mbFromAmount mbToAmount mbVehicleNo mbFleetOwnerId mbBookingStatus cont = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   whenJust mbCurrency $ \currency -> do
@@ -205,6 +207,7 @@ withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDri
           || hasAmountRange
           || isJust mbVehicleNo
           || isJust mbFleetOwnerId
+          || isJust mbBookingStatus
   unless hasAnyFilter $
     throwError $ InvalidRequest "At least one filter is required"
   when (isNothing mbShortRideId && isNothing mbResolvedRideId && isNothing mbfrom && isNothing mbto) $ throwError $ InvalidRequest "from and to date are required"
@@ -241,8 +244,8 @@ getRideListUtil ::
   Maybe HighPrecMoney ->
   Maybe Text ->
   Flow Common.RideListRes
-getRideListUtil isDashboardRequest merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto _mbVehicleNo _mbFleetOwnerId _mbDriverId _mbFromAmount _mbToAmount mbRequestorId = do
-  withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto _mbDriverId _mbFromAmount _mbToAmount _mbVehicleNo _mbFleetOwnerId $ \RideListCommonParams {..} -> do
+getRideListUtil isDashboardRequest merchantShortId opCity _mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto _mbVehicleNo _mbFleetOwnerId _mbDriverId _mbFromAmount _mbToAmount mbRequestorId = do
+  withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto _mbDriverId _mbFromAmount _mbToAmount _mbVehicleNo _mbFleetOwnerId _mbBookingStatus $ \RideListCommonParams {..} -> do
     (shouldShowCustomerInfo, effectiveFleetOwnerId) <- resolveFleetAndCustomerVisibility mbFleetOwnerId
     rideItems <-
       if useClickhouse
@@ -297,7 +300,7 @@ getRideListUtil isDashboardRequest merchantShortId opCity mbBookingStatus mbCurr
 getRideListV2 :: ShortId DM.Merchant -> Context.City -> Maybe Currency -> Maybe Text -> Maybe (Id Common.Driver) -> Maybe Text -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Int -> Maybe Common.PaymentMode -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe DRide.RideStatus -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Text -> Flow Common.RideListResV2
 getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone _mbDriverId mbDriverPhone mbfrom _mbFromAmount mbLimit mbOffset _mbPaymentMode mbRideId mbReqShortRideId mbRideStatus mbto _mbToAmount _mbFleetOwnerId = do
   let mbDriverIdText = getId <$> _mbDriverId
-  withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbRideId mbReqShortRideId mbto mbDriverIdText _mbFromAmount _mbToAmount Nothing _mbFleetOwnerId $ \RideListCommonParams {..} -> do
+  withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbRideId mbReqShortRideId mbto mbDriverIdText _mbFromAmount _mbToAmount Nothing _mbFleetOwnerId Nothing $ \RideListCommonParams {..} -> do
     rideItems <-
       if useClickhouse
         then BppT.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId from to mbFromAmount mbToAmount

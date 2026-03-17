@@ -113,6 +113,7 @@ Booking:
     dqDurationToPickup: Maybe Seconds
     reconciliationStatus: Maybe Value
     ledgerWriteMode: Maybe Bool
+    financeInvoiceId: Maybe Text
     emailDomain: Maybe Text
 
   excludedFields:

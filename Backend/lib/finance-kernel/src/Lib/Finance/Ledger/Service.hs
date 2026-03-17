@@ -23,7 +23,7 @@ module Lib.Finance.Ledger.Service
     -- * Status management
     updateEntryStatus,
     settleEntry,
-    settleEntryWithBalances,
+    settleEntryWithBalancesAndAmount,
     voidEntry,
     markEntriesAsPaidOut,
 
@@ -254,23 +254,25 @@ settleEntry entryId = do
   now <- getCurrentTime
   QLedger.updateSettled SETTLED (Just now) entryId
 
--- | Settle an entry AND write balance snapshots onto the entry
--- Use when settling a previously-PENDING entry where balances weren't captured at creation time.
-settleEntryWithBalances ::
+-- | Settle an entry, update its amount, AND write balance snapshots.
+-- Use when the final settled amount differs from the original hold amount (e.g., fare recalculation).
+settleEntryWithBalancesAndAmount ::
   (BeamFlow.BeamFlow m r) =>
   Id LedgerEntry ->
+  HighPrecMoney -> -- settledAmount (the actual/final amount)
   HighPrecMoney -> -- fromStartingBalance
   HighPrecMoney -> -- fromEndingBalance
   HighPrecMoney -> -- toStartingBalance
   HighPrecMoney -> -- toEndingBalance
   m ()
-settleEntryWithBalances entryId fromStartBal fromEndBal toStartBal toEndBal = do
+settleEntryWithBalancesAndAmount entryId settledAmount fromStartBal fromEndBal toStartBal toEndBal = do
   now <- getCurrentTime
   mbEntry <- QLedger.findById entryId
   forM_ mbEntry $ \entry -> do
     let updatedEntry =
           entry
-            { status = SETTLED,
+            { amount = settledAmount,
+              status = SETTLED,
               settledAt = Just now,
               fromStartingBalance = Just fromStartBal,
               fromEndingBalance = Just fromEndBal,

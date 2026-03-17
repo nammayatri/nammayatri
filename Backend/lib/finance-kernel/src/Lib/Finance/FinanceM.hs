@@ -67,7 +67,7 @@ import Lib.Finance.Account.Interface (AccountInput (..))
 import Lib.Finance.Account.Service (getOrCreateAccount)
 import Lib.Finance.Domain.Types.Account
 import Lib.Finance.Domain.Types.DirectTaxTransaction (TdsRateReason (..))
-import Lib.Finance.Domain.Types.Invoice (InvoiceType)
+import Lib.Finance.Domain.Types.Invoice (Invoice, InvoiceType)
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.Error.Types (FinanceError (..))
 import Lib.Finance.Invoice.Interface (GstAmountBreakdown, InvoiceInput (..), InvoiceLineItem)
@@ -523,40 +523,42 @@ transferAllowZero fromRole toRole amount refType = do
 --         , ...
 --         }
 --   @
-invoice :: (BeamFlow.BeamFlow m r) => InvoiceConfig -> FinanceM m ()
+invoice :: (BeamFlow.BeamFlow m r) => InvoiceConfig -> FinanceM m (Maybe (Id Invoice))
 invoice config = do
   ctx <- ask
   ids <- getEntryIds
-  unless (null ids) $ do
-    let invoiceInput =
-          InvoiceInput
-            { invoiceType = config.invoiceType,
-              paymentOrderId = Nothing,
-              issuedToType = config.issuedToType,
-              issuedToId = config.issuedToId,
-              issuedToName = config.issuedToName,
-              issuedToAddress = config.issuedToAddress,
-              issuedByType = "BUYER",
-              issuedById = ctx.merchantId,
-              issuedByName = ctx.merchantName,
-              issuedByAddress = ctx.issuedByAddress,
-              supplierName = ctx.supplierName,
-              supplierAddress = ctx.issuedByAddress,
-              supplierGSTIN = ctx.supplierGSTIN,
-              supplierId = ctx.supplierId,
-              gstinOfParty = Nothing,
-              panOfParty = ctx.panOfParty,
-              panType = ctx.panType,
-              counterpartyId = ctx.counterpartyId,
-              tdsRateReason = ctx.tdsRateReason,
-              tanOfDeductee = Nothing,
-              lineItems = config.lineItems,
-              gstBreakdown = config.gstBreakdown,
-              currency = ctx.currency,
-              dueAt = Nothing,
-              merchantId = ctx.merchantId,
-              merchantOperatingCityId = ctx.merchantOpCityId,
-              merchantShortId = fromMaybe ctx.merchantId ctx.merchantShortId
-            }
-    _ <- liftFinanceM (createInvoice invoiceInput ids)
-    pure ()
+  if null ids
+    then pure Nothing
+    else do
+      let invoiceInput =
+            InvoiceInput
+              { invoiceType = config.invoiceType,
+                paymentOrderId = Nothing,
+                issuedToType = config.issuedToType,
+                issuedToId = config.issuedToId,
+                issuedToName = config.issuedToName,
+                issuedToAddress = config.issuedToAddress,
+                issuedByType = "BUYER",
+                issuedById = ctx.merchantId,
+                issuedByName = ctx.merchantName,
+                issuedByAddress = ctx.issuedByAddress,
+                supplierName = ctx.supplierName,
+                supplierAddress = ctx.issuedByAddress,
+                supplierGSTIN = ctx.supplierGSTIN,
+                supplierId = ctx.supplierId,
+                gstinOfParty = Nothing,
+                panOfParty = ctx.panOfParty,
+                panType = ctx.panType,
+                counterpartyId = ctx.counterpartyId,
+                tdsRateReason = ctx.tdsRateReason,
+                tanOfDeductee = Nothing,
+                lineItems = config.lineItems,
+                gstBreakdown = config.gstBreakdown,
+                currency = ctx.currency,
+                dueAt = Nothing,
+                merchantId = ctx.merchantId,
+                merchantOperatingCityId = ctx.merchantOpCityId,
+                merchantShortId = fromMaybe ctx.merchantId ctx.merchantShortId
+              }
+      inv <- liftFinanceM (createInvoice invoiceInput ids)
+      pure (Just inv.id)

@@ -374,7 +374,7 @@ settlePrepaidHoldByReference counterpartyType ownerId referenceId finalAmount = 
                 case resTo of
                   Left err -> pure $ Left err
                   Right toEndBal -> do
-                    settleEntryWithBalances entry.id fromStartBal fromEndBal toStartBal toEndBal
+                    settleEntryWithBalancesAndAmount entry.id settleAmount fromStartBal fromEndBal toStartBal toEndBal
                     pure $ Right ()
         )
         (Right ())

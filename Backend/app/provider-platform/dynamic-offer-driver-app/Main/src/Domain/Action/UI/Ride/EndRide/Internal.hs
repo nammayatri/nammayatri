@@ -553,7 +553,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       invoice invoiceConfig
     case result of
       Left err -> fromEitherM (\e -> InternalError ("Failed to create wallet transaction: " <> show e)) (Left err)
-      Right _ -> pure ()
+      Right (mbInvoiceId, _entryIds) -> do
+        let mbInvoiceIdText = (.getId) <$> mbInvoiceId
+        QRB.updateFinanceInvoiceId booking.id mbInvoiceIdText
 
 makeWalletRunningBalanceLockKey :: Text -> Text
 makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId
@@ -672,7 +674,6 @@ sendReferralFCM validRide ride booking mbRiderDetails transporterConfig = do
           when (payoutConfig.d2dPayoutType == DPC.WALLET) $
             creditReferralWallet deltaReferralEarnings referredDriverId id "d2cReferralEarnings" ride.currency referredDriver.merchantId.getId referredDriver.merchantOperatingCityId.getId
 
-
     payoutProcessingLockKey driverId = "Payout:Processing:DriverId" <> driverId
 
 -- | Shared fraud checks for referral payout (driver-to-customer).
@@ -766,14 +767,12 @@ sendDriverToDriverReferralReward validRide ride _booking mbRiderDetails transpor
 
       case mbDailyStats of
         Just stats -> do
-
           Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey referringDriverId.getId) 3 3 $ do
             QDailyStats.updateD2dReferralStatsByDriverId (stats.d2dReferralEarnings + deltaD2dEarnings) (stats.d2dActivatedValidRides + 1) newPayoutStatus referringDriverId (utctDay localTime)
             QDailyStats.updateD2dReferralCount (stats.d2dReferralCounts + 1) referringDriverId (utctDay localTime)
 
           when (payoutConfig.d2dPayoutType == DPC.WALLET) $
             creditReferralWallet deltaD2dEarnings referringDriverId stats.id "d2dReferralEarnings" ride.currency referringDriver.merchantId.getId referringDriver.merchantOperatingCityId.getId
-
         Nothing -> do
           newId <- generateGUIDText
           now <- getCurrentTime
@@ -814,7 +813,6 @@ sendDriverToDriverReferralReward validRide ride _booking mbRiderDetails transpor
 
           when (payoutConfig.d2dPayoutType == DPC.WALLET) $
             creditReferralWallet deltaD2dEarnings referringDriverId newId "d2dReferralEarnings" ride.currency referringDriver.merchantId.getId referringDriver.merchantOperatingCityId.getId
-
 
     getD2DRewardAmount payoutConfig = do
       let mbAmount = payoutConfig.referralRewardAmountPerRideForD2DPayout
