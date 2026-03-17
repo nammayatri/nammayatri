@@ -77,7 +77,7 @@ createSafetyTicket person ride = do
   phoneNumber <- mapM decrypt person.mobileNumber
   let rideInfo = buildRideInfo ride person phoneNumber
       kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
-  ticketResponse <- withTryCatch "createTicket:safetyCSAlert" (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber [trackLink] rideInfo SafetyDSos.CSAlertSosTicket riderConfig.kaptureConfig.disposition kaptureQueue))
+  ticketResponse <- withTryCatch "createTicket:safetyCSAlert" (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber [trackLink] (Just rideInfo) SafetyDSos.CSAlertSosTicket riderConfig.kaptureConfig.disposition kaptureQueue))
   ticketId <- do
     case ticketResponse of
       Right ticketResponse' -> do
@@ -87,12 +87,12 @@ createSafetyTicket person ride = do
       Left err -> do
         logError $ "Ticket didn't created when rider didn't picked up call with error : " <> show err
         return Nothing
-  sosDetails <- buildSosDetails person SosReq {flow = SafetyDSos.CSAlertSosTicket, rideId = Just (cast ride.id), isRideEnded = Nothing, notifyAllContacts = Nothing, customerLocation = Nothing, sendPNOnPostRideSOS = Nothing, isKaptureTicketRequired = Nothing} ticketId
+  sosDetails <- buildSosDetails person SosReq {flow = SafetyDSos.CSAlertSosTicket, rideId = Just (cast ride.id), isRideEnded = Nothing, notifyAllContacts = Nothing, customerLocation = Nothing, sendPNOnPostRideSOS = Nothing, triggerApiList = Nothing} ticketId
   -- SOS persistence via shared-services Safety library
   void $ SafetySos.createSos sosDetails
 
-mkTicket :: DP.Person -> Maybe Text -> [Text] -> Ticket.RideInfo -> SafetyDSos.SosType -> Text -> Text -> Ticket.CreateTicketReq
-mkTicket person phoneNumber mediaLinks info flow disposition queue = do
+mkTicket :: DP.Person -> Maybe Text -> [Text] -> Maybe Ticket.RideInfo -> SafetyDSos.SosType -> Text -> Text -> Ticket.CreateTicketReq
+mkTicket person phoneNumber mediaLinks mbInfo flow disposition queue = do
   Ticket.CreateTicketReq
     { category = "Code Red",
       subCategory = Just "SOS Alert (follow-back)",
@@ -103,7 +103,7 @@ mkTicket person phoneNumber mediaLinks info flow disposition queue = do
       phoneNo = phoneNumber,
       personId = person.id.getId,
       classification = Ticket.CUSTOMER,
-      rideDescription = Just info,
+      rideDescription = mbInfo,
       disposition,
       queue,
       becknIssueId = Nothing
