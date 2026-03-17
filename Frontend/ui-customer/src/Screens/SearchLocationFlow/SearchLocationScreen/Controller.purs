@@ -70,6 +70,7 @@ import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..))
 import Types.App (GlobalState(..), defaultGlobalState, FlowBT, ScreenType(..))
 import Language.Strings (getString)
 import Components.ChooseYourRide.Controller as ChooseYourRideController
+import Components.TimeModeSelector.Controller as TimeModeSelectorController
 import Language.Types (STR(..))
 import Helpers.TipConfig
 import Services.API as API
@@ -125,6 +126,7 @@ data Action = NoAction
             | BusRouteAction
             | RideTypeSelected RideType RideType
             | NoStopNoRoutePopUp PopUpModalController.Action
+            | TimeModeSelectorAC TimeModeSelectorController.Action
             
 
 data ScreenOutput = NoOutput SearchLocationScreenState
@@ -648,6 +650,12 @@ eval (ChooseYourRideAC (ChooseYourRideController.ChooseVehicleAC _ (ChooseVehicl
   continue updatedState
 
 eval (NotificationListener notificationType notificationBody) state = exit $ NotificationListenerSO notificationType notificationBody
+
+eval (TimeModeSelectorAC (TimeModeSelectorController.ModeChanged mode)) state = do
+  let modeStr = show mode
+  continue state { props { timeMode = modeStr, showTimePicker = mode /= TimeModeSelectorController.LeaveNow } }
+
+eval (TimeModeSelectorAC TimeModeSelectorController.NoAction) state = update state
 
 eval _ state = update state
 

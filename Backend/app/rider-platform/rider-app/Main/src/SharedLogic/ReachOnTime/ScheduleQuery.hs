@@ -1,9 +1,8 @@
 module SharedLogic.ReachOnTime.ScheduleQuery where
 
-import Data.Time (UTCTime, addUTCTime, diffUTCTime)
+import qualified Data.Time
+import Data.Time (UTCTime, addUTCTime)
 import Kernel.Prelude
-import Kernel.Types.Id
-import Kernel.Utils.Common
 
 -- | Time mode for journey planning
 data TimeMode = LeaveNow | ArriveBy | DepartAt

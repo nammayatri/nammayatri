@@ -93,6 +93,10 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             toSpecialLocationId = toSpecialLocationId,
             totalRidesCount = totalRidesCount,
             validTill = validTill,
+            timeMode = timeMode,
+            targetArrivalTime = targetArrivalTime,
+            targetDepartureTime = targetDepartureTime,
+            bufferMinutes = bufferMinutes,
             vehicleCategory = vehicleCategory
           }
 
@@ -165,5 +169,9 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.toSpecialLocationId = toSpecialLocationId,
         Beam.totalRidesCount = totalRidesCount,
         Beam.validTill = validTill,
+        Beam.timeMode = timeMode,
+        Beam.targetArrivalTime = targetArrivalTime,
+        Beam.targetDepartureTime = targetDepartureTime,
+        Beam.bufferMinutes = bufferMinutes,
         Beam.vehicleCategory = vehicleCategory
       }

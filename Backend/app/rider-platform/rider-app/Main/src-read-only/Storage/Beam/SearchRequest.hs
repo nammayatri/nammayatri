@@ -89,6 +89,10 @@ data SearchRequestT f = SearchRequestT
     toSpecialLocationId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     totalRidesCount :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     validTill :: (B.C f Kernel.Prelude.UTCTime),
+    timeMode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    targetArrivalTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
+    targetDepartureTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
+    bufferMinutes :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     vehicleCategory :: (B.C f (Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory))
   }
   deriving (Generic, B.Beamable)

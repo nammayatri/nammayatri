@@ -1,14 +1,12 @@
 module SharedLogic.ReachOnTime.DepartureAdvisor where
 
-import Data.Time (UTCTime, NominalDiffTime, addUTCTime, diffUTCTime, TimeOfDay (..))
+import Data.Time (UTCTime, NominalDiffTime, addUTCTime, diffUTCTime)
 import qualified Data.Time as Time
 import Kernel.Prelude
-import Kernel.Types.Id
-import Kernel.Utils.Common
 
 -- | Risk level for departure advisory
 data RiskLevel = Comfortable | Good | Tight | TooLate
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Safety warning for late-night walking legs
 data SafetyWarning = SafetyWarning
@@ -16,7 +14,7 @@ data SafetyWarning = SafetyWarning
     warning :: Text,
     severity :: Text
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 -- | Departure advisory for a time-constrained journey
 data DepartureAdvisory = DepartureAdvisory
@@ -28,7 +26,21 @@ data DepartureAdvisory = DepartureAdvisory
     advisoryMessage :: Text,
     safetyWarnings :: [SafetyWarning]
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+-- | Convert risk level to/from text for DB storage
+riskLevelToText :: RiskLevel -> Text
+riskLevelToText Comfortable = "Comfortable"
+riskLevelToText Good = "Good"
+riskLevelToText Tight = "Tight"
+riskLevelToText TooLate = "TooLate"
+
+riskLevelFromText :: Text -> RiskLevel
+riskLevelFromText "Comfortable" = Comfortable
+riskLevelFromText "Good" = Good
+riskLevelFromText "Tight" = Tight
+riskLevelFromText "TooLate" = TooLate
+riskLevelFromText _ = Good
 
 -- | Compute departure advisory for "Arrive By" mode
 computeArriveByAdvisory ::
@@ -141,8 +153,7 @@ computeCrowdingBufferSeconds departureTime =
 -- | Check if any walking legs are late-night and potentially unsafe
 flagLateNightWalking :: UTCTime -> [(Int, Text, Maybe Double)] -> [SafetyWarning]
 flagLateNightWalking departureTime legs =
-  let istOffset = 5 * 3600 + 30 * 60
-      istTime = addUTCTime (fromIntegral (istOffset :: Int)) departureTime
+  let istTime = addUTCTime (fromIntegral istOffsetSeconds) departureTime
       (_, timeOfDay) = Time.utctDayTime istTime `divMod'` (24 * 3600)
       hours = timeOfDay `div` 3600
       isLateNight = hours >= 21 || hours < 5
@@ -167,8 +178,7 @@ istOffsetSeconds = 5 * 3600 + 30 * 60
 -- | Format UTC time as IST string (HH:MM AM/PM)
 showTimeIST :: UTCTime -> Text
 showTimeIST utcTime =
-  let istOffset = 5 * 3600 + 30 * 60
-      istTime = addUTCTime (fromIntegral (istOffset :: Int)) utcTime
+  let istTime = addUTCTime (fromIntegral istOffsetSeconds) utcTime
       tod = Time.utctDayTime istTime
       totalSecs = floor tod :: Int
       hours = totalSecs `div` 3600

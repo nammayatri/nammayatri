@@ -41,6 +41,12 @@ data JourneyT f = JourneyT
     status :: B.C f (Kernel.Prelude.Maybe Domain.Types.Journey.JourneyStatus),
     toLocationAddress :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    timeMode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    targetArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    targetDepartureTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    bufferMinutes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    riskLevel :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    recommendedDeparture :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     totalLegs :: B.C f Kernel.Prelude.Int,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

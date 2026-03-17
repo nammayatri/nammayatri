@@ -42,6 +42,12 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalSetRouteName,
     postMultimodalUpdateBusLocation,
     postStoreTowerInfo,
+    getMultimodalAdvisory,
+    postMultimodalSavedTrip,
+    getMultimodalSavedTrips,
+    putMultimodalSavedTrip,
+    deleteMultimodalSavedTrip,
+    postMultimodalSavedTripCompute,
   )
 where
 
@@ -63,7 +69,7 @@ import Data.List (nub, nubBy, partition)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import Data.Time (UTCTime (..), defaultTimeLocale, diffTimeToPicoseconds, formatTime, parseTimeM)
+import Data.Time (TimeOfDay (..), UTCTime (..), defaultTimeLocale, diffTimeToPicoseconds, formatTime, parseTimeM)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.BBPS as BBPS
 import qualified Domain.Action.UI.Dispatcher as Dispatcher
@@ -85,6 +91,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person
+import qualified Domain.Types.SavedTrip as DST
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.RouteDetails as RD
 import qualified Domain.Types.RouteStopMapping as DRSM
@@ -131,6 +138,8 @@ import qualified SharedLogic.Cancel as SharedCancel
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.ReachOnTime.DepartureAdvisor as Advisor
+import qualified SharedLogic.ReachOnTime.ScheduleQuery as SQ
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -158,6 +167,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.RouteDetails as QRouteDetails
+import qualified Storage.Queries.SavedTrip as QSavedTrip
 import Storage.Queries.SearchRequest as QSearchRequest
 import System.Environment (lookupEnv)
 import System.IO.Unsafe (unsafePerformIO)
@@ -2714,3 +2724,265 @@ postStoreTowerInfo (mbPersonId, _) req = do
     validateAreaCode areaCode = do
       when (areaCode < 0) $
         logWarning $ "Invalid area code: " <> show areaCode
+
+-- =====================================================================
+-- ReachOnTime: Departure Advisory & Saved Trips Handlers
+-- =====================================================================
+
+getMultimodalAdvisory ::
+  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+  Environment.Flow ApiTypes.DepartureAdvisoryResp
+getMultimodalAdvisory journeyId = do
+  journey <- JM.getJourney journeyId
+  journeyLegs <- QJourneyLeg.getJourneyLegs journeyId
+  now <- getCurrentTime
+  let totalDurationSec = case journey.estimatedDuration of
+        Just dur -> getSeconds dur
+        Nothing -> sum $ map (\leg -> fromMaybe 0 (fmap getSeconds leg.duration)) journeyLegs
+  -- Use journey start/end time to determine time mode
+  let timeMode = case (journey.startTime, journey.endTime) of
+        (_, Just _endTime) -> SQ.ArriveBy
+        (Just _startTime, _) -> SQ.DepartAt
+        _ -> SQ.LeaveNow
+  -- Compute crowding buffer for peak hours
+  let mbCrowdingBuffer = Advisor.computeCrowdingBufferSeconds now
+  -- Compute advisory based on time mode
+  let advisory = case timeMode of
+        SQ.ArriveBy ->
+          let targetArrival = fromMaybe now journey.endTime
+           in Advisor.computeArriveByAdvisory targetArrival totalDurationSec 10 now mbCrowdingBuffer
+        SQ.DepartAt ->
+          let departTime = fromMaybe now journey.startTime
+           in Advisor.computeDepartAtAdvisory departTime totalDurationSec now
+        SQ.LeaveNow ->
+          Advisor.computeLeaveNowAdvisory totalDurationSec now
+  -- Flag late-night walking legs
+  let walkingLegs = map (\leg -> (leg.sequenceNumber, show leg.mode, fmap (fromIntegral . distanceToMeters) leg.distance)) journeyLegs
+  let safetyWarnings = Advisor.flagLateNightWalking now walkingLegs
+  let advisoryWithWarnings = advisory {Advisor.safetyWarnings = safetyWarnings}
+  pure $ convertAdvisoryToResp advisoryWithWarnings
+
+postMultimodalSavedTrip ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    ApiTypes.SavedTripCreateReq ->
+    Environment.Flow ApiTypes.SavedTripResp
+  )
+postMultimodalSavedTrip (mbPersonId, merchantId) req = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
+  newId <- generateGUID
+  now <- getCurrentTime
+  let timeMode = parseSavedTripTimeMode req.timeMode
+  let recurrence = parseSavedTripRecurrence req.recurrence
+  let mbTargetTimeOfDay = req.targetTimeOfDay >>= parseTimeOfDayText
+  let savedTrip =
+        DST.SavedTrip
+          { DST.id = newId,
+            DST.riderId = personId,
+            DST.name = req.name,
+            DST.originLat = req.originLat,
+            DST.originLon = req.originLon,
+            DST.originAddress = req.originAddress,
+            DST.destinationLat = req.destinationLat,
+            DST.destinationLon = req.destinationLon,
+            DST.destinationAddress = req.destinationAddress,
+            DST.timeMode = timeMode,
+            DST.targetTime = req.targetTime,
+            DST.targetTimeOfDay = mbTargetTimeOfDay,
+            DST.bufferMinutes = req.bufferMinutes,
+            DST.recurrence = recurrence,
+            DST.customDays = req.customDays,
+            DST.notifyBeforeMinutes = req.notifyBeforeMinutes,
+            DST.isActive = True,
+            DST.lastComputedDeparture = Nothing,
+            DST.lastNotifiedAt = Nothing,
+            DST.merchantId = merchantId,
+            DST.merchantOperatingCityId = person.merchantOperatingCityId,
+            DST.createdAt = now,
+            DST.updatedAt = now
+          }
+  QSavedTrip.create savedTrip
+  pure $ convertSavedTripToResp savedTrip
+
+getMultimodalSavedTrips ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Environment.Flow [ApiTypes.SavedTripResp]
+  )
+getMultimodalSavedTrips (mbPersonId, _merchantId) mbLimit mbOffset = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  let limitVal = fromMaybe 10 mbLimit
+      offsetVal = fromMaybe 0 mbOffset
+  trips <- QSavedTrip.findAllByRiderIdWithLimitOffset personId limitVal offsetVal
+  pure $ map convertSavedTripToResp trips
+
+putMultimodalSavedTrip ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id DST.SavedTrip ->
+    ApiTypes.SavedTripUpdateReq ->
+    Environment.Flow Kernel.Types.APISuccess.APISuccess
+  )
+putMultimodalSavedTrip (mbPersonId, _merchantId) savedTripId req = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  trip <- QSavedTrip.findById savedTripId >>= fromMaybeM (InvalidRequest $ "SavedTrip not found: " <> savedTripId.getId)
+  -- IDOR security: verify ownership
+  unless (trip.riderId == personId) $
+    throwError $ InvalidRequest "Not authorized to update this saved trip"
+  now <- getCurrentTime
+  let updatedTrip =
+        trip
+          { DST.name = fromMaybe trip.name req.name,
+            DST.timeMode = maybe trip.timeMode parseSavedTripTimeMode req.timeMode,
+            DST.targetTime = req.targetTime <|> trip.targetTime,
+            DST.targetTimeOfDay = case req.targetTimeOfDay of
+              Just todText -> parseTimeOfDayText todText
+              Nothing -> trip.targetTimeOfDay,
+            DST.bufferMinutes = fromMaybe trip.bufferMinutes req.bufferMinutes,
+            DST.recurrence = maybe trip.recurrence parseSavedTripRecurrence req.recurrence,
+            DST.customDays = req.customDays <|> trip.customDays,
+            DST.notifyBeforeMinutes = fromMaybe trip.notifyBeforeMinutes req.notifyBeforeMinutes,
+            DST.isActive = fromMaybe trip.isActive req.isActive,
+            DST.updatedAt = now
+          }
+  QSavedTrip.updateByPrimaryKey updatedTrip
+  pure Kernel.Types.APISuccess.Success
+
+deleteMultimodalSavedTrip ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id DST.SavedTrip ->
+    Environment.Flow Kernel.Types.APISuccess.APISuccess
+  )
+deleteMultimodalSavedTrip (mbPersonId, _merchantId) savedTripId = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  trip <- QSavedTrip.findById savedTripId >>= fromMaybeM (InvalidRequest $ "SavedTrip not found: " <> savedTripId.getId)
+  -- IDOR security: verify ownership
+  unless (trip.riderId == personId) $
+    throwError $ InvalidRequest "Not authorized to delete this saved trip"
+  QSavedTrip.deleteById savedTripId
+  pure Kernel.Types.APISuccess.Success
+
+postMultimodalSavedTripCompute ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id DST.SavedTrip ->
+    Environment.Flow ApiTypes.SavedTripComputeResp
+  )
+postMultimodalSavedTripCompute (mbPersonId, _merchantId) savedTripId = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  trip <- QSavedTrip.findById savedTripId >>= fromMaybeM (InvalidRequest $ "SavedTrip not found: " <> savedTripId.getId)
+  -- IDOR security: verify ownership
+  unless (trip.riderId == personId) $
+    throwError $ InvalidRequest "Not authorized to compute this saved trip"
+  now <- getCurrentTime
+  -- Estimate duration as 1 hour default (in production, would use route computation)
+  let durationEstimate = 3600 :: Int
+  let mbCrowdingBuffer = Advisor.computeCrowdingBufferSeconds now
+  let advisory = case trip.timeMode of
+        DST.ArriveBy ->
+          let targetArrival = case trip.targetTimeOfDay of
+                Just tod ->
+                  let istDay = utctDay (addUTCTime istOffsetNDT now)
+                      todSecs = timeOfDayToSecs tod
+                      istTargetUTC = UTCTime istDay (fromIntegral todSecs)
+                   in addUTCTime (negate istOffsetNDT) istTargetUTC
+                Nothing -> fromMaybe now trip.targetTime
+           in Advisor.computeArriveByAdvisory targetArrival durationEstimate trip.bufferMinutes now mbCrowdingBuffer
+        DST.DepartAt ->
+          let departTime = case trip.targetTimeOfDay of
+                Just tod ->
+                  let istDay = utctDay (addUTCTime istOffsetNDT now)
+                      todSecs = timeOfDayToSecs tod
+                      istTargetUTC = UTCTime istDay (fromIntegral todSecs)
+                   in addUTCTime (negate istOffsetNDT) istTargetUTC
+                Nothing -> fromMaybe now trip.targetTime
+           in Advisor.computeDepartAtAdvisory departTime durationEstimate now
+        DST.LeaveNow ->
+          Advisor.computeLeaveNowAdvisory durationEstimate now
+  -- Update last computed departure
+  QSavedTrip.updateLastNotified (Just now) (Just advisory.recommendedDeparture) savedTripId
+  pure $ ApiTypes.SavedTripComputeResp {advisory = convertAdvisoryToResp advisory}
+
+-- =====================================================================
+-- ReachOnTime: Helper functions
+-- =====================================================================
+
+convertAdvisoryToResp :: Advisor.DepartureAdvisory -> ApiTypes.DepartureAdvisoryResp
+convertAdvisoryToResp adv =
+  ApiTypes.DepartureAdvisoryResp
+    { latestDeparture = adv.latestDeparture,
+      recommendedDeparture = adv.recommendedDeparture,
+      comfortableDeparture = adv.comfortableDeparture,
+      riskLevel = show adv.riskLevel,
+      bufferMinutes = adv.bufferMinutes,
+      advisoryMessage = adv.advisoryMessage,
+      safetyWarnings = map convertSafetyWarning adv.safetyWarnings
+    }
+
+convertSafetyWarning :: Advisor.SafetyWarning -> ApiTypes.SafetyWarningResp
+convertSafetyWarning sw =
+  ApiTypes.SafetyWarningResp
+    { legOrder = sw.legOrder,
+      warning = sw.warning,
+      severity = sw.severity
+    }
+
+convertSavedTripToResp :: DST.SavedTrip -> ApiTypes.SavedTripResp
+convertSavedTripToResp trip =
+  ApiTypes.SavedTripResp
+    { id = trip.id,
+      name = trip.name,
+      originLat = trip.originLat,
+      originLon = trip.originLon,
+      originAddress = trip.originAddress,
+      destinationLat = trip.destinationLat,
+      destinationLon = trip.destinationLon,
+      destinationAddress = trip.destinationAddress,
+      timeMode = show trip.timeMode,
+      targetTime = trip.targetTime,
+      targetTimeOfDay = fmap formatTimeOfDay trip.targetTimeOfDay,
+      bufferMinutes = trip.bufferMinutes,
+      recurrence = show trip.recurrence,
+      customDays = trip.customDays,
+      notifyBeforeMinutes = trip.notifyBeforeMinutes,
+      isActive = trip.isActive,
+      lastComputedDeparture = trip.lastComputedDeparture,
+      createdAt = trip.createdAt
+    }
+
+parseSavedTripTimeMode :: Text -> DST.TimeMode
+parseSavedTripTimeMode "ArriveBy" = DST.ArriveBy
+parseSavedTripTimeMode "DepartAt" = DST.DepartAt
+parseSavedTripTimeMode _ = DST.LeaveNow
+
+parseSavedTripRecurrence :: Text -> DST.TripRecurrence
+parseSavedTripRecurrence "Daily" = DST.Daily
+parseSavedTripRecurrence "Weekdays" = DST.Weekdays
+parseSavedTripRecurrence "Weekends" = DST.Weekends
+parseSavedTripRecurrence "Custom" = DST.Custom
+parseSavedTripRecurrence _ = DST.NoRecurrence
+
+parseTimeOfDayText :: Text -> Maybe TimeOfDay
+parseTimeOfDayText t = parseTimeM True defaultTimeLocale "%H:%M" (T.unpack t)
+
+formatTimeOfDay :: TimeOfDay -> Text
+formatTimeOfDay (TimeOfDay h m _) =
+  let pad n = if n < 10 then "0" <> show n else show n
+   in pad h <> ":" <> pad m
+
+-- | IST offset as NominalDiffTime (UTC+5:30 = 19800 seconds)
+istOffsetNDT :: NominalDiffTime
+istOffsetNDT = fromIntegral (5 * 3600 + 30 * 60 :: Int)
+
+-- | Convert TimeOfDay to seconds since midnight
+timeOfDayToSecs :: TimeOfDay -> Int
+timeOfDayToSecs (TimeOfDay h m s) = h * 3600 + m * 60 + round s

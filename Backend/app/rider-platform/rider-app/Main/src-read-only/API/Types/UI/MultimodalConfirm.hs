@@ -20,6 +20,7 @@ import qualified Domain.Types.LocationAddress
 import qualified Domain.Types.MultimodalPreferences
 import qualified Domain.Types.RouteDetails
 import qualified Domain.Types.RouteStopTimeTable
+import qualified Domain.Types.SavedTrip
 import qualified Domain.Types.Seat
 import qualified Domain.Types.Station
 import qualified Domain.Types.StationType
@@ -469,5 +470,87 @@ data UpdatePaymentOrderReq = UpdatePaymentOrderReq {childTicketQuantity :: Kerne
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data UpdatePaymentOrderResp = UpdatePaymentOrderResp {sdkPayload :: Kernel.Prelude.Maybe Kernel.External.Payment.Juspay.Types.SDKPayloadDetails}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DepartureAdvisoryResp = DepartureAdvisoryResp
+  { latestDeparture :: Kernel.Prelude.UTCTime,
+    recommendedDeparture :: Kernel.Prelude.UTCTime,
+    comfortableDeparture :: Kernel.Prelude.UTCTime,
+    riskLevel :: Kernel.Prelude.Text,
+    bufferMinutes :: Kernel.Prelude.Int,
+    advisoryMessage :: Kernel.Prelude.Text,
+    safetyWarnings :: [SafetyWarningResp]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SafetyWarningResp = SafetyWarningResp
+  { legOrder :: Kernel.Prelude.Int,
+    warning :: Kernel.Prelude.Text,
+    severity :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SavedTripCreateReq = SavedTripCreateReq
+  { name :: Kernel.Prelude.Text,
+    originLat :: Kernel.Prelude.Double,
+    originLon :: Kernel.Prelude.Double,
+    originAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    destinationLat :: Kernel.Prelude.Double,
+    destinationLon :: Kernel.Prelude.Double,
+    destinationAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    timeMode :: Kernel.Prelude.Text,
+    targetTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    targetTimeOfDay :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bufferMinutes :: Kernel.Prelude.Int,
+    recurrence :: Kernel.Prelude.Text,
+    customDays :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    notifyBeforeMinutes :: Kernel.Prelude.Int
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SavedTripResp = SavedTripResp
+  { id :: Kernel.Types.Id.Id Domain.Types.SavedTrip.SavedTrip,
+    name :: Kernel.Prelude.Text,
+    originLat :: Kernel.Prelude.Double,
+    originLon :: Kernel.Prelude.Double,
+    originAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    destinationLat :: Kernel.Prelude.Double,
+    destinationLon :: Kernel.Prelude.Double,
+    destinationAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    timeMode :: Kernel.Prelude.Text,
+    targetTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    targetTimeOfDay :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bufferMinutes :: Kernel.Prelude.Int,
+    recurrence :: Kernel.Prelude.Text,
+    customDays :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    notifyBeforeMinutes :: Kernel.Prelude.Int,
+    isActive :: Kernel.Prelude.Bool,
+    lastComputedDeparture :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    createdAt :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SavedTripUpdateReq = SavedTripUpdateReq
+  { name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    timeMode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    targetTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    targetTimeOfDay :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bufferMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    recurrence :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    customDays :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    notifyBeforeMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    isActive :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SavedTripComputeResp = SavedTripComputeResp
+  { advisory :: DepartureAdvisoryResp
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

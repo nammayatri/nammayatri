@@ -2480,7 +2480,11 @@ type SearchLocationScreenProps =
   , srcLat :: Number
   , srcLong :: Number
   , routeName :: String
-  , selectedEstimateHeight :: Int }
+  , selectedEstimateHeight :: Int
+  , timeMode :: String
+  , showTimePicker :: Boolean
+  , targetTime :: String
+  , bufferMinutes :: Int }
 
 data SearchLocationActionType = AddingStopAction
                               | SearchLocationAction

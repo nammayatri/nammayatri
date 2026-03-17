@@ -14,7 +14,7 @@
 
 module SharedLogic.Scheduler.Jobs.DepartureReminder where
 
-import Data.Time (UTCTime(..), addUTCTime, diffUTCTime, utctDay)
+import Data.Time (UTCTime(..), addUTCTime, utctDay)
 import qualified Data.Time.Calendar as Calendar
 import qualified Data.Time.Calendar.WeekDate as WeekDate
 import qualified Data.Aeson as Aeson

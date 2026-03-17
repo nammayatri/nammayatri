@@ -87,6 +87,10 @@ data SearchRequest = SearchRequest
     toSpecialLocationId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     totalRidesCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     validTill :: Kernel.Prelude.UTCTime,
+    timeMode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    targetArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    targetDepartureTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    bufferMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleCategory :: Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory
   }
   deriving (Generic, (Show))

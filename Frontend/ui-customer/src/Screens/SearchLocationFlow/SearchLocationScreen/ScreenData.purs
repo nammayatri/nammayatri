@@ -114,7 +114,11 @@ initData = {
    stopNameSelected : "",
    srcLat : 0.000,
    srcLong : 0.000,
-   routeName : ""
+   routeName : "",
+   timeMode : "LeaveNow",
+   showTimePicker : false,
+   targetTime : "",
+   bufferMinutes : 10
   },
   appConfig : getAppConfig appConfig
 }

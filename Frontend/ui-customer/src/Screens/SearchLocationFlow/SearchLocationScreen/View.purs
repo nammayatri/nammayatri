@@ -29,6 +29,8 @@ import Components.PrimaryButton as PrimaryButton
 import Components.SaveFavouriteCard as SaveFavouriteCard
 import Components.SeparatorView.View as SeparatorView
 import Components.ChooseYourRide as ChooseYourRide
+import Components.TimeModeSelector.View as TimeModeSelector
+import Components.TimeModeSelector.Controller as TimeModeSelectorController
 import Engineering.Helpers.Utils as EHU
 import Components.RateCard as RateCard
 import Control.Monad.Except.Trans (runExceptT , lift)
@@ -76,7 +78,7 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants (getDelayForAutoComplete)
-import Screens.SearchLocationScreen.ComponentConfig (locationTagBarConfig, separatorConfig, primaryButtonConfig, mapInputViewConfig, menuButtonConfig, confirmLocBtnConfig, locUnserviceablePopUpConfig, primaryButtonRequestRideConfig, rentalRateCardConfig, chooseYourRideConfig,noStopRouteConfig)
+import Screens.SearchLocationScreen.ComponentConfig (locationTagBarConfig, separatorConfig, primaryButtonConfig, mapInputViewConfig, menuButtonConfig, confirmLocBtnConfig, locUnserviceablePopUpConfig, primaryButtonRequestRideConfig, rentalRateCardConfig, chooseYourRideConfig, noStopRouteConfig)
 import Screens.SearchLocationScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationListItemState, GlobalProps, Station, ZoneType(..), RideType(..))
 import Services.API(GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookingRes(..), FRFSRouteAPI(..), FRFSStationAPI(..))
@@ -488,6 +490,15 @@ inputView push state isEditable globalProps =
   ][
   InputView.view (push <<< InputViewAC globalProps ) $ mapInputViewConfig state isEditable]
 
+timeModeSelector :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> PrestoDOM (Effect Unit) w
+timeModeSelector push state =
+  let currentMode = case state.props.timeMode of
+        "ArriveBy" -> TimeModeSelectorController.ArriveBy
+        "DepartAt" -> TimeModeSelectorController.DepartAt
+        _ -> TimeModeSelectorController.LeaveNow
+      config = { currentMode: currentMode, isExpanded: true, showTimePicker: state.props.showTimePicker }
+  in TimeModeSelector.view (push <<< TimeModeSelectorAC) config
+
 recenterButtonView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
 recenterButtonView push state =
   linearLayout
@@ -700,7 +711,8 @@ searchLocationView push state globalProps = let
     , adjustViewWithKeyboard "true"
     , background Color.white900
     ] $ [ inputView push state true globalProps
-        , searchLottieLoader push state ] 
+        , timeModeSelector push state
+        , searchLottieLoader push state ]
     <> if state.props.showLoader then []
         else 
         [ locationTagsView state push globalProps

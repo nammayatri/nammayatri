@@ -42,6 +42,12 @@ data Journey = Journey
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     status :: Domain.Types.Journey.JourneyStatus,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
+    timeMode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    targetArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    targetDepartureTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    bufferMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    riskLevel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    recommendedDeparture :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     totalLegs :: Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
