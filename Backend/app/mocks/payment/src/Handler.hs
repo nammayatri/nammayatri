@@ -39,10 +39,10 @@ import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamPOT
 import qualified Lib.Payment.Storage.Beam.PersonWallet as BeamPW
 import qualified Lib.Payment.Storage.Beam.Refunds as BeamRF
 import qualified Lib.Payment.Storage.Beam.WalletRewardPosting as BeamWRP
+import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQTxn
+import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrderOffer as QOffer
-import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQTxn
-import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import qualified Network.HTTP.Client as HTTP
 import qualified Network.HTTP.Client.TLS as TLS
 import Network.HTTP.Types.Status (statusCode)
@@ -331,7 +331,7 @@ internalOrderStatusHandler orderShortId =
       Just order -> do
         let DOrder.PaymentOrder {id = orderId, shortId = orderShortId'} = order
         mTxn <- HQTxn.findNewTransactionByOrderId orderId
-        refunds <- QRefunds.findAllByOrderId orderShortId'
+        refunds <- HQRefunds.findAllByOrderId orderShortId'
         offers <- QOffer.findByPaymentOrder orderId
         buildJuspayOrderData order mTxn refunds offers
       Nothing ->

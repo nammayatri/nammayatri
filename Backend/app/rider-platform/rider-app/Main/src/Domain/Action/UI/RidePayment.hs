@@ -32,6 +32,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as DPaymentTransaction
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
@@ -553,10 +554,12 @@ fetchPaymentRefundRequestInfo h refreshRefunds rideId = do
         ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
         booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
         driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
+        let commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity refundRequest.merchantOperatingCityId
         let refreshStripeRefundReq =
               DPayment.RefreshStripeRefundReq
                 { orderId = refundRequest.orderId,
-                  driverAccountId
+                  driverAccountId,
+                  merchantOpCityId = commonMerchantOperatingCityId
                 }
         result <- SPayment.refreshStripeRefund refundRequest.merchantId refundRequest.merchantOperatingCityId booking.paymentMode refreshStripeRefundReq
         let updStatus = castRefundRequestStatus result.status

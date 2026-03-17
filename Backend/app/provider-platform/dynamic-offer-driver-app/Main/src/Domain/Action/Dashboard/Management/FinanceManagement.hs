@@ -56,8 +56,8 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as PaymentTransaction
 import qualified Lib.Payment.Domain.Types.Refunds as PaymentRefund
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
+import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
-import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QSchedulerJob
 import SharedLogic.Allocator (AllocatorJobType (..), ReconciliationJobData (..))
 import qualified SharedLogic.Finance.Wallet as WalletService
@@ -797,7 +797,7 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
           -- Get all PaymentTransactions for this order → ORDER entries
           paymentTransactions <- HQPaymentTransaction.findAllByOrderId order.id
           -- Get all Refunds for this order → REFUND entries
-          refunds <- QRefunds.findAllByOrderId order.shortId
+          refunds <- HQRefunds.findAllByOrderId order.shortId
 
           -- Resolve payer context (shared across all entries for this subscription)
           payerContext <- resolvePayerContext subscription
