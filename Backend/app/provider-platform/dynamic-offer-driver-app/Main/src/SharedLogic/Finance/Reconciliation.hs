@@ -400,7 +400,9 @@ processCancelled expectedCustTotal custCancelEntry custCancelGstEntry expectedDr
       firstMismatch
         [ compareMaybe "DriverCancellationCharges" expectedDriverPenalty (Just driverAmt)
         ]
-    _ -> (ReconSummary.MISSING_IN_TARGET, Just reasonNoCancellationEntry)
+    _ -> case (expectedCustTotal, expectedDriverPenalty) of
+           (Nothing, Nothing) -> (ReconSummary.MATCHED, Nothing)
+           _ -> (ReconSummary.MISSING_IN_TARGET, Just reasonNoCancellationEntry)
 
 -- ────────────────────────────────────────────────────────────────────
 -- Unified DSR vs Ledger comparison (single source of truth)

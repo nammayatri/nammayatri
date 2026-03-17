@@ -152,10 +152,10 @@ runReconciliationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       -- Calculate tomorrow at 3:00 AM IST (IST = UTC + 5:30)
       let istOffset = secondsToNominalDiffTime config.timeDiffFromUtc
           schedulerTime = fromMaybe 10800 $ fmap (fromIntegral . (.getSeconds)) config.reconciliationSchedulerTime -- default 3:00 AM = 10800 seconds
-          todayDay = utctDay now
-          yesterdayDay = addDays (-1) todayDay
-          tomorrowDay = addDays 1 todayDay
-          tomorrow3AMIST = UTCTime tomorrowDay (secondsToDiffTime schedulerTime)
+          nowIST = addUTCTime istOffset now
+          todayDayIST = utctDay nowIST
+          tomorrowDayIST = addDays 1 todayDayIST
+          tomorrow3AMIST = UTCTime tomorrowDayIST (secondsToDiffTime schedulerTime)
           tomorrow3AMUTC = addUTCTime (negate istOffset) tomorrow3AMIST
           scheduleAfter = diffUTCTime tomorrow3AMUTC now
 
@@ -164,8 +164,8 @@ runReconciliationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
               ReconciliationJobData
                 { merchantId = mId,
                   merchantOperatingCityId = mOpCityId,
-                  startTime = UTCTime yesterdayDay (secondsToDiffTime 0),
-                  endTime = UTCTime yesterdayDay (secondsToDiffTime 86399),
+                  startTime = UTCTime todayDayIST (secondsToDiffTime 0),
+                  endTime = UTCTime todayDayIST (secondsToDiffTime 86399),
                   reconciliationType = show reconType
                 }
         logInfo $ "Scheduling next reconciliation job for: " <> show nextJobData
