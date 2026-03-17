@@ -1637,8 +1637,10 @@ TransporterConfig:
     vehicleCategoryExcludedFromVerification: "'{TOTO}'"
     videoFileSizeUpperLimit: 15000000
     enableSupportForSafety: "false"
-    trackingShortUrlPattern: "'nammayatri.in/t/'"
-    dashboardMediaFileUrlPattern: "'https://nammayatri.in/t/<FILE_PATH>'"
+    trackingShortUrlPattern: "'https://nammayatri.in/p/?vp={#vp#}&rideId='"
+    dashboardMediaFileUrlPattern: "'https://nammayatri.in/p/<FILE_PATH>'"
+    knowledgeCenterSopTypes: '''[]'' :: json'
+    allowFarePolicyUpdateBelowMinBaseFare: "true"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
