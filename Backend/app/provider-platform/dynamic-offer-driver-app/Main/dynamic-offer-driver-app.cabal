@@ -101,6 +101,7 @@ library
       API.UI.Payment
       API.UI.Performance
       API.UI.Plan
+      API.UI.QueueRank
       API.UI.Rating
       API.UI.Registration
       API.UI.Ride
@@ -308,6 +309,7 @@ library
       Domain.Action.UI.PlaceNameCache
       Domain.Action.UI.Plan
       Domain.Action.UI.PriceBreakup
+      Domain.Action.UI.QueueRank
       Domain.Action.UI.Rating
       Domain.Action.UI.Reels
       Domain.Action.UI.ReferralPayout
