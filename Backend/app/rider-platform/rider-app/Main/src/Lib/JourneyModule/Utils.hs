@@ -1213,32 +1213,18 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
         DIntegratedBPPConfig.CRIS crisConfig -> do
           let fareRouteDetails = CallAPI.BasicRouteDetail {routeCode = "-", startStopCode = originStopCode, endStopCode = destinationStopCode}
           (_, fares) <- Flow.getFares personId mid mocid integratedBppConfig (NonEmpty.fromList [fareRouteDetails]) (Utils.becknVehicleCategoryToFrfsVehicleCategory vc) Nothing (Just searchReqId) blacklistedServiceTiers blacklistedFareQuoteTypes True True
-          let sortedFares = case crisConfig.routeSortingCriteria of
-                Just DIntegratedBPPConfig.FARE ->
-                  sortBy
-                    ( comparing
-                        ( \fare ->
-                            fromMaybe (HighPrecMoney 0.0) ((find ((== ADULT) . (.category)) fare.categories) <&> (.price.amount))
-                        )
-                    )
-                    fares
-                Just DIntegratedBPPConfig.DISTANCE ->
-                  sortBy
-                    ( comparing
-                        ( \fare -> case fare.fareDetails of
-                            Just details -> details.distance
-                            Nothing -> Meters 0
-                        )
-                    )
-                    fares
-                Nothing -> fares
           let filteredFares =
                 filter
                   ( \fare ->
                       notElem fare.vehicleServiceTier.serviceTierType blacklistedServiceTiers
                         && maybe True (\ft -> notElem ft blacklistedFareQuoteTypes) (fare.fareQuoteType)
                   )
-                  sortedFares
+                  fares
+
+          let compareViaRoutes a b = case crisConfig.routeSortingCriteria of
+                Just DIntegratedBPPConfig.FARE -> compare a.fare b.fare <> compare a.distance b.distance
+                Just DIntegratedBPPConfig.DISTANCE -> compare a.distance b.distance <> compare a.fare b.fare
+                Nothing -> EQ
 
           let viaRouteDetailsMap :: M.Map Text ViaRouteDetails
               viaRouteDetailsMap =
@@ -1260,7 +1246,7 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
                                   fare = fareAmount
                                 }
                          in M.insertWith
-                              (\new old -> if new.fare < old.fare then new else old)
+                              (\new old -> if compareViaRoutes new old == LT then new else old)
                               fd.providerRouteId
                               newViaRoute
                               acc
@@ -1268,7 +1254,7 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
                   M.empty
                   filteredFares
 
-          let viaRouteDetails = M.elems viaRouteDetailsMap
+          let viaRouteDetails = sortBy compareViaRoutes (M.elems viaRouteDetailsMap)
           logDebug $ "getAllSubwayRoutes viaRouteDetails: " <> show viaRouteDetails
           return viaRouteDetails
         _ -> return []
