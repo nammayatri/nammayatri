@@ -64,6 +64,51 @@ INSERT INTO atlas_driver_offer_bpp.driver_rc_association (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- ONLY FOR LOCAL --
+INSERT INTO atlas_driver_offer_bpp.driver_license (
+    id,
+    driver_id,
+    merchant_id,
+    consent,
+    consent_timestamp,
+    document_image_id1,
+    document_image_id2,
+    driver_dob,
+    driver_name,
+    license_expiry,
+    license_number_hash,
+    license_number_encrypted,
+    verification_status,
+    failed_rules,
+    class_of_vehicles,
+    date_of_issue,
+    reject_reason,
+    vehicle_category,
+    created_at,
+    updated_at
+) VALUES (
+    'favorit-auto2-dl-0000000000000000000',
+    'favorit-auto2-0000000000000000000000',
+    'favorit0-0000-0000-0000-00000favorit',
+    true,
+    CURRENT_TIMESTAMP,
+    'favorit-auto2-dl-image-0000000000000',
+    NULL,
+    '1990-01-01 00:00:00+00',
+    'Mustafa',
+    '2099-12-31 00:00:00+00',
+    '\x5ef812c992874fbd16c44ae5b498e8b80f32a5943c76ce645e7e80887c5b29b6',  -- HR12345678901234
+    '0.1.0|5|9apKJYcOG4AnBWK7Za9DSOy4pBg4UlSvpBJHdoMNQRo406tcgQh38jxjHKH5FORQffcM/JzTlP9zoATbH9hfeO3xaw==',
+    'VALID',
+    '{}',
+    '{"MCWG", "LMV", "3W-PV"}',
+    '2020-01-01 00:00:00+00',
+    NULL,
+    'CAR',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+);
+
+-- ONLY FOR LOCAL --
 INSERT INTO atlas_driver_offer_bpp.reminder_config (
     document_type,
     merchant_id,
@@ -95,7 +140,7 @@ INSERT INTO atlas_driver_offer_bpp.reminder_config (
     100
   ),
   (
-    'VehicleInspectionForm',
+    'InspectionHub',
     'favorit0-0000-0000-0000-00000favorit',
     'favorit0-0000-0000-0000-00000000city',
     true,
@@ -105,7 +150,7 @@ INSERT INTO atlas_driver_offer_bpp.reminder_config (
     3
   ),
   (
-    'DriverInspectionForm',
+    'DriverInspectionHub',
     'favorit0-0000-0000-0000-00000favorit',
     'favorit0-0000-0000-0000-00000000city',
     true,

@@ -174,9 +174,9 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         when allVehicleDocsVerified $ do
           QVRC.updateApproved (Just True) rc.id
           -- Cancel pending vehicle inspection reminders for all drivers using this RC
-          cancelRemindersForRCByDocumentType rc.id DVC.VehicleInspectionForm
+          cancelRemindersForRCByDocumentType rc.id DVC.InspectionHub
           -- Record inspection completion for auto-trigger monitoring (per RC, not per driver)
-          recordDocumentCompletion DVC.VehicleInspectionForm rc.id.getId DRH.RC Nothing merchantOpCity.merchantId merchantOpCity.id
+          recordDocumentCompletion DVC.InspectionHub rc.id.getId DRH.RC Nothing merchantOpCity.merchantId merchantOpCity.id
         let reqUpdatedStatus = if allVehicleDocsVerified then castReqStatusToDomain request.status else PENDING
         void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
 
@@ -195,9 +195,9 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         when allDriverDocsVerified $ do
           QDIExtra.updateApproved (Just True) personId
           -- Cancel pending driver inspection reminders
-          cancelRemindersForDriverByDocumentType personId DVC.DriverInspectionForm
+          cancelRemindersForDriverByDocumentType personId DVC.DriverInspectionHub
           -- Record driver inspection completion for auto-trigger monitoring
-          recordDocumentCompletion DVC.DriverInspectionForm personId.getId DRH.DRIVER (Just personId) merchantOpCity.merchantId merchantOpCity.id
+          recordDocumentCompletion DVC.DriverInspectionHub personId.getId DRH.DRIVER (Just personId) merchantOpCity.merchantId merchantOpCity.id
           void $ postDriverEnable mShortId city $ cast @DP.Person @Common.Driver personId
         let reqUpdatedStatus = if allDriverDocsVerified then castReqStatusToDomain request.status else PENDING
         void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)

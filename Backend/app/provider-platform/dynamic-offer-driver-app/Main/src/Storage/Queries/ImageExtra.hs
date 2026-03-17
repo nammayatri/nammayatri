@@ -271,7 +271,7 @@ filterRecentByPersonRCAndImageType RcImagesInfo {rcImages} imgType = do
 
 -- Optimized function: tries to extract RcImagesInfo from EntityImagesInfo cache,
 -- falls back to DB query if cache doesn't contain suitable data
--- Assumes that for VehicleInspectionForm these conditions will often be met,
+-- Assumes that for InspectionHub these conditions will often be met,
 -- avoiding unnecessary DB queries
 getRcImagesInfoFromEntityImagesInfo ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
