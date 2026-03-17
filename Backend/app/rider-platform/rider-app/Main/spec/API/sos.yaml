@@ -11,6 +11,10 @@ imports:
 
 module: Sos
 types:
+  TriggerApi:
+    enum: "POLICE,KAPTURE"
+    derive: "HttpInstance"
+
   SosRes:
     sosId: Id Sos
     externalSOSSuccess: Maybe Bool
@@ -27,7 +31,7 @@ types:
     sendPNOnPostRideSOS: Maybe Bool
     notifyAllContacts: Maybe Bool
     customerLocation: Maybe LatLong
-    isKaptureTicketRequired: Maybe Bool
+    triggerApiList: Maybe [TriggerApi]
 
   SosUpdateReq:
     status: SosStatus
