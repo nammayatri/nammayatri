@@ -338,8 +338,9 @@ checkAndMarkTerminalJourneyStatus journey allLegStates = do
 getAllLegsStatus ::
   (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   DJourney.Journey ->
+  Maybe Text ->
   m [JL.JourneyLegState]
-getAllLegsStatus journey = do
+getAllLegsStatus journey mbFleetNo = do
   allLegsRawData <- QJourneyLeg.getJourneyLegs journey.id
   riderLastPoints <- getLastThreePoints journey.id
   riderConfig <- getRiderConfig journey
@@ -374,7 +375,7 @@ getAllLegsStatus journey = do
               DTrip.Subway -> JL.getState $ SubwayLegRequestGetState $ SubwayLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, journeyLeg = leg}
               DTrip.Bus -> do
                 logDebug $ "BusLegRequestGetStateData: " <> show legSearchId <> ", " <> show leg
-                JL.getState $ BusLegRequestGetState $ BusLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, movementDetected, routeCodeForDetailedTracking = getRouteCodeToTrack leg, journeyLeg = leg}
+                JL.getState $ BusLegRequestGetState $ BusLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, movementDetected, routeCodeForDetailedTracking = getRouteCodeToTrack leg, journeyLeg = leg, mbFleetNo}
           return
             ( Just leg,
               legsState <> [(leg, legState)]
@@ -976,8 +977,7 @@ cancelLegUtil journeyLeg cancellationReasonCode shouldUpdateJourneyStatus cancel
               }
   when shouldUpdateJourneyStatus $ do
     journey <- getJourney journeyLeg.journeyId
-    updatedLegStatus <- getAllLegsStatus journey
-    logError $ "Checking and marking terminal journey status for journey: " <> show journey.id.getId <> " with updatedLegStatus: " <> show (length updatedLegStatus)
+    updatedLegStatus <- getAllLegsStatus journey Nothing
     when (length updatedLegStatus == 1) $ do
       checkAndMarkTerminalJourneyStatus journey updatedLegStatus
   return ()
@@ -1557,7 +1557,7 @@ markJourneyComplete journey legs = do
   cancelOngoingTaxiLegs legs
   now <- getCurrentTime
   mapM_ (\leg -> markAllSubLegsCompleted leg now) legs
-  updatedLegStatus <- getAllLegsStatus journey
+  updatedLegStatus <- getAllLegsStatus journey Nothing
   checkAndMarkTerminalJourneyStatus journey updatedLegStatus
   return updatedLegStatus
   where

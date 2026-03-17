@@ -98,6 +98,7 @@ processBusLegState ::
   JMStateTypes.TrackingStatus ->
   Bool ->
   DIBC.IntegratedBPPConfig ->
+  Maybe Text ->
   m [JT.VehiclePosition]
 processBusLegState
   now
@@ -111,7 +112,8 @@ processBusLegState
   routeStopMappings
   journeyLegTrackingStatus
   movementDetected
-  integratedBppConfig = do
+  integratedBppConfig
+  mbBookedVehicleNumber = do
     logDebug $ "movementDetected: " <> show movementDetected <> " journeyLegTrackingStatus: " <> show journeyLegTrackingStatus
     riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
     let includeNullUpcomingStops = fromMaybe False riderConfig.includeVehiclesWithNoEta
@@ -172,7 +174,7 @@ processBusLegState
                 logDebug $ "changedBuses: " <> show changedBuses
                 if null changedBuses
                   then do
-                    findfilteredBusData includeNullUpcomingStops mbUserBoardingStation allBusDataForRoute
+                    findfilteredBusData includeNullUpcomingStops mbUserBoardingStation allBusDataForRoute mbBookedVehicleNumber
                   else findVehiclePositionFromSequence (reverse changedBuses)
               Nothing -> do
                 logDebug "No current leg details available, returning empty list"
@@ -181,7 +183,7 @@ processBusLegState
             logDebug $ "Journey leg is not ongoing or movement is not detected, returning empty list" <> show journeyLegTrackingStatus
             if journeyLegTrackingStatus `elem` [JMStateTypes.InPlan, JMStateTypes.Arriving, JMStateTypes.AlmostArrived, JMStateTypes.Arrived]
               then do
-                findfilteredBusData includeNullUpcomingStops mbUserBoardingStation allBusDataForRoute
+                findfilteredBusData includeNullUpcomingStops mbUserBoardingStation allBusDataForRoute mbBookedVehicleNumber
               else do
                 logDebug "No filtered bus data available, returning empty list"
                 pure []
@@ -206,12 +208,15 @@ processBusLegState
           Nothing -> do
             logDebug $ "No bus data found for vehicle number: " <> show rest
             findVehiclePositionFromSequence rest
-      findfilteredBusData :: (MonadFlow m, Metrics.HasBAPMetrics m r) => Bool -> Maybe Station -> [FullBusData] -> m [JT.VehiclePosition]
-      findfilteredBusData includeNoEta mbBoardingStation allBusData = do
+      findfilteredBusData :: (MonadFlow m, Metrics.HasBAPMetrics m r) => Bool -> Maybe Station -> [FullBusData] -> Maybe Text -> m [JT.VehiclePosition]
+      findfilteredBusData includeNoEta mbBoardingStation allBusData mbVehicleNumber = do
         filteredBusData <- case mbBoardingStation of
           Just boardingStation -> filterBusesYetToReachStop boardingStation.code now includeNoEta merchantOperatingCityId allBusData
           Nothing -> pure allBusData
-        let (confirmedHighBuses, ghostBuses) = partition (\a -> a.busData.route_state == Just CQMMB.ConfirmedHigh) filteredBusData
+        let vehicleFilteredBusData = case mbVehicleNumber of
+              Just vehicleNum -> filter (\bd -> bd.vehicleNumber == vehicleNum) filteredBusData
+              Nothing -> filteredBusData
+        let (confirmedHighBuses, ghostBuses) = partition (\a -> a.busData.route_state == Just CQMMB.ConfirmedHigh) vehicleFilteredBusData
         logInfo $ "confirmedHighBuses: " <> show (length confirmedHighBuses) <> " ghostBuses: " <> show (length ghostBuses)
         pure $
           map

@@ -495,10 +495,11 @@ postMultimodalRiderLocation ::
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   ApiTypes.RiderLocationReq ->
   Environment.Flow ApiTypes.JourneyStatusResp
-postMultimodalRiderLocation _ journeyId req = do
-  (journeyStatus, legs) <- getMultimodalJourneyStatusAndLegs journeyId
+postMultimodalRiderLocation _ journeyId mbFleetNo req = do
+  (journeyStatus, legs) <- getMultimodalJourneyStatusAndLegs journeyId mbFleetNo
   let concatLegs =
         concatMap
           ( \leg -> case leg of
@@ -576,15 +577,16 @@ getMultimodalJourneyStatus ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Environment.Flow ApiTypes.JourneyStatusResp
 getMultimodalJourneyStatus (_, _) journeyId = do
-  (journeyStatusResp, _) <- getMultimodalJourneyStatusAndLegs journeyId
+  (journeyStatusResp, _) <- getMultimodalJourneyStatusAndLegs journeyId Nothing
   return journeyStatusResp
 
 getMultimodalJourneyStatusAndLegs ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow (ApiTypes.JourneyStatusResp, [JMTypes.JourneyLegState])
-getMultimodalJourneyStatusAndLegs journeyId = do
+getMultimodalJourneyStatusAndLegs journeyId mbFleetNo = do
   journey <- JM.getJourney journeyId
-  legs <- JM.getAllLegsStatus journey
+  legs <- JM.getAllLegsStatus journey mbFleetNo
   (,legs) <$> generateJourneyStatusResponse journey legs
 
 postMultimodalJourneyFeedback :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> API.Types.UI.MultimodalConfirm.JourneyFeedBackForm -> Environment.Flow Kernel.Types.APISuccess.APISuccess
@@ -1165,7 +1167,7 @@ postMultimodalOrderSublegSetStatus (_, _) journeyId legOrder subLegOrder newStat
   markLegStatus (Just newStatus) Nothing journeyLeg (Just subLegOrder) now
 
   -- refetch updated legs and journey
-  updatedLegStatus <- JM.getAllLegsStatus journey
+  updatedLegStatus <- JM.getAllLegsStatus journey Nothing
   checkAndMarkTerminalJourneyStatus journey updatedLegStatus
   updatedJourney <- JM.getJourney journeyId
   generateJourneyStatusResponse updatedJourney updatedLegStatus
@@ -1198,7 +1200,7 @@ postMultimodalOrderSublegSetTrackingStatus (_, _) journeyId legOrder subLegOrder
   markLegStatus Nothing (Just trackingStatus) journeyLeg (Just subLegOrder) trackingStatusUpdateTime
 
   -- refetch updated legs and journey
-  updatedLegStatus <- JM.getAllLegsStatus journey
+  updatedLegStatus <- JM.getAllLegsStatus journey Nothing
   checkAndMarkTerminalJourneyStatus journey updatedLegStatus
   updatedJourney <- JM.getJourney journeyId
   generateJourneyStatusResponse updatedJourney updatedLegStatus
