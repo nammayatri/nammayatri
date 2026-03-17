@@ -1363,8 +1363,8 @@ mapDocumentTypeToReminderType = \case
   Common.VehiclePUCImage -> Just DVC.VehiclePUC
   Common.VehicleFitnessCertificateImage -> Just DVC.VehicleFitnessCertificate
   Common.BusinessLicense -> Just DVC.BusinessLicense
-  Common.VehicleInspectionImage -> Just DVC.VehicleInspectionForm
-  Common.DriverInspectionFormImage -> Just DVC.DriverInspectionForm
+  Common.InspectionHub -> Just DVC.InspectionHub
+  Common.DriverInspectionHub -> Just DVC.DriverInspectionHub
   Common.TrainingFormImage -> Just DVC.TrainingForm
   _ -> Nothing -- Document types that don't support reminder triggers
 

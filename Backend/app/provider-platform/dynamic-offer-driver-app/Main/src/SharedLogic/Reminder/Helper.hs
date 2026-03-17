@@ -125,13 +125,13 @@ getCurrentRideCount ::
   Maybe (Id DP.Person) ->
   m Int
 getCurrentRideCount documentType entityType entityIdText mbDriverId = case (documentType, entityType, mbDriverId) of
-  (DVC.DriverInspectionForm, DRH.DRIVER, Just driverId) -> do
+  (DVC.DriverInspectionHub, DRH.DRIVER, Just driverId) -> do
     (rideCount, _) <- QDriverStats.findTotalRides (cast driverId)
     pure rideCount
   (DVC.TrainingForm, DRH.DRIVER, Just driverId) -> do
     (rideCount, _) <- QDriverStats.findTotalRides (cast driverId)
     pure rideCount
-  (DVC.VehicleInspectionForm, DRH.RC, _) -> do
+  (DVC.InspectionHub, DRH.RC, _) -> do
     rcId <- Id entityIdText & pure
     QRCStats.findTotalRides rcId
   _ -> pure 0
@@ -378,7 +378,7 @@ cancelRemindersForRCByDocumentType rcId documentType = do
 
 -- | Determine if a document type is RC-based (vehicle-level) or driver-based
 isRCDocumentType :: DVC.DocumentType -> Bool
-isRCDocumentType DVC.VehicleInspectionForm = True
+isRCDocumentType DVC.InspectionHub = True
 isRCDocumentType _ = False
 
 -- | Record document completion - stores completion date and ride count
@@ -580,7 +580,6 @@ checkAndCreateReminderIfNeeded documentType driverId merchantId merchantOpCityId
   -- Safety check: Skip document expiry types as they are based on expiry dates, not rides/days thresholds
   when (isDocumentExpiryType documentType) $ do
     logInfo $ "Skipping rides threshold check for document expiry type: " <> show documentType <> " (reminders are based on expiry dates, not ride counts)"
-    pure ()
   unless (isDocumentExpiryType documentType) $ do
     mbConfig <- getReminderConfigIfEnabled driverId merchantOpCityId documentType
     case mbConfig of
@@ -601,9 +600,9 @@ checkAndCreateReminderIfNeeded documentType driverId merchantId merchantOpCityId
                 Just history -> do
                   -- Get precomputed ride count
                   let currentRideCount = case (documentType, entityType) of
-                        (DVC.DriverInspectionForm, DRH.DRIVER) -> thresholdData.driverRideCount
+                        (DVC.DriverInspectionHub, DRH.DRIVER) -> thresholdData.driverRideCount
                         (DVC.TrainingForm, DRH.DRIVER) -> thresholdData.driverRideCount
-                        (DVC.VehicleInspectionForm, DRH.RC) -> fromMaybe 0 thresholdData.rcRideCount
+                        (DVC.InspectionHub, DRH.RC) -> fromMaybe 0 thresholdData.rcRideCount
                         _ -> 0
 
                   -- Check rides threshold

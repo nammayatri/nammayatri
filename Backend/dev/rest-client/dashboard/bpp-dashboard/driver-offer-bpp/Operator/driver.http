@@ -134,8 +134,6 @@ token: {{token2}}
 
 # @name getHubRequests
 
-@token2 = {{driver-offer-bpp-auto-token2}}
-
 GET {{driver-offer-bpp-host}}/ui/operation/getRequests?mbRcNo={{rcNo}}
 content-type: application/json
 token: {{token2}}
@@ -145,6 +143,46 @@ token: {{token2}}
 # @name respondHubRequest
 
 @operationHubRequestId = {{getHubRequests.response.body.requests[0].id}}
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/operator/respond/hubRequest
+token: {{operator}}
+content-type: application/json
+
+{ "status" : "APPROVED",
+  "operationHubRequestId" : "{{operationHubRequestId}}",
+  "operatorId": "operatorId",
+  "remarks": "remarks"
+}
+
+###
+
+# @name createDriverHubRequest
+
+@driverId2 = favorit-auto2-0000000000000000000000
+
+POST {{driver-offer-bpp-host}}/ui/operation/createRequest
+content-type: application/json
+token: {{token2}}
+
+{ "requestType": "DRIVER_ONBOARDING_INSPECTION",
+  "operationHubId": "{{operationHubId}}",
+  "creatorId": "Text",
+  "driverId": "{{driverId2}}"
+}
+
+###
+
+# @name getDriverHubRequests
+
+GET {{driver-offer-bpp-host}}/ui/operation/getRequests?mbDriverId={{driverId2}}
+content-type: application/json
+token: {{token2}}
+
+###
+
+# @name respondDriverHubRequest
+
+@operationHubRequestId = {{getDriverHubRequests.response.body.requests[0].id}}
 
 POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/operator/respond/hubRequest
 token: {{operator}}
