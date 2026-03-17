@@ -75,7 +75,8 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     priority :: Text,
     pickupPriority :: Text,
     dropPriority :: Text,
-    specialLocationId :: Text
+    specialLocationId :: Text,
+    isQueueEnabled :: Maybe Text
   }
   deriving (Show)
 
@@ -103,6 +104,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> r .: "pickup_priority"
       <*> r .: "drop_priority"
       <*> r .: "special_location_id"
+      <*> optional (r .: "is_queue_enabled")
 
 ---------------------------------------------------------------------
 -- CSV Helper Functions
@@ -200,6 +202,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
       mbSpecialLocationId :: Maybe Text = cleanField row.specialLocationId
   enabled :: Bool <- readCSVField idx row.enabled "Enabled"
   let priority :: Maybe Int = readMaybeCSVField idx row.priority "Priority"
+      mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
   pickupPriority :: Int <- readCSVField idx row.pickupPriority "Pickup Priority"
   dropPriority :: Int <- readCSVField idx row.dropPriority "Drop Priority"
   gateInfoId <- generateGUID
@@ -235,7 +238,8 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             locationType = fromMaybe SL.Open locationType,
             geom = Just $ T.pack locationGeom,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            isQueueEnabled = mbIsQueueEnabled
           }
       gateInfo =
         DGI.GateInfo
