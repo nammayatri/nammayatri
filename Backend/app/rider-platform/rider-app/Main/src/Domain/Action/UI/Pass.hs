@@ -646,9 +646,8 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
       | existingPayment.status `elem` terminalPassStatuses -> do
           logInfo $ "Duplicate webhook detected for orderId: " <> paymentOrderId.getId <> " — already in terminal status: " <> show existingPayment.status
           incrementPassWebhookDuplicateCounter (show existingPayment.status)
-          mbPass <- QPurchasedPass.findById existingPayment.purchasedPassId
-          let passId = maybe Nothing (Just . (.id.getId)) mbPass
-              paymentId = Just existingPayment.id.getId
+          passId <- fmap (.id.getId) =<< QPurchasedPass.findById existingPayment.purchasedPassId
+          let paymentId = Just existingPayment.id.getId
           return (statusToFulfillment existingPayment.status, passId, paymentId)
     _ -> do
       -- Acquire Redis lock to prevent concurrent processing of the same webhook
