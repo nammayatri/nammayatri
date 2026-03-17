@@ -204,7 +204,8 @@ callExternalSOS sosId = do
           isRideEnded = Nothing,
           sendPNOnPostRideSOS = Nothing,
           notifyAllContacts = Nothing,
-          customerLocation = customerLoc
+          customerLocation = customerLoc,
+          isKaptureTicketRequired = Nothing
         }
 
 flowToSOSService :: DRC.ExternalSOSFlow -> SOS.SOSService

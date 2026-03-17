@@ -718,8 +718,7 @@ data EmergencySettingsRes = EmergencySettingsRes
     safetyCenterDisabledOnDate :: Maybe UTCTime,
     enableOtpLessRide :: Maybe Bool,
     safetyCheckStartTime :: Seconds,
-    safetyCheckEndTime :: Seconds,
-    externalSOSConfig :: Maybe DRC.ExternalSOSConfig
+    safetyCheckEndTime :: Seconds
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -746,7 +745,6 @@ getEmergencySettings personId = do
         shareEmergencyContacts = safetySettings.notifySosWithEmergencyContacts,
         safetyCheckEndTime = riderConfig.safetyCheckEndTime,
         safetyCheckStartTime = riderConfig.safetyCheckStartTime,
-        externalSOSConfig = riderConfig.externalSOSConfig,
         enablePostRideSafetyCheck = convertToPersonRideShareOptions safetySettings.enablePostRideSafetyCheck,
         enableUnexpectedEventsCheck = convertToPersonRideShareOptions safetySettings.enableUnexpectedEventsCheck,
         nightSafetyChecks = safetySettings.nightSafetyChecks,

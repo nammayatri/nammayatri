@@ -7,15 +7,18 @@ imports:
   SosState : Safety.Domain.Types.Sos
   Sos : Safety.Domain.Types.Sos
   LatLong : Kernel.External.Maps.Types
+  ExternalSOSConfig : Domain.Types.RiderConfig
 
 module: Sos
 types:
   SosRes:
     sosId: Id Sos
     externalSOSSuccess: Maybe Bool
+    kaptureTicketId: Maybe Text
 
   SosDetailsRes:
     sos: Maybe Sos
+    externalSOSConfig: Maybe ExternalSOSConfig
 
   SosReq:
     flow: SosType
@@ -24,6 +27,7 @@ types:
     sendPNOnPostRideSOS: Maybe Bool
     notifyAllContacts: Maybe Bool
     customerLocation: Maybe LatLong
+    isKaptureTicketRequired: Maybe Bool
 
   SosUpdateReq:
     status: SosStatus
