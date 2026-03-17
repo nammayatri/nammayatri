@@ -103,7 +103,9 @@ resolveMerchantAndCity merchantShortId opCity mbMocIdText = do
       _ -> CQMOC.getMerchantOpCity merchant (Just opCity)
   pure (merchant, merchantOpCity.id)
 
--- | Create S3 path for knowledge center media.
+sanitizeSopTypeForS3Path :: Text -> Text
+sanitizeSopTypeForS3Path = T.take 200 . T.intercalate "-" . T.words
+
 createKnowledgeCenterPath ::
   (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
   Id DMOC.MerchantOperatingCity ->
@@ -116,11 +118,12 @@ createKnowledgeCenterPath merchantOpCityId sopType fileType extension = do
   now <- getCurrentTime
   let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
       ext = if T.null extension then ("png" :: Text) else T.toLower (T.strip extension)
+      sopTypeSegment = sanitizeSopTypeForS3Path sopType
   pure
     ( pathPrefix <> "/knowledge-center/mocId-"
         <> merchantOpCityId.getId
         <> "/"
-        <> T.take 200 sopType
+        <> sopTypeSegment
         <> "/"
         <> show fileType
         <> "/"
