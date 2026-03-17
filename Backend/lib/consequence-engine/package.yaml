@@ -89,4 +89,4 @@ library:
           - -j4
   dependencies:
     - mobility-core
-    - rule-orchestrator
+    - openapi3

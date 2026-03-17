@@ -81,7 +81,7 @@ recordAction config event = incrementCounters config event
 --
 -- Use when the eligible counter and action counter are driven by different events.
 -- Example:
---   On ride assignment:  incrementCounterOnly config DRIVER driverId DRIVER_RIDE_CANCELLATION ELIGIBLE_COUNT
+--   On ride assignment:  incrementCounterOnly config DRIVER driverId "RIDE_CANCELLATION" ELIGIBLE_COUNT
 --   On cancellation:     recordAndSnapshot config cancelEvent entityState
 incrementCounterOnly ::
   ( Redis.HedisFlow m r,
@@ -91,7 +91,7 @@ incrementCounterOnly ::
   CounterConfig ->
   EntityType ->
   Text -> -- entityId
-  ActionType ->
+  Text -> -- actionType
   CounterType ->
   m ()
 incrementCounterOnly config entityType entityId actionType counterType =

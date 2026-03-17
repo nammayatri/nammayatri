@@ -46,9 +46,9 @@ packages:
   lib/webhook
   lib/dashcam
   lib/behavior-tracker
-  lib/rule-orchestrator
   lib/consequence-engine
   lib/communication-engine
+  lib/behavior-engine
   hunit-tests
 -- ## 6 parallel jobs by default.
 --

@@ -444,6 +444,7 @@ library
       SharedLogic.Analytics
       SharedLogic.Beckn.Common
       SharedLogic.BehaviourManagement.CancellationRate
+      SharedLogic.BehaviourManagement.ConsequenceDispatcher
       SharedLogic.BehaviourManagement.GpsTollBehavior
       SharedLogic.BehaviourManagement.IssueBreach
       SharedLogic.BehaviourManagement.IssueBreachMitigation
@@ -1709,10 +1710,14 @@ library
     , beam-postgres
     , beckn-services
     , beckn-spec
+    , behavior-engine
+    , behavior-tracker
     , bytestring
     , casing
     , cassava
     , cereal
+    , communication-engine
+    , consequence-engine
     , containers
     , cryptonite
     , cryptostore >=0.2.3.0
@@ -1850,10 +1855,14 @@ executable dynamic-offer-driver-app-exe
     , beam-postgres
     , beckn-services
     , beckn-spec
+    , behavior-engine
+    , behavior-tracker
     , bytestring
     , casing
     , cassava
     , cereal
+    , communication-engine
+    , consequence-engine
     , containers
     , cryptonite
     , cryptostore >=0.2.3.0

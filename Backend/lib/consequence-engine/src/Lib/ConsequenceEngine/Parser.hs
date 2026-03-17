@@ -22,7 +22,6 @@ import qualified Data.Aeson as A
 import qualified Data.Text as T
 import Kernel.Prelude
 import Lib.ConsequenceEngine.Types
-import Lib.RuleOrchestrator.Types (ConsequenceDirective (..))
 
 -- | Parse a single ConsequenceDirective (from rule-orchestrator) into a typed ConsequenceAction.
 --

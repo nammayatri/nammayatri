@@ -1,4 +1,4 @@
-name: rule-orchestrator
+name: behavior-engine
 version: 0.1.0.0
 github: "nammayatri/nammayatri"
 license: AllRightsReserved
@@ -12,7 +12,7 @@ flags:
     manual: true
     default: false
 
-description: Rule orchestration library - builds multi-step rule execution plans and wraps Yudhishthira for focused rule evaluation
+description: Behavior engine - orchestrates rule evaluation via Yudhishthira and delegates to consequence-engine and communication-engine
 
 default-extensions:
   - ConstraintKinds
@@ -94,5 +94,7 @@ library:
     - mobility-core
     - yudhishthira
     - behavior-tracker
-    - utils
-    - shared-services
+    - consequence-engine
+    - communication-engine
+    - openapi3
+    - data-default-class

@@ -13,7 +13,8 @@
 -}
 
 module Lib.CommunicationEngine.Types
-  ( CommunicationAction (..),
+  ( CommunicationDirective (..),
+    CommunicationAction (..),
     FcmNotificationParams (..),
     InAppOverlayParams (..),
     InAppMessageParams (..),
@@ -26,6 +27,18 @@ where
 
 import Data.Aeson (Value)
 import Kernel.Prelude
+import Kernel.Types.App ()
+
+-- orphan ToSchema Value instance
+
+-- | Input directive — can come from behavior-engine, dashboard, or any app flow
+data CommunicationDirective = CommunicationDirective
+  { channel :: Text, -- "FCM_NOTIFICATION", "IN_APP_OVERLAY", "SMS", etc.
+    templateKey :: Text, -- template identifier for the message
+    params :: Value, -- template variables
+    delaySeconds :: Int
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Parsed, typed communication action from rule engine output
 data CommunicationAction
@@ -35,14 +48,14 @@ data CommunicationAction
   | SmsCommunication SmsParams
   | BadgeCommunication BadgeParams
   | NoCommunication
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Parameters for FCM push notification
 data FcmNotificationParams = FcmNotificationParams
   { templateKey :: Text, -- notification template identifier
     templateParams :: Value -- template variables (cancellationRate, etc.)
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Parameters for in-app overlay/popup
 data InAppOverlayParams = InAppOverlayParams
@@ -50,7 +63,7 @@ data InAppOverlayParams = InAppOverlayParams
     templateParams :: Value, -- template variables
     showCloseButton :: Bool
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Parameters for persistent in-app message
 data InAppMessageParams = InAppMessageParams
@@ -58,14 +71,14 @@ data InAppMessageParams = InAppMessageParams
     templateParams :: Value,
     expiryHours :: Maybe Int
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Parameters for SMS
 data SmsParams = SmsParams
   { templateKey :: Text,
     templateParams :: Value
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Parameters for badge on profile
 data BadgeParams = BadgeParams
@@ -73,7 +86,7 @@ data BadgeParams = BadgeParams
     badgeType :: Text, -- "WARNING", "INFO", etc.
     expiryHours :: Maybe Int
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Result of dispatching a communication
 data CommunicationResult = CommunicationResult
@@ -81,7 +94,7 @@ data CommunicationResult = CommunicationResult
     success :: Bool,
     errorMessage :: Maybe Text
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Typeclass for apps to implement communication dispatch.
 --

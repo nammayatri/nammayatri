@@ -14,7 +14,6 @@
 
 module Lib.BehaviorTracker.Types
   ( EntityType (..),
-    ActionType (..),
     CounterType (..),
     ActionEvent (..),
     CounterConfig (..),
@@ -27,46 +26,35 @@ module Lib.BehaviorTracker.Types
 where
 
 import Data.Aeson (Value)
+import qualified Data.Aeson as A
+import Data.Default.Class (Default (..))
 import qualified Data.Map.Strict as Map
+import Data.Time (UTCTime (..))
 import Kernel.Prelude
+import Kernel.Types.App ()
+
+-- orphan ToSchema Value instance
 
 -- | Entity performing the action
 data EntityType = DRIVER | RIDER
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON)
-
--- | Extensible action type — new actions added without touching core logic
-data ActionType
-  = -- Driver actions
-    DRIVER_RIDE_CANCELLATION
-  | DRIVER_EXTRA_FARE_REQUEST
-  | DRIVER_AC_NOT_TURNED_ON
-  | DRIVER_GPS_OFF_ON_TOLL_ROUTE
-  | DRIVER_TOLL_ROUTE_DEVIATION
-  | DRIVER_ROUTE_DEVIATION
-  | DRIVER_SOS_FALSE_ALARM
-  | -- Rider actions
-    RIDER_BOOKING_CANCELLATION
-  | RIDER_NO_SHOW
-  | RIDER_FARE_DISPUTE
-  | RIDER_PAYMENT_DEFAULT
-  | RIDER_SAFETY_FALSE_ALARM
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Which counter to maintain for an action
 data CounterType = ACTION_COUNT | ELIGIBLE_COUNT
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Input event from caller
+-- actionType is Text so apps can define their own action types without modifying this library
 data ActionEvent = ActionEvent
   { entityType :: EntityType,
     entityId :: Text,
-    actionType :: ActionType,
+    actionType :: Text, -- e.g. "RIDE_CANCELLATION", "EXTRA_FARE_REQUEST" — defined by caller
     merchantOperatingCityId :: Text,
     flowContext :: Value, -- opaque: caller-resolved city/flow info
     eventData :: Value, -- this event's context (distances, wait time, etc.)
     timestamp :: UTCTime
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Counter configuration (caller-provided per action)
 data CounterConfig = CounterConfig
@@ -74,14 +62,14 @@ data CounterConfig = CounterConfig
     counters :: [CounterType], -- which counters to increment
     periods :: [PeriodConfig] -- which time periods to compute in snapshot
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | A time period to compute counter values for
 data PeriodConfig = PeriodConfig
   { periodName :: Text, -- e.g. "daily", "weekly", "monthly"
     periodDays :: Integer -- days to look back (1, 7, 30)
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Helper to create a PeriodConfig
 mkPeriodConfig :: Text -> Integer -> PeriodConfig
@@ -93,7 +81,10 @@ data CounterValues = CounterValues
     eligibleCount :: Integer,
     rate :: Integer -- (actionCount * 100) / max 1 eligibleCount
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+instance Default CounterValues where
+  def = defaultCounterValues
 
 -- | Default counter values (all zeros)
 defaultCounterValues :: CounterValues
@@ -108,7 +99,7 @@ defaultCounterValues =
 data BehaviorSnapshot = BehaviorSnapshot
   { entityType :: EntityType,
     entityId :: Text,
-    actionType :: ActionType,
+    actionType :: Text,
     merchantOperatingCityId :: Text,
     counters :: Map.Map Text CounterValues, -- keyed by periodName
     flowContext :: Value, -- passthrough from ActionEvent
@@ -116,4 +107,18 @@ data BehaviorSnapshot = BehaviorSnapshot
     entityState :: Value, -- caller-provided entity state
     snapshotAt :: UTCTime
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+instance Default BehaviorSnapshot where
+  def =
+    BehaviorSnapshot
+      { entityType = DRIVER,
+        entityId = "",
+        actionType = "",
+        merchantOperatingCityId = "",
+        counters = Map.empty,
+        flowContext = A.Object mempty,
+        eventData = A.Object mempty,
+        entityState = A.Object mempty,
+        snapshotAt = UTCTime (toEnum 0) 0
+      }

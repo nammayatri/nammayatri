@@ -30,11 +30,11 @@ import Lib.BehaviorTracker.Types
 -- | Unified Redis key scheme
 -- Format: "bt:{entityType}:{actionType}:{counterType}:{entityId}"
 -- Examples:
---   "bt:DRIVER:DRIVER_RIDE_CANCELLATION:ACTION_COUNT:driver-abc-123"
---   "bt:RIDER:RIDER_BOOKING_CANCELLATION:ELIGIBLE_COUNT:rider-xyz-456"
-mkCounterKey :: EntityType -> ActionType -> CounterType -> Text -> Text
+--   "bt:DRIVER:RIDE_CANCELLATION:ACTION_COUNT:driver-abc-123"
+--   "bt:RIDER:BOOKING_CANCELLATION:ELIGIBLE_COUNT:rider-xyz-456"
+mkCounterKey :: EntityType -> Text -> CounterType -> Text -> Text
 mkCounterKey entityType actionType counterType entityId =
-  "bt:" <> show entityType <> ":" <> show actionType <> ":" <> show counterType <> ":" <> entityId
+  "bt:" <> show entityType <> ":" <> actionType <> ":" <> show counterType <> ":" <> entityId
 
 -- | Increment a sliding window counter
 -- Uses CrossAppRedis to ensure counters are accessible across services
@@ -44,7 +44,7 @@ incrementCounter ::
     CacheFlow m r
   ) =>
   EntityType ->
-  ActionType ->
+  Text -> -- actionType
   CounterType ->
   Text -> -- entityId
   Integer -> -- windowSizeDays
@@ -64,7 +64,7 @@ getCountForPeriod ::
     CacheFlow m r
   ) =>
   EntityType ->
-  ActionType ->
+  Text -> -- actionType
   CounterType ->
   Text -> -- entityId
   Integer -> -- periodDays: how many days to look back
@@ -87,7 +87,7 @@ buildCounterValues ::
     CacheFlow m r
   ) =>
   EntityType ->
-  ActionType ->
+  Text -> -- actionType
   Text -> -- entityId
   Integer -> -- periodDays
   Integer -> -- windowSizeDays
