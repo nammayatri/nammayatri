@@ -277,3 +277,7 @@ ALTER TABLE atlas_app.person ADD CONSTRAINT person_unique_idx_merchant_id_operat
 ------- SQL updates -------
 
 CREATE INDEX person_idx_operator_badge_token ON atlas_app.person USING btree (operator_badge_token);
+
+
+ALTER TABLE atlas_app.person ALTER COLUMN business_email_hash TYPE bytea;
+ALTER TABLE atlas_app.person ALTER COLUMN business_email_encrypted TYPE character varying(255);

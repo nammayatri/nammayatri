@@ -152,6 +152,7 @@ PgPaymentSettlementReport:
     rrn: "!SecondaryKey"
     referenceId: "!SecondaryKey"
     settlementId: "!SecondaryKey"
+    utr: "!SecondaryKey"
 
   # ---------------------------------------------------------------------------
   # Generated queries

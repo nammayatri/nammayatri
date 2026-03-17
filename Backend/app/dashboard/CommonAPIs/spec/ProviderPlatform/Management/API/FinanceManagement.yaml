@@ -137,23 +137,23 @@ apis:
 types:
   SubscriptionPurchaseStatus:
     - enum: "SubscriptionPending, SubscriptionActive, SubscriptionExpired, SubscriptionFailed, SubscriptionExhausted"
-    - derive: "ToParamSchema,HttpInstance"
+    - derive: "HttpInstance"
 
   PgGateway:
     - enum: "Juspay, BillDesk"
-    - derive: "ToParamSchema,HttpInstance"
+    - derive: "HttpInstance"
 
   PaymentModeFilter:
     - enum: "UPI, Card, NetBanking, Wallet"
-    - derive: "ToParamSchema,HttpInstance"
+    - derive: "HttpInstance"
 
   PaymentStatusFilter:
     - enum: "Success, Failed, Pending"
-    - derive: "ToParamSchema,HttpInstance"
+    - derive: "HttpInstance"
 
   TransactionTypeFilter:
     - enum: "Order, Refund"
-    - derive: "ToParamSchema,HttpInstance"
+    - derive: "HttpInstance"
 
   # ----- Subscription Purchase -----
   SubscriptionPurchaseListRes:

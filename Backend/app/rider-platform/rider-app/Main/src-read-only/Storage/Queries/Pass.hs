@@ -48,7 +48,6 @@ updateByPrimaryKey (Domain.Types.Pass.Pass {..}) = do
       Se.Set Beam.purchaseEligibilityJsonLogic purchaseEligibilityJsonLogic,
       Se.Set Beam.redeemEligibilityJsonLogic redeemEligibilityJsonLogic,
       Se.Set Beam.verificationValidity (Kernel.Prelude.Just verificationValidity),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

@@ -258,6 +258,8 @@ Person:
     passwordHash: bytea
     emailEncrypted: character varying(255)
     emailHash: bytea
+    businessEmailEncrypted: character varying(255)
+    businessEmailHash: bytea
     whatsappNotificationEnrollStatus: character varying(255)
     referralCode: character varying(15)
     language: character varying(255)

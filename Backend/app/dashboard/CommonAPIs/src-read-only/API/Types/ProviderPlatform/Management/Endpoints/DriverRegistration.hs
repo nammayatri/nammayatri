@@ -123,7 +123,7 @@ data DLDetails = DLDetails
     driverDateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     classOfVehicles :: [Kernel.Prelude.Text],
     imageId1 :: Kernel.Prelude.Text,
-    imageId2 :: Kernel.Prelude.Maybe (Kernel.Prelude.Text),
+    imageId2 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dateOfIssue :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     createdAt :: Kernel.Prelude.UTCTime
   }

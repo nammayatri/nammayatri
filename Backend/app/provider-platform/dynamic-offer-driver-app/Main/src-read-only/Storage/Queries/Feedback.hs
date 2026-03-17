@@ -29,7 +29,6 @@ updateByPrimaryKey (Domain.Types.Feedback.Feedback {..}) = do
   updateWithKV
     [ Se.Set Beam.badge badge,
       Se.Set Beam.badgeKey badgeKey,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.rating rating,
       Se.Set Beam.rideId (Kernel.Types.Id.getId rideId),

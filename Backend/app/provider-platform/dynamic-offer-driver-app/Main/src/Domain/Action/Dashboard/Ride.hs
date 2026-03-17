@@ -30,6 +30,7 @@ where
 
 import qualified API.Types.Dashboard.RideBooking.Ride as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
+import qualified Beckn.ACL.Common as BecknACL
 import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
 import qualified Data.Text as T
@@ -329,6 +330,8 @@ buildRideListItem QRide.RideItem {..} = do
         fareDiff = fareDiff <&> (.amountInt),
         fareDiffWithCurrency = mkPriceAPIEntity <$> fareDiff,
         fareWithCurrency = mkPriceAPIEntity <$> fare,
+        estimatedFareWithCurrency = mkPriceAPIEntity <$> estimatedFare,
+        paymentInstrument = BecknACL.castDPaymentInstrument <$> paymentInstrument,
         bookingStatus,
         rideCreatedAt = rideCreatedAt
       }

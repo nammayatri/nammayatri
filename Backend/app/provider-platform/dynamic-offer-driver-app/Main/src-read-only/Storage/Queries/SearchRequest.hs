@@ -102,7 +102,7 @@ updateByPrimaryKey (Domain.Types.SearchRequest.SearchRequest {..}) = do
       Se.Set Beam.specialLocationTag specialLocationTag,
       Se.Set Beam.startTime (Just startTime),
       Se.Set Beam.toLocGeohash toLocGeohash,
-      Se.Set Beam.toLocationId ((Kernel.Types.Id.getId . (.id)) <$> toLocation),
+      Se.Set Beam.toLocationId (Kernel.Types.Id.getId . (.id) <$> toLocation),
       Se.Set Beam.tollCharges tollCharges,
       Se.Set Beam.tollIds tollIds,
       Se.Set Beam.tollNames tollNames,

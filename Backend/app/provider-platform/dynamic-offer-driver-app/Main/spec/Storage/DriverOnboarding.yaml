@@ -94,6 +94,7 @@ IdfyVerification:
 
 DigilockerVerification:
   tableName: digilocker_verification
+  derives: "Generic, Show, ToJSON, FromJSON"
 
   types:
     SessionStatus:

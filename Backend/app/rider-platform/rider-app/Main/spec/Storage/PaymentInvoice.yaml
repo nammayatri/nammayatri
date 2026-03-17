@@ -47,7 +47,7 @@ PaymentInvoice:
     rideId: SecondaryKey
     paymentOrderId: SecondaryKey
     invoiceNumber: SecondaryKey
-    settledByInvoiceId: SecondaryKey
+    settledByInvoiceId: "!SecondaryKey"
 
   # merchantId and merchantOperatingCityId kept for future filtering/analytics
   excludedFields: []
@@ -82,5 +82,12 @@ PaymentInvoice:
     updatePaymentStatus:
       kvFunction: updateWithKV
       params: [paymentStatus]
+      where: id
+    findBySettledByInvoiceId:
+      kvFunction: findAllWithKV
+      where: settledByInvoiceId
+    updateSettledBy:
+      kvFunction: updateWithKV
+      params: [settledByInvoiceId]
       where: id
 

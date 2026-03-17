@@ -64,13 +64,13 @@ type GetFRFSTicketFrfsRouteStations =
 
 type PostFRFSTicketFrfsStatusUpdate =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.FRFS_TICKET) / ('API.Types.RiderPlatform.Management.FRFSTicket.POST_FRFS_TICKET_FRFS_STATUS_UPDATE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.FRFS_TICKET / 'API.Types.RiderPlatform.Management.FRFSTicket.POST_FRFS_TICKET_FRFS_STATUS_UPDATE)
       :> API.Types.RiderPlatform.Management.FRFSTicket.PostFRFSTicketFrfsStatusUpdate
   )
 
-getFRFSTicketFrfsRoutes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Data.Text.Text) -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.FlowHandler [API.Types.RiderPlatform.Management.FRFSTicket.FRFSDashboardRouteAPI])
+getFRFSTicketFrfsRoutes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.FlowHandler [API.Types.RiderPlatform.Management.FRFSTicket.FRFSDashboardRouteAPI])
 getFRFSTicketFrfsRoutes merchantShortId opCity apiTokenInfo searchStr limit offset vehicleType = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.FRFSTicket.getFRFSTicketFrfsRoutes merchantShortId opCity apiTokenInfo searchStr limit offset vehicleType
 
 getFRFSTicketFrfsRouteFareList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Data.Text.Text -> Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.FlowHandler API.Types.RiderPlatform.Management.FRFSTicket.FRFSRouteFareAPI)

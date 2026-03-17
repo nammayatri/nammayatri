@@ -15,6 +15,9 @@ VendorFee:
     driverFeeId: PrimaryKey
     vendorId: PrimaryKey
 
+  extraIndexes:
+    - columns: [driverFeeId]
+
   excludedFields: [merchantId, merchantOperatingCityId]
 
   extraOperations:

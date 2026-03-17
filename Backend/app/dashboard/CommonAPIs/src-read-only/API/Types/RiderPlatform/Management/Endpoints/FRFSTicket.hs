@@ -167,19 +167,19 @@ type GetFRFSTicketFrfsRouteStations =
            [FRFSStationAPI]
   )
 
-type PostFRFSTicketFrfsStatusUpdate = ("frfs" :> "statusUpdate" :> ReqBody ('[JSON]) FRFSStatusUpdateReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostFRFSTicketFrfsStatusUpdate = ("frfs" :> "statusUpdate" :> ReqBody '[JSON] FRFSStatusUpdateReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 data FRFSTicketAPIs = FRFSTicketAPIs
   { getFRFSTicketFrfsRoutes :: Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient [FRFSDashboardRouteAPI],
     getFRFSTicketFrfsRouteFareList :: Data.Text.Text -> Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient FRFSRouteFareAPI,
     putFRFSTicketFrfsRouteFareUpsert ::
       Data.Text.Text ->
-      Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig ->
-      BecknV2.FRFS.Enums.VehicleCategory ->
-      ( Data.ByteString.Lazy.ByteString,
-        UpsertRouteFareReq
-      ) ->
-      EulerHS.Types.EulerClient UpsertRouteFareResp,
+        Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig ->
+        BecknV2.FRFS.Enums.VehicleCategory ->
+        ( Data.ByteString.Lazy.ByteString,
+          UpsertRouteFareReq
+        ) ->
+        EulerHS.Types.EulerClient UpsertRouteFareResp,
     getFRFSTicketFrfsRouteStations :: Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient [FRFSStationAPI],
     postFRFSTicketFrfsStatusUpdate :: FRFSStatusUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }

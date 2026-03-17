@@ -49,6 +49,9 @@ Invoice:
     merchantOperatingCityId: Text
     createdAt: UTCTime
 
+  sqlType:
+    lineItems: jsonb
+
   constraints:
     id: PrimaryKey
     invoiceNumber: "!SecondaryKey"

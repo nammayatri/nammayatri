@@ -227,6 +227,7 @@ Ride:
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
     onlinePayment: Kernel.Prelude.fromMaybe False onlinePayment|E
     deliveryFileIds: (Kernel.Types.Id.Id <$> ) <$> deliveryFileIds|E
+    subscriptionPurchaseIds: (Kernel.Types.Id.Id <$>) <$> subscriptionPurchaseIds|E
     isDriverSpecialLocWarrior: Kernel.Prelude.fromMaybe False isDriverSpecialLocWarrior|E
     estimatedEndTimeRange: Storage.Queries.Transformers.Ride.mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd|E
     rideTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType
@@ -263,6 +264,7 @@ Ride:
     clientModelName: (clientDevice <&> (.deviceModel))|E
     clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
     deliveryFileIds: (Kernel.Types.Id.getId <$> ) <$> deliveryFileIds|E
+    subscriptionPurchaseIds: (Kernel.Types.Id.getId <$>) <$> subscriptionPurchaseIds|E
     estimatedEndTimeRangeStart: Kernel.Prelude.fmap (.start)|I
     estimatedEndTimeRangeEnd: Kernel.Prelude.fmap (.end)|I
     rideTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
@@ -286,6 +288,7 @@ Ride:
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
     rideTags: "Maybe [Text]"
+    subscriptionPurchaseIds: "Maybe [Text]"
     isInsured: Maybe Bool
     billingCategory: Maybe BillingCategory
 
