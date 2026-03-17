@@ -380,6 +380,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             locationType = SL.Closed,
             priority = 0,
             merchantId = Just merchantId,
+            isQueueEnabled = request.isQueueEnabled <|> (mbExistingSpLoc >>= (.isQueueEnabled)),
             ..
           }
 
@@ -1411,7 +1412,8 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     priority :: Text,
     pickupPriority :: Text,
     dropPriority :: Text,
-    specialLocationId :: Text
+    specialLocationId :: Text,
+    isQueueEnabled :: Maybe Text
   }
   deriving (Show)
 
@@ -1439,6 +1441,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> r .: "pickup_priority"
       <*> r .: "drop_priority"
       <*> r .: "special_location_id"
+      <*> optional (r .: "is_queue_enabled")
 
 postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
 postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
@@ -1488,6 +1491,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
       let locationType :: Maybe SL.SpecialLocationType = readMaybeCSVField idx row.locationType "Location Type"
           priority :: Maybe Int = readMaybeCSVField idx row.priority "Priority"
           mbSpecialLocationId :: Maybe Text = cleanField row.specialLocationId
+          mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
       enabled :: Bool <- readCSVField idx row.enabled "Enabled"
       gateInfoId <- generateGUID
       gateInfoName :: Text <- cleanCSVField idx row.gateInfoName "Gate Info (name)"
@@ -1522,7 +1526,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 geom = Just $ T.pack locationGeom,
                 priority = fromMaybe 0 priority,
                 createdAt = now,
-                updatedAt = now
+                updatedAt = now,
+                isQueueEnabled = mbIsQueueEnabled
               }
           gateInfo =
             DGI.GateInfo

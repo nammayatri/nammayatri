@@ -38,7 +38,8 @@ data SpecialLocationFull = SpecialLocationFull
     geoJson :: Maybe Text,
     createdAt :: UTCTime,
     priority :: Int,
-    enabled :: Bool
+    enabled :: Bool,
+    isQueueEnabled :: Maybe Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 

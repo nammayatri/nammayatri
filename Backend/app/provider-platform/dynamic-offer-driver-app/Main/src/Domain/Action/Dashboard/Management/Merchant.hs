@@ -2793,6 +2793,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             locationType = SL.Closed,
             merchantId = Just merchantId,
             priority = 0,
+            isQueueEnabled = request.isQueueEnabled <|> (mbExistingSpLoc >>= (.isQueueEnabled)),
             ..
           }
 

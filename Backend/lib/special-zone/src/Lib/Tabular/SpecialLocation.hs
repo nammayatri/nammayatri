@@ -41,6 +41,7 @@ mkPersist
       locationType Domain.SpecialLocationType Maybe
       priority Int
       enabled Bool
+      isQueueEnabled Bool Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
