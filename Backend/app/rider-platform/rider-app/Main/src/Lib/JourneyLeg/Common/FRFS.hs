@@ -66,8 +66,8 @@ import qualified Tools.Metrics.BAPMetrics as Metrics
 
 -- getState and other functions from the original file...
 
-getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv), HasShortDurationRetryCfg r c, HasKafkaProducer r, Metrics.HasBAPMetrics m r) => DTrip.MultimodalTravelMode -> Id FRFSSearch -> [APITypes.RiderLocationReq] -> Bool -> Maybe Text -> DJourneyLeg.JourneyLeg -> m JT.JourneyLegState
-getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTracking journeyLeg = do
+getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv), HasShortDurationRetryCfg r c, HasKafkaProducer r, Metrics.HasBAPMetrics m r) => DTrip.MultimodalTravelMode -> Id FRFSSearch -> [APITypes.RiderLocationReq] -> Bool -> Maybe Text -> DJourneyLeg.JourneyLeg -> Maybe Text -> m JT.JourneyLegState
+getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTracking journeyLeg mbFleetNo = do
   logDebug $ "CFRFS getState: searchId: " <> searchId.getId <> ", mode: " <> show mode
   mbBooking <- QTBooking.findBySearchId searchId
   now <- getCurrentTime
@@ -145,6 +145,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               trackingStatus
               movementDetected
               integratedBppConfig
+              mbFleetNo
 
           let detailedStateData = baseStateData {JT.vehiclePositions = vehiclePositionsToReturn}
           -- Commented out: Automatic fleet number finalization based on rider location
@@ -221,6 +222,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               trackingStatus
               movementDetected
               integratedBppConfig
+              mbFleetNo
 
           let detailedStateData = baseStateData {JT.vehiclePositions = vehiclePositionsToReturn}
           logDebug $ "CFRFS getState: Detailed state data for without booking: " <> show vehiclePositionsToReturn
