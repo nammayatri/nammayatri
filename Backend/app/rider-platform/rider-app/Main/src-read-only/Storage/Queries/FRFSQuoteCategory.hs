@@ -25,8 +25,10 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory] -> m ())
 createMany = traverse_ create
 
-findAllByQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m [Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory])
-findAllByQuoteId quoteId = do findAllWithKV [Se.Is Beam.quoteId $ Se.Eq (Kernel.Types.Id.getId quoteId)]
+findAllByQuoteId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m [Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory])
+findAllByQuoteId limit offset quoteId = do findAllWithOptionsKV [Se.Is Beam.quoteId $ Se.Eq (Kernel.Types.Id.getId quoteId)] (Se.Asc Beam.categoryOrder) limit offset
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m (Maybe Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -57,6 +59,7 @@ updateByPrimaryKey (Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory {..}) = do
   updateWithKV
     [ Se.Set Beam.bppItemId bppItemId,
       Se.Set Beam.category (Kernel.Prelude.Just category),
+      Se.Set Beam.categoryOrder (categoryMeta >>= (.categoryOrder)),
       Se.Set Beam.code (categoryMeta <&> (.code)),
       Se.Set Beam.description (categoryMeta <&> (.description)),
       Se.Set Beam.title (categoryMeta <&> (.title)),
@@ -83,7 +86,7 @@ instance FromTType' Beam.FRFSQuoteCategory Domain.Types.FRFSQuoteCategory.FRFSQu
         Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory
           { bppItemId = bppItemId,
             category = Kernel.Prelude.fromMaybe Domain.Types.FRFSQuoteCategoryType.ADULT category,
-            categoryMeta = Storage.Queries.Transformers.FRFSQuoteCategory.mkQuoteCategoryMetadata code title description tnc,
+            categoryMeta = Storage.Queries.Transformers.FRFSQuoteCategory.mkQuoteCategoryMetadataWithOrder code title description tnc categoryOrder,
             finalPrice = Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice,
             holdId = holdId,
             id = Kernel.Types.Id.Id id,
@@ -104,6 +107,7 @@ instance ToTType' Beam.FRFSQuoteCategory Domain.Types.FRFSQuoteCategory.FRFSQuot
     Beam.FRFSQuoteCategoryT
       { Beam.bppItemId = bppItemId,
         Beam.category = Kernel.Prelude.Just category,
+        Beam.categoryOrder = categoryMeta >>= (.categoryOrder),
         Beam.code = categoryMeta <&> (.code),
         Beam.description = categoryMeta <&> (.description),
         Beam.title = categoryMeta <&> (.title),

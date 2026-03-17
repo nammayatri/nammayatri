@@ -630,7 +630,7 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity search
   unless (personId == search.riderId) $ throwError AccessDenied
   (quotes :: [DFRFSQuote.FRFSQuote]) <- B.runInReplica $ QFRFSQuote.findAllBySearchId searchId_
-  quotesWithCategories <- mapM (\quote -> (quote,) <$> QFRFSQuoteCategory.findAllByQuoteId quote.id) quotes
+  quotesWithCategories <- mapM (\quote -> (quote,) <$> QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing quote.id) quotes
   mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just searchId_.getId)
   sortedQuotesWithCategories <- case search.vehicleType of
     Spec.BUS -> do
@@ -701,7 +701,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId) quoteId mbIsMockPayment req = do
               )
               offeredCategories
       _ -> do
-        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quoteId
+        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing quoteId
         pure $
           map
             ( \quoteCategory ->
@@ -849,7 +849,7 @@ getFrfsBookingList (mbPersonId, _merchantId) mbLimit mbOffset mbVehicleCategory 
   bookings <- B.runInReplica $ QFRFSTicketBooking.findAllByRiderId mbLimit mbOffset personId mbVehicleCategory
   mapM
     ( \booking -> do
-        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing booking.quoteId
         buildFRFSTicketBookingStatusAPIRes booking quoteCategories Nothing
     )
     bookings
@@ -1191,7 +1191,7 @@ postFrfsStationsPossibleStops (_personId, mId) mbCity _platformType vehicleType_
 
 select :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType)) => Merchant -> MerchantOperatingCity -> BecknConfig -> DFRFSQuote.FRFSQuote -> [FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> m ()
 select merchant merchantOperatingCity bapConfig quote selectedQuoteCategories crisSdkResponse isSingleMode mbEnableOffer = do
-  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing quote.id
   updatedQuoteCategories <-
     updateQuoteCategoriesWithSelections
       Nothing
