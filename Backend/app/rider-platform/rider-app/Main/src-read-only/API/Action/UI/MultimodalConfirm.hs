@@ -198,6 +198,9 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
       :> "rider"
       :> "location"
+      :> QueryParam
+           "fleetNo"
+           Kernel.Prelude.Text
       :> ReqBody
            '[JSON]
            API.Types.UI.MultimodalConfirm.RiderLocationReq
@@ -698,10 +701,11 @@ postMultimodalRiderLocation ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     API.Types.UI.MultimodalConfirm.RiderLocationReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyStatusResp
   )
-postMultimodalRiderLocation a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalRiderLocation (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMultimodalRiderLocation a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalRiderLocation (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postMultimodalOrderSwitchTaxi ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

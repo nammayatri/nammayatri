@@ -66,7 +66,8 @@ data BusLegRequestGetStateData = BusLegRequestGetStateData
     riderLastPoints :: [ApiTypes.RiderLocationReq],
     movementDetected :: Bool,
     routeCodeForDetailedTracking :: Maybe Text,
-    journeyLeg :: DJourneyLeg.JourneyLeg
+    journeyLeg :: DJourneyLeg.JourneyLeg,
+    mbFleetNo :: Maybe Text
   }
 
 data BusLegRequestGetFareData = BusLegRequestGetFareData
