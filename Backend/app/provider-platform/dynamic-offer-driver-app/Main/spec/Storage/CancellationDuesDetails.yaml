@@ -1,0 +1,55 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Ride: Domain.Types.Ride
+  RiderDetails: Domain.Types.RiderDetails
+
+CancellationDuesDetails:
+  tableName: cancellation_dues_details
+  derives: Generic
+
+  types:
+    CancellationDuesPaymentStatus:
+      enum: "PENDING,PAID,WAIVED"
+
+  fields:
+    id : Id CancellationDuesDetails
+    rideId : Id Ride
+    riderId : Id RiderDetails
+    cancellationAmount : HighPrecMoney
+    currency : Currency
+    paymentStatus : CancellationDuesPaymentStatus
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  beamFields:
+    currency:
+      currency: Maybe Currency
+
+  fromTType:
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+
+  toTType:
+    currency: Kernel.Prelude.Just|I
+
+  constraints:
+    id: PrimaryKey
+    rideId: SecondaryKey
+
+  sqlType:
+    cancellationAmount: integer
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  queries:
+    findByRideId:
+      kvFunction: findOneWithKV
+      where:
+        rideId
+
+    updatePaymentStatusByRideId:
+      kvFunction: updateOneWithKV
+      params: [paymentStatus]
+      where:
+        rideId

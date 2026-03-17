@@ -48,6 +48,7 @@ import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DailyStatsExtra as QDSE
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.FleetDriverAssociationExtra as QFDAE
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QV
 import qualified Tools.Payout as TP

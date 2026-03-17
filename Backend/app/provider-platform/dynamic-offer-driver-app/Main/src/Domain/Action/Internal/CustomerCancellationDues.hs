@@ -16,6 +16,7 @@ module Domain.Action.Internal.CustomerCancellationDues where
 
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.CancellationCharges as DCC
+import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.DailyStats as DDS
 import Domain.Types.Merchant (Merchant)
 import EulerHS.Prelude hiding (id)
@@ -33,6 +34,7 @@ import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CancellationCharges as QCC
+import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
@@ -172,6 +174,7 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = do
                   ..
                 }
         QCC.create cancellationCharges
+        QCDD.updatePaymentStatusByRideId DCDD.PAID ride.id
         localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
         mbDailyStats <- QDailyStats.findByDriverIdAndDate ride.driverId (utctDay localTime)
         case mbDailyStats of
