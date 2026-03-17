@@ -189,3 +189,14 @@ blockDriverLocationsTill merchantId driverId blockTill = do
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVER_BLOCK_TILL_API") url)
   logDebug $ "lts driver block till: " <> show blockLocationsTillResp
   return blockLocationsTillResp
+
+getQueueDriverPosition :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Text -> Id DP.Person -> m QueueDriverPositionResp
+getQueueDriverPosition specialLocationId driverId = do
+  ltsCfg <- asks (.ltsCfg)
+  let url = ltsCfg.url
+  queuePositionRes <-
+    withShortRetry $
+      callAPI url (NearByAPI.queueDriverPosition specialLocationId driverId) "getQueueDriverPosition" NearByAPI.queueDriverPositionAPI
+        >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_QUEUE_DRIVER_POSITION_API") url)
+  logDebug $ "lts getQueueDriverPosition: " <> show queuePositionRes
+  return queuePositionRes
