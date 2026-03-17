@@ -2,6 +2,7 @@
 
 module API.Types.UI.Sos where
 
+import Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.Ride
@@ -10,6 +11,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
+import Kernel.Utils.TH
 import qualified Safety.Domain.Types.Sos
 import Servant
 import Tools.Auth
@@ -46,11 +48,11 @@ data SosLocationUpdateReq = SosLocationUpdateReq {accuracy :: Kernel.Prelude.May
 data SosReq = SosReq
   { customerLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     flow :: Safety.Domain.Types.Sos.SosType,
-    isKaptureTicketRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isRideEnded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     notifyAllContacts :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
-    sendPNOnPostRideSOS :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    sendPNOnPostRideSOS :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    triggerApiList :: Kernel.Prelude.Maybe [TriggerApi]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -85,6 +87,12 @@ data StartTrackingRes = StartTrackingRes {sosId :: Kernel.Types.Id.Id Safety.Dom
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data TriggerApi
+  = POLICE
+  | KAPTURE
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
 data UpdateStateReq = UpdateStateReq {sosState :: Safety.Domain.Types.Sos.SosState}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -92,3 +100,5 @@ data UpdateStateReq = UpdateStateReq {sosState :: Safety.Domain.Types.Sos.SosSta
 data UpdateToRideReq = UpdateToRideReq {rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(mkHttpInstancesForEnum ''TriggerApi)
