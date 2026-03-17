@@ -139,9 +139,8 @@ generateAdvisoryMessage risk availableTime bufferMins =
 computeCrowdingBufferSeconds :: UTCTime -> Maybe Int
 computeCrowdingBufferSeconds departureTime =
   let -- IST is UTC+5:30
-      istOffset = istOffsetSeconds
-      istTime = addUTCTime (fromIntegral (istOffset :: Int)) departureTime
-      (_, timeOfDay) = Time.utctDayTime istTime `divMod'` (24 * 3600)
+      istTime = addUTCTime (fromIntegral istOffsetSeconds) departureTime
+      timeOfDay = floor (Time.utctDayTime istTime) `mod` (24 * 3600) :: Int
       hours = timeOfDay `div` 3600
       mins = (timeOfDay `mod` 3600) `div` 60
       isPeakMorning = (hours == 7 && mins >= 30) || (hours >= 8 && hours < 10)
@@ -154,7 +153,7 @@ computeCrowdingBufferSeconds departureTime =
 flagLateNightWalking :: UTCTime -> [(Int, Text, Maybe Double)] -> [SafetyWarning]
 flagLateNightWalking departureTime legs =
   let istTime = addUTCTime (fromIntegral istOffsetSeconds) departureTime
-      (_, timeOfDay) = Time.utctDayTime istTime `divMod'` (24 * 3600)
+      timeOfDay = floor (Time.utctDayTime istTime) `mod` (24 * 3600) :: Int
       hours = timeOfDay `div` 3600
       isLateNight = hours >= 21 || hours < 5
    in if isLateNight
@@ -188,10 +187,3 @@ showTimeIST utcTime =
           then (if hours > 12 then hours - 12 else hours, "PM" :: Text)
           else (if hours == 0 then 12 else hours, "AM" :: Text)
    in show displayHours <> ":" <> (if mins < 10 then "0" else "") <> show mins <> " " <> amPm
-
--- | Helper for divMod on NominalDiffTime
-divMod' :: NominalDiffTime -> NominalDiffTime -> (Int, Int)
-divMod' a b =
-  let totalSecs = floor a :: Int
-      divisor = floor b :: Int
-   in if divisor == 0 then (0, totalSecs) else totalSecs `divMod` divisor

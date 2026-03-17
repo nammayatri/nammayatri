@@ -15,12 +15,10 @@
 module SharedLogic.Scheduler.Jobs.DepartureReminder where
 
 import Data.Time (UTCTime(..), addUTCTime, utctDay)
-import qualified Data.Time.Calendar as Calendar
 import qualified Data.Time.Calendar.WeekDate as WeekDate
 import qualified Data.Aeson as Aeson
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -51,7 +49,7 @@ processDepartureReminders = do
           when (now >= notifyTime && not (alreadyNotifiedToday trip now)) $ do
             logInfo $ "Sending departure reminder for saved trip: " <> show trip.id
             -- In production: sendPushNotification trip.riderId advisory
-            QSavedTrip.updateLastNotified trip.id (Just now) (Just advisory.recommendedDeparture)
+            QSavedTrip.updateLastNotified (Just now) (Just advisory.recommendedDeparture) trip.id
 
 -- | Check if a trip's recurrence matches today (using IST day)
 isScheduledForToday :: DST.TripRecurrence -> Maybe Text -> UTCTime -> Bool
