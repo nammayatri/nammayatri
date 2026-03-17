@@ -2,6 +2,7 @@ module Domain.Action.Internal.CancellationDues where
 
 import qualified Data.Aeson as A
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Ride as DRide
 import Environment (Flow)
@@ -14,6 +15,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.UserCancellationDues as UserCancellationDues
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
@@ -39,6 +41,13 @@ customerCancellationDuesWaiveOff merchantId apiKey req = withLogTag ("customerCa
   booking <- QBooking.findById bookingId >>= fromMaybeM (BookingNotFound req.bookingId)
   riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
   riderDetails <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
+  -- Check if cancellation dues for this ride are still pending
+  mbCancellationDuesDetails <- QCDD.findByRideId rideId
+  case mbCancellationDuesDetails of
+    Just duesDetails -> do
+      when (duesDetails.paymentStatus /= DCDD.PENDING) $
+        throwError $ InvalidRequest $ "Cancellation dues for rideId " <> req.rideId <> " are already " <> show duesDetails.paymentStatus <> ". Cannot waive off."
+    Nothing -> logWarning $ "No CancellationDuesDetails entry found for rideId: " <> req.rideId <> ". Proceeding with legacy flow."
   transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   logInfo $ "Cancellation Due Amount is not equal to the waived off amount for riderId " <> riderDetails.id.getId <> " rideId " <> req.rideId <> " bookingId " <> req.bookingId <> " waiveOffAmount " <> show req.waiveOffAmount <> " cancellationDues " <> show ride.cancellationChargesOnCancel
   unless (ride.cancellationChargesOnCancel == Just req.waiveOffAmount) $ do
@@ -84,5 +93,6 @@ customerCancellationDuesWaiveOff merchantId apiKey req = withLogTag ("customerCa
     QRD.updateWaivedOffAmount req.waiveOffAmount riderDetails.id.getId
     QRD.updateNoOfTimesWaiveOffUsed riderDetails.id.getId
     QRD.updateCancellationDues (riderDetails.cancellationDues - req.waiveOffAmount) riderDetails.id
+    QCDD.updatePaymentStatusByRideId DCDD.WAIVED rideId
   when (not canWaiveOffResult) $ throwError $ InvalidRequest $ "Failed to waive off cancellation dues for riderId from jsonLogic - " <> riderDetails.id.getId <> " rideId " <> req.rideId <> " bookingId " <> req.bookingId <> " waiveOffAmount " <> show req.waiveOffAmount
   return $ Success

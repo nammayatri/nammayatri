@@ -31,6 +31,11 @@ import qualified Data.Map as M
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
+-- import qualified Lib.Yudhishthira.Event as Yudhishthira
+
+-- import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+
+import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.CancellationReason as DTCR
 import Domain.Types.DriverLocation
 import qualified Domain.Types.Merchant as DMerc
@@ -82,6 +87,7 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.CallStatus as QCallStatus
+import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -258,6 +264,75 @@ cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy cancell
       riderDetails <- QRiderDetails.findById rid >>= fromMaybeM (RiderDetailsNotFound rid.getId)
       void $ QRiderDetails.updateCancellationDues (fee.amount + riderDetails.cancellationDues) rid
       QRiderDetails.updateValidCancellationsCount rid.getId
+      -- Track cancellation dues per ride for waive-off correctness
+      when (fee.amount > 0) $ do
+        cancellationDuesDetailsId <- generateGUID
+        now <- getCurrentTime
+        let cancellationDuesDetails =
+              DCDD.CancellationDuesDetails
+                { id = cancellationDuesDetailsId,
+                  rideId = ride.id,
+                  riderId = rid,
+                  cancellationAmount = fee.amount,
+                  currency = fee.currency,
+                  paymentStatus = DCDD.PENDING,
+                  createdAt = now,
+                  updatedAt = now,
+                  merchantId = ride.merchantId,
+                  merchantOperatingCityId = Just ride.merchantOperatingCityId
+                }
+        QCDD.create cancellationDuesDetails
+      -- Customer cancellation ledger entries (wallet path)
+      when (isPrepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableDriverWallet && fee.amount > 0) $ do
+        let rideGst = transporterConfig.taxConfig.rideGst
+            gstPct = fromMaybe 0 rideGst.cgstPercentage + fromMaybe 0 rideGst.sgstPercentage + fromMaybe 0 rideGst.igstPercentage
+            gstOnCancellation = if gstPct > 0 then fee.amount * gstPct / (1 + gstPct) else 0
+            baseCancellation = fee.amount - gstOnCancellation
+            cancellationComponents =
+              [ (baseCancellation, walletReferenceCustomerCancellationCharges, OwnerLiability),
+                (gstOnCancellation, walletReferenceCustomerCancellationGST, GovtIndirect)
+              ]
+            -- TDS on cancellation charges (same rate as ride)
+            mbTdsRate = transporterConfig.taxConfig.defaultTdsRate
+            mbTdsAmount = do
+              rate <- mbTdsRate
+              let amount = baseCancellation * realToFrac rate
+              if amount > 0 then Just amount else Nothing
+        mbPanCard <- QPanCard.findByDriverId ride.driverId
+        mbDriverInfo <- QDI.findById (cast ride.driverId)
+        ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig
+        result <- runFinance ctx $ do
+          mapM_
+            ( \(amt, ref, dest) -> do
+                transfer_ BuyerAsset BuyerExternal amt ref
+                void $ transfer BuyerExternal dest amt ref
+            )
+            cancellationComponents
+          -- TDS: Liability(DRIVER/FLEET_OWNER) -> Liability(GOVERNMENT_DIRECT)
+          whenJust mbTdsAmount $ \tdsAmount ->
+            void $ transfer OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCancellation
+          invoice
+            InvoiceConfig
+              { invoiceType = Invoice.RideCancellation,
+                issuedToType = "CUSTOMER",
+                issuedToId = rid.getId,
+                issuedToName = booking.riderName,
+                issuedToAddress = booking.fromLocation.address.fullAddress,
+                gstBreakdown = computeGstBreakdown rideGst gstOnCancellation,
+                lineItems =
+                  catMaybes
+                    [ if baseCancellation > 0
+                        then Just InvoiceLineItem {description = "Customer Cancellation Fee", quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, isExternalCharge = False}
+                        else Nothing,
+                      if gstOnCancellation > 0
+                        then Just InvoiceLineItem {description = "GST on Cancellation Fee", quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, isExternalCharge = False}
+                        else Nothing
+                    ]
+              }
+        case result of
+          Left err -> logInfo $ "Failed to create cancellation ledger entries: " <> show err
+          Right _ -> pure ()
+        logInfo $ "Created customer cancellation ledger entries for bookingId: " <> booking.id.getId <> " base=" <> show baseCancellation <> " gst=" <> show gstOnCancellation <> " tds=" <> show mbTdsAmount
     _ -> do
       logError "cancelRideTransaction: riderId in booking or cancellationFee is not present"
 

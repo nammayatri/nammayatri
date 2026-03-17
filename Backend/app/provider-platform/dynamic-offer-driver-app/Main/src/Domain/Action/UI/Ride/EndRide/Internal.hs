@@ -124,6 +124,7 @@ import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.VendorSplitDetails as CQVSD
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CancellationCharges as QCC
+import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
@@ -231,6 +232,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
         QRD.updateCancellationDuesPaid cancellationDues riderDetails.id.getId
         QRD.updateNoOfTimesCanellationDuesPaid riderDetails.id.getId
         QRD.updateCancellationDues 0 riderDetails.id >> QCC.create cancellationCharges
+        QCDD.updateAllPendingToPaidByRiderId riderDetails.id
       -- QRD.updateDisputeChancesUsedAndCancellationDues (max 0 (riderDetails.disputeChancesUsed - calDisputeChances)) 0 (riderDetails.id) >> QCC.create cancellationCharges
       _ -> logWarning $ "Unable to update customer cancellation dues as RiderDetailsId is NULL with rideId " <> ride.id.getId
   when (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled) $ do
