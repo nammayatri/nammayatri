@@ -782,7 +782,7 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
   purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
   unless (purchasedPass.personId == personId) $ throwError AccessDenied
   istTime <- getLocalCurrentTime (19800 :: Seconds)
-  unless (purchasedPass.startDate <= DT.utctDay istTime) $ throwError (InvalidRequest $ "Pass will be active from " <> show purchasedPass.startDate)
+  unless (purchasedPass.startDate <= DT.utctDay istTime) $ throwError (PassActivationNotReady purchasedPassId.getId $ "Pass will be active from " <> show purchasedPass.startDate)
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
 
   -- If autoActivated is requested, find the nearest fleet (vehicle number) from user location
@@ -793,11 +793,11 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
           (Just lat, Just lon) -> do
             riderConfig <- QRiderConfig.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
             case integratedBPPConfigs of
-              [] -> throwError (InvalidRequest "No integrated BPP config available for auto activation")
+              [] -> throwError (PassVerificationFailed purchasedPassId.getId "No integrated BPP config available for auto activation")
               (nearbyConfig : _) -> do
                 buses <- FRFSJourneyUtils.getNearbyBusesFRFS (LatLong lat lon) riderConfig nearbyConfig
                 let busesWithVehicle = filter (isJust . (.vehicle_number)) buses
-                when (null busesWithVehicle) $ throwError (InvalidRequest "No nearby buses found for auto activation")
+                when (null busesWithVehicle) $ throwError (PassNoBusesNearby purchasedPassId.getId)
 
                 -- Filter by purchased pass applicable service tiers
                 let applicableTiers = purchasedPass.applicableVehicleServiceTiers
@@ -815,19 +815,19 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
                         )
                         busesWithVehicle
 
-                when (null busesFilteredByTier) $ throwError (InvalidRequest "No nearby buses found matching pass service tiers for auto activation")
+                when (null busesFilteredByTier) $ throwError (PassNoBusesNearby purchasedPassId.getId)
 
                 let nearest = minimumBy (EHS.comparing (\b -> distanceBetweenInMeters (LatLong lat lon) (LatLong b.latitude b.longitude))) busesFilteredByTier
                 case nearest.vehicle_number of
                   Just v -> return v
-                  Nothing -> throwError (InvalidRequest "No valid vehicle number found for nearest bus")
-          _ -> throwError (InvalidRequest "Location is required for auto activation")
+                  Nothing -> throwError (PassNoBusesNearby purchasedPassId.getId)
+          _ -> throwError (PassVerificationFailed purchasedPassId.getId "Location is required for auto activation")
       else return passVerifyReq.vehicleNumber
 
-  (integratedBPPConfig, vehicleInfo) <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumberToUse (Just True) >>= fromMaybeM (InvalidRequest $ "Entered Bus OTP: " <> vehicleNumberToUse <> " is invalid. Please check again.")
+  (integratedBPPConfig, vehicleInfo) <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumberToUse (Just True) >>= fromMaybeM (PassInvalidVehicle purchasedPassId.getId vehicleNumberToUse)
   when (fromMaybe True vehicleInfo.isActuallyValid) $ do
     unless (vehicleInfo.serviceType `elem` purchasedPass.applicableVehicleServiceTiers) $
-      throwError $ InvalidRequest ("This pass is only " <> purchasedPass.benefitDescription)
+      throwError $ PassVerificationFailed purchasedPassId.getId ("This pass is only valid for " <> purchasedPass.benefitDescription)
   routeStopMapping <-
     case vehicleInfo.routeCode of
       Just routeCode ->
@@ -1026,7 +1026,7 @@ postMultimodalPassActivateTodayUtil ::
     Environment.Flow APISuccess.APISuccess
   )
 postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) passNumber mbStartDate = do
-  purchasedPass <- QPurchasedPass.findByPassNumber passNumber >>= fromMaybeM (InvalidRequest "Pass not found")
+  purchasedPass <- QPurchasedPass.findByPassNumber passNumber >>= fromMaybeM (PurchasedPassNotFound (show passNumber))
   unless isDashboard $ do
     personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
     unless (purchasedPass.personId == personId) $ throwError AccessDenied
@@ -1034,17 +1034,17 @@ postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) 
   let today = DT.utctDay istTime
   normalizedMbStartDate <- case mbStartDate of
     Just d | d == today -> return Nothing
-    Just d | d < today -> throwError (InvalidRequest "Cannot schedule pass for a past date")
+    Just d | d < today -> throwError (PassActivationNotReady purchasedPass.id.getId "Cannot schedule pass for a past date")
     _ -> return mbStartDate
 
   case normalizedMbStartDate of
     Nothing ->
       when (purchasedPass.status /= DPurchasedPass.PreBooked) $
-        throwError (InvalidRequest "Only pre-booked passes can be activated for today")
+        throwError (PassActivationNotReady purchasedPass.id.getId "Only pre-booked passes can be activated for today")
     Just _ ->
       unless (purchasedPass.status `elem` [DPurchasedPass.PreBooked, DPurchasedPass.Active]) $
-        throwError (InvalidRequest "Only active or pre-booked passes can be rescheduled")
-  _ <- purchasedPass.maxValidDays & fromMaybeM (InvalidRequest "Pass does not have a valid duration")
+        throwError (PassActivationNotReady purchasedPass.id.getId "Only active or pre-booked passes can be rescheduled")
+  _ <- purchasedPass.maxValidDays & fromMaybeM (PassActivationNotReady purchasedPass.id.getId "Pass does not have a valid duration")
   let (newStartDate, newStatus) = case normalizedMbStartDate of
         Nothing -> (today, DPurchasedPass.Active)
         Just date -> (date, DPurchasedPass.PreBooked)
@@ -1055,7 +1055,7 @@ postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) 
       overlappingPasses = filter (\p -> hasDateOverlap (newStartDate, newEndDate) (p.startDate, p.endDate)) otherPasses
 
   unless (null overlappingPasses) $
-    throwError (InvalidRequest "Cannot activate pass: date range overlaps with another active or prebooked pass")
+    throwError (PassActivationOverlap purchasedPass.id.getId)
 
   QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate newStatus purchasedPass.benefitDescription purchasedPass.benefitType purchasedPass.benefitValue purchasedPass.passAmount
   allPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatusAndStartDate (Just 1) Nothing purchasedPass.id [DPurchasedPass.Active, DPurchasedPass.PreBooked] purchasedPass.startDate
