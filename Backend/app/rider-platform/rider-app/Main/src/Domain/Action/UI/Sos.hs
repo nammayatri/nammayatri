@@ -45,8 +45,6 @@ import qualified Kernel.External.SOS as PoliceSOS
 import qualified Kernel.External.SOS.ERSS.Auth as ERSSAuth
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
-import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
-import qualified SharedLogic.External.LocationTrackingService.Types as LTSTypes
 import Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import Kernel.ServantMultipart
@@ -62,6 +60,8 @@ import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Safety.Storage.Queries.SafetySettingsExtra as QSafetyExtra
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
+import qualified SharedLogic.External.LocationTrackingService.Types as LTSTypes
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Person as SLP
@@ -327,7 +327,7 @@ createTicketForNewSos person ride riderConfig merchantId merchantOperatingCityId
       ticketId <- do
         if riderConfig.enableSupportForSafety && shouldCreateKaptureTicket
           then do
-            ticketResponse <- withTryCatch "createTicket:sosTrigger" (createTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber ["https://" <> trackLink] rideInfo req.flow riderConfig.kaptureConfig.disposition kaptureQueue))
+            ticketResponse <- withTryCatch "createTicket:sosTrigger" (createTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber [trackLink] rideInfo req.flow riderConfig.kaptureConfig.disposition kaptureQueue))
             case ticketResponse of
               Right ticketResponse' -> return (Just ticketResponse'.ticketId)
               Left _ -> return Nothing
@@ -454,22 +454,22 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
       void $ SafetySos.updateSosMediaFiles updatedMediaFiles sosId
       phoneNumber <- mapM decrypt person.mobileNumber
       let kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
-          dashboardFileUrl =
-            maybe
-              []
-              ( \patternS ->
-                  [ patternS
-                      & T.replace "<FILE_PATH>" filePath
-                  ]
-              )
-              riderConfig.dashboardMediaFileUrlPattern
       when riderConfig.enableSupportForSafety $ do
         when (SafetySos.isRideBasedSos sosDetails.entityType) $ do
           rideId <- sosDetails.rideId & fromMaybeM (RideDoesNotExist "Ride ID not found")
           ride <- QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist (getId rideId))
           let rideInfo = SIVR.buildRideInfo ride person phoneNumber
               trackLink = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
-              mediaLinks = ["https://" <> trackLink] <> dashboardFileUrl
+              dashboardRideInfoUrl =
+                maybe
+                  []
+                  ( \patternS ->
+                      [ patternS
+                          & T.replace "<RIDE_ID>" ride.id.getId
+                      ]
+                  )
+                  riderConfig.dashboardMediaFileUrlPattern
+              mediaLinks = [trackLink] <> dashboardRideInfoUrl
           case sosDetails.ticketId of
             Just ticketId -> do
               let comment =
@@ -984,7 +984,7 @@ postSosUpdateToRide (mbPersonId, merchantId) sosId UpdateToRideReq {..} = do
     ticketResponse <-
       withTryCatch "createTicket:sosUpdateToRide" $
         Ticket.createTicket person.merchantId person.merchantOperatingCityId $
-          SIVR.mkTicket person phoneNumber ["https://" <> trackLink] rideInfo SafetyDSos.SafetyFlow riderConfig.kaptureConfig.disposition kaptureQueue
+          SIVR.mkTicket person phoneNumber [trackLink] rideInfo SafetyDSos.SafetyFlow riderConfig.kaptureConfig.disposition kaptureQueue
     whenJust (either (const Nothing) (Just . (.ticketId)) ticketResponse) $ \newTicketId ->
       void $ SafetySos.updateSosTicketId sosId (Just newTicketId)
 

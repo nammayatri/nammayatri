@@ -620,3 +620,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN max_alternate_route_vehicles integ
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN include_vehicles_with_no_eta boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ALTER COLUMN tracking_short_url_pattern SET DEFAULT 'https://nammayatri.in/t/';
+ALTER TABLE atlas_app.rider_config ALTER COLUMN dashboard_media_file_url_pattern SET DEFAULT 'https://control-center.moving.tech/ops/rides/<RIDE_ID>';
