@@ -837,6 +837,11 @@ creditReferralWallet ::
   m ()
 creditReferralWallet amount driverId_ dailyStatsId earningsKey currency merchantId merchantOperatingCityId =
   when (amount > 0) $ do
+    mbFleetDriverAssociation <- QFDAE.findByDriverId driverId_ True
+    let mbFleetOwnerId = (\fda -> Id fda.fleetOwnerId) <$> mbFleetDriverAssociation
+    let (counterparty, ownerId) = case mbFleetOwnerId of
+          Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
+          Nothing -> (counterpartyDriver, driverId_.getId)
     let metadata =
           A.object
             [ AKey.fromText earningsKey A..= amount,
@@ -844,8 +849,8 @@ creditReferralWallet amount driverId_ dailyStatsId earningsKey currency merchant
             ]
     resp <-
       createWalletEntryDelta
-        counterpartyDriver
-        driverId_.getId
+        counterparty
+        ownerId
         amount
         currency
         merchantId
