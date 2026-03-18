@@ -56,9 +56,12 @@ dispatchCommunications entityId directives =
       Right action ->
         if directive.delaySeconds > 0
           then do
-            -- Fork a delayed communication
+            -- WARNING: This is fire-and-forget. success=True is returned before the delayed
+            -- dispatch actually occurs. If the process restarts, the communication is lost.
+            -- TODO: Replace fork + threadDelaySec with a durable job queue (e.g. Lib.Scheduler)
+            -- to guarantee delivery of delayed communications.
             let delaySecs = fromIntegral directive.delaySeconds
-            logDebug $ "Scheduling delayed communication (" <> show directive.delaySeconds <> "s) for entity " <> entityId
+            logWarning $ "Scheduling delayed communication (" <> show directive.delaySeconds <> "s) for entity " <> entityId <> " — fire-and-forget via fork, success returned before actual dispatch"
             fork ("delayed-comm-" <> entityId) $ do
               threadDelaySec delaySecs
               void $ dispatchCommunication entityId action

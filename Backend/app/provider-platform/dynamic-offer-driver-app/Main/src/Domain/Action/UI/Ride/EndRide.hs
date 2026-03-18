@@ -583,6 +583,9 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
 
     -- GPS Toll Behavior Check - evaluate if driver intentionally turned off GPS on toll route
+    -- TODO: This runs in fork — failures are fire-and-forget and silently lost.
+    -- Consider moving to a scheduled job (Lib.Scheduler) for reliability, or at minimum
+    -- adding error logging inside the forked block to surface failures.
     when thresholdConfig.enableGpsTollBehavior $ do
       fork "GpsTollBehavior Check" $ do
         let isTollRide = isJust updRide.estimatedTollCharges || isJust updRide.tollCharges

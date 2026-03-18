@@ -69,11 +69,14 @@ evaluateRules callerApp mocId domain fetchRules snapshotJson = do
           logError $ "Error evaluating behavior rules: " <> show err
           return defaultOrchestratedOutput
         Right logicResp -> do
-          let output = extractOutput logicResp.result
-          logDebug $
-            "Rule evaluation complete. Consequences: " <> show (length output.consequences)
-              <> ", Communications: "
-              <> show (length output.communications)
+          output <- extractOutput logicResp.result
+          if null output.consequences && null output.communications
+            then logInfo $ "Rules for domain " <> show domain <> " produced empty output (no consequences or communications)."
+            else
+              logDebug $
+                "Rule evaluation complete. Consequences: " <> show (length output.consequences)
+                  <> ", Communications: "
+                  <> show (length output.communications)
           return output
 
 -- | Extract consequences and communications from rule engine JSON output
@@ -83,20 +86,21 @@ evaluateRules callerApp mocId domain fetchRules snapshotJson = do
 --   "consequences": [{ "consequenceType": "HARD_BLOCK", "params": {...}, "requiresResolution": false }],
 --   "communications": [{ "channel": "OVERLAY", "templateKey": "...", "params": {...}, "delaySeconds": 0 }]
 -- }
-extractOutput :: A.Value -> OrchestratedOutput
+extractOutput :: (MonadFlow m) => A.Value -> m OrchestratedOutput
 extractOutput val =
   case val of
-    A.Object obj ->
-      OrchestratedOutput
-        { consequences = parseArrayField "consequences" obj,
-          communications = parseArrayField "communications" obj
-        }
-    _ -> defaultOrchestratedOutput
+    A.Object obj -> do
+      consequences <- parseArrayField "consequences" obj
+      communications <- parseArrayField "communications" obj
+      return OrchestratedOutput {consequences, communications}
+    _ -> return defaultOrchestratedOutput
   where
-    parseArrayField :: (FromJSON a) => Text -> KM.KeyMap A.Value -> [a]
+    parseArrayField :: (FromJSON a, MonadFlow m) => Text -> KM.KeyMap A.Value -> m [a]
     parseArrayField key obj =
       case KM.lookup (AK.fromText key) obj of
         Just v -> case A.fromJSON v of
-          A.Success items -> items
-          A.Error _ -> []
-        Nothing -> []
+          A.Success items -> return items
+          A.Error errMsg -> do
+            logWarning $ "Failed to parse field '" <> key <> "' from rule output: " <> show errMsg <> ". Dropping malformed data."
+            return []
+        Nothing -> return []

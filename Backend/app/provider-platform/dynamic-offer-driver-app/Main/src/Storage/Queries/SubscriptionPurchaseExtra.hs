@@ -112,6 +112,37 @@ findAllByOwnerAndServiceNameWithPagination' merchantOpCityId ownerId ownerType s
     limit
     offset
 
+-- | Find subscriptions by owner with optional service name filter (for dashboard APIs).
+-- When mbServiceName is Nothing, returns all service types for the owner.
+findAllByOwnerWithMbServiceName ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Text ->
+  SubscriptionOwnerType ->
+  Maybe ServiceNames ->
+  Maybe SubscriptionPurchaseStatus ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  Maybe Int ->
+  Maybe Int ->
+  m [SubscriptionPurchase]
+findAllByOwnerWithMbServiceName merchantOpCityId ownerId ownerType mbServiceName mbStatus mbAmountMin mbAmountMax limit offset =
+  findAllWithOptionsKV
+    [ Se.And
+        ( [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId,
+            Se.Is Beam.ownerId $ Se.Eq ownerId,
+            Se.Is Beam.ownerType $ Se.Eq ownerType
+          ]
+            <> [Se.Is Beam.serviceName $ Se.Eq sn | Just sn <- [mbServiceName]]
+            <> [Se.Is Beam.status $ Se.Eq status | Just status <- [mbStatus]]
+            <> [Se.Is Beam.planFee $ Se.GreaterThanOrEq amt | Just amt <- [mbAmountMin]]
+            <> [Se.Is Beam.planFee $ Se.LessThanOrEq amt | Just amt <- [mbAmountMax]]
+        )
+    ]
+    (Se.Desc Beam.createdAt)
+    limit
+    offset
+
 findAllByOwnerWithFilters ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->

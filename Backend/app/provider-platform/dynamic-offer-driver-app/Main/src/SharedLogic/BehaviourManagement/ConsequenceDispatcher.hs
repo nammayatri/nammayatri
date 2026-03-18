@@ -62,11 +62,17 @@ handleConsequences ctx driverId directives = do
   let (actions, errors) = CEParser.parseDirectives directives
   unless (null errors) $
     logError $ "Consequence parse errors for driver " <> driverId.getId <> ": " <> show errors
+  -- TODO: Integrate with a proper audit trail (e.g. DriverBlockTransactions or a dedicated
+  -- consequence audit table) to persist dispatched consequences for compliance and debugging.
   forM_ actions $ \action -> do
     result <- try @_ @SomeException $ dispatchConsequence ctx driverId action
     case result of
-      Right () -> logDebug $ "Consequence executed for driver " <> driverId.getId <> ": " <> show action
-      Left err -> logError $ "Consequence failed for driver " <> driverId.getId <> ": " <> show err
+      Right () -> do
+        logDebug $ "Consequence executed for driver " <> driverId.getId <> ": " <> show action
+        logInfo $ "[AUDIT] Consequence dispatched: type=" <> showConsequenceType action <> ", target=driver:" <> driverId.getId <> ", status=SUCCESS"
+      Left err -> do
+        logError $ "Consequence failed for driver " <> driverId.getId <> ": " <> show err
+        logInfo $ "[AUDIT] Consequence dispatched: type=" <> showConsequenceType action <> ", target=driver:" <> driverId.getId <> ", status=FAILED, error=" <> show err
 
 -- | Dispatch a single parsed consequence action.
 dispatchConsequence ::
@@ -119,8 +125,21 @@ dispatchConsequence ctx driverId = \case
   CET.Nudge _params -> pure ()
   CET.Warn _params -> pure ()
   CET.ChargeFee params -> do
-    logInfo $ "Charge fee requested for driver " <> driverId.getId <> ": " <> show params.penaltyAmount <> " " <> params.currency
-    pure ()
+    -- TODO: Integrate with the fee/penalty system (e.g. Payment.chargePenalty or driver dues framework)
+    -- to actually deduct the fee from the driver's account. Currently this is a no-op.
+    logWarning $ "ChargeFee not implemented — fee not applied for driver " <> driverId.getId <> ": " <> show params.penaltyAmount <> " " <> params.currency
+
+-- | Helper to extract a human-readable consequence type for audit logging.
+showConsequenceType :: CET.ConsequenceAction -> Text
+showConsequenceType = \case
+  CET.NoAction -> "NO_ACTION"
+  CET.FeatureBlock _ -> "FEATURE_BLOCK"
+  CET.SoftBlock _ -> "SOFT_BLOCK"
+  CET.HardBlock _ -> "HARD_BLOCK"
+  CET.PermanentBlock _ -> "PERMANENT_BLOCK"
+  CET.Nudge _ -> "NUDGE"
+  CET.Warn _ -> "WARN"
+  CET.ChargeFee _ -> "CHARGE_FEE"
 
 -- | Dispatch all communication directives for a driver.
 handleCommunications ::
@@ -132,14 +151,26 @@ handleCommunications ::
   [CMT.CommunicationDirective] ->
   m ()
 handleCommunications driverId directives = do
-  let (actions, errors) = CMParser.parseDirectives directives
-  unless (null errors) $
-    logError $ "Communication parse errors for driver " <> driverId.getId <> ": " <> show errors
-  forM_ actions $ \action -> do
-    result <- try @_ @SomeException $ dispatchCommunicationAction driverId action
-    case result of
-      Right () -> logDebug $ "Communication dispatched for driver " <> driverId.getId <> ": " <> show action
-      Left err -> logError $ "Communication failed for driver " <> driverId.getId <> ": " <> show err
+  forM_ directives $ \directive -> do
+    case CMParser.parseDirective directive of
+      Left err ->
+        logError $ "Communication parse error for driver " <> driverId.getId <> ": " <> err
+      Right action -> do
+        let delaySec = directive.delaySeconds
+        if delaySec > 0
+          then do
+            -- WARNING: This is fire-and-forget — success is assumed before actual dispatch.
+            -- TODO: Replace fork + threadDelaySec with a durable job queue (e.g. Lib.Scheduler)
+            -- to ensure delayed communications are reliably delivered.
+            logWarning $ "Scheduling delayed communication (" <> show delaySec <> "s) for driver " <> driverId.getId <> " — fire-and-forget via fork"
+            fork ("delayed-comm-" <> driverId.getId) $ do
+              threadDelaySec (fromIntegral delaySec)
+              void $ try @_ @SomeException $ dispatchCommunicationAction driverId action
+          else do
+            result <- try @_ @SomeException $ dispatchCommunicationAction driverId action
+            case result of
+              Right () -> logDebug $ "Communication dispatched for driver " <> driverId.getId <> ": " <> show action
+              Left err -> logError $ "Communication failed for driver " <> driverId.getId <> ": " <> show err
 
 -- | Dispatch a single parsed communication action.
 dispatchCommunicationAction ::
@@ -152,13 +183,24 @@ dispatchCommunicationAction ::
   m ()
 dispatchCommunicationAction driverId = \case
   CMT.NoCommunication -> pure ()
-  CMT.FcmNotification params ->
+  CMT.FcmNotification params -> do
+    -- TODO: Integrate with actual FCM dispatch via Tools.Notifications (e.g. Notify.notifyDriver)
+    -- once the behavior management notification templates are registered in the FCM notification system.
     logInfo $ "FCM notification for driver " <> driverId.getId <> ": " <> params.templateKey
-  CMT.InAppOverlay params ->
+    logInfo $ "[AUDIT] Consequence communication dispatched: type=FCM_NOTIFICATION, target=driver:" <> driverId.getId <> ", templateKey=" <> params.templateKey <> ", status=STUB_ONLY"
+  CMT.InAppOverlay params -> do
+    -- TODO: Integrate with actual overlay dispatch via Tools.Notifications.sendOverlay
+    -- once overlay templates are configured for behavior management directives.
     logInfo $ "In-app overlay for driver " <> driverId.getId <> ": " <> params.overlayKey
-  CMT.InAppMessage params ->
+    logInfo $ "[AUDIT] Consequence communication dispatched: type=IN_APP_OVERLAY, target=driver:" <> driverId.getId <> ", overlayKey=" <> params.overlayKey <> ", status=STUB_ONLY"
+  CMT.InAppMessage params -> do
     logInfo $ "In-app message for driver " <> driverId.getId <> ": " <> params.messageKey
-  CMT.SmsCommunication params ->
-    logInfo $ "SMS for driver " <> driverId.getId <> ": " <> params.templateKey
-  CMT.BadgeCommunication params ->
-    logInfo $ "Badge for driver " <> driverId.getId <> ": " <> params.badgeKey
+    logInfo $ "[AUDIT] Consequence communication dispatched: type=IN_APP_MESSAGE, target=driver:" <> driverId.getId <> ", messageKey=" <> params.messageKey <> ", status=STUB_ONLY"
+  CMT.SmsCommunication params -> do
+    -- TODO: Integrate with SMS sending infrastructure (e.g. Tools.SMS or Exotel/Gupshup provider)
+    logWarning $ "SMS dispatch not implemented — dropping SMS for driver " <> driverId.getId <> ": " <> params.templateKey
+    logInfo $ "[AUDIT] Consequence communication dispatched: type=SMS, target=driver:" <> driverId.getId <> ", templateKey=" <> params.templateKey <> ", status=NOT_IMPLEMENTED"
+  CMT.BadgeCommunication params -> do
+    -- TODO: Integrate with badge/gamification system once available
+    logWarning $ "Badge dispatch not implemented — dropping badge for driver " <> driverId.getId <> ": " <> params.badgeKey
+    logInfo $ "[AUDIT] Consequence communication dispatched: type=BADGE, target=driver:" <> driverId.getId <> ", badgeKey=" <> params.badgeKey <> ", status=NOT_IMPLEMENTED"

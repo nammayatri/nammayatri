@@ -53,15 +53,13 @@ knowledgeCenterSopList merchantShortId opCity mbMerchantOperatingCityId mbSopTyp
   let filteredTypes = case mbSopType of
         Nothing -> sopTypes
         Just st -> if st `elem` sopTypes then [st] else []
-  case mbSopType of
-    Nothing ->
-      pure $ sortOn fst $ map (\sopType -> (sopType, [])) filteredTypes
-    Just _ -> do
-      pairs <- forM filteredTypes $ \sopType -> do
-        rows <- QKC.findAllBySopTypeAndMerchantOperatingCityId (Just maxKnowledgeCenterDocsPerSopType) (Just 0) sopType mocId
-        let docs = map (\r -> (r.id.getId, fromMaybe "" r.documentName)) rows
-        pure (sopType, docs)
-      pure $ sortOn fst pairs
+  -- P2-8 FIX: When sopType is omitted, fetch documents for ALL SOP types
+  -- (previously returned empty document lists when sopType was omitted).
+  pairs <- forM filteredTypes $ \sopType -> do
+    rows <- QKC.findAllBySopTypeAndMerchantOperatingCityId (Just maxKnowledgeCenterDocsPerSopType) (Just 0) sopType mocId
+    let docs = map (\r -> (r.id.getId, fromMaybe "" r.documentName)) rows
+    pure (sopType, docs)
+  pure $ sortOn fst pairs
 
 knowledgeCenterGetDocument ::
   (CacheFlow m r, MonadFlow m, EsqDBFlow m r, HasField "s3Env" r (S3.S3Env m)) =>

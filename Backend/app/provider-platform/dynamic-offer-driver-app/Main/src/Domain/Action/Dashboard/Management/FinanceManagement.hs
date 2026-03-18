@@ -126,14 +126,20 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
   subscriptions <- case mbSubscriptionId of
     Just subscriptionId -> do
       QSubscriptionPurchase.findByPrimaryKey (Id subscriptionId) >>= \case
-        Just sub -> pure [sub]
+        Just sub -> do
+          -- P0-2 FIX: Verify the record belongs to this merchant operating city
+          unless (sub.merchantOperatingCityId == merchantOpCityId) $
+            throwError $ InvalidRequest "Record does not belong to this merchant operating city"
+          pure [sub]
         Nothing -> pure []
     Nothing -> do
+      -- P1-5 FIX: When serviceName is Nothing, do NOT default to PREPAID_SUBSCRIPTION.
+      -- Pass Nothing through so all service types are returned.
       case (getId <$> mbDriverId, mbFleetOperatorId) of
         (Just driverId, _) ->
-          fetchSubscriptionsForOwner driverId DSP.DRIVER (fromMaybe DPlan.PREPAID_SUBSCRIPTION mbParsedServiceName) mbParsedStatus limit offset merchantOpCityId
+          fetchSubscriptionsForOwner driverId DSP.DRIVER mbParsedServiceName mbParsedStatus limit offset merchantOpCityId
         (_, Just fleetOwnerId) ->
-          fetchSubscriptionsForOwner fleetOwnerId DSP.FLEET_OWNER (fromMaybe DPlan.PREPAID_SUBSCRIPTION mbParsedServiceName) mbParsedStatus limit offset merchantOpCityId
+          fetchSubscriptionsForOwner fleetOwnerId DSP.FLEET_OWNER mbParsedServiceName mbParsedStatus limit offset merchantOpCityId
         _ -> do
           QSubscriptionPurchase.findAllByMerchantOpCityIdWithFilters
             merchantOpCityId
@@ -149,6 +155,9 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
   -- Build response items (use each subscription's serviceName for plan lookup)
   items <- mapM (\sub -> buildSubscriptionPurchaseItem sub limit offset) subscriptions
 
+  -- TODO (P1-6): totalItems and totalCount are computed from the current page of results,
+  -- not the full result set. A separate count query should be added to return the true total
+  -- count for proper pagination support on the frontend.
   let totalItems = length items
       summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems}
 
@@ -175,13 +184,13 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
       API.SubscriptionFailed -> DSP.FAILED
       API.SubscriptionExhausted -> DSP.EXHAUSTED
 
-    fetchSubscriptionsForOwner :: Text -> DSP.SubscriptionOwnerType -> DPlan.ServiceNames -> Maybe DSP.SubscriptionPurchaseStatus -> Int -> Int -> (Id DMOC.MerchantOperatingCity) -> Flow [DSP.SubscriptionPurchase]
-    fetchSubscriptionsForOwner ownerId ownerType serviceName mbStatusVal limit offset merchantOpCityId = do
-      QSubscriptionPurchase.findAllByOwnerAndServiceNameWithPagination'
-        merchantOpCityId
+    fetchSubscriptionsForOwner :: Text -> DSP.SubscriptionOwnerType -> Maybe DPlan.ServiceNames -> Maybe DSP.SubscriptionPurchaseStatus -> Int -> Int -> (Id DMOC.MerchantOperatingCity) -> Flow [DSP.SubscriptionPurchase]
+    fetchSubscriptionsForOwner ownerId ownerType mbServiceName mbStatusVal limit offset merchantOpCityId' = do
+      QSubscriptionPurchaseExtra.findAllByOwnerWithMbServiceName
+        merchantOpCityId'
         ownerId
         ownerType
-        serviceName
+        mbServiceName
         mbStatusVal
         mbAmountMin
         mbAmountMax
@@ -375,12 +384,20 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFrom mbInvoiceId mbInvo
   invoices <- case mbInvoiceId of
     Just invoiceId -> do
       QFinanceInvoice.findById (Id invoiceId) >>= \case
-        Just inv -> pure [inv]
+        Just inv -> do
+          -- P0-2 FIX: Verify the invoice belongs to this merchant operating city
+          unless (inv.merchantOperatingCityId == merchantOpCityId.getId) $
+            throwError $ InvalidRequest "Record does not belong to this merchant operating city"
+          pure [inv]
         Nothing -> pure []
     Nothing -> case mbInvoiceNumber of
       Just invoiceNumber -> do
         QFinanceInvoice.findByNumber invoiceNumber >>= \case
-          Just inv -> pure [inv]
+          Just inv -> do
+            -- P0-2 FIX: Verify the invoice belongs to this merchant operating city
+            unless (inv.merchantOperatingCityId == merchantOpCityId.getId) $
+              throwError $ InvalidRequest "Record does not belong to this merchant operating city"
+            pure [inv]
           Nothing -> pure []
       Nothing -> do
         QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
@@ -395,6 +412,8 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFrom mbInvoiceId mbInvo
   -- Build response items
   items <- mapM buildInvoiceItem invoices
 
+  -- TODO (P1-6): totalItems and totalCount are computed from the current page of results,
+  -- not the full result set. A separate count query should be added for proper pagination.
   let totalItems = length items
       summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems}
 
@@ -664,6 +683,8 @@ getFinanceManagementFinancePaymentSettlementList merchantShortId opCity mbFrom m
   latestReconEntries <- getLatestReconEntries merchant.id.getId selectedSubscriptionIds
   settlements <- mapM (buildPaymentSettlementItem latestReconEntries) reports
 
+  -- TODO (P1-6): totalItems and totalCount are computed from the current page of results,
+  -- not the full result set. A separate count query should be added for proper pagination.
   let totalItems = length settlements
       summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems}
 
@@ -782,8 +803,23 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
   let limit = mkPageLimit mbLimit
       offset = mkPageOffset mbOffset
 
+  -- TODO (P1-3): PAGINATION LIMITATION - This endpoint paginates subscription purchases first,
+  -- then expands each into multiple payment/refund rows, then filters in memory. This means
+  -- matching transactions on later pages of subscription purchases are lost. The proper fix is
+  -- to paginate at the transaction level (e.g., query payment_transaction directly with filters
+  -- and join to subscription_purchase). For now, we use a larger effective window by not capping
+  -- the query limit when specific filters are applied.
+  let effectiveLimit = case (mbSubscriptionId, mbPaymentOrderId) of
+        (Just _, _) -> Just 1 -- specific subscription, no need for large window
+        (_, Just _) -> Just 1 -- specific order, no need for large window
+        _ -> Just (limit * 5) -- Increase window to reduce pagination data loss
+      effectiveOffset = case (mbSubscriptionId, mbPaymentOrderId) of
+        (Just _, _) -> Just 0
+        (_, Just _) -> Just 0
+        _ -> Just offset
+
   -- Resolve subscription purchases based on filters
-  subscriptions <- resolveSubscriptions merchantOpCityId mbSubscriptionId mbPaymentOrderId mbFrom mbTo mbTxnAmountMin mbTxnAmountMax (Just limit) (Just offset)
+  subscriptions <- resolveSubscriptions merchantOpCityId mbSubscriptionId mbPaymentOrderId mbFrom mbTo mbTxnAmountMin mbTxnAmountMax effectiveLimit effectiveOffset
 
   -- For each subscription, look up PaymentOrder, then build ORDER + REFUND entries
   allEntries <- fmap concat $
@@ -825,6 +861,9 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
 
   -- Apply in-memory filters (only paymentMode, paymentStatus, pgGateway)
   let filteredEntries = filter (matchesFilters mbPaymentMode mbPaymentStatus mbPgGateway) allEntries
+      -- TODO (P1-6): totalItems and totalCount are computed from the current page of results
+      -- after in-memory filtering, not the full result set. This is further compounded by the
+      -- pagination limitation (P1-3). A separate count query at the transaction level is needed.
       totalItems = length filteredEntries
 
   pure $
@@ -849,7 +888,11 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
       case mbSubId of
         Just subscriptionId ->
           QSubscriptionPurchase.findByPrimaryKey (cast subscriptionId) >>= \case
-            Just sub -> pure [sub]
+            Just sub -> do
+              -- P0-2 FIX: Verify the subscription belongs to this merchant operating city
+              unless (sub.merchantOperatingCityId == merchantOpCityId) $
+                throwError $ InvalidRequest "Record does not belong to this merchant operating city"
+              pure [sub]
             Nothing -> pure []
         Nothing ->
           case mbOrderId of
@@ -858,7 +901,11 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
               case mbOrder of
                 Just order ->
                   QSubscriptionPurchase.findByPaymentOrderId order.id >>= \case
-                    Just sub -> pure [sub]
+                    Just sub -> do
+                      -- P0-2 FIX: Verify the subscription belongs to this merchant operating city
+                      unless (sub.merchantOperatingCityId == merchantOpCityId) $
+                        throwError $ InvalidRequest "Record does not belong to this merchant operating city"
+                      pure [sub]
                     Nothing -> pure []
                 Nothing -> pure []
             Nothing -> do
@@ -1195,6 +1242,8 @@ getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mb
           -- Map entries to response items
           ledgerItems <- mapM (buildLedgerItem account.id) paginatedEntries
 
+          -- TODO (P1-6): totalItems is computed from the current page of results,
+          -- not the full result set. A count query on filteredEntries should be used.
           pure $
             API.WalletLedgerRes
               { availableWalletBalance = Just availableBalance,

@@ -29,6 +29,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Text.Read (readMaybe)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PlanExtra as CQPlan
@@ -94,17 +95,31 @@ postSubscriptionPlanCreate ::
 postSubscriptionPlanCreate merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  -- Validate all enum/text fields upfront before any DB writes
+  paymentMode' <- safeParseFieldM "paymentMode" req.paymentMode
+  planType' <- safeParseFieldM "planType" req.planType
+  billingType' <- case req.billingType of
+    Nothing -> pure Nothing
+    Just bt -> Just <$> safeParseFieldM "billingType" bt
+  frequency' <- safeParseFieldM "frequency" req.frequency
+  planBaseAmount' <- safeParseFieldM "planBaseAmount" req.planBaseAmount
+  basedOnEntity' <- safeParseFieldM "basedOnEntity" req.basedOnEntity
+  serviceName' <- safeParseFieldM "serviceName" req.serviceName
+  vehicleVariant' <- case req.vehicleVariant of
+    Nothing -> pure Nothing
+    Just vv -> Just <$> safeParseFieldM "vehicleVariant" vv
+  vehicleCategory' <- safeParseFieldM "vehicleCategory" req.vehicleCategory
   planId <- generateGUID
   let plan =
         DPlan.Plan
           { id = planId,
             name = req.name,
             description = req.description,
-            paymentMode = read (toString req.paymentMode),
-            planType = read (toString req.planType),
-            billingType = read . toString <$> req.billingType,
-            frequency = read (toString req.frequency),
-            planBaseAmount = read (toString req.planBaseAmount),
+            paymentMode = paymentMode',
+            planType = planType',
+            billingType = billingType',
+            frequency = frequency',
+            planBaseAmount = planBaseAmount',
             maxAmount = req.maxAmount,
             registrationAmount = req.registrationAmount,
             originalRegistrationAmount = req.originalRegistrationAmount,
@@ -119,12 +134,12 @@ postSubscriptionPlanCreate merchantShortId opCity req = do
             subscribedFlagToggleAllowed = req.subscribedFlagToggleAllowed,
             isDeprecated = req.isDeprecated,
             allowStrikeOff = req.allowStrikeOff,
-            basedOnEntity = read (toString req.basedOnEntity),
-            serviceName = read (toString req.serviceName),
+            basedOnEntity = basedOnEntity',
+            serviceName = serviceName',
             merchantId = merchant.id,
             merchantOpCityId = merchantOpCityId,
-            vehicleVariant = read . toString <$> req.vehicleVariant,
-            vehicleCategory = read (toString req.vehicleCategory),
+            vehicleVariant = vehicleVariant',
+            vehicleCategory = vehicleCategory',
             listingPriority = req.listingPriority,
             validityInDays = req.validityInDays,
             isFleetOwnerPlan = req.isFleetOwnerPlan
@@ -150,21 +165,25 @@ postSubscriptionPlanUpdate merchantShortId opCity planIdText req = do
   -- Verify multi-tenancy
   unless (originalPlan.merchantOpCityId == merchantOpCityId) $
     throwError (InvalidRequest "Plan does not belong to this merchant operating city")
-  -- Mark original as deprecated
-  QPlanExtra.markAsDeprecated originalPlanId
-  CQPlan.clearPlanCacheByCity merchantOpCityId originalPlan.serviceName
-  -- Create new versioned copy
+  -- P0-1 FIX: Parse and validate ALL fields BEFORE deprecating the original plan.
+  -- This ensures the old plan remains active if any parsing fails.
+  paymentMode' <- maybe (pure originalPlan.paymentMode) (safeParseFieldM "paymentMode") req.paymentMode
+  planType' <- maybe (pure originalPlan.planType) (safeParseFieldM "planType") req.planType
+  frequency' <- maybe (pure originalPlan.frequency) (safeParseFieldM "frequency") req.frequency
+  planBaseAmount' <- maybe (pure originalPlan.planBaseAmount) (safeParseFieldM "planBaseAmount") req.planBaseAmount
+  basedOnEntity' <- maybe (pure originalPlan.basedOnEntity) (safeParseFieldM "basedOnEntity") req.basedOnEntity
+  -- Create new versioned copy (validate first, then deprecate)
   newPlanId <- generateGUID
   let newPlan =
         DPlan.Plan
           { id = newPlanId,
             name = fromMaybe originalPlan.name req.name,
             description = fromMaybe originalPlan.description req.description,
-            paymentMode = maybe originalPlan.paymentMode (read . toString) req.paymentMode,
-            planType = maybe originalPlan.planType (read . toString) req.planType,
+            paymentMode = paymentMode',
+            planType = planType',
             billingType = originalPlan.billingType,
-            frequency = maybe originalPlan.frequency (read . toString) req.frequency,
-            planBaseAmount = maybe originalPlan.planBaseAmount (read . toString) req.planBaseAmount,
+            frequency = frequency',
+            planBaseAmount = planBaseAmount',
             maxAmount = fromMaybe originalPlan.maxAmount req.maxAmount,
             registrationAmount = fromMaybe originalPlan.registrationAmount req.registrationAmount,
             originalRegistrationAmount = originalPlan.originalRegistrationAmount,
@@ -179,7 +198,7 @@ postSubscriptionPlanUpdate merchantShortId opCity planIdText req = do
             subscribedFlagToggleAllowed = originalPlan.subscribedFlagToggleAllowed,
             isDeprecated = fromMaybe False req.isDeprecated,
             allowStrikeOff = originalPlan.allowStrikeOff,
-            basedOnEntity = maybe originalPlan.basedOnEntity (read . toString) req.basedOnEntity,
+            basedOnEntity = basedOnEntity',
             serviceName = originalPlan.serviceName,
             merchantId = merchant.id,
             merchantOpCityId = merchantOpCityId,
@@ -189,6 +208,9 @@ postSubscriptionPlanUpdate merchantShortId opCity planIdText req = do
             validityInDays = originalPlan.validityInDays,
             isFleetOwnerPlan = originalPlan.isFleetOwnerPlan
           }
+  -- Now that all parsing succeeded, mark the original as deprecated
+  QPlanExtra.markAsDeprecated originalPlanId
+  CQPlan.clearPlanCacheByCity merchantOpCityId originalPlan.serviceName
   QPlan.create newPlan
   CQPlan.clearPlanCacheByCity merchantOpCityId newPlan.serviceName
   logInfo $ "Created versioned plan copy: " <> newPlanId.getId <> " from original: " <> planIdText
@@ -267,10 +289,17 @@ getSubscriptionPlanAnalytics merchantShortId opCity planIdText = do
         totalSubscribers = totalSubscribers,
         activeSubscribers = activeSubscribers,
         totalRevenue = totalRevenue,
-        currentVersion = 1 -- Version from SubscriptionConfig; default 1 for Plan
+        currentVersion = 1 -- TODO (P1-4): Version from SubscriptionConfig; hardcoded default 1 until versioning is implemented
       }
 
 -- Helper functions
+
+-- | Safely parse a Text field in a monadic context, throwing InvalidRequest on failure.
+safeParseFieldM :: (Read a, MonadFlow m) => Text -> Text -> m a
+safeParseFieldM fieldName value =
+  case readMaybe (toString value) of
+    Just parsed -> pure parsed
+    Nothing -> throwError $ InvalidRequest $ "Invalid value for " <> fieldName <> ": " <> value
 
 -- | Apply status and frequency filters to plan list
 applyFilters :: Maybe Text -> Maybe Text -> [DPlan.Plan] -> [DPlan.Plan]
@@ -312,12 +341,15 @@ toPlanEntity _merchantOpCityId now plan = do
         merchantOpCityId = plan.merchantOpCityId.getId,
         vehicleCategory = show plan.vehicleCategory,
         vehicleVariant = show <$> plan.vehicleVariant,
-        version = 1, -- Default version; tracked in SubscriptionConfig
-        scheduledActivationDate = Nothing,
-        scheduledDeactivationDate = Nothing,
-        parentPlanId = Nothing,
-        benefits = Nothing,
+        -- TODO (P1-4): The following fields are hardcoded/fabricated because the Plan domain type
+        -- does not yet persist them. These must stay for API compatibility but should be backed
+        -- by real data once SubscriptionConfig or a versioning table is implemented.
+        version = 1, -- TODO: Track actual version in SubscriptionConfig table
+        scheduledActivationDate = Nothing, -- TODO: Not yet persisted; add to Plan or SubscriptionConfig
+        scheduledDeactivationDate = Nothing, -- TODO: Not yet persisted; add to Plan or SubscriptionConfig
+        parentPlanId = Nothing, -- TODO: Not yet persisted; needed for plan versioning lineage
+        benefits = Nothing, -- TODO: Not yet persisted; plan benefits are not stored in DB
         subscriberCount = subscriberCount,
-        createdAt = now, -- Plan type doesn't have createdAt, using current time
+        createdAt = now, -- TODO: Plan type doesn't have createdAt; add createdAt to Plan table
         updatedAt = now
       }

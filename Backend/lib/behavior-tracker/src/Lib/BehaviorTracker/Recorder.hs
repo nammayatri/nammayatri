@@ -42,11 +42,20 @@ recordAndSnapshot ::
   Value -> -- entityState: caller-provided entity data (cancellationDues, completedRides, etc.)
   m BehaviorSnapshot
 recordAndSnapshot config event entityState = do
-  -- Step 1: Increment counters
-  incrementCounters config event
+  -- Step 1: Increment counters (best-effort — Redis failure should not crash the pipeline)
+  incrementResult <- try @_ @SomeException $ incrementCounters config event
+  case incrementResult of
+    Right () -> pure ()
+    Left err -> logError $ "Redis error incrementing counters for entity " <> event.entityId <> ": " <> show err <> ". Continuing with stale counters."
 
-  -- Step 2: Build counter snapshot for each period
-  counterMap <- buildCounterMap config event
+  -- Step 2: Build counter snapshot for each period (best-effort — return empty map on Redis failure)
+  counterMap <- do
+    mapResult <- try @_ @SomeException $ buildCounterMap config event
+    case mapResult of
+      Right m -> return m
+      Left err -> do
+        logError $ "Redis error building counter map for entity " <> event.entityId <> ": " <> show err <> ". Using empty counter map."
+        return Map.empty
 
   -- Step 3: Assemble unified snapshot
   now <- getCurrentTime
