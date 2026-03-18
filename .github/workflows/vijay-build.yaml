@@ -1,0 +1,53 @@
+name: Vijay Build
+
+on:
+  push:
+    branches:
+      - "vg-main"
+
+concurrency:
+  group: vijay-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+  packages: write
+
+jobs:
+  build:
+    name: Vijay Self-Hosted Build
+    runs-on:
+      group: vg-selfhosted
+      labels:
+        - self-hosted
+        - vijay-linux
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build all flake outputs
+        run: |
+          om ci run --systems "x86_64-linux" -- --no-link -v
+
+      - name: Build And Push Docker image
+        id: docker
+        env:
+          DOCKER_REGISTRY: ghcr.io
+        run: |
+          nix build .#packages.x86_64-linux.dockerImage
+
+          BASE_IMAGE="$(nix eval --raw .#packages.x86_64-linux.dockerImage.imageName):$(nix eval --raw .#packages.x86_64-linux.dockerImage.imageTag)"
+          echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
+
+          gunzip -c ./result > image.tar || cp ./result image.tar
+          echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ${DOCKER_REGISTRY} -u "${{ github.actor }}" --password-stdin
+          crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
+          crane auth logout ${DOCKER_REGISTRY}
+
+      - name: Push to Cachix
+        env:
+          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        run: |
+          cachix push nammayatri $(nix build .#nammayatri --print-out-paths --no-link)
