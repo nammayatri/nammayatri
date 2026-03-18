@@ -47,6 +47,7 @@ import Storage.Beam.Message
 import Storage.Beam.MessageReport
 import Storage.Beam.MessageTranslation
 import Storage.Beam.Notification
+import Storage.Beam.AdditionalInfoRequest
 import Storage.Beam.OperationHub
 import Storage.Beam.OperationHubRequests
 import Storage.Beam.Person
@@ -97,6 +98,7 @@ atlasDB =
         fleetOperatorDailyStats = fleetOperatorDailyStatsTable,
         driverOperatorAssociation = driverOperatorAssociationTable,
         route = routeTable,
+        additionalInfoRequest = additionalInfoRequestTable,
         operationHub = operationHubTable,
         operationHubRequests = operationHubRequestsTable,
         fleetBadge = fleetBadgeTable,
@@ -143,6 +145,7 @@ data AtlasDB f = AtlasDB
     fleetOperatorDailyStats :: f (B.TableEntity FleetOperatorDailyStatsT),
     driverOperatorAssociation :: f (B.TableEntity DriverOperatorAssociationT),
     route :: f (B.TableEntity RouteT),
+    additionalInfoRequest :: f (B.TableEntity AdditionalInfoRequestT),
     operationHub :: f (B.TableEntity OperationHubT),
     operationHubRequests :: f (B.TableEntity OperationHubRequestsT),
     fleetBadge :: f (B.TableEntity FleetBadgeT),

@@ -11,6 +11,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.AdditionalInfoRequest as BeamAIR
+import Storage.Queries.OrphanInstances.AdditionalInfoRequest ()
 
 -- Extra code goes here --
 
