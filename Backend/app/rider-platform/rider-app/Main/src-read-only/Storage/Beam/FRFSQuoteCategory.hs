@@ -21,6 +21,7 @@ data FRFSQuoteCategoryT f = FRFSQuoteCategoryT
     title :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     tnc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     finalPrice :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    holdId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,

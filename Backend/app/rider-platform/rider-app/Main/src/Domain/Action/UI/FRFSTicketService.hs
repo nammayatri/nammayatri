@@ -1194,6 +1194,7 @@ select merchant merchantOperatingCity bapConfig quote selectedQuoteCategories cr
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing quote.id
   updatedQuoteCategories <-
     updateQuoteCategoriesWithSelections
+      Nothing
       ( selectedQuoteCategories <&> \category ->
           QuoteCategorySelection
             { qcQuoteCategoryId = category.quoteCategoryId,

@@ -26,3 +26,8 @@ ALTER TABLE atlas_app.frfs_ticket_booking_payment_category ADD PRIMARY KEY ( id)
 
 ALTER TABLE atlas_app.frfs_ticket_booking_payment_category ADD COLUMN seat_labels text[] ;
 ALTER TABLE atlas_app.frfs_ticket_booking_payment_category ADD COLUMN seat_ids text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking_payment_category ADD COLUMN hold_id text ;

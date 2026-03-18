@@ -19,6 +19,7 @@ data FRFSQuoteCategory = FRFSQuoteCategory
     category :: Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType,
     categoryMeta :: Kernel.Prelude.Maybe Domain.Types.FRFSQuoteCategory.QuoteCategoryMetadata,
     finalPrice :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
+    holdId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
