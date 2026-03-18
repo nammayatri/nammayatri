@@ -263,8 +263,8 @@ sendFeedbackBadgeNotification merchantOpCityId driver entityData = do
   when (isNothing mbMerchantPN) $ logError $ "MISSED_FCM - FEEDBACK_BADGE_PN"
   whenJust mbMerchantPN $ \merchantPN -> do
     let dynamicParams = [ ("rating", show entityData.rating), ("badgeCount", maybe "0" show entityData.badgeCount) ]
-        title = show $ FCMNotificationTitle $ buildTemplate dynamicParams merchantPN.title
-        body = show $ FCMNotificationBody $ buildTemplate dynamicParams merchantPN.body
+        title = buildTemplate dynamicParams merchantPN.title
+        body = buildTemplate dynamicParams merchantPN.body
     notifyDriverWithProviders merchantOpCityId Notification.FEEDBACK_BADGE_PN title body driver driver.deviceToken entityData
 
 
