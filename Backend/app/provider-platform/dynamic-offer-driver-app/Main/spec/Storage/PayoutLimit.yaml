@@ -1,0 +1,36 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+PayoutLimit:
+  tableName: payout_limit
+
+  derives: "Generic, Show, Eq"
+
+  fields:
+    id: Id PayoutLimit
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    dailyLimit: HighPrecMoney
+    weeklyLimit: HighPrecMoney
+    monthlyLimit: HighPrecMoney
+    perTransactionMin: HighPrecMoney
+    perTransactionMax: HighPrecMoney
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    merchantOperatingCityId: SecondaryKey
+
+  queries:
+    findByMerchantOpCityId:
+      kvFunction: findOneWithKV
+      where: merchantOperatingCityId
+
+  default:
+    dailyLimit: "0.0"
+    weeklyLimit: "0.0"
+    monthlyLimit: "0.0"
+    perTransactionMin: "0.0"
+    perTransactionMax: "0.0"

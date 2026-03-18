@@ -1,0 +1,88 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+
+PayoutMethod:
+  tableName: payout_method
+
+  derives: "Generic, Show, Eq"
+
+  types:
+    PayoutMethodType:
+      enum: "UPI_VPA, BANK_ACCOUNT"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+    VerificationStatus:
+      enum: "PENDING, VERIFIED, FAILED"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+  fields:
+    id: Id PayoutMethod
+    driverId: Id Person
+    methodType: PayoutMethodType
+    vpa: Maybe Text
+    bankAccountNumber: Maybe Text
+    ifscCode: Maybe Text
+    bankName: Maybe Text
+    beneficiaryName: Maybe Text
+    isPrimary: Bool
+    verificationStatus: VerificationStatus
+    isBlocked: Bool
+    blockedReason: Maybe Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <PayoutMethodType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <VerificationStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PayoutMethodType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <VerificationStatus>
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+
+  queries:
+    findByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+
+    findByDriverIdAndMethodType:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverId, methodType]
+
+    findByDriverIdAndIsPrimary:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, isPrimary]
+
+    updateVerificationStatus:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus, updatedAt]
+      where: id
+
+    updateIsPrimary:
+      kvFunction: updateOneWithKV
+      params: [isPrimary, updatedAt]
+      where: id
+
+    updateBlockStatus:
+      kvFunction: updateOneWithKV
+      params: [isBlocked, blockedReason, updatedAt]
+      where: id
+
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+
+  default:
+    isPrimary: "false"
+    verificationStatus: "'PENDING'"
+    isBlocked: "false"
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

@@ -1,0 +1,56 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  PayoutMethodType: Domain.Types.PayoutMethod
+
+PayoutFeeConfig:
+  tableName: payout_fee_config
+
+  derives: "Generic, Show, Eq"
+
+  types:
+    PayoutType:
+      enum: "INSTANT, STANDARD"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+  fields:
+    id: Id PayoutFeeConfig
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    methodType: PayoutMethodType
+    payoutType: PayoutType
+    feePercentage: HighPrecMoney
+    fixedFee: HighPrecMoney
+    minFee: HighPrecMoney
+    maxFee: HighPrecMoney
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <PayoutType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PayoutType>
+
+  constraints:
+    id: PrimaryKey
+    merchantOperatingCityId: SecondaryKey
+
+  queries:
+    findByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+    findByMerchantOpCityIdAndMethodType:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, methodType]
+
+    findByMerchantOpCityIdAndMethodTypeAndPayoutType:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, methodType, payoutType]
+
+  default:
+    feePercentage: "0.0"
+    fixedFee: "0.0"
+    minFee: "0.0"
+    maxFee: "0.0"
