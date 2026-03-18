@@ -1160,22 +1160,25 @@ instance HideSecrets UpdateWaybillTabletReq where
 data GimsTripAction
   = GimsTripActionStart
   | GimsTripActionEnd
+  | GimsTripActionReset
   deriving (Show, Read, Eq, Ord, Generic, ToSchema)
 
 instance ToJSON GimsTripAction where
   toJSON GimsTripActionStart = toJSON ("start" :: Text)
   toJSON GimsTripActionEnd = toJSON ("end" :: Text)
+  toJSON GimsTripActionReset = toJSON ("reset" :: Text)
 
 instance FromJSON GimsTripAction where
   parseJSON = withText "GimsTripAction" $ \case
     "start" -> pure GimsTripActionStart
     "end" -> pure GimsTripActionEnd
+    "reset" -> pure GimsTripActionReset
     v -> fail $ "Unknown GimsTripAction: " <> T.unpack v
 
 data GimsTripActionReq = GimsTripActionReq
   { action :: GimsTripAction,
-    trip_number :: Int,
-    timestamp :: Int64,
+    trip_number :: Maybe Int,
+    timestamp :: Maybe Int64,
     conductor_token :: Maybe Text,
     driver_token :: Maybe Text,
     vehicle_number :: Maybe Text

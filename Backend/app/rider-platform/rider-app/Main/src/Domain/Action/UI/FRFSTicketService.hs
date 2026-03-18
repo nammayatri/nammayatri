@@ -29,6 +29,7 @@ import qualified Domain.Types.FRFSTicketBookingFeedback as DFRFSTicketBookingFee
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
+import qualified Domain.Types.FleetOperatorTripAction as FOTripAction
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.JourneyLeg as DJL
 import Domain.Types.Merchant
@@ -1422,31 +1423,51 @@ postFrfsFleetOperatorTripAction (mbPersonId, merchantId) req = do
   mbPrevTrip <- Hedis.get redisKey
   let prevTrip = fromMaybe 0 (mbPrevTrip :: Maybe Int)
   case req.action of
-    "start" -> do
+    FOTripAction.TripStart -> do
       when (prevTrip >= gimsOps.number_of_trips) $
         throwError $ InvalidRequest "No more trips available for this waybill"
       let nextTrip = prevTrip + 1
       now <- getCurrentTime
       let epochNow = round (utcTimeToPOSIXSeconds now * 1000) :: Int64
-      void $ NandiFlow.gimsTripAction baseUrl gtfsId GimsTripActionReq {action = GimsTripActionStart, trip_number = nextTrip, timestamp = epochNow, conductor_token = req.conductorToken, driver_token = req.driverToken, vehicle_number = req.vehicleNumber}
+      void $ NandiFlow.gimsTripAction baseUrl gtfsId GimsTripActionReq {action = GimsTripActionStart, trip_number = Just nextTrip, timestamp = Just epochNow, conductor_token = req.conductorToken, driver_token = req.driverToken, vehicle_number = req.vehicleNumber}
       Hedis.setExp redisKey nextTrip 172800 -- 2 days TTL for the trip number in Redis
       pure
         FRFSTicketService.FleetOperatorTripActionResp
           { currentTripNumber = nextTrip,
             hasUpcomingTrips = nextTrip < gimsOps.number_of_trips
           }
-    "end" -> do
+    FOTripAction.TripEnd -> do
       when (prevTrip == 0) $
         throwError $ InvalidRequest "No active trip to end"
       now <- getCurrentTime
       let epochNow = round (utcTimeToPOSIXSeconds now * 1000) :: Int64
-      void $ NandiFlow.gimsTripAction baseUrl gtfsId GimsTripActionReq {action = GimsTripActionEnd, trip_number = prevTrip, timestamp = epochNow, conductor_token = req.conductorToken, driver_token = req.driverToken, vehicle_number = req.vehicleNumber}
+      void $ NandiFlow.gimsTripAction baseUrl gtfsId GimsTripActionReq {action = GimsTripActionEnd, trip_number = Just prevTrip, timestamp = Just epochNow, conductor_token = req.conductorToken, driver_token = req.driverToken, vehicle_number = req.vehicleNumber}
       pure
         FRFSTicketService.FleetOperatorTripActionResp
           { currentTripNumber = prevTrip,
             hasUpcomingTrips = prevTrip < gimsOps.number_of_trips
           }
-    other -> throwError $ InvalidRequest $ "Unknown trip action: " <> other
+    FOTripAction.TripReset -> do
+      void $ NandiFlow.gimsTripAction baseUrl gtfsId GimsTripActionReq {action = GimsTripActionReset, trip_number = Nothing, timestamp = Nothing, conductor_token = req.conductorToken, driver_token = req.driverToken, vehicle_number = req.vehicleNumber}
+      void $ Hedis.del redisKey
+      pure
+        FRFSTicketService.FleetOperatorTripActionResp
+          { currentTripNumber = 0,
+            hasUpcomingTrips = gimsOps.number_of_trips > 0
+          }
+    FOTripAction.TripRollback -> do
+      when (prevTrip <= 1) $
+        throwError $ InvalidRequest "No trip to rollback"
+      let rolledBackTrip = prevTrip - 1
+      now <- getCurrentTime
+      let epochNow = round (utcTimeToPOSIXSeconds now * 1000) :: Int64
+      void $ NandiFlow.gimsTripAction baseUrl gtfsId GimsTripActionReq {action = GimsTripActionStart, trip_number = Just rolledBackTrip, timestamp = Just epochNow, conductor_token = req.conductorToken, driver_token = req.driverToken, vehicle_number = req.vehicleNumber}
+      Hedis.setExp redisKey rolledBackTrip 172800 -- 2 days TTL for the trip number in Redis
+      pure
+        FRFSTicketService.FleetOperatorTripActionResp
+          { currentTripNumber = rolledBackTrip,
+            hasUpcomingTrips = rolledBackTrip < gimsOps.number_of_trips
+          }
 
 postFrfsFleetOperatorCurrentOperation ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
