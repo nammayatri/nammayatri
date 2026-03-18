@@ -168,7 +168,8 @@ init journeyReq userPreferences blacklistedServiceTiers blacklistedFareQuoteType
                           updateSource = Just DJourneyLeg.UserSpotBooked,
                           serviceTierType = Just liveInfo.serviceType,
                           busConductorId = liveInfo.busConductorId,
-                          busDriverId = liveInfo.busDriverId
+                          busDriverId = liveInfo.busDriverId,
+                          busTagNumber = liveInfo.busTagNumber
                         }
                   else Nothing
           journeyLeg <- JL.mkJourneyLeg idx (mbPrev, leg, mbNext) fromLocation toLocation journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.parentSearchId journeyReq.maximumWalkDistance mbTotalLegFare Nothing onboardedSingleModeVehicle ((.serviceType) <$> journeyReq.routeLiveInfo) journeyReq.busLocationData (if travelMode == DTrip.Bus then journeyReq.userPreferredServiceTier else Nothing)

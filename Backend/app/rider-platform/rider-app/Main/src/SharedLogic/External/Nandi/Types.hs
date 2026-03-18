@@ -740,6 +740,7 @@ data VehicleServiceTypeResponse = VehicleServiceTypeResponse
     is_actually_valid :: Maybe Bool,
     driver_id :: Maybe Text,
     conductor_id :: Maybe Text,
+    busTagNumber :: Maybe Text,
     eligible_pass_ids :: Maybe [Text],
     seatLayoutId :: Maybe Text
   }
@@ -764,6 +765,7 @@ instance FromJSON VehicleServiceTypeResponse where
     is_actually_valid <- v .:? "is_actually_valid"
     driver_id <- v .:? "driver_id"
     conductor_id <- v .:? "conductor_id"
+    busTagNumber <- v .:? "busTagNumber"
     eligible_pass_ids <- v .:? "eligible_pass_ids"
     seatLayoutId <- v .:? "seatLayoutId"
     return VehicleServiceTypeResponse {..}
