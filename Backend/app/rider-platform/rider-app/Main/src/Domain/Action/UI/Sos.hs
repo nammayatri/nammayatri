@@ -263,26 +263,27 @@ postSosCreate (mbPersonId, _merchantId) req = do
       _ -> pure Nothing
     fork "ltsSosEntityUpsert" $
       LTS.entityUpsertForSos sosId.getId personId.getId person.merchantId.getId mbBroadcasterConfig
-  buildSmsReq <-
-    MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
-      MessageBuilder.BuildSOSAlertMessageReq
-        { userName = SLP.getName person,
-          rideLink = trackLink,
-          rideEndTime = T.pack . formatTime defaultTimeLocale "%e-%-m-%Y %-I:%M%P" <$> mbRideEndTime,
-          isRideEnded = fromMaybe False req.isRideEnded
-        }
-  case req.rideId of
-    Just _ -> do
-      when (triggerShareRideAndNotifyContacts safetySettings) $ do
+  fork "postSosCreate:notifyEmergencyContacts" $ do
+    buildSmsReq <-
+      MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
+        MessageBuilder.BuildSOSAlertMessageReq
+          { userName = SLP.getName person,
+            rideLink = trackLink,
+            rideEndTime = T.pack . formatTime defaultTimeLocale "%e-%-m-%Y %-I:%M%P" <$> mbRideEndTime,
+            isRideEnded = fromMaybe False req.isRideEnded
+          }
+    case req.rideId of
+      Just _ -> do
+        when (triggerShareRideAndNotifyContacts safetySettings) $ do
+          emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
+          when (req.isRideEnded /= Just True) $ do
+            void $ QPDEN.updateShareRideForAll (cast personId) True
+            enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
+          let sosType = if req.isRideEnded == Just True then Notification.POST_RIDE_SOS_ALERT else Notification.SOS_TRIGGERED
+          when shouldNotifyContacts $ SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" sosType [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers Nothing
+      Nothing -> do
         emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
-        when (req.isRideEnded /= Just True) $ do
-          void $ QPDEN.updateShareRideForAll (cast personId) True
-          enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
-        let sosType = if req.isRideEnded == Just True then Notification.POST_RIDE_SOS_ALERT else Notification.SOS_TRIGGERED
-        when shouldNotifyContacts $ SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" sosType [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers Nothing
-    Nothing -> do
-      emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
-      SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" Notification.SOS_TRIGGERED [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers (Just sosId)
+        SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" Notification.SOS_TRIGGERED [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers (Just sosId)
   return $
     SosRes
       { sosId = sosId,
@@ -931,16 +932,16 @@ postSosUpdateState (mbPersonId, _) sosId UpdateStateReq {..} = do
             whenJust newExpiryTime $ \expiry ->
               SOSLocation.updateSosRiderLocation sosId location locationData.accuracy (Just expiry)
 
-          buildSmsReq <-
-            MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
-              MessageBuilder.BuildSOSAlertMessageReq
-                { userName = SLP.getName person,
-                  rideLink = trackLink,
-                  rideEndTime = Nothing,
-                  isRideEnded = False
-                }
-
-          SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" Notification.SOS_TRIGGERED [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers (Just sosId)
+          fork "postSosUpdateState:notifyEmergencyContacts" $ do
+            buildSmsReq <-
+              MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
+                MessageBuilder.BuildSOSAlertMessageReq
+                  { userName = SLP.getName person,
+                    rideLink = trackLink,
+                    rideEndTime = Nothing,
+                    isRideEnded = False
+                  }
+            SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" Notification.SOS_TRIGGERED [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers (Just sosId)
           return result
         (Just SafetyDSos.SosActive, SafetyDSos.LiveTracking) -> do
           result <- SafetySos.updateSosStateWithAutoExpiry safetyPersonId sosDetails sosState
@@ -996,18 +997,19 @@ postSosUpdateToRide (mbPersonId, merchantId) sosId UpdateToRideReq {..} = do
   -- Notify emergency contacts with ride tracking link (parity with postSosCreate ride flow)
   safetySettings <- QSafetyExtra.findSafetySettingsWithFallback (cast personId) (QSafetyExtra.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
   when safetySettings.notifySosWithEmergencyContacts $ do
-    buildSmsReq <-
-      MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
-        MessageBuilder.BuildSOSAlertMessageReq
-          { userName = SLP.getName person,
-            rideLink = trackLink,
-            rideEndTime = T.pack . formatTime defaultTimeLocale "%e-%-m-%Y %-I:%M%P" <$> ride.rideEndTime,
-            isRideEnded = False
-          }
-    emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, merchantId)
-    void $ QPDEN.updateShareRideForAll (cast personId) True
-    enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
-    SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" Notification.SOS_TRIGGERED [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers Nothing
+    fork "postSosUpdateToRide:notifyEmergencyContacts" $ do
+      buildSmsReq <-
+        MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
+          MessageBuilder.BuildSOSAlertMessageReq
+            { userName = SLP.getName person,
+              rideLink = trackLink,
+              rideEndTime = T.pack . formatTime defaultTimeLocale "%e-%-m-%Y %-I:%M%P" <$> ride.rideEndTime,
+              isRideEnded = False
+            }
+      emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, merchantId)
+      void $ QPDEN.updateShareRideForAll (cast personId) True
+      enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
+      SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" Notification.SOS_TRIGGERED [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers Nothing
 
   pure APISuccess.Success
 
