@@ -1,0 +1,72 @@
+imports:
+  Text: Data.Text
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+
+OperatorInvoice:
+  tableName: operator_invoice
+
+  types:
+    OperatorInvoiceType:
+      enum: "PLATFORM_INVOICE, OPERATOR_UPLOADED, TAX_INVOICE, CREDIT_NOTE"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+    OperatorInvoiceStatus:
+      enum: "ACTIVE, ARCHIVED, VOIDED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  fields:
+    id: Id OperatorInvoice
+    operatorId: Id Person
+    fleetOwnerId: Maybe (Id Person)
+    invoiceType: OperatorInvoiceType
+    invoiceNumber: Maybe Text
+    invoiceDate: UTCTime
+    amount: HighPrecMoney
+    currency: Currency
+    fileName: Text
+    s3Key: Text
+    remarks: Maybe Text
+    status: OperatorInvoiceStatus
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamType:
+    currency: Maybe Currency
+
+  fromTType:
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+
+  toTType:
+    currency: Kernel.Prelude.Just|I
+
+  constraints:
+    id: PrimaryKey
+    operatorId: "!SecondaryKey"
+    fleetOwnerId: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where:
+        id: Id OperatorInvoice
+
+    findAllByOperatorId:
+      kvFunction: findAllWithOptionsKV
+      where:
+        operatorId: Id Person
+      orderBy: createdAt
+
+    findAllByFleetOwnerId:
+      kvFunction: findAllWithOptionsKV
+      where:
+        fleetOwnerId: Maybe (Id Person)
+      orderBy: createdAt
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

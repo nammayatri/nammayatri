@@ -18,7 +18,9 @@ instance FromTType' Beam.DriverProfileQuestions Domain.Types.DriverProfileQuesti
       Just
         Domain.Types.DriverProfileQuestions.DriverProfileQuestions
           { aboutMe = aboutMe,
+            anniversary = anniversary,
             aspirations = aspirations,
+            birthday = birthday,
             createdAt = createdAt,
             driverId = Kernel.Types.Id.Id driverId,
             drivingSince = drivingSince,
@@ -34,7 +36,9 @@ instance ToTType' Beam.DriverProfileQuestions Domain.Types.DriverProfileQuestion
   toTType' (Domain.Types.DriverProfileQuestions.DriverProfileQuestions {..}) = do
     Beam.DriverProfileQuestionsT
       { Beam.aboutMe = aboutMe,
+        Beam.anniversary = anniversary,
         Beam.aspirations = aspirations,
+        Beam.birthday = birthday,
         Beam.createdAt = createdAt,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.drivingSince = drivingSince,

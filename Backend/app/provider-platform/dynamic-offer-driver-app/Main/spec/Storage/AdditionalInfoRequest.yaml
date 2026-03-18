@@ -1,0 +1,59 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  OperationHubRequests: Domain.Types.OperationHubRequests
+  UTCTime: Kernel.Prelude
+
+AdditionalInfoRequest:
+  tableName: additional_info_request
+
+  types:
+    AdditionalInfoStatus:
+      enum: "PENDING, RESPONDED, REVIEWED"
+      derive: "HttpInstance"
+    DocumentType:
+      enum: "PAN, AADHAAR, ADDRESS_PROOF, RC_PHOTO, DL_PHOTO, VEHICLE_PERMIT, INSURANCE, FITNESS_CERTIFICATE, OTHER"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id AdditionalInfoRequest
+    operationHubRequestId: Id OperationHubRequests
+    requestedBy: Id Person
+    requestedFrom: Id Person
+    requestedDocumentTypes: "[DocumentType]"
+    message: Text
+    status: AdditionalInfoStatus
+    responseRemarks: Maybe Text
+    responseDocumentIds: Maybe [Text]
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  sqlType:
+    status: character varying(255)
+    requestedDocumentTypes: "text[]"
+    responseDocumentIds: "text[]"
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByOperationHubRequestId:
+      kvFunction: findAllWithKV
+      where: operationHubRequestId
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status, updatedAt]
+      where: id
+    updateResponse:
+      kvFunction: updateOneWithKV
+      params: [status, responseRemarks, responseDocumentIds, updatedAt]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

@@ -1,0 +1,62 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+
+module: DriverVoiceUpdate
+
+types:
+  VoiceUpdateType:
+    enum: "RIDE_REQUEST,EARNINGS_SUMMARY,SAFETY_ALERT,CONTEXTUAL,NAVIGATION"
+
+  GetDriverVoiceSettingsRes:
+    isEnabled: Bool
+    language: Text
+    volumeLevel: Int
+    rideRequestEnabled: Bool
+    navigationEnabled: Bool
+    earningsEnabled: Bool
+    safetyAlertsEnabled: Bool
+    contextualUpdatesEnabled: Bool
+
+  UpdateDriverVoiceSettingsReq:
+    isEnabled: Maybe Bool
+    language: Maybe Text
+    volumeLevel: Maybe Int
+    rideRequestEnabled: Maybe Bool
+    navigationEnabled: Maybe Bool
+    earningsEnabled: Maybe Bool
+    safetyAlertsEnabled: Maybe Bool
+    contextualUpdatesEnabled: Maybe Bool
+
+  VoiceUpdateGenerateReq:
+    updateType: VoiceUpdateType
+    context: Maybe Text
+
+  VoiceUpdateGenerateRes:
+    audioUrl: Text
+    textContent: Text
+    durationMs: Int
+
+apis:
+  - GET:
+      endpoint: /driver/voiceSettings
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: API.Types.UI.DriverVoiceUpdate.GetDriverVoiceSettingsRes
+
+  - PUT:
+      endpoint: /driver/voiceSettings
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.DriverVoiceUpdate.UpdateDriverVoiceSettingsReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: /driver/voiceUpdate/generate
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.DriverVoiceUpdate.VoiceUpdateGenerateReq
+      response:
+        type: API.Types.UI.DriverVoiceUpdate.VoiceUpdateGenerateRes

@@ -1,0 +1,44 @@
+imports:
+  Person: Domain.Types.Person
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+
+DriverEarningGoal:
+  tableName: driver_earning_goal
+  derives: "Generic,Show,ToJSON,FromJSON"
+  fields:
+    driverId: Id Person
+    dailyGoalAmount: Maybe Int
+    dailyGoalCurrency: Text
+    weeklyGoalAmount: Maybe Int
+    weeklyGoalCurrency: Text
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamType:
+    dailyGoalCurrency: Maybe Text
+    weeklyGoalCurrency: Maybe Text
+
+  fromTType:
+    dailyGoalCurrency: Kernel.Prelude.fromMaybe "INR"|I
+    weeklyGoalCurrency: Kernel.Prelude.fromMaybe "INR"|I
+
+  toTType:
+    dailyGoalCurrency: Kernel.Prelude.Just|I
+    weeklyGoalCurrency: Kernel.Prelude.Just|I
+
+  constraints:
+    driverId: PrimaryKey
+
+  queries:
+    findByDriverId:
+      kvFunction: findOneWithKV
+      where: driverId
+
+    upsert:
+      kvFunction: upsertWithKV
+      params: [dailyGoalAmount, weeklyGoalAmount, merchantOperatingCityId, updatedAt]
+      where: driverId
+
+  excludedFields: [merchantId]

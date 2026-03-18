@@ -1,0 +1,111 @@
+imports:
+  LatLong: Kernel.External.Maps.Types
+  UTCTime: Kernel.Prelude
+  Int: Kernel.Prelude
+  Text: Kernel.Prelude
+  Bool: Kernel.Prelude
+  Maybe: Kernel.Prelude
+  Double: Kernel.Prelude
+  MsilServiceCenter: Domain.Types.MsilServiceCenter
+  ServiceCenterCallbackRequest: Domain.Types.ServiceCenterCallbackRequest
+
+module: MsilServiceCenter
+
+types:
+  CenterType:
+    enum: WORKSHOP,BODYSHOP,BOTH
+    derive: HttpInstance
+
+  ServiceType:
+    enum: GENERAL_SERVICE,AC_REPAIR,BODY_WORK,PAINTING,DENTING,WHEEL_ALIGNMENT,ELECTRICAL,TIRE_SERVICE
+    derive: HttpInstance
+
+  CallbackTimeSlot:
+    enum: MORNING,AFTERNOON,EVENING
+    derive: HttpInstance
+
+  CallbackStatus:
+    enum: PENDING,CONTACTED,SCHEDULED,COMPLETED,CANCELLED
+    derive: HttpInstance
+
+  ServiceCenterItem:
+    id: Id MsilServiceCenter
+    name: Text
+    centerType: CenterType
+    address: Text
+    lat: Double
+    lon: Double
+    distance: Maybe Int
+    servicesOffered: "[ServiceType]"
+    phoneNumber: Maybe Text
+    operatingHoursStart: Maybe Text
+    operatingHoursEnd: Maybe Text
+    isOpenSunday: Bool
+    isCurrentlyOpen: Bool
+
+  GetServiceCentersResp:
+    serviceCenters: "[ServiceCenterItem]"
+    totalCount: Int
+
+  ServiceCenterDetailResp:
+    id: Id MsilServiceCenter
+    name: Text
+    centerType: CenterType
+    address: Text
+    lat: Double
+    lon: Double
+    servicesOffered: "[ServiceType]"
+    brand: Maybe Text
+    dealerCode: Maybe Text
+    phoneNumber: Maybe Text
+    email: Maybe Text
+    operatingHoursStart: Maybe Text
+    operatingHoursEnd: Maybe Text
+    isOpenSunday: Bool
+    isCurrentlyOpen: Bool
+    city: Text
+    state: Maybe Text
+    pincode: Maybe Text
+
+  CallbackReq:
+    vehicleNumber: Maybe Text
+    issueDescription: Maybe Text
+    preferredDate: Maybe Text
+    preferredTimeSlot: Maybe CallbackTimeSlot
+
+  CallbackResp:
+    callbackRequestId: Id ServiceCenterCallbackRequest
+    result: Text
+    message: Text
+
+apis:
+  - GET:
+      endpoint: /driver/msilServiceCenters
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        lat: Double
+        lon: Double
+        radius: Maybe Int
+        centerType: Maybe CenterType
+        serviceType: Maybe ServiceType
+        limit: Maybe Int
+      response:
+        type: GetServiceCentersResp
+
+  - GET:
+      endpoint: /driver/msilServiceCenters/{centerId}
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        centerId: Id MsilServiceCenter
+      response:
+        type: ServiceCenterDetailResp
+
+  - POST:
+      endpoint: /driver/msilServiceCenters/{centerId}/callback
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        centerId: Id MsilServiceCenter
+      request:
+        type: CallbackReq
+      response:
+        type: CallbackResp

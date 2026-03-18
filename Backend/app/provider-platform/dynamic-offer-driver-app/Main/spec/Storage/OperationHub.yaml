@@ -36,7 +36,7 @@ OperationHubRequests:
       enum: "ONBOARDING_INSPECTION, REGULAR_INSPECTION, DRIVER_ONBOARDING_INSPECTION, DRIVER_REGULAR_INSPECTION"
       derive: "HttpInstance"
     RequestStatus:
-      enum: "PENDING, APPROVED, REJECTED"
+      enum: "PENDING, APPROVED, REJECTED, AWAITING_INFO"
       derive: "HttpInstance"
   fields:
     id : Id OperationHubRequests

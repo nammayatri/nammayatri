@@ -41,7 +41,9 @@ updateByPrimaryKey (Domain.Types.DriverProfileQuestions.DriverProfileQuestions {
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.aboutMe aboutMe,
+      Se.Set Beam.anniversary anniversary,
       Se.Set Beam.aspirations aspirations,
+      Se.Set Beam.birthday birthday,
       Se.Set Beam.drivingSince drivingSince,
       Se.Set Beam.hometown hometown,
       Se.Set Beam.imageIds imageIds,

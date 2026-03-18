@@ -1,0 +1,63 @@
+imports:
+  Person: Domain.Types.Person
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+DriverGamificationProgress:
+  tableName: driver_gamification_progress
+
+  fields:
+    driverId: Id Person
+    totalXp: Int
+    currentLevel: Text
+    currentStreakDays: Int
+    longestStreakDays: Int
+    lastRideDate: Maybe Day
+    badgesEarnedCount: Int
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamType:
+    currentStreakDays: Maybe Int
+    longestStreakDays: Maybe Int
+    badgesEarnedCount: Maybe Int
+
+  fromTType:
+    currentStreakDays: Kernel.Prelude.fromMaybe 0|I
+    longestStreakDays: Kernel.Prelude.fromMaybe 0|I
+    badgesEarnedCount: Kernel.Prelude.fromMaybe 0|I
+
+  toTType:
+    currentStreakDays: Kernel.Prelude.Just|I
+    longestStreakDays: Kernel.Prelude.Just|I
+    badgesEarnedCount: Kernel.Prelude.Just|I
+
+  constraints:
+    driverId: PrimaryKey
+
+  default:
+    totalXp: "0"
+    currentLevel: "'BRONZE'"
+    currentStreakDays: "0"
+    longestStreakDays: "0"
+    badgesEarnedCount: "0"
+
+  queries:
+    findByDriverId:
+      kvFunction: findOneWithKV
+      where: driverId
+
+    updateTotalXpAndLevel:
+      kvFunction: updateOneWithKV
+      params: [totalXp, currentLevel, updatedAt]
+      where: driverId
+
+    updateStreakDays:
+      kvFunction: updateOneWithKV
+      params: [currentStreakDays, longestStreakDays, lastRideDate, updatedAt]
+      where: driverId
+
+    updateBadgesEarnedCount:
+      kvFunction: updateOneWithKV
+      params: [badgesEarnedCount, updatedAt]
+      where: driverId

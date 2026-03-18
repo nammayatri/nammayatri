@@ -1,0 +1,99 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+MsilServiceCenter:
+  tableName: msil_service_center
+
+  fields:
+    id: Id MsilServiceCenter
+    name: Text
+    centerType: Text
+    address: Text
+    lat: Double
+    lon: Double
+    servicesOffered: "[Text]"
+    brand: Maybe Text
+    dealerCode: Maybe Text
+    phoneNumber: Maybe Text
+    email: Maybe Text
+    operatingHoursStart: Maybe Text
+    operatingHoursEnd: Maybe Text
+    isOpenSunday: Bool
+    isActive: Bool
+    city: Text
+    state: Maybe Text
+    pincode: Maybe Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    merchantOperatingCityId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+    findAllActiveByCityAndType:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - merchantOperatingCityId
+          - isActive
+          - centerType
+
+    updateById:
+      kvFunction: updateWithKV
+      params:
+        - name
+        - centerType
+        - address
+        - lat
+        - lon
+        - servicesOffered
+        - phoneNumber
+        - email
+        - operatingHoursStart
+        - operatingHoursEnd
+        - isOpenSunday
+        - isActive
+        - city
+        - state
+        - pincode
+        - updatedAt
+      where:
+        id: id
+
+    deleteById:
+      kvFunction: deleteWithKV
+      where:
+        id: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  sqlType:
+    id: character varying (36)
+    name: text
+    centerType: character varying (20)
+    address: text
+    servicesOffered: "text[]"
+    brand: text
+    dealerCode: text
+    phoneNumber: text
+    email: text
+    operatingHoursStart: text
+    operatingHoursEnd: text
+    city: text
+    state: text
+    pincode: text
+    merchantId: character varying (36)
+    merchantOperatingCityId: character varying (36)

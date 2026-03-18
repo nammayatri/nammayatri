@@ -1,0 +1,34 @@
+imports:
+  Person: Domain.Types.Person
+  BadgeDefinition: Domain.Types.BadgeDefinition
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+DriverBadge:
+  tableName: driver_badge
+
+  fields:
+    id: Id DriverBadge
+    driverId: Id Person
+    badgeDefinitionId: Id BadgeDefinition
+    earnedAt: UTCTime
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    badgeDefinitionId: SecondaryKey
+
+  queries:
+    findAllByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+
+    findByDriverIdAndBadgeDefinitionId:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, badgeDefinitionId]
+
+    findAllByDriverIdOrderByEarnedAt:
+      kvFunction: findAllWithOptionsKV
+      where: driverId
+      orderBy: earnedAt

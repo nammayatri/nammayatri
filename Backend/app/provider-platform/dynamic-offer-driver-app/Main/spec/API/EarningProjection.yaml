@@ -1,0 +1,111 @@
+imports:
+  UTCTime: Kernel.Prelude
+  Int: Kernel.Prelude
+  Double: Kernel.Prelude
+  Text: Data.Text
+  Bool: Kernel.Prelude
+  Maybe: Kernel.Prelude
+
+module: EarningProjection
+types:
+  DailyProjectionResp:
+    projectedEarnings: ProjectionRange
+    currentEarnings: Int
+    ridesCompleted: Int
+    hoursActive: Double
+    factors: ProjectionFactors
+    goal: Maybe GoalProgress
+    tips: [Text]
+    historicalAccuracy: Double
+    lastUpdated: UTCTime
+
+  WeeklyProjectionResp:
+    projectedEarnings: ProjectionRange
+    currentWeekEarnings: Int
+    daysRemaining: Int
+    dailyBreakdown: [DayBreakdown]
+    weeklyGoal: Maybe WeeklyGoalProgress
+
+  ProjectionRange:
+    low: Int
+    expected: Int
+    high: Int
+    currency: Text
+
+  ProjectionFactors:
+    baseProjection: Int
+    demandMultiplier: Double
+    surgeBonus: Int
+    streakBonus: Int
+    timeRemainingFactor: Double
+
+  GoalProgress:
+    dailyGoalAmount: Int
+    progressPct: Int
+    remainingAmount: Int
+    estimatedRidesNeeded: Int
+
+  WeeklyGoalProgress:
+    amount: Int
+    progressPct: Int
+    onTrack: Bool
+
+  DayBreakdown:
+    day: Text
+    projected: Int
+    actual: Maybe Int
+    isToday: Bool
+
+  SetEarningGoalReq:
+    dailyGoalAmount: Maybe Int
+    weeklyGoalAmount: Maybe Int
+
+  SetEarningGoalResp:
+    result: Text
+
+  EarningGoalResp:
+    dailyGoalAmount: Maybe Int
+    weeklyGoalAmount: Maybe Int
+    dailyProgress: Int
+    weeklyProgress: Int
+    dailyProgressPct: Int
+    weeklyProgressPct: Int
+
+  ProjectionAccuracyResp:
+    averageAccuracy: Double
+    last7DaysAccuracy: Double
+    last30DaysAccuracy: Double
+    totalProjections: Int
+
+apis:
+  - GET:
+      endpoint: /driver/earnings/projection/daily
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: DailyProjectionResp
+
+  - GET:
+      endpoint: /driver/earnings/projection/weekly
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: WeeklyProjectionResp
+
+  - PUT:
+      endpoint: /driver/earnings/goal
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: SetEarningGoalReq
+      response:
+        type: SetEarningGoalResp
+
+  - GET:
+      endpoint: /driver/earnings/goal
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: EarningGoalResp
+
+  - GET:
+      endpoint: /driver/earnings/projection/accuracy
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: ProjectionAccuracyResp

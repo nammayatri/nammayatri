@@ -66,7 +66,9 @@ postDriverProfileQues (mbPersonId, merchantId, merchantOpCityId) req@API.Types.U
               drivingSince = drivingSince,
               imageIds = toMaybe imageIds,
               vehicleTags = toMaybe vehicleTags,
-              aboutMe = Just aboutMe
+              aboutMe = Just aboutMe,
+              birthday = birthday,
+              anniversary = anniversary
             }
         )
     pure Success
@@ -180,10 +182,12 @@ getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) isImages = do
                 pledges = res.pledges,
                 drivingSince = res.drivingSince,
                 vehicleTags = fromMaybe [] res.vehicleTags,
-                otherImages = if isImages == Just True then images else [], -- fromMaybe [] res.images
+                otherImages = if isImages == Just True then images else [],
                 profileImage = profileImage,
                 otherImageIds = fromMaybe [] res.imageIds,
-                vehicleImage = if isImages == Just True then vehicleImage else Nothing
+                vehicleImage = if isImages == Just True then vehicleImage else Nothing,
+                birthday = res.birthday,
+                anniversary = res.anniversary
               }
     Nothing ->
       pure $
@@ -196,7 +200,9 @@ getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) isImages = do
             otherImages = [],
             profileImage = profileImage,
             otherImageIds = [],
-            vehicleImage = Nothing
+            vehicleImage = Nothing,
+            birthday = Nothing,
+            anniversary = Nothing
           }
   where
     getImages imageIds = do

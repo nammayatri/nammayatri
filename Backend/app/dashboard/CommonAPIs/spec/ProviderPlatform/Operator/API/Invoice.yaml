@@ -1,0 +1,173 @@
+imports:
+  Person: Dashboard.Common
+  City: Kernel.Types.Beckn.Context
+  Summary: Dashboard.Common
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+
+module: Invoice
+apiPrefix: operator
+
+types:
+  OperatorInvoiceListItem:
+    invoiceId: Text
+    invoiceNumber: Maybe Text
+    invoiceDate: UTCTime
+    invoiceType: Text
+    source: Text
+    fleetOwnerName: Maybe Text
+    amount: HighPrecMoney
+    currency: Currency
+    status: Text
+    hasDownload: Bool
+
+  OperatorInvoiceListRes:
+    invoices: "[OperatorInvoiceListItem]"
+    totalItems: Int
+    summary: Summary
+
+  TaxDetails:
+    taxableValue: HighPrecMoney
+    cgstRate: Maybe Double
+    cgstAmount: Maybe HighPrecMoney
+    sgstRate: Maybe Double
+    sgstAmount: Maybe HighPrecMoney
+    totalGst: Maybe HighPrecMoney
+    supplierGstin: Maybe Text
+
+  OperatorInvoiceDetail:
+    invoiceId: Text
+    invoiceNumber: Maybe Text
+    invoiceDate: UTCTime
+    invoiceType: Text
+    source: Text
+    fleetOwnerId: Maybe Text
+    fleetOwnerName: Maybe Text
+    amount: HighPrecMoney
+    currency: Currency
+    taxDetails: Maybe TaxDetails
+    downloadUrl: Maybe Text
+    remarks: Maybe Text
+    status: Text
+    createdAt: UTCTime
+
+  BulkDownloadReq:
+    invoiceIds: "[Text]"
+
+  BulkDownloadRes:
+    downloadUrl: Text
+
+  InvoiceUploadReq:
+    invoiceType: Text
+    fleetOwnerId: Maybe Text
+    invoiceDate: UTCTime
+    amount: HighPrecMoney
+    fileBase64: Text
+    fileName: Text
+    remarks: Maybe Text
+
+  InvoiceUploadRes:
+    invoiceId: Text
+
+apis:
+  - GET: # ListOperatorInvoicesAPI
+      endpoint: /invoices
+      auth: ApiAuthV2
+      query:
+        - from: UTCTime
+        - to: UTCTime
+        - invoiceType: Text
+        - status: Text
+        - fleetOwnerId: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: OperatorInvoiceListRes
+      helperApi:
+        - GET:
+            endpoint: /invoices
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            query:
+              - from: UTCTime
+              - to: UTCTime
+              - invoiceType: Text
+              - status: Text
+              - fleetOwnerId: Text
+              - limit: Int
+              - offset: Int
+            response:
+              type: OperatorInvoiceListRes
+
+  - GET: # GetOperatorInvoiceDetailAPI
+      endpoint: /invoices/{invoiceId}
+      auth: ApiAuthV2
+      params:
+        invoiceId: Text
+      response:
+        type: OperatorInvoiceDetail
+      helperApi:
+        - GET:
+            endpoint: /invoices/{invoiceId}
+            auth: ApiAuthV2
+            params:
+              invoiceId: Text
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: OperatorInvoiceDetail
+
+  - GET: # DownloadOperatorInvoiceAPI
+      endpoint: /invoices/{invoiceId}/download
+      auth: ApiAuthV2
+      params:
+        invoiceId: Text
+      response:
+        type: Text
+      helperApi:
+        - GET:
+            endpoint: /invoices/{invoiceId}/download
+            auth: ApiAuthV2
+            params:
+              invoiceId: Text
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: Text
+
+  - POST: # BulkDownloadOperatorInvoicesAPI
+      endpoint: /invoices/bulkDownload
+      auth: ApiAuthV2
+      request:
+        type: BulkDownloadReq
+      response:
+        type: BulkDownloadRes
+      helperApi:
+        - POST:
+            endpoint: /invoices/bulkDownload
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            request:
+              type: BulkDownloadReq
+            response:
+              type: BulkDownloadRes
+
+  - POST: # UploadOperatorInvoiceAPI
+      endpoint: /invoices/upload
+      auth: ApiAuthV2
+      request:
+        type: InvoiceUploadReq
+      response:
+        type: InvoiceUploadRes
+      helperApi:
+        - POST:
+            endpoint: /invoices/upload
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            request:
+              type: InvoiceUploadReq
+            response:
+              type: InvoiceUploadRes

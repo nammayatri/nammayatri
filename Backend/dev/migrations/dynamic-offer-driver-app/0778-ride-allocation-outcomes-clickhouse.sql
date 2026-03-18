@@ -1,0 +1,27 @@
+-- ClickHouse: Ride Allocation Outcomes table
+-- Stores per-ride allocation events for monitoring and analytics.
+-- This migration should be applied to the ClickHouse cluster, not PostgreSQL.
+--
+-- CREATE TABLE IF NOT EXISTS ride_allocation_outcomes (
+--     event_id UUID DEFAULT generateUUIDv4(),
+--     ride_id String,
+--     policy_id String,
+--     merchant_id String,
+--     city_id String,
+--     fleet_owner_id String,
+--     fleet_tier Nullable(String),
+--     vehicle_variant String,
+--     zone_id Nullable(String),
+--     allocated_at DateTime,
+--     allocation_duration_ms UInt32,
+--     was_accepted UInt8,
+--     created_date Date DEFAULT toDate(allocated_at)
+-- )
+-- ENGINE = MergeTree()
+-- PARTITION BY toYYYYMM(created_date)
+-- ORDER BY (merchant_id, city_id, allocated_at)
+-- TTL created_date + INTERVAL 6 MONTH;
+--
+-- Note: ClickHouse DDL is commented out as it must be run against
+-- the ClickHouse cluster separately from PostgreSQL migrations.
+-- The allocation engine emits events into this table at runtime.

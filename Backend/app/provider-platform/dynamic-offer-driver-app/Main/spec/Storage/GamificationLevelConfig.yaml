@@ -1,0 +1,29 @@
+imports:
+  Merchant: Domain.Types.Merchant
+
+GamificationLevelConfig:
+  tableName: gamification_level_config
+
+  fields:
+    id: Id GamificationLevelConfig
+    levelName: Text
+    minXp: Int
+    iconUrl: Maybe Text
+    perksDescription: Maybe Text
+    displayOrder: Int
+    merchantId: Id Merchant
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findAllByMerchantId:
+      kvFunction: findAllWithKV
+      where: merchantId
+
+    findByMerchantIdAndLevelName:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, levelName]

@@ -1,0 +1,48 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  Person: Domain.Types.Person
+
+DriverVoiceSettings:
+  tableName: driver_voice_settings
+
+  fields:
+    driverId: Id Person
+    isEnabled: Bool
+    language: Text
+    volumeLevel: Int
+    rideRequestEnabled: Bool
+    navigationEnabled: Bool
+    earningsEnabled: Bool
+    safetyAlertsEnabled: Bool
+    contextualUpdatesEnabled: Bool
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    driverId: PrimaryKey
+
+  queries:
+    findByDriverId:
+      kvFunction: findOneWithKV
+      where: driverId
+
+  sqlType:
+    driverId: character varying (36)
+    language: character varying (10)
+    merchantOperatingCityId: character varying (36)
+    merchantId: character varying (36)
+    createdAt: timestamp with time zone
+    updatedAt: timestamp with time zone
+
+  default:
+    isEnabled: "false"
+    language: "'en'"
+    volumeLevel: "80"
+    rideRequestEnabled: "true"
+    navigationEnabled: "false"
+    earningsEnabled: "true"
+    safetyAlertsEnabled: "true"
+    contextualUpdatesEnabled: "false"

@@ -1,0 +1,65 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  MsilServiceCenter: Domain.Types.MsilServiceCenter
+
+ServiceCenterCallbackRequest:
+  tableName: service_center_callback_request
+
+  fields:
+    id: Id ServiceCenterCallbackRequest
+    driverId: Id Person
+    serviceCenterId: Id MsilServiceCenter
+    vehicleNumber: Maybe Text
+    issueDescription: Maybe Text
+    preferredDate: Maybe Text
+    preferredTimeSlot: Maybe Text
+    status: Text
+    adminNotes: Maybe Text
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    serviceCenterId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+
+    findAllByServiceCenterId:
+      kvFunction: findAllWithKV
+      where: serviceCenterId
+
+    findAllByStatus:
+      kvFunction: findAllWithKV
+      where: status
+
+    updateStatusById:
+      kvFunction: updateWithKV
+      params:
+        - status
+        - adminNotes
+        - updatedAt
+      where:
+        id: id
+
+  sqlType:
+    id: character varying (36)
+    driverId: character varying (36)
+    serviceCenterId: character varying (36)
+    vehicleNumber: text
+    issueDescription: text
+    preferredDate: text
+    preferredTimeSlot: character varying (20)
+    status: character varying (20)
+    adminNotes: text
+    merchantOperatingCityId: character varying (36)

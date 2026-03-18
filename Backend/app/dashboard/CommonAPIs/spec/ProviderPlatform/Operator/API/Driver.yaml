@@ -123,6 +123,33 @@ apis:
             response:
               type: APISuccess
 
+  - POST: # RequestAdditionalInfo
+      endpoint: /operator/requestAdditionalInfo
+      auth: ApiAuthV2
+      request:
+        type: RequestAdditionalInfoReq
+      response:
+        type: APISuccess
+
+  - GET: # GetAdditionalInfoRequests
+      endpoint: /operator/additionalInfoRequests
+      auth: ApiAuthV2
+      query:
+        - operationHubRequestId: Text
+        - mbStatus: AdditionalInfoStatus
+        - mbLimit: Int
+        - mbOffset: Int
+      response:
+        type: AdditionalInfoRequestListRes
+
+  - POST: # RespondAdditionalInfo (driver-facing)
+      endpoint: /respondAdditionalInfo
+      auth: ApiAuthV2
+      request:
+        type: RespondAdditionalInfoReq
+      response:
+        type: APISuccess
+
   - GET:
       endpoint: /operator/dashboard/analytics/allTime
       auth: ApiAuthV2
@@ -180,7 +207,7 @@ types:
     creatorId: Text
     derive: "'HideSecrets"
   RequestStatus:
-    enum: "PENDING,APPROVED,REJECTED"
+    enum: "PENDING,APPROVED,REJECTED,AWAITING_INFO"
     derive: "HttpInstance"
   RequestType:
     enum: "ONBOARDING_INSPECTION, REGULAR_INSPECTION, DRIVER_ONBOARDING_INSPECTION, DRIVER_REGULAR_INSPECTION"
@@ -225,6 +252,37 @@ types:
     - otp: Text
     - deviceToken: Maybe FCMRecipientToken
     - derive: "'HideSecrets"
+
+  AdditionalInfoStatus:
+    enum: "PENDING,RESPONDED,REVIEWED"
+    derive: "HttpInstance"
+  AdditionalDocumentType:
+    enum: "PAN,AADHAAR,ADDRESS_PROOF,RC_PHOTO,DL_PHOTO,VEHICLE_PERMIT,INSURANCE,FITNESS_CERTIFICATE,OTHER"
+    derive: "HttpInstance"
+  RequestAdditionalInfoReq:
+    operationHubRequestId: Text
+    requestedDocumentTypes: "[AdditionalDocumentType]"
+    message: Text
+    operatorId: Text
+    derive: "'HideSecrets"
+  RespondAdditionalInfoReq:
+    additionalInfoRequestId: Text
+    documentImageIds: "[Text]"
+    remarks: Maybe Text
+    derive: "'HideSecrets"
+  AdditionalInfoRequestItem:
+    id: Text
+    operationHubRequestId: Text
+    requestedDocumentTypes: "[AdditionalDocumentType]"
+    message: Text
+    status: AdditionalInfoStatus
+    responseRemarks: Maybe Text
+    responseDocumentIds: Maybe [Text]
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  AdditionalInfoRequestListRes:
+    - requests: "[AdditionalInfoRequestItem]"
+    - summary: Summary
 
   AllTimeOperatorAnalyticsRes:
     - rating: Maybe Double

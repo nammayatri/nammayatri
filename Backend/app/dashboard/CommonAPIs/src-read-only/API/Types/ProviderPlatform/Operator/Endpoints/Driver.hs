@@ -109,10 +109,61 @@ data OperationHubReqResp = OperationHubReqResp {requests :: [OperationHubDriverR
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data AdditionalDocumentType
+  = PAN
+  | AADHAAR
+  | ADDRESS_PROOF
+  | RC_PHOTO
+  | DL_PHOTO
+  | VEHICLE_PERMIT
+  | INSURANCE
+  | FITNESS_CERTIFICATE
+  | OTHER
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+data AdditionalInfoRequestItem = AdditionalInfoRequestItem
+  { id :: Kernel.Prelude.Text,
+    operationHubRequestId :: Kernel.Prelude.Text,
+    requestedDocumentTypes :: [AdditionalDocumentType],
+    message :: Kernel.Prelude.Text,
+    status :: AdditionalInfoStatus,
+    responseRemarks :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    responseDocumentIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data AdditionalInfoRequestListRes = AdditionalInfoRequestListRes {requests :: [AdditionalInfoRequestItem], summary :: Dashboard.Common.Summary}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data AdditionalInfoStatus
+  = INFO_PENDING
+  | RESPONDED
+  | REVIEWED
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+data RequestAdditionalInfoReq = RequestAdditionalInfoReq
+  { operationHubRequestId :: Kernel.Prelude.Text,
+    requestedDocumentTypes :: [AdditionalDocumentType],
+    message :: Kernel.Prelude.Text,
+    operatorId :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets RequestAdditionalInfoReq where
+  hideSecrets = Kernel.Prelude.identity
+
 data RequestStatus
   = PENDING
   | APPROVED
   | REJECTED
+  | AWAITING_INFO
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
@@ -123,6 +174,17 @@ data RequestType
   | DRIVER_REGULAR_INSPECTION
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+data RespondAdditionalInfoReq = RespondAdditionalInfoReq
+  { additionalInfoRequestId :: Kernel.Prelude.Text,
+    documentImageIds :: [Kernel.Prelude.Text],
+    remarks :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets RespondAdditionalInfoReq where
+  hideSecrets = Kernel.Prelude.identity
 
 data RespondHubRequest = RespondHubRequest {operationHubRequestId :: Kernel.Prelude.Text, operatorId :: Kernel.Prelude.Text, remarks :: Kernel.Prelude.Text, status :: RequestStatus}
   deriving stock (Generic)
@@ -143,7 +205,7 @@ data VerifyOperatorJoiningOtpReq = VerifyOperatorJoiningOtpReq
 instance Kernel.Types.HideSecrets.HideSecrets VerifyOperatorJoiningOtpReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("driver" :> (GetDriverOperatorFetchHubRequests :<|> GetDriverOperationGetAllHubs :<|> PostDriverOperatorRespondHubRequest :<|> PostDriverOperatorCreateRequest :<|> GetDriverOperatorListHelper :<|> PostDriverOperatorSendJoiningOtpHelper :<|> PostDriverOperatorVerifyJoiningOtpHelper :<|> GetDriverOperatorDashboardAnalyticsAllTimeHelper :<|> GetDriverOperatorDashboardAnalyticsHelper))
+type API = ("driver" :> (GetDriverOperatorFetchHubRequests :<|> GetDriverOperationGetAllHubs :<|> PostDriverOperatorRespondHubRequest :<|> PostDriverOperatorCreateRequest :<|> PostDriverOperatorRequestAdditionalInfo :<|> GetDriverOperatorAdditionalInfoRequests :<|> PostDriverRespondAdditionalInfo :<|> GetDriverOperatorListHelper :<|> PostDriverOperatorSendJoiningOtpHelper :<|> PostDriverOperatorVerifyJoiningOtpHelper :<|> GetDriverOperatorDashboardAnalyticsAllTimeHelper :<|> GetDriverOperatorDashboardAnalyticsHelper))
 
 type GetDriverOperatorFetchHubRequests =
   ( "operator" :> "fetch" :> "hubRequests" :> QueryParam "mbFrom" Kernel.Prelude.UTCTime :> QueryParam "mbTo" Kernel.Prelude.UTCTime
@@ -182,6 +244,18 @@ type GetDriverOperationGetAllHubs = ("operation" :> "getAllHubs" :> Get '[JSON] 
 type PostDriverOperatorRespondHubRequest = ("operator" :> "respond" :> "hubRequest" :> ReqBody '[JSON] RespondHubRequest :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostDriverOperatorCreateRequest = ("operator" :> "createRequest" :> ReqBody '[JSON] DriverOperationHubRequest :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type PostDriverOperatorRequestAdditionalInfo = ("operator" :> "requestAdditionalInfo" :> ReqBody '[JSON] RequestAdditionalInfoReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type GetDriverOperatorAdditionalInfoRequests =
+  ( "operator" :> "additionalInfoRequests" :> QueryParam "operationHubRequestId" Kernel.Prelude.Text
+      :> QueryParam "mbStatus" AdditionalInfoStatus
+      :> QueryParam "mbLimit" Kernel.Prelude.Int
+      :> QueryParam "mbOffset" Kernel.Prelude.Int
+      :> Get '[JSON] AdditionalInfoRequestListRes
+  )
+
+type PostDriverRespondAdditionalInfo = ("respondAdditionalInfo" :> ReqBody '[JSON] RespondAdditionalInfoReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type GetDriverOperatorList =
   ( "operator" :> "list" :> QueryParam "isActive" Kernel.Prelude.Bool :> QueryParam "limit" Kernel.Prelude.Int
@@ -292,6 +366,9 @@ data DriverAPIs = DriverAPIs
     getDriverOperationGetAllHubs :: EulerHS.Types.EulerClient [OperationHub],
     postDriverOperatorRespondHubRequest :: RespondHubRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverOperatorCreateRequest :: DriverOperationHubRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverOperatorRequestAdditionalInfo :: RequestAdditionalInfoReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getDriverOperatorAdditionalInfoRequests :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe AdditionalInfoStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient AdditionalInfoRequestListRes,
+    postDriverRespondAdditionalInfo :: RespondAdditionalInfoReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverOperatorList :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.Driver.DriverMode -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverInfoResp,
     postDriverOperatorSendJoiningOtp :: Kernel.Prelude.Text -> Dashboard.ProviderPlatform.Management.DriverRegistration.AuthReq -> EulerHS.Types.EulerClient Dashboard.ProviderPlatform.Management.DriverRegistration.AuthRes,
     postDriverOperatorVerifyJoiningOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> VerifyOperatorJoiningOtpReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
@@ -302,13 +379,16 @@ data DriverAPIs = DriverAPIs
 mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)
 mkDriverAPIs driverClient = (DriverAPIs {..})
   where
-    getDriverOperatorFetchHubRequests :<|> getDriverOperationGetAllHubs :<|> postDriverOperatorRespondHubRequest :<|> postDriverOperatorCreateRequest :<|> getDriverOperatorList :<|> postDriverOperatorSendJoiningOtp :<|> postDriverOperatorVerifyJoiningOtp :<|> getDriverOperatorDashboardAnalyticsAllTime :<|> getDriverOperatorDashboardAnalytics = driverClient
+    getDriverOperatorFetchHubRequests :<|> getDriverOperationGetAllHubs :<|> postDriverOperatorRespondHubRequest :<|> postDriverOperatorCreateRequest :<|> postDriverOperatorRequestAdditionalInfo :<|> getDriverOperatorAdditionalInfoRequests :<|> postDriverRespondAdditionalInfo :<|> getDriverOperatorList :<|> postDriverOperatorSendJoiningOtp :<|> postDriverOperatorVerifyJoiningOtp :<|> getDriverOperatorDashboardAnalyticsAllTime :<|> getDriverOperatorDashboardAnalytics = driverClient
 
 data DriverUserActionType
   = GET_DRIVER_OPERATOR_FETCH_HUB_REQUESTS
   | GET_DRIVER_OPERATION_GET_ALL_HUBS
   | POST_DRIVER_OPERATOR_RESPOND_HUB_REQUEST
   | POST_DRIVER_OPERATOR_CREATE_REQUEST
+  | POST_DRIVER_OPERATOR_REQUEST_ADDITIONAL_INFO
+  | GET_DRIVER_OPERATOR_ADDITIONAL_INFO_REQUESTS
+  | POST_DRIVER_RESPOND_ADDITIONAL_INFO
   | GET_DRIVER_OPERATOR_LIST
   | POST_DRIVER_OPERATOR_SEND_JOINING_OTP
   | POST_DRIVER_OPERATOR_VERIFY_JOINING_OTP
@@ -316,6 +396,10 @@ data DriverUserActionType
   | GET_DRIVER_OPERATOR_DASHBOARD_ANALYTICS
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(mkHttpInstancesForEnum ''AdditionalDocumentType)
+
+$(mkHttpInstancesForEnum ''AdditionalInfoStatus)
 
 $(mkHttpInstancesForEnum ''RequestStatus)
 

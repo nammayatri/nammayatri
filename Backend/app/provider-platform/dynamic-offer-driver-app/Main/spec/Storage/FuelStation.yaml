@@ -1,0 +1,50 @@
+imports:
+  Text: Data.Text
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+FuelStation:
+  tableName: fuel_station
+
+  fields:
+    id: Id FuelStation
+    name: Text
+    address: Text
+    lat: Double
+    lon: Double
+    fuelTypes: "[Text]"
+    brand: Maybe Text
+    operatingHoursStart: Maybe Text
+    operatingHoursEnd: Maybe Text
+    isOpen24h: Bool
+    phoneNumber: Maybe Text
+    isActive: Bool
+    city: Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    merchantOperatingCityId: "!SecondaryKey"
+    city: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where:
+        id: Id FuelStation
+    findAllByCity:
+      kvFunction: findAllWithKV
+      where:
+        city: Text
+        isActive: Bool
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        merchantOperatingCityId: Id MerchantOperatingCity
+        isActive: Bool
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

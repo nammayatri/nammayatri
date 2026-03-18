@@ -1,0 +1,169 @@
+imports:
+  Person: Dashboard.Common
+  City: Kernel.Types.Beckn.Context
+  Summary: Dashboard.Common
+
+module: Payout
+apiPrefix: operator
+
+apis:
+  - GET: # GetOperatorPayoutReceived
+      endpoint: /payout/received
+      auth: ApiAuthV2
+      query:
+        - from: UTCTime
+        - to: UTCTime
+      response:
+        type: OperatorReceivedPayoutRes
+      helperApi:
+        - GET:
+            endpoint: /payout/received
+            auth: ApiAuthV2
+            query:
+              - from: UTCTime
+              - to: UTCTime
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: OperatorReceivedPayoutRes
+
+  - GET: # GetOperatorPayoutReceivedTimeSeries
+      endpoint: /payout/receivedTimeSeries
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - from: UTCTime
+        - to: UTCTime
+        - granularity: Granularity
+      response:
+        type: OperatorReceivedTimeSeriesRes
+      helperApi:
+        - GET:
+            endpoint: /payout/receivedTimeSeries
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+              - from: UTCTime
+              - to: UTCTime
+              - granularity: Granularity
+            response:
+              type: OperatorReceivedTimeSeriesRes
+
+  - GET: # GetOperatorPayoutReceivedByFleet
+      endpoint: /payout/receivedByFleet
+      auth: ApiAuthV2
+      query:
+        - from: UTCTime
+        - to: UTCTime
+        - limit: Int
+        - offset: Int
+      response:
+        type: OperatorReceivedByFleetRes
+      helperApi:
+        - GET:
+            endpoint: /payout/receivedByFleet
+            auth: ApiAuthV2
+            query:
+              - from: UTCTime
+              - to: UTCTime
+              - limit: Int
+              - offset: Int
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: OperatorReceivedByFleetRes
+
+  - GET: # GetOperatorPayoutOutstanding
+      endpoint: /payout/outstanding
+      auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
+        - from: UTCTime
+        - to: UTCTime
+      response:
+        type: OperatorOutstandingPayoutRes
+      helperApi:
+        - GET:
+            endpoint: /payout/outstanding
+            auth: ApiAuthV2
+            query:
+              - fleetOwnerId: Text
+              - from: UTCTime
+              - to: UTCTime
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: OperatorOutstandingPayoutRes
+
+  - GET: # GetOperatorPayoutOutstandingBreakdown
+      endpoint: /payout/outstandingBreakdown
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+      response:
+        type: OperatorOutstandingBreakdownRes
+      helperApi:
+        - GET:
+            endpoint: /payout/outstandingBreakdown
+            auth: ApiAuthV2
+            query:
+              - limit: Int
+              - offset: Int
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: OperatorOutstandingBreakdownRes
+
+types:
+  Granularity:
+    - enum: "DAILY,WEEKLY,MONTHLY"
+  OperatorReceivedPayoutRes:
+    - totalReceived: HighPrecMoney
+    - currency: Currency
+    - rideCommissionsReceived: HighPrecMoney
+    - subscriptionShareReceived: HighPrecMoney
+    - incentivesReceived: HighPrecMoney
+    - deductionsApplied: HighPrecMoney
+    - netReceived: HighPrecMoney
+    - periodFrom: Maybe UTCTime
+    - periodTo: Maybe UTCTime
+  TimeSeriesBucket:
+    - bucketStart: UTCTime
+    - bucketEnd: UTCTime
+    - amount: HighPrecMoney
+  OperatorReceivedTimeSeriesRes:
+    - buckets: "[TimeSeriesBucket]"
+    - granularity: Granularity
+    - total: HighPrecMoney
+  FleetReceivedItem:
+    - fleetOwnerId: Id Person
+    - fleetOwnerName: Text
+    - mobileNumber: Text
+    - totalReceived: HighPrecMoney
+    - driverCount: Int
+    - firstPayoutDate: Maybe UTCTime
+    - lastPayoutDate: Maybe UTCTime
+  OperatorReceivedByFleetRes:
+    - items: "[FleetReceivedItem]"
+    - summary: Summary
+
+  OperatorOutstandingPayoutRes:
+    - totalOutstanding: HighPrecMoney
+    - currency: Currency
+    - rideCommissionPending: HighPrecMoney
+    - subscriptionSharePending: HighPrecMoney
+    - incentivesPending: HighPrecMoney
+    - deductions: HighPrecMoney
+    - lastUpdatedAt: UTCTime
+
+  FleetOwnerOutstandingItem:
+    - fleetOwnerId: Id Person
+    - fleetOwnerName: Text
+    - mobileNumber: Text
+    - outstandingAmount: HighPrecMoney
+    - driverCount: Int
+    - lastPayoutDate: Maybe UTCTime
+
+  OperatorOutstandingBreakdownRes:
+    - items: "[FleetOwnerOutstandingItem]"
+    - summary: Summary

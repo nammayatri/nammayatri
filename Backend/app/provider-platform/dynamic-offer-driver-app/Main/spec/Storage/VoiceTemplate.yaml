@@ -1,0 +1,54 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+
+VoiceTemplate:
+  tableName: voice_template
+
+  fields:
+    id: Id VoiceTemplate
+    templateType: Text
+    language: Text
+    templateText: Text
+    ttsProvider: Text
+    voiceName: Maybe Text
+    speechRate: Maybe Double
+    isActive: Bool
+    merchantId: Id Merchant
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByTemplateTypeAndLanguage:
+      kvFunction: findOneWithKV
+      where:
+        and: [templateType, language, isActive]
+
+    findAllByMerchantId:
+      kvFunction: findAllWithKV
+      where: merchantId
+
+  sqlType:
+    id: character varying (36)
+    templateType: character varying (30)
+    language: character varying (10)
+    templateText: text
+    ttsProvider: character varying (20)
+    voiceName: character varying (50)
+    merchantId: character varying (36)
+    merchantOperatingCityId: character varying (36)
+    createdAt: timestamp with time zone
+    updatedAt: timestamp with time zone
+
+  default:
+    ttsProvider: "'GOOGLE'"
+    speechRate: "1.0"
+    isActive: "true"

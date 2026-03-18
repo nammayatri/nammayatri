@@ -31,7 +31,7 @@ data OperationHubRequests = OperationHubRequests
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data RequestStatus = PENDING | APPROVED | REJECTED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data RequestStatus = PENDING | APPROVED | REJECTED | AWAITING_INFO deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data RequestType
   = ONBOARDING_INSPECTION

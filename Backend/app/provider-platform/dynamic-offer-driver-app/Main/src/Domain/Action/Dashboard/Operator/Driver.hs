@@ -9,6 +9,9 @@ module Domain.Action.Dashboard.Operator.Driver
     postDriverOperatorVerifyJoiningOtp,
     getDriverOperatorDashboardAnalyticsAllTime,
     getDriverOperatorDashboardAnalytics,
+    postDriverOperatorRequestAdditionalInfo,
+    getDriverOperatorAdditionalInfoRequests,
+    postDriverRespondAdditionalInfo,
   )
 where
 
@@ -33,6 +36,7 @@ import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.OperationHub as DOH
+import qualified Domain.Types.AdditionalInfoRequest as DAIR
 import Domain.Types.OperationHubRequests
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RegistrationToken as SR
@@ -63,6 +67,8 @@ import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverRCAssociationExtra as QDRC
 import qualified Storage.Queries.DriverRCAssociationExtra as SQDRA
 import qualified Storage.Queries.Image as IQuery
+import qualified Storage.Queries.AdditionalInfoRequest as QAIR
+import qualified Storage.Queries.AdditionalInfoRequestExtra as QAIRExtra
 import qualified Storage.Queries.OperationHub as QOH
 import qualified Storage.Queries.OperationHubRequests as SQOHR
 import qualified Storage.Queries.OperationHubRequestsExtra as SQOH
@@ -245,6 +251,7 @@ castReqStatusToDomain = \case
   API.Types.ProviderPlatform.Operator.Driver.PENDING -> PENDING
   API.Types.ProviderPlatform.Operator.Driver.REJECTED -> REJECTED
   API.Types.ProviderPlatform.Operator.Driver.APPROVED -> APPROVED
+  API.Types.ProviderPlatform.Operator.Driver.AWAITING_INFO -> AWAITING_INFO
 
 castReqTypeToDomain :: API.Types.ProviderPlatform.Operator.Driver.RequestType -> RequestType
 castReqTypeToDomain = \case
@@ -258,6 +265,7 @@ castReqStatus = \case
   PENDING -> API.Types.ProviderPlatform.Operator.Driver.PENDING
   REJECTED -> API.Types.ProviderPlatform.Operator.Driver.REJECTED
   APPROVED -> API.Types.ProviderPlatform.Operator.Driver.APPROVED
+  AWAITING_INFO -> API.Types.ProviderPlatform.Operator.Driver.AWAITING_INFO
 
 castReqType :: RequestType -> API.Types.ProviderPlatform.Operator.Driver.RequestType
 castReqType = \case

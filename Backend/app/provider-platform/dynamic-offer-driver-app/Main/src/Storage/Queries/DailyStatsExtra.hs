@@ -91,6 +91,30 @@ deleteAllByDriverId ::
 deleteAllByDriverId driverId = do
   deleteWithKV [Se.Is Beam.driverId $ Se.Eq (getId driverId)]
 
+-- | Find historical daily stats for specific dates (used by earning projection for day-of-week queries)
+findAllByDriverIdAndDates :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id SP.Person -> [Day] -> m [DailyStats]
+findAllByDriverIdAndDates (Id driverId) dates = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.driverId $ Se.Eq driverId,
+          Se.Is Beam.merchantLocalDate $ Se.In dates
+        ]
+    ]
+
+-- | Find daily stats for a driver within a date range, ordered by date (for projection accuracy)
+findAllInRangeByDriverIdOrderByDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id SP.Person -> Day -> Day -> m [DailyStats]
+findAllInRangeByDriverIdOrderByDate (Id driverId) from to = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.driverId $ Se.Eq driverId,
+          Se.Is Beam.merchantLocalDate $ Se.GreaterThanOrEq from,
+          Se.Is Beam.merchantLocalDate $ Se.LessThan to
+        ]
+    ]
+    (Se.Asc Beam.merchantLocalDate)
+    Nothing
+    Nothing
+
 -- | Update only d2d (driver-to-driver) referral fields for payout. Customer referral uses updateReferralStatsByDriverId.
 updateD2dReferralStatsByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

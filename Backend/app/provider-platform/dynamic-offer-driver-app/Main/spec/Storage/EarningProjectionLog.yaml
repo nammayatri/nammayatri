@@ -1,0 +1,52 @@
+imports:
+  Person: Domain.Types.Person
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Text: Data.Text
+  Day: Data.Time
+
+EarningProjectionLog:
+  tableName: earning_projection_log
+  derives: "Generic,Show,ToJSON,FromJSON"
+  types:
+    ProjectionType:
+      enum: "DAILY,WEEKLY"
+  fields:
+    id: Text
+    driverId: Id Person
+    projectionDate: Day
+    projectionType: ProjectionType
+    projectedLow: Int
+    projectedExpected: Int
+    projectedHigh: Int
+    actualEarnings: Maybe Int
+    accuracyPct: Maybe Double
+    factorsJson: Maybe Text
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+
+  queries:
+    findByDriverIdAndDate:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, projectionDate, projectionType]
+
+    findByDriverIdInRange:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - driverId
+          - projectionDate
+          - projectionType
+
+    updateActualEarnings:
+      kvFunction: updateOneWithKV
+      params: [actualEarnings, accuracyPct]
+      where:
+        and: [driverId, projectionDate, projectionType]
+
+  excludedFields: [merchantId, updatedAt]

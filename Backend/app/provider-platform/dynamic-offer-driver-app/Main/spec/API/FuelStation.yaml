@@ -1,0 +1,52 @@
+imports:
+  Text: Data.Text
+  Int: Kernel.Prelude
+  Double: Kernel.Prelude
+  Bool: Kernel.Prelude
+  Maybe: Kernel.Prelude
+  UTCTime: Kernel.Prelude
+
+module: FuelStation
+types:
+  FuelType:
+    enum: "PETROL, DIESEL, CNG, EV"
+    derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  FuelStationResp:
+    id: Text
+    name: Text
+    address: Text
+    lat: Double
+    lon: Double
+    fuelTypes: "[FuelType]"
+    brand: Maybe Text
+    distance: Int
+    isOpen: Bool
+    operatingHoursStart: Maybe Text
+    operatingHoursEnd: Maybe Text
+    phoneNumber: Maybe Text
+
+  GetFuelStationsResp:
+    stations: "[FuelStationResp]"
+    totalCount: Int
+
+apis:
+  - GET:
+      endpoint: /driver/fuelStations
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        lat: Double
+        lon: Double
+        radius: Int
+        fuelType: Maybe Text
+        limit: Maybe Int
+      response:
+        type: GetFuelStationsResp
+
+  - GET:
+      endpoint: /driver/fuelStations/{stationId}
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        stationId: Text
+      response:
+        type: FuelStationResp
