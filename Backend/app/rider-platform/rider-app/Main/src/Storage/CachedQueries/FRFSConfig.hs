@@ -16,6 +16,7 @@ module Storage.CachedQueries.FRFSConfig
   ( findByMerchantOperatingCityId,
     findByMerchantOperatingCityIdInRideFlow,
     clearCache,
+    updateByPrimaryKey,
   )
 where
 
@@ -39,3 +40,8 @@ findByMerchantOperatingCityId merchantOperatingCityId mbConfigInExperimentVersio
 
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ()
 clearCache merchantOperatingCityId = DynamicLogic.clearConfigCache (cast merchantOperatingCityId) (LYT.RIDER_CONFIG LYT.FRFSConfig) Nothing
+
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSConfig.FRFSConfig -> m ()
+updateByPrimaryKey cfg = do
+  Queries.updateByPrimaryKey cfg
+  clearCache cfg.merchantOperatingCityId

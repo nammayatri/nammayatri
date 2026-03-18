@@ -41,6 +41,7 @@ import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 data XML
 
@@ -135,7 +136,7 @@ frontendBasedCallHandler =
 
 -- | Try to initiate a call customer -> driver
 initiateCallToDriver :: Id SRide.Ride -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DCall.CallRes
-initiateCallToDriver rideId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DCall.initiateCallToDriver rideId
+initiateCallToDriver rideId (personId, _) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DCall.initiateCallToDriver rideId
 
 callStatusCallback :: DCall.CallCallbackReq -> FlowHandler DCall.CallCallbackRes
 callStatusCallback = withFlowHandlerAPI . DCall.callStatusCallback
@@ -150,7 +151,7 @@ getDriverAlternateNumber :: Text -> Text -> Text -> Maybe Text -> ExotelCallStat
 getDriverAlternateNumber callSid callFrom_ callTo_ dtmfNumber exotelCallStatus = withFlowHandlerAPI . DCall.getDriverMobileNumber DCall.AlternateNumber callSid callFrom_ callTo_ dtmfNumber exotelCallStatus
 
 getCallStatus :: Id CallStatus -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DCall.GetCallStatusRes
-getCallStatus callStatusId _ = withFlowHandlerAPI $ DCall.getCallStatus callStatusId
+getCallStatus callStatusId (personId, _) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DCall.getCallStatus callStatusId
 
 sdkBasedCallHandler :: FlowServer SDKBasedCallAPI
 sdkBasedCallHandler = getCallTwillioAccessToken :<|> getCallTwillioConnectedEntityTwiml

@@ -51,12 +51,13 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FRFSConfirm
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
-import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
@@ -120,7 +121,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                 let mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
                 case mbServiceTier of
                   Just serviceTier -> do
-                    riderConfig <- QRiderConfig.findByMerchantOperatingCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+                    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
                     let allowedVariants = maybe (defaultBusBoardingRelationshitCfg serviceTier._type) (.canBoardIn) $ find (\serviceRelationShip -> serviceRelationShip.vehicleType == Enums.BUS && serviceRelationShip.serviceTierType == serviceTier._type) =<< riderConfig.serviceTierRelationshipCfg
                     map fst . filter (\(_bs, mbVehicleServiceTier) -> maybe True (\vehicleServiceTier -> vehicleServiceTier `elem` allowedVariants) mbVehicleServiceTier)
                       <$> mapConcurrently
@@ -444,7 +445,7 @@ confirm personId merchantId mbQuoteId bookLater bookingAllowed crisSdkResponse v
       DIBC.ONDC _ | vehicleType == Spec.BUS -> do
         merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
         merchantOperatingCity <- CQMOC.findById quote.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound quote.merchantOperatingCityId.getId)
-        bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
+        bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory vehicleType)}) >>= fromMaybeM (InternalError "Beckn Config not found")
         FRFSTicketService.select merchant merchantOperatingCity bapConfig quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer
       _ -> do
         void $ postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer mbIsMockPayment integratedBppConfig mbTripId
@@ -455,5 +456,5 @@ cancel searchId cancellationType = do
   whenJust mbMetroBooking $ \metroBooking -> do
     merchant <- CQM.findById metroBooking.merchantId >>= fromMaybeM (MerchantDoesNotExist metroBooking.merchantId.getId)
     merchantOperatingCity <- CQMOC.findById metroBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound metroBooking.merchantOperatingCityId.getId)
-    bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory metroBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
+    bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory metroBooking.vehicleType)}) >>= fromMaybeM (InternalError "Beckn Config not found")
     CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType metroBooking

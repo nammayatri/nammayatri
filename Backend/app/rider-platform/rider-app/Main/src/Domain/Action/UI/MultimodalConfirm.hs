@@ -133,13 +133,14 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
-import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DeviceVehicleMapping as QDeviceVehicleMapping
 import qualified Storage.Queries.Estimate as QEstimate
@@ -156,7 +157,6 @@ import qualified Storage.Queries.JourneyLegMapping as QJourneyLegMapping
 import Storage.Queries.MultimodalPreferences as QMP
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.RouteDetails as QRouteDetails
 import Storage.Queries.SearchRequest as QSearchRequest
 import System.Environment (lookupEnv)
@@ -699,7 +699,7 @@ getMultimodalUserPreferences (mbPersonId, _merchantId) = do
           }
     Nothing -> do
       personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      riderConfig <- QRiderConfig.findByMerchantOperatingCityId personCityInfo.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound personCityInfo.merchantOperatingCityId.getId)
+      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = personCityInfo.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound personCityInfo.merchantOperatingCityId.getId)
       let convertedModes = mapMaybe generalVehicleTypeToAllowedTransitMode (fromMaybe [] riderConfig.permissibleModes)
           journeyOptionsSortingType = fromMaybe DMP.MOST_RELEVANT riderConfig.journeyOptionsSortingType
           busTransitTypes = fromMaybe [Spec.ORDINARY, Spec.EXPRESS, Spec.SPECIAL, Spec.AC, Spec.NON_AC, Spec.EXECUTIVE] riderConfig.busTransitTypes
@@ -871,7 +871,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute mbNew
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbRequestCity <- maybe (pure Nothing) (CQMOC.findByMerchantIdAndCity merchantId) mbCity
   let merchantOperatingCityId = maybe person.merchantOperatingCityId (.id) mbRequestCity
-  riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
   let vehicleTypes =
         case mbVehicleType of
           Just BUS -> [Enums.BUS]
@@ -916,7 +916,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mbRequestCity <- maybe (pure Nothing) (CQMOC.findByMerchantIdAndCity merchantId) mbCity
   let merchantOperatingCityId = maybe person.merchantOperatingCityId (.id) mbRequestCity
-  riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
   let vehicleTypes =
         case mbVehicleType of
           Just BUS -> [Enums.BUS]
@@ -1214,7 +1214,7 @@ postMultimodalTicketVerify ::
   Environment.Flow API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyResp
 postMultimodalTicketVerify (_mbPersonId, merchantId) opCity req = do
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchantId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show opCity)
-  bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchantId (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory BUS) >>= fromMaybeM (InternalError "Beckn Config not found")
+  bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (Utils.frfsVehicleCategoryToBecknVehicleCategory BUS)}) >>= fromMaybeM (InternalError "Beckn Config not found")
   let verifyTicketsAndBuildResponse provider tickets = do
         legInfoList <- forM tickets $ \ticketQR -> do
           ticket <- CallExternalBPP.verifyTicket merchantId merchantOperatingCity bapConfig BUS ticketQR DIBC.MULTIMODAL
@@ -1487,7 +1487,7 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
   validateChangeNeededForStop reqJourneyLeg req.newSourceStation req.newDestinationStation
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing reqJourneyLeg.merchantOperatingCityId (fromMaybe Enums.METRO $ JM.multiModalTravelModeToBecknVehicleCategory reqJourneyLeg.mode) DIBC.MULTIMODAL
   riderConfig <-
-    QRC.findByMerchantOperatingCityId reqJourneyLeg.merchantOperatingCityId Nothing
+    getConfig (RiderDimensions {merchantOperatingCityId = reqJourneyLeg.merchantOperatingCityId.getId})
       >>= fromMaybeM (RiderConfigDoesNotExist reqJourneyLeg.merchantOperatingCityId.getId)
 
   (newLeg, mbSourceStation, mbDestStation) <- processChangeStops journey reqJourneyLeg integratedBPPConfig riderConfig
@@ -1788,7 +1788,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
     ( do
         person <- authenticate mbPersonId
         integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
-        riderConfig <- QRiderConfig.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound person.merchantOperatingCityId.getId)
+        riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound person.merchantOperatingCityId.getId)
         let routeServiceabilityContext =
               RouteServiceabilityContext
                 { integratedBPPConfig,
@@ -1932,7 +1932,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
 
     getValidSingleModeRoute :: RouteServiceabilityContext -> Text -> Text -> Environment.Flow MultiModalTypes.MultiModalRoute
     getValidSingleModeRoute routeServiceabilityContext srcCode' destCode' = do
-      riderConfig <- QRiderConfig.findByMerchantOperatingCityId routeServiceabilityContext.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound routeServiceabilityContext.merchantOperatingCityId.getId)
+      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = routeServiceabilityContext.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound routeServiceabilityContext.merchantOperatingCityId.getId)
       (sourceLatLong', destLatLong') <- extractSourceDestLatLng srcCode' destCode' routeServiceabilityContext
       let transitRoutesReq =
             MultiModalTypes.GetTransitRoutesReq
@@ -2278,7 +2278,7 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId vehicleCategory DIBC.MULTIMODAL
 
   -- Get rider config to check source of service tier
-  mbSourceOfServiceTier <- fmap (.sourceOfServiceTier) <$> QRiderConfig.findByMerchantOperatingCityId person.merchantOperatingCityId
+  mbSourceOfServiceTier <- fmap (.sourceOfServiceTier) <$> getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
 
   frfsQuotesAndCategories <-
     case (req.journeyId, req.legOrder) of
@@ -2448,7 +2448,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
           JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
         else pure vehicleLiveRouteInfo
     Nothing -> JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
-  riderConfig <- QRiderConfig.findByMerchantOperatingCityId journey.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound journey.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = journey.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound journey.merchantOperatingCityId.getId)
   -- looks like this as of now 😢, should have one element -> [{"code":"3880","color":null,"endPoint":{"lat":13.05177,"lon":80.09496},"longName":"REDHILLS BUS TERMINUS To POONAMALLEE B.T","priceWithCurrency":{"amount":25,"currency":"INR"},"sequenceNum":null,"shortName":"62","startPoint":{"lat":13.19305,"lon":80.18437},"stations":[{"address":null,"code":"tJbXQuOE","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.13037,"lon":80.15852,"name":"PUDUR","routeCodes":null,"sequenceNum":17,"stationType":"START","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"CpULuhdq","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.12724,"lon":80.1539,"name":"AMBATTUR ORAGADAM","routeCodes":null,"sequenceNum":18,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"wFSILCzc","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.12182,"lon":80.14794,"name":"RAAKI THEATRE","routeCodes":null,"sequenceNum":19,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"FlYjxOxQ","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.12446,"lon":80.14361,"name":"THIRUMULLAIVOYAL STEDFORD HOSPITAL","routeCodes":null,"sequenceNum":20,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"GkYZbgqg","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.1281,"lon":80.13972,"name":"THIRUMULLAIVOYAL SARASWATHI NAGAR CTH SALAI","routeCodes":null,"sequenceNum":21,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"FStgRiBS","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.13049,"lon":80.13634,"name":"THIRUMULLAIVOYAL MANIKANDAPURAM","routeCodes":null,"sequenceNum":22,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"XiLvnZTk","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.13073,"lon":80.13103,"name":"THIRUMULLAIVOYAL","routeCodes":null,"sequenceNum":23,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"Vlipnutt","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.12964,"lon":80.12503,"name":"THIRUMULLAIVOYAL VAISHNAVI NAGAR","routeCodes":null,"sequenceNum":24,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"bHagonKv","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.1258,"lon":80.11913,"name":"MURUGAPPA POLYTECHNIC","routeCodes":null,"sequenceNum":25,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"PhjcDdmq","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.12338,"lon":80.1125,"name":"AVADI TUBE PRODUCTS OF INDIA","routeCodes":null,"sequenceNum":26,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"vacPrbQA","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.11972,"lon":80.10169,"name":"AVADI BUS TERMINUS","routeCodes":null,"sequenceNum":27,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"SGnJOquj","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.11942,"lon":80.096,"name":"AVADI CHECK POST","routeCodes":null,"sequenceNum":28,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"pGHnvifU","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.11704,"lon":80.09786,"name":"AVADI GOVERNMENT HOSPITAL","routeCodes":null,"sequenceNum":29,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"qNiTyrkl","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.11658,"lon":80.10061,"name":"KANNIGAPURAM AVADI","routeCodes":null,"sequenceNum":30,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"FldHcjZC","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.11575,"lon":80.10516,"name":"AVADI MARKET","routeCodes":null,"sequenceNum":31,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"9d18d389df1961e2f3d3c19e315bf99a","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.11158,"lon":80.10868,"name":"AVADI JB ESTATE","routeCodes":null,"sequenceNum":32,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"f8687de5e5e79549349ff84b70dda40c","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.10552,"lon":80.10853,"name":"AVADI VASANTHAM NAGAR","routeCodes":null,"sequenceNum":33,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"ae4f951daf0a29a3e562512b767b0a24","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.10265,"lon":80.10843,"name":"AVADI MOORTHY NAGAR","routeCodes":null,"sequenceNum":34,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"BJDTCJYP","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.09841,"lon":80.10839,"name":"GOVARDANAGIRI","routeCodes":null,"sequenceNum":35,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"VMzKgUSR","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.09361,"lon":80.1085,"name":"IYANKULAM","routeCodes":null,"sequenceNum":36,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"GJEXlFdt","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.08655,"lon":80.10869,"name":"PARUTHIPATTU ROAD JUNCTION","routeCodes":null,"sequenceNum":37,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"dgLtpUgu","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.08167,"lon":80.10932,"name":"MELPAKKAM","routeCodes":null,"sequenceNum":38,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"NRaiNGwl","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.07822,"lon":80.11062,"name":"KADUVETTI","routeCodes":null,"sequenceNum":39,"stationType":"INTERMEDIATE","timeTakenToTravelUpcomingStop":null,"towards":null},{"address":null,"code":"qLQHuyIe","color":null,"distance":null,"integratedBppConfigId":"4f148691-12cc-42a7-b49e-f9bd86863fa1","lat":13.06628,"lon":80.11255,"name":"SA ENGINEERING COLLEGE","routeCodes":null,"sequenceNum":40,"stationType":"END","timeTakenToTravelUpcomingStop":null,"towards":null}],"travelTime":null,"vehicleServiceTier":{"_type":"EXECUTIVE","description":"DELUX BUSES","isAirConditioned":false,"longName":"DELUX BUSES","providerCode":"S","shortName":"DELUX BUSES"}}]
   let routeStations :: Maybe [FRFSTicketService.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
   let mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
@@ -2614,7 +2614,7 @@ postMultimodalUpdateBusLocation (mbPersonId, _) mbBusOTP req = do
       (listToMaybe deviceMappings)
 
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  riderConfig <- QRiderConfig.findByMerchantOperatingCityId personCityInfo.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound personCityInfo.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = personCityInfo.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound personCityInfo.merchantOperatingCityId.getId)
 
   now <- getCurrentTime
 

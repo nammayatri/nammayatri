@@ -31,6 +31,7 @@ import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 -------- Support Flow----------
 type API =
@@ -55,10 +56,10 @@ handler =
     :<|> safetyCheckSupport
 
 sendIssue :: (Id Person.Person, Id Merchant.Merchant) -> DSupport.SendIssueReq -> App.FlowHandler DSupport.SendIssueRes
-sendIssue (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DSupport.sendIssue (personId, merchantId)
+sendIssue (personId, merchantId) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId . DSupport.sendIssue (personId, merchantId)
 
 callbackRequest :: (Id Person.Person, Id Merchant.Merchant) -> App.FlowHandler APISuccess
-callbackRequest (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DSupport.callbackRequest personId
+callbackRequest (personId, _) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DSupport.callbackRequest personId
 
 safetyCheckSupport :: (Id Person.Person, Id Merchant.Merchant) -> DSupport.SafetyCheckSupportReq -> App.FlowHandler DSupport.SendIssueRes
-safetyCheckSupport (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DSupport.safetyCheckSupport (personId, merchantId)
+safetyCheckSupport (personId, merchantId) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId . DSupport.safetyCheckSupport (personId, merchantId)

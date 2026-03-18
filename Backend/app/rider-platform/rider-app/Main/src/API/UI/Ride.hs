@@ -35,6 +35,7 @@ import Servant
 import qualified SharedLogic.Ride as DARide
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 type API =
   "ride"
@@ -75,16 +76,16 @@ handler =
         :<|> getDeliveryImage rideId
 
 getDriverLoc :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler DARide.GetDriverLocResp
-getDriverLoc rideId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DARide.getDriverLoc rideId
+getDriverLoc rideId (personId, _) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DARide.getDriverLoc rideId
 
 getDriverPhoto :: (Id SPerson.Person, Id Merchant.Merchant) -> Text -> FlowHandler Text
-getDriverPhoto (personId, _) filePath = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getDriverPhoto filePath
+getDriverPhoto (personId, _) filePath = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DRide.getDriverPhoto filePath
 
 getRideStatus :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler DRide.GetRideStatusResp
-getRideStatus rideId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getRideStatus rideId personId
+getRideStatus rideId (personId, _) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DRide.getRideStatus rideId personId
 
 editLocation :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> DRide.EditLocationReq -> FlowHandler DRide.EditLocationResp
-editLocation rideId (personId, merchantId) editLocationReq = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.editLocation rideId (personId, merchantId) editLocationReq
+editLocation rideId (personId, merchantId) editLocationReq = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DRide.editLocation rideId (personId, merchantId) editLocationReq
 
 getDeliveryImage :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler Text
-getDeliveryImage rideId (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getDeliveryImage rideId (personId, merchantId)
+getDeliveryImage rideId (personId, merchantId) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DRide.getDeliveryImage rideId (personId, merchantId)

@@ -63,13 +63,14 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
-import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as MultiModalBus
 import qualified Storage.CachedQueries.Merchant.MultiModalSuburban as MultiModalSuburban
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
+import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -446,7 +447,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
   routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime currentTimeIST integratedBppConfig mid mocid vc useLiveBusData (vc == Enums.SUBWAY && calledForSubwaySingleMode)) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
 
   -- fetch rider config
-  mbRiderConfig <- measureLatency (QRiderConfig.findByMerchantOperatingCityId mocid Nothing) "QRiderConfig.findByMerchantOperatingCityId"
+  mbRiderConfig <- measureLatency (getConfig (RiderDimensions {merchantOperatingCityId = mocid.getId})) "getConfig RiderConfig"
   let cfgMap = maybe (toCfgMap defaultBusTierSortingConfig) toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
   maxBusTimingPerTier <- liftIO $ fromMaybe 3 . (>>= readMaybe) <$> lookupEnv "BUS_TIER_MAX_PER_TIER"
 
@@ -1399,7 +1400,7 @@ createRecentLocationForMultimodal journey = do
 postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool) => TPayment.PaymentServiceType -> Person -> Id Merchant -> Id MerchantOperatingCity -> [DFRFSTicketBooking.FRFSTicketBooking] -> Maybe Bool -> Bool -> m (Maybe DOrder.PaymentOrder)
 postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings mbEnableOffer isMockPayment = do
   frfsConfig <-
-    CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId []
+    getConfig (FRFSConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
   frfsBookingsPayments <- mapMaybeM QFRFSTicketBookingPayment.findTicketBookingPayment bookings
   (vendorSplitDetails, amountUpdated) <- createVendorSplitFromBookings bookings merchantId person.merchantOperatingCityId paymentType frfsConfig.isFRFSTestingEnabled
@@ -1581,7 +1582,7 @@ getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber mbPassVerifyReq
 sortAndGetBusFares :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Id MerchantOperatingCity -> Maybe Spec.ServiceTierType -> [FRFSFare] -> m (Maybe FRFSFare)
 sortAndGetBusFares _ _ [] = return Nothing
 sortAndGetBusFares merchantOpCityId mbPreferredTier finalFares = do
-  mbRiderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOpCityId Nothing
+  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityId.getId})
   let cfgMap = maybe (toCfgMap defaultBusTierSortingConfig) toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
   let cfgMap' = FRFSUtils.adjustCfgMapForPreferredTier mbPreferredTier cfgMap
   let serviceTierTypeFromFare fare = Just fare.vehicleServiceTier.serviceTierType

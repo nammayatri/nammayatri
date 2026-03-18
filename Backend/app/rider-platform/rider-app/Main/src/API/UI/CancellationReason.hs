@@ -30,6 +30,7 @@ import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 type API =
   "cancellationReason"
@@ -45,4 +46,4 @@ handler :: FlowServer API
 handler = list
 
 list :: (Id Person.Person, Id Merchant.Merchant) -> DCR.CancellationStage -> FlowHandler ListRes
-list _ = withFlowHandlerAPI . DCancellationReason.list
+list (personId, _) stage = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DCancellationReason.list stage

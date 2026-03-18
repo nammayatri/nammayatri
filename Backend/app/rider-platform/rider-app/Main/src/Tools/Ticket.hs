@@ -32,8 +32,9 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 
 createTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.CreateTicketReq -> m Ticket.CreateTicketResp
 createTicket = runWithServiceConfig TI.createTicket
@@ -62,10 +63,10 @@ runWithServiceConfig ::
   m resp
 runWithServiceConfig func merchantId merchantOperatingCityId req = do
   merchantConfig <-
-    QMSUC.findByMerchantOperatingCityId merchantOperatingCityId
+    getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   merchantIssueTicketServiceConfig <-
-    QMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.IssueTicketService merchantConfig.issueTicketService)
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, serviceName = Just (DMSC.IssueTicketService merchantConfig.issueTicketService)})
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   case merchantIssueTicketServiceConfig.serviceConfig of
     DMSC.IssueTicketServiceConfig msc -> func msc req

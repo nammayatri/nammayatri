@@ -20,7 +20,6 @@ import qualified Domain.Types.PaymentInvoice as DPI
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.Ride as Ride
-import Kernel.Beam.Functions (runInReplica)
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
@@ -46,8 +45,9 @@ import SharedLogic.JobScheduler
 import qualified SharedLogic.JobScheduler as JobScheduler
 import SharedLogic.Offer
 import Storage.Beam.Payment ()
-import Storage.CachedQueries.BecknConfig as CQBC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.FRFSRecon as QRecon
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
@@ -237,7 +237,7 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
       case paymentStatusResponse.status of
         Payment.CHARGED -> do
           purchasedPassPayment <- QPurchasedPassPayment.findByPrimaryKey (Id transactionId) >>= fromMaybeM (InvalidRequest $ "Purchase pass payment not found for id: " <> transactionId)
-          bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback purchasedPassPayment.merchantOperatingCityId purchasedPassPayment.merchantId (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory Spec.BUS) >>= fromMaybeM (InternalError "Beckn Config not found")
+          bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = purchasedPassPayment.merchantOperatingCityId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (Utils.frfsVehicleCategoryToBecknVehicleCategory Spec.BUS)}) >>= fromMaybeM (InternalError "Beckn Config not found")
           mkPassReconEntry bapConfig purchasedPassPayment
         _ -> return ()
       where
@@ -447,7 +447,7 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
       m ()
     processRefund person paymentOrder paymentServiceType = do
       let merchantOperatingCityId = fromMaybe person.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
-      riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
       let refundsOrderCall = TPayment.refundOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
       let commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
       mbRefundResp <- DPayment.createRefundService commonMerchantOperatingCityId paymentOrder.shortId refundsOrderCall
@@ -768,7 +768,7 @@ capturePendingPaymentIfExists ::
   m ()
 capturePendingPaymentIfExists person merchantOperatingCityId = do
   -- Load config for excluded payment purposes
-  riderConfig <- runInReplica $ QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = getId merchantOperatingCityId})
   let excludedPurposes = case riderConfig >>= (.duesExcludedPaymentPurposes) of
         Nothing -> [] -- No config = don't exclude anything
         Just textList -> mapMaybe (readMaybe . T.unpack) textList :: [DPI.PaymentPurpose]

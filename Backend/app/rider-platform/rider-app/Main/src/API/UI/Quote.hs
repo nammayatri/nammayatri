@@ -32,6 +32,7 @@ import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 type API =
   "rideSearch"
@@ -46,7 +47,7 @@ handler =
   getQuotes
 
 getQuotes :: Id SSR.SearchRequest -> (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> FlowHandler DQuote.GetQuotesRes
-getQuotes searchRequestId token = withFlowHandlerAPI . getQuotes' searchRequestId token
+getQuotes searchRequestId (personId, merchantId) mbAllowMultiple = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ getQuotes' searchRequestId (personId, merchantId) mbAllowMultiple
 
 getQuotes' :: Id SSR.SearchRequest -> (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> Flow DQuote.GetQuotesRes
 getQuotes' searchRequestId _ mbAllowMultiple = DQuote.getQuotes searchRequestId mbAllowMultiple

@@ -52,11 +52,12 @@ import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import qualified SharedLogic.FRFSUtils as SFU
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
-import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQVSR
 import qualified Storage.CachedQueries.Merchant as QMerch
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.FRFSFarePolicy as QFFP
 import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
@@ -77,7 +78,7 @@ validateRequest DOnSearch {..} = do
   let merchantId = search.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity search
-  frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow search.merchantOperatingCityId [] >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show search.merchantOperatingCityId)
+  frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = search.merchantOperatingCityId.getId}) >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show search.merchantOperatingCityId)
   if frfsConfig.isEventOngoing == Just True && search.riderId /= SFU.partnerOrgRiderId
     then do
       stats <- QPStats.findByPersonId search.riderId >>= fromMaybeM (InternalError "Person stats not found")
@@ -307,7 +308,7 @@ filterQuotes integratedBPPConfig quotesWithCategories (Just journeyLeg) = do
     _ -> do
       case journeyLeg.mode of
         DTripTypes.Bus -> do
-          mbRiderConfig <- QRC.findByMerchantOperatingCityId journeyLeg.merchantOperatingCityId Nothing
+          mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = journeyLeg.merchantOperatingCityId.getId})
           let cfgMap = maybe (JourneyUtils.toCfgMap JourneyUtils.defaultBusTierSortingConfig) JourneyUtils.toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
           let cfgMap' = SFU.adjustCfgMapForPreferredTier journeyLeg.userPreferredServiceTier cfgMap
           let serviceTierTypeFromQuote quote quoteCategories = JourneyUtils.getServiceTierFromQuote quoteCategories quote <&> (.serviceTierType)

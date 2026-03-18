@@ -1,5 +1,7 @@
 imports:
   User: Dashboard.Common
+  ConfigPilotGetConfigRequest: Lib.Yudhishthira.Types
+  ConfigPilotCreateRowRequest: Lib.Yudhishthira.Types
   CreateNammaTagRequest: Lib.Yudhishthira.Types
   UpdateNammaTagRequest: Lib.Yudhishthira.Types
   APISuccess: Kernel.Types.APISuccess
@@ -30,10 +32,12 @@ imports:
   ConfigDetailsResp: Lib.Yudhishthira.Types
   TableDataResp: Lib.Yudhishthira.Types
   ActionChangeRequest: Lib.Yudhishthira.Types
+  AlwaysOnListResp: Lib.Yudhishthira.Types
   UiConfigGetVersionResponse: Lib.Yudhishthira.Types
   UiDevicePlatformReq: Lib.Yudhishthira.Types
   VerifyNammaTagRequest: Lib.Yudhishthira.Types
   VerifyNammaTagResponse: Lib.Yudhishthira.Types
+  NammaTagV2: Lib.Yudhishthira.Types.NammaTagV2
   Value: Data.Aeson
   NammaTagEventsOrNammaTagNamesResp: Lib.Yudhishthira.Types
 
@@ -77,6 +81,11 @@ apis:
         type: APISuccess
       migrate:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG
+  - GET:
+      endpoint: /tag/all
+      auth: ApiAuthV2
+      response:
+        type: "[NammaTagV2]"
   - POST:
       endpoint: /query/create
       auth: ApiAuthV2
@@ -164,6 +173,7 @@ apis:
         domain: LogicDomain
       query:
         timeBound: Text
+        activeOnly: Bool
       response:
         type: "[LogicRolloutObject]"
       migrate:
@@ -311,6 +321,13 @@ apis:
         type: TableDataResp
       migrate:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+  - GET:
+      endpoint: /configPilot/alwaysOnList
+      auth: ApiAuthV2
+      mandatoryQuery:
+        domain: LogicDomain
+      response:
+        type: AlwaysOnListResp
   - POST:
       endpoint: /configPilot/actionChange
       auth: ApiAuthV2
@@ -321,3 +338,24 @@ apis:
       migrate:
         endpointV2:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+  - POST:
+      endpoint: /configPilot/getConfigWithDimensions
+      auth: ApiAuthV2
+      request:
+        type: ConfigPilotGetConfigRequest
+      response:
+        type: TableDataResp
+  - GET:
+      endpoint: /configPilot/getDimensionSchema
+      auth: ApiAuthV2
+      mandatoryQuery:
+        configType: ConfigType
+      response:
+        type: DomainSchemaResp
+  - POST:
+      endpoint: /configPilot/createRow
+      auth: ApiAuthV2
+      request:
+        type: ConfigPilotCreateRowRequest
+      response:
+        type: APISuccess

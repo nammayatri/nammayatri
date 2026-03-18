@@ -1,7 +1,7 @@
-CREATE INDEX CONCURRENTLY idx_pg_payment_settlement_report_txn_date ON atlas_app.pg_payment_settlement_report USING brin (txn_date);
-CREATE INDEX CONCURRENTLY idx_pg_payment_settlement_report_settlement_date ON atlas_app.pg_payment_settlement_report USING brin (settlement_date);
-CREATE INDEX CONCURRENTLY idx_pg_payment_settlement_report_reference_id ON atlas_app.pg_payment_settlement_report USING btree (reference_id);
-CREATE INDEX CONCURRENTLY idx_pg_payment_settlement_report_order_id ON atlas_app.pg_payment_settlement_report USING btree (order_id);
-CREATE INDEX CONCURRENTLY idx_pg_payment_settlement_report_settlement_id ON atlas_app.pg_payment_settlement_report USING btree (settlement_id);
-CREATE INDEX CONCURRENTLY idx_pg_payment_settlement_report_pg_approval_code ON atlas_app.pg_payment_settlement_report USING btree (pg_approval_code);
-CREATE INDEX CONCURRENTLY idx_pg_payment_settlement_report_utr ON atlas_app.pg_payment_settlement_report USING btree (utr);
+CREATE INDEX IF not EXISTS idx_pg_payment_settlement_report_txn_date ON atlas_app.pg_payment_settlement_report USING brin (txn_date);
+CREATE INDEX IF not EXISTS idx_pg_payment_settlement_report_settlement_date ON atlas_app.pg_payment_settlement_report USING brin (settlement_date);
+CREATE INDEX IF not EXISTS idx_pg_payment_settlement_report_reference_id ON atlas_app.pg_payment_settlement_report USING btree (reference_id);
+CREATE INDEX IF not EXISTS idx_pg_payment_settlement_report_order_id ON atlas_app.pg_payment_settlement_report USING btree (order_id);
+CREATE INDEX IF not EXISTS idx_pg_payment_settlement_report_settlement_id ON atlas_app.pg_payment_settlement_report USING btree (settlement_id);
+CREATE INDEX IF not EXISTS idx_pg_payment_settlement_report_pg_approval_code ON atlas_app.pg_payment_settlement_report USING btree (pg_approval_code);
+CREATE INDEX IF not EXISTS idx_pg_payment_settlement_report_utr ON atlas_app.pg_payment_settlement_report USING btree (utr);

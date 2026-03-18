@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Domain.Action.Beckn.OnUpdate
   ( onUpdate,
@@ -83,8 +84,9 @@ import SharedLogic.Payment as SPayment
 import qualified SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as QCM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingExtra as QEBooking
@@ -503,7 +505,7 @@ onUpdate = \case
   OUValidatedSafetyAlertReq ValidatedSafetyAlertReq {..} -> do
     logDebug $ "Safety alert triggered for rideId: " <> ride.id.getId
     merchantOperatingCityId <- maybe (QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId) >>= pure . (.merchantOperatingCityId)) pure ride.merchantOperatingCityId
-    riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
     void $ QRide.updateSafetyJourneyStatus ride.id (DRide.UnexpectedCondition DRide.DriverDeviated)
     rider <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
     safetySettings <- Lib.findSafetySettingsWithFallback (cast booking.riderId) (Lib.getDefaultSafetySettings (cast booking.riderId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults rider))

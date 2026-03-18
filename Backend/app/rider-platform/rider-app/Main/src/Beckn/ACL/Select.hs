@@ -37,9 +37,10 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.MerchantPaymentMethod as SLMPM
-import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import Tools.Error
 
 buildSelectReqV2 ::
@@ -49,9 +50,8 @@ buildSelectReqV2 ::
 buildSelectReqV2 dSelectRes = do
   endLoc <- dSelectRes.searchRequest.toLocation & fromMaybeM (InternalError "To location address not found")
   moc <- CQMOC.findByMerchantIdAndCity dSelectRes.merchant.id dSelectRes.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> dSelectRes.merchant.id.getId <> "-city-" <> show dSelectRes.city)
-  riderConfig <- QRC.findByMerchantOperatingCityId moc.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
-  bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId dSelectRes.merchant.id "MOBILITY" moc.id
-  bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show dSelectRes.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = moc.id.getId}) >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
+  bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = moc.id.getId, domain = Just "MOBILITY", vehicleCategory = Nothing})) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show dSelectRes.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId)
   -- stops <- dSelectRes.searchRequest.stops
   messageId <- generateGUID
   let message = buildSelectReqMessage dSelectRes endLoc dSelectRes.isValueAddNP bapConfig riderConfig

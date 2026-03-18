@@ -167,14 +167,15 @@ selectVersionForUnboundedConfigs ::
 selectVersionForUnboundedConfigs merchantOpCityId domain mbToss = do
   mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
   configs <- if null mbConfigs then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
-  let applicapleConfigs = filter (\cfg -> cfg.timeBounds == "Unbounded") configs
+  let applicapleConfigs = filter (\cfg -> cfg.timeBounds == "Unbounded") $ filterActiveRollouts configs
   mbSelectedConfig <- chooseLogic applicapleConfigs mbToss
   return $ mbSelectedConfig <&> (.version)
 
 isExperimentRunning :: BeamFlow m r => Id MerchantOperatingCity -> LogicDomain -> m Bool
 isExperimentRunning merchantOpCityId domain = do
   mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
-  return $ any (\cfg -> cfg.percentageRollout /= 100 && cfg.percentageRollout /= 0) mbConfigs
+  let activeConfigs = filterActiveRollouts mbConfigs
+  return $ any (\cfg -> cfg.percentageRollout /= 100 && cfg.percentageRollout /= 0) activeConfigs
 
 selectAppDynamicLogicVersion ::
   BeamFlow m r =>
@@ -186,20 +187,30 @@ selectAppDynamicLogicVersion ::
 selectAppDynamicLogicVersion merchantOpCityId domain localTime mbToss = do
   mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
   configs <- if null mbConfigs then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
+  let activeConfigs = filterActiveRollouts configs
   allTimeBoundConfigs <- CTBC.findByCityAndDomain (cast merchantOpCityId) domain
   let boundedTimeBoundConfigs = findBoundedDomain (filter (\cfg -> cfg.timeBounds /= Unbounded) allTimeBoundConfigs) localTime
   let applicapleConfigs =
         case boundedTimeBoundConfigs of -- if not bounded config found, return all configs with Unbounded timeBounds
-          [] -> unboundedConfigs configs
+          [] -> unboundedConfigs activeConfigs
           (x : _) -> do
-            let boundedConfigs = filter (\cfg -> cfg.timeBounds == x.name) configs
+            let boundedConfigs = filter (\cfg -> cfg.timeBounds == x.name) activeConfigs
             if null boundedConfigs
-              then unboundedConfigs configs
+              then unboundedConfigs activeConfigs
               else boundedConfigs
   mbSelectedConfig <- chooseLogic applicapleConfigs mbToss
   return $ mbSelectedConfig <&> (.version)
   where
     unboundedConfigs = filter (\cfg -> cfg.timeBounds == "Unbounded")
+
+-- | Filter out rollouts that are no longer active (DISCARDED, REVERTED).
+filterActiveRollouts :: [AppDynamicLogicRollout] -> [AppDynamicLogicRollout]
+filterActiveRollouts =
+  filter
+    ( \r ->
+        r.experimentStatus /= Just DISCARDED
+          && r.experimentStatus /= Just REVERTED
+    )
 
 cumulativeRollout :: [AppDynamicLogicRollout] -> [(AppDynamicLogicRollout, Int)]
 cumulativeRollout logics = scanl1 addPercentages $ zip logics (map (.percentageRollout) logics)

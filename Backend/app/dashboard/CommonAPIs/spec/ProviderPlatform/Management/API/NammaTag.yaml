@@ -31,10 +31,12 @@ imports:
   ConfigDetailsResp: Lib.Yudhishthira.Types
   TableDataResp: Lib.Yudhishthira.Types
   ActionChangeRequest: Lib.Yudhishthira.Types
+  AlwaysOnListResp: Lib.Yudhishthira.Types
   UiDevicePlatformReq: Lib.Yudhishthira.Types
   GetPatchedElementReq: Lib.Yudhishthira.Types
   GetPatchedElementResp: Lib.Yudhishthira.Types
   UiConfigGetVersionResponse: Lib.Yudhishthira.Types
+  NammaTagV2: Lib.Yudhishthira.Types.NammaTagV2
   Value: Data.Aeson
   NammaTagEventsOrNammaTagNamesResp: Lib.Yudhishthira.Types
 
@@ -80,6 +82,11 @@ apis:
         type: APISuccess
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG
+  - GET:
+      endpoint: /tag/all
+      auth: ApiAuthV2
+      response:
+        type: "[NammaTagV2]"
   - POST:
       endpoint: /query/create
       auth: ApiAuthV2
@@ -169,6 +176,7 @@ apis:
         domain: LogicDomain
       query:
         timeBound: Text
+        activeOnly: Bool
       response:
         type: "[LogicRolloutObject]"
       migrate:
@@ -305,6 +313,13 @@ apis:
         type: TableDataResp
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+  - GET:
+      endpoint: /configPilot/alwaysOnList
+      auth: ApiAuthV2
+      mandatoryQuery:
+        domain: LogicDomain
+      response:
+        type: AlwaysOnListResp
   - POST:
       endpoint: /configPilot/actionChange
       auth: ApiAuthV2

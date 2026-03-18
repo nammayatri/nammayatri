@@ -29,8 +29,9 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Tools.Error
 
 sendSMS :: ServiceFlow m r => Id Merchant -> Id DMOC.MerchantOperatingCity -> SendSMSReq -> m SendSMSRes
@@ -39,14 +40,14 @@ sendSMS merchantId merchantOperatingCityId = Sms.sendSMS handler
     handler = Sms.SmsHandler {..}
 
     getProvidersPriorityList = do
-      merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+      merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
       let smsServiceProviders = merchantConfig.smsProvidersPriorityList
       when (null smsServiceProviders) $ throwError $ InternalError ("No sms service provider configured for the merchant, merchantOperatingCityId:" <> merchantOperatingCityId.getId)
       pure smsServiceProviders
 
     getProviderConfig provider = do
       merchantSmsServiceConfig <-
-        QMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.SmsService provider)
+        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, serviceName = Just (DMSC.SmsService provider)})
           >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
       case merchantSmsServiceConfig.serviceConfig of
         DMSC.SmsServiceConfig msc -> pure msc

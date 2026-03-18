@@ -55,9 +55,10 @@ import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Clickhouse.Sos as CHSos
+import Storage.ConfigPilot.Config.MerchantConfig (MerchantConfigDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SavedReqLocation as QSRL
@@ -114,7 +115,7 @@ postCustomerUnblock merchantShortId opCity customerId = do
   -- merchant access checking
   let merchantId = customer.merchantId
   unless (merchant.id == merchantId && customer.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
-  merchantConfigs <- CMC.findAllByMerchantOperatingCityId customer.merchantOperatingCityId Nothing
+  merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = customer.merchantOperatingCityId.getId})
   mapM_
     ( \mc -> withCrossAppRedis $ do
         SWC.deleteCurrentWindowValues (SMC.mkCancellationKey mc.id.getId personId.getId) mc.fraudBookingCancellationCountWindow

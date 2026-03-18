@@ -29,7 +29,8 @@ import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Utils.Common
-import qualified Storage.CachedQueries.BecknConfig as QBC
+import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 
 data DStatusReq = DStatusReq
   { booking :: Booking,
@@ -73,8 +74,7 @@ buildStatusReqV2 DStatusReq {..} = do
   messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
-  bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId merchant.id "MOBILITY" booking.merchantOperatingCityId
-  bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show merchant.id.getId <> " merchantOperatingCityId " <> show booking.merchantOperatingCityId.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
+  bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, domain = Just "MOBILITY", vehicleCategory = Nothing})) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show merchant.id.getId <> " merchantOperatingCityId " <> show booking.merchantOperatingCityId.getId)
   ttl <- bapConfig.statusTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context <-
     ContextV2.buildContextV2

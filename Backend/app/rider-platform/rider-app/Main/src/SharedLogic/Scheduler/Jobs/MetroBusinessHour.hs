@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 module SharedLogic.Scheduler.Jobs.MetroBusinessHour where
 
 import qualified BecknV2.OnDemand.Enums as BecknSpec
@@ -13,7 +15,8 @@ import Lib.Scheduler
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRCR
-import qualified Storage.Queries.RiderConfig as QRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 
 updateMetroBusinessHour ::
   ( EsqDBFlow m r,
@@ -33,7 +36,7 @@ updateMetroBusinessHour Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let tomorrow = Time.addDays 1 (Time.utctDay now)
 
   -- Get rider config first to access timeDiffFromUtc
-  mbRiderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId
+  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityId.getId})
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig -- Default to IST (UTC+5:30)
       tzMinutes = getSeconds timeDiffFromUtc `div` 60
       tz = Time.minutesToTimeZone tzMinutes
