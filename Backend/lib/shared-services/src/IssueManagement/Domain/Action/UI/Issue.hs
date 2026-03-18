@@ -423,7 +423,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
       void $ L.runIO $ Slack.publishMessage slackConfig message
   _ <- QIR.create issueReport
   when shouldCreateTicket $ do
-    ticket <- buildTicket issueReport category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config uploadedMediaFiles now issueHandle
+    ticket <- buildTicket issueReport category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config now issueHandle
     ticketResponse <- withTryCatch "createTicket:issueReport" (issueHandle.createTicket merchantId mocId ticket)
     case ticketResponse of
       Right ticketResponse' -> do
@@ -538,11 +538,11 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
               <> show moCity.city
               <> "\n"
 
-    buildTicket :: (EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> MerchantOperatingCity -> MerchantConfig -> [D.MediaFile] -> UTCTime -> ServiceHandle m -> m TIT.CreateTicketReq
-    buildTicket issue category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity merchantCfg uploadedMediaFiles now iHandle = do
+    buildTicket :: (EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> MerchantOperatingCity -> MerchantConfig -> UTCTime -> ServiceHandle m -> m TIT.CreateTicketReq
+    buildTicket issue category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity merchantCfg now iHandle = do
       info <- buildRideInfo moCity now mbRide mbRideInfoRes mbFRFSTicketBooking person iHandle
       phoneNumber <- mapM decrypt person.mobileNumber
-      let dashboardMediaFileUrls = mapMaybe (generateDashboardFileUrl merchantCfg moCity) uploadedMediaFiles
+      let dashboardMediaFileUrls = maybe [] pure (generateDashboardRideInfoUrl merchantCfg mbRide)
       return $
         TIT.CreateTicketReq
           { category = category.category,
@@ -687,13 +687,13 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
       DRIVER -> TIT.DRIVER
       CUSTOMER -> TIT.CUSTOMER
 
-    generateDashboardFileUrl :: MerchantConfig -> MerchantOperatingCity -> D.MediaFile -> Maybe Text
-    generateDashboardFileUrl merchantConfig _moCity mediaFile =
-      case (merchantConfig.dashboardMediaFileUrlPattern, mediaFile.s3FilePath) of
-        (Just filePattern, Just s3FilePath) ->
+    generateDashboardRideInfoUrl :: MerchantConfig -> Maybe Ride -> Maybe Text
+    generateDashboardRideInfoUrl merchantConfig mbRide =
+      case (merchantConfig.dashboardMediaFileUrlPattern, (.id.getId) <$> mbRide) of
+        (Just filePattern, Just rideIdText) ->
           Just $
             filePattern
-              & T.replace "<FILE_PATH>" s3FilePath
+              & T.replace "<RIDE_ID>" rideIdText
         _ -> Nothing
 
 issueInfo ::
