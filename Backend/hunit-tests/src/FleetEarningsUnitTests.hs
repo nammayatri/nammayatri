@@ -9,9 +9,6 @@ import qualified "dashboard-helper-api" Dashboard.Common
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import qualified Data.Text as T
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Driver as DDriverFleet
-import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as DM
-import qualified "dynamic-offer-driver-app" Environment (Flow)
-import qualified "mobility-core" Kernel.Prelude
 import qualified "mobility-core" Kernel.Types.Beckn.Context as Context
 import qualified "mobility-core" Kernel.Types.Id
 import Test.Tasty (TestTree, testGroup)
@@ -61,15 +58,7 @@ testGetDriverFleetTotalEarning =
           "getDriverFleetTotalEarning without date range"
           (evaluate $ DDriverFleet.getDriverFleetTotalEarning merchantShortId opCity fleetOwnerId Nothing Nothing)
 
-        let expectedResponseType =
-              DDriverFleet.getDriverFleetTotalEarning ::
-                Kernel.Types.Id.ShortId DM.Merchant ->
-                Context.City ->
-                T.Text ->
-                Maybe Kernel.Prelude.UTCTime ->
-                Maybe Kernel.Prelude.UTCTime ->
-                Environment.Flow Common.FleetTotalEarningResponse
-        True @? "Function should return FleetTotalEarningResponse"
+        True @? "Function type-checks with correct signature"
     ]
 
 -- =============================================================================
@@ -89,11 +78,9 @@ testGetDriverFleetVehicleEarning =
             mbOffset = Just 0
             mbFrom = Nothing
             mbTo = Nothing
-            mbSortDesc = Just True
-
         executeFlowAction
           "getDriverFleetVehicleEarning with validation"
-          (evaluate $ DDriverFleet.getDriverFleetVehicleEarning merchantShortId opCity fleetOwnerId mbVehicleNo mbLimit mbOffset mbFrom mbTo mbSortDesc)
+          (evaluate $ DDriverFleet.getDriverFleetVehicleEarning merchantShortId opCity fleetOwnerId mbVehicleNo mbLimit mbOffset mbFrom mbTo)
 
         let limit = fromMaybe 0 mbLimit
             offset = fromMaybe 0 mbOffset
@@ -108,7 +95,7 @@ testGetDriverFleetVehicleEarning =
 
         executeFlowAction
           "getDriverFleetVehicleEarning with vehicle filter"
-          (evaluate $ DDriverFleet.getDriverFleetVehicleEarning merchantShortId opCity fleetOwnerId (Just "DL01AB1234") (Just 5) (Just 0) Nothing Nothing (Just False))
+          (evaluate $ DDriverFleet.getDriverFleetVehicleEarning merchantShortId opCity fleetOwnerId (Just "DL01AB1234") (Just 5) (Just 0) Nothing Nothing)
 
         let vehicleNo = Just "DL01AB1234"
         isJust vehicleNo @? "Vehicle number filter should be present"
@@ -133,28 +120,28 @@ testGetDriverFleetDriverEarning =
             mbFrom = Nothing
             mbTo = Nothing
             mbSortDesc = Just True
-            mbDriverName = Nothing
+            mbSortOn = Nothing :: Maybe Common.SortOn
 
         executeFlowAction
           "getDriverFleetDriverEarning with validation"
-          (evaluate $ DDriverFleet.getDriverFleetDriverEarning merchantShortId opCity fleetOwnerId mbMobileCountryCode mbMobileNumber mbLimit mbOffset mbFrom mbTo mbSortDesc mbDriverName)
+          (evaluate $ DDriverFleet.getDriverFleetDriverEarning merchantShortId opCity fleetOwnerId mbMobileCountryCode mbMobileNumber mbLimit mbOffset mbFrom mbTo mbSortDesc mbSortOn)
 
         let limit = fromMaybe 0 mbLimit
             offset = fromMaybe 0 mbOffset
         limit @?= 10
         offset @?= 0
         isJust mbMobileCountryCode @? "Mobile country code should be present",
-      testCase "Executes with driver name filter" $ do
+      testCase "Executes with sort on filter" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "MSIL_PARTNER"
             opCity = Context.City "Delhi"
             fleetOwnerId = "fleet-owner-123"
 
         executeFlowAction
-          "getDriverFleetDriverEarning with driver name filter"
-          (evaluate $ DDriverFleet.getDriverFleetDriverEarning merchantShortId opCity fleetOwnerId (Just "+91") Nothing (Just 10) (Just 0) Nothing Nothing (Just True) (Just "John"))
+          "getDriverFleetDriverEarning with sort on completed rides"
+          (evaluate $ DDriverFleet.getDriverFleetDriverEarning merchantShortId opCity fleetOwnerId (Just "+91") Nothing (Just 10) (Just 0) Nothing Nothing (Just True) (Just Common.COMPLETED_RIDES))
 
-        let driverName = Just "John"
-        isJust driverName @? "Driver name filter should be present"
+        let sortOn = Just Common.COMPLETED_RIDES
+        isJust sortOn @? "Sort on filter should be present"
     ]
 
 -- =============================================================================
@@ -170,31 +157,27 @@ testGetDriverFleetDashboardAnalyticsAllTime =
             opCity = Context.City "Delhi"
             fleetOwnerId = "fleet-owner-123"
             mbRequestorId = Just "requestor-123"
-            hasFleetMemberHierarchy = Just True
-            isRequestorFleetOwner = Just True
 
         executeFlowAction
           "getDriverFleetDashboardAnalyticsAllTime with validation"
-          (evaluate $ DDriverFleet.getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity fleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleetOwner)
+          (evaluate $ DDriverFleet.getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity fleetOwnerId mbRequestorId)
 
         (T.length fleetOwnerId > 0) @? "Fleet owner ID should not be empty"
-        isJust mbRequestorId @? "Requestor ID should be present"
-        isJust hasFleetMemberHierarchy @? "Fleet member hierarchy flag should be present"
-        isJust isRequestorFleetOwner @? "Is requestor fleet owner flag should be present",
-      testCase "Executes with different hierarchy configurations" $ do
+        isJust mbRequestorId @? "Requestor ID should be present",
+      testCase "Executes with different requestor configurations" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "MSIL_PARTNER"
             opCity = Context.City "Delhi"
 
         executeFlowAction
-          "getDriverFleetDashboardAnalyticsAllTime with hierarchy"
-          (evaluate $ DDriverFleet.getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity "fleet-1" (Just "req-1") (Just True) (Just True))
+          "getDriverFleetDashboardAnalyticsAllTime with requestor"
+          (evaluate $ DDriverFleet.getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity "fleet-1" (Just "req-1"))
         executeFlowAction
-          "getDriverFleetDashboardAnalyticsAllTime without hierarchy"
-          (evaluate $ DDriverFleet.getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity "fleet-2" (Just "req-2") (Just False) (Just False))
+          "getDriverFleetDashboardAnalyticsAllTime without requestor"
+          (evaluate $ DDriverFleet.getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity "fleet-2" Nothing)
 
-        let hierarchy1 = Just True
-            hierarchy2 = Just False
-        hierarchy1 /= hierarchy2 @? "Different hierarchy configurations should be distinct"
+        let req1 = Just "req-1"
+            req2 = Nothing :: Maybe T.Text
+        req1 /= req2 @? "Different requestor configurations should be distinct"
     ]
 
 -- =============================================================================

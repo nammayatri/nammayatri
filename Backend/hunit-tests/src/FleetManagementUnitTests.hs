@@ -3,12 +3,10 @@
 
 module FleetManagementUnitTests where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet as FleetAPI
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2 as RegV2
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Operator.Endpoints.FleetManagement as FMgmt
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Operator.FleetManagement as FMgmtAPI
 import Control.Exception (SomeException, evaluate, try)
-import qualified "dashboard-helper-api" Dashboard.Common
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import qualified Data.Text as T
 import Data.Time (UTCTime (..), fromGregorian)
@@ -17,10 +15,7 @@ import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Person as DP
 import qualified "lib-dashboard" Domain.Types.Role as DRole
 import qualified "provider-dashboard" Domain.Action.ProviderPlatform.Operator.FleetManagement as DFleetMgmt
-import qualified "lib-dashboard" Environment as EnvDashboard
 import qualified "mobility-core" Kernel.External.Encryption
-import qualified "mobility-core" Kernel.Prelude
-import qualified "mobility-core" Kernel.Types.APISuccess
 import qualified "mobility-core" Kernel.Types.Beckn.Context as Context
 import qualified "mobility-core" Kernel.Types.Id
 import Test.Tasty (TestTree, testGroup)

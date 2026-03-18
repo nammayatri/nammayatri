@@ -8,11 +8,10 @@ import Control.Exception (SomeException, evaluate, try)
 import qualified "dashboard-helper-api" Dashboard.Common
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import qualified Data.Text as T
+import Data.Time (Day, fromGregorian)
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Driver as DDriverFleet
-import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as DM
-import qualified "dynamic-offer-driver-app" Environment (Flow)
-import qualified "mobility-core" Kernel.Prelude
 import qualified "mobility-core" Kernel.Types.Beckn.Context as Context
+import qualified "mobility-core" Kernel.Types.Common
 import qualified "mobility-core" Kernel.Types.Id
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?), (@?=))
@@ -44,19 +43,16 @@ testGetDriverFleetVehicleListStats =
         let merchantShortId = Kernel.Types.Id.ShortId "MSIL_PARTNER"
             opCity = Context.City "Delhi"
             fleetOwnerId = "fleet-owner-123"
-            mbFrom = Nothing
-            mbTo = Nothing
+            mbRequestorId = Just "requestor-123"
+            mbVehicleNo = Nothing :: Maybe T.Text
             mbLimit = Just 10
             mbOffset = Just 0
-            mbVehicleNo = Nothing
-            mbSortOrder = Nothing
-            mbRequestorId = Just "requestor-123"
-            hasFleetMemberHierarchy = Just True
-            isRequestorFleetOwner = Just True
+            fromDay = fromGregorian 2024 1 1
+            toDay = fromGregorian 2024 1 31
 
         executeFlowAction
           "getDriverFleetVehicleListStats with validation"
-          (evaluate $ DDriverFleet.getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mbLimit mbOffset mbVehicleNo mbSortOrder mbRequestorId hasFleetMemberHierarchy isRequestorFleetOwner)
+          (evaluate $ DDriverFleet.getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId mbRequestorId mbVehicleNo mbLimit mbOffset fromDay toDay)
 
         let limit = fromMaybe 0 mbLimit
             offset = fromMaybe 0 mbOffset
@@ -72,7 +68,7 @@ testGetDriverFleetVehicleListStats =
 
         executeFlowAction
           "getDriverFleetVehicleListStats with vehicle filter"
-          (evaluate $ DDriverFleet.getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId Nothing Nothing (Just 5) (Just 0) (Just "DL01AB1234") Nothing (Just "req-1") (Just False) (Just True))
+          (evaluate $ DDriverFleet.getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId (Just "req-1") (Just "DL01AB1234") (Just 5) (Just 0) (fromGregorian 2024 1 1) (fromGregorian 2024 1 31))
 
         let vehicleNo = Just "DL01AB1234"
         isJust vehicleNo @? "Vehicle number filter should be present",
@@ -80,13 +76,15 @@ testGetDriverFleetVehicleListStats =
         let merchantShortId = Kernel.Types.Id.ShortId "MSIL_PARTNER"
             opCity = Context.City "Delhi"
             fleetOwnerId = "fleet-owner-123"
+            fromDay = fromGregorian 2024 1 1
+            toDay = fromGregorian 2024 1 31
 
         executeFlowAction
           "getDriverFleetVehicleListStats page 1"
-          (evaluate $ DDriverFleet.getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId Nothing Nothing (Just 10) (Just 0) Nothing Nothing (Just "req-1") (Just False) (Just True))
+          (evaluate $ DDriverFleet.getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId (Just "req-1") Nothing (Just 10) (Just 0) fromDay toDay)
         executeFlowAction
           "getDriverFleetVehicleListStats page 2"
-          (evaluate $ DDriverFleet.getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId Nothing Nothing (Just 10) (Just 10) Nothing Nothing (Just "req-1") (Just False) (Just True))
+          (evaluate $ DDriverFleet.getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId (Just "req-1") Nothing (Just 10) (Just 10) fromDay toDay)
 
         let offset1 = 0 :: Int
             offset2 = 10 :: Int
@@ -152,28 +150,29 @@ testDataTypeValidation =
                   Common.vehicleModel = Just "Swift",
                   Common.vehicleManufacturer = Just "Maruti",
                   Common.rcId = Just "rc-123",
-                  Common.totalEarnings = Just 50000,
-                  Common.completedRides = Just 200,
-                  Common.rideDistance = Just 3000,
-                  Common.rideDuration = Just 18000,
+                  Common.totalEarnings = 50000,
+                  Common.currency = Just Kernel.Types.Common.INR,
+                  Common.completedRides = 200,
+                  Common.rideDistance = 3000,
+                  Common.rideDuration = 18000,
                   Common.earningPerKm = Just 16.67
                 }
         let Common.FleetVehicleStatsItem {Common.vehicleNo = vno, Common.vehicleModel = vmodel, Common.vehicleManufacturer = vmake, Common.totalEarnings = earnings, Common.completedRides = rides, Common.rideDistance = dist, Common.rideDuration = dur, Common.earningPerKm = epk} = statsItem
         vno @?= Just "DL01AB1234"
         vmodel @?= Just "Swift"
         vmake @?= Just "Maruti"
-        earnings @?= Just 50000
-        rides @?= Just 200
-        dist @?= Just 3000
-        dur @?= Just 18000
+        earnings @?= 50000
+        rides @?= 200
+        dist @?= 3000
+        dur @?= 18000
         epk @?= Just 16.67
         isJust vno @? "Vehicle number should be present"
         isJust vmodel @? "Vehicle model should be present"
         isJust vmake @? "Vehicle manufacturer should be present"
-        isJust earnings @? "Total earnings should be present"
-        isJust rides @? "Completed rides should be present",
+        (earnings >= 0) @? "Total earnings should be non-negative"
+        (rides >= 0) @? "Completed rides should be non-negative",
       testCase "FleetVehicleStatsRes structure is correct" $ do
-        let statsItem = Common.FleetVehicleStatsItem (Just "DL01AB1234") (Just "Swift") (Just "Maruti") (Just "rc-1") (Just 30000) (Just 100) (Just 1500) (Just 9000) (Just 20.0)
+        let statsItem = Common.FleetVehicleStatsItem (Just "DL01AB1234") (Just "Swift") (Just "Maruti") (Just "rc-1") 30000 (Just Kernel.Types.Common.INR) 100 1500 9000 (Just 20.0)
         let summary = Dashboard.Common.Summary {Dashboard.Common.totalCount = 1, Dashboard.Common.count = 1}
         let statsRes = Common.FleetVehicleStatsRes "fleet-owner-123" [statsItem] summary
         let Common.FleetVehicleStatsRes {Common.fleetOwnerId = foid, Common.listItem = items, Common.summary = s} = statsRes
@@ -238,18 +237,18 @@ testErrorHandlingWithRealFunctions =
     [ testCase "Empty fleet owner ID for vehicle stats" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "MSIL_PARTNER"
             opCity = Context.City "Delhi"
-        result <- try (evaluate $ DDriverFleet.getDriverFleetVehicleListStats merchantShortId opCity "" Nothing Nothing (Just 10) (Just 0) Nothing Nothing Nothing Nothing Nothing)
+        result <- try (evaluate $ DDriverFleet.getDriverFleetVehicleListStats merchantShortId opCity "" Nothing Nothing (Just 10) (Just 0) (fromGregorian 2024 1 1) (fromGregorian 2024 1 31))
         case result of
           Left (e :: SomeException) ->
             True @? ("Function correctly rejected empty fleet owner ID: " ++ show e)
           Right _ ->
             True @? "Function processed empty fleet owner ID",
-      testCase "FleetVehicleStatsItem with all Nothing optional fields" $ do
-        let res = Common.FleetVehicleStatsItem Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+      testCase "FleetVehicleStatsItem with minimal optional fields" $ do
+        let res = Common.FleetVehicleStatsItem Nothing Nothing Nothing Nothing 0 Nothing 0 0 0 Nothing
         let Common.FleetVehicleStatsItem {Common.vehicleNo = vno, Common.vehicleModel = vm, Common.totalEarnings = te} = res
         isNothing vno @? "Vehicle number should be Nothing"
         isNothing vm @? "Vehicle model should be Nothing"
-        isNothing te @? "Total earnings should be Nothing",
+        te @?= 0,
       testCase "FleetVehicleStatsRes with empty list" $ do
         let summary = Dashboard.Common.Summary {Dashboard.Common.totalCount = 0, Dashboard.Common.count = 0}
         let emptyRes = Common.FleetVehicleStatsRes "fleet-owner-123" [] summary

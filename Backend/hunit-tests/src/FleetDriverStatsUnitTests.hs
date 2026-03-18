@@ -8,10 +8,8 @@ import Control.Exception (SomeException, evaluate, try)
 import qualified "dashboard-helper-api" Dashboard.Common
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import qualified Data.Text as T
+import Data.Time (Day, fromGregorian)
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Driver as DDriverFleet
-import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as DM
-import qualified "dynamic-offer-driver-app" Environment (Flow)
-import qualified "mobility-core" Kernel.Prelude
 import qualified "mobility-core" Kernel.Types.Beckn.Context as Context
 import qualified "mobility-core" Kernel.Types.Common
 import qualified "mobility-core" Kernel.Types.Id
@@ -44,55 +42,49 @@ testGetDriverFleetDriverListStats =
     [ testCase "Executes with valid parameters and validates response structure" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "MSIL_PARTNER"
             opCity = Context.City "Delhi"
-            fleetOwnerId = "fleet-owner-123"
-            mbFrom = Nothing
-            mbTo = Nothing
+            requestorId = "requestor-123"
+            mbFrom = Just (fromGregorian 2024 1 1) :: Maybe Day
+            mbTo = Just (fromGregorian 2024 1 31) :: Maybe Day
+            mbFleetOwnerId = Just "fleet-owner-123"
+            mbSearch = Nothing :: Maybe T.Text
             mbLimit = Just 10
             mbOffset = Just 0
-            mbSortBy = Just Common.TOTAL_COMPLETED_RIDES
-            mbSortOrder = Nothing
-            mbMobileCountryCode = Just "+91"
-            mbMobileNumber = Nothing
+            mbSortDesc = Nothing :: Maybe Bool
+            mbSortOn = Just Common.TOTAL_COMPLETED_RIDES
             mbResponseType = Just Common.METRICS_LIST
-            mbDriverName = Nothing
-            mbRequestorId = Just "requestor-123"
-            hasFleetMemberHierarchy = Just True
-            isRequestorFleetOwner = Just True
 
         executeFlowAction
           "getDriverFleetDriverListStats with validation"
-          (evaluate $ DDriverFleet.getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mbLimit mbOffset mbSortBy mbSortOrder mbMobileCountryCode mbMobileNumber mbResponseType mbDriverName mbRequestorId hasFleetMemberHierarchy isRequestorFleetOwner)
+          (evaluate $ DDriverFleet.getDriverFleetDriverListStats merchantShortId opCity requestorId mbFrom mbTo mbFleetOwnerId mbSearch mbLimit mbOffset mbSortDesc mbSortOn mbResponseType)
 
         let limit = fromMaybe 0 mbLimit
             offset = fromMaybe 0 mbOffset
         limit @?= 10
         offset @?= 0
-        isJust mbSortBy @? "Sort by should be present"
+        isJust mbSortOn @? "Sort on should be present"
         isJust mbResponseType @? "Response type should be present"
         (limit > 0) @? "Limit should be positive"
         (offset >= 0) @? "Offset should be non-negative",
       testCase "Executes with earnings response type and validates handling" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "MSIL_PARTNER"
             opCity = Context.City "Delhi"
-            fleetOwnerId = "fleet-owner-123"
 
         executeFlowAction
           "getDriverFleetDriverListStats with earnings type"
-          (evaluate $ DDriverFleet.getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId Nothing Nothing (Just 20) (Just 0) (Just Common.ONLINE_TOTAL_EARNING) Nothing (Just "+91") Nothing (Just Common.EARNINGS_LIST) Nothing (Just "req-1") (Just False) (Just True))
+          (evaluate $ DDriverFleet.getDriverFleetDriverListStats merchantShortId opCity "requestor-123" (Just (fromGregorian 2024 1 1)) (Just (fromGregorian 2024 1 31)) (Just "fleet-owner-123") Nothing (Just 20) (Just 0) Nothing (Just Common.ONLINE_TOTAL_EARNING) (Just Common.EARNINGS_LIST))
 
         let responseType = Just Common.EARNINGS_LIST
         responseType @?= Just Common.EARNINGS_LIST,
       testCase "Executes with different sort options and validates handling" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "MSIL_PARTNER"
             opCity = Context.City "Delhi"
-            fleetOwnerId = "fleet-owner-123"
 
         executeFlowAction
           "getDriverFleetDriverListStats sorted by rating"
-          (evaluate $ DDriverFleet.getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId Nothing Nothing (Just 10) (Just 0) (Just Common.TOTAL_RATING_SCORE) Nothing Nothing Nothing (Just Common.METRICS_LIST) Nothing (Just "req-1") (Just False) (Just True))
+          (evaluate $ DDriverFleet.getDriverFleetDriverListStats merchantShortId opCity "requestor-123" Nothing Nothing (Just "fleet-1") Nothing (Just 10) (Just 0) Nothing (Just Common.TOTAL_RATING_SCORE) (Just Common.METRICS_LIST))
         executeFlowAction
           "getDriverFleetDriverListStats sorted by distance"
-          (evaluate $ DDriverFleet.getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId Nothing Nothing (Just 10) (Just 0) (Just Common.TOTAL_DISTANCE) Nothing Nothing Nothing (Just Common.METRICS_LIST) Nothing (Just "req-1") (Just False) (Just True))
+          (evaluate $ DDriverFleet.getDriverFleetDriverListStats merchantShortId opCity "requestor-123" Nothing Nothing (Just "fleet-1") Nothing (Just 10) (Just 0) Nothing (Just Common.TOTAL_DISTANCE) (Just Common.METRICS_LIST))
 
         let sortBy1 = Common.TOTAL_RATING_SCORE
             sortBy2 = Common.TOTAL_DISTANCE
@@ -232,7 +224,7 @@ testErrorHandlingWithRealFunctions =
     [ testCase "Empty fleet owner ID for driver stats" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "MSIL_PARTNER"
             opCity = Context.City "Delhi"
-        result <- try (evaluate $ DDriverFleet.getDriverFleetDriverListStats merchantShortId opCity "" Nothing Nothing (Just 10) (Just 0) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing)
+        result <- try (evaluate $ DDriverFleet.getDriverFleetDriverListStats merchantShortId opCity "" Nothing Nothing Nothing Nothing (Just 10) (Just 0) Nothing Nothing Nothing)
         case result of
           Left (e :: SomeException) ->
             True @? ("Function correctly rejected empty fleet owner ID: " ++ show e)
