@@ -231,6 +231,7 @@ library
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent
       Domain.Action.UI.Cancel
+      Domain.Action.UI.CancellationChargesWaiveOff
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.Conductor.Stats
       Domain.Action.UI.Confirm
@@ -757,6 +758,7 @@ library
       API.Action.UI.AttractionRecommend
       API.Action.UI.BBPS
       API.Action.UI.Cac
+      API.Action.UI.CancellationChargesWaiveOff
       API.Action.UI.CRIS
       API.Action.UI.CustomerReferral
       API.Action.UI.DeletedPerson
@@ -841,6 +843,7 @@ library
       API.Types.UI.AlertWebhook
       API.Types.UI.AttractionRecommend
       API.Types.UI.BBPS
+      API.Types.UI.CancellationChargesWaiveOff
       API.Types.UI.CRIS
       API.Types.UI.CustomerReferral
       API.Types.UI.DeletedPerson
