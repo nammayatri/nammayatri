@@ -25,6 +25,7 @@ import Safety.Storage.BeamFlow
 import qualified Safety.Storage.CachedQueries.Sos as CQSos
 import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
 import qualified Safety.Storage.Queries.Sos as QSos
+import Control.Applicative ((<|>))
 
 -- | Update SOS entityType from NonRide to Ride and update rideId
 -- Validates that the SOS exists and has entityType "NonRide" before updating
@@ -237,17 +238,20 @@ markSosAsSafe sosId personId mbIsEndLiveTracking mbIsRideEnded = do
       shouldStopTracking = fromMaybe True mbIsEndLiveTracking
       isRideBased = isRideBasedSos sosDetails.entityType
       shouldMarkAsResolved = isRideBased || (mbIsEndLiveTracking == Just True)
+      shouldTransitionToLiveTracking = sosDetails.entityType == Just DSos.NonRide && sosDetails.sosState == Just DSos.SosActive && mbIsEndLiveTracking == Just False
 
-  -- Update SOS status if needed (shared-services DB)
-  when shouldMarkAsResolved $ do
-    void $ updateSosStatus DSos.Resolved sosId
+  when (not shouldMarkAsResolved && not shouldTransitionToLiveTracking) $
+    throwError $ InvalidRequest
+      "Nothing to update: SOS is already in LiveTracking state or request is a no-op"
 
-  -- Update SOS state for non-ride SOS transitioning to LiveTracking (shared-services DB)
-  when (sosDetails.entityType == Just DSos.NonRide && sosDetails.sosState == Just DSos.SosActive && mbIsEndLiveTracking == Just False) $ do
-    void $ updateSosState (Just DSos.LiveTracking) sosId
-
-  -- Fetch updated SOS details from DB after all updates
-  updatedSosDetails <- QSos.findById sosId >>= fromMaybeM (InvalidRequest $ "Failed to fetch updated SOS: " <> sosId.getId)
+  now <- getCurrentTime
+  let updatedSosDetails =
+        sosDetails
+          { DSos.status = if shouldMarkAsResolved then DSos.Resolved else sosDetails.status,
+            DSos.sosState = if shouldTransitionToLiveTracking then Just DSos.LiveTracking else sosDetails.sosState,
+            DSos.updatedAt = now
+          }
+  void $ QSos.updateByPrimaryKey updatedSosDetails
 
   -- Cache SOS by rideId if ride-based and resolved (Redis - shared-services)
   when (isRideBased && shouldMarkAsResolved) $ do
@@ -319,12 +323,9 @@ createRideBasedSos personId rideId merchantOperatingCityId merchantId flow mbExi
           }
     Nothing -> case mbExistingSos of
       Just existingSos -> do
-        -- Update existing SOS status to Pending
-        void $ updateSosStatus DSos.Pending existingSos.id
-
-        -- Fetch updated SOS from DB after update
-        -- NOTE: Read from primary after writes to avoid replica staleness.
-        updatedSos <- QSos.findById existingSos.id >>= fromMaybeM (InvalidRequest $ "Failed to fetch updated SOS: " <> existingSos.id.getId)
+        now <- getCurrentTime
+        let updatedSos = existingSos {DSos.status = DSos.Pending, DSos.updatedAt = now}
+        void $ QSos.updateByPrimaryKey updatedSos
 
         -- Cache updated SOS
         CQSos.cacheSosIdByRideId rideId updatedSos
@@ -440,15 +441,12 @@ updateSosStatusWithCache sosId status personId = do
   unless (sos.personId == personId) $
     throwError $ InvalidRequest "SOS does not belong to the specified person"
 
-  -- Update SOS status
-  void $ updateSosStatus status sosId
-
-  -- Fetch updated SOS from DB after update
-  -- NOTE: Read from primary after writes to avoid replica staleness.
-  updatedSos <- QSos.findById sosId >>= fromMaybeM (InvalidRequest $ "Failed to fetch updated SOS: " <> sosId.getId)
+  now <- getCurrentTime
+  let updatedSos = sos {DSos.status = status, DSos.updatedAt = now}
+  void $ QSos.updateByPrimaryKey updatedSos
 
   -- If ride-based: cache updated SOS
-  when (isRideBasedSos updatedSos.entityType) $ do
+  when (isRideBasedSos updatedSos.entityType) $
     whenJust updatedSos.rideId $ \rideId ->
       CQSos.cacheSosIdByRideId rideId updatedSos
 
@@ -507,15 +505,13 @@ updateSosStateWithTracking sos personId newState mbTrackingExpiresAt = do
   unless (sos.status == DSos.Pending) $
     throwError $ InvalidRequest "Can only update state for pending SOS"
 
-  -- Update SOS state
-  void $ updateSosState (Just newState) sos.id
-
-  -- Update tracking expiration if provided
-  whenJust mbTrackingExpiresAt $ \trackingExpiresAt ->
-    void $ updateSosTrackingExpiresAt (Just trackingExpiresAt) sos.id
-
-  -- Fetch updated SOS from DB after all updates
-  updatedSos <- QSos.findById sos.id >>= fromMaybeM (InvalidRequest $ "Failed to fetch updated SOS: " <> sos.id.getId)
+  now <- getCurrentTime
+  let updatedSos =
+        sos{DSos.sosState = Just newState,
+            DSos.trackingExpiresAt = mbTrackingExpiresAt <|> sos.trackingExpiresAt,
+            DSos.updatedAt = now
+           }
+  void $ QSos.updateByPrimaryKey updatedSos
 
   return updatedSos
 
