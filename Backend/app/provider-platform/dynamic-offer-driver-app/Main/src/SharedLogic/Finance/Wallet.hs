@@ -15,6 +15,10 @@ module SharedLogic.Finance.Wallet
     walletReferenceCustomerCancellationCharges,
     walletReferenceCustomerCancellationGST,
     walletReferenceWalletIncentive,
+    walletReferenceTDSDeductionUC,
+    walletReferenceTDSDeductionRefunds,
+    walletReferenceTDSDeductionIncentives,
+    walletReferenceChargebacks,
     walletCreditRefs,
     getWalletAccountByOwner,
     getWalletBalanceByOwner,
@@ -118,6 +122,18 @@ walletReferenceAirportEntryFee = "AirportEntryFee"
 walletReferenceWalletIncentive :: Text
 walletReferenceWalletIncentive = "WalletIncentive"
 
+walletReferenceTDSDeductionUC :: Text
+walletReferenceTDSDeductionUC = "TDSDeductionUC"
+
+walletReferenceTDSDeductionRefunds :: Text
+walletReferenceTDSDeductionRefunds = "TDSDeductionRefunds"
+
+walletReferenceTDSDeductionIncentives :: Text
+walletReferenceTDSDeductionIncentives = "TDSDeductionIncentives"
+
+walletReferenceChargebacks :: Text
+walletReferenceChargebacks = "Chargebacks"
+
 -- | Single source of truth: all wallet reference types that represent
 --   redeemable credit entries (i.e. entries that increase driver wallet balance
 --   and should be tracked for settlement/payout).
@@ -138,7 +154,11 @@ walletCreditRefs =
     walletReferenceCustomerCancellationCharges,
     walletReferenceDriverCancellationCharges,
     walletReferenceCustomerCancellationGST,
-    walletReferenceWalletIncentive
+    walletReferenceWalletIncentive,
+    walletReferenceTDSDeductionUC,
+    walletReferenceTDSDeductionRefunds,
+    walletReferenceTDSDeductionIncentives,
+    walletReferenceChargebacks
   ]
 
 -- Time helpers (shared across getWalletTransactions, postWalletPayout, postWalletTopup)

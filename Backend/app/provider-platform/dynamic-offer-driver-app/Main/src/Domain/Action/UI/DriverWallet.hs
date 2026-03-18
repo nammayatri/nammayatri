@@ -213,6 +213,11 @@ referenceTypeToItemName ref
   | ref == walletReferenceTDSDeductionCash = "TDS (Cash)"
   | ref == walletReferencePayout = "Withdrawal"
   | ref == walletReferenceAirportCashRecharge = "Airport cash recharge (booth)"
+  | ref == walletReferenceWalletIncentive = "Incentives"
+  | ref == walletReferenceTDSDeductionUC = "TDS (User Cancellation)"
+  | ref == walletReferenceTDSDeductionRefunds = "TDS (Refunds)"
+  | ref == walletReferenceTDSDeductionIncentives = "TDS (Incentives)"
+  | ref == walletReferenceChargebacks = "Chargebacks"
   | otherwise = ref
 
 --------------------------------------------------------------------------------
