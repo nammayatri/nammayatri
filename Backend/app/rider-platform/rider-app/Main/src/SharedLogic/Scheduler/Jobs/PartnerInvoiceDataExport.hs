@@ -186,18 +186,40 @@ uploadToSFTP rawFileName content = withLogTag "SFTP" $ do
       liftIO $ hPutStr hBatch batchContent >> hClose hBatch
       logDebug $ "Created SFTP batch file: " <> T.pack tmpBatchPath
 
-      -- Build SFTP argument list (no shell interpolation)
-      let sftpArgs =
-            [ "-i",
-              privateKeyPath,
-              "-P",
-              port,
-              "-o",
-              "StrictHostKeyChecking=yes",
-              "-b",
-              tmpBatchPath,
-              username <> "@" <> host
-            ]
+      -- Build command and argument list based on auth method
+      let (cmd, sftpArgs) = case (sftpCfg.password, sftpCfg.privateKeyPath) of
+            (Just pwd, _) ->
+              -- Password-based auth using sshpass
+              ( "sshpass",
+                [ "-p",
+                  T.unpack pwd,
+                  "sftp",
+                  "-P",
+                  port,
+                  "-o",
+                  "StrictHostKeyChecking=no",
+                  "-b",
+                  tmpBatchPath,
+                  username <> "@" <> host
+                ]
+              )
+            (Nothing, Just keyPath) ->
+              -- Key-based auth
+              ( "sftp",
+                [ "-i",
+                  T.unpack keyPath,
+                  "-P",
+                  port,
+                  "-o",
+                  "StrictHostKeyChecking=accept-new",
+                  "-b",
+                  tmpBatchPath,
+                  username <> "@" <> host
+                ]
+              )
+            (Nothing, Nothing) ->
+              -- No auth configured, will fail
+              ("sftp", ["-P", port, "-o", "StrictHostKeyChecking=no", "-b", tmpBatchPath, username <> "@" <> host])
 
       logInfo $ "Uploading file " <> fileName <> " to SFTP server " <> sftpCfg.host <> ":" <> sftpCfg.remotePath
       logDebug $ "SFTP arguments: " <> T.pack (show sftpArgs)
