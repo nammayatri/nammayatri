@@ -1,0 +1,20 @@
+imports:
+  Booking: Domain.Types.Booking
+  PriceAPIEntity: Kernel.Types.Common
+
+module: CancellationChargesWaiveOff
+
+types:
+  CancellationChargesWaiveOffRes:
+    waivedOffAmount: Maybe HighPrecMoney
+    waivedOffAmountWithCurrency: Maybe PriceAPIEntity
+    waivedOffSuccess: Bool
+
+apis:
+  - POST:
+      endpoint: /rideBooking/{bookingId}/cancellationChargesWaiveOff
+      auth: TokenAuth
+      params:
+        bookingId: Id Booking
+      response:
+        type: API.Types.UI.CancellationChargesWaiveOff.CancellationChargesWaiveOffRes
