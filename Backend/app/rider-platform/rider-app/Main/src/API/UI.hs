@@ -22,6 +22,7 @@ import qualified API.Action.UI.AttractionRecommend as AttractionRecommend
 import qualified API.Action.UI.BBPS as BBPS
 import qualified API.Action.UI.CRIS as CRIS
 import qualified API.Action.UI.Cac as Cac
+import qualified API.Action.UI.CancellationChargesWaiveOff as CancellationChargesWaiveOff
 import qualified API.Action.UI.CustomerReferral as CustomerReferral
 import qualified API.Action.UI.DeletedPerson as DeletedPerson
 import qualified API.Action.UI.Dispatcher as Dispatcher
@@ -115,6 +116,7 @@ type API =
            :<|> MapsProxy.API
            :<|> GoogleTranslateProxy.API
            :<|> CancellationReason.API
+           :<|> CancellationChargesWaiveOff.API
            :<|> SavedReqLocation.API
            :<|> Frontend.API
            :<|> Whatsapp.API
@@ -188,6 +190,7 @@ handler =
     :<|> MapsProxy.handler
     :<|> GoogleTranslateProxy.handler
     :<|> CancellationReason.handler
+    :<|> CancellationChargesWaiveOff.handler
     :<|> SavedReqLocation.handler
     :<|> Frontend.handler
     :<|> Whatsapp.handler
