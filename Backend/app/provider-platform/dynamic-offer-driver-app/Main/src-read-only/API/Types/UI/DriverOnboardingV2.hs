@@ -93,7 +93,8 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     isMandatory :: Kernel.Prelude.Bool,
     isMandatoryForEnabling :: Kernel.Prelude.Bool,
     rcNumberPrefixList :: [Kernel.Prelude.Text],
-    title :: Kernel.Prelude.Text
+    title :: Kernel.Prelude.Text,
+    verificationProvidersPriorityList :: Kernel.Prelude.Maybe [Kernel.External.Verification.Types.VerificationService]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -106,8 +107,7 @@ data DocumentVerificationConfigList = DocumentVerificationConfigList
     bus :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     cabs :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     toto :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
-    trucks :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
-    verificationProvidersPriorityList :: Kernel.Prelude.Maybe [Kernel.External.Verification.Types.VerificationService]
+    trucks :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
