@@ -240,6 +240,7 @@ library
       Domain.Action.Internal.SpecialLocationUpsert
       Domain.Action.Internal.StopDetection
       Domain.Action.Internal.ViolationDetection
+      Domain.Action.UI.BatchConfig
       Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent
@@ -345,6 +346,8 @@ library
       Domain.Action.UnifiedDashboard.Management.Person
       Domain.Action.UnifiedDashboard.Operator.HealthCheck
       Domain.Action.UnifiedDashboard.RideBooking.HealthCheck
+      Domain.Types.BatchPipelineConfig
+      Domain.Types.BatchPriority
       Domain.Types.Beckn.Status
       Domain.Types.Cac
       Domain.Types.CacType
@@ -409,6 +412,7 @@ library
       Lib.Schema
       SharedLogic.AirportEntryFee
       SharedLogic.Allocator
+      SharedLogic.Allocator.Jobs.BatchPipelineTuner
       SharedLogic.Allocator.Jobs.Cautio.InstallationStatus
       SharedLogic.Allocator.Jobs.CongestionCharge.CongestionChargeAvg
       SharedLogic.Allocator.Jobs.Document.VerificationRetry
