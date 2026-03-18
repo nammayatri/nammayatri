@@ -230,35 +230,3 @@ findActiveAssociationByOperatorId operatorId = do
 deleteByOperatorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> m ()
 deleteByOperatorId operatorId = do
   deleteWithKV [Se.Is BeamDOA.operatorId $ Se.Eq (getId operatorId)]
-
-findAllActiveDriverIdsByOperatorId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Text ->
-  m [Text]
-findAllActiveDriverIdsByOperatorId operatorId = do
-  now <- getCurrentTime
-  associations <-
-    findAllWithKV
-      [ Se.And
-          [ Se.Is BeamDOA.operatorId $ Se.Eq operatorId,
-            Se.Is BeamDOA.isActive $ Se.Eq True,
-            Se.Is BeamDOA.associatedTill (Se.GreaterThan $ Just now)
-          ]
-      ]
-  pure $ map (.driverId.getId) associations
-
-findAllActiveDriverIdsByFleetOwnerId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Text ->
-  m [Text]
-findAllActiveDriverIdsByFleetOwnerId fleetOwnerId = do
-  now <- getCurrentTime
-  associations <-
-    findAllWithKV
-      [ Se.And
-          [ Se.Is BeamDOA.driverId $ Se.Eq fleetOwnerId,
-            Se.Is BeamDOA.isActive $ Se.Eq True,
-            Se.Is BeamDOA.associatedTill (Se.GreaterThan $ Just now)
-          ]
-      ]
-  pure $ map (.driverId.getId) associations

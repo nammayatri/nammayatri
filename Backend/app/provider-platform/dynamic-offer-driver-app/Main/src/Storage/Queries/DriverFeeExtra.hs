@@ -23,6 +23,81 @@ import Storage.Queries.OrphanInstances.DriverFee ()
 
 -- Extra code goes here --
 
+-- | Aggregate platform fees from a list of DriverFee records, returning
+--   (totalAmount, rideCommissions, subscriptionShare)
+aggregatePlatformFees :: [DriverFee] -> (HighPrecMoney, HighPrecMoney, HighPrecMoney)
+aggregatePlatformFees fees =
+  let totalAmt = foldl' (\acc fee -> acc + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) (HighPrecMoney 0) fees
+      rideComm = foldl' (\acc fee -> if fee.feeType == RECURRING_INVOICE then acc + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst else acc) (HighPrecMoney 0) fees
+      subShare = foldl' (\acc fee -> if fee.feeType == RECURRING_EXECUTION_INVOICE then acc + fee.platformFee.fee else acc) (HighPrecMoney 0) fees
+   in (totalAmt, rideComm, subShare)
+
+-- | Find settled (paid out) amounts aggregated across given driver IDs.
+--   Returns (totalReceived, rideCommissions, subscriptionShare, firstPayoutDate, lastPayoutDate)
+getSettledAmountsForDriverIds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Text] ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  m (HighPrecMoney, HighPrecMoney, HighPrecMoney, Maybe UTCTime, Maybe UTCTime)
+getSettledAmountsForDriverIds driverIds mbFrom mbTo = do
+  if null driverIds
+    then pure (HighPrecMoney 0, HighPrecMoney 0, HighPrecMoney 0, Nothing, Nothing)
+    else do
+      fees <-
+        findAllWithKV
+          [ Se.And $
+              [ Se.Is BeamDF.driverId $ Se.In driverIds,
+                Se.Is BeamDF.status $ Se.In [CLEARED, COLLECTED_CASH, SETTLED]
+              ]
+                <> maybe [] (\from -> [Se.Is BeamDF.startTime $ Se.GreaterThanOrEq from]) mbFrom
+                <> maybe [] (\to -> [Se.Is BeamDF.endTime $ Se.LessThanOrEq to]) mbTo
+          ]
+      let (totalAmt, rideComm, subShare) = aggregatePlatformFees fees
+          dates = sort $ catMaybes $ map (.collectedAt) fees
+          firstDate = listToMaybe dates
+          lastDate = listToMaybe $ reverse dates
+      pure (totalAmt, rideComm, subShare, firstDate, lastDate)
+
+-- | Time series bucket result
+data TimeSeriesBucketResult = TimeSeriesBucketResult
+  { bucketStart :: UTCTime,
+    bucketEnd :: UTCTime,
+    amount :: HighPrecMoney
+  }
+
+-- | Find settled amounts grouped by time buckets (for time series charts)
+getSettledAmountsTimeSeries ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Text] ->
+  UTCTime ->
+  UTCTime ->
+  Text ->
+  m [TimeSeriesBucketResult]
+getSettledAmountsTimeSeries driverIds _from _to _granularity = do
+  if null driverIds
+    then pure []
+    else pure [] -- placeholder: time series bucketing requires raw SQL or beam aggregation
+
+-- | Find pending (outstanding) amounts aggregated across given driver IDs.
+--   Returns (totalOutstanding, rideCommissionsPending, subscriptionSharePending)
+getPendingAmountsForDriverIds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Text] ->
+  m (HighPrecMoney, HighPrecMoney, HighPrecMoney)
+getPendingAmountsForDriverIds driverIds = do
+  if null driverIds
+    then pure (HighPrecMoney 0, HighPrecMoney 0, HighPrecMoney 0)
+    else do
+      fees <-
+        findAllWithKV
+          [ Se.And
+              [ Se.Is BeamDF.driverId $ Se.In driverIds,
+                Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE]
+              ]
+          ]
+      pure $ aggregatePlatformFees fees
+
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m (Maybe DriverFee)
 findById (Id driverFeeId) = findOneWithKV [Se.Is BeamDF.id $ Se.Eq driverFeeId]
 
@@ -966,3 +1041,110 @@ findAllCancellationPenaltiesInDisputeWindow serviceName merchantId merchantOpera
           Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId)
         ]
     ]
+
+---------------------------------------------------------------------
+-- Operator payout aggregation queries
+---------------------------------------------------------------------
+
+-- | Aggregate settled amounts for a set of driver IDs with optional date range.
+-- Returns (totalReceived, rideCommissions, subscriptionShare, firstPayoutDate, lastPayoutDate).
+getSettledAmountsForDriverIds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Text] ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  m (HighPrecMoney, HighPrecMoney, HighPrecMoney, Maybe UTCTime, Maybe UTCTime)
+getSettledAmountsForDriverIds driverIdTexts mbFrom mbTo = do
+  if null driverIdTexts
+    then pure (HighPrecMoney 0, HighPrecMoney 0, HighPrecMoney 0, Nothing, Nothing)
+    else do
+      fees <- findAllWithKV
+        [ Se.And $
+            [ Se.Is BeamDF.driverId $ Se.In driverIdTexts,
+              Se.Is BeamDF.status $ Se.In [SETTLED, COLLECTED_CASH]
+            ]
+              <> maybe [] (\from' -> [Se.Is BeamDF.createdAt $ Se.GreaterThanOrEq from']) mbFrom
+              <> maybe [] (\to' -> [Se.Is BeamDF.createdAt $ Se.LessThanOrEq to']) mbTo
+        ]
+      let totalReceived = sumPlatformFees fees
+          rideCommissions = sumPlatformFees $ filter (\f -> f.feeType == RECURRING_INVOICE || f.feeType == RECURRING_EXECUTION_INVOICE) fees
+          subscriptionShare = sumPlatformFees $ filter (\f -> f.feeType == MANDATE_REGISTRATION) fees
+          dates = map (.createdAt) fees
+          firstDate = if null dates then Nothing else Just (minimum dates)
+          lastDate = if null dates then Nothing else Just (maximum dates)
+      pure (totalReceived, rideCommissions, subscriptionShare, firstDate, lastDate)
+
+-- | Aggregate pending/outstanding amounts for a set of driver IDs.
+-- Returns (totalOutstanding, rideCommissions, subscriptionShare).
+getPendingAmountsForDriverIds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Text] ->
+  m (HighPrecMoney, HighPrecMoney, HighPrecMoney)
+getPendingAmountsForDriverIds driverIdTexts = do
+  if null driverIdTexts
+    then pure (HighPrecMoney 0, HighPrecMoney 0, HighPrecMoney 0)
+    else do
+      fees <- findAllWithKV
+        [ Se.And
+            [ Se.Is BeamDF.driverId $ Se.In driverIdTexts,
+              Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE]
+            ]
+        ]
+      let totalOutstanding = sumPlatformFees fees
+          rideCommissions = sumPlatformFees $ filter (\f -> f.feeType == RECURRING_INVOICE || f.feeType == RECURRING_EXECUTION_INVOICE) fees
+          subscriptionShare = sumPlatformFees $ filter (\f -> f.feeType == MANDATE_REGISTRATION) fees
+      pure (totalOutstanding, rideCommissions, subscriptionShare)
+
+-- | Time-series aggregation of settled amounts bucketed by month.
+-- Note: This is an in-memory bucketing approach. For production scale,
+-- use date_trunc in a raw SQL query or ClickHouse.
+getSettledAmountsTimeSeries ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Text] ->
+  UTCTime ->
+  UTCTime ->
+  Text ->
+  m [OperatorTimeSeriesBucket]
+getSettledAmountsTimeSeries driverIdTexts from' to' _granularity = do
+  if null driverIdTexts
+    then pure []
+    else do
+      fees <- findAllWithKV
+        [ Se.And
+            [ Se.Is BeamDF.driverId $ Se.In driverIdTexts,
+              Se.Is BeamDF.status $ Se.In [SETTLED, COLLECTED_CASH],
+              Se.Is BeamDF.createdAt $ Se.GreaterThanOrEq from',
+              Se.Is BeamDF.createdAt $ Se.LessThanOrEq to'
+            ]
+        ]
+      -- Group by month (in-memory); production should use date_trunc SQL
+      let grouped = foldl' groupByMonth [] fees
+      pure $ map (\(start, end, amt) -> OperatorTimeSeriesBucket start end amt) grouped
+  where
+    groupByMonth acc f =
+      let day' = utctDay (f.createdAt)
+          (year, month, _) = toGregorian day'
+          bucketStart = UTCTime (fromGregorian year month 1) 0
+          lastDay = case month of
+            12 -> addDays (-1) (fromGregorian (year + 1) 1 1)
+            _ -> addDays (-1) (fromGregorian year (month + 1) 1)
+          bucketEnd = UTCTime lastDay 86399
+          amt = f.platformFee.fee + f.platformFee.cgst + f.platformFee.sgst
+      in case findIndex (\(s, _, _) -> s == bucketStart) acc of
+           Just idx -> take idx acc ++ [(bucketStart, bucketEnd, let (_, _, v) = acc !! idx in v + amt)] ++ drop (idx + 1) acc
+           Nothing -> acc ++ [(bucketStart, bucketEnd, amt)]
+    findIndex _ [] = Nothing
+    findIndex p (x : xs)
+      | p x = Just 0
+      | otherwise = fmap (+ 1) (findIndex p xs)
+
+-- | Helper to sum platform fees across a list of driver fees.
+sumPlatformFees :: [DriverFee] -> HighPrecMoney
+sumPlatformFees = foldl' (\acc f -> acc + f.platformFee.fee + f.platformFee.cgst + f.platformFee.sgst) (HighPrecMoney 0)
+
+-- | Result type for time-series bucketing used by operator payout queries.
+data OperatorTimeSeriesBucket = OperatorTimeSeriesBucket
+  { bucketStart :: UTCTime,
+    bucketEnd :: UTCTime,
+    amount :: HighPrecMoney
+  }

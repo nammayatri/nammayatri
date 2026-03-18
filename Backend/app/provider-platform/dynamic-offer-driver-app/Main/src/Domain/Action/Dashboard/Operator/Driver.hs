@@ -617,3 +617,136 @@ getDriverOperatorDashboardAnalytics merchantShortId opCity requestorId fromDay t
             pure (res.activeDriver, res.driverEnabled, res.greaterThanOneRide, res.greaterThanTenRide, res.greaterThanFiftyRide)
 
       pure $ API.Types.ProviderPlatform.Operator.Driver.FilteredOperatorAnalyticsRes {activeDriver, driverEnabled, greaterThanOneRide, greaterThanTenRide, greaterThanFiftyRide}
+
+-- | Operator requests additional info from a driver/fleet owner for an existing hub request
+postDriverOperatorRequestAdditionalInfo ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  CommonDriver.RequestAdditionalInfoReq ->
+  Environment.Flow APISuccess
+postDriverOperatorRequestAdditionalInfo merchantShortId opCity req = do
+  now <- getCurrentTime
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  Redis.whenWithLockRedis (opsHubRequestLockKey req.operationHubRequestId) 60 $ do
+    opHubReq <- SQOHR.findByPrimaryKey (Kernel.Types.Id.Id req.operationHubRequestId) >>= fromMaybeM (InvalidRequest "Invalid operation hub request id")
+    when (opHubReq.requestStatus == APPROVED) $ throwError (InvalidRequest "Cannot request info on an already approved request")
+    when (opHubReq.requestStatus == REJECTED) $ throwError (InvalidRequest "Cannot request info on a rejected request")
+
+    -- Determine the requestedFrom (driver or fleet owner via creator)
+    let requestedFromId = case opHubReq.driverId of
+          Just driverId -> driverId
+          Nothing -> opHubReq.creatorId
+
+    newId <- generateGUID
+    let additionalInfoRequest =
+          DAIR.AdditionalInfoRequest
+            { id = newId,
+              operationHubRequestId = opHubReq.id,
+              requestedBy = Kernel.Types.Id.Id req.operatorId,
+              requestedFrom = requestedFromId,
+              requestedDocumentTypes = map castAdditionalDocTypeToDomain req.requestedDocumentTypes,
+              message = req.message,
+              status = DAIR.PENDING,
+              responseRemarks = Nothing,
+              responseDocumentIds = Nothing,
+              merchantId = merchant.id,
+              merchantOperatingCityId = merchantOpCity.id,
+              createdAt = now,
+              updatedAt = now
+            }
+    QAIR.create additionalInfoRequest
+    -- Transition hub request status to AWAITING_INFO
+    void $ SQOHR.updateStatusWithDetails AWAITING_INFO (Just $ "Additional info requested: " <> req.message) Nothing (Just (Kernel.Types.Id.Id req.operatorId)) opHubReq.id
+    logInfo $ "Additional info requested for hub request: " <> req.operationHubRequestId
+  pure Success
+
+-- | List additional info requests for a given operation hub request
+getDriverOperatorAdditionalInfoRequests ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Maybe Text ->
+  Maybe CommonDriver.AdditionalInfoStatus ->
+  Maybe Int ->
+  Maybe Int ->
+  Environment.Flow CommonDriver.AdditionalInfoRequestListRes
+getDriverOperatorAdditionalInfoRequests _merchantShortId _opCity mbOpHubReqId mbStatus mbLimit mbOffset = do
+  opHubReqId <- mbOpHubReqId & fromMaybeM (InvalidRequest "operationHubRequestId is required")
+  let domainStatus = fmap castAdditionalInfoStatusToDomain mbStatus
+  let limit = fromMaybe 10 mbLimit
+  let offset = fromMaybe 0 mbOffset
+  requests <- QAIRExtra.findAllByOperationHubRequestIdWithStatus (Kernel.Types.Id.Id opHubReqId) domainStatus (Just limit) (Just offset)
+  totalCount <- QAIRExtra.countByOperationHubRequestId (Kernel.Types.Id.Id opHubReqId) domainStatus
+  let items = map castAdditionalInfoRequest requests
+  let summary = Common.Summary {totalCount = totalCount, count = length items}
+  pure $ CommonDriver.AdditionalInfoRequestListRes {requests = items, summary}
+
+-- | Driver/fleet owner responds to an additional info request
+postDriverRespondAdditionalInfo ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  CommonDriver.RespondAdditionalInfoReq ->
+  Environment.Flow APISuccess
+postDriverRespondAdditionalInfo _merchantShortId _opCity req = do
+  now <- getCurrentTime
+  infoReq <- QAIR.findById (Kernel.Types.Id.Id req.additionalInfoRequestId) >>= fromMaybeM (InvalidRequest "Invalid additional info request id")
+  when (infoReq.status /= DAIR.PENDING) $ throwError (InvalidRequest "This info request has already been responded to")
+  QAIR.updateResponse DAIR.RESPONDED req.remarks (Just req.documentImageIds) now (Kernel.Types.Id.Id req.additionalInfoRequestId)
+  -- Check if all pending info requests for this hub request are now responded
+  pendingRequests <- QAIRExtra.findPendingByOperationHubRequestId infoReq.operationHubRequestId
+  when (null pendingRequests) $ do
+    -- Transition hub request back to PENDING for operator review
+    void $ SQOHR.updateStatusWithDetails PENDING (Just "All additional info provided, ready for review") Nothing Nothing infoReq.operationHubRequestId
+    logInfo $ "All additional info provided for hub request: " <> infoReq.operationHubRequestId.getId
+  pure Success
+
+-- Helper cast functions for additional info types
+castAdditionalDocTypeToDomain :: CommonDriver.AdditionalDocumentType -> DAIR.DocumentType
+castAdditionalDocTypeToDomain = \case
+  CommonDriver.PAN -> DAIR.PAN
+  CommonDriver.AADHAAR -> DAIR.AADHAAR
+  CommonDriver.ADDRESS_PROOF -> DAIR.ADDRESS_PROOF
+  CommonDriver.RC_PHOTO -> DAIR.RC_PHOTO
+  CommonDriver.DL_PHOTO -> DAIR.DL_PHOTO
+  CommonDriver.VEHICLE_PERMIT -> DAIR.VEHICLE_PERMIT
+  CommonDriver.INSURANCE -> DAIR.INSURANCE
+  CommonDriver.FITNESS_CERTIFICATE -> DAIR.FITNESS_CERTIFICATE
+  CommonDriver.OTHER -> DAIR.OTHER
+
+castAdditionalDocTypeFromDomain :: DAIR.DocumentType -> CommonDriver.AdditionalDocumentType
+castAdditionalDocTypeFromDomain = \case
+  DAIR.PAN -> CommonDriver.PAN
+  DAIR.AADHAAR -> CommonDriver.AADHAAR
+  DAIR.ADDRESS_PROOF -> CommonDriver.ADDRESS_PROOF
+  DAIR.RC_PHOTO -> CommonDriver.RC_PHOTO
+  DAIR.DL_PHOTO -> CommonDriver.DL_PHOTO
+  DAIR.VEHICLE_PERMIT -> CommonDriver.VEHICLE_PERMIT
+  DAIR.INSURANCE -> CommonDriver.INSURANCE
+  DAIR.FITNESS_CERTIFICATE -> CommonDriver.FITNESS_CERTIFICATE
+  DAIR.OTHER -> CommonDriver.OTHER
+
+castAdditionalInfoStatusToDomain :: CommonDriver.AdditionalInfoStatus -> DAIR.AdditionalInfoStatus
+castAdditionalInfoStatusToDomain = \case
+  CommonDriver.INFO_PENDING -> DAIR.PENDING
+  CommonDriver.RESPONDED -> DAIR.RESPONDED
+  CommonDriver.REVIEWED -> DAIR.REVIEWED
+
+castAdditionalInfoStatusFromDomain :: DAIR.AdditionalInfoStatus -> CommonDriver.AdditionalInfoStatus
+castAdditionalInfoStatusFromDomain = \case
+  DAIR.PENDING -> CommonDriver.INFO_PENDING
+  DAIR.RESPONDED -> CommonDriver.RESPONDED
+  DAIR.REVIEWED -> CommonDriver.REVIEWED
+
+castAdditionalInfoRequest :: DAIR.AdditionalInfoRequest -> CommonDriver.AdditionalInfoRequestItem
+castAdditionalInfoRequest req =
+  CommonDriver.AdditionalInfoRequestItem
+    { id = req.id.getId,
+      operationHubRequestId = req.operationHubRequestId.getId,
+      requestedDocumentTypes = map castAdditionalDocTypeFromDomain req.requestedDocumentTypes,
+      message = req.message,
+      status = castAdditionalInfoStatusFromDomain req.status,
+      responseRemarks = req.responseRemarks,
+      responseDocumentIds = req.responseDocumentIds,
+      createdAt = req.createdAt,
+      updatedAt = req.updatedAt
+    }

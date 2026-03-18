@@ -140,13 +140,16 @@ getOperatorPayoutOutstanding _merchantShortId _opCity _mbFleetOwnerId _mbFrom _m
   person <- QP.findById (ID.Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
   unless (person.role == DP.OPERATOR) $ throwError (InvalidRequest "Requestor role is not OPERATOR")
   now <- getCurrentTime
-  -- Stub: outstanding payout aggregation to be implemented with PAYMENT_PENDING/PAYMENT_OVERDUE statuses
+  driverIds <- QDOA.getActiveDriverIdsByOperatorId requestorId
+  let driverIdTexts = map (.getId) driverIds
+  (totalOutstanding, rideCommissions, subscriptionShare) <-
+    QDF.getPendingAmountsForDriverIds driverIdTexts
   pure
     Common.OperatorOutstandingPayoutRes
-      { totalOutstanding = HighPrecMoney 0,
+      { totalOutstanding = totalOutstanding,
         currency = INR,
-        rideCommissionPending = HighPrecMoney 0,
-        subscriptionSharePending = HighPrecMoney 0,
+        rideCommissionPending = rideCommissions,
+        subscriptionSharePending = subscriptionShare,
         incentivesPending = HighPrecMoney 0,
         deductions = HighPrecMoney 0,
         lastUpdatedAt = now
@@ -162,9 +165,28 @@ getOperatorPayoutOutstandingBreakdown ::
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Text ->
   Environment.Flow Common.OperatorOutstandingBreakdownRes
-getOperatorPayoutOutstandingBreakdown _merchantShortId _opCity _mbLimit _mbOffset requestorId = do
+getOperatorPayoutOutstandingBreakdown _merchantShortId _opCity mbLimit mbOffset requestorId = do
   person <- QP.findById (ID.Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
   unless (person.role == DP.OPERATOR) $ throwError (InvalidRequest "Requestor role is not OPERATOR")
-  -- Stub: per-fleet outstanding breakdown to be implemented
-  let summary = Common.Summary {totalCount = 0, count = 0}
-  pure Common.OperatorOutstandingBreakdownRes {items = [], summary}
+  let limit = fromMaybe 10 mbLimit
+      offset = fromMaybe 0 mbOffset
+  fleetAssociations <- QFOA.findAllActiveByOperatorIdWithLimitOffset requestorId limit offset
+  items <- forM fleetAssociations $ \foa -> do
+    fleetOwner <- QP.findById (ID.Id foa.fleetOwnerId) >>= fromMaybeM (PersonNotFound foa.fleetOwnerId)
+    decMobileNumber <- mapM decrypt fleetOwner.mobileNumber
+    fleetDriverIds <- QDOA.getActiveDriverIdsByOperatorId foa.fleetOwnerId
+    let driverIdTexts = map (.getId) fleetDriverIds
+    (outstandingAmt, _rideComm, _subShare) <-
+      QDF.getPendingAmountsForDriverIds driverIdTexts
+    pure
+      Common.FleetOwnerOutstandingItem
+        { fleetOwnerId = ID.Id foa.fleetOwnerId,
+          fleetOwnerName = fromMaybe "" fleetOwner.firstName,
+          mobileNumber = fromMaybe "" decMobileNumber,
+          outstandingAmount = outstandingAmt,
+          driverCount = length fleetDriverIds,
+          lastPayoutDate = Nothing
+        }
+  let count = length items
+      summary = Common.Summary {totalCount = 10000, count}
+  pure Common.OperatorOutstandingBreakdownRes {items, summary}
