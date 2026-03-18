@@ -1508,7 +1508,7 @@ getEn = Keymap {
 , rental_str: "Rental"
 , delivery_str: "Delivery"
 , intercity_bus: "Intercity Bus"
-, where_are_you_going: "Where to ?"
+, where_are_you_going: "Where are you going?"
 , tap_to_follow: "Tap to follow"
 , has_shared_a_ride_with_you: (\name -> name <> " has shared a ride with you. Tap to follow")
 , test_sos_activated: "Test SOS Activated!"
