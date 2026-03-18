@@ -1,0 +1,110 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  PenaltyRule: Domain.Types.PenaltyRule
+  PenaltyTriggerEvent: Domain.Types.PenaltyRule
+
+PenaltyRecord:
+  tableName: penalty_record
+
+  types:
+    PenaltyStatus:
+      enum: "PENDING, APPLIED, DISPUTED, WAIVED, REJECTED"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+  fields:
+    id: Id PenaltyRecord
+    driverId: Id Person
+    ruleId: Id PenaltyRule
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    triggerEvent: Text
+    triggerEntityId: Text
+    amount: HighPrecMoney
+    currency: Currency
+    reason: Text
+    status: PenaltyStatus
+    disputeReason: Maybe Text
+    disputeEvidence: Maybe Text
+    disputeResolvedBy: Maybe Text
+    disputeResolvedAt: Maybe UTCTime
+    ledgerEntryId: Maybe Text
+    invoiceId: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  derives: "Generic, Show, Eq"
+
+  beamFields:
+    currency:
+      currency: Maybe Currency
+
+  fromTType:
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+
+  toTType:
+    currency: Kernel.Prelude.Just|I
+
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <PenaltyStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PenaltyStatus>
+
+  constraints:
+    id: PrimaryKey
+    driverId: "!SecondaryKey"
+    ruleId: SecondaryKey
+
+  sqlType:
+    amount: numeric(30,2)
+    triggerEvent: character varying(255)
+    status: character varying(255)
+
+  default:
+    status: "'PENDING'"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+
+    findAllByDriverIdAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverId, status]
+
+    findAllByMerchantIdAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, status]
+
+    findAllByMerchantId:
+      kvFunction: findAllWithKV
+      where: merchantId
+
+    updateStatusById:
+      kvFunction: updateOneWithKV
+      params: [status, updatedAt]
+      where: id
+
+    updateDisputeById:
+      kvFunction: updateOneWithKV
+      params: [status, disputeReason, disputeEvidence, updatedAt]
+      where: id
+
+    updateDisputeResolutionById:
+      kvFunction: updateOneWithKV
+      params: [status, disputeResolvedBy, disputeResolvedAt, updatedAt]
+      where: id
+
+    updateLedgerAndInvoiceById:
+      kvFunction: updateOneWithKV
+      params: [ledgerEntryId, invoiceId, status, updatedAt]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

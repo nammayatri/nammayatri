@@ -1,0 +1,90 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+PenaltyRule:
+  tableName: penalty_rule
+
+  types:
+    PenaltyTriggerEvent:
+      enum: "RIDE_CANCELLATION, SOS_FALSE_ALARM, DOCUMENT_EXPIRY, LOW_ACCEPTANCE_RATE"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+    PenaltyAmountType:
+      enum: "FIXED, PERCENTAGE, FORMULA"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+  fields:
+    id: Id PenaltyRule
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    name: Text
+    triggerEvent: PenaltyTriggerEvent
+    conditionsJson: Text
+    penaltyType: PenaltyAmountType
+    fixedAmount: Maybe HighPrecMoney
+    percentage: Maybe Double
+    formulaExpression: Maybe Text
+    currency: Currency
+    gracePeriodCount: Int
+    gracePeriodWindowHours: Int
+    priority: Int
+    isActive: Bool
+    startDate: Maybe UTCTime
+    endDate: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  derives: "Generic, Show, Eq"
+
+  beamFields:
+    currency:
+      currency: Maybe Currency
+
+  fromTType:
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+
+  toTType:
+    currency: Kernel.Prelude.Just|I
+
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <PenaltyTriggerEvent>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <PenaltyAmountType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PenaltyTriggerEvent>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PenaltyAmountType>
+
+  constraints:
+    id: PrimaryKey
+    merchantId: SecondaryKey
+
+  sqlType:
+    conditionsJson: text
+    fixedAmount: numeric(30,2)
+
+  default:
+    isActive: "true"
+    gracePeriodCount: "0"
+    gracePeriodWindowHours: "24"
+    priority: "0"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllByMerchantIdAndTriggerEvent:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, triggerEvent, isActive]
+
+    findAllByMerchantId:
+      kvFunction: findAllWithKV
+      where: merchantId
+
+    updateIsActiveById:
+      kvFunction: updateOneWithKV
+      params: [isActive, updatedAt]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
