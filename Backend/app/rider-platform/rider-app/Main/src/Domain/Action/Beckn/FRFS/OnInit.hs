@@ -117,16 +117,22 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   (mbJourneyId, allJourneyBookings) <- getAllJourneyFrfsBookings booking
 
-  let allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyBookings
-  when allLegsOnInitDone $ do
+  -- Partial-leg payment: proceed with payment for legs that have completed on_init,
+  -- rather than blocking until ALL legs are done. This prevents a slow/failed BPP
+  -- on one leg from blocking the entire multimodal booking.
+  -- When subsequent legs complete, createPayments uses the update path
+  -- (postMultimodalPaymentUpdateOrderUtil) to add them to the existing payment order.
+  let completedBookings = filter (\b -> b.journeyOnInitDone == Just True) allJourneyBookings
+      hasCompletedLegs = not (null completedBookings)
+  when hasCompletedLegs $ do
     Redis.withLockRedis (key (maybe booking.id.getId (.getId) mbJourneyId)) 60 $ do
       let paymentType = getPaymentType (integratedBPPConfig.platformType == DIBC.MULTIMODAL) booking.vehicleType
-      (vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
+      (vendorSplitDetails, amount) <- createVendorSplitFromBookings completedBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
       baskets <- case mbJourneyId of
         Just _ -> do
-          Just <$> createBasketFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType mbEnableOffer
+          Just <$> createBasketFromBookings completedBookings merchant.id oldBooking.merchantOperatingCityId paymentType mbEnableOffer
         Nothing -> return Nothing
-      createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer mbJourneyId
+      createPayments completedBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer mbJourneyId
   where
     key journeyId = "initJourney-" <> journeyId
 

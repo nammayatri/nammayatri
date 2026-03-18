@@ -205,3 +205,56 @@ finishMetrics' bmContainer action merchantName version txnId merchantOperatingCi
         void $ Redis.del (durationKey txnId action)
         putDuration durationHistogram merchantName version merchantOperatingCityId . realToFrac . diffUTCTime endTime $ startTime
       Nothing -> return ()
+
+-- Fix #22: Payment journey monitoring
+
+incrementPaymentAttemptCount :: HasBAPMetrics m r => Text -> Text -> Text -> m ()
+incrementPaymentAttemptCount paymentMethod transitMode result = do
+  bmContainer <- asks (.bapMetrics)
+  liftIO $ P.withLabel bmContainer.paymentAttemptCounter (paymentMethod, transitMode, result) P.incCounter
+
+observePaymentPageLoadDuration :: HasBAPMetrics m r => Text -> Text -> Double -> m ()
+observePaymentPageLoadDuration platform result duration = do
+  bmContainer <- asks (.bapMetrics)
+  let (hist, _) = bmContainer.paymentPageLoadDuration
+  liftIO $ P.withLabel hist (platform, result) (`P.observe` duration)
+
+incrementHyperSDKInitCount :: HasBAPMetrics m r => Text -> Text -> m ()
+incrementHyperSDKInitCount platform result = do
+  bmContainer <- asks (.bapMetrics)
+  liftIO $ P.withLabel bmContainer.hyperSDKInitCounter (platform, result) P.incCounter
+
+-- Fix #23: Booking funnel per-stage tracking
+
+incrementBookingStageCount :: HasBAPMetrics m r => Text -> Text -> Text -> m ()
+incrementBookingStageCount transitMode stage result = do
+  bmContainer <- asks (.bapMetrics)
+  liftIO $ P.withLabel bmContainer.bookingStageCounter (transitMode, stage, result) P.incCounter
+
+observeBookingStageDuration :: HasBAPMetrics m r => Text -> Text -> Double -> m ()
+observeBookingStageDuration transitMode stage duration = do
+  bmContainer <- asks (.bapMetrics)
+  let (hist, _) = bmContainer.bookingStageDuration
+  liftIO $ P.withLabel hist (transitMode, stage) (`P.observe` duration)
+
+incrementBookingE2ESuccessCount :: HasBAPMetrics m r => Text -> m ()
+incrementBookingE2ESuccessCount transitMode = do
+  bmContainer <- asks (.bapMetrics)
+  liftIO $ P.withLabel bmContainer.bookingE2ECounter transitMode P.incCounter
+
+-- Fix #24: QR scan success rate monitoring
+
+observeQRPayloadSize :: HasBAPMetrics m r => Text -> Text -> Double -> m ()
+observeQRPayloadSize transitMode journeyType size = do
+  bmContainer <- asks (.bapMetrics)
+  liftIO $ P.withLabel bmContainer.qrPayloadSize (transitMode, journeyType) (`P.observe` size)
+
+incrementQRGenerationCount :: HasBAPMetrics m r => Text -> Text -> m ()
+incrementQRGenerationCount transitMode qrVersion = do
+  bmContainer <- asks (.bapMetrics)
+  liftIO $ P.withLabel bmContainer.qrGenerationCounter (transitMode, qrVersion) P.incCounter
+
+incrementQRScanAttemptCount :: HasBAPMetrics m r => Text -> Text -> m ()
+incrementQRScanAttemptCount station result = do
+  bmContainer <- asks (.bapMetrics)
+  liftIO $ P.withLabel bmContainer.qrScanAttemptCounter (station, result) P.incCounter
