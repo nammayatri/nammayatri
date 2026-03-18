@@ -33,11 +33,11 @@ import qualified Domain.Types.Person as Person
 import Environment (Flow, FlowHandler, FlowServer)
 import EulerHS.Prelude
 import Kernel.Types.Id
-import Kernel.Utils.Common (withFlowHandlerAPI)
 import Kernel.Utils.Logging
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 type API =
   "maps"
@@ -62,13 +62,13 @@ handler =
     :<|> getPlaceName
 
 autoComplete :: (Id Person.Person, Id Merchant.Merchant) -> DMaps.AutoCompleteReq -> FlowHandler DMaps.AutoCompleteResp
-autoComplete (personId, merchantId) = withFlowHandlerAPI . autoComplete' (personId, merchantId)
+autoComplete (personId, merchantId) req = withFlowHandlerAPIPersonId personId $ autoComplete' (personId, merchantId) req
 
 getPlaceDetails :: (Id Person.Person, Id Merchant.Merchant) -> DMaps.GetPlaceDetailsReq -> FlowHandler DMaps.GetPlaceDetailsResp
-getPlaceDetails (personId, merchantId) = withFlowHandlerAPI . getPlaceDetails' (personId, merchantId)
+getPlaceDetails (personId, merchantId) req = withFlowHandlerAPIPersonId personId $ getPlaceDetails' (personId, merchantId) req
 
 getPlaceName :: (Id Person.Person, Id Merchant.Merchant) -> DMaps.GetPlaceNameReq -> FlowHandler DMaps.GetPlaceNameResp
-getPlaceName (personId, merchantId) = withFlowHandlerAPI . getPlaceName' (personId, merchantId)
+getPlaceName (personId, merchantId) req = withFlowHandlerAPIPersonId personId $ getPlaceName' (personId, merchantId) req
 
 autoComplete' :: (Id Person.Person, Id Merchant.Merchant) -> DMaps.AutoCompleteReq -> Flow DMaps.AutoCompleteResp
 autoComplete' (personId, merchantId) = withPersonIdLogTag personId . DMaps.autoComplete (personId, merchantId) (Just personId.getId)

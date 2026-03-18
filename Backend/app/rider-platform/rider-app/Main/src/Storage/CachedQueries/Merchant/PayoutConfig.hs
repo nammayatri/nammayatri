@@ -1,4 +1,11 @@
-module Storage.CachedQueries.Merchant.PayoutConfig where
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
+module Storage.CachedQueries.Merchant.PayoutConfig
+  {-# WARNING
+    "This module contains direct calls to the table and redis. \
+  \ Use Storage.ConfigPilot.Config.PayoutConfig (getConfig) instead for reads."
+    #-}
+where
 
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.PayoutConfig
@@ -75,3 +82,8 @@ clearConfigCache merchantOperatingCityId vehicleCategory payoutEntity = do
   clearCache merchantOperatingCityId True payoutEntity
   clearCache merchantOperatingCityId False payoutEntity
   clearCacheByCategory merchantOperatingCityId vehicleCategory
+
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => PayoutConfig -> m ()
+updateByPrimaryKey cfg = do
+  Queries.updateByPrimaryKey cfg
+  clearCache cfg.merchantOperatingCityId cfg.isPayoutEnabled cfg.payoutEntity

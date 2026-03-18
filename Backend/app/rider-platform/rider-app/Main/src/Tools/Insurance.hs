@@ -27,8 +27,9 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 
 createInsurance :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Insurance.InsuranceRequest -> m Insurance.InsuranceResponse
 createInsurance = runWithServiceConfig Insurance.createInsurance
@@ -42,10 +43,10 @@ runWithServiceConfig ::
   m resp
 runWithServiceConfig func merchantId merchantOperatingCityId req = do
   merchantConfig <-
-    QMSUC.findByMerchantOperatingCityId merchantOperatingCityId
+    getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   merchantInsuranceServiceConfig <-
-    QMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.InsuranceService merchantConfig.insuranceService)
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, serviceName = Just (DMSC.InsuranceService merchantConfig.insuranceService)})
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   case merchantInsuranceServiceConfig.serviceConfig of
     DMSC.InsuranceServiceConfig msc -> func msc req

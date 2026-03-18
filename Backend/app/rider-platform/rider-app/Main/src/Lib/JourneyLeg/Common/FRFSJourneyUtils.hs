@@ -28,7 +28,8 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FRFSUtils
 import Storage.CachedQueries.Merchant.MultiModalBus (BusData (..), BusDataWithRoutesInfo (..), FullBusData (..), utcToIST)
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
@@ -115,7 +116,7 @@ processBusLegState
   integratedBppConfig
   mbBookedVehicleNumber = do
     logDebug $ "movementDetected: " <> show movementDetected <> " journeyLegTrackingStatus: " <> show journeyLegTrackingStatus
-    riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
     let includeNullUpcomingStops = fromMaybe False riderConfig.includeVehiclesWithNoEta
     if (isOngoingJourneyLeg journeyLegTrackingStatus) && movementDetected
       then do

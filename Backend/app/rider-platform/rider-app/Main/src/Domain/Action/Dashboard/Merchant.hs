@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-deprecations #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -106,7 +107,6 @@ import qualified Lib.Types.GateInfo as DGI
 import qualified Lib.Types.SpecialLocation as DSL
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as DebugLog
-import qualified Lib.Yudhishthira.Types as LYT
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
@@ -123,6 +123,9 @@ import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CQMP
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.BusinessHour as SQBH
 import qualified Storage.Queries.BusinessHourExtra as SQBHE
@@ -282,12 +285,12 @@ postMerchantServiceUsageConfigMapsUpdate merchantShortId city req = do
   runRequestValidation Common.validateMapsServiceUsageConfigUpdateReq req
   whenJust req.getEstimatedPickupDistances $ \_ ->
     throwError (InvalidRequest "getEstimatedPickupDistances is not allowed for bap")
-  merchant <- findMerchantByShortId merchantShortId
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound ("merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city))
   forM_ Maps.availableMapsServices $ \service -> do
     when (Common.mapsServiceUsedInReq req service) $ do
+      let mscDims = MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, serviceName = Just (DMSC.MapsService service)}
       void $
-        CQMSC.findByMerchantOpCityIdAndService merchant.id merchantOperatingCity.id (DMSC.MapsService service)
+        listToMaybe <$> getConfig mscDims
           >>= fromMaybeM (InvalidRequest $ "Merchant config for maps service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
@@ -314,12 +317,13 @@ postMerchantServiceUsageConfigSmsUpdate ::
   Flow APISuccess
 postMerchantServiceUsageConfigSmsUpdate merchantShortId city req = do
   runRequestValidation Common.validateSmsServiceUsageConfigUpdateReq req
-  merchant <- findMerchantByShortId merchantShortId
+  _ <- findMerchantByShortId merchantShortId
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound ("merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city))
   forM_ SMS.availableSmsServices $ \service -> do
     when (Common.smsServiceUsedInReq req service) $ do
+      let mscDims = MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, serviceName = Just (DMSC.SmsService service)}
       void $
-        CQMSC.findByMerchantOpCityIdAndService merchant.id merchantOperatingCity.id (DMSC.SmsService service)
+        listToMaybe <$> getConfig mscDims
           >>= fromMaybeM (InvalidRequest $ "Merchant config for sms service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
@@ -540,10 +544,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- rider_config
   mbRiderConfig <- do
-    let baseVersion = LYT.ConfigVersionMap {version = 1, config = LYT.RIDER_CONFIG LYT.RiderConfig}
-    QRC.findByMerchantOperatingCityId newMerchantOperatingCityId (Just [baseVersion]) >>= \case
+    getConfig (RiderDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId}) >>= \case
       Nothing -> do
-        riderConfig <- QRC.findByMerchantOperatingCityId baseOperatingCityId (Just [baseVersion]) >>= fromMaybeM (InvalidRequest "Rider Config not found")
+        riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = baseOperatingCityId.getId}) >>= fromMaybeM (InvalidRequest "Rider Config not found")
         let newRiderConfig = buildRiderConfig newMerchantId newMerchantOperatingCityId now riderConfig
         return $ Just newRiderConfig
       _ -> return Nothing
@@ -1741,9 +1744,8 @@ getMerchantRiderConfigEstimatesOrder merchantShortId city = do
     CQMOC.findByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
 
-  let versionMap = LYT.ConfigVersionMap {version = 1, config = LYT.RIDER_CONFIG LYT.RiderConfig}
   riderConfig <-
-    QRC.findByMerchantOperatingCityId merchantOperatingCity.id (Just [versionMap])
+    getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
       >>= fromMaybeM (InvalidRequest "RiderConfig not found for this merchant operating city")
 
   pure $
@@ -1763,9 +1765,8 @@ postMerchantRiderConfigEstimatesOrderUpdate merchantShortId city req = do
     CQMOC.findByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
 
-  let versionMap = LYT.ConfigVersionMap {version = 1, config = LYT.RIDER_CONFIG LYT.RiderConfig}
   riderConfig <-
-    QRC.findByMerchantOperatingCityId merchantOperatingCity.id (Just [versionMap])
+    getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
       >>= fromMaybeM (InvalidRequest "RiderConfig not found for this merchant operating city")
 
   let updatedConfig =

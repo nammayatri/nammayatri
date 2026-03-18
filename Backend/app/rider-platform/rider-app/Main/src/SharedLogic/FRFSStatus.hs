@@ -54,10 +54,12 @@ import SharedLogic.Offer as SOffer
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.CachedQueries.Person as CQPerson
+import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -66,7 +68,6 @@ import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingP
 import qualified Storage.Queries.FRFSTicketBookingPaymentCategory as QFRFSTicketBookingPaymentCategory
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
-import qualified Storage.Queries.Person as QP
 import Tools.Error
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
@@ -85,7 +86,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
   logInfo $ "frfsBookingStatus for booking: " <> show booking'
   let bookingId = booking'.id
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
-  bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking'.merchantOperatingCityId merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking'.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
+  bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking'.merchantOperatingCityId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory booking'.vehicleType)}) >>= fromMaybeM (InternalError "Beckn Config not found")
   unless (personId == booking'.riderId) $ throwError AccessDenied
   now <- getCurrentTime
   let validTillWithBuffer = addUTCTime 5 booking'.validTill
@@ -256,9 +257,9 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                                     }
                           buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentObj
         when (isMultiModalBooking && paymentBookingStatus == FRFSTicketService.SUCCESS) $ do
-          riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
-          becknConfigs <- CQBC.findByMerchantIdDomainandMerchantOperatingCityId merchantId_ "FRFS" merchantOperatingCity.id
-          let initTTLs = map (.initTTLSec) becknConfigs
+          riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
+          allFrfsBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, domain = Just "FRFS", vehicleCategory = Nothing})
+          let initTTLs = map (.initTTLSec) allFrfsBecknConfigs
           let maxInitTTL = intToNominalDiffTime $ case catMaybes initTTLs of
                 [] -> 0 -- 30 minutes in seconds if all are Nothing
                 ttlList -> maximum ttlList
@@ -531,7 +532,7 @@ addPaymentoffersTags totalPrice person = do
               -- Create new tags and add them after removing old ones
               newTags = map LYT.TagNameValueExpiry offerTags
               updatedTags = filteredCurrentTags <> newTags
-          QP.updateCustomerTags (Just updatedTags) person.id
+          CQPerson.updateCustomerTags (Just updatedTags) person.id
           logInfo $ "Added payment offer tags for person: " <> person.id.getId <> ", tags: " <> show offerTags
   where
     createPaymentOfferTags :: [Payment.OfferResp] -> [Text]

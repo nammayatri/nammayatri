@@ -34,4 +34,4 @@ ALTER TABLE atlas_app.finance_invoice ADD PRIMARY KEY ( id);
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.finance_invoice ALTER COLUMN line_items TYPE jsonb;
+ALTER TABLE atlas_app.finance_invoice ALTER COLUMN line_items TYPE jsonb USING line_items::jsonb;

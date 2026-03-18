@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Domain.Action.UI.Call
   ( CallRes (..),
@@ -75,8 +76,9 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingPartiesLink as QBPL
@@ -444,8 +446,8 @@ getCallTwillioAccessToken rideId entity deviceType = do
     getAccessToken id cityId merId = do
       twillioCallConfig :: TwillioCallCfg <- getCfg cityId merId
       createJWT id twillioCallConfig deviceType
-    getCfg cityId mercId = do
-      merchantServConfig <- QMSC.findByMerchantOpCityIdAndService mercId cityId (DMSC.CallService Call.TwillioCall) >>= fromMaybeM (MerchantServiceConfigNotFound cityId.getId "Call" "TwillioCall")
+    getCfg cityId _mercId = do
+      merchantServConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = cityId.getId, serviceName = Just (DMSC.CallService Call.TwillioCall)}) >>= fromMaybeM (MerchantServiceConfigNotFound cityId.getId "Call" "TwillioCall")
       case merchantServConfig.serviceConfig of
         DMSC.CallServiceConfig config ->
           case config of

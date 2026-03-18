@@ -13,6 +13,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 type API =
   "fetchFareCache"
@@ -27,4 +28,4 @@ rentalsIntercityCache ::
   (Id Person.Person, Id Merchant.Merchant) ->
   RIC.FareCacheReq ->
   FlowHandler RIC.FareCacheResp
-rentalsIntercityCache (personId, merchantId) req = withFlowHandlerAPI $ RIC.rentalsIntercityCache personId merchantId req
+rentalsIntercityCache (personId, merchantId) req = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ RIC.rentalsIntercityCache personId merchantId req

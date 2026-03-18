@@ -17,6 +17,7 @@ module Storage.CachedQueries.MerchantConfig
   ( findAllByMerchantOperatingCityId,
     findAllByMerchantOperatingCityIdInRideFlow,
     clearCache,
+    updateByPrimaryKey,
   )
 where
 
@@ -40,3 +41,8 @@ findAllByMerchantOperatingCityId id mbConfigInExperimentVersions =
 
 clearCache :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id MerchantOperatingCity -> m ()
 clearCache id = DynamicLogic.clearConfigCache (cast id) (LYT.RIDER_CONFIG LYT.MerchantConfig) Nothing
+
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantConfig -> m ()
+updateByPrimaryKey cfg = do
+  Queries.updateByPrimaryKey cfg
+  clearCache cfg.merchantOperatingCityId

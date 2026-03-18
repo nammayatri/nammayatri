@@ -27,7 +27,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import "sessionizer-metrics" Lib.SessionizerMetrics.Types.Event as E
 import "rider-app" SharedLogic.Person as SP
-import "rider-app" Storage.CachedQueries.Merchant.RiderConfig as QRC
+import "rider-app" Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import "rider-app" Storage.ConfigPilot.Interface.Types (getConfig)
 import "rider-app" Storage.Queries.BookingCancellationReason as QBCR
 import "rider-app" Storage.Queries.PersonStats as QP
 import "rider-app" Tools.Error
@@ -69,7 +70,7 @@ updateCustomerStats event _ = do
                       case payload.rs of
                         DDR.COMPLETED -> do
                           let createdAt = payload.cAt
-                          riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+                          riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
                           let minuteDiffFromUTC = (riderConfig.timeDiffFromUtc.getSeconds) `div` 60
                           -- Esq.runNoTransaction $ do
                           let ifIsWeekend = SP.isWeekend createdAt minuteDiffFromUTC

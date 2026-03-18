@@ -20,6 +20,7 @@ module Storage.CachedQueries.RideRelatedNotificationConfig
     clearCache,
     findAllByMerchantOperatingCityIdInRideFlow,
     findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow,
+    updateByPrimaryKey,
   )
 where
 
@@ -58,3 +59,8 @@ makeMerchantOpCityIdAndTimeDiffEventKey id timeDiffEvent = "CachedQueries:RideRe
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> TimeDiffEvent -> m ()
 clearCache merchantOpCityId timeDiffEvent =
   DynamicLogic.clearConfigCacheWithPrefix (makeMerchantOpCityIdAndTimeDiffEventKey merchantOpCityId timeDiffEvent) (cast merchantOpCityId) (LYT.RIDER_CONFIG LYT.RideRelatedNotificationConfig) Nothing
+
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => RideRelatedNotificationConfig -> m ()
+updateByPrimaryKey cfg = do
+  Queries.updateByPrimaryKey cfg
+  clearCache cfg.merchantOperatingCityId cfg.timeDiffEvent

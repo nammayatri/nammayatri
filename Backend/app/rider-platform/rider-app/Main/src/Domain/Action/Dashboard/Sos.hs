@@ -7,6 +7,7 @@ import qualified API.Types.UI.Sos as UISos
 import qualified Dashboard.Common
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
+import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -43,8 +44,10 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LTSTypes
 import qualified SharedLogic.Ride as SRide
 import qualified SharedLogic.SosLocationTracking as SOSLocation
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Getter (getConfig)
+import Storage.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import Tools.Auth
@@ -64,7 +67,7 @@ getSosDetails merchantShortId opCity sosId = do
   checkSlidingWindowLimitWithOptions (sosDashboardHitsCountKey sosId) sosTrackingRateLimitOptions
   let sosId' = Kernel.Types.Id.cast @Dashboard.Common.Sos @SafetyDSos.Sos sosId
   mbMerchantOpCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
-  mbRideConfig <- maybe (pure Nothing) (\moc -> QRC.findByMerchantOperatingCityId moc.id Nothing) mbMerchantOpCity
+  mbRideConfig <- maybe (pure Nothing) (\moc -> getConfig (RiderDimensions {merchantOperatingCityId = moc.id.getId})) mbMerchantOpCity
   let externalSOSConfig = mbRideConfig >>= \rc -> rc.externalSOSConfig
   let triggerSource = convertTriggerSource <$> (externalSOSConfig <&> (.triggerSource))
   sos <- B.runInReplica $ SafetyQSos.findById sosId' >>= fromMaybeM (InvalidRequest $ "SOS not found: " <> sosId'.getId)
@@ -157,7 +160,7 @@ callExternalSOS sosId mbComments = do
   merchantOpCityId <- Kernel.Types.Id.cast @SafetyDCommon.MerchantOperatingCity @DMOC.MerchantOperatingCity <$> sos.merchantOperatingCityId & fromMaybeM (InvalidRequest "SOS record missing merchantOperatingCityId")
   merchantId <- Kernel.Types.Id.cast @SafetyDCommon.Merchant @Domain.Types.Merchant.Merchant <$> sos.merchantId & fromMaybeM (InvalidRequest "SOS record missing merchantId")
   person <- QP.findById (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId) >>= fromMaybeM (PersonDoesNotExist sos.personId.getId)
-  riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
+  riderConfig <- getConfig (RiderDimensions merchantOpCityId.getId) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   case riderConfig.externalSOSConfig of
     Nothing -> throwError $ InvalidRequest "External SOS config not configured for this city"
     Just sosConfig -> do
@@ -165,7 +168,7 @@ callExternalSOS sosId mbComments = do
         throwError $ InvalidRequest "External SOS trigger source is not DASHBOARD for this city"
       let sosServiceType = flowToSOSService sosConfig.flow
       merchantSvcCfg <-
-        QMSC.findByMerchantOpCityIdAndService merchantId merchantOpCityId (DMSC.SOSService sosServiceType)
+        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, serviceName = Just (DMSC.SOSService sosServiceType)})
           >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "SOS" (show sosServiceType))
       case merchantSvcCfg.serviceConfig of
         DMSC.SOSServiceConfig specificConfig -> do

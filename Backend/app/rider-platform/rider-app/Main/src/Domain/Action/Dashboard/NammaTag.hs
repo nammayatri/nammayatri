@@ -1,9 +1,11 @@
+{-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Action.Dashboard.NammaTag
   ( postNammaTagTagCreate,
     postNammaTagTagUpdate,
     deleteNammaTagTagDelete,
+    getNammaTagTagAll,
     postNammaTagQueryCreate,
     postNammaTagQueryUpdate,
     deleteNammaTagQueryDelete,
@@ -28,12 +30,16 @@ module Domain.Action.Dashboard.NammaTag
     getNammaTagConfigPilotAllConfigs,
     getNammaTagConfigPilotConfigDetails,
     getNammaTagConfigPilotGetTableData,
+    getNammaTagConfigPilotAlwaysOnList,
     addCustomerTag,
     removeCustomerTag,
     postNammaTagConfigPilotActionChange,
     getNammaTagConfigPilotAllUiConfigs,
     getNammaTagConfigPilotUiConfigDetails,
     getNammaTagConfigPilotGetUiTableData,
+    postNammaTagConfigPilotGetConfigWithDimensions,
+    getNammaTagConfigPilotGetDimensionSchema,
+    postNammaTagConfigPilotCreateRow,
   )
 where
 
@@ -41,13 +47,19 @@ import qualified ConfigPilotFrontend.Flow as CPF
 import qualified ConfigPilotFrontend.Types as CPT
 import qualified Dashboard.Common as Common
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Types as AT
 import Data.Default.Class
+import Data.OpenApi (ToSchema)
 import Data.Singletons
 import qualified Data.Text as Text
+import qualified Domain.Types.BecknConfig as DTBC
+import qualified Domain.Types.Exophone as DTE
 import qualified Domain.Types.FRFSConfig as DFRFS
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantConfig as DTM
 import qualified Domain.Types.MerchantPushNotification as DTPN
+import qualified Domain.Types.MerchantServiceConfig as DTMSC
+import qualified Domain.Types.MerchantServiceUsageConfig as DTMSUC
 import qualified Domain.Types.PayoutConfig as DTP
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RideRelatedNotificationConfig as DTRN
@@ -71,10 +83,12 @@ import Lib.Yudhishthira.SchemaTH
 import Lib.Yudhishthira.SchemaUtils
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTag as QNammaTag
+import qualified Lib.Yudhishthira.Storage.Queries.NammaTagV2 as QNammaTagV2
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types as LYTU
 import qualified Lib.Yudhishthira.Types.Common as C
+import qualified Lib.Yudhishthira.Types.NammaTagV2
 import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.EstimateTags
 import SharedLogic.JobScheduler (RiderJobType (..))
@@ -85,9 +99,31 @@ import qualified SharedLogic.Scheduler.Jobs.Chakras as Chakras
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.CachedQueries.Person as CQPerson
 import qualified Storage.CachedQueries.UiRiderConfig as UIRC
+import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
+import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
+import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantConfig (MerchantConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantPushNotification (MerchantPushNotificationDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..))
+import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Getter (invalidateConfigInMem)
+import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.Queries.BecknConfig as SQBecknConfig
+import qualified Storage.Queries.Exophone as SQExophone
+import qualified Storage.Queries.FRFSConfig as SQFRFSConfig
+import qualified Storage.Queries.MerchantConfig as SQMerchantConfig
+import qualified Storage.Queries.MerchantPushNotification as SQMerchantPN
+import qualified Storage.Queries.MerchantServiceConfig as SQMerchantSC
+import qualified Storage.Queries.MerchantServiceUsageConfig as SQMerchantSUC
+import qualified Storage.Queries.PayoutConfig as SQPayoutConfig
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.RideRelatedNotificationConfig as SQRRNC
+import qualified Storage.Queries.RiderConfig as SQRiderConfig
 import qualified Storage.Queries.UiRiderConfig as SQU
 import Storage.Queries.UiRiderConfigExtra ()
 import qualified Tools.ConfigPilot as TC
@@ -101,6 +137,8 @@ $(YTH.generateGenericDefault ''DTRN.RideRelatedNotificationConfig)
 $(YTH.generateGenericDefault ''DTM.MerchantConfig)
 $(YTH.generateGenericDefault ''DTPN.MerchantPushNotification)
 $(YTH.generateGenericDefault ''DFRFS.FRFSConfig)
+$(YTH.generateGenericDefault ''DTBC.BecknConfig)
+$(YTH.generateGenericDefault ''DTE.Exophone)
 
 $(genToSchema ''DTR.RiderConfig)
 $(genToSchema ''CumulativeOfferReq)
@@ -109,7 +147,11 @@ $(genToSchema ''DTRN.RideRelatedNotificationConfig)
 $(genToSchema ''DTM.MerchantConfig)
 $(genToSchema ''DTPN.MerchantPushNotification)
 $(genToSchema ''DFRFS.FRFSConfig)
+$(genToSchema ''DTBC.BecknConfig)
+$(genToSchema ''DTE.Exophone)
 $(genToSchema ''PickupETA.PickupETAInput)
+$(genToSchema ''MerchantServiceConfigDimensions)
+$(genToSchema ''ExophoneDimensions)
 $(genToSchema ''EstimateTagsData)
 
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.CreateNammaTagRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
@@ -126,6 +168,11 @@ deleteNammaTagTagDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Mercha
 deleteNammaTagTagDelete merchantShortId opCity tagName = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   YudhishthiraFlow.deleteTag (cast merchantOperatingCity.id) tagName
+
+getNammaTagTagAll :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.Flow [Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2]
+getNammaTagTagAll merchantShortId opCity = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  QNammaTagV2.findAllByMerchantOperatingCityId (cast merchantOperatingCity.id)
 
 postNammaTagQueryCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ChakraQueriesAPIEntity -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postNammaTagQueryCreate _merchantShortId _opCity req = YudhishthiraFlow.postQueryCreate req
@@ -177,7 +224,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   let mbMerchantid = Just $ cast merchant.id
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let merchantOpCityId = merchantOperatingCity.id
-  _riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
+  _riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   case req.domain of
     LYTU.UI_RIDER dt pt -> do
       let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchant.id, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
@@ -226,10 +273,22 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DFRFS.FRFSConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy (LYTU.Config DFRFS.FRFSConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
+    LYTU.RIDER_CONFIG LYTU.BecknConfig -> do
+      def' <- fromMaybeM (InvalidRequest "BecknConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTBC.BecknConfig))
+      let configWrap = LYTU.Config def' Nothing 1
+      logicData :: (LYTU.Config DTBC.BecknConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy (LYTU.Config DTBC.BecknConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
+    LYTU.RIDER_CONFIG LYTU.Exophone -> do
+      def' <- fromMaybeM (InvalidRequest "Exophone not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTE.Exophone))
+      let configWrap = LYTU.Config def' Nothing 1
+      logicData :: (LYTU.Config DTE.Exophone) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy (LYTU.Config DTE.Exophone)) _riderConfig.dynamicLogicUpdatePassword req logicData
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
 
 getNammaTagAppDynamicLogic :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Int -> LYTU.LogicDomain -> Environment.Flow [LYTU.GetLogicsResp]
-getNammaTagAppDynamicLogic _ _ = YudhishthiraFlow.getAppDynamicLogicForDomain
+getNammaTagAppDynamicLogic merchantShortId opCity mbVersion domain = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  YudhishthiraFlow.getAppDynamicLogicForDomain (cast merchantOperatingCity.id) mbVersion domain
 
 postNammaTagRunJob ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -291,11 +350,11 @@ deleteNammaTagTimeBoundsDelete merchantShortId opCity domain name = do
   let merchantOpCityId = merchantOperatingCity.id
   YudhishthiraFlow.deleteTimeBounds (cast merchantOpCityId) domain name
 
-getNammaTagAppDynamicLogicGetLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Text -> LYTU.LogicDomain -> Environment.Flow [LYTU.LogicRolloutObject]
-getNammaTagAppDynamicLogicGetLogicRollout merchantShortId opCity timeBound domain = do
+getNammaTagAppDynamicLogicGetLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Bool -> Maybe Text -> LYTU.LogicDomain -> Environment.Flow [LYTU.LogicRolloutObject]
+getNammaTagAppDynamicLogicGetLogicRollout merchantShortId opCity activeOnly timeBound domain = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let merchantOpCityId = merchantOperatingCity.id
-  YudhishthiraFlow.getLogicRollout (cast merchantOpCityId) timeBound domain
+  YudhishthiraFlow.getLogicRollout (cast merchantOpCityId) timeBound activeOnly domain
 
 postNammaTagAppDynamicLogicUpsertLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> [LYTU.LogicRolloutObject] -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq = do
@@ -303,7 +362,9 @@ postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq 
   YudhishthiraFlow.upsertLogicRollout (Just $ cast merchantOperatingCity.merchantId) (cast merchantOperatingCity.id) rolloutReq TC.returnConfigs opCity
 
 getNammaTagAppDynamicLogicVersions :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Maybe Prelude.Int -> Prelude.Maybe Prelude.Int -> LYTU.LogicDomain -> Environment.Flow LYTU.AppDynamicLogicVersionResp
-getNammaTagAppDynamicLogicVersions _merchantShortId _opCity = YudhishthiraFlow.getAppDynamicLogicVersions
+getNammaTagAppDynamicLogicVersions merchantShortId opCity mbLimit mbOffset domain = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  YudhishthiraFlow.getAppDynamicLogicVersions (cast merchantOperatingCity.id) mbLimit mbOffset domain
 
 getNammaTagAppDynamicLogicDomains :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.Flow LYTU.AppDynamicLogicDomainResp
 getNammaTagAppDynamicLogicDomains _merchantShortId _opCity = return LYTU.allValues
@@ -394,6 +455,20 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
           { LYTU.defaultValue = A.toJSON (LYTU.Config def' Nothing 1),
             LYTU.schema = toInlinedSchemaValue (Proxy @(LYTU.Config DFRFS.FRFSConfig))
           }
+    LYTU.RIDER_CONFIG LYTU.BecknConfig -> do
+      def' <- fromMaybeM (InvalidRequest "BecknConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTBC.BecknConfig))
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON (LYTU.Config def' Nothing 1),
+            LYTU.schema = toInlinedSchemaValue (Proxy @(LYTU.Config DTBC.BecknConfig))
+          }
+    LYTU.RIDER_CONFIG LYTU.Exophone -> do
+      def' <- fromMaybeM (InvalidRequest "Exophone not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTE.Exophone))
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON (LYTU.Config def' Nothing 1),
+            LYTU.schema = toInlinedSchemaValue (Proxy @(LYTU.Config DTE.Exophone))
+          }
     _ -> throwError $ InvalidRequest "Domain schema not available"
 
 postNammaTagUpdateCustomerTag :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Common.User -> LYTU.UpdateTagReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
@@ -415,7 +490,7 @@ postNammaTagUpdateCustomerTag merchantShortId opCity userId req = do
             LYTU.replaceTagNameValue person.customerNammaTags reqCustomerTagWithExpiry
           else LYTU.removeTagNameValue person.customerNammaTags req.tag
   unless (Just (LYTU.showRawTags tag) == (LYTU.showRawTags <$> person.customerNammaTags)) $
-    QPerson.updateCustomerTags (Just tag) personId
+    CQPerson.updateCustomerTags (Just tag) personId
   pure Success
 
 postNammaTagConfigPilotGetVersion :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.UiConfigRequest -> Environment.Flow LYTU.UiConfigGetVersionResponse
@@ -484,6 +559,11 @@ getNammaTagConfigPilotConfigDetails _merchantShortId _opCity configType = do
   let merchantOpCityId = merchantOperatingCity.id
   YudhishthiraFlow.getNammaTagConfigPilotConfigDetails (cast merchantOpCityId) (LYTU.RIDER_CONFIG configType)
 
+getNammaTagConfigPilotAlwaysOnList :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.LogicDomain -> Environment.Flow LYTU.AlwaysOnListResp
+getNammaTagConfigPilotAlwaysOnList merchantShortId opCity domain = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  YudhishthiraFlow.getNammaTagConfigPilotAlwaysOnList (cast merchantOperatingCity.id) domain
+
 getNammaTagConfigPilotGetTableData :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ConfigType -> Environment.Flow LYTU.TableDataResp
 getNammaTagConfigPilotGetTableData _merchantShortId _opCity configType = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity _merchantShortId _opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show _opCity)
@@ -525,3 +605,136 @@ addCustomerTag (Just tags) tag = tags ++ [tag]
 removeCustomerTag :: Maybe [Text] -> Text -> [Text]
 removeCustomerTag Nothing _ = []
 removeCustomerTag (Just tags) tag = filter (/= tag) tags
+
+postNammaTagConfigPilotGetConfigWithDimensions :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ConfigPilotGetConfigRequest -> Environment.Flow LYTU.TableDataResp
+postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity req = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let mocId = merchantOperatingCity.id.getId
+      dims = parseDims req.dimensions
+  case req.configType of
+    LYTU.RiderConfig -> do
+      cfg <- getConfig (RiderDimensions {merchantOperatingCityId = mocId})
+      pure LYTU.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
+    LYTU.MerchantServiceUsageConfig -> do
+      cfg <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId})
+      pure LYTU.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
+    LYTU.MerchantServiceConfig -> do
+      cfgs <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mocId, serviceName = dimLookup "serviceName" dims})
+      pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
+    LYTU.BecknConfig -> do
+      cfgs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = mocId, domain = dimLookup "domain" dims, vehicleCategory = dimLookup "vehicleCategory" dims})
+      pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
+    LYTU.MerchantPushNotification -> do
+      cfgs <- getConfig (MerchantPushNotificationDimensions {merchantOperatingCityId = mocId})
+      pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
+    LYTU.Exophone -> do
+      cfgs <- getConfig (ExophoneDimensions {merchantOperatingCityId = mocId, callService = dimLookup "callService" dims})
+      pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
+    LYTU.FRFSConfig -> do
+      cfg <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = mocId})
+      pure LYTU.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
+    LYTU.MerchantConfig -> do
+      cfgs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = mocId})
+      pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
+    LYTU.RideRelatedNotificationConfig -> do
+      cfgs <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = mocId, timeDiffEvent = Nothing})
+      pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
+    _ -> throwError $ InvalidRequest $ "Config type " <> show req.configType <> " is not supported for getConfigWithDimensions"
+  where
+    parseDims :: A.Value -> Maybe A.Object
+    parseDims (A.Object o) = Just o
+    parseDims _ = Nothing
+
+    dimLookup :: A.FromJSON a => A.Key -> Maybe A.Object -> Maybe a
+    dimLookup key obj = obj >>= AT.parseMaybe (A..: key)
+
+getNammaTagConfigPilotGetDimensionSchema :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ConfigType -> Environment.Flow LYTU.DomainSchemaResp
+getNammaTagConfigPilotGetDimensionSchema _merchantShortId _opCity configType = do
+  case configType of
+    LYTU.RiderConfig ->
+      pure $ mkDimSchema (Proxy @RiderDimensions)
+    LYTU.PayoutConfig ->
+      pure $ mkDimSchema (Proxy @PayoutDimensions)
+    LYTU.MerchantPushNotification ->
+      pure $ mkDimSchema (Proxy @MerchantPushNotificationDimensions)
+    LYTU.BecknConfig ->
+      pure $ mkDimSchema (Proxy @BecknConfigDimensions)
+    LYTU.Exophone ->
+      pure $ mkDimSchema (Proxy @ExophoneDimensions)
+    LYTU.MerchantServiceConfig ->
+      pure $ mkDimSchema (Proxy @MerchantServiceConfigDimensions)
+    LYTU.MerchantServiceUsageConfig ->
+      pure $ mkDimSchema (Proxy @MerchantServiceUsageConfigDimensions)
+    LYTU.FRFSConfig ->
+      pure $ mkDimSchema (Proxy @FRFSConfigDimensions)
+    LYTU.MerchantConfig ->
+      pure $ mkDimSchema (Proxy @MerchantConfigDimensions)
+    LYTU.RideRelatedNotificationConfig ->
+      pure $ mkDimSchema (Proxy @RideRelatedNotificationConfigDimensions)
+    _ -> throwError $ InvalidRequest $ "Dimension schema not available for " <> show configType
+  where
+    mkDimSchema :: forall a. (A.ToJSON a, ToSchema a) => Proxy a -> LYTU.DomainSchemaResp
+    mkDimSchema p =
+      LYTU.DomainSchemaResp
+        { LYTU.defaultValue = A.Null,
+          LYTU.schema = toInlinedSchemaValue p
+        }
+
+postNammaTagConfigPilotCreateRow :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ConfigPilotCreateRowRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagConfigPilotCreateRow merchantShortId opCity req = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let mocId = merchantOperatingCity.id
+  case req.configType of
+    LYTU.RiderConfig -> do
+      cfg :: DTR.RiderConfig <- parseConfigData req.configData
+      existing <- SQRiderConfig.findByMerchantOperatingCityId mocId
+      when (isJust existing) $ throwError $ InvalidRequest "RiderConfig already exists for this merchantOperatingCityId"
+      SQRiderConfig.create cfg
+      invalidateConfigInMem LYTU.RiderConfig
+    LYTU.FRFSConfig -> do
+      cfg :: DFRFS.FRFSConfig <- parseConfigData req.configData
+      existing <- SQFRFSConfig.findByMerchantOperatingCityId mocId
+      when (isJust existing) $ throwError $ InvalidRequest "FRFSConfig already exists for this merchantOperatingCityId"
+      SQFRFSConfig.create cfg
+      invalidateConfigInMem LYTU.FRFSConfig
+    LYTU.MerchantServiceUsageConfig -> do
+      cfg :: DTMSUC.MerchantServiceUsageConfig <- parseConfigData req.configData
+      existing <- SQMerchantSUC.findByMerchantOperatingCityId mocId
+      when (isJust existing) $ throwError $ InvalidRequest "MerchantServiceUsageConfig already exists for this merchantOperatingCityId"
+      SQMerchantSUC.create cfg
+      invalidateConfigInMem LYTU.MerchantServiceUsageConfig
+    LYTU.PayoutConfig -> do
+      cfg :: DTP.PayoutConfig <- parseConfigData req.configData
+      SQPayoutConfig.create cfg
+      invalidateConfigInMem LYTU.PayoutConfig
+    LYTU.MerchantConfig -> do
+      cfg :: DTM.MerchantConfig <- parseConfigData req.configData
+      SQMerchantConfig.create cfg
+      invalidateConfigInMem LYTU.MerchantConfig
+    LYTU.RideRelatedNotificationConfig -> do
+      cfg :: DTRN.RideRelatedNotificationConfig <- parseConfigData req.configData
+      SQRRNC.create cfg
+      invalidateConfigInMem LYTU.RideRelatedNotificationConfig
+    LYTU.MerchantPushNotification -> do
+      cfg :: DTPN.MerchantPushNotification <- parseConfigData req.configData
+      SQMerchantPN.create cfg
+      invalidateConfigInMem LYTU.MerchantPushNotification
+    LYTU.BecknConfig -> do
+      cfg :: DTBC.BecknConfig <- parseConfigData req.configData
+      SQBecknConfig.create cfg
+      invalidateConfigInMem LYTU.BecknConfig
+    LYTU.Exophone -> do
+      cfg :: DTE.Exophone <- parseConfigData req.configData
+      SQExophone.create cfg
+      invalidateConfigInMem LYTU.Exophone
+    LYTU.MerchantServiceConfig -> do
+      cfg :: DTMSC.MerchantServiceConfig <- parseConfigData req.configData
+      SQMerchantSC.create cfg
+      invalidateConfigInMem LYTU.MerchantServiceConfig
+    _ -> throwError $ InvalidRequest $ "Config type " <> show req.configType <> " is not supported for createRow"
+  pure Kernel.Types.APISuccess.Success
+  where
+    parseConfigData :: forall a m. (A.FromJSON a, MonadFlow m) => A.Value -> m a
+    parseConfigData val = case A.fromJSON val of
+      A.Success cfg -> pure cfg
+      A.Error err -> throwError $ InvalidRequest $ "Invalid config data: " <> show err

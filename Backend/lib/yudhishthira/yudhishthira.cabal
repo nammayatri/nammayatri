@@ -37,9 +37,11 @@ library
       Lib.Yudhishthira.SchemaTH
       Lib.Yudhishthira.SchemaUtils
       Lib.Yudhishthira.Storage.Beam.BeamFlow
+      Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicAlwaysOn
       Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement
       Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout
       Lib.Yudhishthira.Storage.CachedQueries.TimeBoundConfig
+      Lib.Yudhishthira.Storage.Queries.AppDynamicLogicAlwaysOnExtra
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElementExtra
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRolloutExtra
       Lib.Yudhishthira.Storage.Queries.NammaTagExtra
@@ -60,6 +62,7 @@ library
       Lib.Yudhishthira.Types.Tag
       Lib.Yudhishthira.TypesTH
       Tools.Beam.UtilsTH
+      Lib.Yudhishthira.Storage.Beam.AppDynamicLogicAlwaysOn
       Lib.Yudhishthira.Storage.Beam.AppDynamicLogicElement
       Lib.Yudhishthira.Storage.Beam.AppDynamicLogicRollout
       Lib.Yudhishthira.Storage.Beam.ChakraQueries
@@ -70,6 +73,7 @@ library
       Lib.Yudhishthira.Storage.Beam.TagActionNotificationConfig
       Lib.Yudhishthira.Storage.Beam.TimeBoundConfig
       Lib.Yudhishthira.Storage.Beam.UserData
+      Lib.Yudhishthira.Storage.Queries.AppDynamicLogicAlwaysOn
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElement
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRollout
       Lib.Yudhishthira.Storage.Queries.ChakraQueries
@@ -77,6 +81,7 @@ library
       Lib.Yudhishthira.Storage.Queries.NammaTagTrigger
       Lib.Yudhishthira.Storage.Queries.NammaTagTriggerV2
       Lib.Yudhishthira.Storage.Queries.NammaTagV2
+      Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogicAlwaysOn
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogicElement
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogicRollout
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.NammaTag
@@ -86,6 +91,7 @@ library
       Lib.Yudhishthira.Storage.Queries.TagActionNotificationConfig
       Lib.Yudhishthira.Storage.Queries.TimeBoundConfig
       Lib.Yudhishthira.Storage.Queries.UserData
+      Lib.Yudhishthira.Types.AppDynamicLogicAlwaysOn
       Lib.Yudhishthira.Types.AppDynamicLogicElement
       Lib.Yudhishthira.Types.AppDynamicLogicRollout
       Lib.Yudhishthira.Types.ChakraQueries

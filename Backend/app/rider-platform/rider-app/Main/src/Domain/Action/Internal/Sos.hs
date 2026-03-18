@@ -1,5 +1,6 @@
 module Domain.Action.Internal.Sos where
 
+import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Data.Time.Clock.POSIX as POSIX
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -13,7 +14,8 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 
 -- | Request body for ERSS reauth — LTS sends this to get a fresh token.
 data ErssReauthReq = ErssReauthReq
@@ -34,9 +36,9 @@ data ErssReauthResp = ErssReauthResp
 postSosErssReauth :: ErssReauthReq -> Flow ErssReauthResp
 postSosErssReauth req = do
   let mocId = Id req.merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
-  merchantOpCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound req.merchantOperatingCityId)
-  mbMerchantSvcCfg <-
-    QMSC.findByMerchantOpCityIdAndService merchantOpCity.merchantId mocId (DMSC.SOSService SOS.ERSS)
+  _ <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound req.merchantOperatingCityId)
+  let mscDims = MerchantServiceConfigDimensions {merchantOperatingCityId = mocId.getId, serviceName = Just (DMSC.SOSService SOS.ERSS)}
+  mbMerchantSvcCfg <- listToMaybe <$> getConfig mscDims
   case mbMerchantSvcCfg of
     Nothing ->
       throwError $ InvalidRequest "ERSS service config not found for merchantOperatingCityId"
