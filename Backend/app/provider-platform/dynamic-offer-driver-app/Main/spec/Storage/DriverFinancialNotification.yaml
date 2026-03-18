@@ -1,0 +1,65 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+
+DriverFinancialNotification:
+  tableName: driver_financial_notification
+
+  derives: "Generic,Show,ToJSON,FromJSON"
+
+  types:
+    DriverNotificationCategory:
+      enum: "PAYOUT_STATUS,SUBSCRIPTION_EXPIRY,LOW_BALANCE,PENALTY_APPLIED,TOLL_CREDITED,EARNINGS_UPDATE"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id DriverFinancialNotification
+    driverId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    category: DriverNotificationCategory
+    title: Text
+    message: Text
+    isRead: Bool
+    deepLink: Maybe Text
+    createdAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+
+  sqlType:
+    title: character varying (255)
+    category: character varying (36)
+    deepLink: character varying (500)
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+
+    findAllByDriverIdAndIsRead:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverId, isRead]
+
+    updateIsReadById:
+      kvFunction: updateOneWithKV
+      params: [isRead]
+      where: id
+
+    updateIsReadByDriverId:
+      kvFunction: updateWithKV
+      params: [isRead]
+      where: driverId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedDefaultQueries:
+    - updateByPrimaryKey

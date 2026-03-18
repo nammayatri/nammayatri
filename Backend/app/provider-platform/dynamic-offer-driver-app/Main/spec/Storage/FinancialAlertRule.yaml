@@ -1,0 +1,83 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+FinancialAlertRule:
+  tableName: financial_alert_rule
+
+  derives: "Generic,Show,ToJSON,FromJSON"
+
+  types:
+    AlertType:
+      enum: "THRESHOLD,EVENT,ANOMALY"
+      derive: "HttpInstance"
+
+    AlertCategory:
+      enum: "PAYOUT,SETTLEMENT,RECONCILIATION,SUBSCRIPTION,WALLET"
+      derive: "HttpInstance"
+
+    AlertSeverity:
+      enum: "INFO,WARNING,CRITICAL"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id FinancialAlertRule
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    name: Text
+    alertType: AlertType
+    category: AlertCategory
+    conditionJson: Text
+    severity: AlertSeverity
+    channels: Text
+    cooldownMinutes: Int
+    escalationMinutes: Maybe Int
+    isActive: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    merchantId: SecondaryKey
+
+  sqlType:
+    name: character varying (255)
+    alertType: character varying (36)
+    category: character varying (36)
+    severity: character varying (36)
+    channels: character varying (500)
+    conditionJson: text
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllByMerchantId:
+      kvFunction: findAllWithKV
+      where: merchantId
+
+    findAllActiveByMerchantId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, isActive]
+
+    findByMerchantIdAndCategory:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, category]
+
+    updateIsActiveById:
+      kvFunction: updateOneWithKV
+      params: [isActive, updatedAt]
+      where: id
+
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedDefaultQueries:
+    - updateByPrimaryKey

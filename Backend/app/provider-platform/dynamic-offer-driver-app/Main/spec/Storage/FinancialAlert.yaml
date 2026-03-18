@@ -1,0 +1,88 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  FinancialAlertRule: Domain.Types.FinancialAlertRule
+
+FinancialAlert:
+  tableName: financial_alert
+
+  derives: "Generic,Show,ToJSON,FromJSON"
+
+  types:
+    AlertSeverity:
+      enum: "INFO,WARNING,CRITICAL"
+      derive: "HttpInstance"
+
+    AlertStatus:
+      enum: "OPEN,ACKNOWLEDGED,RESOLVED,ESCALATED"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id FinancialAlert
+    ruleId: Id FinancialAlertRule
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    severity: AlertSeverity
+    title: Text
+    message: Text
+    status: AlertStatus
+    linkedEntityType: Maybe Text
+    linkedEntityId: Maybe Text
+    acknowledgedBy: Maybe Text
+    acknowledgedAt: Maybe UTCTime
+    resolvedBy: Maybe Text
+    resolvedAt: Maybe UTCTime
+    createdAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    merchantId: SecondaryKey
+    ruleId: SecondaryKey
+
+  sqlType:
+    title: character varying (255)
+    severity: character varying (36)
+    status: character varying (36)
+    linkedEntityType: character varying (255)
+    linkedEntityId: character varying (255)
+    acknowledgedBy: character varying (255)
+    resolvedBy: character varying (255)
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllByMerchantId:
+      kvFunction: findAllWithKV
+      where: merchantId
+
+    findAllByMerchantIdAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, status]
+
+    findAllByRuleId:
+      kvFunction: findAllWithKV
+      where: ruleId
+
+    updateStatusById:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+
+    updateAcknowledgeById:
+      kvFunction: updateOneWithKV
+      params: [status, acknowledgedBy, acknowledgedAt]
+      where: id
+
+    updateResolveById:
+      kvFunction: updateOneWithKV
+      params: [status, resolvedBy, resolvedAt]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedDefaultQueries:
+    - updateByPrimaryKey
