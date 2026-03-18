@@ -57,21 +57,24 @@ evaluateRules callerApp mocId domain fetchRules snapshotJson = do
   (allLogics, _mbVersion) <- fetchRules domain
   if null allLogics
     then do
-      logInfo $ "No rules configured for domain " <> show domain <> ". Returning empty output."
+      logInfo $ "BehaviorEngine: No rules configured for domain " <> show domain <> ". Returning empty output."
       return defaultOrchestratedOutput
     else do
-      logDebug $ "Evaluating behavior rules for domain " <> show domain
+      logInfo $ "BehaviorEngine: Evaluating " <> show (length allLogics) <> " rules for domain " <> show domain
       result <-
         try @_ @SomeException $
           LYDL.runLogicsWithDebugLog callerApp mocId domain allLogics snapshotJson
       case result of
         Left err -> do
-          logError $ "Error evaluating behavior rules: " <> show err
+          logError $ "BehaviorEngine: Error evaluating rules for domain " <> show domain <> ": " <> show err
           return defaultOrchestratedOutput
         Right logicResp -> do
-          let output = extractOutput logicResp.result
-          logDebug $
-            "Rule evaluation complete. Consequences: " <> show (length output.consequences)
+          logInfo $ "BehaviorEngine: Raw rule output for domain " <> show domain <> ": " <> show logicResp.result
+          let (output, parseErrors) = extractOutput logicResp.result
+          unless (null parseErrors) $
+            logError $ "BehaviorEngine: Parse errors for domain " <> show domain <> ": " <> show parseErrors
+          logInfo $
+            "BehaviorEngine: Parsed output — Consequences: " <> show (length output.consequences)
               <> ", Communications: "
               <> show (length output.communications)
           return output
@@ -83,20 +86,19 @@ evaluateRules callerApp mocId domain fetchRules snapshotJson = do
 --   "consequences": [{ "consequenceType": "HARD_BLOCK", "params": {...}, "requiresResolution": false }],
 --   "communications": [{ "channel": "OVERLAY", "templateKey": "...", "params": {...}, "delaySeconds": 0 }]
 -- }
-extractOutput :: A.Value -> OrchestratedOutput
+extractOutput :: A.Value -> (OrchestratedOutput, [Text])
 extractOutput val =
   case val of
     A.Object obj ->
-      OrchestratedOutput
-        { consequences = parseArrayField "consequences" obj,
-          communications = parseArrayField "communications" obj
-        }
-    _ -> defaultOrchestratedOutput
+      let (consequences, cErrs) = parseArrayField "consequences" obj
+          (communications, cmErrs) = parseArrayField "communications" obj
+       in (OrchestratedOutput {consequences, communications}, cErrs <> cmErrs)
+    _ -> (defaultOrchestratedOutput, ["Rule output is not a JSON object: " <> show val])
   where
-    parseArrayField :: (FromJSON a) => Text -> KM.KeyMap A.Value -> [a]
+    parseArrayField :: (FromJSON a) => Text -> KM.KeyMap A.Value -> ([a], [Text])
     parseArrayField key obj =
       case KM.lookup (AK.fromText key) obj of
         Just v -> case A.fromJSON v of
-          A.Success items -> items
-          A.Error _ -> []
-        Nothing -> []
+          A.Success items -> (items, [])
+          A.Error err -> ([], ["Failed to parse '" <> key <> "': " <> show err <> ". Raw value: " <> show v])
+        Nothing -> ([], [])
