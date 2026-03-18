@@ -25,43 +25,50 @@ import Lib.RuleOrchestrator.Types
 
 -- | Merge step results into a single OrchestratedOutput
 --
--- Looks for "consequences" key in step results → parses into [ConsequenceDirective]
--- Looks for "communications" key in step results → parses into [CommunicationDirective]
+-- Looks for "consequences" key in step results -> parses into [ConsequenceDirective]
+-- Looks for "communications" key in step results -> parses into [CommunicationDirective]
 -- Falls back to empty lists if keys not found (graceful degradation)
+-- Parse errors are recorded in the corresponding StepResult.errors for observability.
 mergeResults :: [StepResult] -> OrchestratedOutput
 mergeResults results =
-  OrchestratedOutput
-    { consequences = concatMap extractConsequences results,
-      communications = concatMap extractCommunications results,
-      stepResults = results
-    }
+  let annotated = map annotateParseErrors results
+   in OrchestratedOutput
+        { consequences = concatMap (fst . extractConsequences) results,
+          communications = concatMap (fst . extractCommunications) results,
+          stepResults = annotated
+        }
 
--- | Extract consequence directives from a step's output
-extractConsequences :: StepResult -> [ConsequenceDirective]
+-- | Annotate a StepResult with any parse errors encountered during extraction
+annotateParseErrors :: StepResult -> StepResult
+annotateParseErrors result =
+  let (_, cErrs) = extractConsequences result
+      (_, mErrs) = extractCommunications result
+      newErrors = result.errors <> cErrs <> mErrs
+   in result {errors = newErrors}
+
+-- | Extract consequence directives from a step's output, returning parse errors
+extractConsequences :: StepResult -> ([ConsequenceDirective], [String])
 extractConsequences result =
   case result.output of
     A.Object obj ->
       case KM.lookup (AK.fromText "consequences") obj of
-        Just val -> parseOrEmpty val
-        Nothing -> []
-    _ -> []
-  where
-    parseOrEmpty val =
-      case A.fromJSON val of
-        A.Success directives -> directives
-        A.Error _ -> []
+        Just val -> parseOrReport "consequences" result.stepName val
+        Nothing -> ([], [])
+    _ -> ([], [])
 
--- | Extract communication directives from a step's output
-extractCommunications :: StepResult -> [CommunicationDirective]
+-- | Extract communication directives from a step's output, returning parse errors
+extractCommunications :: StepResult -> ([CommunicationDirective], [String])
 extractCommunications result =
   case result.output of
     A.Object obj ->
       case KM.lookup (AK.fromText "communications") obj of
-        Just val -> parseOrEmpty val
-        Nothing -> []
-    _ -> []
-  where
-    parseOrEmpty val =
-      case A.fromJSON val of
-        A.Success directives -> directives
-        A.Error _ -> []
+        Just val -> parseOrReport "communications" result.stepName val
+        Nothing -> ([], [])
+    _ -> ([], [])
+
+-- | Try to parse a JSON value; on failure return empty list and an error message
+parseOrReport :: (A.FromJSON a) => String -> Text -> A.Value -> ([a], [String])
+parseOrReport fieldName stepName val =
+  case A.fromJSON val of
+    A.Success directives -> (directives, [])
+    A.Error err -> ([], ["Failed to parse " <> fieldName <> " in step " <> show stepName <> ": " <> err])

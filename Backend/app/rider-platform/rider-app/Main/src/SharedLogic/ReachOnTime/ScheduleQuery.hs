@@ -1,12 +1,21 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 module SharedLogic.ReachOnTime.ScheduleQuery where
 
 import qualified Data.Time
 import Data.Time (UTCTime, addUTCTime)
+import qualified Domain.Types.SavedTrip as DST
 import Kernel.Prelude
+import SharedLogic.ReachOnTime.DepartureAdvisor (istOffsetSeconds)
 
--- | Time mode for journey planning
-data TimeMode = LeaveNow | ArriveBy | DepartAt
-  deriving (Eq, Show, Read, Generic, ToJSON, FromJSON)
+-- | Re-export TimeMode from the canonical definition
+type TimeMode = DST.TimeMode
+
+pattern LeaveNow, ArriveBy, DepartAt :: TimeMode
+pattern LeaveNow = DST.LeaveNow
+pattern ArriveBy = DST.ArriveBy
+pattern DepartAt = DST.DepartAt
+{-# COMPLETE LeaveNow, ArriveBy, DepartAt #-}
 
 -- | Request to GTFS schedule server for trips between stops
 data TripsBetweenRequest = TripsBetweenRequest
@@ -44,7 +53,7 @@ buildScheduleQuery ::
   TripsBetweenRequest
 buildScheduleQuery mode originStop destStop refTime =
   let -- Convert to IST for GTFS query
-      istOffset = 5 * 3600 + 30 * 60 :: Int
+      istOffset = istOffsetSeconds
       istTime = addUTCTime (fromIntegral istOffset) refTime
       timeStr = formatTimeHHMMSS istTime
       dateStr = formatDateYMD istTime

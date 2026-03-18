@@ -27,6 +27,19 @@ findAllActiveRecurring = do
         ]
     ]
 
+updateLastComputedDeparture ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+  Kernel.Types.Id.Id DST.SavedTrip ->
+  m ()
+updateLastComputedDeparture lastComputedDeparture id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.lastComputedDeparture lastComputedDeparture,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 findAllByRiderIdWithLimitOffset ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Types.Id.Id Domain.Types.Person.Person ->

@@ -13,7 +13,7 @@ CREATE TABLE atlas_app.saved_trip (
     destination_address TEXT,
     time_mode CHARACTER VARYING(20) NOT NULL DEFAULT 'LeaveNow',
     target_time TIMESTAMP WITH TIME ZONE,
-    target_time_of_day TIME,
+    target_time_of_day_seconds INT,
     buffer_minutes INT NOT NULL DEFAULT 10,
     recurrence CHARACTER VARYING(20) NOT NULL DEFAULT 'NoRecurrence',
     custom_days TEXT,

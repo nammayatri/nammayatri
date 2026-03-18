@@ -23,7 +23,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
 import qualified Domain.Types.SavedTrip as DST
-import SharedLogic.ReachOnTime.DepartureAdvisor
+import SharedLogic.ReachOnTime.DepartureAdvisor (computeArriveByAdvisory, computeDepartAtAdvisory, istOffsetSeconds)
 import qualified Storage.Queries.SavedTripExtra as QSavedTrip
 
 -- | Process all active recurring saved trips and send departure reminders
@@ -44,7 +44,11 @@ processDepartureReminders = do
         Nothing -> pure ()
         Just targetTime -> do
           let durationEstimate = 3600 -- default 1 hour estimate; in production, query route
-          let advisory = computeArriveByAdvisory targetTime durationEstimate trip.bufferMinutes now Nothing
+          let advisory = case trip.timeMode of
+                DST.DepartAt ->
+                  computeDepartAtAdvisory targetTime durationEstimate now
+                _ ->
+                  computeArriveByAdvisory targetTime durationEstimate trip.bufferMinutes now Nothing
           let notifyTime = addUTCTime (negate $ fromIntegral (trip.notifyBeforeMinutes * 60)) advisory.recommendedDeparture
           when (now >= notifyTime && not (alreadyNotifiedToday trip now)) $ do
             logInfo $ "Sending departure reminder for saved trip: " <> show trip.id
@@ -110,5 +114,6 @@ secondsToTimeOfDay secs =
    in TimeOfDay h m (fromIntegral s)
 
 -- | IST offset as NominalDiffTime (UTC+5:30 = 19800 seconds)
+-- Uses the shared istOffsetSeconds from DepartureAdvisor
 istOffsetNDT :: NominalDiffTime
-istOffsetNDT = fromIntegral (5 * 3600 + 30 * 60 :: Int)
+istOffsetNDT = fromIntegral istOffsetSeconds

@@ -2779,8 +2779,8 @@ postMultimodalSavedTrip (mbPersonId, merchantId) req = do
     throwError $ InvalidRequest "notifyBeforeMinutes must be between 0 and 120"
   newId <- generateGUID
   now <- getCurrentTime
-  let timeMode = parseSavedTripTimeMode req.timeMode
-  let recurrence = parseSavedTripRecurrence req.recurrence
+  timeMode <- parseSavedTripTimeMode req.timeMode
+  recurrence <- parseSavedTripRecurrence req.recurrence
   let mbTargetTimeOfDay = req.targetTimeOfDay >>= parseTimeOfDayText
   let savedTrip =
         DST.SavedTrip
@@ -2841,18 +2841,27 @@ putMultimodalSavedTrip (mbPersonId, _merchantId) savedTripId req = do
   unless (trip.riderId == personId) $
     throwError $ InvalidRequest "Not authorized to update this saved trip"
   now <- getCurrentTime
+  -- Validate input ranges (same as create)
+  let bufMins = fromMaybe trip.bufferMinutes req.bufferMinutes
+  when (bufMins < 0 || bufMins > 60) $
+    throwError $ InvalidRequest "bufferMinutes must be between 0 and 60"
+  let notifyMins = fromMaybe trip.notifyBeforeMinutes req.notifyBeforeMinutes
+  when (notifyMins < 0 || notifyMins > 120) $
+    throwError $ InvalidRequest "notifyBeforeMinutes must be between 0 and 120"
+  updTimeMode <- maybe (pure trip.timeMode) parseSavedTripTimeMode req.timeMode
+  updRecurrence <- maybe (pure trip.recurrence) parseSavedTripRecurrence req.recurrence
   let updatedTrip =
         trip
           { DST.name = fromMaybe trip.name req.name,
-            DST.timeMode = maybe trip.timeMode parseSavedTripTimeMode req.timeMode,
+            DST.timeMode = updTimeMode,
             DST.targetTime = req.targetTime <|> trip.targetTime,
             DST.targetTimeOfDay = case req.targetTimeOfDay of
               Just todText -> parseTimeOfDayText todText
               Nothing -> trip.targetTimeOfDay,
-            DST.bufferMinutes = fromMaybe trip.bufferMinutes req.bufferMinutes,
-            DST.recurrence = maybe trip.recurrence parseSavedTripRecurrence req.recurrence,
+            DST.bufferMinutes = bufMins,
+            DST.recurrence = updRecurrence,
             DST.customDays = req.customDays <|> trip.customDays,
-            DST.notifyBeforeMinutes = fromMaybe trip.notifyBeforeMinutes req.notifyBeforeMinutes,
+            DST.notifyBeforeMinutes = notifyMins,
             DST.isActive = fromMaybe trip.isActive req.isActive,
             DST.updatedAt = now
           }
@@ -2914,7 +2923,9 @@ postMultimodalSavedTripCompute (mbPersonId, _merchantId) savedTripId = do
         DST.LeaveNow ->
           Advisor.computeLeaveNowAdvisory durationEstimate now
   -- Update last computed departure
-  QSavedTrip.updateLastNotified (Just now) (Just advisory.recommendedDeparture) savedTripId
+  -- Only update lastComputedDeparture (not lastNotifiedAt) so that manual preview
+  -- does not suppress the scheduled departure reminder.
+  QSavedTrip.updateLastComputedDeparture (Just advisory.recommendedDeparture) savedTripId
   pure $ ApiTypes.SavedTripComputeResp {advisory = convertAdvisoryToResp advisory}
 
 -- =====================================================================
@@ -2964,17 +2975,19 @@ convertSavedTripToResp trip =
       createdAt = trip.createdAt
     }
 
-parseSavedTripTimeMode :: Text -> DST.TimeMode
-parseSavedTripTimeMode "ArriveBy" = DST.ArriveBy
-parseSavedTripTimeMode "DepartAt" = DST.DepartAt
-parseSavedTripTimeMode _ = DST.LeaveNow
+parseSavedTripTimeMode :: (MonadFlow m) => Text -> m DST.TimeMode
+parseSavedTripTimeMode "LeaveNow" = pure DST.LeaveNow
+parseSavedTripTimeMode "ArriveBy" = pure DST.ArriveBy
+parseSavedTripTimeMode "DepartAt" = pure DST.DepartAt
+parseSavedTripTimeMode other = throwError $ InvalidRequest $ "Unrecognized timeMode: " <> other
 
-parseSavedTripRecurrence :: Text -> DST.TripRecurrence
-parseSavedTripRecurrence "Daily" = DST.Daily
-parseSavedTripRecurrence "Weekdays" = DST.Weekdays
-parseSavedTripRecurrence "Weekends" = DST.Weekends
-parseSavedTripRecurrence "Custom" = DST.Custom
-parseSavedTripRecurrence _ = DST.NoRecurrence
+parseSavedTripRecurrence :: (MonadFlow m) => Text -> m DST.TripRecurrence
+parseSavedTripRecurrence "NoRecurrence" = pure DST.NoRecurrence
+parseSavedTripRecurrence "Daily" = pure DST.Daily
+parseSavedTripRecurrence "Weekdays" = pure DST.Weekdays
+parseSavedTripRecurrence "Weekends" = pure DST.Weekends
+parseSavedTripRecurrence "Custom" = pure DST.Custom
+parseSavedTripRecurrence other = throwError $ InvalidRequest $ "Unrecognized recurrence: " <> other
 
 parseTimeOfDayText :: Text -> Maybe TimeOfDay
 parseTimeOfDayText t = parseTimeM True defaultTimeLocale "%H:%M" (T.unpack t)
@@ -2985,8 +2998,9 @@ formatTimeOfDay (TimeOfDay h m _) =
    in pad h <> ":" <> pad m
 
 -- | IST offset as NominalDiffTime (UTC+5:30 = 19800 seconds)
+-- Uses the shared istOffsetSeconds from DepartureAdvisor
 istOffsetNDT :: NominalDiffTime
-istOffsetNDT = fromIntegral (5 * 3600 + 30 * 60 :: Int)
+istOffsetNDT = fromIntegral Advisor.istOffsetSeconds
 
 -- | Convert TimeOfDay to seconds since midnight
 timeOfDayToSecs :: TimeOfDay -> Int
