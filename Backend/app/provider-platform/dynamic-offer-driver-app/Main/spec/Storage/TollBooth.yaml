@@ -1,0 +1,65 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+TollBooth:
+  tableName: toll_booth
+
+  types:
+    TollType:
+      enum: "FIXED, DISTANCE_BASED, TIME_BASED"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+  fields:
+    id: Id TollBooth
+    name: Text
+    latitude: Double
+    longitude: Double
+    geofenceRadiusMeters: Int
+    tollType: TollType
+    highwayName: Maybe Text
+    merchantOperatingCityId: Id MerchantOperatingCity
+    isActive: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  derives: "Generic, Show, Eq"
+
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <TollType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TollType>
+
+  constraints:
+    id: PrimaryKey
+    merchantOperatingCityId: SecondaryKey
+
+  sqlType:
+    name: character varying(255)
+    highwayName: character varying(255)
+    tollType: character varying(50)
+    merchantOperatingCityId: character varying(36)
+
+  default:
+    isActive: "true"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+    findAllActiveByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, isActive]
+
+    updateIsActiveById:
+      kvFunction: updateOneWithKV
+      params: [isActive, updatedAt]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

@@ -1,0 +1,63 @@
+imports:
+  TollBooth: Domain.Types.TollBooth
+
+TollRate:
+  tableName: toll_rate
+
+  fields:
+    id: Id TollRate
+    tollBoothId: Id TollBooth
+    vehicleCategory: Text
+    amount: HighPrecMoney
+    currency: Currency
+    effectiveFrom: UTCTime
+    effectiveTo: Maybe UTCTime
+    isActive: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  derives: "Generic, Show, Eq"
+
+  beamFields:
+    currency:
+      currency: Maybe Currency
+
+  fromTType:
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+
+  toTType:
+    currency: Kernel.Prelude.Just|I
+
+  constraints:
+    id: PrimaryKey
+    tollBoothId: SecondaryKey
+
+  sqlType:
+    vehicleCategory: character varying(100)
+    amount: numeric(30,2)
+    tollBoothId: character varying(36)
+
+  default:
+    isActive: "true"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllByTollBoothId:
+      kvFunction: findAllWithKV
+      where: tollBoothId
+
+    findActiveByTollBoothIdAndVehicleCategory:
+      kvFunction: findOneWithKV
+      where:
+        and: [tollBoothId, vehicleCategory, isActive]
+
+    updateIsActiveById:
+      kvFunction: updateOneWithKV
+      params: [isActive, updatedAt]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

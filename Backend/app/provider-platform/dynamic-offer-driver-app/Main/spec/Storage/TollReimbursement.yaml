@@ -1,0 +1,113 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  TollBooth: Domain.Types.TollBooth
+
+TollReimbursement:
+  tableName: toll_reimbursement
+
+  types:
+    TollDetectionMethod:
+      enum: "GPS_GEOFENCE, FASTAG, MANUAL_CLAIM"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+    TollReimbursementStatus:
+      enum: "DETECTED, CREDITED, DISPUTED, REJECTED"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+  fields:
+    id: Id TollReimbursement
+    driverId: Id Person
+    rideId: Id Ride
+    tollBoothId: Maybe (Id TollBooth)
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    amount: HighPrecMoney
+    currency: Currency
+    detectionMethod: TollDetectionMethod
+    reimbursementStatus: TollReimbursementStatus
+    ledgerEntryId: Maybe Text
+    claimEvidence: Maybe Text
+    disputeReason: Maybe Text
+    reviewedBy: Maybe Text
+    reviewedAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  derives: "Generic, Show, Eq"
+
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <TollDetectionMethod>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <TollReimbursementStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TollDetectionMethod>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TollReimbursementStatus>
+
+  beamFields:
+    currency:
+      currency: Maybe Currency
+
+  fromTType:
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+
+  toTType:
+    currency: Kernel.Prelude.Just|I
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    rideId: SecondaryKey
+
+  sqlType:
+    amount: numeric(30,2)
+    detectionMethod: character varying(50)
+    reimbursementStatus: character varying(50)
+    merchantId: character varying(36)
+    merchantOperatingCityId: character varying(36)
+    driverId: character varying(36)
+    rideId: character varying(36)
+    tollBoothId: character varying(36)
+    ledgerEntryId: character varying(36)
+    claimEvidence: text
+    disputeReason: text
+    reviewedBy: character varying(255)
+
+  default:
+    reimbursementStatus: "'DETECTED'"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+
+    findAllByRideId:
+      kvFunction: findAllWithKV
+      where: rideId
+
+    findAllByMerchantIdAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, reimbursementStatus]
+
+    updateReimbursementStatusById:
+      kvFunction: updateOneWithKV
+      params: [reimbursementStatus, updatedAt]
+      where: id
+
+    updateReviewById:
+      kvFunction: updateOneWithKV
+      params: [reimbursementStatus, reviewedBy, reviewedAt, updatedAt]
+      where: id
+
+    updateLedgerEntryIdById:
+      kvFunction: updateOneWithKV
+      params: [ledgerEntryId, updatedAt]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
