@@ -1,0 +1,128 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+
+DriverFinancialStatement:
+  tableName: driver_financial_statement
+
+  types:
+    StatementPeriodType:
+      enum: "WEEKLY, MONTHLY, CUSTOM"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+    StatementStatus:
+      enum: "GENERATING, READY, FAILED"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+  fields:
+    id: Id DriverFinancialStatement
+    driverId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    referenceNumber: Text
+    periodType: StatementPeriodType
+    periodStart: UTCTime
+    periodEnd: UTCTime
+    grossEarnings: HighPrecMoney
+    platformFees: HighPrecMoney
+    subscriptionCharges: HighPrecMoney
+    incentives: HighPrecMoney
+    penalties: HighPrecMoney
+    tollReimbursements: HighPrecMoney
+    gstCollected: HighPrecMoney
+    tdsDeducted: HighPrecMoney
+    netEarnings: HighPrecMoney
+    totalPayouts: HighPrecMoney
+    openingBalance: HighPrecMoney
+    closingBalance: HighPrecMoney
+    currency: Currency
+    pdfUrl: Maybe Text
+    verificationHash: Text
+    status: StatementStatus
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  derives: "Generic, Show, Eq"
+
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <StatementPeriodType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <StatementStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <StatementPeriodType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <StatementStatus>
+
+  beamType:
+    currency: Maybe Currency
+
+  fromTType:
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+
+  toTType:
+    currency: Kernel.Prelude.Just|I
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    referenceNumber: SecondaryKey
+
+  sqlType:
+    grossEarnings: numeric(30,2)
+    platformFees: numeric(30,2)
+    subscriptionCharges: numeric(30,2)
+    incentives: numeric(30,2)
+    penalties: numeric(30,2)
+    tollReimbursements: numeric(30,2)
+    gstCollected: numeric(30,2)
+    tdsDeducted: numeric(30,2)
+    netEarnings: numeric(30,2)
+    totalPayouts: numeric(30,2)
+    openingBalance: numeric(30,2)
+    closingBalance: numeric(30,2)
+    status: character varying(255)
+    periodType: character varying(255)
+
+  default:
+    status: "'GENERATING'"
+    grossEarnings: "0.0"
+    platformFees: "0.0"
+    subscriptionCharges: "0.0"
+    incentives: "0.0"
+    penalties: "0.0"
+    tollReimbursements: "0.0"
+    gstCollected: "0.0"
+    tdsDeducted: "0.0"
+    netEarnings: "0.0"
+    totalPayouts: "0.0"
+    openingBalance: "0.0"
+    closingBalance: "0.0"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByReferenceNumber:
+      kvFunction: findOneWithKV
+      where: referenceNumber
+
+    findAllByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+
+    findByDriverIdAndPeriod:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, periodStart, periodEnd]
+
+    updateStatusById:
+      kvFunction: updateOneWithKV
+      params: [status, updatedAt]
+      where: id
+
+    updatePdfUrlAndStatusById:
+      kvFunction: updateOneWithKV
+      params: [pdfUrl, status, updatedAt]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

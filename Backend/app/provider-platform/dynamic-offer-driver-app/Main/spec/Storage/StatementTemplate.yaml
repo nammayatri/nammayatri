@@ -1,0 +1,42 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+StatementTemplate:
+  tableName: statement_template
+
+  derives: "Generic, Show, Eq"
+
+  fields:
+    id: Id StatementTemplate
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    logoUrl: Maybe Text
+    headerText: Maybe Text
+    footerText: Maybe Text
+    disclaimerText: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    merchantId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByMerchantId:
+      kvFunction: findOneWithKV
+      where: merchantId
+
+    findByMerchantIdAndCityId:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, merchantOperatingCityId]
+
+    updateById:
+      kvFunction: updateOneWithKV
+      params: [logoUrl, headerText, footerText, disclaimerText, updatedAt]
+      where: id
