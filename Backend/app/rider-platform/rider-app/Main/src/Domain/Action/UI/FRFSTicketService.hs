@@ -43,7 +43,7 @@ import Domain.Types.Station
 import Domain.Types.StationType
 import Domain.Utils (mapConcurrently)
 import qualified Environment
-import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, null, readMaybe, toList, whenJust)
+import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, minimumBy, null, readMaybe, toList, whenJust)
 import qualified ExternalBPP.CallAPI.Cancel as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Search as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Select as CallExternalBPP
@@ -111,6 +111,7 @@ import Tools.Error
 import Tools.Maps as Maps
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
 import qualified Tools.MultiModal as MM
+import qualified Tools.Notifications as Notifications
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
 import qualified UrlShortner.Common as UrlShortner
@@ -1426,6 +1427,25 @@ postFrfsFleetOperatorTripAction (mbPersonId, merchantId) req = do
       let epochNow = round (utcTimeToPOSIXSeconds now * 1000) :: Int64
       void $ NandiFlow.gimsTripAction baseUrl gtfsId GimsTripActionReq {action = GimsTripActionStart, trip_number = nextTrip, timestamp = epochNow, conductor_token = req.conductorToken, driver_token = req.driverToken, vehicle_number = req.vehicleNumber}
       Hedis.setExp redisKey nextTrip 172800 -- 2 days TTL for the trip number in Redis
+      fork "NotifyTripStart" $ do
+        let tripId = JMU.makeTripIdFromWaybillNoAndTripNo gimsOps.waybill_no nextTrip
+        -- Fetch all confirmed bookings for this trip
+        bookings <- QFRFSTicketBooking.findAllConfirmedByTripId tripId
+        unless (null bookings) $ do
+          -- Fetch person details for each booking
+          let riderIds = map (.riderId) bookings
+          persons <- QP.findAllByIds riderIds
+          let personMap = Map.fromList $ map (\p -> (p.id, p)) persons
+          -- Process all passengers sequentially in this single thread
+          forM_ bookings $ \booking ->
+            case Map.lookup booking.riderId personMap of
+              Nothing -> pure ()
+              Just person -> do
+                -- Send trip start notification sequentially
+                let routeId = fromMaybe "" booking.routeCode
+                let vehicleNo = fromMaybe "" req.vehicleNumber
+                logInfo $ "Notifying passenger " <> person.id.getId <> " that bus trip has started on route " <> routeId
+                Notifications.notifyBusTripStarted person vehicleNo routeId tripId
       pure
         FRFSTicketService.FleetOperatorTripActionResp
           { currentTripNumber = nextTrip,
