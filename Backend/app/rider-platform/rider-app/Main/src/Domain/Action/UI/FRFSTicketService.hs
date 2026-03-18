@@ -1365,6 +1365,9 @@ getFrfsTripRouteManifest (mbPersonId, _merchantId) tripId routeId = do
       & fromMaybeM (InvalidRequest "Bus schedule not found")
   let stops = scheduleDetail.eta
   bookings <- QFRFSTicketBooking.findAllByTripId tripId
+  let bookingIds = map (.id) bookings
+  allTickets <- QFRFSTicket.findAllByTicketBookingIds bookingIds
+  let ticketMap = Map.fromListWith (++) $ map (\t -> (t.frfsTicketBookingId, [t])) allTickets
   let riderIds = map (.riderId) bookings
   persons <- QP.findAllByIds riderIds
   let personMap = Map.fromList $ map (\p -> (p.id, p)) persons
@@ -1373,7 +1376,7 @@ getFrfsTripRouteManifest (mbPersonId, _merchantId) tripId routeId = do
       Nothing -> pure Nothing
       Just person -> do
         mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-        frfsTickets <- QFRFSTicket.findAllByTicketBookingId booking.id
+        let frfsTickets = fromMaybe [] (Map.lookup booking.id ticketMap)
         let isCheckedIn = any (\t -> t.status == DFRFSTicket.USED) frfsTickets
         let pName = Data.Text.intercalate " " $ catMaybes [person.firstName, person.lastName]
         let pInfo =
@@ -1386,17 +1389,17 @@ getFrfsTripRouteManifest (mbPersonId, _merchantId) tripId routeId = do
                 }
         pure $ Just (booking.fromStationCode, booking.toStationCode, pInfo)
   let validPassengerData = catMaybes passengerData
+  let boardingMap = Map.fromListWith (++) [(fromStop, [p]) | (fromStop, _, p) <- validPassengerData]
+  let alightingMap = Map.fromListWith (++) [(toStop, [p]) | (_, toStop, p) <- validPassengerData]
   let stopManifests =
         map
           ( \stop ->
               let sCode = stop.stopCode
-                  boarding = [p | (fromStop, _, p) <- validPassengerData, fromStop == sCode]
-                  alighting = [p | (_, toStop, p) <- validPassengerData, toStop == sCode]
                in PassengerStopManifest
                     { stopCode = sCode,
                       stopName = stop.stopName,
-                      boardingPassengers = boarding,
-                      alightingPassengers = alighting
+                      boardingPassengers = fromMaybe [] (Map.lookup sCode boardingMap),
+                      alightingPassengers = fromMaybe [] (Map.lookup sCode alightingMap)
                     }
           )
           stops
