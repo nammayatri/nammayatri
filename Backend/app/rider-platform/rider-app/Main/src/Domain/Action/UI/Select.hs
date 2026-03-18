@@ -530,6 +530,7 @@ mkJourneyForSearch searchRequest estimate personId = do
             finalBoardedBusNumberSource = Nothing,
             busConductorId = Nothing,
             busDriverId = Nothing,
+            busTagNumber = Nothing,
             finalBoardedDepotNo = Nothing,
             finalBoardedScheduleNo = Nothing,
             finalBoardedWaybillId = Nothing,

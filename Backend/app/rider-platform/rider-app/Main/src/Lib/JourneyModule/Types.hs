@@ -456,6 +456,7 @@ data BusLegExtraInfo = BusLegExtraInfo
     categoryBookingDetails :: Maybe [CategoryBookingDetails], -- TODO :: To be deprecated once UI starts consuming `categories` instead as this is redundant data.
     busConductorId :: Maybe Text,
     busDriverId :: Maybe Text,
+    busTagNumber :: Maybe Text,
     tripStartTime :: Maybe [UTCTime],
     bookedStopETA :: Maybe [UTCTime]
   }
@@ -984,6 +985,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   fleetNo = journeyLeg.finalBoardedBusNumber,
                   busConductorId = journeyLeg.busConductorId,
                   busDriverId = journeyLeg.busDriverId,
+                  busTagNumber = journeyLeg.busTagNumber,
                   legStartTime = journeyRouteDetail.legStartTime,
                   legEndTime = journeyRouteDetail.legEndTime,
                   discounts =
@@ -1246,6 +1248,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
                   fleetNo = journeyLeg.finalBoardedBusNumber,
                   busConductorId = journeyLeg.busConductorId,
                   busDriverId = journeyLeg.busDriverId,
+                  busTagNumber = journeyLeg.busTagNumber,
                   legStartTime = journeyRouteDetail.legStartTime,
                   legEndTime = journeyRouteDetail.legEndTime,
                   discounts =
@@ -1362,7 +1365,8 @@ data FinalBoardedBusData = FinalBoardedBusData
     updateSource :: Maybe DJL.BusBoardingMethod,
     serviceTierType :: Maybe Spec.ServiceTierType,
     busConductorId :: Maybe Text,
-    busDriverId :: Maybe Text
+    busDriverId :: Maybe Text,
+    busTagNumber :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -1435,6 +1439,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
         finalBoardedBusNumber = mbFinalBoardedBusData >>= (.busNumber),
         busConductorId = mbFinalBoardedBusData >>= (.busConductorId),
         busDriverId = mbFinalBoardedBusData >>= (.busDriverId),
+        busTagNumber = mbFinalBoardedBusData >>= (.busTagNumber),
         finalBoardedBusServiceTierType = mbFinalBoardedBusData >>= (.serviceTierType),
         userBookedBusServiceTierType = mbUserBookedServiceTierType,
         userPreferredServiceTier = mbUserPreferredServiceTier,
