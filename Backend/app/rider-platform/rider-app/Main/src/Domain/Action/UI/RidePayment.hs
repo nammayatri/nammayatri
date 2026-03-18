@@ -82,7 +82,8 @@ getcustomer person = do
             TPayment.CreateCustomerResp
               { customerId = customer.customerId,
                 clientAuthToken = customer.clientAuthToken,
-                clientAuthTokenExpiry = customer.clientAuthTokenExpiry
+                clientAuthTokenExpiry = customer.clientAuthTokenExpiry,
+                isLiveMode = Just $ paymentMode == DMPM.LIVE
               }
         else do
           getCustomer <- TPayment.getCustomer person.merchantId person.merchantOperatingCityId person.paymentMode person.id.getId
@@ -122,7 +123,9 @@ getCustomerPaymentId person = do
           DMPM.LIVE -> person.customerPaymentId
           DMPM.TEST -> person.customerTestPaymentId
   case mbCustomerId of
-    Just customerId -> return customerId
+    Just customerId -> do
+      logInfo $ "Customer already created for person: " <> person.id.getId <> "; mode: " <> show paymentMode <> "; skipping.."
+      return customerId
     Nothing -> do
       --- Create a customer in payment service if not there ---
       mbEmailDecrypted <- mapM decrypt person.email
@@ -132,6 +135,20 @@ getCustomerPaymentId person = do
       case paymentMode of
         DMPM.LIVE -> QPerson.updateCustomerPaymentId (Just customer.customerId) person.id
         DMPM.TEST -> QPerson.updateTestCustomerPaymentId (Just customer.customerId) person.id
+
+      -- Debug payment mode mistmatch (do not expose any credentials)
+      if (Just paymentMode == isLivePaymentMode customer.isLiveMode)
+        then do
+          logInfo $ "Created customer for person: " <> person.id.getId <> " in " <> show paymentMode <> " mode"
+        else do
+          logWarning $
+            "Payment mode mismatch while create customer for person: "
+              <> person.id.getId
+              <> "; required payment mode: "
+              <> show paymentMode
+              <> "; isLiveMode: "
+              <> show customer.isLiveMode
+
       return customer.customerId
 
 checkIfPaymentMethodExists :: Domain.Types.Person.Person -> PaymentMethodId -> Environment.Flow Bool
@@ -182,19 +199,57 @@ getPaymentIntentSetup ::
     ) ->
     Environment.Flow API.Types.UI.RidePayment.SetupIntentResponse
   )
-getPaymentIntentSetup (mbPersonId, _) = do
+getPaymentIntentSetup (mbPersonId, _) = do -- with logtag personId
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
   customerPaymentId <- getCustomerPaymentId person
-  ephemeralKey <- TPayment.createEphemeralKeys person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId
+  ephemeralKeyResp <- TPayment.createEphemeralKeys person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId
   setupIntent <- TPayment.createSetupIntent person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId
+  let ephemeralKey = ephemeralKeyResp.ephemeralKeySecret
+  let requiredPaymentMode = fromMaybe DMPM.LIVE person.paymentMode
+
+  -- Debug payment mode mistmatch (do not expose any credentials)
+  if (Just requiredPaymentMode == getPaymentModeFromEphemeralKey ephemeralKey && Just requiredPaymentMode == isLivePaymentMode ephemeralKeyResp.isLiveMode)
+    then do
+      logInfo $ "Got ephemeral key for person: " <> personId.getId <> " in " <> show requiredPaymentMode <> " mode"
+    else do
+      logWarning $
+        "Payment mode mismatch while fetch ephemeral key for person: "
+          <> personId.getId
+          <> "; required payment mode: "
+          <> show requiredPaymentMode
+          <> "; ephemeralKeyPaymentMode: "
+          <> show (getPaymentModeFromEphemeralKey ephemeralKey)
+          <> "; isLiveMode: "
+          <> show ephemeralKeyResp.isLiveMode
+  if (Just requiredPaymentMode == isLivePaymentMode setupIntent.isLiveMode)
+    then do
+      logInfo $ "Got setup intent for person: " <> personId.getId <> " in " <> show requiredPaymentMode <> " mode"
+    else do
+      logWarning $
+        "Payment mode mismatch while setup intent for person: "
+          <> personId.getId
+          <> "; required payment mode: "
+          <> show requiredPaymentMode
+          <> "; isLiveMode: "
+          <> show setupIntent.isLiveMode
+
   return $
     API.Types.UI.RidePayment.SetupIntentResponse
       { setupIntentClientSecret = setupIntent.clientSecret,
         customerId = customerPaymentId,
         ephemeralKey = ephemeralKey
       }
+
+isLivePaymentMode :: Maybe Bool -> Maybe DMPM.PaymentMode
+isLivePaymentMode = map $ \isLiveMode -> if isLiveMode then DMPM.LIVE else DMPM.TEST
+
+getPaymentModeFromEphemeralKey :: Text -> Maybe DMPM.PaymentMode
+getPaymentModeFromEphemeralKey ephemeralKey
+  | "ek_live_" `Text.isPrefixOf` ephemeralKey = Just DMPM.LIVE
+  | "ek_test_" `Text.isPrefixOf` ephemeralKey = Just DMPM.TEST
+  | otherwise = Nothing
 
 -- TODO: Add the logic to create a payment intent
 getPaymentIntentPayment ::
