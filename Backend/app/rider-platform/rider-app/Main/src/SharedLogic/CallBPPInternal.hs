@@ -252,6 +252,52 @@ getCancellationDuesDetails apiKey internalUrl merchantId phoneNumber countryCode
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getCancellationDuesDetailsClient merchantId merchantCity (Just apiKey) (CancellationDuesReq phoneNumber countryCode)) "GetCancellationDuesDetails" getCancellationDuesDetailsApi
 
+data PendingRideDue = PendingRideDue
+  { rideId :: Text,
+    cancellationAmount :: HighPrecMoney,
+    cancellationAmountWithCurrency :: PriceAPIEntity
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data CancellationDuesBreakdownRes = CancellationDuesBreakdownRes
+  { totalCancellationDues :: HighPrecMoney,
+    totalCancellationDuesWithCurrency :: PriceAPIEntity,
+    pendingRides :: [PendingRideDue]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+type GetCancellationDuesBreakdownAPI =
+  "internal"
+    :> Capture "merchantId" Text
+    :> Capture "merchantCity" Context.City
+    :> "getCancellationDuesBreakdown"
+    :> Header "token" Text
+    :> ReqBody '[JSON] CancellationDuesReq
+    :> Get '[JSON] CancellationDuesBreakdownRes
+
+getCancellationDuesBreakdownClient :: Text -> Context.City -> Maybe Text -> CancellationDuesReq -> EulerClient CancellationDuesBreakdownRes
+getCancellationDuesBreakdownClient = client getCancellationDuesBreakdownApi
+
+getCancellationDuesBreakdownApi :: Proxy GetCancellationDuesBreakdownAPI
+getCancellationDuesBreakdownApi = Proxy
+
+getCancellationDuesBreakdown ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  Text ->
+  Text ->
+  Context.City ->
+  m CancellationDuesBreakdownRes
+getCancellationDuesBreakdown apiKey internalUrl merchantId phoneNumber countryCode merchantCity = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getCancellationDuesBreakdownClient merchantId merchantCity (Just apiKey) (CancellationDuesReq phoneNumber countryCode)) "GetCancellationDuesBreakdown" getCancellationDuesBreakdownApi
+
 data GetFavouriteDriverInfoReq = GetFavouriteDriverInfoReq
   { customerMobileNumber :: Text,
     customerMobileCountryCode :: Text

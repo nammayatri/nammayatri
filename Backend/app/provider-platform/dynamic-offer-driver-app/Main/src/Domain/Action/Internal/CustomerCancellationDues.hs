@@ -17,6 +17,7 @@ module Domain.Action.Internal.CustomerCancellationDues where
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.CancellationCharges as DCC
 import qualified Domain.Types.CancellationDuesDetails as DCDD
+import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.DailyStats as DDS
 import Domain.Types.Merchant (Merchant)
 import EulerHS.Prelude hiding (id)
@@ -51,6 +52,20 @@ data CancellationDuesDetailsRes = CancellationDuesDetailsRes
     customerCancellationDuesWithCurrency :: PriceAPIEntity,
     disputeChancesUsed :: Int,
     canBlockCustomer :: Maybe Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data PendingRideDue = PendingRideDue
+  { rideId :: Id DRide.Ride,
+    cancellationAmount :: HighPrecMoney,
+    cancellationAmountWithCurrency :: PriceAPIEntity
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data CancellationDuesBreakdownRes = CancellationDuesBreakdownRes
+  { totalCancellationDues :: HighPrecMoney,
+    totalCancellationDuesWithCurrency :: PriceAPIEntity,
+    pendingRides :: [PendingRideDue]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -231,3 +246,42 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = do
         QRD.updateDisputeChancesUsed disputeChancesUsedReq riderDetails.id
     (_, _) -> throwError DisputeChancesOrCancellationDuesHasToBeNull
   return Success
+
+getCancellationDuesBreakdown ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    EncFlow m r
+  ) =>
+  Id Merchant ->
+  Context.City ->
+  Maybe Text ->
+  CancellationDuesReq ->
+  m CancellationDuesBreakdownRes
+getCancellationDuesBreakdown merchantId merchantCity apiKey CancellationDuesReq {..} = do
+  merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  unless (Just merchant.internalApiKey == apiKey) $
+    throwError $ AuthBlocked "Invalid BPP internal api key"
+  merchantOperatingCity <- CQMM.findByMerchantIdAndCity merchant.id merchantCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchant.shortId.getShortId <> " ,city: " <> show merchantCity)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCity.id.getId)
+  unless transporterConfig.canAddCancellationFee $
+    throwError $ CityRestrictionOnCustomerCancellationDuesAddition (show merchantCity)
+  numberHash <- getDbHash customerMobileNumber
+  riderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchant.id >>= fromMaybeM (RiderDetailsDoNotExist "Mobile Number" customerMobileNumber)
+  pendingRows <- QCDD.findAllPendingByRiderId riderDetails.id
+  let pendingRides = fmap toPendingRideDue pendingRows
+      total = Kernel.Prelude.sum $ (.cancellationAmount) <$> pendingRows
+      currency = riderDetails.currency
+  return $
+    CancellationDuesBreakdownRes
+      { totalCancellationDues = total,
+        totalCancellationDuesWithCurrency = PriceAPIEntity total currency,
+        pendingRides
+      }
+  where
+    toPendingRideDue row =
+      PendingRideDue
+        { rideId = row.rideId,
+          cancellationAmount = row.cancellationAmount,
+          cancellationAmountWithCurrency = PriceAPIEntity row.cancellationAmount row.currency
+        }

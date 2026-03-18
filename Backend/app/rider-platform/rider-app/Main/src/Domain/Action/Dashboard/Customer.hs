@@ -20,6 +20,7 @@ module Domain.Action.Dashboard.Customer
     getCustomerInfo,
     postCustomerCancellationDuesSync,
     getCustomerCancellationDuesDetails,
+    getCustomerCancellationDuesBreakdown,
     postCustomerUpdateSafetyCenterBlocking,
     postCustomerPersonNumbers,
     postCustomerPersonId,
@@ -213,6 +214,31 @@ getCustomerCancellationDuesDetails merchantShortId _ personId = do
         disputeChancesUsed = res.disputeChancesUsed,
         canBlockCustomer = res.canBlockCustomer
       }
+
+getCustomerCancellationDuesBreakdown ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.Customer ->
+  Flow Common.CancellationDuesBreakdownRes
+getCustomerCancellationDuesBreakdown merchantShortId _ personId = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  let personId' = cast @Common.Customer @DP.Person personId
+  person <- runInReplica $ QP.findById personId' >>= fromMaybeM (PersonNotFound personId'.getId)
+  mobNum <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  res <- CallBPPInternal.getCancellationDuesBreakdown merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobNum (fromMaybe "+91" person.mobileCountryCode) person.currentCity
+  return $
+    Common.CancellationDuesBreakdownRes
+      { totalCancellationDues = res.totalCancellationDues,
+        totalCancellationDuesWithCurrency = res.totalCancellationDuesWithCurrency,
+        pendingRides = map toPendingRideDue res.pendingRides
+      }
+  where
+    toPendingRideDue ride =
+      Common.PendingRideDue
+        { rideId = ride.rideId,
+          cancellationAmount = ride.cancellationAmount,
+          cancellationAmountWithCurrency = ride.cancellationAmountWithCurrency
+        }
 
 postCustomerUpdateSafetyCenterBlocking ::
   ShortId DM.Merchant ->
