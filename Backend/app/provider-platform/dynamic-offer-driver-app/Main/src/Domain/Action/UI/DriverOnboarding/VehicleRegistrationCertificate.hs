@@ -403,6 +403,12 @@ verifyRCFlow person merchantOpCityId rcNumber imageId dateOfRegistration mbVehic
     Verification.SyncResp resp -> do
       when (resp.requestor == VT.Morth && isNothing mbVehicleCategory) $
         throwError (InvalidRequest "vehicleCategory is required when using Morth for RC verification")
+      case resp.requestor of
+        VT.Morth -> do
+          let mbStatus = if isJust resp.response.status then "SUCCESS" else "FAILED"
+          morthEntity <- mkMorthVerificationEntity person Nothing ODC.VehicleRegistrationCertificate encryptedRC mbStatus dateOfRegistration Nothing mbVehicleCategory Nothing Nothing (Just $ show resp.response) now
+          MorthQuery.create morthEntity
+        _ -> logError $ "Handle this case if we want to store the response in the database for provider: " <> show resp.requestor
       void $ onVerifyRC person Nothing resp.response (Just verifyRes.remPriorityList) (Just imageExtractionValidation) (Just encryptedRC) imageId Nothing Nothing (Just resp.requestor) mbVehicleCategory
 
 mkIdfyVerificationEntity :: MonadFlow m => Person.Person -> Text -> UTCTime -> Domain.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> m Domain.IdfyVerification
@@ -505,27 +511,9 @@ onVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, 
 onVerifyRC person mbVerificationReq rcVerificationResponse mbRemPriorityList mbImageExtractionValidation mbEncryptedRC imageId mbRetryCnt mbReqStatus mbServiceName mbVehicleCategoryFromSyncRequest = do
   if maybe False (\req -> req.imageExtractionValidation == Domain.Skipped && compareRegistrationDates rcVerificationResponse.registrationDate req.issueDateOnDoc) mbVerificationReq
     then do
-      now <- getCurrentTime
       case mbServiceName of
         Just VT.Idfy -> IVQuery.updateExtractValidationStatus Domain.Failed (maybe "" (.requestId) mbVerificationReq)
         Just VT.HyperVergeRCDL -> HVQuery.updateExtractValidationStatus Domain.Failed (maybe "" (.requestId) mbVerificationReq)
-        Just VT.Morth ->
-          whenJust mbEncryptedRC $ \encryptedRC -> do
-            morthEntity <-
-              mkMorthVerificationEntity
-                person
-                (mbVerificationReq <&> (.requestId))
-                ODC.VehicleRegistrationCertificate
-                encryptedRC
-                (if isJust rcVerificationResponse.status then "SUCCESS" else "FAILED")
-                Nothing
-                Nothing
-                mbVehicleCategoryFromSyncRequest
-                Nothing
-                Nothing
-                (Just $ show rcVerificationResponse)
-                now
-            MorthQuery.create morthEntity
         Nothing -> logError "WARNING: Sync API call, this check is redundant still entered in this case!!!!!!"
         _ -> throwError $ InternalError ("Unknown Service provider webhook encountered in onVerifyRC. Name of provider : " <> show mbServiceName)
       return Ack
