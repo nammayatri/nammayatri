@@ -694,7 +694,8 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                   createdAt = now,
                   updatedAt = now,
                   seatIds = Nothing,
-                  seatLabels = Nothing
+                  seatLabels = Nothing,
+                  holdId = Nothing
                 }
             ]
       return $ Just (quote, quoteCategories)
@@ -764,6 +765,7 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
           quoteCategories
   updatedQuoteCategories <-
     Utils.updateQuoteCategoriesWithSelections
+      Nothing
       selections
       quoteCategories
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity quote

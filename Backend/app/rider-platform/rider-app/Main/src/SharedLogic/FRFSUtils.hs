@@ -61,7 +61,7 @@ import qualified Domain.Types.RouteTripMapping as DRTM
 import qualified Domain.Types.Seat as DSeat
 import qualified Domain.Types.Station as Station
 import qualified Domain.Types.VendorSplitDetails as VendorSplitDetails
-import EulerHS.Prelude (comparing, concatMapM, (+||), (||+))
+import EulerHS.Prelude (comparing, concatMapM, (+||), (<|>), (||+))
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
@@ -956,7 +956,8 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
             createdAt = now,
             updatedAt = now,
             seatIds = quoteCategory.seatIds,
-            seatLabels = quoteCategory.seatLabels
+            seatLabels = quoteCategory.seatLabels,
+            holdId = quoteCategory.holdId
           }
 
 makecancelledTtlKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
@@ -1038,10 +1039,11 @@ data QuoteCategorySelection = QuoteCategorySelection
 
 updateQuoteCategoriesWithSelections ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Maybe Text ->
   [QuoteCategorySelection] ->
   [DFRFSQuoteCategory.FRFSQuoteCategory] ->
   m [DFRFSQuoteCategory.FRFSQuoteCategory]
-updateQuoteCategoriesWithSelections selections quoteCategories = do
+updateQuoteCategoriesWithSelections mbHoldId selections quoteCategories = do
   mapM updateCategory quoteCategories
   where
     updateCategory category =
@@ -1051,7 +1053,8 @@ updateQuoteCategoriesWithSelections selections quoteCategories = do
                 category
                   { DFRFSQuoteCategory.selectedQuantity = sel.qcQuantity,
                     DFRFSQuoteCategory.seatIds = sel.qcSeatIds,
-                    DFRFSQuoteCategory.seatLabels = sel.qcSeatLabels
+                    DFRFSQuoteCategory.seatLabels = sel.qcSeatLabels,
+                    DFRFSQuoteCategory.holdId = mbHoldId <|> category.holdId
                   }
           QFRFSQuoteCategory.updateByPrimaryKey updatedCategory
           return updatedCategory

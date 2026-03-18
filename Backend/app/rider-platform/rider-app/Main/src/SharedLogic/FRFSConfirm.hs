@@ -129,10 +129,10 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
     if isMultiInitAllowed
       then mapM processCategorySelection selectedQuoteCategories
       else return $ quoteCategories <&> (\qc -> FRFSUtils.QuoteCategorySelection qc.id qc.selectedQuantity Nothing Nothing)
-
+  let mbHoldId = mbHoldCtxForAll <&> (\(h, _, _) -> h)
   updatedQuoteCategories <-
     if isMultiInitAllowed
-      then FRFSUtils.updateQuoteCategoriesWithSelections quoteCategorySelections quoteCategories
+      then FRFSUtils.updateQuoteCategoriesWithSelections mbHoldId quoteCategorySelections quoteCategories
       else return quoteCategories
 
   let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories)

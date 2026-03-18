@@ -420,7 +420,8 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
             createdAt = now,
             updatedAt = now,
             seatIds = Nothing,
-            seatLabels = Nothing
+            seatLabels = Nothing,
+            holdId = Nothing
           }
 
   return (frfsQuote, frfsQuoteCategories)

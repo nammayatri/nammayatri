@@ -4,7 +4,6 @@
 
 module Storage.Queries.FRFSRouteFareProduct where
 
-import qualified Domain.Types.FRFSFarePolicy
 import qualified Domain.Types.FRFSRouteFareProduct
 import qualified Domain.Types.FRFSVehicleServiceTier
 import qualified Domain.Types.IntegratedBPPConfig
