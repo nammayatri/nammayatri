@@ -179,3 +179,44 @@ instance ToJSON RideInfo where
               [ "pickupLocation" .= pickupLocation
               ]
         ]
+
+data SosProviderKind = ERSS
+  deriving (Generic, Show, Eq)
+
+instance ToJSON SosProviderKind where
+  toJSON ERSS = String "erss"
+
+instance FromJSON SosProviderKind where
+  parseJSON = withText "SosProviderKind" $ \case
+    "erss" -> pure ERSS
+    other -> fail $ "Unknown SosProviderKind: " <> show other
+
+data SosTraceProvider = SosTraceProvider
+  { providerKind :: SosProviderKind,
+    authId :: Text,
+    authCode :: Text,
+    mobileNo :: Text,
+    traceUrlSuffix :: Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+data SosErssConfigReq = SosErssConfigReq
+  { externalReferenceId :: Text,
+    baseUrl :: Text,
+    accessToken :: Text,
+    tokenExpiresAt :: Int,
+    nyReauthUrl :: Text,
+    nyApiKey :: Text,
+    merchantOperatingCityId :: Text,
+    pollingIntervalSecs :: Int,
+    timeDiffSecs :: Int,
+    expiresAt :: Maybe Int,
+    provider :: SosTraceProvider
+  }
+  deriving (Generic, Show)
+
+instance FromJSON SosErssConfigReq where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON SosErssConfigReq where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
