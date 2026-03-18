@@ -162,7 +162,7 @@ handler merchant req validatedQuote = do
 
     checkAndStoreOTP merchantOperatingCityId otpCode = do
       let otpKey = mkSpecialZoneOtpKey merchantOperatingCityId otpCode
-      isPresent :: Maybe Bool <- Redis.get otpKey
+      isPresent :: Maybe Bool <- Redis.runInMultiCloudRedisMaybeResult $ Redis.get otpKey
       case isPresent of
         Nothing -> do
           Redis.setExp otpKey True 3600
