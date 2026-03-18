@@ -1349,17 +1349,17 @@ getFrfsTripRouteManifest (mbPersonId, _merchantId) tripId routeId = do
   let cityId = personCityInfo.merchantOperatingCityId
   integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe =<< SIBC.findAllIntegratedBPPConfig cityId Enums.BUS DIBC.MULTIMODAL
   let (waybillNo, tripNo) = JMU.getWaybillNoAndTripNoFromTripId tripId
-  schedule <- OTPRest.getBusTripSchedule waybillNo tripNo routeId integratedBPPConfig
+  schedule <- JMU.measureLatency (OTPRest.getBusTripSchedule waybillNo tripNo routeId integratedBPPConfig) "getBusTripSchedule"
   scheduleDetail <-
     schedule & listToMaybe
       & fromMaybeM (InvalidRequest "Bus schedule not found")
   let stops = scheduleDetail.eta
-  bookings <- QFRFSTicketBooking.findAllByTripId tripId
+  bookings <- JMU.measureLatency (QFRFSTicketBooking.findAllByTripId tripId) "findAllByTripId"
   let bookingIds = map (.id) bookings
-  allTickets <- QFRFSTicket.findAllByTicketBookingIds bookingIds
+  allTickets <- JMU.measureLatency (QFRFSTicket.findAllByTicketBookingIds bookingIds) "findAllByTicketBookingIds"
   let ticketMap = Map.fromListWith (++) $ map (\t -> (t.frfsTicketBookingId, [t])) allTickets
   let riderIds = map (.riderId) bookings
-  persons <- QP.findAllByIds riderIds
+  persons <- JMU.measureLatency (QP.findAllByIds riderIds) "findAllByIds"
   let personMap = Map.fromList $ map (\p -> (p.id, p)) persons
   passengerData <- forM bookings $ \booking ->
     case Map.lookup booking.riderId personMap of
