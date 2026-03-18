@@ -53,8 +53,8 @@ getSosTracking merchantShortId opCity sosId = withFlowHandlerAPI' $ Domain.Actio
 getSosDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Sos -> Environment.FlowHandler API.Types.RiderPlatform.Management.Sos.SosDetailsMaybeRes)
 getSosDetails merchantShortId opCity sosId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Sos.getSosDetails merchantShortId opCity sosId
 
-postSosCallExternalSOS :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Sos -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postSosCallExternalSOS merchantShortId opCity apiTokenInfo sosId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Sos.postSosCallExternalSOS merchantShortId opCity apiTokenInfo sosId
+postSosCallExternalSOS :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Sos -> API.Types.RiderPlatform.Management.Sos.CallExternalSOSReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postSosCallExternalSOS merchantShortId opCity apiTokenInfo sosId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Sos.postSosCallExternalSOS merchantShortId opCity apiTokenInfo sosId req
 
 postSosErssStatusUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Sos.ErssStatusUpdateReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Sos.ErssStatusUpdateRes)
 postSosErssStatusUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Sos.postSosErssStatusUpdate merchantShortId opCity apiTokenInfo req
