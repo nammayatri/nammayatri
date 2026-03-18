@@ -66,17 +66,25 @@ data DRatingReq = DRatingReq
     riderName :: Maybe Text
   }
 
+-- Named indices into the positional feedbackDetails list.
+-- These replace raw numeric literals to prevent silent breakage
+-- if the list layout ever changes.
+feedbackDetailIdx, wasOfferedAssistanceIdx, issueIdIdx :: Int
+feedbackDetailIdx = 0
+wasOfferedAssistanceIdx = 1
+issueIdIdx = 2
+
 handler :: Id Merchant -> DRatingReq -> DRide.Ride -> Flow ()
 handler merchantId req ride = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   let driverId = ride.driverId
   let ratingValue = req.ratingValue
-      feedbackDetails = fromMaybe Nothing (listToMaybe req.feedbackDetails)
-      wasOfferedAssistance = case fromMaybe Nothing (req.feedbackDetails !? 1) of
+      feedbackDetails = fromMaybe Nothing (req.feedbackDetails !? feedbackDetailIdx)
+      wasOfferedAssistance = case fromMaybe Nothing (req.feedbackDetails !? wasOfferedAssistanceIdx) of
         Just "True" -> Just True
         Just "False" -> Just False
         _ -> Nothing
-      issueId = fromMaybe Nothing (req.feedbackDetails !? 2)
+      issueId = fromMaybe Nothing (req.feedbackDetails !? issueIdIdx)
       isSafe = Just $ isNothing issueId
   mbBooking <- QRB.findById req.bookingId
   driver <- SQP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)

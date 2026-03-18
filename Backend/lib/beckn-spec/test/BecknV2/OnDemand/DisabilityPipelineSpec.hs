@@ -13,6 +13,7 @@ module BecknV2.OnDemand.DisabilityPipelineSpec (spec) where
 import BecknV2.OnDemand.Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import BecknV2.Utils (getTagV2)
+import Control.Applicative ((<|>))
 import Data.List (nub)
 import qualified Data.Text as T
 import Kernel.Prelude
