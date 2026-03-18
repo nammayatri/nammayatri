@@ -1720,3 +1720,57 @@ notifyRefunds' notificationType DRefundRequest.RefundRequest {..} = do
     ]
     Nothing
     Nothing
+
+-- Bus FRFS Notifications
+
+data BusTripStartedParam = BusTripStartedParam
+  { vehicleNumber :: Text,
+    routeName :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data BusNotificationType
+  = TRIP_STARTED
+  | APPROACHING
+  | AT_STOP
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data BusNotificationEntityData = BusNotificationEntityData
+  { tripId :: Maybe Text,
+    vehicleNumber :: Text,
+    routeId :: Text,
+    stopCode :: Maybe Text,
+    stopName :: Maybe Text,
+    notificationType :: BusNotificationType
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+-- | Notify passenger that the bus trip has started
+notifyBusTripStarted ::
+  ServiceFlow m r =>
+  Person.Person ->
+  Text ->
+  Text ->
+  Text ->
+  m ()
+notifyBusTripStarted person vehicleNumber routeName tripId = do
+  let entityData =
+        BusNotificationEntityData
+          { tripId = Just tripId,
+            vehicleNumber = vehicleNumber,
+            routeId = routeName,
+            stopCode = Nothing,
+            stopName = Nothing,
+            notificationType = TRIP_STARTED
+          }
+  let entity = Notification.Entity Notification.Product person.id.getId entityData
+      dynamicParams = BusTripStartedParam vehicleNumber routeName
+  dynamicNotifyPerson
+    person
+    (createNotificationReq "BUS_TRIP_STARTED" identity)
+    dynamicParams
+    entity
+    Nothing
+    [("vehicleNumber", vehicleNumber), ("routeName", routeName)]
+    Nothing
+    Nothing
