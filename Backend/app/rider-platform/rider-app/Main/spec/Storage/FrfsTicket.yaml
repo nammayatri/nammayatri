@@ -278,6 +278,7 @@ FRFSQuoteCategory:
     merchantOperatingCityId: Id MerchantOperatingCity
     seatIds: Maybe [Id Seat]
     seatLabels: Maybe [Text]
+    holdId: Maybe Text
   constraints:
     id: PrimaryKey
     quoteId: SecondaryKey
@@ -736,6 +737,7 @@ FRFSTicketBookingPaymentCategory:
     merchantOperatingCityId: Id MerchantOperatingCity
     seatIds: Maybe [Id Seat]
     seatLabels: Maybe [Text]
+    holdId: Maybe Text
 
   constraints:
     id: PrimaryKey
