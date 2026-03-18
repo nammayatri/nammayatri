@@ -400,7 +400,7 @@ executeBatchForSignature _dbStreamKey signature entries = do
 
               -- Push successful batch entries to Kafka (best-effort; DB is source of truth)
               kafkaResults <- pushEntriesToKafka _dbStreamKey batchEntries
-              let (kafkaSuccesses, kafkaFailures) = kafkaResults
+              let (_kafkaSuccesses, kafkaFailures) = kafkaResults
 
               -- Log Kafka results but report all entries as successes since DB insert succeeded
               when (not $ null kafkaFailures) $
