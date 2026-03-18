@@ -29,3 +29,8 @@ ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN is_ticket_valid_on_multip
 
 CREATE INDEX integrated_bpp_config_idx_agency_key ON atlas_app.integrated_bpp_config USING btree (agency_key);
 ALTER TABLE atlas_app.integrated_bpp_config ADD CONSTRAINT integrated_bpp_config_unique_idx_agency_key UNIQUE (agency_key);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.integrated_bpp_config DROP CONSTRAINT integrated_bpp_config_unique_idx_agency_key;

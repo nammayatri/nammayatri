@@ -141,7 +141,7 @@ IntegratedBPPConfig:
 
   extraIndexes:
     - columns: [agencyKey]
-      unique: true
+      unique: false
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
