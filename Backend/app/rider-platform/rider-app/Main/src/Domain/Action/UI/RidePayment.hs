@@ -82,7 +82,8 @@ getcustomer person = do
             TPayment.CreateCustomerResp
               { customerId = customer.customerId,
                 clientAuthToken = customer.clientAuthToken,
-                clientAuthTokenExpiry = customer.clientAuthTokenExpiry
+                clientAuthTokenExpiry = customer.clientAuthTokenExpiry,
+                isLiveMode = Just $ paymentMode == DMPM.LIVE
               }
         else do
           getCustomer <- TPayment.getCustomer person.merchantId person.merchantOperatingCityId person.paymentMode person.id.getId
@@ -122,7 +123,9 @@ getCustomerPaymentId person = do
           DMPM.LIVE -> person.customerPaymentId
           DMPM.TEST -> person.customerTestPaymentId
   case mbCustomerId of
-    Just customerId -> return customerId
+    Just customerId -> do
+      logInfo $ "Customer already created for person: " <> person.id.getId <> "; mode: " <> show paymentMode <> "; skipping.."
+      return customerId
     Nothing -> do
       --- Create a customer in payment service if not there ---
       mbEmailDecrypted <- mapM decrypt person.email
@@ -132,7 +135,25 @@ getCustomerPaymentId person = do
       case paymentMode of
         DMPM.LIVE -> QPerson.updateCustomerPaymentId (Just customer.customerId) person.id
         DMPM.TEST -> QPerson.updateTestCustomerPaymentId (Just customer.customerId) person.id
+
+      -- Debug payment mode mistmatch (do not expose any credentials)
+      logCustomerPaymentModeMismatch paymentMode customer.isLiveMode
+
       return customer.customerId
+    where
+      logCustomerPaymentModeMismatch paymentMode isLiveMode = do
+        if Just paymentMode == isLivePaymentMode isLiveMode
+          then do
+            logInfo $ "Created customer for person: " <> person.id.getId <> " in " <> show paymentMode <> " mode"
+          else do
+            logWarning $
+              "Payment mode mismatch while create customer for person: "
+                <> person.id.getId
+                <> "; required payment mode: "
+                <> show paymentMode
+                <> "; isLiveMode: "
+                <> show isLiveMode
+
 
 checkIfPaymentMethodExists :: Domain.Types.Person.Person -> PaymentMethodId -> Environment.Flow Bool
 checkIfPaymentMethodExists person paymentMethodId = do
@@ -148,19 +169,20 @@ getPaymentMethods ::
   )
 getPaymentMethods (mbPersonId, _) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  customerPaymentId <- getCustomerPaymentId person
-  resp <- TPayment.getCardList person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId -- TODO: Add pagination, do we need to store the card details in our DB?
-  let savedPaymentMethodIds = resp <&> (.cardId)
-  let paymentMode = fromMaybe DMPM.LIVE person.paymentMode
-  let defaultPaymentMethodId =
-        case paymentMode of
-          DMPM.LIVE -> person.defaultPaymentMethodId
-          DMPM.TEST -> person.defaultTestPaymentMethodId
-  when (maybe False (\dpm -> dpm `notElem` savedPaymentMethodIds) defaultPaymentMethodId) $ do
-    let firstSavedPaymentMethodId = listToMaybe savedPaymentMethodIds
-    SPayment.updateDefaultPersonPaymentMethodId person firstSavedPaymentMethodId
-  return $ API.Types.UI.RidePayment.PaymentMethodsResponse {list = resp, defaultPaymentMethodId}
+  withLogTag ("personId_" <> personId.getId) $ do
+    person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    customerPaymentId <- getCustomerPaymentId person
+    resp <- TPayment.getCardList person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId -- TODO: Add pagination, do we need to store the card details in our DB?
+    let savedPaymentMethodIds = resp <&> (.cardId)
+    let paymentMode = fromMaybe DMPM.LIVE person.paymentMode
+    let defaultPaymentMethodId =
+          case paymentMode of
+            DMPM.LIVE -> person.defaultPaymentMethodId
+            DMPM.TEST -> person.defaultTestPaymentMethodId
+    when (maybe False (\dpm -> dpm `notElem` savedPaymentMethodIds) defaultPaymentMethodId) $ do
+      let firstSavedPaymentMethodId = listToMaybe savedPaymentMethodIds
+      SPayment.updateDefaultPersonPaymentMethodId person firstSavedPaymentMethodId
+    return $ API.Types.UI.RidePayment.PaymentMethodsResponse {list = resp, defaultPaymentMethodId}
 
 postPaymentMethodsMakeDefault ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -171,10 +193,11 @@ postPaymentMethodsMakeDefault ::
   )
 postPaymentMethodsMakeDefault (mbPersonId, _) paymentMethodId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  checkIfPaymentMethodExists person paymentMethodId >>= \case
-    False -> throwError $ InvalidRequest "Payment method doesn't belong to Customer"
-    True -> SPayment.updateDefaultPersonPaymentMethodId person (Just paymentMethodId) >> pure Success
+  withLogTag ("personId_" <> personId.getId) $ do
+    person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    checkIfPaymentMethodExists person paymentMethodId >>= \case
+      False -> throwError $ InvalidRequest "Payment method doesn't belong to Customer"
+      True -> SPayment.updateDefaultPersonPaymentMethodId person (Just paymentMethodId) >> pure Success
 
 getPaymentIntentSetup ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -182,19 +205,66 @@ getPaymentIntentSetup ::
     ) ->
     Environment.Flow API.Types.UI.RidePayment.SetupIntentResponse
   )
-getPaymentIntentSetup (mbPersonId, _) = do
+getPaymentIntentSetup (mbPersonId, _) = do -- with logtag personId
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  withLogTag ("personId_" <> personId.getId) $ do
+    person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
-  customerPaymentId <- getCustomerPaymentId person
-  ephemeralKey <- TPayment.createEphemeralKeys person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId
-  setupIntent <- TPayment.createSetupIntent person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId
-  return $
-    API.Types.UI.RidePayment.SetupIntentResponse
-      { setupIntentClientSecret = setupIntent.clientSecret,
-        customerId = customerPaymentId,
-        ephemeralKey = ephemeralKey
-      }
+    customerPaymentId <- getCustomerPaymentId person
+    ephemeralKeyResp <- TPayment.createEphemeralKeys person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId
+    setupIntent <- TPayment.createSetupIntent person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId
+    let ephemeralKey = ephemeralKeyResp.ephemeralKeySecret
+    let requiredPaymentMode = fromMaybe DMPM.LIVE person.paymentMode
+
+    -- Debug payment mode mistmatch (do not expose any credentials)
+    let ephemeralKeyPaymentMode = getPaymentModeFromEphemeralKey ephemeralKey
+    logEphemeralKeyPaymentModeMismatch personId requiredPaymentMode ephemeralKeyPaymentMode ephemeralKeyResp.isLiveMode
+    logSetupIntentPaymentModeMismatch personId requiredPaymentMode setupIntent.isLiveMode
+
+    return $
+      API.Types.UI.RidePayment.SetupIntentResponse
+        { setupIntentClientSecret = setupIntent.clientSecret,
+          customerId = customerPaymentId,
+          ephemeralKey = ephemeralKey
+        }
+  where
+    logEphemeralKeyPaymentModeMismatch personId requiredPaymentMode ephemeralKeyPaymentMode isLiveMode = do
+      -- Debug payment mode mistmatch (do not expose any credentials)
+      if (Just requiredPaymentMode == ephemeralKeyPaymentMode && Just requiredPaymentMode == isLivePaymentMode isLiveMode)
+        then do
+          logInfo $ "Got ephemeral key for person: " <> personId.getId <> " in " <> show requiredPaymentMode <> " mode"
+        else do
+          logWarning $
+            "Payment mode mismatch while fetch ephemeral key for person: "
+              <> personId.getId
+              <> "; required payment mode: "
+              <> show requiredPaymentMode
+              <> "; ephemeralKeyPaymentMode: "
+              <> show ephemeralKeyPaymentMode
+              <> "; isLiveMode: "
+              <> show isLiveMode
+
+    logSetupIntentPaymentModeMismatch personId requiredPaymentMode isLiveMode = do
+      if Just requiredPaymentMode == isLivePaymentMode isLiveMode
+        then do
+          logInfo $ "Got setup intent for person: " <> personId.getId <> " in " <> show requiredPaymentMode <> " mode"
+        else do
+          logWarning $
+            "Payment mode mismatch while setup intent for person: "
+              <> personId.getId
+              <> "; required payment mode: "
+              <> show requiredPaymentMode
+              <> "; isLiveMode: "
+              <> show isLiveMode
+
+isLivePaymentMode :: Maybe Bool -> Maybe DMPM.PaymentMode
+isLivePaymentMode = map $ \isLiveMode -> if isLiveMode then DMPM.LIVE else DMPM.TEST
+
+getPaymentModeFromEphemeralKey :: Text -> Maybe DMPM.PaymentMode
+getPaymentModeFromEphemeralKey ephemeralKey
+  | "ek_live_" `Text.isPrefixOf` ephemeralKey = Just DMPM.LIVE
+  | "ek_test_" `Text.isPrefixOf` ephemeralKey = Just DMPM.TEST
+  | otherwise = Nothing
 
 -- TODO: Add the logic to create a payment intent
 getPaymentIntentPayment ::
@@ -242,9 +312,10 @@ deletePaymentMethodsDelete ::
   )
 deletePaymentMethodsDelete (mbPersonId, _) paymentMethodId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  TPayment.deleteCard person.merchantId person.merchantOperatingCityId person.paymentMode paymentMethodId
-  return Success
+  withLogTag ("personId_" <> personId.getId) $ do
+    person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    TPayment.deleteCard person.merchantId person.merchantOperatingCityId person.paymentMode paymentMethodId
+    return Success
 
 postPaymentAddTip ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -373,8 +444,9 @@ getPaymentCustomer ::
   )
 getPaymentCustomer (mbPersonId, _) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  getcustomer person
+  withLogTag ("personId_" <> personId.getId) $ do
+    person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    getcustomer person
 
 postPaymentRefundRequestCreate ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

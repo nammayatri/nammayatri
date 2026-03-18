@@ -134,7 +134,7 @@ createCustomer = runWithServiceConfig1 Payment.createCustomer (.createPaymentCus
 getCustomer :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> CustomerId -> m CreateCustomerResp
 getCustomer = runWithServiceConfig1 Payment.getCustomer (.createPaymentCustomer)
 
-createEphemeralKeys :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> CustomerId -> m Text
+createEphemeralKeys :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> CustomerId -> m CreateEphemeralKeysResp
 createEphemeralKeys = runWithServiceConfig1 Payment.createEphemeralKeys (.createEphemeralKeys)
 
 getCardList :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> CustomerId -> m CustomerCardListResp
