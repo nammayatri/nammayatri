@@ -1,0 +1,207 @@
+diff --git a/consumer/src-v2/multimodal/hooks/usePublicTransportData.ts b/consumer/src-v2/multimodal/hooks/usePublicTransportData.ts
+index abc123..def456 100644
+--- a/consumer/src-v2/multimodal/hooks/usePublicTransportData.ts
++++ b/consumer/src-v2/multimodal/hooks/usePublicTransportData.ts
+@@ -28,6 +28,47 @@ export const PUBLIC_TRANSPORT_CONFIG_VERSION_KEY = 'public_transport_config_ver
+ // Storage instance for caching the data locally
+ const storage = createMMKV();
+ 
++// ============================================================================
++// SINGLETON PATTERN - Module-level state to coordinate fetches across all hook instances
++// ============================================================================
++
++/** Tracks if a fetch is currently in progress across all component instances */
++let isFetchInProgress = false;
++
++/** Stores the promise of the ongoing fetch so multiple callers can await the same request */
++let ongoingFetchPromise: Promise<publicTransportData | null> | null = null;
++
++/** Callbacks to notify all hook instances when fetch completes */
++const fetchCompletionCallbacks: Set<(success: boolean) => void> = new Set();
++
++/** Notify all registered callbacks that fetch completed */
++const notifyFetchCompletion = (success: boolean): void => {
++    fetchCompletionCallbacks.forEach(callback => {
++        try {
++            callback(success);
++        } catch (e) {
++            console.error('[PublicTransportData] Error in fetch completion callback:', e);
++        }
++    });
++    fetchCompletionCallbacks.clear();
++};
++
++/** Register a callback to be called when the current fetch completes */
++const registerFetchCompletionCallback = (callback: (success: boolean) => void): (() => void) => {
++    fetchCompletionCallbacks.add(callback);
++    return () => {
++        fetchCompletionCallbacks.delete(callback);
++    };
++};
++
++/** Reset the fetch state (useful for testing or error recovery) */
++const resetFetchState = (): void => {
++    isFetchInProgress = false;
++    ongoingFetchPromise = null;
++    fetchCompletionCallbacks.clear();
++};
++
++// ============================================================================
++
+ /**
+  * Hook to manage public transport data fetching and caching
+  * Uses a singleton pattern to ensure only one API call is made across all component instances
+@@ -42,7 +83,6 @@ export const usePublicTransportData = (enabled: boolean = true) => {
+     const [isLoading, setIsLoading] = useState(false);
+     const [error, setError] = useState<Error | null>(null);
+     const [isDataLoaded, setIsDataLoaded] = useState(false);
+-    const fetchInProgressRef = useRef(false);
+     const hasAttemptedFetchRef = useRef(false);
+     const dispatch = useDispatch();
+     const userProfile = useSelector(selectUserProfile);
+@@ -78,7 +118,7 @@ export const usePublicTransportData = (enabled: boolean = true) => {
+         return null;
+     }, []);
+ 
+-    const fetchData = useCallback(async (): Promise<void> => {
++    const performFetch = useCallback(async (): Promise<publicTransportData | null> => {
+         // Don't fetch if offline
+         if (!netInfo.isConnected) {
+             console.log('[PublicTransportData] Device is offline, skipping fetch');
+@@ -86,16 +126,10 @@ export const usePublicTransportData = (enabled: boolean = true) => {
+             // Use cached data if available
+             const cachedData = getCachedData();
+             if (cachedData) {
+-                setIsDataAvailable(true);
+-                setIsDataLoaded(true);
++                return cachedData;
+             }
+-            return;
+-        }
+-
+-        // Prevent concurrent fetches
+-        if (fetchInProgressRef.current) {
+-            console.log('[PublicTransportData] Fetch already in progress, skipping');
+-            return;
++            return null;
+         }
+ 
+         // Check if we have valid cached data
+@@ -105,20 +139,14 @@ export const usePublicTransportData = (enabled: boolean = true) => {
+             // If we have cached data and no version mismatch, use it
+             if (!shouldFetchData(cachedData)) {
+                 console.log('[PublicTransportData] Using cached data, no fetch needed');
+-                setIsDataAvailable(true);
+-                setIsDataLoaded(true);
+-                return;
++                return cachedData;
+             }
+         }
+ 
+-        fetchInProgressRef.current = true;
+-        setIsLoading(true);
+-        setError(null);
+-
+         try {
+             console.log('[PublicTransportData] Fetching fresh data from API');
+             const response = await triggerPublicTransportDataGet({});
++            
+             if (response.data) {
+                 // Store in both MMKV and global cache
+                 storage.set(PUBLIC_TRANSPORT_DATA_KEY, JSON.stringify(response.data));
+@@ -130,27 +158,73 @@ export const usePublicTransportData = (enabled: boolean = true) => {
+                     globalCache.set(PUBLIC_TRANSPORT_CONFIG_VERSION_KEY, response.data.configVersion);
+                 }
+                 
+-                setIsDataAvailable(true);
+-                setIsDataLoaded(true);
+                 console.log('[PublicTransportData] Data fetched and cached successfully');
++                return response.data;
+             } else if (response.error) {
+                 throw new Error(`API Error: ${JSON.stringify(response.error)}`);
+             }
+         } catch (err) {
+             console.error('[PublicTransportData] Error fetching data:', err);
+-            setError(err instanceof Error ? err : new Error(String(err)));
+-            
+             // Fall back to cached data if available
+             const cachedData = getCachedData();
+             if (cachedData) {
+-                setIsDataAvailable(true);
+-                setIsDataLoaded(true);
++                return cachedData;
+             }
+-        } finally {
+-            setIsLoading(false);
+-            fetchInProgressRef.current = false;
++            throw err;
+         }
+-    }, [netInfo.isConnected, triggerPublicTransportDataGet, getCachedData, shouldFetchData]);
++        return null;
++    }, [netInfo.isConnected, triggerPublicTransportDataGet, getCachedData, shouldFetchData]);
++
++    const fetchData = useCallback(async (): Promise<void> => {
++        // If a fetch is already in progress, wait for it to complete
++        if (isFetchInProgress && ongoingFetchPromise) {
++            console.log('[PublicTransportData] Fetch already in progress, waiting for completion');
++            setIsLoading(true);
++            try {
++                await ongoingFetchPromise;
++                setIsDataAvailable(true);
++                setIsDataLoaded(true);
++            } catch (err) {
++                setError(err instanceof Error ? err : new Error(String(err)));
++            } finally {
++                setIsLoading(false);
++            }
++            return;
++        }
++
++        // Start a new fetch
++        isFetchInProgress = true;
++        setIsLoading(true);
++        setError(null);
++
++        ongoingFetchPromise = performFetch();
++
++        try {
++            const data = await ongoingFetchPromise;
++            if (data) {
++                setIsDataAvailable(true);
++                setIsDataLoaded(true);
++            } else {
++                setIsDataAvailable(false);
++            }
++            notifyFetchCompletion(true);
++        } catch (err) {
++            console.error('[PublicTransportData] Error in fetchData:', err);
++            setError(err instanceof Error ? err : new Error(String(err)));
++            setIsDataAvailable(false);
++            notifyFetchCompletion(false);
++        } finally {
++            setIsLoading(false);
++            isFetchInProgress = false;
++            ongoingFetchPromise = null;
++        }
++    }, [performFetch]);
+ 
+     // Initial data load - only fetch if enabled and we haven't attempted yet
+     useEffect(() => {
+@@ -162,7 +236,7 @@ export const usePublicTransportData = (enabled: boolean = true) => {
+             hasAttemptedFetchRef.current = true;
+             fetchData();
+         }
+-    }, [enabled, isDataLoaded, fetchData]);
++    }, [enabled, fetchData]);
+ 
+     // Listen for network reconnection to refresh data
+     useEffect(() => {
+@@ -186,7 +260,7 @@ export const usePublicTransportData = (enabled: boolean = true) => {
+         isDataAvailable,
+         isDataLoaded,
+         error,
+-        refreshData: fetchData,
++        refreshData: fetchData
+     };
+ };
+ 
