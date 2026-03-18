@@ -94,12 +94,14 @@ setJsonLogicDebugFlags mocId req = do
 
 -- | Check if debug logging is enabled for an identifier and current time is within window
 checkDebugLogFlags ::
-  (CacheFlow m r) =>
+  (CacheFlow m r, MonadFlow m) =>
   Id LYT.MerchantOperatingCity ->
   Text ->
   m Bool
 checkDebugLogFlags mocId identifier' = do
-  mbEnabled :: Maybe Text <- Hedis.get (mkDebugEnabledKey mocId identifier')
+  let enabledKey = mkDebugEnabledKey mocId identifier'
+  mbEnabled :: Maybe Text <- Hedis.get enabledKey
+  logInfo $ "JsonLogicDebug: checkFlags key=" <> enabledKey <> " enabled=" <> show mbEnabled
   case mbEnabled of
     Just "1" -> do
       mbStartStr :: Maybe Text <- Hedis.get (mkDebugStartTimeKey mocId identifier')
@@ -111,7 +113,9 @@ checkDebugLogFlags mocId identifier' = do
             startT <- ISO.iso8601ParseM (T.unpack startStr)
             endT <- ISO.iso8601ParseM (T.unpack endStr)
             pure $ now >= startT && now <= endT
-      pure $ fromMaybe False mbInWindow
+      let result = fromMaybe False mbInWindow
+      logInfo $ "JsonLogicDebug: startTime=" <> show mbStartStr <> " endTime=" <> show mbEndStr <> " now=" <> show now <> " inWindow=" <> show result
+      pure result
     _ -> pure False
 
 -- | Insert a debug log row into ClickHouse json_logic_transactions table
