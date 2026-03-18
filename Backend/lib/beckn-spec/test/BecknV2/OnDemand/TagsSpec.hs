@@ -43,6 +43,39 @@ spec = describe "BecknV2.OnDemand.Tags" $ do
       let desc = getTagGroupDescriptor DISABILITY_OTH
       desc.descriptorCode `shouldBe` Just "DISABILITY_OTH"
 
+    -- ONDC v2.1.0 new disability tag groups
+    it "DISABILITY_LEP has correct descriptor code" $ do
+      let desc = getTagGroupDescriptor DISABILITY_LEP
+      desc.descriptorCode `shouldBe` Just "DISABILITY_LEP"
+
+    it "DISABILITY_SPE has correct descriptor code" $ do
+      let desc = getTagGroupDescriptor DISABILITY_SPE
+      desc.descriptorCode `shouldBe` Just "DISABILITY_SPE"
+
+    it "DISABILITY_INTEL has correct descriptor code" $ do
+      let desc = getTagGroupDescriptor DISABILITY_INTEL
+      desc.descriptorCode `shouldBe` Just "DISABILITY_INTEL"
+
+    it "DISABILITY_MENTAL has correct descriptor code" $ do
+      let desc = getTagGroupDescriptor DISABILITY_MENTAL
+      desc.descriptorCode `shouldBe` Just "DISABILITY_MENTAL"
+
+    it "DISABILITY_BLOOD has correct descriptor code" $ do
+      let desc = getTagGroupDescriptor DISABILITY_BLOOD
+      desc.descriptorCode `shouldBe` Just "DISABILITY_BLOOD"
+
+    it "DISABILITY_DWARFISM has correct descriptor code" $ do
+      let desc = getTagGroupDescriptor DISABILITY_DWARFISM
+      desc.descriptorCode `shouldBe` Just "DISABILITY_DWARFISM"
+
+    it "DISABILITY_ACID_ATTACK has correct descriptor code" $ do
+      let desc = getTagGroupDescriptor DISABILITY_ACID_ATTACK
+      desc.descriptorCode `shouldBe` Just "DISABILITY_ACID_ATTACK"
+
+    it "DISABILITY_MULTIPLE_DIS has correct descriptor code" $ do
+      let desc = getTagGroupDescriptor DISABILITY_MULTIPLE_DIS
+      desc.descriptorCode `shouldBe` Just "DISABILITY_MULTIPLE_DIS"
+
     it "BAP_TERMS has descriptive name" $ do
       let desc = getTagGroupDescriptor BAP_TERMS
       desc.descriptorName `shouldBe` Just "BAP Terms of Engagement"
@@ -158,6 +191,31 @@ spec = describe "BecknV2.OnDemand.Tags" $ do
     it "maps COGNITIVE_DISABILITY to DISABILITY_COG" $ do
       disabilityTagToGroup "COGNITIVE_DISABILITY" `shouldBe` DISABILITY_COG
 
+    -- ONDC v2.1.0 new disability types
+    it "maps LEPROSY_CURED to DISABILITY_LEP" $ do
+      disabilityTagToGroup "LEPROSY_CURED" `shouldBe` DISABILITY_LEP
+
+    it "maps SPEECH_LANGUAGE to DISABILITY_SPE" $ do
+      disabilityTagToGroup "SPEECH_LANGUAGE" `shouldBe` DISABILITY_SPE
+
+    it "maps INTELLECTUAL_DISABILITY to DISABILITY_INTEL" $ do
+      disabilityTagToGroup "INTELLECTUAL_DISABILITY" `shouldBe` DISABILITY_INTEL
+
+    it "maps MENTAL_ILLNESS to DISABILITY_MENTAL" $ do
+      disabilityTagToGroup "MENTAL_ILLNESS" `shouldBe` DISABILITY_MENTAL
+
+    it "maps BLOOD_DISORDER to DISABILITY_BLOOD" $ do
+      disabilityTagToGroup "BLOOD_DISORDER" `shouldBe` DISABILITY_BLOOD
+
+    it "maps DWARFISM to DISABILITY_DWARFISM" $ do
+      disabilityTagToGroup "DWARFISM" `shouldBe` DISABILITY_DWARFISM
+
+    it "maps ACID_ATTACK_SURVIVOR to DISABILITY_ACID_ATTACK" $ do
+      disabilityTagToGroup "ACID_ATTACK_SURVIVOR" `shouldBe` DISABILITY_ACID_ATTACK
+
+    it "maps MULTIPLE_DISABILITIES to DISABILITY_MULTIPLE_DIS" $ do
+      disabilityTagToGroup "MULTIPLE_DISABILITIES" `shouldBe` DISABILITY_MULTIPLE_DIS
+
     it "maps unknown to DISABILITY_OTH" $ do
       disabilityTagToGroup "SOMETHING_ELSE" `shouldBe` DISABILITY_OTH
 
@@ -172,7 +230,6 @@ spec = describe "BecknV2.OnDemand.Tags" $ do
       let groups = mkDisabilityTagGroups (Just "BLIND_LOW_VISION")
       length groups `shouldBe` 1
       let grp = head groups
-      -- Check descriptor code is DISABILITY_VIS
       (grp.tagGroupDescriptor >>= (.descriptorCode)) `shouldBe` Just "DISABILITY_VIS"
 
     it "creates tag group with DISABILITY_TYPE tag inside" $ do
@@ -180,12 +237,79 @@ spec = describe "BecknV2.OnDemand.Tags" $ do
       length groups `shouldBe` 1
       let grp = head groups
       (grp.tagGroupDescriptor >>= (.descriptorCode)) `shouldBe` Just "DISABILITY_HEA"
-      -- Check there's a tag with code DISABILITY_TYPE
       let tags = fromMaybe [] grp.tagGroupList
       length tags `shouldBe` 1
       let tag = head tags
       (tag.tagDescriptor >>= (.descriptorCode)) `shouldBe` Just "DISABILITY_TYPE"
       tag.tagValue `shouldBe` Just "HEAR_IMPAIRMENT"
+
+    -- ONDC v2.1.0: verify mkDisabilityTagGroups routes each type to the correct group
+    it "routes LOCOMOTOR_DISABILITY to DISABILITY_MOB group" $ do
+      let groups = mkDisabilityTagGroups (Just "LOCOMOTOR_DISABILITY")
+      length groups `shouldBe` 1
+      ((head groups).tagGroupDescriptor >>= (.descriptorCode)) `shouldBe` Just "DISABILITY_MOB"
+
+    it "routes COGNITIVE_DISABILITY to DISABILITY_COG group" $ do
+      let groups = mkDisabilityTagGroups (Just "COGNITIVE_DISABILITY")
+      length groups `shouldBe` 1
+      ((head groups).tagGroupDescriptor >>= (.descriptorCode)) `shouldBe` Just "DISABILITY_COG"
+
+    it "routes LEPROSY_CURED to DISABILITY_LEP group" $ do
+      let groups = mkDisabilityTagGroups (Just "LEPROSY_CURED")
+      length groups `shouldBe` 1
+      ((head groups).tagGroupDescriptor >>= (.descriptorCode)) `shouldBe` Just "DISABILITY_LEP"
+
+    it "routes SPEECH_LANGUAGE to DISABILITY_SPE group" $ do
+      let groups = mkDisabilityTagGroups (Just "SPEECH_LANGUAGE")
+      length groups `shouldBe` 1
+      ((head groups).tagGroupDescriptor >>= (.descriptorCode)) `shouldBe` Just "DISABILITY_SPE"
+
+    it "routes INTELLECTUAL_DISABILITY to DISABILITY_INTEL group" $ do
+      let groups = mkDisabilityTagGroups (Just "INTELLECTUAL_DISABILITY")
+      length groups `shouldBe` 1
+      ((head groups).tagGroupDescriptor >>= (.descriptorCode)) `shouldBe` Just "DISABILITY_INTEL"
+
+    it "routes MENTAL_ILLNESS to DISABILITY_MENTAL group" $ do
+      let groups = mkDisabilityTagGroups (Just "MENTAL_ILLNESS")
+      length groups `shouldBe` 1
+      ((head groups).tagGroupDescriptor >>= (.descriptorCode)) `shouldBe` Just "DISABILITY_MENTAL"
+
+    it "routes BLOOD_DISORDER to DISABILITY_BLOOD group" $ do
+      let groups = mkDisabilityTagGroups (Just "BLOOD_DISORDER")
+      length groups `shouldBe` 1
+      ((head groups).tagGroupDescriptor >>= (.descriptorCode)) `shouldBe` Just "DISABILITY_BLOOD"
+
+    it "routes DWARFISM to DISABILITY_DWARFISM group" $ do
+      let groups = mkDisabilityTagGroups (Just "DWARFISM")
+      length groups `shouldBe` 1
+      ((head groups).tagGroupDescriptor >>= (.descriptorCode)) `shouldBe` Just "DISABILITY_DWARFISM"
+
+    it "routes ACID_ATTACK_SURVIVOR to DISABILITY_ACID_ATTACK group" $ do
+      let groups = mkDisabilityTagGroups (Just "ACID_ATTACK_SURVIVOR")
+      length groups `shouldBe` 1
+      ((head groups).tagGroupDescriptor >>= (.descriptorCode)) `shouldBe` Just "DISABILITY_ACID_ATTACK"
+
+    it "routes MULTIPLE_DISABILITIES to DISABILITY_MULTIPLE_DIS group" $ do
+      let groups = mkDisabilityTagGroups (Just "MULTIPLE_DISABILITIES")
+      length groups `shouldBe` 1
+      ((head groups).tagGroupDescriptor >>= (.descriptorCode)) `shouldBe` Just "DISABILITY_MULTIPLE_DIS"
+
+    it "routes unknown disability to DISABILITY_OTH group" $ do
+      let groups = mkDisabilityTagGroups (Just "UNKNOWN_TYPE")
+      length groups `shouldBe` 1
+      ((head groups).tagGroupDescriptor >>= (.descriptorCode)) `shouldBe` Just "DISABILITY_OTH"
+
+    it "preserves disability tag value in DISABILITY_TYPE tag for all types" $ do
+      let allTypes =
+            [ "BLIND_LOW_VISION", "HEAR_IMPAIRMENT", "LOCOMOTOR_DISABILITY",
+              "COGNITIVE_DISABILITY", "LEPROSY_CURED", "SPEECH_LANGUAGE",
+              "INTELLECTUAL_DISABILITY", "MENTAL_ILLNESS", "BLOOD_DISORDER",
+              "DWARFISM", "ACID_ATTACK_SURVIVOR", "MULTIPLE_DISABILITIES"
+            ]
+      forM_ allTypes $ \disType -> do
+        let groups = mkDisabilityTagGroups (Just disType)
+        let tags = fromMaybe [] (head groups).tagGroupList
+        (head tags).tagValue `shouldBe` Just disType
 
   -- ================================================================
   -- getFullTagGroup construction

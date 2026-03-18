@@ -376,6 +376,8 @@ test-suite beckn-spec-test
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
+      BecknV2.OnDemand.DisabilityGuardSpec
+      BecknV2.OnDemand.DisabilityPipelineSpec
       BecknV2.OnDemand.EnumsSpec
       BecknV2.OnDemand.TagsSpec
       BecknV2.OnDemand.TypesSpec
@@ -433,6 +435,7 @@ test-suite beckn-spec-test
     , cryptonite
     , data-default-class
     , dhall
+    , directory
     , double-conversion
     , either
     , esqueleto

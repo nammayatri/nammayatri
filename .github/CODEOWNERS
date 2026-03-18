@@ -1,0 +1,23 @@
+# Purple Rides (accessibility / disability) — require review for any changes
+# touching disability tag logic to prevent silent regressions.
+#
+# Files matching these patterns will require approval from @nammayatri/purple-rides
+# before merging.
+
+# Disability guard module
+Backend/lib/shared-services/src/SharedLogic/DisabilityGuard.hs @nammayatri/purple-rides
+
+# Beckn disability tag definitions and helpers
+Backend/lib/beckn-spec/src/BecknV2/OnDemand/Tags.hs @nammayatri/purple-rides
+
+# Disability CI guard tests
+Backend/lib/beckn-spec/test/BecknV2/OnDemand/DisabilityGuardSpec.hs @nammayatri/purple-rides
+
+# Rider-app disability domain types and queries
+Backend/app/rider-platform/rider-app/Main/src/Domain/Action/UI/Disability.hs @nammayatri/purple-rides
+Backend/app/rider-platform/rider-app/Main/src-read-only/Domain/Types/PersonDisability.hs @nammayatri/purple-rides
+Backend/app/rider-platform/rider-app/Main/src-read-only/Domain/Types/Disability.hs @nammayatri/purple-rides
+Backend/app/rider-platform/rider-app/Main/spec/Storage/PersonDisability.yaml @nammayatri/purple-rides
+
+# Disability translations
+Backend/app/rider-platform/rider-app/Main/src-read-only/Domain/Types/DisabilityTranslation.hs @nammayatri/purple-rides

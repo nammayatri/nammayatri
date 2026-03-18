@@ -101,6 +101,7 @@ library
       Safety.Storage.CachedQueries.Sos
       Safety.Storage.Queries.PersonDefaultEmergencyNumberExtra
       Safety.Storage.Queries.SafetySettingsExtra
+      SharedLogic.DisabilityGuard
       UrlShortner.Common
       UrlShortner.Types
       API.Types.ProviderPlatform.IssueManagement

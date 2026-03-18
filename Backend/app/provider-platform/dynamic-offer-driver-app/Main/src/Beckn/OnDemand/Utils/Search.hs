@@ -169,7 +169,7 @@ buildDisabilityTag :: Spec.SearchReqMessage -> Maybe Text
 buildDisabilityTag req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
   -- ONDC v2.1.0: try per-type disability tag groups first, then fall back to legacy CUSTOMER_DISABILITY tag
-  let disabilityGroups = [Tag.DISABILITY_VIS, Tag.DISABILITY_HEA, Tag.DISABILITY_MOB, Tag.DISABILITY_COG, Tag.DISABILITY_OTH]
+  let disabilityGroups = [Tag.DISABILITY_VIS, Tag.DISABILITY_HEA, Tag.DISABILITY_MOB, Tag.DISABILITY_COG, Tag.DISABILITY_OTH, Tag.DISABILITY_LEP, Tag.DISABILITY_SPE, Tag.DISABILITY_INTEL, Tag.DISABILITY_MENTAL, Tag.DISABILITY_BLOOD, Tag.DISABILITY_DWARFISM, Tag.DISABILITY_ACID_ATTACK, Tag.DISABILITY_MULTIPLE_DIS]
       fromNewGroups = asum $ map (\grp -> Utils.getTagV2 grp Tag.DISABILITY_TYPE tagGroups) disabilityGroups
   fromNewGroups <|> Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_DISABILITY tagGroups
 
