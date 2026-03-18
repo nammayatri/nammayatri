@@ -1,0 +1,98 @@
+# Finance Kernel - Chargeback Entity
+# Tracks chargebacks/disputes against payment gateway settlement rows.
+# Linked to PgPaymentSettlementReport via settlementReportId.
+# Namma-DSL YAML specification
+
+imports:
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+  PgPaymentSettlementReport: Lib.Finance.Domain.Types.PgPaymentSettlementReport
+
+Chargeback:
+  tableName: finance_chargeback
+  derives: "Generic"
+
+  # ---------------------------------------------------------------------------
+  # Enums
+  # ---------------------------------------------------------------------------
+  types:
+
+    ChargebackStatus:
+      enum: "OPEN,EVIDENCE_SUBMITTED,WON,LOST,EXPIRED"
+      derive: "ToParamSchema"
+
+  # ---------------------------------------------------------------------------
+  # Fields
+  # ---------------------------------------------------------------------------
+  fields:
+    id: Id Chargeback
+
+    # --- Link to settlement report ---
+    settlementReportId: Id PgPaymentSettlementReport
+
+    # --- Transaction identity ---
+    transactionId: Text                              # PG transaction ID this chargeback relates to
+
+    # --- Chargeback details ---
+    chargebackReasonCode: Text                       # Reason code from PG / card network
+    chargebackAmount: HighPrecMoney                  # Disputed amount
+    chargebackStatus: ChargebackStatus               # OPEN | EVIDENCE_SUBMITTED | WON | LOST | EXPIRED
+
+    # --- Response tracking ---
+    responseDeadline: UTCTime                        # Deadline for submitting evidence / response
+    evidenceUrl: Maybe Text                          # URL to uploaded evidence document
+    adminNotes: Maybe Text                           # Internal admin notes / response reason
+
+    # --- Multi-tenancy ---
+    merchantId: Text
+    merchantOperatingCityId: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  # ---------------------------------------------------------------------------
+  # Default values
+  # ---------------------------------------------------------------------------
+  default:
+    chargebackStatus: "'OPEN'"
+
+  # ---------------------------------------------------------------------------
+  # Constraints / indexes
+  # ---------------------------------------------------------------------------
+  constraints:
+    id: PrimaryKey
+    settlementReportId: SecondaryKey
+    transactionId: "!SecondaryKey"
+    chargebackStatus: "!SecondaryKey"
+
+  # ---------------------------------------------------------------------------
+  # Generated queries
+  # ---------------------------------------------------------------------------
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findBySettlementReportId:
+      kvFunction: findAllWithKV
+      where: settlementReportId
+
+    findByTransactionId:
+      kvFunction: findAllWithKV
+      where: transactionId
+
+    updateChargebackStatus:
+      kvFunction: updateOneWithKV
+      params: [chargebackStatus, evidenceUrl, adminNotes, updatedAt]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  # ---------------------------------------------------------------------------
+  # Finance kernel boilerplate
+  # ---------------------------------------------------------------------------
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <ChargebackStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <ChargebackStatus>

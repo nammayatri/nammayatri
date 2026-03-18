@@ -37,3 +37,11 @@ findBySummaryIdWithPagination summaryId limit offset =
     (Se.Asc Beam.createdAt)
     (Just limit)
     (Just offset)
+
+findBySettlementId ::
+  (BeamFlow m r) =>
+  Text -> -- settlementId
+  m [Domain.ReconciliationEntry]
+findBySettlementId settlementId =
+  findAllWithKV
+    [Se.Is Beam.settlementId $ Se.Eq (Just settlementId)]

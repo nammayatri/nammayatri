@@ -1,0 +1,253 @@
+# Settlement Dashboard APIs — settlement overview, management, and chargeback handling
+# Part of Initiative 2: Settlement Dashboard & Management
+
+imports:
+  Summary: Dashboard.Common
+  PGPaymentSettlementReport: Dashboard.Common
+
+module: Settlement
+
+apis:
+  # ----- Settlement Summary (aggregated totals) -----
+  - GET: # SettlementSummaryAPI
+      endpoint: /settlement/summary
+      query:
+        dateFrom: UTCTime
+        dateTo: UTCTime
+        gateway: Text
+      auth: ApiAuthV2
+      response:
+        type: SettlementSummaryRes
+
+  # ----- Settlement List (paginated, filterable) -----
+  - GET: # SettlementListAPI
+      endpoint: /settlement/list
+      query:
+        limit: Int
+        offset: Int
+        dateFrom: UTCTime
+        dateTo: UTCTime
+        gateway: Text
+        status: SettlementStatusFilter
+        amountMin: HighPrecMoney
+        amountMax: HighPrecMoney
+        searchQuery: Text
+      auth: ApiAuthV2
+      response:
+        type: SettlementListRes
+
+  # ----- Settlement Details (single settlement with linked txns) -----
+  - GET: # SettlementDetailsAPI
+      endpoint: /settlement/{settlementId}/details
+      params:
+        settlementId: Id PGPaymentSettlementReport
+      auth: ApiAuthV2
+      response:
+        type: SettlementDetailsRes
+
+  # ----- Chargeback List -----
+  - GET: # ChargebackListAPI
+      endpoint: /settlement/chargebacks/list
+      query:
+        limit: Int
+        offset: Int
+        dateFrom: UTCTime
+        dateTo: UTCTime
+        status: ChargebackStatusFilter
+      auth: ApiAuthV2
+      response:
+        type: ChargebackListRes
+
+  # ----- Respond to Chargeback -----
+  - POST: # ChargebackRespondAPI
+      endpoint: /settlement/chargebacks/{chargebackId}/respond
+      params:
+        chargebackId: Text
+      auth: ApiAuthV2
+      request:
+        type: ChargebackRespondReq
+      response:
+        type: ChargebackRespondRes
+
+  # ----- Settlement Trend (time-series for charts) -----
+  - GET: # SettlementTrendAPI
+      endpoint: /settlement/trend
+      query:
+        dateFrom: UTCTime
+        dateTo: UTCTime
+        gateway: Text
+        granularity: TrendGranularity
+      auth: ApiAuthV2
+      response:
+        type: SettlementTrendRes
+
+types:
+  # ----- Enums -----
+  SettlementStatusFilter:
+    - enum: "AllSettlements, Settled, Pending, Failed, Disputed"
+    - derive: "ToParamSchema,HttpInstance"
+
+  ChargebackStatusFilter:
+    - enum: "AllChargebacks, ChargebackOpen, ChargebackEvidenceSubmitted, ChargebackWon, ChargebackLost, ChargebackExpired"
+    - derive: "ToParamSchema,HttpInstance"
+
+  TrendGranularity:
+    - enum: "Daily, Weekly, Monthly"
+    - derive: "ToParamSchema,HttpInstance"
+
+  # ----- Settlement Summary -----
+  SettlementSummaryRes:
+    - totalSettledAmount: HighPrecMoney
+    - totalPendingAmount: HighPrecMoney
+    - totalFailedAmount: HighPrecMoney
+    - totalDisputedAmount: HighPrecMoney
+    - totalSettlementCount: Int
+    - pendingCount: Int
+    - failedCount: Int
+    - disputedCount: Int
+    - settlementRate: Text
+    - gatewayBreakdown: [GatewaySettlementSummary]
+
+  GatewaySettlementSummary:
+    - gateway: Text
+    - settledAmount: HighPrecMoney
+    - pendingAmount: HighPrecMoney
+    - failedAmount: HighPrecMoney
+    - transactionCount: Int
+
+  # ----- Settlement List -----
+  SettlementListRes:
+    - totalItems: Int
+    - summary: Summary
+    - settlements: [SettlementListItem]
+
+  SettlementListItem:
+    - settlementReportId: Text
+    - orderId: Text
+    - txnId: Maybe Text
+    - rrn: Maybe Text
+    - txnType: Text
+    - txnStatus: Text
+    - txnAmount: HighPrecMoney
+    - settlementAmount: HighPrecMoney
+    - pgBaseFee: HighPrecMoney
+    - pgTax: HighPrecMoney
+    - paymentGateway: Maybe Text
+    - paymentMethod: Maybe Text
+    - settlementId: Maybe Text
+    - settlementDate: Maybe UTCTime
+    - settlementStatus: Maybe Text
+    - reconStatus: Text
+    - hasChargeback: Bool
+    - chargebackAmount: Maybe HighPrecMoney
+    - txnDate: Maybe UTCTime
+    - createdAt: UTCTime
+
+  # ----- Settlement Details -----
+  SettlementDetailsRes:
+    - settlementReport: SettlementReportDetail
+    - linkedChargebacks: [ChargebackItem]
+    - reconEntries: [SettlementReconEntry]
+
+  SettlementReportDetail:
+    - id: Text
+    - orderId: Text
+    - txnId: Maybe Text
+    - rrn: Maybe Text
+    - utr: Maybe Text
+    - txnType: Text
+    - txnStatus: Text
+    - txnDate: Maybe UTCTime
+    - txnAmount: HighPrecMoney
+    - pgBaseFee: HighPrecMoney
+    - pgTax: HighPrecMoney
+    - settlementAmount: HighPrecMoney
+    - paymentGateway: Maybe Text
+    - paymentMethod: Maybe Text
+    - paymentMethodSubType: Maybe Text
+    - settlementType: Maybe Text
+    - settlementMode: Maybe Text
+    - settlementId: Maybe Text
+    - settlementDate: Maybe UTCTime
+    - referenceId: Maybe Text
+    - referenceType: Maybe Text
+    - disputeId: Maybe Text
+    - disputeType: Maybe Text
+    - reconStatus: Text
+    - reconMessage: Maybe Text
+    - merchantId: Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+
+  SettlementReconEntry:
+    - reconEntryId: Text
+    - bookingId: Maybe Text
+    - expectedValue: HighPrecMoney
+    - actualValue: HighPrecMoney
+    - variance: HighPrecMoney
+    - reconStatus: Text
+    - mismatchReason: Maybe Text
+
+  # ----- Chargeback List -----
+  ChargebackListRes:
+    - totalItems: Int
+    - summary: Summary
+    - chargebacks: [ChargebackItem]
+    - statusCounts: ChargebackStatusCounts
+
+  ChargebackStatusCounts:
+    - openCount: Int
+    - evidenceSubmittedCount: Int
+    - wonCount: Int
+    - lostCount: Int
+    - expiredCount: Int
+
+  ChargebackItem:
+    - chargebackId: Text
+    - settlementReportId: Text
+    - transactionId: Text
+    - chargebackReasonCode: Text
+    - chargebackAmount: HighPrecMoney
+    - chargebackStatus: Text
+    - responseDeadline: UTCTime
+    - evidenceUrl: Maybe Text
+    - adminNotes: Maybe Text
+    - merchantId: Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+
+  # ----- Chargeback Respond -----
+  ChargebackRespondReq:
+    - action: ChargebackAction
+    - evidenceUrl: Maybe Text
+    - adminNotes: Maybe Text
+
+  ChargebackAction:
+    - enum: "AcceptChargeback, RejectChargeback, SubmitEvidence"
+    - derive: "HttpInstance"
+
+  ChargebackRespondRes:
+    - success: Bool
+    - message: Text
+    - updatedStatus: Text
+
+  # ----- Settlement Trend -----
+  SettlementTrendRes:
+    - trendData: [SettlementTrendPoint]
+    - totalSettled: HighPrecMoney
+    - totalPending: HighPrecMoney
+    - periodStart: UTCTime
+    - periodEnd: UTCTime
+
+  SettlementTrendPoint:
+    - date: UTCTime
+    - settledAmount: HighPrecMoney
+    - pendingAmount: HighPrecMoney
+    - failedAmount: HighPrecMoney
+    - disputedAmount: HighPrecMoney
+    - transactionCount: Int
+    - settlementCount: Int
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE
+  - EXTRA_API_COMMON_TYPES_FILE
