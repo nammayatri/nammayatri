@@ -36,13 +36,10 @@ import qualified Data.Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv (FromNamedRecord (..), Header, decodeByName, (.:))
-import Data.OpenApi (ToSchema)
 import qualified Data.Vector as V
 import qualified Domain.Action.UI.TransitOperator as DTOp
 import qualified Domain.Types.DeviceVehicleMapping
-import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
@@ -52,11 +49,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (Header, throwError)
 import qualified "this" SharedLogic.External.Nandi.Types
-import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
-import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DeviceVehicleMapping as QDvm
-import Tools.Auth
 
 transitOperatorGetRow :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow SharedLogic.External.Nandi.Types.NandiRow)
 transitOperatorGetRow merchantShortId opCity column table vehicleCategory =
@@ -166,35 +159,13 @@ instance FromNamedRecord DeviceVehicleMappingCsvRow where
       <$> r .: "device_id"
       <*> r .: "fleet_id"
 
-getFeedKey :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Environment.Flow Text
-getFeedKey merchantOpCityId = do
-  integratedBPPConfig <-
-    CQIBC.findByDomainAndCityAndVehicleCategory
-      "FRFS"
-      merchantOpCityId
-      BecknV2.OnDemand.Enums.BUS
-      Domain.Types.IntegratedBPPConfig.APPLICATION
-      >>= fromMaybeM (InternalError "IntegratedBPPConfig not found for BUS")
-  pure integratedBPPConfig.feedKey
-
 transitOperatorGetDeviceVehicleMappingList ::
   ( Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
     Kernel.Types.Beckn.Context.City ->
     Environment.Flow APITransitOp.DeviceVehicleMappingListRes
   )
 transitOperatorGetDeviceVehicleMappingList merchantShortId opCity = do
-  merchant <-
-    CQM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-
-  merchantOpCity <-
-    CQMOC.findByMerchantIdAndCity merchant.id opCity
-      >>= fromMaybeM
-        ( MerchantOperatingCityNotFound $
-            "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity
-        )
-
-  gtfsId <- getFeedKey merchantOpCity.id
+  (_, gtfsId) <- DTOp.resolveBaseUrlAndGtfsId merchantShortId opCity BecknV2.OnDemand.Enums.BUS
   mappings <- QDvm.findAllByGtfsId gtfsId
   let items = map toItem mappings
   pure $
@@ -218,18 +189,7 @@ transitOperatorUpsertDeviceVehicleMapping ::
     Environment.Flow APITransitOp.UpsertDeviceVehicleMappingResp
   )
 transitOperatorUpsertDeviceVehicleMapping merchantShortId opCity req = do
-  merchant <-
-    CQM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-
-  merchantOpCity <-
-    CQMOC.findByMerchantIdAndCity merchant.id opCity
-      >>= fromMaybeM
-        ( MerchantOperatingCityNotFound $
-            "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity
-        )
-
-  gtfsId <- getFeedKey merchantOpCity.id
+  (_, gtfsId) <- DTOp.resolveBaseUrlAndGtfsId merchantShortId opCity BecknV2.OnDemand.Enums.BUS
   csvRows <- readCsv req.file
 
   unprocessedEntries <- fmap catMaybes $
@@ -244,7 +204,9 @@ transitOperatorUpsertDeviceVehicleMapping merchantShortId opCity req = do
 
   pure $
     APITransitOp.UpsertDeviceVehicleMappingResp
-      { success = "All mappings upserted successfully",
+      { success = case length unprocessedEntries of
+        0 -> "All mappings upserted successfully"
+        _ -> "Some mappings failed to upsert",
         unprocessedEntries = unprocessedEntries
       }
   where
