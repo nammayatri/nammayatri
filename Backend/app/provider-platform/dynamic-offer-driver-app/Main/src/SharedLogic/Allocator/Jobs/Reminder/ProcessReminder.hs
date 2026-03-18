@@ -351,14 +351,16 @@ processInspectionReminder ::
   m ()
 processInspectionReminder reminder driver config merchantId merchantOpCityId displayName notificationType messageKey setApprovedAction = do
   now <- getCurrentTime
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let isOverdue = reminder.dueDate <= now
       isMandatory = config.isMandatory
-      shouldDisable = isOverdue && isMandatory
+      isVehicleRelated = reminder.documentType == DVC.InspectionHub
+      shouldDisableAction = isOverdue && isMandatory
+      shouldDisableDriver = shouldDisableAction && (not isVehicleRelated || transporterConfig.separateDriverVehicleEnablement /= Just True)
   -- Check if reminder is overdue and mandatory, then disable driver and set approved = false
-  when shouldDisable $ do
-    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  when shouldDisableDriver $ do
     disableDriverForMandatoryReminder transporterConfig reminder.driverId now displayName
-
+  when shouldDisableAction $ do
     -- Set approved flag to False (action depends on inspection type)
     setApprovedAction
   -- Before sending notification, check if reminder still exists and is still PENDING
@@ -370,12 +372,12 @@ processInspectionReminder reminder driver config merchantId merchantOpCityId dis
       sendInspectionOrTrainingNotification currentReminder driver merchantOpCityId notificationType messageKey displayName config
       -- Only reschedule if driver was NOT disabled (i.e., not overdue and mandatory)
       -- If driver was disabled, don't reschedule to avoid unnecessary job execution
-      unless shouldDisable $ do
+      unless shouldDisableAction $ do
         let scheduleAfter = fromIntegral $ fromMaybe defaultRescheduleIntervalSeconds config.reminderRescheduleIntervalSeconds
         scheduleReminderJob scheduleAfter reminder.id merchantId merchantOpCityId
         logInfo $ "Scheduled next " <> displayName <> " reminder job for driver " <> driver.id.getId <> " in " <> show scheduleAfter <> " seconds"
-      when shouldDisable $
-        logInfo $ "Driver disabled due to overdue mandatory " <> displayName <> " reminder, skipping reschedule"
+      when shouldDisableAction $
+        logInfo $ "Disable action was triggered due to overdue mandatory " <> displayName <> " reminder, skipping reschedule"
     _ -> do
       logInfo $ "Reminder " <> reminder.id.getId <> " is no longer PENDING (status: " <> maybe "not found" (show . (.status)) mbCurrentReminder <> "), skipping notification and reschedule"
 
