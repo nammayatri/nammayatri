@@ -38,6 +38,7 @@ import Kernel.External.MultiModal.Types as MultiModal
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Payment.Stripe.Config as Stripe
 import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
@@ -72,16 +73,25 @@ import qualified Utils.Common.JWT.Config as GW
 
 findByMerchantOpCityIdAndService :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> ServiceName -> m (Maybe MerchantServiceConfig)
 findByMerchantOpCityIdAndService id mocId serviceName =
-  Hedis.safeGet (makeMerchantIdAndServiceKey id mocId serviceName) >>= \case
-    Just a -> return . Just $ coerce @(MerchantServiceConfigD 'Unsafe) @MerchantServiceConfig a
-    Nothing -> flip whenJust cacheMerchantServiceConfig /=<< Queries.findByMerchantOpCityIdAndService id mocId serviceName
+  logDebug ("findByMerchantOpCityIdAndService: " <> show id <> " " <> show mocId <> " " <> show serviceName)
+    >> Hedis.safeGet (makeMerchantIdAndServiceKey id mocId serviceName)
+    >>= \case
+      Just a -> return . Just $ coerce @(MerchantServiceConfigD 'Unsafe) @MerchantServiceConfig a
+      Nothing -> flip whenJust cacheMerchantServiceConfig /=<< Queries.findByMerchantOpCityIdAndService id mocId serviceName
 
 cacheMerchantServiceConfig :: CacheFlow m r => MerchantServiceConfig -> m ()
 cacheMerchantServiceConfig merchantServiceConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeMerchantIdAndServiceKey merchantServiceConfig.merchantId merchantServiceConfig.merchantOperatingCityId (getServiceName merchantServiceConfig)
+  logDebug ("cacheMerchantServiceConfig: setting idKey=" <> idKey <> " expTime=" <> show expTime)
   Hedis.setExp idKey (coerce @MerchantServiceConfig @(MerchantServiceConfigD 'Unsafe) merchantServiceConfig) expTime
   where
+    stripePaymentService :: (Payment.PaymentService -> ServiceName) -> Stripe.StripeCfg -> ServiceName
+    stripePaymentService wrap cfg =
+      wrap $ case cfg.serviceMode of
+        Just Stripe.Test -> Payment.StripeTest
+        _ -> Payment.Stripe
+
     getServiceName :: MerchantServiceConfig -> ServiceName
     getServiceName msc = case msc.serviceConfig of
       MapsServiceConfig mapsCfg -> case mapsCfg of
@@ -115,35 +125,35 @@ cacheMerchantServiceConfig merchantServiceConfig = do
         Notification.GRPCConfig _ -> NotificationService Notification.GRPC
       PaymentServiceConfig paymentCfg -> case paymentCfg of
         Payment.JuspayConfig _ -> PaymentService Payment.Juspay
-        Payment.StripeConfig _ -> PaymentService Payment.Stripe
+        Payment.StripeConfig cfg -> stripePaymentService PaymentService cfg
         Payment.PaytmEDCConfig _ -> PaymentService Payment.PaytmEDC
       MetroPaymentServiceConfig paymentCfg -> case paymentCfg of
         Payment.JuspayConfig _ -> MetroPaymentService Payment.Juspay
-        Payment.StripeConfig _ -> MetroPaymentService Payment.Stripe
+        Payment.StripeConfig cfg -> stripePaymentService MetroPaymentService cfg
         Payment.PaytmEDCConfig _ -> MetroPaymentService Payment.PaytmEDC
       BusPaymentServiceConfig paymentCfg -> case paymentCfg of
         Payment.JuspayConfig _ -> BusPaymentService Payment.Juspay
-        Payment.StripeConfig _ -> BusPaymentService Payment.Stripe
+        Payment.StripeConfig cfg -> stripePaymentService BusPaymentService cfg
         Payment.PaytmEDCConfig _ -> BusPaymentService Payment.PaytmEDC
       BbpsPaymentServiceConfig paymentCfg -> case paymentCfg of
         Payment.JuspayConfig _ -> BbpsPaymentService Payment.Juspay
-        Payment.StripeConfig _ -> BbpsPaymentService Payment.Stripe
+        Payment.StripeConfig cfg -> stripePaymentService BbpsPaymentService cfg
         Payment.PaytmEDCConfig _ -> BbpsPaymentService Payment.PaytmEDC
       MultiModalPaymentServiceConfig paymentCfg -> case paymentCfg of
         Payment.JuspayConfig _ -> MultiModalPaymentService Payment.Juspay
-        Payment.StripeConfig _ -> MultiModalPaymentService Payment.Stripe
+        Payment.StripeConfig cfg -> stripePaymentService MultiModalPaymentService cfg
         Payment.PaytmEDCConfig _ -> MultiModalPaymentService Payment.PaytmEDC
       PassPaymentServiceConfig paymentCfg -> case paymentCfg of
         Payment.JuspayConfig _ -> PassPaymentService Payment.Juspay
-        Payment.StripeConfig _ -> PassPaymentService Payment.Stripe
+        Payment.StripeConfig cfg -> stripePaymentService PassPaymentService cfg
         Payment.PaytmEDCConfig _ -> PassPaymentService Payment.PaytmEDC
       ParkingPaymentServiceConfig paymentCfg -> case paymentCfg of
         Payment.JuspayConfig _ -> ParkingPaymentService Payment.Juspay
-        Payment.StripeConfig _ -> ParkingPaymentService Payment.Stripe
+        Payment.StripeConfig cfg -> stripePaymentService ParkingPaymentService cfg
         Payment.PaytmEDCConfig _ -> ParkingPaymentService Payment.PaytmEDC
       MembershipPaymentServiceConfig paymentCfg -> case paymentCfg of
         Payment.JuspayConfig _ -> MembershipPaymentService Payment.Juspay
-        Payment.StripeConfig _ -> MembershipPaymentService Payment.Stripe
+        Payment.StripeConfig cfg -> stripePaymentService MembershipPaymentService cfg
         Payment.PaytmEDCConfig _ -> MembershipPaymentService Payment.PaytmEDC
       IssueTicketServiceConfig ticketCfg -> case ticketCfg of
         Ticket.KaptureConfig _ -> IssueTicketService Ticket.Kapture
