@@ -20,6 +20,14 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
+data CancellationDuesBreakdownRes = CancellationDuesBreakdownRes
+  { totalCancellationDues :: Kernel.Types.Common.HighPrecMoney,
+    totalCancellationDuesWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
+    pendingRides :: [PendingRideDue]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data CancellationDuesDetailsRes = CancellationDuesDetailsRes
   { cancellationDues :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     disputeChancesUsed :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -81,7 +89,15 @@ data UpdateSafetyCenterBlockingReq = UpdateSafetyCenterBlockingReq {incrementCou
 instance Kernel.Types.HideSecrets.HideSecrets UpdateSafetyCenterBlockingReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("customer" :> (GetCustomerList :<|> DeleteCustomerDelete :<|> PostCustomerBlock :<|> PostCustomerUnblock :<|> GetCustomerInfo :<|> PostCustomerCancellationDuesSync :<|> GetCustomerCancellationDuesDetails :<|> PostCustomerUpdateSafetyCenterBlocking :<|> PostCustomerPersonNumbers :<|> PostCustomerPersonId :<|> PostCustomerUpdatePaymentMode))
+data PendingRideDue = PendingRideDue
+  { rideId :: Kernel.Prelude.Text,
+    cancellationAmount :: Kernel.Types.Common.HighPrecMoney,
+    cancellationAmountWithCurrency :: Kernel.Types.Common.PriceAPIEntity
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+type API = ("customer" :> (GetCustomerList :<|> DeleteCustomerDelete :<|> PostCustomerBlock :<|> PostCustomerUnblock :<|> GetCustomerInfo :<|> PostCustomerCancellationDuesSync :<|> GetCustomerCancellationDuesDetails :<|> GetCustomerCancellationDuesBreakdown :<|> PostCustomerUpdateSafetyCenterBlocking :<|> PostCustomerPersonNumbers :<|> PostCustomerPersonId :<|> PostCustomerUpdatePaymentMode))
 
 type GetCustomerList =
   ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> QueryParam "enabled" Kernel.Prelude.Bool
@@ -115,6 +131,8 @@ type PostCustomerCancellationDuesSync =
 
 type GetCustomerCancellationDuesDetails = (Capture "customerId" (Kernel.Types.Id.Id Dashboard.Common.Customer) :> "getCancellationDuesDetails" :> Get '[JSON] CancellationDuesDetailsRes)
 
+type GetCustomerCancellationDuesBreakdown = (Capture "customerId" (Kernel.Types.Id.Id Dashboard.Common.Customer) :> "getCancellationDuesBreakdown" :> Get '[JSON] CancellationDuesBreakdownRes)
+
 type PostCustomerUpdateSafetyCenterBlocking =
   ( Capture "customerId" (Kernel.Types.Id.Id Dashboard.Common.Customer) :> "updateSafetyCenterBlocking"
       :> ReqBody
@@ -142,6 +160,7 @@ data CustomerAPIs = CustomerAPIs
     getCustomerInfo :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient CustomerInfoRes,
     postCustomerCancellationDuesSync :: Kernel.Types.Id.Id Dashboard.Common.Customer -> CustomerCancellationDuesSyncReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getCustomerCancellationDuesDetails :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient CancellationDuesDetailsRes,
+    getCustomerCancellationDuesBreakdown :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient CancellationDuesBreakdownRes,
     postCustomerUpdateSafetyCenterBlocking :: Kernel.Types.Id.Id Dashboard.Common.Customer -> UpdateSafetyCenterBlockingReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postCustomerPersonNumbers :: (Data.ByteString.Lazy.ByteString, Dashboard.Common.PersonIdsReq) -> EulerHS.Types.EulerClient [Dashboard.Common.PersonRes],
     postCustomerPersonId :: (Data.ByteString.Lazy.ByteString, Dashboard.Common.PersonMobileNoReq) -> EulerHS.Types.EulerClient [Dashboard.Common.PersonRes],
@@ -151,7 +170,7 @@ data CustomerAPIs = CustomerAPIs
 mkCustomerAPIs :: (Client EulerHS.Types.EulerClient API -> CustomerAPIs)
 mkCustomerAPIs customerClient = (CustomerAPIs {..})
   where
-    getCustomerList :<|> deleteCustomerDelete :<|> postCustomerBlock :<|> postCustomerUnblock :<|> getCustomerInfo :<|> postCustomerCancellationDuesSync :<|> getCustomerCancellationDuesDetails :<|> postCustomerUpdateSafetyCenterBlocking :<|> postCustomerPersonNumbers :<|> postCustomerPersonId :<|> postCustomerUpdatePaymentMode = customerClient
+    getCustomerList :<|> deleteCustomerDelete :<|> postCustomerBlock :<|> postCustomerUnblock :<|> getCustomerInfo :<|> postCustomerCancellationDuesSync :<|> getCustomerCancellationDuesDetails :<|> getCustomerCancellationDuesBreakdown :<|> postCustomerUpdateSafetyCenterBlocking :<|> postCustomerPersonNumbers :<|> postCustomerPersonId :<|> postCustomerUpdatePaymentMode = customerClient
 
 data CustomerUserActionType
   = GET_CUSTOMER_LIST
@@ -161,6 +180,7 @@ data CustomerUserActionType
   | GET_CUSTOMER_INFO
   | POST_CUSTOMER_CANCELLATION_DUES_SYNC
   | GET_CUSTOMER_CANCELLATION_DUES_DETAILS
+  | GET_CUSTOMER_CANCELLATION_DUES_BREAKDOWN
   | POST_CUSTOMER_UPDATE_SAFETY_CENTER_BLOCKING
   | POST_CUSTOMER_PERSON_NUMBERS
   | POST_CUSTOMER_PERSON_ID

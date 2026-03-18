@@ -86,6 +86,16 @@ apis:
         type: CancellationDuesDetailsRes
       migrate:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_CANCELLATION_DUES_DETAILS
+  - GET:
+      name: GetCustomerCancellationDuesBreakdown
+      endpoint: /{customerId}/getCancellationDuesBreakdown
+      auth: ApiAuthV2
+      params:
+        customerId: Id Customer
+      response:
+        type: CancellationDuesBreakdownRes
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_CANCELLATION_DUES_BREAKDOWN
   - POST:
       endpoint: /{customerId}/updateSafetyCenterBlocking
       auth: ApiAuthV2
@@ -162,6 +172,14 @@ types:
     - incrementCount: Maybe Bool
     - resetCount: Maybe Bool
     - derive: "'HideSecrets"
+  PendingRideDue:
+    - rideId: Text
+    - cancellationAmount: HighPrecMoney
+    - cancellationAmountWithCurrency: PriceAPIEntity
+  CancellationDuesBreakdownRes:
+    - totalCancellationDues: HighPrecMoney
+    - totalCancellationDuesWithCurrency: PriceAPIEntity
+    - pendingRides: "[PendingRideDue]"
   UpdatePaymentModeReq:
     - recordType: NewType
     - paymentMode: PaymentMode

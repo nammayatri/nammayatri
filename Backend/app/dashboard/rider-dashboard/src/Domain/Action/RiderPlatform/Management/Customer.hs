@@ -8,6 +8,7 @@ module Domain.Action.RiderPlatform.Management.Customer
     getCustomerInfo,
     postCustomerCancellationDuesSync,
     getCustomerCancellationDuesDetails,
+    getCustomerCancellationDuesBreakdown,
     postCustomerUpdateSafetyCenterBlocking,
     postCustomerPersonNumbers,
     postCustomerPersonId,
@@ -89,6 +90,11 @@ getCustomerCancellationDuesDetails :: Kernel.Types.Id.ShortId Domain.Types.Merch
 getCustomerCancellationDuesDetails merchantShortId opCity apiTokenInfo customerId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.customerDSL.getCustomerCancellationDuesDetails) customerId
+
+getCustomerCancellationDuesBreakdown :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.Flow API.Types.RiderPlatform.Management.Customer.CancellationDuesBreakdownRes
+getCustomerCancellationDuesBreakdown merchantShortId opCity apiTokenInfo customerId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.customerDSL.getCustomerCancellationDuesBreakdown) customerId
 
 postCustomerUpdateSafetyCenterBlocking :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> API.Types.RiderPlatform.Management.Customer.UpdateSafetyCenterBlockingReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postCustomerUpdateSafetyCenterBlocking merchantShortId opCity apiTokenInfo customerId req = do
