@@ -210,7 +210,7 @@ uploadToSFTP rawFileName content = withLogTag "SFTP" $ do
                   "-P",
                   port,
                   "-o",
-                  "StrictHostKeyChecking=yes",
+                  "StrictHostKeyChecking=accept-new",
                   "-b",
                   tmpBatchPath,
                   username <> "@" <> host
