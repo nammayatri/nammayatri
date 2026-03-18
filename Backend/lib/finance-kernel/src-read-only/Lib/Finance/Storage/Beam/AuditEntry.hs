@@ -9,15 +9,15 @@ import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Lib.Finance.Domain.Types.AuditEntry
+import qualified Kernel.Types.Finance.Audit
 
 data AuditEntryT f = AuditEntryT
-  { action :: (B.C f Lib.Finance.Domain.Types.AuditEntry.AuditAction),
+  { action :: (B.C f Kernel.Types.Finance.Audit.AuditAction),
     actorId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    actorType :: (B.C f Kernel.Prelude.Text),
+    actorType :: (B.C f Kernel.Types.Finance.Audit.AuditActorType),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
     entityId :: (B.C f Kernel.Prelude.Text),
-    entityType :: (B.C f Kernel.Prelude.Text),
+    entityType :: (B.C f Kernel.Types.Finance.Audit.AuditEntityType),
     hashChain :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     id :: (B.C f Kernel.Prelude.Text),
     ipAddress :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
@@ -25,8 +25,7 @@ data AuditEntryT f = AuditEntryT
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     metadata :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     newState :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    previousState :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+    previousState :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value))
   }
   deriving (Generic, B.Beamable)
 

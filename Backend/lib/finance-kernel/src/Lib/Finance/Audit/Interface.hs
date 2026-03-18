@@ -16,14 +16,14 @@ where
 
 import Data.Aeson (Value)
 import Kernel.Prelude
-import Lib.Finance.Domain.Types.AuditEntry (AuditAction)
+import Kernel.Types.Finance.Audit (AuditAction, AuditActorType, AuditEntityType)
 
 -- | Input for creating an audit entry
 data AuditInput = AuditInput
-  { entityType :: Text,
+  { entityType :: AuditEntityType,
     entityId :: Text,
     action :: AuditAction,
-    actorType :: Text,
+    actorType :: AuditActorType,
     actorId :: Maybe Text,
     beforeState :: Maybe Value, -- Maps to previousState in DB
     afterState :: Maybe Value, -- Maps to newState in DB
@@ -34,9 +34,9 @@ data AuditInput = AuditInput
 
 -- | Request for listing audit entries with filters
 data AuditListRequest = AuditListRequest
-  { entityType :: Maybe Text,
+  { entityType :: Maybe AuditEntityType,
     action :: Maybe AuditAction,
-    actorType :: Maybe Text,
+    actorType :: Maybe AuditActorType,
     actorId :: Maybe Text,
     entityId :: Maybe Text,
     dateFrom :: Maybe UTCTime,
@@ -56,9 +56,9 @@ data AuditSummaryRequest = AuditSummaryRequest
 
 -- | Request for exporting audit log
 data AuditExportRequest = AuditExportRequest
-  { entityType :: Maybe Text,
+  { entityType :: Maybe AuditEntityType,
     action :: Maybe AuditAction,
-    actorType :: Maybe Text,
+    actorType :: Maybe AuditActorType,
     dateFrom :: Maybe UTCTime,
     dateTo :: Maybe UTCTime,
     format :: Text -- "CSV" or "JSON"

@@ -4,6 +4,7 @@ module Lib.Finance.Storage.Queries.AuditEntryExtra where
 
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import qualified Kernel.Types.Finance.Audit as AuditTypes
 import qualified Lib.Finance.Domain.Types.AuditEntry as Domain
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Beam.AuditEntry as Beam
@@ -14,9 +15,9 @@ import qualified Sequelize as Se
 findAllWithFilters ::
   (BeamFlow m r) =>
   Text -> -- merchantId
-  Maybe Text -> -- entityType filter
-  Maybe Domain.AuditAction -> -- action filter
-  Maybe Text -> -- actorType filter
+  Maybe AuditTypes.AuditEntityType -> -- entityType filter
+  Maybe AuditTypes.AuditAction -> -- action filter
+  Maybe AuditTypes.AuditActorType -> -- actorType filter
   Maybe UTCTime -> -- dateFrom
   Maybe UTCTime -> -- dateTo
   Int -> -- limit
@@ -36,19 +37,23 @@ findAllWithFilters merchantId mbEntityType mbAction mbActorType mbDateFrom mbDat
     (Just limit)
     (Just offset)
 
--- | Count audit entries with optional filters
+-- | Count audit entries with optional filters.
+--   Uses findAllWithOptionsKV with a large limit to avoid unbounded row loading,
+--   since the KV connector does not expose a native SQL COUNT.
+--   TODO: Replace with a proper SQL COUNT aggregation when countWithKV is available.
 countWithFilters ::
   (BeamFlow m r) =>
   Text -> -- merchantId
-  Maybe Text -> -- entityType filter
-  Maybe Domain.AuditAction -> -- action filter
-  Maybe Text -> -- actorType filter
+  Maybe AuditTypes.AuditEntityType -> -- entityType filter
+  Maybe AuditTypes.AuditAction -> -- action filter
+  Maybe AuditTypes.AuditActorType -> -- actorType filter
   Maybe UTCTime -> -- dateFrom
   Maybe UTCTime -> -- dateTo
   m Int
 countWithFilters merchantId mbEntityType mbAction mbActorType mbDateFrom mbDateTo = do
+  let maxCountLimit = 10000 -- Cap to prevent OOM; callers should use pagination
   entries <-
-    findAllWithKV
+    findAllWithOptionsKV
       [ Se.And $
           [Se.Is Beam.merchantId $ Se.Eq merchantId]
             <> maybe [] (\et -> [Se.Is Beam.entityType $ Se.Eq et]) mbEntityType
@@ -57,9 +62,12 @@ countWithFilters merchantId mbEntityType mbAction mbActorType mbDateFrom mbDateT
             <> maybe [] (\df -> [Se.Is Beam.createdAt $ Se.GreaterThanOrEq df]) mbDateFrom
             <> maybe [] (\dt -> [Se.Is Beam.createdAt $ Se.LessThanOrEq dt]) mbDateTo
       ]
+      (Se.Desc Beam.createdAt)
+      (Just maxCountLimit)
+      Nothing
   pure $ length (entries :: [Domain.AuditEntry])
 
--- | Find admin-specific audit entries (actorType = "ADMIN")
+-- | Find admin-specific audit entries (actorType = AdminUser)
 findAdminActions ::
   (BeamFlow m r) =>
   Text -> -- merchantId
@@ -72,7 +80,7 @@ findAdminActions merchantId mbDateFrom mbDateTo limit offset =
   findAllWithOptionsKV
     [ Se.And $
         [ Se.Is Beam.merchantId $ Se.Eq merchantId,
-          Se.Is Beam.actorType $ Se.Eq ("ADMIN" :: Text)
+          Se.Is Beam.actorType $ Se.Eq AuditTypes.AdminUser
         ]
           <> maybe [] (\df -> [Se.Is Beam.createdAt $ Se.GreaterThanOrEq df]) mbDateFrom
           <> maybe [] (\dt -> [Se.Is Beam.createdAt $ Se.LessThanOrEq dt]) mbDateTo
@@ -95,18 +103,43 @@ findByEntityIdSearch merchantId entityId =
         ]
     ]
 
--- | Find audit entries within a date range for a merchant
+-- | Find audit entries within a date range for a merchant (with pagination).
+--   Uses a default limit of 1000 and offset of 0 to prevent unbounded result sets.
 findByDateRange ::
   (BeamFlow m r) =>
   Text -> -- merchantId
   UTCTime -> -- from
   UTCTime -> -- to
+  Int -> -- limit
+  Int -> -- offset
   m [Domain.AuditEntry]
-findByDateRange merchantId dateFrom dateTo =
-  findAllWithKV
+findByDateRange merchantId dateFrom dateTo limit offset =
+  findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.merchantId $ Se.Eq merchantId,
           Se.Is Beam.createdAt $ Se.GreaterThanOrEq dateFrom,
           Se.Is Beam.createdAt $ Se.LessThanOrEq dateTo
         ]
     ]
+    (Se.Desc Beam.createdAt)
+    (Just limit)
+    (Just offset)
+
+-- | Find the latest audit entry for an entity (used for hash chain computation)
+findLatestForEntity ::
+  (BeamFlow m r) =>
+  AuditTypes.AuditEntityType -> -- entityType
+  Text -> -- entityId
+  m (Maybe Domain.AuditEntry)
+findLatestForEntity entityType entityId = do
+  entries <-
+    findAllWithOptionsKV
+      [ Se.And
+          [ Se.Is Beam.entityType $ Se.Eq entityType,
+            Se.Is Beam.entityId $ Se.Eq entityId
+          ]
+      ]
+      (Se.Desc Beam.createdAt)
+      (Just 1)
+      Nothing
+  pure $ listToMaybe entries

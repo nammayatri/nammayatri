@@ -1,25 +1,29 @@
 # Finance Kernel - Audit Entry Table
 # Namma-DSL YAML specification
+#
+# NOTE: Audit entries are IMMUTABLE (append-only). The auto-generated
+# updateByPrimaryKey is overridden in the Extra query file to throw an error.
+# Do NOT add update/delete queries here. See LAW 2: Immutability of History.
+# The updatedAt field is intentionally excluded -- audit records must not
+# be updated after creation.
 
 imports:
   UTCTime: Kernel.Prelude
   Value: Data.Aeson
+  AuditAction: Kernel.Types.Finance.Audit
+  AuditEntityType: Kernel.Types.Finance.Audit
+  AuditActorType: Kernel.Types.Finance.Audit
 
 AuditEntry:
   tableName: finance_audit_entry
   derives: "Generic"
 
-  types:
-    AuditAction:
-      enum: "Created,Updated,Reversed,StatusChanged"
-      derive: "ToParamSchema"
-
   fields:
     id: Id AuditEntry
-    entityType: Text
+    entityType: AuditEntityType
     entityId: Text
     action: AuditAction
-    actorType: Text
+    actorType: AuditActorType
     actorId: Maybe Text
     previousState: Maybe Value
     newState: Maybe Value
@@ -54,7 +58,8 @@ AuditEntry:
       where:
         and: [entityType, action]
 
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
-  domainInstance:
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <AuditAction>

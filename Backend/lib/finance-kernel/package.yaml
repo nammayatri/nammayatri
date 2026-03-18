@@ -68,6 +68,10 @@ dependencies:
   - beam-postgres
   - postgresql-simple
   - sequelize
+  - cryptonite
+  - base16-bytestring
+  - memory
+  - bytestring
 
 ghc-options:
   - -fwrite-ide-info

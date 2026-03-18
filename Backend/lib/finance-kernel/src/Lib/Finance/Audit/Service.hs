@@ -4,6 +4,7 @@
   Concrete audit trail operations for domain use.
   Implements LAW 2: Immutability of History (append-only).
   Uses generated Beam queries internally.
+  Implements cryptographic hash chain for tamper-evidence.
 -}
 {-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
@@ -26,13 +27,22 @@ module Lib.Finance.Audit.Service
     listAdminAuditActions,
     getAuditEntriesByDateRange,
 
+    -- * Hash chain
+    computeAuditHash,
+
     -- * Input types (re-export from Interface)
     module Lib.Finance.Audit.Interface,
   )
 where
 
-import Data.Aeson (Value)
+import Crypto.Hash (SHA256, hashWith)
+import Data.Aeson (Value, encode)
+import qualified Data.ByteArray as BA
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as Base16
+import qualified Data.Text.Encoding as TE
 import Kernel.Prelude
+import Kernel.Types.Finance.Audit (AuditAction, AuditActorType, AuditEntityType)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Lib.Finance.Audit.Interface
@@ -44,10 +54,10 @@ import qualified Lib.Finance.Storage.Queries.AuditEntryExtra as QAuditExtra
 
 -- | Context for the financial audit middleware
 data FinancialAuditContext = FinancialAuditContext
-  { entityType :: Text,
+  { entityType :: AuditEntityType,
     entityId :: Text,
     action :: AuditAction,
-    actorType :: Text,
+    actorType :: AuditActorType,
     actorId :: Maybe Text,
     merchantId :: Text,
     merchantOperatingCityId :: Text,
@@ -56,7 +66,29 @@ data FinancialAuditContext = FinancialAuditContext
   }
   deriving (Eq, Show, Generic)
 
--- | Log an audit entry (append-only, never modify)
+-- | Compute SHA-256 hash for an audit entry, chaining with the previous entry's hash.
+--   Hash = SHA256(previousHash + entityType + entityId + action + newState + timestamp)
+computeAuditHash ::
+  Maybe Text -> -- previous hash (Nothing for first entry in chain)
+  AuditEntityType -> -- entityType
+  Text -> -- entityId
+  AuditAction -> -- action
+  Maybe Value -> -- newState
+  UTCTime -> -- timestamp
+  Text
+computeAuditHash mbPrevHash entityType entityId action newState timestamp =
+  let prevHashBytes = maybe BS.empty TE.encodeUtf8 mbPrevHash
+      entityTypeBytes = TE.encodeUtf8 (show entityType)
+      entityIdBytes = TE.encodeUtf8 entityId
+      actionBytes = TE.encodeUtf8 (show action)
+      newStateBytes = maybe BS.empty (toStrict . encode) newState
+      timestampBytes = TE.encodeUtf8 (show timestamp)
+      combined = prevHashBytes <> entityTypeBytes <> entityIdBytes <> actionBytes <> newStateBytes <> timestampBytes
+      digest = hashWith SHA256 combined
+   in TE.decodeUtf8 $ Base16.encode (BA.convert digest :: BS.ByteString)
+
+-- | Log an audit entry (append-only, never modify).
+--   Automatically computes hash chain by fetching the previous entry's hash.
 logAudit ::
   (BeamFlow.BeamFlow m r) =>
   AuditInput ->
@@ -64,6 +96,11 @@ logAudit ::
 logAudit input = do
   now <- getCurrentTime
   auditId <- generateGUID
+
+  -- Fetch previous hash for chain computation
+  mbPrevEntry <- QAuditExtra.findLatestForEntity input.entityType input.entityId
+  let mbPrevHash = mbPrevEntry >>= (.hashChain)
+      entryHash = computeAuditHash mbPrevHash input.entityType input.entityId input.action input.afterState now
 
   let entry =
         AuditEntry
@@ -76,28 +113,32 @@ logAudit input = do
             previousState = input.beforeState,
             newState = input.afterState,
             metadata = Nothing,
-            hashChain = Nothing,
+            hashChain = Just entryHash,
             ipAddress = Nothing,
             merchantId = input.merchantId,
             merchantOperatingCityId = input.merchantOperatingCityId,
-            createdAt = now,
-            updatedAt = now
+            createdAt = now
           }
 
   QAudit.create entry
   pure $ Right entry
 
--- | Log an audit entry with additional metadata, IP address, and hash chain
+-- | Log an audit entry with additional metadata and IP address.
+--   Automatically computes hash chain by fetching the previous entry's hash.
 logAuditWithMetadata ::
   (BeamFlow.BeamFlow m r) =>
   AuditInput ->
   Maybe Value -> -- metadata
   Maybe Text -> -- ipAddress
-  Maybe Text -> -- hashChain
   m (Either FinanceError AuditEntry)
-logAuditWithMetadata input mbMetadata mbIpAddress mbHashChain = do
+logAuditWithMetadata input mbMetadata mbIpAddress = do
   now <- getCurrentTime
   auditId <- generateGUID
+
+  -- Fetch previous hash for chain computation
+  mbPrevEntry <- QAuditExtra.findLatestForEntity input.entityType input.entityId
+  let mbPrevHash = mbPrevEntry >>= (.hashChain)
+      entryHash = computeAuditHash mbPrevHash input.entityType input.entityId input.action input.afterState now
 
   let entry =
         AuditEntry
@@ -110,12 +151,11 @@ logAuditWithMetadata input mbMetadata mbIpAddress mbHashChain = do
             previousState = input.beforeState,
             newState = input.afterState,
             metadata = mbMetadata,
-            hashChain = mbHashChain,
+            hashChain = Just entryHash,
             ipAddress = mbIpAddress,
             merchantId = input.merchantId,
             merchantOperatingCityId = input.merchantOperatingCityId,
-            createdAt = now,
-            updatedAt = now
+            createdAt = now
           }
 
   QAudit.create entry
@@ -123,6 +163,7 @@ logAuditWithMetadata input mbMetadata mbIpAddress mbHashChain = do
 
 -- | Composable audit wrapper for any financial operation.
 --   Captures before/after state automatically.
+--   Computes hash chain for tamper-evidence.
 --
 --   Usage:
 --   @
@@ -152,7 +193,7 @@ withFinancialAudit ctx beforeState operation = do
             merchantId = ctx.merchantId,
             merchantOperatingCityId = ctx.merchantOperatingCityId
           }
-  _ <- logAuditWithMetadata auditInput ctx.metadata ctx.ipAddress Nothing
+  _ <- logAuditWithMetadata auditInput ctx.metadata ctx.ipAddress
   pure result
 
 -- | Get a single audit entry by ID
@@ -165,7 +206,7 @@ getAuditEntry = QAudit.findById
 -- | Get audit log for an entity
 getAuditLog ::
   (BeamFlow.BeamFlow m r) =>
-  Text -> -- Entity type
+  AuditEntityType -> -- Entity type
   Text -> -- Entity ID
   m [AuditEntry]
 getAuditLog = QAudit.findByEntity
@@ -173,7 +214,7 @@ getAuditLog = QAudit.findByEntity
 -- | Get audit entries by action type
 getAuditByAction ::
   (BeamFlow.BeamFlow m r) =>
-  Text -> -- Entity type
+  AuditEntityType -> -- Entity type
   AuditAction ->
   m [AuditEntry]
 getAuditByAction = QAudit.findByAction
@@ -181,7 +222,7 @@ getAuditByAction = QAudit.findByAction
 -- | Get audit entries by actor
 getAuditByActor ::
   (BeamFlow.BeamFlow m r) =>
-  Text -> -- Actor type (e.g., "DRIVER", "SYSTEM", "ADMIN")
+  AuditActorType -> -- Actor type
   Maybe Text -> -- Actor ID (optional)
   m [AuditEntry]
 getAuditByActor = QAudit.findByActor
@@ -190,9 +231,9 @@ getAuditByActor = QAudit.findByActor
 listAuditEntries ::
   (BeamFlow.BeamFlow m r) =>
   Text -> -- merchantId
-  Maybe Text -> -- entityType filter
+  Maybe AuditEntityType -> -- entityType filter
   Maybe AuditAction -> -- action filter
-  Maybe Text -> -- actorType filter
+  Maybe AuditActorType -> -- actorType filter
   Maybe UTCTime -> -- dateFrom
   Maybe UTCTime -> -- dateTo
   Int -> -- limit
@@ -204,9 +245,9 @@ listAuditEntries = QAuditExtra.findAllWithFilters
 countAuditEntries ::
   (BeamFlow.BeamFlow m r) =>
   Text -> -- merchantId
-  Maybe Text -> -- entityType filter
+  Maybe AuditEntityType -> -- entityType filter
   Maybe AuditAction -> -- action filter
-  Maybe Text -> -- actorType filter
+  Maybe AuditActorType -> -- actorType filter
   Maybe UTCTime -> -- dateFrom
   Maybe UTCTime -> -- dateTo
   m Int
@@ -223,11 +264,13 @@ listAdminAuditActions ::
   m [AuditEntry]
 listAdminAuditActions = QAuditExtra.findAdminActions
 
--- | Get audit entries within a date range for a merchant
+-- | Get audit entries within a date range for a merchant (with pagination)
 getAuditEntriesByDateRange ::
   (BeamFlow.BeamFlow m r) =>
   Text -> -- merchantId
   UTCTime -> -- from
   UTCTime -> -- to
+  Int -> -- limit
+  Int -> -- offset
   m [AuditEntry]
 getAuditEntriesByDateRange = QAuditExtra.findByDateRange
