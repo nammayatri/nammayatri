@@ -13,6 +13,8 @@ types:
     otherImages: "[Text]"
     otherImageIds: "[Text]"
     vehicleImage: "Maybe Text"
+    birthday: "Maybe Day"
+    anniversary: "Maybe Day"
   DriverProfileQuesReq:
     aspirations : "[Text]"
     drivingSince : "Maybe Int"
@@ -20,6 +22,8 @@ types:
     pledges : "[Text]"
     vehicleTags : "[Text]"
     imageIds: "[Text]"
+    birthday: "Maybe Day"
+    anniversary: "Maybe Day"
 apis:
   # POST /DriverProfileQues
   - POST:

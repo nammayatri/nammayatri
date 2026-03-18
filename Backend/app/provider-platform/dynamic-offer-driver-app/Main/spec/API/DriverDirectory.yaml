@@ -1,0 +1,133 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  APISuccess: Kernel.Types.APISuccess
+  Person: Domain.Types.Person
+  DriverDirectoryProfile: Domain.Types.DriverDirectoryProfile
+
+module: DriverDirectory
+
+types:
+  DriverDirectoryOptInReq:
+    preferredVehicleType: Maybe Text
+    preferredCities: "[Text]"
+    yearsOfExperience: Maybe Int
+    bio: Maybe Text
+    showPhoneNumber: Bool
+    showRating: Bool
+    showTotalRides: Bool
+    showVehicleInfo: Bool
+
+  DriverDirectoryStatusRes:
+    isListed: Bool
+    listedAt: Maybe UTCTime
+    profileCompleteness: Int
+    preferredVehicleType: Maybe Text
+    preferredCities: "[Text]"
+    yearsOfExperience: Maybe Int
+    bio: Maybe Text
+    showPhoneNumber: Bool
+    showRating: Bool
+    showTotalRides: Bool
+    showVehicleInfo: Bool
+
+  DriverDirectoryProfileUpdateReq:
+    preferredVehicleType: Maybe Text
+    preferredCities: Maybe [Text]
+    yearsOfExperience: Maybe Int
+    bio: Maybe Text
+    showPhoneNumber: Maybe Bool
+    showRating: Maybe Bool
+    showTotalRides: Maybe Bool
+    showVehicleInfo: Maybe Bool
+    availabilityStatus: Maybe Text
+
+  DirectoryDriverListItem:
+    driverId: Id Person
+    name: Text
+    rating: Maybe Int
+    totalRides: Maybe Int
+    yearsOfExperience: Maybe Int
+    preferredVehicleType: Maybe Text
+    city: Maybe Text
+    bio: Maybe Text
+    listedAt: Maybe UTCTime
+    phoneNumber: Maybe Text
+    vehicleInfo: Maybe Text
+
+  DirectorySearchRes:
+    drivers: "[DirectoryDriverListItem]"
+    totalCount: Int
+    limit: Int
+    offset: Int
+
+  DirectoryDriverDetailRes:
+    driverId: Id Person
+    name: Text
+    rating: Maybe Int
+    totalRides: Maybe Int
+    yearsOfExperience: Maybe Int
+    preferredVehicleType: Maybe Text
+    preferredCities: "[Text]"
+    city: Maybe Text
+    bio: Maybe Text
+    listedAt: Maybe UTCTime
+    phoneNumber: Maybe Text
+    vehicleInfo: Maybe Text
+    availabilityStatus: Maybe Text
+
+apis:
+  # POST /driver/directory/optIn
+  - POST:
+      endpoint: /driver/directory/optIn
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: DriverDirectoryOptInReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # POST /driver/directory/optOut
+  - POST:
+      endpoint: /driver/directory/optOut
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # GET /driver/directory/status
+  - GET:
+      endpoint: /driver/directory/status
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: DriverDirectoryStatusRes
+
+  # PUT /driver/directory/profile
+  - PUT:
+      endpoint: /driver/directory/profile
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: DriverDirectoryProfileUpdateReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # GET /fleet/directory/search
+  - GET:
+      endpoint: /fleet/directory/search
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - city: Maybe Text
+        - minRating: Maybe Int
+        - vehicleType: Maybe Text
+        - availability: Maybe Text
+        - searchQuery: Maybe Text
+        - limit: Maybe Int
+        - offset: Maybe Int
+      response:
+        type: DirectorySearchRes
+
+  # GET /fleet/directory/driver/{driverId}
+  - GET:
+      endpoint: /fleet/directory/driver/{driverId}
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        driverId: Id Person
+      response:
+        type: DirectoryDriverDetailRes

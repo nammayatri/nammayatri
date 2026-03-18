@@ -1,0 +1,66 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Text: Data.Text
+
+DriverDirectoryProfile:
+  tableName: driver_directory_profile
+  derives: "Generic,Show,ToJSON,FromJSON"
+
+  types:
+    AvailabilityStatus:
+      enum: "AVAILABLE,BUSY,NOT_AVAILABLE"
+
+  fields:
+    driverId: Id Person
+    isListed: Bool
+    listedAt: Maybe UTCTime
+    preferredVehicleType: Maybe Text
+    preferredCities: "[Text]"
+    yearsOfExperience: Maybe Int
+    bio: Maybe Text
+    showPhoneNumber: Bool
+    showRating: Bool
+    showTotalRides: Bool
+    showVehicleInfo: Bool
+    availabilityStatus: AvailabilityStatus
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamType:
+    preferredCities: "Maybe [Text]"
+    availabilityStatus: Maybe AvailabilityStatus
+
+  fromTType:
+    preferredCities: Kernel.Prelude.fromMaybe []|I
+    availabilityStatus: Kernel.Prelude.fromMaybe Domain.Types.DriverDirectoryProfile.AVAILABLE|I
+
+  toTType:
+    preferredCities: Kernel.Prelude.Just|I
+    availabilityStatus: Kernel.Prelude.Just|I
+
+  constraints:
+    driverId: PrimaryKey
+    merchantOperatingCityId: SecondaryKey
+
+  queries:
+    findByDriverId:
+      kvFunction: findOneWithKV
+      where: driverId
+
+    updateIsListedByDriverId:
+      kvFunction: updateOneWithKV
+      params: [isListed, listedAt, updatedAt]
+      where: driverId
+
+    updateProfileByDriverId:
+      kvFunction: updateOneWithKV
+      params: [preferredVehicleType, preferredCities, yearsOfExperience, bio, showPhoneNumber, showRating, showTotalRides, showVehicleInfo, availabilityStatus, updatedAt]
+      where: driverId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

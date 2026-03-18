@@ -1,0 +1,104 @@
+imports:
+  Person: Domain.Types.Person
+  BadgeDefinition: Domain.Types.BadgeDefinition
+  DriverGamificationProgress: Domain.Types.DriverGamificationProgress
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+module: DriverGamification
+
+types:
+  GamificationJourneyRes:
+    currentLevel: GamificationLevelInfo
+    totalXp: Int
+    xpToNextLevel: Int
+    nextLevel: Maybe Text
+    badgesEarned: Int
+    totalBadges: Int
+    currentStreakDays: Int
+    longestStreakDays: Int
+    lifetimeStats: LifetimeStatsInfo
+
+  GamificationLevelInfo:
+    name: Text
+    iconUrl: Maybe Text
+    displayOrder: Int
+
+  LifetimeStatsInfo:
+    totalRides: Int
+    totalEarnings: Int
+    averageRating: Maybe Double
+    memberSince: UTCTime
+
+  GamificationBadgesRes:
+    badges: "[GamificationBadgeInfo]"
+
+  GamificationBadgeInfo:
+    id: Id BadgeDefinition
+    name: Text
+    description: Text
+    iconUrl: Text
+    category: Text
+    tier: Text
+    isEarned: Bool
+    earnedAt: Maybe UTCTime
+    criteriaType: Text
+    criteriaValue: Int
+    progress: Maybe Int
+    xpReward: Int
+    coinReward: Int
+
+  GamificationMilestonesRes:
+    milestones: "[MilestoneInfo]"
+
+  MilestoneInfo:
+    name: Text
+    description: Text
+    targetValue: Int
+    currentValue: Int
+    progressPercent: Int
+    isAchieved: Bool
+    achievedAt: Maybe UTCTime
+    category: Text
+
+  GamificationTimelineRes:
+    events: "[TimelineEvent]"
+    totalCount: Int
+
+  TimelineEvent:
+    eventType: Text
+    title: Text
+    description: Text
+    iconUrl: Maybe Text
+    xpEarned: Maybe Int
+    coinsEarned: Maybe Int
+    timestamp: UTCTime
+
+apis:
+  - GET:
+      endpoint: /driver/gamification/journey
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: API.Types.UI.DriverGamification.GamificationJourneyRes
+
+  - GET:
+      endpoint: /driver/gamification/badges
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        category: Maybe Text
+      response:
+        type: API.Types.UI.DriverGamification.GamificationBadgesRes
+
+  - GET:
+      endpoint: /driver/gamification/milestones
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: API.Types.UI.DriverGamification.GamificationMilestonesRes
+
+  - GET:
+      endpoint: /driver/gamification/timeline
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        limit: Maybe Int
+        offset: Maybe Int
+      response:
+        type: API.Types.UI.DriverGamification.GamificationTimelineRes

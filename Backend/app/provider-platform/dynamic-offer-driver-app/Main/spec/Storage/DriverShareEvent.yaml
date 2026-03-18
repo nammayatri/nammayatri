@@ -1,0 +1,44 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+DriverShareEvent:
+  tableName: driver_share_event
+
+  fields:
+    id: Id DriverShareEvent
+    driverId: Id Person
+    shareType: Text
+    sharePlatform: Maybe Text
+    contentId: Maybe Text
+    shareCardUrl: Maybe Text
+    deepLinkUrl: Maybe Text
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    createdAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+
+    findByShareTypeAndCreatedAt:
+      kvFunction: findAllWithKV
+      where:
+        and: [shareType, merchantOperatingCityId]
+
+  sqlType:
+    id: character varying(36)
+    driverId: character varying(36)
+    shareType: character varying(30)
+    sharePlatform: character varying(30)
+    contentId: character varying(36)
+    shareCardUrl: text
+    deepLinkUrl: text
+    merchantOperatingCityId: character varying(36)
+    merchantId: character varying(36)
+    createdAt: timestamp with time zone

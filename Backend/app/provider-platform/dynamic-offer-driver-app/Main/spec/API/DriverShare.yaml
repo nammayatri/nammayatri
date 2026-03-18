@@ -1,0 +1,84 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  APISuccess: Kernel.Types.APISuccess
+
+module: DriverShare
+
+types:
+  ShareType:
+    enum: "MILESTONE, EARNINGS, REFERRAL, BADGE"
+
+  SharePlatform:
+    enum: "WHATSAPP, FACEBOOK, INSTAGRAM, TWITTER, OTHER"
+
+  ShareMilestoneReq:
+    milestoneType: Text
+    milestoneValue: Int
+
+  ShareEarningsReq:
+    earningsPeriod: Text
+    earningsAmount: Int
+
+  ShareBadgeReq:
+    badgeId: Text
+    badgeName: Text
+
+  ShareTrackReq:
+    shareType: ShareType
+    sharePlatform: Maybe SharePlatform
+    contentId: Maybe Text
+
+  ShareCardRes:
+    shareCardUrl: Text
+    shareText: Text
+    deepLinkUrl: Maybe Text
+
+  ShareReferralRes:
+    shareCardUrl: Text
+    shareText: Text
+    deepLinkUrl: Text
+    referralCode: Text
+
+apis:
+  # POST /driver/share/milestone
+  - POST:
+      endpoint: /driver/share/milestone
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: ShareMilestoneReq
+      response:
+        type: ShareCardRes
+
+  # POST /driver/share/earnings
+  - POST:
+      endpoint: /driver/share/earnings
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: ShareEarningsReq
+      response:
+        type: ShareCardRes
+
+  # POST /driver/share/referral
+  - POST:
+      endpoint: /driver/share/referral
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: ShareReferralRes
+
+  # POST /driver/share/badge
+  - POST:
+      endpoint: /driver/share/badge
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: ShareBadgeReq
+      response:
+        type: ShareCardRes
+
+  # POST /driver/share/track
+  - POST:
+      endpoint: /driver/share/track
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: ShareTrackReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

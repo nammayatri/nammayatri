@@ -4,6 +4,7 @@
 module Domain.Types.DriverProfileQuestions where
 
 import Data.Aeson
+import qualified Data.Time.Calendar
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import Kernel.Prelude
@@ -12,7 +13,9 @@ import qualified Tools.Beam.UtilsTH
 
 data DriverProfileQuestions = DriverProfileQuestions
   { aboutMe :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    anniversary :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
     aspirations :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    birthday :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
     createdAt :: Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     drivingSince :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

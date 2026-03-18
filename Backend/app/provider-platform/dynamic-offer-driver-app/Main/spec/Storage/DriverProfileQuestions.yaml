@@ -18,6 +18,8 @@ DriverProfileQuestions:
     aboutMe: "Maybe Text"
     imageIds: "Maybe [Text]"
     merchantOperatingCityId : Id MerchantOperatingCity
+    birthday : Maybe Day
+    anniversary : Maybe Day
 
   default:
     imageIds: "'{}'"

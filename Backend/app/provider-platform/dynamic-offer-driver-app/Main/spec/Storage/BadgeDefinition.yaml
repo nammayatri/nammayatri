@@ -1,0 +1,59 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+BadgeDefinition:
+  tableName: badge_definition
+
+  fields:
+    id: Id BadgeDefinition
+    name: Text
+    description: Text
+    category: BadgeCategory
+    iconUrl: Text
+    criteriaType: BadgeCriteriaType
+    criteriaValue: Int
+    xpReward: Int
+    coinReward: Int
+    tier: BadgeTier
+    isActive: Bool
+    merchantId: Id Merchant
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    BadgeCategory:
+      enum: "RIDES,EARNINGS,RATING,STREAK,SPECIAL"
+      derive: "Show,Eq,Ord,Read"
+
+    BadgeCriteriaType:
+      enum: "TOTAL_RIDES,TOTAL_EARNINGS,RATING_ABOVE,STREAK_DAYS,LATE_NIGHT_TRIPS,FIVE_STAR_RATINGS,REFERRALS"
+      derive: "Show,Eq,Ord,Read"
+
+    BadgeTier:
+      enum: "COMMON,RARE,EPIC,LEGENDARY"
+      derive: "Show,Eq,Ord,Read"
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findAllByMerchantId:
+      kvFunction: findAllWithKV
+      where: merchantId
+
+    findAllActiveByMerchantId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, isActive]
+
+    findByMerchantIdAndCriteriaType:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, criteriaType]
+
+    findAllByCategory:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, category]

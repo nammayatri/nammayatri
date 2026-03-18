@@ -3,6 +3,7 @@
 
 module Storage.Beam.DriverProfileQuestions where
 
+import qualified Data.Time.Calendar
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import Kernel.External.Encryption
@@ -12,7 +13,9 @@ import Tools.Beam.UtilsTH
 
 data DriverProfileQuestionsT f = DriverProfileQuestionsT
   { aboutMe :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    anniversary :: B.C f (Kernel.Prelude.Maybe Data.Time.Calendar.Day),
     aspirations :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    birthday :: B.C f (Kernel.Prelude.Maybe Data.Time.Calendar.Day),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     driverId :: B.C f Kernel.Prelude.Text,
     drivingSince :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

@@ -3,13 +3,16 @@
 module API.Types.UI.DriverProfileQuestions where
 
 import Data.OpenApi (ToSchema)
+import qualified Data.Time.Calendar
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import Servant
 import Tools.Auth
 
 data DriverProfileQuesReq = DriverProfileQuesReq
-  { aspirations :: [Kernel.Prelude.Text],
+  { anniversary :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
+    aspirations :: [Kernel.Prelude.Text],
+    birthday :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
     drivingSince :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     hometown :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     imageIds :: [Kernel.Prelude.Text],
@@ -20,7 +23,9 @@ data DriverProfileQuesReq = DriverProfileQuesReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DriverProfileQuesRes = DriverProfileQuesRes
-  { aspirations :: [Kernel.Prelude.Text],
+  { anniversary :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
+    aspirations :: [Kernel.Prelude.Text],
+    birthday :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
     drivingSince :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     hometown :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     otherImageIds :: [Kernel.Prelude.Text],
