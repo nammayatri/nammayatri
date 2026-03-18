@@ -25,6 +25,7 @@ AuditEntry:
     newState: Maybe Value
     metadata: Maybe Value
     ipAddress: Maybe Text
+    hashChain: Maybe Text
     merchantId: Text
     merchantOperatingCityId: Text
     createdAt: UTCTime

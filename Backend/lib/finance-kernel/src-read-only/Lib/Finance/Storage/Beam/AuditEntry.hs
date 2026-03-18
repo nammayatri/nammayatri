@@ -18,6 +18,7 @@ data AuditEntryT f = AuditEntryT
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
     entityId :: (B.C f Kernel.Prelude.Text),
     entityType :: (B.C f Kernel.Prelude.Text),
+    hashChain :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     id :: (B.C f Kernel.Prelude.Text),
     ipAddress :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     merchantId :: (B.C f Kernel.Prelude.Text),

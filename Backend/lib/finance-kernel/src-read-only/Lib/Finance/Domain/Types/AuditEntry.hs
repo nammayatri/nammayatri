@@ -15,6 +15,7 @@ data AuditEntry = AuditEntry
     createdAt :: Kernel.Prelude.UTCTime,
     entityId :: Kernel.Prelude.Text,
     entityType :: Kernel.Prelude.Text,
+    hashChain :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.AuditEntry.AuditEntry,
     ipAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Prelude.Text,
