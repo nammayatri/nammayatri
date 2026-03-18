@@ -17,7 +17,8 @@ import Storage.ConfigPilot.Interface.Getter
 import Storage.ConfigPilot.Interface.Types
 
 data ExophoneDimensions = ExophoneDimensions
-  { merchantOperatingCityId :: Text
+  { merchantOperatingCityId :: Text,
+    callService :: Maybe CallService
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 

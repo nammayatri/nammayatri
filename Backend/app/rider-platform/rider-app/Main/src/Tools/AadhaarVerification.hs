@@ -63,7 +63,7 @@ runWithServiceConfig func merchantId merchantOperatingCityId req = do
   merchantServiceUsageConfig <-
     getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
-  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, serviceName = Nothing})
   merchantServiceConfig <-
     filterByService allMSC (DMSC.AadhaarVerificationService merchantServiceUsageConfig.aadhaarVerificationService)
       & fromMaybeM (InternalError $ "No Aadhaar Verification service provider configured for the merchant, merchantId:" <> merchantId.getId)

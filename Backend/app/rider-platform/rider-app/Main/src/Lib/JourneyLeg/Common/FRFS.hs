@@ -436,7 +436,7 @@ confirm personId merchantId mbQuoteId bookLater bookingAllowed crisSdkResponse v
       DIBC.ONDC _ | vehicleType == Spec.BUS -> do
         merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
         merchantOperatingCity <- CQMOC.findById quote.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound quote.merchantOperatingCityId.getId)
-        allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+        allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, domain = Nothing, vehicleCategory = Nothing})
         bapConfig <- filterByDomainAndVehicleWithFallback allBecknConfigs (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType) & fromMaybeM (InternalError "Beckn Config not found")
         FRFSTicketService.select merchant merchantOperatingCity bapConfig quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer
       _ -> do
@@ -448,6 +448,6 @@ cancel searchId cancellationType = do
   whenJust mbMetroBooking $ \metroBooking -> do
     merchant <- CQM.findById metroBooking.merchantId >>= fromMaybeM (MerchantDoesNotExist metroBooking.merchantId.getId)
     merchantOperatingCity <- CQMOC.findById metroBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound metroBooking.merchantOperatingCityId.getId)
-    allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+    allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, domain = Nothing, vehicleCategory = Nothing})
     bapConfig <- filterByDomainAndVehicleWithFallback allBecknConfigs (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory metroBooking.vehicleType) & fromMaybeM (InternalError "Beckn Config not found")
     CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType metroBooking

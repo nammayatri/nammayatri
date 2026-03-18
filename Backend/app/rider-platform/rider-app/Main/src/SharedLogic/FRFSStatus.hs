@@ -87,7 +87,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
   logInfo $ "frfsBookingStatus for booking: " <> show booking'
   let bookingId = booking'.id
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
-  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = booking'.merchantOperatingCityId.getId})
+  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = booking'.merchantOperatingCityId.getId, domain = Nothing, vehicleCategory = Nothing})
   bapConfig <- filterByDomainAndVehicleWithFallback allBecknConfigs (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking'.vehicleType) & fromMaybeM (InternalError "Beckn Config not found")
   unless (personId == booking'.riderId) $ throwError AccessDenied
   now <- getCurrentTime
@@ -260,7 +260,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                           buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentObj
         when (isMultiModalBooking && paymentBookingStatus == FRFSTicketService.SUCCESS) $ do
           riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
-          allBecknConfigsFRFS <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+          allBecknConfigsFRFS <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, domain = Nothing, vehicleCategory = Nothing})
           let becknConfigs = filterByDomain allBecknConfigsFRFS "FRFS"
           let initTTLs = map (.initTTLSec) becknConfigs
           let maxInitTTL = intToNominalDiffTime $ case catMaybes initTTLs of

@@ -122,7 +122,7 @@ bookingStatusPolling bookingId _ = runInMultiCloud $ do
 
 handleConfirmTtlExpiry :: SRB.Booking -> Flow ()
 handleConfirmTtlExpiry booking = do
-  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
+  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, domain = Nothing, vehicleCategory = Nothing})
   let bapConfigs = filterByDomain allBecknConfigs "MOBILITY"
   bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show booking.merchantId.getId <> " merchantOperatingCityId " <> show booking.merchantOperatingCityId.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
   confirmBufferTtl <- bapConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")

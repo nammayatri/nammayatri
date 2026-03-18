@@ -107,7 +107,7 @@ runWithServiceConfig ::
   m resp
 runWithServiceConfig func merchantId merchantOperatingCityId req = do
   let serviceName = DMSC.JuspayWalletService Payment.Juspay
-  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, serviceName = Nothing})
   merchantServiceConfig <-
     filterByService allMSC serviceName
       & fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "JuspayWallet" (show Payment.Juspay))

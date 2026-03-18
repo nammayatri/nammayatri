@@ -19,9 +19,9 @@ import Storage.ConfigPilot.Interface.Types
 
 data PayoutDimensions = PayoutDimensions
   { merchantOperatingCityId :: Text,
-    merchantId :: Text,
-    txnId :: Maybe Text,
-    payoutType :: Text
+    vehicleCategory :: Maybe VehicleCategory,
+    isPayoutEnabled :: Maybe Bool,
+    payoutEntity :: Maybe DPC.PayoutEntity
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 

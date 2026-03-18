@@ -40,7 +40,7 @@ buildRatingReqV2 res@DFeedback.FeedbackRes {..} = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
   moc <- CQMOC.findByMerchantIdAndCity merchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show city)
-  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = moc.id.getId})
+  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = moc.id.getId, domain = Nothing, vehicleCategory = Nothing})
   let bapConfigs = filterByDomain allBecknConfigs "MOBILITY"
   bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show res.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
   ttl <- bapConfig.ratingTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601

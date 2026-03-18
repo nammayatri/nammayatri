@@ -96,7 +96,6 @@ instance
     HasField "esqDBEnv" r EsqDBEnv,
     HasField "enablePrometheusMetricLogging" r Bool,
     HasField "enableRedisLatencyLogging" r Bool,
-    HasField "txnId" r (Maybe Text),
     Redis.HedisFlowEnv r,
     CF.HasCacConfig r,
     CF.HasInMemEnv r,

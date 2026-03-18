@@ -27,7 +27,9 @@ filterByDomainAndVehicleWithFallback cfgs domain vehicle =
   find (\c -> c.domain == domain && c.vehicleCategory == vehicle) cfgs
 
 data BecknConfigDimensions = BecknConfigDimensions
-  { merchantOperatingCityId :: Text
+  { merchantOperatingCityId :: Text,
+    domain :: Maybe Text,
+    vehicleCategory :: Maybe Enums.VehicleCategory
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 

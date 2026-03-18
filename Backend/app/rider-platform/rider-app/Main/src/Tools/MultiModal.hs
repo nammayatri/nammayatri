@@ -33,7 +33,7 @@ getMultiModalConfig merchantId merchantOperatingCityId = do
   merchantServiceUsageConfig <-
     getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
-  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, serviceName = Nothing})
   merchantServiceConfig <-
     filterByService allMSC (DMSC.MultiModalService merchantServiceUsageConfig.getMultiModalService)
       & fromMaybeM (InternalError $ "No MultiModal service provider configured for the merchant, merchantId:" <> merchantId.getId)
@@ -47,7 +47,7 @@ getTransitServiceReq = getMultiModalConfig
 
 getOTPRestServiceReq :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m BaseUrl
 getOTPRestServiceReq _merchantId merchantOperatingCityId = do
-  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, serviceName = Nothing})
   transitServiceReq <- filterByService allMSC (DMSC.MultiModalStaticDataService MultiModal.OTPTransit) & fromMaybeM (InternalError "No OTP Transit Service Config Found")
   transitServiceReq' <- case transitServiceReq.serviceConfig of
     DMSC.MultiModalStaticDataServiceConfig multiModalServiceConfig -> return multiModalServiceConfig

@@ -85,7 +85,7 @@ buildTrackReqV2 res = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
   booking <- QRB.findByBPPBookingId res.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> res.bppBookingId.getId)
-  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
+  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, domain = Nothing, vehicleCategory = Nothing})
   let bapConfigs = filterByDomain allBecknConfigs "MOBILITY"
   bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show res.merchant.id.getId <> " merchantOperatingCityId " <> show booking.merchantOperatingCityId.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
   ttls <- bapConfig.trackTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601

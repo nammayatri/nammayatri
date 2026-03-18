@@ -41,8 +41,7 @@ healthCheck ::
     HasField "hedisNonCriticalEnv" r Redis.HedisEnv,
     HasField "hedisNonCriticalClusterEnv" r Redis.HedisEnv,
     HasField "hedisClusterEnv" r Redis.HedisEnv,
-    HasField "secondaryHedisClusterEnv" r (Maybe Redis.HedisEnv),
-    HasField "txnId" r (Maybe Text)
+    HasField "secondaryHedisClusterEnv" r (Maybe Redis.HedisEnv)
   ) =>
   FlowHandlerR r Text
 healthCheck = withFlowHandlerAPI' do

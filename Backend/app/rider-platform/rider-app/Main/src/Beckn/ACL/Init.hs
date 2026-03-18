@@ -41,7 +41,7 @@ buildInitReqV2 res = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   moc <- CQMOC.findByMerchantIdAndCity res.merchant.id res.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> res.merchant.id.getId <> "-city-" <> show res.city)
   riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = moc.id.getId}) >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
-  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = moc.id.getId})
+  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = moc.id.getId, domain = Nothing, vehicleCategory = Nothing})
   let bapConfigs = filterByDomain allBecknConfigs "MOBILITY"
   bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show res.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
   let action = Context.INIT

@@ -55,7 +55,7 @@ whatsAppOptAPI merchantId merchantOperatingCityId req = do
       pure whatsappServiceProviders
 
     getProviderConfig provider = do
-      allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+      allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, serviceName = Nothing})
       merchantWhatsappServiceConfig <-
         filterByService allMSC (DMSC.WhatsappService provider)
           & fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
@@ -77,7 +77,7 @@ whatsAppOtpApi merchantId merchantOperatingCityId = Whatsapp.whatsAppOtpApi hand
       pure whatsappServiceProviders
 
     getProviderConfig provider = do
-      allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+      allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, serviceName = Nothing})
       merchantWhatsappServiceConfig <-
         filterByService allMSC (DMSC.WhatsappService provider)
           & fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
@@ -97,7 +97,7 @@ whatsAppSendMessageWithTemplateIdAPI merchantId merchantOpCityId = Whatsapp.what
       pure whatsappServiceProviders
 
     getProviderConfig provider = do
-      allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, serviceName = Nothing})
       merchantWhatsappServiceConfig <-
         filterByService allMSC (DMSC.WhatsappService provider)
           & fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)

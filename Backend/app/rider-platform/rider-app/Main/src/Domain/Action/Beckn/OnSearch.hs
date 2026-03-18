@@ -303,7 +303,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   let isReservedSearch = isReservedRideSearch searchRequest
   mbNySubscription <- getNyRegularSubs isReservedSearch
   isValueAddNP <- CQVAN.isValueAddNP providerInfo.providerId
-  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
+  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId, domain = Nothing, vehicleCategory = Nothing})
   let becknConfigs = filterByDomain allBecknConfigs (show Domain.MOBILITY)
   becknConfig <- listToMaybe becknConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
   blackListedVehicles <- Utils.getBlackListedVehicles becknConfig.id providerInfo.providerId

@@ -74,7 +74,7 @@ buildStatusReqV2 DStatusReq {..} = do
   messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
-  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
+  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, domain = Nothing, vehicleCategory = Nothing})
   let bapConfigs = filterByDomain allBecknConfigs "MOBILITY"
   bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show merchant.id.getId <> " merchantOperatingCityId " <> show booking.merchantOperatingCityId.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
   ttl <- bapConfig.statusTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601

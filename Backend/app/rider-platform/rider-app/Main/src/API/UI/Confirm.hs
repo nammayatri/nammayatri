@@ -92,7 +92,7 @@ confirm' (personId, _) quoteId mbDashboardAgentId mbPaymentMethodId mbPaymentIns
     dConfirmRes <- DConfirm.confirm personId quoteId mbDashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled requiresPaymentBeforeConfirm
     becknInitReq <- ACL.buildInitReqV2 dConfirmRes
     moc <- CQMOC.findByMerchantIdAndCity dConfirmRes.merchant.id dConfirmRes.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> dConfirmRes.merchant.id.getId <> "-city-" <> show dConfirmRes.city)
-    allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = moc.id.getId})
+    allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = moc.id.getId, domain = Nothing, vehicleCategory = Nothing})
     let bapConfigs = filterByDomain allBecknConfigs "MOBILITY"
     bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show dConfirmRes.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
     initTtl <- bapConfig.initTTLSec & fromMaybeM (InternalError "Invalid ttl")

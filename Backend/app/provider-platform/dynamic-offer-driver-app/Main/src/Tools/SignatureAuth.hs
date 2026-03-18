@@ -96,7 +96,6 @@ instance
     FromJSON req,
     HasField "hedisMigrationStage" r Bool,
     HasField "esqDBEnv" r EsqDBEnv,
-    HasField "txnId" r (Maybe Text),
     HasField "enablePrometheusMetricLogging" r Bool,
     HasField "enableRedisLatencyLogging" r Bool,
     Redis.HedisFlowEnv r,

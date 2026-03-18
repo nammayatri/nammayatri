@@ -46,7 +46,7 @@ sendSMS merchantId merchantOperatingCityId = Sms.sendSMS handler
       pure smsServiceProviders
 
     getProviderConfig provider = do
-      allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+      allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, serviceName = Nothing})
       merchantSmsServiceConfig <-
         filterByService allMSC (DMSC.SmsService provider)
           & fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)

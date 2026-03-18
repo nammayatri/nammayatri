@@ -93,7 +93,7 @@ select (personId, merchantId) estimateId req = withFlowHandlerAPIPersonId person
   let searchRequestId = estimate.requestId
   searchRequest <- QSearchRequest.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   autoAssignEnabled <- searchRequest.autoAssignEnabled & fromMaybeM (InternalError "Invalid autoAssignEnabled")
-  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
+  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId, domain = Nothing, vehicleCategory = Nothing})
   let bapConfigs = filterByDomain allBecknConfigs "MOBILITY"
   bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
   selectTtl <- bapConfig.selectTTLSec & fromMaybeM (InternalError "Invalid ttl")

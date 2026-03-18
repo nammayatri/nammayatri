@@ -493,8 +493,9 @@ fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId service
     Just id -> CQPBSC.findByPlaceIdAndServiceName (Id id) (DMSC.PaymentService service)
     Nothing -> return Nothing
   merchantServiceConfig' <- do
-    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCity.id (getPaymentServiceByType mbServiceType)
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOperatingCity.id.getId "Payment" (show service))
+    allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, serviceName = Nothing})
+    filterByService allMSC (getPaymentServiceByType mbServiceType)
+      & fromMaybeM (MerchantServiceConfigNotFound merchantOperatingCity.id.getId "Payment" (show service))
   (,merchantOperatingCity) <$> case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig'.serviceConfig of
     Just (DMSC.PaymentServiceConfig vsc) -> pure vsc
     Just (DMSC.MetroPaymentServiceConfig vsc) -> pure vsc

@@ -59,7 +59,7 @@ getSosDetails merchantShortId opCity sosId = do
   checkSlidingWindowLimitWithOptions (sosDashboardHitsCountKey sosId) sosTrackingRateLimitOptions
   let sosId' = Kernel.Types.Id.cast @Dashboard.Common.Sos @SafetyDSos.Sos sosId
   mbMerchantOpCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
-  mbRideConfig <- maybe (pure Nothing) (\moc -> QRC.findByMerchantOperatingCityId moc.id Nothing) mbMerchantOpCity
+  mbRideConfig <- maybe (pure Nothing) (\moc -> getConfig (RiderDimensions {merchantOperatingCityId = moc.id.getId})) mbMerchantOpCity
   let externalSOSConfig = mbRideConfig >>= \rc -> rc.externalSOSConfig
   let triggerSource = convertTriggerSource <$> (externalSOSConfig <&> (.triggerSource))
   sos <- B.runInReplica $ SafetyQSos.findById sosId' >>= fromMaybeM (InvalidRequest $ "SOS not found: " <> sosId'.getId)
@@ -159,7 +159,7 @@ callExternalSOS sosId = do
       when (sosConfig.triggerSource /= DRC.DASHBOARD) $
         throwError $ InvalidRequest "External SOS trigger source is not DASHBOARD for this city"
       let sosServiceType = flowToSOSService sosConfig.flow
-      allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, serviceName = Nothing})
       merchantSvcCfg <-
         filterByService allMSC (DMSC.SOSService sosServiceType)
           & fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "SOS" (show sosServiceType))

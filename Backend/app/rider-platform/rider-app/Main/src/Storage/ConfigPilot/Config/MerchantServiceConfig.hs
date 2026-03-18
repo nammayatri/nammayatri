@@ -17,7 +17,8 @@ import Storage.ConfigPilot.Interface.Types
 import qualified Storage.Queries.Transformers.MerchantServiceConfig as TRMSC
 
 data MerchantServiceConfigDimensions = MerchantServiceConfigDimensions
-  { merchantOperatingCityId :: Text
+  { merchantOperatingCityId :: Text,
+    serviceName :: Maybe DMSC.ServiceName
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 

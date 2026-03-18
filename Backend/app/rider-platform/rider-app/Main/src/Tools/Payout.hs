@@ -48,7 +48,7 @@ runWithServiceConfigAndName ::
   req ->
   m resp
 runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName mRoutingId req = do
-  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.getId})
+  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.getId, serviceName = Nothing})
   merchantServiceConfig <-
     filterByService allMSC serviceName
       & fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payout" (show Payout.Juspay))

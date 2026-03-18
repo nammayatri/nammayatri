@@ -374,7 +374,8 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
           else pure Nothing
       else pure person.customerReferralCode
   logInfo "[Profile.getPersonDetails] referralCode done"
-  mbPayoutConfig <- CPC.findByCityIdAndVehicleCategory person.merchantOperatingCityId VehicleCategory.AUTO_CATEGORY Nothing
+  allPayoutCfgs <- getConfig (PayoutDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just VehicleCategory.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing})
+  let mbPayoutConfig = filterByCityIdAndVehicleCategory allPayoutCfgs VehicleCategory.AUTO_CATEGORY Nothing
   logInfo "[Profile.getPersonDetails] findPayoutConfig done"
   let vehicleTypes = [Enums.BUS, Enums.METRO, Enums.SUBWAY]
   integratedBPPConfigs <-

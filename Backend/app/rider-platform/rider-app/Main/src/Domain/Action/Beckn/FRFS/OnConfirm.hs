@@ -129,7 +129,7 @@ validateRequest DOrder {..} = do
       -- Booking is expired
       logInfo $ "booking is expired: " <> show booking
       merchantOperatingCity <- QMerchOpCity.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-      allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+      allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, domain = Nothing, vehicleCategory = Nothing})
       bapConfig <- filterByDomainAndVehicleWithFallback allBecknConfigs (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) & fromMaybeM (InternalError $ "Beckn Config not found for merchantId:- " <> merchantId.getId)
       void $ QTBooking.updateBPPOrderIdAndStatusById (Just bppOrderId) Booking.FAILED booking.id
       void $ SPayment.markRefundPendingAndSyncOrderStatus merchantId booking.riderId bookingPayment.paymentOrderId
@@ -273,7 +273,7 @@ buildReconTable ::
   DIBC.IntegratedBPPConfig ->
   m ()
 buildReconTable merchant booking fareParameters _dOrder tickets mRiderNumber integratedBPPConfig = do
-  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
+  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, domain = Nothing, vehicleCategory = Nothing})
   bapConfig <- filterByDomainAndVehicleWithFallback allBecknConfigs (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) & fromMaybeM (InternalError "Beckn Config not found")
   fromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.fromStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.toStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)

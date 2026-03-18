@@ -93,7 +93,7 @@ getTokenofJMService merchantId merchantOpCityId = do
   where
     fetchAndStoreToken = do
       logDebug "Journey Monitoring Token does not exist in Redis, fetching from Tokenize Service"
-      allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, serviceName = Nothing})
       sc <-
         filterByService allMSC (DMSC.TokenizationService Tokenize.JourneyMonitoring)
           & maybe (throwError $ MerchantServiceUsageConfigNotFound merchantId.getId) pure
@@ -124,7 +124,7 @@ diffUTCTimeInSeconds _ Nothing = 3600 -- default to (1 hour)
 
 getServiceConfig :: CallApiFlow m r => Id Merchant.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> m IncidentReportServiceConfig
 getServiceConfig merchantId merchantOpCityId service = do
-  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, serviceName = Nothing})
   let merchantSvcCfgResult = filterByService allMSC service
   case merchantSvcCfgResult of
     Just cfg -> case cfg.serviceConfig of

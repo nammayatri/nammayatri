@@ -163,7 +163,7 @@ runWithServiceConfig ::
   m resp
 runWithServiceConfig func getCfg merchantId merchantOperatingCityId personId req liveActivityReq = do
   merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
-  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, serviceName = Nothing})
   merchantNotificationServiceConfig <-
     filterByService allMSC (DMSC.NotificationService $ getCfg merchantConfig)
       & fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "notification" (show $ getCfg merchantConfig))

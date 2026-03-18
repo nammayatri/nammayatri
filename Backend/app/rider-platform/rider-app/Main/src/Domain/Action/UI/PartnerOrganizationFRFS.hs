@@ -470,7 +470,7 @@ shareTicketInfo ticketBookingId = do
       bppStatusCallCfg <- DPOC.getBPPStatusCallConfig pOrgCfg.config
 
       whenWithLockRedisWithoutUnlock statusTriggerLockKey bppStatusCallCfg.intervalInSec $ do
-        allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = city.id.getId})
+        allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = city.id.getId, domain = Nothing, vehicleCategory = Nothing})
         bapConfig <-
           filterByDomainAndVehicleWithFallback allBecknConfigs (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType)
             & fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchantId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType ||+ "")
@@ -482,7 +482,7 @@ getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTrans
       frfsVehicleType = fromStation.vehicleType
   frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow fromStation.merchantOperatingCityId [] >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, domain = Nothing, vehicleCategory = Nothing})
   bapConfig <-
     filterByDomainAndVehicleWithFallback allBecknConfigs (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType)
       & fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchantId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType ||+ "")

@@ -20,7 +20,6 @@ import qualified Domain.Types.PaymentInvoice as DPI
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.Ride as Ride
-import Kernel.Beam.Functions (runInReplica)
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
@@ -238,7 +237,7 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
       case paymentStatusResponse.status of
         Payment.CHARGED -> do
           purchasedPassPayment <- QPurchasedPassPayment.findByPrimaryKey (Id transactionId) >>= fromMaybeM (InvalidRequest $ "Purchase pass payment not found for id: " <> transactionId)
-          allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = purchasedPassPayment.merchantOperatingCityId.getId})
+          allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = purchasedPassPayment.merchantOperatingCityId.getId, domain = Nothing, vehicleCategory = Nothing})
           bapConfig <- filterByDomainAndVehicleWithFallback allBecknConfigs (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory Spec.BUS) & fromMaybeM (InternalError "Beckn Config not found")
           mkPassReconEntry bapConfig purchasedPassPayment
         _ -> return ()
@@ -769,7 +768,7 @@ capturePendingPaymentIfExists ::
   m ()
 capturePendingPaymentIfExists person merchantOperatingCityId = do
   -- Load config for excluded payment purposes
-  riderConfig <- runInReplica $ QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = getId merchantOperatingCityId})
   let excludedPurposes = case riderConfig >>= (.duesExcludedPaymentPurposes) of
         Nothing -> [] -- No config = don't exclude anything
         Just textList -> mapMaybe (readMaybe . T.unpack) textList :: [DPI.PaymentPurpose]

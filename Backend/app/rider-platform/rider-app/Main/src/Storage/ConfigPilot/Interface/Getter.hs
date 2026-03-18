@@ -3,6 +3,7 @@ module Storage.ConfigPilot.Interface.Getter
   ( getConfig,
     getConfigImpl,
     PersonIdKey (..),
+    TxnIdKey (..),
   )
 where
 
@@ -31,16 +32,23 @@ data PersonIdKey = PersonIdKey
 
 instance OptionEntity PersonIdKey Text
 
+-- | Key for storing txnId in EulerHS option local context.
+data TxnIdKey = TxnIdKey
+  deriving stock (Generic, Typeable, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON)
+
+instance OptionEntity TxnIdKey Text
+
 getConfigImpl ::
   forall configTypeDimensions b m r.
-  (ConfigDimensions configTypeDimensions, FromJSON b, ToJSON b, MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "txnId" r (Maybe Text)) =>
+  (ConfigDimensions configTypeDimensions, FromJSON b, ToJSON b, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   configTypeDimensions ->
   LYT.Config b ->
   LYT.LogicDomain ->
   Id LYT.MerchantOperatingCity ->
   m b
 getConfigImpl _dimensions wrappedConfig logicDomain merchantOpCityId = do
-  mTxnId <- asks (.txnId)
+  mTxnId <- L.getOptionLocal TxnIdKey
   mPersonId <- L.getOptionLocal PersonIdKey
   personTags <- case mPersonId of
     Just pid -> do

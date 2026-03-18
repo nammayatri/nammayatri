@@ -41,7 +41,8 @@ import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.PaymentInvoice as SPInvoice
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.PaymentCustomer as QPaymentCustomer
@@ -617,7 +618,7 @@ getPaymentGetDueAmount ::
 getPaymentGetDueAmount (mbPersonId, _) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  riderConfig <- runInReplica $ QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
   let excludedPurposes = case riderConfig >>= (.duesExcludedPaymentPurposes) of
         Nothing -> [] -- No config = don't exclude anything
         Just textList -> mapMaybe (readMaybe . Text.unpack) textList :: [DPI.PaymentPurpose]
@@ -695,7 +696,7 @@ postPaymentClearDues (mbPersonId, merchantId) req = do
   currency <- duesResp.currency & fromMaybeM (InvalidRequest "Currency required when dues present")
 
   -- 2. Get failed invoices to link as parents (same exclusion as Get Dues: config-based)
-  riderConfig <- runInReplica $ QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
   let excludedPurposes = case riderConfig >>= (.duesExcludedPaymentPurposes) of
         Nothing -> [] -- No config = don't exclude anything
         Just textList -> mapMaybe (readMaybe . Text.unpack) textList :: [DPI.PaymentPurpose]

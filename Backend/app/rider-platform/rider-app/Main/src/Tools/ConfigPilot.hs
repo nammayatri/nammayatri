@@ -63,16 +63,16 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
       msucCfg <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList msucCfg)}
     LYTU.RIDER_CONFIG LYTU.MerchantServiceConfig -> do
-      mscCfgs <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      mscCfgs <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, serviceName = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON mscCfgs}
     LYTU.RIDER_CONFIG LYTU.BecknConfig -> do
-      bcCfgs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      bcCfgs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, domain = Nothing, vehicleCategory = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON bcCfgs}
     LYTU.RIDER_CONFIG LYTU.MerchantPushNotification -> do
       mpnCfgs <- getConfig (MerchantPushNotificationDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       return LYTU.TableDataResp {configs = map A.toJSON mpnCfgs}
     LYTU.RIDER_CONFIG LYTU.Exophone -> do
-      exoCfgs <- getConfig (ExophoneDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      exoCfgs <- getConfig (ExophoneDimensions {merchantOperatingCityId = merchantOpCityId.getId, callService = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON exoCfgs}
     LYTU.RIDER_CONFIG LYTU.FRFSConfig -> do
       frfsConfig <- SCFRFS.findByMerchantOperatingCityId (cast merchantOpCityId) (Just [])

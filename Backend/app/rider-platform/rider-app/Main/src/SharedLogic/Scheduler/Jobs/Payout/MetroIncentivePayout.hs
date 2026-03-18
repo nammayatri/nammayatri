@@ -67,7 +67,7 @@ sendCustomerRefund Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       merchantId = jobData.merchantId
       statusForRetry = jobData.statusForRetry
       toScheduleNextPayout = jobData.toScheduleNextPayout
-  allPayoutCfgs <- getConfig (PayoutDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, txnId = Nothing, payoutType = ""})
+  allPayoutCfgs <- getConfig (PayoutDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Nothing, isPayoutEnabled = Just True, payoutEntity = Just METRO_TICKET_CASHBACK})
   let payoutConfig = filterByPayoutEnabledAndEntity allPayoutCfgs True METRO_TICKET_CASHBACK
   riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (InternalError $ "RiderConfig not found for mocId: " <> show merchantOpCityId.getId)
   let rescheduleTimeDiff = payoutConfig <&> (.timeDiff)

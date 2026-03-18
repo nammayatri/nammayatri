@@ -85,7 +85,7 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges message
   void $ CQP.clearPSCache booking.riderId
   void $ sendTicketCancelSMS mRiderNumber person.mobileCountryCode booking fareParameters
   handleGoogleWalletStatusUpdate booking
-  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
+  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, domain = Nothing, vehicleCategory = Nothing})
   bapConfig <-
     filterByDomainAndVehicleWithFallback allBecknConfigs (show Spec.FRFS) (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)
       & fromMaybeM (InternalError "Beckn Config not found")

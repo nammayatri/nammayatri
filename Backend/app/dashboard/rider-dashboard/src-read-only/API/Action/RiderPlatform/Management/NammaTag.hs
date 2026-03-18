@@ -278,13 +278,6 @@ type GetNammaTagConfigPilotGetUiTableData =
       :> API.Types.RiderPlatform.Management.NammaTag.GetNammaTagConfigPilotGetUiTableData
   )
 
-type GetNammaTagConfigPilotAlwaysOnList =
-  ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.NAMMA_TAG) / ('API.Types.RiderPlatform.Management.NammaTag.GET_NAMMA_TAG_CONFIG_PILOT_ALWAYS_ON_LIST))
-      :> API.Types.RiderPlatform.Management.NammaTag.GetNammaTagConfigPilotAlwaysOnList
-  )
 
 type PostNammaTagConfigPilotActionChange =
   ( ApiAuth
@@ -387,8 +380,6 @@ getNammaTagConfigPilotUiConfigDetails merchantShortId opCity apiTokenInfo req = 
 getNammaTagConfigPilotGetUiTableData :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.UiDevicePlatformReq -> Environment.FlowHandler Lib.Yudhishthira.Types.TableDataResp)
 getNammaTagConfigPilotGetUiTableData merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.NammaTag.getNammaTagConfigPilotGetUiTableData merchantShortId opCity apiTokenInfo req
 
-getNammaTagConfigPilotAlwaysOnList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.LogicDomain -> Environment.FlowHandler Lib.Yudhishthira.Types.AlwaysOnListResp)
-getNammaTagConfigPilotAlwaysOnList merchantShortId opCity apiTokenInfo domain = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.NammaTag.getNammaTagConfigPilotAlwaysOnList merchantShortId opCity apiTokenInfo domain
 
 postNammaTagConfigPilotActionChange :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.ActionChangeRequest -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postNammaTagConfigPilotActionChange merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.NammaTag.postNammaTagConfigPilotActionChange merchantShortId opCity apiTokenInfo req

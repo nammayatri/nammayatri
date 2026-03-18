@@ -1212,7 +1212,7 @@ postMultimodalTicketVerify ::
   Environment.Flow API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyResp
 postMultimodalTicketVerify (_mbPersonId, merchantId) opCity req = do
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchantId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show opCity)
-  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, domain = Nothing, vehicleCategory = Nothing})
   bapConfig <- filterByDomainAndVehicleWithFallback allBecknConfigs (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory BUS) & fromMaybeM (InternalError "Beckn Config not found")
   let verifyTicketsAndBuildResponse provider tickets = do
         legInfoList <- forM tickets $ \ticketQR -> do
@@ -1786,7 +1786,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
     ( do
         person <- authenticate mbPersonId
         integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
-        riderConfig <- QRiderConfig.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound person.merchantOperatingCityId.getId)
+        riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound person.merchantOperatingCityId.getId)
         let routeServiceabilityContext =
               RouteServiceabilityContext
                 { integratedBPPConfig,

@@ -60,7 +60,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
   merchanOperatingCityId <- CQMOC.getMerchantOpCityId merchant mbOpCity
   let merchantId = merchant.id
       serviceName' = DEMSC.PayoutService TPayout.Juspay
-  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchanOperatingCityId.getId})
+  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchanOperatingCityId.getId, serviceName = Nothing})
   merchantServiceConfig <-
     filterByService allMSC serviceName'
       & fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payout" (show TPayout.Juspay))
@@ -76,7 +76,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
     IPayout.OrderStatusPayoutResp {..} -> do
       payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId)
       let personId = Id payoutOrder.customerId
-      allPayoutCfgs <- getConfig (PayoutDimensions {merchantOperatingCityId = merchanOperatingCityId.getId, merchantId = merchantId.getId, txnId = Nothing, payoutType = ""})
+      allPayoutCfgs <- getConfig (PayoutDimensions {merchantOperatingCityId = merchanOperatingCityId.getId, vehicleCategory = Just DV.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing})
       payoutConfig <- filterByCityIdAndVehicleCategory allPayoutCfgs DV.AUTO_CATEGORY Nothing & fromMaybeM (PayoutConfigNotFound "AUTO_CATEGORY" merchanOperatingCityId.getId)
       unless (isPayoutStatusSuccess payoutOrder.status) do
         personStats <- QPersonStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)

@@ -37,7 +37,6 @@ import qualified Domain.Types.HyperVergeVerification as HV
 import qualified Domain.Types.IdfyVerification as IV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan as Plan
@@ -61,7 +60,6 @@ import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as BVQuery
 import qualified Storage.Queries.DigilockerVerification as QDV

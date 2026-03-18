@@ -50,7 +50,7 @@ onConfirm _ reqBS = withFlowHandlerAPI $ do
   transaction_id <- req.onConfirmReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   bookingId <- req.onConfirmReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
   ticketBooking <- QFRFSTicketBooking.findById (Id bookingId) >>= fromMaybeM (InvalidRequest "Invalid booking id")
-  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = ticketBooking.merchantOperatingCityId.getId})
+  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = ticketBooking.merchantOperatingCityId.getId, domain = Nothing, vehicleCategory = Nothing})
   bapConfig <- filterByDomainAndVehicleWithFallback allBecknConfigs (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType) & fromMaybeM (InternalError "Beckn Config not found")
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity ticketBooking
   routeStopMappingFromStation <- OTPRest.getRouteStopMappingByStopCode ticketBooking.fromStationCode integratedBppConfig

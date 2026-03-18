@@ -55,7 +55,7 @@ import Storage.Beam.SchedulerJob ()
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..), filterByDomainAndVehicleWithFallback)
 import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import qualified Storage.CachedQueries.Seat as QSeat
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
@@ -75,7 +75,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
   mbBooking <- QFRFSTicketBooking.findBySearchId quote.searchId
   riderConfig <-
-    QRiderConfig.findByMerchantOperatingCityId integratedBppConfig.merchantOperatingCityId Nothing
+    getConfig (RiderDimensions {merchantOperatingCityId = integratedBppConfig.merchantOperatingCityId.getId})
       >>= fromMaybeM
         (RiderConfigNotFound $ "merchantOpCityid: " <> integratedBppConfig.merchantOperatingCityId.getId)
   isMultiInitAllowed <-
@@ -290,7 +290,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
   let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< dConfirmRes.routeStationsJson
   now <- getCurrentTime
   when isMultiInitAllowed $ do
-    allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+    allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, domain = Nothing, vehicleCategory = Nothing})
     bapConfig <- filterByDomainAndVehicleWithFallback allBecknConfigs (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType) & fromMaybeM (InternalError "Beckn Config not found")
     let mRiderName = rider.firstName <&> (\fName -> rider.lastName & maybe fName (\lName -> fName <> " " <> lName))
     mRiderNumber <- mapM decrypt rider.mobileNumber

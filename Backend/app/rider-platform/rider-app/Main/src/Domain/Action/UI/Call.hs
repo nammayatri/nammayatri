@@ -448,7 +448,7 @@ getCallTwillioAccessToken rideId entity deviceType = do
       twillioCallConfig :: TwillioCallCfg <- getCfg cityId merId
       createJWT id twillioCallConfig deviceType
     getCfg cityId _mercId = do
-      allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = cityId.getId})
+      allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = cityId.getId, serviceName = Nothing})
       merchantServConfig <- filterByService allMSC (DMSC.CallService Call.TwillioCall) & fromMaybeM (MerchantServiceConfigNotFound cityId.getId "Call" "TwillioCall")
       case merchantServConfig.serviceConfig of
         DMSC.CallServiceConfig config ->

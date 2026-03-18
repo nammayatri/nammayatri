@@ -1361,7 +1361,7 @@ customerReferralPayout ::
 customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantOperatingCityId = do
   let vehicleCategory = DV.castVehicleVariantToVehicleCategory ride.vehicleVariant
   logDebug $ "Ride End referral payout : vehicleCategory : " <> show vehicleCategory <> " isValidRide: " <> show isValidRide
-  allPayoutCfgs <- getConfig (PayoutDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, txnId = Nothing, payoutType = ""})
+  allPayoutCfgs <- getConfig (PayoutDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing})
   let mbPayoutConfig = filterByCityIdAndVehicleCategory allPayoutCfgs vehicleCategory Nothing
   case mbPayoutConfig of
     Just payoutConfig -> do

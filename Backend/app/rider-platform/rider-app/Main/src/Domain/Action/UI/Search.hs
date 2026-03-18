@@ -777,7 +777,7 @@ calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person sea
   let collectMMIData = fromMaybe False riderConfig.collectMMIRouteData
   when collectMMIData $ do
     fork "calling mmi directions api" $ do
-      allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+      allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, serviceName = Nothing})
       mmiConfigs <- filterByService allMSC (DMSC.MapsService MapsK.MMI) & fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "MMI")
       case mmiConfigs.serviceConfig of
         DMSC.MapsServiceConfig mapsCfg -> do
@@ -790,7 +790,7 @@ calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person sea
   shouldCollectRouteData <- asks (.collectRouteData)
   when shouldCollectRouteData $ do
     fork "calling next billion directions api" $ do
-      allMSC' <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+      allMSC' <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, serviceName = Nothing})
       nextBillionConfigs <- filterByService allMSC' (DMSC.MapsService MapsK.NextBillion) & fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "NextBillion")
       case nextBillionConfigs.serviceConfig of
         DMSC.MapsServiceConfig mapsCfg -> do

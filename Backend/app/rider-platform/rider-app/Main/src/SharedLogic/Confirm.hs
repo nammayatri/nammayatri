@@ -505,7 +505,7 @@ extractDriverPreference mbTags = do
 findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m DExophone.Exophone
 findRandomExophone merchantOperatingCityId = do
   merchantServiceUsageConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
-  allExophones <- getConfig (ExophoneDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+  allExophones <- getConfig (ExophoneDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, callService = Nothing})
   let exophones = filterByService allExophones merchantServiceUsageConfig.getExophone
   nonEmptyExophones <- case exophones of
     [] -> throwError $ ExophoneNotFound merchantOperatingCityId.getId

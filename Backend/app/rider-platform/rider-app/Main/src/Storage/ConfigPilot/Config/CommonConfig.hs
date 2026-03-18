@@ -12,9 +12,7 @@ import Storage.ConfigPilot.Interface.Types
 -- | Shared dimension type for configs that use common dimensions.
 -- Every dimension record includes merchantOperatingCityId and merchantId for fetching configs.
 data CommonDimensions = CommonDimensions
-  { merchantOperatingCityId :: Text,
-    merchantId :: Text,
-    txnId :: Maybe Text
+  { merchantOperatingCityId :: Text
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 

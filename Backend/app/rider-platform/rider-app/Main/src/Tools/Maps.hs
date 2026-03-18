@@ -151,7 +151,7 @@ getRoutes isAvoidToll personId merchantId mbMOCId entityId req = do
 getPickupRoutes :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> MapsService -> Maybe Text -> GetRoutesReq -> m GetRoutesResp
 getPickupRoutes merchantId merchantOperatingCityId service entityId req = do
   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, serviceName = Nothing})
   merchantMapsServiceConfig <-
     filterByService allMSC (DMSC.MapsService service)
       & fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show service))
@@ -212,7 +212,7 @@ runWithServiceConfig ::
   m resp
 runWithServiceConfig func getCfg merchantId merchantOperatingCityId entityId req = do
   merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
-  allMSC' <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+  allMSC' <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, serviceName = Nothing})
   merchantMapsServiceConfig <-
     filterByService allMSC' (DMSC.MapsService $ getCfg merchantConfig)
       & fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show $ getCfg merchantConfig))
