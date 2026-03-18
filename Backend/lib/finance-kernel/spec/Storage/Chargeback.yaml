@@ -6,6 +6,7 @@
 imports:
   UTCTime: Kernel.Prelude
   HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
   PgPaymentSettlementReport: Lib.Finance.Domain.Types.PgPaymentSettlementReport
 
 Chargeback:
@@ -36,6 +37,7 @@ Chargeback:
     # --- Chargeback details ---
     chargebackReasonCode: Text                       # Reason code from PG / card network
     chargebackAmount: HighPrecMoney                  # Disputed amount
+    chargebackCurrency: Currency                     # M5 fix: Currency of the chargeback amount
     chargebackStatus: ChargebackStatus               # OPEN | EVIDENCE_SUBMITTED | WON | LOST | EXPIRED
 
     # --- Response tracking ---
@@ -52,8 +54,18 @@ Chargeback:
   # ---------------------------------------------------------------------------
   # Default values
   # ---------------------------------------------------------------------------
+  beamType:
+    chargebackCurrency: Maybe Currency
+
+  fromTType:
+    chargebackCurrency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+
+  toTType:
+    chargebackCurrency: Kernel.Prelude.Just|I
+
   default:
     chargebackStatus: "'OPEN'"
+    chargebackCurrency: "'INR'"
 
   # ---------------------------------------------------------------------------
   # Constraints / indexes

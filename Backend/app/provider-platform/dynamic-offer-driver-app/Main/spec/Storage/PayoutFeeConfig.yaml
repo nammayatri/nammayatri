@@ -49,6 +49,12 @@ PayoutFeeConfig:
       where:
         and: [merchantOperatingCityId, methodType, payoutType]
 
+  sqlType:
+    feePercentage: numeric(30,2)
+    fixedFee: numeric(30,2)
+    minFee: numeric(30,2)
+    maxFee: numeric(30,2)
+
   default:
     feePercentage: "0.0"
     fixedFee: "0.0"

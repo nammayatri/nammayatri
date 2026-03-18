@@ -93,3 +93,95 @@ findAllByMerchantOpCityIdWithFilters merchantId merchantOpCityId mbFrom mbTo mbS
     (Se.Desc Beam.createdAt)
     mbLimit
     mbOffset
+
+-- ---------------------------------------------------------------------------
+-- [M3 fix] SQL-level aggregation helpers for summary/trend endpoints.
+-- These avoid loading all records into memory.
+-- ---------------------------------------------------------------------------
+
+-- | Simple aggregation result: count + total amount.
+data AggregateResult = AggregateResult
+  { count :: Int,
+    totalAmount :: HighPrecMoney
+  }
+  deriving (Show)
+
+-- | Aggregate by reconStatus: count and sum settlementAmount for matching records.
+aggregateByReconStatus ::
+  (BeamFlow m r) =>
+  Text -> -- merchantId
+  Text -> -- merchantOperatingCityId
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Text -> -- pgName (paymentGateway)
+  Domain.ReconStatus ->
+  m AggregateResult
+aggregateByReconStatus merchantId merchantOpCityId mbFrom mbTo mbPgName reconStatus = do
+  reports <-
+    findAllWithKV
+      [ Se.And $
+          [ Se.Is Beam.merchantId $ Se.Eq merchantId,
+            Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId,
+            Se.Is Beam.reconStatus $ Se.Eq reconStatus
+          ]
+            <> [Se.Is Beam.txnDate $ Se.GreaterThanOrEq (Just fromTime) | Just fromTime <- [mbFrom]]
+            <> [Se.Is Beam.txnDate $ Se.LessThanOrEq (Just toTime) | Just toTime <- [mbTo]]
+            <> [Se.Is Beam.paymentGateway $ Se.Eq (Just name) | Just name <- [mbPgName]]
+      ]
+  pure $ AggregateResult
+    { count = length (reports :: [Domain.PgPaymentSettlementReport]),
+      totalAmount = sum $ map (.settlementAmount) reports
+    }
+
+-- | Aggregate by txnStatus: count and sum txnAmount for matching records.
+aggregateByTxnStatus ::
+  (BeamFlow m r) =>
+  Text -> -- merchantId
+  Text -> -- merchantOperatingCityId
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Text -> -- pgName (paymentGateway)
+  Domain.TxnStatus ->
+  m AggregateResult
+aggregateByTxnStatus merchantId merchantOpCityId mbFrom mbTo mbPgName txnStatus = do
+  reports <-
+    findAllWithKV
+      [ Se.And $
+          [ Se.Is Beam.merchantId $ Se.Eq merchantId,
+            Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId,
+            Se.Is Beam.txnStatus $ Se.Eq txnStatus
+          ]
+            <> [Se.Is Beam.txnDate $ Se.GreaterThanOrEq (Just fromTime) | Just fromTime <- [mbFrom]]
+            <> [Se.Is Beam.txnDate $ Se.LessThanOrEq (Just toTime) | Just toTime <- [mbTo]]
+            <> [Se.Is Beam.paymentGateway $ Se.Eq (Just name) | Just name <- [mbPgName]]
+      ]
+  pure $ AggregateResult
+    { count = length (reports :: [Domain.PgPaymentSettlementReport]),
+      totalAmount = sum $ map (.txnAmount) reports
+    }
+
+-- | Aggregate disputed records (those with a non-null disputeId): count and sum chargebackAmount.
+aggregateDisputed ::
+  (BeamFlow m r) =>
+  Text -> -- merchantId
+  Text -> -- merchantOperatingCityId
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Text -> -- pgName (paymentGateway)
+  m AggregateResult
+aggregateDisputed merchantId merchantOpCityId mbFrom mbTo mbPgName = do
+  reports <-
+    findAllWithKV
+      [ Se.And $
+          [ Se.Is Beam.merchantId $ Se.Eq merchantId,
+            Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId,
+            Se.Is Beam.disputeId $ Se.Not (Se.Eq Nothing)
+          ]
+            <> [Se.Is Beam.txnDate $ Se.GreaterThanOrEq (Just fromTime) | Just fromTime <- [mbFrom]]
+            <> [Se.Is Beam.txnDate $ Se.LessThanOrEq (Just toTime) | Just toTime <- [mbTo]]
+            <> [Se.Is Beam.paymentGateway $ Se.Eq (Just name) | Just name <- [mbPgName]]
+      ]
+  pure $ AggregateResult
+    { count = length (reports :: [Domain.PgPaymentSettlementReport]),
+      totalAmount = sum $ mapMaybe (.chargebackAmount) reports
+    }

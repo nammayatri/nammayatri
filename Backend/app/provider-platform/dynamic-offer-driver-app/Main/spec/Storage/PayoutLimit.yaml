@@ -23,6 +23,13 @@ PayoutLimit:
     id: PrimaryKey
     merchantOperatingCityId: SecondaryKey
 
+  sqlType:
+    dailyLimit: numeric(30,2)
+    weeklyLimit: numeric(30,2)
+    monthlyLimit: numeric(30,2)
+    perTransactionMin: numeric(30,2)
+    perTransactionMax: numeric(30,2)
+
   queries:
     findByMerchantOpCityId:
       kvFunction: findOneWithKV

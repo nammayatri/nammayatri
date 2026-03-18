@@ -25,6 +25,7 @@ DriverGracePeriodTracker:
     id: PrimaryKey
     driverId: "!SecondaryKey"
     ruleId: SecondaryKey
+    driverId-ruleId: UniqueConstraint
 
   default:
     offenseCount: "0"

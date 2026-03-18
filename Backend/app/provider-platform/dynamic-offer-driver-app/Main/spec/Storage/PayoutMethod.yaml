@@ -2,6 +2,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Person: Domain.Types.Person
+  EncryptedHashedField: Kernel.External.Encryption
 
 PayoutMethod:
   tableName: payout_method
@@ -14,7 +15,7 @@ PayoutMethod:
       derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
 
     VerificationStatus:
-      enum: "PENDING, VERIFIED, FAILED"
+      enum: "PENDING, VERIFICATION_IN_PROGRESS, VERIFIED, FAILED"
       derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
 
   fields:
@@ -22,7 +23,7 @@ PayoutMethod:
     driverId: Id Person
     methodType: PayoutMethodType
     vpa: Maybe Text
-    bankAccountNumber: Maybe Text
+    bankAccountNumber: Maybe (EncryptedHashedField e Text)
     ifscCode: Maybe Text
     bankName: Maybe Text
     beneficiaryName: Maybe Text

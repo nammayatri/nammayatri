@@ -54,7 +54,7 @@ import qualified Storage.Queries.Person as QPerson
 
 data DriverPenaltyItem = DriverPenaltyItem
   { penaltyId :: Id DPR.PenaltyRecord,
-    triggerEvent :: Text,
+    triggerEvent :: DPRule.PenaltyTriggerEvent,
     amount :: HighPrecMoney,
     currency :: Currency,
     reason :: Text,
@@ -91,7 +91,9 @@ data GracePeriodItem = GracePeriodItem
     offenseCount :: Int,
     gracePeriodCount :: Maybe Int,
     windowStartTime :: UTCTime,
-    windowEndTime :: UTCTime
+    windowEndTime :: UTCTime,
+    isWindowExpired :: Bool,
+    remainingGrace :: Maybe Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -105,6 +107,7 @@ data GracePeriodStatusRes = GracePeriodStatusRes
 -- Handlers
 -- -----------------------------------------------------------------
 
+-- | [M9] Properly implements pagination using limit/offset at DB level
 listMyPenalties ::
   ( Maybe (Id DP.Person),
     Id DM.Merchant,
@@ -114,12 +117,10 @@ listMyPenalties ::
   Maybe Int ->
   Maybe Int ->
   Flow DriverPenaltyListRes
-listMyPenalties (mbDriverId, _merchantId, _merchantOpCityId) mbStatus _mbLimit _mbOffset = do
+listMyPenalties (mbDriverId, _merchantId, _merchantOpCityId) mbStatus mbLimit mbOffset = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
   _driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  records <- case mbStatus of
-    Just status -> QPenaltyRecord.findAllByDriverIdAndStatus driverId status
-    Nothing -> QPenaltyRecord.findAllByDriverId driverId
+  records <- QPenaltyRecord.findAllByDriverIdWithLimitOffset driverId mbStatus mbLimit mbOffset
   items <- mapM toDriverPenaltyItem records
   pure $ DriverPenaltyListRes {penalties = items, totalCount = length items}
   where
@@ -181,6 +182,7 @@ disputePenalty (mbDriverId, _merchantId, _merchantOpCityId) penaltyId req = do
   logInfo $ "Driver " <> driverId.getId <> " disputed penalty " <> penaltyId.getId
   pure APISuccess.Success
 
+-- | [C2] Grace period status endpoint enriched with window expiry info
 getGracePeriodStatus ::
   ( Maybe (Id DP.Person),
     Id DM.Merchant,
@@ -190,13 +192,21 @@ getGracePeriodStatus ::
 getGracePeriodStatus (mbDriverId, _merchantId, _merchantOpCityId) = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
   _driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  now <- getCurrentTime
   trackers <- QGraceTracker.findAllByDriverId driverId
-  items <- mapM toGracePeriodItem trackers
+  items <- mapM (toGracePeriodItem now) trackers
   pure $ GracePeriodStatusRes {trackers = items, totalCount = length items}
   where
-    toGracePeriodItem :: DGPT.DriverGracePeriodTracker -> Flow GracePeriodItem
-    toGracePeriodItem tracker = do
+    toGracePeriodItem :: UTCTime -> DGPT.DriverGracePeriodTracker -> Flow GracePeriodItem
+    toGracePeriodItem now tracker = do
       mbRule <- QPenaltyRule.findById tracker.ruleId
+      let isExpired = now > tracker.windowEndTime
+          remaining = case mbRule of
+            Just rule ->
+              if isExpired
+                then Just rule.gracePeriodCount
+                else Just (max 0 (rule.gracePeriodCount - tracker.offenseCount))
+            Nothing -> Nothing
       pure $
         GracePeriodItem
           { ruleId = tracker.ruleId,
@@ -205,5 +215,7 @@ getGracePeriodStatus (mbDriverId, _merchantId, _merchantOpCityId) = do
             offenseCount = tracker.offenseCount,
             gracePeriodCount = (.gracePeriodCount) <$> mbRule,
             windowStartTime = tracker.windowStartTime,
-            windowEndTime = tracker.windowEndTime
+            windowEndTime = tracker.windowEndTime,
+            isWindowExpired = isExpired,
+            remainingGrace = remaining
           }

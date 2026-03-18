@@ -19,7 +19,7 @@ PenaltyRecord:
     ruleId: Id PenaltyRule
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    triggerEvent: Text
+    triggerEvent: PenaltyTriggerEvent
     triggerEntityId: Text
     amount: HighPrecMoney
     currency: Currency
