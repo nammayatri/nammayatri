@@ -248,8 +248,8 @@ generateAndEmailInvoice invoiceId person bookingAPIEntities merchantId email = d
     throwError $ InternalError "Invoice file generation failed - file not found"
 
   -- Send email with PDF attachment
-  let subject = "Your Namma Yatri Invoice - " <> invoiceId.getId
-      bodyText = buildInvoiceEmailBody invoiceId.getId
+  let subject = "Your " <> merchant.name <> " Invoice - " <> invoiceId.getId
+      bodyText = buildInvoiceEmailBody merchant.name invoiceId.getId
       fileName = "invoice_" <> invoiceId.getId <> ".pdf"
 
   emailServiceConfig <- asks (.emailServiceConfig)
@@ -259,19 +259,19 @@ generateAndEmailInvoice invoiceId person bookingAPIEntities merchantId email = d
   logInfo $ "Invoice PDF generated and emailed successfully for invoiceId: " <> invoiceId.getId
 
 -- | Build plain text email body for invoice
-buildInvoiceEmailBody :: Text -> Text
-buildInvoiceEmailBody invoiceId =
+buildInvoiceEmailBody :: Text -> Text -> Text
+buildInvoiceEmailBody merchantName invoiceId =
   T.unlines
     [ "Dear Customer,",
       "",
-      "Please find attached your Namma Yatri invoice (" <> invoiceId <> ") for the requested period.",
+      "Please find attached your " <> merchantName <> " invoice (" <> invoiceId <> ") for the requested period.",
       "",
       "The invoice contains details of all your rides during the selected date range.",
       "",
       "If you have any questions or concerns, please contact our support team.",
       "",
-      "Thank you for choosing Namma Yatri!",
+      "Thank you for choosing " <> merchantName <> "!",
       "",
       "Best regards,",
-      "Namma Yatri Team"
+      merchantName <> " Team"
     ]
