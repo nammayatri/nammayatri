@@ -1,5 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
-
 -- |
 -- Module      : DBSync.BatchCreate
 -- Description : Optimized batch processing for database operations in the drainer
@@ -41,33 +39,6 @@ import Types.DBSync
 import Types.DBSync.Create
 import Types.Event as Event
 import Utils.Utils
-
--- =============================================================================
--- LOGGING UTILITIES
--- =============================================================================
-
--- | Lightweight logging helpers that use string concatenation instead of JSON encoding
---    to reduce overhead in hot paths. These functions create structured log messages
---    without the performance cost of JSON serialization.
-
--- | Log entry split information between forced individual and batchable entries
-logSplitInfo :: Text -> Int -> Int -> Flow ()
-logSplitInfo prefix forcedCount batchableCount =
-  EL.logInfo prefix $ "forced:" <> show forcedCount <> "|batchable:" <> show batchableCount
-
--- =============================================================================
--- STATISTICS AND GROUPING
--- =============================================================================
-
--- | Calculate table statistics in a single pass to avoid multiple traversals.
---    Returns (signature_count, total_entries) for efficient logging and metrics.
-calculateTableStats :: Map ColumnSignature [ParsedCreateEntry] -> (Int, Int)
-calculateTableStats =
-  M.foldl'
-    ( \(sigCount, entryCount) entries ->
-        (sigCount + 1, entryCount + length entries)
-    )
-    (0, 0)
 
 -- | Column signature represents the structure of a database insert operation.
 --    Entries with the same signature can be batched together into a single bulk INSERT
@@ -387,12 +358,6 @@ shouldBatchSignature entryCount = do
   -- Since DBSync already decided to use BatchCreate, we only need to check entry count
   pure $ entryCount >= minBatchSize
 
--- | Execute individual processing for small signature groups
-executeIndividuallyForSignature :: Text -> [ParsedCreateEntry] -> Flow ([EL.KVDBStreamEntryID], [EL.KVDBStreamEntryID])
-executeIndividuallyForSignature dbStreamKey entries = do
-  EL.logInfo ("EXECUTING_INDIVIDUALLY_FOR_SIGNATURE" :: Text) ("Count: " <> show (length entries))
-  processIndividualEntries dbStreamKey entries
-
 -- | Execute batch for a specific signature
 executeBatchForSignature :: Text -> ColumnSignature -> [ParsedCreateEntry] -> Flow ([EL.KVDBStreamEntryID], [EL.KVDBStreamEntryID])
 executeBatchForSignature _dbStreamKey signature entries = do
@@ -434,16 +399,17 @@ executeBatchForSignature _dbStreamKey signature entries = do
               void $ publishDBSyncMetric $ Event.BatchExecutionTime sig.tableName.getDBModel executionTime
               void $ publishDBSyncMetric $ Event.BatchEntriesProcessed sig.tableName.getDBModel (length batchEntries)
 
-              -- Push successful batch entries to Kafka
+              -- Push successful batch entries to Kafka (best-effort; DB is source of truth)
               kafkaResults <- pushEntriesToKafka _dbStreamKey batchEntries
               let (kafkaSuccesses, kafkaFailures) = kafkaResults
 
-              -- Log Kafka results
+              -- Log Kafka results but report all entries as successes since DB insert succeeded
               when (not $ null kafkaFailures) $
                 EL.logError ("BATCH_KAFKA_FAILURES" :: Text) $
                   sig.tableName.getDBModel <> "|kafka_failed:" <> show (length kafkaFailures)
 
-              pure (kafkaSuccesses, kafkaFailures)
+              let allEntryIds = map (.entryId) batchEntries
+              pure (allEntryIds, [])
 
 -- | Get global batch size from environment variables
 getGlobalBatchSize :: Flow Int

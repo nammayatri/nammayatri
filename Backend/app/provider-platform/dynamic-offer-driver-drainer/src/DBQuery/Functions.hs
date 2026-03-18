@@ -144,13 +144,18 @@ textToSnakeCaseText :: Text -> Text
 textToSnakeCaseText = T.pack . quietSnake . T.unpack
 
 -- | Validate that a SQL identifier (table name, column name, schema name) contains
--- only safe characters: alphanumeric, underscores, and dots (for schema-qualified names).
--- Throws a QueryError if validation fails.
+-- only safe characters: alphanumeric and underscores.
+-- Uses 'error' to abort query generation with a clear message on invalid input.
+-- This is intentionally strict: identifiers come from code-generated mappings,
+-- so a validation failure indicates a programming bug, not user input.
+-- NOTE: This throws 'ErrorCall', not 'QueryError', so it will NOT be caught by
+-- 'try @QueryError' in callers like executeSingleBatch. If this ever fires,
+-- the drainer will crash. This is acceptable because it signals a code-level bug.
 validateIdentifier :: Text -> Text
 validateIdentifier identifier
   | T.null identifier = error "Empty SQL identifier"
   | T.all (\c -> Char.isAlphaNum c || c == '_') identifier = identifier
-  | otherwise = error $ "Invalid SQL identifier: " <> T.unpack identifier <> " (only alphanumeric and underscore allowed)"
+  | otherwise = error $ "Invalid SQL identifier: " <> T.unpack identifier
 
 -- | Validate a column name for safe SQL interpolation.
 validateColumnName :: Text -> Text
@@ -194,7 +199,7 @@ valueToTextForInConditions values = "(" <> T.intercalate "," (map valueToText va
 makeWhereCondition :: Where -> Mapping -> Text
 makeWhereCondition whereClause mappings = do
   case whereClause of
-    [] -> "true" -- TODO test this
+    [] -> "" -- Empty WHERE clause returns empty text; callers guard with T.null to reject unbounded queries
     [clause] -> makeClauseCondition clause
     clauses -> makeClauseCondition (And clauses)
   where
@@ -216,7 +221,7 @@ makeWhereCondition whereClause mappings = do
         LessThan value -> columnText <> " < " <> valueToText value
         LessThanOrEq value -> columnText <> " <= " <> valueToText value
         Null -> columnText <> " IS NULL"
-        Like txt -> columnText <> " LIKE " <> txt
+        Like txt -> columnText <> " LIKE " <> quote txt
         Not (Eq value) -> columnText <> " != " <> valueToText value
         Not (In values) -> columnText <> " NOT IN " <> valueToTextForInConditions values
         Not Null -> columnText <> " IS NOT NULL"
@@ -224,6 +229,6 @@ makeWhereCondition whereClause mappings = do
 
 getArrayConditionText :: [Clause] -> Text -> Mapping -> Text
 getArrayConditionText clauses cnd mappings = case clauses of
-  [] -> "true"
+  [] -> ""
   [x] -> makeWhereCondition [x] mappings
   (x : xs) -> "(" <> makeWhereCondition [x] mappings <> ")" <> cnd <> "(" <> getArrayConditionText xs cnd mappings <> ")"
