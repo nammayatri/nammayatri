@@ -202,3 +202,18 @@ ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN seat_ids text[] ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN hold_id text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

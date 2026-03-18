@@ -43,7 +43,7 @@ import Domain.Types.Merchant as Merchant
 import qualified Domain.Types.PartnerOrgConfig as DPOC
 import Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person as Person
-import EulerHS.Prelude ((+||), (||+))
+import EulerHS.Prelude ((+||), (<|>), (||+))
 import ExternalBPP.CallAPI.Cancel
 import Kernel.Beam.Functions
 import Kernel.Beam.Functions as B
@@ -56,8 +56,8 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common
 import Kernel.Types.Version (CloudType)
+import Kernel.Utils.Common
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
@@ -82,6 +82,7 @@ import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
+import qualified Storage.Queries.FRFSTicketBookingPaymentCategory as QFRFSTicketBookingPaymentCategory
 import qualified Storage.Queries.JourneyExtra as QJourneyExtra
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QPS
@@ -195,7 +196,9 @@ onConfirm merchant booking' quoteCategories dOrder = do
   let booking = booking' {Booking.bppOrderId = Just dOrder.bppOrderId}
   let discountedTickets = fromMaybe 0 booking.discountedTickets
   tickets <- createTickets booking dOrder.tickets discountedTickets
-  whenJust booking'.holdId $ \holdId -> do
+  let mbPaymentHoldId = listToMaybe quoteCategories >>= (.holdId)
+  let effectiveHoldId = mbPaymentHoldId <|> booking'.holdId
+  whenJust effectiveHoldId $ \holdId -> do
     whenJust booking'.tripId $ \tripId -> do
       logInfo $ "OnConfirm:onConfirm finalizing seat hold bookingId=" <> booking.id.getId <> " holdId=" <> holdId <> " tripId=" <> tripId
       SeatBooking.confirmBooking tripId holdId
@@ -339,7 +342,7 @@ mkTicket ::
     HasLongDurationRetryCfg r c,
     HasShortDurationRetryCfg r c,
     HasField "cloudType" r (Maybe CloudType)
-    ) =>
+  ) =>
   Booking.FRFSTicketBooking ->
   DTicket ->
   Bool ->

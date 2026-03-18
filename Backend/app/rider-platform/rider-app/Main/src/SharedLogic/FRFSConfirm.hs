@@ -129,10 +129,10 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
     if isMultiInitAllowed
       then mapM processCategorySelection selectedQuoteCategories
       else return $ quoteCategories <&> (\qc -> FRFSUtils.QuoteCategorySelection qc.id qc.selectedQuantity Nothing Nothing)
-
+  let mbHoldId = mbHoldCtxForAll <&> (\(h, _, _) -> h)
   updatedQuoteCategories <-
     if isMultiInitAllowed
-      then FRFSUtils.updateQuoteCategoriesWithSelections quoteCategorySelections quoteCategories
+      then FRFSUtils.updateQuoteCategoriesWithSelections mbHoldId quoteCategorySelections quoteCategories
       else return quoteCategories
 
   let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories)
@@ -187,12 +187,12 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
     validateQuota :: Int -> Int -> Maybe Seat.Seat -> Either GenericError ()
     validateQuota fromIdx toIdx mbSeat =
       case mbSeat of
-          Nothing ->
-            Left (InvalidRequest "Selected seat not found.")
-          Just seat ->
-            if JourneyUtils.meetsSeatQuota fromIdx toIdx seat
-              then Right ()
-              else Left (InvalidRequest "One or more selected seats are reserved for longer journeys.")
+        Nothing ->
+          Left (InvalidRequest "Selected seat not found.")
+        Just seat ->
+          if JourneyUtils.meetsSeatQuota fromIdx toIdx seat
+            then Right ()
+            else Left (InvalidRequest "One or more selected seats are reserved for longer journeys.")
 
     buildAndCreateBooking :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "cloudType" r (Maybe CloudType)) => Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> FRFSUtils.FRFSFareParameters -> Maybe Bool -> Maybe (Text, Int, Int) -> Maybe Text -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
     buildAndCreateBooking rider quote'@DFRFSQuote.FRFSQuote {..} fareParameters mbMockPayment mbHoldCtxForAll firstTripId = do
