@@ -1,0 +1,182 @@
+imports: {}
+
+module: SubscriptionPlan
+
+apis:
+  - GET: # ListSubscriptionPlans with filters and pagination
+      endpoint: /list
+      name: GetSubscriptionPlanList
+      auth: ApiAuthV2
+      query:
+        - status: Text
+        - city: Text
+        - frequency: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: SubscriptionPlanListResp
+
+  - GET: # GetPlanDetails with subscriber count
+      endpoint: /{planId}/details
+      name: GetSubscriptionPlanDetails
+      auth: ApiAuthV2
+      params:
+        planId: Text
+      response:
+        type: SubscriptionPlanDetailsResp
+
+  - POST: # CreatePlan
+      endpoint: /create
+      name: PostSubscriptionPlanCreate
+      auth: ApiAuthV2
+      request:
+        type: CreateSubscriptionPlanReq
+      response:
+        type: CreateSubscriptionPlanResp
+
+  - POST: # UpdatePlan (creates versioned copy)
+      endpoint: /{planId}/update
+      name: PostSubscriptionPlanUpdate
+      auth: ApiAuthV2
+      params:
+        planId: Text
+      request:
+        type: UpdateSubscriptionPlanReq
+      response:
+        type: CreateSubscriptionPlanResp
+
+  - POST: # DeactivatePlan
+      endpoint: /{planId}/deactivate
+      name: PostSubscriptionPlanDeactivate
+      auth: ApiAuthV2
+      params:
+        planId: Text
+      request:
+        type: DeactivatePlanReq
+      response:
+        type: APISuccess
+
+  - POST: # ActivatePlan
+      endpoint: /{planId}/activate
+      name: PostSubscriptionPlanActivate
+      auth: ApiAuthV2
+      params:
+        planId: Text
+      request:
+        type: ActivatePlanReq
+      response:
+        type: APISuccess
+
+  - GET: # GetPlanAnalytics
+      endpoint: /{planId}/analytics
+      name: GetSubscriptionPlanAnalytics
+      auth: ApiAuthV2
+      params:
+        planId: Text
+      response:
+        type: PlanAnalyticsResp
+
+types:
+  SubscriptionPlanEntity:
+    - id: Text
+    - name: Text
+    - description: Text
+    - paymentMode: Text
+    - planType: Text
+    - billingType: Maybe Text
+    - frequency: Text
+    - planBaseAmount: Text
+    - maxAmount: HighPrecMoney
+    - registrationAmount: HighPrecMoney
+    - cgstPercentage: HighPrecMoney
+    - sgstPercentage: HighPrecMoney
+    - freeRideCount: Int
+    - isOfferApplicable: Bool
+    - isDeprecated: Bool
+    - basedOnEntity: Text
+    - serviceName: Text
+    - merchantId: Text
+    - merchantOpCityId: Text
+    - vehicleCategory: Text
+    - vehicleVariant: Maybe Text
+    - version: Int
+    - scheduledActivationDate: Maybe UTCTime
+    - scheduledDeactivationDate: Maybe UTCTime
+    - parentPlanId: Maybe Text
+    - benefits: Maybe Text
+    - subscriberCount: Int
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  SubscriptionPlanListResp:
+    - plans: "[SubscriptionPlanEntity]"
+    - totalCount: Int
+  SubscriptionPlanDetailsResp:
+    - plan: SubscriptionPlanEntity
+  CreateSubscriptionPlanReq:
+    - name: Text
+    - description: Text
+    - paymentMode: Text
+    - planType: Text
+    - billingType: Maybe Text
+    - frequency: Text
+    - planBaseAmount: Text
+    - maxAmount: HighPrecMoney
+    - registrationAmount: HighPrecMoney
+    - originalRegistrationAmount: Maybe HighPrecMoney
+    - maxCreditLimit: HighPrecMoney
+    - maxMandateAmount: HighPrecMoney
+    - productOwnershipAmount: HighPrecMoney
+    - cgstPercentage: HighPrecMoney
+    - sgstPercentage: HighPrecMoney
+    - freeRideCount: Int
+    - isOfferApplicable: Bool
+    - eligibleForCoinDiscount: Bool
+    - subscribedFlagToggleAllowed: Bool
+    - isDeprecated: Bool
+    - allowStrikeOff: Bool
+    - basedOnEntity: Text
+    - serviceName: Text
+    - vehicleVariant: Maybe Text
+    - vehicleCategory: Text
+    - listingPriority: Maybe Int
+    - validityInDays: Maybe Int
+    - isFleetOwnerPlan: Maybe Bool
+    - benefits: Maybe Text
+    - derive: "'HideSecrets"
+  CreateSubscriptionPlanResp:
+    - recordType: NewType
+    - planId: Text
+  UpdateSubscriptionPlanReq:
+    - name: Maybe Text
+    - description: Maybe Text
+    - paymentMode: Maybe Text
+    - planType: Maybe Text
+    - billingType: Maybe Text
+    - frequency: Maybe Text
+    - planBaseAmount: Maybe Text
+    - maxAmount: Maybe HighPrecMoney
+    - registrationAmount: Maybe HighPrecMoney
+    - maxCreditLimit: Maybe HighPrecMoney
+    - maxMandateAmount: Maybe HighPrecMoney
+    - productOwnershipAmount: Maybe HighPrecMoney
+    - cgstPercentage: Maybe HighPrecMoney
+    - sgstPercentage: Maybe HighPrecMoney
+    - freeRideCount: Maybe Int
+    - isOfferApplicable: Maybe Bool
+    - isDeprecated: Maybe Bool
+    - basedOnEntity: Maybe Text
+    - benefits: Maybe Text
+    - derive: "'HideSecrets"
+  DeactivatePlanReq:
+    - scheduledDeactivationDate: Maybe UTCTime
+    - derive: "'HideSecrets"
+  ActivatePlanReq:
+    - scheduledActivationDate: Maybe UTCTime
+    - derive: "'HideSecrets"
+  PlanAnalyticsResp:
+    - planId: Text
+    - planName: Text
+    - totalSubscribers: Int
+    - activeSubscribers: Int
+    - totalRevenue: HighPrecMoney
+    - currentVersion: Int

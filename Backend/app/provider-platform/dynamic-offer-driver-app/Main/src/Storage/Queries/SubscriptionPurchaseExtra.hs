@@ -4,6 +4,7 @@ import Data.List (partition, sortBy)
 import Data.Ord (comparing)
 import Domain.Types.Extra.Plan (ServiceNames)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Plan
 import Domain.Types.SubscriptionPurchase
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -235,3 +236,17 @@ findByFinanceInvoiceId ::
   m (Maybe SubscriptionPurchase)
 findByFinanceInvoiceId invoiceId =
   findOneWithKV [Se.Is Beam.financeInvoiceId $ Se.Eq (Just (Kernel.Types.Id.getId invoiceId))]
+
+-- | Find all ACTIVE subscription purchases for a specific plan ID.
+-- Used for plan analytics to count active subscribers and calculate revenue.
+findAllActiveByPlanId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id Domain.Types.Plan.Plan ->
+  m [SubscriptionPurchase]
+findAllActiveByPlanId planId =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.planId $ Se.Eq (getId planId),
+          Se.Is Beam.status $ Se.Eq ACTIVE
+        ]
+    ]

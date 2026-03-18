@@ -75,6 +75,11 @@ SubscriptionConfig:
     sendManualPaymentLinkJobMaxDelay: Maybe Data.Time.NominalDiffTime
     manualPaymentLinkRateLimitExpirySeconds: Maybe Data.Time.NominalDiffTime
     vendorMigrationMappings: "Maybe [VendorMigrationMapping]"
+    version: Int
+    scheduledActivationDate: Maybe UTCTime
+    scheduledDeactivationDate: Maybe UTCTime
+    parentPlanId: Maybe Text
+    benefits: Maybe Text
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CurrentPlanEntites>
 
@@ -102,6 +107,7 @@ SubscriptionConfig:
     manualPaymentLinkRateLimitExpirySeconds: Kernel.Prelude.Just . Kernel.Utils.Common.secondsToNominalDiffTime . Kernel.Prelude.fromMaybe 21600|I
     vendorMigrationMappings: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorMigrationMappings | E
+    version: Kernel.Prelude.fromMaybe 1|I
   toTType:
     genericJobRescheduleTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     paymentLinkJobTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
@@ -123,6 +129,7 @@ SubscriptionConfig:
     sendManualPaymentLinkJobMaxDelay: Kernel.Prelude.Just . Kernel.Utils.Common.nominalDiffTimeToSeconds . Kernel.Prelude.fromMaybe (Kernel.Utils.Common.secondsToNominalDiffTime 43200)|I
     manualPaymentLinkRateLimitExpirySeconds: Kernel.Prelude.Just . Kernel.Utils.Common.nominalDiffTimeToSeconds . Kernel.Prelude.fromMaybe (Kernel.Utils.Common.secondsToNominalDiffTime 21600)|I
     vendorMigrationMappings: Kernel.Prelude.toJSON <$> vendorMigrationMappings | E
+    version: Kernel.Prelude.Just|I
   beamType:
     genericJobRescheduleTime: Seconds
     paymentLinkJobTime: Seconds
@@ -144,6 +151,7 @@ SubscriptionConfig:
     sendManualPaymentLinkJobMaxDelay: Maybe Seconds
     manualPaymentLinkRateLimitExpirySeconds: Maybe Seconds
     vendorMigrationMappings: Maybe Value
+    version: Maybe Int
   constraints:
     serviceName: PrimaryKey
     merchantOperatingCityId: PrimaryKey
@@ -173,6 +181,7 @@ SubscriptionConfig:
     showManualPlansInUI: "false"
     sendManualPaymentLinkJobMaxDelay: "43200"
     manualPaymentLinkRateLimitExpirySeconds: "21600"
+    version: "1"
 
   sqlType:
    executionEnabledForVehicleCategories: text[]

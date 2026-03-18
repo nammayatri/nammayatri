@@ -21,6 +21,14 @@ import Storage.Queries.OrphanInstances.DriverPlan ()
 
 -- Extra code goes here --
 
+-- | Find all driver plan entries subscribed to a specific plan
+findAllByPlanId ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DPlan.Plan ->
+  m [DriverPlan]
+findAllByPlanId (Id planId) =
+  findAllWithKV [Se.Is BeamDF.planId $ Se.Eq planId]
+
 findAllDriversToSendManualPaymentLinkWithLimit ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   DPlan.ServiceNames ->
