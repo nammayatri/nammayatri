@@ -45,7 +45,6 @@ types:
     bus: Maybe [DocumentVerificationConfigAPIEntity]
     boat: Maybe [DocumentVerificationConfigAPIEntity]
     toto: Maybe [DocumentVerificationConfigAPIEntity]
-    verificationProvidersPriorityList: Maybe [VerificationService]
   DocumentVerificationConfigAPIEntity:
     documentType: DocumentType
     documentCategory: Maybe DocumentCategory
@@ -64,6 +63,7 @@ types:
     filterForOldApks: Maybe Bool
     applicableTo: DocumentApplicableType
     documentFields: Maybe [FieldInfo]
+    verificationProvidersPriorityList: Maybe [VerificationService]
   UpdateAirConditionUpdateRequest:
     recordType: NewType
     isAirConditioned: Bool
