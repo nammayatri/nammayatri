@@ -86,6 +86,7 @@ data AllocatorJobType
   | ExpireSubscriptionPurchase
   | Reconciliation
   | ScheduledBatchPayout
+  | BatchPipelineTuner
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -133,6 +134,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SExpireSubscriptionPurchase jobData = AnyJobInfo <$> restoreJobInfo SExpireSubscriptionPurchase jobData
   restoreAnyJobInfo SReconciliation jobData = AnyJobInfo <$> restoreJobInfo SReconciliation jobData
   restoreAnyJobInfo SScheduledBatchPayout jobData = AnyJobInfo <$> restoreJobInfo SScheduledBatchPayout jobData
+  restoreAnyJobInfo SBatchPipelineTuner jobData = AnyJobInfo <$> restoreJobInfo SBatchPipelineTuner jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -518,3 +520,13 @@ data ScheduledBatchPayoutJobData = ScheduledBatchPayoutJobData
 instance JobInfoProcessor 'ScheduledBatchPayout
 
 type instance JobContent 'ScheduledBatchPayout = ScheduledBatchPayoutJobData
+
+data BatchPipelineTunerJobData = BatchPipelineTunerJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'BatchPipelineTuner
+
+type instance JobContent 'BatchPipelineTuner = BatchPipelineTunerJobData
