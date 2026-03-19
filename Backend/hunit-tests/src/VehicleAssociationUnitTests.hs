@@ -6,8 +6,8 @@ module VehicleAssociationUnitTests where
 -- Import the REAL functions from the codebase
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Endpoints.Driver as Common
-import Control.Exception (evaluate, try)
-import Data.Maybe (fromMaybe, isJust, isNothing)
+import Control.Exception (try)
+import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Driver as DDriver
 import qualified "dynamic-offer-driver-app" Domain.Types.Common as DCommon

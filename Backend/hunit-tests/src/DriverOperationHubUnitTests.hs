@@ -6,10 +6,7 @@ module DriverOperationHubUnitTests where
 -- Imports for the real function and types
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Operator.Endpoints.Driver as Common
-import Control.Exception (evaluate, try)
-import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Operator.Driver as DDriverOp
-import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as DM
-import qualified "dynamic-offer-driver-app" Environment (Flow)
+import Control.Exception (try)
 import qualified "mobility-core" Kernel.Prelude
 import qualified "mobility-core" Kernel.Types.Beckn.Context as Context
 import qualified "mobility-core" Kernel.Types.Id
