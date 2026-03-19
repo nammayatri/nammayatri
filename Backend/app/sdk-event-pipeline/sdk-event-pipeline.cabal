@@ -73,7 +73,7 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -fplugin=RecordDotPreprocessor
   build-depends:
       aeson
     , base >=4.7 && <5

@@ -82,11 +82,6 @@ library:
   source-dirs:
     - src
     - src-read-only
-  ghc-options:
-    - -Wall
-    - -Wcompat
-    - -Widentities
-    - -fhide-source-paths
   when:
     - condition: flag(Local)
       then:

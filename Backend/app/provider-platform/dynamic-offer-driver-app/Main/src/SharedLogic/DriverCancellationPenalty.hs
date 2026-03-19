@@ -163,7 +163,6 @@ accumulateCancellationPenalty ::
   m ()
 accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterConfig driver = do
   when (validCancellationPenaltyApplicable `elem` rideTags && isJust booking.fareParams.driverCancellationPenaltyAmount) $ do
-    Metrics.incrementDriverPenaltyCount "cooldown" booking.merchantOperatingCityId.getId
     case booking.fareParams.driverCancellationPenaltyAmount of
       Just penaltyAmount ->
         if isWalletEnabled
@@ -194,6 +193,7 @@ accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterC
                 <> " bookingId: "
                 <> booking.id.getId
             QRide.updateDriverCancellationPenalty Nothing (Just penaltyAmount) ride.id
+            Metrics.incrementDriverPenaltyCount "cooldown" booking.merchantOperatingCityId.getId
           else do
             -- Legacy path: create/update DriverFee
             now <- getCurrentTime
@@ -229,6 +229,7 @@ accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterC
                     <> show penaltyAmount
                 return (newFee.id, penaltyAmount)
             QRide.updateDriverCancellationPenalty (Just feeId.getId) (Just penAmt) ride.id
+            Metrics.incrementDriverPenaltyCount "cooldown" booking.merchantOperatingCityId.getId
       Nothing ->
         logError $
           "Penalty tag present but driverCancellationPenaltyAmount is Nothing for ride "
