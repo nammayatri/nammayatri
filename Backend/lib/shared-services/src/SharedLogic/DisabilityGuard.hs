@@ -20,6 +20,7 @@ module SharedLogic.DisabilityGuard
   ( DisabilityTag (..),
     allDisabilityTags,
     disabilityTagToText,
+    parseDisabilityTag,
     disabilityTagFromText,
   )
 where
@@ -77,23 +78,32 @@ disabilityTagToText = \case
   MULTIPLE_DISABILITIES -> "MULTIPLE_DISABILITIES"
   OTHER_DISABILITY -> "OTHER_DISABILITY"
 
--- | Parse a text value into a 'DisabilityTag'.  Unknown strings map to
---   'OTHER_DISABILITY' for backwards-compatibility with legacy data.
+-- | Strict parser: returns 'Just' only for recognised ONDC disability tags,
+--   'Nothing' otherwise.  Callers should use this for any new code so that
+--   unrecognised values are surfaced explicitly instead of silently mapping
+--   to 'OTHER_DISABILITY'.
+parseDisabilityTag :: T.Text -> Maybe DisabilityTag
+parseDisabilityTag = \case
+  "BLIND_LOW_VISION" -> Just BLIND_LOW_VISION
+  "HEAR_IMPAIRMENT" -> Just HEAR_IMPAIRMENT
+  "LOCOMOTOR_DISABILITY" -> Just LOCOMOTOR_DISABILITY
+  "COGNITIVE_DISABILITY" -> Just COGNITIVE_DISABILITY
+  "LEPROSY_CURED" -> Just LEPROSY_CURED
+  "SPEECH_LANGUAGE" -> Just SPEECH_LANGUAGE
+  "INTELLECTUAL_DISABILITY" -> Just INTELLECTUAL_DISABILITY
+  "MENTAL_ILLNESS" -> Just MENTAL_ILLNESS
+  "BLOOD_DISORDER" -> Just BLOOD_DISORDER
+  "DWARFISM" -> Just DWARFISM
+  "ACID_ATTACK_SURVIVOR" -> Just ACID_ATTACK_SURVIVOR
+  "MULTIPLE_DISABILITIES" -> Just MULTIPLE_DISABILITIES
+  "OTHER_DISABILITY" -> Just OTHER_DISABILITY
+  _ -> Nothing
+
+-- | Lossy parser kept for backwards-compatibility (JSON deserialisation,
+--   legacy database rows).  Unknown strings fall back to 'OTHER_DISABILITY'.
+--   Prefer 'parseDisabilityTag' in new code.
 disabilityTagFromText :: T.Text -> DisabilityTag
-disabilityTagFromText = \case
-  "BLIND_LOW_VISION" -> BLIND_LOW_VISION
-  "HEAR_IMPAIRMENT" -> HEAR_IMPAIRMENT
-  "LOCOMOTOR_DISABILITY" -> LOCOMOTOR_DISABILITY
-  "COGNITIVE_DISABILITY" -> COGNITIVE_DISABILITY
-  "LEPROSY_CURED" -> LEPROSY_CURED
-  "SPEECH_LANGUAGE" -> SPEECH_LANGUAGE
-  "INTELLECTUAL_DISABILITY" -> INTELLECTUAL_DISABILITY
-  "MENTAL_ILLNESS" -> MENTAL_ILLNESS
-  "BLOOD_DISORDER" -> BLOOD_DISORDER
-  "DWARFISM" -> DWARFISM
-  "ACID_ATTACK_SURVIVOR" -> ACID_ATTACK_SURVIVOR
-  "MULTIPLE_DISABILITIES" -> MULTIPLE_DISABILITIES
-  _ -> OTHER_DISABILITY
+disabilityTagFromText t = fromMaybe OTHER_DISABILITY (parseDisabilityTag t)
 
 -- JSON instances -----------------------------------------------------------
 

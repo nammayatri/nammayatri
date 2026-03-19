@@ -304,7 +304,8 @@ spec = describe "BecknV2.OnDemand.Tags" $ do
             [ "BLIND_LOW_VISION", "HEAR_IMPAIRMENT", "LOCOMOTOR_DISABILITY",
               "COGNITIVE_DISABILITY", "LEPROSY_CURED", "SPEECH_LANGUAGE",
               "INTELLECTUAL_DISABILITY", "MENTAL_ILLNESS", "BLOOD_DISORDER",
-              "DWARFISM", "ACID_ATTACK_SURVIVOR", "MULTIPLE_DISABILITIES"
+              "DWARFISM", "ACID_ATTACK_SURVIVOR", "MULTIPLE_DISABILITIES",
+              "OTHER_DISABILITY"
             ]
       forM_ allTypes $ \disType -> do
         let groups = mkDisabilityTagGroups (Just disType)

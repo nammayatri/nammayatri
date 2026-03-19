@@ -19,5 +19,13 @@ Backend/app/rider-platform/rider-app/Main/src-read-only/Domain/Types/PersonDisab
 Backend/app/rider-platform/rider-app/Main/src-read-only/Domain/Types/Disability.hs @nammayatri/purple-rides
 Backend/app/rider-platform/rider-app/Main/spec/Storage/PersonDisability.yaml @nammayatri/purple-rides
 
+# Rider-app Beckn ACL / Transformer (production disability tag serialisation path)
+Backend/app/rider-platform/rider-app/Main/src/Beckn/OnDemand/Transformer/Search.hs @nammayatri/purple-rides
+Backend/app/rider-platform/rider-app/Main/src/Beckn/ACL/Select.hs @nammayatri/purple-rides
+
+# Driver-app Beckn ACL / Utils (production disability tag deserialisation path)
+Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/Beckn/OnDemand/Utils/Search.hs @nammayatri/purple-rides
+Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/Beckn/ACL/Select.hs @nammayatri/purple-rides
+
 # Disability translations
 Backend/app/rider-platform/rider-app/Main/src-read-only/Domain/Types/DisabilityTranslation.hs @nammayatri/purple-rides
