@@ -187,6 +187,7 @@ callCMRLV2APIWithRetry config eulerClientFunc description proxy attempt authRefr
               callCMRLV2APIWithRetry config eulerClientFunc description proxy attempt True
           | otherwise -> do
               logError "[CMRLV2:API] Auth retry already attempted, failing"
+              recordCMRLV2Failure config.merchantId
               throwError $ InternalError "CMRL V2 authentication failed after token refresh"
         Just code
           | code `elem` ["INTERNAL_ERROR", "SERVICE_UNAVAILABLE", "GATEWAY_TIMEOUT"] && attempt < maxRetries -> do
