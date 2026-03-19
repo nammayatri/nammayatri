@@ -53,7 +53,8 @@ data Handle m r = Handle
     initiateDriverSearchBatch :: m DST.SearchTry,
     cancelSearchTry :: m (),
     cancelBookingIfApplies :: m (),
-    isScheduledBooking :: Bool
+    isScheduledBooking :: Bool,
+    searchRepeatCounter :: Int
   }
 
 handler :: HandleMonad m r => Handle m r -> GoHomeConfig -> Text -> m (ExecutionResult, PoolType, Maybe Seconds)
@@ -74,19 +75,24 @@ handler h@Handle {..} goHomeCfg transactionId = do
             return (Complete, NormalPool, Nothing)
           else processRequestSending h goHomeCfg transactionId
 
+-- | Maximum number of automatic search retries with expanded radius before giving up.
+maxAutoRetries :: Int
+maxAutoRetries = 2
+
 processRequestSending :: HandleMonad m r => Handle m r -> GoHomeConfig -> Text -> m (ExecutionResult, PoolType, Maybe Seconds)
 processRequestSending Handle {..} goHomeCfg transactionId = do
   isBatchNumExceedLimit' <- isBatchNumExceedLimit
   logInfo $ "processRequestSending isBatchNumExceedLimit: " <> show isBatchNumExceedLimit'
   if isBatchNumExceedLimit'
     then do
-      if isScheduledBooking
+      if isScheduledBooking || searchRepeatCounter < maxAutoRetries
         then do
+          logInfo $ "Batch limit exceeded — auto-retrying with expanded search (attempt " <> show (searchRepeatCounter + 1) <> "/" <> show maxAutoRetries <> ")"
           void initiateDriverSearchBatch
           return (Complete, NormalPool, Nothing)
         else do
           metrics.incrementFailedTaskCounter
-          logInfo "No driver accepted"
+          logInfo $ "No driver accepted after " <> show searchRepeatCounter <> " retry attempts"
           appBackendBapInternal <- asks (.appBackendBapInternal)
           let request = CallBAPInternal.RideSearchExpiredReq {transactionId = transactionId}
           void $ CallBAPInternal.rideSearchExpired appBackendBapInternal.apiKey appBackendBapInternal.url request
@@ -95,6 +101,13 @@ processRequestSending Handle {..} goHomeCfg transactionId = do
           return (Complete, NormalPool, Nothing)
     else do
       driverPoolWithFlags <- getNextDriverPoolBatch goHomeCfg
-      when (not $ null driverPoolWithFlags.driverPoolWithActualDistResult) $
+      let poolIsEmpty = null driverPoolWithFlags.driverPoolWithActualDistResult
+      when (not poolIsEmpty) $
         sendSearchRequestToDrivers driverPoolWithFlags.driverPoolWithActualDistResult driverPoolWithFlags.prevBatchDrivers goHomeCfg
-      ReSchedule <$> getRescheduleTime <&> (,driverPoolWithFlags.poolType,driverPoolWithFlags.nextScheduleTime)
+      if poolIsEmpty
+        then do
+          logInfo "Empty driver pool batch — skipping wait, expanding search radius immediately"
+          now <- getCurrentTime
+          return (ReSchedule $ addUTCTime 1 now, driverPoolWithFlags.poolType, driverPoolWithFlags.nextScheduleTime)
+        else
+          ReSchedule <$> getRescheduleTime <&> (,driverPoolWithFlags.poolType,driverPoolWithFlags.nextScheduleTime)
