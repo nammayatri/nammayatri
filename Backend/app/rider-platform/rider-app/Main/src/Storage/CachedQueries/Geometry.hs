@@ -28,4 +28,4 @@ cacheGeometry city state _geo = do
   Hedis.setExp (makeStateAndCityKey city state) _geo expTime
 
 makeStateAndCityKey :: Context.City -> Context.IndianState -> Text
-makeStateAndCityKey city state = "CachedQueries:Geometry:City-" <> show city <> ":State-" <> show state
+makeStateAndCityKey city state = "rider-app:CachedQueries:Geometry:City-" <> show city <> ":State-" <> show state

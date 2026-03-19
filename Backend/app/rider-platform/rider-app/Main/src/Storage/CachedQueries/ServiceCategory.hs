@@ -22,7 +22,7 @@ findById scId =
 
 findAllByIds :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => [Id ServiceCategory] -> m [ServiceCategory]
 findAllByIds ids = do
-  cachedResults <- mapM (\scId -> Hedis.safeGet (makeIdKey scId)) ids
+  cachedResults <- mapM (Hedis.safeGet . makeIdKey) ids
   let (hits, missIds) = partitionCacheResults ids cachedResults
   if null missIds
     then return hits

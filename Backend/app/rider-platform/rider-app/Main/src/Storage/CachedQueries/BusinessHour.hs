@@ -21,12 +21,12 @@ findById bhId =
 
 findAllByIds :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => [Id BusinessHour] -> m [BusinessHour]
 findAllByIds ids = do
-  cachedResults <- mapM (\bhId -> Hedis.safeGet (makeIdKey bhId)) ids
+  cachedResults <- mapM (Hedis.safeGet . makeIdKey) ids
   let (hits, missIds) = partitionCacheResults ids cachedResults
   if null missIds
     then return hits
     else do
-      dbResults <- Queries.findAllByIds missIds
+      dbResults <- catMaybes <$> mapM Queries.findById missIds
       mapM_ cacheBusinessHour dbResults
       return $ hits <> dbResults
 
@@ -37,6 +37,9 @@ findAllByPlaceId (Just pid) =
     Just a -> return a
     Nothing -> cachePlaceResults pid /=<< Queries.findAllByPlaceId (Just pid)
 
+-- NOTE: This only clears the id-keyed cache entry. PlaceId-keyed list entries
+-- (set by findAllByPlaceId) may remain stale until their TTL expires.
+-- A full invalidation would require knowing the associated placeId.
 clearCacheById :: (CacheFlow m r) => Id BusinessHour -> m ()
 clearCacheById bhId = Hedis.del (makeIdKey bhId)
 
