@@ -192,8 +192,7 @@ reconcileChargedButCancelledOrders nonTerminalOrders = do
           )
           nonTerminalOrders
   logInfo $ "Reconciliation: checking " <> show (length chargedPendingOrders) <> " CHARGED orders with pending/failed fulfillment"
-  refundCount <- foldM processReconOrder 0 chargedPendingOrders
-  return refundCount
+  foldM processReconOrder 0 chargedPendingOrders
   where
     processReconOrder :: Int -> DOrder.PaymentOrder -> m Int
     processReconOrder count order = do
@@ -203,25 +202,38 @@ reconcileChargedButCancelledOrders nonTerminalOrders = do
         case mbInvoice of
           Nothing -> return count
           Just invoice -> do
-            mbRide <- QRide.findById invoice.rideId
-            case mbRide of
-              Nothing -> return count
-              Just ride -> do
-                -- If ride is CANCELLED but payment was CHARGED, trigger auto-refund
-                if ride.status == DRideStatus.CANCELLED
-                  then do
-                    -- Use Redis dedup key to avoid re-processing on every job run
-                    let reconDedupKey = "PaymentRecon:AutoRefund:OrderId-" <> order.id.getId
-                    alreadyProcessed <- Redis.get @Text reconDedupKey
-                    case alreadyProcessed of
-                      Just _ -> return count -- already processed
-                      Nothing -> do
-                        Redis.setExp reconDedupKey ("1" :: Text) 86400 -- 24h TTL
-                        logInfo $ "Reconciliation: ride " <> invoice.rideId.getId <> " is CANCELLED but payment order " <> order.id.getId <> " is CHARGED. Initiating auto-refund."
-                        void $ SPayment.initiateRefundWithPaymentStatusRespSync (cast order.personId) order.id
-                        logInfo $ "Reconciliation: auto-refund initiated for order " <> order.id.getId
-                        return (count + 1)
-                  else return count
+            -- Exclude legitimate cancellation-fee captures from auto-refund.
+            -- A CANCELLATION_FEE payment on a cancelled ride is expected, not an error.
+            if invoice.paymentPurpose == DPI.CANCELLATION_FEE
+              then return count
+              else do
+                mbRide <- QRide.findById invoice.rideId
+                case mbRide of
+                  Nothing -> return count
+                  Just ride -> do
+                    -- If ride is CANCELLED but payment was CHARGED, trigger auto-refund
+                    if ride.status == DRideStatus.CANCELLED
+                      then do
+                        -- Use atomic Redis dedup to avoid re-processing on every job run (TOCTOU-safe).
+                        -- setNxExpire atomically checks and sets, preventing concurrent duplicate processing.
+                        let reconDedupKey = "PaymentRecon:AutoRefund:OrderId-" <> order.id.getId
+                        isNew <- Redis.setNxExpire reconDedupKey 86400 ("1" :: Text) -- 24h TTL, atomic
+                        if not isNew
+                          then return count -- already processed or in progress
+                          else do
+                            logInfo $ "Reconciliation: ride " <> invoice.rideId.getId <> " is CANCELLED but payment order " <> order.id.getId <> " is CHARGED. Initiating auto-refund."
+                            refundResult <- withTryCatch "reconcileAutoRefund" $
+                              void $ SPayment.initiateRefundWithPaymentStatusRespSync (cast order.personId) order.id
+                            case refundResult of
+                              Left err -> do
+                                -- Refund failed: remove dedup key so it can be retried on next run
+                                Redis.del reconDedupKey
+                                logError $ "Reconciliation: auto-refund failed for order " <> order.id.getId <> ": " <> show err
+                                return count
+                              Right _ -> do
+                                logInfo $ "Reconciliation: auto-refund initiated for order " <> order.id.getId
+                                return (count + 1)
+                      else return count
       case result of
         Left err -> do
           logError $ "Reconciliation failed for order " <> order.id.getId <> ": " <> show err

@@ -498,17 +498,15 @@ chargePaymentIntentService merchantOpCityId paymentIntentId capturePaymentIntent
   -- webhooks used per-transaction keys — all different, allowing concurrent captures.
   -- This canonical lock at the chargePaymentIntentService level prevents any
   -- duplicate capture regardless of which code path triggered it.
+  -- Uses atomic setNxExpire to avoid TOCTOU race between get and setExp.
+  -- setNxExpire returns True if the key was set (we acquired the lock), False if it already existed.
   let idempotencyKey = "PaymentCapture:IntentId-" <> paymentIntentId
-  alreadyInProgress <- Redis.get @Text idempotencyKey
-  case alreadyInProgress of
-    Just _ -> do
+  lockAcquired <- Redis.setNxExpire idempotencyKey 120 ("processing" :: Text)
+  if lockAcquired
+    then chargePaymentIntentServiceImpl merchantOpCityId paymentIntentId capturePaymentIntentCall getPaymentIntentCall
+    else do
       logInfo $ "Payment capture already in progress or completed for intent: " <> paymentIntentId <> ", skipping duplicate"
       pure False
-    Nothing -> do
-      -- Set idempotency key with 120s TTL before attempting capture.
-      -- This prevents a second concurrent caller from also proceeding.
-      Redis.setExp idempotencyKey ("processing" :: Text) 120
-      chargePaymentIntentServiceImpl merchantOpCityId paymentIntentId capturePaymentIntentCall getPaymentIntentCall
 
 -- | Internal implementation of chargePaymentIntentService, called after idempotency check.
 chargePaymentIntentServiceImpl ::

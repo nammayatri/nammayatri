@@ -1046,18 +1046,20 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
   -- P0 Fix: Auto-refund when ride is cancelled after payment was already charged.
   -- If a payment was deducted but the ride is being cancelled, we need to initiate a refund.
   -- This handles the race condition where payment completes just before/during cancellation.
+  -- Do not gate on mutable invoice.paymentStatus — the payment may still be in-flight and
+  -- the status not yet updated. The refund call itself is idempotent and will check
+  -- the actual payment status from the gateway.
   fork "Auto-refund charged payment on cancellation" $ do
     whenJust mbRide $ \ride -> do
       when ride.onlinePayment $ do
         mbInvoice <- QPaymentInvoiceExtra.findByRideIdAndTypeAndPurpose ride.id DPI.PAYMENT DPI.RIDE
         whenJust mbInvoice $ \invoice -> do
-          when (invoice.paymentStatus == DPI.CAPTURED) $ do
-            whenJust invoice.paymentOrderId $ \paymentOrderId -> do
-              logInfo $ "Payment already charged for cancelled ride: " <> ride.id.getId <> ", initiating auto-refund for order: " <> paymentOrderId.getId
-              void $
-                withTryCatch "autoRefundOnCancellation" $ do
-                  void $ SPayment.initiateRefundWithPaymentStatusRespSync booking.riderId paymentOrderId
-                  logInfo $ "Auto-refund initiated for cancelled ride: " <> ride.id.getId
+          whenJust invoice.paymentOrderId $ \paymentOrderId -> do
+            logInfo $ "Payment exists for cancelled ride: " <> ride.id.getId <> ", initiating auto-refund for order: " <> paymentOrderId.getId
+            void $
+              withTryCatch "autoRefundOnCancellation" $ do
+                void $ SPayment.initiateRefundWithPaymentStatusRespSync booking.riderId paymentOrderId
+                logInfo $ "Auto-refund initiated for cancelled ride: " <> ride.id.getId
 
   unless (cancellationSource == DBCR.ByUser) $
     QBCR.upsert bookingCancellationReason
