@@ -160,9 +160,29 @@ package *
     -Werror=deferred-out-of-scope-variables
 
     -- Everything else stays as warning (unused-imports, name-shadowing, etc.)
+    -Wwarn=ambiguous-fields
+
+-- Tests: no -Werror at all (fast iteration)
+package hunit-tests
+  ghc-options: -Wwarn
+
+package nammayatri-test
+  ghc-options: -Wwarn
+
+-- Mocks: only crash-class as errors
+package mock-sms
+  ghc-options: -Wwarn -Werror=incomplete-patterns -Werror=incomplete-uni-patterns -Werror=missing-fields -Werror=missing-methods
+
+package mock-fcm
+  ghc-options: -Wwarn -Werror=incomplete-patterns -Werror=incomplete-uni-patterns -Werror=missing-fields -Werror=missing-methods
+
+-- Note: alchemist-generated modules live inside app packages.
+-- Use per-module {-# OPTIONS_GHC -Wwarn #-} pragmas for generated files
+-- rather than per-package overrides, since generated and hand-written code
+-- coexist in the same package.
 ```
 
-This gives CI the same safety guarantees for dangerous warnings while allowing noisy warnings to exist without blocking builds.
+This gives CI the same safety guarantees for dangerous warnings while allowing noisy warnings to exist without blocking builds. The per-package overrides implement the tiered strategy from Section 4.
 
 ---
 
