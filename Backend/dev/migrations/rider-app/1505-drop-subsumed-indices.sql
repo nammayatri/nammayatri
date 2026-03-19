@@ -1,5 +1,5 @@
--- Drop indices that are now subsumed by composite upgrades created in 1492.
--- Must run AFTER 1492 indices are confirmed live and serving queries.
+-- Drop indices that are now subsumed by composite upgrades created in 1503.
+-- Must run AFTER 1503 indices are confirmed live and serving queries.
 -- Uses CONCURRENTLY to avoid holding AccessExclusive lock during drop.
 
 -- idx_ride_booking_id (booking_id)

@@ -2,25 +2,38 @@
 -- transaction records from concurrent webhook deliveries.
 -- The Redis lock is the primary guard, but this is a DB-level safety net.
 
--- Pre-check: find duplicates before adding unique constraint
--- If this query returns rows, deduplicate before proceeding
+-- Pre-check: find and back up duplicates before adding unique constraint.
+-- Duplicates are moved to a backup table for manual review instead of being silently deleted.
 DO $$
 BEGIN
   IF EXISTS (
     SELECT txn_uuid, COUNT(*) FROM atlas_app.payment_transaction
     WHERE txn_uuid IS NOT NULL GROUP BY txn_uuid HAVING COUNT(*) > 1
   ) THEN
-    RAISE NOTICE 'DUPLICATE txn_uuid VALUES FOUND - deduplicating...';
-    -- Keep the most recent record for each txn_uuid
-    DELETE FROM atlas_app.payment_transaction
-    WHERE id NOT IN (
+    RAISE NOTICE 'DUPLICATE txn_uuid VALUES FOUND - backing up duplicates before deduplication...';
+
+    -- Create backup table to preserve duplicate records for audit
+    CREATE TABLE IF NOT EXISTS atlas_app.payment_transaction_duplicate_backup AS
+      SELECT * FROM atlas_app.payment_transaction WHERE false;
+
+    -- Insert duplicate records (all except the most recent per txn_uuid) into backup
+    INSERT INTO atlas_app.payment_transaction_duplicate_backup
+    SELECT pt.* FROM atlas_app.payment_transaction pt
+    WHERE pt.id NOT IN (
       SELECT DISTINCT ON (txn_uuid) id FROM atlas_app.payment_transaction
       WHERE txn_uuid IS NOT NULL ORDER BY txn_uuid, created_at DESC
-    ) AND txn_uuid IS NOT NULL
-    AND txn_uuid IN (
+    ) AND pt.txn_uuid IS NOT NULL
+    AND pt.txn_uuid IN (
       SELECT txn_uuid FROM atlas_app.payment_transaction
       WHERE txn_uuid IS NOT NULL GROUP BY txn_uuid HAVING COUNT(*) > 1
     );
+
+    RAISE NOTICE 'Backed up % duplicate rows to payment_transaction_duplicate_backup',
+      (SELECT COUNT(*) FROM atlas_app.payment_transaction_duplicate_backup);
+
+    -- Now remove the duplicates from the main table (keeping the most recent per txn_uuid)
+    DELETE FROM atlas_app.payment_transaction
+    WHERE id IN (SELECT id FROM atlas_app.payment_transaction_duplicate_backup);
   END IF;
 END $$;
 

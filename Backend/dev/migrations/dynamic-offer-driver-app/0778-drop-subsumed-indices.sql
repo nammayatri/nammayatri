@@ -1,5 +1,5 @@
--- Drop indices that are now subsumed by composite upgrades created in 0758.
--- Must run AFTER 0758 indices are confirmed live and serving queries.
+-- Drop indices that are now subsumed by composite upgrades created in 0776.
+-- Must run AFTER 0776 indices are confirmed live and serving queries.
 -- Uses CONCURRENTLY to avoid holding AccessExclusive lock during drop.
 
 -- idx_driver_quote_s_try_id (search_try_id)
