@@ -201,7 +201,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         case mbPending of
           Just pendingPass -> do
             -- don't update device id if existing different device id pass is active or prebooked
-            when (pendingPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $ do
+            unless (pendingPass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $ do
               QPurchasedPass.updateDeviceIdById deviceId 0 pendingPass.id
               logInfo $ "Reusing existing purchased pass " <> pendingPass.id.getId <> " and updated deviceId to " <> deviceId
             return $ Just pendingPass
@@ -668,7 +668,7 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
       let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (isJust purchasedPass.profilePicture) (purchasedPassPayment.startDate > DT.utctDay istTime) status
       whenJust mbPassStatus $ \passStatus -> do
         -- Idempotency: skip if payment is already in a terminal success state
-        when (purchasedPassPayment.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
+        unless (purchasedPassPayment.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
           QPurchasedPassPayment.updateStatusByOrderId passStatus paymentOrderId
           when (passStatus `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending] && isDashboard) $ do
             sendPassPurchasedSuccessMessage purchasedPass.personId purchasedPass.merchantId purchasedPass.merchantOperatingCityId (fromMaybe "" purchasedPass.passName)
