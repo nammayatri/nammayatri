@@ -492,6 +492,37 @@ chargePaymentIntentService ::
   (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
   m Bool
 chargePaymentIntentService merchantOpCityId paymentIntentId capturePaymentIntentCall getPaymentIntentCall = do
+  -- P0 Fix: Unified idempotency lock across all payment capture paths.
+  -- Previously, ExecutePaymentIntent used "PaymentJobExec:RideId-<rideId>",
+  -- orderStatusHandler used "orderStatusHandler:paymentOrder:<orderId>", and
+  -- webhooks used per-transaction keys — all different, allowing concurrent captures.
+  -- This canonical lock at the chargePaymentIntentService level prevents any
+  -- duplicate capture regardless of which code path triggered it.
+  let idempotencyKey = "PaymentCapture:IntentId-" <> paymentIntentId
+  alreadyInProgress <- Redis.get @Text idempotencyKey
+  case alreadyInProgress of
+    Just _ -> do
+      logInfo $ "Payment capture already in progress or completed for intent: " <> paymentIntentId <> ", skipping duplicate"
+      pure False
+    Nothing -> do
+      -- Set idempotency key with 120s TTL before attempting capture.
+      -- This prevents a second concurrent caller from also proceeding.
+      Redis.setExp idempotencyKey ("processing" :: Text) 120
+      chargePaymentIntentServiceImpl merchantOpCityId paymentIntentId capturePaymentIntentCall getPaymentIntentCall
+
+-- | Internal implementation of chargePaymentIntentService, called after idempotency check.
+chargePaymentIntentServiceImpl ::
+  forall m r c.
+  ( EncFlow m r,
+    BeamFlow m r,
+    HasShortDurationRetryCfg r c
+  ) =>
+  Id MerchantOperatingCity ->
+  Payment.PaymentIntentId ->
+  (Payment.PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()) ->
+  (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
+  m Bool
+chargePaymentIntentServiceImpl merchantOpCityId paymentIntentId capturePaymentIntentCall getPaymentIntentCall = do
   transaction <- QTransaction.findByTxnId paymentIntentId >>= fromMaybeM (InternalError $ "No transaction found while charge payment intent: " <> paymentIntentId)
   if transaction.status `notElem` [Payment.CHARGED, Payment.CANCELLED, Payment.AUTO_REFUNDED] -- if not already charged or cancelled or auto refunded
     then do
@@ -503,6 +534,8 @@ chargePaymentIntentService merchantOpCityId paymentIntentId capturePaymentIntent
               errorCode = err <&> toErrorCode
               errorMessage = err >>= toMessage
           logError $ "Error while charging payment intent: " <> show err
+          -- Clear idempotency key on failure so retries are possible
+          Redis.del $ "PaymentCapture:IntentId-" <> paymentIntentId
           if transaction.retryCount >= 2 -- already 3 retries
             then do
               logError "Max retries reached, cancelling payment intent"
@@ -534,6 +567,8 @@ chargePaymentIntentService merchantOpCityId paymentIntentId capturePaymentIntent
           QTransaction.updateStatusAndError transaction.id updStatus Nothing Nothing
           PaymentHistory.recordPaymentHistory merchantOpCityId (Just transaction.status) updStatus Nothing transaction
           QOrder.updateStatus transaction.orderId paymentIntentId updStatus
+          -- Mark idempotency key as completed with extended TTL to prevent any future duplicate
+          Redis.setExp ("PaymentCapture:IntentId-" <> paymentIntentId) ("completed" :: Text) 3600
           pure True
     else pure False -- if already charged or cancelled or auto refunded no need to charge again
 
