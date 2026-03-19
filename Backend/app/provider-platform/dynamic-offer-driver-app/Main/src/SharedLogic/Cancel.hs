@@ -296,12 +296,22 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
           arrivedPickupThreshold = highPrecMetersToMeters transporterConfig.arrivedPickupThreshold
           driverHasNotArrived = isNothing driverArrivalTime || maybe True (> arrivedPickupThreshold) bookingCReason.driverDistToPickup
           scheduleReallocationAllowed = transporterConfig.enableScheduleReallocation == Just True
-      return $
-        searchTry.searchRepeatCounter < searchRepeatLimit
-          && (bookingCReason.source == SBCR.ByDriver || (bookingCReason.source == SBCR.ByFleetOwner && scheduleReallocationAllowed) || (bookingCReason.source == SBCR.ByUser && userReallocationEnabled))
-          && (isSearchTryValid || isScheduled)
-          && fromMaybe False isReallocationEnabled
-          && (driverHasNotArrived || (scheduleReallocationAllowed && booking.startTime > now))
+          canRepeat =
+            searchTry.searchRepeatCounter < searchRepeatLimit
+              && (bookingCReason.source == SBCR.ByDriver || (bookingCReason.source == SBCR.ByFleetOwner && scheduleReallocationAllowed) || (bookingCReason.source == SBCR.ByUser && userReallocationEnabled))
+              && (isSearchTryValid || isScheduled)
+              && fromMaybe False isReallocationEnabled
+              && (driverHasNotArrived || (scheduleReallocationAllowed && booking.startTime > now))
+      logInfo $
+        "Reallocation check for bookingId: " <> booking.id.getId
+          <> " | repeatCounter: " <> show searchTry.searchRepeatCounter
+          <> "/" <> show searchRepeatLimit
+          <> " | searchTryValid: " <> show isSearchTryValid
+          <> " | reallocationEnabled: " <> show isReallocationEnabled
+          <> " | driverHasNotArrived: " <> show driverHasNotArrived
+          <> " | source: " <> show bookingCReason.source
+          <> " | canRepeat: " <> show canRepeat
+      return canRepeat
 
     buildBookingCancellationReason newBooking = do
       return $

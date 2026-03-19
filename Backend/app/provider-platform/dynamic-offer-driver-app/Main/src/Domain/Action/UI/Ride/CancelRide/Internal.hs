@@ -208,8 +208,13 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                 DCP.accumulateCancellationPenalty (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableDriverWallet) booking ride rideTags transporterConfig driver
               Notify.notifyOnCancel ride.merchantOperatingCityId booking driver bookingCReason.source
             fork "cancelRide/ReAllocate - Notify BAP" $ do
+              logInfo $ "Attempting reallocation for bookingId: " <> booking.id.getId <> " after driver cancellation by driverId: " <> ride.driverId.getId
               isReallocated <- reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason isForceReallocation
-              unless isReallocated $ BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source userNoShowCharges
+              if isReallocated
+                then logInfo $ "Reallocation initiated successfully for bookingId: " <> booking.id.getId
+                else do
+                  logWarning $ "Reallocation failed for bookingId: " <> booking.id.getId <> " — notifying rider of cancellation"
+                  BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source userNoShowCharges
             computeEligibleUpgradeTiers ride transporterConfig
         )
         ( do
