@@ -1,0 +1,133 @@
+groups:
+  - name: bharat_taxi_alerts
+    rules:
+      # Search volume drop: rate drops >50% compared to 10m ago
+      - alert: BharatTaxiSearchDropHigh
+        expr: |
+          (
+            sum(rate(search_request_count[5m]))
+            /
+            sum(rate(search_request_count[10m] offset 5m))
+          ) < 0.5
+        for: 5m
+        labels:
+          severity: critical
+          team: bharat-taxi
+        annotations:
+          summary: "Search request rate dropped >50% in last 5 minutes"
+          description: "Current search rate is {{ $value | humanizePercentage }} of the rate 10 minutes ago. Possible platform outage or upstream issue."
+
+      # Search failure rate >10%
+      - alert: BharatTaxiSearchFailureHigh
+        expr: |
+          sum(rate(beckn_search_round_trip_failure_counter[5m]))
+          /
+          (sum(rate(beckn_search_round_trip_count[5m])) + sum(rate(beckn_search_round_trip_failure_counter[5m])))
+          > 0.10
+        for: 5m
+        labels:
+          severity: critical
+          team: bharat-taxi
+        annotations:
+          summary: "Search failure rate >10%"
+          description: "{{ $value | humanizePercentage }} of searches are failing. Check BPP connectivity and gateway health."
+
+      # Confirm failure rate >5%
+      - alert: BharatTaxiConfirmFailureHigh
+        expr: |
+          sum(rate(beckn_confirm_round_trip_failure_counter[5m]))
+          /
+          (sum(rate(beckn_confirm_round_trip_count[5m])) + sum(rate(beckn_confirm_round_trip_failure_counter[5m])))
+          > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          team: bharat-taxi
+        annotations:
+          summary: "Confirm failure rate >5%"
+          description: "{{ $value | humanizePercentage }} of booking confirmations are failing. Users may be unable to book rides."
+
+      # Payment failure rate >5%
+      - alert: BharatTaxiPaymentFailureHigh
+        expr: |
+          sum(rate(payment_total{result="failure"}[5m]))
+          /
+          sum(rate(payment_total[5m]))
+          > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          team: bharat-taxi
+        annotations:
+          summary: "Payment failure rate >5%"
+          description: "{{ $value | humanizePercentage }} of payments are failing. Check Juspay gateway status."
+
+      # Allocation failure rate >20%
+      - alert: BharatTaxiAllocationFailureHigh
+        expr: |
+          sum(rate(allocation_total{result="failure"}[5m]))
+          /
+          sum(rate(allocation_total[5m]))
+          > 0.20
+        for: 5m
+        labels:
+          severity: warning
+          team: bharat-taxi
+        annotations:
+          summary: "Allocation failure rate >20%"
+          description: "{{ $value | humanizePercentage }} of ride allocations are failing. Possible driver supply shortage or allocator issue."
+
+      # Slow queries >10/min
+      - alert: BharatTaxiSlowQueries
+        expr: sum(rate(db_slow_queries_total[5m])) * 60 > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: bharat-taxi
+        annotations:
+          summary: "More than 10 slow DB queries/min"
+          description: "Slow query rate is {{ $value }}/min. Check db_slow_queries_total by table_name for hotspots."
+
+      # Connection pool exhaustion >85%
+      - alert: BharatTaxiPoolExhaustion
+        expr: connection_pool_utilization > 0.85
+        for: 5m
+        labels:
+          severity: critical
+          team: bharat-taxi
+        annotations:
+          summary: "DB connection pool utilization >85%"
+          description: "Pool {{ $labels.pool_name }} is at {{ $value | humanizePercentage }} utilization. Risk of connection exhaustion."
+
+      # Circuit breaker opened
+      - alert: BharatTaxiCircuitBreakerOpen
+        expr: sum(rate(circuit_breaker_transitions_total{to_state="open"}[5m])) > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: bharat-taxi
+        annotations:
+          summary: "Circuit breaker transitioned to OPEN for {{ $labels.service }}"
+          description: "Service {{ $labels.service }} circuit breaker has opened. Downstream dependency may be unhealthy."
+
+      # Low driver supply per city
+      - alert: BharatTaxiLowDriverSupply
+        expr: online_drivers_count < 10
+        for: 10m
+        labels:
+          severity: warning
+          team: bharat-taxi
+        annotations:
+          summary: "Low driver supply in city {{ $labels.city_id }}"
+          description: "Only {{ $value }} drivers online in city {{ $labels.city_id }}. Users may experience long wait times."
+
+      # Fare deviation p95 >20%
+      - alert: BharatTaxiFareDeviation
+        expr: histogram_quantile(0.95, sum(rate(BPP_fare_deviation_bucket[15m])) by (le)) > 0.2
+        for: 15m
+        labels:
+          severity: warning
+          team: bharat-taxi
+        annotations:
+          summary: "Fare deviation p95 >20%"
+          description: "95th percentile fare deviation is {{ $value }}. Estimated vs actual fares diverging significantly."

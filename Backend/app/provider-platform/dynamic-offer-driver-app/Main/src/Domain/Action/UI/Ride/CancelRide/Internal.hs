@@ -135,6 +135,7 @@ cancelRideImpl ::
     Redis.HedisFlow m r,
     EventStreamFlow m r,
     Metrics.HasCoreMetrics r,
+    Metrics.HasBPPMetrics m r,
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
@@ -190,6 +191,15 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             unless (isValidRide ride) $ throwError (InternalError "Ride is not valid for cancellation")
             cancelRideTransaction booking ride bookingCReason merchant rideEndedBy userNoShowCharges transporterConfig driver
             logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
+            let initiatedBy = case bookingCReason.source of
+                  SBCR.ByDriver -> "driver"
+                  SBCR.ByUser -> "rider"
+                  SBCR.ByMerchant -> "system"
+                  SBCR.ByApplication -> "system"
+                  SBCR.ByAllocator -> "system"
+                  SBCR.ByFleetOwner -> "system"
+                reasonText = maybe "UNKNOWN" show bookingCReason.reasonCode
+            Metrics.incrementRideCancelledCount reasonText initiatedBy merchant.name booking.merchantOperatingCityId.getId
 
             fork "DriverRideCancelledCoin Event : " $ do
               mbLocation <- do
