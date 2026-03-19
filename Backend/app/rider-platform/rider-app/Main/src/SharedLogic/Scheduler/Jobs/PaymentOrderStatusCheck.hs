@@ -192,8 +192,7 @@ reconcileChargedButCancelledOrders nonTerminalOrders = do
           )
           nonTerminalOrders
   logInfo $ "Reconciliation: checking " <> show (length chargedPendingOrders) <> " CHARGED orders with pending/failed fulfillment"
-  refundCount <- foldM processReconOrder 0 chargedPendingOrders
-  return refundCount
+  foldM processReconOrder 0 chargedPendingOrders
   where
     processReconOrder :: Int -> DOrder.PaymentOrder -> m Int
     processReconOrder count order = do
