@@ -3,7 +3,8 @@ module ExternalBPP.ExternalAPI.Direct.Utils where
 import Crypto.Error as Crypto
 import qualified Crypto.PubKey.Ed25519 as Ed25519
 import qualified Data.ByteArray as BA
-import Data.ByteString hiding (length)
+import Data.ByteString hiding (dropWhileEnd, length)
+import Data.List (dropWhileEnd)
 import qualified Data.ByteString.Base64 as Base64
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -45,7 +46,18 @@ verify (Base64 privateKey) msg signatureBs =
 generateQR :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DIRECTConfig -> TicketPayload -> m Text
 generateQR config ticket = do
   let secretKey = config.cipherKey
-      qrData = ticket.ticketNumber <> "," <> ticket.fromRouteProviderCode <> "," <> ticket.toRouteProviderCode <> "," <> show ticket.adultQuantity <> "," <> show ticket.childQuantity <> "," <> ticket.vehicleTypeProviderCode <> "," <> show ticket.ticketAmount.getMoney <> "," <> maybe "" show ticket.otpCode <> "," <> maybe "" (\otpCode -> qrColorHex !! (otpCode `mod` length qrColorHex)) ticket.otpCode <> "," <> ticket.expiry <> "," <> maybe "" show ticket.refreshAt <> "," <> fromMaybe "" ticket.fleetNo <> "," <> fromMaybe "" (T.intercalate "|" <$> ticket.seatLabels)
+      -- Core fields always present
+      coreFields = ticket.ticketNumber <> "," <> ticket.fromRouteProviderCode <> "," <> ticket.toRouteProviderCode <> "," <> show ticket.adultQuantity <> "," <> show ticket.childQuantity <> "," <> ticket.vehicleTypeProviderCode <> "," <> show ticket.ticketAmount.getMoney
+      -- Optional fields - only include trailing fields if non-empty to reduce QR payload size
+      otpField = maybe "" show ticket.otpCode
+      colorField = maybe "" (\otpCode -> qrColorHex !! (otpCode `mod` length qrColorHex)) ticket.otpCode
+      expiryField = ticket.expiry
+      refreshField = maybe "" show ticket.refreshAt
+      fleetField = fromMaybe "" ticket.fleetNo
+      seatField = fromMaybe "" (T.intercalate "|" <$> ticket.seatLabels)
+      -- Trim trailing empty fields to minimize QR data density
+      optionalFields = dropWhileEnd T.null [otpField, colorField, expiryField, refreshField, fleetField, seatField]
+      qrData = coreFields <> (if null optionalFields then "" else "," <> T.intercalate "," optionalFields)
   signature <- sign secretKey qrData & fromEitherM (\err -> InternalError $ "Failed to encrypt: " <> show err)
   return $ (TE.decodeUtf8 $ Base64.encode signature) <> "," <> qrData
 

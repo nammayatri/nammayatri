@@ -125,24 +125,60 @@ callCMRLV2API ::
   Text ->
   Proxy api ->
   m res
-callCMRLV2API config eulerClientFunc description proxy = do
-  logInfo $ "[CMRLV2:API] Calling API: " <> description <> " at " <> showBaseUrl config.networkHostUrl
+callCMRLV2API config eulerClientFunc description proxy =
+  callCMRLV2APIWithRetry config eulerClientFunc description proxy 0
+
+-- | Maximum number of retries for transient failures
+maxRetries :: Int
+maxRetries = 3
+
+-- | Calculate exponential backoff delay in microseconds: 500ms, 1s, 2s
+backoffDelayUs :: Int -> Int
+backoffDelayUs attempt = 500000 * (2 ^ attempt) -- 500ms * 2^attempt
+
+callCMRLV2APIWithRetry ::
+  ( HasCallStack,
+    CoreMetrics m,
+    SanitizedUrl api,
+    MonadFlow m,
+    ToJSON res,
+    CacheFlow m r,
+    EncFlow m r,
+    HasRequestId r,
+    MonadReader r m
+  ) =>
+  CMRLV2Config ->
+  (Text -> ET.EulerClient res) ->
+  Text ->
+  Proxy api ->
+  Int ->
+  m res
+callCMRLV2APIWithRetry config eulerClientFunc description proxy attempt = do
+  logInfo $ "[CMRLV2:API] Calling API: " <> description <> " at " <> showBaseUrl config.networkHostUrl <> " (attempt " <> show (attempt + 1) <> ")"
   token <- getAuthToken config
   eitherResp <- withTryCatch "CMRLV2:auth" $ callApiUnwrappingApiError (identity @CMRLV2Error) Nothing Nothing Nothing config.networkHostUrl (eulerClientFunc token) description proxy
   case eitherResp of
     Left exec -> do
       let mbError = fromException @CMRLV2Error exec
           errorCode = mbError <&> toErrorCode
-      logError $ "[CMRLV2:API] API call failed: " <> description <> ", errorCode: " <> show errorCode
+      logError $ "[CMRLV2:API] API call failed: " <> description <> ", errorCode: " <> show errorCode <> ", attempt: " <> show (attempt + 1)
       case errorCode of
         Just "UNAUTHORIZED" -> do
           logInfo "[CMRLV2:API] Token expired, refreshing and retrying..."
           void $ resetAuthToken config
-          callCMRLV2API config eulerClientFunc description proxy
+          callCMRLV2APIWithRetry config eulerClientFunc description proxy attempt
         _ -> do
-          case mbError of
-            Just err -> throwError err
-            Nothing -> throwError $ InternalError "CMRL V2 API Failed"
+          if attempt < maxRetries
+            then do
+              let delayUs = backoffDelayUs attempt
+              logWarning $ "[CMRLV2:API] Transient failure, retrying in " <> show (delayUs `div` 1000) <> "ms (attempt " <> show (attempt + 1) <> "/" <> show maxRetries <> ")"
+              threadDelay delayUs
+              callCMRLV2APIWithRetry config eulerClientFunc description proxy (attempt + 1)
+            else do
+              logError $ "[CMRLV2:API] All " <> show maxRetries <> " retries exhausted for: " <> description
+              case mbError of
+                Just err -> throwError err
+                Nothing -> throwError $ InternalError "CMRL V2 API Failed"
     Right resp -> do
       logInfo $ "[CMRLV2:API] API call successful: " <> description
       return resp

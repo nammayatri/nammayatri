@@ -1913,7 +1913,16 @@ getRouteStopIndices routeCode fromStationCode toStationCode integratedBppConfig 
           findIndex (\s -> s.stopCode == fromStationCode) sortedStops
         mToIdx =
           findIndex (\s -> s.stopCode == toStationCode) sortedStops
-    pure $ (,) <$> mFromIdx <*> mToIdx
+    case (mFromIdx, mToIdx) of
+      (Just fromIdx, Just toIdx) -> do
+        when (fromIdx >= toIdx) $
+          logWarning $ "Invalid route direction: fromIdx=" <> show fromIdx <> " >= toIdx=" <> show toIdx
+            <> " for routeCode=" <> routeCode
+            <> " from=" <> fromStationCode <> " to=" <> toStationCode
+        if fromIdx < toIdx
+          then pure $ Just (fromIdx, toIdx)
+          else pure Nothing
+      _ -> pure Nothing
 
 getWaybillNoAndTripNoFromTripId :: T.Text -> (T.Text, Int)
 getWaybillNoAndTripNoFromTripId tripId =
