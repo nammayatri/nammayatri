@@ -21,6 +21,7 @@ data FRFSTicketBookingPaymentCategoryT f = FRFSTicketBookingPaymentCategoryT
     tnc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     finalPrice :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     frfsTicketBookingPaymentId :: B.C f Kernel.Prelude.Text,
+    holdId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,

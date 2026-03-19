@@ -1987,7 +1987,6 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
     getRouteNotFoundError MultiModalTypes.Subway source dest = NoValidSubwayRoute source dest
     getRouteNotFoundError MultiModalTypes.Bus source dest = NoValidBusRoute source dest
     getRouteNotFoundError _ source dest = NoValidMetroRoute source dest -- fallback
-
     getRouteServiceability ::
       Maybe ApiTypes.EffectiveStops ->
       RouteServiceabilityContext ->
@@ -2390,11 +2389,12 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
           _ -> Spec.BUS
 
   void $
-    withTryCatch "postMultimodalOrderSublegSetOnboardedVehicleDetails:postFrfsTicketVerify"
+    withTryCatch
+      "postMultimodalOrderSublegSetOnboardedVehicleDetails:postFrfsTicketVerify"
       ( do
-        forM_ qrDataList $ \qrData -> do
-          let verifyReq = FRFSTicketServiceAPI.FRFSTicketVerifyReq {FRFSTicketServiceAPI.qrData = qrData}
-          void $ FRFSTicketService.postFrfsTicketVerify (mbPersonId, merchantId) (Just integratedBPPConfig.platformType) merchantOperatingCity.city frfsVehicleCategory verifyReq
+          forM_ qrDataList $ \qrData -> do
+            let verifyReq = FRFSTicketServiceAPI.FRFSTicketVerifyReq {FRFSTicketServiceAPI.qrData = qrData}
+            void $ FRFSTicketService.postFrfsTicketVerify (mbPersonId, merchantId) (Just integratedBPPConfig.platformType) merchantOperatingCity.city frfsVehicleCategory verifyReq
       )
 
   QJourneyLeg.updateByPrimaryKey $

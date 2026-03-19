@@ -24,8 +24,8 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common
 import Kernel.Types.Version (CloudType)
+import Kernel.Utils.Common
 import Lib.Payment.Storage.Beam.BeamFlow
 import SharedLogic.FRFSConfirm
 import qualified SharedLogic.IntegratedBPPConfig as SIBC

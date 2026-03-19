@@ -27,7 +27,7 @@ createMany = traverse_ create
 
 findAllByPaymentId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPayment -> m ([Domain.Types.FRFSTicketBookingPaymentCategory.FRFSTicketBookingPaymentCategory]))
+  (Kernel.Types.Id.Id Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPayment -> m [Domain.Types.FRFSTicketBookingPaymentCategory.FRFSTicketBookingPaymentCategory])
 findAllByPaymentId frfsTicketBookingPaymentId = do findAllWithKV [Se.Is Beam.frfsTicketBookingPaymentId $ Se.Eq (Kernel.Types.Id.getId frfsTicketBookingPaymentId)]
 
 findById ::
@@ -46,19 +46,20 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBookingPaymentCategory.FRFSTicketBook
   updateWithKV
     [ Se.Set Beam.bppItemId bppItemId,
       Se.Set Beam.category (Kernel.Prelude.Just category),
-      Se.Set Beam.code ((categoryMeta <&> (.code))),
-      Se.Set Beam.description ((categoryMeta <&> (.description))),
-      Se.Set Beam.title ((categoryMeta <&> (.title))),
-      Se.Set Beam.tnc ((categoryMeta <&> (.tnc))),
-      Se.Set Beam.finalPrice ((Kernel.Prelude.fmap (.amount)) finalPrice),
+      Se.Set Beam.code (categoryMeta <&> (.code)),
+      Se.Set Beam.description (categoryMeta <&> (.description)),
+      Se.Set Beam.title (categoryMeta <&> (.title)),
+      Se.Set Beam.tnc (categoryMeta <&> (.tnc)),
+      Se.Set Beam.finalPrice (Kernel.Prelude.fmap (.amount) finalPrice),
       Se.Set Beam.frfsTicketBookingPaymentId (Kernel.Types.Id.getId frfsTicketBookingPaymentId),
+      Se.Set Beam.holdId holdId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.offeredPrice ((.amount) offeredPrice),
-      Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) price),
+      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),
       Se.Set Beam.price ((.amount) price),
       Se.Set Beam.quoteId (Kernel.Types.Id.getId quoteId),
-      Se.Set Beam.seatIds ((fmap Kernel.Types.Id.getId) <$> seatIds),
+      Se.Set Beam.seatIds (fmap Kernel.Types.Id.getId <$> seatIds),
       Se.Set Beam.seatLabels seatLabels,
       Se.Set Beam.selectedQuantity (Kernel.Prelude.Just selectedQuantity),
       Se.Set Beam.updatedAt _now
@@ -75,6 +76,7 @@ instance FromTType' Beam.FRFSTicketBookingPaymentCategory Domain.Types.FRFSTicke
             categoryMeta = Storage.Queries.Transformers.FRFSQuoteCategory.mkQuoteCategoryMetadata code title description tnc,
             finalPrice = Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice,
             frfsTicketBookingPaymentId = Kernel.Types.Id.Id frfsTicketBookingPaymentId,
+            holdId = holdId,
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -93,20 +95,21 @@ instance ToTType' Beam.FRFSTicketBookingPaymentCategory Domain.Types.FRFSTicketB
     Beam.FRFSTicketBookingPaymentCategoryT
       { Beam.bppItemId = bppItemId,
         Beam.category = Kernel.Prelude.Just category,
-        Beam.code = (categoryMeta <&> (.code)),
-        Beam.description = (categoryMeta <&> (.description)),
-        Beam.title = (categoryMeta <&> (.title)),
-        Beam.tnc = (categoryMeta <&> (.tnc)),
-        Beam.finalPrice = (Kernel.Prelude.fmap (.amount)) finalPrice,
+        Beam.code = categoryMeta <&> (.code),
+        Beam.description = categoryMeta <&> (.description),
+        Beam.title = categoryMeta <&> (.title),
+        Beam.tnc = categoryMeta <&> (.tnc),
+        Beam.finalPrice = Kernel.Prelude.fmap (.amount) finalPrice,
         Beam.frfsTicketBookingPaymentId = Kernel.Types.Id.getId frfsTicketBookingPaymentId,
+        Beam.holdId = holdId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.offeredPrice = (.amount) offeredPrice,
-        Beam.currency = ((Kernel.Prelude.Just . (.currency))) price,
+        Beam.currency = (Kernel.Prelude.Just . (.currency)) price,
         Beam.price = (.amount) price,
         Beam.quoteId = Kernel.Types.Id.getId quoteId,
-        Beam.seatIds = (fmap Kernel.Types.Id.getId) <$> seatIds,
+        Beam.seatIds = fmap Kernel.Types.Id.getId <$> seatIds,
         Beam.seatLabels = seatLabels,
         Beam.selectedQuantity = Kernel.Prelude.Just selectedQuantity,
         Beam.createdAt = createdAt,
