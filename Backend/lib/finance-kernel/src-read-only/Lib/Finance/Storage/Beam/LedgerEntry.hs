@@ -5,12 +5,12 @@ module Lib.Finance.Storage.Beam.LedgerEntry where
 
 import qualified Data.Aeson
 import qualified Database.Beam as B
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Lib.Finance.Domain.Types.LedgerEntry
+import Tools.Beam.UtilsTH
 
 data LedgerEntryT f = LedgerEntryT
   { amount :: (B.C f Kernel.Types.Common.HighPrecMoney),

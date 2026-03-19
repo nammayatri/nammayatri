@@ -23,7 +23,7 @@ import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.StateTransition as QTransition
 
 data PayoutHistoryRecord = PayoutHistoryRecord
-  { entityType :: Text,
+  { entityType :: ST.PaymentEntityType,
     entityId :: Text,
     fromState :: Maybe ST.PaymentState,
     toState :: ST.PaymentState,
@@ -64,7 +64,7 @@ recordPayoutHistory PayoutHistoryRecord {..} =
 
 getPayoutHistory ::
   (BeamFlow.BeamFlow m r) =>
-  Text ->
+  ST.PaymentEntityType ->
   Text ->
   m [PayoutHistoryEvent]
 getPayoutHistory entityType entityId = do
@@ -81,7 +81,7 @@ getPayoutHistory entityType entityId = do
 
 recordTransition ::
   (BeamFlow.BeamFlow m r) =>
-  Text ->
+  ST.PaymentEntityType ->
   Text ->
   Maybe ST.PaymentState ->
   ST.PaymentState ->

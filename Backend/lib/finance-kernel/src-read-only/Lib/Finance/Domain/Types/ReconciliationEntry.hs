@@ -4,11 +4,11 @@
 module Lib.Finance.Domain.Types.ReconciliationEntry where
 
 import Data.Aeson
-import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Lib.Finance.Domain.Types.ReconciliationSummary
+import qualified Tools.Beam.UtilsTH
 
 data ReconciliationEntry = ReconciliationEntry
   { actualLedgerValue :: Kernel.Types.Common.HighPrecMoney,
@@ -68,12 +68,12 @@ data RideMode = ONLINE | CASH deriving (Eq, Ord, Show, Read, Generic, ToJSON, Fr
 
 data RideStatus = COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FinanceComponent))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationStatus))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''FinanceComponent))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationType))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''RideMode))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideMode))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))

@@ -37,7 +37,7 @@ recordPaymentHistory merchantOperatingCityId mbFromStatus toStatus mbMessage pay
       transition =
         ST.StateTransition
           { id = transitionId,
-            entityType = "PaymentTransaction",
+            entityType = ST.PaymentTransaction,
             entityId = paymentTransaction.id.getId,
             fromState = fromMaybe toState mbFromState,
             toState = toState,

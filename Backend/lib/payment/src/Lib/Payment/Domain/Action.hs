@@ -943,7 +943,7 @@ orderStatusService merchantOpCityId personId orderId orderStatusCall mbWalletPos
               updateOrderTransaction merchantOpCityId order orderTxn Nothing
         )
         transactionUUID
-      mapM_ (void . upsertRefundStatus merchantOpCityId order) refunds
+      mapM_ (upsertRefundStatus merchantOpCityId order) refunds
       void $ QOrder.updateEffectiveAmount orderId effectiveAmount
       res <- withTryCatch "buildOrderOffer:processPaymentStatus" $ buildOrderOffer orderId offers order.merchantId order.merchantOperatingCityId
       case res of
@@ -1209,7 +1209,7 @@ juspayWebhookService merchantOpCityId resp respDump = do
             Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction merchantOpCityId order orderTxn $ Just respDump
         )
         transactionUUID
-      mapM_ (void . upsertRefundStatus merchantOpCityId order) refunds
+      mapM_ (upsertRefundStatus merchantOpCityId order) refunds
     _ -> return ()
   return Ack
 
@@ -1504,7 +1504,7 @@ createRefundService merchantOpCityId orderShortId refundsCall =
           resp <- withTryCatch "refundsCall:refundService" (refundsCall refundReq)
           case resp of
             Right response -> do
-              mapM_ (void . upsertRefundStatus merchantOpCityId order) response.refunds
+              mapM_ (upsertRefundStatus merchantOpCityId order) response.refunds
               HQRefunds.updateIsApiCallSuccess merchantOpCityId (Just True) refundsEntry mbAction
               return $ Just response
             Left err -> do

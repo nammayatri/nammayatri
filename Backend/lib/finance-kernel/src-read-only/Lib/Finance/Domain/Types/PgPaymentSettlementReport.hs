@@ -4,11 +4,11 @@
 module Lib.Finance.Domain.Types.PgPaymentSettlementReport where
 
 import Data.Aeson
-import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
-import qualified Kernel.Utils.TH
+import Kernel.Utils.TH
+import qualified Tools.Beam.UtilsTH
 
 data PgPaymentSettlementReport = PgPaymentSettlementReport
   { bankId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -75,30 +75,30 @@ data TxnStatus = SUCCESS | FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON
 
 data TxnType = ORDER | REFUND deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''TxnType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DisputeType))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''TxnType))
+$(mkHttpInstancesForEnum (''DisputeType))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''TxnStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentMethod))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''TxnStatus))
+$(mkHttpInstancesForEnum (''PaymentMethod))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''SettlementType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ReconStatus))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''SettlementType))
+$(mkHttpInstancesForEnum (''ReconStatus))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''SettlementMode))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SettlementMode))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''SettlementMode))
+$(mkHttpInstancesForEnum (''SettlementMode))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentMethod))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SettlementType))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''PaymentMethod))
+$(mkHttpInstancesForEnum (''SettlementType))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''DisputeType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TxnStatus))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''DisputeType))
+$(mkHttpInstancesForEnum (''TxnStatus))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ReconStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TxnType))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''ReconStatus))
+$(mkHttpInstancesForEnum (''TxnType))

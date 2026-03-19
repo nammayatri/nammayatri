@@ -4,10 +4,10 @@
 module Lib.Finance.Storage.Beam.InvoiceLedgerLink where
 
 import qualified Database.Beam as B
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data InvoiceLedgerLinkT f = InvoiceLedgerLinkT
   { createdAt :: (B.C f Kernel.Prelude.UTCTime),

@@ -36,7 +36,7 @@ import qualified Lib.Finance.Storage.Queries.StateTransition as QTransition
 -- Validates the transition is allowed, creates transition record, updates current state
 transition ::
   (BeamFlow.BeamFlow m r) =>
-  Text -> -- Entity type
+  PaymentEntityType -> -- Entity type
   Text -> -- Entity ID
   PaymentEvent -> -- Trigger event
   ActorInfo -> -- Who triggered it
@@ -95,7 +95,7 @@ transition entityType entityId event actor metadata merchantId merchantOpCityId 
 -- | Get current state for an entity
 getCurrentState ::
   (BeamFlow.BeamFlow m r) =>
-  Text -> -- Entity type
+  PaymentEntityType -> -- Entity type
   Text -> -- Entity ID
   m (Maybe PaymentState)
 getCurrentState entityType entityId = do
@@ -105,7 +105,7 @@ getCurrentState entityType entityId = do
 -- | Get full state history for an entity
 getStateHistory ::
   (BeamFlow.BeamFlow m r) =>
-  Text -> -- Entity type
+  PaymentEntityType -> -- Entity type
   Text -> -- Entity ID
   m [StateTransition]
 getStateHistory = QTransition.findByEntity
@@ -113,7 +113,7 @@ getStateHistory = QTransition.findByEntity
 -- | Initialize entity with a starting state
 initializeState ::
   (BeamFlow.BeamFlow m r) =>
-  Text -> -- Entity type
+  PaymentEntityType -> -- Entity type
   Text -> -- Entity ID
   PaymentState -> -- Initial state
   ActorInfo -> -- Actor who initialized

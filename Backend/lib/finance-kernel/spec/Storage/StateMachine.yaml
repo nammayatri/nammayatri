@@ -5,6 +5,7 @@ imports:
   UTCTime: Kernel.Prelude
   Value: Data.Aeson
   PaymentState: Lib.Finance.Domain.Types.StateTransition
+  PaymentEntityType: Lib.Finance.Domain.Types.StateTransition
 
 StateTransition:
   tableName: finance_state_transition
@@ -19,9 +20,12 @@ StateTransition:
       enum: "INITIATE,AUTHORIZE,CAPTURE,SETTLE,FAIL,REFUND,CANCEL,CREDIT,RETRY"
       derive: "ToParamSchema"
 
+    PaymentEntityType:
+      enum: "PaymentTransaction,PayoutRequest,Refunds"
+
   fields:
     id: Id StateTransition
-    entityType: Text
+    entityType: PaymentEntityType
     entityId: Text
     fromState: PaymentState
     toState: PaymentState
@@ -49,15 +53,12 @@ StateTransition:
 
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
-  domainInstance:
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PaymentState>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PaymentEvent>
 
 CurrentState:
   tableName: finance_current_state
   derives: "Generic"
   fields:
-    entityType: Text
+    entityType: PaymentEntityType
     entityId: Text
     currentState: PaymentState
     merchantId: Text

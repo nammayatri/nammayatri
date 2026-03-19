@@ -3,10 +3,11 @@
 
 module Lib.Finance.Domain.Types.DirectTaxTransaction where
 
-import qualified Kernel.Beam.Lib.UtilsTH
+import Data.Aeson
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Tools.Beam.UtilsTH
 
 data DirectTaxTransaction = DirectTaxTransaction
   { counterpartyId :: Kernel.Prelude.Text,
@@ -33,14 +34,23 @@ data DirectTaxTransaction = DirectTaxTransaction
   }
   deriving (Generic)
 
-data TdsTreatment = Deducted | Reimbursed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-
 data TdsRateReason = PAN | PAN_AADHAR_LINKAGE | LDC_CERTIFICATE | NO_PAN deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data TransactionType = RideFare | Subscription | Incentive | Cancellation | BuyerCommission | CreditNote | DebitNote | PGFee deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data TdsTreatment = Deducted | Reimbursed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''TransactionType))
+data TransactionType
+  = RideFare
+  | Subscription
+  | Incentive
+  | Cancellation
+  | BuyerCommission
+  | CreditNote
+  | DebitNote
+  | PGFee
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''TdsTreatment))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TdsRateReason))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''TdsRateReason))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TdsTreatment))
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TransactionType))

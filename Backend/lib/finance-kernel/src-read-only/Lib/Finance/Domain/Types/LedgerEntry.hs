@@ -4,12 +4,12 @@
 module Lib.Finance.Domain.Types.LedgerEntry where
 
 import Data.Aeson
-import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
-import qualified Kernel.Utils.TH
+import Kernel.Utils.TH
 import qualified Lib.Finance.Domain.Types.Account
+import qualified Tools.Beam.UtilsTH
 
 data LedgerEntry = LedgerEntry
   { amount :: Kernel.Types.Common.HighPrecMoney,
@@ -47,12 +47,12 @@ data EntryType = Expense | Revenue | LiabilityCreated | LiabilitySettled | Rever
 
 data SettlementStatus = UNSETTLED | PAID_OUT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''EntryStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EntryStatus))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''EntryType))
+$(mkHttpInstancesForEnum (''EntryStatus))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''EntryStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EntryType))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''SettlementStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SettlementStatus))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''SettlementStatus))
+$(mkHttpInstancesForEnum (''SettlementStatus))
