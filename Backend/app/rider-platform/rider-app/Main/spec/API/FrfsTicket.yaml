@@ -36,6 +36,7 @@ imports:
   SeatLayout: Domain.Types.SeatLayout
   SeatType: Domain.Types.Seat
   Person: Domain.Types.Person
+  FleetOperatorTripAction: Domain.Types.FleetOperatorTripAction
 
 module: FRFSTicketService
 types:
@@ -332,7 +333,7 @@ types:
     derive: "Show"
 
   FleetOperatorTripActionReq:
-    action: Text
+    action: FleetOperatorTripAction
     conductorToken: Maybe Text
     driverToken: Maybe Text
     vehicleNumber: Maybe Text
@@ -355,6 +356,9 @@ types:
     routeNumber: Text
     routeName: Text
     isActiveTrip: Bool
+    dutyDate: Maybe Text
+    startTime: Maybe Text
+    endTime: Maybe Text
     derive: "Show"
 
   FleetOperatorCurrentOperationResp:

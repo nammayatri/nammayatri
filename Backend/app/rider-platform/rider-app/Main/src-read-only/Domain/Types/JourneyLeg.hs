@@ -23,6 +23,7 @@ data JourneyLeg = JourneyLeg
     busConductorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     busDriverId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     busLocationData :: [API.Types.UI.RiderLocation.BusLocation],
+    busTagNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     changedBusesInSequence :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     distance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     duration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,

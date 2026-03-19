@@ -740,6 +740,7 @@ data VehicleServiceTypeResponse = VehicleServiceTypeResponse
     is_actually_valid :: Maybe Bool,
     driver_id :: Maybe Text,
     conductor_id :: Maybe Text,
+    busTagNumber :: Maybe Text,
     eligible_pass_ids :: Maybe [Text],
     seatLayoutId :: Maybe Text
   }
@@ -764,6 +765,7 @@ instance FromJSON VehicleServiceTypeResponse where
     is_actually_valid <- v .:? "is_actually_valid"
     driver_id <- v .:? "driver_id"
     conductor_id <- v .:? "conductor_id"
+    busTagNumber <- v .:? "busTagNumber"
     eligible_pass_ids <- v .:? "eligible_pass_ids"
     seatLayoutId <- v .:? "seatLayoutId"
     return VehicleServiceTypeResponse {..}
@@ -1157,22 +1159,25 @@ instance HideSecrets UpdateWaybillTabletReq where
 data GimsTripAction
   = GimsTripActionStart
   | GimsTripActionEnd
+  | GimsTripActionReset
   deriving (Show, Read, Eq, Ord, Generic, ToSchema)
 
 instance ToJSON GimsTripAction where
   toJSON GimsTripActionStart = toJSON ("start" :: Text)
   toJSON GimsTripActionEnd = toJSON ("end" :: Text)
+  toJSON GimsTripActionReset = toJSON ("reset" :: Text)
 
 instance FromJSON GimsTripAction where
   parseJSON = withText "GimsTripAction" $ \case
     "start" -> pure GimsTripActionStart
     "end" -> pure GimsTripActionEnd
+    "reset" -> pure GimsTripActionReset
     v -> fail $ "Unknown GimsTripAction: " <> T.unpack v
 
 data GimsTripActionReq = GimsTripActionReq
   { action :: GimsTripAction,
-    trip_number :: Int,
-    timestamp :: Int64,
+    trip_number :: Maybe Int,
+    timestamp :: Maybe Int64,
     conductor_token :: Maybe Text,
     driver_token :: Maybe Text,
     vehicle_number :: Maybe Text
@@ -1198,7 +1203,10 @@ data GimsTripInfo = GimsTripInfo
     route_id :: Text,
     route_number :: Text,
     route_name :: Text,
-    is_active_trip :: Bool
+    is_active_trip :: Bool,
+    duty_date :: Maybe Text,
+    start_time :: Maybe Text,
+    end_time :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 

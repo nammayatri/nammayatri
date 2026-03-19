@@ -14,6 +14,7 @@ import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus
 import qualified Domain.Types.FRFSTicketStatus
+import qualified Domain.Types.FleetOperatorTripAction
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
@@ -357,7 +358,7 @@ data FleetOperatorCurrentOperationResp = FleetOperatorCurrentOperationResp
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FleetOperatorTripActionReq = FleetOperatorTripActionReq
-  { action :: Data.Text.Text,
+  { action :: Domain.Types.FleetOperatorTripAction.FleetOperatorTripAction,
     conductorToken :: Data.Maybe.Maybe Data.Text.Text,
     driverToken :: Data.Maybe.Maybe Data.Text.Text,
     vehicleNumber :: Data.Maybe.Maybe Data.Text.Text
@@ -369,7 +370,16 @@ data FleetOperatorTripActionResp = FleetOperatorTripActionResp {currentTripNumbe
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data OperatorTripInfo = OperatorTripInfo {isActiveTrip :: Kernel.Prelude.Bool, routeId :: Data.Text.Text, routeName :: Data.Text.Text, routeNumber :: Data.Text.Text, tripNumber :: Kernel.Prelude.Int}
+data OperatorTripInfo = OperatorTripInfo
+  { dutyDate :: Data.Maybe.Maybe Data.Text.Text,
+    endTime :: Data.Maybe.Maybe Data.Text.Text,
+    isActiveTrip :: Kernel.Prelude.Bool,
+    routeId :: Data.Text.Text,
+    routeName :: Data.Text.Text,
+    routeNumber :: Data.Text.Text,
+    startTime :: Data.Maybe.Maybe Data.Text.Text,
+    tripNumber :: Kernel.Prelude.Int
+  }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
