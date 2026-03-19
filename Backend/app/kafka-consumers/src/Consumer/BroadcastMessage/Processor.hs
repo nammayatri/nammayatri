@@ -25,7 +25,8 @@ import EulerHS.Prelude
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Types.Id
 import Kernel.Types.Time
-import Kernel.Utils.Common (logError, withTryCatch)
+import Kernel.Utils.Common (withTryCatch)
+import Kernel.Utils.Logging (logError)
 import "dynamic-offer-driver-app" Storage.Queries.MessageReport as MRQuery
 import "dynamic-offer-driver-app" Storage.Queries.Person as Person
 import "dynamic-offer-driver-app" Tools.Notifications (sendMessageToDriver)

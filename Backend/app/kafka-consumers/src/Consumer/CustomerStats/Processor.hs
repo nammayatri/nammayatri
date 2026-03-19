@@ -80,7 +80,7 @@ updateCustomerStats event _ = do
 
                           -- here we will increment all these in one function
                           QP.incrementCompletedRidesEventCount personId ifIsWeekend isMorningPeak isEveningPeak isWeekendPeak isAnyPeak
-                        other -> logWarning $ "Ride ended with non-COMPLETED status " <> show other <> " for personId: " <> personId.getId <> ", skipping stats update"
+                        other -> logInfo $ "Ride ended with non-COMPLETED status " <> show other <> " for personId: " <> personId.getId <> ", skipping stats update"
                     BookingCancelled -> do
                       let bookingId = cast payload.bId
                       -- bookingCancellationReason <- Esq.runInReplica $ QBCR.findByRideBookingId bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)

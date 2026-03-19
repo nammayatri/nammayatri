@@ -63,7 +63,7 @@ startConsumerWithEnv appCfg appEnv@AppEnv {..} = do
   void $ installHandler sigTERM shutdownHandler Nothing
   void $ installHandler sigINT shutdownHandler Nothing
   let loggerRuntime = L.getEulerLoggerRuntime appEnv.hostname appEnv.loggerConfig
-  (R.withFlowRuntime (Just loggerRuntime) $ \flowRt' -> do
+  R.withFlowRuntime (Just loggerRuntime) (\flowRt' -> do
     managers <- managersFromManagersSettings appCfg.httpClientOptions.timeoutMs mempty -- default manager is created
     let flowRt = flowRt' {L._httpClientManagers = managers}
     runFlow
@@ -97,7 +97,7 @@ startConsumerWithEnv appCfg appEnv@AppEnv {..} = do
     newKafkaConsumer =
       either (error . ("Unable to open a kafka consumer: " <>) . show) id
         <$> Consumer.newConsumer
-          (kafkaConsumerCfg.consumerProperties)
+          kafkaConsumerCfg.consumerProperties
           (Consumer.topics kafkaConsumerCfg.topicNames)
 
 runDriverHealthcheck :: AppCfg -> AppEnv -> IO ()

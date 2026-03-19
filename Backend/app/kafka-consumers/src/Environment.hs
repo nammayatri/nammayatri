@@ -238,5 +238,5 @@ releaseAppEnv AppEnv {..} = do
   releaseKafkaProducerTools kafkaProducerTools
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
-  disconnectHedis hedisClusterEnv
+  unless cutOffHedisCluster $ disconnectHedis hedisClusterEnv
   Kernel.Prelude.maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
