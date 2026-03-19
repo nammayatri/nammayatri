@@ -990,7 +990,7 @@ getEndDateMonth day addMonths = pred $ addGregorianMonthsClip (integerFromInt ad
 putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> HighPrecMoney -> Meters -> m ()
 putDiffMetric merchantId money mtrs = do
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  Metrics.putFareAndDistanceDeviations org.name (roundToIntegral money) mtrs
+  Metrics.putFareAndDistanceDeviations org.name merchantId.getId (roundToIntegral money) mtrs
 
 getRouteAndDistanceBetweenPoints ::
   ( EncFlow m r,
@@ -1155,7 +1155,11 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
           Just ldFee ->
             if now >= ldFee.startTime && now < ldFee.endTime
               then do
-                QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now True booking isSpecialZoneCharge
+                -- Use Redis lock to prevent concurrent read-then-write race in updateFee.
+                -- Without this, two simultaneous ride ends for the same driver can lose updates.
+                -- Ref: BT earnings fix plan Fix #1 (P0).
+                Redis.withWaitOnLockRedisWithExpiry ("DriverFee:Update:" <> driverId.getId) 10 10 $
+                  QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now True booking isSpecialZoneCharge
                 return (ldFee.numRides + 1)
               else do
                 createWithMbSibling driverFee lastElderSiblingDriverFee ldFee

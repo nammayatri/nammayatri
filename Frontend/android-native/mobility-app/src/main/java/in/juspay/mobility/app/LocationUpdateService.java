@@ -1044,6 +1044,23 @@ public class LocationUpdateService extends Service {
                 super.onLocationResult(locationResult);
                 Location lastLocation = locationResult.getLastLocation();
                 if (lastLocation != null) {
+                    // GPS accuracy filtering: reject inaccurate readings
+                    SharedPreferences accPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                    String rideStatus = accPref.getString("DRIVER_RIDE_STATUS", "IDLE");
+                    float maxAccuracy;
+                    if ("ON_RIDE".equals(rideStatus)) {
+                        String threshold = accPref.getString(PREF_LOCATION_ON_RIDE_MAX_ACCURACY, null);
+                        maxAccuracy = threshold != null ? Float.parseFloat(threshold) : ON_RIDE_MAX_ACCURACY;
+                    } else {
+                        String threshold = accPref.getString(PREF_LOCATION_MAX_ACCURACY, null);
+                        maxAccuracy = threshold != null ? Float.parseFloat(threshold) : DEFAULT_MAX_ACCURACY;
+                    }
+                    if (lastLocation.getAccuracy() > maxAccuracy) {
+                        Log.w(LOG_TAG, "Rejected location: accuracy=" + lastLocation.getAccuracy()
+                                + "m, threshold=" + maxAccuracy + "m");
+                        return;
+                    }
+
                     updated = true;
                     Log.e(LOG_TAG, "GoogleClient - CURRENT LOCATION FETCHED BY GPS");
                     double lat = lastLocation.getLatitude();

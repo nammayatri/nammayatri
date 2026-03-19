@@ -457,7 +457,12 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             chats = updatedChats,
             merchantId = Just merchantId,
             reopenedCount = 0,
-            becknIssueId
+            becknIssueId,
+            firstResponseAt = Nothing,
+            resolvedAt = Nothing,
+            slaDeadline = Nothing,
+            priority = Nothing,
+            escalationLevel = Nothing
           }
     createJsonMessage :: Text -> T.Text
     createJsonMessage descriptionText =
