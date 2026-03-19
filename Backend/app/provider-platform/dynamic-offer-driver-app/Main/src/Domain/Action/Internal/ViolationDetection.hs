@@ -1,7 +1,17 @@
-module Domain.Action.Internal.ViolationDetection where
+module Domain.Action.Internal.ViolationDetection
+  ( ViolationDetectionReq (..),
+    mkReachedStopsKey,
+    mkProcessedStopsKey,
+    addReachedStop,
+    violationDetection,
+    ReachedStopInfo (..),
+  )
+where
 
-import Data.Aeson hiding (Success)
+import Data.Aeson as Aeson hiding (Success)
+import qualified Data.Text as T
 import Data.OpenApi (ToSchema)
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Domain.Types.Alert
 import Domain.Types.Alert.DetectionData as DTD
 import qualified Domain.Types.Person as DP
@@ -9,6 +19,8 @@ import qualified Domain.Types.Ride as DRide
 import Environment
 import EulerHS.Prelude
 import Kernel.External.Encryption
+import Kernel.External.Maps.Types (LatLong)
+import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
@@ -38,14 +50,9 @@ violationDetection ViolationDetectionReq {..} = do
   case detectionData of
     RideStopReachedDetection RideStopReachedDetectionData {..} -> do
       when isViolated $ do
-        existingStops <- Redis.safeGet (mkReachedStopKey rideId)
-        case existingStops of
-          Just existingList -> do
-            unless (location `elem` existingList) $ do
-              let updatedList = existingList ++ [location]
-              Redis.setExp (mkReachedStopKey rideId) updatedList 86400
-          Nothing -> do
-            Redis.setExp (mkReachedStopKey rideId) [location] 86400
+        now <- getCurrentTime
+        let nowTs = floor $ utcTimeToPOSIXSeconds now
+        addReachedStop rideId (stopIndex + 1) location nowTs
     RouteDeviationDetection _ -> when isViolated $ notifyDriver driver "DRIVER_ROUTE_DEVIATION"
     StoppedDetection _ -> when isViolated $ notifyDriver driver "DRIVER_RIDE_STOPPAGE"
     _ -> pure ()
@@ -109,5 +116,22 @@ violationDetection ViolationDetectionReq {..} = do
         -- You'll need to define this in Alert types
         return (requestTitle, requestBody, requestData)
 
-mkReachedStopKey :: Id DRide.Ride -> Text
-mkReachedStopKey rideId = "add_stop_ride_reached_stop:" <> rideId.getId
+data ReachedStopInfo = ReachedStopInfo
+  { location :: LatLong,
+    stopIndex :: Int,
+    timestamp :: Int64
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, Read)
+
+mkReachedStopsKey :: Id DRide.Ride -> Text
+mkReachedStopsKey rideId = "ride:" <> rideId.getId <> ":reachedStops"
+
+mkProcessedStopsKey :: Id DRide.Ride -> Text
+mkProcessedStopsKey rideId = "ride:" <> rideId.getId <> ":processedStops"
+
+addReachedStop :: (HedisFlow m env) => Id DRide.Ride -> Int -> LatLong -> Int64 -> m ()
+addReachedStop rideId stopIndex location timestamp = do
+  let stopInfo = ReachedStopInfo {location = location, stopIndex = stopIndex, timestamp = timestamp}
+      field = T.pack (show stopIndex)
+      key = mkReachedStopsKey rideId
+  void $ Redis.hSetExp key field stopInfo 86400

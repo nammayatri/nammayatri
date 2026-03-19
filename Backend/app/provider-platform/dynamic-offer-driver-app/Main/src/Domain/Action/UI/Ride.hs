@@ -39,6 +39,7 @@ import Data.Ord
 import qualified Data.Text as T hiding (count, map)
 import qualified Data.Text as Text
 import Data.Time (Day)
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Action.UI.RideDetails as RD
@@ -65,7 +66,6 @@ import qualified Kernel.External.Types as L
 import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Domain as Domain
@@ -330,15 +330,6 @@ stopAction rideId pt stopLocId action = do
       QSI.updateByStopLocIdAndRideId (Just now) (Just pt) stopLocId rideId
       let request = CallBAPInternal.StopEventsReq CallBAPInternal.Depart rideId stopLM.order stopInfo.waitingTimeStart (Just now)
       void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
-      let currentPassStop = LatLong stopInfo.stopStartLatLng.lat stopInfo.stopStartLatLng.lon
-      existingStops <- Redis.runInMultiCloudRedisMaybeResult $ Redis.get (VID.mkReachedStopKey rideId)
-      case existingStops of
-        Just reachedStopList -> do
-          unless (currentPassStop `elem` reachedStopList) $ do
-            let updatedList = reachedStopList ++ [currentPassStop]
-            Redis.setExp (VID.mkReachedStopKey rideId) updatedList 86400
-        Nothing -> do
-          Redis.setExp (VID.mkReachedStopKey rideId) [currentPassStop] 86400
       pure Success
     ARRIVE -> do
       unless (isValidStopArrivedAction stopLM stopsInfo) $ throwError $ InvalidRequest ("Invalid Stop arrived request with stopLocId " <> stopLocId.getId <> "for ride " <> ride.id.getId)
@@ -359,6 +350,8 @@ stopAction rideId pt stopLocId action = do
                 merchantId = ride.merchantId
               }
       QSI.create stopInfo
+      let nowTs = floor $ utcTimeToPOSIXSeconds now
+      VID.addReachedStop rideId stopLM.order pt nowTs
       let request = CallBAPInternal.StopEventsReq CallBAPInternal.Arrive rideId stopLM.order now Nothing
       void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
       pure Success

@@ -17,6 +17,7 @@ module Domain.Action.Internal.BulkLocUpdate where
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe (fromJust)
 import Data.OpenApi (ToSchema)
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Domain.Action.UI.Ride.EndRide.Internal (getRouteInfoWithShortestDuration)
 import qualified Domain.Types as DC
 import qualified Domain.Types.Person as DP
@@ -30,6 +31,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.LocationUpdates
 import qualified Lib.LocationUpdates as LocUpd
+import qualified SharedLogic.External.LocationTrackingService.Types as LTS
 import qualified SharedLogic.CallBAP as CallBAP
 import SharedLogic.Ride as SRide
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -41,7 +43,7 @@ import Tools.Utils (isDropInsideThreshold)
 data BulkLocUpdateReq = BulkLocUpdateReq
   { rideId :: Id DRide.Ride,
     driverId :: Id DP.Person,
-    loc :: NonEmpty LatLong
+    loc :: NonEmpty LTS.LocationUpdate
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -50,6 +52,7 @@ bulkLocUpdate req = do
   let driverId = req.driverId
       rideId = req.rideId
       loc = req.loc
+      points = fmap (\w -> LatLong w.lat w.lon) loc
   logDebug $ "BulkLocUpdate = " <> show rideId <> " " <> show driverId <> " " <> show loc
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   transportConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
@@ -62,9 +65,12 @@ bulkLocUpdate req = do
       then Just <$> TM.getServiceConfigForRectifyingSnapToRoadDistantPointsFailure booking.providerId booking.merchantOperatingCityId
       else pure Nothing
   let isTollApplicable = DC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory
-  let passedThroughDrop = any (isDropInsideThreshold booking transportConfig) loc
-  logDebug $ "Did we passed through drop yet in bulkLocation  " <> show passedThroughDrop <> " and points: " <> show loc
-  _ <- addIntermediateRoutePoints defaultRideInterpolationHandler rectificationServiceConfig isTollApplicable transportConfig.enableTollCrossedNotifications rideId driverId passedThroughDrop (booking.tripCategory == DC.OneWay DC.MeterRide) loc
+  let passedThroughDrop = any (isDropInsideThreshold booking transportConfig) points
+  logDebug $ "Did we passed through drop yet in bulkLocation  " <> show passedThroughDrop <> " and points: " <> show points
+  currentTime <- getCurrentTime
+  let nowTs = floor $ utcTimeToPOSIXSeconds currentTime
+      waypointsWithTime = fmap (\w -> (LatLong w.lat w.lon, fromMaybe nowTs w.ts)) loc
+  _ <- addIntermediateRoutePoints defaultRideInterpolationHandler rectificationServiceConfig isTollApplicable transportConfig.enableTollCrossedNotifications rideId driverId passedThroughDrop (booking.tripCategory == DC.OneWay DC.MeterRide) waypointsWithTime
 
   let buffertime' = getArrivalTimeBufferOfVehicle transportConfig.arrivalTimeBufferOfVehicle booking.vehicleServiceTier
   when (isJust buffertime' && ride.status == DRide.INPROGRESS && isJust ride.estimatedEndTimeRange && isJust ride.toLocation) $ do
@@ -75,7 +81,7 @@ bulkLocUpdate req = do
       fork "update estimated end time" $ do
         logDebug $ "Updating estimated end time for ride " <> show rideId
         let toLocation = fromJust ride.toLocation
-            currentLatLong = NE.last loc
+            currentLatLong = NE.last points
             dropLatLong = TM.LatLong {lat = toLocation.lat, lon = toLocation.lon}
         routeResponse <-
           TM.getRoutes merchantId booking.merchantOperatingCityId (Just rideId.getId) $

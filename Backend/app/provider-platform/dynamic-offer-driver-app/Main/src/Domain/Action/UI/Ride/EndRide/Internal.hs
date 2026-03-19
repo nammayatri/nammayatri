@@ -1049,6 +1049,7 @@ pickNWayPoints :: Int -> [a] -> [a]
 pickNWayPoints number waypoints
   | null waypoints = []
   | number <= 1 = [last waypoints]
+  | length waypoints == 1 = waypoints
   | otherwise = do
     let len = length waypoints
         step = len `div` number
