@@ -75,7 +75,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.External.Nandi.Flow as NandiFlow
-import SharedLogic.External.Nandi.Types (GimsCurrentTripDetailsReq (..), GimsOperationAnchor (..), GimsTripAction (..), GimsTripActionReq (..), StopInfo (..), StopSchedule (..))
+import SharedLogic.External.Nandi.Types (GimsCurrentTripDetailsReq (..), GimsOperationAnchor (..), GimsTripAction (..), GimsTripActionReq (..), GimsTripInfo (..), StopInfo (..), StopSchedule (..))
 import SharedLogic.FRFSConfirm
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.FRFSStatus
@@ -1482,13 +1482,16 @@ postFrfsFleetOperatorCurrentOperation (mbPersonId, merchantId) req = do
   let prevTrip = fromMaybe 0 (mbPrevTrip :: Maybe Int)
   resp <- NandiFlow.gimsCurrentTripDetails baseUrl gtfsId GimsCurrentTripDetailsReq {previous_trip_number = prevTrip, conductor_token = req.conductorToken, driver_token = req.driverToken, vehicle_number = req.vehicleNumber}
 
-  let toTripInfo t =
+  let toTripInfo (t :: GimsTripInfo) =
         FRFSTicketService.OperatorTripInfo
           { tripNumber = t.trip_number,
             routeId = t.route_id,
             routeNumber = t.route_number,
             routeName = t.route_name,
-            isActiveTrip = t.is_active_trip
+            isActiveTrip = t.is_active_trip,
+            dutyDate = t.duty_date,
+            startTime = t.start_time,
+            endTime = t.end_time
           }
   pure
     FRFSTicketService.FleetOperatorCurrentOperationResp

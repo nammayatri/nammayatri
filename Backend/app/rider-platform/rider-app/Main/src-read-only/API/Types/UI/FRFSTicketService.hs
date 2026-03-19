@@ -369,7 +369,16 @@ data FleetOperatorTripActionResp = FleetOperatorTripActionResp {currentTripNumbe
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data OperatorTripInfo = OperatorTripInfo {isActiveTrip :: Kernel.Prelude.Bool, routeId :: Data.Text.Text, routeName :: Data.Text.Text, routeNumber :: Data.Text.Text, tripNumber :: Kernel.Prelude.Int}
+data OperatorTripInfo = OperatorTripInfo
+  { dutyDate :: Data.Maybe.Maybe Data.Text.Text,
+    endTime :: Data.Maybe.Maybe Data.Text.Text,
+    isActiveTrip :: Kernel.Prelude.Bool,
+    routeId :: Data.Text.Text,
+    routeName :: Data.Text.Text,
+    routeNumber :: Data.Text.Text,
+    startTime :: Data.Maybe.Maybe Data.Text.Text,
+    tripNumber :: Kernel.Prelude.Int
+  }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
