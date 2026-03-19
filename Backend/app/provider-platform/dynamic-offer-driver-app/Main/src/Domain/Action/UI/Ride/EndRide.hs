@@ -98,6 +98,7 @@ import qualified SharedLogic.FareCalculatorV2 as FareV2
 import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.RuleBasedTierUpgrade
+import qualified SharedLogic.FareTransparency as FareTransparency
 import qualified SharedLogic.TollsDetector as TollsDetector
 import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.GoHomeConfig as CGHC
@@ -777,14 +778,40 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               govtChargesRate = Just thresholdConfig.taxConfig.rideGst,
               pickupGateId = booking.pickupGateId
             }
-      let finalFare = Fare.fareSum fareParams Nothing
+      let computedFare = Fare.fareSum fareParams Nothing
           distanceDiff = recalcDistance - oldDistance
+          -- P0 FIX-04: Apply fare cap as safety net to prevent runaway fares.
+          -- Cap at defaultFareCapMultiplier (1.5x) of estimated fare.
+          -- This protects riders from GPS drift, route deviation, or calculation errors.
+          fareCapResult = FareTransparency.applyFareCap FareTransparency.defaultFareCapMultiplier estimatedFare computedFare
+          finalFare = fareCapResult.cappedFare
           fareDiff = finalFare - estimatedFare
+      when fareCapResult.wasCapped $
+        logWarning $
+          "FARE_CAP_APPLIED: rideId="
+            <> show ride.id.getId
+            <> ", computedFare=" <> show (realToFrac @_ @Double computedFare)
+            <> ", cappedFare=" <> show (realToFrac @_ @Double finalFare)
+            <> ", ceiling=" <> show (realToFrac @_ @Double fareCapResult.fareCeiling)
+            <> ", discount=" <> show (realToFrac @_ @Double fareCapResult.fareCapDiscount)
       logTagInfo "Fare recalculation" $
         "Fare difference: "
           <> show (realToFrac @_ @Double fareDiff)
           <> ", Distance difference: "
           <> show distanceDiff
+          <> (if fareCapResult.wasCapped then ", FARE_CAPPED=true" else "")
+      -- P0 FIX-09: Check for unexpected tolls not in original estimate
+      let tollResult = TollsDetector.identifyUnexpectedTolls
+                         booking.tollIds   -- estimated toll IDs from search time
+                         ride.tollIds      -- actual toll IDs
+                         ride.tollCharges
+                         ride.tollNames
+      when tollResult.unexpectedTollAdded $
+        logWarning $
+          "UNEXPECTED_TOLL: rideId="
+            <> show ride.id.getId
+            <> ", unexpectedAmount=" <> show tollResult.unexpectedTollAmount
+            <> ", unexpectedNames=" <> show tollResult.unexpectedTollNames
       putDiffMetric merchantId fareDiff distanceDiff
       return (recalcDistance, finalFare, Just fareParams)
 
