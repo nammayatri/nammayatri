@@ -630,13 +630,23 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             Just DVC.TRUCK -> DV.getTruckVehicleVariant input.grossVehicleWeight input.unladdenWeight vehicleVariant
             Just DVC.TOTO -> DV.E_RICKSHAW
             _ -> vehicleVariant
-      logInfo $ "createVehicleRC: Creating RC with verificationStatus=MANUAL_VERIFICATION_REQUIRED, vehicleVariant=" <> show vehicleVariant <> ", failedRules=" <> show failedRules <> ", registrationNumber=" <> show input.registrationNumber
+      -- When fitness expiry is missing from verification provider, use a 30-day grace period
+      -- and flag for manual review instead of silently defaulting to +50 years
+      let (fitnessExpiryVal, verificationStatusVal) = case input.fitnessUpto of
+            Just expiry -> (expiry, Documents.MANUAL_VERIFICATION_REQUIRED)
+            Nothing ->
+              ( addUTCTime (secondsToNominalDiffTime 2592000) now, -- 30-day grace period
+                Documents.MANUAL_VERIFICATION_REQUIRED
+              )
+      when (isNothing input.fitnessUpto) $
+        logWarning $ "createVehicleRC: fitnessUpto is Nothing for RC " <> show input.registrationNumber <> ", setting 30-day grace period and requiring manual verification"
+      logInfo $ "createVehicleRC: Creating RC with verificationStatus=" <> show verificationStatusVal <> ", vehicleVariant=" <> show vehicleVariant <> ", failedRules=" <> show failedRules <> ", registrationNumber=" <> show input.registrationNumber
       return $
         DVRC.VehicleRegistrationCertificate
           { id,
             documentImageId = input.documentImageId,
             certificateNumber,
-            fitnessExpiry = fromMaybe (addUTCTime (secondsToNominalDiffTime 788400000) now) input.fitnessUpto, -- TODO :: Please fix me, if my usage is critical. I am hardcoded for next 50 years.
+            fitnessExpiry = fitnessExpiryVal,
             permitExpiry = input.permitValidityUpto,
             pucExpiry = input.pucValidityUpto,
             vehicleClass = input.vehicleClass,
@@ -650,7 +660,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             reviewedAt = Nothing,
             reviewRequired = Nothing,
             insuranceValidity = input.insuranceValidity,
-            verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
+            verificationStatus = verificationStatusVal,
             fleetOwnerId = input.fleetOwnerId,
             merchantId = Just merchantId,
             mYManufacturing = input.mYManufacturing,

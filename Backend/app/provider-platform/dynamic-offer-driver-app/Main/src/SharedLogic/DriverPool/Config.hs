@@ -147,7 +147,7 @@ instance Default DriverPoolConfig where
         updatedAt = read "2023-09-19 15:30:00 UTC",
         useOneToOneOsrmMapping = Nothing,
         vehicleVariant = Nothing,
-        dynamicBatchSize = V.singleton 1,
+        dynamicBatchSize = V.fromList [3, 5, 7],
         selfRequestIfRiderIsDriver = False
       }
 
