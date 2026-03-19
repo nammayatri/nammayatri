@@ -113,6 +113,8 @@ Same as business logic. Libraries are shared, so catching bugs early is valuable
 
 Only crash-class warnings as errors. Likely-bug and noisy warnings remain warnings. Developers cannot meaningfully fix generated code.
 
+**Implementation note:** Auto-generated modules live inside the same packages as hand-written code (e.g., `src-read-only/` alongside `src/`), so `cabal.project` per-package overrides cannot distinguish them. The recommended approach is to add `{-# OPTIONS_GHC -Wwarn #-}` pragmas to generated files via the code generator, which overrides the package-level likely-bug `-Werror=*` flags while preserving crash-class errors from the global config. See Section 5 for details.
+
 ### Tests (`test/`, `hunit-tests/`)
 
 Warnings only (no `-Werror`). Tests change rapidly and unused bindings are expected during development.
@@ -176,13 +178,22 @@ package mock-sms
 package mock-fcm
   ghc-options: -Wwarn -Werror=incomplete-patterns -Werror=incomplete-uni-patterns -Werror=missing-fields -Werror=missing-methods
 
--- Note: alchemist-generated modules live inside app packages.
--- Use per-module {-# OPTIONS_GHC -Wwarn #-} pragmas for generated files
--- rather than per-package overrides, since generated and hand-written code
--- coexist in the same package.
+-- Auto-generated code (alchemist/NammaDSL output in src-read-only/):
+-- Generated modules coexist with hand-written code in the same packages,
+-- so per-package overrides cannot distinguish them. Instead, the code
+-- generator should emit this pragma at the top of each generated file:
+--
+--   {-# OPTIONS_GHC -Wwarn=unused-matches -Wwarn=unused-foralls
+--                   -Wwarn=missing-home-modules -Wwarn=identities
+--                   -Wwarn=deriving-defaults -Wwarn=partial-fields
+--                   -Wwarn=unused-do-bind #-}
+--
+-- This demotes likely-bug warnings back to warnings for generated code
+-- while keeping crash-class warnings (incomplete-patterns, missing-fields,
+-- etc.) as errors — matching the per-package strategy in Section 4.
 ```
 
-This gives CI the same safety guarantees for dangerous warnings while allowing noisy warnings to exist without blocking builds. The per-package overrides implement the tiered strategy from Section 4.
+This gives CI the same safety guarantees for dangerous warnings while allowing noisy warnings to exist without blocking builds. The per-package overrides for tests and mocks, plus the per-module pragmas for generated code, implement the tiered strategy from Section 4.
 
 ---
 
