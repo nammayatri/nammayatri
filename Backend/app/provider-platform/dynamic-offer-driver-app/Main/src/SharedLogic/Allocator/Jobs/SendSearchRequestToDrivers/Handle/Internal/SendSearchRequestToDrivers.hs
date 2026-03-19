@@ -112,8 +112,9 @@ sendSearchRequestToDrivers ::
   [Id Driver] ->
   GoHomeConfig ->
   m ()
-sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq searchTry driverPoolConfig driverPool prevBatchDrivers goHomeConfig = do
-  logInfo $ "Send search requests to driver pool batch-" <> show driverPool
+sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq searchTry driverPoolConfig unsortedDriverPool prevBatchDrivers goHomeConfig = do
+  let driverPool = List.sortOn (.actualDistanceToPickup) unsortedDriverPool
+  logInfo $ "Send search requests to driver pool batch (sorted by proximity)-" <> show driverPool
 
   -- We update few things during 1st batch in searchReq table which is not being passed in above Search request, hence fetch search request again if it is first batch
   -- isAllocatorBatch is false if it is first batch because 1st batch is always triggered from application, not allocator
