@@ -568,7 +568,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
           ((Just <$>) . createVehicleRC person.merchantId person.merchantOperatingCityId rcInput vehicleVariant allFailures)
           (encrypt `mapM` rcVerificationResponse.registrationNumber)
       Nothing -> buildRC person.merchantId person.merchantOperatingCityId rcInput allFailures
-  if isNothing mbVehicleVariant && mbRemPriorityList /= Just [] && isJust mbRemPriorityList && ((mVehicleRC <&> (.verificationStatus)) == Just Documents.MANUAL_VERIFICATION_REQUIRED || join (mVehicleRC <&> (.reviewRequired)) == Just True)
+  if isNothing mbVehicleVariant && mbRemPriorityList /= Just [] && isJust mbRemPriorityList && ((mVehicleRC <&> (.verificationStatus)) == Just Documents.MANUAL_VERIFICATION_REQUIRED || ((.reviewRequired) =<< mVehicleRC) == Just True)
     then do
       flip (maybe (logError "imageExtrationValidation flag or encryptedRC or registrationNumber is null in onVerifyRCHandler. Not proceeding with alternate service providers !!!!!!!!!" >> initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures)) ((,,,) <$> mbImageExtractionValidation <*> mbEncryptedRC <*> mbRemPriorityList <*> rcVerificationResponse.registrationNumber) $
         \(imageExtractionValidation, encryptedRC, remPriorityList, rcNum) -> do
@@ -638,7 +638,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                 Documents.MANUAL_VERIFICATION_REQUIRED
               )
       when (isNothing input.fitnessUpto) $
-        logWarning $ "createVehicleRC: fitnessUpto is Nothing for RC " <> maybe "null" maskText input.registrationNumber <> ", setting 30-day grace period and requiring manual verification"
+        logInfo $ "createVehicleRC: fitnessUpto is Nothing for RC " <> maybe "null" maskText input.registrationNumber <> ", setting 30-day grace period and requiring manual verification"
       logInfo $ "createVehicleRC: Creating RC with verificationStatus=" <> show verificationStatusVal <> ", vehicleVariant=" <> show vehicleVariant <> ", failedRules=" <> show failedRules <> ", registrationNumber=" <> maybe "null" maskText input.registrationNumber
       return $
         DVRC.VehicleRegistrationCertificate
