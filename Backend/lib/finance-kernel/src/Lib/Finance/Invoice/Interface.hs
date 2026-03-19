@@ -10,12 +10,17 @@ module Lib.Finance.Invoice.Interface
   ( InvoiceInput (..),
     InvoiceLineItem (..),
     GstAmountBreakdown (..),
+    IndirectTaxInput (..),
+    DirectTaxInput (..),
   )
 where
 
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
+import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import Lib.Finance.Domain.Types.DirectTaxTransaction (TdsRateReason)
+import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
+import Lib.Finance.Domain.Types.IndirectTaxTransaction (GstCreditType)
 import Lib.Finance.Domain.Types.Invoice (InvoiceType)
 
 -- | Single line item in an invoice
@@ -67,5 +72,44 @@ data GstAmountBreakdown = GstAmountBreakdown
   { cgstAmount :: Maybe HighPrecMoney,
     sgstAmount :: Maybe HighPrecMoney,
     igstAmount :: Maybe HighPrecMoney
+  }
+  deriving (Eq, Show, Generic)
+
+-- | Input for creating a standalone indirect tax (GST) transaction
+--   without an invoice.
+data IndirectTaxInput = IndirectTaxInput
+  { transactionType :: IndirectTax.TransactionType,
+    referenceId :: Text,
+    taxableValue :: HighPrecMoney,
+    totalGstAmount :: HighPrecMoney,
+    gstBreakdown :: Maybe GstAmountBreakdown,
+    gstCreditType :: GstCreditType,
+    counterpartyId :: Text,
+    gstinOfParty :: Maybe Text,
+    sacCode :: Maybe Text,
+    externalCharges :: Maybe HighPrecMoney,
+    invoiceNumber :: Maybe Text,
+    merchantId :: Text,
+    merchantOperatingCityId :: Text
+  }
+  deriving (Eq, Show, Generic)
+
+-- | Input for creating a standalone direct tax (TDS) transaction
+--   without an invoice.
+data DirectTaxInput = DirectTaxInput
+  { transactionType :: DirectTax.TransactionType,
+    referenceId :: Text,
+    grossAmount :: HighPrecMoney,
+    tdsAmount :: HighPrecMoney,
+    tdsTreatment :: DirectTax.TdsTreatment,
+    counterpartyId :: Text,
+    panOfParty :: Maybe Text,
+    panType :: Maybe Text,
+    tdsRateReason :: Maybe TdsRateReason,
+    tanOfDeductee :: Maybe Text,
+    tdsSection :: Maybe Text,
+    invoiceNumber :: Maybe Text,
+    merchantId :: Text,
+    merchantOperatingCityId :: Text
   }
   deriving (Eq, Show, Generic)

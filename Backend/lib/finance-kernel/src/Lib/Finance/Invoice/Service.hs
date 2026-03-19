@@ -13,6 +13,10 @@ module Lib.Finance.Invoice.Service
     getByNumber,
     updateInvoiceStatus,
 
+    -- * Standalone tax entry creation
+    createIndirectTaxEntry,
+    createDirectTaxEntry,
+
     -- * Invoice-Ledger linking
     getEntriesForInvoice,
     getInvoiceForEntry,
@@ -127,87 +131,136 @@ createInvoice input entryIds = do
     case mbToAccount of
       Just toAccount
         | toAccount.counterpartyType == Just GOVERNMENT_INDIRECT -> do
-          taxTxnId <- generateGUID
-          let gstAmount = entry.amount
-              -- Use caller-provided breakdown; fall back to 50/50 if not provided
-              (cgstAmt, sgstAmt, igstAmt) = case input.gstBreakdown of
-                Just breakdown ->
-                  ( fromMaybe 0 breakdown.cgstAmount,
-                    fromMaybe 0 breakdown.sgstAmount,
-                    fromMaybe 0 breakdown.igstAmount
-                  )
-                Nothing ->
-                  let cg = gstAmount / 2.0
-                   in (cg, gstAmount - cg, 0)
-              extCharges = sum $ map (.lineTotal) $ filter (.isExternalCharge) input.lineItems
-              taxableValue = subtotal - gstAmount - extCharges
-              gstRate = if taxableValue > 0 then realToFrac (gstAmount / taxableValue) * 100.0 else 0.0
+          let extCharges = sum $ map (.lineTotal) $ filter (.isExternalCharge) input.lineItems
               txnType = invoiceTypeToTransactionType input.invoiceType
-          let taxTxn =
-                IndirectTaxTransaction
-                  { id = Id taxTxnId,
-                    transactionDate = now,
-                    transactionType = txnType,
+              indirectTaxInput =
+                IndirectTaxInput
+                  { transactionType = txnType,
                     referenceId = entry.referenceId,
-                    taxableValue = taxableValue,
-                    gstRate = gstRate,
-                    cgstAmount = cgstAmt,
-                    sgstAmount = sgstAmt,
-                    igstAmount = igstAmt,
-                    totalGstAmount = gstAmount,
+                    taxableValue = subtotal - entry.amount - extCharges,
+                    totalGstAmount = entry.amount,
+                    gstBreakdown = input.gstBreakdown,
                     gstCreditType = Output,
                     counterpartyId = input.issuedToId,
                     gstinOfParty = input.gstinOfParty,
-                    saleType = if isJust input.gstinOfParty then B2B else B2C,
-                    invoiceNumber = Just invoiceNum,
-                    creditOrDebitNoteNumber = Nothing,
                     sacCode = Just (sacCodeForTransactionType txnType),
                     externalCharges = Just extCharges,
+                    invoiceNumber = Just invoiceNum,
                     merchantId = input.merchantId,
-                    merchantOperatingCityId = input.merchantOperatingCityId,
-                    createdAt = now,
-                    updatedAt = now
+                    merchantOperatingCityId = input.merchantOperatingCityId
                   }
-          QIndirectTax.create taxTxn
+          void $ createIndirectTaxEntry indirectTaxInput
         | toAccount.counterpartyType == Just GOVERNMENT_DIRECT -> do
-          taxTxnId <- generateGUID
-          let tdsAmount = entry.amount
-              extCharges = sum $ map (.lineTotal) $ filter (.isExternalCharge) input.lineItems
+          let extCharges = sum $ map (.lineTotal) $ filter (.isExternalCharge) input.lineItems
               gstAmount = case input.gstBreakdown of
                 Just breakdown -> fromMaybe 0 breakdown.cgstAmount + fromMaybe 0 breakdown.sgstAmount + fromMaybe 0 breakdown.igstAmount
                 Nothing -> 0
-              grossAmount = subtotal - extCharges - gstAmount
-              netAmountPaid = grossAmount - tdsAmount
-              tdsRate = if netAmountPaid > 0 then realToFrac (tdsAmount / grossAmount) * 100.0 else 0.0
               txnType = invoiceTypeToDirectTransactionType input.invoiceType
-          let directTaxTxn =
-                DirectTaxTransaction
-                  { id = Id taxTxnId,
-                    transactionDate = now,
-                    transactionType = txnType,
+              directTaxInput =
+                DirectTaxInput
+                  { transactionType = txnType,
                     referenceId = entry.referenceId,
-                    grossAmount = grossAmount,
-                    tdsRate = tdsRate,
-                    tdsAmount = tdsAmount,
-                    netAmountPaid = netAmountPaid,
+                    grossAmount = subtotal - extCharges - gstAmount,
+                    tdsAmount = entry.amount,
                     tdsTreatment = DirectTax.Deducted,
-                    tdsSection = transactionTypeToTdsSection txnType,
                     counterpartyId = input.counterpartyId,
                     panOfParty = input.panOfParty,
                     panType = input.panType,
                     tdsRateReason = input.tdsRateReason,
                     tanOfDeductee = input.tanOfDeductee,
-                    paymentDate = Just now,
+                    tdsSection = transactionTypeToTdsSection txnType,
                     invoiceNumber = Just invoiceNum,
                     merchantId = input.merchantId,
-                    merchantOperatingCityId = input.merchantOperatingCityId,
-                    createdAt = now,
-                    updatedAt = now
+                    merchantOperatingCityId = input.merchantOperatingCityId
                   }
-          QDirectTax.create directTaxTxn
+          void $ createDirectTaxEntry directTaxInput
       _ -> pure ()
 
   pure $ Right invoice
+
+-- | Create a standalone indirect tax (GST) transaction without an invoice.
+createIndirectTaxEntry ::
+  (BeamFlow.BeamFlow m r) =>
+  IndirectTaxInput ->
+  m IndirectTaxTransaction
+createIndirectTaxEntry input = do
+  now <- getCurrentTime
+  taxTxnId <- generateGUID
+  let gstAmount = input.totalGstAmount
+      (cgstAmt, sgstAmt, igstAmt) = case input.gstBreakdown of
+        Just breakdown ->
+          ( fromMaybe 0 breakdown.cgstAmount,
+            fromMaybe 0 breakdown.sgstAmount,
+            fromMaybe 0 breakdown.igstAmount
+          )
+        Nothing ->
+          let cg = gstAmount / 2.0
+           in (cg, gstAmount - cg, 0)
+      gstRate = if input.taxableValue > 0 then realToFrac (gstAmount / input.taxableValue) * 100.0 else 0.0
+      taxTxn =
+        IndirectTaxTransaction
+          { id = Id taxTxnId,
+            transactionDate = now,
+            transactionType = input.transactionType,
+            referenceId = input.referenceId,
+            taxableValue = input.taxableValue,
+            gstRate = gstRate,
+            cgstAmount = cgstAmt,
+            sgstAmount = sgstAmt,
+            igstAmount = igstAmt,
+            totalGstAmount = gstAmount,
+            gstCreditType = input.gstCreditType,
+            counterpartyId = input.counterpartyId,
+            gstinOfParty = input.gstinOfParty,
+            saleType = if isJust input.gstinOfParty then B2B else B2C,
+            invoiceNumber = input.invoiceNumber,
+            creditOrDebitNoteNumber = Nothing,
+            sacCode = input.sacCode,
+            externalCharges = input.externalCharges,
+            merchantId = input.merchantId,
+            merchantOperatingCityId = input.merchantOperatingCityId,
+            createdAt = now,
+            updatedAt = now
+          }
+  QIndirectTax.create taxTxn
+  pure taxTxn
+
+-- | Create a standalone direct tax (TDS) transaction without an invoice.
+createDirectTaxEntry ::
+  (BeamFlow.BeamFlow m r) =>
+  DirectTaxInput ->
+  m DirectTaxTransaction
+createDirectTaxEntry input = do
+  now <- getCurrentTime
+  taxTxnId <- generateGUID
+  let netAmountPaid = input.grossAmount - input.tdsAmount
+      tdsRate = if input.grossAmount > 0 then realToFrac (input.tdsAmount / input.grossAmount) * 100.0 else 0.0
+      directTaxTxn =
+        DirectTaxTransaction
+          { id = Id taxTxnId,
+            transactionDate = now,
+            transactionType = input.transactionType,
+            referenceId = input.referenceId,
+            grossAmount = input.grossAmount,
+            tdsRate = tdsRate,
+            tdsAmount = input.tdsAmount,
+            netAmountPaid = netAmountPaid,
+            tdsTreatment = input.tdsTreatment,
+            tdsSection = input.tdsSection,
+            counterpartyId = input.counterpartyId,
+            panOfParty = input.panOfParty,
+            panType = input.panType,
+            tdsRateReason = input.tdsRateReason,
+            tanOfDeductee = input.tanOfDeductee,
+            paymentDate = Just now,
+            invoiceNumber = input.invoiceNumber,
+            merchantId = input.merchantId,
+            merchantOperatingCityId = input.merchantOperatingCityId,
+            createdAt = now,
+            updatedAt = now
+          }
+  QDirectTax.create directTaxTxn
+  pure directTaxTxn
 
 -- | Get invoice by ID
 getInvoice ::
@@ -284,6 +337,7 @@ sacCodeForTransactionType = \case
   BuyerCommission -> "998314"
   CreditNote -> "998314"
   DebitNote -> "998314"
+  PGFee -> "998516" -- Payment processing services
 
 -- | Map InvoiceType to purpose abbreviation for invoice number generation
 invoiceTypeToPurpose :: InvoiceType -> Text

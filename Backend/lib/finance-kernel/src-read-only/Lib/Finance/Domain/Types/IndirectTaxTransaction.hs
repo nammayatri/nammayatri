@@ -38,7 +38,7 @@ data GstCreditType = Input | Output deriving (Eq, Ord, Show, Read, Generic, ToJS
 
 data SaleType = B2B | B2C deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data TransactionType = RideFare | Subscription | Incentive | Cancellation | BuyerCommission | CreditNote | DebitNote deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data TransactionType = RideFare | Subscription | Incentive | Cancellation | BuyerCommission | CreditNote | DebitNote | PGFee deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''TransactionType))
 

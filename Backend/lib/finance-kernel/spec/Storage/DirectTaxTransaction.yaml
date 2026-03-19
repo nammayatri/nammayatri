@@ -11,7 +11,7 @@ DirectTaxTransaction:
 
   types:
     TransactionType:
-      enum: "RideFare,Subscription,Incentive,Cancellation,BuyerCommission,CreditNote,DebitNote"
+      enum: "RideFare,Subscription,Incentive,Cancellation,BuyerCommission,CreditNote,DebitNote,PGFee"
       derive: "ToParamSchema"
 
     TdsTreatment:

@@ -52,6 +52,12 @@ module Lib.Finance.FinanceM
     InvoiceConfig (..),
     invoice,
 
+    -- * Standalone Tax Entry
+    IndirectTaxConfig (..),
+    DirectTaxConfig (..),
+    recordIndirectTax,
+    recordDirectTax,
+
     -- * TDS Rate Reason
     TdsRateReason (..),
   )
@@ -66,12 +72,15 @@ import Kernel.Utils.Common (MonadFlow)
 import Lib.Finance.Account.Interface (AccountInput (..))
 import Lib.Finance.Account.Service (getOrCreateAccount)
 import Lib.Finance.Domain.Types.Account
-import Lib.Finance.Domain.Types.DirectTaxTransaction (TdsRateReason (..))
+import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
+import Lib.Finance.Domain.Types.DirectTaxTransaction (DirectTaxTransaction, TdsRateReason (..))
+import Lib.Finance.Domain.Types.IndirectTaxTransaction (GstCreditType, IndirectTaxTransaction)
+import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import Lib.Finance.Domain.Types.Invoice (Invoice, InvoiceType)
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.Error.Types (FinanceError (..))
-import Lib.Finance.Invoice.Interface (GstAmountBreakdown, InvoiceInput (..), InvoiceLineItem)
-import Lib.Finance.Invoice.Service (createInvoice)
+import Lib.Finance.Invoice.Interface (DirectTaxInput (..), GstAmountBreakdown, IndirectTaxInput (..), InvoiceInput (..), InvoiceLineItem)
+import Lib.Finance.Invoice.Service (createDirectTaxEntry, createIndirectTaxEntry, createInvoice)
 import Lib.Finance.Ledger.Interface (LedgerEntryInput (..))
 import Lib.Finance.Ledger.Service (createEntryWithBalanceUpdate)
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
@@ -562,3 +571,107 @@ invoice config = do
               }
       inv <- liftFinanceM (createInvoice invoiceInput ids)
       pure (Just inv.id)
+
+-- | Caller-provided config for recording a standalone indirect tax (GST) entry.
+--   merchantId and merchantOperatingCityId come from FinanceCtx.
+data IndirectTaxConfig = IndirectTaxConfig
+  { transactionType :: IndirectTax.TransactionType,
+    referenceId :: Text,
+    taxableValue :: HighPrecMoney,
+    totalGstAmount :: HighPrecMoney,
+    gstBreakdown :: Maybe GstAmountBreakdown,
+    gstCreditType :: GstCreditType,
+    counterpartyId :: Text,
+    gstinOfParty :: Maybe Text,
+    sacCode :: Maybe Text,
+    externalCharges :: Maybe HighPrecMoney
+  }
+  deriving (Eq, Show, Generic)
+
+-- | Caller-provided config for recording a standalone direct tax (TDS) entry.
+--   merchantId and merchantOperatingCityId come from FinanceCtx.
+data DirectTaxConfig = DirectTaxConfig
+  { transactionType :: DirectTax.TransactionType,
+    referenceId :: Text,
+    grossAmount :: HighPrecMoney,
+    tdsAmount :: HighPrecMoney,
+    tdsTreatment :: DirectTax.TdsTreatment,
+    counterpartyId :: Text,
+    panOfParty :: Maybe Text,
+    panType :: Maybe Text,
+    tdsRateReason :: Maybe TdsRateReason,
+    tanOfDeductee :: Maybe Text,
+    tdsSection :: Maybe Text
+  }
+  deriving (Eq, Show, Generic)
+
+-- | Record a standalone indirect tax (GST) transaction without creating an invoice.
+--   Uses FinanceCtx for merchantId and merchantOperatingCityId.
+--
+--   Example:
+--   @
+--     runFinance ctx $ do
+--       transfer_ PGPaymentLiability PGGstAsset gstAmount "PGFeeGST"
+--       recordIndirectTax IndirectTaxConfig
+--         { transactionType = PGFee
+--         , referenceId = orderId
+--         , taxableValue = pgBaseFee
+--         , totalGstAmount = gstAmount
+--         , gstBreakdown = Nothing
+--         , gstCreditType = Input
+--         , counterpartyId = pgProviderId
+--         , ...
+--         }
+--   @
+recordIndirectTax ::
+  (BeamFlow.BeamFlow m r) =>
+  IndirectTaxConfig ->
+  FinanceM m (Id IndirectTaxTransaction)
+recordIndirectTax config = do
+  ctx <- ask
+  let input =
+        IndirectTaxInput
+          { transactionType = config.transactionType,
+            referenceId = config.referenceId,
+            taxableValue = config.taxableValue,
+            totalGstAmount = config.totalGstAmount,
+            gstBreakdown = config.gstBreakdown,
+            gstCreditType = config.gstCreditType,
+            counterpartyId = config.counterpartyId,
+            gstinOfParty = config.gstinOfParty,
+            sacCode = config.sacCode,
+            externalCharges = config.externalCharges,
+            invoiceNumber = Nothing,
+            merchantId = ctx.merchantId,
+            merchantOperatingCityId = ctx.merchantOpCityId
+          }
+  txn <- lift (createIndirectTaxEntry input)
+  pure txn.id
+
+-- | Record a standalone direct tax (TDS) transaction without creating an invoice.
+--   Uses FinanceCtx for merchantId and merchantOperatingCityId.
+recordDirectTax ::
+  (BeamFlow.BeamFlow m r) =>
+  DirectTaxConfig ->
+  FinanceM m (Id DirectTaxTransaction)
+recordDirectTax config = do
+  ctx <- ask
+  let input =
+        DirectTaxInput
+          { transactionType = config.transactionType,
+            referenceId = config.referenceId,
+            grossAmount = config.grossAmount,
+            tdsAmount = config.tdsAmount,
+            tdsTreatment = config.tdsTreatment,
+            counterpartyId = config.counterpartyId,
+            panOfParty = config.panOfParty,
+            panType = config.panType,
+            tdsRateReason = config.tdsRateReason,
+            tanOfDeductee = config.tanOfDeductee,
+            tdsSection = config.tdsSection,
+            invoiceNumber = Nothing,
+            merchantId = ctx.merchantId,
+            merchantOperatingCityId = ctx.merchantOpCityId
+          }
+  txn <- lift (createDirectTaxEntry input)
+  pure txn.id
