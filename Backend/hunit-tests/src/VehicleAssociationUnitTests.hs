@@ -17,7 +17,7 @@ import qualified "mobility-core" Kernel.Prelude
 import qualified "mobility-core" Kernel.Types.Beckn.Context as Context
 import qualified "mobility-core" Kernel.Types.Id
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?), (@?=))
+import Test.Tasty.HUnit (assertFailure, testCase, (@?), (@?=))
 import Prelude
 
 -- =============================================================================
@@ -31,13 +31,9 @@ executeFlowAction description action = do
   result <- try action
   case result of
     Left (e :: Kernel.Prelude.SomeException) ->
-      -- Expected behavior: Flow functions need proper environment setup
-      -- We verify the exception is handled gracefully and provide context
-      let errorMsg = description ++ ": Flow execution failed (expected without test environment): " ++ show e
-       in True @? errorMsg
+      assertFailure $ description ++ ": Flow execution failed: " ++ show e
     Right _ ->
-      -- Success: Flow action executed without exceptions
-      True @? (description ++ ": Flow action executed successfully")
+      pure ()
 
 -- =============================================================================
 -- REAL FUNCTION EXECUTION WITH REQUEST BODIES AND RESPONSE VALIDATION

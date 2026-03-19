@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.FleetBookingInformationExtra where
 
 import Data.Text (toLower)
