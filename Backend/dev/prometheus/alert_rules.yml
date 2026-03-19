@@ -101,7 +101,7 @@ groups:
 
       # Circuit breaker opened
       - alert: BharatTaxiCircuitBreakerOpen
-        expr: sum(rate(circuit_breaker_transitions_total{to_state="open"}[5m])) > 0
+        expr: sum by (service) (rate(circuit_breaker_transitions_total{to_state="open"}[5m])) > 0
         for: 1m
         labels:
           severity: critical

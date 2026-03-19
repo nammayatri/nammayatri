@@ -132,30 +132,23 @@
             "steppedLine": false,
             "targets": [
                 {
-                    "expr": "sum(rate(ride_created_count[$__interval])) by (merchant_id) * 60",
+                    "expr": "sum(rate(ride_created_count[$__interval])) / sum(rate(search_request_count[$__interval]))",
                     "interval": "",
                     "intervalFactor": 2,
-                    "legendFormat": "rides created - {{merchant_id}}",
+                    "legendFormat": "booking success rate",
                     "refId": "A"
-                },
-                {
-                    "expr": "sum(rate(search_request_count[$__interval])) by (merchant_name) * 60",
-                    "interval": "",
-                    "intervalFactor": 2,
-                    "legendFormat": "searches - {{merchant_name}}",
-                    "refId": "B"
                 }
             ],
             "thresholds": [],
             "timeFrom": null,
             "timeRegions": [],
             "timeShift": null,
-            "title": "Booking Success Rate (rides created vs searches)",
+            "title": "Booking Success Rate (rides created / searches)",
             "tooltip": { "shared": true, "sort": 2, "value_type": "individual" },
             "type": "graph",
             "xaxis": { "buckets": null, "mode": "time", "name": null, "show": true, "values": [] },
             "yaxes": [
-                { "format": "short", "label": "req/min", "logBase": 1, "max": null, "min": "0", "show": true },
+                { "format": "percentunit", "label": "ratio", "logBase": 1, "max": "1", "min": "0", "show": true },
                 { "format": "short", "label": null, "logBase": 1, "max": null, "min": null, "show": true }
             ],
             "yaxis": { "align": false, "alignLevel": null }

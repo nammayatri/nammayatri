@@ -83,7 +83,7 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -Wall -Wcompat -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wincomplete-uni-patterns
+  ghc-options: -Wall -Wcompat -Widentities -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -170,7 +170,7 @@ executable kafka-consumers-exe
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -Wall -Wcompat -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+  ghc-options: -Wall -Wcompat -Widentities -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
