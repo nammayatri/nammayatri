@@ -339,6 +339,7 @@ library
       Domain.Types.Extra.TicketBooking
       Domain.Types.Extra.VendorSplitDetails
       Domain.Types.FarePolicy.FareProductType
+      Domain.Types.FleetOperatorTripAction
       Domain.Types.Geometry
       Domain.Types.HotSpot
       Domain.Types.LocationAddress

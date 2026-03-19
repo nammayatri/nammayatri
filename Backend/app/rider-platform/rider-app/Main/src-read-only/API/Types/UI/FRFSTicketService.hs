@@ -14,6 +14,7 @@ import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus
 import qualified Domain.Types.FRFSTicketStatus
+import qualified Domain.Types.FleetOperatorTripAction
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
@@ -357,7 +358,7 @@ data FleetOperatorCurrentOperationResp = FleetOperatorCurrentOperationResp
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FleetOperatorTripActionReq = FleetOperatorTripActionReq
-  { action :: Data.Text.Text,
+  { action :: Domain.Types.FleetOperatorTripAction.FleetOperatorTripAction,
     conductorToken :: Data.Maybe.Maybe Data.Text.Text,
     driverToken :: Data.Maybe.Maybe Data.Text.Text,
     vehicleNumber :: Data.Maybe.Maybe Data.Text.Text
