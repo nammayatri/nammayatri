@@ -30,7 +30,7 @@ instance JT.JourneyLeg BusLegRequest m where
   cancel (BusLegRequestCancel legData) = CFRFS.cancel legData.searchId legData.cancellationType
   cancel _ = throwError (InternalError "Not supported")
 
-  getState (BusLegRequestGetState req) = CFRFS.getState DTrip.Bus req.searchId req.riderLastPoints req.movementDetected req.routeCodeForDetailedTracking req.journeyLeg
+  getState (BusLegRequestGetState req) = CFRFS.getState DTrip.Bus req.searchId req.riderLastPoints req.movementDetected req.routeCodeForDetailedTracking req.journeyLeg req.mbFleetNo
   getState _ = throwError (InternalError "Not supported")
 
   getInfo (BusLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.journeyLeg req.journeyLegs

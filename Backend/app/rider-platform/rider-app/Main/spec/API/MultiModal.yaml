@@ -535,6 +535,8 @@ apis:
         journeyId: Id Journey
       request:
         type: RiderLocationReq
+      query:
+        fleetNo: Text
       response:
         type: JourneyStatusResp
 
