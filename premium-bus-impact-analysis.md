@@ -1,9 +1,11 @@
 # Premium Bus — Impact Analysis & Validation Queries
 
-**Date:** 2026-03-17
+**Last updated:** 2026-03-17
 **PR:** https://github.com/nammayatri/nammayatri/pull/14007 (backend), https://github.com/nammayatri/ny-react-native/pull/6146 (frontend)
 **Launch date:** 2026-03-11 (premium bus app-only booking)
 **Data source:** ClickHouse `atlas_app` database
+
+> **Note:** All queries below use `created_at >= '2026-03-11'` (launch date). Replace this date if re-running for a different time window.
 
 ---
 
@@ -72,8 +74,8 @@ GROUP BY status
 ORDER BY booking_count DESC
 ```
 
-**Expected baseline:** CONFIRMED < 50%, FAILED + PAYMENT_PENDING > 30%
-**Post-fix target:** CONFIRMED > 80%, FAILED < 10%
+**Baseline (Mar 11-17):** CONFIRMED ~84%, PAYMENT_PENDING ~13%, FAILED <1%
+**Post-fix target:** CONFIRMED > 90%, PAYMENT_PENDING < 5%
 
 ---
 
@@ -98,8 +100,8 @@ INNER JOIN atlas_app.payment_order AS po ON tbp.payment_order_id = po.id
 INNER JOIN atlas_app.payment_transaction AS pt ON po.id = pt.order_id
 ```
 
-**Expected baseline:** ~30% affected (from reports/fix-plan-booking.md analysis)
-**Post-fix target:** < 5%
+**Baseline (Mar 11-17):** ~0.06% of riders affected (96 of 152K)
+**Post-fix target:** Zero new orphaned payments after deployment
 
 ---
 
@@ -109,12 +111,13 @@ INNER JOIN atlas_app.payment_transaction AS pt ON po.id = pt.order_id
 SELECT
     tb.id AS booking_id,
     tb.rider_id,
-    count(t.id) AS actual_ticket_count,
+    tkt.actual_tickets AS actual_ticket_count,
     tb.quantity AS expected_ticket_count,
     tb.created_at
 FROM (
     SELECT frfs_ticket_booking_id AS booking_id, countDistinct(id) AS actual_tickets
-    FROM atlas_app.frfs_ticket GROUP BY frfs_ticket_booking_id
+    FROM atlas_app.frfs_ticket FINAL
+    GROUP BY frfs_ticket_booking_id
 ) AS tkt
 INNER JOIN (
     SELECT id, rider_id, quantity, created_at
@@ -215,7 +218,7 @@ GROUP BY dt
 ORDER BY dt
 ```
 
-**Expected:** success_rate_pct should increase from ~30-40% to >80% after deploy
+**Expected:** success_rate_pct should increase from ~84% baseline to >90% after deploy
 
 ---
 

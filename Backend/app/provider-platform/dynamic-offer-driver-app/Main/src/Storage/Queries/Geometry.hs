@@ -15,7 +15,6 @@
 
 module Storage.Queries.Geometry where
 
-import Data.Either
 import qualified Database.Beam as B
 import Domain.Types.Geometry
 import qualified EulerHS.Language as L
@@ -47,7 +46,11 @@ findGeometriesContaining :: forall m r. (MonadFlow m, EsqDBFlow m r, CacheFlow m
 findGeometriesContaining gps regions = do
   dbConf <- getReplicaBeamConfig
   geoms <- L.runDB dbConf $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
-  catMaybes <$> mapM fromTType' (fromRight [] geoms)
+  case geoms of
+    Left err -> do
+      logError $ "findGeometriesContaining: DB query failed: " <> show err
+      pure []
+    Right rows -> catMaybes <$> mapM fromTType' rows
 
 someGeometriesContain :: forall m r. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LatLong -> [Text] -> m Bool
 someGeometriesContain gps regions = do
@@ -66,7 +69,11 @@ findGeometriesContainingGps gps = do
                 containsPoint' (gps.lon, gps.lat)
             )
             $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
-  catMaybes <$> mapM fromTType' (fromRight [] geoms)
+  case geoms of
+    Left err -> do
+      logError $ "findGeometriesContainingGps: DB query failed: " <> show err
+      pure []
+    Right rows -> catMaybes <$> mapM fromTType' rows
 
 instance FromTType' BeamG.Geometry Geometry where
   fromTType' BeamG.GeometryT {..} = do

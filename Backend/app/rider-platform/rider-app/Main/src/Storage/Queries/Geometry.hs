@@ -21,7 +21,6 @@ module Storage.Queries.Geometry
   )
 where
 
-import Data.Either
 import qualified Data.ByteString.Char8 as BS8
 import qualified Database.Beam as B
 import Database.Beam.Postgres
@@ -57,7 +56,11 @@ findGeometriesContaining :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LatLo
 findGeometriesContaining gps regions = do
   dbConf <- getReplicaBeamConfig
   geoms <- L.runDB dbConf $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
-  catMaybes <$> mapM fromTType' (fromRight [] geoms)
+  case geoms of
+    Left err -> do
+      logError $ "findGeometriesContaining: DB query failed: " <> show err
+      pure []
+    Right rows -> catMaybes <$> mapM fromTType' rows
 
 -- | Find geometries within a buffer distance (in meters) of a point.
 -- Uses PostGIS ST_DWithin with geography cast for meter-based distance.
@@ -75,7 +78,11 @@ findGeometriesWithinBuffer gps regions bufferMeters = do
                   B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))
             )
             $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
-  catMaybes <$> mapM fromTType' (fromRight [] geoms)
+  case geoms of
+    Left err -> do
+      logError $ "findGeometriesWithinBuffer: DB query failed: " <> show err
+      pure []
+    Right rows -> catMaybes <$> mapM fromTType' rows
 
 -- | Raw PostGIS ST_DWithin expression for geography-based distance check.
 dWithinPoint' :: (Double, Double) -> Int -> BQ.QGenExpr ctxt Postgres s Bool
