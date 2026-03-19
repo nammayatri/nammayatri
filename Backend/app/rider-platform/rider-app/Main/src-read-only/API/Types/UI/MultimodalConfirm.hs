@@ -208,6 +208,7 @@ data LegServiceTierOptionsResp = LegServiceTierOptionsResp {options :: [Domain.T
 
 data LegStatus = LegStatus
   { bookingStatus :: Lib.JourneyModule.State.Types.JourneyBookingStatus,
+    currentTripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fleetNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     legOrder :: Kernel.Prelude.Int,
     mode :: Domain.Types.Trip.MultimodalTravelMode,
@@ -223,7 +224,6 @@ data LegStatus = LegStatus
 
 data LiveVehicleInfo = LiveVehicleInfo
   { currentTripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    currentTripNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA],
     locationUTCTimestamp :: Kernel.Prelude.UTCTime,
     number :: Kernel.Prelude.Text,

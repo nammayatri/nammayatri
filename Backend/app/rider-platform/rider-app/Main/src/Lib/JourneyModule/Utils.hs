@@ -1510,6 +1510,27 @@ getVehicleServiceSubTypesFromInMem integratedBPPConfigs vehicleNumber =
     mbVehicleLiveRouteInfo <- getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing
     pure $ mbVehicleLiveRouteInfo >>= (\(_, v) -> v.serviceSubTypes)
 
+-- | Get the current trip ID for a vehicle, but only return non-Nothing for PREMIUM tier vehicles.
+-- Fetches VehicleLiveRouteInfo and extracts both serviceType and currentTripId in a single call.
+getVehicleCurrentTripId ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  DIntegratedBPPConfig.IntegratedBPPConfig ->
+  Text ->
+  m (Maybe Text)
+getVehicleCurrentTripId integratedBppConfig vehicleNumber = do
+  mbLiveRouteInfo <- getVehicleLiveRouteInfo [integratedBppConfig] vehicleNumber Nothing
+  case mbLiveRouteInfo of
+    Just (_, lri) ->
+      if lri.serviceType == Spec.PREMIUM
+        then do
+          let mbCurrentTripId = do
+                waybill <- lri.waybillId
+                tripNum <- lri.tripNumber
+                pure $ waybill <> "-" <> show tripNum
+          pure mbCurrentTripId
+        else pure Nothing
+    Nothing -> pure Nothing
+
 getVehicleLiveRouteInfoUnsafe ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   [DIntegratedBPPConfig.IntegratedBPPConfig] ->
