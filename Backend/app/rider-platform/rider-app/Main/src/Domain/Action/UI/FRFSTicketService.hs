@@ -1455,10 +1455,10 @@ postFrfsFleetOperatorTripAction (mbPersonId, merchantId) req = do
               Nothing -> pure ()
               Just person -> do
                 -- Send trip start notification sequentially
-                let routeId = fromMaybe "" booking.routeCode
-                let vehicleNo = fromMaybe "" req.vehicleNumber
-                logInfo $ "Notifying passenger " <> person.id.getId <> " that bus trip has started on route " <> routeId
-                Notifications.notifyBusTripStarted person vehicleNo routeId tripId
+                let routeName = fromMaybe "" booking.routeName
+                let vehicleNo = fromMaybe "" booking.vehicleNumber
+                logInfo $ "Notifying passenger " <> person.id.getId <> " that bus trip has started on route " <> routeName
+                Notifications.notifyBusTripStarted person vehicleNo routeName tripId
       pure
         FRFSTicketService.FleetOperatorTripActionResp
           { currentTripNumber = nextTrip,
