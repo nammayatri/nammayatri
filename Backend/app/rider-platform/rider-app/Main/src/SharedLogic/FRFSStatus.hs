@@ -198,8 +198,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                           else True
                   if paymentBookingStatus == FRFSTicketService.SUCCESS && (not isMultiModalBooking || isJust mbJourneyId) && shouldProceedWithConfirm
                     then do
-                      -- Add default TTL of 1 min or the value provided in the config
-                      let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
+                      -- Add default TTL of 2 min or the value provided in the config
+                      let updatedTTL = addUTCTime (maybe 120 intToNominalDiffTime bapConfig.confirmTTLSec) now
                       transactions <- QPaymentTransaction.findAllByOrderId paymentOrder.id
                       txnId <- getSuccessTransactionId transactions
                       isLockAcquired <- Hedis.tryLockRedis (mkPaymentSuccessLockKey bookingId) 60
