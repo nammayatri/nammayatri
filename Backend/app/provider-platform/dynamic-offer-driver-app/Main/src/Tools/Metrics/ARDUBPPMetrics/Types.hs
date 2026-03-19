@@ -32,7 +32,8 @@ type SearchDurationMetric = (P.Vector P.Label2 P.Histogram, P.Vector P.Label2 P.
 data BPPMetricsContainer = BPPMetricsContainer
   { searchDurationTimeout :: Seconds,
     searchDuration :: SearchDurationMetric,
-    countingDeviation :: CountingDeviationMetric
+    countingDeviation :: CountingDeviationMetric,
+    prematureArrivalBlocked :: P.Vector P.Label1 P.Counter
   }
 
 data CountingDeviationMetric = CountingDeviationMetric
@@ -44,6 +45,11 @@ registerBPPMetricsContainer :: Seconds -> IO BPPMetricsContainer
 registerBPPMetricsContainer searchDurationTimeout = do
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
   countingDeviation <- registerCountingDeviationMetric
+  prematureArrivalBlocked <-
+    P.register $
+      P.vector "city" $
+        P.counter $
+          P.Info "premature_arrival_blocked_total" "Premature arrival attempts blocked (driver >500m from pickup)"
   return $ BPPMetricsContainer {..}
 
 registerCountingDeviationMetric :: IO CountingDeviationMetric
