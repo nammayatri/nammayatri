@@ -99,8 +99,8 @@ parseDisabilityTag = \case
   "OTHER_DISABILITY" -> Just OTHER_DISABILITY
   _ -> Nothing
 
--- | Lossy parser kept for backwards-compatibility (JSON deserialisation,
---   legacy database rows).  Unknown strings fall back to 'OTHER_DISABILITY'.
+-- | Lossy parser kept for backwards-compatibility with legacy database rows.
+--   Unknown strings fall back to 'OTHER_DISABILITY'.
 --   Prefer 'parseDisabilityTag' in new code.
 disabilityTagFromText :: T.Text -> DisabilityTag
 disabilityTagFromText t = fromMaybe OTHER_DISABILITY (parseDisabilityTag t)
@@ -111,7 +111,10 @@ instance ToJSON DisabilityTag where
   toJSON = String . disabilityTagToText
 
 instance FromJSON DisabilityTag where
-  parseJSON = withText "DisabilityTag" (pure . disabilityTagFromText)
+  parseJSON = withText "DisabilityTag" $ \t ->
+    case parseDisabilityTag t of
+      Just tag -> pure tag
+      Nothing -> fail $ "Unknown DisabilityTag: " <> T.unpack t
 
 -- Beam / PostgreSQL instances ----------------------------------------------
 
