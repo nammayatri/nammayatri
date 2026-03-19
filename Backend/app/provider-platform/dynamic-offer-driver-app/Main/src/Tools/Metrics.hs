@@ -16,4 +16,7 @@ module Tools.Metrics (module Reexport) where
 
 import Kernel.Tools.Metrics.CoreMetrics as Reexport
 import Tools.Metrics.ARDUBPPMetrics as Reexport
+import Tools.Metrics.CancellationMetrics as Reexport
+import Tools.Metrics.PaymentMonitoringMetrics as Reexport
+import Tools.Metrics.RideFunnelMetrics as Reexport
 import Tools.Metrics.SendSearchRequestToDriverMetrics as Reexport

@@ -1,0 +1,72 @@
+groups:
+  - name: ride_allocation_critical
+    rules:
+      - alert: RideAllocationSuccessRateLow
+        expr: ride:allocation_success_rate:5m < 0.50
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+          runbook: ny-ride-allocation-investigation
+        annotations:
+          summary: "Ride allocation success rate below 50% in {{ $labels.city }}/{{ $labels.zone }}"
+          description: "Only {{ $value | humanizePercentage }} of ride requests are being matched to drivers. Check driver supply, batch quality, and allocator health."
+
+      - alert: OrderFulfillmentRateLow
+        expr: ride:order_fulfillment_rate:5m < 0.30
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+          runbook: ny-ride-allocation-investigation
+        annotations:
+          summary: "Order fulfillment rate below 30% in {{ $labels.merchantOperatingCityId }}"
+          description: "Fewer than 30% of searches are resulting in rides. Possible supply shortage or allocation failure."
+
+      - alert: AllocatorTaskDurationHigh
+        expr: histogram_quantile(0.95, sum(rate(BTM_task_duration_bucket[5m])) by (le)) > 5
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+          runbook: ny-ride-allocation-investigation
+        annotations:
+          summary: "Allocator task P95 latency above 5s"
+          description: "The allocator is taking too long to process batches. Check for DB/Redis slowness or resource pressure."
+
+  - name: ride_allocation_warning
+    rules:
+      - alert: DriverAcceptanceRateLow
+        expr: ride:driver_acceptance_rate:5m < 0.20
+        for: 10m
+        labels:
+          severity: high
+          team: backend
+          runbook: ny-ride-allocation-investigation
+        annotations:
+          summary: "Driver acceptance rate below 20% in {{ $labels.city }}"
+          description: "Drivers are declining most ride requests. Check incentives, surge pricing correlation, and driver cohort patterns."
+
+      - alert: EmptyBatchRateHigh
+        expr: |
+          sum(rate(ride_batch_driver_count_bucket{le="0"}[15m])) by (city)
+          /
+          sum(rate(ride_batch_driver_count_count[15m])) by (city) > 0.30
+        for: 15m
+        labels:
+          severity: warning
+          team: backend
+          runbook: ny-ride-allocation-investigation
+        annotations:
+          summary: "Over 30% of allocation batches finding zero drivers in {{ $labels.city }}"
+          description: "Many allocation batches are empty. Check driver availability and search radius configuration."
+
+      - alert: RideFunnelDropoffHigh
+        expr: ride:funnel_dropoff_rate:5m > 0.70
+        for: 15m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Ride funnel drop-off rate above 70% in {{ $labels.city }}"
+          description: "More than 70% of searches are not completing as rides. Investigate per-stage conversion rates."

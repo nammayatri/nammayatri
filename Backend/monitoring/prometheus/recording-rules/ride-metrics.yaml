@@ -1,0 +1,51 @@
+groups:
+  - name: ride_recording_rules
+    interval: 30s
+    rules:
+      - record: ride:order_fulfillment_rate:5m
+        expr: |
+          sum(rate(ride_created_count[5m])) by (merchantOperatingCityId)
+          /
+          sum(rate(search_request_count[5m])) by (merchantOperatingCityId)
+
+      - record: ride:allocation_success_rate:5m
+        expr: |
+          sum(rate(ride_allocation_request_total{result="matched"}[5m])) by (city, zone)
+          /
+          sum(rate(ride_allocation_request_total[5m])) by (city, zone)
+
+      - record: ride:cancellation_rate:15m
+        expr: |
+          sum(rate(ride_cancellation_total[15m])) by (city, cancelled_by)
+          /
+          sum(rate(ride_created_count[15m])) by (city)
+
+      - record: ride:driver_acceptance_rate:5m
+        expr: |
+          sum(rate(ride_driver_notification_total{result="accepted"}[5m])) by (city)
+          /
+          sum(rate(ride_driver_notification_total{result!="sent"}[5m])) by (city)
+
+      - record: ride:funnel_dropoff_rate:5m
+        expr: |
+          1 - (
+            sum(rate(ride_funnel_stage_total{stage="ride_complete", result="success"}[5m])) by (city)
+            /
+            sum(rate(ride_funnel_stage_total{stage="search", result="success"}[5m])) by (city)
+          )
+
+      - record: payment:success_rate:5m
+        expr: |
+          sum(rate(payment_gateway_request_total{result="success"}[5m])) by (method)
+          /
+          sum(rate(payment_gateway_request_total[5m])) by (method)
+
+      - record: payment:gateway_success_rate:5m
+        expr: |
+          sum(rate(payment_gateway_request_total{result="success"}[5m])) by (gateway)
+          /
+          sum(rate(payment_gateway_request_total[5m])) by (gateway)
+
+      - record: payment:refund_rate:5m
+        expr: |
+          sum(rate(refund_total[5m])) by (gateway, result)

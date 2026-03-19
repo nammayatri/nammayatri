@@ -1,0 +1,83 @@
+groups:
+  - name: payment_critical
+    rules:
+      - alert: PaymentSuccessRateLow
+        expr: payment:success_rate:5m < 0.95
+        for: 5m
+        labels:
+          severity: critical
+          team: payments
+          runbook: ny-payment-failure-spike-investigation
+        annotations:
+          summary: "Payment success rate below 95% for {{ $labels.method }}"
+          description: "Payment method {{ $labels.method }} has {{ $value | humanizePercentage }} success rate. Check gateway health and bank-specific errors."
+
+      - alert: PaymentGatewayDown
+        expr: payment:gateway_success_rate:5m < 0.80
+        for: 3m
+        labels:
+          severity: critical
+          team: payments
+          runbook: ny-payment-failure-spike-investigation
+        annotations:
+          summary: "Payment gateway {{ $labels.gateway }} success rate below 80%"
+          description: "Gateway {{ $labels.gateway }} is failing at an elevated rate. Check for gateway outage or configuration issues."
+
+      - alert: DoubleDeductionDetected
+        expr: increase(double_deduction_detected_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          team: payments
+          runbook: ny-payment-failure-spike-investigation
+        annotations:
+          summary: "Double deduction detected in {{ $labels.city }}"
+          description: "A double deduction event was detected. Immediate investigation required to prevent customer trust erosion."
+
+      - alert: PaymentGatewayLatencyHigh
+        expr: histogram_quantile(0.95, sum(rate(payment_gateway_latency_seconds_bucket[5m])) by (le, gateway)) > 10
+        for: 5m
+        labels:
+          severity: critical
+          team: payments
+          runbook: ny-payment-failure-spike-investigation
+        annotations:
+          summary: "Payment gateway {{ $labels.gateway }} P95 latency above 10s"
+          description: "Payment processing is extremely slow. Users are likely seeing timeouts."
+
+  - name: payment_warning
+    rules:
+      - alert: RefundProcessingDelayed
+        expr: histogram_quantile(0.95, sum(rate(refund_processing_duration_seconds_bucket[1h])) by (le)) > 86400
+        for: 1h
+        labels:
+          severity: warning
+          team: payments
+          runbook: ny-payment-failure-spike-investigation
+        annotations:
+          summary: "Refund processing P95 exceeds 24 hours"
+          description: "Refunds are taking longer than 24 hours at P95. Check gateway refund processing and reconciliation jobs."
+
+      - alert: RefundFailureRateHigh
+        expr: |
+          sum(rate(refund_total{result="failure"}[1h])) by (gateway)
+          /
+          sum(rate(refund_total[1h])) by (gateway) > 0.10
+        for: 1h
+        labels:
+          severity: warning
+          team: payments
+          runbook: ny-payment-failure-spike-investigation
+        annotations:
+          summary: "Refund failure rate above 10% for gateway {{ $labels.gateway }}"
+          description: "Refunds are failing at an elevated rate. Check gateway API health and refund eligibility logic."
+
+      - alert: PaymentMethodSwitchSpike
+        expr: sum(rate(payment_method_switch_total[1h])) > 50
+        for: 1h
+        labels:
+          severity: warning
+          team: payments
+        annotations:
+          summary: "Elevated payment method switching rate"
+          description: "Over 50 payment method switches per hour. May indicate UPI/card failures forcing users to switch to cash."

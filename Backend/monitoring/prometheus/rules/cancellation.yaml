@@ -1,0 +1,69 @@
+groups:
+  - name: cancellation_critical
+    rules:
+      - alert: DriverCancellationRateSpike
+        expr: ride:cancellation_rate:15m{cancelled_by="driver"} > 0.25
+        for: 15m
+        labels:
+          severity: high
+          team: backend
+          runbook: ny-cancellation-rate-spike-investigation
+        annotations:
+          summary: "Driver cancellation rate above 25% in {{ $labels.city }}"
+          description: "{{ $value | humanizePercentage }} of rides are being cancelled by drivers. Check reason breakdown, zone patterns, and incentive changes."
+
+      - alert: PostAcceptanceCancellationSpike
+        expr: |
+          sum(rate(ride_cancellation_after_acceptance_total[15m])) by (city)
+          /
+          sum(rate(ride_created_count[15m])) by (city) > 0.15
+        for: 15m
+        labels:
+          severity: high
+          team: backend
+          runbook: ny-cancellation-rate-spike-investigation
+        annotations:
+          summary: "Post-acceptance cancellation rate above 15% in {{ $labels.city }}"
+          description: "Riders and drivers are cancelling after acceptance at an elevated rate. Check timing distribution and passive cancellation patterns."
+
+      - alert: ReallocationFailureRateHigh
+        expr: |
+          sum(rate(reallocation_success_total{result!="matched"}[15m])) by (city)
+          /
+          sum(rate(reallocation_success_total[15m])) by (city) > 0.50
+        for: 10m
+        labels:
+          severity: high
+          team: backend
+          runbook: ny-cancellation-rate-spike-investigation
+        annotations:
+          summary: "Reallocation failure rate above 50% in {{ $labels.city }}"
+          description: "More than half of reallocation attempts after cancellation are failing. Riders are left stranded."
+
+  - name: cancellation_warning
+    rules:
+      - alert: PassiveCancellationDetected
+        expr: sum(rate(ride_passive_cancellation_total[30m])) by (city) > 5
+        for: 30m
+        labels:
+          severity: warning
+          team: backend
+          runbook: ny-cancellation-rate-spike-investigation
+        annotations:
+          summary: "Elevated passive cancellation rate in {{ $labels.city }}"
+          description: "Detected pattern of drivers forcing riders to cancel. More than 5 passive cancellations in 30 min."
+
+      - alert: CancellationReasonConcentration
+        expr: |
+          max(
+            sum(rate(ride_cancellation_total[1h])) by (city, reason)
+            /
+            sum(rate(ride_cancellation_total[1h])) by (city)
+          ) by (city) > 0.60
+        for: 1h
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Single cancellation reason dominates (>60%) in {{ $labels.city }}"
+          description: "One cancellation reason accounts for over 60% of all cancellations. Investigate whether this is a systemic issue."
