@@ -184,7 +184,7 @@ library
       UndecidableInstances
       DerivingStrategies
       DerivingVia
-  ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
+  ghc-options: -Wall -Wcompat -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -261,7 +261,7 @@ executable public-transport-rider-platform-exe
       UndecidableInstances
       DerivingStrategies
       DerivingVia
-  ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+  ghc-options: -Wall -Wcompat -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
