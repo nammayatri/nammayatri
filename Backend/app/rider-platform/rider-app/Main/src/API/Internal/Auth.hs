@@ -13,13 +13,24 @@ import Storage.Beam.SystemConfigs ()
 
 type API =
   "auth"
-    :> Header "token" RegToken
-    :> Header "api-key" Text
-    :> Get '[JSON] Domain.InternalResp
+    :> ( Header "token" RegToken
+           :> Header "api-key" Text
+           :> Get '[JSON] Domain.InternalResp
+           :<|> "getToken"
+             :> Header "token" Text
+             :> QueryParam "mobileNumber" Text
+             :> QueryParam "mobileCountryCode" Text
+             :> Get '[JSON] Domain.CustomerAuthTokenResp
+       )
 
 handler :: FlowServer API
 handler =
   internalAuth
+    :<|> getToken
 
 internalAuth :: Maybe RegToken -> Maybe Text -> FlowHandler Domain.InternalResp
 internalAuth token apiKey = withFlowHandlerAPI $ Domain.internalAuth token apiKey
+
+getToken :: Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Domain.CustomerAuthTokenResp
+getToken apiKey mobileNumber mobileCountryCode =
+  withFlowHandlerAPI $ Domain.getCustomerAuthToken apiKey mobileNumber mobileCountryCode
