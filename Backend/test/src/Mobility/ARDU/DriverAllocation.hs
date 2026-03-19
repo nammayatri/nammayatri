@@ -84,7 +84,6 @@ data MockHandle = MockHandle
     mockIsReceivedMaxDriverQuotes :: Bool,
     mockIsBatchNumExceedLimit :: Bool,
     mockIsScheduledBooking :: Bool,
-    mockDriverPool :: [DriverPoolWithActualDistResult],
     mockPoolType :: PoolType,
     mockNextScheduleTime :: Maybe Seconds
   }
@@ -97,7 +96,6 @@ defaultMockHandle =
       mockIsReceivedMaxDriverQuotes = False,
       mockIsBatchNumExceedLimit = False,
       mockIsScheduledBooking = False,
-      mockDriverPool = [],
       mockPoolType = NormalPool,
       mockNextScheduleTime = Nothing
     }
@@ -219,7 +217,7 @@ getBatchSizeSpec = describe "getBatchSize" $ do
   it "returns default batch size for empty vector" $ do
     getBatchSize V.empty 0 30 `shouldBe` 30
 
-  it "returns default batch size when vector has single element and index is -1" $ do
+  it "returns default batch size when vector has single element and index is negative" $ do
     let dynamicSizes = V.fromList [5]
     getBatchSize dynamicSizes (-2) 30 `shouldBe` 30
 
@@ -266,8 +264,7 @@ handlerLogicSpec = describe "Handler logic" $ do
   it "reschedules with pool info when drivers available" $ do
     let handle =
           defaultMockHandle
-            { mockDriverPool = [mkOnlineDriver "d1" 100 1000 60],
-              mockPoolType = NormalPool,
+            { mockPoolType = NormalPool,
               mockNextScheduleTime = Nothing
             }
     simulateHandler handle `shouldBe` [ActionReschedule NormalPool Nothing]
@@ -283,8 +280,7 @@ handlerLogicSpec = describe "Handler logic" $ do
   it "still reschedules even with empty pool (batch not exceeded)" $ do
     let handle =
           defaultMockHandle
-            { mockDriverPool = [],
-              mockPoolType = NormalPool,
+            { mockPoolType = NormalPool,
               mockNextScheduleTime = Nothing
             }
     simulateHandler handle `shouldBe` [ActionReschedule NormalPool Nothing]
@@ -322,8 +318,7 @@ edgeCaseSpec = describe "Edge cases" $ do
       let actions =
             simulateHandler
               defaultMockHandle
-                { mockDriverPool = [],
-                  mockIsBatchNumExceedLimit = False
+                { mockIsBatchNumExceedLimit = False
                 }
       actions `shouldBe` [ActionReschedule NormalPool Nothing]
 
