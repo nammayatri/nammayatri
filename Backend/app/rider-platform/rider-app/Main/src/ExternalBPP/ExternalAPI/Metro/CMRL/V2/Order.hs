@@ -281,8 +281,7 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
   when (ticketRes.returnCode /= "0") $ do
     logError $ "[CMRLV2:Order] Ticket generation failed: returnCode=" <> ticketRes.returnCode <> ", message=" <> ticketRes.returnMessage
     -- Handle specific CMRL error codes with user-facing messages
-    let isAuthCodeError = T.isInfixOf "Authorization" ticketRes.returnMessage
-                       || T.isInfixOf "authorization" ticketRes.returnMessage
+    let isAuthCodeError = T.isInfixOf "authorization" (T.toLower ticketRes.returnMessage)
                        || ticketRes.returnCode == "-1"
     if isAuthCodeError
       then throwError $ InternalError "Metro ticket booking authorization expired. Please try booking again."

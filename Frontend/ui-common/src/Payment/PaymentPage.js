@@ -64,11 +64,11 @@ export const  killPP = function (services) {
 }
 
 export const initiatePP = function () {
-  try { startPaymentPageLoad(); } catch(_) {}
   if (ppInitiateStatus()) {
     window.isPPInitiated = true;
     return;
   }
+  try { startPaymentPageLoad(); } catch(_) {}
   try {
     if (JBridge.initiatePP) {
       JBridge.initiatePP(JSON.stringify(getInitiatPayload()));

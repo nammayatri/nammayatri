@@ -45,11 +45,15 @@ function pushMetric(metricName, labels, value) {
     if (JBridge && JBridge.firebaseLogEventWithParams) {
       JBridge.firebaseLogEventWithParams("ny_metric_" + metricName, "payload", JSON.stringify(payload));
     }
+  } catch (e) {
+    console.warn("[MetricsTracking] firebase pushMetric failed:", e);
+  }
+  try {
     if (typeof window.__pushMetricToBackend === "function") {
       window.__pushMetricToBackend(payload);
     }
   } catch (e) {
-    console.warn("[MetricsTracking] pushMetric failed:", e);
+    console.warn("[MetricsTracking] backend pushMetric failed:", e);
   }
 }
 
