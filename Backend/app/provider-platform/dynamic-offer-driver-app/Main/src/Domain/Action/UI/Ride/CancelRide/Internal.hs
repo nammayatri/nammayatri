@@ -305,37 +305,48 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
         mbPanCard <- QPanCard.findByDriverId ride.driverId
         mbDriverInfo <- QDI.findById (cast ride.driverId)
         ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig
-        result <- runFinance ctx $ do
-          mapM_
-            ( \(amt, ref, dest) -> do
-                transfer_ BuyerAsset BuyerExternal amt ref
-                void $ transfer BuyerExternal dest amt ref
-            )
-            cancellationComponents
-          -- TDS: Liability(DRIVER/FLEET_OWNER) -> Liability(GOVERNMENT_DIRECT)
-          whenJust mbTdsAmount $ \tdsAmount ->
-            void $ transfer OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCancellation
-          invoice
-            InvoiceConfig
-              { invoiceType = Invoice.RideCancellation,
-                issuedToType = "CUSTOMER",
-                issuedToId = rid.getId,
-                issuedToName = booking.riderName,
-                issuedToAddress = booking.fromLocation.address.fullAddress,
-                gstBreakdown = computeGstBreakdown rideGst gstOnCancellation,
-                lineItems =
-                  catMaybes
-                    [ if baseCancellation > 0
-                        then Just InvoiceLineItem {description = "Customer Cancellation Fee", quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, isExternalCharge = False}
-                        else Nothing,
-                      if gstOnCancellation > 0
-                        then Just InvoiceLineItem {description = "GST on Cancellation Fee", quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, isExternalCharge = False}
-                        else Nothing
-                    ]
-              }
-        case result of
-          Left err -> logInfo $ "Failed to create cancellation ledger entries: " <> show err
-          Right _ -> pure ()
+        let financeAction = runFinance ctx $ do
+              mapM_
+                ( \(amt, ref, dest) -> do
+                    transfer_ BuyerAsset BuyerExternal amt ref
+                    void $ transfer BuyerExternal dest amt ref
+                )
+                cancellationComponents
+              -- TDS: Liability(DRIVER/FLEET_OWNER) -> Liability(GOVERNMENT_DIRECT)
+              whenJust mbTdsAmount $ \tdsAmount ->
+                void $ transfer OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCancellation
+              invoice
+                InvoiceConfig
+                  { invoiceType = Invoice.RideCancellation,
+                    issuedToType = "CUSTOMER",
+                    issuedToId = rid.getId,
+                    issuedToName = booking.riderName,
+                    issuedToAddress = booking.fromLocation.address.fullAddress,
+                    gstBreakdown = computeGstBreakdown rideGst gstOnCancellation,
+                    lineItems =
+                      catMaybes
+                        [ if baseCancellation > 0
+                            then Just InvoiceLineItem {description = "Customer Cancellation Fee", quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, isExternalCharge = False}
+                            else Nothing,
+                          if gstOnCancellation > 0
+                            then Just InvoiceLineItem {description = "GST on Cancellation Fee", quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, isExternalCharge = False}
+                            else Nothing
+                        ]
+                  }
+        -- Retry up to 3 times with backoff on failure
+        let tryFinance attempt = do
+              result <- financeAction
+              case result of
+                Left err -> do
+                  if attempt < 3
+                    then do
+                      logWarning $ "Cancellation ledger creation attempt " <> show attempt <> " failed for bookingId: " <> booking.id.getId <> " error: " <> show err <> " — retrying..."
+                      liftIO $ threadDelay (attempt * 1000000) -- backoff: 1s, 2s
+                      tryFinance (attempt + 1)
+                    else do
+                      logError $ "CRITICAL: Failed to create cancellation ledger entries after 3 attempts for bookingId: " <> booking.id.getId <> " error: " <> show err
+                Right _ -> pure ()
+        tryFinance (1 :: Int)
         logInfo $ "Created customer cancellation ledger entries for bookingId: " <> booking.id.getId <> " base=" <> show baseCancellation <> " gst=" <> show gstOnCancellation <> " tds=" <> show mbTdsAmount
     _ -> do
       logError "cancelRideTransaction: riderId in booking or cancellationFee is not present"
