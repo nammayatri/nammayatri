@@ -107,6 +107,10 @@ public class LocationUpdateService extends Service {
     private static final String LAST_LOCATION_TIME = "LAST_LOCATION_TIME";
     private static final String DRIVER_CURRENT_LOCATION_PRIORITY_KEY = "driver_current_location_priority";
     private static final String DRIVER_FUSED_LOCATION_PRIORITY_KEY = "driver_fused_location_priority";
+    private static final String PREF_LOCATION_MAX_ACCURACY = "LOCATION_MAX_ACCURACY";
+    private static final String PREF_LOCATION_ON_RIDE_MAX_ACCURACY = "LOCATION_ON_RIDE_MAX_ACCURACY";
+    private static final float DEFAULT_MAX_ACCURACY = 50.0f;
+    private static final float ON_RIDE_MAX_ACCURACY = 30.0f;
     final int notificationServiceId = 15082022; // ARDU pilot launch date : DDMMYYYY
     final int alertNotificationId = 07102022;
     FusedLocationProviderClient fusedLocationProviderClient, fusedLocClientForDistanceCal;
@@ -1045,20 +1049,24 @@ public class LocationUpdateService extends Service {
                 Location lastLocation = locationResult.getLastLocation();
                 if (lastLocation != null) {
                     // GPS accuracy filtering: reject inaccurate readings
-                    SharedPreferences accPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                    String rideStatus = accPref.getString("DRIVER_RIDE_STATUS", "IDLE");
-                    float maxAccuracy;
-                    if ("ON_RIDE".equals(rideStatus)) {
-                        String threshold = accPref.getString(PREF_LOCATION_ON_RIDE_MAX_ACCURACY, null);
-                        maxAccuracy = threshold != null ? Float.parseFloat(threshold) : ON_RIDE_MAX_ACCURACY;
-                    } else {
-                        String threshold = accPref.getString(PREF_LOCATION_MAX_ACCURACY, null);
-                        maxAccuracy = threshold != null ? Float.parseFloat(threshold) : DEFAULT_MAX_ACCURACY;
-                    }
-                    if (lastLocation.getAccuracy() > maxAccuracy) {
-                        Log.w(LOG_TAG, "Rejected location: accuracy=" + lastLocation.getAccuracy()
-                                + "m, threshold=" + maxAccuracy + "m");
-                        return;
+                    try {
+                        SharedPreferences accPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                        String rideStatus = accPref.getString("DRIVER_RIDE_STATUS", "IDLE");
+                        float maxAccuracy;
+                        if ("ON_RIDE".equals(rideStatus)) {
+                            String threshold = accPref.getString(PREF_LOCATION_ON_RIDE_MAX_ACCURACY, null);
+                            maxAccuracy = (threshold != null) ? Float.parseFloat(threshold) : ON_RIDE_MAX_ACCURACY;
+                        } else {
+                            String threshold = accPref.getString(PREF_LOCATION_MAX_ACCURACY, null);
+                            maxAccuracy = (threshold != null) ? Float.parseFloat(threshold) : DEFAULT_MAX_ACCURACY;
+                        }
+                        if (lastLocation.getAccuracy() > maxAccuracy) {
+                            Log.w(LOG_TAG, "Rejected location: accuracy=" + lastLocation.getAccuracy()
+                                    + "m, threshold=" + maxAccuracy + "m");
+                            return;
+                        }
+                    } catch (Exception e) {
+                        Log.e(LOG_TAG, "Error in accuracy filtering, allowing location", e);
                     }
 
                     updated = true;

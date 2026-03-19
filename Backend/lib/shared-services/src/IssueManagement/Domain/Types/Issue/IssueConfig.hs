@@ -24,7 +24,10 @@ data IssueConfig = IssueConfig
     reopenCount :: Int,
     onIssueCloseMsgs :: [Id IssueMessage],
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    slaFirstResponseDurationHours :: Maybe Double,
+    slaResolutionDurationHours :: Maybe Double,
+    enableSlaTracking :: Maybe Bool
   }
   deriving (Show, Generic, Read, Eq, Ord, ToJSON, FromJSON, ToSchema)
 

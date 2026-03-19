@@ -990,7 +990,7 @@ getEndDateMonth day addMonths = pred $ addGregorianMonthsClip (integerFromInt ad
 putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> HighPrecMoney -> Meters -> m ()
 putDiffMetric merchantId money mtrs = do
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  Metrics.putFareAndDistanceDeviations org.name merchantId.getId (roundToIntegral money) mtrs
+  Metrics.putFareAndDistanceDeviations org.name (roundToIntegral money) mtrs
 
 getRouteAndDistanceBetweenPoints ::
   ( EncFlow m r,
