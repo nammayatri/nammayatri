@@ -378,6 +378,9 @@ updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig = 
       currentTime = floor $ utcTimeToPOSIXSeconds now
       rideCreatedTime = floor $ utcTimeToPOSIXSeconds ride.createdAt
       driverArrivalTime = floor . utcTimeToPOSIXSeconds <$> (ride.driverArrivalTime)
+      timeSinceAcceptSec = currentTime - rideCreatedTime
+      estimatedTripDistanceMeters = fromIntegral <$> booking.estimatedDistance
+      estimatedFareAmount = Just booking.estimatedFare
       tagData =
         TY.CancelRideTagData
           { ride = ride{status = DRide.CANCELLED},
