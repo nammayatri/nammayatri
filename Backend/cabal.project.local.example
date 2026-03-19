@@ -1,0 +1,4 @@
+-- Developer override: warnings don't block compilation
+-- Copy this to cabal.project.local (gitignored) for fast iteration
+package *
+  ghc-options: -Wwarn
