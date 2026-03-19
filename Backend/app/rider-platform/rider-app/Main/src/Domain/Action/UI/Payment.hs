@@ -537,17 +537,29 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
   logDebug $ "order short Id from Response bap webhook: " <> show orderShortId
   whenJust mbServiceType $ \paymentServiceType -> do
     Redis.whenWithLockRedis (mkOrderStatusCheckKey orderShortId status) 60 $ do
-      paymentOrder <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
-      mocId <- paymentOrder.merchantOperatingCityId & fromMaybeM (InternalError "MerchantOperatingCityId not found in payment order")
-      person <- QP.findById (cast paymentOrder.personId) >>= fromMaybeM (InvalidRequest "Person not found")
-      ticketPlaceId <-
-        case paymentServiceType of
-          Payment.Normal -> do
-            ticketBooking <- QTB.findById (cast paymentOrder.id)
-            return $ ticketBooking <&> (.ticketPlaceId)
-          _ -> return Nothing
-      let orderStatusCall = Payment.orderStatus (cast paymentOrder.merchantId) (cast mocId) ticketPlaceId paymentServiceType (Just paymentOrder.personId.getId) person.clientSdkVersion paymentOrder.isMockPayment
-      void $ callWebhookHandlerWithOrderStatus merchantOperatingCity paymentServiceType (ShortId orderShortId) orderStatusCall
+      -- P0 Fix: Wrap webhook processing with error handling and dead-letter queue.
+      -- On failure, store the webhook data in Redis for manual replay/investigation.
+      -- Always return Ack to Juspay to prevent infinite retries on transient errors.
+      result <- withTryCatch "juspayWebhookHandler:processWebhook" $ do
+        paymentOrder <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
+        mocId <- paymentOrder.merchantOperatingCityId & fromMaybeM (InternalError "MerchantOperatingCityId not found in payment order")
+        person <- QP.findById (cast paymentOrder.personId) >>= fromMaybeM (InvalidRequest "Person not found")
+        ticketPlaceId <-
+          case paymentServiceType of
+            Payment.Normal -> do
+              ticketBooking <- QTB.findById (cast paymentOrder.id)
+              return $ ticketBooking <&> (.ticketPlaceId)
+            _ -> return Nothing
+        let orderStatusCall = Payment.orderStatus (cast paymentOrder.merchantId) (cast mocId) ticketPlaceId paymentServiceType (Just paymentOrder.personId.getId) person.clientSdkVersion paymentOrder.isMockPayment
+        void $ callWebhookHandlerWithOrderStatus merchantOperatingCity paymentServiceType (ShortId orderShortId) orderStatusCall
+      case result of
+        Left err -> do
+          logError $ "Juspay webhook processing failed for order " <> orderShortId <> ": " <> show err
+          -- Store in Redis dead-letter queue for monitoring and manual replay
+          now <- getCurrentTime
+          let deadLetterEntry = orderShortId <> "|" <> show status <> "|" <> show now <> "|" <> show err
+          Redis.rPush "juspay:webhook:dead-letter" [deadLetterEntry]
+        Right _ -> pure ()
   pure Ack
   where
     getOrderData osr = case osr of
@@ -694,7 +706,15 @@ stripeWebhookHandler' ::
   Flow AckResponse
 stripeWebhookHandler' serviceName merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader rawBytes = do
   (paymentServiceConfig, merchantOperatingCity) <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId serviceName
-  let checkDuplicatedEvent _eventId = pure False -- FIXME
+  -- P0 Fix: Implement Stripe webhook deduplication (was: pure False -- FIXME)
+  let checkDuplicatedEvent eventId = do
+        let dedupKey = "stripe:webhook:eventId:" <> eventId
+        mbProcessed <- Redis.get @Text dedupKey
+        case mbProcessed of
+          Just _ -> pure True
+          Nothing -> do
+            Redis.setExp dedupKey ("1" :: Text) 86400
+            pure False
   Stripe.serviceEventWebhook paymentServiceConfig checkDuplicatedEvent (stripeWebhookAction merchantOperatingCity.id) mbSigHeader rawBytes
 
 stripeWebhookAction ::
