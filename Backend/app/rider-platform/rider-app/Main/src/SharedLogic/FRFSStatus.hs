@@ -46,6 +46,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.Payment as SPayment
 import SharedLogic.FRFSUtils
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.FRFSUtils as Utils
@@ -226,8 +227,11 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                           updatedBooking <-
                             case confirmResp of
                               Left err -> do
+                                logError $ "BPP confirm failed for booking " <> show booking.id <> ": " <> err
                                 void $ QFRFSTicketBooking.updateFailureReasonById (Just err) booking.id
                                 void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
+                                -- Auto-refund: payment was charged but BPP confirm failed, so initiate refund
+                                void $ SPayment.markRefundPendingAndSyncOrderStatus merchantId_ (Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id) paymentOrder.id
                                 return $ makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
                               Right _ -> return $ makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
                           buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
