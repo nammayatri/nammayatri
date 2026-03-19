@@ -350,9 +350,11 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
                       tryFinance (attempt + 1)
                     else do
                       logError $ "CRITICAL: Failed to create cancellation ledger entries after 3 attempts for bookingId: " <> booking.id.getId <> " error: " <> show err
-                Right _ -> pure ()
-        tryFinance (1 :: Int)
-        logInfo $ "Created customer cancellation ledger entries for bookingId: " <> booking.id.getId <> " base=" <> show baseCancellation <> " gst=" <> show gstOnCancellation <> " tds=" <> show mbTdsAmount
+                      pure False
+                Right _ -> pure True
+        success <- tryFinance (1 :: Int)
+        when success $
+          logInfo $ "Created customer cancellation ledger entries for bookingId: " <> booking.id.getId <> " base=" <> show baseCancellation <> " gst=" <> show gstOnCancellation <> " tds=" <> show mbTdsAmount
     _ -> do
       logError "cancelRideTransaction: riderId in booking or cancellationFee is not present"
 

@@ -51,11 +51,12 @@ isValidTransition from to
       -- All other transitions are invalid
       _ -> False
 
--- | Checks if a status is terminal (no further transitions expected)
-isTerminalStatus :: FRFSTicketBookingStatus -> Bool
-isTerminalStatus CONFIRMED = True
-isTerminalStatus FAILED = True
-isTerminalStatus CANCELLED = True
-isTerminalStatus COUNTER_CANCELLED = True
-isTerminalStatus TECHNICAL_CANCEL_REJECTED = True
-isTerminalStatus _ = False
+-- | Checks if a status represents a completed/terminal state (no further transitions expected).
+-- Named to align with 'isValidTransition' for consistency.
+isCompletionStatus :: FRFSTicketBookingStatus -> Bool
+isCompletionStatus CONFIRMED = True
+isCompletionStatus FAILED = True
+isCompletionStatus CANCELLED = True
+isCompletionStatus COUNTER_CANCELLED = True
+isCompletionStatus TECHNICAL_CANCEL_REJECTED = True
+isCompletionStatus _ = False

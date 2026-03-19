@@ -706,15 +706,11 @@ stripeWebhookHandler' ::
   Flow AckResponse
 stripeWebhookHandler' serviceName merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader rawBytes = do
   (paymentServiceConfig, merchantOperatingCity) <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId serviceName
-  -- P0 Fix: Implement Stripe webhook deduplication (was: pure False -- FIXME)
+  -- P0 Fix: Implement Stripe webhook deduplication using atomic setNxExpire
   let checkDuplicatedEvent eventId = do
         let dedupKey = "stripe:webhook:eventId:" <> eventId
-        mbProcessed <- Redis.get @Text dedupKey
-        case mbProcessed of
-          Just _ -> pure True
-          Nothing -> do
-            Redis.setExp dedupKey ("1" :: Text) 86400
-            pure False
+        isNew <- Redis.setNxExpire dedupKey 86400 ("1" :: Text)
+        pure (not isNew)
   Stripe.serviceEventWebhook paymentServiceConfig checkDuplicatedEvent (stripeWebhookAction merchantOperatingCity.id) mbSigHeader rawBytes
 
 stripeWebhookAction ::
