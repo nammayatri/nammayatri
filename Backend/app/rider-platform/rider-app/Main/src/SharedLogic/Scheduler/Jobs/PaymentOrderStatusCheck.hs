@@ -20,6 +20,8 @@ import qualified Domain.Action.UI.ParkingBooking as ParkingBooking
 import qualified Domain.Action.UI.Pass as Pass
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.PaymentInvoice as DPI
+import qualified Domain.Types.RideStatus as DRideStatus
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
@@ -40,7 +42,9 @@ import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.JobScheduler
 import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.Payment ()
+import qualified Storage.Queries.PaymentInvoice as QPaymentInvoice
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Ride as QRide
 import qualified Tools.Metrics.BAPMetrics as Metrics
 import qualified Tools.Payment as Payment
 import qualified UrlShortner.Common as UrlShortner
@@ -73,9 +77,11 @@ paymentOrderStatusCheckJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
       merchantId' = jobData.merchantId
       merchantOperatingCityId' = jobData.merchantOperatingCityId
   now <- getCurrentTime
-  allRecentNonTerminalOrders <- QPaymentOrder.findAllNonTerminalOrders (addUTCTime (intToNominalDiffTime (-3600)) now)
+  -- Extended lookback from 1 hour to 6 hours for better reconciliation coverage.
+  -- Payments completing after 1 hour were previously never discovered by backend.
+  allRecentNonTerminalOrders <- QPaymentOrder.findAllNonTerminalOrders (addUTCTime (intToNominalDiffTime (-21600)) now)
 
-  logInfo $ "Found " <> show (length allRecentNonTerminalOrders) <> " payment orders with status not CHARGED (or CHARGED with pending refunds) created within the last hour"
+  logInfo $ "Found " <> show (length allRecentNonTerminalOrders) <> " payment orders with non-terminal status within the last 6 hours"
 
   mapM_
     ( \paymentOrder -> do
@@ -89,6 +95,12 @@ paymentOrderStatusCheckJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
             logInfo $ "Payment order status check succeeded for order " <> paymentOrder.id.getId
     )
     allRecentNonTerminalOrders
+
+  -- Reconciliation pass: find CHARGED orders where ride was cancelled/failed but no refund initiated.
+  -- This catches "payment deducted but ride cancelled" cases that were missed by the real-time flow.
+  reconciledCount <- reconcileChargedButCancelledOrders allRecentNonTerminalOrders
+  when (reconciledCount > 0) $
+    logInfo $ "Reconciliation: auto-initiated refunds for " <> show reconciledCount <> " charged-but-cancelled orders"
 
   logInfo $ "Completed payment order status check for " <> show (length allRecentNonTerminalOrders) <> " orders"
 
@@ -151,3 +163,67 @@ processPaymentOrder merchantId merchantOperatingCityId paymentOrder = do
         paymentFulfillStatus <- BBPS.bbpsOrderStatusHandler mId paymentStatusResp
         pure (paymentFulfillStatus, Nothing, Nothing)
       _ -> pure (DPayment.FulfillmentPending, Nothing, Nothing)
+
+-- | Reconciliation pass: detect CHARGED payment orders where the associated ride
+-- has been cancelled or failed, and auto-initiate refunds.
+-- This catches the "payment deducted but ride cancelled" race condition that was
+-- missed by the real-time cancellation flow (e.g., payment completed between
+-- the cancellation check and the actual cancel).
+reconcileChargedButCancelledOrders ::
+  forall m r c.
+  ( EncFlow m r,
+    CacheFlow m r,
+    MonadFlow m,
+    EsqDBFlow m r,
+    SchedulerFlow r,
+    EsqDBReplicaFlow m r,
+    ServiceFlow m r,
+    HasField "blackListedJobs" r [Text]
+  ) =>
+  [DOrder.PaymentOrder] ->
+  m Int
+reconcileChargedButCancelledOrders nonTerminalOrders = do
+  -- Filter to CHARGED orders with FulfillmentPending (payment succeeded but fulfillment didn't complete)
+  let chargedPendingOrders =
+        filter
+          ( \order ->
+              order.status == Payment.CHARGED
+                && order.paymentFulfillmentStatus `elem` [Just DPayment.FulfillmentPending, Just DPayment.FulfillmentFailed, Nothing]
+          )
+          nonTerminalOrders
+  logInfo $ "Reconciliation: checking " <> show (length chargedPendingOrders) <> " CHARGED orders with pending/failed fulfillment"
+  refundCount <- foldM processReconOrder 0 chargedPendingOrders
+  return refundCount
+  where
+    processReconOrder :: Int -> DOrder.PaymentOrder -> m Int
+    processReconOrder count order = do
+      result <- withTryCatch "reconcileChargedButCancelled" $ do
+        -- Find the invoice linked to this payment order to get the rideId
+        mbInvoice <- QPaymentInvoice.findByPaymentOrderIdAndInvoiceType (Just order.id) DPI.PAYMENT
+        case mbInvoice of
+          Nothing -> return count
+          Just invoice -> do
+            mbRide <- QRide.findById invoice.rideId
+            case mbRide of
+              Nothing -> return count
+              Just ride -> do
+                -- If ride is CANCELLED but payment was CHARGED, trigger auto-refund
+                if ride.status == DRideStatus.CANCELLED
+                  then do
+                    -- Use Redis dedup key to avoid re-processing on every job run
+                    let reconDedupKey = "PaymentRecon:AutoRefund:OrderId-" <> order.id.getId
+                    alreadyProcessed <- Redis.get @Text reconDedupKey
+                    case alreadyProcessed of
+                      Just _ -> return count -- already processed
+                      Nothing -> do
+                        Redis.setExp reconDedupKey ("1" :: Text) 86400 -- 24h TTL
+                        logInfo $ "Reconciliation: ride " <> invoice.rideId.getId <> " is CANCELLED but payment order " <> order.id.getId <> " is CHARGED. Initiating auto-refund."
+                        void $ SPayment.initiateRefundWithPaymentStatusRespSync (cast order.personId) order.id
+                        logInfo $ "Reconciliation: auto-refund initiated for order " <> order.id.getId
+                        return (count + 1)
+                  else return count
+      case result of
+        Left err -> do
+          logError $ "Reconciliation failed for order " <> order.id.getId <> ": " <> show err
+          return count
+        Right c -> return c
