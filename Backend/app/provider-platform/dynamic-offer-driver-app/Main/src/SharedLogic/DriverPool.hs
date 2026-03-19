@@ -1206,13 +1206,19 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
   prevRideDropGeoHash <- case prevRideDropLatLn of
     Just (LatLong lat lon) -> pure $ T.pack <$> DG.encode 9 (lat, lon)
     Nothing -> pure Nothing
-  return $ mkDriverPoolWithActualDistResult transporter.defaultPopupDelay prevRideDropGeoHash <$> getDistanceResults
+  -- Apply peak-hour traffic multiplier for more accurate ETA estimates.
+  -- OSRM/routing APIs return static road distance/duration without traffic consideration.
+  -- This multiplier adjusts pickup duration during known congestion windows.
+  now <- getCurrentTime
+  let localTime = addUTCTime (fromIntegral transporter.timeDiffFromUtc) now
+      trafficMultiplier = peakHourTrafficMultiplier localTime
+  return $ mkDriverPoolWithActualDistResult transporter.defaultPopupDelay prevRideDropGeoHash trafficMultiplier <$> getDistanceResults
   where
-    mkDriverPoolWithActualDistResult defaultPopupDelay prevRideDropGeoHash distDur = do
+    mkDriverPoolWithActualDistResult defaultPopupDelay prevRideDropGeoHash trafficMult distDur = do
       DriverPoolWithActualDistResult
         { driverPoolResult = distDur.origin,
           actualDistanceToPickup = distDur.distance,
-          actualDurationToPickup = distDur.duration,
+          actualDurationToPickup = Seconds $ round $ (fromIntegral distDur.duration :: Double) * trafficMult,
           intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing Nothing defaultPopupDelay,
           isPartOfIntelligentPool = False,
           pickupZone = False,
@@ -1225,6 +1231,16 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
           previousDropGeoHash = prevRideDropGeoHash,
           score = distDur.origin.score
         }
+
+    -- | Peak hour traffic multiplier for more accurate pickup ETAs.
+    -- Morning rush (8-10 AM): 1.3x, Evening rush (5-8 PM): 1.4x, Normal: 1.0x
+    peakHourTrafficMultiplier :: UTCTime -> Double
+    peakHourTrafficMultiplier localTime =
+      let dayTimeSecs = realToFrac (utctDayTime localTime) :: Double
+          hourOfDay = floor (dayTimeSecs / 3600) `mod` 24 :: Int
+      in if hourOfDay >= 8 && hourOfDay < 10 then 1.3
+         else if hourOfDay >= 17 && hourOfDay < 20 then 1.4
+         else 1.0
 
 computeActualDistanceOneToOneSrcAndDestMapping ::
   ( CacheFlow m r,
@@ -1254,6 +1270,9 @@ computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCity
             distanceUnit
           }
   logDebug $ "get distance results one to one mapping" <> show getDistanceResults
+  now <- getCurrentTime
+  let localTime = addUTCTime (fromIntegral transporter.timeDiffFromUtc) now
+      trafficMultiplier = peakHourTrafficMultiplier localTime
   let distanceAndDropPointsZipped = zip previousDropPoints (NE.toList getDistanceResults)
   driverPoolEntities <-
     mapM
@@ -1261,16 +1280,16 @@ computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCity
           prevRideDropGeoHash <- case prevRideDropLatLn of
             Just (LatLong lat lon) -> pure $ T.pack <$> DG.encode 9 (lat, lon)
             Nothing -> pure Nothing
-          return $ mkDriverPoolWithActualDistResult transporter.defaultPopupDelay prevRideDropGeoHash getDistanceResult
+          return $ mkDriverPoolWithActualDistResult transporter.defaultPopupDelay prevRideDropGeoHash trafficMultiplier getDistanceResult
       )
       distanceAndDropPointsZipped
   return $ NE.fromList driverPoolEntities
   where
-    mkDriverPoolWithActualDistResult defaultPopupDelay prevRideDropGeoHash distDur = do
+    mkDriverPoolWithActualDistResult defaultPopupDelay prevRideDropGeoHash trafficMult distDur = do
       DriverPoolWithActualDistResult
         { driverPoolResult = distDur.origin,
           actualDistanceToPickup = distDur.distance,
-          actualDurationToPickup = distDur.duration,
+          actualDurationToPickup = Seconds $ round $ (fromIntegral distDur.duration :: Double) * trafficMult,
           intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing Nothing defaultPopupDelay,
           isPartOfIntelligentPool = False,
           pickupZone = False,
@@ -1283,6 +1302,14 @@ computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCity
           previousDropGeoHash = prevRideDropGeoHash,
           score = distDur.origin.score
         }
+
+    peakHourTrafficMultiplier :: UTCTime -> Double
+    peakHourTrafficMultiplier localTime =
+      let dayTimeSecs = realToFrac (utctDayTime localTime) :: Double
+          hourOfDay = floor (dayTimeSecs / 3600) `mod` 24 :: Int
+      in if hourOfDay >= 8 && hourOfDay < 10 then 1.3
+         else if hourOfDay >= 17 && hourOfDay < 20 then 1.4
+         else 1.0
 
 parallelRequestsFilter :: (Redis.HedisFlow m r, MonadFlow m) => Maybe Version -> Int -> Int -> Int -> m Bool
 parallelRequestsFilter clientSdkVersion defaultMaxParallelReq maxParallelSearchRequests getParallelSearchRequestCount = do
