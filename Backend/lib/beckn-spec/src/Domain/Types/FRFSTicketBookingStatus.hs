@@ -51,10 +51,14 @@ isValidTransition from to
       -- All other transitions are invalid
       _ -> False
 
--- | Checks if a status is terminal (no further transitions expected)
+-- | Checks if a status is terminal (no further transitions expected).
+--
+-- Note: FAILED is /not/ terminal because it supports a retry transition
+-- (FAILED -> PAYMENT_PENDING). A booking that has genuinely failed with no
+-- retry will simply never transition again, but the state machine still
+-- permits recovery.
 isTerminalStatus :: FRFSTicketBookingStatus -> Bool
 isTerminalStatus CONFIRMED = True
-isTerminalStatus FAILED = True
 isTerminalStatus CANCELLED = True
 isTerminalStatus COUNTER_CANCELLED = True
 isTerminalStatus TECHNICAL_CANCEL_REJECTED = True

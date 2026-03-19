@@ -37,11 +37,11 @@ import Kernel.Utils.ComputeIntersection
 import Storage.CachedQueries.Toll (findAllTollsByMerchantOperatingCity)
 
 -- | Pending toll Redis TTL in seconds.
--- Reduced from 6 hours (21600) to 30 minutes (1800) as part of FIX-09:
--- If a toll exit gate isn't detected within 30 minutes of entry, resolve
--- the toll as confirmed rather than leaving it pending for hours.
+-- Set to 2 hours (7200) to handle long rides (e.g., intercity trips)
+-- where the exit gate may not be detected for a significant time after entry.
+-- Previously 30 minutes, which caused toll detection failures on longer rides.
 pendingTollTTLSeconds :: Int
-pendingTollTTLSeconds = 1800 -- 30 minutes
+pendingTollTTLSeconds = 7200 -- 2 hours
 
 tollStartGateTrackingKey :: Id DP.Driver -> Text
 tollStartGateTrackingKey driverId = "TollGateTracking:DriverId-" <> driverId.getId
