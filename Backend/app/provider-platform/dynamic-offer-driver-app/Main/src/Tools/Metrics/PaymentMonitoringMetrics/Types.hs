@@ -99,7 +99,7 @@ registerRefundCounter =
 registerRefundDurationHist :: IO RefundDurationMetric
 registerRefundDurationHist =
   P.register $
-    P.vector ("gateway") $
+    P.vector "gateway" $
       P.histogram
         (P.Info "refund_processing_duration_seconds" "Refund processing time from initiation to completion")
         refundDurationBuckets
@@ -110,7 +110,7 @@ registerRefundDurationHist =
 registerDoubleDeductionCounter :: IO DoubleDeductionMetric
 registerDoubleDeductionCounter =
   P.register $
-    P.vector ("city") $
+    P.vector "city" $
       P.counter $
         P.Info
           "double_deduction_detected_total"

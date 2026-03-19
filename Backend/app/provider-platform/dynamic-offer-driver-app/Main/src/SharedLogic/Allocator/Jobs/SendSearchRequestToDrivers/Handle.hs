@@ -102,7 +102,7 @@ processRequestSending Handle {..} goHomeCfg transactionId = do
     else do
       driverPoolWithFlags <- getNextDriverPoolBatch goHomeCfg
       let poolIsEmpty = null driverPoolWithFlags.driverPoolWithActualDistResult
-      when (not poolIsEmpty) $
+      unless poolIsEmpty $
         sendSearchRequestToDrivers driverPoolWithFlags.driverPoolWithActualDistResult driverPoolWithFlags.prevBatchDrivers goHomeCfg
       if poolIsEmpty
         then do

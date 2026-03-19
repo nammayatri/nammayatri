@@ -69,7 +69,7 @@ observeRefundDuration ::
   m ()
 observeRefundDuration gateway duration = do
   container <- asks (.paymentMonitoringMetrics)
-  liftIO $ P.withLabel container.refundDurationHist (gateway) (`P.observe` duration)
+  liftIO $ P.withLabel container.refundDurationHist gateway (`P.observe` duration)
 
 -- | Increment double deduction detection counter
 incrementDoubleDeduction ::
@@ -78,7 +78,7 @@ incrementDoubleDeduction ::
   m ()
 incrementDoubleDeduction city = do
   container <- asks (.paymentMonitoringMetrics)
-  liftIO $ P.withLabel container.doubleDeductionCounter (city) P.incCounter
+  liftIO $ P.withLabel container.doubleDeductionCounter city P.incCounter
 
 -- | Increment payment method switch counter
 incrementPaymentMethodSwitch ::
