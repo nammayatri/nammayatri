@@ -194,43 +194,64 @@ onConfirm ::
 onConfirm merchant booking' quoteCategories dOrder = do
   Metrics.finishMetrics Metrics.CONFIRM_FRFS merchant.name dOrder.transactionId booking'.merchantOperatingCityId.getId
   let booking = booking' {Booking.bppOrderId = Just dOrder.bppOrderId}
-  let discountedTickets = fromMaybe 0 booking.discountedTickets
-  tickets <- createTickets booking dOrder.tickets discountedTickets
-  let mbPaymentHoldId = listToMaybe quoteCategories >>= (.holdId)
-  let effectiveHoldId = mbPaymentHoldId <|> booking'.holdId
-  whenJust effectiveHoldId $ \holdId -> do
-    whenJust booking'.tripId $ \tripId -> do
-      logInfo $ "OnConfirm:onConfirm finalizing seat hold bookingId=" <> booking.id.getId <> " holdId=" <> holdId <> " tripId=" <> tripId
-      SeatBooking.confirmBooking tripId holdId
-      SeatBooking.releaseAbandonedHolds tripId booking.id.getId holdId
-  void $ QTicket.createMany tickets
-  mbJourneyId <- FRFSUtils.getJourneyIdFromBooking booking
-  -- Update journey expiry time based on maximum ticket validity using the created tickets
-  whenJust mbJourneyId $ \journeyId -> do
-    QJourneyExtra.updateLongestJourneyExpiryTimeWithTickets journeyId tickets
-  void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
-  person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  mRiderNumber <- mapM ENC.decrypt person.mobileNumber
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
-  let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
-  buildReconTable merchant booking fareParameters dOrder tickets mRiderNumber integratedBPPConfig
-  void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode fareParameters
-  void $ QPS.incrementTicketsBookedInEvent booking.riderId fareParameters.totalQuantity
-  void $ CQP.clearPSCache booking.riderId
-  whenJust booking.partnerOrgId $ \pOrgId -> do
-    walletPOCfg <- do
-      pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.WALLET_CLASS_NAME >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.WALLET_CLASS_NAME)
-      DPOC.getWalletClassNameConfig pOrgCfg.config
-    let mbClassName = lookup booking.providerId walletPOCfg.className
-    whenJust mbClassName $ \className -> do
-      fork ("adding googleJWTUrl" <> " Booking Id: " <> booking.id.getId) $ do
-        let serviceName = DEMSC.WalletService GW.GoogleWallet
-        let mId = booking'.merchantId
-        let mocId' = booking'.merchantOperatingCityId
-        serviceAccount <- GWSA.getserviceAccount mId mocId' serviceName
-        transitObjects' <- createTransitObjects pOrgId booking tickets person serviceAccount className integratedBPPConfig
-        url <- mkGoogleWalletLink serviceAccount transitObjects'
-        void $ QTBooking.updateGoogleWalletLinkById (Just url) booking.id
+  -- Idempotency guard: check if tickets already exist for this booking
+  existingTickets <- QTicket.findAllByTicketBookingId booking.id
+  if not (null existingTickets)
+    then do
+      logInfo $ "OnConfirm:idempotent - tickets already exist for bookingId=" <> booking.id.getId <> " count=" <> show (length existingTickets) <> ", skipping ticket creation"
+      void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
+    else do
+      -- Acquire Redis lock to prevent concurrent ticket creation from duplicate callbacks
+      let lockKey = "onConfirm:ticketCreation:" <> booking.id.getId
+      isLockAcquired <- Redis.tryLockRedis lockKey 60
+      if isLockAcquired
+        then do
+          -- Double-check after lock acquisition (another callback may have completed)
+          existingTicketsAfterLock <- QTicket.findAllByTicketBookingId booking.id
+          if not (null existingTicketsAfterLock)
+            then do
+              logInfo $ "OnConfirm:idempotent - tickets created by concurrent callback for bookingId=" <> booking.id.getId
+              void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
+            else do
+              let discountedTickets = fromMaybe 0 booking.discountedTickets
+              tickets <- createTickets booking dOrder.tickets discountedTickets
+              let mbPaymentHoldId = listToMaybe quoteCategories >>= (.holdId)
+              let effectiveHoldId = mbPaymentHoldId <|> booking'.holdId
+              whenJust effectiveHoldId $ \holdId -> do
+                whenJust booking'.tripId $ \tripId -> do
+                  logInfo $ "OnConfirm:onConfirm finalizing seat hold bookingId=" <> booking.id.getId <> " holdId=" <> holdId <> " tripId=" <> tripId
+                  SeatBooking.confirmBooking tripId holdId
+                  SeatBooking.releaseAbandonedHolds tripId booking.id.getId holdId
+              void $ QTicket.createMany tickets
+              mbJourneyId <- FRFSUtils.getJourneyIdFromBooking booking
+              whenJust mbJourneyId $ \journeyId -> do
+                QJourneyExtra.updateLongestJourneyExpiryTimeWithTickets journeyId tickets
+              void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
+              person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+              mRiderNumber <- mapM ENC.decrypt person.mobileNumber
+              integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
+              let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
+              buildReconTable merchant booking fareParameters dOrder tickets mRiderNumber integratedBPPConfig
+              void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode fareParameters
+              void $ QPS.incrementTicketsBookedInEvent booking.riderId fareParameters.totalQuantity
+              void $ CQP.clearPSCache booking.riderId
+              whenJust booking.partnerOrgId $ \pOrgId -> do
+                walletPOCfg <- do
+                  pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.WALLET_CLASS_NAME >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.WALLET_CLASS_NAME)
+                  DPOC.getWalletClassNameConfig pOrgCfg.config
+                let mbClassName = lookup booking.providerId walletPOCfg.className
+                whenJust mbClassName $ \className -> do
+                  fork ("adding googleJWTUrl" <> " Booking Id: " <> booking.id.getId) $ do
+                    let serviceName = DEMSC.WalletService GW.GoogleWallet
+                    let mId = booking'.merchantId
+                    let mocId' = booking'.merchantOperatingCityId
+                    serviceAccount <- GWSA.getserviceAccount mId mocId' serviceName
+                    transitObjects' <- createTransitObjects pOrgId booking tickets person serviceAccount className integratedBPPConfig
+                    url <- mkGoogleWalletLink serviceAccount transitObjects'
+                    void $ QTBooking.updateGoogleWalletLinkById (Just url) booking.id
+        else do
+          logWarning $ "OnConfirm:lock not acquired for bookingId=" <> booking.id.getId <> ", another callback likely in progress"
+          void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
   return ()
   where
     sendTicketBookedSMS mRiderNumber mRiderMobileCountryCode fareParameters =
