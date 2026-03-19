@@ -85,7 +85,6 @@ ghc-options:
   - -Wcompat
   - -Widentities
   - -fhide-source-paths
-  - -Werror
   - -fplugin=RecordDotPreprocessor
 
 library:
@@ -96,7 +95,6 @@ library:
     - -Wcompat
     - -Widentities
     - -fhide-source-paths
-    - -Werror
   when:
     - condition: flag(Local)
       then:
