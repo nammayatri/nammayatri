@@ -260,7 +260,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                                       transactionId = Nothing
                                     }
                           buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentObj
-        when (isMultiModalBooking && paymentBookingStatus == FRFSTicketService.SUCCESS) $ do
+        when (paymentBookingStatus == FRFSTicketService.SUCCESS) $ do  -- Auto-refund job for all FRFS bookings, not just multimodal
           riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
           becknConfigs <- CQBC.findByMerchantIdDomainandMerchantOperatingCityId merchantId_ "FRFS" merchantOperatingCity.id
           let initTTLs = map (.initTTLSec) becknConfigs
