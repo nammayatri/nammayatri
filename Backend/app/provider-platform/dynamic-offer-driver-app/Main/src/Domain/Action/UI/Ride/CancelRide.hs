@@ -105,6 +105,7 @@ cancelRideHandle ::
     EventStreamFlow m r,
     MonadFlow m,
     Metrics.HasCoreMetrics r,
+    Metrics.HasBPPMetrics m r,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],

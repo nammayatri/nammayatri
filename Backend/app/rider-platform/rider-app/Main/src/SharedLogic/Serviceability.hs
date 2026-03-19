@@ -8,19 +8,24 @@ import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantState as QMMS
+import qualified Tools.Metrics.BAPMetrics as BAPMetrics
 import Tools.Error
 
-validateServiceability :: (MonadFlow m, EncFlow m r, EsqDBFlow m r, HasField "esqDBReplicaEnv" r EsqDBEnv, CacheFlow m r) => LatLong -> [LatLong] -> Person -> m Context.City
+validateServiceability :: (MonadFlow m, EncFlow m r, EsqDBFlow m r, HasField "esqDBReplicaEnv" r EsqDBEnv, CacheFlow m r, BAPMetrics.HasBAPMetrics m r) => LatLong -> [LatLong] -> Person -> m Context.City
 validateServiceability origin stops person' = do
   Serviceability.NearestOperatingAndCurrentCity {nearestOperatingCity, currentCity} <- Serviceability.getNearestOperatingAndCurrentCity (.origin) (person'.id, person'.merchantId) False origin
   stopCitiesAndStates <- traverse (Serviceability.getNearestOperatingAndCurrentCity (.destination) (person'.id, person'.merchantId) False) stops
   mbMerchantState <- QMMS.findByMerchantIdAndState person'.merchantId currentCity.state
   let allowedStates = maybe [currentCity.state] (.allowedDestinationStates) mbMerchantState
   if all (\d -> d.currentCity.state `elem` allowedStates) stopCitiesAndStates
-    then return nearestOperatingCity.city
-    else throwError RideNotServiceable
+    then do
+      BAPMetrics.incrementServiceabilityCheckCount (show nearestOperatingCity.city) "serviceable"
+      return nearestOperatingCity.city
+    else do
+      BAPMetrics.incrementServiceabilityCheckCount (show currentCity.city) "unserviceable"
+      throwError RideNotServiceable
 
-validateServiceabilityForEditDestination :: (MonadFlow m, EncFlow m r, EsqDBFlow m r, HasField "esqDBReplicaEnv" r EsqDBEnv, CacheFlow m r) => LatLong -> LatLong -> Person -> m Context.City
+validateServiceabilityForEditDestination :: (MonadFlow m, EncFlow m r, EsqDBFlow m r, HasField "esqDBReplicaEnv" r EsqDBEnv, CacheFlow m r, BAPMetrics.HasBAPMetrics m r) => LatLong -> LatLong -> Person -> m Context.City
 validateServiceabilityForEditDestination origin dest person' = do
   Serviceability.NearestOperatingAndCurrentCity {nearestOperatingCity, currentCity} <- Serviceability.getNearestOperatingAndCurrentCity (.origin) (person'.id, person'.merchantId) False origin
   destCityAndState <- Serviceability.getNearestOperatingAndCurrentCity (.destination) (person'.id, person'.merchantId) False dest
