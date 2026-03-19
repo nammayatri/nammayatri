@@ -1043,6 +1043,22 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
           -- Update payment invoice status to CANCELLED
           QPaymentInvoiceExtra.updatePaymentStatusByRideIdAndTypeAndPurpose ride.id DPI.PAYMENT DPI.RIDE DPI.CANCELLED
 
+  -- P0 Fix: Auto-refund when ride is cancelled after payment was already charged.
+  -- If a payment was deducted but the ride is being cancelled, we need to initiate a refund.
+  -- This handles the race condition where payment completes just before/during cancellation.
+  fork "Auto-refund charged payment on cancellation" $ do
+    whenJust mbRide $ \ride -> do
+      when ride.onlinePayment $ do
+        mbInvoice <- QPaymentInvoiceExtra.findByRideIdAndTypeAndPurpose ride.id DPI.PAYMENT DPI.RIDE
+        whenJust mbInvoice $ \invoice -> do
+          when (invoice.paymentStatus == DPI.CAPTURED) $ do
+            whenJust invoice.paymentOrderId $ \paymentOrderId -> do
+              logInfo $ "Payment already charged for cancelled ride: " <> ride.id.getId <> ", initiating auto-refund for order: " <> paymentOrderId.getId
+              void $
+                withTryCatch "autoRefundOnCancellation" $ do
+                  void $ SPayment.initiateRefundWithPaymentStatusRespSync booking.riderId paymentOrderId
+                  logInfo $ "Auto-refund initiated for cancelled ride: " <> ride.id.getId
+
   unless (cancellationSource == DBCR.ByUser) $
     QBCR.upsert bookingCancellationReason
   fork "Update namma tags and cancellation rate for customer cancellation" $ do
