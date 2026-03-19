@@ -1201,7 +1201,10 @@ data GimsTripInfo = GimsTripInfo
     route_id :: Text,
     route_number :: Text,
     route_name :: Text,
-    is_active_trip :: Bool
+    is_active_trip :: Bool,
+    duty_date :: Maybe Text,
+    start_time :: Maybe Text,
+    end_time :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
