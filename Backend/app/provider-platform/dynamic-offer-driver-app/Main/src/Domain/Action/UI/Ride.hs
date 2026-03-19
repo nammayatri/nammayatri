@@ -229,7 +229,7 @@ arrivedAtPickup rideId req = do
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let pickupLoc = getCoordinates booking.fromLocation
   let distance = distanceBetweenInMeters req pickupLoc
-  -- Premature arrival detection: block >500m, warn 300-500m
+  -- Premature arrival detection: block >=500m, warn 300-499m
   when (distance >= 500) $ do
     incrementPrematureArrivalBlocked booking.merchantOperatingCityId.getId
     logWarning $ "Premature arrival blocked: driver " <> ride.driverId.getId <> " attempted arrival " <> Text.pack (show distance) <> " from pickup for ride " <> rideId.getId

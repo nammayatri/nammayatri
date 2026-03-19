@@ -639,8 +639,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                 Documents.MANUAL_VERIFICATION_REQUIRED
               )
       when (isNothing input.fitnessUpto) $
-        logWarning $ "createVehicleRC: fitnessUpto is Nothing for RC " <> show input.registrationNumber <> ", setting 30-day grace period and requiring manual verification"
-      logInfo $ "createVehicleRC: Creating RC with verificationStatus=" <> show verificationStatusVal <> ", vehicleVariant=" <> show vehicleVariant <> ", failedRules=" <> show failedRules <> ", registrationNumber=" <> show input.registrationNumber
+        logWarning $ "createVehicleRC: fitnessUpto is Nothing for RC " <> maybe "null" maskText input.registrationNumber <> ", setting 30-day grace period and requiring manual verification"
+      logInfo $ "createVehicleRC: Creating RC with verificationStatus=" <> show verificationStatusVal <> ", vehicleVariant=" <> show vehicleVariant <> ", failedRules=" <> show failedRules <> ", registrationNumber=" <> maybe "null" maskText input.registrationNumber
       return $
         DVRC.VehicleRegistrationCertificate
           { id,
