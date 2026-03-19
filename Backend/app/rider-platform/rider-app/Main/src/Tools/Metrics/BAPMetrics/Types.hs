@@ -17,7 +17,6 @@ module Tools.Metrics.BAPMetrics.Types
     BAPMetricsContainer (..),
     registerBAPMetricsContainer,
     registerDurationMetricFRFS,
-    PassWebhookDuplicateCounterMetric,
   )
 where
 
@@ -44,8 +43,7 @@ data BAPMetricsContainer = BAPMetricsContainer
     confirmDuration :: DurationMetric,
     busScannerCounter :: BusScannetCounterMetric,
     fleetRouteMapMissingCounter :: FleetRouteMapMissingCounterMetric,
-    vehicleNoEtaCounter :: VehicleNoEtaCounterMetric,
-    passWebhookDuplicateCounter :: PassWebhookDuplicateCounterMetric
+    vehicleNoEtaCounter :: VehicleNoEtaCounterMetric
   }
 
 type SearchRequestCounterMetric = P.Vector P.Label3 P.Counter
@@ -62,8 +60,6 @@ type DurationMetric = (P.Vector P.Label3 P.Histogram, P.Vector P.Label3 P.Counte
 
 type VehicleNoEtaCounterMetric = P.Vector P.Label4 P.Counter
 
-type PassWebhookDuplicateCounterMetric = P.Vector P.Label2 P.Counter
-
 type BusScanSearchRequestCounterMetric = P.Vector P.Label3 P.Counter
 
 registerBAPMetricsContainer :: Seconds -> IO BAPMetricsContainer
@@ -74,7 +70,6 @@ registerBAPMetricsContainer searchDurationTimeout = do
   vehicleNoEtaCounter <- registerVehicleNoEtaCounterMetric
   busScanSearchRequestCounter <- registerBusScanSearchRequestCounterMetric
   rideCreatedCounter <- registerRideCreatedCounterMetric
-  passWebhookDuplicateCounter <- registerPassWebhookDuplicateCounterMetric
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
   searchDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_search_frfs_round_trip" "beckn_search_frfs_round_trip_failure_counter"
   selectDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_select_frfs_round_trip" "beckn_select_frfs_round_trip_failure_counter"
@@ -103,9 +98,6 @@ registerBusScanSearchRequestCounterMetric = P.register $ P.vector ("merchant_nam
 
 registerRideCreatedCounterMetric :: IO RideCreatedCounterMetric
 registerRideCreatedCounterMetric = P.register $ P.vector ("merchant_id", "version", "category", "merchantOperatingCityId") $ P.counter $ P.Info "ride_created_count" ""
-
-registerPassWebhookDuplicateCounterMetric :: IO PassWebhookDuplicateCounterMetric
-registerPassWebhookDuplicateCounterMetric = P.register $ P.vector ("version", "existing_status") $ P.counter $ P.Info "pass_webhook_duplicate_total" ""
 
 registerSearchDurationMetric :: Seconds -> IO SearchDurationMetric
 registerSearchDurationMetric searchDurationTimeout = do
