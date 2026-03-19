@@ -733,7 +733,16 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId mbIsMockPayment = do
   postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId mbIsMockPayment (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {offered = Nothing, ticketQuantity = Nothing, childTicketQuantity = Nothing, crisSdkResponse = Nothing, enableOffer = Nothing, tripId = Nothing})
 
 postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
-postFrfsQuotePaymentRetry = error "Logic yet to be decided"
+postFrfsQuotePaymentRetry (mbPersonId, merchantId_) quoteId = do
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  quote <- B.runInReplica $ QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
+  booking <- QFRFSTicketBooking.findBySearchId quote.searchId >>= fromMaybeM (InvalidRequest "No booking found for this quote")
+  unless (booking.riderId == personId) $ throwError AccessDenied
+  unless (booking.status == DFRFSTicketBooking.FAILED) $ throwError (InvalidRequest "Can only retry payment for failed bookings")
+  logInfo $ "Payment retry initiated for booking " <> show booking.id <> " by person " <> show personId
+  -- Reset booking status to APPROVED so the status polling flow creates a new payment order
+  void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.APPROVED booking.id
+  getFrfsBookingStatus (Just personId, merchantId_) booking.id
 
 frfsOrderStatusHandler ::
   (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType)) =>
