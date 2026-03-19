@@ -26,19 +26,19 @@ PgPayoutSettlementReport:
 
     TxnStatus:
       enum: "SUCCESS,FAILED"
-      derive: "ToParamSchema"
+      derive: "HttpInstance"
 
     SettlementType:
       enum: "CREDIT,DEBIT"
-      derive: "ToParamSchema"
+      derive: "HttpInstance"
 
     SettlementMode:
       enum: "GROSS,NET,NETTING"
-      derive: "ToParamSchema"
+      derive: "HttpInstance"
 
     FulfillmentInstrument:
       enum: "IMPS,NEFT,RTGS,UPI,OTHER"
-      derive: "ToParamSchema"
+      derive: "HttpInstance"
 
   # ---------------------------------------------------------------------------
   # Fields
@@ -139,12 +139,3 @@ PgPayoutSettlementReport:
   # ---------------------------------------------------------------------------
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
-  domainInstance:
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TxnStatus>
-    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <TxnStatus>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SettlementType>
-    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <SettlementType>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SettlementMode>
-    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <SettlementMode>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <FulfillmentInstrument>
-    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <FulfillmentInstrument>

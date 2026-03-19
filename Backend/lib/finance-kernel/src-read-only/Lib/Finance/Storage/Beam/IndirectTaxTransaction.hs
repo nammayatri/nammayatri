@@ -4,12 +4,12 @@
 module Lib.Finance.Storage.Beam.IndirectTaxTransaction where
 
 import qualified Database.Beam as B
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction
+import Tools.Beam.UtilsTH
 
 data IndirectTaxTransactionT f = IndirectTaxTransactionT
   { cgstAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),

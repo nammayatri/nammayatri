@@ -20,7 +20,7 @@ ReconciliationSummary:
     # Reconciliation types
     ReconciliationType:
       enum: "DSR_VS_LEDGER, DSR_VS_SUBSCRIPTION, DSSR_VS_SUBSCRIPTION, PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION, PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST"
-      derive: "ToParamSchema"
+      derive: "HttpInstance"
 
     JobStatus:
       enum: "COMPLETED, FAILED, IN_PROGRESS"
@@ -82,7 +82,3 @@ ReconciliationSummary:
 
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
-  domainInstance:
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <ReconciliationType>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <ReconciliationStatus>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <JobStatus>

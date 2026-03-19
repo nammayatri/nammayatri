@@ -37,7 +37,7 @@ recordRefundsHistory merchantOperatingCityId mbFromStatus toStatus mbMessage ref
       transition =
         ST.StateTransition
           { id = transitionId,
-            entityType = "Refunds",
+            entityType = ST.Refunds,
             entityId = refunds.id.getId,
             fromState = fromMaybe toState mbFromState,
             toState = toState,

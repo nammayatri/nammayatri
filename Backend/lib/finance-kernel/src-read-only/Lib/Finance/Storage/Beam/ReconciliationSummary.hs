@@ -4,12 +4,12 @@
 module Lib.Finance.Storage.Beam.ReconciliationSummary where
 
 import qualified Database.Beam as B
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Lib.Finance.Domain.Types.ReconciliationSummary
+import Tools.Beam.UtilsTH
 
 data ReconciliationSummaryT f = ReconciliationSummaryT
   { createdAt :: (B.C f Kernel.Prelude.UTCTime),

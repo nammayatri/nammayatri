@@ -4,12 +4,12 @@
 module Lib.Finance.Storage.Beam.DirectTaxTransaction where
 
 import qualified Database.Beam as B
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction
+import Tools.Beam.UtilsTH
 
 data DirectTaxTransactionT f = DirectTaxTransactionT
   { counterpartyId :: (B.C f Kernel.Prelude.Text),

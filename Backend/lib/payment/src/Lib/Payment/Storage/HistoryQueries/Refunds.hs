@@ -90,12 +90,12 @@ updateRefundsEntryByResponse ::
 updateRefundsEntryByResponse merchantOpCityId initiatedBy idAssignedByServiceProvider mbErrorMessage mbErrorCode status arn completedAt refunds mbAction = do
   let historyMessage =
         "Update refunds entry by response: "
-          <> RefundsHistory.getStatusMessage refunds.status
+          <> RefundsHistory.getStatusMessage status
           <> maybe "" ("; action: " <>) mbAction
           <> maybe "" ("; error code: " <>) mbErrorCode
           <> maybe "" ("; error message: " <>) mbErrorMessage
   QRefunds.updateRefundsEntryByResponse initiatedBy idAssignedByServiceProvider mbErrorMessage mbErrorCode status arn completedAt refunds.id
-  RefundsHistory.recordRefundsHistory merchantOpCityId (Just refunds.status) refunds.status (Just historyMessage) refunds
+  RefundsHistory.recordRefundsHistory merchantOpCityId (Just refunds.status) status (Just historyMessage) refunds
 
 updateRefundsEntryByStripeResponse ::
   BeamFlow m r =>
@@ -111,12 +111,12 @@ updateRefundsEntryByStripeResponse ::
 updateRefundsEntryByStripeResponse merchantOpCityId idAssignedByServiceProvider mbErrorCode status isApiCallSuccess completedAt refunds mbAction = do
   let historyMessage =
         "Update refunds entry by Stripe response: "
-          <> RefundsHistory.getStatusMessage refunds.status
+          <> RefundsHistory.getStatusMessage status
           <> maybe "" ("; action: " <>) mbAction
           <> maybe "" ("; error code: " <>) mbErrorCode
           <> maybe "" (("; is api call success: " <>) . show) isApiCallSuccess
   QRefunds.updateRefundsEntryByStripeResponse idAssignedByServiceProvider mbErrorCode status isApiCallSuccess completedAt refunds.id
-  RefundsHistory.recordRefundsHistory merchantOpCityId (Just refunds.status) refunds.status (Just historyMessage) refunds
+  RefundsHistory.recordRefundsHistory merchantOpCityId (Just refunds.status) status (Just historyMessage) refunds
 
 findLatestByOrderId ::
   PaymentBeamFlow.BeamFlow m r =>

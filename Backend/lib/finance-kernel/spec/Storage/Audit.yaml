@@ -55,5 +55,3 @@ AuditEntry:
 
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
-  domainInstance:
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <AuditAction>

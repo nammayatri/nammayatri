@@ -4,12 +4,12 @@
 module Lib.Finance.Storage.Beam.Account where
 
 import qualified Database.Beam as B
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Lib.Finance.Domain.Types.Account
+import Tools.Beam.UtilsTH
 
 data AccountT f = AccountT
   { accountType :: (B.C f Lib.Finance.Domain.Types.Account.AccountType),

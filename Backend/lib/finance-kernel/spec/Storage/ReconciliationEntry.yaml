@@ -118,9 +118,3 @@ ReconciliationEntry:
 
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
-  domainInstance:
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <ReconciliationType>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <ReconciliationStatus>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <FinanceComponent>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <RideMode>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <RideStatus>

@@ -92,7 +92,7 @@ updateStatusAndError ::
 updateStatusAndError merchantOpCityId transaction status mbErrorCode mbErrorMessage mbAction = do
   let historyMessage =
         "Update status and error: "
-          <> PaymentHistory.getStatusMessage transaction.status
+          <> PaymentHistory.getStatusMessage status
           <> maybe "" ("; action: " <>) mbAction
           <> maybe "" ("; error code: " <>) mbErrorCode
           <> maybe "" ("; error message: " <>) mbErrorMessage
