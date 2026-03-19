@@ -21,6 +21,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.LocationUpdates.Internal as LU
+import qualified SharedLogic.External.LocationTrackingService.Types as LTS
 import SharedLogic.FarePolicy
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Quote as QQuote
@@ -70,7 +71,8 @@ postMeterRidePrice (Just driverId, merchantId, merchantOpCityId) rideId req = do
   let tripStartTime = ride.tripStartTime
   let rideStatus = ride.status
   whenJust (NE.nonEmpty (fromMaybe [] req.locationUpdates)) $ \locUpdates -> do
-    void $ BLoc.bulkLocUpdate (BLoc.BulkLocUpdateReq ride.id driverId locUpdates)
+    let locationUpdates = fmap (\point -> LTS.LocationUpdate {lat = point.lat, lon = point.lon, ts = Nothing}) locUpdates
+    void $ BLoc.bulkLocUpdate (BLoc.BulkLocUpdateReq ride.id driverId locationUpdates)
   traveledDistance <- LU.getTravelledDistance driverId
   fareEstimates <- FC.calculateFareUtil merchantId merchantOpCityId Nothing (LatLong ride.fromLocation.lat ride.fromLocation.lon) (Just $ highPrecMetersToMeters traveledDistance) Nothing Nothing (OneWay MeterRide) (Just booking.vehicleServiceTier) booking.configInExperimentVersions
   let mbMeterRideEstimate = Kernel.Prelude.listToMaybe fareEstimates.estimatedFares
