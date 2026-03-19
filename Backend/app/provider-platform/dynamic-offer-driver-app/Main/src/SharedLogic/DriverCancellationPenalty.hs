@@ -29,6 +29,7 @@ import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVC
+import qualified Domain.Types.VehicleVariant as DVV
 import EulerHS.Prelude
 import Kernel.Prelude hiding (any, elem, map)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -65,8 +66,9 @@ mkCancellationPenaltyFee ::
   HighPrecMoney ->
   Currency ->
   DTC.TransporterConfig ->
+  DVC.VehicleCategory ->
   m (UTCTime, DF.DriverFee)
-mkCancellationPenaltyFee now merchantId merchantOpCityId driverId penaltyAmount currency transporterConfig = do
+mkCancellationPenaltyFee now merchantId merchantOpCityId driverId penaltyAmount currency transporterConfig vehicleCat = do
   id' <- generateGUID
   let cycleDuration = secondsToNominalDiffTime $ fromMaybe 0 transporterConfig.cancellationFeeCycle
       startTime = now
@@ -118,7 +120,7 @@ mkCancellationPenaltyFee now merchantId merchantOpCityId driverId penaltyAmount 
           refundedAmount = Nothing,
           refundedAt = Nothing,
           refundedBy = Nothing,
-          vehicleCategory = DVC.AUTO_CATEGORY,
+          vehicleCategory = vehicleCat,
           hasSibling = Just False,
           siblingFeeId = Nothing,
           splitOfDriverFeeId = Nothing,
@@ -161,6 +163,7 @@ accumulateCancellationPenalty ::
   DP.Person ->
   m ()
 accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterConfig driver = do
+  let vehicleCat = maybe DVC.AUTO_CATEGORY DVV.castServiceTierToVehicleCategory (Just booking.vehicleServiceTier)
   when (validCancellationPenaltyApplicable `elem` rideTags && isJust booking.fareParams.driverCancellationPenaltyAmount) $ do
     case booking.fareParams.driverCancellationPenaltyAmount of
       Just penaltyAmount ->
@@ -220,6 +223,7 @@ accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterC
                     penaltyAmount
                     booking.currency
                     transporterConfig
+                    vehicleCat
                 QDF.create newFee
                 logInfo $
                   "Created new CANCELLATION_PENALTY DriverFee " <> newFee.id.getId
