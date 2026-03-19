@@ -55,6 +55,7 @@ The Namma Yatri platform processed **509.6 million service mesh requests** and g
 | **gRPC notification streams** | ~300,000ms (expected for long-lived streams) | beckn-notification-service |
 
 ### Timeout-Affected Endpoints (rider-app, 504s)
+
 | Endpoint | Impact |
 |----------|--------|
 | `/v2/nearbyDrivers` | Driver discovery for riders |
@@ -211,7 +212,7 @@ The Namma Yatri platform processed **509.6 million service mesh requests** and g
 - **istio-2026.03.14**: 171,889,737 docs / 152.9 GB - Istio control plane logs
 - **mettle-2026.03.14**: 289,366 docs / 169.2 MB - Mettle backend logs
 - **juspay-recon-2026.03.14**: 14,769 docs / 24.7 MB - Payment reconciliation logs
-- **beckn_settlement_automation_cron-2026.03.14**: 792,345 docs / 239.4 MB - Settlement cron logs
+- **beckn-settlement-cron-2026.03.14**: 792,345 docs / 239.4 MB - Settlement cron logs
 
 **Limitations**: OpenSearch's default `track_total_hits` caps exact counts at 10,000. Where counts show "10,000+", the actual number is at or above this threshold. VictoriaMetrics infrastructure metrics (CPU, memory, disk, network) were unavailable during data collection.
 

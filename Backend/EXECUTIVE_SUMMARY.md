@@ -142,8 +142,8 @@ The system employs a **Redis-first write pattern** via the "Drainer" architectur
 | 6 | **Practice Game Days** | 1/10 | Zero chaos engineering. No fault injection tests. No runbook evidence in repo. No load testing framework. |
 | 7 | **Implement Graceful Degradation** | 4/10 | Graceful shutdown with configurable termination periods. Rate limiting in 54 files. PT circuit breaker with canary recovery. But no circuit-breaker-driven fallbacks on core ride flow, no read-only mode, no queue-based load leveling. |
 | 8 | **Test Reliability** | 2/10 | ~54 test files for 463K LoC. HUnit tests and integration tests exist but are **never run in CI**. No contract tests for BECKN protocol. 1 property-based test. Zero code coverage visibility. |
-| 9 | **Document and Learn** | 4/10 | CLAUDE.md is thorough. Dhall configs are self-documenting. But no runbooks, no incident post-mortems in repo, no ADRs (Architecture Decision Records). |
-| 10 | **Build a Culture of Reliability** | 4/10 | `-Werror` enforced. HLint configured. Strong type safety culture. But no SLO ownership, no on-call rotation evidence, no error budget tracking. |
+| 9 | **Document and Learn** | 5/10 | CLAUDE.md is thorough. Dhall configs are self-documenting. Incident response playbooks now cover 10 critical failure scenarios with structured detection, mitigation, and CoE templates. But no incident post-mortems in repo, no ADRs (Architecture Decision Records). |
+| 10 | **Build a Culture of Reliability** | 5/10 | `-Werror` enforced. HLint configured. Strong type safety culture. Incident response playbooks define escalation matrix and CoE review process. But no SLO ownership, no on-call rotation evidence, no error budget tracking. |
 
 **Overall Score: 3.8 / 10** - The platform has strong foundations (type safety, code generation, data architecture) and pockets of good resilience engineering (PT circuit breaker, drainer error queues, ConfigPilot), but critical gaps in failure engineering generalization, testing (exists but not in CI), observability, and payment idempotency.
 

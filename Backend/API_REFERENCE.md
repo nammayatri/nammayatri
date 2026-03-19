@@ -275,6 +275,7 @@ data GetTokenReq = GetTokenReq
 **Auth:** TokenAuth
 
 **Request body:** `SearchReq` -- tagged union with `fareProduct` discriminator:
+
 | fareProduct | Inner type |
 |---|---|
 | `ONE_WAY` | `OneWaySearchReq` |
@@ -332,7 +333,7 @@ data MultimodalSearchResp = MultimodalSearchResp
 
 **Query params:** `filterServiceAndJrnyType :: Maybe Bool`
 
-**Business logic summary:** Creates search request, queries multi-modal transit routes (bus/metro/subway + taxi legs) via Google Transit/OTP. Creates Journey and JourneyLeg DB records. If `initateJourney` header is true, the first journey is immediately initiated with fare quotes.
+**Business logic summary:** Creates search request, queries multi-modal transit routes (bus/metro/subway + taxi legs) via Google Transit/OTP. Creates Journey and JourneyLeg DB records. If `initiateJourney` header is true, the first journey is immediately initiated with fare quotes.
 
 **DB tables touched:** All from /rideSearch plus `journey`, `journey_leg`, `multimodal_preferences`, `integrated_bpp_config`, `merchant_service_config`
 

@@ -53,7 +53,7 @@ These playbooks cover the 10 most critical failure scenarios for the Namma Yatri
 
 ### Immediate Mitigation
 
-```
+```bash
 1. VERIFY the failure:
    $ psql -h <primary_host> -p 5434 -U <user> -d atlas_dev -c "SELECT 1;"
    $ psql -h <replica_host> -p 5434 -U <user> -d atlas_dev -c "SELECT 1;"
@@ -76,7 +76,7 @@ These playbooks cover the 10 most critical failure scenarios for the Namma Yatri
 
 ### Root Cause Investigation
 
-```
+```bash
 1. Check PostgreSQL logs:
    $ tail -1000 /var/log/postgresql/postgresql-*.log
 
@@ -164,7 +164,7 @@ Common root causes:
 
 ### Immediate Mitigation
 
-```
+```bash
 1. IDENTIFY which Redis tier is affected:
    $ redis-cli -p 6379 PING          # Single instance
    $ redis-cli -p 30001 CLUSTER INFO  # Primary cluster
@@ -191,7 +191,7 @@ Common root causes:
 
 ### Root Cause Investigation
 
-```
+```bash
 1. Check Redis logs and memory:
    $ redis-cli -p <port> INFO memory
    $ redis-cli -p <port> INFO persistence
@@ -274,7 +274,7 @@ Common root causes:
 
 ### Immediate Mitigation
 
-```
+```bash
 1. VERIFY broker status:
    $ kafka-broker-api-versions --bootstrap-server localhost:29092
    $ kafka-topics --bootstrap-server localhost:29092 --list
@@ -301,7 +301,7 @@ Common root causes:
 
 ### Root Cause Investigation
 
-```
+```bash
 1. Check Kafka logs:
    $ tail -1000 /var/log/kafka/server.log
 
@@ -381,7 +381,7 @@ Common root causes:
 
 ### Immediate Mitigation
 
-```
+```bash
 1. VERIFY Google Maps is the issue (not our config/quota):
    $ curl "https://maps.googleapis.com/maps/api/directions/json?\
      origin=12.9716,77.5946&destination=12.9352,77.6245&key=<API_KEY>"
@@ -407,7 +407,7 @@ Common root causes:
 
 ### Root Cause Investigation
 
-```
+```bash
 1. Confirm outage scope:
    - Check https://status.cloud.google.com/
    - Check if issue is regional or global
@@ -491,7 +491,7 @@ Common root causes:
 
 ### Immediate Mitigation
 
-```
+```bash
 1. VERIFY Juspay is the issue:
    - Check Juspay merchant dashboard for incident status
    - Test API endpoint directly with a test order
@@ -521,7 +521,7 @@ Common root causes:
 
 ### Root Cause Investigation
 
-```
+```bash
 1. Check Juspay response codes and bodies:
    - 503 Service Unavailable → Juspay outage
    - 429 Too Many Requests → Rate limiting (our side)
@@ -607,7 +607,7 @@ Common root causes:
 
 ### Immediate Mitigation
 
-```
+```bash
 1. CHECK process status:
    $ ps aux | grep rider-app
    $ curl -s http://localhost:8013/health  # If health endpoint exists
@@ -652,7 +652,7 @@ Common root causes:
 
 ### Root Cause Investigation
 
-```
+```bash
 1. Check startup initialization order (from Environment.hs):
    - Dhall config loading
    - Metrics server init
@@ -748,7 +748,7 @@ Common root causes:
 
 ### Immediate Mitigation
 
-```
+```bash
 1. CHECK process status:
    $ ps aux | grep allocator
    $ curl -s http://localhost:9996/health
@@ -780,7 +780,7 @@ Common root causes:
 
 ### Root Cause Investigation
 
-```
+```bash
 1. Check scheduler loop health:
    - Is the 5-second loop running?
    - Are jobs being picked up from Available_Jobs stream?
@@ -867,7 +867,7 @@ Common root causes:
 
 ### Immediate Mitigation
 
-```
+```bash
 1. CHECK LTS status:
    $ curl -s http://localhost:8081/health
    $ ps aux | grep location-tracking
@@ -904,7 +904,7 @@ Common root causes:
 
 ### Root Cause Investigation
 
-```
+```bash
 1. Check LTS-specific dependencies:
    - OSRM service reachable?
    - LTS Redis (ltsHedisEnv) healthy?
@@ -983,7 +983,7 @@ Common root causes:
 
 ### Immediate Mitigation
 
-```
+```bash
 1. IDENTIFY the affected service and endpoint:
    - Which service port is returning 5XX?
    - Which specific API endpoint(s)?
@@ -1028,7 +1028,7 @@ Common root causes:
 
 ### Root Cause Investigation
 
-```
+```bash
 1. Correlate error timing with events:
    - Deployment? Config change? Traffic spike? Dependency failure?
 
@@ -1116,7 +1116,7 @@ Common root causes:
 
 ### Immediate Mitigation
 
-```
+```bash
 1. IDENTIFY the bottleneck:
    a. Which service has high latency? (rider-app, driver-app, allocator)
    b. Which specific endpoints are slow?
@@ -1171,7 +1171,7 @@ Common root causes:
 
 ### Root Cause Investigation
 
-```
+```bash
 1. Database analysis:
    - pg_stat_statements: query execution time trends
    - Missing indexes: seq scans on large tables

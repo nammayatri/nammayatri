@@ -196,7 +196,7 @@ Everything supporting the critical path should be **redundant, distributed, and 
 | Maps API calls per search | 3-5 | 1-2 (cached) | **60-70% reduction** |
 | PostgreSQL connection utilization | 80%+ at peak | <40% with PgBouncer | **2x headroom** |
 | OSRM calls per ride (location tracking) | ~50-100 | ~15-30 (cached) | **3x reduction** |
-| Monthly maps API cost | Baseline | -60% | **$XX,000 saved** |
+| Monthly maps API cost | Baseline | -60% | **Estimated 60% reduction (exact savings depend on current spend)** |
 
 ---
 

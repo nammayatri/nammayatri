@@ -1115,13 +1115,13 @@ let eventStreamMappings =
 ```dhall
 -- dhall-configs/dev/secrets/rider-app.dhall
 in {
-  dbUserId = "atlas_app_user",
-  dbPassword = "atlas",
-  signingKey = "Lw9M+SHLY+yyTmqPVlbKxgvktZRfuIT8nHyE89Jmf+o=",
-  dashboardToken = "some-secret-dashboard-token-for-rider-app",
-  internalAPIKey = "test-bap-api-key",
-  ondcTokenMap = [ { mapKey = { merchantId = "NAMMA_YATRI", domain = "MOBILITY" }
-                   , mapValue = { token = "abcd123", ondcUrl = ondclogsUrl } } ]
+  dbUserId = "<DB_USER>",
+  dbPassword = "<DB_PASSWORD>",
+  signingKey = "<BASE64_SIGNING_KEY>",
+  dashboardToken = "<DASHBOARD_TOKEN>",
+  internalAPIKey = "<INTERNAL_API_KEY>",
+  ondcTokenMap = [ { mapKey = { merchantId = "<MERCHANT_ID>", domain = "MOBILITY" }
+                   , mapValue = { token = "<ONDC_TOKEN>", ondcUrl = ondclogsUrl } } ]
 }
 ```
 
