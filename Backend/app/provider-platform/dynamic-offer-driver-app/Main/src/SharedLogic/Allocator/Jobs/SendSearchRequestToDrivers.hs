@@ -240,6 +240,7 @@ sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput go
           isSearchTryValid = I.isSearchTryValid searchTry.id,
           initiateDriverSearchBatch = SST.initiateDriverSearchBatch driverSearchBatchInput,
           isScheduledBooking = searchTry.isScheduled,
+          searchRepeatCounter = searchTry.searchRepeatCounter,
           cancelSearchTry = I.cancelSearchTry searchTry.id,
           isBookingValid = do
             case mbBooking of
