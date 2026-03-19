@@ -1,5 +1,9 @@
 # Prometheus alerting rules for connection pool health monitoring.
 # Deploy alongside your Prometheus configuration.
+#
+# DEPENDENCY: Metrics (db_pool_size, db_pool_in_use, db_pool_idle,
+# db_pool_utilization_ratio) are emitted by Utils.ConnectionPoolMetrics
+# in dynamic-offer-driver-app (PR #13977).
 
 groups:
   - name: connection_pool_health
@@ -42,14 +46,14 @@ groups:
             All {{ $labels.service }}/{{ $labels.pool }} pool connections are in use.
             New requests may block waiting for a connection.
 
-      # Pool size unexpectedly at zero (misconfiguration or pool destroyed)
-      - alert: PgPoolEmpty
-        expr: db_pool_size == 0
-        for: 1m
+      # Pool metrics not being reported (monitor thread may have died)
+      - alert: PgPoolMetricsAbsent
+        expr: absent(db_pool_size)
+        for: 5m
         labels:
-          severity: critical
+          severity: warning
         annotations:
-          summary: "PostgreSQL pool size is zero ({{ $labels.service }}/{{ $labels.pool }})"
+          summary: "PostgreSQL pool metrics are not being reported"
           description: >
-            Pool {{ $labels.service }}/{{ $labels.pool }} reports size 0.
-            This indicates a misconfiguration or pool destruction.
+            No db_pool_size metric received for 5+ minutes.
+            The pool monitoring thread may have crashed or the service may be down.

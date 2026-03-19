@@ -1,57 +1,44 @@
 # Prometheus alerting rules for drainer health monitoring.
 # Covers both rider-app-drainer and dynamic-offer-driver-drainer.
+#
+# Actual metrics emitted by drainers:
+#   Rider:  query_execution_failure_error, drainer_stop_status,
+#           peek_db_command_error, drop_db_command_error, parse_db_command_error,
+#           query_drain_latency, drainer_query_executes
+#   Driver: driver_query_execution_failure_error, driver_drainer_stop_status,
+#           driver_peek_db_command_error, driver_drop_db_command_error,
+#           driver_parse_db_command_error, driver_query_drain_latency,
+#           driver_drainer_query_executes
 
 groups:
   - name: drainer_health
     rules:
-      # Drainer lag exceeds 30 seconds
-      - alert: DrainerLagHigh
-        expr: drainer_lag_seconds > 30 or driver_drainer_lag_seconds > 30
-        for: 2m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Drainer lag exceeds 30 seconds"
-          description: >
-            Drainer lag is {{ $value | humanize }}s.
-            Data in Redis is not being written to PostgreSQL in a timely manner.
-            Check DB connection health and query performance.
-
-      # Drainer lag exceeds 120 seconds (critical)
-      - alert: DrainerLagCritical
-        expr: drainer_lag_seconds > 120 or driver_drainer_lag_seconds > 120
-        for: 1m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Drainer lag exceeds 2 minutes — risk of data loss"
-          description: >
-            Drainer lag is {{ $value | humanize }}s.
-            Redis stream is growing faster than drainer can process.
-            Immediate investigation required.
-
-      # Any drainer errors occurring
-      - alert: DrainerErrorsDetected
-        expr: rate(drainer_errors_total[5m]) > 0 or rate(driver_drainer_errors_total[5m]) > 0
+      # Query execution failures detected
+      - alert: DrainerQueryFailures
+        expr: >
+          rate(query_execution_failure_error[5m]) > 0
+          or rate(driver_query_execution_failure_error[5m]) > 0
         for: 1m
         labels:
           severity: warning
         annotations:
-          summary: "Drainer is experiencing errors"
+          summary: "Drainer DB query execution failures"
           description: >
-            Drainer error rate is {{ $value | humanize }}/s over the last 5 minutes.
-            Check logs for PeekDBCommandError, QueryExecutionFailure, or ParseDBCommandError.
+            Database query failures detected in drainer.
+            Check PostgreSQL connectivity and schema compatibility.
 
-      # High error rate (sustained)
-      - alert: DrainerErrorRateHigh
-        expr: rate(drainer_errors_total[5m]) > 0.1 or rate(driver_drainer_errors_total[5m]) > 0.1
+      # Sustained high query failure rate
+      - alert: DrainerQueryFailureRateHigh
+        expr: >
+          sum(rate(query_execution_failure_error[5m])) > 0.1
+          or sum(rate(driver_query_execution_failure_error[5m])) > 0.1
         for: 5m
         labels:
           severity: critical
         annotations:
-          summary: "Sustained high drainer error rate"
+          summary: "Sustained high drainer query failure rate"
           description: >
-            Drainer error rate has been {{ $value | humanize }}/s for 5+ minutes.
+            Drainer query failure rate has been {{ $value | humanize }}/s for 5+ minutes.
             Drainer may be stuck in a failure loop. Check DB and Redis connectivity.
 
       # Drainer is stopped (dead man's switch)
@@ -81,28 +68,34 @@ groups:
             The drainer process may have crashed or failed to start.
             Check pod/container status.
 
-      # Items pending growing (backlog building up)
-      - alert: DrainerBacklogGrowing
-        expr: drainer_items_pending > 10000 or driver_drainer_items_pending > 10000
+      # Peek/drop/parse errors indicate stream corruption or schema drift
+      - alert: DrainerStreamErrors
+        expr: >
+          rate(peek_db_command_error[5m]) > 0
+          or rate(drop_db_command_error[5m]) > 0
+          or rate(parse_db_command_error[5m]) > 0
+          or rate(driver_peek_db_command_error[5m]) > 0
+          or rate(driver_drop_db_command_error[5m]) > 0
+          or rate(driver_parse_db_command_error[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Drainer stream read/parse errors detected"
+          description: >
+            Drainer is encountering errors reading or parsing commands from Redis.
+            Check for schema drift (schema_variation_alert) or Redis connectivity issues.
+
+      # High drain latency indicates DB slowness
+      - alert: DrainerHighLatency
+        expr: >
+          histogram_quantile(0.95, rate(query_drain_latency_bucket[5m])) > 5
+          or histogram_quantile(0.95, rate(driver_query_drain_latency_bucket[5m])) > 5
         for: 5m
         labels:
           severity: warning
         annotations:
-          summary: "Drainer backlog exceeds 10,000 items"
+          summary: "Drainer query drain latency is high (p95 > 5s)"
           description: >
-            {{ $value | humanize }} items pending in Redis stream shard.
-            Drainer may be unable to keep up with write volume.
-
-      # Query execution failures
-      - alert: DrainerQueryFailures
-        expr: >
-          rate(query_execution_failure_error[5m]) > 0
-          or rate(driver_query_execution_failure_error[5m]) > 0
-        for: 1m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Drainer DB query execution failures"
-          description: >
-            Database query failures detected in drainer.
-            Check PostgreSQL connectivity and schema compatibility.
+            95th percentile drain latency is {{ $value | humanize }}s.
+            Database may be under heavy load or queries may need optimization.
