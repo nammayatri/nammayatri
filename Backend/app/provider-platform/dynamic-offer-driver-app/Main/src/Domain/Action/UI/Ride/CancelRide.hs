@@ -27,7 +27,10 @@ where
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
+import qualified Data.Aeson as A
 import qualified Data.Text as Text
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Encoding as TLE
 import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
 import qualified Domain.SharedLogic.Cancel as SharedCancel
 import qualified Domain.Types.Booking as SRB
@@ -272,7 +275,22 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
   where
     isValidRide ride = ride.status `elem` [DRide.NEW, DRide.UPCOMING]
     buildRideCancelationReason currentDriverLocation disToPickup mbDriverId source ride merchantId = do
+      now <- getCurrentTime
       let CancelRideReq {..} = req
+          -- Enrich additionalInfo with cancellation metadata for analytics
+          timeSinceAcceptSec = round (diffUTCTime now ride.createdAt) :: Int
+          cancellationMeta =
+            A.object
+              [ "timeSinceAcceptSec" A..= timeSinceAcceptSec,
+                "distToPickupMeters" A..= disToPickup,
+                "estimatedDistance" A..= booking.estimatedDistance,
+                "estimatedFare" A..= booking.estimatedFare,
+                "source" A..= show source,
+                "reasonCode" A..= show reasonCode
+              ]
+          enrichedAdditionalInfo = case additionalInfo of
+            Just info -> Just $ info <> " | " <> TL.toStrict (TLE.decodeUtf8 (A.encode cancellationMeta))
+            Nothing -> Just $ TL.toStrict (TLE.decodeUtf8 (A.encode cancellationMeta))
       return $
         DBCR.BookingCancellationReason
           { bookingId = ride.bookingId,
@@ -281,6 +299,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
             source = source,
             reasonCode = Just reasonCode,
             driverId = mbDriverId,
+            additionalInfo = enrichedAdditionalInfo,
             driverCancellationLocation = currentDriverLocation,
             driverDistToPickup = disToPickup,
             distanceUnit = ride.distanceUnit,
