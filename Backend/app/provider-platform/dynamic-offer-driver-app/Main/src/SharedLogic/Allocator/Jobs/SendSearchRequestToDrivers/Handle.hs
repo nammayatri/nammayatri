@@ -102,12 +102,12 @@ processRequestSending Handle {..} goHomeCfg transactionId = do
     else do
       driverPoolWithFlags <- getNextDriverPoolBatch goHomeCfg
       let poolIsEmpty = null driverPoolWithFlags.driverPoolWithActualDistResult
-      when (not poolIsEmpty) $
+      unless poolIsEmpty $
         sendSearchRequestToDrivers driverPoolWithFlags.driverPoolWithActualDistResult driverPoolWithFlags.prevBatchDrivers goHomeCfg
       if poolIsEmpty
         then do
           logInfo "Empty driver pool batch — skipping wait, expanding search radius immediately"
           now <- getCurrentTime
-          return (ReSchedule $ addUTCTime 1 now, driverPoolWithFlags.poolType, driverPoolWithFlags.nextScheduleTime)
+          return (ReSchedule $ addUTCTime 1 now, driverPoolWithFlags.poolType, Just $ Seconds 1)
         else
           ReSchedule <$> getRescheduleTime <&> (,driverPoolWithFlags.poolType,driverPoolWithFlags.nextScheduleTime)
