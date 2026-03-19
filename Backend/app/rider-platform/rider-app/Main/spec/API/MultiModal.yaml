@@ -106,6 +106,7 @@ types:
     userPosition: Maybe LatLong
     mode: MultimodalTravelMode
     fleetNo: Maybe Text
+    currentTripId: Maybe Text
 
   JourneyStatusResp:
     journeyStatus: Domain.Types.Journey.JourneyStatus
@@ -342,7 +343,6 @@ types:
     eta: "Maybe [BusStopETA]"
     position: LatLong
     serviceSubTypes: "Maybe [ServiceSubType]"
-    currentTripNumber: Maybe Int
     currentTripId: Maybe Text
 
   AlternateRouteDetails:

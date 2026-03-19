@@ -63,8 +63,6 @@ import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import Tools.Error
 
--- getState and other functions from the original file...
-
 getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv), HasShortDurationRetryCfg r c, HasKafkaProducer r) => DTrip.MultimodalTravelMode -> Id FRFSSearch -> [APITypes.RiderLocationReq] -> Bool -> Maybe Text -> DJourneyLeg.JourneyLeg -> m JT.JourneyLegState
 getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTracking journeyLeg = do
   logDebug $ "CFRFS getState: searchId: " <> searchId.getId <> ", mode: " <> show mode
@@ -98,6 +96,9 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                 case listToMaybe trackingStatuses of
                   Just (_, ts, tsupAt) -> (ts, tsupAt)
                   Nothing -> (JMStateTypes.InPlan, now)
+          mbCurrentTripId <- case mbCurrentLegDetails >>= (.finalBoardedBusNumber) of
+            Just vehicleNumber -> JMU.getVehicleCurrentTripId integratedBppConfig vehicleNumber
+            Nothing -> pure Nothing
           let baseStateData =
                 JT.JourneyLegStateData
                   { status = oldStatus,
@@ -109,7 +110,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                     legOrder = journeyLeg.sequenceNumber,
                     subLegOrder = 1,
                     mode,
-                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber)
+                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber),
+                    currentTripId = mbCurrentTripId
                   }
           mbQuote <- QFRFSQuote.findById booking.quoteId
           validBuses <-
@@ -162,7 +164,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                       legOrder = journeyLeg.sequenceNumber,
                       subLegOrder,
                       mode,
-                      fleetNo = Nothing
+                      fleetNo = Nothing,
+                      currentTripId = Nothing
                     }
                   | (subLegOrder, trackingStatus, trackingStatusLastUpdatedAt) <- trackingStatuses
                 ]
@@ -192,6 +195,9 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                 case listToMaybe trackingStatuses of
                   Just (_, ts, tsupAt) -> (ts, tsupAt)
                   Nothing -> (JMStateTypes.InPlan, now)
+          mbCurrentTripId <- case mbCurrentLegDetails >>= (.finalBoardedBusNumber) of
+            Just vehicleNumber -> JMU.getVehicleCurrentTripId integratedBppConfig vehicleNumber
+            Nothing -> pure Nothing
           let baseStateData =
                 JT.JourneyLegStateData
                   { status = oldStatus,
@@ -203,7 +209,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                     legOrder = journeyLeg.sequenceNumber,
                     subLegOrder = 1,
                     mode,
-                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber)
+                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber),
+                    currentTripId = mbCurrentTripId
                   }
 
           vehiclePositionsToReturn <-
@@ -240,7 +247,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                       legOrder = journeyLeg.sequenceNumber,
                       subLegOrder = subLegOrder,
                       mode,
-                      fleetNo = Nothing
+                      fleetNo = Nothing,
+                      currentTripId = Nothing
                     }
                   | (subLegOrder, trackingStatus, trackingStatusLastUpdatedAt) <- trackingStatuses
                 ]
