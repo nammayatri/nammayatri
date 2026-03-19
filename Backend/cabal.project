@@ -85,3 +85,15 @@ jobs: 6
 -- #  +flagname enables the flag.
 -- #  -flagname disables it.
 flags: +Local
+
+package *
+  ghc-options:
+    -Werror=incomplete-patterns
+    -Werror=incomplete-uni-patterns
+    -Werror=missing-fields
+    -Werror=missing-methods
+    -Werror=overlapping-patterns
+    -Werror=inaccessible-code
+    -Werror=incomplete-record-updates
+    -Wwarn=ambiguous-fields
+    -Wunused-packages
