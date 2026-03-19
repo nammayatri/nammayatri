@@ -824,7 +824,7 @@ getIsInterCityCached merchant req = do
           Hedis.setExp cacheKey resp (3600 :: Int) -- 1 hour; geographic data changes rarely
           pure resp
         Left err -> do
-          logWarning $ "Intercity check failed, defaulting to non-intercity: " <> show err
+          logError $ "Intercity check failed, defaulting to non-intercity: " <> show err
           pure defaultIntercityResp
 
 intercityCBConfig :: CircuitBreakerConfig
@@ -842,9 +842,13 @@ defaultIntercityResp = IsIntercityResp {isInterCity = False, isCrossCity = False
 mkInterCityCacheKey :: IsIntercityReq -> Text
 mkInterCityCacheKey req =
   "CachedQueries:IsInterCity:pickup-"
-    <> show req.pickupLatLong.lat <> "," <> show req.pickupLatLong.lon
+    <> normCoord req.pickupLatLong.lat <> "," <> normCoord req.pickupLatLong.lon
     <> ":drop-"
-    <> maybe "none" (\ll -> show ll.lat <> "," <> show ll.lon) req.mbDropLatLong
+    <> maybe "none" (\ll -> normCoord ll.lat <> "," <> normCoord ll.lon) req.mbDropLatLong
+  where
+    -- Round to 3 decimal places (~111m precision) to bound cache-key cardinality
+    normCoord :: Double -> Text
+    normCoord v = show (fromIntegral (round (v * 1000) :: Int) / 1000.0 :: Double)
 
 -- Fleet Booking Information (Create/Update) - provider internal "fleet" APIs
 
