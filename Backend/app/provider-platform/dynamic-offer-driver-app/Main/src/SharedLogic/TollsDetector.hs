@@ -7,7 +7,21 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module SharedLogic.TollsDetector where
+module SharedLogic.TollsDetector
+  ( tollStartGateTrackingKey,
+    clearTollStartGateBatchCache,
+    removeMatchedTollFromCache,
+    checkAndValidatePendingTolls,
+    getExitTollAndRemainingRoute,
+    getAggregatedTollChargesAndNamesOnRoute,
+    getTollInfoOnRoute,
+    -- P0 FIX-09: Unexpected toll detection at ride end
+    UnexpectedTollResult (..),
+    identifyUnexpectedTolls,
+    -- Configurable TTL
+    pendingTollTTLSeconds,
+  )
+where
 
 import Data.List (nubBy)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -21,6 +35,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.ComputeIntersection
 import Storage.CachedQueries.Toll (findAllTollsByMerchantOperatingCity)
+
+-- | Pending toll Redis TTL in seconds.
+-- Reduced from 6 hours (21600) to 30 minutes (1800) as part of FIX-09:
+-- If a toll exit gate isn't detected within 30 minutes of entry, resolve
+-- the toll as confirmed rather than leaving it pending for hours.
+pendingTollTTLSeconds :: Int
+pendingTollTTLSeconds = 1800 -- 30 minutes
 
 tollStartGateTrackingKey :: Id DP.Driver -> Text
 tollStartGateTrackingKey driverId = "TollGateTracking:DriverId-" <> driverId.getId
@@ -37,7 +58,7 @@ removeMatchedTollFromCache driverId allPendingTolls matchedToll = do
   let remainingPendingTolls = filter (\toll -> toll.tollStartGates /= matchedToll.tollStartGates) allPendingTolls
   if null remainingPendingTolls
     then Hedis.del $ tollStartGateTrackingKey driverId
-    else Hedis.setExp (tollStartGateTrackingKey driverId) remainingPendingTolls 21600 -- 6 hours
+    else Hedis.setExp (tollStartGateTrackingKey driverId) remainingPendingTolls pendingTollTTLSeconds
 
 -- | Validates pending tolls (entry detected, exit not found) against estimated tolls using IDs
 -- | Used at end ride to apply toll charges when exit gate was never detected
@@ -158,7 +179,7 @@ getAggregatedTollChargesAndNamesOnRoute mbDriverId route@(p1 : p2 : ps) tolls (t
             let allPendingTolls = fromMaybe [] mbExistingPendingTolls <> allTollCombinationsWithStartGates
                 -- Remove duplicates by ID
                 uniquePendingTolls = nubBy (\toll1 toll2 -> getId toll1.id == getId toll2.id) allPendingTolls
-            Hedis.setExp (tollStartGateTrackingKey driverId) uniquePendingTolls 21600 -- 6 hours
+            Hedis.setExp (tollStartGateTrackingKey driverId) uniquePendingTolls pendingTollTTLSeconds
           return (tollCharges, tollNames, tollIds, tollIsAutoRickshawAllowed, tollIsTwoWheelerAllowed)
     else getAggregatedTollChargesAndNamesOnRoute mbDriverId (p2 : ps) tolls (tollCharges, tollNames, tollIds, tollIsAutoRickshawAllowed, tollIsTwoWheelerAllowed)
 
@@ -208,3 +229,55 @@ getTollInfoOnRoute merchantOperatingCityId mbDriverId route = do
           logWarning $ "No exit segment of tolls with start segment marked from previous batch found for driverId : " <> driverId.getId <> " TollCombinationsWithStartGatesInPrevBatch : " <> show tollCombinationsWithStartGatesInPrevBatch <> " route : " <> show route
           -- Continue processing current batch for new toll entries even though pending tolls didn't find exits
           getAggregatedTollCharges route eligibleTollsThatMaybePresentOnTheRoute (0, [], [])
+
+-- ---------------------------------------------------------------------------
+-- P0 FIX-09: Unexpected Toll Detection
+-- ---------------------------------------------------------------------------
+
+-- | Result of comparing actual tolls against estimated tolls at ride end.
+data UnexpectedTollResult = UnexpectedTollResult
+  { -- | True if a toll was charged that was NOT in the original estimate
+    unexpectedTollAdded :: Bool,
+    -- | Amount of unexpected toll charges
+    unexpectedTollAmount :: HighPrecMoney,
+    -- | Names of unexpected toll plazas
+    unexpectedTollNames :: [Text]
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+
+-- | Compare actual toll charges at ride end against the estimated tolls
+-- from search time. Identifies tolls that were charged but not in the
+-- original estimate (due to route change, GPS reroute, etc.).
+identifyUnexpectedTolls ::
+  -- | Estimated toll IDs from search time
+  Maybe [Text] ->
+  -- | Actual toll IDs detected during ride
+  Maybe [Text] ->
+  -- | Actual toll charges
+  Maybe HighPrecMoney ->
+  -- | Actual toll names
+  Maybe [Text] ->
+  UnexpectedTollResult
+identifyUnexpectedTolls mbEstimatedTollIds mbActualTollIds mbActualCharges mbActualNames =
+  case (mbEstimatedTollIds, mbActualTollIds) of
+    (Just estIds, Just actIds) ->
+      let unexpectedIds = filter (`notElem` estIds) actIds
+          hasUnexpected = not (null unexpectedIds)
+       in UnexpectedTollResult
+            { unexpectedTollAdded = hasUnexpected,
+              unexpectedTollAmount = if hasUnexpected then fromMaybe 0 mbActualCharges else 0,
+              unexpectedTollNames = if hasUnexpected then fromMaybe [] mbActualNames else []
+            }
+    (Nothing, Just _) ->
+      -- No tolls were estimated but tolls were actually detected
+      UnexpectedTollResult
+        { unexpectedTollAdded = True,
+          unexpectedTollAmount = fromMaybe 0 mbActualCharges,
+          unexpectedTollNames = fromMaybe [] mbActualNames
+        }
+    _ ->
+      UnexpectedTollResult
+        { unexpectedTollAdded = False,
+          unexpectedTollAmount = 0,
+          unexpectedTollNames = []
+        }
