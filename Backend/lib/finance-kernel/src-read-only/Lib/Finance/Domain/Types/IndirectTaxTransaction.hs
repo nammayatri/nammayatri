@@ -3,10 +3,11 @@
 
 module Lib.Finance.Domain.Types.IndirectTaxTransaction where
 
-import qualified Kernel.Beam.Lib.UtilsTH
+import Data.Aeson
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Tools.Beam.UtilsTH
 
 data IndirectTaxTransaction = IndirectTaxTransaction
   { cgstAmount :: Kernel.Types.Common.HighPrecMoney,
@@ -38,10 +39,19 @@ data GstCreditType = Input | Output deriving (Eq, Ord, Show, Read, Generic, ToJS
 
 data SaleType = B2B | B2C deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data TransactionType = RideFare | Subscription | Incentive | Cancellation | BuyerCommission | CreditNote | DebitNote | PGFee deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data TransactionType
+  = RideFare
+  | Subscription
+  | Incentive
+  | Cancellation
+  | BuyerCommission
+  | CreditNote
+  | DebitNote
+  | PGFee
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''TransactionType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''GstCreditType))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''GstCreditType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SaleType))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''SaleType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TransactionType))

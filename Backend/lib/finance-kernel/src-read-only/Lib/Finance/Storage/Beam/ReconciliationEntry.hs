@@ -4,12 +4,12 @@
 module Lib.Finance.Storage.Beam.ReconciliationEntry where
 
 import qualified Database.Beam as B
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Lib.Finance.Domain.Types.ReconciliationEntry
+import Tools.Beam.UtilsTH
 
 data ReconciliationEntryT f = ReconciliationEntryT
   { actualLedgerValue :: (B.C f Kernel.Types.Common.HighPrecMoney),

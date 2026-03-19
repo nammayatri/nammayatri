@@ -5,18 +5,18 @@ module Lib.Finance.Storage.Beam.StateTransition where
 
 import qualified Data.Aeson
 import qualified Database.Beam as B
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Lib.Finance.Domain.Types.StateTransition
+import Tools.Beam.UtilsTH
 
 data StateTransitionT f = StateTransitionT
   { actorId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     actorType :: (B.C f Kernel.Prelude.Text),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
     entityId :: (B.C f Kernel.Prelude.Text),
-    entityType :: (B.C f Kernel.Prelude.Text),
+    entityType :: (B.C f Lib.Finance.Domain.Types.StateTransition.PaymentEntityType),
     event :: (B.C f Lib.Finance.Domain.Types.StateTransition.PaymentEvent),
     eventData :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     fromState :: (B.C f Lib.Finance.Domain.Types.StateTransition.PaymentState),

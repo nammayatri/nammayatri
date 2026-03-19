@@ -4,11 +4,11 @@
 module Lib.Finance.Domain.Types.ReconciliationSummary where
 
 import Data.Aeson
-import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
-import Kernel.Utils.TH (mkHttpInstancesForEnum)
+import Kernel.Utils.TH
+import qualified Tools.Beam.UtilsTH
 
 data ReconciliationSummary = ReconciliationSummary
   { createdAt :: Kernel.Prelude.UTCTime,
@@ -41,10 +41,10 @@ data ReconciliationType
   | PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''JobStatus))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationStatus))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''JobStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationType))
 
-$(mkHttpInstancesForEnum ''ReconciliationType)
+$(mkHttpInstancesForEnum (''ReconciliationType))

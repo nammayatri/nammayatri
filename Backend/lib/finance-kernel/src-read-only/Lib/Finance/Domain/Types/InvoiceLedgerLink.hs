@@ -3,11 +3,12 @@
 
 module Lib.Finance.Domain.Types.InvoiceLedgerLink where
 
-import qualified Kernel.Beam.Lib.UtilsTH
+import Data.Aeson
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Lib.Finance.Domain.Types.Invoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry
+import qualified Tools.Beam.UtilsTH
 
 data InvoiceLedgerLink = InvoiceLedgerLink
   { createdAt :: Kernel.Prelude.UTCTime,

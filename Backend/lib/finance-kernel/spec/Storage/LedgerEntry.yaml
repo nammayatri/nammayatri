@@ -19,11 +19,11 @@ LedgerEntry:
 
     EntryStatus:
       enum: "PENDING,DUE,SETTLED,VOIDED"
-      derive: "ToParamSchema"
+      derive: "HttpInstance"
 
     SettlementStatus:
       enum: "UNSETTLED,PAID_OUT"
-      derive: "ToParamSchema"
+      derive: "HttpInstance"
 
   fields:
     id: Id LedgerEntry
@@ -108,10 +108,3 @@ LedgerEntry:
 
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
-  domainInstance:
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <EntryType>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <EntryStatus>
-    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <EntryStatus>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SettlementStatus>
-    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <SettlementStatus>
-

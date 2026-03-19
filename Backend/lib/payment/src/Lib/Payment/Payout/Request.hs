@@ -348,7 +348,7 @@ recordHistory fromStatus toStatus message payoutRequest = do
   void $
     PayoutHistory.recordPayoutHistory
       PayoutHistory.PayoutHistoryRecord
-        { entityType = "PayoutRequest",
+        { entityType = ST.PayoutRequest,
           entityId = payoutRequest.id.getId,
           fromState = toPaymentState <$> fromStatus,
           toState = toPaymentState toStatus,
@@ -385,11 +385,11 @@ getStatusMessage CASH_PENDING = "Payment marked as cash pending"
 
 toPaymentEvent :: PayoutRequestStatus -> ST.PaymentEvent
 toPaymentEvent INITIATED = ST.INITIATE
-toPaymentEvent PROCESSING = ST.AUTHORIZE
+toPaymentEvent PROCESSING = ST.CAPTURE
 toPaymentEvent CREDITED = ST.CREDIT
 toPaymentEvent AUTO_PAY_FAILED = ST.FAIL
 toPaymentEvent CANCELLED = ST.CANCEL
 toPaymentEvent RETRYING = ST.RETRY
 toPaymentEvent FAILED = ST.FAIL
-toPaymentEvent CASH_PAID = ST.CAPTURE
+toPaymentEvent CASH_PAID = ST.CREDIT
 toPaymentEvent CASH_PENDING = ST.INITIATE

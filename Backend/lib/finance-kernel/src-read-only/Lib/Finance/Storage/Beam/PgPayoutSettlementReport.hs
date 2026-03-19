@@ -5,13 +5,13 @@ module Lib.Finance.Storage.Beam.PgPayoutSettlementReport where
 
 import qualified Data.Aeson
 import qualified Database.Beam as B
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport
 import qualified Lib.Finance.Domain.Types.PgPayoutSettlementReport
+import Tools.Beam.UtilsTH
 
 data PgPayoutSettlementReportT f = PgPayoutSettlementReportT
   { bankName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
