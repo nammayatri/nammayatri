@@ -717,6 +717,7 @@ library
       Tools.Ticket
       Tools.Wallet
       Tools.Whatsapp
+      Utils.CircuitBreaker
       API.Action.Dashboard.AppManagement
       API.Action.Dashboard.AppManagement.Customer
       API.Action.Dashboard.AppManagement.EventManagement
