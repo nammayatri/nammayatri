@@ -58,7 +58,7 @@ makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:MerchantServiceUsageCon
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCache merchantId = do
-  Hedis.withCrossAppRedis $ Hedis.del (makeMerchantOpCityIdKey merchantId)
+  Hedis.runInMultiCloudRedisWrite $ Hedis.withCrossAppRedis $ Hedis.del (makeMerchantOpCityIdKey merchantId)
 
 updateMerchantServiceUsageConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceUsageConfig -> m ()
 updateMerchantServiceUsageConfig = Queries.updateMerchantServiceUsageConfig
