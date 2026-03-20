@@ -42,7 +42,7 @@ module SharedLogic.FareTransparency
   )
 where
 
-import Domain.Types.FareParameters (FareParameters (..), FareParametersDetails (..), FParamsInterCityDetails (..), FParamsProgressiveDetails (..), FParamsRentalDetails (..), FParamsAmbulanceDetails (..))
+import Domain.Types.FareParameters (FareParameters (..), FareParametersDetails (..))
 import qualified Domain.Types.FarePolicy as DFP
 import Kernel.Prelude
 import Kernel.Utils.Common (HighPrecMoney (..))
@@ -204,13 +204,13 @@ applyFareCap ::
   HighPrecMoney ->
   FareCapResult
 applyFareCap multiplier estimatedFare finalFare =
-  let ceiling = HighPrecMoney $ toRational multiplier * estimatedFare.getHighPrecMoney
-      isCapped = finalFare > ceiling
-      cappedFare = if isCapped then ceiling else finalFare
+  let fareCapCeiling = HighPrecMoney $ toRational multiplier * estimatedFare.getHighPrecMoney
+      isCapped = finalFare > fareCapCeiling
+      cappedFare = if isCapped then fareCapCeiling else finalFare
       fareCapDiscount = if isCapped then finalFare - cappedFare else 0
    in FareCapResult
         { cappedFare,
           wasCapped = isCapped,
           fareCapDiscount,
-          fareCeiling = ceiling
+          fareCeiling = fareCapCeiling
         }
