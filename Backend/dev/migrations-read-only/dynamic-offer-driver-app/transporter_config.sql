@@ -820,3 +820,10 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN knowledge_cente
 
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_gps_toll_behavior boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_search_blacklist_duration_seconds integer  default 3600;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_rider_blacklist_duration_seconds integer  default 3600;

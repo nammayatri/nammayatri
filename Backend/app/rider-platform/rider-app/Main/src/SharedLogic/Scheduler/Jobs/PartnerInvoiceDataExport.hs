@@ -183,7 +183,7 @@ uploadToSFTP rawFileName content = withLogTag "SFTP" $ do
       (tmpBatchPath, hBatch) <- liftIO $ openTempFile tmpDir ("sftp_batch_" <> T.unpack fileName <> ".txt")
       let batchContent = "put " <> tmpContentPath <> " " <> remoteFilePath <> "\nquit\n"
       liftIO $ hPutStr hBatch batchContent >> hClose hBatch
-      logDebug $ "Created SFTP batch file: " <> T.pack tmpBatchPath
+      logDebug $ "Created SFTP batch file: " <> T.pack tmpBatchPath <> " with content: " <> T.pack batchContent
 
       -- Build command and argument list based on auth method
       let (cmd, sftpArgs) = case (sftpCfg.password, sftpCfg.privateKeyPath) of

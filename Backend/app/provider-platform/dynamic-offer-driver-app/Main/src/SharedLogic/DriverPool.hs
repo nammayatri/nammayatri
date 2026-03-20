@@ -496,37 +496,36 @@ mkBlockListedDriversForRiderKey :: Id RiderDetails -> Text
 mkBlockListedDriversForRiderKey riderId = "Block-Listed-Drivers-Key:RiderId-" <> riderId.getId
 
 addDriverToSearchCancelledList ::
-  ( CacheFlow m r,
-    HasField "searchRequestExpirationSeconds" r NominalDiffTime
+  ( CacheFlow m r
   ) =>
+  Seconds ->
   Id SearchRequest ->
   Id DP.Person ->
   m ()
-addDriverToSearchCancelledList searchReqId driverId = do
+addDriverToSearchCancelledList blacklistTtl searchReqId driverId = do
   let keyForDriverCancelledList = mkBlockListedDriversKey searchReqId
-  cacheBlockListedDrivers keyForDriverCancelledList driverId
+  cacheBlockListedDrivers blacklistTtl keyForDriverCancelledList driverId
 
 addDriverToRiderCancelledList ::
-  ( CacheFlow m r,
-    HasField "searchRequestExpirationSeconds" r NominalDiffTime
+  ( CacheFlow m r
   ) =>
+  Seconds ->
   Id DP.Person ->
   Id RiderDetails ->
   m ()
-addDriverToRiderCancelledList driverId riderId = do
+addDriverToRiderCancelledList blacklistTtl driverId riderId = do
   let keyForDriverCancelledList = mkBlockListedDriversForRiderKey riderId
-  cacheBlockListedDrivers keyForDriverCancelledList driverId
+  cacheBlockListedDrivers blacklistTtl keyForDriverCancelledList driverId
 
 cacheBlockListedDrivers ::
-  ( CacheFlow m r,
-    HasField "searchRequestExpirationSeconds" r NominalDiffTime
+  ( CacheFlow m r
   ) =>
+  Seconds ->
   Text ->
   Id DP.Person ->
   m ()
-cacheBlockListedDrivers key driverId = do
-  searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
-  Redis.withCrossAppRedis $ Redis.rPushExp key [driverId] (round searchRequestExpirationSeconds)
+cacheBlockListedDrivers blacklistTtl key driverId = do
+  Redis.withCrossAppRedis $ Redis.rPushExp key [driverId] (fromIntegral blacklistTtl)
 
 calculateGoHomeDriverPool ::
   ( BeamFlow m r,
