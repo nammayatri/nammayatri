@@ -2,7 +2,6 @@ module Storage.Queries.FRFSTicketBookingExtra where
 
 import Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
-import qualified Domain.Types.JourneyLeg as DJL
 import Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.Prelude
