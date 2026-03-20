@@ -142,7 +142,7 @@ processOrphanedPayment merchantId merchantOperatingCityId payment = do
           let orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing Payment.FRFSPassPurchase (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
               fulfillmentHandler paymentStatusResp = do
                 status <- DPayment.getTransactionStatus paymentStatusResp
-                Pass.passOrderStatusHandler (cast merchantId) paymentOrder.id status
+                Pass.passOrderStatusHandler paymentOrder.id merchantId status
           void $ SPayment.orderStatusHandler merchantOperatingCityId fulfillmentHandler Payment.FRFSPassPurchase paymentOrder orderStatusCall
           logInfo $ "Reconciled orphaned payment " <> payment.id.getId <> " via payment order status check"
   case result of
