@@ -282,28 +282,36 @@ validateRouteDirection integratedBPPConfig booking = do
   case booking.routeCode of
     Nothing -> pure () -- No route code; skip validation (e.g., metro with auto-routing)
     Just routeCode -> do
-      stops <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
-      let mbFromSeq = find (\s -> s.stopCode == booking.fromStationCode) stops <&> (.sequenceNum)
-          mbToSeq = find (\s -> s.stopCode == booking.toStationCode) stops <&> (.sequenceNum)
-      case (mbFromSeq, mbToSeq) of
-        (Just fromSeq, Just toSeq) -> do
-          when (fromSeq >= toSeq) $ do
-            logError $
-              "[RouteValidation] Wrong direction detected for booking " <> booking.id.getId
-                <> ": fromStop seq=" <> show fromSeq
-                <> " >= toStop seq=" <> show toSeq
-                <> " on route " <> routeCode
-            throwError $ InvalidRequest $
-              "Route direction mismatch: source station (seq " <> show fromSeq
-                <> ") must come before destination station (seq " <> show toSeq
-                <> ") on route " <> routeCode
-        _ -> do
+      eitherStops <- withTryCatch "validateRouteDirection:getRouteStopMapping" $
+        OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
+      case eitherStops of
+        Left err -> do
           logWarning $
-            "[RouteValidation] Could not validate direction for booking " <> booking.id.getId
-              <> ": fromStation=" <> booking.fromStationCode
-              <> " toStation=" <> booking.toStationCode
-              <> " route=" <> routeCode
-              <> " (stop not found in route mapping)"
+            "[RouteValidation] Failed to fetch route-stop mapping for booking " <> booking.id.getId
+              <> " on route " <> routeCode
+              <> ", failing open: " <> show err
+        Right stops -> do
+          let mbFromSeq = find (\s -> s.stopCode == booking.fromStationCode) stops <&> (.sequenceNum)
+              mbToSeq = find (\s -> s.stopCode == booking.toStationCode) stops <&> (.sequenceNum)
+          case (mbFromSeq, mbToSeq) of
+            (Just fromSeq, Just toSeq) -> do
+              when (fromSeq >= toSeq) $ do
+                logError $
+                  "[RouteValidation] Wrong direction detected for booking " <> booking.id.getId
+                    <> ": fromStop seq=" <> show fromSeq
+                    <> " >= toStop seq=" <> show toSeq
+                    <> " on route " <> routeCode
+                throwError $ InvalidRequest $
+                  "Route direction mismatch: source station (seq " <> show fromSeq
+                    <> ") must come before destination station (seq " <> show toSeq
+                    <> ") on route " <> routeCode
+            _ -> do
+              logWarning $
+                "[RouteValidation] Could not validate direction for booking " <> booking.id.getId
+                  <> ": fromStation=" <> booking.fromStationCode
+                  <> " toStation=" <> booking.toStationCode
+                  <> " route=" <> routeCode
+                  <> " (stop not found in route mapping)"
 
 status :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Id Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
 status _merchantId _merchantOperatingCity integratedBPPConfig bapConfig booking = do

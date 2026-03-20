@@ -284,7 +284,10 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
                        || T.isInfixOf "authorization" ticketRes.returnMessage
                        || ticketRes.returnCode == "-1"
     if isAuthCodeError
-      then throwError $ InternalError "Metro ticket booking authorization expired. Please try booking again."
+      then do
+        logWarning "[CMRLV2:Order] Body-level auth error detected, resetting cached auth token"
+        void $ resetAuthToken config
+        throwError $ InternalError "Metro ticket booking authorization expired. Please try booking again."
       else throwError $ InternalError $ "Metro ticket generation failed (code: " <> ticketRes.returnCode <> "). Please retry."
 
   -- Validate non-empty ticket response
