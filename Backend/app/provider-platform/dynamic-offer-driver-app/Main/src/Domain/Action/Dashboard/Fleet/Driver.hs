@@ -1972,7 +1972,7 @@ postDriverFleetVehicleDriverRcStatus merchantShortId opCity reqDriverId requesto
       validateFleetOwnerWithDriverAndVehicle personId entityId merchant.id merchantOpCityId req.rcNo
     DP.OPERATOR -> validateOperatorWithDriver personId entityId
     _ -> throwError (InvalidRequest "Invalid Data")
-  _ <- DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) (DomainRC.RCStatusReq {isActivate = req.isActivate, rcNo = req.rcNo})
+  _ <- DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) False (DomainRC.RCStatusReq {isActivate = req.isActivate, rcNo = req.rcNo})
   logTagInfo "dashboard -> addVehicle : " (show personId)
   pure Success
   where
