@@ -216,7 +216,9 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
 
       fork "notify customer for ride start" $ notifyBAPRideStarted booking updatedRide (Just point)
       fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride booking
-      fork "IffcoTokio driver insurance" $ IffcoInsurance.triggerIffcoTokioInsurance driverId booking.providerId ride.merchantOperatingCityId
+      if isInterCityTrip booking.tripCategory || isRentalTrip booking.tripCategory
+        then logTagInfo "IffcoTokio driver insurance skipped" ("tripCategory=" <> show booking.tripCategory <> ", rideId=" <> ride.id.getId)
+        else fork "IffcoTokio driver insurance" $ IffcoInsurance.triggerIffcoTokioInsurance driverId booking.providerId ride.merchantOperatingCityId
 
       -- Schedule payout for special zone rides if enabled
       let paymentInstrument = fromMaybe DMPM.Cash booking.paymentInstrument
