@@ -30,6 +30,7 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AKey
 import qualified Data.Aeson.KeyMap as AKeyMap
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Time as DT
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -75,6 +76,9 @@ import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified SharedLogic.External.Nandi.Types
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -723,6 +727,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
   mbLastVerified <- QPassVerifyTransaction.findLastVerifiedVehicleNumberByPurchasePassId purchasedPass.id
   let lastVerifiedVehicleNumber = fmap fst mbLastVerified
   let isAutoVerified = (mbLastVerified >>= snd) == Just True
+  futureRenewalEntities <- buildPurchasedPassPaymentAPIEntities futureRenewals
   return $
     PassAPI.PurchasedPassAPIEntity
       { id = purchasedPass.id,
@@ -741,7 +746,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         purchaseDate = DT.utctDay purchasedPass.createdAt,
         expiryDate = purchasedPass.endDate,
         isPreferredSourceAndDestinationSet = isJust purchasedPass.preferredDestination && isJust purchasedPass.preferredSource,
-        futureRenewals = buildPurchasedPassPaymentAPIEntity <$> futureRenewals
+        futureRenewals = futureRenewalEntities
       }
 
 -- Webhook Handler for Pass Payment Status Updates
@@ -1327,20 +1332,96 @@ getMultimodalPassTransactions (mbCallerPersonId, _) mbLimitParam mbOffsetParam m
   allPurchasedPassTransactions <- case statuses of
     [] -> QPurchasedPassPayment.findAllWithPersonId (Just limit) (Just offset) personId
     _ -> QPurchasedPassPayment.findAllByPersonIdAndStatuses (Just limit) (Just offset) personId statuses
-  return $ map buildPurchasedPassPaymentAPIEntity allPurchasedPassTransactions
+  buildPurchasedPassPaymentAPIEntities allPurchasedPassTransactions
 
-buildPurchasedPassPaymentAPIEntity :: DPurchasedPassPayment.PurchasedPassPayment -> PassAPI.PurchasedPassTransactionAPIEntity
-buildPurchasedPassPaymentAPIEntity purchasedPassPayment =
+buildPurchasedPassPaymentAPIEntities ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [DPurchasedPassPayment.PurchasedPassPayment] ->
+  m [PassAPI.PurchasedPassTransactionAPIEntity]
+buildPurchasedPassPaymentAPIEntities payments = do
+  refundMap <- fetchRefundsForPayments payments
+  return $ map (mkPurchasedPassPaymentAPIEntity refundMap) payments
+
+mkPurchasedPassPaymentAPIEntity ::
+  Map.Map (Id.Id DOrder.PaymentOrder) [PassAPI.RefundAPIEntity] ->
+  DPurchasedPassPayment.PurchasedPassPayment ->
   PassAPI.PurchasedPassTransactionAPIEntity
-    { id = purchasedPassPayment.id,
-      startDate = purchasedPassPayment.startDate,
-      endDate = purchasedPassPayment.endDate,
-      status = purchasedPassPayment.status,
-      amount = purchasedPassPayment.amount,
-      passName = purchasedPassPayment.passName,
-      passCode = purchasedPassPayment.passCode,
-      passType = purchasedPassPayment.passEnum,
-      createdAt = purchasedPassPayment.createdAt
+mkPurchasedPassPaymentAPIEntity refundMap purchasedPassPayment =
+  let refunds = Map.findWithDefault [] purchasedPassPayment.orderId refundMap
+      computedStatus = computePassStatusFromRefunds purchasedPassPayment.status refunds
+   in PassAPI.PurchasedPassTransactionAPIEntity
+        { id = purchasedPassPayment.id,
+          startDate = purchasedPassPayment.startDate,
+          endDate = purchasedPassPayment.endDate,
+          status = computedStatus,
+          amount = purchasedPassPayment.amount,
+          passName = purchasedPassPayment.passName,
+          passCode = purchasedPassPayment.passCode,
+          passType = purchasedPassPayment.passEnum,
+          createdAt = purchasedPassPayment.createdAt,
+          refunds = refunds
+        }
+
+-- Derives status from the most-recently-updated refund row. Retries land as
+-- new refund rows, so the latest row supersedes earlier failed attempts.
+computePassStatusFromRefunds :: DPurchasedPass.StatusType -> [PassAPI.RefundAPIEntity] -> DPurchasedPass.StatusType
+computePassStatusFromRefunds originalStatus refunds
+  | null refunds = originalStatus
+  | otherwise =
+      let latest = foldr1 pickLatest refunds
+       in mapStatus latest.status
+  where
+    pickLatest r acc = if r.updatedAt >= acc.updatedAt then r else acc
+    mapStatus PaymentInterface.REFUND_PENDING = DPurchasedPass.RefundPending
+    mapStatus PaymentInterface.REFUND_SUCCESS = DPurchasedPass.Refunded
+    mapStatus PaymentInterface.REFUND_FAILURE = DPurchasedPass.RefundFailed
+    mapStatus PaymentInterface.MANUAL_REVIEW = DPurchasedPass.RefundInitiated
+    mapStatus _ = originalStatus
+
+isRefundStatus :: DPurchasedPass.StatusType -> Bool
+isRefundStatus DPurchasedPass.RefundInitiated = True
+isRefundStatus DPurchasedPass.RefundPending = True
+isRefundStatus DPurchasedPass.Refunded = True
+isRefundStatus DPurchasedPass.RefundFailed = True
+isRefundStatus _ = False
+
+fetchRefundsForPayments ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [DPurchasedPassPayment.PurchasedPassPayment] ->
+  m (Map.Map (Id.Id DOrder.PaymentOrder) [PassAPI.RefundAPIEntity])
+fetchRefundsForPayments payments = do
+  let refundPayments = filter (isRefundStatus . (.status)) payments
+      orderIds = map (.orderId) refundPayments
+  if null orderIds
+    then return Map.empty
+    else do
+      paymentOrders <- QPaymentOrder.findAllByIds orderIds
+      let foundOrderIds = map (.id) paymentOrders
+          missingOrderIds = filter (`notElem` foundOrderIds) orderIds
+      forM_ missingOrderIds $ \missingId ->
+        logError $ "Missing payment order for pass payment, paymentOrderId: " <> missingId.getId
+      let shortIdMap = Map.fromList $ map (\po -> (po.shortId, po.id)) paymentOrders
+          allShortIds = map (.shortId) paymentOrders
+      if null allShortIds
+        then return Map.empty
+        else do
+          allRefunds <- QRefunds.findAllByOrderIds allShortIds
+          let refundsByOrderId = foldl' (\acc refund -> case Map.lookup refund.orderId shortIdMap of
+                  Just payOrderId -> Map.insertWith (++) payOrderId [buildRefundAPIEntity refund] acc
+                  Nothing -> acc
+                ) Map.empty allRefunds
+          return refundsByOrderId
+
+buildRefundAPIEntity :: DRefunds.Refunds -> PassAPI.RefundAPIEntity
+buildRefundAPIEntity refund =
+  PassAPI.RefundAPIEntity
+    { id = refund.id,
+      amount = refund.refundAmount,
+      status = refund.status,
+      arn = refund.arn,
+      completedAt = refund.completedAt,
+      updatedAt = refund.updatedAt,
+      createdAt = refund.createdAt
     }
 
 getDeviceId :: DP.Person -> Maybe Text -> Maybe Text -> Environment.Flow Text
