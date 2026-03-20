@@ -30,6 +30,9 @@ import qualified Sequelize as Se
 findById :: BeamFlow m r => Id DOrder.PaymentOrder -> m (Maybe DOrder.PaymentOrder)
 findById (Id paymentOrder) = findOneWithKV [Se.Is BeamPO.id $ Se.Eq paymentOrder]
 
+findAllByIds :: BeamFlow m r => [Id DOrder.PaymentOrder] -> m [DOrder.PaymentOrder]
+findAllByIds ids = findAllWithKV [Se.Is BeamPO.id $ Se.In (map getId ids)]
+
 findByShortId :: BeamFlow m r => ShortId DOrder.PaymentOrder -> m (Maybe DOrder.PaymentOrder)
 findByShortId (ShortId shortId) = findOneWithKV [Se.Is BeamPO.shortId $ Se.Eq shortId]
 
