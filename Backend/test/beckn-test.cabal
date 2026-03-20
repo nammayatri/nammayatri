@@ -36,6 +36,7 @@ library
       Mobility.ARDU.APICalls
       Mobility.ARDU.CancelFlow
       Mobility.ARDU.DriverAcceptsNonrelevantQuote
+      Mobility.ARDU.DriverAllocation
       Mobility.ARDU.DriverOffersTwice
       Mobility.ARDU.Fixtures
       Mobility.ARDU.HealthCheck

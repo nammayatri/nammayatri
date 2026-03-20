@@ -99,6 +99,7 @@ test-suite location-updates-tests
   main-is: Main.hs
   other-modules:
       API
+      HedisSpec
       RedisAlgorithm
       Routes
       Utils
