@@ -170,7 +170,7 @@ processPaymentOrder merchantId merchantOperatingCityId paymentOrder = do
 -- missed by the real-time cancellation flow (e.g., payment completed between
 -- the cancellation check and the actual cancel).
 reconcileChargedButCancelledOrders ::
-  forall m r c.
+  forall m r.
   ( EncFlow m r,
     CacheFlow m r,
     MonadFlow m,
