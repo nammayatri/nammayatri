@@ -16,10 +16,10 @@ import qualified Kernel.External.Insurance.Interface as Insurance
 import qualified Kernel.External.Insurance.Interface.Types as InsuranceTypes
 import qualified Kernel.External.Insurance.IffcoTokio.Types as IffcoTokio
 import Kernel.External.Notification.FCM.Types as FCM
-import Kernel.Prelude hiding (all, whenJust)
+import Kernel.Prelude ()
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant.Client.Core (Scheme (..))
+import Servant.Client.Core ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Domain.Types.Extra.MerchantServiceConfig as ExtraMSC
@@ -115,7 +115,7 @@ triggerIffcoTokioInsurance driverId merchantId merchantOpCityId = do
           QIffco.create insuranceEntry
           let iffcoCfg =
                 IffcoTokio.IffcoTokioConfig
-                  { url = BaseUrl Http (Text.unpack iffcoExtCfg.url) 80 "",
+                  { url = iffcoExtCfg.url,
                     username = iffcoExtCfg.username,
                     password = iffcoExtCfg.password,
                     masterPolicyClient = iffcoExtCfg.masterPolicyClient,
