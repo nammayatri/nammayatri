@@ -1357,7 +1357,7 @@ getFrfsTripRouteManifest (mbPersonId, _merchantId) tripId routeId = do
     schedule & listToMaybe
       & fromMaybeM (InvalidRequest "Bus schedule not found")
   let stops = scheduleDetail.eta
-  bookings <- JMU.measureLatency (QFRFSTicketBooking.findAllByTripId tripId) "findAllByTripId"
+  bookings <- JMU.measureLatency (QFRFSTicketBooking.findAllConfirmedByTripId tripId) "findAllByTripId"
   let bookingIds = map (.id) bookings
   allTickets <- JMU.measureLatency (QFRFSTicket.findAllByTicketBookingIds bookingIds) "findAllByTicketBookingIds"
   let ticketMap = Map.fromListWith (++) $ map (\t -> (t.frfsTicketBookingId, [t])) allTickets
