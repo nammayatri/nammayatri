@@ -489,6 +489,7 @@ library
       SharedLogic.Scheduler.Jobs.Chakras
       SharedLogic.Scheduler.Jobs.CheckExotelCallStatusAndNotifyBPP
       SharedLogic.Scheduler.Jobs.CheckMultimodalConfirmFail
+      SharedLogic.Scheduler.Jobs.CheckOrphanedPassPayment
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
       SharedLogic.Scheduler.Jobs.CheckRefundStatus
       SharedLogic.Scheduler.Jobs.CrisRecon
