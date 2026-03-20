@@ -45,7 +45,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RiderDetails
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Yudhishthira as TY
-import EulerHS.Prelude hiding (whenJust)
+import EulerHS.Prelude hiding (threadDelay, whenJust)
 import Kernel.External.Maps
 import Kernel.Prelude hiding (any, elem, map, mapM_, notElem)
 import Kernel.Storage.Clickhouse.Config
