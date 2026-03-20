@@ -36,6 +36,7 @@ import qualified Beckn.ACL.Confirm as ACL
 import Control.Applicative ((<|>))
 -- import Data.Aeson (defaultOptions, withObject, (.:?))
 import Data.Aeson.Types ()
+import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.OpenApi ()
 import qualified Data.Text
 import qualified Domain.Action.Beckn.OnInit as DOnInit
@@ -706,13 +707,38 @@ stripeWebhookHandler' ::
   Flow AckResponse
 stripeWebhookHandler' serviceName merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader rawBytes = do
   (paymentServiceConfig, merchantOperatingCity) <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId serviceName
-  -- P0 Fix: Implement Stripe webhook deduplication (was: pure False -- FIXME)
-  -- Uses atomic setNxExpire to avoid TOCTOU race between get and setExp.
+  -- P0 Fix: Stripe webhook deduplication with claim/complete/clear pattern.
+  -- The dedup check claims a short-lived processing key; the completion marker
+  -- is written only after successful processing so transient failures allow retries.
+  eventIdRef <- liftIO $ newIORef Nothing
   let checkDuplicatedEvent eventId = do
-        let dedupKey = "stripe:webhook:eventId:" <> eventId.getId
-        isNew <- Redis.setNxExpire dedupKey 86400 ("1" :: Text)
-        pure (not isNew) -- setNxExpire returns True if key was set (new event); we return True if duplicate
-  Stripe.serviceEventWebhook paymentServiceConfig checkDuplicatedEvent (stripeWebhookAction merchantOperatingCity.id) mbSigHeader rawBytes
+        let eventIdText = eventId.getId
+        liftIO $ writeIORef eventIdRef (Just eventIdText)
+        let completionKey = "stripe:webhook:eventId:" <> eventIdText
+        let processingKey = "stripe:webhook:processing:" <> eventIdText
+        mbCompleted <- Redis.get @Text completionKey
+        case mbCompleted of
+          Just _ -> pure True -- Already successfully processed
+          Nothing -> do
+            claimed <- Redis.setNxExpire processingKey 60 ("1" :: Text)
+            pure (not claimed) -- If claim failed, another worker is processing
+  let wrappedAction mocId resp respDump = do
+        result <- withTryCatch "stripeWebhookAction" $ stripeWebhookAction mocId resp respDump
+        mbEventId <- liftIO $ readIORef eventIdRef
+        case result of
+          Right ackResp -> do
+            whenJust mbEventId $ \evtId -> do
+              let completionKey = "stripe:webhook:eventId:" <> evtId
+              let processingKey = "stripe:webhook:processing:" <> evtId
+              Redis.setExp completionKey ("1" :: Text) 86400
+              Redis.del processingKey
+            pure ackResp
+          Left err -> do
+            whenJust mbEventId $ \evtId -> do
+              let processingKey = "stripe:webhook:processing:" <> evtId
+              Redis.del processingKey
+            throwM err
+  Stripe.serviceEventWebhook paymentServiceConfig checkDuplicatedEvent (wrappedAction merchantOperatingCity.id) mbSigHeader rawBytes
 
 stripeWebhookAction ::
   Id DMOC.MerchantOperatingCity ->
