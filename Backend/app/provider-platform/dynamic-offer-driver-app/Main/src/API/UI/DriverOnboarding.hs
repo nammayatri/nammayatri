@@ -204,7 +204,7 @@ getReferredDrivers :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity
 getReferredDrivers (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ DriverOnboarding.getReferredDrivers (personId, merchantId, merchantOpCityId)
 
 setRCStatus :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.RCStatusReq -> FlowHandler APISuccess
-setRCStatus (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . DriverOnboarding.linkRCStatus (personId, merchantId, merchantOpCityId)
+setRCStatus (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . DriverOnboarding.linkRCStatus (personId, merchantId, merchantOpCityId) False
 
 deleteRC :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DeleteRCReq -> FlowHandler APISuccess
 deleteRC (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.deleteRC (personId, merchantId, merchantOpCityId) req False
