@@ -10,6 +10,7 @@
 
 module Safety.Domain.Action.UI.Sos where
 
+import Control.Applicative ((<|>))
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -25,7 +26,6 @@ import Safety.Storage.BeamFlow
 import qualified Safety.Storage.CachedQueries.Sos as CQSos
 import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
 import qualified Safety.Storage.Queries.Sos as QSos
-import Control.Applicative ((<|>))
 
 -- | Update SOS entityType from NonRide to Ride and update rideId
 -- Validates that the SOS exists and has entityType "NonRide" before updating
@@ -241,8 +241,9 @@ markSosAsSafe sosId personId mbIsEndLiveTracking mbIsRideEnded = do
       shouldTransitionToLiveTracking = sosDetails.entityType == Just DSos.NonRide && sosDetails.sosState == Just DSos.SosActive && mbIsEndLiveTracking == Just False
 
   when (not shouldMarkAsResolved && not shouldTransitionToLiveTracking) $
-    throwError $ InvalidRequest
-      "Nothing to update: SOS is already in LiveTracking state or request is a no-op"
+    throwError $
+      InvalidRequest
+        "Nothing to update: SOS is already in LiveTracking state or request is a no-op"
 
   now <- getCurrentTime
   let updatedSosDetails =
@@ -327,55 +328,55 @@ createRideBasedSos personId rideId merchantOperatingCityId merchantId flow mbExi
         let updatedSos = existingSos {DSos.status = DSos.Pending, DSos.updatedAt = now}
         void $ QSos.updateByPrimaryKey updatedSos
 
-          -- Cache updated SOS
-          CQSos.cacheSosIdByRideId rideId updatedSos
+        -- Cache updated SOS
+        CQSos.cacheSosIdByRideId rideId updatedSos
 
-          return $
-            CreateSosResult
-              { sosId = existingSos.id,
-                wasReactivated = True,
-                sosDetails = updatedSos
-              }
-        Nothing -> do
-          -- Create new SOS
-          now <- getCurrentTime
-          pid <- generateGUID
-          let eightHoursInSeconds :: Int = 8 * 60 * 60
-          let trackingExpiresAt = addUTCTime (fromIntegral eightHoursInSeconds) now
-          let newSos =
-                DSos.Sos
-                  { id = pid,
-                    personId = personId,
-                    status = DSos.Pending,
-                    flow = flow,
-                    rideId = Just rideId,
-                    ticketId = ticketId,
-                    mediaFiles = [],
-                    merchantId = Just merchantId,
-                    merchantOperatingCityId = Just merchantOperatingCityId,
-                    trackingExpiresAt = Just trackingExpiresAt,
-                    entityType = Just DSos.Ride,
-                    sosState = Just DSos.SosActive,
-                    createdAt = now,
-                    updatedAt = now,
-                    externalReferenceId = mbExternalReferenceId,
-                    externalReferenceStatus = Nothing,
-                    externalStatusHistory = Nothing
-                  }
+        return $
+          CreateSosResult
+            { sosId = existingSos.id,
+              wasReactivated = True,
+              sosDetails = updatedSos
+            }
+      Nothing -> do
+        -- Create new SOS
+        now <- getCurrentTime
+        pid <- generateGUID
+        let eightHoursInSeconds :: Int = 8 * 60 * 60
+        let trackingExpiresAt = addUTCTime (fromIntegral eightHoursInSeconds) now
+        let newSos =
+              DSos.Sos
+                { id = pid,
+                  personId = personId,
+                  status = DSos.Pending,
+                  flow = flow,
+                  rideId = Just rideId,
+                  ticketId = ticketId,
+                  mediaFiles = [],
+                  merchantId = Just merchantId,
+                  merchantOperatingCityId = Just merchantOperatingCityId,
+                  trackingExpiresAt = Just trackingExpiresAt,
+                  entityType = Just DSos.Ride,
+                  sosState = Just DSos.SosActive,
+                  createdAt = now,
+                  updatedAt = now,
+                  externalReferenceId = mbExternalReferenceId,
+                  externalReferenceStatus = Nothing,
+                  externalStatusHistory = Nothing
+                }
 
-          logDebug $ "createRideBasedSos: about to createSos, sosId=" <> getId pid <> ", rideId=" <> rideId.getId
-          void $ createSos newSos
-          logDebug $ "createRideBasedSos: createSos returned, sosId=" <> getId pid
+        logDebug $ "createRideBasedSos: about to createSos, sosId=" <> getId pid <> ", rideId=" <> rideId.getId
+        void $ createSos newSos
+        logDebug $ "createRideBasedSos: createSos returned, sosId=" <> getId pid
 
-          -- Cache new SOS
-          CQSos.cacheSosIdByRideId rideId newSos
+        -- Cache new SOS
+        CQSos.cacheSosIdByRideId rideId newSos
 
-          return $
-            CreateSosResult
-              { sosId = newSos.id,
-                wasReactivated = False,
-                sosDetails = newSos
-              }
+        return $
+          CreateSosResult
+            { sosId = newSos.id,
+              wasReactivated = False,
+              sosDetails = newSos
+            }
 
 -- | Core logic for creating non-ride SOS
 -- Handles SOS DB operations
