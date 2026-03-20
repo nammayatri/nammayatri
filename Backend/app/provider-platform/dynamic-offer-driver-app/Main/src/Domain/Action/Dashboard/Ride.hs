@@ -676,7 +676,7 @@ bookingWithVehicleNumberAndPhone merchant merchantOpCityId req = do
               { rcNo = req.vehicleNumber,
                 isActivate = True
               }
-      void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) rcStatusReq
+      void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) True rcStatusReq
     createRCAssociation driverId rc = do
       transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       allLinkedRCs <- DAQuery.findAllLinkedByDriverId driverId

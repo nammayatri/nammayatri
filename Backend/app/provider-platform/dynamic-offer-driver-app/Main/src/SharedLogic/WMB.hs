@@ -555,7 +555,7 @@ linkVehicleToDriver driverId merchantId merchantOperatingCityId _ _ vehicleNumbe
               { rcNo = vehicleNumber,
                 isActivate = True
               }
-      void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) rcStatusReq
+      void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) False rcStatusReq
     createRCAssociation = do
       transporterConfig <- SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
       createDriverRCAssociationIfPossible transporterConfig driverId vehicleRC
@@ -581,7 +581,7 @@ unlinkVehicleToDriver driverId merchantId merchantOperatingCityId vehicleNumber 
           { rcNo = vehicleNumber,
             isActivate = False
           }
-  void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) rcStatusReq
+  void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) False rcStatusReq
   RCQuery.findLastVehicleRCWrapper vehicleNumber
     >>= \case
       Just rc -> DAQuery.endAssociationForRC driverId rc.id
