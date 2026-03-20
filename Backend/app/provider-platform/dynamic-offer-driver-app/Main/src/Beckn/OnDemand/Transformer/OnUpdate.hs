@@ -331,6 +331,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderPayments = Nothing,
           orderProvider = Nothing,
           orderQuote = Nothing,
+          orderTags = Nothing,
           orderStatus = Nothing,
           orderCreatedAt = Just booking.createdAt,
           orderUpdatedAt = Just booking.updatedAt
