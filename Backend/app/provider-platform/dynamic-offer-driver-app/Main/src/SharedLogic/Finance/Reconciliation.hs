@@ -51,6 +51,7 @@ import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Extra.MerchantPaymentMethod as MP
+import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.Ride as DR
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -74,6 +75,7 @@ import SharedLogic.Finance.Wallet
     walletReferenceTollCharges,
   )
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.FareParameters as QFareParams
 
 -- ────────────────────────────────────────────────────────────────────
 -- Reconciliation job type (status map key)
@@ -415,10 +417,11 @@ processCancelled expectedCustTotal custCancelEntry custCancelGstEntry expectedDr
 runDsrVsLedgerComparison ::
   DB.Booking ->
   Maybe DR.Ride ->
+  Maybe DFP.FareParameters ->
   [LedgerEntry.LedgerEntry] ->
   [IndirectTax.IndirectTaxTransaction] ->
   DsrVsLedgerResult
-runDsrVsLedgerComparison booking mbRide ledgerEntries indirectTaxTxns =
+runDsrVsLedgerComparison booking mbRide mbRideFareParams ledgerEntries indirectTaxTxns =
   let mode = determineRideMode booking.ledgerWriteMode booking.paymentInstrument
 
       -- Ledger entries by reference type
@@ -437,10 +440,11 @@ runDsrVsLedgerComparison booking mbRide ledgerEntries indirectTaxTxns =
         _ -> IndirectTax.Cancellation
       expectedGst = (.totalGstAmount) <$> find (\t -> t.transactionType == relevantType) indirectTaxTxns
 
+      fareParams = fromMaybe booking.fareParams mbRideFareParams
       baseFare = fromMaybe booking.estimatedFare (mbRide >>= (.fare))
       tollCharges = fromMaybe 0 $ (mbRide >>= (.tollCharges)) <|> booking.tollCharges
-      parkingCharges = fromMaybe 0 booking.fareParams.parkingCharge
-      govtCharges = fromMaybe 0 booking.fareParams.govtCharges
+      parkingCharges = fromMaybe 0 fareParams.parkingCharge
+      govtCharges = fromMaybe 0 fareParams.govtCharges
       expectedGross = Just $ baseFare - tollCharges - parkingCharges - govtCharges
       expectedToll = Just tollCharges
       expectedParking = Just parkingCharges
@@ -512,7 +516,8 @@ reconcileBookingWithLedgerEntries jobType booking mbRide = do
       Nothing -> do
         ledgerEntries <- QLedgerExtra.findByReferenceIn dsrVsLedgerRefTypes booking.id.getId
         indirectTaxTxns <- QIndirectTax.findByReferenceId booking.id.getId
-        let dsrResult = runDsrVsLedgerComparison booking mbRide ledgerEntries indirectTaxTxns
+        rideFareParams <- maybe (pure Nothing) (\ride -> maybe (pure Nothing) (QFareParams.findById) ride.fareParametersId) mbRide
+        let dsrResult = runDsrVsLedgerComparison booking mbRide rideFareParams ledgerEntries indirectTaxTxns
             result = ReconciliationResult dsrResult.reconStatus dsrResult.mismatchReason dsrResult.expectedStored dsrResult.actualStored
         let updatedStatusMap = updateReconStatus existingStatusMap jobType result.reconStatus
             newStatusValue = Just $ mkReconciliationStatusValue updatedStatusMap
