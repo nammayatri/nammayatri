@@ -45,6 +45,10 @@ clearCache :: BeamFlow.BeamFlow m r => Lib.Yudhishthira.Types.LogicDomain -> m (
 clearCache domain =
   Hedis.runInMultiCloudRedisWrite $ Hedis.withCrossAppRedis $ Hedis.del $ domainCacheKey domain
 
+clearCacheByDomainAndVersion :: BeamFlow.BeamFlow m r => Lib.Yudhishthira.Types.LogicDomain -> Kernel.Prelude.Int -> m ()
+clearCacheByDomainAndVersion domain version =
+  Hedis.runInMultiCloudRedisWrite $ Hedis.withCrossAppRedis $ Hedis.del $ domainAndVersionCacheKey domain version
+
 createMany :: (BeamFlow.BeamFlow m r) => [Lib.Yudhishthira.Types.AppDynamicLogicElement.AppDynamicLogicElement] -> m ()
 createMany = Queries.createMany
 

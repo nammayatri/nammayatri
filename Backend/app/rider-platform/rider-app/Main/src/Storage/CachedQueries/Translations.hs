@@ -28,18 +28,25 @@ findByMerchantOpCityIdMessageKeyLanguage ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Data.Text.Text -> Lang.Language -> m (Kernel.Prelude.Maybe Domain.Types.Translations.Translations))
 findByMerchantOpCityIdMessageKeyLanguage merchantOperatingCityId messageKey language = do
-  (Hedis.safeGet ("CachedQueries:Translations:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":MessageKey-" <> show messageKey <> ":Language-" <> show language))
-    >>= ( \case
-            Just a -> pure (Just a)
-            Nothing ->
-              flip
-                whenJust
-                ( \dataToBeCached -> do
-                    expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-                    Hedis.setExp ("CachedQueries:Translations:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":MessageKey-" <> show messageKey <> ":Language-" <> show language) dataToBeCached expTime
-                )
-                /=<< Queries.findByMerchantOpCityIdMessageKeyLanguage merchantOperatingCityId messageKey language
-        )
+  let makeKey mbCityId =
+        "CachedQueries:Translations:"
+          <> ":MessageKey-" <> show messageKey
+          <> ":Language-" <> show language
+          <> ":City-" <> fromMaybe "" mbCityId
+      citySpecificKey = makeKey (Just $ Kernel.Types.Id.getId merchantOperatingCityId)
+      globalKey = makeKey Nothing
+  Hedis.safeGet citySpecificKey >>= \case
+    Just cached -> pure (Just cached)
+    Nothing ->
+      Hedis.safeGet globalKey >>= \case
+        Just cached -> pure (Just cached)
+        Nothing -> do
+          result <- Queries.findByMerchantOpCityIdMessageKeyLanguage merchantOperatingCityId messageKey language
+          whenJust result $ \dataToBeCached -> do
+            expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+            let cacheKey = makeKey (Kernel.Types.Id.getId <$> dataToBeCached.merchantOperatingCityId)
+            Hedis.setExp cacheKey dataToBeCached expTime
+          pure result
 
 findByMerchantOpCityIdMessageKeyLanguageWithInMemcache :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMerchantOperatingCity.MerchantOperatingCity -> Text -> Lang.Language -> m (Maybe Domain.Types.Translations.Translations)
 findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid messageKey language = do

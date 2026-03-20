@@ -16,7 +16,7 @@ Translations:
     messageKey : Text
     language : Language
     message : Text
-    merchantOperatingCityId : Id MerchantOperatingCity
+    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
     createdAt : UTCTime
     updatedAt : UTCTime
 

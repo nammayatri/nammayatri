@@ -59,6 +59,8 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as TE
 import qualified Domain.Types.BecknConfig as DTBC
 import qualified Domain.Types.Exophone as DTE
+import qualified Data.HashMap.Strict as HM
+import qualified Domain.Action.UI.CancelLogic as CancelLogic
 import qualified Domain.Types.FRFSConfig as DFRFS
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantConfig as DTM
@@ -306,6 +308,10 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTE.Exophone) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy (LYTU.Config DTE.Exophone)) _riderConfig.dynamicLogicUpdatePassword req logicData
+    LYTU.CANCELLATION_REASONS -> do
+      let defaultInput = CancelLogic.CancellationReasonInput {hasRideAssigned = False, isAirConditioned = False}
+      logicData :: CancelLogic.CancellationReasonInput <- YudhishthiraFlow.createLogicData defaultInput (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy (HM.HashMap Text [CancelLogic.CancellationReasonConfig])) _riderConfig.dynamicLogicUpdatePassword req logicData
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
 
 getNammaTagAppDynamicLogic :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Int -> LYTU.LogicDomain -> Environment.Flow [LYTU.GetLogicsResp]
@@ -493,6 +499,13 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
         LYTU.DomainSchemaResp
           { LYTU.defaultValue = A.toJSON (LYTU.Config def' Nothing 1),
             LYTU.schema = toInlinedSchemaValue (Proxy @(LYTU.Config DTE.Exophone))
+          }
+    LYTU.CANCELLATION_REASONS -> do
+      let defaultInput = CancelLogic.CancellationReasonInput {hasRideAssigned = False, isAirConditioned = False}
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON defaultInput,
+            LYTU.schema = toInlinedSchemaValue (Proxy @CancelLogic.CancellationReasonInput)
           }
     _ -> throwError $ InvalidRequest "Domain schema not available"
 

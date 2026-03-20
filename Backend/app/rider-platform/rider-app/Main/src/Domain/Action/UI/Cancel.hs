@@ -19,6 +19,8 @@ module Domain.Action.UI.Cancel
     CancelRes (..),
     CancelSearch (..),
     CancellationDuesDetailsRes (..),
+    CancellationReasonInput (..),
+    computeCancellationReasons,
     mkDomainCancelSearch,
     cancelSearch,
     getCancellationDuesDetails,
@@ -29,6 +31,10 @@ where
 
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.HashMap.Strict as HM
+import Domain.Action.UI.CancelLogic
+  ( CancellationReasonInput (..),
+    computeCancellationReasons,
+  )
 import qualified Domain.SharedLogic.Cancel as SharedCancel
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
