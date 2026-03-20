@@ -17,6 +17,8 @@ imports:
   Day: Data.Time
   Language: Kernel.External.Types
   CumulativeOfferResp: SharedLogic.Offer
+  Refunds: Lib.Payment.Domain.Types.Refunds
+  RefundStatus: Kernel.External.Payment.Interface
 
 module: Pass
 types:
@@ -111,6 +113,16 @@ types:
     passDetails: PassAPIEntity
     derive: "Show"
 
+  RefundAPIEntity:
+    id: Id Refunds
+    amount: HighPrecMoney
+    status: RefundStatus
+    arn: Maybe Text
+    completedAt: Maybe UTCTime
+    updatedAt: UTCTime
+    createdAt: UTCTime
+    derive: "Show"
+
   PurchasedPassTransactionAPIEntity:
     id: Id PurchasedPassPayment
     passName: Maybe Text
@@ -121,6 +133,7 @@ types:
     amount: HighPrecMoney
     status: StatusType
     passType: Maybe PassEnum
+    refunds: "[RefundAPIEntity]"
     derive: "Show"
 
   SetPassPrefSrcAndDestReq:

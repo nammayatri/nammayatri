@@ -13,10 +13,12 @@ import qualified Domain.Types.PassType
 import qualified Domain.Types.PurchasedPass
 import qualified Domain.Types.PurchasedPassPayment
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Juspay.Types.CreateOrder
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Lib.Payment.Domain.Types.Refunds
 import Servant
 import qualified SharedLogic.Offer
 import Tools.Auth
@@ -123,8 +125,21 @@ data PurchasedPassTransactionAPIEntity = PurchasedPassTransactionAPIEntity
     passCode :: Data.Text.Text,
     passName :: Data.Maybe.Maybe Data.Text.Text,
     passType :: Data.Maybe.Maybe Domain.Types.PassType.PassEnum,
+    refunds :: [RefundAPIEntity],
     startDate :: Data.Time.Day,
     status :: Domain.Types.PurchasedPass.StatusType
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RefundAPIEntity = RefundAPIEntity
+  { amount :: Kernel.Types.Common.HighPrecMoney,
+    arn :: Data.Maybe.Maybe Data.Text.Text,
+    completedAt :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
+    createdAt :: Kernel.Prelude.UTCTime,
+    id :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.Refunds.Refunds,
+    status :: Kernel.External.Payment.Interface.RefundStatus,
+    updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
