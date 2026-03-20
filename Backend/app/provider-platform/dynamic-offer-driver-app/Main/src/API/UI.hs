@@ -156,7 +156,6 @@ type API =
            :<|> StclMembership.API
            :<|> DriverSafetySettings.API
            :<|> PersonDefaultEmergencyContact.API
-           :<|> CancellationReasonLookup.API
        )
 
 handler :: FlowServer API
@@ -226,4 +225,3 @@ handler =
     :<|> StclMembership.handler
     :<|> DriverSafetySettings.handler
     :<|> PersonDefaultEmergencyContact.handler
-    :<|> CancellationReasonLookup.handler
