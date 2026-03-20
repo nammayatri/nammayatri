@@ -253,7 +253,7 @@ makeCacheKeyForConfigWithPrefix prefix mbVersion = prefix <> "-V:" <> show mbVer
 
 clearConfigCache :: BeamFlow m r => Id MerchantOperatingCity -> LogicDomain -> Maybe Int -> m ()
 clearConfigCache merchanOperatingCityId configDomain mbVersion = do
-  Hedis.withCrossAppRedis $
+  Hedis.runInMultiCloudRedisWrite $ Hedis.withCrossAppRedis $
     case mbVersion of
       Nothing -> do
         rollouts <- DALR.findByMerchantOpCityAndDomain merchanOperatingCityId configDomain
@@ -263,7 +263,7 @@ clearConfigCache merchanOperatingCityId configDomain mbVersion = do
 
 clearConfigCacheWithPrefix :: BeamFlow m r => Text -> Id MerchantOperatingCity -> LogicDomain -> Maybe Int -> m ()
 clearConfigCacheWithPrefix prefix merchanOperatingCityId configDomain mbVersion = do
-  Hedis.withCrossAppRedis $
+  Hedis.runInMultiCloudRedisWrite $ Hedis.withCrossAppRedis $
     case mbVersion of
       Nothing -> do
         rollouts <- DALR.findByMerchantOpCityAndDomain merchanOperatingCityId configDomain

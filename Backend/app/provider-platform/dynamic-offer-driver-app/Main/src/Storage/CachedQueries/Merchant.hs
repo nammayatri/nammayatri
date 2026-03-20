@@ -69,7 +69,7 @@ findByShortId shortId =
 -- Call it after any update
 clearCache :: HedisFlow m r => Merchant -> m ()
 clearCache merchant = do
-  Hedis.withCrossAppRedis $ do
+  Hedis.runInMultiCloudRedisWrite $ Hedis.withCrossAppRedis $ do
     Hedis.del (makeIdKey merchant.id)
     Hedis.del (makeShortIdKey merchant.shortId)
     Hedis.del (makeSubscriberIdKey merchant.subscriberId)

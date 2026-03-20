@@ -199,10 +199,10 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   let newFlowStatus = DDriverMode.getDriverFlowStatus oldDriverInfo.mode oldDriverInfo.active
   DDriverMode.updateDriverModeAndFlowStatus driverId thresholdConfig oldDriverInfo.active Nothing newFlowStatus oldDriverInfo (Just False) Nothing
   let driverInfo = oldDriverInfo {DI.driverFlowStatus = Just newFlowStatus}
-  QRB.updateStatus booking.id SRB.COMPLETED
   whenJust mbRiderDetailsId $ \riderDetailsId -> do
     QRiderDetails.updateCompletedRidesCount riderDetailsId.getId
   whenJust mbFareParams QFare.create
+  QRB.updateStatus booking.id SRB.COMPLETED
   QRide.updateAll ride.id ride
   let safetyPlusCharges = maybe Nothing (\a -> find (\ac -> ac.chargeCategory == DAC.SAFETY_PLUS_CHARGES) a) $ (mbFareParams <&> (.conditionalCharges)) <|> (Just newFareParams.conditionalCharges)
   -- Save driver ride count from increment to reuse in reminder check

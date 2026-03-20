@@ -44,4 +44,4 @@ makeFlowStatusKey personId = "CachedQueries:Person:FlowStatus-" <> personId.getI
 
 clearCache :: CacheFlow m r => Id Person -> m ()
 clearCache personId = do
-  Hedis.del (makeFlowStatusKey personId)
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeFlowStatusKey personId)

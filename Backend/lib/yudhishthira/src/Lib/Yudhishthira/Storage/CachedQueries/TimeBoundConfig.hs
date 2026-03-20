@@ -49,7 +49,7 @@ delete :: BeamFlow.BeamFlow m r => Id MerchantOperatingCity -> LogicDomain -> Te
 delete = Queries.delete
 
 clearCache :: BeamFlow.BeamFlow m r => Id MerchantOperatingCity -> LogicDomain -> Text -> m ()
-clearCache merchantOperatingCityId timeBoundDomain name = do
+clearCache merchantOperatingCityId timeBoundDomain name = Hedis.runInMultiCloudRedisWrite $ do
   Hedis.withCrossAppRedis $ Hedis.del (cityAndDomainCacheKey merchantOperatingCityId timeBoundDomain)
   Hedis.withCrossAppRedis $ Hedis.del (primaryKeyCacheKey merchantOperatingCityId name timeBoundDomain)
 
