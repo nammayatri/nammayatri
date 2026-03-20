@@ -8,7 +8,7 @@ import Kernel.External.Encryption (EncFlow)
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime, secondsToNominalDiffTime)
-import Kernel.Utils.Logging (logInfo)
+import Kernel.Utils.Logging (logDebug, logInfo)
 import Lib.Scheduler (ExecutionResult (..), Job (..))
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
@@ -42,7 +42,7 @@ runNyRegularMasterJob Job {merchantOperatingCityId} = do
   let localNow = Time.addUTCTime timeDiffFromUtc now
   let today = Time.utctDay now
   subscriptions <- NyRegularSubscription.findAllActiveAt cityId today (Just batchSize)
-  logInfo $ "Found " <> show (length subscriptions) <> " active subscriptions to process for city " <> cityId.getId
+  logDebug $ "Found " <> show (length subscriptions) <> " active subscriptions to process for city " <> cityId.getId
   traverse_ (processSubscription now localNow timeDiffFromUtc executionTimeOffsetMinutes) subscriptions
 
   -- If we processed a full batch, there might be more for this city.
@@ -50,7 +50,7 @@ runNyRegularMasterJob Job {merchantOperatingCityId} = do
   if length subscriptions == batchSize
     then do
       rescheduleTime <- Time.addUTCTime 10 <$> getCurrentTime
-      logInfo $ "Rescheduling master job to process next batch for city " <> cityId.getId
+      logDebug $ "Rescheduling master job to process next batch for city " <> cityId.getId
       return $ ReSchedule rescheduleTime
     else do
       let offsetSeconds = riderConfig.nyRegularMasterJobNextRunOffsetSeconds
@@ -82,7 +82,7 @@ processSubscription now localNow utcOffset executionTimeOffsetMinutes subscripti
   let today = Time.utctDay now
   let todayLocal = Time.utctDay localNow
   when (isValid today todayLocal subscription) $ do
-    logInfo $ "Processing subscription: " <> show subscription.id
+    logDebug $ "Processing subscription: " <> show subscription.id
     createNyRegularInstanceJob executionTimeOffsetMinutes utcOffset subscription
     -- Mark as processed for today
     void $ NyRegularSubscription.updateLastProcessedAtById (Just localNow) subscription.id

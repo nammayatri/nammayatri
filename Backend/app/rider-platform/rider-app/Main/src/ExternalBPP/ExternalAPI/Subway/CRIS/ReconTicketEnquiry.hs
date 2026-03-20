@@ -90,7 +90,7 @@ getReconTicketEnquiry config frfsTicketBooking = do
 
   let jsonStr = decodeUtf8 $ LBS.toStrict $ encode reconRequest
 
-  logInfo $ "getReconTicketEnquiry Req: " <> jsonStr
+  logDebug $ "getReconTicketEnquiry Req: " <> jsonStr
 
   encryptionKey <- decrypt config.encryptionKey
   decryptionKey <- decrypt config.decryptionKey
@@ -98,19 +98,19 @@ getReconTicketEnquiry config frfsTicketBooking = do
 
   encryptedResponse <- callCRISAPI config reconTicketEnquiryAPI (eulerClientFn payload) "getReconTicketEnquiry"
 
-  logInfo $ "getReconTicketEnquiry Resp: " <> show encryptedResponse
+  logDebug $ "getReconTicketEnquiry Resp: " <> show encryptedResponse
 
   -- Decrypt the response
   decryptedResponse :: ReconTicketEnquiryDecryptedResponse <- case eitherDecode (encode encryptedResponse) :: Either String ReconTicketEnquiryResponse of
     Left err -> throwError (InternalError $ "Failed to parse encrypted getReconTicketEnquiry Resp: " <> T.pack (show err))
     Right encResp -> do
-      logInfo $ "getReconTicketEnquiry Resp Code: " <> encResp.responseCode
+      logDebug $ "getReconTicketEnquiry Resp Code: " <> encResp.responseCode
       if encResp.responseCode == "0"
         then do
           case decryptResponseData encResp.responseData decryptionKey of
             Left err -> throwError (InternalError $ "Failed to decrypt getReconTicketEnquiry Resp: " <> T.pack err)
             Right decryptedJson -> do
-              logInfo $ "getReconTicketEnquiry Decrypted Resp: " <> decryptedJson
+              logDebug $ "getReconTicketEnquiry Decrypted Resp: " <> decryptedJson
               case eitherDecode (LBS.fromStrict $ TE.encodeUtf8 decryptedJson) of
                 Left err -> throwError (InternalError $ "Failed to decode getReconTicketEnquiry Resp: " <> T.pack (show err))
                 Right reconResponse -> pure reconResponse

@@ -67,7 +67,7 @@ changeDevice ::
   CRISChangeDeviceRequest ->
   m ChangeDeviceResponse
 changeDevice config request = do
-  logInfo $ "Change device request object: " <> show request
+  logDebug $ "Change device request object: " <> show request
 
   -- 1. Construct and encrypt the request
   let jsonStr = constructChangeDeviceJson request

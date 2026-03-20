@@ -81,7 +81,7 @@ getRouteFare config merchantOperatingCityId request getAllFares = do
           ]
   let jsonStr = decodeUtf8 $ LBS.toStrict $ encode fareRequest
 
-  logInfo $ "getRouteFare Req: " <> jsonStr
+  logDebug $ "getRouteFare Req: " <> jsonStr
 
   encryptionKey <- decrypt config.encryptionKey
   decryptionKey <- decrypt config.decryptionKey
@@ -92,19 +92,19 @@ getRouteFare config merchantOperatingCityId request getAllFares = do
          in client (Just $ "Bearer " <> token) (Just "application/json") (Just "CUMTA") payload'
   encryptedResponse <- callCRISAPI config routeFareAPI (eulerClientFn payload) "getRouteFare"
 
-  logInfo $ "getRouteFare Resp: " <> show encryptedResponse
+  logDebug $ "getRouteFare Resp: " <> show encryptedResponse
 
   -- Fix the encoding chain
   decryptedResponse :: CRISFareResponse <- case eitherDecode (encode encryptedResponse) of
     Left err -> throwError (CRISError $ "Failed to parse encrypted getRouteFare Resp: " <> T.pack (show err))
     Right encResp -> do
-      logInfo $ "getRouteFare Resp Code: " <> responseCode encResp
+      logDebug $ "getRouteFare Resp Code: " <> responseCode encResp
       if encResp.responseCode == "0"
         then do
           case decryptResponseData (responseData encResp) decryptionKey of
             Left err -> throwError (CRISError $ "Failed to decrypt getRouteFare Resp: " <> T.pack err)
             Right decryptedJson -> do
-              logInfo $ "getRouteFare Decrypted Resp: " <> decryptedJson
+              logDebug $ "getRouteFare Decrypted Resp: " <> decryptedJson
               case eitherDecode (LBS.fromStrict $ TE.encodeUtf8 decryptedJson) of
                 Left err -> throwError (CRISError $ "Failed to decode getRouteFare Resp: " <> T.pack (show err))
                 Right fareResponse -> pure fareResponse

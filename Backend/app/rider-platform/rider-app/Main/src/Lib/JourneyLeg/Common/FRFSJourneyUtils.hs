@@ -218,7 +218,7 @@ processBusLegState
               Just vehicleNum -> filter (\bd -> bd.vehicleNumber == vehicleNum) filteredBusData
               Nothing -> filteredBusData
         let (confirmedHighBuses, ghostBuses) = partition (\a -> a.busData.route_state == Just CQMMB.ConfirmedHigh) vehicleFilteredBusData
-        logInfo $ "confirmedHighBuses: " <> show (length confirmedHighBuses) <> " ghostBuses: " <> show (length ghostBuses)
+        logDebug $ "confirmedHighBuses: " <> show (length confirmedHighBuses) <> " ghostBuses: " <> show (length ghostBuses)
         pure $
           map
             ( \bd -> do

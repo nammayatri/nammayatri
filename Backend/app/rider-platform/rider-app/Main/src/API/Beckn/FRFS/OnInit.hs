@@ -59,7 +59,7 @@ onInit _ reqBS = withFlowHandlerAPI $ do
 
       if fareCachingAllowed
         then do
-          logInfo $ "Fare caching enabled for booking: " <> booking.id.getId <> ". Skipping domain onInit processing."
+          logDebug $ "Fare caching enabled for booking: " <> booking.id.getId <> ". Skipping domain onInit processing."
           now <- getCurrentTime
           fork "FRFS on_init fare_caching" $ do
             if onInitReq.totalPrice == booking.totalPrice

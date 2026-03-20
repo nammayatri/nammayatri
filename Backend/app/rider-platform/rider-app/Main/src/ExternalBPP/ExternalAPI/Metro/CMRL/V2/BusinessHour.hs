@@ -43,5 +43,5 @@ getBusinessHour config = do
   let eulerClient = \accessToken -> ET.client businessHourAPI (Just $ "Bearer " <> accessToken) config.operatorNameId
   response <- callCMRLV2API config eulerClient "getBusinessHour" businessHourAPI
   logDebug $ "[CMRLV2:BusinessHour] API Response - returnCode: " <> response.returnCode <> ", returnMessage: " <> response.returnMessage
-  logInfo $ "[CMRLV2:BusinessHour] Fetched " <> show (length response.commonParamList) <> " business hour params"
+  logDebug $ "[CMRLV2:BusinessHour] Fetched " <> show (length response.commonParamList) <> " business hour params"
   return response

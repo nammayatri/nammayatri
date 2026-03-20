@@ -72,7 +72,7 @@ getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeSt
       seatLabels =
         let labels = concatMap (fromMaybe [] . (.seatLabels)) quoteCategories
          in if null labels then Nothing else Just labels
-  logInfo $ "DirectOrder:createOrder bookingId=" <> booking.id.getId <> " seatLabels=" <> show seatLabels
+  logDebug $ "DirectOrder:createOrder bookingId=" <> booking.id.getId <> " seatLabels=" <> show seatLabels
   qrData <-
     generateQR config $
       TicketPayload

@@ -1336,7 +1336,7 @@ notifyRideStartToEmergencyContacts booking ride = do
           --       " wants you to follow their ride"
           --     ]
           Nothing -> sendSMS contact rider.firstName trackLink
-    else logInfo "Follow ride is not enabled"
+    else logDebug "Follow ride is not enabled"
   where
     updateFollowsRideCount emPersonId = do
       void $ CQFollowRide.updateFollowRideList emPersonId booking.riderId True

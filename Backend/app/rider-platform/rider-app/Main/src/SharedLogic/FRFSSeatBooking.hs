@@ -12,7 +12,7 @@ import qualified Domain.Types.SeatLayout as SeatLayout
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, logInfo, logWarning)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, logDebug, logWarning)
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.FRFSSeatBooking.Lua as Lua
 import qualified Storage.Queries.Seat as QSeat
@@ -66,7 +66,7 @@ holdSeats ::
   m Bool
 holdSeats tripId seatIds fromIdx toIdx holdId ttl seatBitMapTtl = do
   let seatIdStrs = map (.getId) seatIds
-  logInfo $ "SeatBooking:holdSeats attempting holdId=" <> holdId <> " tripId=" <> tripId <> " seats=" <> show seatIdStrs <> " range=[" <> show fromIdx <> "," <> show toIdx <> ") ttl=" <> show ttl <> " seatBitMapTtl=" <> show seatBitMapTtl
+  logDebug $ "SeatBooking:holdSeats attempting holdId=" <> holdId <> " tripId=" <> tripId <> " seats=" <> show seatIdStrs <> " range=[" <> show fromIdx <> "," <> show toIdx <> ") ttl=" <> show ttl
   let seatKeys = map (seatKey tripId) seatIds
       mKey = metaKey tripId holdId
       tKey = timerKey tripId holdId
@@ -97,7 +97,7 @@ holdSeats tripId seatIds fromIdx toIdx holdId ttl seatBitMapTtl = do
       )
   case res of
     1 -> do
-      logInfo $ "SeatBooking:holdSeats SUCCESS holdId=" <> holdId <> " tripId=" <> tripId
+      logDebug $ "SeatBooking:holdSeats SUCCESS holdId=" <> holdId <> " tripId=" <> tripId
       void $ Redis.sAdd "active-seat-holds" [ActiveSeatHold tripId holdId]
       pure True
     _ -> do
@@ -110,17 +110,17 @@ releaseHold ::
   Text ->
   m ()
 releaseHold tripId holdId = do
-  logInfo $ "SeatBooking:releaseHold attempting holdId=" <> holdId <> " tripId=" <> tripId
+  logDebug $ "SeatBooking:releaseHold attempting holdId=" <> holdId <> " tripId=" <> tripId
   Redis.withLockRedis (holdLockKey tripId holdId) 10 $ do
     let mKey = metaKey tripId holdId
         tKey = timerKey tripId holdId
     mbMeta :: Maybe SeatHoldMeta <- Redis.get mKey
     case mbMeta of
       Nothing -> do
-        logInfo $ "SeatBooking:releaseHold no-op (meta not found) holdId=" <> holdId <> " tripId=" <> tripId
+        logDebug $ "SeatBooking:releaseHold no-op (meta not found) holdId=" <> holdId <> " tripId=" <> tripId
         pure ()
       Just meta -> do
-        logInfo $ "SeatBooking:releaseHold clearing bits holdId=" <> holdId <> " tripId=" <> tripId <> " seats=" <> show meta.seatIds <> " range=[" <> show meta.fromIdx <> "," <> show meta.toIdx <> ")"
+        logDebug $ "SeatBooking:releaseHold clearing bits holdId=" <> holdId <> " tripId=" <> tripId <> " seats=" <> show meta.seatIds <> " range=[" <> show meta.fromIdx <> "," <> show meta.toIdx <> ")"
         let seatIds = meta.seatIds
             fromIdx = meta.fromIdx
             toIdx = meta.toIdx
@@ -140,7 +140,7 @@ releaseHold tripId holdId = do
         Redis.del mKey
         Redis.del tKey
         void $ Redis.srem "active-seat-holds" [ActiveSeatHold tripId holdId]
-        logInfo $ "SeatBooking:releaseHold completed holdId=" <> holdId <> " tripId=" <> tripId
+        logDebug $ "SeatBooking:releaseHold completed holdId=" <> holdId <> " tripId=" <> tripId
 
 confirmBooking ::
   (MonadFlow m, Redis.HedisFlow m r) =>
@@ -148,7 +148,7 @@ confirmBooking ::
   Text ->
   m ()
 confirmBooking tripId holdId = do
-  logInfo $ "SeatBooking:confirmBooking attempting holdId=" <> holdId <> " tripId=" <> tripId
+  logDebug $ "SeatBooking:confirmBooking attempting holdId=" <> holdId <> " tripId=" <> tripId
   Redis.withLockRedis (holdLockKey tripId holdId) 10 $ do
     let mKey = metaKey tripId holdId
         tKey = timerKey tripId holdId
@@ -161,14 +161,14 @@ confirmBooking tripId holdId = do
         void $ Redis.srem "active-seat-holds" [ActiveSeatHold tripId holdId]
         Redis.del mKey
         Redis.del tKey
-        logInfo $ "SeatBooking:confirmBooking completed (bits retained) holdId=" <> holdId <> " tripId=" <> tripId
+        logDebug $ "SeatBooking:confirmBooking completed (bits retained) holdId=" <> holdId <> " tripId=" <> tripId
 
 bookingHoldsKey :: Text -> Text
 bookingHoldsKey bookingId = "booking-holds:" <> bookingId
 
 trackHoldForBooking :: (MonadFlow m, Redis.HedisFlow m r) => Text -> Text -> Int -> m ()
 trackHoldForBooking bookingId holdId ttl' = do
-  logInfo $ "SeatBooking:trackHoldForBooking bookingId=" <> bookingId <> " holdId=" <> holdId
+  logDebug $ "SeatBooking:trackHoldForBooking bookingId=" <> bookingId <> " holdId=" <> holdId
   let k = bookingHoldsKey bookingId
   void $ Redis.sAddExp k [holdId] ttl'
 
@@ -177,7 +177,7 @@ releaseAbandonedHolds tripId bookingId successfulHoldId = do
   let k = bookingHoldsKey bookingId
   allHolds <- Redis.sMembers k
   let abandonedHolds = filter (/= successfulHoldId) allHolds
-  logInfo $ "SeatBooking:releaseAbandonedHolds bookingId=" <> bookingId <> " tripId=" <> tripId <> " successfulHoldId=" <> successfulHoldId <> " abandonedCount=" <> show (length abandonedHolds)
+  logDebug $ "SeatBooking:releaseAbandonedHolds bookingId=" <> bookingId <> " tripId=" <> tripId <> " successfulHoldId=" <> successfulHoldId <> " abandonedCount=" <> show (length abandonedHolds)
   forM_ abandonedHolds $ \h -> releaseHold tripId h
   Redis.del k
 
@@ -189,7 +189,7 @@ releaseConfirmedSeats ::
   Int ->
   m ()
 releaseConfirmedSeats tripId seatIds fromIdx toIdx = do
-  logInfo $ "SeatBooking:releaseConfirmedSeats tripId=" <> tripId <> " seats=" <> show (map (.getId) seatIds) <> " range=[" <> show fromIdx <> "," <> show toIdx <> ")"
+  logDebug $ "SeatBooking:releaseConfirmedSeats tripId=" <> tripId <> " seats=" <> show (map (.getId) seatIds) <> " range=[" <> show fromIdx <> "," <> show toIdx <> ")"
   let seatKeys = map (seatKey tripId) seatIds
       args =
         [ toBS fromIdx,
@@ -202,7 +202,7 @@ releaseConfirmedSeats tripId seatIds fromIdx toIdx = do
       ( RawRedis.eval Lua.clearMultiScript pSeatKeys args ::
           RawRedis.Redis (Either RawRedis.Reply Integer)
       )
-  logInfo $ "SeatBooking:releaseConfirmedSeats completed tripId=" <> tripId
+  logDebug $ "SeatBooking:releaseConfirmedSeats completed tripId=" <> tripId
 
 -- | Standard functions (Availability check doesn't need hold hashtags)
 getTripAvailability :: (MonadFlow m, Redis.HedisFlow m r) => Text -> Int -> Int -> [Seat.Seat] -> m [SeatWithStatus]

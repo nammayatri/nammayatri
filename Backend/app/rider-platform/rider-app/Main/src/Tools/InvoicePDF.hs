@@ -101,7 +101,7 @@ generateInvoicePDF invoiceId person bookings merchant startDate endDate mbLogoUr
           }
 
   -- Debug log for logo URL
-  logInfo $ "Generating invoice PDF with logoUrl: " <> maybe "Nothing" (\url -> "Just " <> url) mbLogoUrl
+  logDebug $ "Generating invoice PDF with logoUrl: " <> maybe "Nothing" (\url -> "Just " <> url) mbLogoUrl
 
   -- Generate HTML
   let html = generateInvoiceHTML invoiceData
@@ -127,7 +127,7 @@ generateInvoicePDF invoiceId person bookings merchant startDate endDate mbLogoUr
       pdfExists <- liftIO $ doesFileExist pdfPath
       if pdfExists
         then do
-          logInfo $ "PDF generated and verified successfully: " <> T.pack pdfPath
+          logDebug $ "PDF generated and verified successfully: " <> T.pack pdfPath
           return pdfPath
         else do
           logWarning $ "PDF generation succeeded but file not found at: " <> T.pack pdfPath <> ", using HTML instead"
@@ -168,7 +168,7 @@ generatePDFFromHTML htmlPath pdfPath = do
 
   case result of
     Just (Right (ExitSuccess, _stdout, stderr)) -> do
-      logInfo $ "wkhtmltopdf succeeded: " <> T.pack pdfPath
+      logDebug $ "wkhtmltopdf succeeded: " <> T.pack pdfPath
       unless (null stderr) $ logWarning $ "wkhtmltopdf stderr: " <> T.pack stderr
       return True
     Just (Right (exitCode, stdout, stderr)) -> do

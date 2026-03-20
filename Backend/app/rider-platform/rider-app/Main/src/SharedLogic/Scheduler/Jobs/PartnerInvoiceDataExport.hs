@@ -73,7 +73,7 @@ partnerInvoiceDataExportJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
 
   unexportedLogs <- QPartnerInvoiceDataLog.findUnexportedSince yesterday
 
-  logInfo $ "Found " <> show (length unexportedLogs) <> " unexported partner invoice data logs"
+  logDebug $ "Found " <> show (length unexportedLogs) <> " unexported partner invoice data logs"
 
   -- Generate JSON content, pairing each log with its enrichment result
   results <- mapM (\logEntry -> (logEntry,) <$> enrichLogEntry logEntry) unexportedLogs
@@ -169,7 +169,7 @@ uploadToSFTP rawFileName content = withLogTag "SFTP" $ do
       tmpDir <- liftIO getTemporaryDirectory
       (tmpContentPath, hContent) <- liftIO $ openTempFile tmpDir ("sftp_export_" <> T.unpack fileName)
       liftIO $ hPutStr hContent (T.unpack content) >> hClose hContent
-      logInfo $ "Written export file to " <> T.pack tmpContentPath
+      logDebug $ "Written export file to " <> T.pack tmpContentPath
 
       -- Read SFTP config from environment
       sftpCfg <- asks (.sftpConfig)

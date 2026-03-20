@@ -81,7 +81,7 @@ groupAndFilterHotSpotWithPrecision hotSpotConfig precision geohashPerGroup geoha
   let sortLexicographically = Dl.sortBy (\gh1 gh2 -> compare (gh2._geoHash) (gh1._geoHash)) geohashes
       grouped = Dl.groupBy (\gh1 gh2 -> Dl.take precision (Dt.unpack gh1._geoHash) == Dl.take precision (Dt.unpack gh2._geoHash)) sortLexicographically
       selected = concatMap (Dl.take geohashPerGroup . sortWithFrequency hotSpotConfig) grouped
-  logInfo $ "hotspot groupAndFilterWithPrecision : " <> show selected
+  logDebug $ "hotspot groupAndFilterWithPrecision : " <> show selected
   pure selected
 
 sortWithFrequency :: HotSpotConfig -> [HotSpot] -> [HotSpot]

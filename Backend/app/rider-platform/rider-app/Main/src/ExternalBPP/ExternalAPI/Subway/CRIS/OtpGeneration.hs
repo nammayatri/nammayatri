@@ -64,7 +64,7 @@ generateOtp ::
   CRISOtpGenerationRequest ->
   m OtpGenerationResponse
 generateOtp config request = do
-  logInfo $ "OTP generation request object: " <> show request
+  logDebug $ "OTP generation request object: " <> show request
 
   -- 1. Construct and encrypt the request
   let jsonStr = constructOtpJson request

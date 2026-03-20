@@ -67,7 +67,7 @@ resetAuthToken config = do
     then do
       logInfo "[CMRL:Auth] Acquired Redis lock for token refresh"
       let unlockLock = do
-            logInfo "[CMRL:Auth] Releasing Redis lock"
+            logDebug "[CMRL:Auth] Releasing Redis lock"
             Hedis.unlockRedis refreshLockKey
 
       auth <-
@@ -76,7 +76,7 @@ resetAuthToken config = do
             mbToken <- Hedis.get authTokenKey
             case mbToken of
               Just token -> do
-                logInfo "[CMRL:Auth] Token found in cache after acquiring lock"
+                logDebug "[CMRL:Auth] Token found in cache after acquiring lock"
                 return token
               Nothing -> do
                 logInfo $ "[CMRL:Auth] Requesting new auth token from: " <> showBaseUrl config.networkHostUrl
@@ -84,7 +84,7 @@ resetAuthToken config = do
                 authRes <-
                   callAPI config.networkHostUrl (ET.client authAPI $ AuthReq config.username password cmrlAppType) "authCMRL" authAPI
                     >>= fromEitherM (ExternalAPICallError (Just "CMRL_AUTH_API") config.networkHostUrl)
-                logInfo "[CMRL:Auth] Successfully obtained auth token"
+                logDebug "[CMRL:Auth] Successfully obtained auth token"
                 let tokenExpiry = 2 * 3600
                 Hedis.setExp authTokenKey authRes.result.access_token tokenExpiry
                 return authRes.result.access_token
@@ -92,7 +92,7 @@ resetAuthToken config = do
           `finally` unlockLock
       return auth
     else do
-      logInfo "[CMRL:Auth] Redis lock already held by another pod, waiting 2 seconds"
+      logDebug "[CMRL:Auth] Redis lock already held by another pod, waiting 2 seconds"
       threadDelay 2000000
       getAuthToken config
 

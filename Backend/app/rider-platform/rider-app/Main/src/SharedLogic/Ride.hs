@@ -100,12 +100,12 @@ calculatePickupETA ride booking driverLocation = do
     Just cachedRoutePoints -> do
       return cachedRoutePoints
     Nothing -> do
-      logInfo $ "No cached route found, fetching route as fallback for rideId: " <> ride.id.getId
+      logDebug $ "No cached route found, fetching route as fallback for rideId: " <> ride.id.getId
       fetchedRoute <- fetchPickupRoute ride booking driverLocation pickupLocation
       case fetchedRoute of
         Just route -> do
           CQPickupRoute.cachePickupRoute ride.id route
-          logInfo $ "Cached pickup route (fallback fetch) for rideId: " <> ride.id.getId
+          logDebug $ "Cached pickup route (fallback fetch) for rideId: " <> ride.id.getId
           return route
         Nothing -> do
           logWarning $ "Failed to fetch route, will use straight-line distance for rideId: " <> ride.id.getId
@@ -119,11 +119,11 @@ calculatePickupETA ride booking driverLocation = do
       else do return $ calculateDistanceAlongRoute driverLocation pickupLocation routePoints
   case mbEstimatedSpeed of
     Nothing -> do
-      logInfo $ "Cannot calculate pickup ETA: missing pickup speed for rideId: " <> ride.id.getId
+      logDebug $ "Cannot calculate pickup ETA: missing pickup speed for rideId: " <> ride.id.getId
       return (Nothing, distanceToPickup)
     Just estimatedSpeedInMps
       | estimatedSpeedInMps <= 0 -> do
-        logInfo $ "Cannot calculate pickup ETA: invalid speed for rideId: " <> ride.id.getId
+        logDebug $ "Cannot calculate pickup ETA: invalid speed for rideId: " <> ride.id.getId
         return (Nothing, distanceToPickup)
       | ride.status == NEW ->
         return (Just $ ceiling (distanceToPickup / estimatedSpeedInMps / 60), distanceToPickup)
@@ -150,7 +150,7 @@ fetchPickupRoute ride booking driverLoc pickupLoc = do
             calcPoints = True,
             rideId = Just ride.id
           }
-  logInfo $ "Fetching pickup route for rideId: " <> ride.id.getId <> " with waypoints: " <> show (length waypointsList) <> " points (driverLoc, " <> show (length middleStops) <> " middle stops, pickupLoc)"
+  logDebug $ "Fetching pickup route for rideId: " <> ride.id.getId <> " with waypoints: " <> show (length waypointsList) <> " points (driverLoc, " <> show (length middleStops) <> " middle stops, pickupLoc)"
   routeResp <- try @_ @SomeException $ DRoute.getPickupRoutes (booking.riderId, booking.merchantId) (Just booking.riderId.getId) pickupRouteReq
   case routeResp of
     Left err -> do

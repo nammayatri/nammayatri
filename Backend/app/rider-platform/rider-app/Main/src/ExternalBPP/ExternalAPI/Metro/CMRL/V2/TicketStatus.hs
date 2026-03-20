@@ -98,7 +98,7 @@ getTicketStatus config booking = do
     logError $ "[CMRLV2:TicketStatus] Ticket status fetch failed: " <> ticketStatusRes.returnMessage
     throwError $ InternalError $ "Ticket status fetch failed: " <> ticketStatusRes.returnMessage
 
-  logInfo $ "[CMRLV2:TicketStatus] Returning " <> show (length ticketStatusRes.ticket_Response) <> " tickets from API response"
+  logDebug $ "[CMRLV2:TicketStatus] Returning " <> show (length ticketStatusRes.ticket_Response) <> " tickets from API response"
 
   return $
     map
