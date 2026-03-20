@@ -88,6 +88,7 @@ import Tools.Error
 import qualified Tools.SMS as Sms
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import qualified UrlShortner.Common as UrlShortner
+import qualified Domain.Types.Journey
 
 templateText :: Text -> Text
 templateText txt = "{#" <> txt <> "#}"
@@ -1768,7 +1769,8 @@ data BusNotificationEntityData = BusNotificationEntityData
     routeId :: Text,
     stopCode :: Maybe Text,
     stopName :: Maybe Text,
-    notificationType :: BusNotificationType
+    notificationType :: BusNotificationType,
+    journeyId :: Maybe Text
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
@@ -1779,8 +1781,9 @@ notifyBusTripStarted ::
   Text ->
   Text ->
   Text ->
+  Maybe (Id Domain.Types.Journey.Journey) ->
   m ()
-notifyBusTripStarted person vehicleNumber routeName tripId = do
+notifyBusTripStarted person vehicleNumber routeName tripId mbJourneyId = do
   let entityData =
         BusNotificationEntityData
           { tripId = Just tripId,
@@ -1788,7 +1791,8 @@ notifyBusTripStarted person vehicleNumber routeName tripId = do
             routeId = routeName,
             stopCode = Nothing,
             stopName = Nothing,
-            notificationType = TRIP_STARTED
+            notificationType = TRIP_STARTED,
+            journeyId = mbJourneyId <&> (.getId)
           }
   let entity = Notification.Entity Notification.Product person.id.getId entityData
       dynamicParams = BusTripStartedParam vehicleNumber routeName
