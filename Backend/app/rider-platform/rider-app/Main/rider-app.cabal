@@ -456,6 +456,7 @@ library
       SharedLogic.FRFSFareCalculator
       SharedLogic.FRFSSeatBooking
       SharedLogic.FRFSSeatBooking.Lua
+      SharedLogic.FRFSStateTransition
       SharedLogic.FRFSStatus
       SharedLogic.FRFSUtils
       SharedLogic.GoogleTranslate
