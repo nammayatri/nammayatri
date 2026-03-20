@@ -20,12 +20,12 @@ import qualified SharedLogic.PTCircuitBreaker as CB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Prelude as P
 
-getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty CallAPI.BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe Text -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Bool -> m (Bool, [FRFSFare])
-getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRouteDetails vehicleCategory serviceTier mbParentSearchReqId blacklistedServiceTiers blacklistedFareQuoteTypes getAllSubwayFares isSingleMode = do
+getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> CallAPI.FareRoute -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe Text -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Bool -> m (Bool, [FRFSFare])
+getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRoute vehicleCategory serviceTier mbParentSearchReqId blacklistedServiceTiers blacklistedFareQuoteTypes getAllSubwayFares isSingleMode = do
   subwayFareDetail <-
     case integratedBPPConfig.providerConfig of
-      CRIS _ -> do
-        if getAllSubwayFares
+      CRIS _ ->
+        if getAllSubwayFares || isJust fareRoute.mbProviderRouteId
           then
             return $
               Just
@@ -36,7 +36,7 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
                     getAllFares = True
                   }
           else do
-            (viaPoints, changeOver, rawChangeOver) <- CallAPI.getChangeOverAndViaPoints (NE.toList fareRouteDetails) integratedBPPConfig
+            (viaPoints, changeOver, rawChangeOver) <- CallAPI.getChangeOverAndViaPoints (NE.toList fareRoute.segments) integratedBPPConfig
             return $
               Just
                 CallAPI.SubwayFareDetail
@@ -55,7 +55,7 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
   let apiConfig = cbConfig.fare
 
   -- Extract route details using pattern matching (safe for NonEmpty)
-  let (firstRoute NE.:| restRoutes) = fareRouteDetails
+  let (firstRoute NE.:| restRoutes) = fareRoute.segments
   let lastRoute = fromMaybe firstRoute (listToMaybe $ reverse restRoutes)
 
       baseCacheKey =
@@ -109,10 +109,13 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
 
     getCacheFilterFn :: Maybe CallAPI.SubwayFareDetail -> ([FRFSFare] -> [FRFSFare])
     getCacheFilterFn subwayFareDetail = case integratedBPPConfig.providerConfig of
-      CRIS _ -> case (subwayFareDetail, isSingleMode) of
-        (Just subwayFareDetail', True) ->
-          \fares -> filter (\fare -> maybe False (\fd -> fd.via == subwayFareDetail'.rawChangeOver) fare.fareDetails) fares
-        _ -> P.id
+      CRIS _ -> case (fareRoute.mbProviderRouteId, isSingleMode) of
+        (Just routeId, True) ->
+          filter (\fare -> maybe False (\fd -> fd.providerRouteId == routeId) fare.fareDetails)
+        _ -> case (subwayFareDetail, isSingleMode) of
+          (Just subwayFareDetail', True) ->
+            filter (\fare -> maybe False (\fd -> fd.via == subwayFareDetail'.rawChangeOver) fare.fareDetails)
+          _ -> P.id
       _ -> P.id
 
     -- When circuit is OPEN: clear cache and try canary request
@@ -151,7 +154,7 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
                     merchantId
                     merchantOperatingCityId
                     integratedBPPConfig
-                    fareRouteDetails
+                    fareRoute.segments
                     vehicleCategory
                     serviceTier
                     subwayFareDetail
@@ -193,7 +196,7 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
             merchantId
             merchantOperatingCityId
             integratedBPPConfig
-            fareRouteDetails
+            fareRoute.segments
             vehicleCategory
             serviceTier
             subwayFareDetail
@@ -216,10 +219,11 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
 
           CB.recordSuccess ptMode CB.FareAPI merchantOperatingCityId
 
-          -- Cache the fares to all cache keys (store unfiltered)
+          -- Cache the fares unfiltered, return filtered
           unless (null fares) $
             setToCaches setCacheKey fares
-          return fares
+          let filterFn = maybe P.id snd getCacheKey
+          return $ filterFn fares
 
     -- Filter fares based on blacklisted service tiers and quote types that UI cannot parse
     filterBlacklistedFaresForUI :: [FRFSFare] -> [FRFSFare]
