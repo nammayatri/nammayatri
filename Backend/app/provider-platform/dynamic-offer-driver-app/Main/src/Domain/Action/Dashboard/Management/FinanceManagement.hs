@@ -355,6 +355,7 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
 getFinanceManagementInvoiceList ::
   ShortId DM.Merchant ->
   Context.City ->
+  Maybe Text ->
   Maybe UTCTime ->
   Maybe Text ->
   Maybe Text ->
@@ -364,7 +365,7 @@ getFinanceManagementInvoiceList ::
   Maybe FinanceInvoice.InvoiceStatus ->
   Maybe UTCTime ->
   Flow API.InvoiceListRes
-getFinanceManagementInvoiceList merchantShortId opCity mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbLimit mbOffset mbStatus mbTo = do
+getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbLimit mbOffset mbStatus mbTo = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
@@ -383,14 +384,24 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFrom mbInvoiceId mbInvo
           Just inv -> pure [inv]
           Nothing -> pure []
       Nothing -> do
-        QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
-          merchantOpCityId.getId
-          mbFrom
-          mbTo
-          mbInvoiceType
-          mbStatus
-          (Just limit)
-          (Just offset)
+        let mbIssuedToId =
+              case mbInvoiceType of
+                Just FinanceInvoice.Ride -> Nothing
+                _ -> mbFleetOwnerOrDriverId
+            mbSupplierId =
+              case mbInvoiceType of
+                Just FinanceInvoice.Ride -> mbFleetOwnerOrDriverId
+                _ -> Nothing
+         in QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
+              merchantOpCityId.getId
+              mbFrom
+              mbTo
+              mbInvoiceType
+              mbStatus
+              mbIssuedToId
+              mbSupplierId
+              (Just limit)
+              (Just offset)
 
   -- Build response items
   items <- mapM buildInvoiceItem invoices
@@ -488,6 +499,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFrom mbInvoiceId mbInvo
 getFinanceManagementFinanceInvoiceList ::
   ShortId DM.Merchant ->
   Context.City ->
+  Maybe Text -> -- fleetOwnerOrDriverId
   Maybe UTCTime ->
   Maybe Text ->
   Maybe Text ->

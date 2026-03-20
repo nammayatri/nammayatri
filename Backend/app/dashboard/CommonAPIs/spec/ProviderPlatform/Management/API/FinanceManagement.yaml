@@ -49,6 +49,7 @@ apis:
         to: UTCTime
         invoiceType: InvoiceType
         status: InvoiceStatus
+        fleetOwnerOrDriverId: Text
       auth: ApiAuthV2
       response:
         type: InvoiceListRes
