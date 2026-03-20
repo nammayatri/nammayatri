@@ -27,7 +27,7 @@ findAllByIds ids = do
   if null missIds
     then return hits
     else do
-      dbResults <- Queries.findAllByIds missIds
+      dbResults <- catMaybes <$> mapM Queries.findById missIds
       mapM_ cacheServiceCategory dbResults
       return $ hits <> dbResults
 

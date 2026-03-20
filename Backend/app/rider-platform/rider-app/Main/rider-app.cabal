@@ -531,10 +531,12 @@ library
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.BppDetails
+      Storage.CachedQueries.BusinessHour
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FollowRide
       Storage.CachedQueries.FRFSConfig
       Storage.CachedQueries.FRFSGtfsStageFare
+      Storage.CachedQueries.Geometry
       Storage.CachedQueries.HotSpotConfig
       Storage.CachedQueries.IntegratedBPPConfig
       Storage.CachedQueries.Maps.LocationMapCache
@@ -567,8 +569,10 @@ library
       Storage.CachedQueries.RouteStopTimeTable
       Storage.CachedQueries.SavedReqLocationExtra
       Storage.CachedQueries.Seat
+      Storage.CachedQueries.ServiceCategory
       Storage.CachedQueries.Sos
       Storage.CachedQueries.StationsExtraInformation
+      Storage.CachedQueries.TicketPlace
       Storage.CachedQueries.Translations
       Storage.CachedQueries.UiRiderConfig
       Storage.CachedQueries.ValueAddNP
