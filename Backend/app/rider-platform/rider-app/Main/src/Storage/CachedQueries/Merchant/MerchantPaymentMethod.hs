@@ -58,7 +58,7 @@ makeIdKey id = "rider-app:CachedQueries:MerchantPaymentMethod:Id-" <> id.getId
 
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCache merchantOperatingCityId = do
-  Hedis.del (makeMerchantOperatingCityIdKey merchantOperatingCityId)
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantOperatingCityIdKey merchantOperatingCityId)
 
 findById :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantPaymentMethod -> m (Maybe MerchantPaymentMethod)
 findById id = do

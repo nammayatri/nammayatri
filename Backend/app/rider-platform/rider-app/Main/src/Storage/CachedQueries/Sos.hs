@@ -42,7 +42,7 @@ makeIdKey :: Id Ride -> Text
 makeIdKey rideId = "CachedQueries:Sos:RideId-" <> rideId.getId
 
 clearCache :: (CacheFlow m r) => Id Ride -> m ()
-clearCache rideId = Hedis.del $ makeIdKey rideId
+clearCache rideId = Hedis.runInMultiCloudRedisWrite $ Hedis.del $ makeIdKey rideId
 
 mockSosKey :: Id Person.Person -> Text
 mockSosKey personId = "mock-sos-" <> getId personId

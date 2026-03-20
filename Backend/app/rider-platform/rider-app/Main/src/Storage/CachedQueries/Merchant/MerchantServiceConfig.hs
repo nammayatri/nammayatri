@@ -167,7 +167,7 @@ makeMerchantIdAndServiceKey id mocId serviceName = "CachedQueries:MerchantServic
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Id Merchant -> Id DMOC.MerchantOperatingCity -> ServiceName -> m ()
 clearCache merchantId mocId serviceName = do
-  Hedis.del (makeMerchantIdAndServiceKey merchantId mocId serviceName)
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantIdAndServiceKey merchantId mocId serviceName)
 
 upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig = Queries.upsertMerchantServiceConfig
