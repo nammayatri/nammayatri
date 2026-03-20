@@ -6,7 +6,7 @@ where
 
 import Control.Concurrent (ThreadId, forkIO)
 import Control.Concurrent.MVar (tryReadMVar)
-import Control.Exception (SomeException, try)
+import qualified Control.Exception as CE
 import qualified Data.Foldable as F
 import Data.Pool.Internal
 import Kernel.Prelude
@@ -84,7 +84,7 @@ readPoolStats pool = do
 
 startPgPoolMonitor :: Pool a -> Text -> Text -> Int -> IO ThreadId
 startPgPoolMonitor pool serviceName poolName maxSize = forkIO $ forever $ do
-  result <- try @SomeException $ do
+  result <- CE.try @CE.SomeException $ do
     (currentInUse, currentIdle) <- readPoolStats pool
     let maxD = fromIntegral maxSize :: Double
         inUseD = fromIntegral currentInUse :: Double
