@@ -15,7 +15,6 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallBAPInternal
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
-import qualified Domain.Types.Extra.MerchantServiceConfig as ExtraMSC
 import qualified Storage.Queries.IffcoTokioInsurance as QIffco
 import qualified Storage.Queries.Ride as QRide
 

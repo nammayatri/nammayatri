@@ -98,6 +98,7 @@ import qualified Tools.BackgroundVerification as BackgroundVerificationT
 import Tools.Error
 import qualified Tools.Verification as Verification
 import Utils.Common.Cac.KeyNameConstants
+import qualified Kernel.External.Verification.Types as VerificationTypes
 
 stringToPrice :: Currency -> Text -> Maybe Price
 stringToPrice currency value = do

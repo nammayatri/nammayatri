@@ -361,7 +361,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             onboardingAs = Nothing,
             tollRouteBlockedTill = Nothing,
             nomineeName = Nothing,
-            nomineeRelationship = Nothing,
+            nomineeRelationship = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo

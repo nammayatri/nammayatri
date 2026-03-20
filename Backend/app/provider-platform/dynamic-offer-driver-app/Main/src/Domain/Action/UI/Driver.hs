@@ -1353,12 +1353,8 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.E_RICKSHAW -> [DVST.E_RICKSHAW]
               DV.AUTO_LITE -> [DVST.AUTO_LITE]
               DV.PINK_AUTO -> [DVST.PINK_AUTO]
-      QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
-  -- Update driver information (works for both cases: with or without vehicle)
-  when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity || isJust req.availableUpiApps || isJust req.isPetModeEnabled || isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold || isJust req.maxPickupRadius || isJust req.isSilentModeEnabled || isJust req.rideRequestVolume || isJust req.isTTSEnabled || isJust req.isHighAccuracyLocationEnabled || isJust req.rideRequestVolumeEnabled || isJust req.onboardingAs || isJust req.nomineeName || isJust req.nomineeRelationship) $ do
-    QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled isHighAccuracyLocationEnabled rideRequestVolumeEnabled onboardingAs nomineeName nomineeRelationship person.id
 
-      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled isHighAccuracyLocationEnabled rideRequestVolumeEnabled onboardingAs person.id
+      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled isHighAccuracyLocationEnabled rideRequestVolumeEnabled onboardingAs nomineeName nomineeRelationship person.id
       when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi) $
         QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
 

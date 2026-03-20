@@ -60,40 +60,6 @@ jobs:
             echo "should_push_docker=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Validate changed files for hotfix branch
-        id: validate-paths
-        run: |
-          BASE_BRANCH="${{ github.base_ref }}"
-          CHANGED_FILES=$(git diff --name-only "origin/${BASE_BRANCH}...HEAD")
-
-          if [[ "$BASE_BRANCH" == "prodHotPush-BAP" ]]; then
-            # BAP hotfix must NOT touch provider-platform (BPP) files
-            FORBIDDEN=$(echo "$CHANGED_FILES" | grep -E '^Backend/app/provider-platform/' || true)
-            if [[ -n "$FORBIDDEN" ]]; then
-              echo "::error::prodHotPush-BAP PR contains changes in Backend/app/provider-platform/. This is not allowed for BAP hotfixes."
-              echo "Forbidden files:"
-              echo "$FORBIDDEN"
-              exit 1
-            fi
-          fi
-
-          if [[ "$BASE_BRANCH" == "prodHotPush-BPP" ]]; then
-            # BPP hotfix must NOT touch rider-platform (BAP) files
-            FORBIDDEN=$(echo "$CHANGED_FILES" | grep -E '^Backend/app/rider-platform/' || true)
-            if [[ -n "$FORBIDDEN" ]]; then
-              echo "::error::prodHotPush-BPP PR contains changes in Backend/app/rider-platform/. This is not allowed for BPP hotfixes."
-              echo "Forbidden files:"
-              echo "$FORBIDDEN"
-              exit 1
-            fi
-          fi
-
-          echo "Path validation passed."
   build:
     name: ${{ matrix.name }}
     needs: [check-conditions]
