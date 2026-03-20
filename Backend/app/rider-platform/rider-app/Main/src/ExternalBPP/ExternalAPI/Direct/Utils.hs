@@ -3,7 +3,7 @@ module ExternalBPP.ExternalAPI.Direct.Utils where
 import Crypto.Error as Crypto
 import qualified Crypto.PubKey.Ed25519 as Ed25519
 import qualified Data.ByteArray as BA
-import Data.ByteString hiding (dropWhileEnd, length)
+import Data.ByteString hiding (dropWhileEnd, length, null)
 import Data.List (dropWhileEnd)
 import qualified Data.ByteString.Base64 as Base64
 import qualified Data.Text as T
