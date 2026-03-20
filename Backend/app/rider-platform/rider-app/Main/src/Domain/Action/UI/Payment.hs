@@ -558,7 +558,7 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
           -- Store in Redis dead-letter queue for monitoring and manual replay
           now <- getCurrentTime
           let deadLetterEntry = orderShortId <> "|" <> show status <> "|" <> show now <> "|" <> show err
-          Redis.rPush "juspay:webhook:dead-letter" [deadLetterEntry]
+          Redis.rPush "juspay:webhook:dead-letter" (deadLetterEntry :| [])
         Right _ -> pure ()
   pure Ack
   where
@@ -708,7 +708,7 @@ stripeWebhookHandler' serviceName merchantShortId mbCity mbServiceType mbPlaceId
   (paymentServiceConfig, merchantOperatingCity) <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId serviceName
   -- P0 Fix: Implement Stripe webhook deduplication using atomic setNxExpire
   let checkDuplicatedEvent eventId = do
-        let dedupKey = "stripe:webhook:eventId:" <> eventId
+        let dedupKey = "stripe:webhook:eventId:" <> eventId.getId
         isNew <- Redis.setNxExpire dedupKey 86400 ("1" :: Text)
         pure (not isNew)
   Stripe.serviceEventWebhook paymentServiceConfig checkDuplicatedEvent (stripeWebhookAction merchantOperatingCity.id) mbSigHeader rawBytes
