@@ -1366,7 +1366,7 @@ getFrfsTripRouteManifest (mbPersonId, _merchantId) tripId routeId = do
     schedule & listToMaybe
       & fromMaybeM (InvalidRequest "Bus schedule not found")
   let stops = scheduleDetail.eta
-  bookings <- QFRFSTicketBooking.findAllByTripId tripId
+  bookings <- QFRFSTicketBooking.findAllConfirmedByTripId tripId
   let bookingIds = map (.id) bookings
   allTickets <- QFRFSTicket.findAllByTicketBookingIds bookingIds
   let ticketMap = Map.fromListWith (++) $ map (\t -> (t.frfsTicketBookingId, [t])) allTickets
