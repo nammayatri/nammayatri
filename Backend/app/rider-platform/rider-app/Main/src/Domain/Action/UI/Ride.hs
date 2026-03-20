@@ -58,6 +58,7 @@ import Kernel.Types.Id
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
+import Tools.Metrics.BAPMetrics (HasBAPMetrics)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.LocationMapping as SLM
@@ -149,6 +150,7 @@ editLocation ::
     EsqDBFlow m r,
     HasField "esqDBReplicaEnv" r EsqDBEnv,
     MonadFlow m,
+    HasBAPMetrics m r,
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
