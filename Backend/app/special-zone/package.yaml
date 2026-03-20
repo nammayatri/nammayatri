@@ -90,11 +90,6 @@ ghc-options:
 library:
   source-dirs:
     - src
-  ghc-options:
-    - -Wall
-    - -Wcompat
-    - -Widentities
-    - -fhide-source-paths
   when:
     - condition: flag(Local)
       then:
