@@ -776,6 +776,7 @@ cancellationSourceToSubCategory = \case
   SBCR.ByDriver -> Notification.ByDriver
   SBCR.ByAllocator -> Notification.ByAllocator
   SBCR.ByApplication -> Notification.ByApplication
+  SBCR.ByFleetOwner -> Notification.ByMerchant
 
 -- Notification.CANCELLED_PRODUCT
 -- BOOKING_CANCEL_WITH_RIDE
