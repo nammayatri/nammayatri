@@ -17,6 +17,7 @@ module SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation
   )
 where
 
+import Control.Applicative ((<|>))
 import Data.IORef (newIORef, readIORef, writeIORef)
 import qualified Data.Map.Strict as M
 import Data.Time.Calendar (addDays)
@@ -76,6 +77,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.FareParameters as QFareParams
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SubscriptionPurchase as QSubPurchase
 
@@ -521,7 +523,9 @@ processDsrVsLedger booking ledgerEntries indirectTaxTxns now = do
   rides <- QRide.findRidesByBookingId [booking.id]
   let dcoId = (.driverId.getId) <$> listToMaybe rides
       mbRide = listToMaybe rides
-      dsrResult = DomainRecon.runDsrVsLedgerComparison booking mbRide ledgerEntries indirectTaxTxns
+  rideFareParams <- maybe (pure Nothing) (\ride -> maybe (pure Nothing) (QFareParams.findById) ride.fareParametersId) mbRide
+  let
+      dsrResult = DomainRecon.runDsrVsLedgerComparison booking mbRide rideFareParams ledgerEntries indirectTaxTxns
 
   entryId <- generateGUID
   let inp =
@@ -559,10 +563,12 @@ processDsrVsSubscription booking ledgerEntry now = do
   rides <- QRide.findRidesByBookingId [booking.id]
   let dcoId = (.driverId.getId) <$> listToMaybe rides
       mbRide = listToMaybe rides
+  rideFareParams <- maybe (pure Nothing) (\ride -> maybe (pure Nothing) (QFareParams.findById) ride.fareParametersId) mbRide
+  let fareParams = fromMaybe booking.fareParams rideFareParams
       rideFare = fromMaybe booking.estimatedFare (mbRide >>= (.fare))
-      parkingCharge = fromMaybe 0 booking.fareParams.parkingCharge
-      govtCharges = fromMaybe 0 booking.fareParams.govtCharges
-      tollCharges = fromMaybe 0 booking.tollCharges
+      parkingCharge = fromMaybe 0 fareParams.parkingCharge
+      govtCharges = fromMaybe 0 fareParams.govtCharges
+      tollCharges = fromMaybe 0 $ (mbRide >>= (.tollCharges)) <|> booking.tollCharges
       expectedValue = rideFare - parkingCharge - govtCharges - tollCharges
 
   entryId <- generateGUID
