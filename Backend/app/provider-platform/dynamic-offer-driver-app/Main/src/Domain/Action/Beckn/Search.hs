@@ -90,6 +90,7 @@ import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculatorV2 as FCV2
 import SharedLogic.FarePolicy
+import qualified SharedLogic.FareTransparency as FareTransparency
 import SharedLogic.GoogleMaps
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
@@ -821,7 +822,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
   let isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
 
   -- P0 FIX-01: Compute and log fare breakdown for transparency
-  let fareBreakdown = FareTransparency.buildFareBreakdown maxFareParams ((realToFrac . DFP.congestionChargeMultiplierToCentesimal) <$> fullFarePolicy.congestionChargeMultiplier)
+  let fareBreakdown = FareTransparency.buildFareBreakdown maxFareParams (realToFrac . DFP.congestionChargeMultiplierToCentesimal <$> fullFarePolicy.congestionChargeMultiplier)
   logInfo $
     "FareBreakdown for estimate "
       <> show estimateId
