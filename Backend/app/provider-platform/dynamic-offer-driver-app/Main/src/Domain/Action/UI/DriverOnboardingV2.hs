@@ -29,9 +29,9 @@ import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.DriverGstin as DGST
 import qualified Domain.Types.DriverPanCard as DPC
 import Domain.Types.DriverSSN
-import qualified Domain.Types.IdfyVerification as DIV
 import Domain.Types.FarePolicy
 import qualified Domain.Types.HyperVergeSdkLogs as DomainHVSdkLogs
+import qualified Domain.Types.IdfyVerification as DIV
 import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -89,12 +89,12 @@ import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.DriverGstin as QDGTIN
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLicense as QDL
-import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.DriverPanCard as QDPC
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverSSN as QDriverSSN
 import qualified Storage.Queries.FleetDriverAssociationExtra as FDA
 import qualified Storage.Queries.HyperVergeSdkLogs as HVSdkLogsQuery
+import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as PersonQuery
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite

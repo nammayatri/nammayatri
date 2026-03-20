@@ -16,8 +16,8 @@ import qualified API.Internal.FrequentLocUser as FrequentLocUser
 import qualified API.Internal.GetPickupInstructions as GetPickupInstructions
 import qualified API.Internal.Rating as Rating
 import qualified API.Internal.RideSearchExpired as RideSearchExpired
-import qualified API.Internal.StopEvents as StopEvents
 import qualified API.Internal.Sos as Sos
+import qualified API.Internal.StopEvents as StopEvents
 import qualified API.Internal.ViolationDetection as ViolationDetection
 import Environment
 import Servant

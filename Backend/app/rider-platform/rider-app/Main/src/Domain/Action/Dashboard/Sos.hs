@@ -3,7 +3,6 @@
 module Domain.Action.Dashboard.Sos where
 
 import qualified API.Types.RiderPlatform.Management.Sos
-import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified API.Types.UI.Sos as UISos
 import qualified Dashboard.Common
 import qualified Data.Aeson as A
@@ -11,6 +10,7 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.Profile as DP
 import qualified Domain.Action.UI.Sos as Sos
 import qualified Domain.Types.Merchant
@@ -27,8 +27,6 @@ import qualified Kernel.External.SOS as PoliceSOS
 import qualified Kernel.External.SOS.ERSS.Auth as ERSSAuth
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
-import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
-import qualified SharedLogic.External.LocationTrackingService.Types as LTSTypes
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
@@ -40,6 +38,8 @@ import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import Servant hiding (throwError)
 import Servant.Client (showBaseUrl)
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
+import qualified SharedLogic.External.LocationTrackingService.Types as LTSTypes
 import qualified SharedLogic.Ride as SRide
 import qualified SharedLogic.SosLocationTracking as SOSLocation
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC

@@ -12,8 +12,8 @@ where
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import qualified Lib.Finance.Domain.Types.Account as Account
-import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import Lib.Finance.Domain.Types.IndirectTaxTransaction (GstCreditType (..))
+import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import Lib.Finance.Error.Types (FinanceError)
 import Lib.Finance.FinanceM
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow

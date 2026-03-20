@@ -70,6 +70,7 @@ import qualified Storage.Queries.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverPanCard as QDPC
 import qualified Storage.Queries.DriverRCAssociation as DRAQuery
 import qualified Storage.Queries.DriverSSN as QDSSN
+import qualified Storage.Queries.DriverUdyam as QUDYAM
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
@@ -84,7 +85,6 @@ import qualified Storage.Queries.VehicleNOC as VNOCQuery
 import qualified Storage.Queries.VehiclePUC as VPUCQuery
 import qualified Storage.Queries.VehiclePermit as VPQuery
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
-import qualified Storage.Queries.DriverUdyam as QUDYAM
 import qualified Tools.BackgroundVerification as BackgroundVerification
 import Tools.Error (DriverOnboardingError (ImageNotValid))
 import qualified Tools.Plasma as TPlasma

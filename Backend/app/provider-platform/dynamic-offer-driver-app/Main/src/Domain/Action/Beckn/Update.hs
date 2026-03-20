@@ -23,6 +23,7 @@ import Data.Maybe
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Data.Text as Text
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.EditBooking as EditBooking
 import qualified Domain.Action.UI.Location as DL
@@ -50,7 +51,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.LocationUpdates.Internal
 import SharedLogic.CallBAP
-import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculatorV2 as FCV2
@@ -221,7 +221,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                       reachedStops = sortOn (.timestamp) $ map snd reachedStopsMap
                       unprocessedReachedStops = filter (\r -> Set.notMember r.stopIndex processedStopIndices) reachedStops
                       reachedStopIndices = Set.fromList $ map (.stopIndex) reachedStops
-                      pendingStops = [latLong | (latLong, idx) <- zip stopLatLongs [1..], Set.notMember idx reachedStopIndices]
+                      pendingStops = [latLong | (latLong, idx) <- zip stopLatLongs [1 ..], Set.notMember idx reachedStopIndices]
                       rawGpsTriples = map (\(ll, t) -> (ll, False, t)) (editDestinationWaypoints <> map (\w -> (Maps.LatLong w.lat w.lon, fromMaybe nowTs w.ts)) currentLocationPointsBatch.loc)
                   unless (null unprocessedReachedStops) $ do
                     void $ Redis.sAddExp (VID.mkProcessedStopsKey ride.id) (map VID.stopIndex unprocessedReachedStops) 86400
@@ -235,7 +235,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     let stopLLs = [(ll, True) | (ll, True, _) <- seg]
                         nonStopLLs = [ll | (ll, False, _) <- seg]
                     (segFailed, snapped) <- getLatlongsViaSnapToRoad nonStopLLs merchantOperatingCity.merchantId merchantOperatingCity.id
-                    return (segFailed, map (, False) snapped ++ stopLLs)
+                    return (segFailed, map (,False) snapped ++ stopLLs)
 
                   let (failures, snappedSegList) = unzip results
                       snapToRoadFailed = or failures
@@ -385,7 +385,6 @@ handler (UEditLocationReq EditLocationReq {..}) = do
         (_, Right snapToRoadResp) ->
           pure (False, snapToRoadResp.snappedPoints)
 
-
     getLatlongsViaSnapToRoad latlongs merchantId merchanOperatingCityId = do
       let batches = chunksOf 98 latlongs
       logTagError "DebugErrorLog: EditDestSnapToRoad" $ "SnapToRoad request batch count: " <> show (length batches)
@@ -418,7 +417,6 @@ handler (UEditLocationReq EditLocationReq {..}) = do
         go [] acc = [reverse acc]
         go ((ll, True, t) : rest) acc = (reverse ((ll, True, t) : acc)) : go rest []
         go (pt : rest) acc = go rest (pt : acc)
-
 
 mkActions2 :: Text -> Double -> Double -> FCM.FCMActions -> FCM.FCMActions
 mkActions2 bookingUpdateReqId lat long action = do
