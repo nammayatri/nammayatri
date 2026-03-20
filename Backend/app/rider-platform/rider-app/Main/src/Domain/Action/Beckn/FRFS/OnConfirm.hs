@@ -22,7 +22,7 @@ import BecknV2.FRFS.Utils
 import Data.Aeson
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Lazy as BL
-import Data.HashMap.Strict
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time.Clock.POSIX hiding (getCurrentTime)
@@ -49,7 +49,7 @@ import Kernel.Beam.Functions
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption as ENC
 import Kernel.External.Types (SchedulerFlow)
-import Kernel.Prelude as Prelude hiding (lookup)
+import Kernel.Prelude as Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -240,7 +240,7 @@ onConfirm merchant booking' quoteCategories dOrder = do
                   walletPOCfg <- do
                     pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.WALLET_CLASS_NAME >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.WALLET_CLASS_NAME)
                     DPOC.getWalletClassNameConfig pOrgCfg.config
-                  let mbClassName = lookup booking.providerId walletPOCfg.className
+                  let mbClassName = HM.lookup booking.providerId walletPOCfg.className
                   whenJust mbClassName $ \className -> do
                     fork ("adding googleJWTUrl" <> " Booking Id: " <> booking.id.getId) $ do
                       let serviceName = DEMSC.WalletService GW.GoogleWallet
@@ -487,7 +487,7 @@ mkTransitObjects pOrgId booking ticket person serviceAccount className sortIndex
   walletQRTypeCfg <- do
     qrCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.WALLET_QR_TYPE >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.WALLET_QR_TYPE)
     DPOC.getWalletQRTypeConfig qrCfg.config
-  let mbPeriodMillis = lookup booking.merchantOperatingCityId.getId walletQRTypeCfg.qrType
+  let mbPeriodMillis = HM.lookup booking.merchantOperatingCityId.getId walletQRTypeCfg.qrType
   let mbRotatingBarcode = mkRotatingBarcode ticket.qrData mbPeriodMillis
   frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId fromStation.merchantOperatingCityId Nothing >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
   let passengerName' = fromMaybe "-" person.firstName
