@@ -61,8 +61,6 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
-import Kernel.External.Types (SchedulerFlow)
-
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 
 import qualified SharedLogic.MessageBuilder as MessageBuilder
