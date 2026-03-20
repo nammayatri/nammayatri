@@ -26,6 +26,7 @@ module Domain.Action.Dashboard.Ride
     postRideSyncMultiple,
     validateMultipleRideSyncReq,
     cancellationChargesWaiveOff,
+    cancellationChargesWaiveOffCore,
   )
 where
 
@@ -610,30 +611,37 @@ cancellationChargesWaiveOff merchantShortId _ reqRideId = do
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   unless (merchant.id == booking.merchantId) $
     throwError (RideDoesNotExist rideId.getId)
-  -- fareBreakup <- B.runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING
-  -- let cancellationCharges = filter (\fareBreakup' -> fareBreakup'.description == "CANCELLATION_CHARGES") fareBreakup
+  (mbAmt, success) <- cancellationChargesWaiveOffCore merchant booking ride
+  return $
+    Common.CancellationChargesWaiveOffRes
+      { rideId = reqRideId,
+        waivedOffAmount = mbAmt,
+        waivedOffAmountWithCurrency = fmap (\a -> PriceAPIEntity {amount = a, currency = booking.estimatedFare.currency}) mbAmt,
+        waivedOffSuccess = success
+      }
+
+cancellationChargesWaiveOffCore ::
+  DM.Merchant ->
+  DTB.Booking ->
+  DRide.Ride ->
+  Flow (Maybe HighPrecMoney, Bool)
+cancellationChargesWaiveOffCore merchant booking ride = do
   case ride.cancellationChargesOnCancel of
-    Just entity -> do
-      let charges = entity
+    Just charges | charges > 0 -> do
       case booking.bppBookingId of
         Just bppBookingId -> do
-          if charges > 0
-            then do
-              logInfo $ "CancellationChargesWaiveOff: Trying to waive off cancellation charges for rideId: " <> rideId.getId <> " with amount: " <> show charges
-              result <- withTryCatch "customerCancellationDuesWaiveOff" $ CallBPPInternal.customerCancellationDuesWaiveOff merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId bppBookingId.getId ride.bppRideId.getId charges
-              case result of
-                Right _ -> do
-                  logInfo $ "CancellationChargesWaiveOff: Successfully waived off cancellation charges for rideId: " <> rideId.getId <> " with amount: " <> show charges
-                  return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Just charges, waivedOffAmountWithCurrency = Just PriceAPIEntity {amount = charges, currency = INR}, waivedOffSuccess = True}
-                Left err -> do
-                  logError $ "CancellationChargesWaiveOff: Failed to waive off cancellation charges for rideId: " <> rideId.getId <> " with amount: " <> show charges <> " with error: " <> show err
-                  return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Nothing, waivedOffAmountWithCurrency = Nothing, waivedOffSuccess = False}
-            else do
-              logInfo $ "CancellationChargesWaiveOff: No non-zero cancellation charges found for rideId: " <> rideId.getId
-              return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Nothing, waivedOffAmountWithCurrency = Nothing, waivedOffSuccess = False}
-        _ -> do
-          logInfo $ "CancellationChargesWaiveOff: No bppBookingId found for rideId: " <> rideId.getId
-          return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Nothing, waivedOffAmountWithCurrency = Nothing, waivedOffSuccess = False}
+          logInfo $ "CancellationChargesWaiveOff: Trying to waive off cancellation charges for bookingId: " <> booking.id.getId <> " with amount: " <> show charges
+          result <- withTryCatch "customerCancellationDuesWaiveOff" $ CallBPPInternal.customerCancellationDuesWaiveOff merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId bppBookingId.getId ride.bppRideId.getId charges
+          case result of
+            Right _ -> do
+              logInfo $ "CancellationChargesWaiveOff: Successfully waived off cancellation charges for bookingId: " <> booking.id.getId
+              pure (Just charges, True)
+            Left err -> do
+              logError $ "CancellationChargesWaiveOff: Failed to waive off cancellation charges for bookingId: " <> booking.id.getId <> " with error: " <> show err
+              pure (Nothing, False)
+        Nothing -> do
+          logInfo $ "CancellationChargesWaiveOff: No bppBookingId found for bookingId: " <> booking.id.getId
+          pure (Nothing, False)
     _ -> do
-      logInfo $ "CancellationChargesWaiveOff: No cancellation charges found for rideId: " <> rideId.getId
-      return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Nothing, waivedOffAmountWithCurrency = Nothing, waivedOffSuccess = False}
+      logInfo $ "CancellationChargesWaiveOff: No non-zero cancellation charges found for bookingId: " <> booking.id.getId
+      pure (Nothing, False)

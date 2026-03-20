@@ -226,6 +226,7 @@ library
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent
       Domain.Action.UI.Cancel
+      Domain.Action.UI.CancellationChargesWaiveOff
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.Conductor.Stats
       Domain.Action.UI.Confirm
