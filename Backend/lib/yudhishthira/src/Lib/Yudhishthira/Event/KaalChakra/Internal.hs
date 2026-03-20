@@ -70,11 +70,11 @@ type ChakraEvent m r action =
 skipUpdateUserTagsHandler :: forall m action. (Monad m, Log m, MonadThrow m, Read action, Show action) => Handle m action
 skipUpdateUserTagsHandler =
   Handle
-    { getUserTags = \userId -> logInfo ("Skip update user tags in DB selected: userId: " <> show userId) >> pure (Just []),
-      updateUserTags = \userId updatedTags -> logInfo $ "Skip update user tags in DB selected: userId: " <> show userId <> "; updated tags: " <> show updatedTags,
-      createFetchUserDataJob = \chakra updateTagData _scheduledTime -> logInfo $ "Skip generateUserData job for: " <> show updateTagData <> "; chakra: " <> show chakra,
-      createUpdateUserTagDataJob = \chakra kaalChakraData _scheduledTime -> logInfo $ "Skip updateTag job for: " <> show kaalChakraData <> "; chakra: " <> show chakra,
-      action = \userId action _ -> logInfo $ "Skip action: " <> show action <> "; userId: " <> show userId,
+    { getUserTags = \userId -> logDebug ("Skip update user tags in DB selected: userId: " <> show userId) >> pure (Just []),
+      updateUserTags = \userId updatedTags -> logDebug $ "Skip update user tags in DB selected: userId: " <> show userId <> "; updated tags: " <> show updatedTags,
+      createFetchUserDataJob = \chakra updateTagData _scheduledTime -> logDebug $ "Skip generateUserData job for: " <> show updateTagData <> "; chakra: " <> show chakra,
+      createUpdateUserTagDataJob = \chakra kaalChakraData _scheduledTime -> logDebug $ "Skip updateTag job for: " <> show kaalChakraData <> "; chakra: " <> show chakra,
+      action = \userId action _ -> logDebug $ "Skip action: " <> show action <> "; userId: " <> show userId,
       merchantOperatingCityId = Nothing
     }
 
@@ -100,7 +100,7 @@ kaalChakraEventInternal ::
   m Yudhishthira.RunKaalChakraJobRes
 kaalChakraEventInternal eventId req = withLogTag ("EventId-" <> eventId.getId) do
   startTime <- getCurrentTime
-  logInfo $
+  logDebug $
     "Running kaal-chakra event: chakra: "
       <> show req.chakra
       <> "; update user tags: "
@@ -120,7 +120,7 @@ kaalChakraEventInternal eventId req = withLogTag ("EventId-" <> eventId.getId) d
   let usersNumber = length batchedUserData.userIds
   endTime <- getCurrentTime
   let durationInSeconds = Time.nominalDiffTimeToSeconds $ diffUTCTime endTime startTime
-  logInfo $ "User data fetched successfully: batches number: " <> show batchesNumber <> "; users number: " <> show usersNumber
+  logDebug $ "User data fetched successfully: batches number: " <> show batchesNumber <> "; users number: " <> show usersNumber
   logDebug $ "took time: " <> show durationInSeconds
   pure $ Yudhishthira.RunKaalChakraJobRes (Just eventId) Nothing Nothing batchedUserData.chakraBatchState
 
@@ -194,7 +194,7 @@ updateUserTagsHandlerInternal h req = withLogTag ("EventId-" <> req.eventId.getI
       pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Just tagsAPIEntity, users = Just usersAPIEntity, chakraBatchState = Yudhishthira.Completed}
   endTime <- getCurrentTime
   let durationInSeconds = Time.nominalDiffTimeToSeconds $ diffUTCTime endTime startTime
-  logInfo $ "User tags updated successfully in " <> show durationInSeconds <> " seconds; batches number: " <> show batchNumber
+  logDebug $ "User tags updated successfully in " <> show durationInSeconds <> " seconds; batches number: " <> show batchNumber
   pure res
 
 data ChakraBatchedUserData = ChakraBatchedUserData
@@ -211,14 +211,14 @@ fetchUserDataBatch ::
   Int ->
   m ChakraBatchedUserData
 fetchUserDataBatch req eventId chakraQueries batchNumber = do
-  logInfo $ "Running batch: " <> show batchNumber
+  logDebug $ "Running batch: " <> show batchNumber
   when (req.usersInBatch < 1) $ throwError (InvalidRequest "Quantity of users in batch should be more than 0")
 
   -- 1. Separate queries by type (only run Redis path for queryType == Just REDIS, not for Nothing)
   let (clickhouseQueries, nonClickhouseQueries) =
         partition (\q -> q.queryType == Just YT.CLICKHOUSE) chakraQueries
   let redisQueries = filter (\q -> q.queryType == Just YT.REDIS) nonClickhouseQueries
-  logInfo $
+  logDebug $
     "Chakra batch " <> show batchNumber <> ": ClickHouse queries=" <> show (length clickhouseQueries)
       <> ", Redis queries="
       <> show (length redisQueries)
@@ -433,7 +433,7 @@ runTagAction h userId actionData = do
                 logError $ "Could not parse action: tagName: " <> show tagName <> "; action: " <> actionTxt <> "; tagValueOld: " <> show mbTagValueOld <> "; tagValueNew: " <> show tagValueNew <> "; skipping."
                 h.action userId Nothing actionTxt
             Right A.Null ->
-              logInfo $ "Empty extra tag action determined: tagName:" <> show tagName <> "; tagValueOld: " <> show mbTagValueOld <> "; tagValueNew: " <> show tagValueNew
+              logDebug $ "Empty extra tag action determined: tagName:" <> show tagName <> "; tagValueOld: " <> show mbTagValueOld <> "; tagValueNew: " <> show tagValueNew
             Right val -> do
               -- only String or Null value supported for now, we can add Array later
               logError $ "String or Null expected for extra tag action: tagName: " <> show tagName <> "; data: " <> show val <> "; skipping."
@@ -766,7 +766,7 @@ executeSlidingWindowCount config userIdMapping = do
   periodTypeText <- maybe (throwError $ InvalidRequest "SLIDING_WINDOW_COUNT requires windowPeriodType") pure config.windowPeriodType
   periodType <- either (throwError . InvalidRequest) pure $ parseWindowPeriodType periodTypeText
   let opts = SWCTypes.SlidingWindowOptions period periodType
-  logInfo $
+  logDebug $
     "SLIDING_WINDOW_COUNT: keyTemplate=" <> config.key
       <> ", windowPeriod="
       <> show period
@@ -780,7 +780,7 @@ executeSlidingWindowCount config userIdMapping = do
       logDebug $
         "SLIDING_WINDOW_COUNT user " <> show idx <> ": userId=" <> userId.getId <> ", baseKey=" <> baseKey <> ", count=" <> show count
     pure $ Just $ BS.toStrict $ A.encode (A.Number $ fromIntegral count)
-  logInfo $ "SLIDING_WINDOW_COUNT: completed, returned " <> show (length results) <> " results"
+  logDebug $ "SLIDING_WINDOW_COUNT: completed, returned " <> show (length results) <> " results"
   pure results
 
 -- Format Redis Results
@@ -929,7 +929,7 @@ runRedisQueryRequest chakraQuery userIds = do
   -- 2. Build Redis keys with mapping (for SLIDING_WINDOW_COUNT only userIdMapping is used)
   let (userIdMapping, keys) = buildRedisKeysWithMapping redisConfig userIds
   when (redisConfig.operation == YT.SLIDING_WINDOW_COUNT) $
-    logInfo $ "Run Redis query: SLIDING_WINDOW_COUNT queryName=" <> show chakraQuery.queryName
+    logDebug $ "Run Redis query: SLIDING_WINDOW_COUNT queryName=" <> show chakraQuery.queryName
 
   -- 3. Execute Redis operation based on config
   redisResponses <- case redisConfig.operation of
@@ -982,16 +982,16 @@ clearEventData ::
   Maybe (Id Yudhishthira.Event) ->
   m ()
 clearEventData chakra (Just eventId) = do
-  logInfo $ "finished update tag job for event " <> show eventId
+  logDebug $ "finished update tag job for event " <> show eventId
   resetChakraBatchNumber chakra
-  logInfo "batch number reset now"
+  logDebug "batch number reset now"
   delChakraEventId chakra
   QUserDataE.deleteUserDataWithEventId eventId
-  logInfo "deleted all event user data"
+  logDebug "deleted all event user data"
 clearEventData chakra Nothing = do
-  logInfo "finished get user data job"
+  logDebug "finished get user data job"
   resetChakraBatchNumber chakra
-  logInfo "batch number reset now"
+  logDebug "batch number reset now"
 
 -- keeping chakra event in redis
 getEventId :: (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Yudhishthira.Chakra -> m (Id Yudhishthira.Event)

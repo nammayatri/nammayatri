@@ -57,10 +57,10 @@ evaluateRules callerApp mocId domain fetchRules snapshotJson = do
   (allLogics, _mbVersion) <- fetchRules domain
   if null allLogics
     then do
-      logInfo $ "BehaviorEngine: No rules configured for domain " <> show domain <> ". Returning empty output."
+      logDebug $ "BehaviorEngine: No rules configured for domain " <> show domain <> ". Returning empty output."
       return defaultOrchestratedOutput
     else do
-      logInfo $ "BehaviorEngine: Evaluating " <> show (length allLogics) <> " rules for domain " <> show domain
+      logDebug $ "BehaviorEngine: Evaluating " <> show (length allLogics) <> " rules for domain " <> show domain
       result <-
         try @_ @SomeException $
           LYDL.runLogicsWithDebugLog callerApp mocId domain allLogics snapshotJson
@@ -69,11 +69,11 @@ evaluateRules callerApp mocId domain fetchRules snapshotJson = do
           logError $ "BehaviorEngine: Error evaluating rules for domain " <> show domain <> ": " <> show err
           return defaultOrchestratedOutput
         Right logicResp -> do
-          logInfo $ "BehaviorEngine: Raw rule output for domain " <> show domain <> ": " <> show logicResp.result
+          logDebug $ "BehaviorEngine: Raw rule output for domain " <> show domain <> ": " <> show logicResp.result
           let (output, parseErrors) = extractOutput logicResp.result
           unless (null parseErrors) $
             logError $ "BehaviorEngine: Parse errors for domain " <> show domain <> ": " <> show parseErrors
-          logInfo $
+          logDebug $
             "BehaviorEngine: Parsed output — Consequences: " <> show (length output.consequences)
               <> ", Communications: "
               <> show (length output.communications)

@@ -246,7 +246,7 @@ executePayoutRequestInternal ::
 executePayoutRequestInternal payoutRequest payoutCall = do
   if not (isPayoutExecutable payoutRequest)
     then do
-      logInfo $ "PayoutRequest " <> payoutRequest.id.getId <> " not executable (status: " <> show payoutRequest.status <> "), skipping"
+      logDebug $ "PayoutRequest " <> payoutRequest.id.getId <> " not executable (status: " <> show payoutRequest.status <> "), skipping"
       pure Nothing
     else do
       orderId <- generateGUID

@@ -76,10 +76,10 @@ handler hnd = do
 
 dbBasedHandlerLoop :: (JobProcessor t, FromJSON t) => SchedulerHandle t -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
 dbBasedHandlerLoop hnd runTask = do
-  logInfo "Starting runner iteration 1"
+  logDebug "Starting runner iteration 1"
   iterSessionId <- generateGUIDText
   before <- getCurrentTime
-  withLogTag iterSessionId $ logInfo "Starting runner iteration"
+  withLogTag iterSessionId $ logDebug "Starting runner iteration"
   runnerIteration hnd runTask
   after <- getCurrentTime
   let diff = floor $ abs $ diffUTCTime after before
@@ -93,7 +93,7 @@ mapConcurrently action = mapM_ (fork "mapThread" . action)
 
 runnerIterationRedis :: forall t. (JobProcessor t, FromJSON t) => SchedulerHandle t -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
 runnerIterationRedis SchedulerHandle {..} runTask = do
-  logInfo "Starting runner iteration"
+  logDebug "Starting runner iteration"
   key <- asks (.streamName)
   groupName <- asks (.groupName)
   readyTasks <- getReadyTask
@@ -213,7 +213,7 @@ registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
   logDebug $ "Current Job Id with Status : " <> show id <> " " <> show result
   case result of
     DuplicateExecution -> do
-      logInfo $ "job id " <> show id <> " already executed "
+      logDebug $ "job id " <> show id <> " already executed "
     Complete -> do
       logInfo $ "job successfully completed on try " <> show (currErrors + 1)
       markAsComplete jobType' job.id

@@ -684,7 +684,7 @@ createOrderService ::
   Maybe Text ->
   m (Maybe Payment.CreateOrderResp)
 createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType isTestTransaction createOrderRequest createOrderCall mbCreateWalletCall _isMockPayment mbGroupId = do
-  logInfo $ "CreateOrderService: "
+  logDebug $ "CreateOrderService: "
   -- Apply test- prefix if isTestTransaction is True and not already prefixed (idempotent)
   let updatedOrderShortId =
         if isTestTransaction
@@ -959,10 +959,10 @@ buildOrderOffer paymentOrderId mbOffers merchantId merchantOperatingCityId = do
   logDebug $ "buildOrderOffer called for paymentOrderId: " <> poIdTxt <> " with " <> show (length (fromMaybe [] mbOffers)) <> " offers"
   case mbOffers of
     Nothing -> do
-      logInfo $ "No offers to create for paymentOrderId: " <> paymentOrderId.getId
+      logDebug $ "No offers to create for paymentOrderId: " <> paymentOrderId.getId
       pure ()
     Just [] -> do
-      logInfo $ "No offers to create for paymentOrderId: " <> paymentOrderId.getId
+      logDebug $ "No offers to create for paymentOrderId: " <> paymentOrderId.getId
       pure ()
     Just offers -> do
       Redis.whenWithLockRedis (offerProccessingLockKey poIdTxt) 60 $ do
@@ -971,11 +971,11 @@ buildOrderOffer paymentOrderId mbOffers merchantId merchantOperatingCityId = do
           [] -> do
             now <- getCurrentTime
             paymentOrderOffers <- mapM (createPaymentOrderOffer now) offers
-            logInfo $ "Creating " <> show (length paymentOrderOffers) <> " payment order offers for paymentOrderId: " <> paymentOrderId.getId
+            logDebug $ "Creating " <> show (length paymentOrderOffers) <> " payment order offers for paymentOrderId: " <> paymentOrderId.getId
             QPaymentOrderOffer.createMany paymentOrderOffers
-            logInfo $ "Successfully created payment order offers for paymentOrderId: " <> paymentOrderId.getId
+            logDebug $ "Successfully created payment order offers for paymentOrderId: " <> paymentOrderId.getId
           _ -> do
-            logInfo $ "Payment order offers already exist for paymentOrderId: " <> paymentOrderId.getId <> ", skipping creation"
+            logDebug $ "Payment order offers already exist for paymentOrderId: " <> paymentOrderId.getId <> ", skipping creation"
             pure ()
   where
     createPaymentOrderOffer now offer = do
@@ -1446,7 +1446,7 @@ stripeWebhookService merchantOpCityId resp respDump stripeWebhookData = do
         Just orderShortId -> do
           Redis.whenWithLockRedis (refundProccessingKey orderShortId) 60 $ updateRefundsByWebhook merchantOpCityId refundsInfo -- respDump currently does not stored in refunds table
         Nothing -> throwError (InvalidRequest $ "orderShortId not found for eventId: " <> resp.id.getId)
-    SkipWebhookData -> logInfo $ "Skip webhook event: " <> show resp.eventType <> "; eventId: " <> resp.id.getId
+    SkipWebhookData -> logDebug $ "Skip webhook event: " <> show resp.eventType <> "; eventId: " <> resp.id.getId
 
   pure Ack
 
