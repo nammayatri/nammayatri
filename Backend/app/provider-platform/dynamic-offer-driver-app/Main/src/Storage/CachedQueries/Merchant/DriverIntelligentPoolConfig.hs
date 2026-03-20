@@ -57,7 +57,7 @@ makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:DriverIntelligentPoolCo
 
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
-clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantOpCityIdKey
+clearCache id = Hedis.runInMultiCloudRedisWrite $ Hedis.withCrossAppRedis $ Hedis.del $ makeMerchantOpCityIdKey id
 
 update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverIntelligentPoolConfig -> m ()
 update = Queries.update
