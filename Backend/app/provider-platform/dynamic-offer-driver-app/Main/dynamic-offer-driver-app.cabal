@@ -839,6 +839,12 @@ library
       Tools.Metrics
       Tools.Metrics.ARDUBPPMetrics
       Tools.Metrics.ARDUBPPMetrics.Types
+      Tools.Metrics.CancellationMetrics
+      Tools.Metrics.CancellationMetrics.Types
+      Tools.Metrics.PaymentMonitoringMetrics
+      Tools.Metrics.PaymentMonitoringMetrics.Types
+      Tools.Metrics.RideFunnelMetrics
+      Tools.Metrics.RideFunnelMetrics.Types
       Tools.Metrics.SendSearchRequestToDriverMetrics
       Tools.Metrics.SendSearchRequestToDriverMetrics.Types
       Tools.Notifications
