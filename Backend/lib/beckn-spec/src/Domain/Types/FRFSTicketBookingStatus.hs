@@ -51,8 +51,10 @@ isValidTransition from to
       -- All other transitions are invalid
       _ -> False
 
--- | Checks if a status represents a completed/terminal state (no further transitions expected).
--- Named to align with 'isValidTransition' for consistency.
+-- | Checks if a status represents a completed/resolved booking outcome.
+-- Note: CONFIRMED bookings can still be cancelled, and FAILED bookings
+-- can retry via PAYMENT_PENDING. "Completion" here means the primary
+-- booking workflow has reached an outcome, not that no transitions remain.
 isCompletionStatus :: FRFSTicketBookingStatus -> Bool
 isCompletionStatus CONFIRMED = True
 isCompletionStatus FAILED = True

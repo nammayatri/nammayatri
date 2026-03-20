@@ -281,16 +281,15 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
           timeSinceAcceptSec = round (diffUTCTime now ride.createdAt) :: Int
           cancellationMeta =
             A.object
-              [ "timeSinceAcceptSec" A..= timeSinceAcceptSec,
+              [ "message" A..= additionalInfo,
+                "timeSinceAcceptSec" A..= timeSinceAcceptSec,
                 "distToPickupMeters" A..= disToPickup,
                 "estimatedDistance" A..= booking.estimatedDistance,
                 "estimatedFare" A..= booking.estimatedFare,
-                "source" A..= A.toJSON source,
-                "reasonCode" A..= A.toJSON reasonCode
+                "source" A..= source,
+                "reasonCode" A..= reasonCode
               ]
-          enrichedAdditionalInfo = case additionalInfo of
-            Just info -> Just $ info <> " | " <> TL.toStrict (TLE.decodeUtf8 (A.encode cancellationMeta))
-            Nothing -> Just $ TL.toStrict (TLE.decodeUtf8 (A.encode cancellationMeta))
+          enrichedAdditionalInfo = Just $ TL.toStrict (TLE.decodeUtf8 (A.encode cancellationMeta))
       return $
         DBCR.BookingCancellationReason
           { bookingId = ride.bookingId,
