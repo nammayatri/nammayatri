@@ -168,14 +168,29 @@ package *
 package hunit-tests
   ghc-options: -Wwarn
 
-package nammayatri-test
+package beckn-test
   ghc-options: -Wwarn
 
--- Mocks: only crash-class as errors
-package mock-sms
+-- Mocks: only crash-class as errors (all 7 packages in app/mocks/)
+package mock-fcm
   ghc-options: -Wwarn -Werror=incomplete-patterns -Werror=incomplete-uni-patterns -Werror=missing-fields -Werror=missing-methods
 
-package mock-fcm
+package mock-google
+  ghc-options: -Wwarn -Werror=incomplete-patterns -Werror=incomplete-uni-patterns -Werror=missing-fields -Werror=missing-methods
+
+package mock-idfy
+  ghc-options: -Wwarn -Werror=incomplete-patterns -Werror=incomplete-uni-patterns -Werror=missing-fields -Werror=missing-methods
+
+package mock-payment
+  ghc-options: -Wwarn -Werror=incomplete-patterns -Werror=incomplete-uni-patterns -Werror=missing-fields -Werror=missing-methods
+
+package mock-public-transport-provider-platform
+  ghc-options: -Wwarn -Werror=incomplete-patterns -Werror=incomplete-uni-patterns -Werror=missing-fields -Werror=missing-methods
+
+package mock-rider-platform
+  ghc-options: -Wwarn -Werror=incomplete-patterns -Werror=incomplete-uni-patterns -Werror=missing-fields -Werror=missing-methods
+
+package mock-sms
   ghc-options: -Wwarn -Werror=incomplete-patterns -Werror=incomplete-uni-patterns -Werror=missing-fields -Werror=missing-methods
 
 -- Auto-generated code (alchemist/NammaDSL output in src-read-only/):

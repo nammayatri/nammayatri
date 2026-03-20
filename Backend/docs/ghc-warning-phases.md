@@ -15,7 +15,8 @@ See [ghc-warning-strategy.md](ghc-warning-strategy.md) for rationale and classif
 ## Phase 2: Centralize Warning Flags (Week 2)
 
 - [ ] Audit all 51 `package.yaml` files for `ghc-options` inconsistencies
-- [ ] Move shared flags (`-Wall`, `-Wcompat`, `-Widentities`, `-fwrite-ide-info`, `-hiedir=.hie`) to `cabal.project` under `package *`
+- [ ] Move shared flags (`-Wall`, `-Wcompat`, `-Widentities`) to `cabal.project` under `package *`
+- [ ] Move IDE-support flags (`-fwrite-ide-info`, `-hiedir=.hie`) to `cabal.project` — note: these are not warning flags but build-artifact flags; applying globally increases build output for test/mock packages that don't need `.hie` files. Consider scoping to business-logic and library packages only, or accept the minor disk overhead for simplicity.
 - [ ] Remove duplicated flags from individual `package.yaml` files
 - [ ] Verify build still succeeds with `cabal build all`
 
@@ -44,6 +45,7 @@ See [ghc-warning-strategy.md](ghc-warning-strategy.md) for rationale and classif
 
 ## Phase 4: Remove Blanket `-Werror` (Week 3)
 
+- [ ] Update `CLAUDE.md` rule 3: change "Project uses `-Werror` — all GHC warnings are compile errors" to reflect selective `-Werror=*` policy (crash-class and likely-bug warnings are errors; noisy warnings are not)
 - [ ] Remove `-Werror` from all 50 `package.yaml` files that have it
 - [ ] Remove `-Wwarn=ambiguous-fields` from 38 stanzas (no longer needed when `-Werror` is gone)
 - [ ] Remove `-Wincomplete-uni-patterns` from 20 stanzas (now centralized)
