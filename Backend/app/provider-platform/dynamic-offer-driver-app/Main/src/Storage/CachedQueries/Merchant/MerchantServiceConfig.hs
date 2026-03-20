@@ -99,5 +99,4 @@ upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Me
 upsertMerchantServiceConfig = Queries.upsertMerchantServiceConfig
 
 clearCacheById :: Hedis.HedisFlow m r => Id DMOC.MerchantOperatingCity -> m ()
-clearCacheById opCity = do
-  Hedis.withCrossAppRedis $ Hedis.del (makeMerchantOpCityIdKey opCity)
+clearCacheById opCity = Hedis.runInMultiCloudRedisWrite $ Hedis.withCrossAppRedis $ Hedis.del (makeMerchantOpCityIdKey opCity)
