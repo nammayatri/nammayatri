@@ -665,7 +665,7 @@ activateRCAutomatically personId merchantOpCity rcNumber = do
           { rcNo = rcNumber,
             isActivate = True
           }
-  void $ DomainRC.linkRCStatus (personId, merchantOpCity.merchantId, merchantOpCity.id) rcStatusReq
+  void $ DomainRC.linkRCStatus (personId, merchantOpCity.merchantId, merchantOpCity.id) False rcStatusReq
 
 checkIfDocumentValid ::
   [DVC.DocumentVerificationConfig] ->

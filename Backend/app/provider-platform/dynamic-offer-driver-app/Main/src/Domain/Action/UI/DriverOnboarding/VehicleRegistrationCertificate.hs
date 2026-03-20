@@ -700,8 +700,8 @@ compareRegistrationDates actualDate providedDate =
   isJust providedDate
     && ((convertUTCTimetoDate <$> providedDate) /= (convertUTCTimetoDate <$> convertTextToUTC actualDate))
 
-linkRCStatus :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> RCStatusReq -> Flow APISuccess
-linkRCStatus (driverId, merchantId, merchantOpCityId) req@RCStatusReq {..} = runInMasterDbAndRedis $ do
+linkRCStatus :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> RCStatusReq -> Flow APISuccess
+linkRCStatus (driverId, merchantId, merchantOpCityId) isTaxiBoothRequest req@RCStatusReq {..} = runInMasterDbAndRedis $ do
   driverInfo <- DIQuery.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
   unless (rc.verificationStatus == Documents.VALID) $ do
@@ -711,7 +711,7 @@ linkRCStatus (driverId, merchantId, merchantOpCityId) req@RCStatusReq {..} = run
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   if req.isActivate
     then do
-      validated <- validateRCActivation driverId transporterConfig rc
+      validated <- validateRCActivation isTaxiBoothRequest driverId transporterConfig rc
       when validated $ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc
     else do
       deactivateRC transporterConfig rc driverId
@@ -734,8 +734,8 @@ removeVehicle driverId = do
   when (isJust isOnRide) $ throwError RCVehicleOnRide
   VQuery.deleteById driverId -- delete the vehicle entry too for the driver
 
-validateRCActivation :: Id Person.Person -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> Flow Bool
-validateRCActivation driverId transporterConfig rc = do
+validateRCActivation :: Bool -> Id Person.Person -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> Flow Bool
+validateRCActivation isTaxiBoothRequest driverId transporterConfig rc = do
   now <- getCurrentTime
   mAssoc <- DAQuery.findLinkedByRCIdAndDriverId driverId rc.id now
   case mAssoc of
@@ -778,7 +778,7 @@ validateRCActivation driverId transporterConfig rc = do
       mLastRideAssigned <- RQuery.findLastRideAssigned oldDriverId
       case mLastRideAssigned of
         Just lastRide -> do
-          if (nominalDiffTimeToSeconds (diffUTCTime now lastRide.createdAt) > transporterConfig.automaticRCActivationCutOff || canUnlinkWhenOffline) && driverInfo.onRide == False
+          if ((nominalDiffTimeToSeconds (diffUTCTime now lastRide.createdAt) > transporterConfig.automaticRCActivationCutOff || canUnlinkWhenOffline) && driverInfo.onRide == False) || isTaxiBoothRequest
             then deactivateFunc oldDriverId
             else do
               DAQuery.updateRcErrorMessage oldDriverId rc.id (show RCActiveOnOtherAccount)
@@ -786,7 +786,7 @@ validateRCActivation driverId transporterConfig rc = do
         Nothing -> do
           -- if driver didn't take any ride yet
           person <- Person.findById oldDriverId >>= fromMaybeM (PersonNotFound oldDriverId.getId)
-          if (nominalDiffTimeToSeconds (diffUTCTime now person.createdAt) > transporterConfig.automaticRCActivationCutOff || canUnlinkWhenOffline) && driverInfo.onRide == False
+          if ((nominalDiffTimeToSeconds (diffUTCTime now person.createdAt) > transporterConfig.automaticRCActivationCutOff || canUnlinkWhenOffline) && driverInfo.onRide == False) || isTaxiBoothRequest
             then deactivateFunc oldDriverId
             else do
               DAQuery.updateRcErrorMessage oldDriverId rc.id (show RCActiveOnOtherAccount)
