@@ -87,9 +87,12 @@ findPendingPassByPersonIdAndPassTypeId personId merchantId passTypeId =
       Se.Is Beam.passTypeId $ Se.Eq (getId passTypeId),
       Se.Or
         [ Se.Is Beam.status $ Se.Not $ Se.In [DPurchasedPass.Active, DPurchasedPass.PreBooked],
-          Se.Or
-            [ Se.Is Beam.deviceSwitchCount $ Se.LessThanOrEq (Just 5), -- Allow up to 5 device switches for server-backed recovery
-              Se.Is Beam.deviceSwitchCount $ Se.Eq Nothing
+          Se.And
+            [ Se.Is Beam.status $ Se.In [DPurchasedPass.Active, DPurchasedPass.PreBooked],
+              Se.Or
+                [ Se.Is Beam.deviceSwitchCount $ Se.LessThanOrEq (Just 5), -- Allow up to 5 device switches for server-backed recovery
+                  Se.Is Beam.deviceSwitchCount $ Se.Eq Nothing
+                ]
             ]
         ]
     ]

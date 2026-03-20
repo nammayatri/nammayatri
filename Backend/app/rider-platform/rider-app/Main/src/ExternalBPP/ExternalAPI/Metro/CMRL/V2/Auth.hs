@@ -93,8 +93,13 @@ resetAuthToken config = do
                 password <- decrypt config.password
                 let authReq = AuthReq config.operatorNameId config.username password "password" config.merchantId
                 authRes <-
-                  callAPI config.networkHostUrl (ET.client authAPI authReq) "authCMRLV2" authAPI
-                    >>= fromEitherM (ExternalAPICallError (Just "CMRL_V2_AUTH_API") config.networkHostUrl)
+                  ( callAPI config.networkHostUrl (ET.client authAPI authReq) "authCMRLV2" authAPI
+                      >>= fromEitherM (ExternalAPICallError (Just "CMRL_V2_AUTH_API") config.networkHostUrl)
+                  )
+                    `catch` \(e :: SomeException) -> do
+                      logError $ "[CMRLV2:Auth] Auth token request failed: " <> show e
+                      recordCMRLV2Failure config.merchantId
+                      throwM e
                 logInfo $ "[CMRLV2:Auth] Successfully obtained auth token, expires_in: " <> show authRes.expires_in <> "s, key_index: " <> show authRes.key_index
                 let tokenExpiry = authRes.expires_in * 90 `div` 100
                 Hedis.setExp (authTokenKey config.merchantId) authRes.access_token tokenExpiry
@@ -203,9 +208,9 @@ callCMRLV2APIWithRetry config eulerClientFunc description proxy attempt authRefr
             Nothing -> throwError $ InternalError "CMRL V2 API Failed"
     Right resp -> do
       logInfo $ "[CMRLV2:API] API call successful: " <> description
-      -- Clear circuit breaker on success
-      let cbKey = cmrlV2CircuitBreakerKey config.merchantId
-      void $ Hedis.del cbKey
+      -- Note: We do NOT clear the circuit breaker on success. The TTL-based window
+      -- handles decay naturally. Clearing on a single success would mask ongoing
+      -- issues from other endpoints sharing the same merchant-wide breaker key.
       return resp
 
 -- | Record a CMRL V2 API failure for circuit breaker tracking
