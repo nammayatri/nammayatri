@@ -1197,6 +1197,8 @@ TransporterConfig:
     minBaseFare: Maybe HighPrecMoney
     allowFarePolicyUpdateBelowMinBaseFare: Maybe Bool
     enableDirectWalletIncentives: Maybe Bool
+    driverSearchBlacklistDurationSeconds: Maybe Seconds
+    driverRiderBlacklistDurationSeconds: Maybe Seconds
 
   beamType:
     currency: Maybe Currency
@@ -1663,6 +1665,8 @@ TransporterConfig:
     dashboardMediaFileUrlPattern: "'https://nammayatri.in/p/<FILE_PATH>'"
     knowledgeCenterSopTypes: '''[]'' :: json'
     allowFarePolicyUpdateBelowMinBaseFare: "true"
+    driverSearchBlacklistDurationSeconds: "3600"
+    driverRiderBlacklistDurationSeconds: "3600"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
@@ -1710,6 +1714,8 @@ TransporterConfig:
         - useWithSnapToRoadFallback
         - dpGeoHashPercision
         - knowledgeCenterSopTypes
+        - driverSearchBlacklistDurationSeconds
+        - driverRiderBlacklistDurationSeconds
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId

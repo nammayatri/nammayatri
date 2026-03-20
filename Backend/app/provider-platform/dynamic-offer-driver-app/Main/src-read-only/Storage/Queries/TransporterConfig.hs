@@ -73,6 +73,8 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.useWithSnapToRoadFallback useWithSnapToRoadFallback,
       Se.Set Beam.dpGeoHashPercision dpGeoHashPercision,
       Se.Set Beam.knowledgeCenterSopTypes ((Just . Data.Aeson.toJSON) knowledgeCenterSopTypes),
+      Se.Set Beam.driverSearchBlacklistDurationSeconds driverSearchBlacklistDurationSeconds,
+      Se.Set Beam.driverRiderBlacklistDurationSeconds driverRiderBlacklistDurationSeconds,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]

@@ -138,7 +138,8 @@ cancel req merchant booking mbActiveSearchTry = do
         logDebug "RideCancelled Coin Event by customer"
         DC.driverCoinsEvent ride.driverId merchant.id booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup DCT.CancellationByCustomer (fromMaybe (DTCR.CancellationReasonCode "Other") bookingCR.reasonCode)) (Just $ ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
 
-        whenJust booking.riderId (DP.addDriverToRiderCancelledList ride.driverId)
+        let riderBlacklistTtl = fromMaybe 3600 transporterConfig.driverRiderBlacklistDurationSeconds
+        whenJust booking.riderId (DP.addDriverToRiderCancelledList riderBlacklistTtl ride.driverId)
 
     whenJust mbRide $ \ride -> do
       triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}

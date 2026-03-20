@@ -132,7 +132,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       transporterConfig <- QTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId $ Id booking.transactionId)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
       isRepeatSearch <- checkIfRepeatSearch searchTry ride.driverArrivalTime searchReq.isReallocationEnabled now booking.isScheduled transporterConfig
       if isRepeatSearch
-        then performDynamicOfferReallocation driverQuote searchReq searchTry
+        then performDynamicOfferReallocation transporterConfig driverQuote searchReq searchTry
         else cancelRideTransactionForNonReallocation Nothing (Just searchTry.estimateId)
 
     reallocateStaticOffer = do
@@ -146,8 +146,9 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
         then performStaticOfferReallocation quote searchReq searchTry transporterConfig now isRepeatSearch
         else cancelRideTransactionForNonReallocation Nothing Nothing
 
-    performDynamicOfferReallocation driverQuote searchReq searchTry = do
-      DP.addDriverToSearchCancelledList searchReq.id ride.driverId
+    performDynamicOfferReallocation transporterConfig driverQuote searchReq searchTry = do
+      let searchBlacklistTtl = fromMaybe 3600 transporterConfig.driverSearchBlacklistDurationSeconds
+      DP.addDriverToSearchCancelledList searchBlacklistTtl searchReq.id ride.driverId
       let conditionalCharges = driverQuote.fareParams.conditionalCharges
       tripQuoteDetails <- createTripQuoteDetails searchReq searchTry driverQuote.estimateId conditionalCharges
       merchantPaymentMethod <- maybe (return Nothing) QMPM.findById booking.paymentMethodId
@@ -170,7 +171,8 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       handleDriverSearchBatch driverSearchBatchInput booking searchTry.estimateId False
 
     performStaticOfferReallocation quote searchReq searchTry transporterConfig now isRepeatSearch = do
-      DP.addDriverToSearchCancelledList searchReq.id ride.driverId
+      let searchBlacklistTtl = fromMaybe 3600 transporterConfig.driverSearchBlacklistDurationSeconds
+      DP.addDriverToSearchCancelledList searchBlacklistTtl searchReq.id ride.driverId
       (newBooking, newQuote) <- createNewBookingAndQuote quote transporterConfig now searchReq
       let mbDriverExtraFeeBounds = ((,) <$> searchReq.estimatedDistance <*> ((.driverExtraFeeBounds) =<< (quote.farePolicy))) <&> uncurry DFP.findDriverExtraFeeBoundsByDistance
           driverPickUpCharge = USRD.extractDriverPickupCharges . (.farePolicyDetails) =<< (quote.farePolicy)
