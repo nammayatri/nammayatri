@@ -20,7 +20,7 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
-import Kernel.Utils.Logging (logInfo)
+import Kernel.Utils.Logging (logDebug)
 import qualified SharedLogic.KnowledgeCenter as SL
 
 getKnowledgeCenterGetDocument ::
@@ -46,7 +46,7 @@ getKnowledgeCenterSopList ::
   Text ->
   Flow API.KnowledgeCenterSopListResp
 getKnowledgeCenterSopList merchantShortId opCity mbSopType requestorId = do
-  logInfo $
+  logDebug $
     "KnowledgeCenterSopList requested by: " <> requestorId
       <> " merchant: "
       <> merchantShortId.getShortId
@@ -78,7 +78,7 @@ postKnowledgeCenterSopUpload ::
   API.KnowledgeCenterUploadImageReq ->
   Flow API.KnowledgeCenterUploadImageResp
 postKnowledgeCenterSopUpload merchantShortId opCity requestorId req = do
-  logInfo $
+  logDebug $
     "KnowledgeCenterSopUpload requested by: " <> requestorId
       <> " merchant: "
       <> merchantShortId.getShortId

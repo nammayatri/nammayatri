@@ -299,30 +299,30 @@ getStatusV2 ::
   Text ->
   m DPayment.PaymentStatusResp
 getStatusV2 tokenDetails orderIdText = do
-  logInfo $ "getStatusV2 called with orderIdText: " <> orderIdText
+  logDebug $ "getStatusV2 called with orderIdText: " <> orderIdText
   -- Lookup by shortId only
   paymentOrder <- QOrder.findByShortId (ShortId orderIdText) >>= fromMaybeM (PaymentOrderNotFound orderIdText)
-  logInfo $ "Found payment order: " <> show paymentOrder.id <> ", paymentServiceType: " <> show paymentOrder.paymentServiceType
+  logDebug $ "Found payment order: " <> show paymentOrder.id <> ", paymentServiceType: " <> show paymentOrder.paymentServiceType
 
   -- Get payment status using existing getStatus function with the found order ID
   paymentStatusResp <- getStatus tokenDetails paymentOrder.id
-  logInfo $ "Payment Status Response: " <> show paymentStatusResp
+  logDebug $ "Payment Status Response: " <> show paymentStatusResp
 
   -- Handle domain-specific logic based on payment service type
   -- Update payment status in domain tables regardless of charge status
   case paymentOrder.paymentServiceType of
     Just DOrder.STCL -> do
-      logInfo $ "Calling stclMemberShipOrderStatusHandler for STCL order"
+      logDebug $ "Calling stclMemberShipOrderStatusHandler for STCL order"
       DStclMembership.stclMemberShipOrderStatusHandler paymentStatusResp paymentOrder.id
     Just otherType -> do
-      logInfo $ "Payment Service Type not STCL: " <> show otherType
+      logDebug $ "Payment Service Type not STCL: " <> show otherType
       throwError $ InternalError "Payment Service Type Not Handled"
     Nothing -> do
-      logInfo $ "No payment service type, checking entityName: " <> show paymentOrder.entityName
+      logDebug $ "No payment service type, checking entityName: " <> show paymentOrder.entityName
       -- Also check entityName as fallback
       case paymentOrder.entityName of
         Just DPayment.DRIVER_STCL -> do
-          logInfo $ "Found DRIVER_STCL entityName, calling handler"
+          logDebug $ "Found DRIVER_STCL entityName, calling handler"
           DStclMembership.stclMemberShipOrderStatusHandler paymentStatusResp paymentOrder.id
         _ -> pure () -- No payment service type, skip domain-specific handling
   return paymentStatusResp

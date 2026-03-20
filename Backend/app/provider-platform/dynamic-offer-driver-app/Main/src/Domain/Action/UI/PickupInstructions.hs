@@ -21,11 +21,11 @@ getPickupInstructions ::
     Environment.Flow API.Types.UI.PickupInstructions.PickupInstructionResp
   )
 getPickupInstructions (_, _, _) rideId = do
-  logInfo $ "GetPickupInstructions: Fetching pickup instructions for rideId: " <> rideId.getId
+  logDebug $ "GetPickupInstructions: Fetching pickup instructions for rideId: " <> rideId.getId
 
   -- Get BAP internal API configuration from environment
   appBackendBapInternal <- asks (.appBackendBapInternal)
-  logInfo $ "GetPickupInstructions: Using BAP internal API: " <> appBackendBapInternal.name
+  logDebug $ "GetPickupInstructions: Using BAP internal API: " <> appBackendBapInternal.name
 
   -- Call BAP internal API to get pickup instructions
   result <-
@@ -34,5 +34,5 @@ getPickupInstructions (_, _, _) rideId = do
       appBackendBapInternal.url
       rideId.getId
 
-  logInfo $ "GetPickupInstructions: Successfully retrieved pickup instructions for rideId: " <> rideId.getId
+  logDebug $ "GetPickupInstructions: Successfully retrieved pickup instructions for rideId: " <> rideId.getId
   pure result

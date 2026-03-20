@@ -80,13 +80,13 @@ safetyWebhookHandler merchantShortId mbOpCity secret val = do
   let mResp = fromJSON val
   case mResp of
     DAT.Success (resp :: SafetyWebhookReq) -> do
-      logInfo $ "Success: " <> show resp
+      logDebug $ "Success: " <> show resp
       let description = encodeToText resp.suspectList
       ticket <- TT.createTicket merchant.id merchanOperatingCityId (mkTicket description transporterConfig)
-      logInfo $ "Ticket: " <> show ticket
+      logDebug $ "Ticket: " <> show ticket
       pure Ack
     DAT.Error err -> do
-      logInfo $ "Error 2: " <> show err
+      logDebug $ "Error 2: " <> show err
       pure Ack
   where
     mkTicket description tConfig =

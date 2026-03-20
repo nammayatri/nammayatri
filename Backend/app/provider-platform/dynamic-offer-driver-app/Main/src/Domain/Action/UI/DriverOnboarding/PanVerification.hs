@@ -161,10 +161,10 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
     then Redis.withWaitOnLockRedisWithExpiry (DVRC.makeDocumentVerificationLockKey personId.getId) 10 10 runBody
     else runBody
   mdriverPanCard <- DPQuery.findByDriverId person.id
-  logInfo ("mdriverPanCard isJust: " <> show (isJust mdriverPanCard))
+  logDebug ("mdriverPanCard isJust: " <> show (isJust mdriverPanCard))
   when (fromMaybe True transporterConfig.allowPanAadhaarLinkage) $
     when (isJust mdriverPanCard) $ do
-      logInfo "verifyPanAadhaarLinkageIfAadhaarExists: mdriverPanCard is present"
+      logDebug "verifyPanAadhaarLinkageIfAadhaarExists: mdriverPanCard is present"
       verifyPanAadhaarLinkageIfAadhaarExists person merchantOpCityId mdriverPanCard
   res <- case person.role of
     Person.DRIVER -> do
@@ -207,8 +207,8 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
                       (maybe "null" maskText extractedPanNo)
                       (maskText req.panNumber)
               let extractedNameOnCard = extractedPan.name_on_card
-              logInfo ("extractedNameOnCard: " <> show extractedNameOnCard)
-              logInfo ("panName: " <> show panName)
+              logDebug ("extractedNameOnCard: " <> show extractedNameOnCard)
+              logDebug ("panName: " <> show panName)
               when (verifyBy /= DPan.FRONTEND_SDK) $ do
                 case (panName, extractedNameOnCard) of
                   (Just providedName, Just extractedName) | not (T.null providedName) && not (T.null extractedName) -> do
@@ -427,9 +427,9 @@ triggerPanAadhaarLinkageWhenPanAndAadhaarExist ::
   Maybe Text ->
   Flow ()
 triggerPanAadhaarLinkageWhenPanAndAadhaarExist person merchantOpCityId mbAadhaarNumber = do
-  logInfo ("triggerPanAadhaarLinkageWhenPanAndAadhaarExist: " <> show mbAadhaarNumber)
+  logDebug ("triggerPanAadhaarLinkageWhenPanAndAadhaarExist: " <> show mbAadhaarNumber)
   whenJust mbAadhaarNumber $ \aadhaarNumber -> do
-    logInfo ("aadhaarNumber: " <> show aadhaarNumber)
+    logDebug ("aadhaarNumber: " <> show aadhaarNumber)
     transporterConfig <-
       SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast person.id)))
         >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -445,14 +445,14 @@ verifyPanAadhaarLinkageIfPanExists ::
   Text ->
   Flow ()
 verifyPanAadhaarLinkageIfPanExists person merchantOpCityId aadhaarNumber = do
-  logInfo ("verifyPanAadhaarLinkageIfPanExists: " <> show aadhaarNumber)
+  logDebug ("verifyPanAadhaarLinkageIfPanExists: " <> show aadhaarNumber)
   mdriverPanCard <- DPQuery.findByDriverId person.id
   whenJust mdriverPanCard $ \driverPanCard -> do
     panNumber <- decrypt driverPanCard.panCardNumber
     verifyRes <-
       Verification.verifyPanAadhaarLinkAsync person.merchantId merchantOpCityId $
         VI.VerifyPanAadhaarLinkAsyncReq {panNumber, aadhaarNumber, driverId = person.id.getId}
-    logInfo ("verifyRes: " <> show verifyRes)
+    logDebug ("verifyRes: " <> show verifyRes)
     case verifyRes.requestor of
       VT.Idfy -> do
         encPan <- encrypt panNumber
@@ -491,7 +491,7 @@ verifyPanAadhaarLinkageIfAadhaarExists person merchantOpCityId mdriverPanCard = 
   -- Get Aadhaar number: for fleet owners query FleetOwnerInformation table,
   -- for drivers query DriverInformation table (encrypted; decrypt to get Text for API).
   -- AadhaarCard only stores aadhaarNumberHash (one-way), not the full number.
-  logInfo ("verifyPanAadhaarLinkageIfAadhaarExists: mdriverPanCard isJust=" <> show (isJust mdriverPanCard))
+  logDebug ("verifyPanAadhaarLinkageIfAadhaarExists: mdriverPanCard isJust=" <> show (isJust mdriverPanCard))
   whenJust mdriverPanCard $ \driverPanCard -> do
     panNumber <- decrypt driverPanCard.panCardNumber
     mbAadhaarNumber <- case person.role of
@@ -505,7 +505,7 @@ verifyPanAadhaarLinkageIfAadhaarExists person merchantOpCityId mdriverPanCard = 
       verifyRes <-
         Verification.verifyPanAadhaarLinkAsync person.merchantId merchantOpCityId $
           VI.VerifyPanAadhaarLinkAsyncReq {panNumber, aadhaarNumber, driverId = person.id.getId}
-      logInfo ("verifyRes: " <> show verifyRes)
+      logDebug ("verifyRes: " <> show verifyRes)
       case verifyRes.requestor of
         VT.Idfy -> do
           encPan <- encrypt panNumber
@@ -519,7 +519,7 @@ onVerifyPanAadhaarLink verificationReq output serviceName = do
   person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
   case serviceName of
     VT.Idfy -> do
-      logInfo ("onVerifyPanAadhaarLink: " <> show output)
+      logDebug ("onVerifyPanAadhaarLink: " <> show output)
       IVQuery.updateExtractValidationStatus Domain.Success verificationReq.requestId
       case output.message of
         Just "PAN & Aadhaar are linked" -> DPQuery.updatePanAadhaarLinkage (Just DPan.PAN_AADHAAR_LINKED) person.id

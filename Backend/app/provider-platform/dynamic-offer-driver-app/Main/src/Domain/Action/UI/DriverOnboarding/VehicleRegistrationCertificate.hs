@@ -606,7 +606,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             Just DVC.TRUCK -> DV.getTruckVehicleVariant input.grossVehicleWeight input.unladdenWeight vehicleVariant
             Just DVC.TOTO -> DV.E_RICKSHAW
             _ -> vehicleVariant
-      logInfo $ "createVehicleRC: Creating RC with verificationStatus=MANUAL_VERIFICATION_REQUIRED, vehicleVariant=" <> show vehicleVariant <> ", failedRules=" <> show failedRules <> ", registrationNumber=" <> show input.registrationNumber
+      logDebug $ "createVehicleRC: Creating RC with verificationStatus=MANUAL_VERIFICATION_REQUIRED, vehicleVariant=" <> show vehicleVariant <> ", failedRules=" <> show failedRules <> ", registrationNumber=" <> show input.registrationNumber
       return $
         DVRC.VehicleRegistrationCertificate
           { id,
@@ -994,7 +994,7 @@ compareNames merchantId merchantOpCityId mbExtractedName mbVerifiedName personId
       unless isNameValid $ throwError (MismatchDataError "Name match failed with previously uploaded docs")
       return True
     _ -> do
-      logInfo "Name comparison checks not executed."
+      logDebug "Name comparison checks not executed."
       return False
 
 compareDateOfBirth :: Maybe UTCTime -> Maybe UTCTime -> Flow Bool
@@ -1006,7 +1006,7 @@ compareDateOfBirth mbExtractedValue mbVerifiedValue = do
       unless (extractedDay == verifiedDay) $ throwError (MismatchDataError $ "Date of birth mismatch: " <> show extractedDay <> " " <> show verifiedDay)
       return True
     _ -> do
-      logInfo "Date of birth checks not executed."
+      logDebug "Date of birth checks not executed."
       return False
 
 checkPan :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Maybe Text -> Maybe UTCTime -> ODC.DocumentType -> Flow Bool

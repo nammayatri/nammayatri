@@ -600,7 +600,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         let isTollRide = isJust updRide.estimatedTollCharges || isJust updRide.tollCharges
             gpsTurnedOff = fromMaybe False updRide.driverGpsTurnedOff
         when isTollRide $ do
-          logInfo $ "GPS toll behavior check for DriverId: " <> driverId.getId <> ", RideId: " <> updRide.id.getId
+          logDebug $ "GPS toll behavior check for DriverId: " <> driverId.getId <> ", RideId: " <> updRide.id.getId
           let windowDays = fromMaybe 15 thresholdConfig.gpsTollBehaviorWindowDays
               counterConfig =
                 BTT.CounterConfig
@@ -638,7 +638,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
               else do
                 snapshot <- BTSnap.buildSnapshot counterConfig actionEvent entityState
                 BEOrch.orchestrate snapshot LYDL.Driver (cast booking.merchantOperatingCityId) LYT.GPS_TOLL_BEHAVIOR fetchRules
-          logInfo $ "GPS Toll Behavior evaluation result: consequences=" <> show (length output.consequences) <> ", communications=" <> show (length output.communications)
+          logDebug $ "GPS Toll Behavior evaluation result: consequences=" <> show (length output.consequences) <> ", communications=" <> show (length output.communications)
           let dispatchCtx = BehaviorDispatch.DispatchContext {merchantId = booking.providerId, merchantOperatingCityId = booking.merchantOperatingCityId}
           BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
           BehaviorDispatch.handleCommunications driverId output.communications

@@ -582,7 +582,7 @@ postDriverUpdateTagBulk merchantShortId opCity req = do
   csvData <- liftIO $ BS.readFile req.file
   case decodeByName (LBS.fromStrict csvData) :: Either String (V.Vector BS.ByteString, V.Vector Dashboard.Common.DriverTagBulkCSVRow) of
     Left err -> do
-      logInfo $ "CSV parse error: " <> show err
+      logDebug $ "CSV parse error: " <> show err
       return [Dashboard.Common.UpdateTagBulkRes "parse-error" False (Just $ T.pack err)]
     Right (_, v) -> do
       results <- forM (V.toList v) $ \row -> do
@@ -590,10 +590,10 @@ postDriverUpdateTagBulk merchantShortId opCity req = do
         case res of
           Left err -> do
             let errorMsg = show err
-            logInfo $ "Error processing driver " <> row.driverId <> ": " <> T.pack errorMsg
+            logDebug $ "Error processing driver " <> row.driverId <> ": " <> T.pack errorMsg
             return $ Dashboard.Common.UpdateTagBulkRes row.driverId False (Just $ T.pack errorMsg)
           Right _ -> do
-            logInfo $ "Successfully processed driver " <> row.driverId
+            logDebug $ "Successfully processed driver " <> row.driverId
             return $ Dashboard.Common.UpdateTagBulkRes row.driverId True Nothing
       return results
   where
@@ -622,7 +622,7 @@ postDriverUpdateTagBulk merchantShortId opCity req = do
 
       -- Check if tag already exists
       when (maybe False (Yudhishthira.elemTagNameValue tagNameValue) driver.driverTag) $
-        logInfo "Tag already exists, updating expiry"
+        logDebug "Tag already exists, updating expiry"
 
       -- Verify tag
       mbNammTag <- Yudhishthira.verifyTag (cast merchantOpCityId) tagNameValue
@@ -635,7 +635,7 @@ postDriverUpdateTagBulk merchantShortId opCity req = do
       -- Update database if tag changed
       unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> driver.driverTag)) $ do
         QPerson.updateDriverTag (Just tag) personId
-        logInfo $ "Updated tag for driver " <> row.driverId <> ": " <> show tagNameValue
+        logDebug $ "Updated tag for driver " <> row.driverId <> ": " <> show tagNameValue
 
 ---------------------------------------------------------------------
 postDriverUpdateByPhoneNumber :: ShortId DM.Merchant -> Context.City -> Text -> Common.UpdateDriverDataReq -> Flow APISuccess
@@ -891,7 +891,7 @@ postDriverUpdateDriverTag merchantShortId opCity driverId req = do
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   when (req.isAddingTag && maybe False (Yudhishthira.elemTagNameValue req.driverTag) driver.driverTag) $
-    logInfo "Tag already exists, update expiry"
+    logDebug "Tag already exists, update expiry"
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   mbNammTag <- Yudhishthira.verifyTag (cast merchantOpCityId) req.driverTag

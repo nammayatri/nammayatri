@@ -1409,7 +1409,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
 
   let petTag = Yudhishthira.TagNameValue "PetDriver#\"true\""
   when (isPetModeEnabled && maybe False (Yudhishthira.elemTagNameValue petTag) person.driverTag) $
-    logInfo "Tag already exists, update expiry"
+    logDebug "Tag already exists, update expiry"
   tag <-
     if isPetModeEnabled
       then do
@@ -3430,7 +3430,7 @@ getDriverSpecificSubscriptionDataWithSubsConfig (personId, _, opCityId) transpor
 
 consentResponse :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> GetConsentReq -> Flow APISuccess
 consentResponse (personId, _, _) req = do
-  logInfo $ "Driver consent request - Driver ID: " <> personId.getId <> ", Consent: " <> show req.consent
+  logDebug $ "Driver consent request - Driver ID: " <> personId.getId <> ", Consent: " <> show req.consent
   QPerson.updateNyClubConsent (Just req.consent) personId
   pure APISuccess.Success
 
