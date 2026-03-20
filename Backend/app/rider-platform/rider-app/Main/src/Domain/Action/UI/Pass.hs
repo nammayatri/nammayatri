@@ -690,11 +690,11 @@ processPassWebhook paymentOrderId _merchantId status = do
           let isDashboard = fromMaybe False purchasedPassPayment.isDashboard
           let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (isJust purchasedPass.profilePicture) (purchasedPassPayment.startDate > DT.utctDay istTime) status
           whenJust mbPassStatus $ \passStatus -> do
-            when (purchasedPassPayment.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
+            unless (purchasedPassPayment.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
               QPurchasedPassPayment.updateStatusByOrderId passStatus paymentOrderId
               when (passStatus `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending] && isDashboard) $ do
                 sendPassPurchasedSuccessMessage purchasedPass.personId purchasedPass.merchantId purchasedPass.merchantOperatingCityId (fromMaybe "" purchasedPass.passName)
-            when (purchasedPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
+            unless (purchasedPass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
               QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount
             -- If payment results in an active/prebooked pass, update purchased_pass.profilePicture from payment
             when (passStatus `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
