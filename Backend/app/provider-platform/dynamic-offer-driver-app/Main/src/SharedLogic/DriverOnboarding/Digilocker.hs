@@ -60,7 +60,7 @@ verifyDigiLockerEnabled merchantOpCityId = do
   unless (fromMaybe False transporterConfig.digilockerEnabled) $
     throwError DigiLockerNotEnabled
 
-  logInfo $ "DigiLocker initiate - Verified DigiLocker is enabled for merchantOpCityId: " <> merchantOpCityId.getId
+  logDebug $ "DigiLocker initiate - Verified DigiLocker is enabled for merchantOpCityId: " <> merchantOpCityId.getId
 
 -- | Get allowed vehicle categories for DigiLocker from config
 -- Note: Assumes DigiLocker is already enabled (checked before calling this function)
@@ -77,7 +77,7 @@ getAllowedVehicleCategories merchantOpCityId = do
   -- Return parsed categories, or default if parsing failed or empty
   if null categories
     then do
-      logInfo $ "DigiLocker getAllowedVehicleCategories - Using default categories for merchantOpCityId: " <> merchantOpCityId.getId <> ". Config had: " <> show config.allowedVehicleCategories
+      logDebug $ "DigiLocker getAllowedVehicleCategories - Using default categories for merchantOpCityId: " <> merchantOpCityId.getId <> ". Config had: " <> show config.allowedVehicleCategories
       return defaultAllowedVehicleCategories
     else return categories
   where

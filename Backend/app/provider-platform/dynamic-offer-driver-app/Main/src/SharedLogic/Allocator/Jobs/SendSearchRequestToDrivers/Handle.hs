@@ -58,26 +58,26 @@ data Handle m r = Handle
 
 handler :: HandleMonad m r => Handle m r -> GoHomeConfig -> Text -> m (ExecutionResult, PoolType, Maybe Seconds)
 handler h@Handle {..} goHomeCfg transactionId = do
-  logInfo "Starting job execution"
+  logDebug "Starting job execution"
   metrics.incrementTaskCounter
   measuringDuration (\ms (_, _, _) -> metrics.putTaskDuration ms) $ do
     isSearchTryValid' <- isSearchTryValid
     if not isSearchTryValid' || not isBookingValid
       then do
-        logInfo "Search request is either assigned, cancelled or expired."
+        logDebug "Search request is either assigned, cancelled or expired."
         return (Complete, NormalPool, Nothing)
       else do
         isReceivedMaxDriverQuotes' <- isReceivedMaxDriverQuotes
         if isReceivedMaxDriverQuotes'
           then do
-            logInfo "Received enough quotes from drivers."
+            logDebug "Received enough quotes from drivers."
             return (Complete, NormalPool, Nothing)
           else processRequestSending h goHomeCfg transactionId
 
 processRequestSending :: HandleMonad m r => Handle m r -> GoHomeConfig -> Text -> m (ExecutionResult, PoolType, Maybe Seconds)
 processRequestSending Handle {..} goHomeCfg transactionId = do
   isBatchNumExceedLimit' <- isBatchNumExceedLimit
-  logInfo $ "processRequestSending isBatchNumExceedLimit: " <> show isBatchNumExceedLimit'
+  logDebug $ "processRequestSending isBatchNumExceedLimit: " <> show isBatchNumExceedLimit'
   if isBatchNumExceedLimit'
     then do
       if isScheduledBooking

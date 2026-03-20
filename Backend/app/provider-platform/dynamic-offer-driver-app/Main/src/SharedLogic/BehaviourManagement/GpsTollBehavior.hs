@@ -139,7 +139,7 @@ evaluateGpsTollBehavior ::
 evaluateGpsTollBehavior mocId domain allLogics inputData = do
   if null allLogics
     then do
-      logInfo "No GPS toll behavior rules configured in App Dynamic Logic, using default output"
+      logDebug "No GPS toll behavior rules configured in App Dynamic Logic, using default output"
       return def
     else do
       logDebug $ "Evaluating GPS toll behavior with input: " <> show inputData

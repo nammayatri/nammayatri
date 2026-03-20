@@ -119,7 +119,7 @@ dispatchConsequence ctx driverId = \case
   CET.Nudge _params -> pure ()
   CET.Warn _params -> pure ()
   CET.ChargeFee params -> do
-    logInfo $ "Charge fee requested for driver " <> driverId.getId <> ": " <> show params.penaltyAmount <> " " <> params.currency
+    logDebug $ "Charge fee requested for driver " <> driverId.getId <> ": " <> show params.penaltyAmount <> " " <> params.currency
     pure ()
 
 -- | Dispatch all communication directives for a driver.
@@ -153,12 +153,12 @@ dispatchCommunicationAction ::
 dispatchCommunicationAction driverId = \case
   CMT.NoCommunication -> pure ()
   CMT.FcmNotification params ->
-    logInfo $ "FCM notification for driver " <> driverId.getId <> ": " <> params.templateKey
+    logDebug $ "FCM notification for driver " <> driverId.getId <> ": " <> params.templateKey
   CMT.InAppOverlay params ->
-    logInfo $ "In-app overlay for driver " <> driverId.getId <> ": " <> params.overlayKey
+    logDebug $ "In-app overlay for driver " <> driverId.getId <> ": " <> params.overlayKey
   CMT.InAppMessage params ->
-    logInfo $ "In-app message for driver " <> driverId.getId <> ": " <> params.messageKey
+    logDebug $ "In-app message for driver " <> driverId.getId <> ": " <> params.messageKey
   CMT.SmsCommunication params ->
-    logInfo $ "SMS for driver " <> driverId.getId <> ": " <> params.templateKey
+    logDebug $ "SMS for driver " <> driverId.getId <> ": " <> params.templateKey
   CMT.BadgeCommunication params ->
-    logInfo $ "Badge for driver " <> driverId.getId <> ": " <> params.badgeKey
+    logDebug $ "Badge for driver " <> driverId.getId <> ": " <> params.badgeKey

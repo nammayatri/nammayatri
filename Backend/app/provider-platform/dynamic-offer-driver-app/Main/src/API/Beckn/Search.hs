@@ -69,7 +69,7 @@ forwardSearchToBpp redirectBaseUrl merchantId authResult gatewayAuthResult reqV2
   let basePath = Kernel.baseUrlPath redirectBaseUrl
       becknPath = basePath <> "/beckn/" <> T.unpack merchantId.getId
       redirectedUrl = redirectBaseUrl {Kernel.baseUrlPath = becknPath}
-  logInfo $ "Forwarding to " <> Kernel.showBaseUrl redirectedUrl <> " for merchant " <> merchantId.getId
+  logDebug $ "Forwarding to " <> Kernel.showBaseUrl redirectedUrl <> " for merchant " <> merchantId.getId
   let baseClient = ET.client Search.searchAPI reqV2
       gatewaySignature = decodeUtf8 $ HttpSig.encode gatewayAuthResult.signature
       clientWithHeaders =

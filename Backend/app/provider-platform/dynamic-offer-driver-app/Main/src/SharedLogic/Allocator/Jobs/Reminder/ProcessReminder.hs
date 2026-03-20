@@ -194,12 +194,12 @@ processReminder Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
 
   if reminder.status /= DR.PENDING
     then do
-      logInfo $ "Reminder " <> reminderId.getId <> " is not pending (status: " <> show reminder.status <> "), skipping"
+      logDebug $ "Reminder " <> reminderId.getId <> " is not pending (status: " <> show reminder.status <> "), skipping"
       return Complete
     else do
       driver <- BF.runInReplica $ QPerson.findById reminder.driverId >>= fromMaybeM (PersonDoesNotExist reminder.driverId.getId)
 
-      logInfo $ "Processing reminder " <> reminderId.getId <> " of type " <> show reminder.documentType <> " for driver " <> reminder.driverId.getId
+      logDebug $ "Processing reminder " <> reminderId.getId <> " of type " <> show reminder.documentType <> " for driver " <> reminder.driverId.getId
 
       mbReminderConfig <- QReminderConfig.findByMerchantOpCityIdAndDocumentType merchantOpCityId reminder.documentType
 
@@ -250,7 +250,7 @@ processReminderByType reminder driver config merchantId merchantOpCityId =
                 then do
                   let scheduleAfter = fromIntegral $ fromMaybe defaultOnRideRescheduleIntervalSeconds config.reminderOnRideRescheduleIntervalSeconds
                   scheduleReminderJob scheduleAfter reminder.id merchantId merchantOpCityId
-                  logInfo $ "Driver " <> reminder.driverId.getId <> " on ride, rescheduling vehicle inspection reminder in " <> show scheduleAfter <> " seconds"
+                  logDebug $ "Driver " <> reminder.driverId.getId <> " on ride, rescheduling vehicle inspection reminder in " <> show scheduleAfter <> " seconds"
                   return True
                 else return False
             else return False
@@ -282,7 +282,7 @@ processReminderByType reminder driver config merchantId merchantOpCityId =
           $ do
             -- Set approved flag to False for DriverInformation
             QDIExtra.updateApproved (Just False) reminder.driverId
-            logInfo $ "Set approved = false for driver " <> reminder.driverId.getId <> " due to expired mandatory driver inspection reminder"
+            logDebug $ "Set approved = false for driver " <> reminder.driverId.getId <> " due to expired mandatory driver inspection reminder"
       DVC.TrainingForm -> do
         -- Check LMS training status: if all trainings completed, cancel other pending training reminders and mark current SENT
         mbStatus <- DriverOnboardingStatus.checkLMSTrainingStatus reminder.driverId merchantOpCityId
@@ -293,7 +293,7 @@ processReminderByType reminder driver config merchantId merchantOpCityId =
               QReminder.findAllPendingByDriverIdAndDocumentType reminder.driverId DR.PENDING DVC.TrainingForm
             ReminderHelper.cancelPendingReminders pendingTrainingReminders "LMS training completed"
             QReminder.updateByPrimaryKey reminder {DR.status = DR.SENT}
-            logInfo $
+            logDebug $
               "All LMS trainings completed for driver " <> reminder.driverId.getId
                 <> ", marked current training reminder as SENT and cancelled "
                 <> show (max 0 (length pendingTrainingReminders - 1))
@@ -364,11 +364,11 @@ processInspectionReminder reminder driver config merchantId merchantOpCityId dis
       unless shouldDisableAction $ do
         let scheduleAfter = fromIntegral $ fromMaybe defaultRescheduleIntervalSeconds config.reminderRescheduleIntervalSeconds
         scheduleReminderJob scheduleAfter reminder.id merchantId merchantOpCityId
-        logInfo $ "Scheduled next " <> displayName <> " reminder job for driver " <> driver.id.getId <> " in " <> show scheduleAfter <> " seconds"
+        logDebug $ "Scheduled next " <> displayName <> " reminder job for driver " <> driver.id.getId <> " in " <> show scheduleAfter <> " seconds"
       when shouldDisableAction $
-        logInfo $ "Disable action was triggered due to overdue mandatory " <> displayName <> " reminder, skipping reschedule"
+        logDebug $ "Disable action was triggered due to overdue mandatory " <> displayName <> " reminder, skipping reschedule"
     _ -> do
-      logInfo $ "Reminder " <> reminder.id.getId <> " is no longer PENDING (status: " <> maybe "not found" (show . (.status)) mbCurrentReminder <> "), skipping notification and reschedule"
+      logDebug $ "Reminder " <> reminder.id.getId <> " is no longer PENDING (status: " <> maybe "not found" (show . (.status)) mbCurrentReminder <> "), skipping notification and reschedule"
 
 processDocumentExpiryReminder ::
   ( EsqDBFlow m r,
@@ -405,7 +405,7 @@ processDocumentExpiryReminder reminder driver reminderConfig merchantId merchant
       if reminder.dueDate <= now
         then do
           -- Reminder has expired - check if mandatory before blocking
-          logInfo $ "Reminder expired for driver " <> driver.id.getId <> " (documentType: " <> documentTypeName <> ")"
+          logDebug $ "Reminder expired for driver " <> driver.id.getId <> " (documentType: " <> documentTypeName <> ")"
 
           -- Check if reminder is mandatory (from ReminderConfig)
           let isMandatory = reminderConfig.isMandatory
@@ -435,7 +435,7 @@ processDocumentExpiryReminder reminder driver reminderConfig merchantId merchant
                   nextReminderDate = Time.addUTCTime scheduleAfter now
               QReminder.updateByPrimaryKey reminder {DR.reminderDate = nextReminderDate}
               scheduleReminderJob scheduleAfter reminder.id merchantId merchantOpCityId
-              logInfo $ "Non-mandatory reminder expired for driver " <> driver.id.getId <> ", rescheduling in " <> show scheduleAfter <> " seconds"
+              logDebug $ "Non-mandatory reminder expired for driver " <> driver.id.getId <> ", rescheduling in " <> show scheduleAfter <> " seconds"
 
           -- Send expiry notification (for vehicle-related use current RC-associated drivers; if none, use RC fleet owner and fleet operators)
           if reminder.documentType `elem` vehicleRelatedDocumentTypes
@@ -443,7 +443,7 @@ processDocumentExpiryReminder reminder driver reminderConfig merchantId merchant
             else sendDocumentExpiryNotification reminder driver merchantOpCityId True Nothing
         else do
           -- Document is expiring - send reminder notification (for vehicle-related use current RC-associated drivers; if none, use RC fleet owner and fleet operators)
-          logInfo $ "Sending document expiry reminder (documentType: " <> documentTypeName <> ", " <> show daysBeforeExpiry <> " days before expiry)"
+          logDebug $ "Sending document expiry reminder (documentType: " <> documentTypeName <> ", " <> show daysBeforeExpiry <> " days before expiry)"
           if reminder.documentType `elem` vehicleRelatedDocumentTypes
             then sendVehicleDocumentExpiryNotification reminder driver merchantOpCityId False (Just daysBeforeExpiry)
             else sendDocumentExpiryNotification reminder driver merchantOpCityId False (Just daysBeforeExpiry)
@@ -535,7 +535,7 @@ sendDriverNotifications reminder driver merchantOpCityId notificationType messag
             _ -> (merchantPN.title, merchantPN.body)
       let entityData = NotifReq {entityId = reminder.entityId, title, message = body}
       notifyDriverOnEvents merchantOpCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType
-    Nothing -> logInfo $ "MerchantPushNotification not found for " <> notificationKey <> ", skipping FCM notification"
+    Nothing -> logDebug $ "MerchantPushNotification not found for " <> notificationKey <> ", skipping FCM notification"
 
   -- Send SMS to driver
   -- For DOCUMENT_EXPIRY_REMINDER_SMS, use MessageBuilder to replace template variables
@@ -556,14 +556,14 @@ sendDriverNotifications reminder driver merchantOpCityId notificationType messag
             let sender = fromMaybe smsCfg.sender merchantMsg.senderHeader
             pure $ Just (merchantMsg.message, sender, merchantMsg.templateId, merchantMsg.messageType)
           Nothing -> do
-            logInfo $ "MerchantMessage not found for " <> show messageKey <> ", skipping SMS"
+            logDebug $ "MerchantMessage not found for " <> show messageKey <> ", skipping SMS"
             pure Nothing
   whenJust mbSmsInfo $ \(smsMessage, smsSender, smsTemplateId, messageType) -> do
     mbPhoneNumber <- mapM decrypt driver.mobileNumber
     case mbPhoneNumber of
       Just phoneNumber -> do
         Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq smsMessage phoneNumber smsSender smsTemplateId messageType) >>= Sms.checkSmsResult
-      Nothing -> logInfo "Driver mobile number not available, skipping SMS"
+      Nothing -> logDebug "Driver mobile number not available, skipping SMS"
 
 -- Helper function to send GRPC notifications to fleet owners and operators
 sendFleetAndOperatorNotifications ::
@@ -583,14 +583,14 @@ sendFleetAndOperatorNotifications driver merchantOpCityId title message entityDa
   -- Send notification to fleet owner (if exists) via GRPC
   mbFleetAssociation <- QFDA.findByDriverId driver.id True
   Kernel.Prelude.whenJust mbFleetAssociation $ \fleetAssoc -> do
-    logInfo $ "Fleet owner found for driver " <> driver.id.getId <> ": " <> fleetAssoc.fleetOwnerId
+    logDebug $ "Fleet owner found for driver " <> driver.id.getId <> ": " <> fleetAssoc.fleetOwnerId
     notifyFleetWithGRPCProvider merchantOpCityId Notification.DRIVER_NOTIFY title message driver.id entityData
 
   -- Send notification to operator(s) via GRPC (direct association or through fleet)
   operatorIdTexts <- Analytics.findOperatorIdForDriver driver.id
   forM_ operatorIdTexts $ \operatorIdText -> do
     let operatorId = Id operatorIdText
-    logInfo $ "Operator found for driver " <> driver.id.getId <> ": " <> operatorIdText
+    logDebug $ "Operator found for driver " <> driver.id.getId <> ": " <> operatorIdText
     notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_NOTIFY title message operatorId entityData
 
 -- Helper function to send document expiry notifications

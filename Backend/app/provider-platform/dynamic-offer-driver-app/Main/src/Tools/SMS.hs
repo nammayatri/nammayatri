@@ -125,4 +125,4 @@ sendDashboardSms merchantId merchantOpCityId messageType mbRide driverId mbBooki
                 }
           sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId msgType) >>= Sms.checkSmsResult
     else do
-      logInfo "Merchant not configured to send dashboard sms"
+      logDebug "Merchant not configured to send dashboard sms"

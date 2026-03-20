@@ -416,7 +416,7 @@ buildRC merchantId merchantOperatingCityId input failedRules = do
   mbRC <- case (mEncryptedRC, mbFitnessExpiry) of
     (Just certificateNumber, Just expiry) -> do
       rc <- createRC merchantId merchantOperatingCityId input rCConfigs id now failedRules certificateNumber expiry
-      logInfo $ "buildRC: Created RC with verificationStatus=" <> show rc.verificationStatus <> ", failedRules=" <> show failedRules <> ", registrationNumber=" <> show input.registrationNumber
+      logDebug $ "buildRC: Created RC with verificationStatus=" <> show rc.verificationStatus <> ", failedRules=" <> show failedRules <> ", registrationNumber=" <> show input.registrationNumber
       return $ Just rc
     _ -> return Nothing
   return mbRC
@@ -435,7 +435,7 @@ createRC ::
   m VehicleRegistrationCertificate
 createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules certificateNumber expiry = do
   (verificationStatus, reviewRequired, variant, mbVehicleModel) <- validateRCStatus input rcconfigs now expiry
-  logInfo $ "createRC: verificationStatus=" <> show verificationStatus <> ", reviewRequired=" <> show reviewRequired <> ", variant=" <> show variant <> ", mbVehicleModel=" <> show mbVehicleModel
+  logDebug $ "createRC: verificationStatus=" <> show verificationStatus <> ", reviewRequired=" <> show reviewRequired <> ", variant=" <> show variant <> ", mbVehicleModel=" <> show mbVehicleModel
   let airConditioned = input.airConditioned
       updVariant = case DV.castVehicleVariantToVehicleCategory <$> variant of
         Just DVC.BUS -> if airConditioned == Just True then Just DV.BUS_AC else Just DV.BUS_NON_AC
@@ -492,14 +492,14 @@ validateRCStatus input rcconfigs now expiry = do
     DVC.RCValidClasses vehicleClassVariantMap -> do
       let validCOVsCheck = rcconfigs.vehicleClassCheckType
       let mbVehicleClassOrCategory = input.vehicleClass <|> input.vehicleClassCategory
-      logInfo $ "validateRCStatus: vehicleClass=" <> show input.vehicleClass <> ", vehicleClassCategory=" <> show input.vehicleClassCategory <> ", mbVehicleClassOrCategory=" <> show mbVehicleClassOrCategory <> ", vehicleClassCheckType=" <> show validCOVsCheck <> ", vehicleClassVariantMap size=" <> show (length vehicleClassVariantMap)
+      logDebug $ "validateRCStatus: vehicleClass=" <> show input.vehicleClass <> ", vehicleClassCategory=" <> show input.vehicleClassCategory <> ", mbVehicleClassOrCategory=" <> show mbVehicleClassOrCategory <> ", vehicleClassCheckType=" <> show validCOVsCheck <> ", vehicleClassVariantMap size=" <> show (length vehicleClassVariantMap)
       let (isCOVValid, reviewRequired, variant, mbVehicleModel) = maybe (False, Nothing, Nothing, Nothing) (isValidCOVRC input.airConditioned input.oxygen input.ventilator input.vehicleClassCategory input.seatingCapacity input.manufacturer input.bodyType input.manufacturerModel vehicleClassVariantMap validCOVsCheck) mbVehicleClassOrCategory
       logDebug $ "validateRCStatus: reviewRequired=" <> show reviewRequired <> ", variant=" <> show variant <> ", mbVehicleModel=" <> show mbVehicleModel
-      logInfo $ "validateRCStatus: isCOVValid=" <> show isCOVValid <> ", checkExpiry=" <> show rcconfigs.checkExpiry <> ", expiry=" <> show expiry <> ", now < expiry=" <> show (now < expiry)
+      logDebug $ "validateRCStatus: isCOVValid=" <> show isCOVValid <> ", checkExpiry=" <> show rcconfigs.checkExpiry <> ", expiry=" <> show expiry <> ", now < expiry=" <> show (now < expiry)
       let validInsurance = True -- (not rcInsurenceConfigs.checkExpiry) || maybe False (now <) insuranceValidity
       let expiryCheck = (not rcconfigs.checkExpiry) || now < expiry
       let finalStatus = if expiryCheck && isCOVValid && validInsurance then Documents.VALID else Documents.INVALID
-      logInfo $ "validateRCStatus: Setting verificationStatus=" <> show finalStatus <> " (expiryCheck=" <> show expiryCheck <> ", isCOVValid=" <> show isCOVValid <> ", validInsurance=" <> show validInsurance <> ")"
+      logDebug $ "validateRCStatus: Setting verificationStatus=" <> show finalStatus <> " (expiryCheck=" <> show expiryCheck <> ", isCOVValid=" <> show isCOVValid <> ", validInsurance=" <> show validInsurance <> ")"
       pure $ if finalStatus == Documents.VALID then (Documents.VALID, reviewRequired, variant, mbVehicleModel) else (Documents.INVALID, reviewRequired, variant, mbVehicleModel)
     _ -> pure (Documents.INVALID, Nothing, Nothing, Nothing)
 

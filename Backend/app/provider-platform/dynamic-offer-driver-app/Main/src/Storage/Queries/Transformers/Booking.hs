@@ -30,7 +30,7 @@ fromAndToLocation mappings tripCategory id fromLocationId toLocationId providerI
   case (mappings, tripCategory) of
     ([], Nothing) -> do
       -- HANDLING OLD DATA : ONLY IF TripCategory is Nothing as for older cases
-      logInfo "Accessing Booking Location Table"
+      logDebug "Accessing Booking Location Table"
       pickupLoc <- upsertLocationForOldData (Id <$> fromLocationId) id
       pickupLocMapping <- SLM.buildPickUpLocationMapping pickupLoc.id id DLM.BOOKING (Just $ Id providerId) (Id <$> merchantOperatingCityId)
       QLM.create pickupLocMapping

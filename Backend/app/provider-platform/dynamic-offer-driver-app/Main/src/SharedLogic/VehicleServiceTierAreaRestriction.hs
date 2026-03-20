@@ -26,7 +26,7 @@ import Domain.Types.VehicleServiceTier
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, MonadFlow, logDebug, logInfo)
+import Kernel.Utils.Common (CacheFlow, MonadFlow, logDebug)
 import qualified Lib.Types.SpecialLocation as SL
 
 areaToText :: SL.Area -> Maybe Text
@@ -52,7 +52,7 @@ populateVSTAreasCache vst =
     Just areasList -> do
       let hashKey = vstAreasCacheKey vst.id vst.merchantOperatingCityId
           thirtyDaysInSeconds = 30 * 24 * 60 * 60 :: Int
-      logInfo $ "VST area cache: writing to Redis key=" <> hashKey <> " areasCount=" <> show (length areasList)
+      logDebug $ "VST area cache: writing to Redis key=" <> hashKey <> " areasCount=" <> show (length areasList)
       forM_ areasList $ \area ->
         Redis.hSetExp hashKey (SL.areaToText area) ("1" :: Text) thirtyDaysInSeconds
       logDebug $ "VST area cache: populated Redis for vstId=" <> vst.id.getId
@@ -75,7 +75,7 @@ isAreaAllowedForVSTMaybe vst (Just area) =
       return True
     Just _ -> case areaToText area of
       Nothing -> do
-        logInfo $ "VST area check: area is not PickupDrop (cannot check cache), denying vstId=" <> vst.id.getId <> " area=" <> show area
+        logDebug $ "VST area check: area is not PickupDrop (cannot check cache), denying vstId=" <> vst.id.getId <> " area=" <> show area
         return False
       Just areaText -> checkAreaInCache vst areaText
 
@@ -95,7 +95,7 @@ checkAreaInCache vst areaText = do
       hashLen <- Redis.hLen hashKey
       if hashLen == 0
         then do
-          logInfo $ "VST area check: cache MISS (empty) vstId=" <> vst.id.getId <> " areaText=" <> areaText <> " key=" <> hashKey <> " (warming from passed-in VST)"
+          logDebug $ "VST area check: cache MISS (empty) vstId=" <> vst.id.getId <> " areaText=" <> areaText <> " key=" <> hashKey <> " (warming from passed-in VST)"
           populateVSTAreasCache vst
           return $ maybe False (elem areaText . map SL.areaToText) vst.allowedAreas
         else do

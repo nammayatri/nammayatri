@@ -145,15 +145,15 @@ driverCoinsEvent driverId merchantId merchantOpCityId eventType entityId mbVehVa
       let filteredConfigAll = filter (\cc -> cc.eventFunction `notElem` combinedBlacklist) coinConfiguration
       logDebug $ "Coin config count: total=" <> show (length coinConfiguration) <> ", filtered=" <> show (length filteredConfigAll)
 
-      logInfo $ "Coin events for driver " <> driverId.getId <> " - DriverBlacklist: " <> show blacklistedEventsByDriver <> ", FleetBlacklist: " <> show blacklistedEventsByFleet <> ", Total: " <> show (map (.eventFunction) coinConfiguration) <> ", Filtered: " <> show (map (.eventFunction) filteredConfigAll)
+      logDebug $ "Coin events for driver " <> driverId.getId <> " - DriverBlacklist: " <> show blacklistedEventsByDriver <> ", FleetBlacklist: " <> show blacklistedEventsByFleet <> ", Total: " <> show (map (.eventFunction) coinConfiguration) <> ", Filtered: " <> show (map (.eventFunction) filteredConfigAll)
 
       if null filteredConfigAll
         then do
-          logInfo "All coin events blacklisted; skipping award"
+          logDebug "All coin events blacklisted; skipping award"
           pure ()
         else do
           finalCoinsValue <- sum <$> forM filteredConfigAll (\cc -> calculateCoins eventType driverId merchantId merchantOpCityId cc.eventFunction cc.expirationAt cc.coins transporterConfig entityId vehCategory)
-          logInfo $ "Awarding coins: " <> show finalCoinsValue
+          logDebug $ "Awarding coins: " <> show finalCoinsValue
           updateDriverCoins driverId finalCoinsValue transporterConfig.timeDiffFromUtc
 
 calculateCoins :: EventFlow m r => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> m Int
@@ -308,14 +308,14 @@ runCancellationLogic merchantOpCityId logicInput = do
 
   if null logics
     then do
-      logInfo "No cancellation logic found, using default logic"
+      logDebug "No cancellation logic found, using default logic"
       pure 0
     else do
-      logInfo $ "Running cancellation logic with " <> show (length logics) <> " rules"
+      logDebug $ "Running cancellation logic with " <> show (length logics) <> " rules"
       result <- LYDL.runLogicsWithDebugLog LYDL.Driver (cast merchantOpCityId) LYT.CANCELLATION_COIN_POLICY logics logicInput
       case A.fromJSON result.result :: A.Result CancellationCoins.CancellationCoinResult of
         A.Success logicResult -> do
-          logInfo $ "Cancellation logic result: " <> show logicResult
+          logDebug $ "Cancellation logic result: " <> show logicResult
           pure logicResult.coins
         A.Error err -> do
           logError $ "Failed to parse cancellation logic result: " <> show err
@@ -471,7 +471,7 @@ driverMonetaryRewardEvent driverId merchantId merchantOpCityId eventType entityI
 
   if null filteredConfigAll
     then do
-      logInfo "All wallet events blacklisted; skipping award"
+      logDebug "All wallet events blacklisted; skipping award"
       pure ()
     else do
       forM_ filteredConfigAll (\wc -> calculateMonetaryRewardCash eventType driverId merchantId merchantOpCityId (DWC.eventFunction wc) (DWC.monetaryRewardAmount wc) transporterConfig entityId vehCategory mbFleetOwnerId)

@@ -50,7 +50,7 @@ calculateSupplyDemand Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   query1Result <- SRFD.calulateSupplyDemandByGeohashAndServiceTier from now
   query2Result <- SRFD.calulateAcceptanceCountByGeohashAndServiceTier from now
   let queryResult = SRFD.concatFun query1Result query2Result
-  logInfo $ "SupplyDemandRatio clickhouse result : -" <> show queryResult
+  logDebug $ "SupplyDemandRatio clickhouse result : -" <> show queryResult
   mapM_ (updateSupplyDemandRatio supplyDemandRatioTTLInSec) queryResult
   return (ReSchedule nextScheduleT)
 
@@ -92,7 +92,7 @@ calculateAndUpdateCityQAR now from supplyDemandRatioTTLInSec = do
   query1Result <- SRFD.calulateDemandByCityAndServiceTier from now
   query2Result <- SRFD.calulateAcceptanceCountByCityAndServiceTier from now
   let queryResult = SRFD.concatFun' query2Result query1Result
-  logInfo $ "SupplyDemandRatio clickhouse result : -" <> show queryResult
+  logDebug $ "SupplyDemandRatio clickhouse result : -" <> show queryResult
   mapM_ (updateCityActualQAR supplyDemandRatioTTLInSec) queryResult
 
 updateCityActualQAR ::
@@ -128,7 +128,7 @@ calculateAndUpdateGeohashAndDistanceBinQAR now from supplyDemandRatioTTLInSec = 
   query1Result <- SRFD.calulateSupplyDemandByGeohashAndServiceTierAndDistanceBin from now
   query2Result <- SRFD.calulateAcceptanceCountByGeohashAndServiceTierAndDistanceBin from now
   let queryResult = SRFD.concatFun'' query1Result query2Result
-  logInfo $ "SupplyDemandRatio clickhouse result : -" <> show queryResult
+  logDebug $ "SupplyDemandRatio clickhouse result : -" <> show queryResult
   mapM_ (updateGeohashAndDistanceBinQAR supplyDemandRatioTTLInSec) queryResult
 
 updateGeohashAndDistanceBinQAR ::

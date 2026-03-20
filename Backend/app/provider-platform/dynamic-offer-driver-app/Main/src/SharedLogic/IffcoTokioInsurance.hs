@@ -77,7 +77,7 @@ triggerIffcoTokioInsurance driverId merchantId merchantOpCityId = do
       let nomineeName = driverInfo.nomineeName
           nomineeRelationship = driverInfo.nomineeRelationship
       if isNothing nomineeName || isNothing nomineeRelationship
-        then logInfo $ "IffcoTokio: skipping insurance for driver=" <> driverId.getId <> " nomineeName or nomineeRelationship is missing"
+        then logDebug $ "IffcoTokio: skipping insurance for driver=" <> driverId.getId <> " nomineeName or nomineeRelationship is missing"
         else do
           decPerson <- decrypt person
           mobileNumber <- decPerson.mobileNumber & fromMaybeM (InvalidRequest "Driver mobile number not found for IffcoTokio insurance")

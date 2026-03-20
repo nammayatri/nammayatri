@@ -284,7 +284,7 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
       fork "Update cancellation percentage tags daily" $ do
         catch (updateDriverCancellationPercentageTagsDaily driver.merchantOperatingCityId driver.id cancellationRates) $ \(err :: SomeException) -> do
           logError $ "Failed to update cancellation percentage tags for driver " <> driver.id.getId <> ": " <> show err
-    _ -> logInfo "cancellationRateWindow or cancellationRateBasedNudgingAndBlockingConfig not found in transporter config"
+    _ -> logDebug "cancellationRateWindow or cancellationRateBasedNudgingAndBlockingConfig not found in transporter config"
   where
     canNudgeDriver cancellationRateThreshold minAssignedRides maxAssignedRides cancellationRate rideAssignedCount =
       (cancellationRate > cancellationRateThreshold) && (rideAssignedCount > minAssignedRides && rideAssignedCount <= maxAssignedRides)

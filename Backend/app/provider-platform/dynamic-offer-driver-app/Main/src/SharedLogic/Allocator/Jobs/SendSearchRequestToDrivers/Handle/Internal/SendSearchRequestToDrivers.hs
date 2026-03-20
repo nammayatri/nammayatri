@@ -114,7 +114,7 @@ sendSearchRequestToDrivers ::
   GoHomeConfig ->
   m ()
 sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq searchTry driverPoolConfig driverPool prevBatchDrivers goHomeConfig = do
-  logInfo $ "Send search requests to driver pool batch-" <> show driverPool
+  logDebug $ "Send search requests to driver pool batch-" <> show driverPool
 
   -- We update few things during 1st batch in searchReq table which is not being passed in above Search request, hence fetch search request again if it is first batch
   -- isAllocatorBatch is false if it is first batch because 1st batch is always triggered from application, not allocator
@@ -293,7 +293,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
       let vehicleCategory = BecknUtils.castVehicleCategoryToDomain $ BecknUtils.mapVariantToVehicle dpRes.variant
       let driverCoinsRewardedOnGoldTierRideRequest = join $ M.lookup vehicleCategory coinConfigCache
 
-      logInfo $ "Coins rewarded on gold tier ride request: " <> show driverCoinsRewardedOnGoldTierRideRequest
+      logDebug $ "Coins rewarded on gold tier ride request: " <> show driverCoinsRewardedOnGoldTierRideRequest
 
       baseFare <- case tripQuoteDetail.tripCategory of
         DTC.Ambulance _ -> do

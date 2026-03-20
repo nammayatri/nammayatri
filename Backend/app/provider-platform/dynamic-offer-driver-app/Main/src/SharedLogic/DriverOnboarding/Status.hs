@@ -506,13 +506,13 @@ fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language (
           docs <- fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language [] (Just reqRegistrationNo) onlyMandatoryDocs skipMessages
           if null docs
             then logWarning $ "No docs found for rcNo and " <> entityTxt <> ": " <> entityId
-            else logInfo $ "Inprogress vehicle docs found for rcNo and " <> entityTxt <> ": " <> entityId
+            else logDebug $ "Inprogress vehicle docs found for rcNo and " <> entityTxt <> ": " <> entityId
           pure docs
         else do
-          logInfo $ "Processed vehicle docs without RC found for rcNo and " <> entityTxt <> ": " <> entityId
+          logDebug $ "Processed vehicle docs without RC found for rcNo and " <> entityTxt <> ": " <> entityId
           pure processedVehicleDocumentsWithoutRC
     else do
-      logInfo $ "Processed vehicle documents with RC found for rcNo and " <> entityTxt <> ": " <> entityId
+      logDebug $ "Processed vehicle documents with RC found for rcNo and " <> entityTxt <> ": " <> entityId
       pure processedVehicleDocumentsWithRC
 
 getVehicleDocTypes ::
@@ -529,7 +529,7 @@ getVehicleDocTypes merchantOpCityId allDocumentVerificationConfigs verifiedVehic
   if onlyMandatoryDocs == Just True
     then do
       let vehicleDocumentTypes = filter (\doc -> doc `elem` (mandatoryVehicleDocumentVerificationConfigs <&> (.documentType))) SDO.defaultVehicleDocumentTypes
-      logInfo $
+      logDebug $
         "Fetch only mandatory vehicle docs types: merchantOpCityId: "
           <> merchantOpCityId.getId
           <> "; vehicleCategory: "
@@ -555,7 +555,7 @@ getDriverDocTypes merchantOpCityId allDocumentVerificationConfigs possibleVehicl
       if onlyMandatoryDocs == Just True
         then do
           let driverDocumentTypes = filter (\doc -> doc `elem` nub (mandatoryVehicleDocumentVerificationConfigs <&> (.documentType))) SDO.defaultDriverDocumentTypes
-          logInfo $
+          logDebug $
             "Fetch only mandatory driver docs types: merchantOpCityId: "
               <> merchantOpCityId.getId
               <> "; possibleVehicleCategories: "

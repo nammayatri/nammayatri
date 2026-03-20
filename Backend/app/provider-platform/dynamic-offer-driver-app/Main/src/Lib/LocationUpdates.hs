@@ -132,7 +132,7 @@ checkForDeviation routeDeviationThreshold estimatedRoute (pt : batchWaypoints) d
 
 updateDeviation :: LocationUpdateFlow m r c => TransporterConfig -> Bool -> Maybe Ride -> [LatLong] -> m Bool
 updateDeviation _ _ Nothing _ = do
-  logInfo "No ride found to check deviation"
+  logDebug "No ride found to check deviation"
   return False
 updateDeviation transportConfig safetyCheckEnabled (Just ride) batchWaypoints = do
   let rideId = ride.id
@@ -141,7 +141,7 @@ updateDeviation transportConfig safetyCheckEnabled (Just ride) batchWaypoints = 
   (alreadyDeviated, safetyAlertAlreadyTriggered) <- getDeviationAndSafetyDetails ride
   if safetyAlertAlreadyTriggered && alreadyDeviated
     then do
-      logInfo $ "Safety alert and deviation already triggered for rideId: " <> getId rideId
+      logDebug $ "Safety alert and deviation already triggered for rideId: " <> getId rideId
       return True
     else do
       let routeDeviationThreshold = transportConfig.routeDeviationThreshold
@@ -176,9 +176,9 @@ updateDeviation transportConfig safetyCheckEnabled (Just ride) batchWaypoints = 
 checkMultipleRoutesForDeviation :: LocationUpdateFlow m r c => [RI.RouteAndDeviationInfo] -> [LatLong] -> Meters -> Meters -> Ride -> Booking -> Bool -> m Bool
 checkMultipleRoutesForDeviation routes batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking safetyCheckEnabled = do
   let rideId = ride.id
-  logInfo $ "Checking for deviation in multiple routes for rideId: " <> getId rideId
+  logDebug $ "Checking for deviation in multiple routes for rideId: " <> getId rideId
   let updatedRoutesInfo = map checkRouteForDeviation routes
-  logInfo $ "Updated routes info for rideId: " <> getId rideId <> " is: " <> show updatedRoutesInfo
+  logDebug $ "Updated routes info for rideId: " <> getId rideId <> " is: " <> show updatedRoutesInfo
   setExp (multipleRouteKey booking.transactionId) updatedRoutesInfo 14400
   fork "Performing safety check" $
     when (safetyCheckEnabled && all (\route -> RI.safetyDeviation $ RI.deviationInfo route) updatedRoutesInfo) $ performSafetyCheck ride booking
@@ -224,7 +224,7 @@ checkMultipleRoutesForDeviation routes batchWaypoints routeDeviationThreshold ni
 checkForDeviationInSingleRoute :: LocationUpdateFlow m r c => [LatLong] -> Meters -> Meters -> Ride -> Booking -> m Bool
 checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking = do
   let rideId = ride.id
-  logInfo $ "Checking for deviation in single route for rideId: " <> getId rideId
+  logDebug $ "Checking for deviation in single route for rideId: " <> getId rideId
   let key = searchRequestKey booking.transactionId
   mbRouteInfo :: Maybe RI.RouteInfo <- Redis.runInMultiCloudRedisMaybeResult $ Redis.withMasterRedis $ Redis.get key
   case mbRouteInfo of
@@ -242,7 +242,7 @@ checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafet
 
 updateTollRouteDeviation :: LocationUpdateFlow m r c => Id DMOC.MerchantOperatingCity -> Id Person -> Maybe Ride -> [LatLong] -> m (Bool, Bool)
 updateTollRouteDeviation _ _ Nothing _ = do
-  logInfo "No ride found to check deviation"
+  logDebug "No ride found to check deviation"
   return (False, False)
 updateTollRouteDeviation merchantOpCityId driverId (Just ride) batchWaypoints = do
   let driverDeviatedToTollRoute = fromMaybe False ride.driverDeviatedToTollRoute
@@ -253,7 +253,7 @@ updateTollRouteDeviation merchantOpCityId driverId (Just ride) batchWaypoints = 
 
 getTravelledDistanceAndTollInfo :: LocationUpdateFlow m r c => Id DMOC.MerchantOperatingCity -> Maybe Ride -> Meters -> Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool) -> m (Meters, Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool))
 getTravelledDistanceAndTollInfo _ Nothing _ estimatedTollInfo = do
-  logInfo "No ride found to get travelled distance"
+  logDebug "No ride found to get travelled distance"
   return (0, estimatedTollInfo)
 getTravelledDistanceAndTollInfo merchantOperatingCityId (Just ride) estimatedDistance estimatedTollInfo = do
   let rideId = ride.id
@@ -270,10 +270,10 @@ getTravelledDistanceAndTollInfo merchantOperatingCityId (Just ride) estimatedDis
           tollChargesInfo <- join <$> mapM (TollsDetector.getTollInfoOnRoute merchantOperatingCityId Nothing) routePoints
           return $ (fromMaybe estimatedDistance distance, tollChargesInfo <|> estimatedTollInfo)
         Nothing -> do
-          logInfo $ "UndeviatedRoute not found for ride" <> show rideId
+          logDebug $ "UndeviatedRoute not found for ride" <> show rideId
           return (estimatedDistance, estimatedTollInfo)
     Nothing -> do
-      logInfo $ "MultipleRoutes not found for ride" <> show rideId
+      logDebug $ "MultipleRoutes not found for ride" <> show rideId
       return (estimatedDistance, estimatedTollInfo)
 
 buildRideInterpolationHandler :: LocationUpdateFlow m r c => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id Ride) -> Bool -> Maybe Integer -> m (RideInterpolationHandler Person m)
@@ -349,7 +349,7 @@ whenWithLocationUpdatesLock driverId f = do
 performSafetyCheck :: LocationUpdateFlow m r c => Ride -> Booking -> m ()
 performSafetyCheck ride booking = do
   let rideId = ride.id
-  logInfo $ "Performing safety check for rideId: " <> getId rideId
+  logDebug $ "Performing safety check for rideId: " <> getId rideId
   when (not ride.safetyAlertTriggered) $ do
     riderId <-
       booking.riderId

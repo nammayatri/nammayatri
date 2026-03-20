@@ -89,7 +89,7 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
             fork ("execution for driverFeeId : " <> executionData.driverFee.id.getId) $ do
               asyncExecutionCall executionData merchantId merchantOpCityId
         ReSchedule <$> getRescheduledTime transporterConfig
-  logInfo ("duration of job " <> show timetaken)
+  logDebug ("duration of job " <> show timetaken)
   return response
   where
     driverIdAndDriverPlanTuple =
