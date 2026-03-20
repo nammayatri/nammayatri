@@ -32,8 +32,8 @@ import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
 
-search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> m DOnSearch
-search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHostUrl mbNetworkId searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode = do
+search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m DOnSearch
+search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHostUrl mbNetworkId searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId = do
   quotes <- buildQuotes routeDetails
   logDebug $ "Route Details Debug: " <> show routeDetails
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.searchTTLSec
@@ -107,10 +107,10 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
     mkQuote _serviceTier _vehicleType [] = return []
     mkQuote serviceTier vehicleType routesInfo = do
       logDebug $ "Routes Info Debug: " <> show routesInfo
-      let fareRouteDetails = map (\routeInfo -> CallAPI.BasicRouteDetail {routeCode = routeInfo.route.code, startStopCode = routeInfo.startStopCode, endStopCode = routeInfo.endStopCode}) routesInfo
-      stations <- CallAPI.buildStations fareRouteDetails integratedBPPConfig
-      let nonEmptyFareRouteDetails = NE.fromList fareRouteDetails
-      (_, fares) <- Flow.getFares searchReq.riderId merchant.id merchantOperatingCity.id integratedBPPConfig nonEmptyFareRouteDetails vehicleType serviceTier searchReq.multimodalSearchRequestId blacklistedServiceTiers blacklistedFareQuoteTypes False isSingleMode
+      let segments = map (\routeInfo -> CallAPI.BasicRouteDetail {routeCode = routeInfo.route.code, startStopCode = routeInfo.startStopCode, endStopCode = routeInfo.endStopCode}) routesInfo
+          fareRoute = CallAPI.FareRoute {segments = NE.fromList segments, mbProviderRouteId}
+      stations <- CallAPI.buildStations segments integratedBPPConfig
+      (_, fares) <- Flow.getFares searchReq.riderId merchant.id merchantOperatingCity.id integratedBPPConfig fareRoute vehicleType serviceTier searchReq.multimodalSearchRequestId blacklistedServiceTiers blacklistedFareQuoteTypes False isSingleMode
       return $
         map
           ( \FRFSFare {..} ->
@@ -136,7 +136,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
                       routesInfo
                in DQuote
                     { bppItemId = adultBppItemId,
-                      routeCode = (NE.head nonEmptyFareRouteDetails).routeCode,
+                      routeCode = (NE.head fareRoute.segments).routeCode,
                       _type = DFRFSQuote.SingleJourney,
                       routeStations = routeStations,
                       fareDetails = fareDetails,

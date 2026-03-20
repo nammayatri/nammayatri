@@ -138,6 +138,7 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveIn
                     endLocation = leg.endLocation.latLng,
                     agencyGtfsId = leg.agency >>= (.gtfsId),
                     searchReqId = searchReqId,
+                    mbProviderRouteId = leg.providerRouteId,
                     ..
                   }
 

@@ -1315,8 +1315,8 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
     getAllSubwayRoutes = do
       case integratedBppConfig.providerConfig of
         DIntegratedBPPConfig.CRIS crisConfig -> do
-          let fareRouteDetails = CallAPI.BasicRouteDetail {routeCode = "-", startStopCode = originStopCode, endStopCode = destinationStopCode}
-          (_, fares) <- Flow.getFares personId mid mocid integratedBppConfig (NonEmpty.fromList [fareRouteDetails]) (Utils.becknVehicleCategoryToFrfsVehicleCategory vc) Nothing (Just searchReqId) blacklistedServiceTiers blacklistedFareQuoteTypes True True
+          let fareRoute = CallAPI.FareRoute {segments = pure CallAPI.BasicRouteDetail {routeCode = "-", startStopCode = originStopCode, endStopCode = destinationStopCode}, mbProviderRouteId = Nothing}
+          (_, fares) <- Flow.getFares personId mid mocid integratedBppConfig fareRoute (Utils.becknVehicleCategoryToFrfsVehicleCategory vc) Nothing (Just searchReqId) blacklistedServiceTiers blacklistedFareQuoteTypes True True
           let filteredFares =
                 filter
                   ( \fare ->
