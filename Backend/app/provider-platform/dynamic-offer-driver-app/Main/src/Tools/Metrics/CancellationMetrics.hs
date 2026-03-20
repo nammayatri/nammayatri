@@ -46,9 +46,9 @@ incrementPostAcceptanceCancellation ::
   Text -> -- cancelled_by
   Text -> -- minutes_after_bucket
   m ()
-incrementPostAcceptanceCancellation city zone cancelledBy minutesAfterBucket = do
+incrementPostAcceptanceCancellation city zone cancelledBy maBucket = do
   container <- asks (.cancellationMetrics)
-  liftIO $ P.withLabel container.postAcceptanceCancellationCounter (city, zone, cancelledBy, minutesAfterBucket) P.incCounter
+  liftIO $ P.withLabel container.postAcceptanceCancellationCounter (city, zone, cancelledBy, maBucket) P.incCounter
 
 -- | Increment passive cancellation counter (driver made rider cancel)
 incrementPassiveCancellation ::
