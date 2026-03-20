@@ -53,18 +53,18 @@ recordPaymentHistory merchantOperatingCityId mbFromStatus toStatus mbMessage pay
   QTransition.create transition
 
 toPaymentState :: Payment.TransactionStatus -> ST.PaymentState
-toPaymentState Payment.NEW = ST.Pending
-toPaymentState Payment.PENDING_VBV = ST.Pending
-toPaymentState Payment.CHARGED = ST.Captured
-toPaymentState Payment.AUTHENTICATION_FAILED = ST.Failed
-toPaymentState Payment.AUTHORIZATION_FAILED = ST.Failed
-toPaymentState Payment.CANCELLED = ST.Cancelled
-toPaymentState Payment.JUSPAY_DECLINED = ST.Failed
+toPaymentState Payment.NEW = ST.PENDING
+toPaymentState Payment.PENDING_VBV = ST.PENDING
+toPaymentState Payment.CHARGED = ST.CAPTURED
+toPaymentState Payment.AUTHENTICATION_FAILED = ST.FAILED
+toPaymentState Payment.AUTHORIZATION_FAILED = ST.FAILED
+toPaymentState Payment.CANCELLED = ST.CANCELLED
+toPaymentState Payment.JUSPAY_DECLINED = ST.FAILED
 toPaymentState Payment.AUTHORIZING = ST.PROCESSING
 toPaymentState Payment.COD_INITIATED = ST.CASH_PENDING
 toPaymentState Payment.STARTED = ST.INITIATED
-toPaymentState Payment.AUTO_REFUNDED = ST.Refunded
-toPaymentState Payment.CLIENT_AUTH_TOKEN_EXPIRED = ST.Failed
+toPaymentState Payment.AUTO_REFUNDED = ST.REFUNDED
+toPaymentState Payment.CLIENT_AUTH_TOKEN_EXPIRED = ST.FAILED
 
 getStatusMessage :: Payment.TransactionStatus -> Text
 getStatusMessage Payment.NEW = "Payment initiated"
@@ -81,15 +81,15 @@ getStatusMessage Payment.AUTO_REFUNDED = "Payment auto-refunded"
 getStatusMessage Payment.CLIENT_AUTH_TOKEN_EXPIRED = "Authentication token expired"
 
 toPaymentEvent :: Payment.TransactionStatus -> ST.PaymentEvent
-toPaymentEvent Payment.NEW = ST.Initiate
-toPaymentEvent Payment.PENDING_VBV = ST.Authorize
-toPaymentEvent Payment.CHARGED = ST.Capture
-toPaymentEvent Payment.AUTHENTICATION_FAILED = ST.Fail
-toPaymentEvent Payment.AUTHORIZATION_FAILED = ST.Fail
-toPaymentEvent Payment.CANCELLED = ST.Cancel
-toPaymentEvent Payment.JUSPAY_DECLINED = ST.Fail
-toPaymentEvent Payment.AUTHORIZING = ST.Authorize
-toPaymentEvent Payment.COD_INITIATED = ST.Initiate
-toPaymentEvent Payment.STARTED = ST.Initiate
-toPaymentEvent Payment.AUTO_REFUNDED = ST.Refund
-toPaymentEvent Payment.CLIENT_AUTH_TOKEN_EXPIRED = ST.Fail
+toPaymentEvent Payment.NEW = ST.INITIATE
+toPaymentEvent Payment.PENDING_VBV = ST.AUTHORIZE
+toPaymentEvent Payment.CHARGED = ST.CAPTURE
+toPaymentEvent Payment.AUTHENTICATION_FAILED = ST.FAIL
+toPaymentEvent Payment.AUTHORIZATION_FAILED = ST.FAIL
+toPaymentEvent Payment.CANCELLED = ST.CANCEL
+toPaymentEvent Payment.JUSPAY_DECLINED = ST.FAIL
+toPaymentEvent Payment.AUTHORIZING = ST.AUTHORIZE
+toPaymentEvent Payment.COD_INITIATED = ST.INITIATE
+toPaymentEvent Payment.STARTED = ST.INITIATE
+toPaymentEvent Payment.AUTO_REFUNDED = ST.REFUND
+toPaymentEvent Payment.CLIENT_AUTH_TOKEN_EXPIRED = ST.FAIL

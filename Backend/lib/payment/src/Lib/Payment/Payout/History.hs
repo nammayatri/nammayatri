@@ -27,6 +27,7 @@ data PayoutHistoryRecord = PayoutHistoryRecord
     entityId :: Text,
     fromState :: Maybe ST.PaymentState,
     toState :: ST.PaymentState,
+    paymentEvent :: ST.PaymentEvent,
     message :: Maybe Text,
     metadata :: Maybe A.Value,
     actorType :: Text,
@@ -53,6 +54,7 @@ recordPayoutHistory PayoutHistoryRecord {..} =
     entityId
     fromState
     toState
+    paymentEvent
     message
     metadata
     actorType
@@ -83,6 +85,7 @@ recordTransition ::
   Text ->
   Maybe ST.PaymentState ->
   ST.PaymentState ->
+  ST.PaymentEvent ->
   Maybe Text ->
   Maybe A.Value ->
   Text ->
@@ -90,7 +93,7 @@ recordTransition ::
   Text ->
   Text ->
   m ST.StateTransition
-recordTransition entityType entityId fromState toState message metadata actorType actorId merchantId merchantOperatingCityId = do
+recordTransition entityType entityId fromState toState paymentEvent message metadata actorType actorId merchantId merchantOperatingCityId = do
   now <- getCurrentTime
   transitionId <- Id <$> generateGUID
   let fromState' = fromMaybe toState fromState
@@ -102,7 +105,7 @@ recordTransition entityType entityId fromState toState message metadata actorTyp
             entityId = entityId,
             fromState = fromState',
             toState = toState,
-            event = ST.PAYOUT_STATUS_CHANGED,
+            event = paymentEvent,
             eventData = eventData',
             actorType = actorType,
             actorId = actorId,
