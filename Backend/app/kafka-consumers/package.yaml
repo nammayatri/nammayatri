@@ -84,6 +84,7 @@ dependencies:
   - esqueleto
   - template-haskell
   - sessionizer-metrics
+  - unix
   - unordered-containers
   - cereal
   - beam-core
