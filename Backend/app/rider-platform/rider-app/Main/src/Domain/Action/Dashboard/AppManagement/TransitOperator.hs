@@ -206,8 +206,8 @@ transitOperatorUpsertDeviceVehicleMapping merchantShortId opCity req = do
   pure $
     APITransitOp.UpsertDeviceVehicleMappingResp
       { success = case length unprocessedEntries of
-        0 -> "All mappings upserted successfully"
-        _ -> "Some mappings failed to upsert",
+          0 -> "All mappings upserted successfully"
+          _ -> "Some mappings failed to upsert",
         unprocessedEntries = unprocessedEntries
       }
   where

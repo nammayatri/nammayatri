@@ -34,6 +34,9 @@ import Data.Either.Extra (eitherToMaybe)
 import Data.Maybe (listToMaybe)
 import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Data.Text as Text
+-- import qualified Lib.Yudhishthira.Event as Yudhishthira
+
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.Ride.Common as DUIRideCommon
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
@@ -61,8 +64,6 @@ import Kernel.External.Maps
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
 import Kernel.Prelude (roundToIntegral)
--- import qualified Lib.Yudhishthira.Event as Yudhishthira
-
 import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import qualified Kernel.Storage.Hedis as Redis
@@ -84,7 +85,6 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.LocationUpdates as LocUpd
 import qualified Lib.LocationUpdates.Internal as LocUpdInternal
-import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
