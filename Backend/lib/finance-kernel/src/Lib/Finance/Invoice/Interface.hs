@@ -17,10 +17,10 @@ where
 
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
-import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import Lib.Finance.Domain.Types.DirectTaxTransaction (TdsRateReason)
-import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
+import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import Lib.Finance.Domain.Types.IndirectTaxTransaction (GstCreditType)
+import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import Lib.Finance.Domain.Types.Invoice (InvoiceType)
 
 -- | Single line item in an invoice

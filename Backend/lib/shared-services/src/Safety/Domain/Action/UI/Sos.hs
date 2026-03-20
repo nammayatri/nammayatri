@@ -10,6 +10,7 @@
 
 module Safety.Domain.Action.UI.Sos where
 
+import Control.Applicative ((<|>))
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -25,7 +26,6 @@ import Safety.Storage.BeamFlow
 import qualified Safety.Storage.CachedQueries.Sos as CQSos
 import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
 import qualified Safety.Storage.Queries.Sos as QSos
-import Control.Applicative ((<|>))
 
 -- | Update SOS entityType from NonRide to Ride and update rideId
 -- Validates that the SOS exists and has entityType "NonRide" before updating
@@ -241,8 +241,9 @@ markSosAsSafe sosId personId mbIsEndLiveTracking mbIsRideEnded = do
       shouldTransitionToLiveTracking = sosDetails.entityType == Just DSos.NonRide && sosDetails.sosState == Just DSos.SosActive && mbIsEndLiveTracking == Just False
 
   when (not shouldMarkAsResolved && not shouldTransitionToLiveTracking) $
-    throwError $ InvalidRequest
-      "Nothing to update: SOS is already in LiveTracking state or request is a no-op"
+    throwError $
+      InvalidRequest
+        "Nothing to update: SOS is already in LiveTracking state or request is a no-op"
 
   now <- getCurrentTime
   let updatedSosDetails =

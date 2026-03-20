@@ -72,8 +72,8 @@ import Kernel.Utils.Common (MonadFlow)
 import Lib.Finance.Account.Interface (AccountInput (..))
 import Lib.Finance.Account.Service (getOrCreateAccount)
 import Lib.Finance.Domain.Types.Account
-import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import Lib.Finance.Domain.Types.DirectTaxTransaction (DirectTaxTransaction, TdsRateReason (..))
+import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import Lib.Finance.Domain.Types.IndirectTaxTransaction (GstCreditType, IndirectTaxTransaction)
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import Lib.Finance.Domain.Types.Invoice (Invoice, InvoiceType)
