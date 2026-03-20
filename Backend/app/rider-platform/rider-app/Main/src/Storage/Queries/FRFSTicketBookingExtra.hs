@@ -9,6 +9,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
+import qualified BecknV2.FRFS.Enums as Spec
 import qualified Storage.Beam.FRFSTicketBooking as Beam
 import Storage.Queries.OrphanInstances.FRFSTicketBooking ()
 
