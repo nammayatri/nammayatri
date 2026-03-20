@@ -852,6 +852,7 @@ library
       Tools.Utils
       Tools.Verification
       Tools.Whatsapp
+      Utils.ConnectionPoolMetrics
       API.Action.Dashboard.AppManagement
       API.Action.Dashboard.AppManagement.Driver
       API.Action.Dashboard.AppManagement.DriverSubscription
