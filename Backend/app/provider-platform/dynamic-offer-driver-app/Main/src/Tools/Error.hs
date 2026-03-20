@@ -18,7 +18,7 @@ import Data.Aeson (Value (Null), object, (.=))
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
-import Kernel.Types.Error as Tools.Error hiding (PersonError, SosError, SosIdDoesNotExist)
+import Kernel.Types.Error as Tools.Error hiding (DriverNotAtPickupLocation, PersonError, SosError, SosIdDoesNotExist)
 import Kernel.Types.Error.BaseError.HTTPError
 import Kernel.Utils.Common (Meters)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
