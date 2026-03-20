@@ -16,6 +16,7 @@ module DriverTrackingHealthCheck.Service.Runner where
 
 -- import Consumer.LocationUpdate.Processor
 import Consumer.LocationUpdate.Types (DriverIdTokenKey)
+import Control.Exception (AsyncException)
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
@@ -89,7 +90,9 @@ withLock :: (Redis.HedisFlow m r, MonadMask m) => Text -> m () -> m ()
 withLock serviceName func =
   Redis.withLockRedis key 10 $ do
     func `catch` \(e :: SomeException) ->
-      logError $ "Exception in service " <> serviceName <> " (iteration skipped): " <> makeLogSomeException e
+      case fromException @AsyncException e of
+        Just _ -> throwM e -- Re-throw async exceptions (SIGTERM/SIGINT) for graceful shutdown
+        Nothing -> logError $ "Exception in service " <> serviceName <> " (iteration skipped): " <> makeLogSomeException e
   where
     key = "beckn:" <> serviceName <> ":lock"
 
