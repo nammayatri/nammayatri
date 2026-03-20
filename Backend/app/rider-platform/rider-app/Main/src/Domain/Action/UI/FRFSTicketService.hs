@@ -106,6 +106,7 @@ import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBookingFeedback
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.CachedQueries.JourneyLeg as CQJourneyLeg
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SeatLayout as QSeatLayout
 import Tools.Error
@@ -1443,15 +1444,17 @@ postFrfsFleetOperatorTripAction (mbPersonId, merchantId) req = do
           persons <- QP.findAllByIds riderIds
           let personMap = Map.fromList $ map (\p -> (p.id, p)) persons
           -- Process all passengers sequentially in this single thread
-          forM_ bookings $ \booking ->
+          forM_ bookings $ \booking -> do
+            -- Get journeyId for this booking
+            mbJourneyId <- CQJourneyLeg.findJourneyIdByLegSearchId booking.searchId.getId
             case Map.lookup booking.riderId personMap of
               Nothing -> pure ()
               Just person -> do
                 -- Send trip start notification sequentially
                 let routeName = fromMaybe "" booking.routeName
                 let vehicleNo = fromMaybe "" booking.vehicleNumber
-                logInfo $ "Notifying passenger " <> person.id.getId <> " that bus trip has started on route " <> routeName
-                Notifications.notifyBusTripStarted person vehicleNo routeName tripId
+                logInfo $ "Notifying passenger " <> person.id.getId <> " that bus trip has started on route " <> routeName <> "for journeyId" <> show mbJourneyId
+                Notifications.notifyBusTripStarted person vehicleNo routeName tripId mbJourneyId
       pure
         FRFSTicketService.FleetOperatorTripActionResp
           { currentTripNumber = nextTrip,
