@@ -44,7 +44,7 @@ runCreate createDataEntry streamName = do
               _ <- runCreateQuery createDataEntry createDBModel --- it should push that entry to db what if isForcePushEnabled is true then it will get missed
               return $ Left entryId
             Right _ -> do
-              EL.logInfo ("KAFKA CREATE SUCCESSFUL" :: Text) (" Create successful for object :: " <> show createDBModel.contents)
+              EL.logDebug ("KAFKA CREATE SUCCESSFUL" :: Text) (" Create successful for object :: " <> show createDBModel.contents)
               runCreateQuery createDataEntry createDBModel
     Left err -> do
       EL.logError ("CREATE FAILED" :: Text) ("Invalid streamData or Extraction of data from redis stream failed :: " <> TE.decodeUtf8 streamData <> "; error :: " <> show err)

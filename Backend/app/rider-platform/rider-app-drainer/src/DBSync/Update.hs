@@ -41,7 +41,7 @@ runUpdate updateDataEntries streamName = do
               _ <- runUpdateQuery updateDataEntries updateDBModel --- it should push that entry to db what if isForcePushEnabled is true then it will get missed
               return $ Left entryId
             Right _ -> do
-              EL.logInfo ("KAFKA UPDATE SUCCESSFUL" :: Text) (" Update successful for object :: " <> show updateDBModel.contents)
+              EL.logDebug ("KAFKA UPDATE SUCCESSFUL" :: Text) (" Update successful for object :: " <> show updateDBModel.contents)
               runUpdateQuery updateDataEntries updateDBModel
     Left err -> do
       EL.logError ("UPDATE FAILED" :: Text) ("Invalid streamData or Extraction of data from redis stream failed :: " <> TE.decodeUtf8 streamData <> "; error :: " <> show err)

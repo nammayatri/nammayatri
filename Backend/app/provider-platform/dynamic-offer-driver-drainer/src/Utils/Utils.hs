@@ -104,12 +104,12 @@ publishDrainLatency :: Text -> L.KVDBStreamEntryID -> Flow ()
 publishDrainLatency action (L.KVDBStreamEntryID id _) = do
   time <- L.getCurrentDateInMillis
   let latency = int2Double time - int2Double (fromIntegral id)
-  L.logInfo (("LATENCY: " :: Text) <> action) (show latency)
+  L.logDebug (("LATENCY: " :: Text) <> action) (show latency)
   void $ publishDBSyncMetric $ QueryDrainLatency action latency
 
 publishProcessLatency :: Text -> Double -> Flow ()
 publishProcessLatency processName latency = do
-  L.logInfo (("LATENCY: " :: Text) <> processName) (show latency)
+  L.logDebug (("LATENCY: " :: Text) <> processName) (show latency)
   void $ publishDBSyncMetric $ ProcessLatency processName latency
 
 decodeToText :: ByteString -> Text

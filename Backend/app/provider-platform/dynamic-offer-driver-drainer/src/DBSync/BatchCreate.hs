@@ -53,7 +53,7 @@ import Utils.Utils
 -- | Log entry split information between forced individual and batchable entries
 logSplitInfo :: Text -> Int -> Int -> Flow ()
 logSplitInfo prefix forcedCount batchableCount =
-  EL.logInfo prefix $ "forced:" <> show forcedCount <> "|batchable:" <> show batchableCount
+  EL.logDebug prefix $ "forced:" <> show forcedCount <> "|batchable:" <> show batchableCount
 
 -- =============================================================================
 -- STATISTICS AND GROUPING
@@ -159,7 +159,7 @@ parseCreateEntry (entryId, streamData) = do
 executeBatchedCreate :: Text -> [(EL.KVDBStreamEntryID, ByteString)] -> Flow ([EL.KVDBStreamEntryID], [EL.KVDBStreamEntryID])
 executeBatchedCreate _ [] = pure ([], [])
 executeBatchedCreate dbStreamKey createEntries = do
-  EL.logInfo ("STARTING_BATCHED_CREATE" :: Text) ("Total entries: " <> show (length createEntries))
+  EL.logDebug ("STARTING_BATCHED_CREATE" :: Text) ("Total entries: " <> show (length createEntries))
 
   -- Step 1: Parse all entries and compute column signatures for grouping
   parseResults <- mapM parseCreateEntry createEntries
@@ -175,7 +175,7 @@ executeBatchedCreate dbStreamKey createEntries = do
         "total:" <> show totalEntries <> "|parsed:" <> show parsedCount <> "|failed:" <> show failedParseCount <> "|falling_back_to_sequential"
 
       -- Fallback to sequential processing for all entries to handle parsing errors gracefully
-      EL.logInfo ("FALLING_BACK_TO_SEQUENTIAL" :: Text) "Using executeInSequence for all entries due to parse failures"
+      EL.logDebug ("FALLING_BACK_TO_SEQUENTIAL" :: Text) "Using executeInSequence for all entries due to parse failures"
       executeInSequence runCreate ([], []) dbStreamKey createEntries
     else do
       -- Step 2: Split by processing strategy based on forceDrainToDB flag
@@ -195,7 +195,7 @@ executeBatchedCreate dbStreamKey createEntries = do
           totalFailures = failures1 ++ failures2
 
       -- Simplified logging - avoid expensive length calculations
-      EL.logInfo ("BATCHED_CREATE_COMPLETE" :: Text) $
+      EL.logDebug ("BATCHED_CREATE_COMPLETE" :: Text) $
         "indiv_batches:" <> show (null successes1) <> "|bulk_batches:" <> show (null successes2)
 
       pure (totalSuccesses, totalFailures)
@@ -390,7 +390,7 @@ shouldBatchSignature entryCount = do
 -- | Execute individual processing for small signature groups
 executeIndividuallyForSignature :: Text -> [ParsedCreateEntry] -> Flow ([EL.KVDBStreamEntryID], [EL.KVDBStreamEntryID])
 executeIndividuallyForSignature dbStreamKey entries = do
-  EL.logInfo ("EXECUTING_INDIVIDUALLY_FOR_SIGNATURE" :: Text) ("Count: " <> show (length entries))
+  EL.logDebug ("EXECUTING_INDIVIDUALLY_FOR_SIGNATURE" :: Text) ("Count: " <> show (length entries))
   processIndividualEntries dbStreamKey entries
 
 -- | Execute batch for a specific signature
@@ -398,12 +398,12 @@ executeBatchForSignature :: Text -> ColumnSignature -> [ParsedCreateEntry] -> Fl
 executeBatchForSignature _dbStreamKey signature entries = do
   let batchSize = length entries
       createObjects = map (.createObject) entries
-  EL.logInfo ("EXECUTING_BATCH_FOR_SIGNATURE" :: Text) $ signature.tableName.getDBModel <> "|size:" <> show batchSize
+  EL.logDebug ("EXECUTING_BATCH_FOR_SIGNATURE" :: Text) $ signature.tableName.getDBModel <> "|size:" <> show batchSize
   maxBatchSize <- getGlobalBatchSize
   if batchSize <= maxBatchSize
     then executeSingleBatch signature entries createObjects
     else do
-      EL.logInfo ("SPLITTING_LARGE_BATCH" :: Text) $ signature.tableName.getDBModel <> "|size:" <> show batchSize <> "|max:" <> show maxBatchSize
+      EL.logDebug ("SPLITTING_LARGE_BATCH" :: Text) $ signature.tableName.getDBModel <> "|size:" <> show batchSize <> "|max:" <> show maxBatchSize
 
       let batches = splitIntoBatches maxBatchSize entries
       results <- mapM (\batch -> executeSingleBatch signature batch (map (.createObject) batch)) batches
@@ -426,10 +426,10 @@ executeBatchForSignature _dbStreamKey signature entries = do
               EL.logError ("BATCH_INSERT_FAILED" :: Text) $
                 sig.tableName.getDBModel <> "|entries:" <> show (length batchEntries) <> "|error:" <> errorMsg <> "|query:" <> bulkQuery
               void $ publishDBSyncMetric $ Event.QueryExecutionFailure "BatchCreate" sig.tableName.getDBModel
-              EL.logInfo ("FALLING_BACK_TO_INDIVIDUAL" :: Text) ("Batch size: " <> show (length batchEntries))
+              EL.logDebug ("FALLING_BACK_TO_INDIVIDUAL" :: Text) ("Batch size: " <> show (length batchEntries))
               processIndividualEntries _dbStreamKey batchEntries
             Right _ -> do
-              EL.logInfo ("BATCH_INSERT_SUCCESS" :: Text) $
+              EL.logDebug ("BATCH_INSERT_SUCCESS" :: Text) $
                 sig.tableName.getDBModel <> "|entries:" <> show (length batchEntries) <> "|time:" <> show executionTime
               void $ publishDBSyncMetric $ Event.BatchExecutionTime sig.tableName.getDBModel executionTime
               void $ publishDBSyncMetric $ Event.BatchEntriesProcessed sig.tableName.getDBModel (length batchEntries)
