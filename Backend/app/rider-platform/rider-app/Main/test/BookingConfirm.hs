@@ -1,5 +1,6 @@
 module BookingConfirm (bookingConfirmTests) where
 
+import qualified Data.Text as T
 import Data.Time.Clock (addUTCTime)
 import Domain.Action.UI.Estimate (isCancelled)
 import Domain.Types.BookingStatus
@@ -112,7 +113,7 @@ isQuoteExpired :: UTCTime -> UTCTime -> Bool
 isQuoteExpired validTill now = validTill < now
 
 mkTime :: String -> UTCTime
-mkTime str = fromMaybe (error $ "Invalid time: " <> str) (readMaybe str)
+mkTime str = fromMaybe (error $ "Invalid time: " <> T.pack str) (readMaybe str)
 
 quoteExpiryTests :: TestTree
 quoteExpiryTests =
