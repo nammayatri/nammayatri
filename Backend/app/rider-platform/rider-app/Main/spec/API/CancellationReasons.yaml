@@ -1,0 +1,24 @@
+imports:
+  Text: Data.Text
+  Booking: Domain.Types.Booking
+  Language: Kernel.External.Types
+
+module: CancellationReasons
+types:
+  CancellationReasonEntity:
+    code: Text
+    iconUrl: Text
+    text: Text
+    derive: "Show"
+
+apis:
+  # GET /rideBooking/{rideBookingId}/cancellationReasons
+  - GET:
+      endpoint: /rideBooking/{rideBookingId}/cancellationReasons
+      auth: TokenAuth
+      headers:
+        x-language: Language
+      params:
+        rideBookingId: Id Booking
+      response:
+        type: "[CancellationReasonEntity]"

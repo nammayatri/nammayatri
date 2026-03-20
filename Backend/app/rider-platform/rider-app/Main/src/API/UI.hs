@@ -20,6 +20,7 @@ where
 
 import qualified API.Action.UI.AttractionRecommend as AttractionRecommend
 import qualified API.Action.UI.BBPS as BBPS
+import qualified API.Action.UI.CancellationReasons as CancellationReasons
 import qualified API.Action.UI.CRIS as CRIS
 import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.CancellationChargesWaiveOff as CancellationChargesWaiveOff
@@ -104,6 +105,7 @@ type API =
            :<|> Quote.API
            :<|> Confirm.API
            :<|> Booking.API
+           :<|> CancellationReasons.API
            :<|> Cancel.API
            :<|> CancelSearch.API
            :<|> Ride.API
@@ -178,6 +180,7 @@ handler =
     :<|> Quote.handler
     :<|> Confirm.handler
     :<|> Booking.handler
+    :<|> CancellationReasons.handler
     :<|> Cancel.handler
     :<|> CancelSearch.handler
     :<|> Ride.handler

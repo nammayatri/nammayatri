@@ -441,6 +441,7 @@ verifyAndUpdateDynamicLogic mbMerchantId _ referralLinkPassword req logicData = 
       let appDynamicLogics = zip rules [0 ..] <&> (\(rule, order) -> mkAppDynamicLogicElement version rule order now)
       CADLE.createMany appDynamicLogics
       CADLE.clearCache domain
+      CADLE.clearCacheByDomainAndVersion domain version
       return (True, Just version)
       where
         mkAppDynamicLogicElement :: Int -> A.Value -> Int -> UTCTime -> DTADLE.AppDynamicLogicElement

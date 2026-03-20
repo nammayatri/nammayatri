@@ -106,7 +106,10 @@ import qualified Lib.Types.GateInfo as D
 import qualified Lib.Types.GateInfo as DGI
 import qualified Lib.Types.SpecialLocation as DSL
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
 import qualified Lib.Yudhishthira.Tools.DebugLog as DebugLog
+import qualified Lib.Yudhishthira.Types as LYT
+import qualified Lib.Yudhishthira.Types.AppDynamicLogicRollout as LYTADLR
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
@@ -553,6 +556,23 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         return $ Just newRiderConfig
       _ -> return Nothing
 
+  -- cancellation reasons dynamic-logic rollout (copy-city support)
+  mbCancellationReasonsRollouts <- do
+    existingRollouts <- CADLR.findByMerchantOpCityAndDomain (cast newMerchantOperatingCityId) LYT.CANCELLATION_REASONS
+    case existingRollouts of
+      [] -> do
+        baseRollouts <- CADLR.findByMerchantOpCityAndDomain (cast baseOperatingCityId) LYT.CANCELLATION_REASONS
+        let newRollouts :: [LYTADLR.AppDynamicLogicRollout]
+            newRollouts =
+              baseRollouts <&> \r ->
+                r
+                  { LYTADLR.merchantOperatingCityId = cast newMerchantOperatingCityId,
+                    LYTADLR.createdAt = now,
+                    LYTADLR.updatedAt = now
+                  }
+        pure $ if null newRollouts then Nothing else Just newRollouts
+      _ -> pure Nothing
+
   -- geometry
   mbGeometry <-
     QGeo.findGeometryByStateAndCity req.city req.state >>= \case
@@ -684,6 +704,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         whenJust mbMerchantServiceConfig $ \merchantServiceConfigs -> mapM_ SQMSC.create merchantServiceConfigs
         whenJust mbBecknConfig $ \becknConfig -> mapM_ SQBC.create becknConfig
         whenJust mbRiderConfig $ \riderConfig -> QRC.create riderConfig
+        whenJust mbCancellationReasonsRollouts $ \rollouts -> CADLR.createMany rollouts
         whenJust mbMerchantPushNotification $ \newMerchantPushNotifications -> mapM_ CQMPN.create newMerchantPushNotifications
         whenJust mbExophone $ \exophones -> do
           whenJust (find (\ex -> ex.callService == Exotel) exophones) $ \exophone -> do
@@ -709,6 +730,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         CQMPM.clearCache newMerchantOperatingCityId
         CQMSUC.clearCache newMerchantOperatingCityId
         QRC.clearCache newMerchantOperatingCityId
+        CADLR.clearDomainCache (cast newMerchantOperatingCityId) LYT.CANCELLATION_REASONS
         CQIssueConfig.clearIssueConfigCache (cast newMerchantOperatingCityId) ICommon.CUSTOMER
         exoPhone <- CQExophone.findAllByMerchantOperatingCityId newMerchantOperatingCityId
         CQExophone.clearCache newMerchantOperatingCityId exoPhone
