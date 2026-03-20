@@ -25,10 +25,10 @@ module SharedLogic.DisabilityGuard
   )
 where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), withText)
+import Data.Aeson (Value (..), withText)
 import qualified Data.Text as T
-import Database.Beam.Backend (HasSqlValueSyntax, sqlValueSyntax)
-import Database.PostgreSQL.Simple.FromField (FromField (..))
+import Database.Beam.Backend ()
+import Database.PostgreSQL.Simple.FromField ()
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 
