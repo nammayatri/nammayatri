@@ -57,6 +57,7 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
+import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.LocationMapping as SLM
@@ -71,7 +72,6 @@ import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.Ride as QRide
-import Storage.Queries.SafetySettings as QSafety
 import Tools.Error
 import qualified Tools.Maps as MapSearch
 
@@ -123,7 +123,7 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
   customerDisability <- B.runInReplica $ PDisability.findByPersonId personId
   let tag = customerDisability <&> (.tag)
   decRider <- decrypt rider
-  safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just rider)
+  safetySettings <- Lib.findSafetySettingsWithFallback (cast personId) (Lib.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults rider))
   isSafetyCenterDisabled <- SLP.checkSafetyCenterDisabled rider safetySettings
   ride' <- buildRideAPIEntity ride
   return $

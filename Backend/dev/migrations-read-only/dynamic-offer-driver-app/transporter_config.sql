@@ -747,12 +747,10 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN reconciliation_
 
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-
-
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN video_file_size_upper_limit integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN tracking_short_url_pattern text  default 'nammayatri.in/t/';
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_support_for_safety boolean  default false;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dashboard_media_file_url_pattern text  default 'https://nammayatri.in/t/<FILE_PATH>';
 
 
 ------- SQL updates -------
@@ -792,5 +790,23 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_coins_to
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN tax_config TYPE text;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_number_of_luggages integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN min_base_fare double precision ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_fare_policy_update_below_min_base_fare boolean  default true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_direct_wallet_incentives boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN tracking_short_url_pattern SET DEFAULT 'https://nammayatri.in/p/?vp={#vp#}&rideId=';
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN dashboard_media_file_url_pattern SET DEFAULT 'https://nammayatri.in/p/<FILE_PATH>';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN knowledge_center_sop_types json  default '[]' :: json;
+
+

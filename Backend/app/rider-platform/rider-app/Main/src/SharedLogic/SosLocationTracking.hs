@@ -14,13 +14,13 @@
 
 module SharedLogic.SosLocationTracking where
 
-import qualified Domain.Types.Sos as DSos
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Safety.Domain.Types.Sos as SafetyDSos
 
 data SosLocationData = SosLocationData
   { lat :: Double,
@@ -30,12 +30,12 @@ data SosLocationData = SosLocationData
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-makeSosLocationRedisKey :: Id DSos.Sos -> Text
+makeSosLocationRedisKey :: Id SafetyDSos.Sos -> Text
 makeSosLocationRedisKey sosId = "sos-rider-location:" <> sosId.getId
 
 updateSosRiderLocation ::
   (HedisFlow m env) =>
-  Id DSos.Sos ->
+  Id SafetyDSos.Sos ->
   LatLong ->
   Maybe Double ->
   Maybe UTCTime ->
@@ -55,7 +55,7 @@ updateSosRiderLocation sosId LatLong {..} mbAccuracy mbExpiryTimeStamp = do
 
 getSosRiderLocation ::
   (HedisFlow m env) =>
-  Id DSos.Sos ->
+  Id SafetyDSos.Sos ->
   m (Maybe SosLocationData)
 getSosRiderLocation sosId = do
   let key = makeSosLocationRedisKey sosId
@@ -63,7 +63,7 @@ getSosRiderLocation sosId = do
 
 clearSosRiderLocation ::
   (HedisFlow m env) =>
-  Id DSos.Sos ->
+  Id SafetyDSos.Sos ->
   m ()
 clearSosRiderLocation sosId = do
   let key = makeSosLocationRedisKey sosId

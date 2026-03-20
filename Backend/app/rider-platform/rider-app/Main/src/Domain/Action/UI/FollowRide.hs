@@ -2,7 +2,7 @@ module Domain.Action.UI.FollowRide where
 
 import API.Types.UI.FollowRide
 import qualified Domain.Action.UI.Booking as DAB
-import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as PDEN
+import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
 import Domain.Action.UI.Profile as DAP
 import Domain.Types.Booking
 import qualified Domain.Types.Merchant as Merchant
@@ -18,24 +18,25 @@ import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SLPEN
+import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.FollowRide as CQFollowRide
 import qualified Storage.Queries.Booking as Booking
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.PersonDefaultEmergencyNumber as PDEN
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
 getFollowRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Log m) => (Maybe (Id Person.Person), Id Merchant.Merchant) -> m [Followers]
 getFollowRide (mbPersonId, _) = do
   id <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  emContacts <- PDEN.findAllByContactPersonId id
+  emContacts <- QPDEN.findAllByContactPersonId (cast id)
   followList <- CQFollowRide.getFollowRideCounter id
   let followingEmContacts = filter (\contact -> contact.personId.getId `elem` followList) emContacts
   foldlM
     ( \acc contact -> do
-        mbPerson <- QPerson.findById contact.personId
+        mbPerson <- QPerson.findById (cast contact.personId)
         case mbPerson of
           Nothing -> pure acc
           Just person -> do
@@ -74,7 +75,7 @@ postShareRide (mbPersonId, merchantId) req = do
               emergencyContactEntity <- QPerson.findById id >>= fromMaybeM (PersonDoesNotExist id.getId)
               updateFollowDetails emergencyContactEntity emergencyContact
               dbHash <- getDbHash emergencyContact.mobileNumber
-              PDEN.updateShareRide dbHash personId True
+              QPDEN.updateShareRide dbHash (cast personId) True
               SLPEN.sendNotificationToEmergencyContact personId emergencyContactEntity (body person) title Notification.SHARE_RIDE Nothing Nothing
     )
     emergencyContacts.defaultEmergencyNumbers
@@ -83,8 +84,8 @@ postShareRide (mbPersonId, merchantId) req = do
     title = "Ride Share"
     body person = SLP.getName person <> " has invited you to follow their ride!\nFollow along to ensure their safety."
 
-updateFollowDetails :: Person.Person -> PDEN.PersonDefaultEmergencyNumberAPIEntity -> Flow ()
-updateFollowDetails contactPersonEntity PDEN.PersonDefaultEmergencyNumberAPIEntity {..} = do
+updateFollowDetails :: Person.Person -> DPDEN.PersonDefaultEmergencyNumberAPIEntity -> Flow ()
+updateFollowDetails contactPersonEntity DPDEN.PersonDefaultEmergencyNumberAPIEntity {..} = do
   void $ CQFollowRide.updateFollowRideList contactPersonEntity.id personId True
   QPerson.updateFollowsRide True contactPersonEntity.id
 

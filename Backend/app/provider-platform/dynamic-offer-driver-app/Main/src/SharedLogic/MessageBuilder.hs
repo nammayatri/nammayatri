@@ -13,7 +13,8 @@
 -}
 
 module SharedLogic.MessageBuilder
-  ( BuildSendOTPMessageReq (..),
+  ( buildSendSmsReq,
+    BuildSendOTPMessageReq (..),
     buildSendOTPMessage,
     WelcomeToPlatformMessageReq (..),
     buildWelcomeToPlatformMessage,
@@ -52,6 +53,8 @@ module SharedLogic.MessageBuilder
     buildDriverPayoutMessage,
     BuildDocumentExpiryReminderMessageReq (..),
     buildDocumentExpiryReminderMessage,
+    BuildSOSAlertMessageReq (..),
+    buildSOSAlertMessage,
   )
 where
 
@@ -63,7 +66,9 @@ import qualified Domain.Types.Message as Message
 import qualified Domain.Types.Person as P
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Beam.Functions as B
+import qualified Kernel.External.SMS as Sms
 import Kernel.Prelude
+import Kernel.Sms.Config (SmsConfig)
 import Kernel.Streaming.Kafka.Commons
 import Kernel.Streaming.Kafka.Producer
 import Kernel.Streaming.Kafka.Producer.Types
@@ -76,6 +81,22 @@ import qualified UrlShortner.Common as UrlShortner
 
 templateText :: Text -> Text
 templateText txt = "{#" <> txt <> "#}"
+
+type BuildMessageFlow m r =
+  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    EsqDBFlow m r,
+    CacheFlow m r
+  )
+
+type SmsReqBuilder = Text -> Sms.SendSMSReq
+
+buildSendSmsReq :: BuildMessageFlow m r => DMM.MerchantMessage -> [(Text, Text)] -> m SmsReqBuilder
+buildSendSmsReq merchantMessage vars = do
+  smsCfg <- asks (.smsCfg)
+  let smsBody = foldl' (\msg (findKey, replaceVal) -> T.replace (templateText findKey) replaceVal msg) merchantMessage.message vars
+      sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
+      templateId = merchantMessage.templateId
+  return $ \phoneNumber -> Sms.SendSMSReq smsBody phoneNumber sender templateId merchantMessage.messageType
 
 data BuildSendPaymentLinkReq = BuildSendPaymentLinkReq
   { paymentLink :: Text,
@@ -226,6 +247,29 @@ buildDriverPayoutMessage merchantOpCityId req = do
           & T.replace (templateText "numeric") req.payoutAmount
           & T.replace (templateText "url") payoutUrl
   pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
+
+data BuildSOSAlertMessageReq = BuildSOSAlertMessageReq
+  { userName :: Text,
+    rideLink :: Text,
+    rideEndTime :: Maybe Text,
+    isRideEnded :: Bool
+  }
+  deriving (Generic)
+
+buildSOSAlertMessage ::
+  (BuildMessageFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  BuildSOSAlertMessageReq ->
+  m SmsReqBuilder
+buildSOSAlertMessage merchantOperatingCityId req = do
+  let messageKey = if req.isRideEnded then DMM.POST_RIDE_SOS else DMM.SEND_SOS_ALERT
+      -- Post-ride SMS: use a meaningful placeholder when rideEndTime is missing to avoid confusing empty text
+      rideEndTimeParam = fromMaybe "time unknown" req.rideEndTime
+      smsParams = if req.isRideEnded then [("userName", req.userName), ("rideEndTime", rideEndTimeParam)] else [("userName", req.userName), ("rideLink", req.rideLink)]
+  merchantMessage <-
+    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId messageKey Nothing Nothing
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show messageKey))
+  buildSendSmsReq merchantMessage smsParams
 
 data BuildGenericMessageReq = BuildGenericMessageReq {}
   deriving (Generic)

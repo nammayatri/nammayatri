@@ -19,6 +19,7 @@ import Data.Default.Class
 import qualified Data.List as L
 import qualified Data.Text as T
 import Data.Time hiding (secondsToNominalDiffTime)
+import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BppDetails as DBppDetails
@@ -60,10 +61,15 @@ import Kernel.Utils.Common hiding (getCurrentTime)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Safety.Domain.Types.Common as SafetyCommon
+import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
+import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.Person as SLP
 import SharedLogic.Quote
 import Storage.Beam.SchedulerJob ()
+import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.FollowRide as CQFollowRide
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
@@ -76,9 +82,7 @@ import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.NotificationSoundsConfig as SQNSC
 import qualified Storage.Queries.Person as Person
-import Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.PersonDisability as PD
-import Storage.Queries.SafetySettings as QSafety
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Error
 import qualified Tools.SMS as Sms
@@ -568,10 +572,15 @@ notifyOnRideCompleted booking ride otherParties = do
       )
 
   fork "Create Post ride safety job" $ do
-    safetySettings <- QSafety.findSafetySettingsWithFallback person.id (Just person)
+    safetySettings <- Lib.findSafetySettingsWithFallback (cast person.id) (Lib.getDefaultSafetySettings (cast person.id) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
     now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
-    when (checkSafetySettingConstraint (Just safetySettings.enablePostRideSafetyCheck) riderConfig now) $ do
+    let convertToPersonRideShareOptions :: SafetyCommon.RideShareOptions -> RideShareOptions
+        convertToPersonRideShareOptions = \case
+          SafetyCommon.ALWAYS_SHARE -> ALWAYS_SHARE
+          SafetyCommon.SHARE_WITH_TIME_CONSTRAINTS -> SHARE_WITH_TIME_CONSTRAINTS
+          SafetyCommon.NEVER_SHARE -> NEVER_SHARE
+    when (checkSafetySettingConstraint (Just $ convertToPersonRideShareOptions safetySettings.enablePostRideSafetyCheck) riderConfig now) $ do
       let scheduleAfter = riderConfig.postRideSafetyNotificationDelay
           postRideSafetyNotificationJobData = PostRideSafetyNotificationJobData {rideId = ride.id, personId = booking.riderId}
       createJobIn @_ @'PostRideSafetyNotification ride.merchantId ride.merchantOperatingCityId scheduleAfter (postRideSafetyNotificationJobData :: PostRideSafetyNotificationJobData)
@@ -584,13 +593,13 @@ disableFollowRide ::
   Id Person ->
   m ()
 disableFollowRide personId = do
-  emContacts <- QPDEN.findAllByPersonId personId
-  let followingContacts = filter (\item -> item.shareTripWithEmergencyContactOption /= Just NEVER_SHARE || item.enableForShareRide) emContacts
+  emContacts <- QPDEN.findAllByPersonId (cast personId)
+  let followingContacts = filter (\item -> item.shareTripWithEmergencyContactOption /= Just SafetyCommon.NEVER_SHARE || item.enableForShareRide) emContacts
   mapM_
-    ( \contact -> maybe (pure ()) updateFollowRideCount contact.contactPersonId
+    ( \contact -> maybe (pure ()) (updateFollowRideCount . cast) contact.contactPersonId
     )
     followingContacts
-  void $ QPDEN.updateShareRideForAll personId False
+  void $ QPDEN.updateShareRideForAll (cast personId) False
   where
     updateFollowRideCount emPersonId = do
       CQFollowRide.updateFollowRideList emPersonId personId False
@@ -1284,8 +1293,8 @@ notifyRideStartToEmergencyContacts booking ride = do
   rider <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow rider.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist rider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
-  personENList <- QPDEN.findpersonENListWithFallBack booking.riderId (Just rider)
-  let followingContacts = filter (\contact -> checkSafetySettingConstraint contact.shareTripWithEmergencyContactOption riderConfig now) personENList
+  personENList <- DPDEN.findpersonENListWithFallBack booking.riderId (Just rider)
+  let followingContacts = filter (\contact -> checkSafetySettingConstraint (DPDEN.fromSafetyRideShare <$> contact.shareTripWithEmergencyContactOption) riderConfig now) personENList
   let shouldShare = not $ null followingContacts
   if shouldShare
     then do
@@ -1293,7 +1302,8 @@ notifyRideStartToEmergencyContacts booking ride = do
       decEmContacts <- decrypt `mapM` followingContacts
       for_ decEmContacts \contact -> do
         case contact.contactPersonId of
-          Just personId -> do
+          Just contactPersonId -> do
+            let personId = cast contactPersonId
             updateFollowsRideCount personId
             person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
             let entity = Notification.Entity Notification.Product personId.getId ()

@@ -27,6 +27,7 @@ flag Local
 library
   exposed-modules:
       API
+      API.Action.UI.TicketKapture
       API.Beckn
       API.Beckn.Cancel
       API.Beckn.Confirm
@@ -77,6 +78,7 @@ library
       API.Internal.SpecialLocationUpsert
       API.Internal.StopDetection
       API.Internal.ViolationDetection
+      API.Types.UI.TicketKapture
       API.UI
       API.UI.Call
       API.UI.CallEvent
@@ -105,6 +107,7 @@ library
       API.UI.RideRoute
       API.UI.RideSummary
       API.UI.Route
+      API.UI.Sos
       API.UI.Transporter
       API.UI.Whatsapp
       API.UnifiedDashboard
@@ -190,6 +193,7 @@ library
       Domain.Action.Dashboard.Management.PlanManagement
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
+      Domain.Action.Dashboard.Management.SosMedia
       Domain.Action.Dashboard.Management.System
       Domain.Action.Dashboard.Management.VehicleInfo
       Domain.Action.Dashboard.Management.Volunteer
@@ -268,6 +272,7 @@ library
       Domain.Action.UI.DriverProfileQuestions
       Domain.Action.UI.DriverProfileSummary
       Domain.Action.UI.DriverReferral
+      Domain.Action.UI.DriverSafetySettings
       Domain.Action.UI.DriverWallet
       Domain.Action.UI.EditBooking
       Domain.Action.UI.ExotelEndRide
@@ -295,6 +300,7 @@ library
       Domain.Action.UI.Penalty
       Domain.Action.UI.Performance
       Domain.Action.UI.Person
+      Domain.Action.UI.PersonDefaultEmergencyContact
       Domain.Action.UI.PickupInstructions
       Domain.Action.UI.PlaceNameCache
       Domain.Action.UI.Plan
@@ -319,10 +325,12 @@ library
       Domain.Action.UI.SearchRequestForDriver
       Domain.Action.UI.SearchRequestLocation
       Domain.Action.UI.SocialLogin
+      Domain.Action.UI.Sos
       Domain.Action.UI.SpecialLocation
       Domain.Action.UI.SpecialLocationWarrior
       Domain.Action.UI.StclMembership
       Domain.Action.UI.SubscriptionTransaction
+      Domain.Action.UI.TicketKapture
       Domain.Action.UI.Tokenization
       Domain.Action.UI.Transporter
       Domain.Action.UI.VehicleDetails
@@ -386,6 +394,7 @@ library
       Domain.Types.OnUpdate
       Domain.Types.Quote
       Domain.Types.RideRoute
+      Domain.Types.TicketKapture
       Domain.Types.UpgradedTier
       Domain.Types.UtilsTH
       Domain.Types.Yudhishthira
@@ -491,6 +500,7 @@ library
       SharedLogic.Payment
       SharedLogic.Person
       SharedLogic.PersonBankAccount
+      SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.Pricing
       SharedLogic.Reminder.Helper
       SharedLogic.Ride
@@ -539,6 +549,7 @@ library
       Storage.Beam.Payment
       Storage.Beam.Quote
       Storage.Beam.SchedulerJob
+      Storage.Beam.Sos
       Storage.Beam.SystemConfigs
       Storage.Beam.Webhook
       Storage.Beam.Yudhishthira
@@ -869,6 +880,7 @@ library
       API.Action.Dashboard.Management.PlanManagement
       API.Action.Dashboard.Management.Revenue
       API.Action.Dashboard.Management.Ride
+      API.Action.Dashboard.Management.SosMedia
       API.Action.Dashboard.Management.System
       API.Action.Dashboard.Management.VehicleInfo
       API.Action.Dashboard.Management.Volunteer
@@ -890,6 +902,7 @@ library
       API.Action.UI.DriverOnboardingV2
       API.Action.UI.DriverProfile
       API.Action.UI.DriverProfileQuestions
+      API.Action.UI.DriverSafetySettings
       API.Action.UI.DriverWallet
       API.Action.UI.EditBooking
       API.Action.UI.FareCalculator
@@ -903,11 +916,13 @@ library
       API.Action.UI.Operator
       API.Action.UI.PayoutDriverStatus
       API.Action.UI.Penalty
+      API.Action.UI.PersonDefaultEmergencyContact
       API.Action.UI.PickupInstructions
       API.Action.UI.PriceBreakup
       API.Action.UI.Reels
       API.Action.UI.ReferralPayout
       API.Action.UI.SocialLogin
+      API.Action.UI.Sos
       API.Action.UI.SpecialLocation
       API.Action.UI.SpecialLocationWarrior
       API.Action.UI.StclMembership
@@ -960,6 +975,7 @@ library
       API.Types.UI.DriverOnboardingV2
       API.Types.UI.DriverProfile
       API.Types.UI.DriverProfileQuestions
+      API.Types.UI.DriverSafetySettings
       API.Types.UI.DriverWallet
       API.Types.UI.EditBooking
       API.Types.UI.FareCalculator
@@ -971,11 +987,13 @@ library
       API.Types.UI.MeterRide
       API.Types.UI.OperationHub
       API.Types.UI.Penalty
+      API.Types.UI.PersonDefaultEmergencyContact
       API.Types.UI.PickupInstructions
       API.Types.UI.PriceBreakup
       API.Types.UI.Reels
       API.Types.UI.ReferralPayout
       API.Types.UI.SocialLogin
+      API.Types.UI.Sos
       API.Types.UI.SpecialLocationWarrior
       API.Types.UI.StclMembership
       API.Types.UI.SubscriptionTransaction

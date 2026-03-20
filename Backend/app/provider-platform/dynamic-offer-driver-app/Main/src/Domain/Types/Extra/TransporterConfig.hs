@@ -76,4 +76,3 @@ instance ToJSON ExotelMapping where
 
 instance FromJSON ExotelMapping where
   parseJSON = withObject "ExotelMapping" $ \v -> ExotelMapping <$> v .: "exotelMap"
-

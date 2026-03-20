@@ -61,6 +61,7 @@ library
       API.Internal.GetPickupInstructions
       API.Internal.Rating
       API.Internal.RideSearchExpired
+      API.Internal.Sos
       API.Internal.StopEvents
       API.Internal.ViolationDetection
       API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
@@ -217,6 +218,7 @@ library
       Domain.Action.Internal.PickupInstructionHandler
       Domain.Action.Internal.Rating
       Domain.Action.Internal.RideSearchExpired
+      Domain.Action.Internal.Sos
       Domain.Action.Internal.StopEvents
       Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.AadhaarVerification
@@ -439,6 +441,7 @@ library
       SharedLogic.EstimateTags
       SharedLogic.External.BbpsService.Flow
       SharedLogic.External.LocationTrackingService.API.NearbyDrivers
+      SharedLogic.External.LocationTrackingService.API.Sos
       SharedLogic.External.LocationTrackingService.API.VehicleTrackingOnRoute
       SharedLogic.External.LocationTrackingService.Flow
       SharedLogic.External.LocationTrackingService.Types
@@ -519,6 +522,7 @@ library
       Storage.Beam.IssueManagement
       Storage.Beam.Payment
       Storage.Beam.SchedulerJob
+      Storage.Beam.Sos
       Storage.Beam.SystemConfigs
       Storage.Beam.Yudhishthira
       Storage.CachedQueries.BecknConfig
@@ -626,7 +630,6 @@ library
       Storage.Queries.PassTypeExtra
       Storage.Queries.PassVerifyTransactionExtra
       Storage.Queries.PaymentInvoiceExtra
-      Storage.Queries.PersonDefaultEmergencyNumberExtra
       Storage.Queries.PersonExtra
       Storage.Queries.PersonStatsExtra
       Storage.Queries.PlaceBasedServiceConfigExtra
@@ -642,7 +645,6 @@ library
       Storage.Queries.RideExtra
       Storage.Queries.RouteDetailsExtra
       Storage.Queries.RoutePolylinesExtra
-      Storage.Queries.SafetySettingsExtra
       Storage.Queries.SavedReqLocationExtra
       Storage.Queries.SearchRequestExtra
       Storage.Queries.ServiceCategoryExtra
@@ -981,7 +983,6 @@ library
       Domain.Types.PaymentTransactionOfferPayout
       Domain.Types.PayoutConfig
       Domain.Types.Person
-      Domain.Types.PersonDefaultEmergencyNumber
       Domain.Types.PersonDisability
       Domain.Types.PersonFlowStatus
       Domain.Types.PersonStats
@@ -1006,7 +1007,6 @@ library
       Domain.Types.RoutePolylines
       Domain.Types.RouteStopCalender
       Domain.Types.RouteTripMapping
-      Domain.Types.SafetySettings
       Domain.Types.SavedReqLocation
       Domain.Types.SearchReqLocation
       Domain.Types.SearchRequest
@@ -1016,7 +1016,6 @@ library
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
-      Domain.Types.Sos
       Domain.Types.SpecialOccasion
       Domain.Types.SpecialZoneQuote
       Domain.Types.StationsExtraInformation
@@ -1143,7 +1142,6 @@ library
       Storage.Beam.PaymentTransactionOfferPayout
       Storage.Beam.PayoutConfig
       Storage.Beam.Person
-      Storage.Beam.PersonDefaultEmergencyNumber
       Storage.Beam.PersonDisability
       Storage.Beam.PersonStats
       Storage.Beam.PickupInstructions
@@ -1167,7 +1165,6 @@ library
       Storage.Beam.RoutePolylines
       Storage.Beam.RouteStopCalender
       Storage.Beam.RouteTripMapping
-      Storage.Beam.SafetySettings
       Storage.Beam.SavedReqLocation
       Storage.Beam.SearchReqLocation
       Storage.Beam.SearchRequest
@@ -1177,7 +1174,6 @@ library
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
-      Storage.Beam.Sos
       Storage.Beam.SpecialOccasion
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.StationsExtraInformation
@@ -1332,7 +1328,6 @@ library
       Storage.Queries.OrphanInstances.PassType
       Storage.Queries.OrphanInstances.PassVerifyTransaction
       Storage.Queries.OrphanInstances.Person
-      Storage.Queries.OrphanInstances.PersonDefaultEmergencyNumber
       Storage.Queries.OrphanInstances.PersonStats
       Storage.Queries.OrphanInstances.PlaceBasedServiceConfig
       Storage.Queries.OrphanInstances.PopularLocation
@@ -1346,7 +1341,6 @@ library
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.RouteDetails
       Storage.Queries.OrphanInstances.RoutePolylines
-      Storage.Queries.OrphanInstances.SafetySettings
       Storage.Queries.OrphanInstances.SavedReqLocation
       Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.OrphanInstances.ServiceCategory
@@ -1376,7 +1370,6 @@ library
       Storage.Queries.PaymentTransactionOfferPayout
       Storage.Queries.PayoutConfig
       Storage.Queries.Person
-      Storage.Queries.PersonDefaultEmergencyNumber
       Storage.Queries.PersonDisability
       Storage.Queries.PersonStats
       Storage.Queries.PickupInstructions
@@ -1400,7 +1393,6 @@ library
       Storage.Queries.RoutePolylines
       Storage.Queries.RouteStopCalender
       Storage.Queries.RouteTripMapping
-      Storage.Queries.SafetySettings
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchReqLocation
       Storage.Queries.SearchRequest
@@ -1410,7 +1402,6 @@ library
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory
-      Storage.Queries.Sos
       Storage.Queries.SpecialOccasion
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.StationsExtraInformation

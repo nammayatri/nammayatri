@@ -103,12 +103,15 @@ import Kernel.Utils.Validation
 import Kernel.Utils.Version
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as Yudhishthira
+import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
+import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import qualified SharedLogic.External.Nandi.Flow as NandiFlow
 import SharedLogic.External.Nandi.Types (GimsVerifyReq (..))
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.OTP as SOTP
 import qualified SharedLogic.Person as SLP
+import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
@@ -117,12 +120,10 @@ import qualified Storage.CachedQueries.MerchantConfig as CQM
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.DepotManager as QDepotManager
 import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.PersonExtra as PersonExtra
 import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
-import Storage.Queries.SafetySettings as QSafety
 import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
 import qualified Tools.MultiModal as MM
@@ -898,7 +899,7 @@ verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   decPerson <- decrypt updPerson
   customerDisability <- B.runInReplica $ PDisability.findByPersonId person.id
   let tag = customerDisability <&> (.tag)
-  safetySettings <- QSafety.findSafetySettingsWithFallback person.id (Just updPerson)
+  safetySettings <- Lib.findSafetySettingsWithFallback (cast person.id) (Lib.getDefaultSafetySettings (cast person.id) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
   isSafetyCenterDisabled <- SLP.checkSafetyCenterDisabled updPerson safetySettings
   let personAPIEntity = SP.makePersonAPIEntity decPerson tag isSafetyCenterDisabled safetySettings
   unless (decPerson.whatsappNotificationEnrollStatus == whatsappNotificationEnroll && isJust whatsappNotificationEnroll) $ do
@@ -1135,7 +1136,7 @@ getPersonOTPChannel personId = do
 updatePersonIdForEmergencyContacts :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBFlow m r) => Id SP.Person -> Text -> Id DMerchant.Merchant -> m ()
 updatePersonIdForEmergencyContacts personId mobileNumber merchantId = do
   dbHash <- getDbHash mobileNumber
-  QPDEN.updateEmergencyContactPersonId dbHash personId merchantId
+  QPDEN.updateEmergencyContactPersonId dbHash (cast personId) (cast merchantId)
 
 generateCustomerReferralCode :: MonadFlow m => m Text
 generateCustomerReferralCode = do

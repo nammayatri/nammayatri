@@ -14,9 +14,11 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.WMB
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.TripTransaction as QTT
 import Tools.Error
+import qualified Tools.Notifications as TN
 
 data ViolationDetectionReq = ViolationDetectionReq
   { rideId :: Id DRide.Ride,
@@ -28,7 +30,7 @@ data ViolationDetectionReq = ViolationDetectionReq
 
 violationDetection :: ViolationDetectionReq -> Flow APISuccess
 violationDetection ViolationDetectionReq {..} = do
-  tripTransaction <- QTT.findByPrimaryKey (cast rideId) >>= fromMaybeM (TripTransactionNotFound rideId.getId)
+  mbTripTransaction <- QTT.findByPrimaryKey (cast rideId)
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   let driverName = driver.firstName <> " " <> (fromMaybe "" driver.lastName)
   driverMobileNumber <- mapM decrypt driver.mobileNumber
@@ -44,10 +46,19 @@ violationDetection ViolationDetectionReq {..} = do
               Redis.setExp (mkReachedStopKey rideId) updatedList 86400
           Nothing -> do
             Redis.setExp (mkReachedStopKey rideId) [location] 86400
+    RouteDeviationDetection _ -> when isViolated $ notifyDriver driver "DRIVER_ROUTE_DEVIATION"
+    StoppedDetection _ -> when isViolated $ notifyDriver driver "DRIVER_RIDE_STOPPAGE"
     _ -> pure ()
-  void $ triggerAlertRequest driverId tripTransaction.fleetOwnerId.getId requestTitle requestBody requestData isViolated tripTransaction
+  whenJust mbTripTransaction $ \tripTransaction ->
+    void $ triggerAlertRequest driverId tripTransaction.fleetOwnerId.getId requestTitle requestBody requestData isViolated tripTransaction
   pure Success
   where
+    notifyDriver driver pnKey = do
+      mbMerchantPN <- CPN.findMatchingMerchantPN driver.merchantOperatingCityId pnKey Nothing Nothing driver.language Nothing
+      whenJust mbMerchantPN $ \merchantPN -> do
+        let entityData = TN.NotifReq {entityId = driver.id.getId, title = merchantPN.title, message = merchantPN.body}
+        TN.notifyDriverOnEvents driver.merchantOperatingCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType
+
     getAlertRequestData :: Text -> Maybe Text -> DTD.DetectionData -> Flow (Text, Text, AlertRequestData)
     getAlertRequestData driverName driverMobileNumber = \case
       OverSpeedingDetection OverSpeedingDetectionData {..} -> do
