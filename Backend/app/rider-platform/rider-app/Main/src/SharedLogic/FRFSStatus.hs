@@ -231,7 +231,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                                 void $ QFRFSTicketBooking.updateFailureReasonById (Just err) booking.id
                                 void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
                                 -- Auto-refund: payment was charged but BPP confirm failed, so initiate refund
-                                void $ SPayment.markRefundPendingAndSyncOrderStatus merchantId_ (Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id) paymentOrder.id
+                                void $ SPayment.markRefundPendingAndSyncOrderStatus merchantId_ person.id paymentOrder.id
                                 return $ makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
                               Right _ -> return $ makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
                           buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
