@@ -92,6 +92,7 @@ ghc-options:
   - -Wall
   - -Wcompat
   - -Widentities
+  - -Werror=unused-imports
   - -fhide-source-paths
   - -fplugin=RecordDotPreprocessor
 

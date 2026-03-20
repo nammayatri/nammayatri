@@ -89,6 +89,7 @@ ghc-options:
   - -Wall
   - -Wcompat
   - -Widentities
+  - -Werror=unused-imports
   - -fplugin=RecordDotPreprocessor
   - -fwrite-ide-info
   - -hiedir=.hie
