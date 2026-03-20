@@ -25,23 +25,21 @@ data StateTransition = StateTransition
   }
   deriving (Generic)
 
-data PaymentEvent = Initiate | Authorize | Capture | Settle | Fail | Refund | Cancel | PAYOUT_STATUS_CHANGED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data PaymentEvent = INITIATE | AUTHORIZE | CAPTURE | SETTLE | FAIL | REFUND | CANCEL | CREDIT | RETRY deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data PaymentState
-  = Pending
-  | Authorized
-  | Captured
-  | Settled
-  | Failed
-  | Refunded
-  | Cancelled
+  = PENDING
+  | AUTHORIZED
+  | CAPTURED
+  | SETTLED
+  | FAILED
+  | REFUNDED
+  | CANCELLED
   | INITIATED
   | PROCESSING
   | CREDITED
   | AUTO_PAY_FAILED
   | RETRYING
-  | FAILED
-  | CANCELLED
   | CASH_PAID
   | CASH_PENDING
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)

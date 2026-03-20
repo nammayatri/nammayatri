@@ -53,12 +53,12 @@ recordRefundsHistory merchantOperatingCityId mbFromStatus toStatus mbMessage ref
   QTransition.create transition
 
 toPaymentState :: Payment.RefundStatus -> ST.PaymentState
-toPaymentState Payment.REFUND_PENDING = ST.Pending
-toPaymentState Payment.REFUND_FAILURE = ST.Failed
-toPaymentState Payment.REFUND_SUCCESS = ST.Refunded
-toPaymentState Payment.MANUAL_REVIEW = ST.Pending
-toPaymentState Payment.REFUND_CANCELED = ST.Cancelled
-toPaymentState Payment.REFUND_REQUIRES_ACTION = ST.Pending
+toPaymentState Payment.REFUND_PENDING = ST.PENDING
+toPaymentState Payment.REFUND_FAILURE = ST.FAILED
+toPaymentState Payment.REFUND_SUCCESS = ST.REFUNDED
+toPaymentState Payment.MANUAL_REVIEW = ST.PENDING
+toPaymentState Payment.REFUND_CANCELED = ST.CANCELLED
+toPaymentState Payment.REFUND_REQUIRES_ACTION = ST.PENDING
 
 getStatusMessage :: Payment.RefundStatus -> Text
 getStatusMessage Payment.REFUND_PENDING = "Refund pending"
@@ -69,9 +69,9 @@ getStatusMessage Payment.REFUND_CANCELED = "Refund cancelled"
 getStatusMessage Payment.REFUND_REQUIRES_ACTION = "Refund requires additional action"
 
 toPaymentEvent :: Payment.RefundStatus -> ST.PaymentEvent
-toPaymentEvent Payment.REFUND_PENDING = ST.Refund
-toPaymentEvent Payment.REFUND_FAILURE = ST.Fail
-toPaymentEvent Payment.REFUND_SUCCESS = ST.Refund
-toPaymentEvent Payment.MANUAL_REVIEW = ST.Refund
-toPaymentEvent Payment.REFUND_CANCELED = ST.Cancel
-toPaymentEvent Payment.REFUND_REQUIRES_ACTION = ST.Refund
+toPaymentEvent Payment.REFUND_PENDING = ST.REFUND
+toPaymentEvent Payment.REFUND_FAILURE = ST.FAIL
+toPaymentEvent Payment.REFUND_SUCCESS = ST.REFUND
+toPaymentEvent Payment.MANUAL_REVIEW = ST.REFUND
+toPaymentEvent Payment.REFUND_CANCELED = ST.CANCEL
+toPaymentEvent Payment.REFUND_REQUIRES_ACTION = ST.REFUND
