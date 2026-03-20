@@ -164,9 +164,16 @@ callCMRLV2APIWithRetry config eulerClientFunc description proxy attempt = do
       logError $ "[CMRLV2:API] API call failed: " <> description <> ", errorCode: " <> show errorCode <> ", attempt: " <> show (attempt + 1)
       case errorCode of
         Just "UNAUTHORIZED" -> do
-          logInfo "[CMRLV2:API] Token expired, refreshing and retrying..."
-          void $ resetAuthToken config
-          callCMRLV2APIWithRetry config eulerClientFunc description proxy attempt
+          if attempt < maxRetries
+            then do
+              logInfo "[CMRLV2:API] Token expired, refreshing and retrying..."
+              void $ resetAuthToken config
+              callCMRLV2APIWithRetry config eulerClientFunc description proxy (attempt + 1)
+            else do
+              logError $ "[CMRLV2:API] All " <> show maxRetries <> " retries exhausted for UNAUTHORIZED on: " <> description
+              case mbError of
+                Just err -> throwError err
+                Nothing -> throwError $ InternalError "CMRL V2 API Failed: UNAUTHORIZED after max retries"
         _ -> do
           if attempt < maxRetries
             then do

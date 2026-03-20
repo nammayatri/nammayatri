@@ -54,7 +54,7 @@ generateQR config ticket = do
       expiryField = ticket.expiry
       refreshField = maybe "" show ticket.refreshAt
       fleetField = fromMaybe "" ticket.fleetNo
-      seatField = fromMaybe "" (T.intercalate "|" <$> ticket.seatLabels)
+      seatField = maybe "" (T.intercalate "|") ticket.seatLabels
       -- Trim trailing empty fields to minimize QR data density
       optionalFields = dropWhileEnd T.null [otpField, colorField, expiryField, refreshField, fleetField, seatField]
       qrData = coreFields <> (if null optionalFields then "" else "," <> T.intercalate "," optionalFields)
@@ -82,10 +82,10 @@ decodeQR config signatureAndQrData = do
   childQuantity' <- req 4 "Missing childQuantity"
   vehicleTypeProviderCode <- req 5 "Missing vehicleTypeProviderCode"
   ticketAmount' <- req 6 "Missing ticketAmount"
-  otpCode' <- req 7 "Missing otpCode"
-  _colorCode <- req 8 "Missing colorCode"
-  expiry <- req 9 "Missing expiry"
-  refreshAt' <- req 10 "Missing refreshAt"
+  let otpCode' = opt 7
+  let _colorCode = opt 8
+  let expiry = opt 9
+  let refreshAt' = opt 10
   let fleetNo' = opt 11
   let seatLabels' = opt 12
   now <- getCurrentTime
