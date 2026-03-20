@@ -8,12 +8,28 @@ imports:
   Sos : Safety.Domain.Types.Sos
   LatLong : Kernel.External.Maps.Types
   ExternalSOSConfig : Domain.Types.RiderConfig
+  Integer: EulerHS.Prelude
 
 module: Sos
 types:
   TriggerApi:
     enum: "POLICE,KAPTURE"
     derive: "HttpInstance"
+
+  ErssStatusUpdateReq:
+    - idSource: Maybe Text
+    - idErss: Text
+    - currentStatus: Text
+    - statusDesc: Maybe Text
+    - comments: Maybe Text
+    - lastUpdatedTime: Maybe Integer
+
+  ErssStatusUpdateRes:
+    - resultCode: Text
+    - resultString: Maybe Text
+    - errorMsg: Maybe Text
+    - message: Maybe Text
+    - payLoad: Maybe Text
 
   SosRes:
     sosId: Id Sos
@@ -216,3 +232,12 @@ apis:
         type: API.Types.UI.Sos.UpdateToRideReq
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
+  # POST /sos/erss/statusUpdate (Webhook for external SOS status update from Police)
+  - POST:
+      endpoint: /sos/erss/statusUpdate
+      auth: NoAuth
+      request:
+        type: API.Types.UI.Sos.ErssStatusUpdateReq
+      response:
+        type: API.Types.UI.Sos.ErssStatusUpdateRes

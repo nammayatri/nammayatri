@@ -9,10 +9,12 @@ import AWS.S3 as S3
 import Control.Applicative
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Foldable as Foldable
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as List
 import Data.Text as T hiding (map)
+import qualified Data.Text.Encoding as TE
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.Time.Format
 import qualified Domain.Action.UI.Call as DUCall
@@ -60,6 +62,7 @@ import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Safety.Storage.Queries.SafetySettingsExtra as QSafetyExtra
+import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import qualified SharedLogic.External.LocationTrackingService.Types as LTSTypes
 import SharedLogic.JobScheduler
@@ -308,8 +311,8 @@ postSosCreate (mbPersonId, _merchantId) req = do
               (Just existing, _) -> pure (Just existing, Nothing, Just True)
               (Nothing, Just sosConfig)
                 | sosConfig.triggerSource == DRC.FRONTEND -> do
-                    (trackingId, specificConfig) <- handleExternalSOS riderPerson sosConfig sosRequest riderPersonId riderPlatformConfig'
-                    pure (trackingId, specificConfig, Just True)
+                  (trackingId, specificConfig) <- handleExternalSOS riderPerson sosConfig sosRequest riderPersonId riderPlatformConfig'
+                  pure (trackingId, specificConfig, Just True)
               _ -> pure (externalReferenceId, sosServiceConfig, externalApiStatus)
             pure (finalExternalReferenceId, kaptureTicketId, dbSosId, finalSosServiceConfig <|> sosServiceConfig, finalExternalApiStatus)
           KAPTURE -> do
@@ -1173,3 +1176,34 @@ extractStateCode _ = Nothing
 flowToSOSService :: DRC.ExternalSOSFlow -> SOS.SOSService
 flowToSOSService DRC.ERSS = SOS.ERSS
 flowToSOSService DRC.GJ112 = SOS.GJ112
+
+postSosErssStatusUpdate :: API.Types.UI.Sos.ErssStatusUpdateReq -> Flow API.Types.UI.Sos.ErssStatusUpdateRes
+postSosErssStatusUpdate req = do
+  erssStatusUpdateRateLimitOptions <- asks (.erssStatusUpdateRateLimitOptions)
+  checkSlidingWindowLimitWithOptions erssStatusUpdateHitsCountKey erssStatusUpdateRateLimitOptions
+  sosDetails <-
+    SafetyQSos.findByExternalReferenceId (Just req.idErss)
+      >>= fromMaybeM (InvalidRequest $ "No SOS found for tracking ID: " <> req.idErss)
+
+  let previousStatus = sosDetails.externalReferenceStatus
+      newStatus = req.currentStatus
+      newEntry = ExternalStatusEntry {status = newStatus, idErss = req.idErss, lastUpdatedTime = req.lastUpdatedTime}
+      existingHistory = maybe [] (\h -> fromMaybe [] (A.decode (LBS.fromStrict $ TE.encodeUtf8 h))) sosDetails.externalStatusHistory :: [ExternalStatusEntry]
+      updatedHistory = existingHistory <> [newEntry]
+      updatedHistoryJson = Just $ TE.decodeUtf8 $ LBS.toStrict $ A.encode updatedHistory
+
+  SafetyQSos.updateExternalReferenceStatus (Just newStatus) updatedHistoryJson sosDetails.id
+
+  when (newStatus == "RESOLVED") $ do
+    SafetyQSos.updateStatus SafetyDSos.Resolved sosDetails.id
+
+  logInfo $ "ERSS status update received for SOS " <> sosDetails.id.getId <> ": " <> fromMaybe "none" previousStatus <> " -> " <> newStatus
+
+  pure $
+    API.Types.UI.Sos.ErssStatusUpdateRes
+      { resultCode = "OPERATION_SUCCESS",
+        resultString = Just "Status update received successfully",
+        errorMsg = Nothing,
+        message = Nothing,
+        payLoad = Nothing
+      }
