@@ -182,7 +182,8 @@ callCMRLV2APIWithRetry config eulerClientFunc description proxy attempt authRefr
       case errorCode of
         Just "UNAUTHORIZED"
           | not authRefreshed -> do
-              logInfo "[CMRLV2:API] Token expired, refreshing and retrying (once)..."
+              logInfo "[CMRLV2:API] Token expired (401), deleting stale cached key and refreshing..."
+              void $ Hedis.del (authTokenKey config.merchantId)
               void $ resetAuthToken config
               callCMRLV2APIWithRetry config eulerClientFunc description proxy attempt True
           | otherwise -> do
