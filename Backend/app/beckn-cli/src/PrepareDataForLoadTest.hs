@@ -67,12 +67,12 @@ prepareDataForLoadTest privateKey nmbOfReq filePath = do
 
 cleanupData :: Text -> L.Flow ()
 cleanupData path = do
-  L.logInfo @Text "GenerateRequestsForLoadTest" "Cleaning up..."
+  L.logDebug @Text "GenerateRequestsForLoadTest" "Cleaning up..."
   L.runIO . removeFile . T.unpack $ path
 
 runK6Script :: Text -> Text -> Int -> L.Flow String
 runK6Script url filePath nmbOfReq = do
-  L.logInfo @Text "GenerateRequestsForLoadTest" "Start K6 script..."
+  L.logDebug @Text "GenerateRequestsForLoadTest" "Start K6 script..."
   L.runSysCmd $
     "k6 run -e LOAD_TEST_URL="
       <> T.unpack url

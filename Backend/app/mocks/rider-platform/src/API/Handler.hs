@@ -35,7 +35,7 @@ handler = trigger :<|> callbackReceiver
 trigger :: Text -> BS.ByteString -> FlowHandler AckResponse
 trigger urlText body = withFlowHandlerBecknAPI' $ do
   url <- parseBaseUrl urlText
-  logInfo $ decodeUtf8 body
+  logDebug $ decodeUtf8 body
   callBAP url body
 
 callBAP ::
@@ -60,5 +60,5 @@ callBAP uri body = do
 
 callbackReceiver :: SignatureAuthResult -> Text -> BS.ByteString -> FlowHandler AckResponse
 callbackReceiver _ action body = withFlowHandlerBecknAPI' $ do
-  logInfo $ "Received " <> action <> " callback with body: " <> decodeUtf8 body
+  logDebug $ "Received " <> action <> " callback with body: " <> decodeUtf8 body
   return Ack
