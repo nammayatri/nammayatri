@@ -781,10 +781,10 @@ calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person sea
       case mmiConfigs.serviceConfig of
         DMSC.MapsServiceConfig mapsCfg -> do
           routeResp <- MapsRoutes.getRoutes (Just searchRequestId.getId) True mapsCfg request
-          logInfo $ "MMI route response: " <> show routeResp
+          logDebug $ "MMI route response: " <> show routeResp
           let routeData = RouteDataEvent (Just $ show MapsK.MMI) (map show routeResp) (Just searchRequestId) merchant.id merchantOperatingCity.id now now
           triggerRouteDataEvent routeData
-        _ -> logInfo "MapsServiceConfig config not found for MMI"
+        _ -> logDebug "MapsServiceConfig config not found for MMI"
 
   shouldCollectRouteData <- asks (.collectRouteData)
   when shouldCollectRouteData $ do
@@ -798,13 +798,13 @@ calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person sea
               let nbShortestReq = NBT.GetRoutesRequest request.waypoints (Just True) (Just 3) (Just "shortest") (Just "flexible")
               nbFastestRouteResponse <- NextBillion.getRoutesWithExtraParameters (Just searchRequestId.getId) msc nbFastestReq
               nbShortestRouteResponse <- NextBillion.getRoutesWithExtraParameters (Just searchRequestId.getId) msc nbShortestReq
-              logInfo $ "NextBillion route responses: " <> show nbFastestRouteResponse <> "\n" <> show nbShortestRouteResponse
+              logDebug $ "NextBillion route responses: " <> show nbFastestRouteResponse <> "\n" <> show nbShortestRouteResponse
               let fastRouteData = RouteDataEvent (Just "NB_Fastest") (map show nbFastestRouteResponse) (Just searchRequestId) (merchant.id) (merchantOperatingCity.id) now now
               let shortRouteData = RouteDataEvent (Just "NB_Shortest") (map show nbShortestRouteResponse) (Just searchRequestId) (merchant.id) (merchantOperatingCity.id) now now
               triggerRouteDataEvent fastRouteData
               triggerRouteDataEvent shortRouteData
-            _ -> logInfo "No NextBillion config"
-        _ -> logInfo "NextBillion route not found"
+            _ -> logDebug "No NextBillion config"
+        _ -> logDebug "NextBillion route not found"
 
   let distanceWeightage = riderConfig.distanceWeightage
       durationWeightage = 100 - distanceWeightage

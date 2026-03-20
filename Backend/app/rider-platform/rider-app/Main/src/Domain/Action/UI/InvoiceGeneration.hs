@@ -121,7 +121,7 @@ generateInvoice (personId, merchantId) req@GenerateInvoiceReq {..} = do
   let totalAmount = calculateTotalFromRides validBookingAPIEntities
       totalCount = length validBookingAPIEntities
 
-  logInfo $ "Filtered bookings: " <> show (length allBookingAPIEntities) <> " total, " <> show totalCount <> " valid (with exactly 1 ride)"
+  logDebug $ "Filtered bookings: " <> show (length allBookingAPIEntities) <> " total, " <> show totalCount <> " valid (with exactly 1 ride)"
 
   -- Step 7: Fork async job to generate PDF and email (uses email from request)
   whenJust email $ \emaill -> do

@@ -2647,7 +2647,7 @@ postMultimodalUpdateBusLocation (mbPersonId, _) mbBusOTP req = do
 
   let topicName = riderConfig.kafkaTopicName
 
-  logInfo $ "Pushing bus location to Kafka for deviceId: " <> deviceMapping.deviceId <> " on topic: " <> topicName
+  logDebug $ "Pushing bus location to Kafka for deviceId: " <> deviceMapping.deviceId <> " on topic: " <> topicName
   let key = deviceMapping.deviceId
 
   fork "Pushing bus location to Kafka" $ do
@@ -2681,7 +2681,7 @@ postStoreTowerInfo (mbPersonId, _) req = do
     validateSignalStrength tower.signalStrength
     validateAreaCode tower.areaCode
 
-  logInfo $
+  logDebug $
     "Received tower info from person: " <> personIdStr
       <> " | Location: ("
       <> show req.userLat

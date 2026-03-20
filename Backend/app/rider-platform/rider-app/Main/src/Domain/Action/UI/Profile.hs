@@ -316,11 +316,11 @@ getPersonDetails ::
   Maybe Text ->
   m ProfileRes
 getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice = do
-  logInfo $ "[Profile.getPersonDetails] START | personId: " <> personId.getId
+  logDebug $ "[Profile.getPersonDetails] START | personId: " <> personId.getId
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  logInfo "[Profile.getPersonDetails] findById done"
+  logDebug "[Profile.getPersonDetails] findById done"
   decPerson <- decrypt person
-  logInfo "[Profile.getPersonDetails] decrypt done"
+  logDebug "[Profile.getPersonDetails] decrypt done"
   personStats <- QPersonStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
   riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let device = getDeviceFromText mbDevice
@@ -331,30 +331,30 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
   tag <- case person.hasDisability of
     Just True -> B.runInReplica $ fmap (.tag) <$> PDisability.findByPersonId personId
     _ -> return Nothing
-  logInfo "[Profile.getPersonDetails] disability check done"
+  logDebug "[Profile.getPersonDetails] disability check done"
 
   cloudType <- asks (.cloudType)
   when ((decPerson.clientBundleVersion /= mbBundleVersion || decPerson.clientSdkVersion /= mbClientVersion || decPerson.clientConfigVersion /= mbClientConfigVersion || decPerson.clientReactNativeVersion /= mbRnVersion || decPerson.clientDevice /= device || person.cloudType /= cloudType) && isJust device) do
     deploymentVersion <- asks (.version)
     void $ QPerson.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion device deploymentVersion.getDeploymentVersion mbRnVersion cloudType
-  logInfo "[Profile.getPersonDetails] version update check done"
+  logDebug "[Profile.getPersonDetails] version update check done"
   when (isJust decPerson.email && not (isValidEmail decPerson.email)) do
     logDebug $ "Invalid email, updating person email to nothing , Previous emailId: " <> show decPerson.email <> " for person id " <> show personId
     let updatedPerson = person {Person.email = Nothing}
     void $ QPerson.updateByPrimaryKey updatedPerson
-  logInfo "[Profile.getPersonDetails] email validation done"
+  logDebug "[Profile.getPersonDetails] email validation done"
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe False (.useCACForFrontend) systemConfigs
   let context' = fromMaybe DAKM.empty (DA.decode $ BSL.pack $ T.unpack $ fromMaybe "{}" context)
-  logInfo $ "[Profile.getPersonDetails] calling getFrontendConfigs, useCACConfig=" <> show useCACConfig
+  logDebug $ "[Profile.getPersonDetails] calling getFrontendConfigs, useCACConfig=" <> show useCACConfig
   frntndfgs <- if useCACConfig then getFrontendConfigs person toss tenant' context' else return $ Just DAKM.empty
-  logInfo "[Profile.getPersonDetails] getFrontendConfigs done"
+  logDebug "[Profile.getPersonDetails] getFrontendConfigs done"
   let mbMd5Digest = T.pack . show . MD5.md5 . DA.encode <$> frntndfgs
   safetySettings <- Lib.findSafetySettingsWithFallback (cast personId) (Lib.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
-  logInfo "[Profile.getPersonDetails] findSafetySettings done"
+  logDebug "[Profile.getPersonDetails] findSafetySettings done"
   isSafetyCenterDisabled_ <- SLP.checkSafetyCenterDisabled person safetySettings
   hasTakenValidRide <- QCP.findAllByPersonId personId
-  logInfo "[Profile.getPersonDetails] findAllByPersonId (ClientPersonInfo) done"
+  logDebug "[Profile.getPersonDetails] findAllByPersonId (ClientPersonInfo) done"
   let hasTakenValidFirstCabRide = validRideCount hasTakenValidRide BecknEnums.CAB
       hasTakenValidFirstAutoRide = validRideCount hasTakenValidRide BecknEnums.AUTO_RICKSHAW
       hasTakenValidFirstBikeRide = validRideCount hasTakenValidRide BecknEnums.MOTORCYCLE
@@ -364,7 +364,7 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
   newCustomerReferralCode <-
     if isNothing person.customerReferralCode
       then do
-        logInfo "[Profile.getPersonDetails] generating new customerReferralCode"
+        logDebug "[Profile.getPersonDetails] generating new customerReferralCode"
         newCustomerReferralCode <- DR.generateCustomerReferralCode
         checkIfReferralCodeExists <- QPerson.findPersonByCustomerReferralCode (Just newCustomerReferralCode)
         if isNothing checkIfReferralCodeExists
@@ -383,7 +383,7 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
           SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId vType DIBC.MULTIMODAL
       )
       vehicleTypes
-  logInfo $ "[Profile.getPersonDetails] findIntegratedBPPConfigs done, count=" <> show (length integratedBPPConfigs)
+  logDebug $ "[Profile.getPersonDetails] findIntegratedBPPConfigs done, count=" <> show (length integratedBPPConfigs)
   let isMultimodalRider = getIsMultimodalRider riderConfig.enableMultiModalForAllUsers decPerson.customerNammaTags integratedBPPConfigs
   -- Check if customer is temporarily blocked and should be unblocked
   fork "Check and unblock customer if temporary block expired" $ do
@@ -396,16 +396,16 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
             logInfo $ "Unblocked customer in profile API, customerId: " <> personId.getId <> " blockedUntil was: " <> show blockedUntilTime
         Nothing -> pure ()
   fork "Check customer cancellation rate blocking" $ CCR.nudgeOrBlockCustomer riderConfig person
-  logInfo "[Profile.getPersonDetails] calling makeProfileRes (includes getGtfsVersion)"
+  logDebug "[Profile.getPersonDetails] calling makeProfileRes (includes getGtfsVersion)"
   makeProfileRes riderConfig decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImage
   where
     makeProfileRes riderConfig Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImageParam = do
-      logInfo $ "[Profile.makeProfileRes] calling getGtfsVersion for " <> show (length integratedBPPConfigs) <> " configs"
+      logDebug $ "[Profile.makeProfileRes] calling getGtfsVersion for " <> show (length integratedBPPConfigs) <> " configs"
       gtfsVersion <-
         withTryCatch "getGtfsVersion:getPersonDetails" (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case
           Left _ -> return (map (.feedKey) integratedBPPConfigs)
           Right gtfsVersions -> return gtfsVersions
-      logInfo "[Profile.makeProfileRes] getGtfsVersion done"
+      logDebug "[Profile.makeProfileRes] getGtfsVersion done"
       return $
         ProfileRes
           { maskedMobileNumber = maskText <$> mobileNumber,

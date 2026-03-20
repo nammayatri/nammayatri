@@ -79,7 +79,7 @@ handleFiringAlert isManual req alert rawPayload = do
   case existingIncidents of
     (existingIncident : _) -> do
       -- Incident already exists, ignore duplicate
-      logInfo $
+      logDebug $
         "Ignoring duplicate firing alert for incident: " <> show existingIncident.id
           <> ", alertName: "
           <> alertName

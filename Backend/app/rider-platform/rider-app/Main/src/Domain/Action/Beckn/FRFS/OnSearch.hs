@@ -168,7 +168,7 @@ upsertFareCache ::
   ValidatedDOnSearch ->
   m ()
 upsertFareCache onSearchReq validatedReq = do
-  logInfo $ "Upserting fare cache for search: " <> onSearchReq.transactionId
+  logDebug $ "Upserting fare cache for search: " <> onSearchReq.transactionId
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity validatedReq.search
 
   updatedQuotes <- case integratedBPPConfig.providerConfig of
@@ -190,13 +190,13 @@ upsertFareCache onSearchReq validatedReq = do
   if null quotesCreatedByCache
     then do
       -- No existing quotes found, create new ones
-      logInfo $ "No existing quotes found for search " <> onSearchReq.transactionId <> ", creating new quotes"
+      logDebug $ "No existing quotes found for search " <> onSearchReq.transactionId <> ", creating new quotes"
       let quotes = map fst quotesWithCategories
       QQuote.createMany quotes
       QFRFSQuoteCategory.createMany quoteCategories
     else do
       -- Existing quotes found: update matched ones and create any new quotes from BPP that we don't have yet
-      logInfo $ "Found " <> show (length quotesCreatedByCache) <> " existing quotes for search " <> onSearchReq.transactionId <> ", updating them"
+      logDebug $ "Found " <> show (length quotesCreatedByCache) <> " existing quotes for search " <> onSearchReq.transactionId <> ", updating them"
       quotesCreatedByCacheWithQuoteCategories <-
         mapM
           ( \quote -> do
@@ -209,7 +209,7 @@ upsertFareCache onSearchReq validatedReq = do
       for_ zippedQuotesWithQuoteCategories updateQuoteCategoriesFromOnSearch
       -- Create any new quotes from ONDC on_search that don't have a cache entry yet
       when (not $ null newQuotesFromBpp) $ do
-        logInfo $ "Creating " <> show (length newQuotesFromBpp) <> " new quote(s) from BPP on_search for search " <> onSearchReq.transactionId
+        logDebug $ "Creating " <> show (length newQuotesFromBpp) <> " new quote(s) from BPP on_search for search " <> onSearchReq.transactionId
         let newQuotes = map fst newQuotesFromBpp
             newQuoteCategories = concatMap snd newQuotesFromBpp
         QQuote.createMany newQuotes
@@ -231,7 +231,7 @@ upsertFareCache onSearchReq validatedReq = do
   fork "Refreshing Route Stop Fare Cache" $ do
     logDebug $ "[FARE_CACHE_REFRESH] Starting fare cache refresh for " <> show (length updatedOnSearchReq.quotes) <> " quotes"
     upsertRouteStopFare updatedOnSearchReq.quotes integratedBPPConfig validatedReq.search.merchantId validatedReq.search.merchantOperatingCityId
-  logInfo $ "Fare cache refresh completed for search: " <> onSearchReq.transactionId
+  logDebug $ "Fare cache refresh completed for search: " <> onSearchReq.transactionId
   where
     updateQuote integratedBppConfig quote = do
       stations <-

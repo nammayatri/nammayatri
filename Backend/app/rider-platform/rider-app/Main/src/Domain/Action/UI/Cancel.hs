@@ -173,7 +173,7 @@ cancel booking mRide req cancellationSource = do
                   logWarning $ "Invalid disToPickup received: " <> show disToPickup
                   pure Nothing
                 else do
-                  logInfo $ "Valid disToPickup received: " <> show disToPickup
+                  logDebug $ "Valid disToPickup received: " <> show disToPickup
                   pure $ Just disToPickup
             buildBookingCancellationReason (Just res'.currPoint) disToPickupUpd (Just ride.id)
           Left err -> do

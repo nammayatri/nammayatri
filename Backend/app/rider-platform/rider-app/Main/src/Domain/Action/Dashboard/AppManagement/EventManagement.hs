@@ -770,7 +770,7 @@ invalidateTicketPlaceAvailabilityCache placeId = do
     let cacheKey = mkTicketPlaceAvailabilityCacheKey placeId month
     Redis.del cacheKey
 
-  logInfo $ "Invalidated availability cache for place: " <> placeId.getId
+  logDebug $ "Invalidated availability cache for place: " <> placeId.getId
   where
     mkTicketPlaceAvailabilityCacheKey :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Int -> Text
     mkTicketPlaceAvailabilityCacheKey placeId' month =

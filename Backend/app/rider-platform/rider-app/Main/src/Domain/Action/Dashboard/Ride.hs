@@ -655,8 +655,8 @@ cancellationChargesWaiveOffCore merchant booking ride = do
               logError $ "CancellationChargesWaiveOff: Failed to waive off cancellation charges for bookingId: " <> booking.id.getId <> " with error: " <> show err
               pure (Nothing, False)
         Nothing -> do
-          logInfo $ "CancellationChargesWaiveOff: No bppBookingId found for bookingId: " <> booking.id.getId
+          logDebug $ "CancellationChargesWaiveOff: No bppBookingId found for bookingId: " <> booking.id.getId
           pure (Nothing, False)
     _ -> do
-      logInfo $ "CancellationChargesWaiveOff: No non-zero cancellation charges found for bookingId: " <> booking.id.getId
+      logDebug $ "CancellationChargesWaiveOff: No non-zero cancellation charges found for bookingId: " <> booking.id.getId
       pure (Nothing, False)

@@ -230,10 +230,10 @@ callExternalSOS sosId mbComments = do
       mbSosLoc <- SOSLocation.getSosRiderLocation sosId
       case mbSosLoc of
         Just sosLoc -> do
-          logInfo $ "Using SOS rider location from Redis for sosId: " <> sosId.getId
+          logDebug $ "Using SOS rider location from Redis for sosId: " <> sosId.getId
           pure $ Just $ LatLong sosLoc.lat sosLoc.lon
         Nothing -> do
-          logInfo $ "SOS rider location not found, trying driver location for sosId: " <> sosId.getId
+          logDebug $ "SOS rider location not found, trying driver location for sosId: " <> sosId.getId
           case rideId of
             Just rid -> do
               driverLocResp <- withTryCatch "getDriverLoc:callExternalSOS" $ SRide.getDriverLoc rid
