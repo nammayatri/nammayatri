@@ -63,7 +63,7 @@ import Data.List (nub, nubBy, partition)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import Data.Time (UTCTime (..), defaultTimeLocale, diffTimeToPicoseconds, formatTime, parseTimeM)
+import Data.Time (defaultTimeLocale, formatTime, parseTimeM)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.BBPS as BBPS
 import qualified Domain.Action.UI.Dispatcher as Dispatcher
@@ -2312,14 +2312,18 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
           True
           False
           False
-      let UTCTime _date secondsDiffTimeTillNow = CQMMB.utcToIST currentTime
-      let secondsTillNow = fromIntegral $ div (diffTimeToPicoseconds secondsDiffTimeTillNow) 1000000000000
-      let filteredRoutesByTiming = map (\routeByTier -> routeByTier {RD.availableRoutesInfo = filter (\route -> not . null $ filter (\timing -> timing - secondsTillNow > 0 && timing - secondsTillNow < 7200) route.routeTimings) routeByTier.availableRoutesInfo}) availableRoutesByTier
-      let (liveBuses, staticBuses) = partition (\route -> route.source == LIVE) filteredRoutesByTiming
-      let filteredRoutes =
-            if req.onlyLive
-              then liveBuses
-              else liveBuses <> staticBuses
+      let filteredRoutesByTiming =
+            map
+              ( \routeByTier ->
+                  routeByTier
+                    { RD.availableRoutesInfo =
+                        filter
+                          (\route -> any (\timing -> timing > Seconds 0 && timing < Seconds 7200) route.routeTimings)
+                          routeByTier.availableRoutesInfo
+                    }
+              )
+              availableRoutesByTier
+      let filteredRoutes = filter (\route -> not req.onlyLive || route.source == LIVE) filteredRoutesByTiming
       case mbSourceOfServiceTier of
         Just DRC.QUOTES -> do
           availableRoutes <- concatMapM (convertToAvailableRouteWithQuotes integratedBPPConfig person frfsQuotes) filteredRoutes
