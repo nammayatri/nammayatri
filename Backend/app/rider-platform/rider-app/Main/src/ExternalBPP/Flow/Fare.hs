@@ -66,7 +66,7 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
           firstRoute.startStopCode lastRoute.endStopCode
           serviceTier
       setCacheKey = buildCacheKeySuffix subwayFareDetail <&> \suffix -> (baseCacheKey <> suffix, getCacheTTL)
-      getCacheKey = buildCacheKeySuffix subwayFareDetail <&> \suffix -> (baseCacheKey <> suffix, getCacheFilterFn subwayFareDetail)
+      getCacheKey = buildCacheKeySuffix subwayFareDetail <&> \suffix -> (baseCacheKey <> suffix, getCacheFilterFn)
 
   -- Get threshold for 2x probing
   let failureThreshold = CB.getFirstThresholdFailureCount apiConfig
@@ -107,15 +107,12 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
       CRIS _ -> "-"
       _ -> firstRoute.routeCode
 
-    getCacheFilterFn :: Maybe CallAPI.SubwayFareDetail -> ([FRFSFare] -> [FRFSFare])
-    getCacheFilterFn subwayFareDetail = case integratedBPPConfig.providerConfig of
+    getCacheFilterFn :: [FRFSFare] -> [FRFSFare]
+    getCacheFilterFn = case integratedBPPConfig.providerConfig of
       CRIS _ -> case (fareRoute.mbProviderRouteId, isSingleMode) of
         (Just routeId, True) ->
           filter (\fare -> maybe False (\fd -> fd.providerRouteId == routeId) fare.fareDetails)
-        _ -> case (subwayFareDetail, isSingleMode) of
-          (Just subwayFareDetail', True) ->
-            filter (\fare -> maybe False (\fd -> fd.via == subwayFareDetail'.rawChangeOver) fare.fareDetails)
-          _ -> P.id
+        _ -> P.id
       _ -> P.id
 
     -- When circuit is OPEN: clear cache and try canary request
