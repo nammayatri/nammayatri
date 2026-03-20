@@ -30,7 +30,6 @@ import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.Notifications as Notify
 import Data.Time (UTCTime (..), utctDay)
-import Data.Time.Calendar (addDays)
 
 -- | Trigger IffcoTokio insurance for a driver at ride start.
 -- Skips if (1) config not set for the city, (2) driver already insured today (same local calendar day),
