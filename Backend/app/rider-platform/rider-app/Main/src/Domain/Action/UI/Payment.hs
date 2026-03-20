@@ -558,7 +558,7 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
       logError $ "Juspay webhook processing failed: " <> show err
       -- Dead-letter the raw callback payload for monitoring and manual replay
       now <- getCurrentTime
-      let deadLetterEntry = show value <> "|" <> show now <> "|" <> show err
+      let deadLetterEntry = show value <> "|" <> show now <> "|" <> show err :: Text
       Redis.rPush "juspay:webhook:dead-letter" (deadLetterEntry :| [])
     Right _ -> pure ()
   pure Ack
