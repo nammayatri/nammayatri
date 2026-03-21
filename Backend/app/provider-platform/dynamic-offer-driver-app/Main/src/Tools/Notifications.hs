@@ -40,6 +40,7 @@ import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.SearchTry
 import Domain.Types.ServiceTierType
+import qualified Domain.Types.SpecialZoneQueueRequest as DSZQR
 import Domain.Types.Trip as Trip
 import qualified Domain.Types.TripTransaction as DTT
 import qualified EulerHS.Prelude hiding (null)
@@ -1654,3 +1655,30 @@ sendPickupInstructionNotification merchantOpCityId driver entityData = do
   logInfo $ "PickupInstructionNotification: Notification data: " <> show notificationData
   -- Send notification
   FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) (clearDeviceToken driver.id) notificationData (FCMNotificationRecipient driver.id.getId driver.deviceToken) EulerHS.Prelude.id
+
+notifyPickupZoneRequest ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Id DSZQR.SpecialZoneQueueRequest ->
+  Text ->
+  Text ->
+  UTCTime ->
+  m ()
+notifyPickupZoneRequest merchantOpCityId driverId requestId gateName specialLocationName _validTill = do
+  driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  let lang = fromMaybe ENGLISH driver.language
+  dynamicFCMNotifyPerson
+    merchantOpCityId
+    driverId
+    driver.deviceToken
+    lang
+    Nothing
+    (createFCMReq "PICKUP_ZONE_REQUEST" requestId.getId FCM.Person identity)
+    (Nothing :: Maybe EmptyDynamicParam)
+    [ ("gateName", gateName),
+      ("specialLocationName", specialLocationName)
+    ]
+    Nothing

@@ -95,6 +95,7 @@ import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
+import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import SharedLogic.TollsDetector
 import qualified SharedLogic.Type as SLT
 import qualified SharedLogic.VehicleServiceTierAreaRestriction as VSTAR
@@ -381,7 +382,14 @@ handler ValidatedDSearchReq {..} sReq = do
     getSpecialPickupZoneInfo (Just _) fromLocation = do
       mbPickupZone <- Esq.runInReplica $ findGateInfoByLatLongWithoutGeoJson (LatLong fromLocation.lat fromLocation.lon)
       if ((.canQueueUpOnGate) <$> mbPickupZone) == Just True
-        then pure $ ((.id.getId) <$> mbPickupZone, (.id.getId) <$> mbPickupZone, fmap (toHighPrecMoney . Money) . (.defaultDriverExtra) =<< mbPickupZone) -- FIXME
+        then do
+          -- Increment demand and trigger async supply check for demand-based driver requirement
+          whenJust mbPickupZone $ \pickupZone ->
+            when (isJust pickupZone.minDriverThreshold) $ do
+              SpecialZoneDriverDemand.incrementGateSearchDemand pickupZone.id.getId
+              fork "specialZoneDriverDemandCheck" $
+                SpecialZoneDriverDemand.checkAndNotifyDriverDemand merchantOpCityId merchant.id pickupZone
+          pure $ ((.id.getId) <$> mbPickupZone, (.id.getId) <$> mbPickupZone, fmap (toHighPrecMoney . Money) . (.defaultDriverExtra) =<< mbPickupZone) -- FIXME
         else pure ((.id.getId) <$> mbPickupZone, Nothing, Nothing)
 
     combineFarePoliciesProducts :: [FarePoliciesProduct] -> FarePoliciesProduct

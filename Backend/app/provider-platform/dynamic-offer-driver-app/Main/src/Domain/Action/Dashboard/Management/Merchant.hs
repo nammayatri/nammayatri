@@ -2965,6 +2965,10 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             merchantId = specialLocation.merchantId,
             merchantOperatingCityId = specialLocation.merchantOperatingCityId,
             entryFeeAmount = Nothing,
+            minDriverThreshold = Nothing,
+            demandThreshold = Nothing,
+            notificationCooldownInSec = Nothing,
+            maxRideSkipsBeforeQueueRemoval = Nothing,
             ..
           }
 
