@@ -1871,8 +1871,8 @@ instance FromNamedRecord FarePolicyCSVRow where
 merchantCityLockKey :: Text -> Text
 merchantCityLockKey id = "Driver:MerchantOperating:CityId-" <> id
 
-ambulanceSlabsCreateLockKey :: Text
-ambulanceSlabsCreateLockKey = "Driver:FarePolicy:AmbulanceSlabs:CreateLock"
+ambulanceSlabsCreateLockKey :: Text -> Text
+ambulanceSlabsCreateLockKey cityId = "Driver:FarePolicy:AmbulanceSlabs:CreateLock:CityId-" <> cityId
 
 -- | Export all enabled fare policies for a merchant operating city as CSV
 getMerchantConfigFarePolicyExport :: ShortId DM.Merchant -> Context.City -> Flow Text
@@ -2219,12 +2219,20 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       flatFarePolicies <- readCsv merchant.id merchantOpCity.distanceUnit req.file merchantOpCity.id
       logTagInfo "Read file: " (show flatFarePolicies)
       let boundedAlreadyDeletedMap = Map.empty :: Map.Map Text Bool
-      (farePolicyErrors, _) <- (foldlM (processFarePolicyGroup merchantOpCity) ([], boundedAlreadyDeletedMap) . groupFarePolices) flatFarePolicies
-      return $
-        Common.UpsertFarePolicyResp
-          { unprocessedFarePolicies = farePolicyErrors,
-            success = "Fare Policies updated successfully"
-          }
+      foldResult <- try $ (foldlM (processFarePolicyGroup merchantOpCity) ([], boundedAlreadyDeletedMap, []) . groupFarePolices) flatFarePolicies
+      case foldResult of
+        Right (farePolicyErrors, _, productsToInvalidate) -> do
+          let uniqueProducts = DL.nubBy (\a b -> a.merchantOperatingCityId == b.merchantOperatingCityId && a.vehicleServiceTier == b.vehicleServiceTier && a.tripCategory == b.tripCategory && a.area == b.area) productsToInvalidate
+          forM_ uniqueProducts CQFProduct.clearCache
+          return $
+            Common.UpsertFarePolicyResp
+              { unprocessedFarePolicies = farePolicyErrors,
+                success = "Fare Policies updated successfully"
+              }
+        Left (e :: SomeException) -> do
+          logTagError "FarePolicyUpsert" $ "Error during fare policy group processing, clearing city cache: " <> show e
+          CQFProduct.clearCacheById merchantOpCity.id
+          throwError $ InvalidRequest (show e)
   case result of
     Right res -> return res
     Left _ -> throwError $ InvalidRequest "Someone already triggered this api"
@@ -2240,12 +2248,12 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       where
         fst7 (dr, c, t, tr, a, tb, ss, en, _) = (dr, c, t, tr, a, tb, ss, en)
 
-    processFarePolicyGroup :: DMOC.MerchantOperatingCity -> ([Text], Map.Map Text Bool) -> [(Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)] -> Flow ([Text], Map.Map Text Bool)
+    processFarePolicyGroup :: DMOC.MerchantOperatingCity -> ([Text], Map.Map Text Bool, [DFareProduct.FareProduct]) -> [(Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)] -> Flow ([Text], Map.Map Text Bool, [DFareProduct.FareProduct])
     processFarePolicyGroup _ _ [] = throwError $ InvalidRequest "Empty Fare Policy Group"
-    processFarePolicyGroup merchantOpCity (errors, boundedAlreadyDeletedMap) (x : xs) = do
+    processFarePolicyGroup merchantOpCity (errors, boundedAlreadyDeletedMap, pendingCacheClear) (x : xs) = do
       let (disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBounds, searchSource, enabled', firstFarePolicy) = x
       if city /= opCity
-        then return $ (errors <> ["Can't process fare policy for different city: " <> show city <> ", please login with this city in dashboard"], boundedAlreadyDeletedMap)
+        then return $ (errors <> ["Can't process fare policy for different city: " <> show city <> ", please login with this city in dashboard"], boundedAlreadyDeletedMap, pendingCacheClear)
         else do
           let mergeFarePolicy newId firstFarePolicy'@FarePolicy.FarePolicy {..} = do
                 let remainingfarePolicies = map (\(_, _, _, _, _, _, _, _, fp) -> fp) xs
@@ -2364,12 +2372,12 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
               belowMinMsg = "Base fare is below the minimum base fare for this city (area: " <> show area <> ", vehicleServiceTier: " <> show vehicleServiceTier <> ", tripCategory: " <> show tripCategory <> ")."
               newErrors = if anyBelowMin then errors <> [belowMinMsg] else errors
           if anyBelowMin && not allowUpdate
-            then return (newErrors, boundedAlreadyDeletedMap)
+            then return (newErrors, boundedAlreadyDeletedMap, pendingCacheClear)
             else do
               CQFP.create finalFarePolicy
               case finalFarePolicy.farePolicyDetails of
                 FarePolicy.AmbulanceDetails details ->
-                  Hedis.withLockRedis ambulanceSlabsCreateLockKey 60 $ do
+                  Hedis.withLockRedis (ambulanceSlabsCreateLockKey merchantOpCity.id.getId) 60 $ do
                     QueriesFPAD.delete finalFarePolicy.id
                     forM_ (NE.toList details.slabs) $ \slab ->
                       QueriesFPAD.create (finalFarePolicy.id, slab)
@@ -2394,16 +2402,14 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                 fareProducts <- CQFProduct.findAllFareProductByFarePolicyId fp.farePolicyId
                 when (length fareProducts == 1) $ CQFP.delete fp.farePolicyId
                 CQFProduct.delete fp.id
-                CQFProduct.clearCache fp
 
               id <- generateGUID
               let farePolicyId = finalFarePolicy.id
               let fareProduct = DFareProduct.FareProduct {enabled = enabled', merchantId = merchantOpCity.merchantId, merchantOperatingCityId = merchantOpCity.id, ..}
               CQFProduct.create fareProduct
-              CQFProduct.clearCache fareProduct
-              oldFareProducts `forM_` CQFProduct.clearCache
 
-              return (newErrors, newBoundedAlreadyDeletedMap)
+              -- Collect products for batch cache clear at end (old products + new product)
+              return (newErrors, newBoundedAlreadyDeletedMap, pendingCacheClear <> oldFareProducts <> [fareProduct])
 
     checkIfvehicleServiceTierExists vehicleServiceTier merchanOperatingCityId = CQVST.findByServiceTierTypeAndCityId merchanOperatingCityId vehicleServiceTier (Just []) >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
 
