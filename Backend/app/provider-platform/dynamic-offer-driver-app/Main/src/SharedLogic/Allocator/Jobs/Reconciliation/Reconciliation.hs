@@ -33,11 +33,13 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id (Id (..), cast)
 import Kernel.Utils.Common
+import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerEntry
 import qualified Lib.Finance.Domain.Types.ReconciliationEntry as ReconEntry
 import qualified Lib.Finance.Domain.Types.ReconciliationSummary as ReconSummary
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Queries.DirectTaxTransactionExtra as QDirectTax
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedger
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerExtra
@@ -197,7 +199,8 @@ doReconciliationDsrVsLedger merchantId merchantOpCityId startTime endTime now = 
   entries <- forM bookings $ \booking -> do
     ledgerEntries <- ledgerEntriesForBookingInRange booking.id.getId startTime endTime
     indirectTaxTxns <- QIndirectTax.findByReferenceId booking.id.getId
-    mEntry <- processDsrVsLedger booking ledgerEntries indirectTaxTxns now
+    directTaxTxns <- QDirectTax.findByReferenceId booking.id.getId
+    mEntry <- processDsrVsLedger booking ledgerEntries indirectTaxTxns directTaxTxns now
     return mEntry
 
   -- Filter valid entries - only include entries where domain reconciliation hasn't already set a status
@@ -517,15 +520,16 @@ processDsrVsLedger ::
   DB.Booking ->
   [LedgerEntry.LedgerEntry] ->
   [IndirectTax.IndirectTaxTransaction] ->
+  [DirectTax.DirectTaxTransaction] ->
   UTCTime ->
   m (Maybe ReconEntry.ReconciliationEntry)
-processDsrVsLedger booking ledgerEntries indirectTaxTxns now = do
+processDsrVsLedger booking ledgerEntries indirectTaxTxns directTaxTxns now = do
   rides <- QRide.findRidesByBookingId [booking.id]
   let dcoId = (.driverId.getId) <$> listToMaybe rides
       mbRide = listToMaybe rides
   rideFareParams <- maybe (pure Nothing) (\ride -> maybe (pure Nothing) (QFareParams.findById) ride.fareParametersId) mbRide
   let
-      dsrResult = DomainRecon.runDsrVsLedgerComparison booking mbRide rideFareParams ledgerEntries indirectTaxTxns
+      dsrResult = DomainRecon.runDsrVsLedgerComparison booking mbRide rideFareParams ledgerEntries indirectTaxTxns directTaxTxns
 
   entryId <- generateGUID
   let inp =
