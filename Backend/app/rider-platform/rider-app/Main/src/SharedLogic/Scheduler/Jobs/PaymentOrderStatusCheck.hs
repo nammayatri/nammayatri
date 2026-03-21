@@ -44,6 +44,7 @@ import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
+import qualified Domain.Types.Person as DPerson
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Metrics.BAPMetrics as Metrics
 import qualified Tools.Payment as Payment
@@ -150,6 +151,7 @@ processPaymentOrder merchantId merchantOperatingCityId paymentOrder = do
     isFRFSPaymentType Payment.FRFSMultiModalBooking = True
     isFRFSPaymentType _ = False
 
+    autoRefundPaymentWithNoTicket :: Id DM.Merchant -> DOrder.PaymentOrder -> DPerson.Person -> m ()
     autoRefundPaymentWithNoTicket mId order person = do
       bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId order.id
       forM_ bookingPayments $ \bookingPayment -> do
