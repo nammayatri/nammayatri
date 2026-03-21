@@ -121,6 +121,10 @@ getFare integrationBPPConfig config _riderId fareReq = do
     (fareItem : _) -> do
       if fareItem.returnCode == "0"
         then do
+          -- Validate fare response: finalFare must be positive
+          when (fareItem.finalFare <= 0) $ do
+            logError $ "[CMRLV2:GetFare] Invalid fare value: finalFare=" <> T.pack (show fareItem.finalFare) <> " for " <> fareReq.fromStationId <> " -> " <> fareReq.toStationId
+            throwError $ InternalError $ "Invalid fare: finalFare=" <> T.pack (show fareItem.finalFare) <> " for route " <> fareReq.fromStationId <> " -> " <> fareReq.toStationId
           let originalPrice = HighPrecMoney $ toRational fareItem.fareBeforeDiscount
               offeredPrice = HighPrecMoney $ toRational fareItem.finalFare
           logDebug $ "[CMRLV2:GetFare] Using API values - fareBeforeDiscount: " <> T.pack (show fareItem.fareBeforeDiscount) <> ", finalFare: " <> T.pack (show fareItem.finalFare) <> ", discountAmount: " <> T.pack (show fareItem.discountAmount)
