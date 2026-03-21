@@ -285,8 +285,8 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
                 "distToPickupMeters" A..= disToPickup,
                 "estimatedDistance" A..= booking'.estimatedDistance,
                 "estimatedFare" A..= booking'.estimatedFare,
-                "source" A..= show source,
-                "reasonCode" A..= show reasonCode
+                "source" A..= (show source :: Text),
+                "reasonCode" A..= (show reasonCode :: Text)
               ]
           enrichedAdditionalInfo = case additionalInfo of
             Just info -> Just $ info <> " | " <> TL.toStrict (TLE.decodeUtf8 (A.encode cancellationMeta))
