@@ -26,6 +26,11 @@ import Kernel.Utils.Time (getClockTimeInMs)
 import Prometheus as P
 import Tools.Metrics.ARDUBPPMetrics.Types as Reexport
 
+incrementPrematureArrivalBlocked :: (MonadIO m, HasBPPMetrics m r) => Text -> m ()
+incrementPrematureArrivalBlocked city = do
+  bmContainer <- asks (.bppMetrics)
+  liftIO $ P.withLabel bmContainer.prematureArrivalBlocked city P.incCounter
+
 putFareAndDistanceDeviations :: (MonadIO m, HasBPPMetrics m r) => Text -> Money -> Meters -> m ()
 putFareAndDistanceDeviations agencyName fareDiff distanceDiff = do
   countingDeviationMetric <- asks (.bppMetrics.countingDeviation)

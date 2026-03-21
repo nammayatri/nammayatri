@@ -101,6 +101,7 @@ import qualified Storage.Queries.StopInformation as QSI
 import Storage.Queries.Vehicle as QVeh
 import qualified Text.Read as TR (read)
 import Tools.Error
+import Tools.Metrics (HasBPPMetrics, incrementPrematureArrivalBlocked)
 import qualified Tools.Notifications as TN
 import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
@@ -221,15 +222,20 @@ listDriverRides driverId mocId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay 
     Nothing -> return driverRideLis
   pure . DriverRideListRes $ sortOn (Down . (.bookingType)) filteredRides
 
-arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Id DRide.Ride -> LatLong -> m APISuccess
+arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig], HasBPPMetrics m r) => Id DRide.Ride -> LatLong -> m APISuccess
 arrivedAtPickup rideId req = do
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus ("The ride has already started." <> Text.pack (show ride.status))
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let pickupLoc = getCoordinates booking.fromLocation
   let distance = distanceBetweenInMeters req pickupLoc
-  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  unless (distance < transporterConfig.arrivedPickupThreshold) $ throwError $ DriverNotAtPickupLocation ride.driverId.getId
+  -- Premature arrival detection: block >500m, warn 300-500m
+  when (distance > 500) $ do
+    incrementPrematureArrivalBlocked booking.merchantOperatingCityId.getId
+    logError $ "Premature arrival blocked: driver " <> ride.driverId.getId <> " attempted arrival " <> Text.pack (show distance) <> " from pickup for ride " <> rideId.getId
+    throwError $ DriverNotAtPickupLocation ride.driverId.getId
+  when (distance >= 300 && distance <= 500) $
+    logInfo $ "Premature arrival warning: driver " <> ride.driverId.getId <> " marked arrival " <> Text.pack (show distance) <> " from pickup for ride " <> rideId.getId
   unless (isJust ride.driverArrivalTime) $ do
     now <- getCurrentTime
     QRide.updateArrival rideId now
