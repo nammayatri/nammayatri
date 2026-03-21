@@ -71,7 +71,7 @@ updateWhatsappProvidersPriorityList whatsappProvidersPriorityList merchantOperat
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCache merchantOperatingCityId = do
-  Hedis.del (makeMerchantOperatingCityIdKey merchantOperatingCityId)
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantOperatingCityIdKey merchantOperatingCityId)
 
 updateMerchantServiceUsageConfig :: (CacheFlow m r, EsqDBFlow m r) => MerchantServiceUsageConfig -> m ()
 updateMerchantServiceUsageConfig = Queries.updateMerchantServiceUsageConfig

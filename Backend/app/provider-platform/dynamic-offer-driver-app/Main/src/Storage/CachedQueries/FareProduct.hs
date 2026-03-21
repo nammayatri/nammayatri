@@ -142,7 +142,7 @@ delete :: (Esq.EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id FareProduct -> m
 delete = Queries.delete
 
 clearCache :: CacheFlow m r => FareProduct -> m ()
-clearCache FareProduct {..} = Hedis.withCrossAppRedis $ do
+clearCache FareProduct {..} = Hedis.runInMultiCloudRedisWrite $ Hedis.withCrossAppRedis $ do
   let allPossibleSearchSoruces = [[ALL], [ALL, MOBILE_APP], [ALL, DASHBOARD]]
   allPossibleSearchSoruces `forM_` \searchSources -> do
     Hedis.del (makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey merchantOperatingCityId searchSources tripCategory area)
@@ -153,6 +153,6 @@ clearCache FareProduct {..} = Hedis.withCrossAppRedis $ do
     Hedis.del (makeBoundedFareProductByMerchantVariantAreaKey merchantOperatingCityId searchSources tripCategory vehicleServiceTier area)
 
 clearCacheById :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
-clearCacheById merchantOperatingCityId = do
+clearCacheById merchantOperatingCityId = Hedis.runInMultiCloudRedisWrite $ do
   Hedis.del (makeFareProductByMerchantOpCityIdKey merchantOperatingCityId)
   Hedis.del (makeSupportedServiceTiersKey merchantOperatingCityId)
