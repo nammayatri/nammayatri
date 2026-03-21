@@ -542,7 +542,12 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
     buildTicket issue category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity merchantCfg now iHandle = do
       info <- buildRideInfo moCity now mbRide mbRideInfoRes mbFRFSTicketBooking person iHandle
       phoneNumber <- mapM decrypt person.mobileNumber
-      let dashboardMediaFileUrls = maybe [] pure (generateDashboardRideInfoUrl merchantCfg mbRide)
+      let merchantShortId = moCity.merchantShortId.getShortId
+          dashboardCityCode =
+            case A.toJSON moCity.city of
+              A.String code -> code
+              _ -> show moCity.city
+          dashboardMediaFileUrls = maybe [] pure (generateDashboardRideInfoUrl merchantCfg mbRide merchantShortId dashboardCityCode)
       return $
         TIT.CreateTicketReq
           { category = category.category,
@@ -687,13 +692,17 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
       DRIVER -> TIT.DRIVER
       CUSTOMER -> TIT.CUSTOMER
 
-    generateDashboardRideInfoUrl :: MerchantConfig -> Maybe Ride -> Maybe Text
-    generateDashboardRideInfoUrl merchantConfig mbRide =
-      case (merchantConfig.dashboardMediaFileUrlPattern, (.id.getId) <$> mbRide) of
-        (Just filePattern, Just rideIdText) ->
+    generateDashboardRideInfoUrl :: MerchantConfig -> Maybe Ride -> Text -> Text -> Maybe Text
+    generateDashboardRideInfoUrl merchantConfig mbRide merchantShortId cityCode =
+      case (merchantConfig.dashboardMediaFileUrlPattern, mbRide) of
+        (Just filePattern, Just rideInfo) ->
           Just $
             filePattern
-              & T.replace "<RIDE_ID>" rideIdText
+              & T.replace "<RIDES_OR_SOS>" "rides"
+              & T.replace "<ID>" rideInfo.id.getId
+              & T.replace "<RIDE_ID>" rideInfo.id.getId
+              & T.replace "<MERCHANT_SHORT_ID>" merchantShortId
+              & T.replace "<CITY_CODE>" cityCode
         _ -> Nothing
 
 issueInfo ::
