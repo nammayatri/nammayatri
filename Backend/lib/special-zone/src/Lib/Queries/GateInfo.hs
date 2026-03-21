@@ -15,7 +15,7 @@
 module Lib.Queries.GateInfo where
 
 import Kernel.External.Maps.Types (LatLong)
-import Kernel.Prelude
+import Kernel.Prelude hiding (isNothing)
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Esqueleto.Functions as F
 import Kernel.Types.Id
@@ -54,6 +54,15 @@ findGateInfoByLatLongWithoutGeoJson point = do
 
 deleteById :: Id D.GateInfo -> SqlDB ()
 deleteById = Esq.deleteByKey @GateInfoT
+
+findGatesWithDriverThreshold :: Transactionable m => Id SL.SpecialLocation -> m [D.GateInfo]
+findGatesWithDriverThreshold slId = Esq.findAll $ do
+  gateInfo <- from $ table @GateInfoT
+  where_ $
+    gateInfo ^. GateInfoSpecialLocationId ==. val (toKey slId)
+      &&. gateInfo ^. GateInfoCanQueueUpOnGate ==. val True
+      &&. not_ (isNothing (gateInfo ^. GateInfoMinDriverThreshold))
+  return gateInfo
 
 deleteAll :: Id SL.SpecialLocation -> SqlDB ()
 deleteAll specialLocationId =

@@ -433,6 +433,10 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             merchantId = specialLocation.merchantId,
             merchantOperatingCityId = specialLocation.merchantOperatingCityId,
             entryFeeAmount = Nothing,
+            minDriverThreshold = Nothing,
+            demandThreshold = Nothing,
+            notificationCooldownInSec = Nothing,
+            maxRideSkipsBeforeQueueRemoval = Nothing,
             ..
           }
 
@@ -1552,7 +1556,11 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 updatedAt = now,
                 gateTags = gateInfoGateTags,
                 walkDescription = gateInfoWalkDescription,
-                entryFeeAmount = Nothing
+                entryFeeAmount = Nothing,
+                minDriverThreshold = Nothing,
+                demandThreshold = Nothing,
+                notificationCooldownInSec = Nothing,
+                maxRideSkipsBeforeQueueRemoval = Nothing
               }
       return (city, locationName, (specialLocation, gateInfo), mbSpecialLocationId)
 
