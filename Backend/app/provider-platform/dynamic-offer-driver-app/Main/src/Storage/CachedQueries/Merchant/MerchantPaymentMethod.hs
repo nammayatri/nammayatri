@@ -58,7 +58,7 @@ makeIdKey id = "driver-offer:CachedQueries:MerchantPaymentMethod:Id-" <> id.getI
 
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCache merchantOperatingCityId = do
-  Hedis.del (makeMerchantIdKey merchantOperatingCityId)
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantIdKey merchantOperatingCityId)
 
 findById :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantPaymentMethod -> m (Maybe MerchantPaymentMethod)
 findById id = do

@@ -51,7 +51,7 @@ cachePersonCityInfo personCityInfo = do
 
 clearCache :: (CacheFlow m r, MonadFlow m) => Id Person -> m ()
 clearCache personId = do
-  Hedis.del (makeIdKey personId)
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeIdKey personId)
 
 makeIdKey :: Id Person -> Text
 makeIdKey personId = "CachedQueries:Person:PersonCityInformation-" <> personId.getId

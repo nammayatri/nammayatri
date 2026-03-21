@@ -43,7 +43,7 @@ findByDomainAndVersion domain version = do
 
 clearCache :: BeamFlow.BeamFlow m r => Lib.Yudhishthira.Types.LogicDomain -> m ()
 clearCache domain =
-  Hedis.withCrossAppRedis $ Hedis.del $ domainCacheKey domain
+  Hedis.runInMultiCloudRedisWrite $ Hedis.withCrossAppRedis $ Hedis.del $ domainCacheKey domain
 
 createMany :: (BeamFlow.BeamFlow m r) => [Lib.Yudhishthira.Types.AppDynamicLogicElement.AppDynamicLogicElement] -> m ()
 createMany = Queries.createMany
