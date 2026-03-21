@@ -735,7 +735,69 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId mbIsMockPayment = do
   postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId mbIsMockPayment (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {offered = Nothing, ticketQuantity = Nothing, childTicketQuantity = Nothing, crisSdkResponse = Nothing, enableOffer = Nothing, tripId = Nothing})
 
 postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
-postFrfsQuotePaymentRetry = error "Logic yet to be decided"
+postFrfsQuotePaymentRetry (mbPersonId, merchantId) quoteId = do
+  -- Payment Retry: Reserve-then-Capture pattern
+  -- 1. Look up existing booking by quoteId (idempotency key)
+  -- 2. Verify booking is in FAILED state with failed payment
+  -- 3. Reset booking to APPROVED to allow new payment attempt
+  -- 4. Create new payment order for existing booking
+  -- 5. Return booking status with new sdkPayload
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  _quote <- B.runInReplica $ QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
+  booking <- QFRFSTicketBooking.findByQuoteId quoteId >>= fromMaybeM (InvalidRequest "No booking found for this quote")
+  unless (personId == booking.riderId) $ throwError AccessDenied
+
+  -- Acquire Redis lock to prevent concurrent retry requests from creating duplicate payment orders
+  let lockKey = "paymentRetry:booking:" <> booking.id.getId
+  lockAcquired <- Hedis.tryLockRedis lockKey 30
+  unless lockAcquired $
+    throwError $ InvalidRequest "Payment retry already in progress for this booking"
+
+  ( do
+      -- Re-read booking inside lock to prevent TOCTOU race
+      latestBooking <- QFRFSTicketBooking.findByQuoteId quoteId >>= fromMaybeM (InvalidRequest "No booking found for this quote")
+
+      -- Only allow retry on FAILED bookings
+      unless (latestBooking.status == DFRFSTicketBooking.FAILED) $
+        throwError $ InvalidRequest "Payment retry is only allowed for failed bookings"
+
+      -- Verify the previous payment actually failed
+      mbPrevPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment latestBooking
+      case mbPrevPayment of
+        Just prevPayment ->
+          unless (prevPayment.status == DFRFSTicketBookingPayment.FAILED) $
+            throwError $ InvalidRequest "Payment retry is only allowed when previous payment has failed"
+        Nothing -> pure () -- No previous payment record, allow retry
+
+      person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+
+      -- Reset booking status to APPROVED to allow new payment flow
+      logInfo $ "Payment retry: resetting booking " <> latestBooking.id.getId <> " from FAILED to APPROVED"
+      now <- getCurrentTime
+      merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
+      merchantOperatingCity <- CQMOC.findById latestBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound latestBooking.merchantOperatingCityId.getId)
+      bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory latestBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
+
+      -- Extend validTill for the retry attempt
+      let newValidTill = addUTCTime (maybe 120 intToNominalDiffTime bapConfig.confirmTTLSec) now
+      void $ QFRFSTicketBooking.updateValidTillById newValidTill latestBooking.id
+      void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.APPROVED latestBooking.id
+
+      -- Create new payment order for the existing booking
+      integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity latestBooking
+      let isMultiModal = integratedBppConfig.platformType == DIBC.MULTIMODAL
+          paymentType = FRFSUtils.getPaymentType isMultiModal latestBooking.vehicleType
+          isMockPayment = fromMaybe False latestBooking.isMockPayment
+      frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (InvalidRequest "FRFS config not found")
+      isMetroTestTransaction <- asks (.isMetroTestTransaction)
+      (vendorSplitDetails, amount) <- FRFSUtils.createVendorSplitFromBookings [latestBooking] merchantId merchantOperatingCity.id paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
+      void $ FRFSUtils.createPaymentOrder [latestBooking] merchantOperatingCity.id merchantId amount person paymentType vendorSplitDetails Nothing isMockPayment
+      logInfo $ "Payment retry: created new payment order for booking " <> latestBooking.id.getId
+
+      -- Return booking status (will include new sdkPayload via the normal status flow)
+      getFrfsBookingStatus (Just personId, merchantId) latestBooking.id
+    )
+    `finally` Hedis.unlockRedis lockKey
 
 frfsOrderStatusHandler ::
   (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType)) =>

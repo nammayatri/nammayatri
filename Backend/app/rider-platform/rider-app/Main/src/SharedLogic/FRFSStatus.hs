@@ -50,6 +50,7 @@ import SharedLogic.FRFSUtils
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.FRFSUtils as Utils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.Payment as SPayment
 import SharedLogic.JobScheduler as JobScheduler
 import SharedLogic.Offer as SOffer
 import qualified SharedLogic.Utils as SLUtils
@@ -198,8 +199,9 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                           else True
                   if paymentBookingStatus == FRFSTicketService.SUCCESS && (not isMultiModalBooking || isJust mbJourneyId) && shouldProceedWithConfirm
                     then do
-                      -- Add default TTL of 1 min or the value provided in the config
-                      let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
+                      -- Add default TTL of 2 min or the value provided in the config
+                      -- Extended from 60s to 120s to accommodate slow BPP responses during peak hours
+                      let updatedTTL = addUTCTime (maybe 120 intToNominalDiffTime bapConfig.confirmTTLSec) now
                       transactions <- QPaymentTransaction.findAllByOrderId paymentOrder.id
                       txnId <- getSuccessTransactionId transactions
                       isLockAcquired <- Hedis.tryLockRedis (mkPaymentSuccessLockKey bookingId) 60
@@ -222,14 +224,24 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                           -- Use payment categories if available, otherwise fall back to quote categories
                           paymentCategories <- QFRFSTicketBookingPaymentCategory.findAllByPaymentId paymentBooking.id
                           let categoriesToUse = if null paymentCategories then quoteCategories else map paymentCategoryToQuoteCategory paymentCategories
+                          -- Transactional Outbox: confirm is called only after payment success.
+                          -- On ticket generation failure, a compensating transaction (auto-refund) is triggered.
+                          logInfo $ "Payment success confirmed for booking " <> booking.id.getId <> ", initiating BPP confirm"
                           confirmResp <- CallExternalBPP.confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) quoteUpdatedBooking categoriesToUse mbIsSingleMode
                           updatedBooking <-
                             case confirmResp of
                               Left err -> do
+                                logError $ "BPP confirm failed for booking " <> booking.id.getId <> " after payment success: " <> err
                                 void $ QFRFSTicketBooking.updateFailureReasonById (Just err) booking.id
                                 void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
+                                -- Compensating transaction: auto-refund on ticket generation failure
+                                -- Payment was successful but ticket could not be generated, so initiate refund
+                                logInfo $ "Initiating compensating refund for booking " <> booking.id.getId <> " (payment succeeded, ticket generation failed)"
+                                void $ SPayment.markRefundPendingAndSyncOrderStatus merchant.id booking.riderId paymentBooking.paymentOrderId
                                 return $ makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
-                              Right _ -> return $ makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
+                              Right _ -> do
+                                logInfo $ "BPP confirm succeeded for booking " <> booking.id.getId <> ", ticket generation in progress"
+                                return $ makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
                           buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
                         else buildFRFSTicketBookingStatusAPIRes booking quoteCategories (buildPaymentObject booking paymentBooking paymentBookingStatus)
                     else do
