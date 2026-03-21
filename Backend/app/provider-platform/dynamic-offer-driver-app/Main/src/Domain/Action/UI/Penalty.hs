@@ -96,7 +96,10 @@ postPenaltyCheck (mbPersonId, _merchantId, _merchantOpCityId) req = do
               currentTime = currentTime,
               rideCreatedTime = rideCreatedTime,
               driverArrivalTime = driverArrivalTime,
-              merchantOperatingCityId = booking.merchantOperatingCityId
+              merchantOperatingCityId = booking.merchantOperatingCityId,
+              timeSinceAcceptSec = currentTime - rideCreatedTime,
+              estimatedTripDistanceMeters = fromIntegral <$> booking.estimatedDistance,
+              estimatedFareAmount = Just booking.estimatedFare
             }
     tagsE <- withTryCatch "computeNammaTags:RideCancel" $ LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) YA.RideCancel tagData
     let tags = fromMaybe [] $ eitherToMaybe tagsE
