@@ -232,6 +232,10 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
   baseMerchant <- SQM.findByShortId merchantShortId >>= fromMaybeM (InvalidRequest $ "Merchant not found with shortId " <> show merchantShortId)
   geom <- getGeomFromKML req.file >>= fromMaybeM (InvalidRequest "Cannot convert KML to Geom")
   now <- getCurrentTime
+  whenJust cityStdCode $ \stdCode -> do
+    let (City.City cityText) = req.city
+    mbErr <- City.validateAndAppendCityStdCodeMapping cityText stdCode
+    whenJust mbErr $ \err -> throwError (InvalidRequest err)
   merchant <-
     case (merchantData, canCreateMerchant) of
       (Just merchantD, True) -> do
