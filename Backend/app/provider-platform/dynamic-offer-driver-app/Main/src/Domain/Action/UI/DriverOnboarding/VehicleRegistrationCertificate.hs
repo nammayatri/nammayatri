@@ -24,6 +24,7 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     onVerifyRC,
     convertUTCTimetoDate,
     deactivateCurrentRC,
+    invalidateRCAndRemoveVehicleForReminder,
     linkRCStatus,
     deleteRC,
     getAllLinkedRCs,
@@ -81,6 +82,7 @@ import Kernel.External.Types (VerificationFlow)
 import qualified Kernel.External.Verification.Interface as VI
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude hiding (find)
+import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Documents as Documents
