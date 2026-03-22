@@ -819,24 +819,24 @@ linkRCStatus (driverId, merchantId, merchantOpCityId) isTaxiBoothRequest req@RCS
       validated <- validateRCActivation isTaxiBoothRequest driverId transporterConfig rc
       when validated $ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc
     else do
-      deactivateRC transporterConfig rc driverId
+      deactivateRC isTaxiBoothRequest transporterConfig rc driverId
   return Success
 
-deactivateRC :: DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> Id Person.Person -> Flow ()
-deactivateRC transporterConfig rc driverId = do
+deactivateRC :: Bool -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> Id Person.Person -> Flow ()
+deactivateRC isTaxiBoothRequest transporterConfig rc driverId = do
   activeAssociation <- DAQuery.findActiveAssociationByRC rc.id True >>= fromMaybeM ActiveRCNotFound
   unless (activeAssociation.driverId == driverId) $ do
     DAQuery.updateRcErrorMessage driverId rc.id "Driver can't deactivate RC which is not active with them"
     throwError (InvalidRequest "Driver can't deactivate RC which is not active with them")
-  removeVehicle driverId
+  removeVehicle isTaxiBoothRequest driverId
   DAQuery.deactivateRCForDriver False driverId rc.id
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount rc.fleetOwnerId driverId
   return ()
 
-removeVehicle :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> m ()
-removeVehicle driverId = do
+removeVehicle :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Bool -> Id Person.Person -> m ()
+removeVehicle isTaxiBoothRequest driverId = do
   isOnRide <- DIQuery.findByDriverIdActiveRide (cast driverId)
-  when (isJust isOnRide) $ throwError RCVehicleOnRide
+  when ((not isTaxiBoothRequest) && isJust isOnRide) $ throwError RCVehicleOnRide
   VQuery.deleteById driverId -- delete the vehicle entry too for the driver
 
 validateRCActivation :: Bool -> Id Person.Person -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> Flow Bool
@@ -863,7 +863,7 @@ validateRCActivation isTaxiBoothRequest driverId transporterConfig rc = do
       if activeAssociation.driverId == driverId
         then return False
         else do
-          deactivateIfWeCanDeactivate activeAssociation.driverId now (deactivateRC transporterConfig rc)
+          deactivateIfWeCanDeactivate activeAssociation.driverId now (deactivateRC isTaxiBoothRequest transporterConfig rc)
           return True
     Nothing -> do
       -- check if vehicle of that rc number is already with other driver
@@ -871,8 +871,8 @@ validateRCActivation isTaxiBoothRequest driverId transporterConfig rc = do
       case mVehicle of
         Just vehicle -> do
           if vehicle.driverId /= driverId
-            then deactivateIfWeCanDeactivate vehicle.driverId now removeVehicle
-            else removeVehicle driverId
+            then deactivateIfWeCanDeactivate vehicle.driverId now (removeVehicle isTaxiBoothRequest)
+            else removeVehicle isTaxiBoothRequest driverId
         Nothing -> return ()
       return True
   where
@@ -929,9 +929,9 @@ deactivateCurrentRC transporterConfig driverId = do
   case mActiveAssociation of
     Just association -> do
       rc <- RCQuery.findById association.rcId >>= fromMaybeM (RCNotFound "")
-      deactivateRC transporterConfig rc driverId -- call deativate RC flow
+      deactivateRC False transporterConfig rc driverId -- call deativate RC flow
     Nothing -> do
-      removeVehicle driverId
+      removeVehicle False driverId
       return ()
 
 -- | For reminder job: invalidate RC (set approved false, verification status INVALID),
@@ -959,7 +959,7 @@ invalidateRCAndRemoveVehicleForReminder rcId driverId merchantOpCityId reason = 
   mActiveAssociation <- DAQuery.findActiveAssociationByRC rc.id True
   case mActiveAssociation of
     Just assoc | assoc.driverId == driverId -> do
-      removeVehicle driverId
+      removeVehicle False driverId
       DAQuery.deactivateRCForDriver False driverId rc.id
       when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
         Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount rc.fleetOwnerId driverId
@@ -978,7 +978,7 @@ deleteRC (driverId, _, merchantOpCityId) DeleteRCReq {..} isOldFlow = do
       when (assoc.driverId == driverId) $ do
         DAQuery.updateRcErrorMessage driverId rc.id "Deactivate RC first to delete!"
         throwError (InvalidRequest "Deactivate RC first to delete!")
-    (Just _, True) -> deactivateRC transporterConfig rc driverId
+    (Just _, True) -> deactivateRC False transporterConfig rc driverId
     (_, _) -> return ()
   DAQuery.endAssociationForRC driverId rc.id
   return Success
