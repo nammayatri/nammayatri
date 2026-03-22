@@ -20,10 +20,17 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Safety.Domain.Types.Common as Common
 import qualified Safety.Domain.Types.Sos as DSos
+import qualified Safety.Storage.BeamFlow as BeamFlow
+import qualified Safety.Storage.Queries.Sos as QSos
 
-findByRideId :: (CacheFlow m r, EsqDBFlow m r) => Id Common.Ride -> m (Maybe DSos.Sos)
+findByRideId :: (BeamFlow.BeamFlow m r) => Id Common.Ride -> m (Maybe DSos.Sos)
 findByRideId rideId = do
-  Hedis.safeGet $ makeIdKey rideId
+  Hedis.safeGet (makeIdKey rideId) >>= \case
+    Just sos -> pure (Just sos)
+    Nothing -> do
+      mbSos <- QSos.findByRideId (Just rideId)
+      whenJust mbSos $ \sos -> cacheSosIdByRideId rideId sos
+      pure mbSos
 
 cacheSosIdByRideId :: (CacheFlow m r) => Id Common.Ride -> DSos.Sos -> m ()
 cacheSosIdByRideId rideId sos = do
