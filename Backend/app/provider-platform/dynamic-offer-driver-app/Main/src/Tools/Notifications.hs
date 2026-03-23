@@ -259,7 +259,14 @@ sendFeedbackBadgeNotification ::
   FeedbackBadgeEntityData ->
   m ()
 sendFeedbackBadgeNotification merchantOpCityId driver entityData = do
-  notifyDriverWithProviders merchantOpCityId Notification.FEEDBACK_BADGE_PN "FEEDBACK_BADGE_PN" "FEEDBACK_BADGE_PN" driver driver.deviceToken entityData
+  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "FEEDBACK_BADGE_PN" Nothing Nothing (Just $ fromMaybe ENGLISH driver.language) Nothing
+  when (isNothing mbMerchantPN) $ logError $ "MISSED_FCM - FEEDBACK_BADGE_PN"
+  whenJust mbMerchantPN $ \merchantPN -> do
+    let dynamicParams = [ ("rating", show entityData.rating), ("badgeCount", maybe "0" show entityData.badgeCount) ]
+        title = buildTemplate dynamicParams merchantPN.title
+        body = buildTemplate dynamicParams merchantPN.body
+    notifyDriverWithProviders merchantOpCityId Notification.FEEDBACK_BADGE_PN title body driver driver.deviceToken entityData
+
 
 
 -- NEW_RIDE_AVAILABLE
