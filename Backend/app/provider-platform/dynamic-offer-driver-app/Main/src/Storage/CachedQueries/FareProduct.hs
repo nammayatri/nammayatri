@@ -142,15 +142,16 @@ delete :: (Esq.EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id FareProduct -> m
 delete = Queries.delete
 
 clearCache :: CacheFlow m r => FareProduct -> m ()
-clearCache FareProduct {..} = Hedis.runInMultiCloudRedisWrite $ Hedis.withCrossAppRedis $ do
-  let allPossibleSearchSoruces = [[ALL], [ALL, MOBILE_APP], [ALL, DASHBOARD]]
-  allPossibleSearchSoruces `forM_` \searchSources -> do
-    Hedis.del (makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey merchantOperatingCityId searchSources tripCategory area)
-    Hedis.del (makeUnboundedFareProductByMerchantIdAndAreaKey merchantOperatingCityId searchSources area)
-    Hedis.del (makeFareProductByMerchantOpCityIdKey merchantOperatingCityId)
-    Hedis.del (makeSupportedServiceTiersKey merchantOperatingCityId)
-    Hedis.del (makeUnboundedFareProductByMerchantVariantAreaKey merchantOperatingCityId searchSources tripCategory vehicleServiceTier area)
-    Hedis.del (makeBoundedFareProductByMerchantVariantAreaKey merchantOperatingCityId searchSources tripCategory vehicleServiceTier area)
+clearCache FareProduct {..} = Hedis.runInMultiCloudRedisWrite $
+  Hedis.withCrossAppRedis $ do
+    let allPossibleSearchSoruces = [[ALL], [ALL, MOBILE_APP], [ALL, DASHBOARD]]
+    allPossibleSearchSoruces `forM_` \searchSources -> do
+      Hedis.del (makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey merchantOperatingCityId searchSources tripCategory area)
+      Hedis.del (makeUnboundedFareProductByMerchantIdAndAreaKey merchantOperatingCityId searchSources area)
+      Hedis.del (makeFareProductByMerchantOpCityIdKey merchantOperatingCityId)
+      Hedis.del (makeSupportedServiceTiersKey merchantOperatingCityId)
+      Hedis.del (makeUnboundedFareProductByMerchantVariantAreaKey merchantOperatingCityId searchSources tripCategory vehicleServiceTier area)
+      Hedis.del (makeBoundedFareProductByMerchantVariantAreaKey merchantOperatingCityId searchSources tripCategory vehicleServiceTier area)
 
 clearCacheById :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCacheById merchantOperatingCityId = Hedis.runInMultiCloudRedisWrite $ do

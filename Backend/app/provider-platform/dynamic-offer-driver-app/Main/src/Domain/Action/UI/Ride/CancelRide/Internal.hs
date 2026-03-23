@@ -170,9 +170,9 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                 then do
                   let tagsForCancellationCharges = [validCustomerCancellation, validUserNoShowCancellation]
                   let cancellationType = DCT.CancellationByDriver
-                        -- if bookingCReason.source == SBCR.ByDriver && validUserNoShowCancellation `elem` rideTags          ---------------- can be discussed if it's required.
-                        --   then DCT.CancellationByDriver
-                        --   else DCT.CancellationByCustomer
+                  -- if bookingCReason.source == SBCR.ByDriver && validUserNoShowCancellation `elem` rideTags          ---------------- can be discussed if it's required.
+                  --   then DCT.CancellationByDriver
+                  --   else DCT.CancellationByCustomer
                   if any (`elem` rideTags) tagsForCancellationCharges
                     then getCancellationCharges booking ride cancellationType bookingCReason.reasonCode
                     else return Nothing
@@ -282,57 +282,7 @@ cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy cancell
                   merchantOperatingCityId = Just ride.merchantOperatingCityId
                 }
         QCDD.create cancellationDuesDetails
-      -- Customer cancellation ledger entries (wallet path)
-      when (isPrepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableDriverWallet && fee.amount > 0) $ do
-        let rideGst = transporterConfig.taxConfig.rideGst
-            gstPct = fromMaybe 0 rideGst.cgstPercentage + fromMaybe 0 rideGst.sgstPercentage + fromMaybe 0 rideGst.igstPercentage
-            gstOnCancellation = if gstPct > 0 then fee.amount * gstPct / (1 + gstPct) else 0
-            baseCancellation = fee.amount - gstOnCancellation
-            cancellationComponents =
-              [ (baseCancellation, walletReferenceCustomerCancellationCharges, OwnerLiability),
-                (gstOnCancellation, walletReferenceCustomerCancellationGST, GovtIndirect)
-              ]
-            -- TDS on cancellation charges (same rate as ride)
-            mbTdsRate = transporterConfig.taxConfig.defaultTdsRate
-            mbTdsAmount = do
-              rate <- mbTdsRate
-              let amount = baseCancellation * realToFrac rate
-              if amount > 0 then Just amount else Nothing
-        mbPanCard <- QPanCard.findByDriverId ride.driverId
-        mbDriverInfo <- QDI.findById (cast ride.driverId)
-        ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig
-        result <- runFinance ctx $ do
-          mapM_
-            ( \(amt, ref, dest) -> do
-                transfer_ BuyerAsset BuyerExternal amt ref
-                void $ transfer BuyerExternal dest amt ref
-            )
-            cancellationComponents
-          -- TDS: Liability(DRIVER/FLEET_OWNER) -> Liability(GOVERNMENT_DIRECT)
-          whenJust mbTdsAmount $ \tdsAmount ->
-            void $ transfer OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCancellation
-          invoice
-            InvoiceConfig
-              { invoiceType = Invoice.RideCancellation,
-                issuedToType = "CUSTOMER",
-                issuedToId = rid.getId,
-                issuedToName = booking.riderName,
-                issuedToAddress = booking.fromLocation.address.fullAddress,
-                gstBreakdown = computeGstBreakdown rideGst gstOnCancellation,
-                lineItems =
-                  catMaybes
-                    [ if baseCancellation > 0
-                        then Just InvoiceLineItem {description = "Customer Cancellation Fee", quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, isExternalCharge = False}
-                        else Nothing,
-                      if gstOnCancellation > 0
-                        then Just InvoiceLineItem {description = "GST on Cancellation Fee", quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, isExternalCharge = False}
-                        else Nothing
-                    ]
-              }
-        case result of
-          Left err -> logInfo $ "Failed to create cancellation ledger entries: " <> show err
-          Right _ -> pure ()
-        logInfo $ "Created customer cancellation ledger entries for bookingId: " <> booking.id.getId <> " base=" <> show baseCancellation <> " gst=" <> show gstOnCancellation <> " tds=" <> show mbTdsAmount
+      pure ()
     _ -> do
       logError "cancelRideTransaction: riderId in booking or cancellationFee is not present"
 
@@ -480,7 +430,7 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
           { cancelledBy = cancellationType,
             timeOfDriverCancellation = timeOfCancellation,
             timeOfCustomerCancellation = timeOfCancellation,
-            isArrivedAtPickup = isJust ride.driverArrivalTime || _isArrivedAtPickup ,
+            isArrivedAtPickup = isJust ride.driverArrivalTime || _isArrivedAtPickup,
             driverWaitingTime = fromMaybe 0 driverWaitingTime,
             callAttemptByDriver = callAttemptByDriver,
             actualCoveredDistance = fromMaybe 0 actualCoveredDistance,

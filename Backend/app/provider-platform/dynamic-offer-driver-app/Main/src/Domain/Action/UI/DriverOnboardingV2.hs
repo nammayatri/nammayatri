@@ -46,6 +46,7 @@ import Kernel.External.Maps (LatLong (..))
 import Kernel.External.Types (Language (..), ServiceFlow)
 import qualified Kernel.External.Verification.Interface as VI
 import qualified Kernel.External.Verification.Interface.Types as Verification
+import qualified Kernel.External.Verification.Types as VerificationTypes
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -98,7 +99,6 @@ import qualified Tools.BackgroundVerification as BackgroundVerificationT
 import Tools.Error
 import qualified Tools.Verification as Verification
 import Utils.Common.Cac.KeyNameConstants
-import qualified Kernel.External.Verification.Types as VerificationTypes
 
 stringToPrice :: Currency -> Text -> Maybe Price
 stringToPrice currency value = do

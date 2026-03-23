@@ -20,6 +20,7 @@ where
 
 import qualified API.Types.Dashboard.RideBooking.Volunteer as Common
 import qualified "dashboard-helper-api" Dashboard.Common as Common
+import qualified Data.Text as T
 import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Action.UI.Ride.StartRide as RideStart
 import qualified Domain.Types as DVST
@@ -30,7 +31,6 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as DRideDetails
 import Environment
 import Kernel.Beam.Functions
-import qualified Data.Text as T
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))

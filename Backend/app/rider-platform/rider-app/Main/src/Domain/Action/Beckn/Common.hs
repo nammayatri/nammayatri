@@ -373,6 +373,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         refundRequestStatus = Nothing,
         vehicleAge = req.vehicleAge,
         cancellationFeeIfCancelled = Nothing,
+        cancellationFeeStatus = Nothing,
         isAlreadyFav = Just isAlreadyFav,
         safetyJourneyStatus = Nothing,
         driverImage = fileUrl,
@@ -1012,6 +1013,8 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
       checkAndUpdateJourneyTerminalStatusForNormalRide booking DJourney.CANCELLED
   whenJust mbRide $ \ride -> void $ do
     void $ QRide.updateCancellationChargesOnCancel (maybe Nothing (Just . (.amount)) cancellationFee) ride.id
+    whenJust cancellationFee $ \_ ->
+      QRide.updateCancellationFeeStatus (Just DRide.PENDING) ride.id
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
   riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (InternalError "RiderConfig not found")
   fork "Cancellation Settlement" $ do

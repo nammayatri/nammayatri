@@ -61,6 +61,7 @@ library
       API.Internal.Rating
       API.Internal.RideSearchExpired
       API.Internal.StopEvents
+      API.Internal.UpdateCancellationFeeStatus
       API.Internal.ViolationDetection
       API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
       API.Types.Dashboard.AppManagement.OrphanInstances.TicketDashboard
@@ -215,6 +216,7 @@ library
       Domain.Action.Internal.Rating
       Domain.Action.Internal.RideSearchExpired
       Domain.Action.Internal.StopEvents
+      Domain.Action.Internal.UpdateCancellationFeeStatus
       Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.AadhaarVerification
       Domain.Action.UI.AlertWebhook
@@ -739,6 +741,7 @@ library
       API.Action.UI.AttractionRecommend
       API.Action.UI.BBPS
       API.Action.UI.Cac
+      API.Action.UI.CancellationChargesWaiveOff
       API.Action.UI.CRIS
       API.Action.UI.CustomerReferral
       API.Action.UI.DeletedPerson
@@ -819,6 +822,7 @@ library
       API.Types.UI.AlertWebhook
       API.Types.UI.AttractionRecommend
       API.Types.UI.BBPS
+      API.Types.UI.CancellationChargesWaiveOff
       API.Types.UI.CRIS
       API.Types.UI.CustomerReferral
       API.Types.UI.DeletedPerson

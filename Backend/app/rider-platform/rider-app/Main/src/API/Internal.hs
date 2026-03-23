@@ -16,6 +16,7 @@ import qualified API.Internal.GetPickupInstructions as GetPickupInstructions
 import qualified API.Internal.Rating as Rating
 import qualified API.Internal.RideSearchExpired as RideSearchExpired
 import qualified API.Internal.StopEvents as StopEvents
+import qualified API.Internal.UpdateCancellationFeeStatus as UpdateCancellationFeeStatus
 import qualified API.Internal.ViolationDetection as ViolationDetection
 import Environment
 import Servant
@@ -36,6 +37,7 @@ type API =
            :<|> RideSearchExpired.API
            :<|> GetPickupInstructions.API
            :<|> AlertWebhook.API
+           :<|> UpdateCancellationFeeStatus.API
        )
 
 handler :: FlowServer API
@@ -53,3 +55,4 @@ handler =
     :<|> RideSearchExpired.handler
     :<|> GetPickupInstructions.handler
     :<|> AlertWebhook.handler
+    :<|> UpdateCancellationFeeStatus.handler

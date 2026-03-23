@@ -62,6 +62,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculatorV2 as FCV2
 import qualified SharedLogic.FarePolicy as SFP
+import qualified SharedLogic.IffcoTokioInsurance as IffcoInsurance
 import SharedLogic.Ride (calculateEstimatedEndTimeRange, getRcIdForRide)
 import qualified SharedLogic.ScheduledNotifications as SN
 import Storage.Cac.TransporterConfig as SCTC
@@ -71,7 +72,6 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.ScheduledPayout as QSP
 import qualified Storage.Queries.ScheduledPayoutExtra as QSPE
-import qualified SharedLogic.IffcoTokioInsurance as IffcoInsurance
 import Tools.Error
 import qualified Tools.Notifications as Notify
 import Utils.Common.Cac.KeyNameConstants

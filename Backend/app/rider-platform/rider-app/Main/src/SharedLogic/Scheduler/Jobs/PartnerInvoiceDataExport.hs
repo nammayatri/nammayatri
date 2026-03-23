@@ -79,7 +79,7 @@ partnerInvoiceDataExportJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
   results <- mapM (\logEntry -> (logEntry,) <$> enrichLogEntry logEntry) unexportedLogs
   let successPairs = [(logEntry, rec) | (logEntry, Just rec) <- results]
       enrichedRecords = map snd successPairs
-      -- successLogs = map fst successPairs
+  -- successLogs = map fst successPairs
   let jsonContent = TE.decodeUtf8 $ BL.toStrict $ encode enrichedRecords
       timestamp = T.pack $ formatTime defaultTimeLocale "%Y%m%d_%H%M%S" now
       fileName = "partner_invoice_data_" <> timestamp <> ".json"
@@ -176,7 +176,6 @@ uploadToSFTP rawFileName content = withLogTag "SFTP" $ do
       let host = T.unpack sftpCfg.host
           port = show sftpCfg.port
           username = T.unpack sftpCfg.username
-          privateKeyPath = T.unpack sftpCfg.privateKeyPath
           remotePath = T.unpack sftpCfg.remotePath
           remoteFilePath = remotePath <> "/" <> T.unpack fileName
 
@@ -184,7 +183,7 @@ uploadToSFTP rawFileName content = withLogTag "SFTP" $ do
       (tmpBatchPath, hBatch) <- liftIO $ openTempFile tmpDir ("sftp_batch_" <> T.unpack fileName <> ".txt")
       let batchContent = "put " <> tmpContentPath <> " " <> remoteFilePath <> "\nquit\n"
       liftIO $ hPutStr hBatch batchContent >> hClose hBatch
-      logDebug $ "Created SFTP batch file: " <> T.pack tmpBatchPath
+      logDebug $ "Created SFTP batch file: " <> T.pack tmpBatchPath <> " with content: " <> T.pack batchContent
 
       -- Build command and argument list based on auth method
       let (cmd, sftpArgs) = case (sftpCfg.password, sftpCfg.privateKeyPath) of
@@ -222,11 +221,11 @@ uploadToSFTP rawFileName content = withLogTag "SFTP" $ do
               ("sftp", ["-P", port, "-o", "StrictHostKeyChecking=no", "-b", tmpBatchPath, username <> "@" <> host])
 
       logInfo $ "Uploading file " <> fileName <> " to SFTP server " <> sftpCfg.host <> ":" <> sftpCfg.remotePath
-      logDebug $ "SFTP arguments: " <> T.pack (show sftpArgs)
+      logDebug $ "SFTP command: " <> T.pack cmd <> " with arguments: " <> T.pack (show sftpArgs)
 
       -- Execute SFTP upload with 240-second timeout
       let sftpTimeoutMicros = 240 * 1000000 -- 240 seconds
-      mbResult <- liftIO $ timeout sftpTimeoutMicros (Control.Exception.try $ callProcess "sftp" sftpArgs :: IO (Either SomeException ()))
+      mbResult <- liftIO $ timeout sftpTimeoutMicros (Control.Exception.try $ callProcess cmd sftpArgs :: IO (Either SomeException ()))
 
       -- Clean up temp files
       liftIO $ removeFile tmpContentPath `catch` \(_ :: SomeException) -> pure ()

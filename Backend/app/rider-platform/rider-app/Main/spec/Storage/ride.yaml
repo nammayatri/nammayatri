@@ -46,6 +46,9 @@ Ride:
     PaymentStatus:
       enum: "Completed,NotInitiated,Initiated,Cancelled,Failed"
 
+    CancellationFeeStatus:
+      enum: "PENDING,CLEARED,WAIVED"
+
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <PaymentStatus>
 
@@ -116,6 +119,7 @@ Ride:
     onlinePayment: Bool
     tollConfidence: Maybe Confidence
     cancellationFeeIfCancelled: Maybe HighPrecMoney
+    cancellationFeeStatus: Maybe CancellationFeeStatus
     isAlreadyFav: Maybe Bool
     favCount: Maybe Int
     safetyJourneyStatus: Maybe SosJourneyStatus
@@ -344,6 +348,10 @@ Ride:
     updateCancellationChargesOnCancel:
       kvFunction: updateOneWithKV
       params: [cancellationChargesOnCancel]
+      where: id
+    updateCancellationFeeStatus:
+      kvFunction: updateOneWithKV
+      params: [cancellationFeeStatus]
       where: id
     updatePickupEtaLogicVersion:
       kvFunction: updateOneWithKV

@@ -20,6 +20,7 @@ where
 import Kernel.Beam.Functions as BF
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
@@ -27,7 +28,6 @@ import qualified Storage.Queries.FeedbackBadgeExtra as QFeedbackBadge
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.Notifications as Notify
-import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 
 sendFeedbackPN ::
   ( EsqDBReplicaFlow m r,

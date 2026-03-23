@@ -20,6 +20,7 @@ import qualified API.IGM as IGM
 import qualified API.Internal as Internal
 import qualified API.UI as UI
 import qualified API.UnifiedDashboard as UnifiedDashboard
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import Data.OpenApi
 import qualified Domain.Action.UI.DriverOnboarding.DigiLockerCallback as DigiLockerCallback
@@ -30,10 +31,8 @@ import qualified Domain.Action.UI.Payout as Payout
 import qualified Domain.Action.UI.SafetyWebhook as SafetyWebhook
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Plan as Plan
-import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Environment
 import EulerHS.Prelude
-import qualified Data.Aeson as Aeson
 import qualified Kernel.External.Payment.Juspay.Webhook as Juspay
 import qualified Kernel.External.Payout.Juspay.Webhook as JuspayPayout
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
@@ -42,6 +41,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.BasicAuth ()
 import Kernel.Utils.Servant.HTML
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Servant hiding (serveDirectoryWebApp)
 import Servant.OpenApi
 import Storage.Beam.SystemConfigs ()
