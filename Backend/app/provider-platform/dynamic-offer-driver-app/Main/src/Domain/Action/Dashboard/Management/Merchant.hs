@@ -60,6 +60,9 @@ module Domain.Action.Dashboard.Management.Merchant
     getMerchantConfigGeometryList,
     putMerchantConfigGeometryUpdate,
     postMerchantConfigDebugLogUpdate,
+    filterUnboundedFareProducts,
+    filterBoundedFareProductsFromSnapshot,
+    buildFarePolicyUsageCount,
   )
 where
 
@@ -1871,8 +1874,8 @@ instance FromNamedRecord FarePolicyCSVRow where
 merchantCityLockKey :: Text -> Text
 merchantCityLockKey id = "Driver:MerchantOperating:CityId-" <> id
 
-ambulanceSlabsCreateLockKey :: Text
-ambulanceSlabsCreateLockKey = "Driver:FarePolicy:AmbulanceSlabs:CreateLock"
+ambulanceSlabsCreateLockKey :: Text -> Text
+ambulanceSlabsCreateLockKey cityId = "Driver:FarePolicy:AmbulanceSlabs:CreateLock:" <> cityId
 
 -- | Export all enabled fare policies for a merchant operating city as CSV
 getMerchantConfigFarePolicyExport :: ShortId DM.Merchant -> Context.City -> Flow Text
@@ -2209,6 +2212,64 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
     extractWaitingChargeType (FarePolicy.PerMinuteWaitingCharge _) = "PerMinuteWaitingCharge"
     extractWaitingChargeType (FarePolicy.ConstantWaitingCharge _) = "ConstantWaitingCharge"
 
+-- | Filter enabled unbounded fare products from a pre-fetched snapshot matching
+-- the given (area, vehicleServiceTier, tripCategory, searchSource) key.
+-- Extracted for testability — pure, no DB access.
+filterUnboundedFareProducts ::
+  [DFareProduct.FareProduct] ->
+  SL.Area ->
+  ServiceTierType ->
+  TripCategory ->
+  DFareProduct.SearchSource ->
+  [DFareProduct.FareProduct]
+filterUnboundedFareProducts allFareProducts area vehicleServiceTier tripCategory searchSource =
+  filter
+    ( \fp ->
+        fp.area == area
+          && fp.vehicleServiceTier == vehicleServiceTier
+          && fp.tripCategory == tripCategory
+          && fp.timeBounds == TB.Unbounded
+          && fp.searchSource == searchSource
+    )
+    allFareProducts
+
+-- | Filter bounded (timeBounds ≠ Unbounded) fare products from a pre-fetched snapshot,
+-- replicating the InterCity-with-city fallback of 'findAllBoundedByMerchantOpCityIdVariantArea'.
+-- Returns the matched fare products AND the effective TripCategory that was used for the match
+-- (which may differ from the input when the InterCity fallback fires).
+-- The caller must key 'boundedAlreadyDeletedMap' on this effective category so that a later
+-- group whose city-agnostic tripCategory resolves to the same old fare products sees the guard
+-- entry and skips re-processing them.
+-- Extracted for testability — pure, no DB access.
+filterBoundedFareProductsFromSnapshot ::
+  [DFareProduct.FareProduct] ->
+  SL.Area ->
+  ServiceTierType ->
+  TripCategory ->
+  DFareProduct.SearchSource ->
+  ([DFareProduct.FareProduct], TripCategory)
+filterBoundedFareProductsFromSnapshot allFareProducts area vehicleServiceTier tripCategory searchSource =
+  let boundedFilter tc =
+        filter
+          ( \fp ->
+              fp.area == area
+                && fp.vehicleServiceTier == vehicleServiceTier
+                && fp.tripCategory == tc
+                && fp.timeBounds /= TB.Unbounded
+                && fp.searchSource == searchSource
+          )
+          allFareProducts
+      results = boundedFilter tripCategory
+   in if null results && SQF.isInterCityWithCity tripCategory
+        then (boundedFilter (SQF.removeCityFromTripCategory tripCategory), SQF.removeCityFromTripCategory tripCategory)
+        else (results, tripCategory)
+
+-- | Build a map of FarePolicyId → number of FareProducts referencing it.
+-- Used to detect orphaned FarePolicies without per-product DB queries.
+-- Extracted for testability — pure, no DB access.
+buildFarePolicyUsageCount :: [DFareProduct.FareProduct] -> Map.Map (Id FarePolicy.FarePolicy) Int
+buildFarePolicyUsageCount = Map.fromListWith (+) . map (\fp -> (fp.farePolicyId, 1))
+
 postMerchantConfigFarePolicyUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertFarePolicyReq -> Flow Common.UpsertFarePolicyResp
 postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
@@ -2218,8 +2279,35 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       logTagInfo "Updating Fare Policies for merchant: " (show merchant.id <> " and city: " <> show opCity)
       flatFarePolicies <- readCsv merchant.id merchantOpCity.distanceUnit req.file merchantOpCity.id
       logTagInfo "Read file: " (show flatFarePolicies)
+      -- Pre-fetch ALL fare products for this city (enabled AND disabled) in two queries.
+      -- The combined snapshot is used for BOTH:
+      --   1. Finding old fare products to replace — disabled ones must also be replaced so
+      --      the domain stays unique (consistent with the upfront uniqueness check below).
+      --   2. Building the orphan-check usage count — a FarePolicy must not be deleted while
+      --      a disabled FareProduct still references it.
+      enabledCityFareProducts <- SQF.findAllFareProductByMerchantOpCityId merchantOpCity.id True
+      disabledCityFareProducts <- SQF.findAllFareProductByMerchantOpCityId merchantOpCity.id False
+      let allCityFareProducts = enabledCityFareProducts ++ disabledCityFareProducts
+      -- Usage count: how many FareProducts (any state) reference each FarePolicyId.
+      -- Threaded through the fold; decremented on delete; policy deleted when count reaches 0.
+      let farePolicyUsageCount = buildFarePolicyUsageCount allCityFareProducts
+      -- Reject conflicting groups upfront: two groups with the same lookup domain
+      -- (area, vehicleServiceTier, tripCategory, searchSource, timeBounds) but different
+      -- enabled/disableRecompute would both create a FareProduct for the same domain,
+      -- leaving duplicates in DB. Fail fast with a clear error.
+      let groups = groupFarePolices flatFarePolicies
+          lookupKey (_, _, t, tr, a, tb, ss, _, _) = (t, tr, a, tb, ss)
+          groupKeys = map (lookupKey . head) groups
+          duplicateKeys = map head . filter ((> 1) . length) . DL.group . DL.sort $ groupKeys
+      unless (null duplicateKeys) $
+        throwError $
+          InvalidRequest $
+            "CSV contains conflicting rows that map to the same fare policy lookup domain "
+              <> "(vehicleServiceTier, tripCategory, area, timeBound, searchSource). "
+              <> "Please deduplicate: "
+              <> show duplicateKeys
       let boundedAlreadyDeletedMap = Map.empty :: Map.Map Text Bool
-      (farePolicyErrors, _) <- (foldlM (processFarePolicyGroup merchantOpCity) ([], boundedAlreadyDeletedMap) . groupFarePolices) flatFarePolicies
+      (farePolicyErrors, _, _) <- foldlM (processFarePolicyGroup merchantOpCity allCityFareProducts) ([], boundedAlreadyDeletedMap, farePolicyUsageCount) groups
       return $
         Common.UpsertFarePolicyResp
           { unprocessedFarePolicies = farePolicyErrors,
@@ -2240,12 +2328,12 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       where
         fst7 (dr, c, t, tr, a, tb, ss, en, _) = (dr, c, t, tr, a, tb, ss, en)
 
-    processFarePolicyGroup :: DMOC.MerchantOperatingCity -> ([Text], Map.Map Text Bool) -> [(Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)] -> Flow ([Text], Map.Map Text Bool)
-    processFarePolicyGroup _ _ [] = throwError $ InvalidRequest "Empty Fare Policy Group"
-    processFarePolicyGroup merchantOpCity (errors, boundedAlreadyDeletedMap) (x : xs) = do
+    processFarePolicyGroup :: DMOC.MerchantOperatingCity -> [DFareProduct.FareProduct] -> ([Text], Map.Map Text Bool, Map.Map (Id FarePolicy.FarePolicy) Int) -> [(Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)] -> Flow ([Text], Map.Map Text Bool, Map.Map (Id FarePolicy.FarePolicy) Int)
+    processFarePolicyGroup _ _ _ [] = throwError $ InvalidRequest "Empty Fare Policy Group"
+    processFarePolicyGroup merchantOpCity allCityFareProducts (errors, boundedAlreadyDeletedMap, farePolicyUsageCount) (x : xs) = do
       let (disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBounds, searchSource, enabled', firstFarePolicy) = x
       if city /= opCity
-        then return $ (errors <> ["Can't process fare policy for different city: " <> show city <> ", please login with this city in dashboard"], boundedAlreadyDeletedMap)
+        then return (errors <> ["Can't process fare policy for different city: " <> show city <> ", please login with this city in dashboard"], boundedAlreadyDeletedMap, farePolicyUsageCount)
         else do
           let mergeFarePolicy newId firstFarePolicy'@FarePolicy.FarePolicy {..} = do
                 let remainingfarePolicies = map (\(_, _, _, _, _, _, _, _, fp) -> fp) xs
@@ -2364,46 +2452,78 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
               belowMinMsg = "Base fare is below the minimum base fare for this city (area: " <> show area <> ", vehicleServiceTier: " <> show vehicleServiceTier <> ", tripCategory: " <> show tripCategory <> ")."
               newErrors = if anyBelowMin then errors <> [belowMinMsg] else errors
           if anyBelowMin && not allowUpdate
-            then return (newErrors, boundedAlreadyDeletedMap)
+            then return (newErrors, boundedAlreadyDeletedMap, farePolicyUsageCount)
             else do
               CQFP.create finalFarePolicy
               case finalFarePolicy.farePolicyDetails of
                 FarePolicy.AmbulanceDetails details ->
-                  Hedis.withLockRedis ambulanceSlabsCreateLockKey 60 $ do
+                  Hedis.withLockRedis (ambulanceSlabsCreateLockKey merchantOpCity.id.getId) 60 $ do
                     QueriesFPAD.delete finalFarePolicy.id
                     forM_ (NE.toList details.slabs) $ \slab ->
                       QueriesFPAD.create (finalFarePolicy.id, slab)
                 _ -> pure ()
               let merchanOperatingCityId = merchantOpCity.id
+              -- Find old fare products from the pre-fetched city snapshot instead of per-group DB queries.
+              --
+              -- Conflicts (two groups for the same lookup domain) are already rejected upfront.
+              -- The ":U" suffix for unbounded keys and the plain makeKey for bounded keys both
+              -- serve as a defence-in-depth guard: for bounded, multiple groups legitimately share
+              -- the same (area, tier, tripCategory, searchSource) key with different timeBounds,
+              -- so only the FIRST group deletes old fare products for that key; later groups in
+              -- the same timeBound set just create new ones.  The unbounded case mirrors that.
               (oldFareProducts, newBoundedAlreadyDeletedMap) <-
                 case timeBounds of
                   Unbounded -> do
-                    fareProducts <- SQF.findAllUnboundedByMerchantOpCityIdVariantArea merchanOperatingCityId area tripCategory vehicleServiceTier TB.Unbounded True [searchSource]
-                    return (fareProducts, boundedAlreadyDeletedMap)
-                  _ -> do
-                    let key = makeKey merchanOperatingCityId vehicleServiceTier tripCategory area searchSource
-                    let value = Map.lookup key boundedAlreadyDeletedMap
-                    if isJust value
+                    -- Suffix ":U" distinguishes unbounded keys from bounded keys in the same map.
+                    let key = makeKey merchanOperatingCityId vehicleServiceTier tripCategory area searchSource <> ":U"
+                    if isJust (Map.lookup key boundedAlreadyDeletedMap)
                       then return ([], boundedAlreadyDeletedMap)
                       else do
-                        fareProducts <- CQFProduct.findAllBoundedByMerchantVariantArea merchanOperatingCityId [searchSource] tripCategory vehicleServiceTier area
-                        let updatedBoundedAlreadyDeletedMap = markBoundedAreadyDeleted merchanOperatingCityId vehicleServiceTier tripCategory area searchSource boundedAlreadyDeletedMap
+                        let fareProducts = filterUnboundedFareProducts allCityFareProducts area vehicleServiceTier tripCategory searchSource
+                        return (fareProducts, Map.insert key True boundedAlreadyDeletedMap)
+                  _ -> do
+                    let key = makeKey merchanOperatingCityId vehicleServiceTier tripCategory area searchSource
+                    -- Also check the generic (city-agnostic) key: a prior group may have used
+                    -- the InterCity fallback and stored its guard under the generic category.
+                    let genericKey = makeKey merchanOperatingCityId vehicleServiceTier (SQF.removeCityFromTripCategory tripCategory) area searchSource
+                    if isJust (Map.lookup key boundedAlreadyDeletedMap)
+                         || (SQF.isInterCityWithCity tripCategory && isJust (Map.lookup genericKey boundedAlreadyDeletedMap))
+                      then return ([], boundedAlreadyDeletedMap)
+                      else do
+                        -- filterBoundedFareProductsFromSnapshot returns the effective TripCategory
+                        -- (which may be the city-agnostic fallback).  Key the guard entry on that
+                        -- effective category so later groups that resolve to the same old fare
+                        -- products are correctly blocked.
+                        let (fareProducts, effectiveTripCategory) = filterBoundedFareProductsFromSnapshot allCityFareProducts area vehicleServiceTier tripCategory searchSource
+                        -- Store both the original key and the effective key so the guard fires
+                        -- regardless of which category a later group presents.
+                        let updatedBoundedAlreadyDeletedMap =
+                              markBoundedAreadyDeleted merchanOperatingCityId vehicleServiceTier effectiveTripCategory area searchSource $
+                                markBoundedAreadyDeleted merchanOperatingCityId vehicleServiceTier tripCategory area searchSource boundedAlreadyDeletedMap
                         return (fareProducts, updatedBoundedAlreadyDeletedMap)
 
-              oldFareProducts `forM_` \fp -> do
-                fareProducts <- CQFProduct.findAllFareProductByFarePolicyId fp.farePolicyId
-                when (length fareProducts == 1) $ CQFP.delete fp.farePolicyId
-                CQFProduct.delete fp.id
-                CQFProduct.clearCache fp
+              -- Delete old fare products. Use the in-memory usage count to decide whether the
+              -- FarePolicy itself is now orphaned (no remaining FareProducts reference it),
+              -- avoiding one DB query per old fare product.
+              newFarePolicyUsageCount <-
+                foldlM
+                  ( \usageCount fp -> do
+                      let currentCount = Map.findWithDefault 0 fp.farePolicyId usageCount
+                      when (currentCount <= 1) $ CQFP.delete fp.farePolicyId
+                      CQFProduct.delete fp.id
+                      CQFProduct.clearCache fp
+                      return $ Map.adjust (subtract 1) fp.farePolicyId usageCount
+                  )
+                  farePolicyUsageCount
+                  oldFareProducts
 
               id <- generateGUID
               let farePolicyId = finalFarePolicy.id
               let fareProduct = DFareProduct.FareProduct {enabled = enabled', merchantId = merchantOpCity.merchantId, merchantOperatingCityId = merchantOpCity.id, ..}
               CQFProduct.create fareProduct
               CQFProduct.clearCache fareProduct
-              oldFareProducts `forM_` CQFProduct.clearCache
 
-              return (newErrors, newBoundedAlreadyDeletedMap)
+              return (newErrors, newBoundedAlreadyDeletedMap, newFarePolicyUsageCount)
 
     checkIfvehicleServiceTierExists vehicleServiceTier merchanOperatingCityId = CQVST.findByServiceTierTypeAndCityId merchanOperatingCityId vehicleServiceTier (Just []) >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
 
