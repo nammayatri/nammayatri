@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findByEntity ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Finance.Domain.Types.StateTransition.PaymentEntityType -> Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.StateTransition.StateTransition]))
+  (Lib.Finance.Domain.Types.StateTransition.PaymentEntityType -> Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.StateTransition.StateTransition])
 findByEntity entityType entityId = do findAllWithKV [Se.And [Se.Is Beam.entityType $ Se.Eq entityType, Se.Is Beam.entityId $ Se.Eq entityId]]
 
 findById ::

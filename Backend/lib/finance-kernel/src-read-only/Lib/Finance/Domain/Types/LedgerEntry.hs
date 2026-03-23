@@ -47,12 +47,12 @@ data EntryType = Expense | Revenue | LiabilityCreated | LiabilitySettled | Rever
 
 data SettlementStatus = UNSETTLED | PAID_OUT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EntryStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EntryStatus)
 
-$(mkHttpInstancesForEnum (''EntryStatus))
+$(mkHttpInstancesForEnum ''EntryStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EntryType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EntryType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SettlementStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SettlementStatus)
 
-$(mkHttpInstancesForEnum (''SettlementStatus))
+$(mkHttpInstancesForEnum ''SettlementStatus)

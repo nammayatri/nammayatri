@@ -41,10 +41,10 @@ data ReconciliationType
   | PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''JobStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''JobStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ReconciliationStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ReconciliationType)
 
-$(mkHttpInstancesForEnum (''ReconciliationType))
+$(mkHttpInstancesForEnum ''ReconciliationType)
