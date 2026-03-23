@@ -1,0 +1,1 @@
+CREATE INDEX idx_sos_person_id_status ON atlas_app.sos (person_id, status);
