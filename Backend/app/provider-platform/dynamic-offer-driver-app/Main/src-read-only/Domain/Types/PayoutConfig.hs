@@ -34,6 +34,7 @@ data PayoutConfig = PayoutConfig
     thresholdPayoutAmountPerPerson :: Kernel.Types.Common.HighPrecMoney,
     timeDiff :: Kernel.Prelude.NominalDiffTime,
     vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,
+    vpaVerificationMode :: Domain.Types.PayoutConfig.VpaVerificationMode,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
@@ -41,4 +42,8 @@ data PayoutConfig = PayoutConfig
 
 data D2DPayoutTypeEnum = WALLET | DIRECT_PAYOUT | NO_PAYOUT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+data VpaVerificationMode = PAYMENT_BASED | API_BASED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''D2DPayoutTypeEnum)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VpaVerificationMode)

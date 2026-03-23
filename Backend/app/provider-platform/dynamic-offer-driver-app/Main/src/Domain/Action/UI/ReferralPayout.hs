@@ -6,15 +6,18 @@ import Data.Time.Calendar
 import qualified Domain.Action.UI.Driver as DD
 import qualified Domain.Action.UI.Payout as DAP
 import qualified Domain.Types.DailyStats as DS
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.PayoutConfig as DPC
 import Domain.Types.Person
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Payment.Interface.Types as KT
 import qualified Kernel.External.Payment.Types as PaymentTypes
 import qualified Kernel.External.Payout.Interface.Types as Payout
 import qualified Kernel.External.Payout.Types as PT
@@ -82,7 +85,9 @@ getPayoutReferralEarnings (mbPersonId, _merchantId, merchantOpCityId) fromDate t
         payoutRegistrationAmount = sum [payoutConfig.payoutRegistrationFee, payoutConfig.payoutRegistrationCgst, payoutConfig.payoutRegistrationSgst],
         referralRewardAmountPerRideForD2DPayout = payoutConfig.referralRewardAmountPerRideForD2DPayout,
         d2dReferralEarnings = Just d2dDailyEarnings,
-        d2cReferralEarnings = Just d2cDailyEarnings
+        d2cReferralEarnings = Just d2cDailyEarnings,
+        payoutRegAmountRefunded = dInfo.payoutRegAmountRefunded,
+        vpaVerificationMode = payoutConfig.vpaVerificationMode
       }
   where
     parseDailyEarnings earning =
@@ -122,11 +127,58 @@ postPayoutDeleteVpa ::
     ) ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postPayoutDeleteVpa (mbPersonId, _merchantId, _merchantOpCityId) = do
+postPayoutDeleteVpa (mbPersonId, _merchantId, merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   driverInfo <- runInReplica $ DrInfo.findByPrimaryKey personId >>= fromMaybeM DriverInfoNotFound
   unless (isJust driverInfo.payoutVpa) $ throwError (InvalidRequest "Vpa Id does not Exists")
   void $ DrInfo.updatePayoutVpaAndStatus Nothing Nothing personId -- Deleting the prev VPA (We can get this in payout order history)
+  -- Reset refund tracking so re-registration (₹2 payment) can be refunded again
+  mbVehicle <- QVeh.findById personId
+  let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
+  mbPayoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing
+  when (maybe False (\pc -> pc.vpaVerificationMode == DPC.PAYMENT_BASED) mbPayoutConfig) $
+    DrInfo.updatePayoutRegAmountRefunded Nothing personId
+  pure Kernel.Types.APISuccess.Success
+
+postPayoutUpdateVpa ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.ReferralPayout.UpdatePayoutVpaReq ->
+    Environment.Flow Kernel.Types.APISuccess.APISuccess
+  )
+postPayoutUpdateVpa (mbPersonId, _merchantId, merchantOpCityId) req = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  mbVehicle <- QVeh.findById personId
+  let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
+  payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
+  unless payoutConfig.isPayoutEnabled $ throwError $ InvalidRequest "Payout is Not Enabled"
+  unless (payoutConfig.vpaVerificationMode == DPC.API_BASED) $
+    throwError $ InvalidRequest "VPA update via API is not enabled. Please use the registration payment flow."
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- Verify VPA using Juspay API
+  paymentServiceName <- TPayment.decidePaymentService (DEMSC.PaymentService PaymentTypes.Juspay) person.clientSdkVersion person.merchantOperatingCityId
+  let verifyVPAReq =
+        KT.VerifyVPAReq
+          { orderId = Nothing,
+            customerId = Just person.id.getId,
+            vpa = req.vpa
+          }
+      verifyVpaCall = TPayment.verifyVpa person.merchantId person.merchantOperatingCityId paymentServiceName (Just person.id.getId)
+  resp <- try @_ @SomeException $ Payout.verifyVPAService verifyVPAReq verifyVpaCall
+  case resp of
+    Left e -> throwError $ InvalidRequest $ "VPA Verification Failed: " <> show e
+    Right response ->
+      unless (response.status == "VALID") $
+        throwError $ InvalidRequest $ "Invalid VPA: " <> req.vpa
+  -- VPA is valid — store it
+  DrInfo.updatePayoutVpaAndStatus (Just req.vpa) (Just DI.VERIFIED_BY_USER) personId
+  -- Process backlog referral payouts with the just-verified VPA.
+  -- processPreviousPayoutAmount uses tryLockRedis (non-blocking), so concurrent
+  -- calls from rapid VPA updates are dropped — no risk of double-pay.
+  fork ("processing backlog payout for driver via updateVpa " <> personId.getId) $
+    DAP.processPreviousPayoutAmount personId (Just req.vpa) merchantOpCityId
   pure Kernel.Types.APISuccess.Success
 
 getPayoutRegistration ::
@@ -142,6 +194,8 @@ getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = do
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
   unless payoutConfig.isPayoutEnabled $ throwError $ InvalidRequest "Payout Registration is Not Enabled"
+  when (payoutConfig.vpaVerificationMode == DPC.API_BASED) $
+    throwError $ InvalidRequest "Use /payout/update/vpa to register your VPA"
 
   -- Get driver details for creating the payment order
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
