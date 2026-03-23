@@ -7,6 +7,7 @@ module Domain.Action.Management.AccessMatrix
 where
 
 import qualified API.Types.Management.AccessMatrix
+import qualified Data.Text as T
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Role as DRole
@@ -25,7 +26,6 @@ import qualified Storage.Queries.MerchantExtra as QMerchantExtra
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth.Api
 import Tools.Error
-import qualified Data.Text as T
 
 getAccessMatrix ::
   ( Kernel.Types.Id.ShortId DMerchant.Merchant ->

@@ -14,6 +14,7 @@
 
 module Domain.Action.Dashboard.AccessMatrix where
 
+import qualified Data.Text as T
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Role as DRole
 import Kernel.Beam.Functions as B
@@ -26,7 +27,6 @@ import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth
 import Tools.Error
-import qualified Data.Text as T
 
 getMerchantWithCityList ::
   BeamFlow m r =>

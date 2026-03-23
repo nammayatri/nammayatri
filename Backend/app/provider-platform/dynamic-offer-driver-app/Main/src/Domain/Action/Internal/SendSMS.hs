@@ -14,13 +14,13 @@
 
 module Domain.Action.Internal.SendSMS where
 
-import Data.Map.Strict (Map, foldlWithKey')
+import Data.Map.Strict (Map, foldlWithKey', insert)
 import qualified Data.Text as T
 import qualified Domain.Types.MerchantMessage as DMM
 import Environment
-import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Prelude
-import Kernel.Types.APISuccess
+import Kernel.Sms.Config (useFakeSms)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -32,7 +32,13 @@ import qualified Tools.SMS as Sms
 data SendSMSReq = SendSMSReq
   { phoneNumber :: Text,
     messageKey :: DMM.MessageKey,
-    templateVars :: Map Text Text -- e.g. {"otp": "1234", "validityMinutes": "5"}
+    templateVars :: Map Text Text, -- e.g. {"otp": "1234", "validityMinutes": "5"}
+    isOtp :: Maybe Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+newtype SendSMSRes = SendSMSRes
+  { otp :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -41,17 +47,33 @@ sendSMS ::
   Text ->
   Context.City ->
   SendSMSReq ->
-  Flow APISuccess
+  Flow SendSMSRes
 sendSMS apiKey merchantShortIdText city req = do
   merchant <- findMerchantByShortId (ShortId merchantShortIdText)
   unless (Just merchant.internalApiKey == apiKey) $
     throwError (AuthBlocked "Invalid BPP internal api key")
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
   smsCfg <- asks (.smsCfg)
-  merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId req.messageKey Nothing Nothing
-      >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show req.messageKey))
-  let msg = foldlWithKey' (\acc k v -> T.replace ("{#" <> k <> "#}") v acc) merchantMessage.message req.templateVars
-      sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
-  Sms.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq msg req.phoneNumber sender merchantMessage.templateId merchantMessage.messageType) >>= Sms.checkSmsResult
-  pure Success
+  let isOtpMessage = fromMaybe False req.isOtp
+      useFakeOtpM = useFakeSms smsCfg
+  if isOtpMessage
+    then do
+      otpCode <- generateOTPCode
+      let otpToUse = maybe otpCode show useFakeOtpM
+          updatedTemplateVars = insert "otp" otpToUse req.templateVars
+      unless (isJust useFakeOtpM) $ do
+        merchantMessage <-
+          QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId req.messageKey Nothing Nothing
+            >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show req.messageKey))
+        let msg = foldlWithKey' (\acc k v -> T.replace ("{#" <> k <> "#}") v acc) merchantMessage.message updatedTemplateVars
+            sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
+        Sms.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq msg req.phoneNumber sender merchantMessage.templateId merchantMessage.messageType) >>= Sms.checkSmsResult
+      pure $ SendSMSRes {otp = Just otpToUse}
+    else do
+      merchantMessage <-
+        QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId req.messageKey Nothing Nothing
+          >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show req.messageKey))
+      let msg = foldlWithKey' (\acc k v -> T.replace ("{#" <> k <> "#}") v acc) merchantMessage.message req.templateVars
+          sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
+      Sms.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq msg req.phoneNumber sender merchantMessage.templateId merchantMessage.messageType) >>= Sms.checkSmsResult
+      pure $ SendSMSRes {otp = Nothing}

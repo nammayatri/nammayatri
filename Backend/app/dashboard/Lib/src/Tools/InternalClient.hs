@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Tools.InternalClient (SendSMSReq (..), callBPPInternalSendSMS) where
+module Tools.InternalClient (SendSMSReq (..), SendSMSRes (..), callBPPInternalSendSMS) where
 
 import qualified Data.HashMap.Strict as HM
 import Data.Map.Strict (Map)
@@ -20,7 +20,6 @@ import qualified Domain.Types.ServerName as DSN
 import qualified EulerHS.Types as Euler
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.City as City
-import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Utils.Common hiding (Error, callAPI, throwError)
 import Kernel.Utils.Error.Throwing (throwError)
 import Servant hiding (throwError)
@@ -30,7 +29,13 @@ import Tools.Metrics
 data SendSMSReq = SendSMSReq
   { phoneNumber :: Text,
     messageKey :: Text,
-    templateVars :: Map Text Text
+    templateVars :: Map Text Text,
+    isOtp :: Maybe Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+newtype SendSMSRes = SendSMSRes
+  { otp :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -41,9 +46,9 @@ type SendSMSAPI =
     :> Capture "city" City.City
     :> Header "api-key" Text
     :> ReqBody '[JSON] SendSMSReq
-    :> Post '[JSON] APISuccess
+    :> Post '[JSON] SendSMSRes
 
-sendSMSClient :: Text -> City.City -> Maybe Text -> SendSMSReq -> Euler.EulerClient APISuccess
+sendSMSClient :: Text -> City.City -> Maybe Text -> SendSMSReq -> Euler.EulerClient SendSMSRes
 sendSMSClient = Euler.client (Proxy @SendSMSAPI)
 
 callBPPInternalSendSMS ::
@@ -55,7 +60,7 @@ callBPPInternalSendSMS ::
   Text ->
   City.City ->
   SendSMSReq ->
-  m APISuccess
+  m SendSMSRes
 callBPPInternalSendSMS merchantShortId city req = do
   dataServers <- asks (.dataServers)
   let mbDataServer = find (\s -> s.name == DSN.DRIVER_OFFER_BPP) dataServers

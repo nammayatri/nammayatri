@@ -23,3 +23,12 @@ WHERE merchant_operating_city_id IN (
   SELECT id FROM atlas_driver_offer_bpp.merchant_operating_city
   WHERE merchant_short_id = 'MSIL_PARTNER'
 );
+
+INSERT INTO atlas_driver_offer_bpp.merchant_message (merchant_id, message_key, message, merchant_operating_city_id)
+SELECT
+    m.merchant_id,
+    'SEND_TOTP',
+    '{#otp#} is your OTP for 2FA verification. Please do not share it with anyone.',
+    m.id
+FROM atlas_driver_offer_bpp.merchant_operating_city AS m
+ON CONFLICT (merchant_operating_city_id, message_key) DO NOTHING;
