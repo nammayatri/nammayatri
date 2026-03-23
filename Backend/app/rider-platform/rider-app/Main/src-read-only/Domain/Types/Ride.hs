@@ -37,6 +37,7 @@ data RideE e = Ride
     bppRideId :: Kernel.Types.Id.Id Domain.Types.Ride.BPPRide,
     cancellationChargesOnCancel :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationFeeIfCancelled :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationFeeStatus :: Kernel.Prelude.Maybe Domain.Types.Ride.CancellationFeeStatus,
     chargeableDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
@@ -112,9 +113,9 @@ data RideE e = Ride
   }
   deriving (Generic)
 
-type Ride = RideE 'AsEncrypted
+type Ride = RideE ('AsEncrypted)
 
-type DecryptedRide = RideE 'AsUnencrypted
+type DecryptedRide = RideE ('AsUnencrypted)
 
 instance EncryptedItem Ride where
   type Unencrypted Ride = (DecryptedRide, HashSalt)
@@ -132,6 +133,7 @@ instance EncryptedItem Ride where
           bppRideId = bppRideId entity,
           cancellationChargesOnCancel = cancellationChargesOnCancel entity,
           cancellationFeeIfCancelled = cancellationFeeIfCancelled entity,
+          cancellationFeeStatus = cancellationFeeStatus entity,
           chargeableDistance = chargeableDistance entity,
           clientBundleVersion = clientBundleVersion entity,
           clientConfigVersion = clientConfigVersion entity,
@@ -219,6 +221,7 @@ instance EncryptedItem Ride where
             bppRideId = bppRideId entity,
             cancellationChargesOnCancel = cancellationChargesOnCancel entity,
             cancellationFeeIfCancelled = cancellationFeeIfCancelled entity,
+            cancellationFeeStatus = cancellationFeeStatus entity,
             chargeableDistance = chargeableDistance entity,
             clientBundleVersion = clientBundleVersion entity,
             clientConfigVersion = clientConfigVersion entity,
@@ -302,6 +305,8 @@ instance EncryptedItem' Ride where
 
 data BPPRide = BPPRide {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+data CancellationFeeStatus = PENDING | CLEARED | WAIVED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data EstimatedEndTimeRange = EstimatedEndTimeRange {end :: Kernel.Prelude.UTCTime, start :: Kernel.Prelude.UTCTime} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data PaymentStatus = Completed | NotInitiated | Initiated | Cancelled | Failed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -316,10 +321,12 @@ data SosJourneyStatus
 
 data UnexpectedConditionStage = DriverDeviated | UnusualStop | UnsafeArea deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CancellationFeeStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosJourneyStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''UnexpectedConditionStage)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SosJourneyStatus))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PaymentStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''UnexpectedConditionStage))
+
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''PaymentStatus))
