@@ -855,7 +855,9 @@ postDriverAddRidePayoutAccountNumber merchantShortId opCity req = do
   case (req.accountNumber, req.ifscCode) of
     (Just accountNumber, Just ifscCode) -> do
       let payoutVpa = accountNumber <> "@" <> ifscCode <> ".ifsc.npci"
-      QDriverInfo.updatePayoutVpaAndStatusByDriverIds (Just payoutVpa) (Just DI.MANUALLY_ADDED) [person.id]
+      if DCommon.checkFleetOwnerRole person.role
+        then FOI.updatePayoutVpaAndStatus (Just payoutVpa) (Just DFOI.MANUALLY_ADDED) person.id
+        else QDriverInfo.updatePayoutVpaAndStatusByDriverIds (Just payoutVpa) (Just DI.MANUALLY_ADDED) [person.id]
     _ -> pure ()
   pure Success
 

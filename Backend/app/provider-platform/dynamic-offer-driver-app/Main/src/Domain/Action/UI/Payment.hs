@@ -115,6 +115,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import Storage.Queries.DriverPlan (findByDriverIdWithServiceName)
 import qualified Storage.Queries.DriverPlan as QDP
+import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Mandate as QM
@@ -244,7 +245,11 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
           let isOneTimeSecurityInvoice = any (\inv -> inv.paymentMode == INV.ONE_TIME_SECURITY_INVOICE && inv.invoiceStatus == INV.ACTIVE_INVOICE) invoices
           let isPayoutRegistration = order.entityName == Just DPayment.PAYOUT_REGISTRATION
           when ((isOneTimeSecurityInvoice || isPayoutRegistration) && status == Payment.CHARGED) do
-            whenJust payerVpa $ \vpa -> QDI.updatePayoutVpaAndStatus (Just vpa) (Just DI.VIA_WEBHOOK) (cast order.personId)
+            whenJust payerVpa $ \vpa -> do
+              person' <- QP.findById (cast order.personId) >>= fromMaybeM (PersonNotFound order.personId.getId)
+              if DCommon.checkFleetOwnerRole person'.role
+                then QFOI.updatePayoutVpaAndStatus (Just vpa) (Just DFOI.VIA_WEBHOOK) (cast order.personId)
+                else QDI.updatePayoutVpaAndStatus (Just vpa) (Just DI.VIA_WEBHOOK) (cast order.personId)
             logDebug $ "Updating Payout (Via getStatus) And Process Previous Payout For Person: " <> show order.personId <> " with Vpa: " <> show payerVpa
             when isPayoutRegistration $ do
               -- Store VPA on PaymentOrder
@@ -359,7 +364,11 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
           logDebug $ "Invoices: " <> show invoices
           when (order.entityName == Just DPayment.PAYOUT_REGISTRATION && transactionStatus == Payment.CHARGED) do
             let mbVpa = payerVpa <|> ((.payerVpa) =<< upi)
-            whenJust mbVpa $ \vpa -> QDI.updatePayoutVpaAndStatus (Just vpa) (Just DI.VIA_WEBHOOK) (cast order.personId)
+            whenJust mbVpa $ \vpa -> do
+              person' <- QP.findById (cast order.personId) >>= fromMaybeM (PersonNotFound order.personId.getId)
+              if DCommon.checkFleetOwnerRole person'.role
+                then QFOI.updatePayoutVpaAndStatus (Just vpa) (Just DFOI.VIA_WEBHOOK) (cast order.personId)
+                else QDI.updatePayoutVpaAndStatus (Just vpa) (Just DI.VIA_WEBHOOK) (cast order.personId)
             logDebug $ "Updating Payout And Process Previous Payout For Person: " <> show order.personId <> " with Vpa: " <> show mbVpa
             -- Store VPA on PaymentOrder
             QOrder.updateVpa order.id mbVpa
