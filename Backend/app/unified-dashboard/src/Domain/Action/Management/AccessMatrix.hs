@@ -25,6 +25,7 @@ import qualified Storage.Queries.MerchantExtra as QMerchantExtra
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth.Api
 import Tools.Error
+import qualified Data.Text as T
 
 getAccessMatrix ::
   ( Kernel.Types.Id.ShortId DMerchant.Merchant ->
@@ -62,7 +63,7 @@ getMerchantWithCityList ::
   )
 getMerchantWithCityList _ _ _ = do
   merchantList <- B.runInReplica $ QMerchantExtra.findAllMerchants
-  let merchantCityList = map (\merchant -> API.Types.Management.AccessMatrix.MerchantCityList merchant.supportedOperatingCities merchant.shortId) merchantList
+  let merchantCityList = map (\merchant -> API.Types.Management.AccessMatrix.MerchantCityList merchant.supportedOperatingCities merchant.shortId (map (T.pack . show) merchant.supportedOperatingCities)) merchantList
   pure merchantCityList
 
 mkAccessMatrixRowAPIEntity :: [DMatrix.AccessMatrix] -> DRole.Role -> API.Types.Management.AccessMatrix.AccessMatrixRowAPIEntity

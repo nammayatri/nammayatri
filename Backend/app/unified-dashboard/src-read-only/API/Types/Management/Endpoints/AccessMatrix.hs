@@ -29,7 +29,7 @@ data AccessMatrixRowAPIEntity = AccessMatrixRowAPIEntity {accessMatrixRow :: [Ac
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data MerchantCityList = MerchantCityList {cityList :: [Kernel.Types.Beckn.Context.City], merchantId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant}
+data MerchantCityList = MerchantCityList {cityList :: [Kernel.Types.Beckn.Context.City], merchantId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant, operatingCityWithNames :: [Kernel.Prelude.Text]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
