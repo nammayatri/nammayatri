@@ -199,7 +199,7 @@ processOneWalletPayout config transporterConfig merchantId merchantOpCityId driv
               merchantId = merchantId,
               mocId = merchantOpCityId,
               person = person,
-              driverInfo = driverInfo,
+              payoutVpa = driverInfo.payoutVpa,
               transporterConfig = transporterConfig
             }
 

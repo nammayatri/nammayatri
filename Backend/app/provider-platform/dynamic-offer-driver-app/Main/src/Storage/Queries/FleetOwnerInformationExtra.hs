@@ -204,6 +204,21 @@ updateByPrimaryKey fleetOwnerInfo = do
         ]
         [Se.And [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]]
 
+updatePayoutVpaAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe Text ->
+  Maybe Domain.Types.FleetOwnerInformation.PayoutVpaStatus ->
+  Kernel.Types.Id.Id DP.Person ->
+  m ()
+updatePayoutVpaAndStatus payoutVpa payoutVpaStatus fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.payoutVpa payoutVpa,
+      Se.Set Beam.payoutVpaStatus payoutVpaStatus,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
 getFleetOwnerByTicketPlaceId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe Text ->
