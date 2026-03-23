@@ -37,7 +37,7 @@ type API =
              :> ReqBody '[JSON] DReg.Enable2FAReq
              :> Post '[JSON] DReg.Enable2FARes
            :<|> "initiate2FaSetup"
-             :> ReqBody '[JSON] DReg.Enable2FAReq
+             :> ReqBody '[JSON] DReg.Initiate2FASetupReq
              :> Post '[JSON] DReg.Initiate2FASetupRes
            :<|> "verify2FaSetup"
              :> ReqBody '[JSON] DReg.Verify2FASetupReq
@@ -75,7 +75,7 @@ logoutAllMerchants = withFlowHandlerAPI' . DReg.logoutAllMerchants
 enable2fa :: BeamFlow' => DReg.Enable2FAReq -> FlowHandler DReg.Enable2FARes
 enable2fa = withFlowHandlerAPI' . DReg.enable2fa
 
-initiate2FASetup :: BeamFlow' => DReg.Enable2FAReq -> FlowHandler DReg.Initiate2FASetupRes
+initiate2FASetup :: BeamFlow' => DReg.Initiate2FASetupReq -> FlowHandler DReg.Initiate2FASetupRes
 initiate2FASetup = withFlowHandlerAPI' . DReg.initiate2FASetup
 
 verify2FASetup :: BeamFlow' => DReg.Verify2FASetupReq -> FlowHandler DReg.Enable2FARes

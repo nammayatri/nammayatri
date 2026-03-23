@@ -66,10 +66,10 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as QODC
 import qualified Storage.Queries.DriverInformation as DriverInfo
 import qualified Storage.Queries.DriverLicense as Query
-import qualified Storage.Queries.MorthVerification as MorthQuery
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as ImageQuery
+import qualified Storage.Queries.MorthVerification as MorthQuery
 import qualified Storage.Queries.Person as Person
 import qualified Tools.DriverBackgroundVerification as DriverBackgroundVerification
 import Tools.Error

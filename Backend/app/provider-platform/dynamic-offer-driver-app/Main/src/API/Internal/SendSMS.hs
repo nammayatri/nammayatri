@@ -22,7 +22,6 @@ import qualified Domain.Action.Internal.SendSMS as Domain
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.APISuccess
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
@@ -33,11 +32,11 @@ type API =
       :> Capture "city" Context.City
       :> Header "api-key" Text
       :> ReqBody '[JSON] Domain.SendSMSReq
-      :> Post '[JSON] APISuccess
+      :> Post '[JSON] Domain.SendSMSRes
   )
 
 handler :: FlowServer API
 handler = sendSMS
 
-sendSMS :: Text -> Context.City -> Maybe Text -> Domain.SendSMSReq -> FlowHandler APISuccess
+sendSMS :: Text -> Context.City -> Maybe Text -> Domain.SendSMSReq -> FlowHandler Domain.SendSMSRes
 sendSMS merchantShortId city apiKey = withFlowHandlerAPI . Domain.sendSMS apiKey merchantShortId city

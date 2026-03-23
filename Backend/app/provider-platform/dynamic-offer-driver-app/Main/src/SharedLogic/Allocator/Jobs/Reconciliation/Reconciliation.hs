@@ -528,8 +528,7 @@ processDsrVsLedger booking ledgerEntries indirectTaxTxns directTaxTxns now = do
   let dcoId = (.driverId.getId) <$> listToMaybe rides
       mbRide = listToMaybe rides
   rideFareParams <- maybe (pure Nothing) (\ride -> maybe (pure Nothing) (QFareParams.findById) ride.fareParametersId) mbRide
-  let
-      dsrResult = DomainRecon.runDsrVsLedgerComparison booking mbRide rideFareParams ledgerEntries indirectTaxTxns directTaxTxns
+  let dsrResult = DomainRecon.runDsrVsLedgerComparison booking mbRide rideFareParams ledgerEntries indirectTaxTxns directTaxTxns
 
   entryId <- generateGUID
   let inp =

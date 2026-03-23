@@ -30,8 +30,8 @@ import qualified API.Internal.ProdLoopStatus as ProdLoopStatus
 import qualified API.Internal.QuoteRespond as QuoteRespond
 import qualified API.Internal.ReportACIssue as ReportACIssue
 import qualified API.Internal.ReportIssue as ReportIssue
-import qualified API.Internal.SendSMS as SendSMS
 import qualified API.Internal.Ride as Ride
+import qualified API.Internal.SendSMS as SendSMS
 import qualified API.Internal.SpecialLocationList as SpecialLocationList
 import qualified API.Internal.SpecialLocationUpsert as SpecialLocationUpsert
 import qualified API.Internal.StopDetection as StopDetection
