@@ -15,7 +15,8 @@
 -}
 
 module Domain.Action.UI.DriverWallet
-  ( getWalletTransactions,
+  ( getWalletBalance,
+    getWalletTransactions,
     postWalletPayout,
     postWalletTopup,
     recordAirportCashRecharge,
@@ -99,6 +100,24 @@ counterpartyFromRole :: DP.Role -> CounterpartyType
 counterpartyFromRole DP.FLEET_OWNER = counterpartyFleetOwner
 counterpartyFromRole DP.FLEET_BUSINESS = counterpartyFleetOwner
 counterpartyFromRole _ = counterpartyDriver
+
+--------------------------------------------------------------------------------
+-- getWalletBalance
+--------------------------------------------------------------------------------
+
+getWalletBalance ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id DP.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Environment.Flow DriverWallet.WalletBalanceResponse
+  )
+getWalletBalance (mbPersonId, _merchantId, _mocId) = do
+  driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
+  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  let counterparty = counterpartyFromRole person.role
+  currentBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty driverId.getId
+  pure $ DriverWallet.WalletBalanceResponse {currentBalance}
 
 --------------------------------------------------------------------------------
 -- getWalletTransactions

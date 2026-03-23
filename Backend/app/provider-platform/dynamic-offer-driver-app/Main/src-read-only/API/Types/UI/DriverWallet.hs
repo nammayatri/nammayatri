@@ -37,6 +37,10 @@ data TopUpRequest = TopUpRequest {amount :: Kernel.Types.Common.HighPrecMoney, p
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data WalletBalanceResponse = WalletBalanceResponse {currentBalance :: Kernel.Types.Common.HighPrecMoney}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data WalletItem = WalletItem
   { itemName :: Kernel.Prelude.Text,
     itemReference :: Kernel.Prelude.Text,

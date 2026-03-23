@@ -45,7 +45,15 @@ types:
     totalPending: HighPrecMoney
     items: "[PayoutHistoryItem]"
 
+  WalletBalanceResponse:
+    currentBalance: HighPrecMoney
+
 apis:
+  - GET:
+      endpoint: /wallet/balance
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: WalletBalanceResponse
   - GET:
       endpoint: /wallet/transactions
       auth: TokenAuth PROVIDER_TYPE
