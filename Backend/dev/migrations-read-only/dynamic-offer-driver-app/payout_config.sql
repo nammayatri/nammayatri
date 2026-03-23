@@ -44,3 +44,8 @@ ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN coin_redemption_mini
 
 ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN referral_reward_amount_per_ride_for_d2_d_payout double precision ;
 ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN d2d_payout_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN vpa_verification_mode text ;

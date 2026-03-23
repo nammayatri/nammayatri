@@ -41,6 +41,16 @@ type API =
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "payout"
+      :> "update"
+      :> "vpa"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.ReferralPayout.UpdatePayoutVpaReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "payout"
       :> "registration"
       :> Get
            '[JSON]
@@ -67,7 +77,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getPayoutReferralEarnings :<|> postPayoutDeleteVpa :<|> getPayoutRegistration :<|> postPayoutCreateOrder :<|> getPayoutOrderStatus
+handler = getPayoutReferralEarnings :<|> postPayoutDeleteVpa :<|> postPayoutUpdateVpa :<|> getPayoutRegistration :<|> postPayoutCreateOrder :<|> getPayoutOrderStatus
 
 getPayoutReferralEarnings ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -88,6 +98,16 @@ postPayoutDeleteVpa ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postPayoutDeleteVpa a1 = withFlowHandlerAPI $ Domain.Action.UI.ReferralPayout.postPayoutDeleteVpa (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+
+postPayoutUpdateVpa ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.ReferralPayout.UpdatePayoutVpaReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postPayoutUpdateVpa a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.ReferralPayout.postPayoutUpdateVpa (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getPayoutRegistration ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

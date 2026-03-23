@@ -1888,17 +1888,21 @@ PayoutConfig:
     coinRedemptionMinimumLimit: Maybe HighPrecMoney
     d2dPayoutType: D2DPayoutTypeEnum
     referralRewardAmountPerRideForD2DPayout: Maybe HighPrecMoney
+    vpaVerificationMode: VpaVerificationMode
 
   beamType:
     timeDiff: Seconds
     d2dPayoutType: Maybe D2DPayoutTypeEnum
+    vpaVerificationMode: Maybe VpaVerificationMode
 
   toTType:
     timeDiff: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     d2dPayoutType: Just d2dPayoutType|E
+    vpaVerificationMode: Just vpaVerificationMode|E
   fromTType:
     timeDiff: Kernel.Utils.Common.secondsToNominalDiffTime|I
     d2dPayoutType: fromMaybe Domain.Types.PayoutConfig.NO_PAYOUT d2dPayoutType|E
+    vpaVerificationMode: fromMaybe Domain.Types.PayoutConfig.PAYMENT_BASED vpaVerificationMode|E
   default:
     referralRewardAmountPerRide: "100.0"
     timeDiff: "86400"
@@ -1925,6 +1929,8 @@ PayoutConfig:
   types:
     D2DPayoutTypeEnum:
       enum: "WALLET,DIRECT_PAYOUT,NO_PAYOUT"
+    VpaVerificationMode:
+      enum: "PAYMENT_BASED,API_BASED"
 
   extraOperations:
     - EXTRA_QUERY_FILE

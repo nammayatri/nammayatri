@@ -6,6 +6,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Data.Time.Calendar
 import qualified Domain.Types.DailyStats
+import qualified Domain.Types.PayoutConfig
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Payment.Juspay.Types.Common
 import qualified Kernel.Prelude
@@ -32,11 +33,17 @@ data ReferralEarningsRes = ReferralEarningsRes
     dailyEarnings :: [DailyEarning],
     orderId :: Kernel.Prelude.Maybe Data.Text.Text,
     orderStatus :: Kernel.Prelude.Maybe Kernel.External.Payment.Juspay.Types.Common.TransactionStatus,
+    payoutRegAmountRefunded :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     payoutRegistrationAmount :: Kernel.Types.Common.HighPrecMoney,
     referralRewardAmountPerRide :: Kernel.Types.Common.HighPrecMoney,
     referralRewardAmountPerRideForD2DPayout :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     totalReferralCount :: Kernel.Prelude.Int,
-    vpaId :: Kernel.Prelude.Maybe Data.Text.Text
+    vpaId :: Kernel.Prelude.Maybe Data.Text.Text,
+    vpaVerificationMode :: Domain.Types.PayoutConfig.VpaVerificationMode
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UpdatePayoutVpaReq = UpdatePayoutVpaReq {vpa :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
