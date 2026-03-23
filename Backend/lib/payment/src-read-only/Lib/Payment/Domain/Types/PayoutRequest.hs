@@ -70,7 +70,6 @@ $(Kernel.Utils.TH.mkHttpInstancesForEnum ''PayoutRequestStatus)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutType)
 
-
 instance FromHttpApiData [PayoutRequestStatus] where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece

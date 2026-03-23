@@ -308,8 +308,8 @@ postSosCreate (mbPersonId, _merchantId) req = do
               (Just existing, _) -> pure (Just existing, Nothing, Just True)
               (Nothing, Just sosConfig)
                 | sosConfig.triggerSource == DRC.FRONTEND -> do
-                    (trackingId, specificConfig) <- handleExternalSOS riderPerson sosConfig sosRequest riderPersonId riderPlatformConfig'
-                    pure (trackingId, specificConfig, Just True)
+                  (trackingId, specificConfig) <- handleExternalSOS riderPerson sosConfig sosRequest riderPersonId riderPlatformConfig'
+                  pure (trackingId, specificConfig, Just True)
               _ -> pure (externalReferenceId, sosServiceConfig, externalApiStatus)
             pure (finalExternalReferenceId, kaptureTicketId, dbSosId, finalSosServiceConfig <|> sosServiceConfig, finalExternalApiStatus)
           KAPTURE -> do

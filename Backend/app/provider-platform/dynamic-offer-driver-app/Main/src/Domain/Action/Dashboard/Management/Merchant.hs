@@ -2488,7 +2488,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                     -- the InterCity fallback and stored its guard under the generic category.
                     let genericKey = makeKey merchanOperatingCityId vehicleServiceTier (SQF.removeCityFromTripCategory tripCategory) area searchSource
                     if isJust (Map.lookup key boundedAlreadyDeletedMap)
-                         || (SQF.isInterCityWithCity tripCategory && isJust (Map.lookup genericKey boundedAlreadyDeletedMap))
+                      || (SQF.isInterCityWithCity tripCategory && isJust (Map.lookup genericKey boundedAlreadyDeletedMap))
                       then return ([], boundedAlreadyDeletedMap)
                       else do
                         -- filterBoundedFareProductsFromSnapshot returns the effective TripCategory
