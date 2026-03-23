@@ -46,7 +46,10 @@ import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Domain.Types.FleetOwnerInformation as DFOI
+import qualified Domain.Types.Person as DP
 import qualified Storage.Queries.DriverInformationExtra as QDIE
+import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ScheduledPayoutConfig as QSPC
 
@@ -148,29 +151,43 @@ processWalletPayouts config jobData = do
       logInfo "Wallet payouts disabled at transporter level"
       pure Complete
     else do
-      -- Cursor-based pagination: use lastDriverId from Redis
-      let cursorKey = "ScheduledBatchPayout:Cursor:" <> merchantOpCityId.getId <> ":" <> show config.payoutCategory
-      mbLastDriverId <- Redis.get cursorKey
+      let driverCursorKey = "ScheduledBatchPayout:Cursor:" <> merchantOpCityId.getId <> ":" <> show config.payoutCategory
+          fleetCursorKey = "ScheduledBatchPayout:Cursor:Fleet:" <> merchantOpCityId.getId <> ":" <> show config.payoutCategory
+
+      -- Process drivers
+      mbLastDriverId <- Redis.get driverCursorKey
       eligibleDriverInfos <- QDIE.findEligibleForScheduledPayout merchantOpCityId config.batchSize mbLastDriverId
-      if null eligibleDriverInfos
+      unless (null eligibleDriverInfos) $ do
+        let lastDriverId = (.driverId) $ last eligibleDriverInfos
+        Redis.setExp driverCursorKey lastDriverId 86400
+        for_ eligibleDriverInfos $ \driverInfo -> do
+          fork ("ScheduledWalletPayout:Driver:" <> driverInfo.driverId.getId) $ do
+            processOneWalletPayout config transporterConfig merchantId merchantOpCityId
+              driverInfo.driverId driverInfo.payoutVpa (driverInfo.payoutVpaStatus == Just DI.MANUALLY_ADDED)
+
+      -- Process fleet owners
+      mbLastFleetId <- Redis.get fleetCursorKey
+      eligibleFleetInfos <- QFOIE.findEligibleFleetOwnersForScheduledPayout merchantOpCityId config.batchSize mbLastFleetId
+      unless (null eligibleFleetInfos) $ do
+        let lastFleetId = (.fleetOwnerPersonId) $ last eligibleFleetInfos
+        Redis.setExp fleetCursorKey lastFleetId 86400
+        for_ eligibleFleetInfos $ \fleetInfo -> do
+          fork ("ScheduledWalletPayout:Fleet:" <> fleetInfo.fleetOwnerPersonId.getId) $ do
+            processOneWalletPayout config transporterConfig merchantId merchantOpCityId
+              fleetInfo.fleetOwnerPersonId fleetInfo.payoutVpa (fleetInfo.payoutVpaStatus == Just DFOI.MANUALLY_ADDED)
+
+      if null eligibleDriverInfos && null eligibleFleetInfos
         then do
-          -- All drivers processed; clear cursor and schedule for next interval
-          Redis.del cursorKey
+          Redis.del driverCursorKey
+          Redis.del fleetCursorKey
           nextTime <- computeNextRunTime config
-          logInfo $ "All drivers processed. Next run at: " <> show nextTime
+          logInfo $ "All drivers and fleet owners processed. Next run at: " <> show nextTime
           pure $ ReSchedule nextTime
         else do
-          -- Track the last driver ID for cursor
-          let lastDriverId = (.driverId) $ last eligibleDriverInfos
-          Redis.setExp cursorKey lastDriverId 86400 -- TTL: 1 day
-          for_ eligibleDriverInfos $ \driverInfo -> do
-            fork ("ScheduledWalletPayout:Driver:" <> driverInfo.driverId.getId) $ do
-              processOneWalletPayout config transporterConfig merchantId merchantOpCityId driverInfo
-          -- Short gap reschedule for next batch
           nextBatch <- addUTCTime 5 <$> getCurrentTime
           pure $ ReSchedule nextBatch
 
--- | Process a single driver's wallet payout.
+-- | Process a single wallet payout for a driver or fleet owner.
 --   Reuses PayoutContext and helpers from DriverWallet module.
 processOneWalletPayout ::
   ( EncFlow m r,
@@ -186,28 +203,29 @@ processOneWalletPayout ::
   DTConf.TransporterConfig ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
-  DI.DriverInformation ->
+  Id DP.Person ->
+  Maybe Text ->
+  Bool -> -- isManuallyAdded
   m ()
-processOneWalletPayout config transporterConfig merchantId merchantOpCityId driverInfo = do
-  let driverId = driverInfo.driverId
+processOneWalletPayout config transporterConfig merchantId merchantOpCityId personId mbPayoutVpa isManuallyAdded = do
   result <- try $ do
-    person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+    person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     let counterparty = counterpartyFromRole person.role
         ctx =
           PayoutContext
-            { driverId = driverId,
+            { driverId = personId,
               merchantId = merchantId,
               mocId = merchantOpCityId,
               person = person,
-              driverInfo = driverInfo,
+              payoutVpa = mbPayoutVpa,
               transporterConfig = transporterConfig
             }
 
-    Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
+    Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey personId.getId) 10 10 $ do
       now <- getCurrentTime
-      mbAccount <- getWalletAccountByOwner counterparty driverId.getId
+      mbAccount <- getWalletAccountByOwner counterparty personId.getId
       let mbAccountId = (.id) <$> mbAccount
-      walletBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty driverId.getId
+      walletBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty personId.getId
       -- Single query: get both non-redeemable balance and redeemable entry IDs
       let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
           cutOffDays = transporterConfig.driverWalletConfig.payoutCutOffDays
@@ -220,10 +238,10 @@ processOneWalletPayout config transporterConfig merchantId merchantOpCityId driv
       when (payoutableBalance >= config.minimumPayoutAmount) $ do
         vpa <- resolvePayoutVpa ctx
         -- Skip manually-added VPAs
-        when (driverInfo.payoutVpaStatus /= Just DI.MANUALLY_ADDED) $ do
+        unless isManuallyAdded $ do
           initiateWalletPayout ctx vpa payoutableBalance PR.SCHEDULED Nothing (Just cutoff) (map (.getId) redeemableIds)
   case result of
-    Left (e :: SomeException) -> logError $ "ScheduledWalletPayout error for driver " <> driverId.getId <> ": " <> show e
+    Left (e :: SomeException) -> logError $ "ScheduledWalletPayout error for " <> personId.getId <> ": " <> show e
     Right _ -> pure ()
 
 --------------------------------------------------------------------------------

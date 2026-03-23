@@ -58,7 +58,7 @@ import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
-import SharedLogic.Finance.Prepaid (counterpartyDriver)
+import Domain.Action.UI.DriverWallet (counterpartyFromRole)
 import SharedLogic.Finance.Wallet
 import SharedLogic.Merchant
 import Storage.Beam.Finance ()
@@ -133,9 +133,12 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
             let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
             payoutConfig <- CPC.findByPrimaryKey merchantOperatingCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOperatingCityId.getId)
             when (isSuccessStatus payoutStatus) do
-              driverStats <- QDriverStats.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonNotFound payoutOrder.customerId)
-              QDriverStats.updateTotalPayoutAmountPaid (Just (fromMaybe 0 driverStats.totalPayoutAmountPaid + amount)) (Id payoutOrder.customerId)
-              updateDFeeStatusForPayoutRegistrationRefund payoutOrder.customerId
+              person' <- QP.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonNotFound payoutOrder.customerId)
+              let isFleetOwnerRole = person'.role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS]
+              unless isFleetOwnerRole do
+                driverStats <- QDriverStats.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonNotFound payoutOrder.customerId)
+                QDriverStats.updateTotalPayoutAmountPaid (Just (fromMaybe 0 driverStats.totalPayoutAmountPaid + amount)) (Id payoutOrder.customerId)
+                updateDFeeStatusForPayoutRegistrationRefund payoutOrder.customerId
             case payoutOrder.entityName of
               Just DPayment.DRIVER_DAILY_STATS -> do
                 forM_ (listToMaybe =<< payoutOrder.entityIds) $ \dailyStatsId -> do
@@ -201,6 +204,8 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                   Nothing -> pure Nothing
                   Just prId -> QPR.findById (Id prId)
 
+                person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+                let counterparty = counterpartyFromRole person.role
                 Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
                   when (isSuccessStatus payoutStatus) $ do
                     -- Create wallet debit ledger entry only on confirmed success
@@ -212,7 +217,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                             ]
                     void $
                       createWalletEntryDelta
-                        counterpartyDriver
+                        counterparty
                         driverId.getId
                         (negate amount)
                         transporterConfig.currency
@@ -239,8 +244,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                       let statusMsg = "Bank Webhook: " <> show payoutStatus
                       PayoutRequest.updateStatusWithHistoryById newStatus (Just statusMsg) payoutReq
 
-                  -- Notify driver
-                  person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+                  -- Notify driver/fleet owner
                   let (notificationTitle, notificationMessage, notificationType) =
                         if isSuccessStatus payoutStatus
                           then ("Payout Complete", "Your payout of Rs." <> show amount <> " has been successfully settled to your bank account.", FCM.PAYOUT_COMPLETED)

@@ -39,7 +39,9 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.DailyStats as QDS
 import qualified Storage.Queries.DailyStatsExtra as QDSE
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Storage.Queries.DriverInformation as DrInfo
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QVeh
@@ -129,15 +131,23 @@ postPayoutDeleteVpa ::
   )
 postPayoutDeleteVpa (mbPersonId, _merchantId, merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  driverInfo <- runInReplica $ DrInfo.findByPrimaryKey personId >>= fromMaybeM DriverInfoNotFound
-  unless (isJust driverInfo.payoutVpa) $ throwError (InvalidRequest "Vpa Id does not Exists")
-  void $ DrInfo.updatePayoutVpaAndStatus Nothing Nothing personId -- Deleting the prev VPA (We can get this in payout order history)
-  -- Reset refund tracking so re-registration (₹2 payment) can be refunded again
-  mbVehicle <- QVeh.findById personId
-  let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
-  mbPayoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing
-  when (maybe False (\pc -> pc.vpaVerificationMode == DPC.PAYMENT_BASED) mbPayoutConfig) $
-    DrInfo.updatePayoutRegAmountRefunded Nothing personId
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  if DCommon.checkFleetOwnerRole person.role
+    then do
+      mbFleetInfo <- runInReplica $ QFOI.findByPersonIdAndEnabledAndVerified Nothing Nothing personId
+      let mbVpa = mbFleetInfo >>= (.payoutVpa)
+      unless (isJust mbVpa) $ throwError (InvalidRequest "Vpa Id does not Exists")
+      void $ QFOI.updatePayoutVpaAndStatus Nothing Nothing personId
+    else do
+      driverInfo <- runInReplica $ DrInfo.findByPrimaryKey personId >>= fromMaybeM DriverInfoNotFound
+      unless (isJust driverInfo.payoutVpa) $ throwError (InvalidRequest "Vpa Id does not Exists")
+      void $ DrInfo.updatePayoutVpaAndStatus Nothing Nothing personId
+      -- Reset refund tracking so re-registration (₹2 payment) can be refunded again
+      mbVehicle <- QVeh.findById personId
+      let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
+      mbPayoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing
+      when (maybe False (\pc -> pc.vpaVerificationMode == DPC.PAYMENT_BASED) mbPayoutConfig) $
+        DrInfo.updatePayoutRegAmountRefunded Nothing personId
   pure Kernel.Types.APISuccess.Success
 
 postPayoutUpdateVpa ::
@@ -190,6 +200,8 @@ getPayoutRegistration ::
   )
 getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let isFleetOwner = DCommon.checkFleetOwnerRole person.role
   mbVehicle <- QVeh.findById personId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
@@ -197,8 +209,7 @@ getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = do
   when (payoutConfig.vpaVerificationMode == DPC.API_BASED) $
     throwError $ InvalidRequest "Use /payout/update/vpa to register your VPA"
 
-  -- Get driver details for creating the payment order
-  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- Get person details for creating the payment order
   driverPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   let driverEmail = fromMaybe "test@juspay.in" person.email
 
@@ -218,8 +229,9 @@ getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = do
       (Just person.firstName)
       person.lastName
 
-  -- Store orderId on DriverInformation
-  DrInfo.updatePayoutRegistrationOrderId (Just regResult.orderId.getId) personId
+  -- Store orderId on DriverInformation (fleet owners don't have this field)
+  unless isFleetOwner $
+    DrInfo.updatePayoutRegistrationOrderId (Just regResult.orderId.getId) personId
   pure $
     DD.ClearDuesRes
       { orderId = Kernel.Types.Id.cast regResult.orderId,

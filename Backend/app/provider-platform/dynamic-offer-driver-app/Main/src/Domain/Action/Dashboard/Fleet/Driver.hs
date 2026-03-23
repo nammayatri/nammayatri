@@ -819,7 +819,8 @@ postDriverAddRidePayoutAccountNumber merchantShortId opCity req = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   now <- getCurrentTime
   mobileNumberHash <- getDbHash req.driverMobileNumber
-  mbPerson <- QP.findByMobileNumberAndMerchantAndRole req.driverMobileNumberCountryCode mobileNumberHash merchant.id DP.DRIVER
+  let lookupRoles = [DP.DRIVER, DP.FLEET_OWNER, DP.FLEET_BUSINESS]
+  mbPerson <- QPersonExtra.findByMobileNumberAndMerchantAndRoles req.driverMobileNumberCountryCode mobileNumberHash merchant.id lookupRoles
   person <-
     case mbPerson of
       Nothing -> do
@@ -828,7 +829,7 @@ postDriverAddRidePayoutAccountNumber merchantShortId opCity req = do
             merchantShortId
             opCity
             (Common.AuthReq req.driverMobileNumber req.driverMobileNumberCountryCode req.driverName)
-        QP.findByMobileNumberAndMerchantAndRole req.driverMobileNumberCountryCode mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (DriverNotFound req.driverMobileNumber)
+        QPersonExtra.findByMobileNumberAndMerchantAndRoles req.driverMobileNumberCountryCode mobileNumberHash merchant.id lookupRoles >>= fromMaybeM (DriverNotFound req.driverMobileNumber)
       Just p -> do
         whenJust req.driverName $ \name -> QPerson.updateName name p.id
         return p
@@ -856,7 +857,9 @@ postDriverAddRidePayoutAccountNumber merchantShortId opCity req = do
   case (req.accountNumber, req.ifscCode) of
     (Just accountNumber, Just ifscCode) -> do
       let payoutVpa = accountNumber <> "@" <> ifscCode <> ".ifsc.npci"
-      QDriverInfo.updatePayoutVpaAndStatusByDriverIds (Just payoutVpa) (Just DI.MANUALLY_ADDED) [person.id]
+      if DCommon.checkFleetOwnerRole person.role
+        then FOI.updatePayoutVpaAndStatus (Just payoutVpa) (Just DFOI.MANUALLY_ADDED) person.id
+        else QDriverInfo.updatePayoutVpaAndStatusByDriverIds (Just payoutVpa) (Just DI.MANUALLY_ADDED) [person.id]
     _ -> pure ()
   pure Success
 
