@@ -233,12 +233,13 @@ fetchLiveBusTimings ::
   [Text] ->
   Text ->
   UTCTime ->
+  UTCTime ->
   DIntegratedBPPConfig.IntegratedBPPConfig ->
   Id Merchant ->
   Id MerchantOperatingCity ->
   Bool ->
   m [RouteStopTimeTable]
-fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid useLiveBusData = do
+fetchLiveBusTimings routeCodes stopCode currentTime currentTimeIST integratedBppConfig mid mocid useLiveBusData = do
   -- Fetch all service tier metadata once, shared across live and static paths
   frfsServiceTierMap <-
     M.fromList . map (\t -> (t._type, t))
@@ -297,7 +298,6 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
     convertStaticSchedule routeId frfsServiceTierMap busScheduleDetail =
       let serviceTierType = busScheduleDetail.service_tier
           frfsServiceTierName = M.lookup serviceTierType frfsServiceTierMap <&> (.shortName)
-          currentTimeIST = MultiModalBus.utcToIST currentTime
           filteredEtas = filter (\eta -> eta.stopCode == stopCode && eta.arrivalTime > currentTimeIST) busScheduleDetail.eta
        in map (\eta -> createRouteStopTimeTable routeId busScheduleDetail.vehicle_no eta serviceTierType frfsServiceTierName GTFS) filteredEtas
 
@@ -394,6 +394,7 @@ fetchLiveTimings ::
   [Text] ->
   Text ->
   UTCTime ->
+  UTCTime ->
   DIntegratedBPPConfig.IntegratedBPPConfig ->
   Id Merchant ->
   Id MerchantOperatingCity ->
@@ -401,9 +402,9 @@ fetchLiveTimings ::
   Bool ->
   Bool ->
   m [RouteStopTimeTable]
-fetchLiveTimings routeCodes stopCode currentTime integratedBppConfig mid mocid vc useLiveBusData calledForSubwaySingleMode = case vc of
+fetchLiveTimings routeCodes stopCode currentTime currentTimeIST integratedBppConfig mid mocid vc useLiveBusData calledForSubwaySingleMode = case vc of
   -- Enums.SUBWAY -> fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid mocid -- Removed this for now.
-  Enums.BUS -> fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid useLiveBusData
+  Enums.BUS -> fetchLiveBusTimings routeCodes stopCode currentTime currentTimeIST integratedBppConfig mid mocid useLiveBusData
   _ -> measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode False calledForSubwaySingleMode) "fetch route stop timing through graphql"
 
 type RouteCodeText = Text
@@ -442,7 +443,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
   validRoutes <- measureLatency (getRouteCodesFromTo fromStopCode toStopCode integratedBppConfig) "getRouteCodesFromTo"
   let (_, currentTimeIST) = getISTTimeInfo currentTime
 
-  routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc useLiveBusData (vc == Enums.SUBWAY && calledForSubwaySingleMode)) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
+  routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime currentTimeIST integratedBppConfig mid mocid vc useLiveBusData (vc == Enums.SUBWAY && calledForSubwaySingleMode)) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
 
   -- fetch rider config
   mbRiderConfig <- measureLatency (QRiderConfig.findByMerchantOperatingCityId mocid Nothing) "QRiderConfig.findByMerchantOperatingCityId"
@@ -671,7 +672,7 @@ findUpcomingTrips routeCode stopCode mbServiceType currentTime mid mocid vc = do
     SIBC.fetchFirstIntegratedBPPConfigResult
       integratedBPPConfigs
       ( \integratedBPPConfig ->
-          fetchLiveTimings [routeCode] stopCode currentTime integratedBPPConfig mid mocid vc True False
+          fetchLiveTimings [routeCode] stopCode currentTime currentTimeIST integratedBPPConfig mid mocid vc True False
       )
   logDebug $ "routeStopTimings: " <> show routeStopTimings
 
@@ -683,34 +684,26 @@ findUpcomingTrips routeCode stopCode mbServiceType currentTime mid mocid vc = do
   -- Filter out trips that have already passed the stop
   logDebug $ "filteredByService before filtering on current time : " <> show filteredByService
 
-  let tripTimingsWithCalendars =
-        [ UpcomingVehicleInfo
-            { routeCode = rst.routeCode,
-              serviceType = rst.serviceTierType,
-              serviceName = rst.serviceTierName,
-              arrivalTimeInSeconds = estimatedArrivalTimeInSeconds,
-              nextAvailableTimings = (rst.timeOfArrival, rst.timeOfDeparture),
-              source = rst.source,
-              serviceSubTypes = Nothing -- Will be populated below for LIVE vehicles
-            }
-          | rst <- filteredByService,
-            let arrivalTimeInSeconds' = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime rst.timeOfArrival currentTime) currentTimeIST,
-            let secondsValue = fromIntegral (getSeconds arrivalTimeInSeconds') :: Double,
-            let estimatedArrivalTimeInSeconds
-                  | arrivalTimeInSeconds' > 0 = arrivalTimeInSeconds'
-                  | abs secondsValue > 86400 = Seconds $ round $ (7 * 86400) + secondsValue
-                  | otherwise = Seconds $ round $ 86400 + secondsValue
+  let tripTimingsDrafts =
+        [ ( UpcomingVehicleInfo
+              { routeCode = rst.routeCode,
+                serviceType = rst.serviceTierType,
+                serviceName = rst.serviceTierName,
+                arrivalTimeInSeconds = getETASec rst currentTime currentTimeIST,
+                nextAvailableTimings = (rst.timeOfArrival, rst.timeOfDeparture),
+                source = rst.source,
+                serviceSubTypes = Nothing
+              },
+            rst.tripId.getId
+          )
+          | rst <- filteredByService
         ]
 
-  -- Fetch serviceSubTypes for LIVE vehicles using tripId (which is vehicleNumber)
-  tripTimingsWithSubTypes <- forM tripTimingsWithCalendars $ \info -> do
+  -- Fetch serviceSubTypes for LIVE vehicles concurrently using vehicleId
+  tripTimingsWithSubTypes <- (flip mapConcurrently) tripTimingsDrafts $ \(info, vehicleId) -> do
     if info.source == LIVE
       then do
-        -- For LIVE vehicles, tripId in RouteStopTimeTable is the vehicleNumber
-        let mbVehicleId = find (\rst -> rst.routeCode == info.routeCode && rst.serviceTierType == info.serviceType) filteredByService <&> (.tripId.getId)
-        mbServiceSubTypes <- case mbVehicleId of
-          Just vehicleId -> getVehicleServiceSubTypesFromInMem integratedBPPConfigs vehicleId
-          Nothing -> pure Nothing
+        mbServiceSubTypes <- getVehicleServiceSubTypesFromInMem integratedBPPConfigs vehicleId
         pure $ (info {serviceSubTypes = mbServiceSubTypes} :: UpcomingVehicleInfo)
       else pure info
 
@@ -998,7 +991,7 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationSt
             -- fetchLiveTimings [route.code] destinationStopCode currentTime integratedBppConfig mid mocid vc True calledForSubwaySingleMode
             _ -> do
               logDebug $ "fetching old traditional way using live timings"
-              fetchLiveTimings [route.code] destinationStopCode currentTime integratedBppConfig mid mocid vc True calledForSubwaySingleMode
+              fetchLiveTimings [route.code] destinationStopCode currentTime currentTimeIST integratedBppConfig mid mocid vc True calledForSubwaySingleMode
 
           let stopCodeToSequenceNum = Map.fromList $ map (\rst -> (rst.stopCode, rst.sequenceNum)) routeStopMappings
 
