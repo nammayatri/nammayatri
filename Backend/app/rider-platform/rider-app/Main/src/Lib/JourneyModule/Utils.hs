@@ -9,7 +9,7 @@ import Control.Applicative ((<|>))
 import Control.Monad.Extra (mapMaybeM)
 import qualified Data.Geohash as Geohash
 import qualified Data.HashMap.Strict as HM
-import Data.List (findIndex, groupBy, nub, sort, sortBy, sortOn)
+import Data.List (findIndex, groupBy, nub, partition, sort, sortBy, sortOn)
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map.Strict as M
 import qualified Data.Map.Strict as Map
@@ -1145,8 +1145,57 @@ getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid m
           allSubwayRoutes
       return (allRoutes, [])
     else do
-      go allSubwayRoutes
+      let isCorridorIssueRoute vr =
+            let pairs = vr.viaPoints
+                rawIssue (f, t) =
+                  let fc = f `elem` corridorStations
+                      tc = t `elem` corridorStations
+                   in (fc || tc) && not (fc && tc)
+                isBridged idx (f, t) =
+                  let fc = f `elem` corridorStations
+                      tc = t `elem` corridorStations
+                      prevPair = if idx > 0 then Just (pairs !! (idx - 1)) else Nothing
+                      nextPair = if idx < length pairs - 1 then Just (pairs !! (idx + 1)) else Nothing
+                      toBridged = tc && maybe False (\(_, nt) -> nt `elem` corridorStations) nextPair
+                      fromBridged = fc && maybe False (\(pf, _) -> pf `elem` corridorStations) prevPair
+                   in toBridged || fromBridged
+             in any (\(idx, pair) -> rawIssue pair && not (isBridged idx pair)) (zip [0 ..] pairs)
+      let (normalRoutes, corridorRoutes) =
+            if deprioritizeEnabled && not (null corridorStations)
+              then partition (not . isCorridorIssueRoute) allSubwayRoutes
+              else (allSubwayRoutes, [])
+      let orderedRoutes =
+            if null normalRoutes || null corridorRoutes
+              then allSubwayRoutes -- either deprioritization is off, or all routes are corridor-issue (process as-is)
+              else normalRoutes ++ corridorRoutes
+      when (not (null corridorRoutes) && not (null normalRoutes)) $
+        logDebug $ "corridorDeprioritization: reordered " <> show (length corridorRoutes) <> " corridor-issue route(s) to end"
+      go orderedRoutes
   where
+    corridorStations :: [Text]
+    corridorStations =
+      case integratedBppConfig.providerConfig of
+        DIntegratedBPPConfig.CRIS config -> fromMaybe [] config.corridorStations
+        _ -> []
+    deprioritizeEnabled :: Bool
+    deprioritizeEnabled =
+      case integratedBppConfig.providerConfig of
+        DIntegratedBPPConfig.CRIS config -> fromMaybe False config.enableCorridorDeprioritization
+        _ -> False
+    tryCorridorAlts :: [Text] -> (Text -> Flow (Maybe a)) -> Flow (Maybe a)
+    tryCorridorAlts [] _ = return Nothing
+    tryCorridorAlts (x : xs) f =
+      f x >>= \case
+        Just r -> return (Just r)
+        Nothing -> tryCorridorAlts xs f
+    getCorridorWalkResult :: Text -> Text -> Flow (Maybe MultiModalTypes.MultiModalRouteDetails, Maybe HighPrecMeters)
+    getCorridorWalkResult fromStopCode toStopCode = do
+      mbFromStop <- OTPRest.getStationByGtfsIdAndStopCode fromStopCode integratedBppConfig
+      mbToStop <- OTPRest.getStationByGtfsIdAndStopCode toStopCode integratedBppConfig
+      case (mbFromStop >>= (.lat), mbFromStop >>= (.lon), mbToStop >>= (.lat), mbToStop >>= (.lon)) of
+        (Just fromLat, Just fromLon, Just toLat, Just toLon) ->
+          return (Nothing, Just $ distanceBetweenInMeters (LatLong fromLat fromLon) (LatLong toLat toLon))
+        _ -> return (Nothing, Nothing)
     processRoute viaRoute = do
       disableViaPointTimetableCheck <- asks (.disableViaPointTimetableCheck)
       let viaPoints = viaRoute.viaPoints
@@ -1161,10 +1210,65 @@ getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid m
                   DIntegratedBPPConfig.CRIS config -> fromIntegral <$> config.singleModeWalkThreshold
                   _ -> Nothing
               )
-      let isRoutePossible = all (\(mbRouteDetails, mbDistance) -> isJust mbRouteDetails || (isJust mbDistance && mbDistance < Just (HighPrecMeters singleModeWalkThreshold))) routeDetailsWithDistance
+      let isPairValid (mbRD, mbDist) = isJust mbRD || (isJust mbDist && mbDist < Just (HighPrecMeters singleModeWalkThreshold))
+      let isInitialRoutePossible = all isPairValid routeDetailsWithDistance
+      (_, finalRouteDetailsWithDistance) <-
+        if isInitialRoutePossible || null corridorStations
+          then return (viaPoints, routeDetailsWithDistance)
+          else do
+            expandedPairs <-
+              forM (zip viaPoints routeDetailsWithDistance) $ \((from, to), result) ->
+                if isPairValid result
+                  then return [((from, to), result)]
+                  else do
+                    let fromIsCorr = from `elem` corridorStations
+                        toIsCorr = to `elem` corridorStations
+                    case (fromIsCorr, toIsCorr) of
+                      (True, True) -> do
+                        unless (isPairValid result) $
+                          logDebug $ "corridorExpansion: walk leg between corridor stations (" <> from <> "," <> to <> ") exceeds singleModeWalkThreshold — check corridorStations config"
+                        return [((from, to), result)]
+                      (True, False) -> do
+                        -- 'from' is corridor station; try other corridor members as intermediate.
+                        let alts = filter (/= from) corridorStations
+                        mbExpanded <-
+                          tryCorridorAlts alts $ \alt -> do
+                            trainResult@(mbRD2, _) <- buildMultimodalRouteDetails 1 Nothing alt to integratedBppConfig mid mocid vc disableViaPointTimetableCheck True
+                            if isJust mbRD2
+                              then do
+                                walkResult <- getCorridorWalkResult from alt
+                                if isPairValid walkResult
+                                  then do
+                                    logDebug $ "corridorExpansion (from): expanded (" <> from <> "," <> to <> ") via " <> alt
+                                    return $ Just [((from, alt), walkResult), ((alt, to), trainResult)]
+                                  else return Nothing
+                              else return Nothing
+                        return $ fromMaybe [((from, to), result)] mbExpanded
+                      (False, True) -> do
+                        -- 'to' is corridor station; try other corridor members as intermediate.
+                        let alts = filter (/= to) corridorStations
+                        mbExpanded <-
+                          tryCorridorAlts alts $ \alt -> do
+                            trainResult@(mbRD2, _) <- buildMultimodalRouteDetails 1 Nothing from alt integratedBppConfig mid mocid vc disableViaPointTimetableCheck True
+                            if isJust mbRD2
+                              then do
+                                walkResult <- getCorridorWalkResult alt to
+                                if isPairValid walkResult
+                                  then do
+                                    logDebug $ "corridorExpansion (to): expanded (" <> from <> "," <> to <> ") via " <> alt
+                                    return $ Just [((from, alt), trainResult), ((alt, to), walkResult)]
+                                  else return Nothing
+                              else return Nothing
+                        return $ fromMaybe [((from, to), result)] mbExpanded
+                      (False, False) ->
+                        -- No corridor station involved; nothing to expand
+                        return [((from, to), result)]
+            let flatPairs = concat expandedPairs
+            return (map fst flatPairs, map snd flatPairs)
+      let isRoutePossible = all isPairValid finalRouteDetailsWithDistance
       if isRoutePossible
         then do
-          let routeDetails = mapMaybe (\(mbRouteDetails, _) -> mbRouteDetails) routeDetailsWithDistance
+          let routeDetails = mapMaybe (\(mbRouteDetails, _) -> mbRouteDetails) finalRouteDetailsWithDistance
           logDebug $ "buildTrainAllViaRoutes routeDetails: " <> show routeDetails
           let updateRouteDetails = zipWith (\idx routeDetail -> routeDetail {MultiModalTypes.subLegOrder = idx}) [1 ..] routeDetails
           case updateRouteDetails of
@@ -1211,34 +1315,20 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
     getAllSubwayRoutes = do
       case integratedBppConfig.providerConfig of
         DIntegratedBPPConfig.CRIS crisConfig -> do
-          let fareRouteDetails = CallAPI.BasicRouteDetail {routeCode = "-", startStopCode = originStopCode, endStopCode = destinationStopCode}
-          (_, fares) <- Flow.getFares personId mid mocid integratedBppConfig (NonEmpty.fromList [fareRouteDetails]) (Utils.becknVehicleCategoryToFrfsVehicleCategory vc) Nothing (Just searchReqId) blacklistedServiceTiers blacklistedFareQuoteTypes True True
-          let sortedFares = case crisConfig.routeSortingCriteria of
-                Just DIntegratedBPPConfig.FARE ->
-                  sortBy
-                    ( comparing
-                        ( \fare ->
-                            fromMaybe (HighPrecMoney 0.0) ((find ((== ADULT) . (.category)) fare.categories) <&> (.price.amount))
-                        )
-                    )
-                    fares
-                Just DIntegratedBPPConfig.DISTANCE ->
-                  sortBy
-                    ( comparing
-                        ( \fare -> case fare.fareDetails of
-                            Just details -> details.distance
-                            Nothing -> Meters 0
-                        )
-                    )
-                    fares
-                Nothing -> fares
+          let fareRoute = CallAPI.FareRoute {segments = pure CallAPI.BasicRouteDetail {routeCode = "-", startStopCode = originStopCode, endStopCode = destinationStopCode}, mbProviderRouteId = Nothing}
+          (_, fares) <- Flow.getFares personId mid mocid integratedBppConfig fareRoute (Utils.becknVehicleCategoryToFrfsVehicleCategory vc) Nothing (Just searchReqId) blacklistedServiceTiers blacklistedFareQuoteTypes True True
           let filteredFares =
                 filter
                   ( \fare ->
                       notElem fare.vehicleServiceTier.serviceTierType blacklistedServiceTiers
                         && maybe True (\ft -> notElem ft blacklistedFareQuoteTypes) (fare.fareQuoteType)
                   )
-                  sortedFares
+                  fares
+
+          let compareViaRoutes a b = case crisConfig.routeSortingCriteria of
+                Just DIntegratedBPPConfig.FARE -> compare a.fare b.fare <> compare a.distance b.distance
+                Just DIntegratedBPPConfig.DISTANCE -> compare a.distance b.distance <> compare a.fare b.fare
+                Nothing -> EQ
 
           let viaRouteDetailsMap :: M.Map Text ViaRouteDetails
               viaRouteDetailsMap =
@@ -1260,7 +1350,7 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
                                   fare = fareAmount
                                 }
                          in M.insertWith
-                              (\new old -> if new.fare < old.fare then new else old)
+                              (\new old -> if compareViaRoutes new old == LT then new else old)
                               fd.providerRouteId
                               newViaRoute
                               acc
@@ -1268,7 +1358,7 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
                   M.empty
                   filteredFares
 
-          let viaRouteDetails = M.elems viaRouteDetailsMap
+          let viaRouteDetails = sortBy compareViaRoutes (M.elems viaRouteDetailsMap)
           logDebug $ "getAllSubwayRoutes viaRouteDetails: " <> show viaRouteDetails
           return viaRouteDetails
         _ -> return []

@@ -85,6 +85,7 @@ data SubwayLegRequestGetFareData = SubwayLegRequestGetFareData
     merchantOpCity :: DMOC.MerchantOperatingCity,
     riderId :: Id DPerson.Person,
     searchReqId :: Maybe Text,
+    mbProviderRouteId :: Maybe Text,
     blacklistedServiceTiers :: [Spec.ServiceTierType],
     blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType],
     isSingleMode :: Bool

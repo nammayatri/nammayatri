@@ -73,6 +73,12 @@ data BasicRouteDetail = BasicRouteDetail
   }
   deriving (Show)
 
+data FareRoute = FareRoute
+  { segments :: NonEmpty BasicRouteDetail,
+    mbProviderRouteId :: Maybe Text
+  }
+  deriving (Show)
+
 data SubwayFareDetail = SubwayFareDetail
   { viaPoints :: Text,
     changeOver :: Text,
