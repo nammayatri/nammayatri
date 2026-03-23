@@ -423,7 +423,7 @@ RiderConfig:
     safetyCheckStartTime: "75600"
     safetyCheckEndTime: "21600"
     trackingShortUrlPattern: "'https://nammayatri.in/t/'"
-    dashboardMediaFileUrlPattern: "'https://control-center.moving.tech/ops/rides/<RIDE_ID>'"
+    dashboardMediaFileUrlPattern: "'https://control-center.moving.tech/ops/<RIDES_OR_SOS>/<ID>?merchant=<MERCHANT_SHORT_ID>&city=<CITY_CODE>'"
     specialZoneRadius: "150"
     distanceWeightage: "70"
     isAvoidToll: "true"
