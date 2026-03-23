@@ -1873,18 +1873,19 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
           logDebug $ "handleSingleVehicleRoute: no live data for vehicle=" <> vno <> " routeId=" <> routeId
           pure $ ApiTypes.RouteServiceabilityResp Nothing Nothing []
         Just singleBus -> do
-          mbServiceTier <- JLU.getVehicleServiceTypeFromInMem [ctx.integratedBPPConfig] vno
-          case mbServiceTier of
+          mbVehicleLiveRouteInfo <- JMU.getVehicleLiveRouteInfo [ctx.integratedBPPConfig] vno Nothing
+          case mbVehicleLiveRouteInfo of
             Nothing -> do
               logError $ "handleSingleVehicleRoute: vehicle service type not found for vehicle=" <> vno
               pure $ ApiTypes.RouteServiceabilityResp Nothing Nothing []
-            Just serviceTier -> do
+            Just (_, liveRoute) -> do
+              let serviceTier = liveRoute.serviceType
               frfsServiceTier <-
                 CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId
                   serviceTier
                   ctx.merchantOperatingCityId
                   ctx.integratedBPPConfig.id
-              mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [ctx.integratedBPPConfig] vno
+              let mbServiceSubTypes = liveRoute.serviceSubTypes
               enrichedEta <-
                 mapConcurrently
                   (JMRouteServiceability.enrichBusStopETA ctx.integratedBPPConfig)
@@ -1897,7 +1898,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                         locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral singleBus.busData.timestamp,
                         serviceTierType = serviceTier,
                         serviceTierName = (.shortName) <$> frfsServiceTier,
-                        serviceSubTypes = mbServiceSubTypes
+                        serviceSubTypes = mbServiceSubTypes,
+                        busTagNumber = liveRoute.busTagNumber
                       }
               pure $
                 ApiTypes.RouteServiceabilityResp

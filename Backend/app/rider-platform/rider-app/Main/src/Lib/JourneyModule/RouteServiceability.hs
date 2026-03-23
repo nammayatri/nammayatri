@@ -86,12 +86,12 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
           ( \detail -> do
               let busLiveInfo = join $ lookup detail.vehicle_no busLiveInfoMap
               logDebug $ "getBusScheduleInfo: getBusLiveInfo vehicle=" <> detail.vehicle_no <> ", found=" <> show (isJust busLiveInfo) <> ", details=" <> show (fmap (\v -> (v.vehicle_number, v.latitude, v.longitude, v.timestamp, v.routes_info, v.bearing)) busLiveInfo)
-              mbServiceTier <- JMU.getVehicleServiceTypeFromInMem [integratedBPPConfig'] detail.vehicle_no
-              case mbServiceTier of
-                Just serviceTier -> do
-                  let frfsServiceTier = lookup serviceTier frfsTierMap'
-                  -- Get service subtypes from in-memory cache
-                  mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [integratedBPPConfig'] detail.vehicle_no
+              mbVehicleLiveRouteInfo <- JMU.getVehicleLiveRouteInfo [integratedBPPConfig'] detail.vehicle_no Nothing
+              case mbVehicleLiveRouteInfo of
+                Just (_, liveRoute) -> do
+                  let serviceTier = liveRoute.serviceType
+                      frfsServiceTier = lookup serviceTier frfsTierMap'
+                      mbServiceSubTypes = liveRoute.serviceSubTypes
 
                   let combinedTripId = do
                         waybill <- detail.waybill_no
@@ -126,7 +126,8 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                             vehicleNumber = detail.vehicle_no,
                             tripId = combinedTripId,
                             serviceSubTypes = mbServiceSubTypes,
-                            availableSeats = availableSeatsCount
+                            availableSeats = availableSeatsCount,
+                            busTagNumber = liveRoute.busTagNumber
                           }
                 Nothing -> do
                   logError $ "Vehicle info not found for bus: " <> detail.vehicle_no
@@ -139,12 +140,12 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
         catMaybes
           <$> mapM
             ( \bus -> do
-                mbServiceTier <- JMU.getVehicleServiceTypeFromInMem [integratedBPPConfig'] bus.vehicleNumber
-                case mbServiceTier of
-                  Just serviceTier -> do
-                    let frfsServiceTier = lookup serviceTier frfsTierMap'
-                    -- Get service subtypes from in-memory cache
-                    mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [integratedBPPConfig'] bus.vehicleNumber
+                mbVehicleLiveRouteInfo <- JMU.getVehicleLiveRouteInfo [integratedBPPConfig'] bus.vehicleNumber Nothing
+                case mbVehicleLiveRouteInfo of
+                  Just (_, liveRoute) -> do
+                    let serviceTier = liveRoute.serviceType
+                        frfsServiceTier = lookup serviceTier frfsTierMap'
+                        mbServiceSubTypes = liveRoute.serviceSubTypes
 
                     logDebug $ "getLiveVehicles: vehicle=" <> bus.vehicleNumber <> ", routeId=" <> bus.busData.route_id <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", position=(" <> show bus.busData.latitude <> "," <> show bus.busData.longitude <> ")" <> ", timestamp=" <> show bus.busData.timestamp <> ", eta=" <> show bus.busData.eta_data <> ", routeState=" <> show bus.busData.route_state <> ", routeNumber=" <> show bus.busData.route_number
                     enrichedEta <-
@@ -159,7 +160,8 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                           locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral bus.busData.timestamp,
                           serviceTierType = serviceTier,
                           serviceTierName = (.shortName) <$> frfsServiceTier,
-                          serviceSubTypes = mbServiceSubTypes
+                          serviceSubTypes = mbServiceSubTypes,
+                          busTagNumber = liveRoute.busTagNumber
                         }
                   Nothing -> do
                     logError $ "Vehicle info not found for bus: " <> bus.vehicleNumber
