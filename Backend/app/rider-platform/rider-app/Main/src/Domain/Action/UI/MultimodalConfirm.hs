@@ -2312,14 +2312,16 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
           True
           False
           False
+      let filterAndCleanRoute route =
+            let filteredTimings = filter (\t -> t > 0 && t < 7200) (RD.routeTimings route)
+             in if null filteredTimings
+                  then Nothing
+                  else Just $ route {RD.routeTimings = filteredTimings}
       let filteredRoutesByTiming =
             map
               ( \routeByTier ->
                   routeByTier
-                    { RD.availableRoutesInfo =
-                        filter
-                          (\route -> any (\timing -> timing > Seconds 0 && timing < Seconds 7200) route.routeTimings)
-                          routeByTier.availableRoutesInfo
+                    { RD.availableRoutesInfo = mapMaybe filterAndCleanRoute (RD.availableRoutesInfo routeByTier)
                     }
               )
               availableRoutesByTier
