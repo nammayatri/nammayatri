@@ -26,6 +26,7 @@ import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth
 import Tools.Error
+import qualified Data.Text as T
 
 getMerchantWithCityList ::
   BeamFlow m r =>
@@ -34,7 +35,7 @@ getMerchantWithCityList = do
   logInfo "[AccessMatrix.getMerchantWithCityList] START"
   merchantList <- B.runInReplica QMerchant.findAllMerchants
   logInfo $ "[AccessMatrix.getMerchantWithCityList] findAllMerchants done, count=" <> show (length merchantList)
-  let merchantCityList = map (\merchant -> DMatrix.MerchantCityList merchant.shortId merchant.supportedOperatingCities) merchantList
+  let merchantCityList = map (\merchant -> DMatrix.MerchantCityList merchant.shortId merchant.supportedOperatingCities (map (T.pack . show) merchant.supportedOperatingCities)) merchantList
   pure merchantCityList
 
 getAccessMatrix ::
