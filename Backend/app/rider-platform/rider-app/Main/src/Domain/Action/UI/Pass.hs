@@ -741,22 +741,31 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
   passEntities <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
   istTime <- getLocalCurrentTime (19800 :: Seconds)
   let today = DT.utctDay istTime
+  now <- getCurrentTime
   forM_ passEntities $ \purchasedPass -> do
-    when (purchasedPass.status == DPurchasedPass.PreBooked && purchasedPass.startDate <= today) $ do
-      QPurchasedPass.updateStatusById DPurchasedPass.Active purchasedPass.id
+    when (diffUTCTime now purchasedPass.updatedAt > 300) $ do
+      latestPreBookedPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus (Just 1) (Just 0) purchasedPass.id [DPurchasedPass.PreBooked, DPurchasedPass.Active] today
+      let mbFirstPreBookedPayment = listToMaybe latestPreBookedPayments
 
-    when (purchasedPass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired] && purchasedPass.endDate < today) $ do
-      -- check if user has already renewed the pass
-      allPreBookedPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus (Just 1) (Just 0) purchasedPass.id [DPurchasedPass.PreBooked, DPurchasedPass.Active] today
-      let mbFirstPreBookedPayment = listToMaybe allPreBookedPayments
-      case mbFirstPreBookedPayment of
-        Just firstPreBookedPayment -> do
-          let newStatus = if firstPreBookedPayment.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
-          QPurchasedPassPayment.updateStatusByOrderId newStatus firstPreBookedPayment.orderId
-          QPurchasedPass.updatePurchaseData purchasedPass.id firstPreBookedPayment.startDate firstPreBookedPayment.endDate newStatus firstPreBookedPayment.benefitDescription firstPreBookedPayment.benefitType firstPreBookedPayment.benefitValue firstPreBookedPayment.amount
-        Nothing -> do
-          QPurchasedPassPayment.expireOlderActivePaymentsByPurchasedPassId purchasedPass.id today
-          QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id
+      when (purchasedPass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired] && purchasedPass.endDate < today) $ do
+        case mbFirstPreBookedPayment of
+          Just firstPreBookedPayment -> do
+            let newStatus = if firstPreBookedPayment.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
+            QPurchasedPassPayment.updateStatusByOrderId newStatus firstPreBookedPayment.orderId
+            QPurchasedPass.updatePurchaseData purchasedPass.id firstPreBookedPayment.startDate firstPreBookedPayment.endDate newStatus firstPreBookedPayment.benefitDescription firstPreBookedPayment.benefitType firstPreBookedPayment.benefitValue firstPreBookedPayment.amount
+          Nothing -> do
+            QPurchasedPassPayment.expireOlderActivePaymentsByPurchasedPassId purchasedPass.id today
+            QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id
+
+      when (purchasedPass.status == DPurchasedPass.PreBooked && purchasedPass.startDate <= today && purchasedPass.endDate >= today) $ do
+        QPurchasedPass.updateStatusById DPurchasedPass.Active purchasedPass.id
+        whenJust mbFirstPreBookedPayment $ \payment ->
+          when (payment.status == DPurchasedPass.PreBooked) $
+            QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.Active payment.orderId
+      when (purchasedPass.status == DPurchasedPass.Expired) $ do
+        whenJust mbFirstPreBookedPayment $ \payment ->
+          when (payment.startDate <= today && payment.endDate >= today) $
+            QPurchasedPass.updateStatusById DPurchasedPass.Active purchasedPass.id
 
   allActivePurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
 
