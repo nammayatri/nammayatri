@@ -399,14 +399,13 @@ createNonRideSos personId mbMerchantId mbMerchantOperatingCityId mbTrackingExpir
     Nothing -> do
       now <- getCurrentTime
       pid <- generateGUID
-      dummyRideId <- generateGUID
       let newSos =
             DSos.Sos
               { id = pid,
                 personId = personId,
                 status = DSos.Pending,
                 flow = flow,
-                rideId = Just dummyRideId,
+                rideId = Nothing,
                 ticketId = Nothing,
                 mediaFiles = [],
                 merchantId = mbMerchantId,
