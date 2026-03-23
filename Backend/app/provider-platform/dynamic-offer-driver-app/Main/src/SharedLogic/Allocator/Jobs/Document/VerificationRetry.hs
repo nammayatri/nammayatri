@@ -98,8 +98,8 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
     callVerifyDL documentNum person verificationReq = do
       whenJust verificationReq.driverDateOfBirth $ \dob -> do
         verifyRes <-
-          Verification.verifyDLAsync person.merchantId person.merchantOperatingCityId $
-          Verification.VerifyDLAsyncReq {dlNumber = documentNum, dateOfBirth = dob, driverId = person.id.getId, returnState = Just True, applicantMobile = Nothing}
+          Verification.verifyDL person.merchantId person.merchantOperatingCityId $
+          Verification.VerifyDLReq {dlNumber = documentNum, dateOfBirth = dob, driverId = person.id.getId, returnState = Just True, applicantMobile = Nothing}
         case verifyRes of
           VerificationIntTypes.AsyncDLResp res -> case res.requestor of
             VT.Idfy -> IVQuery.create =<< mkIdfyNewVerificationEntity verificationReq res.requestId

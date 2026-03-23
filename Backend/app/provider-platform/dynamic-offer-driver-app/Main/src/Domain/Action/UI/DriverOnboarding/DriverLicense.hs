@@ -251,8 +251,8 @@ verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverD
               then Domain.Success
               else Domain.Skipped
       verifyRes <-
-        Verification.verifyDLAsync person.merchantId merchantOpCityId $
-          Verification.VerifyDLAsyncReq {dlNumber, dateOfBirth = driverDateOfBirth, driverId = person.id.getId, returnState = Just True, applicantMobile = Nothing}
+        Verification.verifyDL person.merchantId merchantOpCityId $
+          Verification.VerifyDLReq {dlNumber, dateOfBirth = driverDateOfBirth, driverId = person.id.getId, returnState = Just True, applicantMobile = Nothing}
 
       case verifyRes of
         VerificationIntTypes.AsyncDLResp res -> case res.requestor of
