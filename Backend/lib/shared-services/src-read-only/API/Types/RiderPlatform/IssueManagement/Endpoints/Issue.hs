@@ -279,9 +279,9 @@ data IssueAPIs = IssueAPIs
     postIssueOptionUpdate :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption -> IssueManagement.Common.Dashboard.Issue.UpdateIssueOptionReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postIssueMessageUpsert ::
       ( Data.ByteString.Lazy.ByteString,
-          IssueManagement.Common.Dashboard.Issue.UpsertIssueMessageReq
-        ) ->
-        EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.UpsertIssueMessageRes,
+        IssueManagement.Common.Dashboard.Issue.UpsertIssueMessageReq
+      ) ->
+      EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.UpsertIssueMessageRes,
     postIssueKaptureCreate :: IssueManagement.Common.Dashboard.Issue.IssueReportReqV2 -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getIssueCategoryDetail :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueCategoryDetailRes,
     getIssueOptionDetail :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueOptionDetailRes,

@@ -40,8 +40,8 @@ import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.UI.DriverOnboardingV2
 import qualified Data.Aeson as A
-import qualified Data.HashMap.Strict as HM
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Tuple.Extra as TE

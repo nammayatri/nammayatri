@@ -300,38 +300,38 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
     _ ->
       let fareRoute = mkFareRouteFromFRFSDetails routeDetails mbProviderRouteId
        in JMU.measureLatency (withTryCatch "getFares:getFaresForRouteDetails" $ Flow.getFares riderId merchant.id merchantOperatingCity.id integratedBPPConfig fareRoute vehicleCategory serviecType mbSearchReqId blacklistedServiceTiers blacklistedFareQuoteTypes False isSingleMode) ("getFares" <> show vehicleCategory <> " routeDetails: " <> show fareRoute.segments)
-        >>= \case
-          Right (isFareMandatory, []) -> do
-            logError $ "Getting Empty Fares for Vehicle Category : " <> show vehicleCategory <> "for riderId: " <> show riderId
-            return (isFareMandatory, Nothing)
-          Right (isFareMandatory, fares) -> do
-            now <- getCurrentTime
-            let arrivalTime = fromMaybe now mbFromArrivalTime
-            -- L.setOptionLocal QRSTT.CalledForFare True
-            ((possibleServiceTiers, availableFares), mbPossibleRoutes) <- case serviecType of
-              Just serviceTier -> pure ((Just [serviceTier], fares), Nothing) -- bypassing as in case of serviceType/serviceTier is passed, we only calculate fare for that type
-              Nothing -> JMU.measureLatency (filterAvailableBuses arrivalTime fareRoute.segments integratedBPPConfig fares) ("filterAvailableBuses" <> show vehicleCategory <> " routeDetails: " <> show fareRoute.segments)
-            -- L.setOptionLocal QRSTT.CalledForFare False
-
-            (mbMinFarePerRoute, mbMaxFarePerRoute) <- case vehicleCategory of
-              Spec.BUS -> do
-                mbSelectedServiceTierQuote <- JMU.sortAndGetBusFares merchantOperatingCity.id mbPreferredServiceTier availableFares
-                case mbSelectedServiceTierQuote of
-                  Just selectedServiceTierQuote -> pure (Just selectedServiceTierQuote, Just selectedServiceTierQuote)
-                  Nothing -> pure (selectMinFare availableFares, selectMaxFare availableFares)
-              _ -> pure (selectMinFare availableFares, selectMaxFare availableFares)
-            logDebug $ "all fares: " <> show fares <> "min fare: " <> show mbMinFarePerRoute <> "max fare: " <> show mbMaxFarePerRoute <> "possible service tiers: " <> show possibleServiceTiers <> "available fares: " <> show availableFares
-            case (mbMinFarePerRoute, mbMaxFarePerRoute) of
-              (Just minFare, Just maxFare) -> do
-                let minAdultFare = maybe (HighPrecMoney 0.0) (.price.amount) (find (\category -> category.category == ADULT) minFare.categories)
-                    maxAdultFare = maybe (HighPrecMoney 0.0) (.price.amount) (find (\category -> category.category == ADULT) maxFare.categories)
-                return (isFareMandatory, Just $ JT.GetFareResponse {liveVehicleAvailableServiceTypes = possibleServiceTiers, estimatedMinFare = minAdultFare, estimatedMaxFare = maxAdultFare, possibleRoutes = mbPossibleRoutes})
-              _ -> do
-                logError $ "No Fare Found for Vehicle Category : " <> show vehicleCategory <> "for riderId: " <> show riderId
+            >>= \case
+              Right (isFareMandatory, []) -> do
+                logError $ "Getting Empty Fares for Vehicle Category : " <> show vehicleCategory <> "for riderId: " <> show riderId
                 return (isFareMandatory, Nothing)
-          Left err -> do
-            logError $ "Exception Occured in Get Fare for Vehicle Category : " <> show vehicleCategory <> ", Error : " <> show err
-            return (True, Nothing)
+              Right (isFareMandatory, fares) -> do
+                now <- getCurrentTime
+                let arrivalTime = fromMaybe now mbFromArrivalTime
+                -- L.setOptionLocal QRSTT.CalledForFare True
+                ((possibleServiceTiers, availableFares), mbPossibleRoutes) <- case serviecType of
+                  Just serviceTier -> pure ((Just [serviceTier], fares), Nothing) -- bypassing as in case of serviceType/serviceTier is passed, we only calculate fare for that type
+                  Nothing -> JMU.measureLatency (filterAvailableBuses arrivalTime fareRoute.segments integratedBPPConfig fares) ("filterAvailableBuses" <> show vehicleCategory <> " routeDetails: " <> show fareRoute.segments)
+                -- L.setOptionLocal QRSTT.CalledForFare False
+
+                (mbMinFarePerRoute, mbMaxFarePerRoute) <- case vehicleCategory of
+                  Spec.BUS -> do
+                    mbSelectedServiceTierQuote <- JMU.sortAndGetBusFares merchantOperatingCity.id mbPreferredServiceTier availableFares
+                    case mbSelectedServiceTierQuote of
+                      Just selectedServiceTierQuote -> pure (Just selectedServiceTierQuote, Just selectedServiceTierQuote)
+                      Nothing -> pure (selectMinFare availableFares, selectMaxFare availableFares)
+                  _ -> pure (selectMinFare availableFares, selectMaxFare availableFares)
+                logDebug $ "all fares: " <> show fares <> "min fare: " <> show mbMinFarePerRoute <> "max fare: " <> show mbMaxFarePerRoute <> "possible service tiers: " <> show possibleServiceTiers <> "available fares: " <> show availableFares
+                case (mbMinFarePerRoute, mbMaxFarePerRoute) of
+                  (Just minFare, Just maxFare) -> do
+                    let minAdultFare = maybe (HighPrecMoney 0.0) (.price.amount) (find (\category -> category.category == ADULT) minFare.categories)
+                        maxAdultFare = maybe (HighPrecMoney 0.0) (.price.amount) (find (\category -> category.category == ADULT) maxFare.categories)
+                    return (isFareMandatory, Just $ JT.GetFareResponse {liveVehicleAvailableServiceTypes = possibleServiceTiers, estimatedMinFare = minAdultFare, estimatedMaxFare = maxAdultFare, possibleRoutes = mbPossibleRoutes})
+                  _ -> do
+                    logError $ "No Fare Found for Vehicle Category : " <> show vehicleCategory <> "for riderId: " <> show riderId
+                    return (isFareMandatory, Nothing)
+              Left err -> do
+                logError $ "Exception Occured in Get Fare for Vehicle Category : " <> show vehicleCategory <> ", Error : " <> show err
+                return (True, Nothing)
   where
     mkFareRouteFromFRFSDetails :: [FRFSRouteDetails] -> Maybe Text -> CallAPI.FareRoute
     mkFareRouteFromFRFSDetails rds mbPrId =
