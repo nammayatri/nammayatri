@@ -31,15 +31,12 @@ import qualified Safety.Storage.Queries.Sos as QSos
 -- Validates that the SOS exists and has entityType "NonRide" before updating
 updateSosFromNonRideToRide ::
   ( BeamFlow m r,
-    EsqDBReplicaFlow m r,
     CoreMetrics m
   ) =>
-  Id DSos.Sos ->
+  DSos.Sos ->
   Id Common.Ride ->
   m ()
-updateSosFromNonRideToRide sosId newRideId = do
-  sos <- QSos.findById sosId >>= fromMaybeM (InvalidRequest $ "SOS not found: " <> sosId.getId)
-
+updateSosFromNonRideToRide sos newRideId = do
   unless (sos.entityType == Just DSos.NonRide) $
     throwError $ InvalidRequest $ "SOS entityType is not NonRide. Current entityType: " <> show sos.entityType
 
@@ -56,14 +53,12 @@ updateSosFromNonRideToRide sosId newRideId = do
 -- Updates DB and cache when SOS has a rideId.
 updateSosTicketId ::
   ( BeamFlow m r,
-    EsqDBReplicaFlow m r,
     CoreMetrics m
   ) =>
-  Id DSos.Sos ->
+  DSos.Sos ->
   Maybe Text ->
   m ()
-updateSosTicketId sosId mbTicketId = do
-  sos <- QSos.findById sosId >>= fromMaybeM (InvalidRequest $ "SOS not found: " <> sosId.getId)
+updateSosTicketId sos mbTicketId = do
   let updatedSos = sos {DSos.ticketId = mbTicketId}
   QSos.updateByPrimaryKey updatedSos
   whenJust sos.rideId $ \rid -> CQSos.cacheSosIdByRideId rid updatedSos

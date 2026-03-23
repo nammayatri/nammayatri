@@ -62,6 +62,7 @@ import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payout.Types as PT
+import qualified Kernel.External.Ticket.Interface.Types as TIT
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
@@ -88,6 +89,10 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
+import qualified Safety.Domain.Action.UI.Sos as SafetySos
+import qualified Safety.Domain.Types.Sos as SafetyDSos
+import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
+import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import qualified SharedLogic.BehaviourManagement.CustomerCancellationRate as CCR
 import SharedLogic.Booking
 import qualified SharedLogic.CallBPP as CallBPP
@@ -98,6 +103,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Payment as SPayment
 import qualified SharedLogic.PaymentInvoice as SPInvoice
 import qualified SharedLogic.ScheduledNotifications as SN
+import qualified SharedLogic.Scheduler.Jobs.SafetyCSAlert as SIVR
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -134,6 +140,7 @@ import Tools.Metrics (HasBAPMetrics, incrementRideCreatedRequestCount)
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as TP
 import qualified Tools.SMS as Sms
+import qualified Tools.Ticket as Ticket
 import qualified Tools.Whatsapp as Whatsapp
 import TransactionLogs.Types
 import qualified UrlShortner.Common as UrlShortner
@@ -607,19 +614,21 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
   now <- getCurrentTime
   rideRelatedNotificationConfigList <- CRRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId DRN.START_TIME booking.configInExperimentVersions
   forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updRideForStartReq (fromMaybe now rideStartTime))
+  person <- QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  fork "convert pending non-ride sos to ride sos on ride start" $ convertNonRideSosToRide person riderConfig
   unless isInitiatedByCronJob $ do
     fork "notify emergency contacts" $ Notify.notifyRideStartToEmergencyContacts booking ride
     Notify.notifyOnRideStarted booking ride
   case booking.bookingDetails of
-    DRB.RentalDetails _ -> when (booking.isDashboardRequest == Just True) sendRideEndOTPMessage
-    DRB.InterCityDetails _ -> when (booking.isDashboardRequest == Just True) sendRideEndOTPMessage
+    DRB.RentalDetails _ -> when (booking.isDashboardRequest == Just True) $ sendRideEndOTPMessage person
+    DRB.InterCityDetails _ -> when (booking.isDashboardRequest == Just True) $ sendRideEndOTPMessage person
     DRB.DeliveryDetails _ -> do
       deliveryInitiatedAs <- fromMaybeM (InternalError "DeliveryInitiatedBy not found") booking.initiatedBy
-      when (deliveryInitiatedAs /= Trip.DeliveryParty Trip.Receiver) $ sendDeliveryDetailsToReceiver
+      when (deliveryInitiatedAs /= Trip.DeliveryParty Trip.Receiver) $ sendDeliveryDetailsToReceiver riderConfig
     _ -> pure ()
   where
-    sendDeliveryDetailsToReceiver = fork "Sending Delivery Details SMS to Receiver" $ do
-      riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+    sendDeliveryDetailsToReceiver riderConfig = fork "Sending Delivery Details SMS to Receiver" $ do
       mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
       senderParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Sender) >>= fromMaybeM (InternalError $ "Sender booking party not found for " <> booking.id.getId)
       receiverParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Receiver) >>= fromMaybeM (InternalError $ "Receiver booking party not found for " <> booking.id.getId)
@@ -647,16 +656,15 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
       buildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId receiverSmsReq
       Sms.sendSMS booking.merchantId booking.merchantOperatingCityId (buildSmsReq phoneNumber) >>= Sms.checkSmsResult
 
-    sendRideEndOTPMessage = fork "sending ride end otp sms" $ do
+    sendRideEndOTPMessage person = fork "sending ride end otp sms" $ do
       let merchantOperatingCityId = booking.merchantOperatingCityId
       merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
       if merchantConfig.enableDashboardSms
         then do
           case endOtp_ of
             Just endOtp' -> do
-              customer <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
-              mobileNumber <- mapM decrypt customer.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-              let countryCode = fromMaybe "+91" customer.mobileCountryCode
+              mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+              let countryCode = fromMaybe "+91" person.mobileCountryCode
               let phoneNumber = countryCode <> mobileNumber
               buildSmsReq <-
                 MessageBuilder.buildSendRideEndOTPMessage merchantOperatingCityId $
@@ -668,6 +676,35 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
         else do
           logInfo "Merchant not configured to send dashboard sms"
           pure ()
+
+    convertNonRideSosToRide person riderConfig = do
+      mbNonRideSos <- SafetyQSos.findPendingNonRideSosByPersonId (cast booking.riderId) SafetyDSos.Pending (Just SafetyDSos.NonRide)
+      whenJust mbNonRideSos $ \sos ->
+        case sos.sosState of
+          Just SafetyDSos.SosActive -> do
+            SafetySos.updateSosFromNonRideToRide sos (cast ride.id)
+            QRide.updateSosId (Just $ cast sos.id) ride.id
+            when riderConfig.enableSupportForSafety $ do
+              phoneNumber <- mapM decrypt person.mobileNumber
+              let rideInfo = SIVR.buildRideInfo ride person phoneNumber
+              case sos.ticketId of
+                Just existingTicketId ->
+                  void $
+                    withTryCatch "updateTicket:autoConvertSos" $
+                      Ticket.updateTicket person.merchantId person.merchantOperatingCityId TIT.UpdateTicketReq {comment = "SOS converted from non-ride to ride", ticketId = existingTicketId, subStatus = TIT.IN, rideDescription = Just rideInfo, issueDetails = Nothing}
+                Nothing -> do
+                  let trackLink = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
+                      kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
+                  ticketResponse <-
+                    withTryCatch "createTicket:autoConvertSos" $
+                      Ticket.createTicket person.merchantId person.merchantOperatingCityId $
+                        SIVR.mkTicket person phoneNumber [trackLink] (Just rideInfo) SafetyDSos.SafetyFlow riderConfig.kaptureConfig.disposition kaptureQueue
+                  whenJust (either (const Nothing) (Just . (.ticketId)) ticketResponse) $ \newTicketId ->
+                    void $ SafetySos.updateSosTicketId sos (Just newTicketId)
+          Just SafetyDSos.LiveTracking -> do
+            SafetyQSos.updateStatus SafetyDSos.Resolved sos.id
+            SafetyCQSos.clearAllCacheKeys sos
+          Nothing -> pure ()
 
 data RideEndOffersKafkaData = RideEndOffersKafkaData
   { rideId :: Id DRide.Ride,
@@ -825,6 +862,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   --         }
   --   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
   --   void . withShortRetry $ CallBPP.update booking.providerUrl becknUpdateReq
+  fork "mark pending sos as not resolved on ride end" $ do
+    SafetyCQSos.updateStatusToNotResolvedIfPendingByRideId (cast ride.id)
   unless isInitiatedByCronJob $
     Notify.notifyOnRideCompleted booking updRide otherParties
   where
