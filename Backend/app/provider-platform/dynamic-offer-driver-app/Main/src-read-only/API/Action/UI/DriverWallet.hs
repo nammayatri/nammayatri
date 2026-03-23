@@ -27,24 +27,28 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "wallet" :> "transactions" :> QueryParam "fromDate" Data.Time.UTCTime :> QueryParam "toDate" Data.Time.UTCTime
+  ( TokenAuth :> "wallet" :> "balance" :> Get ('[JSON]) API.Types.UI.DriverWallet.WalletBalanceResponse :<|> TokenAuth :> "wallet" :> "transactions"
+      :> QueryParam
+           "fromDate"
+           Data.Time.UTCTime
+      :> QueryParam "toDate" Data.Time.UTCTime
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.DriverWallet.WalletSummaryResponse
       :<|> TokenAuth
       :> "wallet"
       :> "payout"
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "wallet"
       :> "topup"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.DriverWallet.TopUpRequest
       :> Post
-           '[JSON]
+           ('[JSON])
            Domain.Action.UI.Plan.PlanSubscribeRes
       :<|> TokenAuth
       :> "wallet"
@@ -65,20 +69,29 @@ type API =
            "offset"
            Kernel.Prelude.Int
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.DriverWallet.PayoutHistoryResponse
   )
 
 handler :: Environment.FlowServer API
-handler = getWalletTransactions :<|> postWalletPayout :<|> postWalletTopup :<|> getWalletPayoutHistory
+handler = getWalletBalance :<|> getWalletTransactions :<|> postWalletPayout :<|> postWalletTopup :<|> getWalletPayoutHistory
+
+getWalletBalance ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Environment.FlowHandler API.Types.UI.DriverWallet.WalletBalanceResponse
+  )
+getWalletBalance a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverWallet.getWalletBalance (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 getWalletTransactions ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe Data.Time.UTCTime ->
-    Kernel.Prelude.Maybe Data.Time.UTCTime ->
+    Kernel.Prelude.Maybe (Data.Time.UTCTime) ->
+    Kernel.Prelude.Maybe (Data.Time.UTCTime) ->
     Environment.FlowHandler API.Types.UI.DriverWallet.WalletSummaryResponse
   )
 getWalletTransactions a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverWallet.getWalletTransactions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
@@ -107,11 +120,11 @@ getWalletPayoutHistory ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe Data.Time.UTCTime ->
-    Kernel.Prelude.Maybe Data.Time.UTCTime ->
-    Kernel.Prelude.Maybe [Lib.Payment.Domain.Types.PayoutRequest.PayoutRequestStatus] ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe (Data.Time.UTCTime) ->
+    Kernel.Prelude.Maybe (Data.Time.UTCTime) ->
+    Kernel.Prelude.Maybe ([Lib.Payment.Domain.Types.PayoutRequest.PayoutRequestStatus]) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
     Environment.FlowHandler API.Types.UI.DriverWallet.PayoutHistoryResponse
   )
 getWalletPayoutHistory a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverWallet.getWalletPayoutHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
