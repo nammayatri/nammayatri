@@ -63,6 +63,7 @@ library
       API.Internal.RideSearchExpired
       API.Internal.Sos
       API.Internal.StopEvents
+      API.Internal.UpdateCancellationFeeStatus
       API.Internal.ViolationDetection
       API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
       API.Types.Dashboard.AppManagement.OrphanInstances.TicketDashboard
@@ -220,6 +221,7 @@ library
       Domain.Action.Internal.RideSearchExpired
       Domain.Action.Internal.Sos
       Domain.Action.Internal.StopEvents
+      Domain.Action.Internal.UpdateCancellationFeeStatus
       Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.AadhaarVerification
       Domain.Action.UI.AlertWebhook

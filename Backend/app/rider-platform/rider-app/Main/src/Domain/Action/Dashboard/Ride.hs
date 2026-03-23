@@ -649,6 +649,7 @@ cancellationChargesWaiveOffCore merchant booking ride = do
           case result of
             Right _ -> do
               logInfo $ "CancellationChargesWaiveOff: Successfully waived off cancellation charges for bookingId: " <> booking.id.getId
+              QRide.updateCancellationFeeStatus (Just DRide.WAIVED) ride.id
               pure (Just charges, True)
             Left err -> do
               logError $ "CancellationChargesWaiveOff: Failed to waive off cancellation charges for bookingId: " <> booking.id.getId <> " with error: " <> show err
