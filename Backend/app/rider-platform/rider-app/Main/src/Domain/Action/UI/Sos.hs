@@ -255,7 +255,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
             pure $ either (const Nothing) (Just . (.ticketId)) ticketResponse
           else pure Nothing
       let finalTicketId = mbTrigTicketId <|> mbNonRideTicketId <|> sosDetails.ticketId
-      whenJust finalTicketId $ \tId -> void $ SafetySos.updateSosTicketId sosDetails.id (Just tId)
+      whenJust finalTicketId $ \tId -> void $ SafetySos.updateSosTicketId sosDetails (Just tId)
       let finalTrackLink = buildSosTrackingUrl sosDetails.id riderConfig.trackingShortUrlPattern
       return (sosDetails.id, finalTicketId, finalTrackLink, Nothing)
   -- Register SOS entity with LTS, optionally bundling ERSS broadcaster config.
@@ -1033,14 +1033,14 @@ postSosUpdateToRide (mbPersonId, merchantId) sosId UpdateToRideReq {..} = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   unless (personId == booking.riderId) $ throwError $ InvalidRequest "Ride does not belong to this person"
-  -- Update SOS from NonRide to Ride
-  void $ SafetySos.updateSosFromNonRideToRide sosId (cast @DRide.Ride @SafetyCommon.Ride rideId)
+  -- Update SOS from NonRide to Ride and link ride table
+  void $ SafetySos.updateSosFromNonRideToRide sosDetails (cast @DRide.Ride @SafetyCommon.Ride rideId)
+  QRide.updateSosId (Just $ cast sosId) ride.id
 
   -- Same steps as creating a new ride SOS: Kapture ticket, tracking link, notify emergency contacts
   riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let trackLink = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
 
-  -- Create Kapture ticket if support for safety is enabled (parity with postSosCreate ride flow)
   when riderConfig.enableSupportForSafety $ do
     phoneNumber <- mapM decrypt person.mobileNumber
     let rideMocId = fromMaybe person.merchantOperatingCityId ride.merchantOperatingCityId
@@ -1054,35 +1054,37 @@ postSosUpdateToRide (mbPersonId, merchantId) sosId UpdateToRideReq {..} = do
             (Just sosId.getId)
             merchantShortId
             rideCityCode
-        mediaLinks = dashboardRideInfoUrl
-    ticketResponse <-
-      withTryCatch "createTicket:sosUpdateToRide" $
-        Ticket.createTicket person.merchantId person.merchantOperatingCityId $
-          SIVR.mkTicket person phoneNumber mediaLinks (Just rideInfo) SafetyDSos.SafetyFlow riderConfig.kaptureConfig.disposition kaptureQueue
-    whenJust (either (const Nothing) (Just . (.ticketId)) ticketResponse) $ \newTicketId ->
-      void $ SafetySos.updateSosTicketId sosId (Just newTicketId)
-
-  -- Fetch updated SOS (may have new ticketId) for ticket update comment
-  updatedSos <- runInReplica $ SafetySos.findSosById sosId >>= fromMaybeM (SosIdDoesNotExist sosId.getId)
-  QRide.updateSosId (Just $ cast updatedSos.id) ride.id
-  void $ callUpdateTicket person updatedSos $ Just "SOS linked to ride"
-
-  -- Notify emergency contacts with ride tracking link (parity with postSosCreate ride flow)
-  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback (cast personId) (QSafetyExtra.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
-  when safetySettings.notifySosWithEmergencyContacts $ do
-    fork "postSosUpdateToRide:notifyEmergencyContacts" $ do
-      buildSmsReq <-
-        MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
-          MessageBuilder.BuildSOSAlertMessageReq
-            { userName = SLP.getName person,
-              rideLink = trackLink,
-              rideEndTime = T.pack . formatTime defaultTimeLocale "%e-%-m-%Y %-I:%M%P" <$> ride.rideEndTime,
-              isRideEnded = False
-            }
-      emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, merchantId)
-      void $ QPDEN.updateShareRideForAll (cast personId) True
-      enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
-      SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" Notification.SOS_TRIGGERED [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers Nothing
+        mediaLinks = [trackLink] <> dashboardRideInfoUrl
+    case sosDetails.ticketId of
+      Just existingTicketId ->
+        -- Existing ticket from non-ride SOS: update with ride info, no new notifications
+        void $
+          withTryCatch "updateTicket:sosUpdateToRide" $
+            Ticket.updateTicket person.merchantId person.merchantOperatingCityId
+              Ticket.UpdateTicketReq {comment = "SOS converted from non-ride to ride", ticketId = existingTicketId, subStatus = Ticket.IN, rideDescription = Just rideInfo, issueDetails = Nothing}
+      Nothing -> do
+        -- No existing ticket: create fresh ticket and notify emergency contacts
+        ticketResponse <-
+          withTryCatch "createTicket:sosUpdateToRide" $
+            Ticket.createTicket person.merchantId person.merchantOperatingCityId $
+              SIVR.mkTicket person phoneNumber mediaLinks (Just rideInfo) SafetyDSos.SafetyFlow riderConfig.kaptureConfig.disposition kaptureQueue
+        whenJust (either (const Nothing) (Just . (.ticketId)) ticketResponse) $ \newTicketId ->
+          void $ SafetySos.updateSosTicketId sosDetails (Just newTicketId)
+        safetySettings <- QSafetyExtra.findSafetySettingsWithFallback (cast personId) (QSafetyExtra.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
+        when safetySettings.notifySosWithEmergencyContacts $ do
+          fork "postSosUpdateToRide:notifyEmergencyContacts" $ do
+            buildSmsReq <-
+              MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
+                MessageBuilder.BuildSOSAlertMessageReq
+                  { userName = SLP.getName person,
+                    rideLink = trackLink,
+                    rideEndTime = T.pack . formatTime defaultTimeLocale "%e-%-m-%Y %-I:%M%P" <$> ride.rideEndTime,
+                    isRideEnded = False
+                  }
+            emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, merchantId)
+            void $ QPDEN.updateShareRideForAll (cast personId) True
+            enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
+            SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" Notification.SOS_TRIGGERED [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers Nothing
 
   pure APISuccess.Success
 
@@ -1283,3 +1285,9 @@ postSosErssStatusUpdateInternal req sosDetails = do
         message = Nothing,
         payLoad = Nothing
       }
+
+getSosGetDetailsByPerson :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> SafetyDSos.SosStatus -> Flow SosDetailsRes
+getSosGetDetailsByPerson (mbPersonId, _) sosStatus = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  mbSos <- SafetyQSos.findByPersonIdAndStatus (cast personId) sosStatus
+  return SosDetailsRes {sos = mbSos, externalSOSConfig = Nothing}

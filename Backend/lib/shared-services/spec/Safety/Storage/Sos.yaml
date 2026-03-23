@@ -39,6 +39,7 @@ Sos:
 
     SosStatus:
       enum: "Resolved,NotResolved,Pending,MockPending,MockResolved"
+      derive: "HttpInstance"
 
     SosState:
       enum: "LiveTracking,SosActive"
@@ -105,6 +106,19 @@ Sos:
         field: createdAt
         order: desc
       limit: 1
+    findPendingNonRideSosByPersonId:
+      kvFunction: findOneWithKV
+      where:
+        and:
+          - personId
+          - status
+          - entityType
+    findByPersonIdAndStatus:
+      kvFunction: findOneWithKV
+      where:
+        and:
+          - personId
+          - status
 
   beamType:
     mediaFiles: Maybe [Text]

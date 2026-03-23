@@ -8,6 +8,7 @@ import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import Kernel.Utils.TH
 import qualified Safety.Domain.Types.Common
 import qualified Tools.Beam.UtilsTH
 
@@ -40,7 +41,7 @@ data SosMockDrill = SosMockDrill {personId :: Kernel.Types.Id.Id Safety.Domain.T
 
 data SosState = LiveTracking | SosActive deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data SosStatus = Resolved | NotResolved | Pending | MockPending | MockResolved deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data SosStatus = Resolved | NotResolved | Pending | MockPending | MockResolved deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data SosType
   = Police
@@ -59,5 +60,7 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosEntityType)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosState)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosStatus)
+
+$(mkHttpInstancesForEnum ''SosStatus)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosType)

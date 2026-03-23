@@ -47,11 +47,26 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 findByPersonId :: (Safety.Storage.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Safety.Domain.Types.Common.Person -> m [Safety.Domain.Types.Sos.Sos])
 findByPersonId personId = do findAllWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
+findByPersonIdAndStatus :: (Safety.Storage.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Safety.Domain.Types.Common.Person -> Safety.Domain.Types.Sos.SosStatus -> m (Maybe Safety.Domain.Types.Sos.Sos))
+findByPersonIdAndStatus personId status = do findOneWithKV [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId), Se.Is Beam.status $ Se.Eq status]]
+
 findByRideId :: (Safety.Storage.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Safety.Domain.Types.Common.Ride) -> m (Maybe Safety.Domain.Types.Sos.Sos))
 findByRideId rideId = do findOneWithKV [Se.Is Beam.rideId $ Se.Eq (Kernel.Types.Id.getId <$> rideId)]
 
 findByTicketId :: (Safety.Storage.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Safety.Domain.Types.Sos.Sos))
 findByTicketId ticketId = do findOneWithKV [Se.Is Beam.ticketId $ Se.Eq ticketId]
+
+findPendingNonRideSosByPersonId ::
+  (Safety.Storage.BeamFlow.BeamFlow m r) =>
+  (Kernel.Types.Id.Id Safety.Domain.Types.Common.Person -> Safety.Domain.Types.Sos.SosStatus -> Kernel.Prelude.Maybe Safety.Domain.Types.Sos.SosEntityType -> m (Maybe Safety.Domain.Types.Sos.Sos))
+findPendingNonRideSosByPersonId personId status entityType = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId),
+          Se.Is Beam.status $ Se.Eq status,
+          Se.Is Beam.entityType $ Se.Eq entityType
+        ]
+    ]
 
 updateEntityType :: (Safety.Storage.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Safety.Domain.Types.Sos.SosEntityType -> Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos -> m ())
 updateEntityType entityType id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.entityType entityType, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

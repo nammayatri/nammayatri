@@ -233,6 +233,15 @@ apis:
       response:
         type: Kernel.Types.APISuccess.APISuccess
 
+  # GET /sos/getDetails/personID
+  - GET:
+      endpoint: /sos/getDetailsByPerson/{sosStatus}
+      auth: TokenAuth
+      params:
+        sosStatus: SosStatus
+      response:
+        type: API.Types.UI.Sos.SosDetailsRes
+
   # POST /sos/erss/statusUpdate (Webhook for external SOS status update from Police) NoAuth as it will be called by Police system
   - POST:
       endpoint: /sos/erss/statusUpdate
