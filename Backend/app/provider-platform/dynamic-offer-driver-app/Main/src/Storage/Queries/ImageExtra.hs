@@ -133,23 +133,29 @@ hoursAgo i now = negate (intToNominalDiffTime $ 3600 * i) `DT.addUTCTime` now
 
 findByPersonIdImageTypeAndValidationStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> DocumentType -> DImage.SelfieFetchStatus -> m (Maybe DImage.Image)
 findByPersonIdImageTypeAndValidationStatus persondId docType fetchStatus = do
-  case fetchStatus of
+  listToMaybe <$> case fetchStatus of
     DImage.APPROVED ->
-      findOneWithKV
+      findAllWithOptionsKV
         [ Se.And
             [ Se.Is BeamI.personId $ Se.Eq $ getId persondId,
               Se.Is BeamI.imageType $ Se.Eq docType,
               Se.Is BeamI.verificationStatus $ Se.Eq (Just Documents.VALID)
             ]
         ]
+        (Se.Desc BeamI.createdAt)
+        (Just 1)
+        Nothing
     DImage.NEEDS_REVIEW ->
-      findOneWithKV
+      findAllWithOptionsKV
         [ Se.And
             [ Se.Is BeamI.personId $ Se.Eq $ persondId.getId,
               Se.Is BeamI.imageType $ Se.Eq docType,
               Se.Is BeamI.verificationStatus $ Se.Eq (Just Documents.MANUAL_VERIFICATION_REQUIRED)
             ]
         ]
+        (Se.Desc BeamI.createdAt)
+        (Just 1)
+        Nothing
 
 updateVerificationStatusOnlyById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Documents.VerificationStatus -> Kernel.Types.Id.Id DImage.Image -> m ())
 updateVerificationStatusOnlyById verificationStatus (Kernel.Types.Id.Id id) = do

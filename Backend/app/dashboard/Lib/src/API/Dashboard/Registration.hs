@@ -36,6 +36,12 @@ type API =
            :<|> "enable2Fa"
              :> ReqBody '[JSON] DReg.Enable2FAReq
              :> Post '[JSON] DReg.Enable2FARes
+           :<|> "initiate2FaSetup"
+             :> ReqBody '[JSON] DReg.Enable2FAReq
+             :> Post '[JSON] DReg.Initiate2FASetupRes
+           :<|> "verify2FaSetup"
+             :> ReqBody '[JSON] DReg.Verify2FASetupReq
+             :> Post '[JSON] DReg.Enable2FARes
            :<|> "switchMerchant"
              :> DashboardAuth 'DASHBOARD_USER
              :> ReqBody '[JSON] DReg.SwitchMerchantReq
@@ -52,6 +58,8 @@ handler =
     :<|> logout
     :<|> logoutAllMerchants
     :<|> enable2fa
+    :<|> initiate2FASetup
+    :<|> verify2FASetup
     :<|> switchMerchant
     :<|> switchMerchantAndCity
 
@@ -66,6 +74,12 @@ logoutAllMerchants = withFlowHandlerAPI' . DReg.logoutAllMerchants
 
 enable2fa :: BeamFlow' => DReg.Enable2FAReq -> FlowHandler DReg.Enable2FARes
 enable2fa = withFlowHandlerAPI' . DReg.enable2fa
+
+initiate2FASetup :: BeamFlow' => DReg.Enable2FAReq -> FlowHandler DReg.Initiate2FASetupRes
+initiate2FASetup = withFlowHandlerAPI' . DReg.initiate2FASetup
+
+verify2FASetup :: BeamFlow' => DReg.Verify2FASetupReq -> FlowHandler DReg.Enable2FARes
+verify2FASetup = withFlowHandlerAPI' . DReg.verify2FASetup
 
 switchMerchant :: BeamFlow' => TokenInfo -> DReg.SwitchMerchantReq -> FlowHandler DReg.LoginRes
 switchMerchant token = withFlowHandlerAPI' . DReg.switchMerchant token

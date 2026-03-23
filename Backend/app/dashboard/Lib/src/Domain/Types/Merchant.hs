@@ -27,6 +27,8 @@ data MerchantE e = Merchant
     shortId :: ShortId Merchant,
     serverNames :: [DSN.ServerName],
     is2faMandatory :: Bool,
+    twoFaOtpTTLInSecs :: Maybe Int,
+    twoFaMaxOtpVerifyAttempts :: Maybe Int,
     defaultOperatingCity :: City.City,
     supportedOperatingCities :: [City.City],
     domain :: Maybe Text,

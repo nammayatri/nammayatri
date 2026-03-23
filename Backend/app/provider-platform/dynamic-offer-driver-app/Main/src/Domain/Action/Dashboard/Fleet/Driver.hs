@@ -2009,10 +2009,10 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
   whenJust req.mobileNo $ \reqMobileNo -> do
     mobileNumberHash <- getDbHash reqMobileNo
     let countryCodeFallback = P.getCountryMobileCode merchantOpCity.country
-    person <- QPerson.findByMobileNumberAndMerchantAndRole (fromMaybe countryCodeFallback req.mobileCountryCode) mobileNumberHash merchant.id DP.FLEET_OWNER
+    person <- QPerson.findByMobileNumberAndMerchantAndRole (fromMaybe countryCodeFallback req.mobileCountryCode) mobileNumberHash merchant.id driver.role
     when (isJust person) $ throwError (MobileNumberAlreadyLinked reqMobileNo)
   whenJust req.email $ \reqEmail -> do
-    person <- QPerson.findByEmailAndMerchantIdAndRole (Just reqEmail) merchant.id DP.FLEET_OWNER
+    person <- QPerson.findByEmailAndMerchantIdAndRole (Just reqEmail) merchant.id driver.role
     when (isJust person) $ throwError (EmailAlreadyLinked reqEmail)
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
@@ -2025,8 +2025,9 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
             DP.firstName = fromMaybe driver.firstName req.firstName,
             DP.lastName = req.lastName
           }
-  mbUpdFleetOwnerinfo <- do
-    fleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
+  -- Update fleet owner info only if the record exists (fleet owners have it, operators don't)
+  mbFleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId)
+  whenJust mbFleetOwnerInfo $ \fleetOwnerInfo -> do
     reqStripeIdNumber <- forM req.stripeIdNumber encrypt
     let updFleetOwnerInfo =
           fleetOwnerInfo
@@ -2036,10 +2037,9 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
               DFOI.fleetName = req.fleetName <|> fleetOwnerInfo.fleetName,
               DFOI.fleetType = fromMaybe fleetOwnerInfo.fleetType (DRegV2.castFleetType <$> req.fleetType)
             }
-    pure $ Just updFleetOwnerInfo
+    FOI.updateFleetOwnerInfo updFleetOwnerInfo
 
   QPerson.updateFleetOwnerDetails personId updDriver
-  whenJust mbUpdFleetOwnerinfo FOI.updateFleetOwnerInfo
   pure Success
 
 ---------------------------------------------------------------------
