@@ -204,6 +204,42 @@ updateByPrimaryKey fleetOwnerInfo = do
         ]
         [Se.And [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]]
 
+findEligibleFleetOwnersForScheduledPayout ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Int ->
+  Maybe (Id DP.Person) ->
+  m [Domain.Types.FleetOwnerInformation.FleetOwnerInformation]
+findEligibleFleetOwnersForScheduledPayout merchantOpCityId batchSize mbLastPersonId =
+  findAllWithOptionsKV
+    [ Se.And $
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Just merchantOpCityId.getId),
+          Se.Is Beam.enabled $ Se.Eq True,
+          Se.Is Beam.blocked $ Se.Eq False,
+          Se.Is Beam.payoutVpa $ Se.Not (Se.Eq Nothing),
+          Se.Is Beam.isBlockedForScheduledPayout $ Se.Not (Se.Eq (Just True))
+        ]
+          <> maybe [] (\lastId -> [Se.Is Beam.fleetOwnerPersonId $ Se.GreaterThan (getId lastId)]) mbLastPersonId
+    ]
+    (Se.Asc Beam.fleetOwnerPersonId)
+    (Just batchSize)
+    Nothing
+
+updatePayoutVpaAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe Text ->
+  Maybe Domain.Types.FleetOwnerInformation.PayoutVpaStatus ->
+  Kernel.Types.Id.Id DP.Person ->
+  m ()
+updatePayoutVpaAndStatus payoutVpa payoutVpaStatus fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.payoutVpa payoutVpa,
+      Se.Set Beam.payoutVpaStatus payoutVpaStatus,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
 getFleetOwnerByTicketPlaceId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe Text ->
