@@ -60,6 +60,7 @@ data DriverCoinsFunctionType
   | RidesCompleted Kernel.Prelude.Int
   | QuizQuestionCompleted
   | BonusQuizCoins
+  | CoinsRedemptionRefund
   deriving stock (Generic, Eq, Ord)
   deriving anyclass (ToSchema, ToJSON)
 
@@ -84,6 +85,7 @@ instance Show DriverCoinsFunctionType where
   show BonusQuizCoins = "BonusQuizCoins"
   show (BulkUploadFunctionV2 msg) = "BulkUploadFunctionV2 " <> show msg
   show (RidesCompleted n) = "RidesCompleted " <> show n
+  show (CoinsRedemptionRefund) = "CoinsRedemptionRefund"
 
 -- These instance are for backward compatibility of the Old Events stored in the DB.
 instance Read DriverCoinsFunctionType where
