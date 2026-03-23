@@ -25,3 +25,19 @@ updateAllPendingToPaidByRiderId riderId = do
           Se.Is Beam.paymentStatus $ Se.Eq DCDD.PENDING
         ]
     ]
+
+findAllPendingByRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id.Id DRD.RiderDetails -> m [DCDD.CancellationDuesDetails]
+findAllPendingByRiderId riderId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.riderId $ Se.Eq (Id.getId riderId),
+          Se.Is Beam.paymentStatus $ Se.Eq DCDD.PENDING
+        ]
+    ]
+
+updateStatusByIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DCDD.CancellationDuesPaymentStatus -> [Id.Id DCDD.CancellationDuesDetails] -> m ()
+updateStatusByIds status ids = do
+  _now <- getCurrentTime
+  updateWithKV
+    [Se.Set Beam.paymentStatus status, Se.Set Beam.updatedAt _now]
+    [Se.Is Beam.id $ Se.In (map Id.getId ids)]

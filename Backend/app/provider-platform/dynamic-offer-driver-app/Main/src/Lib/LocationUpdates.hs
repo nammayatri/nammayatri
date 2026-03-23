@@ -47,6 +47,7 @@ import Kernel.Utils.Common
 import "location-updates" Lib.LocationUpdates as Reexport
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
+import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CallInternalMLPricing as ML
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -98,7 +99,8 @@ type LocationUpdateFlow m r c =
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal]
   )
 
 getDeviationForPoint :: LatLong -> [LatLong] -> Meters
