@@ -2420,14 +2420,14 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                   QueriesFPAD.create (finalFarePolicy.id, slab)
             _ -> pure ()
           let merchanOperatingCityId = merchantOpCity.id
-              -- Find old fare products from the pre-fetched city snapshot instead of per-group DB queries.
-              --
-              -- Conflicts (two groups for the same lookup domain) are already rejected upfront.
-              -- The ":U" suffix for unbounded keys and the plain makeKey for bounded keys both
-              -- serve as a defence-in-depth guard: for bounded, multiple groups legitimately share
-              -- the same (area, tier, tripCategory, searchSource) key with different timeBounds,
-              -- so only the FIRST group deletes old fare products for that key; later groups in
-              -- the same timeBound set just create new ones.  The unbounded case mirrors that.
+          -- Find old fare products from the pre-fetched city snapshot instead of per-group DB queries.
+          --
+          -- Conflicts (two groups for the same lookup domain) are already rejected upfront.
+          -- The ":U" suffix for unbounded keys and the plain makeKey for bounded keys both
+          -- serve as a defence-in-depth guard: for bounded, multiple groups legitimately share
+          -- the same (area, tier, tripCategory, searchSource) key with different timeBounds,
+          -- so only the FIRST group deletes old fare products for that key; later groups in
+          -- the same timeBound set just create new ones.  The unbounded case mirrors that.
           (oldFareProducts, newBoundedAlreadyDeletedMap) <-
             case timeBounds of
               Unbounded -> do

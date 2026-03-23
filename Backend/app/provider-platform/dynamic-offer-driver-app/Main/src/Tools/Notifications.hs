@@ -250,10 +250,11 @@ notifySoftBlocked person entity = do
     blockedSTiers = T.intercalate ", " $ map show entity.blockedSTiers
 
 sendFeedbackBadgeNotification ::
-  (ServiceFlow m r,
+  ( ServiceFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+  ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
   FeedbackBadgeEntityData ->
@@ -262,12 +263,10 @@ sendFeedbackBadgeNotification merchantOpCityId driver entityData = do
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "FEEDBACK_BADGE_PN" Nothing Nothing (Just $ fromMaybe ENGLISH driver.language) Nothing
   when (isNothing mbMerchantPN) $ logError $ "MISSED_FCM - FEEDBACK_BADGE_PN"
   whenJust mbMerchantPN $ \merchantPN -> do
-    let dynamicParams = [ ("rating", show entityData.rating), ("badgeCount", maybe "0" show entityData.badgeCount) ]
+    let dynamicParams = [("rating", show entityData.rating), ("badgeCount", maybe "0" show entityData.badgeCount)]
         title = buildTemplate dynamicParams merchantPN.title
         body = buildTemplate dynamicParams merchantPN.body
     notifyDriverWithProviders merchantOpCityId Notification.FEEDBACK_BADGE_PN title body driver driver.deviceToken entityData
-
-
 
 -- NEW_RIDE_AVAILABLE
 -- title = FCMNotificationTitle "New ride available for offering"

@@ -11,6 +11,7 @@ import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.External.BackgroundVerification.Types as BackgroundVerification
 import qualified Kernel.External.Call as Call
 import Kernel.External.Call.Interface.Types
+import Kernel.External.Encryption
 import qualified Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Interface.Types
@@ -29,7 +30,6 @@ import Lib.Dashcam.Domain.Interface as DashcamInter
 import Lib.Dashcam.Domain.Types as Dashcam
 import qualified Text.Show
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
-import Kernel.External.Encryption
 
 -- Extra code goes here --
 
@@ -47,7 +47,9 @@ data IffcoTokioConfig = IffcoTokioConfig
   deriving (Eq, Generic, Show)
   deriving anyclass (FromJSON, ToJSON)
 
-data InsuranceProvider = IffcoTokio deriving stock (Eq, Ord, Show, Read, Generic) deriving anyclass (FromJSON, ToJSON)
+data InsuranceProvider = IffcoTokio
+  deriving stock (Eq, Ord, Show, Read, Generic)
+  deriving anyclass (FromJSON, ToJSON)
 
 data ServiceName
   = MapsService Maps.MapsService

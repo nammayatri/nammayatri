@@ -58,12 +58,14 @@ makeIdKey id = "driver-offer:CachedQueries:FarePolicy:Id-" <> id.getId
 
 -- Call it after any update
 clearCache :: HedisFlow m r => FarePolicy -> m ()
-clearCache fp = Hedis.runInMultiCloudRedisWrite $ Hedis.withCrossAppRedis $ do
-  Hedis.del (makeIdKey fp.id)
+clearCache fp = Hedis.runInMultiCloudRedisWrite $
+  Hedis.withCrossAppRedis $ do
+    Hedis.del (makeIdKey fp.id)
 
 clearCacheById :: HedisFlow m r => Id FarePolicy -> m ()
-clearCacheById fid = Hedis.runInMultiCloudRedisWrite $ Hedis.withCrossAppRedis $ do
-  Hedis.del (makeIdKey fid)
+clearCacheById fid = Hedis.runInMultiCloudRedisWrite $
+  Hedis.withCrossAppRedis $ do
+    Hedis.del (makeIdKey fid)
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
 create = Queries.create
