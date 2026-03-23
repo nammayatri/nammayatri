@@ -18,6 +18,8 @@
 module SharedLogic.Scheduler.Jobs.SafetyCSAlert where
 
 import API.Types.UI.Sos
+import qualified Data.Aeson as A
+import qualified Data.Text as T
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Kernel.Beam.Functions as B
@@ -33,6 +35,8 @@ import qualified Safety.Domain.Types.Sos as SafetyDSos
 import SharedLogic.JobScheduler
 import SharedLogic.Person as SLP
 import Storage.Beam.Sos ()
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
@@ -73,11 +77,33 @@ createSafetyTicket ::
 createSafetyTicket person ride = do
   logDebug $ "Creating Safety Ticket for ride : " <> show ride.id
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  merchantConfig <- CQM.findById (person.merchantId) >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+  let rideMocId = fromMaybe person.merchantOperatingCityId ride.merchantOperatingCityId
+  rideMoc <- CQMOC.findById rideMocId >>= fromMaybeM (MerchantOperatingCityNotFound rideMocId.getId)
   let trackLink = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
+      merchantShortId = merchantConfig.shortId.getShortId
+      dashboardCityCode =
+        case A.toJSON rideMoc.city of
+          A.String code -> code
+          _ -> show rideMoc.city
+      dashboardRideInfoUrl =
+        maybe
+          []
+          ( \patternS ->
+              [ patternS
+                  & T.replace "<RIDES_OR_SOS>" "rides"
+                  & T.replace "<ID>" ride.id.getId
+                  & T.replace "<RIDE_ID>" ride.id.getId
+                  & T.replace "<MERCHANT_SHORT_ID>" merchantShortId
+                  & T.replace "<CITY_CODE>" dashboardCityCode
+              ]
+          )
+          riderConfig.dashboardMediaFileUrlPattern
+      mediaLinks = [trackLink] <> dashboardRideInfoUrl
   phoneNumber <- mapM decrypt person.mobileNumber
   let rideInfo = buildRideInfo ride person phoneNumber
       kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
-  ticketResponse <- withTryCatch "createTicket:safetyCSAlert" (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber [trackLink] (Just rideInfo) SafetyDSos.CSAlertSosTicket riderConfig.kaptureConfig.disposition kaptureQueue))
+  ticketResponse <- withTryCatch "createTicket:safetyCSAlert" (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber mediaLinks (Just rideInfo) SafetyDSos.CSAlertSosTicket riderConfig.kaptureConfig.disposition kaptureQueue))
   ticketId <- do
     case ticketResponse of
       Right ticketResponse' -> do
