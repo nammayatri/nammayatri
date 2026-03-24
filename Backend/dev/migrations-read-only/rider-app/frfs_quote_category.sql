@@ -208,3 +208,12 @@ ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN category_order integer ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN hold_id text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

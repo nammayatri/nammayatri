@@ -617,3 +617,13 @@ ALTER TABLE atlas_app.estimate ADD COLUMN personal_discount double precision ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

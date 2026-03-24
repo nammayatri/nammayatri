@@ -388,3 +388,13 @@ ALTER TABLE atlas_app.ride ADD COLUMN sos_id character varying(36) ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

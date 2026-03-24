@@ -42,6 +42,7 @@ import qualified API.Action.UI.NyRegularSubscription as NYRegular
 import qualified API.Action.UI.PartnerBookingStatement as PartnerBookingStatement
 import qualified API.Action.UI.PickupInstructions as PickupInstructions
 import qualified API.Action.UI.Places as Places
+import qualified API.Action.UI.PreferredRoute as PreferredRoute
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.RiderLocation as RiderLocation
@@ -151,6 +152,7 @@ type API =
            :<|> NearbyDrivers.API
            :<|> NearbyBuses.API
            :<|> Places.API
+           :<|> PreferredRoute.API
            :<|> CRIS.API
            :<|> TicketKapture.API
            :<|> Insurance.API
@@ -225,6 +227,7 @@ handler =
     :<|> NearbyDrivers.handler
     :<|> NearbyBuses.handler
     :<|> Places.handler
+    :<|> PreferredRoute.handler
     :<|> CRIS.handler
     :<|> TicketKapture.handler
     :<|> Insurance.handler

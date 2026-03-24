@@ -1,0 +1,24 @@
+imports:
+  Text: Data.Text
+  LocationAddress: Domain.Types.LocationAddress
+
+module: PreferredRoute
+types:
+  PreferredRouteResp:
+    id: Text
+    routeName: Text
+    fromLocationLat: Double
+    fromLocationLon: Double
+    fromLocationAddress: LocationAddress
+    toLocationLat: Double
+    toLocationLon: Double
+    toLocationAddress: LocationAddress
+    priority: Int
+    usageCount: Int
+
+apis:
+  - GET:
+      endpoint: /preferredRoutes
+      auth: TokenAuth
+      response:
+        type: "[PreferredRouteResp]"

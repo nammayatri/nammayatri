@@ -1,35 +1,37 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Types.UI.ParkingBooking where
 
-import Data.OpenApi (ToSchema)
-import qualified Data.Text
-import qualified Domain.Types.Person
+module API.Types.UI.ParkingBooking where
 import EulerHS.Prelude hiding (id)
-import qualified Kernel.Prelude
-import qualified Kernel.Types.Common
-import qualified Kernel.Types.Id
-import qualified Lib.Payment.Domain.Types.PaymentOrder
 import Servant
 import Tools.Auth
+import Data.OpenApi (ToSchema)
+import qualified Kernel.Types.Common
+import qualified Kernel.Types.Id
+import qualified Domain.Types.Person
+import qualified Data.Text
+import qualified Kernel.Prelude
+import qualified Lib.Payment.Domain.Types.PaymentOrder
 
-data ParkingBookingReq = ParkingBookingReq
-  { amount :: Kernel.Types.Common.HighPrecMoney,
-    customerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    entityId :: Data.Text.Text,
-    parkingEndTime :: Kernel.Prelude.UTCTime,
-    parkingStartTime :: Kernel.Prelude.UTCTime,
-    slotNumber :: Data.Text.Text,
-    vehicleNumber :: Data.Text.Text
-  }
-  deriving stock (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ParkingBookingResponse = ParkingBookingResponse
-  { orderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,
-    orderShortId :: Data.Text.Text,
-    parkingLotId :: Data.Text.Text,
-    paymentLink :: Data.Text.Text
-  }
-  deriving stock (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ParkingBookingReq
+    = ParkingBookingReq {amount :: Kernel.Types.Common.HighPrecMoney,
+                         customerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+                         entityId :: Data.Text.Text,
+                         parkingEndTime :: Kernel.Prelude.UTCTime,
+                         parkingStartTime :: Kernel.Prelude.UTCTime,
+                         slotNumber :: Data.Text.Text,
+                         vehicleNumber :: Data.Text.Text}
+    deriving stock (Generic, Show)
+    deriving anyclass (ToJSON, FromJSON, ToSchema)
+data ParkingBookingResponse
+    = ParkingBookingResponse {orderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,
+                              orderShortId :: Data.Text.Text,
+                              parkingLotId :: Data.Text.Text,
+                              paymentLink :: Data.Text.Text}
+    deriving stock (Generic, Show)
+    deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+
+

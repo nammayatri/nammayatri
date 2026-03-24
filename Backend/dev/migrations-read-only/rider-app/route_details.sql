@@ -284,3 +284,13 @@ ALTER TABLE atlas_app.route_details ADD COLUMN user_booked_route_short_name text
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

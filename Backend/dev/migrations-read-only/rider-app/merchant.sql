@@ -113,3 +113,13 @@ ALTER TABLE atlas_app.merchant ADD COLUMN signing_private_key text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

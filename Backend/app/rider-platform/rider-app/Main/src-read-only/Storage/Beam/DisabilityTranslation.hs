@@ -1,29 +1,28 @@
-{-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
+{-# LANGUAGE StandaloneDeriving #-}
 module Storage.Beam.DisabilityTranslation where
-
-import qualified Database.Beam as B
-import Domain.Types.Common ()
-import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
+import Kernel.External.Encryption
+import Domain.Types.Common ()
+import qualified Kernel.Prelude
+import qualified Database.Beam as B
 
-data DisabilityTranslationT f = DisabilityTranslationT
-  { disabilityId :: B.C f Kernel.Prelude.Text,
-    disabilityTag :: B.C f Kernel.Prelude.Text,
-    language :: B.C f Kernel.Prelude.Text,
-    translation :: B.C f Kernel.Prelude.Text
-  }
-  deriving (Generic, B.Beamable)
 
-instance B.Table DisabilityTranslationT where
-  data PrimaryKey DisabilityTranslationT f = DisabilityTranslationId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = DisabilityTranslationId <$> disabilityId <*> language
 
+data DisabilityTranslationT f
+    = DisabilityTranslationT {disabilityId :: (B.C f Kernel.Prelude.Text),
+                              disabilityTag :: (B.C f Kernel.Prelude.Text),
+                              language :: (B.C f Kernel.Prelude.Text),
+                              translation :: (B.C f Kernel.Prelude.Text)}
+    deriving (Generic, B.Beamable)
+instance B.Table DisabilityTranslationT
+    where data PrimaryKey DisabilityTranslationT f = DisabilityTranslationId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
+          primaryKey = DisabilityTranslationId <$> disabilityId <*> language
 type DisabilityTranslation = DisabilityTranslationT Identity
 
-$(enableKVPG ''DisabilityTranslationT ['disabilityId, 'language] [])
+$(enableKVPG (''DisabilityTranslationT) [('disabilityId), ('language)] [])
 
-$(mkTableInstances ''DisabilityTranslationT "disability_translation")
+$(mkTableInstances (''DisabilityTranslationT) "disability_translation")
+

@@ -89,6 +89,7 @@ import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import qualified Storage.Queries.UserPreferredRoute as QUserPreferredRoute
 import Tools.DynamicLogic (getConfigVersionMapForStickiness)
 import Tools.Error
 import Tools.Event
@@ -164,6 +165,7 @@ extractSearchDetails now = \case
         numberOfLuggages = numberOfLuggages,
         fromSpecialLocationId = Nothing,
         toSpecialLocationId = Nothing,
+        preferredRouteId = preferredRouteId,
         ..
       }
   RentalSearch RentalSearchReq {..} ->
@@ -328,6 +330,18 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         OneWaySearch OneWaySearchReq {isReserveRide} -> fromMaybe False isReserveRide
         _ -> False
   validateStartAndReturnTime now startTime returnTime
+
+  -- Validate and increment usage count for preferred route if provided
+  whenJust preferredRouteId $ \routeId -> do
+    mbRoute <- QUserPreferredRoute.findByPrimaryKey (Id routeId)
+    case mbRoute of
+      Just route -> do
+        -- Validate the route belongs to the current user
+        unless (route.personId == personId) $
+          throwError (InvalidRequest "Preferred route does not belong to the user")
+        -- Increment usage count
+        QUserPreferredRoute.updateUsageCount (route.usageCount + 1) (Id routeId) personId
+      Nothing -> throwError (InvalidRequest "Preferred route not found")
 
   let isDashboardRequest = isDashboardRequest_ || isNothing quotesUnifiedFlow -- Don't get confused with this, it is done to handle backward compatibility so that in both dashboard request or mobile app request without quotesUnifiedFlow can be consider same
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)

@@ -102,6 +102,7 @@ SearchRequest:
     busLocationData: "[BusLocation]"
     fromSpecialLocationId: Maybe Text  # Fixed route: origin area ID
     toSpecialLocationId: Maybe Text    # Fixed route: destination area ID
+    preferredRouteId: Maybe Text       # User preferred route ID for tracking usage
 
 
   default:

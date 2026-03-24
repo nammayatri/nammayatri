@@ -36,3 +36,13 @@ ALTER TABLE atlas_app.driver_offer ADD COLUMN is_upgraded_to_cab boolean ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

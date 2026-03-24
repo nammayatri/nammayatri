@@ -1,0 +1,130 @@
+imports:
+  Person: Domain.Types.Person
+  LocationAddress: Domain.Types.LocationAddress
+
+UserPreferredRoute:
+  tableName: user_preferred_route
+
+  derives: "Generic, Show, Eq, FromJSON, ToJSON, ToSchema"
+
+  fields:
+    id: Id UserPreferredRoute
+    personId: Id Person
+    routeName: Text
+    fromLocationLat: Double
+    fromLocationLon: Double
+    fromLocationAddress: LocationAddress
+    toLocationLat: Double
+    toLocationLon: Double
+    toLocationAddress: LocationAddress
+    priority: Int
+    usageCount: Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamFields:
+    fromLocationAddress:
+      fromStreet: Maybe Text
+      fromDoor: Maybe Text
+      fromCity: Maybe Text
+      fromState: Maybe Text
+      fromCountry: Maybe Text
+      fromBuilding: Maybe Text
+      fromAreaCode: Maybe Text
+      fromArea: Maybe Text
+      fromWard: Maybe Text
+      fromPlaceId: Maybe Text
+      fromInstructions: Maybe Text
+      fromTitle: Maybe Text
+      fromExtras: Maybe Text
+    toLocationAddress:
+      toStreet: Maybe Text
+      toDoor: Maybe Text
+      toCity: Maybe Text
+      toState: Maybe Text
+      toCountry: Maybe Text
+      toBuilding: Maybe Text
+      toAreaCode: Maybe Text
+      toArea: Maybe Text
+      toWard: Maybe Text
+      toPlaceId: Maybe Text
+      toInstructions: Maybe Text
+      toTitle: Maybe Text
+      toExtras: Maybe Text
+
+  sqlType:
+    routeName: character varying(255)
+    fromStreet: character varying(255)
+    fromDoor: character varying(255)
+    fromCity: character varying(255)
+    fromState: character varying(255)
+    fromCountry: character varying(255)
+    fromBuilding: character varying(255)
+    fromAreaCode: character varying(255)
+    fromArea: character varying(255)
+    fromWard: character varying(255)
+    toStreet: character varying(255)
+    toDoor: character varying(255)
+    toCity: character varying(255)
+    toState: character varying(255)
+    toCountry: character varying(255)
+    toBuilding: character varying(255)
+    toAreaCode: character varying(255)
+    toArea: character varying(255)
+    toWard: character varying(255)
+
+  toTType:
+    fromStreet: Domain.Types.LocationAddress.street|I
+    fromDoor: Domain.Types.LocationAddress.door|I
+    fromCity: Domain.Types.LocationAddress.city|I
+    fromState: Domain.Types.LocationAddress.state|I
+    fromCountry: Domain.Types.LocationAddress.country|I
+    fromBuilding: Domain.Types.LocationAddress.building|I
+    fromAreaCode: Domain.Types.LocationAddress.areaCode|I
+    fromArea: Domain.Types.LocationAddress.area|I
+    fromWard: Domain.Types.LocationAddress.ward|I
+    fromPlaceId: Domain.Types.LocationAddress.placeId|I
+    fromInstructions: Domain.Types.LocationAddress.instructions|I
+    fromTitle: Domain.Types.LocationAddress.title|I
+    fromExtras: Domain.Types.LocationAddress.extras|I
+    toStreet: Domain.Types.LocationAddress.street|I
+    toDoor: Domain.Types.LocationAddress.door|I
+    toCity: Domain.Types.LocationAddress.city|I
+    toState: Domain.Types.LocationAddress.state|I
+    toCountry: Domain.Types.LocationAddress.country|I
+    toBuilding: Domain.Types.LocationAddress.building|I
+    toAreaCode: Domain.Types.LocationAddress.areaCode|I
+    toArea: Domain.Types.LocationAddress.area|I
+    toWard: Domain.Types.LocationAddress.ward|I
+    toPlaceId: Domain.Types.LocationAddress.placeId|I
+    toInstructions: Domain.Types.LocationAddress.instructions|I
+    toTitle: Domain.Types.LocationAddress.title|I
+    toExtras: Domain.Types.LocationAddress.extras|I
+
+  fromTType:
+    fromLocationAddress: Domain.Types.LocationAddress.LocationAddress {street = fromStreet, door = fromDoor, city = fromCity, state = fromState, country = fromCountry, building = fromBuilding, areaCode = fromAreaCode, area = fromArea, ward = fromWard, placeId = fromPlaceId, instructions = fromInstructions, title = fromTitle, extras = fromExtras}|E
+    toLocationAddress: Domain.Types.LocationAddress.LocationAddress {street = toStreet, door = toDoor, city = toCity, state = toState, country = toCountry, building = toBuilding, areaCode = toAreaCode, area = toArea, ward = toWard, placeId = toPlaceId, instructions = toInstructions, title = toTitle, extras = toExtras}|E
+
+  constraints:
+    id: PrimaryKey
+    personId: SecondaryKey
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  queries:
+    findAllByPersonId:
+      kvFunction: findAllWithOptionsKV
+      where: personId
+      orderBy:
+        field: priority
+        order: asc
+    findByIdAndPersonId:
+      kvFunction: findOneWithKV
+      where:
+        and: [id, personId]
+    updateUsageCount:
+      kvFunction: updateOneWithKV
+      params:
+        - usageCount
+      where:
+        and: [id, personId]

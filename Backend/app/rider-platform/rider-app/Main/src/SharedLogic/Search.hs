@@ -119,7 +119,8 @@ data OneWaySearchReq = OneWaySearchReq
     subscriptionId :: Maybe (Id DNyRegularSubscription.NyRegularSubscription),
     verifyBeforeCancellingOldBooking :: Maybe Bool,
     numberOfLuggages :: Maybe Int,
-    doMultimodalSearch :: Maybe Bool
+    doMultimodalSearch :: Maybe Bool,
+    preferredRouteId :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -138,7 +139,8 @@ data PublicTransportSearchReq = PublicTransportSearchReq
     busLocationData :: Maybe [RL.BusLocation],
     firstMileRemoved :: Maybe Bool,
     doMultimodalSearch :: Maybe Bool,
-    userPreferredServiceTier :: Maybe Spec.ServiceTierType
+    userPreferredServiceTier :: Maybe Spec.ServiceTierType,
+    preferredRouteId :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -156,7 +158,8 @@ data RentalSearchReq = RentalSearchReq
     placeNameSource :: Maybe Text,
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
     numberOfLuggages :: Maybe Int,
-    doMultimodalSearch :: Maybe Bool
+    doMultimodalSearch :: Maybe Bool,
+    preferredRouteId :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -177,7 +180,8 @@ data InterCitySearchReq = InterCitySearchReq
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
     platformType :: Maybe DIBPC.PlatformType,
     numberOfLuggages :: Maybe Int,
-    doMultimodalSearch :: Maybe Bool
+    doMultimodalSearch :: Maybe Bool,
+    preferredRouteId :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -188,7 +192,8 @@ data FixedRouteSearchReq = FixedRouteSearchReq
     numberOfLuggages :: Maybe Int,
     origin :: SearchReqLocation,
     destination :: SearchReqLocation,
-    doMultimodalSearch :: Maybe Bool
+    doMultimodalSearch :: Maybe Bool,
+    preferredRouteId :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -227,7 +232,8 @@ data SearchDetails = SearchDetails
     currentLocation :: Maybe LatLong,
     busLocationData :: [RL.BusLocation],
     fromSpecialLocationId :: Maybe Text, -- Fixed route: origin area ID
-    toSpecialLocationId :: Maybe Text -- Fixed route: destination area ID
+    toSpecialLocationId :: Maybe Text, -- Fixed route: destination area ID
+    preferredRouteId :: Maybe Text -- User preferred route ID for tracking usage
   }
   deriving (Generic, Show)
 

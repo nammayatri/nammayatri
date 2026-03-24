@@ -175,3 +175,13 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN cloud_type text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
