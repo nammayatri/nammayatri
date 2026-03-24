@@ -260,7 +260,7 @@ handle2FA ::
 handle2FA secretKey otp = case (secretKey, otp) of
   (Just key, Just userOtp) -> do
     generatedOtp <- L.runIO (Utils.genTOTP key)
-    if generatedOtp == read (T.unpack userOtp)
+    if show generatedOtp == T.unpack userOtp
       then pure (True, "Logged in successfully")
       else pure (False, "Google Authenticator OTP does not match")
   (_, Nothing) -> pure (False, "Google Authenticator OTP is required")
@@ -331,7 +331,7 @@ initiate2FASetup Initiate2FASetupReq {..} = do
   case (merchantAccess.secretKey, otp) of
     (Just existingKey, Just userOtp) -> do
       generatedOtp <- L.runIO (Utils.genTOTP existingKey)
-      if generatedOtp == read (T.unpack userOtp)
+      if show generatedOtp == T.unpack userOtp
         then do
           -- TOTP valid, generate new secret directly
           newKey <- L.runIO Utils.generateSecretKey
