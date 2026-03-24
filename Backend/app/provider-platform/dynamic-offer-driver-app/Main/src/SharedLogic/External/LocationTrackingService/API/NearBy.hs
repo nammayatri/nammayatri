@@ -40,6 +40,7 @@ type QueueDriverPositionAPI =
     :> "special-locations"
     :> Capture "specialLocationId" Text
     :> "queue"
+    :> Capture "vehicleType" Text
     :> "drivers"
     :> Capture "driverId" (Id DP.Person)
     :> "position"
@@ -48,5 +49,5 @@ type QueueDriverPositionAPI =
 queueDriverPositionAPI :: Proxy QueueDriverPositionAPI
 queueDriverPositionAPI = Proxy
 
-queueDriverPosition :: Text -> Id DP.Person -> ET.EulerClient QueueDriverPositionResp
+queueDriverPosition :: Text -> Text -> Id DP.Person -> ET.EulerClient QueueDriverPositionResp
 queueDriverPosition = ET.client queueDriverPositionAPI

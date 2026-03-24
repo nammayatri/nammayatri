@@ -17,9 +17,10 @@ data QueueRankResponse = QueueRankResponse
 getQueuePosition ::
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Text ->
+  Text ->
   Environment.Flow QueueRankResponse
-getQueuePosition (driverId, _merchantId, _merchantOpCityId) specialLocationId = do
-  ltsResp <- LTSFlow.getQueueDriverPosition specialLocationId driverId
+getQueuePosition (driverId, _merchantId, _merchantOpCityId) specialLocationId vehicleType = do
+  ltsResp <- LTSFlow.getQueueDriverPosition specialLocationId vehicleType driverId
   pure $
     QueueRankResponse
       { queuePositionRange = ltsResp.queuePositionRange,

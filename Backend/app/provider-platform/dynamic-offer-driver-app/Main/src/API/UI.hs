@@ -68,6 +68,7 @@ import qualified API.UI.DriverReferral as DriverReferral
 import qualified API.UI.ExotelEndRide as ExotelEndRide
 import qualified API.UI.Issue as Issue
 import qualified API.UI.KioskLocation as KioskLocation
+import qualified API.UI.QueueRank as QueueRank
 import qualified API.UI.LeaderBoard as LeaderBoard
 import qualified API.UI.Maps as Maps
 import qualified API.UI.Message as Message
@@ -76,7 +77,6 @@ import qualified API.UI.OrgAdmin as OrgAdmin
 import qualified API.UI.Payment as Payment
 import qualified API.UI.Performance as Performance
 import qualified API.UI.Plan as Plan
-import qualified API.UI.QueueRank as QueueRank
 import qualified API.UI.Rating as Rating
 import qualified API.UI.Registration as Registration
 import qualified API.UI.Ride as Ride
