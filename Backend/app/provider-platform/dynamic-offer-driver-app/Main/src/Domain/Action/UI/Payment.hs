@@ -545,7 +545,6 @@ juspayWebhookHandlerForPaymentServiceType merchantShortId mbCity paymentServiceT
     Payment.BadStatusResp -> pure ()
   pure Ack
 
-
 processPayment ::
   ( MonadFlow m,
     CacheFlow m r,

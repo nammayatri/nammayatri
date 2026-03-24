@@ -631,3 +631,9 @@ ALTER TABLE atlas_app.rider_config ALTER COLUMN dashboard_media_file_url_pattern
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ALTER COLUMN dashboard_media_file_url_pattern SET DEFAULT 'https://control-center.moving.tech/ops/<RIDES_OR_SOS>/<ID>?merchant=<MERCHANT_SHORT_ID>&city=<CITY_CODE>';
+ALTER TABLE atlas_app.rider_config ADD COLUMN cache_vehicle_metadata boolean ;
+
+
+
+------- SQL updates -------
+

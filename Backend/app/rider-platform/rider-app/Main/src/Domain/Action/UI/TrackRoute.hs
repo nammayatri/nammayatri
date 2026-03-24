@@ -70,14 +70,14 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
   let sortedTracking = sortOn (distanceToStop currentLocation . snd) ghostBuses
   let sortedConfirmed = sortOn (distanceToStop currentLocation . snd) confirmedHighBuses
   let (nearestXBuses, restOfBuses) = splitAt maxBuses $ sortedConfirmed <> sortedTracking
-  serviceTiersOfSelectedBuses :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] <- mapM (\vehicle -> (,vehicle) <$> JMU.getVehicleServiceTypeFromInMem [integratedBPPConfig] (snd vehicle).vehicleId) nearestXBuses
-  serviceTiersOfRemainingBuses :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] <- mapM (\vehicle -> (,vehicle) <$> JMU.getVehicleServiceTypeFromInMem [integratedBPPConfig] (snd vehicle).vehicleId) restOfBuses
+  serviceTiersOfSelectedBuses :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] <- mapM (\vehicle -> (,vehicle) <$> JMU.getVehicleServiceTypeFromInMem (Just riderConfig) [integratedBPPConfig] (snd vehicle).vehicleId) nearestXBuses
+  serviceTiersOfRemainingBuses :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] <- mapM (\vehicle -> (,vehicle) <$> JMU.getVehicleServiceTypeFromInMem (Just riderConfig) [integratedBPPConfig] (snd vehicle).vehicleId) restOfBuses
   let alreadySelectedServiceTiers :: [Maybe Spec.ServiceTierType] = List.nub $ map fst serviceTiersOfSelectedBuses
   let oneFromEachRemaining :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] = filter (\(st, _) -> not $ st `elem` alreadySelectedServiceTiers) . M.toList $ M.fromList serviceTiersOfRemainingBuses
   let allBuses :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] = serviceTiersOfSelectedBuses <> oneFromEachRemaining
 
   vehicleTrackingInfoWithSubTypes <- forM allBuses $ \(mbServiceTier, (actualRouteCode, vt@VehicleTracking {..})) -> do
-    mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [integratedBPPConfig] vehicleId
+    mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem (Just riderConfig) [integratedBPPConfig] vehicleId
     let resp = mkVehicleTrackingResponse mbServiceTier mbServiceSubTypes (actualRouteCode, vt)
     pure resp
 
