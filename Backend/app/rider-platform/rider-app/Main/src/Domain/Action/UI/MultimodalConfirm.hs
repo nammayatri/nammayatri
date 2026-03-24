@@ -1764,7 +1764,8 @@ data RouteServiceabilityContext = RouteServiceabilityContext
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     merchantId :: Id Domain.Types.Merchant.Merchant,
     maxLiveVehiclesPerRoute :: Int,
-    maxAlternateRouteVehicles :: Int
+    maxAlternateRouteVehicles :: Int,
+    riderConfig :: DRC.RiderConfig
   }
 
 data ResolvedLeg = ResolvedLeg
@@ -1795,7 +1796,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                   merchantOperatingCityId = person.merchantOperatingCityId,
                   merchantId = person.merchantId,
                   maxLiveVehiclesPerRoute = riderConfig.maxLiveVehiclesPerRoute,
-                  maxAlternateRouteVehicles = riderConfig.maxAlternateRouteVehicles
+                  maxAlternateRouteVehicles = riderConfig.maxAlternateRouteVehicles,
+                  riderConfig
                 }
         let userRequestedCodes = maybe [] (concatMap (.routeCodes)) req.routeCodes
         case req.vehicleNumber of
@@ -1873,7 +1875,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
           logDebug $ "handleSingleVehicleRoute: no live data for vehicle=" <> vno <> " routeId=" <> routeId
           pure $ ApiTypes.RouteServiceabilityResp Nothing Nothing []
         Just singleBus -> do
-          mbServiceTier <- JLU.getVehicleServiceTypeFromInMem [ctx.integratedBPPConfig] vno
+          mbServiceTier <- JLU.getVehicleServiceTypeFromInMem (Just ctx.riderConfig) [ctx.integratedBPPConfig] vno
           case mbServiceTier of
             Nothing -> do
               logError $ "handleSingleVehicleRoute: vehicle service type not found for vehicle=" <> vno
@@ -1884,7 +1886,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                   serviceTier
                   ctx.merchantOperatingCityId
                   ctx.integratedBPPConfig.id
-              mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [ctx.integratedBPPConfig] vno
+              mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem (Just ctx.riderConfig) [ctx.integratedBPPConfig] vno
+              mbVehicleTagNumber <- JMU.getVehicleTagNumberFromInMem (Just ctx.riderConfig) [ctx.integratedBPPConfig] vno
               enrichedEta <-
                 mapConcurrently
                   (JMRouteServiceability.enrichBusStopETA ctx.integratedBPPConfig)
@@ -1897,7 +1900,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                         locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral singleBus.busData.timestamp,
                         serviceTierType = serviceTier,
                         serviceTierName = (.shortName) <$> frfsServiceTier,
-                        serviceSubTypes = mbServiceSubTypes
+                        serviceSubTypes = mbServiceSubTypes,
+                        vehicleTagNumber = mbVehicleTagNumber
                       }
               pure $
                 ApiTypes.RouteServiceabilityResp
@@ -1932,7 +1936,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
 
     getValidSingleModeRoute :: RouteServiceabilityContext -> Text -> Text -> Environment.Flow MultiModalTypes.MultiModalRoute
     getValidSingleModeRoute routeServiceabilityContext srcCode' destCode' = do
-      riderConfig <- QRiderConfig.findByMerchantOperatingCityId routeServiceabilityContext.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound routeServiceabilityContext.merchantOperatingCityId.getId)
+      let riderConfig = routeServiceabilityContext.riderConfig
       (sourceLatLong', destLatLong') <- extractSourceDestLatLng srcCode' destCode' routeServiceabilityContext
       let transitRoutesReq =
             MultiModalTypes.GetTransitRoutesReq
@@ -2098,7 +2102,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
           routesWithLiveVehicles <-
             catMaybes
               <$> mapConcurrently
-                (\(r, s) -> JMRouteServiceability.buildRouteWithLiveVehicle r s ctx.integratedBPPConfig rlFromStopCode rlToStopCode frfsTierMap mbSourceLatLong ctx.maxLiveVehiclesPerRoute)
+                (\(r, s) -> JMRouteServiceability.buildRouteWithLiveVehicle r s ctx.integratedBPPConfig rlFromStopCode rlToStopCode frfsTierMap mbSourceLatLong ctx.maxLiveVehiclesPerRoute (Just ctx.riderConfig))
                 (zip busesForRoutes schedulesForRoutes)
 
           -- Separate user-requested routes (5 per route, already limited by distance)

@@ -330,6 +330,7 @@ types:
     position: Maybe LatLong
     serviceSubTypes: "Maybe [ServiceSubType]"
     availableSeats: Maybe Int
+    vehicleTagNumber: Maybe Text
 
   LiveVehicleInfo:
     number: Text
@@ -339,6 +340,7 @@ types:
     eta: "Maybe [BusStopETA]"
     position: LatLong
     serviceSubTypes: "Maybe [ServiceSubType]"
+    vehicleTagNumber: Maybe Text
 
   AlternateRouteDetails:
     routeCode: Text

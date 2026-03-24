@@ -236,6 +236,7 @@ RiderConfig:
     maxLiveVehiclesPerRoute: Int
     maxAlternateRouteVehicles: Int
     includeVehiclesWithNoEta: Maybe Bool
+    cacheVehicleMetadata: Maybe Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
