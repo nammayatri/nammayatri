@@ -295,7 +295,7 @@ processScheduledRegistrationRefunds merchantOpCityId payoutConfigList = do
             let mbPayoutConfig = find (\pc -> pc.vehicleCategory == vehicleCategory) payoutConfigList
             whenJust mbPayoutConfig $ \payoutConfig -> do
               person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-              merchantOperatingCity <- CQMOC.findById (cast person.merchantOperatingCityId) >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
+              merchantOperatingCity <- CQMOC.findById (cast driverFee.merchantOperatingCityId) >>= fromMaybeM (MerchantOperatingCityNotFound driverFee.merchantOperatingCityId.getId)
               uid <- generateGUID
               now <- getCurrentTime
               let registrationFee = driverFee.platformFee

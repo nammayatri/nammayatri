@@ -39,7 +39,7 @@ data GateInfoFull = GateInfoFull
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
-data GateType = Pickup | Drop
+data GateType = Pickup | Drop | Parking
   deriving (Read, Show, Generic, Eq, FromJSON, ToJSON, ToSchema)
 
 data GateInfo = GateInfo
