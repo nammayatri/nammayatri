@@ -44,6 +44,7 @@ import qualified SharedLogic.Ride as SRide
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
 import Tools.Error
@@ -128,6 +129,12 @@ getVolunteerBooking merchantShortId opCity otpCode = do
 postVolunteerAssignStartOtpRide :: ShortId DM.Merchant -> Context.City -> Common.AssignCreateAndStartOtpRideAPIReq -> Flow APISuccess
 postVolunteerAssignStartOtpRide _ _ Common.AssignCreateAndStartOtpRideAPIReq {..} = do
   requestor <- findPerson (cast driverId)
+  driverInfo <- QDI.findById (cast requestor.id) >>= fromMaybeM (PersonNotFound requestor.id.getId)
+  when driverInfo.onRide $ do
+    veryMuchNotOnRide <- runInReplica $ QRide.notOnRide requestor.id
+    if veryMuchNotOnRide
+      then SRide.updateOnRideStatusWithAdvancedRideCheck requestor.id Nothing
+      else throwError DriverOnRide
   booking <- runInReplica $ QBooking.findById (cast bookingId) >>= fromMaybeM (BookingNotFound bookingId.getId)
   when (DVST.isRentalTrip booking.tripCategory) $ throwError (InvalidRequest "Rental rides are not supported through dashboard.")
   rideOtp <- booking.specialZoneOtpCode & fromMaybeM (InternalError "otpCode not found for special zone booking")
