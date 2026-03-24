@@ -287,7 +287,8 @@ fetchLiveBusTimings routeCodes stopCode currentTime currentTimeIST integratedBpp
       ]
 
     getVehicleServiceType (vno, eta) = do
-      mbServiceTier <- getVehicleServiceTypeFromInMem [integratedBppConfig] vno
+      mbRiderConfigLocal <- QRiderConfig.findByMerchantOperatingCityId mocid Nothing
+      mbServiceTier <- getVehicleServiceTypeFromInMem mbRiderConfigLocal [integratedBppConfig] vno
       return $ mbServiceTier <&> (vno,eta,)
 
     -- Fetches static schedules for all fallback routes concurrently then converts using the shared tier map
@@ -699,11 +700,12 @@ findUpcomingTrips routeCode stopCode mbServiceType currentTime mid mocid vc = do
           | rst <- filteredByService
         ]
 
+  mbRiderConfig <- QRiderConfig.findByMerchantOperatingCityId mocid Nothing
   -- Fetch serviceSubTypes for LIVE vehicles concurrently using vehicleId
   tripTimingsWithSubTypes <- (flip mapConcurrently) tripTimingsDrafts $ \(info, vehicleId) -> do
     if info.source == LIVE
       then do
-        mbServiceSubTypes <- getVehicleServiceSubTypesFromInMem integratedBPPConfigs vehicleId
+        mbServiceSubTypes <- getVehicleServiceSubTypesFromInMem mbRiderConfig integratedBPPConfigs vehicleId
         pure $ (info {serviceSubTypes = mbServiceSubTypes} :: UpcomingVehicleInfo)
       else pure info
 
@@ -1536,27 +1538,139 @@ getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber mbPassVerifyReq = do
       return Nothing
     Right result -> return result
 
+-- | JSON payloads for Redis so negative lookups (Nothing) are cached as hits.
+newtype CachedVehicleServiceTier = CachedVehicleServiceTier
+  { unCachedVehicleServiceTier :: Maybe Spec.ServiceTierType
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON)
+
+newtype CachedVehicleServiceSubTypes = CachedVehicleServiceSubTypes
+  { unCachedVehicleServiceSubTypes :: Maybe [Spec.ServiceSubType]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON)
+
+newtype CachedVehicleTagNumber = CachedVehicleTagNumber
+  { unCachedVehicleTagNumber :: Maybe Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON)
+
+vehicleMetadataServiceTierRedisKey :: Id MerchantOperatingCity -> Text -> Text
+vehicleMetadataServiceTierRedisKey mocId vehicleNo =
+  "VehicleMetadata:ServiceTier:" <> mocId.getId <> ":" <> vehicleNo
+
+vehicleMetadataServiceSubTypesRedisKey :: Id MerchantOperatingCity -> Text -> Text
+vehicleMetadataServiceSubTypesRedisKey mocId vehicleNo =
+  "VehicleMetadata:ServiceSubTypes:" <> mocId.getId <> ":" <> vehicleNo
+
+vehicleMetadataTagNumberRedisKey :: Id MerchantOperatingCity -> Text -> Text
+vehicleMetadataTagNumberRedisKey mocId vehicleNo =
+  "VehicleMetadata:TagNumber:" <> mocId.getId <> ":" <> vehicleNo
+
+useRedisForVehicleMetadata :: Maybe RCTypes.RiderConfig -> Bool
+useRedisForVehicleMetadata = \case
+  Just rc -> rc.cacheVehicleMetadata == Just True
+  Nothing -> False
+
+merchantOperatingCityIdForVehicleMetadata ::
+  Maybe RCTypes.RiderConfig ->
+  [DIntegratedBPPConfig.IntegratedBPPConfig] ->
+  Maybe (Id MerchantOperatingCity)
+merchantOperatingCityIdForVehicleMetadata mbRiderConfig integratedBPPConfigs =
+  (mbRiderConfig <&> (.merchantOperatingCityId))
+    <|> (listToMaybe integratedBPPConfigs <&> (.merchantOperatingCityId))
+
 getVehicleServiceTypeFromInMem ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  Maybe RCTypes.RiderConfig ->
   [DIntegratedBPPConfig.IntegratedBPPConfig] ->
   Text ->
   m (Maybe Spec.ServiceTierType)
-getVehicleServiceTypeFromInMem integratedBPPConfigs vehicleNumber = IM.withInMemCache ["CACHED_VEHICLE_TYPE", vehicleNumber] 43200 $ do
-  res <- getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing
-  case res of
-    Just (_, VehicleLiveRouteInfo {serviceType}) -> return $ Just serviceType
-    Nothing -> return Nothing
+getVehicleServiceTypeFromInMem mbRiderConfig integratedBPPConfigs vehicleNumber =
+  case (useRedisForVehicleMetadata mbRiderConfig, merchantOperatingCityIdForVehicleMetadata mbRiderConfig integratedBPPConfigs) of
+    (True, Just mocId) -> do
+      let key = vehicleMetadataServiceTierRedisKey mocId vehicleNumber
+      mbCached <- Hedis.safeGet key
+      case mbCached of
+        Just (CachedVehicleServiceTier (Just serviceType)) -> pure $ Just serviceType
+        Just (CachedVehicleServiceTier Nothing) -> fetchServiceTypeWithoutCachingMiss
+        Nothing -> do
+          serviceTier <- fetchServiceTypeWithoutCachingMiss
+          whenJust serviceTier $ \serviceType -> Hedis.setExp key (CachedVehicleServiceTier (Just serviceType)) 43200
+          pure serviceTier
+    _ ->
+      IM.withInMemCache ["CACHED_VEHICLE_TYPE", vehicleNumber] 43200 fetchServiceTypeWithoutCachingMiss
+        >>= \case
+          Just serviceType -> pure $ Just serviceType
+          Nothing -> fetchServiceTypeWithoutCachingMiss
+  where
+    fetchServiceTypeWithoutCachingMiss = do
+      res <- getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing
+      pure $ case res of
+        Just (_, VehicleLiveRouteInfo {serviceType}) -> Just serviceType
+        Nothing -> Nothing
 
--- | Get service subtypes for a vehicle, cached in-memory for 1 day (86400 seconds)
+-- | Get service subtypes for a vehicle, cached in-memory for 1 day (86400 seconds), or Redis when rider_config.cache_vehicle_metadata is true
 getVehicleServiceSubTypesFromInMem ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  Maybe RCTypes.RiderConfig ->
   [DIntegratedBPPConfig.IntegratedBPPConfig] ->
   Text ->
   m (Maybe [Spec.ServiceSubType])
-getVehicleServiceSubTypesFromInMem integratedBPPConfigs vehicleNumber =
-  IM.withInMemCache ["CACHED_VEHICLE_SERVICE_SUBTYPES", vehicleNumber] 86400 $ do
-    mbVehicleLiveRouteInfo <- getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing
-    pure $ mbVehicleLiveRouteInfo >>= (\(_, v) -> v.serviceSubTypes)
+getVehicleServiceSubTypesFromInMem mbRiderConfig integratedBPPConfigs vehicleNumber =
+  case (useRedisForVehicleMetadata mbRiderConfig, merchantOperatingCityIdForVehicleMetadata mbRiderConfig integratedBPPConfigs) of
+    (True, Just mocId) -> do
+      let key = vehicleMetadataServiceSubTypesRedisKey mocId vehicleNumber
+      mbCached <- Hedis.safeGet key
+      case mbCached of
+        Just (CachedVehicleServiceSubTypes v) -> pure v
+        Nothing -> do
+          mbVehicleLiveRouteInfo <- getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing
+          let v = mbVehicleLiveRouteInfo >>= (\(_, info) -> info.serviceSubTypes)
+          Hedis.setExp key (CachedVehicleServiceSubTypes v) 86400
+          pure v
+    _ ->
+      IM.withInMemCache ["CACHED_VEHICLE_SERVICE_SUBTYPES", vehicleNumber] 86400 $ do
+        mbVehicleLiveRouteInfo <- getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing
+        pure $ mbVehicleLiveRouteInfo >>= (\(_, v) -> v.serviceSubTypes)
+
+-- | Get tag number for a vehicle, cached in-memory for 24 hours (86400 seconds), or Redis when rider_config.cache_vehicle_metadata is true
+getVehicleTagNumberFromInMem ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  Maybe RCTypes.RiderConfig ->
+  [DIntegratedBPPConfig.IntegratedBPPConfig] ->
+  Text ->
+  m (Maybe Text)
+getVehicleTagNumberFromInMem mbRiderConfig integratedBPPConfigs vehicleNumber =
+  case (useRedisForVehicleMetadata mbRiderConfig, merchantOperatingCityIdForVehicleMetadata mbRiderConfig integratedBPPConfigs) of
+    (True, Just mocId) -> do
+      let key = vehicleMetadataTagNumberRedisKey mocId vehicleNumber
+      mbCached <- Hedis.safeGet key
+      case mbCached of
+        Just (CachedVehicleTagNumber Nothing) -> pure Nothing
+        Just (CachedVehicleTagNumber (Just tagNumber))
+          | T.null (T.strip tagNumber) -> do
+              mbVehicleLiveRouteInfo <- getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing
+              let freshTag = sanitizeVehicleTagNumber $ mbVehicleLiveRouteInfo >>= (\(_, info) -> info.busTagNumber)
+              Hedis.setExp key (CachedVehicleTagNumber freshTag) 86400
+              pure freshTag
+          | otherwise -> pure $ Just tagNumber
+        Nothing -> do
+          mbVehicleLiveRouteInfo <- getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing
+          let freshTag = sanitizeVehicleTagNumber $ mbVehicleLiveRouteInfo >>= (\(_, info) -> info.busTagNumber)
+          Hedis.setExp key (CachedVehicleTagNumber freshTag) 86400
+          pure freshTag
+    _ ->
+      IM.withInMemCache ["CACHED_VEHICLE_TAG_NUMBER", vehicleNumber] 86400 $ do
+        mbVehicleLiveRouteInfo <- getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing
+        pure $ sanitizeVehicleTagNumber $ mbVehicleLiveRouteInfo >>= (\(_, v) -> v.busTagNumber)
+  where
+    sanitizeVehicleTagNumber :: Maybe Text -> Maybe Text
+    sanitizeVehicleTagNumber = \case
+      Just tagNumber | T.null (T.strip tagNumber) -> Nothing
+      v -> v
 
 getVehicleLiveRouteInfoUnsafe ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
