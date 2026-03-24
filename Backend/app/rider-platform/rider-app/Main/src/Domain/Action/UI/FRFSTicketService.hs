@@ -1315,7 +1315,7 @@ postFrfsRouteServiceability (mbPersonId, _merchantId) routeId req = do
   routesWithLiveVehicles <-
     catMaybes
       <$> mapConcurrently
-        (\(r, s) -> JMRouteServiceability.buildRouteWithLiveVehicle r s integratedBPPConfig req.startStopCode req.endStopCode frfsTierMap Nothing 5 mbRiderConfig)
+        (\(r, s) -> JMRouteServiceability.buildRouteWithLiveVehicle r s integratedBPPConfig req.startStopCode req.endStopCode frfsTierMap Nothing 5 False mbRiderConfig)
         (zip busesForRoutes schedulesForRoutes)
 
   case routesWithLiveVehicles of

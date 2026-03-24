@@ -1765,7 +1765,8 @@ data RouteServiceabilityContext = RouteServiceabilityContext
     merchantId :: Id Domain.Types.Merchant.Merchant,
     maxLiveVehiclesPerRoute :: Int,
     maxAlternateRouteVehicles :: Int,
-    riderConfig :: DRC.RiderConfig
+    riderConfig :: DRC.RiderConfig,
+    includeAll :: Bool
   }
 
 data ResolvedLeg = ResolvedLeg
@@ -1790,6 +1791,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
         person <- authenticate mbPersonId
         integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
         riderConfig <- QRiderConfig.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound person.merchantOperatingCityId.getId)
+        let bypassCaps = fromMaybe False req.includeAll
         let routeServiceabilityContext =
               RouteServiceabilityContext
                 { integratedBPPConfig,
@@ -1797,7 +1799,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                   merchantId = person.merchantId,
                   maxLiveVehiclesPerRoute = riderConfig.maxLiveVehiclesPerRoute,
                   maxAlternateRouteVehicles = riderConfig.maxAlternateRouteVehicles,
-                  riderConfig
+                  riderConfig,
+                  includeAll = bypassCaps
                 }
         let userRequestedCodes = maybe [] (concatMap (.routeCodes)) req.routeCodes
         case req.vehicleNumber of
@@ -2102,14 +2105,29 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
           routesWithLiveVehicles <-
             catMaybes
               <$> mapConcurrently
-                (\(r, s) -> JMRouteServiceability.buildRouteWithLiveVehicle r s ctx.integratedBPPConfig rlFromStopCode rlToStopCode frfsTierMap mbSourceLatLong ctx.maxLiveVehiclesPerRoute (Just ctx.riderConfig))
+                ( \(r, s) ->
+                    JMRouteServiceability.buildRouteWithLiveVehicle
+                      r
+                      s
+                      ctx.integratedBPPConfig
+                      rlFromStopCode
+                      rlToStopCode
+                      frfsTierMap
+                      mbSourceLatLong
+                      ctx.maxLiveVehiclesPerRoute
+                      ctx.includeAll
+                      (Just ctx.riderConfig)
+                )
                 (zip busesForRoutes schedulesForRoutes)
 
           -- Separate user-requested routes (5 per route, already limited by distance)
           -- from alternate routes (capped to 7 total combined by ETA)
           let (requestedRoutes, alternateRoutes) =
                 partition (\r -> r.routeCode `elem` userRequestedCodes) routesWithLiveVehicles
-              cappedAlternates = capVehiclesAcrossRoutes rlFromStopCode ctx.maxAlternateRouteVehicles alternateRoutes
+              cappedAlternates =
+                if ctx.includeAll
+                  then alternateRoutes
+                  else capVehiclesAcrossRoutes rlFromStopCode ctx.maxAlternateRouteVehicles alternateRoutes
 
           pure $
             ApiTypes.LegRouteWithLiveVehicle

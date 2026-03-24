@@ -33,9 +33,10 @@ buildRouteWithLiveVehicle ::
   [(BecknV2.FRFS.Enums.ServiceTierType, DFRFSVehicleServiceTier.FRFSVehicleServiceTier)] ->
   Maybe LatLong ->
   Int ->
+  Bool ->
   Maybe DRiderConfig.RiderConfig ->
   Flow (Maybe API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle)
-buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromStopCode toStopCode frfsTierMap mbSourceStopLatLong maxLiveVehicles mbRiderConfig = do
+buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromStopCode toStopCode frfsTierMap mbSourceStopLatLong maxLiveVehicles includeAll mbRiderConfig = do
   route <-
     OTPRest.getRouteByRouteId integratedBPPConfig routeInfo.routeId
       >>= fromMaybeM
@@ -177,7 +178,10 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
             Just sourceLatLong ->
               sortOn (\v -> distanceBetweenInMeters sourceLatLong v.position) allVehicles
             Nothing -> allVehicles
-      pure $ take maxLiveCount sorted
+      pure $
+        if includeAll
+          then sorted
+          else take maxLiveCount sorted
 
 enrichBusStopETA :: DIntegratedBPPConfig.IntegratedBPPConfig -> CQMMB.BusStopETA -> Flow CQMMB.BusStopETA
 enrichBusStopETA integratedBPPConfig' eta =

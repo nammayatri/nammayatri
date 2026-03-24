@@ -1650,10 +1650,10 @@ getVehicleTagNumberFromInMem mbRiderConfig integratedBPPConfigs vehicleNumber =
         Just (CachedVehicleTagNumber Nothing) -> pure Nothing
         Just (CachedVehicleTagNumber (Just tagNumber))
           | T.null (T.strip tagNumber) -> do
-              mbVehicleLiveRouteInfo <- getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing
-              let freshTag = sanitizeVehicleTagNumber $ mbVehicleLiveRouteInfo >>= (\(_, info) -> info.busTagNumber)
-              Hedis.setExp key (CachedVehicleTagNumber freshTag) 86400
-              pure freshTag
+            mbVehicleLiveRouteInfo <- getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing
+            let freshTag = sanitizeVehicleTagNumber $ mbVehicleLiveRouteInfo >>= (\(_, info) -> info.busTagNumber)
+            Hedis.setExp key (CachedVehicleTagNumber freshTag) 86400
+            pure freshTag
           | otherwise -> pure $ Just tagNumber
         Nothing -> do
           mbVehicleLiveRouteInfo <- getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing
