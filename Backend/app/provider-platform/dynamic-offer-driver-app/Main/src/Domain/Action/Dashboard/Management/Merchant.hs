@@ -2260,7 +2260,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
           }
   case result of
     Right res -> return res
-    Left _ -> throwError $ InvalidRequest "Someone already triggered this api"
+    Left e -> throwError $ InvalidRequest (show e)
   where
     readCsv merchantId distanceUnit csvFile merchantOpCity = do
       csvData <- L.runIO $ BS.readFile csvFile
