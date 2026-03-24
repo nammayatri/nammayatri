@@ -240,6 +240,7 @@ fetchLiveBusTimings ::
   Bool ->
   m [RouteStopTimeTable]
 fetchLiveBusTimings routeCodes stopCode currentTime currentTimeIST integratedBppConfig mid mocid useLiveBusData = do
+  mbRiderConfig <- QRiderConfig.findByMerchantOperatingCityId mocid Nothing
   -- Fetch all service tier metadata once, shared across live and static paths
   frfsServiceTierMap <-
     M.fromList . map (\t -> (t._type, t))
@@ -251,7 +252,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime currentTimeIST integratedBpp
         allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes integratedBppConfig
 
         -- Enrich vehicles for all routes concurrently
-        enrichedRoutes <- mapConcurrently enrichRoute allRouteWithBuses
+        enrichedRoutes <- mapConcurrently (enrichRoute mbRiderConfig) allRouteWithBuses
 
         -- Build entries (pure) and determine fallback routes
         let liveStopTimes = concatMap (buildLiveEntries frfsServiceTierMap) enrichedRoutes
@@ -270,14 +271,14 @@ fetchLiveBusTimings routeCodes stopCode currentTime currentTimeIST integratedBpp
   return $ liveRouteStopTimes ++ staticRouteStopTimes
   where
     -- Filters buses at the target stop and enriches each with its service tier type
-    enrichRoute routeWithBuses = do
+    enrichRoute mbRiderConfigLocal routeWithBuses = do
       let filteredBuses =
             [ (bus.vehicleNumber, eta)
               | bus <- routeWithBuses.buses,
                 eta <- fromMaybe [] bus.busData.eta_data,
                 eta.stopCode == stopCode
             ]
-      enrichedBuses <- mapM getVehicleServiceType filteredBuses
+      enrichedBuses <- mapM (getVehicleServiceType mbRiderConfigLocal) filteredBuses
       return (routeWithBuses.routeId, catMaybes enrichedBuses)
 
     buildLiveEntries frfsServiceTierMap (routeId, validBuses) =
@@ -286,8 +287,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime currentTimeIST integratedBpp
           let frfsServiceTierName = M.lookup serviceTierType frfsServiceTierMap <&> (.shortName)
       ]
 
-    getVehicleServiceType (vno, eta) = do
-      mbRiderConfigLocal <- QRiderConfig.findByMerchantOperatingCityId mocid Nothing
+    getVehicleServiceType mbRiderConfigLocal (vno, eta) = do
       mbServiceTier <- getVehicleServiceTypeFromInMem mbRiderConfigLocal [integratedBppConfig] vno
       return $ mbServiceTier <&> (vno,eta,)
 
@@ -1538,7 +1538,7 @@ getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber mbPassVerifyReq = do
       return Nothing
     Right result -> return result
 
--- | JSON payloads for Redis so negative lookups (Nothing) are cached as hits.
+-- | JSON payload wrappers used for vehicle-metadata Redis entries.
 newtype CachedVehicleServiceTier = CachedVehicleServiceTier
   { unCachedVehicleServiceTier :: Maybe Spec.ServiceTierType
   }
@@ -1601,10 +1601,8 @@ getVehicleServiceTypeFromInMem mbRiderConfig integratedBPPConfigs vehicleNumber 
           whenJust serviceTier $ \serviceType -> Hedis.setExp key (CachedVehicleServiceTier (Just serviceType)) 43200
           pure serviceTier
     _ ->
-      IM.withInMemCache ["CACHED_VEHICLE_TYPE", vehicleNumber] 43200 fetchServiceTypeWithoutCachingMiss
-        >>= \case
-          Just serviceType -> pure $ Just serviceType
-          Nothing -> fetchServiceTypeWithoutCachingMiss
+      -- For serviceType, Nothing is treated as miss (no negative caching).
+      fetchServiceTypeWithoutCachingMiss
   where
     fetchServiceTypeWithoutCachingMiss = do
       res <- getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing
