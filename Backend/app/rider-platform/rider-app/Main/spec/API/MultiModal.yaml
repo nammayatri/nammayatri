@@ -378,6 +378,7 @@ types:
     sourceStopCode: Maybe Text
     destinationStopCode: Maybe Text
     vehicleNumber: Maybe Text
+    includeAll: Maybe Bool
     derive: "Show"
 
   AvailableRoute:

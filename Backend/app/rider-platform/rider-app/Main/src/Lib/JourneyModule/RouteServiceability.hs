@@ -171,7 +171,11 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
             Just sourceLatLong ->
               sortOn (\v -> distanceBetweenInMeters sourceLatLong v.position) allVehicles
             Nothing -> allVehicles
-      pure $ take maxLiveCount sorted
+      -- maxLiveCount == -1 means no limit, to bypass config cap
+      pure $
+        if maxLiveCount == (-1)
+          then sorted
+          else take maxLiveCount sorted
 
 enrichBusStopETA :: DIntegratedBPPConfig.IntegratedBPPConfig -> CQMMB.BusStopETA -> Flow CQMMB.BusStopETA
 enrichBusStopETA integratedBPPConfig' eta =
