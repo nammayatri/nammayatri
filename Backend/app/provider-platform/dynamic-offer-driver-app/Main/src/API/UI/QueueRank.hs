@@ -33,6 +33,7 @@ import Tools.Auth
 type API =
   "queue"
     :> Capture "specialLocationId" Text
+    :> Capture "vehicleType" Text
     :> "position"
     :> TokenAuth
     :> Get '[JSON] DQueueRank.QueueRankResponse
@@ -40,6 +41,6 @@ type API =
 handler :: FlowServer API
 handler = getQueuePosition
 
-getQueuePosition :: Text -> (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DQueueRank.QueueRankResponse
-getQueuePosition specialLocationId (driverId, merchantId, merchantOpCityId) =
-  withFlowHandlerAPI $ DQueueRank.getQueuePosition (driverId, merchantId, merchantOpCityId) specialLocationId
+getQueuePosition :: Text -> Text -> (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DQueueRank.QueueRankResponse
+getQueuePosition specialLocationId vehicleType (driverId, merchantId, merchantOpCityId) =
+  withFlowHandlerAPI $ DQueueRank.getQueuePosition (driverId, merchantId, merchantOpCityId) specialLocationId vehicleType

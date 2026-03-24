@@ -202,13 +202,13 @@ manualQueueRemove specialLocationId vehicleType merchantId driverId = do
   logDebug $ "lts manual queue remove: " <> show manualQueueRemoveResp
   return manualQueueRemoveResp
 
-getQueueDriverPosition :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Text -> Id DP.Person -> m QueueDriverPositionResp
-getQueueDriverPosition specialLocationId driverId = do
+getQueueDriverPosition :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Text -> Text -> Id DP.Person -> m QueueDriverPositionResp
+getQueueDriverPosition specialLocationId vehicleType driverId = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
   queuePositionRes <-
     withShortRetry $
-      callAPI url (NearByAPI.queueDriverPosition specialLocationId driverId) "getQueueDriverPosition" NearByAPI.queueDriverPositionAPI
+      callAPI url (NearByAPI.queueDriverPosition specialLocationId vehicleType driverId) "getQueueDriverPosition" NearByAPI.queueDriverPositionAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_QUEUE_DRIVER_POSITION_API") url)
   logDebug $ "lts getQueueDriverPosition: " <> show queuePositionRes
   return queuePositionRes
