@@ -174,6 +174,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
+import qualified Lib.Finance.Storage.Queries.Account as QFinanceAccount
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
@@ -2046,9 +2047,34 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
 getDriverFleetOperatorInfo ::
   ShortId DM.Merchant ->
   Context.City ->
-  Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
   Flow Common.FleetOwnerInfoRes
-getDriverFleetOperatorInfo merchantShortId opCity personId = do
+getDriverFleetOperatorInfo merchantShortId opCity mbMobileCountryCode mbMobileNumber mbPersonId mbWalletId = do
+  when (length (catMaybes [mbPersonId, mbMobileNumber, mbWalletId]) /= 1) $
+    throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"personId\", \"walletId\" is required"
+  when (isJust mbMobileCountryCode && isNothing mbMobileNumber) $
+    throwError $ InvalidRequest "\"mobileCountryCode\" can be used only with \"mobileNumber\""
+  merchant <- findMerchantByShortId merchantShortId
+  personId <- case (mbPersonId, mbMobileNumber, mbWalletId) of
+    (Just pid, _, _) -> pure pid
+    (_, Just mobileNumber, _) -> do
+      mobileNumberHash <- getDbHash mobileNumber
+      person <-
+        QPerson.findByMobileNumberAndMerchantAndRoles
+          (fromMaybe "+91" mbMobileCountryCode)
+          mobileNumberHash
+          merchant.id
+          [DP.FLEET_OWNER, DP.OPERATOR]
+          >>= fromMaybeM (PersonDoesNotExist mobileNumber)
+      pure person.id.getId
+    (Nothing, Nothing, Just walletId) -> do
+      account <- QFinanceAccount.findById (Id walletId) >>= fromMaybeM (InvalidRequest $ "Wallet account not found: " <> walletId)
+      counterpartyId <- fromMaybeM (InvalidRequest $ "Wallet account missing counterpartyId: " <> walletId) account.counterpartyId
+      pure counterpartyId
+    _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"personId\", \"walletId\" is required"
   getDriverFleetOwnerInfo merchantShortId opCity (Id personId)
 
 getDriverFleetOwnerInfo :: -- Deprecated, use getDriverFleetOperatorInfo

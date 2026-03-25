@@ -131,6 +131,7 @@ import SharedLogic.TollsDetector
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
@@ -523,6 +524,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
           let amount = baseFareForTds * realToFrac rate -- tdsRate is already decimal (0.01 = 1%)
           if amount > 0 then Just amount else Nothing
 
+    merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist booking.merchantOperatingCityId.getId)
     ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig
     let invoiceConfig =
           InvoiceConfig
@@ -546,7 +548,14 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                       then Just InvoiceLineItem {description = "Parking Charges", quantity = 1, unitPrice = parkingAmount, lineTotal = parkingAmount, isExternalCharge = True}
                       else Nothing
                   ],
-              gstBreakdown = computeGstBreakdown transporterConfig.taxConfig.rideGst gstAmount
+              gstBreakdown =
+                computeGstBreakdownByPlace
+                  transporterConfig.taxConfig.rideGst
+                  (Just $ show merchantOperatingCity.state)
+                  booking.fromLocation.address.state
+                  (Just $ show merchantOperatingCity.city)
+                  booking.fromLocation.address.city
+                  gstAmount
             }
     result <- runFinance ctx $ do
       if isOnline

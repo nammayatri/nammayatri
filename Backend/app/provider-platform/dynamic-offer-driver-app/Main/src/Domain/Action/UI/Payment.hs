@@ -669,12 +669,13 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                   merchantShortId = getShortId merchant.shortId
                 }
         let subscriptionGstBreakdown =
-              Just
-                GstAmountBreakdown
-                  { cgstAmount = Just cgst,
-                    sgstAmount = Just sgst,
-                    igstAmount = Nothing
-                  }
+              computeGstBreakdownByPlace
+                transporterConfig.taxConfig.rideGst
+                (Just $ show merchant.state)
+                (Just $ show merchantOperatingCity.state)
+                (Just $ show merchant.city)
+                (Just $ show merchantOperatingCity.city)
+                (cgst + sgst)
         mbPanCard <- QPanCard.findByDriverId person.id
         (_newBalance, mbInvoiceId) <-
           creditPrepaidBalance

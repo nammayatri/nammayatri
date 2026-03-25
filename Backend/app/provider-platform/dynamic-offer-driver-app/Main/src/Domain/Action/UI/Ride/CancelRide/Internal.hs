@@ -84,6 +84,7 @@ import qualified SharedLogic.UserCancellationDues as UserCancellationDues
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -290,6 +291,7 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
         QCDD.create cancellationDuesDetails
       -- Customer cancellation ledger entries (wallet path)
       when (isPrepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableDriverWallet && fee.amount > 0) $ do
+        merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist booking.merchantOperatingCityId.getId)
         let rideGst = transporterConfig.taxConfig.rideGst
             gstPct = fromMaybe 0 rideGst.cgstPercentage + fromMaybe 0 rideGst.sgstPercentage + fromMaybe 0 rideGst.igstPercentage
             gstOnCancellation = if gstPct > 0 then fee.amount * gstPct / (1 + gstPct) else 0
@@ -324,7 +326,14 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
                 issuedToId = rid.getId,
                 issuedToName = booking.riderName,
                 issuedToAddress = booking.fromLocation.address.fullAddress,
-                gstBreakdown = computeGstBreakdown rideGst gstOnCancellation,
+                gstBreakdown =
+                  computeGstBreakdownByPlace
+                    rideGst
+                    (Just $ show merchantOperatingCity.state)
+                    booking.fromLocation.address.state
+                    (Just $ show merchantOperatingCity.city)
+                    booking.fromLocation.address.city
+                    gstOnCancellation,
                 lineItems =
                   catMaybes
                     [ if baseCancellation > 0

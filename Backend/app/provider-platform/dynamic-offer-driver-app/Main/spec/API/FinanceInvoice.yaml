@@ -17,8 +17,10 @@ types:
     gstRate: Maybe Double
     cgstRate: Maybe Double
     sgstRate: Maybe Double
+    igstRate: Maybe Double
     sgstAmount: Maybe HighPrecMoney
     cgstAmount: Maybe HighPrecMoney
+    igstAmount: Maybe HighPrecMoney
     totalGstAmount: Maybe HighPrecMoney
     paymentMethod: Maybe Text
     issuedToName: Maybe Text

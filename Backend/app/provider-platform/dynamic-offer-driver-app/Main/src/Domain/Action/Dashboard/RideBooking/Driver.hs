@@ -33,6 +33,7 @@ where
 
 import qualified "this" API.Types.Dashboard.RideBooking.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
+import Control.Applicative ((<|>))
 import qualified Dashboard.Common
 import qualified Data.Map as M
 import qualified Data.Text as T
@@ -72,6 +73,8 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation (runRequestValidation)
 import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
+import qualified Lib.Finance.Domain.Types.Account as FinanceAccount
+import qualified Lib.Finance.Storage.Queries.Account as QFinanceAccount
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
@@ -331,8 +334,9 @@ getDriverInfo ::
   Maybe Text ->
   Maybe Text ->
   Maybe (Id Common.Driver) ->
+  Maybe Text ->
   Flow Common.DriverInfoRes
-getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber mbEmail mbPersonId = do
+getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber mbEmail mbPersonId mbWalletId = do
   when mbFleet $ do
     when (isNothing mbVehicleNumber) $ throwError $ InvalidRequest "Fleet Owner can only search with vehicle Number"
     vehicleInfo <- RCQuery.findLastVehicleRCFleet' (fromMaybe " " mbVehicleNumber) fleetOwnerId
@@ -341,7 +345,14 @@ getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mbMobileNumber mbMobil
     throwError $ InvalidRequest "\"mobileCountryCode\" can be used only with \"mobileNumber\""
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  let mbPersonId' = cast @Common.Driver @DP.Person <$> mbPersonId
+  mbPersonIdFromWallet <- forM mbWalletId $ \walletId -> do
+    account <- QFinanceAccount.findById (Id walletId) >>= fromMaybeM (InvalidRequest $ "Wallet account not found: " <> walletId)
+    unless (account.counterpartyType == Just FinanceAccount.DRIVER) $
+      throwError (InvalidRequest $ "WalletId does not belong to a DRIVER account: " <> walletId)
+    counterpartyId <- fromMaybeM (InvalidRequest $ "Wallet account missing counterpartyId: " <> walletId) account.counterpartyId
+    pure (Id counterpartyId)
+
+  let mbPersonId' = cast @Common.Driver @DP.Person <$> mbPersonId <|> mbPersonIdFromWallet
   driverWithRidesCount <- case (mbMobileNumber, mbVehicleNumber, mbDlNumber, mbRcNumber, mbEmail, mbPersonId') of
     (Just mobileNumber, Nothing, Nothing, Nothing, Nothing, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
@@ -371,7 +382,7 @@ getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mbMobileNumber mbMobil
       B.runInReplica $
         QDriverStats.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing Nothing Nothing Nothing Nothing (Just personId)
           >>= fromMaybeM (PersonDoesNotExist $ personId.getId)
-    _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\", \"dlNumber\", \"rcNumber\", \"Email\" is required"
+    _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\", \"dlNumber\", \"rcNumber\", \"email\", \"personId\", \"walletId\" is required"
   let driverId = driverWithRidesCount.person.id
   mbDriverLicense <- B.runInReplica $ QDriverLicense.findByDriverId driverId
   rcAssociationHistory <- B.runInReplica $ QRCAssociation.findAllByDriverId driverId
