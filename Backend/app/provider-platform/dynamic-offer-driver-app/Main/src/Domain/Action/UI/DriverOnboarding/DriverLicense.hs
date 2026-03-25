@@ -69,6 +69,7 @@ import qualified Storage.Queries.DriverLicense as Query
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as ImageQuery
+import qualified Storage.Queries.MorthVerification as MorthQuery
 import qualified Storage.Queries.Person as Person
 import qualified Tools.DriverBackgroundVerification as DriverBackgroundVerification
 import Tools.Error
@@ -250,13 +251,20 @@ verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverD
               then Domain.Success
               else Domain.Skipped
       verifyRes <-
-        Verification.verifyDLAsync person.merchantId merchantOpCityId $
-          Verification.VerifyDLAsyncReq {dlNumber, dateOfBirth = driverDateOfBirth, driverId = person.id.getId, returnState = Just True}
+        Verification.verifyDL person.merchantId merchantOpCityId $
+          Verification.VerifyDLReq {dlNumber, dateOfBirth = driverDateOfBirth, driverId = person.id.getId, returnState = Just True, applicantMobile = Nothing}
 
-      case verifyRes.requestor of
-        VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard verifyRes.requestId now imageExtractionValidation encryptedDL
-        VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard verifyRes.requestId now imageExtractionValidation encryptedDL verifyRes.transactionId
-        _ -> throwError $ InternalError ("Service provider not configured to return DL verification async responses. Provider Name : " <> (show verifyRes.requestor))
+      case verifyRes of
+        VerificationIntTypes.AsyncDLResp res -> case res.requestor of
+          VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard res.requestId now imageExtractionValidation encryptedDL
+          VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard res.requestId now imageExtractionValidation encryptedDL res.transactionId
+          _ -> throwError $ InternalError ("Service provider not configured to return DL verification async responses. Provider Name : " <> (show res.requestor))
+        VerificationIntTypes.SyncDLResp resp -> do
+          when (resp.requestor == VT.Morth) $ do
+            let mbStatus = if isJust resp.response.status then "SUCCESS" else "FAILED"
+            morthEntity <- VC.mkMorthVerificationEntity person Nothing DTO.DriverLicense encryptedDL mbStatus dateOfIssue (Just driverDateOfBirth) mbVehicleCategory Nothing Nothing (Just $ show resp.response) now
+            MorthQuery.create morthEntity
+          onVerifyDLHandler person resp.response.licenseNumber (resp.response.t_validity_to <|> resp.response.nt_validity_to <|> Just "2099-12-12") resp.response.covs resp.response.driverName resp.response.dob documentVerificationConfig imageId1 imageId2 nameOnTheCard dateOfIssue mbVehicleCategory
 
 mkIdfyVerificationEntity :: Person.Person -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe VehicleCategory -> UTCTime -> Maybe UTCTime -> Maybe Text -> Text -> UTCTime -> Domain.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> Flow Domain.IdfyVerification
 mkIdfyVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard requestId now imageExtractionValidation encryptedDL = do

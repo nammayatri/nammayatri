@@ -45,6 +45,7 @@ where
 
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AKey
+import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import qualified Data.Map as M
 import qualified Data.Text as T
@@ -135,6 +136,9 @@ import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.VendorSplitDetails as CQVSD
 import qualified Storage.Queries.Booking as QRB
+import qualified Domain.Types.CancellationDuesDetails as DCDD
+import SharedLogic.CallBAPInternal (AppBackendBapInternal)
+import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified Storage.Queries.CancellationCharges as QCC
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.DailyStats as QDailyStats
@@ -183,7 +187,10 @@ endRideTransaction ::
     ClickhouseFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    CoreMetrics m
   ) =>
   Id DP.Driver ->
   SRB.Booking ->
@@ -255,7 +262,18 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
         QRD.updateCancellationDuesPaid cancellationDues riderDetails.id.getId
         QRD.updateNoOfTimesCanellationDuesPaid riderDetails.id.getId
         QRD.updateCancellationDues 0 riderDetails.id >> QCC.create cancellationCharges
-        QCDD.updateAllPendingToPaidByRiderId riderDetails.id
+        pendingDues <- QCDD.findAllPendingByRiderId riderDetails.id
+        let pendingIds = (.id) <$> pendingDues
+            bppRideIds = (\d -> d.rideId.getId) <$> pendingDues
+        unless (null pendingIds) $ do
+          QCDD.updateStatusByIds DCDD.PAID pendingIds
+          appBackendBapInternal <- asks (.appBackendBapInternal)
+          fork "updateCancellationFeeStatusOnBAP" $ do
+            void $
+              CallBAPInternal.updateCancellationFeeStatus
+                appBackendBapInternal.apiKey
+                appBackendBapInternal.url
+                (CallBAPInternal.UpdateCancellationFeeStatusReq {bppRideIds = bppRideIds})
       -- QRD.updateDisputeChancesUsedAndCancellationDues (max 0 (riderDetails.disputeChancesUsed - calDisputeChances)) 0 (riderDetails.id) >> QCC.create cancellationCharges
       _ -> logWarning $ "Unable to update customer cancellation dues as RiderDetailsId is NULL with rideId " <> ride.id.getId
   merchant <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)

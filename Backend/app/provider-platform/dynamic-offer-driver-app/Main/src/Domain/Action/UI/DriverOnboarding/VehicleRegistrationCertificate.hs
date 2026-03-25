@@ -33,6 +33,7 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     convertTextToUTC,
     mkIdfyVerificationEntity,
     mkHyperVergeVerificationEntity,
+    mkMorthVerificationEntity,
     validateRCResponse,
     VerificationReqRecord (..),
     DriverDocument (..),
@@ -67,7 +68,6 @@ import qualified Domain.Types.IdfyVerification as Domain
 import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MorthVerification as MorthDomain
 import qualified Domain.Types.Person as Person
 import Domain.Types.RCValidationRules
@@ -103,7 +103,6 @@ import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as SCO
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverGstin as DGQuery
@@ -376,23 +375,14 @@ getDocumentImage personId imageId_ expectedDocType = do
   Redis.withLockRedisAndReturnValue (imageS3Lock (imageMetadata.s3Path)) 5 $
     S3.get $ T.unpack imageMetadata.s3Path
 
-getMorthApplicantMobile :: Id DMOC.MerchantOperatingCity -> Flow (Maybe Text)
-getMorthApplicantMobile merchantOpCityId = do
-  msc <- CQMSC.findByServiceAndCity (DMSC.VerificationService Verification.Morth) merchantOpCityId
-  return $
-    msc >>= \c -> case c.serviceConfig of
-      DMSC.VerificationServiceConfig (Verification.MorthConfig _) -> Nothing
-      _ -> Nothing
-
 verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Domain.ImageExtractionValidation -> Maybe Text -> Maybe Text -> Maybe Text -> Flow ()
 verifyRCFlow person merchantOpCityId rcNumber imageId dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation mbUdinNumber mbEngineNumber mbChassisNumber = do
-  mbApplicantMobile <- getMorthApplicantMobile merchantOpCityId
   now <- getCurrentTime
   verifyRes <-
     Verification.verifyRC person.merchantId
       merchantOpCityId
       Nothing
-      Verification.VerifyRCReq {rcNumber = rcNumber, driverId = person.id.getId, token = Nothing, udinNo = mbUdinNumber, engineNumber = mbEngineNumber, chassisNumber = mbChassisNumber, applicantMobile = mbApplicantMobile}
+      Verification.VerifyRCReq {rcNumber = rcNumber, driverId = person.id.getId, token = Nothing, udinNo = mbUdinNumber, engineNumber = mbEngineNumber, chassisNumber = mbChassisNumber, applicantMobile = Nothing}
   case verifyRes.verifyRCResp of
     Verification.AsyncResp res -> do
       case res.requestor of
@@ -819,24 +809,24 @@ linkRCStatus (driverId, merchantId, merchantOpCityId) isTaxiBoothRequest req@RCS
       validated <- validateRCActivation isTaxiBoothRequest driverId transporterConfig rc
       when validated $ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc
     else do
-      deactivateRC transporterConfig rc driverId
+      deactivateRC isTaxiBoothRequest transporterConfig rc driverId
   return Success
 
-deactivateRC :: DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> Id Person.Person -> Flow ()
-deactivateRC transporterConfig rc driverId = do
+deactivateRC :: Bool -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> Id Person.Person -> Flow ()
+deactivateRC isTaxiBoothRequest transporterConfig rc driverId = do
   activeAssociation <- DAQuery.findActiveAssociationByRC rc.id True >>= fromMaybeM ActiveRCNotFound
   unless (activeAssociation.driverId == driverId) $ do
     DAQuery.updateRcErrorMessage driverId rc.id "Driver can't deactivate RC which is not active with them"
     throwError (InvalidRequest "Driver can't deactivate RC which is not active with them")
-  removeVehicle driverId
+  removeVehicle isTaxiBoothRequest driverId
   DAQuery.deactivateRCForDriver False driverId rc.id
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount rc.fleetOwnerId driverId
   return ()
 
-removeVehicle :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> m ()
-removeVehicle driverId = do
+removeVehicle :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Bool -> Id Person.Person -> m ()
+removeVehicle isTaxiBoothRequest driverId = do
   isOnRide <- DIQuery.findByDriverIdActiveRide (cast driverId)
-  when (isJust isOnRide) $ throwError RCVehicleOnRide
+  when ((not isTaxiBoothRequest) && isJust isOnRide) $ throwError RCVehicleOnRide
   VQuery.deleteById driverId -- delete the vehicle entry too for the driver
 
 validateRCActivation :: Bool -> Id Person.Person -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> Flow Bool
@@ -863,7 +853,7 @@ validateRCActivation isTaxiBoothRequest driverId transporterConfig rc = do
       if activeAssociation.driverId == driverId
         then return False
         else do
-          deactivateIfWeCanDeactivate activeAssociation.driverId now (deactivateRC transporterConfig rc)
+          deactivateIfWeCanDeactivate activeAssociation.driverId now (deactivateRC isTaxiBoothRequest transporterConfig rc)
           return True
     Nothing -> do
       -- check if vehicle of that rc number is already with other driver
@@ -871,8 +861,8 @@ validateRCActivation isTaxiBoothRequest driverId transporterConfig rc = do
       case mVehicle of
         Just vehicle -> do
           if vehicle.driverId /= driverId
-            then deactivateIfWeCanDeactivate vehicle.driverId now removeVehicle
-            else removeVehicle driverId
+            then deactivateIfWeCanDeactivate vehicle.driverId now (removeVehicle isTaxiBoothRequest)
+            else removeVehicle isTaxiBoothRequest driverId
         Nothing -> return ()
       return True
   where
@@ -929,9 +919,9 @@ deactivateCurrentRC transporterConfig driverId = do
   case mActiveAssociation of
     Just association -> do
       rc <- RCQuery.findById association.rcId >>= fromMaybeM (RCNotFound "")
-      deactivateRC transporterConfig rc driverId -- call deativate RC flow
+      deactivateRC False transporterConfig rc driverId -- call deativate RC flow
     Nothing -> do
-      removeVehicle driverId
+      removeVehicle False driverId
       return ()
 
 -- | For reminder job: invalidate RC (set approved false, verification status INVALID),
@@ -959,7 +949,7 @@ invalidateRCAndRemoveVehicleForReminder rcId driverId merchantOpCityId reason = 
   mActiveAssociation <- DAQuery.findActiveAssociationByRC rc.id True
   case mActiveAssociation of
     Just assoc | assoc.driverId == driverId -> do
-      removeVehicle driverId
+      removeVehicle False driverId
       DAQuery.deactivateRCForDriver False driverId rc.id
       when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
         Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount rc.fleetOwnerId driverId
@@ -978,7 +968,7 @@ deleteRC (driverId, _, merchantOpCityId) DeleteRCReq {..} isOldFlow = do
       when (assoc.driverId == driverId) $ do
         DAQuery.updateRcErrorMessage driverId rc.id "Deactivate RC first to delete!"
         throwError (InvalidRequest "Deactivate RC first to delete!")
-    (Just _, True) -> deactivateRC transporterConfig rc driverId
+    (Just _, True) -> deactivateRC False transporterConfig rc driverId
     (_, _) -> return ()
   DAQuery.endAssociationForRC driverId rc.id
   return Success

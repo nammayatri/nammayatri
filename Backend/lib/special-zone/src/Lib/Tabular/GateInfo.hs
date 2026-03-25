@@ -47,6 +47,10 @@ mkPersist
       gateTags [Text] Maybe
       walkDescription Text Maybe
       entryFeeAmount Double Maybe
+      minDriverThreshold Int Maybe
+      demandThreshold Int Maybe
+      notificationCooldownInSec Int Maybe
+      maxRideSkipsBeforeQueueRemoval Int Maybe
       Primary id
       deriving Generic
     |]

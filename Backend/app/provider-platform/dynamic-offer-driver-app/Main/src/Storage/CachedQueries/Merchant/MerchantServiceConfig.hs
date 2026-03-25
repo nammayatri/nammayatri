@@ -91,13 +91,13 @@ makeServiceNameKey serviceName = "driver-offer:CachedQueries:MerchantServiceConf
 
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => ServiceName -> Id DMOC.MerchantOperatingCity -> m ()
-clearCache serviceName opCity = do
-  Hedis.withCrossAppRedis $ Hedis.del (makeServiceAndCityKey serviceName opCity)
-  Hedis.withCrossAppRedis $ Hedis.del (makeServiceNameKey serviceName)
+clearCache serviceName opCity = Hedis.runInMultiCloudRedisWrite $
+  Hedis.withCrossAppRedis $ do
+    Hedis.del (makeServiceAndCityKey serviceName opCity)
+    Hedis.del (makeServiceNameKey serviceName)
 
 upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> Id DMOC.MerchantOperatingCity -> m ()
 upsertMerchantServiceConfig = Queries.upsertMerchantServiceConfig
 
 clearCacheById :: Hedis.HedisFlow m r => Id DMOC.MerchantOperatingCity -> m ()
-clearCacheById opCity = do
-  Hedis.withCrossAppRedis $ Hedis.del (makeMerchantOpCityIdKey opCity)
+clearCacheById opCity = Hedis.runInMultiCloudRedisWrite $ Hedis.withCrossAppRedis $ Hedis.del (makeMerchantOpCityIdKey opCity)

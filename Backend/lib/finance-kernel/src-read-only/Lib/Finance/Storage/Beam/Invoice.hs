@@ -5,12 +5,12 @@ module Lib.Finance.Storage.Beam.Invoice where
 
 import qualified Data.Aeson
 import qualified Database.Beam as B
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Lib.Finance.Domain.Types.Invoice
+import Tools.Beam.UtilsTH
 
 data InvoiceT f = InvoiceT
   { createdAt :: (B.C f Kernel.Prelude.UTCTime),

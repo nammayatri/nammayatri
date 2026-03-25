@@ -19,6 +19,8 @@ module Domain.Action.UI.Payment
     getStatusV2,
     getOrder,
     juspayWebhookHandler,
+    juspayWebhookHandlerForPaymentServiceType,
+    paymentServiceNameForWebhook,
     pdnNotificationStatus,
     postWalletRecharge,
     getWalletBalance,
@@ -254,6 +256,8 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
             Just subscriptionPurchase -> do
               unless (status /= Payment.CHARGED) $ processSubscriptionPurchasePayment merchantId driver subscriptionPurchase
             Nothing -> do
+              when (order.entityName == Just DPayment.DRIVER_WALLET_TOPUP) $
+                processWalletTopupWebhook driver order status
               unless (status /= Payment.CHARGED) $ do
                 processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices
               QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
@@ -366,7 +370,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
             when (isJust mbVpa) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) mbVpa merchantOperatingCityId
           when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
             when (order.entityName == Just DPayment.DRIVER_WALLET_TOPUP) $
-              processWalletTopupWebhook driver order transactionStatus
+              processWalletTopupAndUpdateStatus driver order transactionStatus
             unless (transactionStatus /= Payment.CHARGED) $ do
               processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices
             notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName bankErrorCode True (serviceName, serviceConfig)
@@ -393,38 +397,8 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
     Payment.BadStatusResp -> pure ()
   pure Ack
   where
-    processWalletTopupWebhook ::
-      ( BeamFlow m r,
-        CacheFlow m r,
-        EsqDBFlow m r,
-        MonadFlow m
-      ) =>
-      DP.Person ->
-      DOrder.PaymentOrder ->
-      Payment.TransactionStatus ->
-      m ()
-    processWalletTopupWebhook driver order transactionStatus = do
-      when (transactionStatus == Payment.CHARGED) $ do
-        existing <- getEntriesByReference walletReferenceTopup (order.id.getId)
-        when (null existing) $ do
-          ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId)
-          let topupInvoiceConfig =
-                InvoiceConfig
-                  { invoiceType = FinanceInvoice.SubscriptionPurchase,
-                    issuedToType = "DRIVER",
-                    issuedToId = order.personId.getId,
-                    issuedToName = Nothing,
-                    issuedToAddress = Nothing,
-                    lineItems = [InvoiceLineItem {description = "Wallet Top-up", quantity = 1, unitPrice = order.amount, lineTotal = order.amount, isExternalCharge = False}],
-                    gstBreakdown = Nothing
-                  }
-          result <- runFinance ctx $ do
-            _ <- transfer PlatformAsset OwnerLiability order.amount walletReferenceTopup
-            invoice topupInvoiceConfig
-          void $ fromEitherM (\e -> WalletBalanceUpdateFailed ("wallet topup: " <> show e)) result
-          let notificationTitle = "Wallet Top-up Successful"
-              notificationMessage = "Your wallet has been topped up with Rs." <> show order.amount
-          sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY notificationTitle notificationMessage driver driver.deviceToken
+    processWalletTopupAndUpdateStatus driver order transactionStatus = do
+      processWalletTopupWebhook driver order transactionStatus
       QOrder.updateStatus order.id order.paymentServiceOrderId transactionStatus
 
     getInvoicesAndServiceWithServiceConfigByOrderId ::
@@ -441,6 +415,143 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
         CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName driver.merchantOperatingCityId Nothing serviceName'
           >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName')
       return (invoices', serviceName', serviceConfig, driver)
+
+processWalletTopupWebhook ::
+  ( BeamFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m
+  ) =>
+  DP.Person ->
+  DOrder.PaymentOrder ->
+  Payment.TransactionStatus ->
+  m ()
+processWalletTopupWebhook driver order transactionStatus = do
+  when (transactionStatus == Payment.CHARGED) $ do
+    let lockKey = "wallet:topup:lock:" <> order.id.getId
+    Redis.withLockRedis lockKey 60 $ do
+      existing <- getEntriesByReference walletReferenceTopup (order.id.getId)
+      when (null existing) $ do
+        ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId)
+        let topupInvoiceConfig =
+              InvoiceConfig
+                { invoiceType = FinanceInvoice.SubscriptionPurchase,
+                  issuedToType = "DRIVER",
+                  issuedToId = order.personId.getId,
+                  issuedToName = Nothing,
+                  issuedToAddress = Nothing,
+                  lineItems = [InvoiceLineItem {description = "Wallet Top-up", quantity = 1, unitPrice = order.amount, lineTotal = order.amount, isExternalCharge = False}],
+                  gstBreakdown = Nothing
+                }
+        result <- runFinance ctx $ do
+          _ <- transfer PlatformAsset OwnerLiability order.amount walletReferenceTopup
+          invoice topupInvoiceConfig
+        void $ fromEitherM (\e -> WalletBalanceUpdateFailed ("wallet topup: " <> show e)) result
+        let notificationTitle = "Wallet Top-up Successful"
+            notificationMessage = "Your wallet has been topped up with Rs." <> show order.amount
+        sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY notificationTitle notificationMessage driver driver.deviceToken
+
+----------------------------------------------------------Juspay Webhook Handler For Payment Service Type----------------------------------------------------------
+
+-- | Resolve merchant service config name from payment service type (e.g. STCL -> MembershipPaymentService).
+-- Extend this when adding new payment service types for webhooks.
+paymentServiceNameForWebhook :: DOrder.PaymentServiceType -> Maybe DMSC.ServiceName
+paymentServiceNameForWebhook = \case
+  DOrder.STCL -> Just $ DMSC.MembershipPaymentService Payment.Juspay
+  _ -> Nothing
+
+-- | Dispatch webhook to the appropriate domain handler based on order's payment service type.
+-- Add cases for new payment service types as needed.
+dispatchWebhookByPaymentServiceType ::
+  DOrder.PaymentOrder ->
+  DPayment.PaymentStatusResp ->
+  Flow ()
+dispatchWebhookByPaymentServiceType order paymentStatusResp =
+  case order.paymentServiceType of
+    Just DOrder.STCL ->
+      DStclMembership.stclMemberShipOrderStatusHandler paymentStatusResp order.id
+    Just _ -> pure () -- other payment service types: extend when needed
+    Nothing -> pure ()
+
+juspayWebhookHandlerForPaymentServiceType ::
+  ShortId DM.Merchant ->
+  Maybe Context.City ->
+  DOrder.PaymentServiceType ->
+  BasicAuthData ->
+  Value ->
+  Flow AckResponse
+juspayWebhookHandlerForPaymentServiceType merchantShortId mbCity paymentServiceType authData value = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchanOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant mbCity
+  let merchantId = merchant.id
+      commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchanOperatingCityId
+  paymentServiceName <-
+    fromMaybeM (InternalError $ "Unsupported payment service type for webhook: " <> show paymentServiceType) (paymentServiceNameForWebhook paymentServiceType)
+  merchantServiceConfig <-
+    CQMSC.findByServiceAndCity paymentServiceName merchanOperatingCityId
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
+  psc <- case merchantServiceConfig.serviceConfig of
+    DMSC.PaymentServiceConfig psc' -> pure psc'
+    DMSC.RentalPaymentServiceConfig psc' -> pure psc'
+    DMSC.CautioPaymentServiceConfig psc' -> pure psc'
+    DMSC.MembershipPaymentServiceConfig psc' -> pure psc'
+    _ -> throwError $ InternalError "Unknown Service Config"
+  orderStatusResp <- Juspay.orderStatusWebhook psc (DPayment.juspayWebhookService commonMerchantOperatingCityId) authData value
+  logDebug $ "Juspay Webhook Response: " <> show orderStatusResp
+  osr <- case orderStatusResp of
+    Nothing -> throwError $ InternalError "Order Contents not found."
+    Just osr' -> pure osr'
+  case osr of
+    Payment.OrderStatusResp {..} -> do
+      order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
+      let paymentStatusResp =
+            DPayment.PaymentStatus
+              { orderId = order.id,
+                orderShortId = order.shortId,
+                status = transactionStatus,
+                bankErrorMessage = bankErrorMessage,
+                bankErrorCode = bankErrorCode,
+                isRetried = isRetriedOrder,
+                isRetargeted = isRetargetedOrder,
+                retargetLink = retargetPaymentLink,
+                refunds = refunds,
+                payerVpa = payerVpa <|> ((.payerVpa) =<< upi),
+                card = Nothing,
+                paymentMethodType = paymentMethodType,
+                authIdCode = (.authIdCode) =<< paymentGatewayResponse,
+                txnUUID = transactionUUID,
+                txnId = txnId,
+                effectAmount = effectiveAmount,
+                offers = offers,
+                paymentServiceType = order.paymentServiceType,
+                paymentFulfillmentStatus = order.paymentFulfillmentStatus,
+                domainEntityId = order.domainEntityId,
+                amount = order.amount,
+                validTill = order.validTill
+              }
+      dispatchWebhookByPaymentServiceType order paymentStatusResp
+    Payment.MandateOrderStatusResp {..} -> do
+      order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
+      now <- getCurrentTime
+      let paymentStatusResp =
+            DPayment.MandatePaymentStatus
+              { status = transactionStatus,
+                mandateStatus = mandateStatus,
+                mandateStartDate = fromMaybe now mandateStartDate,
+                mandateEndDate = fromMaybe now mandateEndDate,
+                mandateId = mandateId,
+                mandateMaxAmount = mandateMaxAmount,
+                payerVpa = payerVpa,
+                bankErrorMessage = bankErrorMessage,
+                bankErrorCode = bankErrorCode,
+                upi = upi
+              }
+      dispatchWebhookByPaymentServiceType order paymentStatusResp
+    Payment.MandateStatusResp {} -> pure ()
+    Payment.PDNNotificationStatusResp {} -> pure ()
+    Payment.BadStatusResp -> pure ()
+  pure Ack
+
 
 processPayment ::
   ( MonadFlow m,

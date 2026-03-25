@@ -253,23 +253,25 @@ makeCacheKeyForConfigWithPrefix prefix mbVersion = prefix <> "-V:" <> show mbVer
 
 clearConfigCache :: BeamFlow m r => Id MerchantOperatingCity -> LogicDomain -> Maybe Int -> m ()
 clearConfigCache merchanOperatingCityId configDomain mbVersion = do
-  Hedis.withCrossAppRedis $
-    case mbVersion of
-      Nothing -> do
-        rollouts <- DALR.findByMerchantOpCityAndDomain merchanOperatingCityId configDomain
-        let allKeys = makeCacheKeyForConfig Nothing : map (\r -> makeCacheKeyForConfig (Just r.version)) rollouts
-        Hedis.hDel (makeRedisHashKeyForConfig merchanOperatingCityId configDomain) allKeys
-      Just version -> Hedis.hDel (makeRedisHashKeyForConfig merchanOperatingCityId configDomain) [makeCacheKeyForConfig (Just version)]
+  Hedis.runInMultiCloudRedisWrite $
+    Hedis.withCrossAppRedis $
+      case mbVersion of
+        Nothing -> do
+          rollouts <- DALR.findByMerchantOpCityAndDomain merchanOperatingCityId configDomain
+          let allKeys = makeCacheKeyForConfig Nothing : map (\r -> makeCacheKeyForConfig (Just r.version)) rollouts
+          Hedis.hDel (makeRedisHashKeyForConfig merchanOperatingCityId configDomain) allKeys
+        Just version -> Hedis.hDel (makeRedisHashKeyForConfig merchanOperatingCityId configDomain) [makeCacheKeyForConfig (Just version)]
 
 clearConfigCacheWithPrefix :: BeamFlow m r => Text -> Id MerchantOperatingCity -> LogicDomain -> Maybe Int -> m ()
 clearConfigCacheWithPrefix prefix merchanOperatingCityId configDomain mbVersion = do
-  Hedis.withCrossAppRedis $
-    case mbVersion of
-      Nothing -> do
-        rollouts <- DALR.findByMerchantOpCityAndDomain merchanOperatingCityId configDomain
-        let allKeys = makeCacheKeyForConfigWithPrefix prefix Nothing : map (\r -> makeCacheKeyForConfigWithPrefix prefix (Just r.version)) rollouts
-        Hedis.hDel (makeRedisHashKeyForConfig merchanOperatingCityId configDomain) allKeys
-      Just version -> Hedis.hDel (makeRedisHashKeyForConfig merchanOperatingCityId configDomain) [makeCacheKeyForConfigWithPrefix prefix (Just version)]
+  Hedis.runInMultiCloudRedisWrite $
+    Hedis.withCrossAppRedis $
+      case mbVersion of
+        Nothing -> do
+          rollouts <- DALR.findByMerchantOpCityAndDomain merchanOperatingCityId configDomain
+          let allKeys = makeCacheKeyForConfigWithPrefix prefix Nothing : map (\r -> makeCacheKeyForConfigWithPrefix prefix (Just r.version)) rollouts
+          Hedis.hDel (makeRedisHashKeyForConfig merchanOperatingCityId configDomain) allKeys
+        Just version -> Hedis.hDel (makeRedisHashKeyForConfig merchanOperatingCityId configDomain) [makeCacheKeyForConfigWithPrefix prefix (Just version)]
 
 deleteConfigHashKey :: BeamFlow m r => Id MerchantOperatingCity -> LogicDomain -> m ()
 deleteConfigHashKey merchantOpCityId configDomain = do

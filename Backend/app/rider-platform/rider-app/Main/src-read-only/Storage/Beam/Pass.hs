@@ -31,6 +31,7 @@ data PassT f = PassT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     name :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     order :: B.C f Kernel.Prelude.Int,
+    maxSwitchCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     passTypeId :: B.C f Kernel.Prelude.Text,
     purchaseEligibilityJsonLogic :: B.C f [Data.Aeson.Value],
     redeemEligibilityJsonLogic :: B.C f [Data.Aeson.Value],

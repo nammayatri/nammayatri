@@ -37,8 +37,8 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
+import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
-import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
@@ -298,7 +298,7 @@ refundStatusHandler ::
   DOrder.PaymentServiceType ->
   m ()
 refundStatusHandler paymentOrder paymentServiceType = do
-  refundsEntry <- QRefunds.findAllByOrderId paymentOrder.shortId
+  refundsEntry <- HQRefunds.findAllByOrderId paymentOrder.shortId
   mapM_
     ( \refundEntry -> do
         case paymentServiceType of
@@ -449,7 +449,8 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
       let merchantOperatingCityId = fromMaybe person.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
       riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
       let refundsOrderCall = TPayment.refundOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
-      mbRefundResp <- DPayment.createRefundService paymentOrder.shortId refundsOrderCall
+      let commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
+      mbRefundResp <- DPayment.createRefundService commonMerchantOperatingCityId paymentOrder.shortId refundsOrderCall
       whenJust mbRefundResp $ \refundResp -> do
         let refundRequestId = (listToMaybe refundResp.refunds) <&> (.requestId) -- TODO :: When will refunds be more than one ? even if more than 1 there requestId would be same right ?
         whenJust refundRequestId $ \refundId -> do

@@ -89,6 +89,7 @@ data MessageKey
   | TRAINING_VIDEO_SMS
   | FLEET_COMMUNICATION_SMS
   | FLEET_COMMUNICATION_WHATSAPP
+  | SEND_TOTP
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type MerchantMessage = MerchantMessageD 'Safe

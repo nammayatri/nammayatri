@@ -205,18 +205,7 @@ processReminder Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
 
       -- Process based on document type
       case mbReminderConfig of
-        Just config -> do
-          processReminderByType reminder driver config merchantId merchantOpCityId
-          -- Only mark as SENT if it's a document expiry reminder that doesn't reschedule
-          -- Non-mandatory expired document expiry reminders reschedule, so they stay PENDING
-          -- Inspection/training reminders are rescheduled above, so they stay PENDING
-          when (reminder.documentType `elem` documentExpiryTypes) $ do
-            now <- getCurrentTime
-            let hasExpired = reminder.dueDate <= now
-            -- Mark as SENT only if: not expired yet, or expired but mandatory (mandatory ones don't reschedule)
-            when (not hasExpired || (hasExpired && config.isMandatory)) $ do
-              QReminder.updateByPrimaryKey reminder {DR.status = DR.SENT}
-              logInfo $ "Reminder " <> reminderId.getId <> " sent and marked as SENT"
+        Just config -> processReminderByType reminder driver config merchantId merchantOpCityId
         Nothing -> logError $ "ReminderConfig not found for documentType: " <> show reminder.documentType
 
       return Complete
@@ -442,8 +431,8 @@ processDocumentExpiryReminder reminder driver reminderConfig merchantId merchant
                   logInfo $ "Invalidated document " <> reminder.entityId <> " (type: " <> documentTypeName <> ") due to expiry"
             else do
               let rescheduleSeconds = fromMaybe defaultRescheduleIntervalSeconds reminderConfig.reminderRescheduleIntervalSeconds
-                  nextReminderDate = Time.addUTCTime (fromIntegral rescheduleSeconds) now
-                  scheduleAfter = max 0 (Time.diffUTCTime nextReminderDate now)
+                  scheduleAfter = fromIntegral rescheduleSeconds
+                  nextReminderDate = Time.addUTCTime scheduleAfter now
               QReminder.updateByPrimaryKey reminder {DR.reminderDate = nextReminderDate}
               scheduleReminderJob scheduleAfter reminder.id merchantId merchantOpCityId
               logInfo $ "Non-mandatory reminder expired for driver " <> driver.id.getId <> ", rescheduling in " <> show scheduleAfter <> " seconds"
@@ -458,6 +447,13 @@ processDocumentExpiryReminder reminder driver reminderConfig merchantId merchant
           if reminder.documentType `elem` vehicleRelatedDocumentTypes
             then sendVehicleDocumentExpiryNotification reminder driver merchantOpCityId False (Just daysBeforeExpiry)
             else sendDocumentExpiryNotification reminder driver merchantOpCityId False (Just daysBeforeExpiry)
+
+      -- Mark as SENT when: not yet expired (pre-expiry reminder sent), or expired and mandatory (terminal state, no reschedule).
+      -- Non-mandatory expired reminders are rescheduled above and stay PENDING.
+      let hasExpired = reminder.dueDate <= now
+      when (not hasExpired || reminderConfig.isMandatory) $ do
+        QReminder.updateByPrimaryKey reminder {DR.status = DR.SENT}
+        logInfo $ "Reminder " <> reminder.id.getId <> " marked as SENT"
 
 -- | Invalidate an expired document by setting its verification status to INVALID.
 -- For vehicle types, entityId is rcId: invalidate only the doc-specific row for that document type and its image (RC itself is done by invalidateRCAndRemoveVehicleForReminder).
@@ -655,11 +651,11 @@ sendVehicleDocumentExpiryNotification reminder fallbackDriver merchantOpCityId i
           sendDocumentExpiryNotification reminder fleetOwner merchantOpCityId isExpiredParam mbDaysBefore
           operators <- QFOA.findAllByFleetOwnerId (Id @DP.Person fleetOwnerIdText) True
           let documentTypeName = show reminder.documentType
-              title = if isExpiredParam then "Driver Document Expired" else "Driver Document Expiring Soon"
+              title = if isExpiredParam then "Vehicle Document Expired" else "Vehicle Document Expiring Soon"
               message =
                 if isExpiredParam
-                  then "Driver " <> fleetOwner.firstName <> "'s " <> documentTypeName <> " has expired. Please ensure they upload an updated document."
-                  else "Driver " <> fleetOwner.firstName <> "'s " <> documentTypeName <> " will expire in " <> show (fromMaybe 0 mbDaysBefore) <> " days."
+                  then "A vehicle's " <> documentTypeName <> " in your fleet has expired. Please ensure an updated document is uploaded."
+                  else "A vehicle's " <> documentTypeName <> " in your fleet will expire in " <> show (fromMaybe 0 mbDaysBefore) <> " days."
               entityData = Aeson.object ["driverId" Aeson..= fleetOwner.id.getId, "documentType" Aeson..= documentTypeName, "isExpired" Aeson..= isExpiredParam]
           notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_NOTIFY title message fleetOwner.id entityData
           forM_ operators $ \op -> notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_NOTIFY title message (Id op.operatorId) entityData

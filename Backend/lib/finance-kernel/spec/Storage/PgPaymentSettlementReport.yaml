@@ -25,32 +25,32 @@ PgPaymentSettlementReport:
 
     TxnType:
       enum: "ORDER,REFUND"
-      derive: "ToParamSchema"
+      derive: "HttpInstance"
 
     TxnStatus:
       enum: "SUCCESS,FAILED"
-      derive: "ToParamSchema"
+      derive: "HttpInstance"
 
     SettlementType:
       enum: "CREDIT,DEBIT"
-      derive: "ToParamSchema"
+      derive: "HttpInstance"
 
     SettlementMode:
       enum: "GROSS,NET,NETTING"
-      derive: "ToParamSchema"
+      derive: "HttpInstance"
 
     PaymentMethod:
       enum: "UPI,CREDIT_CARD,DEBIT_CARD,NETBANKING,WALLET"
-      derive: "ToParamSchema"
+      derive: "HttpInstance"
 
 
     DisputeType:
       enum: "FRAUD,CONSUMER,PROCESSING_ERROR,OTHER"
-      derive: "ToParamSchema"
+      derive: "HttpInstance"
 
     ReconStatus:
       enum: "PENDING,MATCHED,MISMATCHED,MANUAL_REVIEW,IGNORED,SETTLED"
-      derive: "ToParamSchema"
+      derive: "HttpInstance"
 
   # ---------------------------------------------------------------------------
   # Fields
@@ -176,18 +176,3 @@ PgPaymentSettlementReport:
   # ---------------------------------------------------------------------------
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
-  domainInstance:
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TxnType>
-    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <TxnType>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TxnStatus>
-    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <TxnStatus>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SettlementType>
-    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <SettlementType>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SettlementMode>
-    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <SettlementMode>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PaymentMethod>
-    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <PaymentMethod>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <DisputeType>
-    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <DisputeType>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <ReconStatus>
-    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <ReconStatus>

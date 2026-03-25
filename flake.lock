@@ -673,11 +673,11 @@
         "tinylog": "tinylog"
       },
       "locked": {
-        "lastModified": 1773985972,
-        "narHash": "sha256-G8bKlrWx7e7nFTuVfYExq2XG+bdvcbw7k5DUAIr7xgQ=",
+        "lastModified": 1774254079,
+        "narHash": "sha256-FU9xn2nlxbJ1CF/cH/7HNjV5/JGvkInMGyOJRzQX9Ck=",
         "owner": "nammayatri",
         "repo": "euler-hs",
-        "rev": "a0db83c426c2dbe54089a74927b182538ea1edc7",
+        "rev": "bf99af696dca8d9c221e45b2715cf45a827b4fef",
         "type": "github"
       },
       "original": {
@@ -3613,11 +3613,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1774002656,
-        "narHash": "sha256-bkM/sGXAW25yBwGAhtLcRrI2v99CMKXEgnwkkzgGFSk=",
+        "lastModified": 1774371063,
+        "narHash": "sha256-dOQsiHjsVSkKnjZ9RqvQRxBDPgUZOf2cBFqf32+iyZs=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "6ed9995c0e9483b1c9ef467035ac5caac4db0acd",
+        "rev": "9503cf7864d8d1c28b5d9a3332ed656069662d28",
         "type": "github"
       },
       "original": {

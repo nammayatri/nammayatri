@@ -38,6 +38,7 @@ instance FromTType' Beam.PayoutConfig Domain.Types.PayoutConfig.PayoutConfig whe
             thresholdPayoutAmountPerPerson = thresholdPayoutAmountPerPerson,
             timeDiff = Kernel.Utils.Common.secondsToNominalDiffTime timeDiff,
             vehicleCategory = vehicleCategory,
+            vpaVerificationMode = fromMaybe Domain.Types.PayoutConfig.PAYMENT_BASED vpaVerificationMode,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -65,6 +66,7 @@ instance ToTType' Beam.PayoutConfig Domain.Types.PayoutConfig.PayoutConfig where
         Beam.thresholdPayoutAmountPerPerson = thresholdPayoutAmountPerPerson,
         Beam.timeDiff = Kernel.Utils.Common.nominalDiffTimeToSeconds timeDiff,
         Beam.vehicleCategory = vehicleCategory,
+        Beam.vpaVerificationMode = Just vpaVerificationMode,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

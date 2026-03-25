@@ -348,10 +348,11 @@ recordHistory fromStatus toStatus message payoutRequest = do
   void $
     PayoutHistory.recordPayoutHistory
       PayoutHistory.PayoutHistoryRecord
-        { entityType = "PayoutRequest",
+        { entityType = ST.PayoutRequest,
           entityId = payoutRequest.id.getId,
           fromState = toPaymentState <$> fromStatus,
           toState = toPaymentState toStatus,
+          paymentEvent = toPaymentEvent toStatus,
           message = message,
           metadata = Nothing,
           actorType = "SYSTEM",
@@ -377,7 +378,18 @@ getStatusMessage PROCESSING = "Payment in progress"
 getStatusMessage CREDITED = "Payment credited to bank"
 getStatusMessage AUTO_PAY_FAILED = "Auto-pay failed"
 getStatusMessage CANCELLED = "Payment cancelled"
-getStatusMessage CASH_PAID = "Payment marked as cash paid"
-getStatusMessage CASH_PENDING = "Payment marked as cash pending"
 getStatusMessage RETRYING = "Retrying payment..."
 getStatusMessage FAILED = "Payment failed/cancelled"
+getStatusMessage CASH_PAID = "Payment marked as cash paid"
+getStatusMessage CASH_PENDING = "Payment marked as cash pending"
+
+toPaymentEvent :: PayoutRequestStatus -> ST.PaymentEvent
+toPaymentEvent INITIATED = ST.INITIATE
+toPaymentEvent PROCESSING = ST.CAPTURE
+toPaymentEvent CREDITED = ST.CREDIT
+toPaymentEvent AUTO_PAY_FAILED = ST.FAIL
+toPaymentEvent CANCELLED = ST.CANCEL
+toPaymentEvent RETRYING = ST.RETRY
+toPaymentEvent FAILED = ST.FAIL
+toPaymentEvent CASH_PAID = ST.CREDIT
+toPaymentEvent CASH_PENDING = ST.INITIATE

@@ -20,12 +20,15 @@ where
 
 import qualified API.Types.Dashboard.RideBooking.Volunteer as Common
 import qualified "dashboard-helper-api" Dashboard.Common as Common
+import qualified Data.Text as T
 import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Action.UI.Ride.StartRide as RideStart
 import qualified Domain.Types as DVST
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.Location as Domain
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideDetails as DRideDetails
 import Environment
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -41,7 +44,9 @@ import qualified SharedLogic.Ride as SRide
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideDetails as QRideDetails
 import Tools.Error
 import qualified Tools.SMS as Sms
 
@@ -124,9 +129,22 @@ getVolunteerBooking merchantShortId opCity otpCode = do
 postVolunteerAssignStartOtpRide :: ShortId DM.Merchant -> Context.City -> Common.AssignCreateAndStartOtpRideAPIReq -> Flow APISuccess
 postVolunteerAssignStartOtpRide _ _ Common.AssignCreateAndStartOtpRideAPIReq {..} = do
   requestor <- findPerson (cast driverId)
+  driverInfo <- QDI.findById (cast requestor.id) >>= fromMaybeM (PersonNotFound requestor.id.getId)
+  when driverInfo.onRide $ do
+    veryMuchNotOnRide <- runInReplica $ QRide.notOnRide requestor.id
+    if veryMuchNotOnRide
+      then SRide.updateOnRideStatusWithAdvancedRideCheck requestor.id Nothing
+      else throwError DriverOnRide
   booking <- runInReplica $ QBooking.findById (cast bookingId) >>= fromMaybeM (BookingNotFound bookingId.getId)
   when (DVST.isRentalTrip booking.tripCategory) $ throwError (InvalidRequest "Rental rides are not supported through dashboard.")
   rideOtp <- booking.specialZoneOtpCode & fromMaybeM (InternalError "otpCode not found for special zone booking")
+  mbExistingRide <- runInReplica $ QRide.findActiveByRBId booking.id
+  whenJust mbExistingRide $ \existingRide -> do
+    mbRideDetails <- runInReplica $ QRideDetails.findById existingRide.id
+    whenJust mbRideDetails $ \rideDetails ->
+      throwError $
+        InvalidRequest $
+          volunteerRideAlreadyExistsMessage booking.id existingRide rideDetails
   Redis.whenWithLockRedis (SRide.confirmLockKey booking.id) 60 $ do
     ride <- DRide.otpRideCreate requestor rideOtp booking Nothing
     let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor, odometer = Nothing}
@@ -136,3 +154,27 @@ postVolunteerAssignStartOtpRide _ _ Common.AssignCreateAndStartOtpRideAPIReq {..
     shandle <- RideStart.buildStartRideHandle requestor.merchantId booking.merchantOperatingCityId (Just ride.id)
     void $ RideStart.driverStartRide shandle ride.id driverReq
   return Success
+
+volunteerRideAlreadyExistsMessage ::
+  Id Domain.Booking ->
+  DRide.Ride ->
+  DRideDetails.RideDetails ->
+  Text
+volunteerRideAlreadyExistsMessage bookingId existingRide rideDetails =
+  T.concat
+    [ "A ride already exists for this booking (bookingId: ",
+      bookingId.getId,
+      ", rideId: ",
+      existingRide.id.getId,
+      ", rideShortId: ",
+      existingRide.shortId.getShortId,
+      ", driverId: ",
+      existingRide.driverId.getId,
+      ", vehicleNo: ",
+      rideDetails.vehicleNumber,
+      ", driverName: ",
+      rideDetails.driverName,
+      ", rideStatus: ",
+      T.pack $ show existingRide.status,
+      ")."
+    ]

@@ -200,6 +200,12 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
       let validateExtractedPan resp = case resp.extractedPan of
             Just extractedPan -> do
               let extractedPanNo = removeSpaceAndDash <$> extractedPan.id_number
+              when (verifyBy /= DPan.FRONTEND_SDK) $
+                unless (extractedPanNo == (Just $ removeSpaceAndDash req.panNumber)) $
+                  throwImageError (Id req.imageId) $
+                    ImageDocumentNumberMismatch
+                      (maybe "null" maskText extractedPanNo)
+                      (maskText req.panNumber)
               let extractedNameOnCard = extractedPan.name_on_card
               logInfo ("extractedNameOnCard: " <> show extractedNameOnCard)
               logInfo ("panName: " <> show panName)

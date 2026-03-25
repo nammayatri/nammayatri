@@ -72,7 +72,7 @@ findByMerchantOperatingCityIdAndService merchantOperatingCityId service =
 
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Id DMOC.MerchantOperatingCity -> [Exophone] -> m ()
-clearCache merchantOperatingCityId exophones = do
+clearCache merchantOperatingCityId exophones = Hedis.runInMultiCloudRedisWrite $ do
   Hedis.del (makeMerchantOperatingCityIdKey merchantOperatingCityId)
   forM_ exophones $ \exophone -> do
     Hedis.del (makePhoneKey exophone.primaryPhone)

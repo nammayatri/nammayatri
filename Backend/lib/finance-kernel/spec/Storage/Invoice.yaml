@@ -15,10 +15,10 @@ Invoice:
   types:
     InvoiceStatus:
       enum: "Draft,Issued,Paid,PartiallyPaid,Cancelled,Voided"
-      derive: "ToParamSchema,HttpInstance"
+      derive: "HttpInstance"
     InvoiceType:
       enum: "SubscriptionPurchase,Ride,RideCancellation"
-      derive: "ToParamSchema,HttpInstance"
+      derive: "HttpInstance"
 
   fields:
     id: Id Invoice
@@ -83,9 +83,6 @@ Invoice:
 
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
-  domainInstance:
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <InvoiceStatus>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <InvoiceType>
 
 InvoiceLedgerLink:
   tableName: finance_invoice_ledger_link

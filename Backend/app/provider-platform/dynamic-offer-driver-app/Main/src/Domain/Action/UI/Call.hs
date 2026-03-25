@@ -42,7 +42,9 @@ import qualified Data.Maybe as DM
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as DTL
 import Data.Text.Lazy.Builder (fromString, toLazyText)
+import Data.Time (timeToTimeOfDay, utctDayTime)
 import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
+import Data.Time.Format (defaultTimeLocale, parseTimeM)
 import Domain.Action.External.LiveEKD as LiveEKD
 import qualified Domain.Action.UI.CallEvent as DCE
 import qualified Domain.Types.Booking as DB
@@ -682,19 +684,37 @@ addCampaignData ::
 addCampaignData req merchantOpCityId = do
   -- Get Ozonetel config from merchant service config
   merchantServConfig <- QMSC.findByServiceAndCity (DMSC.CallService Call.Ozonetel) merchantOpCityId >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Call" "Ozonetel")
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  localNow <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let currentLocalTimeOfDay = timeToTimeOfDay $ utctDayTime localNow
   case merchantServConfig.serviceConfig of
     DMSC.CallServiceConfig config ->
       case config of
         Call.OzonetelConfig ozonetelCfg -> do
-          let buildingRequest = buildRequest req ozonetelCfg
+          let selectedCampaignName = chooseCampaignName ozonetelCfg currentLocalTimeOfDay
+              buildingRequest = buildRequest req ozonetelCfg selectedCampaignName
           logInfo $ "Adding campaign data to Ozonetel: " <> show buildingRequest
           Call.addCampaignData (Call.OzonetelConfig ozonetelCfg) buildingRequest
         _ -> throwError $ InternalError "Ozonetel config not found"
     _ -> throwError $ InternalError "Call service config not found"
   where
-    buildRequest campaignReq ozonetelCfg =
+    chooseCampaignName ozonetelCfg currentLocalTimeOfDay =
+      case (ozonetelCfg.sosCampaignName, ozonetelCfg.expiryTime >>= parseCutoffTime) of
+        (Just sosCampaignName, Just cutoffTime)
+          | currentLocalTimeOfDay >= cutoffTime ->
+              sosCampaignName
+        _ -> ozonetelCfg.campaignName
+
+    parseCutoffTime :: Text -> Maybe TimeOfDay
+    parseCutoffTime valueText =
+      let parseWith format = parseTimeM True defaultTimeLocale format (T.unpack valueText)
+       in case parseWith "%H:%M:%S" of
+            Just t -> Just t
+            Nothing -> parseWith "%H:%M"
+
+    buildRequest campaignReq ozonetelCfg selectedCampaignName =
       Ozonetel.OzonetelAddCampaignDataReq
-        { campaignName = ozonetelCfg.campaignName,
+        { campaignName = selectedCampaignName,
           userName = ozonetelCfg.userName,
           checkDuplicate = ozonetelCfg.checkDuplicate,
           action = ozonetelCfg.action,

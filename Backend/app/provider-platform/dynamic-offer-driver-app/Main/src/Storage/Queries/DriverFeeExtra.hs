@@ -581,6 +581,25 @@ findLatestByFeeTypeAndStatusWithServiceName feeType status driverId serviceName 
     Nothing
     <&> listToMaybe
 
+findPendingRegistrationRefunds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Maybe Int ->
+  Id MerchantOperatingCity ->
+  ServiceNames ->
+  m [DriverFee]
+findPendingRegistrationRefunds mbLimit merchantOpCityId serviceName = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamDF.feeType $ Se.Eq Domain.PAYOUT_REGISTRATION,
+          Se.Is BeamDF.status $ Se.Eq Domain.CLEARED,
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+          Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOpCityId.getId)
+        ]
+    ]
+    (Se.Asc BeamDF.updatedAt)
+    mbLimit
+    Nothing
+
 findLatestByFeeTypeAndStatusWithTotalEarnings ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Domain.FeeType ->

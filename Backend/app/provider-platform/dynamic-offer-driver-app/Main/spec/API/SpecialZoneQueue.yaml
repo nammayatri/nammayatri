@@ -1,0 +1,37 @@
+imports:
+  Id: Kernel.Types.Id
+  APISuccess: Kernel.Types.APISuccess
+  SpecialZoneQueueRequest: Domain.Types.SpecialZoneQueueRequest
+  SpecialZoneQueueRequestResponse: Domain.Types.SpecialZoneQueueRequest
+
+module: SpecialZoneQueue
+
+types:
+  SpecialZoneQueueRequestRes:
+    requestId: Id SpecialZoneQueueRequest
+    gateName: Text
+    specialLocationName: Text
+    validTill: UTCTime
+
+  SpecialZoneQueueRequestListRes:
+    requests: "[SpecialZoneQueueRequestRes]"
+
+  SpecialZoneQueueRespondReq:
+    response: SpecialZoneQueueRequestResponse
+
+apis:
+  - GET:
+      endpoint: /specialZoneQueue/request
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: SpecialZoneQueueRequestListRes
+
+  - POST:
+      endpoint: /specialZoneQueue/request/{requestId}/respond
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        requestId: Id SpecialZoneQueueRequest
+      request:
+        type: SpecialZoneQueueRespondReq
+      response:
+        type: APISuccess

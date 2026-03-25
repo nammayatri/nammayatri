@@ -10,6 +10,7 @@ import Control.Applicative ((<|>))
 import qualified Dashboard.Common as Common
 import qualified Domain.Action.UI.RidePayment as DRidePayment
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified "this" Domain.Types.Person as DP
 import qualified "this" Domain.Types.RefundRequest as DRefundRequest
 import qualified Domain.Types.Ride as DRide
@@ -23,8 +24,9 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified "payment" Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
-import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
+import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.PaymentInvoice as SPInvoice
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -83,7 +85,7 @@ getPaymentRefundRequestInfo merchantShortId opCity orderId refreshRefunds = do
               merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
               unless (refundRequest.merchantOperatingCityId == merchantOpCity.id) $ throwError (RefundRequestDoesNotExist orderId.getId),
             mkRefundRequestInfoResp = mkRefundRequestInfoResp,
-            fetchRefunds = \refundsId -> (Just <$>) $ QRefunds.findById refundsId >>= fromMaybeM (InvalidRequest $ "No refunds matches passed data \"" <> refundsId.getId <> "\" not exist."), -- required only for admin
+            fetchRefunds = \refundsId -> (Just <$>) $ HQRefunds.findById refundsId >>= fromMaybeM (InvalidRequest $ "No refunds matches passed data \"" <> refundsId.getId <> "\" not exist."), -- required only for admin
             notifyRefunds = Notify.notifyRefunds
           }
   let rideId = cast @DPaymentOrder.PaymentOrder @DRide.Ride orderId
@@ -173,6 +175,7 @@ postPaymentRefundRequestRespond merchantShortId opCity orderId req = do
       ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
       booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
       driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
+      let commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCity.id
       let initiateStripeRefundReq =
             DPayment.InitiateStripeRefundReq
               { orderId = refundRequest.orderId,
@@ -180,7 +183,8 @@ postPaymentRefundRequestRespond merchantShortId opCity orderId req = do
                 amount = (req.approvedAmount <&> (.amount)) <|> refundRequest.requestedAmount, -- full transaction.amount would be refunded in case if not specified
                 driverAccountId,
                 email = Nothing, -- driver email is not mandatory, as driver bank account already created
-                retryRefunds = fromMaybe False req.retryRefunds
+                retryRefunds = fromMaybe False req.retryRefunds,
+                merchantOpCityId = commonMerchantOperatingCityId
               }
       SPayment.makeStripeRefund merchantOpCity.merchantId merchantOpCity.id booking.paymentMode initiateStripeRefundReq >>= \case
         Left err -> do

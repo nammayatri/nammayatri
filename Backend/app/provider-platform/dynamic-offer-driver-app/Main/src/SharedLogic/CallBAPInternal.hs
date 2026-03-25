@@ -311,3 +311,35 @@ ekdLiveCallFeedback apiKey internalUrl request = do
   logInfo "CallBAPInternal: Calling BAP internal API for EKD live call feedback"
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (ekdLiveCallFeedbackClient (Just apiKey) request) "EKDLiveCallFeedback" ekdLiveCallFeedbackAPI
+
+type UpdateCancellationFeeStatusAPI =
+  "internal"
+    :> "updateCancellationFeeStatus"
+    :> Header "token" Text
+    :> ReqBody '[JSON] UpdateCancellationFeeStatusReq
+    :> Post '[JSON] APISuccess
+
+newtype UpdateCancellationFeeStatusReq = UpdateCancellationFeeStatusReq
+  {bppRideIds :: [Text]}
+  deriving (Generic, ToJSON, FromJSON)
+
+updateCancellationFeeStatusClient :: Maybe Text -> UpdateCancellationFeeStatusReq -> EulerClient APISuccess
+updateCancellationFeeStatusClient = client (Proxy @UpdateCancellationFeeStatusAPI)
+
+updateCancellationFeeStatusAPI :: Proxy UpdateCancellationFeeStatusAPI
+updateCancellationFeeStatusAPI = Proxy
+
+updateCancellationFeeStatus ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  UpdateCancellationFeeStatusReq ->
+  m APISuccess
+updateCancellationFeeStatus apiKey internalUrl request = do
+  logInfo "CallBAPInternal: Calling BAP internal API for updating cancellation fee status"
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (updateCancellationFeeStatusClient (Just apiKey) request) "UpdateCancellationFeeStatus" updateCancellationFeeStatusAPI

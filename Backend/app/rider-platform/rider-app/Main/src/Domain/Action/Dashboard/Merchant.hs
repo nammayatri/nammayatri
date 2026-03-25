@@ -85,6 +85,7 @@ import Kernel.Storage.Esqueleto (runTransaction)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (..))
+import qualified Kernel.Types.Beckn.City as City
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
@@ -432,6 +433,10 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             merchantId = specialLocation.merchantId,
             merchantOperatingCityId = specialLocation.merchantOperatingCityId,
             entryFeeAmount = Nothing,
+            minDriverThreshold = Nothing,
+            demandThreshold = Nothing,
+            notificationCooldownInSec = Nothing,
+            maxRideSkipsBeforeQueueRemoval = Nothing,
             ..
           }
 
@@ -656,6 +661,11 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             return Nothing
           Just sub | req.city `elem` sub.city -> return Nothing
           Just _ -> Just <$> RegistryT.buildAddCityNyReq (req.city :| []) uniqueKeyId subscriberId subType domain
+
+  whenJust mbNewOperatingCity $ \newOperatingCity ->
+    whenJust newOperatingCity.stdCode $ \stdCode -> do
+      let (Context.City cityText) = newOperatingCity.city
+      void $ City.validateAndAppendCityStdCodeMapping cityText stdCode
 
   finally
     ( do
@@ -1546,7 +1556,11 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 updatedAt = now,
                 gateTags = gateInfoGateTags,
                 walkDescription = gateInfoWalkDescription,
-                entryFeeAmount = Nothing
+                entryFeeAmount = Nothing,
+                minDriverThreshold = Nothing,
+                demandThreshold = Nothing,
+                notificationCooldownInSec = Nothing,
+                maxRideSkipsBeforeQueueRemoval = Nothing
               }
       return (city, locationName, (specialLocation, gateInfo), mbSpecialLocationId)
 

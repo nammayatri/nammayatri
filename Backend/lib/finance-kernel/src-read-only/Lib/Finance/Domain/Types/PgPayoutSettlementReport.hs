@@ -4,12 +4,12 @@
 module Lib.Finance.Domain.Types.PgPayoutSettlementReport where
 
 import Data.Aeson
-import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
-import qualified Kernel.Utils.TH
+import Kernel.Utils.TH
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport
+import qualified Tools.Beam.UtilsTH
 
 data PgPayoutSettlementReport = PgPayoutSettlementReport
   { bankName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -60,18 +60,18 @@ data SettlementType = CREDIT | DEBIT deriving (Eq, Ord, Show, Read, Generic, ToJ
 
 data TxnStatus = SUCCESS | FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''TxnStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FulfillmentInstrument))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''TxnStatus))
+$(mkHttpInstancesForEnum (''FulfillmentInstrument))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''SettlementType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SettlementMode))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''SettlementType))
+$(mkHttpInstancesForEnum (''SettlementMode))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''SettlementMode))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SettlementType))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''SettlementMode))
+$(mkHttpInstancesForEnum (''SettlementType))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''FulfillmentInstrument))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TxnStatus))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''FulfillmentInstrument))
+$(mkHttpInstancesForEnum (''TxnStatus))

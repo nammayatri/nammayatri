@@ -3,10 +3,10 @@
 
 module Lib.Finance.Domain.Types.AuditEntry where
 
-import qualified Data.Aeson
-import qualified Kernel.Beam.Lib.UtilsTH
+import Data.Aeson
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified Tools.Beam.UtilsTH
 
 data AuditEntry = AuditEntry
   { action :: Lib.Finance.Domain.Types.AuditEntry.AuditAction,
@@ -28,4 +28,4 @@ data AuditEntry = AuditEntry
 
 data AuditAction = Created | Updated | Reversed | StatusChanged deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''AuditAction))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AuditAction))

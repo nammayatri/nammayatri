@@ -75,7 +75,7 @@ findBySubscriberId subscriberId =
 
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Merchant -> m ()
-clearCache merchant = do
+clearCache merchant = Hedis.runInMultiCloudRedisWrite $ do
   Hedis.del (makeIdKey merchant.id)
   Hedis.del (makeShortIdKey merchant.shortId)
 

@@ -35,6 +35,7 @@ data PayoutConfigT f = PayoutConfigT
     thresholdPayoutAmountPerPerson :: B.C f Kernel.Types.Common.HighPrecMoney,
     timeDiff :: B.C f Kernel.Types.Common.Seconds,
     vehicleCategory :: B.C f Domain.Types.VehicleCategory.VehicleCategory,
+    vpaVerificationMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.PayoutConfig.VpaVerificationMode),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

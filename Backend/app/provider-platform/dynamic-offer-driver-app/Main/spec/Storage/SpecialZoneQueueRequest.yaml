@@ -1,0 +1,49 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+SpecialZoneQueueRequest:
+  tableName: special_zone_queue_request
+
+  types:
+    SpecialZoneQueueRequestStatus:
+      enum: "Active, Expired"
+    SpecialZoneQueueRequestResponse:
+      enum: "Accept, Reject, Ignored"
+
+  fields:
+    id: Id SpecialZoneQueueRequest
+    driverId: Id Person
+    gateId: Text
+    specialLocationId: Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    status: SpecialZoneQueueRequestStatus
+    response: "Maybe SpecialZoneQueueRequestResponse"
+    validTill: UTCTime
+    gateName: Text
+    specialLocationName: Text
+    vehicleType: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+
+  queries:
+    findActiveByDriverId:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverId, status]
+
+    updateResponse:
+      kvFunction: updateOneWithKV
+      params: [response, status, updatedAt]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]

@@ -1,0 +1,4 @@
+ALTER TABLE atlas_app.gate_info ADD COLUMN min_driver_threshold integer;
+ALTER TABLE atlas_app.gate_info ADD COLUMN demand_threshold integer;
+ALTER TABLE atlas_app.gate_info ADD COLUMN notification_cooldown_in_sec integer;
+ALTER TABLE atlas_app.gate_info ADD COLUMN max_ride_skips_before_queue_removal integer;

@@ -7,6 +7,7 @@ module Domain.Action.Management.AccessMatrix
 where
 
 import qualified API.Types.Management.AccessMatrix
+import qualified Data.Text as T
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Role as DRole
@@ -62,7 +63,7 @@ getMerchantWithCityList ::
   )
 getMerchantWithCityList _ _ _ = do
   merchantList <- B.runInReplica $ QMerchantExtra.findAllMerchants
-  let merchantCityList = map (\merchant -> API.Types.Management.AccessMatrix.MerchantCityList merchant.supportedOperatingCities merchant.shortId) merchantList
+  let merchantCityList = map (\merchant -> API.Types.Management.AccessMatrix.MerchantCityList merchant.supportedOperatingCities merchant.shortId (map (T.pack . show) merchant.supportedOperatingCities)) merchantList
   pure merchantCityList
 
 mkAccessMatrixRowAPIEntity :: [DMatrix.AccessMatrix] -> DRole.Role -> API.Types.Management.AccessMatrix.AccessMatrixRowAPIEntity

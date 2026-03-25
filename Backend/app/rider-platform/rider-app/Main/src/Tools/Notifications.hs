@@ -26,6 +26,7 @@ import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.EmptyDynamicParam
 import Domain.Types.Estimate (Estimate)
 import qualified Domain.Types.EstimateStatus as DEstimate
+import qualified Domain.Types.Journey
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.MerchantServiceConfig as DMSC
@@ -88,7 +89,6 @@ import Tools.Error
 import qualified Tools.SMS as Sms
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import qualified UrlShortner.Common as UrlShortner
-import qualified Domain.Types.Journey
 
 templateText :: Text -> Text
 templateText txt = "{#" <> txt <> "#}"

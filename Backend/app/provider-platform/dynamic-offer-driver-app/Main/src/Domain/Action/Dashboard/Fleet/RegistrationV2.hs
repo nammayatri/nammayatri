@@ -92,21 +92,30 @@ postRegistrationV2Register ::
 postRegistrationV2Register merchantShortId opCity requestorId req =
   fleetOwnerRegister merchantShortId opCity (Just requestorId) req
 
--- TODO check merchant and requestor access
 fleetOwnerRegister ::
   ShortId DMerchant.Merchant ->
   City.City ->
   Maybe Text ->
   Common.FleetOwnerRegisterReqV2 ->
   Flow Common.FleetOwnerRegisterResV2
-fleetOwnerRegister _merchantShortId _opCity mbRequestorId req = do
+fleetOwnerRegister merchantShortId opCity mbRequestorId req = do
   runRequestValidation Common.validateRegisterReqV2 req
+  merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  -- Validate requestor belongs to the same merchant and city
+  whenJust mbRequestorId $ \requestorId -> do
+    requestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
+    unless (requestor.merchantId == merchant.id && requestor.merchantOperatingCityId == merchantOpCityId) $
+      throwError (InvalidRequest "Requestor does not belong to this merchant and city")
   let mbPersonId = cast @Common.Person @DP.Person <$> req.personId
   fleetOwnerId <- (mbPersonId <|> (Id <$> mbRequestorId)) & fromMaybeM (InvalidRequest "personId required")
 
   person <- QP.findById fleetOwnerId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId.getId)
   unless (person.role == DP.FLEET_OWNER) $
     throwError (InvalidRequest "personId should be fleet owner")
+  -- Validate fleet owner also belongs to the same merchant and city
+  unless (person.merchantId == merchant.id && person.merchantOperatingCityId == merchantOpCityId) $
+    throwError (InvalidRequest "Fleet owner does not belong to this merchant and city")
   fleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId.getId)
   -- TODO: Refactor later --
   case fleetOwnerInfo.panImageId of
