@@ -991,7 +991,8 @@ getMultimodalPassTransactions (mbCallerPersonId, _) mbLimitParam mbOffsetParam =
 buildPurchasedPassPaymentAPIEntity :: DPurchasedPassPayment.PurchasedPassPayment -> PassAPI.PurchasedPassTransactionAPIEntity
 buildPurchasedPassPaymentAPIEntity purchasedPassPayment =
   PassAPI.PurchasedPassTransactionAPIEntity
-    { startDate = purchasedPassPayment.startDate,
+    { id = purchasedPassPayment.id,
+      startDate = purchasedPassPayment.startDate,
       endDate = purchasedPassPayment.endDate,
       status = purchasedPassPayment.status,
       amount = purchasedPassPayment.amount,
