@@ -99,6 +99,7 @@ RiderConfig:
     specialZoneRadius: Int
     appUrl: Text
     seatBookingTtl: Maybe Int
+    busTripTtl: Maybe Int
     seatBookingCleanupTtl: Maybe Int
     collectAutoCompleteData: Maybe Bool
     distanceWeightage: Int

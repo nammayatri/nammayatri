@@ -61,11 +61,12 @@ holdSeats ::
   Int -> -- From Stop Index
   Int -> -- To Stop Index
   Text -> -- Hold ID
-  Int -> -- TTL in seconds
+  Int -> -- TTL in seconds (for timerKey)
+  Int -> -- Seat bitmap TTL in seconds (for seatKey expiry)
   m Bool
-holdSeats tripId seatIds fromIdx toIdx holdId ttl = do
+holdSeats tripId seatIds fromIdx toIdx holdId ttl seatBitMapTtl = do
   let seatIdStrs = map (.getId) seatIds
-  logInfo $ "SeatBooking:holdSeats attempting holdId=" <> holdId <> " tripId=" <> tripId <> " seats=" <> show seatIdStrs <> " range=[" <> show fromIdx <> "," <> show toIdx <> ") ttl=" <> show ttl
+  logInfo $ "SeatBooking:holdSeats attempting holdId=" <> holdId <> " tripId=" <> tripId <> " seats=" <> show seatIdStrs <> " range=[" <> show fromIdx <> "," <> show toIdx <> ") ttl=" <> show ttl <> " seatBitMapTtl=" <> show seatBitMapTtl
   let seatKeys = map (seatKey tripId) seatIds
       mKey = metaKey tripId holdId
       tKey = timerKey tripId holdId
@@ -82,7 +83,8 @@ holdSeats tripId seatIds fromIdx toIdx holdId ttl = do
           BS.toStrict (Aeson.encode meta),
           toBS fromIdx,
           toBS toIdx,
-          toBS (length seatIds)
+          toBS (length seatIds),
+          toBS seatBitMapTtl
         ]
   pSeatKeys <- traverse Redis.buildKey seatKeys
   pMetaKey <- Redis.buildKey mKey

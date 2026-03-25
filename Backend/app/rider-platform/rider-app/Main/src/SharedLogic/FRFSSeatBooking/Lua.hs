@@ -26,11 +26,12 @@ import Kernel.Prelude
 --
 --   ARGV:
 --     [ holdId
---     , ttlSeconds
+--     , ttlSeconds (for timerKey)
 --     , metaJSON
 --     , fromStopIdx
 --     , toStopIdx
 --     , seatCount
+--     , seatBitMapTtl (for seatKey expiry)
 --     ]
 --
 --   Returns:
@@ -46,6 +47,7 @@ holdSeatScript =
         "local fromIdx = tonumber(ARGV[4])",
         "local toIdx = tonumber(ARGV[5])",
         "local seatCount = tonumber(ARGV[6])",
+        "local seatBitMapTtl = tonumber(ARGV[7])",
         "",
         "for i = 1, seatCount do",
         "  local seatKey = KEYS[i]",
@@ -74,6 +76,11 @@ holdSeatScript =
         "",
         "    redis.call('BITFIELD', seatKey, 'SET', 'u' .. chunk, curr, mask)",
         "    curr = curr + chunk",
+        "  end",
+        "",
+        "  local currentTtl = redis.call('TTL', seatKey)",
+        "  if currentTtl < seatBitMapTtl then",
+        "    redis.call('EXPIRE', seatKey, seatBitMapTtl)",
         "  end",
         "end",
         "",

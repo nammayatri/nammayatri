@@ -25,7 +25,7 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.RouteDetails as DRD
 import qualified Domain.Types.Seat as Seat
 import qualified Domain.Types.Trip as DTrip
-import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, null, readMaybe, toList, whenJust)
+import EulerHS.Prelude hiding (all, and, any, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, minimumBy, null, readMaybe, toList, whenJust, concatMap)
 import qualified ExternalBPP.CallAPI.Init as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Types as CallExternalBPP
 import Kernel.Beam.Functions as B
@@ -55,6 +55,7 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
+import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Seat as QSeat
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
@@ -107,15 +108,16 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
               case mIndices of
                 Just (fromIdx, toIdx) -> do
                   holdId <- generateGUID
-                  let ttl' = fromMaybe 600 riderConfig.seatBookingTtl
-
+                  let defaultTtl = fromMaybe 600 riderConfig.seatBookingTtl
+                      bufferTime = fromMaybe 172800 riderConfig.busTripTtl
+                  -- Calculate dynamic TTL based on trip start time
+                  seatBitMapTtl <- calculateDynamicSeatHoldTTL tripId routeCode integratedBppConfig bufferTime
                   -- validate seat quota
                   seats <- mapM QSeat.findById allSeatIds
                   case mapM_ (validateQuota fromIdx toIdx) seats of
                     Left err -> throwError err
                     Right () -> pure ()
-
-                  success <- SeatBooking.holdSeats tripId allSeatIds fromIdx toIdx holdId ttl'
+                  success <- SeatBooking.holdSeats tripId allSeatIds fromIdx toIdx holdId defaultTtl seatBitMapTtl
                   unless success $
                     throwError (InvalidRequest "Selected seat is no longer available.")
                   pure $ Just (holdId, fromIdx, toIdx)
@@ -274,6 +276,40 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
           QJourneyLeg.updateByPrimaryKey $ journeyLeg {DJL.userBookedBusServiceTierType = mbBookedServiceTierType}
 
       return (rider, booking)
+
+    calculateDynamicSeatHoldTTL ::
+      ( MonadFlow m,
+        ServiceFlow m r,
+        HasShortDurationRetryCfg r c,
+        HasBAPMetrics m r
+      ) =>
+      Text -> -- tripId (format: waybillNo-tripNumber)
+      Text ->
+      DIBC.IntegratedBPPConfig ->
+      Int ->
+      m Int
+    calculateDynamicSeatHoldTTL tripId routeCode integratedBPPConfig bufferTime = do
+      let (waybillNo, tripNo) = JourneyUtils.getWaybillNoAndTripNoFromTripId tripId
+      mbSchedule <- withTryCatch "calculateDynamicSeatHoldTTL:getBusTripSchedule" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBPPConfig)
+      case mbSchedule of
+        Left err -> do
+          logWarning $ "Failed to fetch bus trip schedule, falling back to bufferTime: " <> show err
+          pure bufferTime
+        Right [] -> do
+          logWarning "Empty schedule returned from bus-trip-schedule"
+          pure bufferTime
+        Right schedule -> do
+          now <- getCurrentTime
+          let allEtas = concatMap (.eta) schedule
+              firstStop = minimumBy (comparing (.arrivalTimeUnix)) allEtas
+              tripStartTime = unixToUTC firstStop.arrivalTimeUnix
+              timeUntilTrip = diffUTCTime tripStartTime now
+              timeUntilTripSec =
+                round (realToFrac timeUntilTrip :: Double)
+              finalTtl =
+                bufferTime + max 0 timeUntilTripSec
+          logInfo $ "Dynamic TTL calculated: tripStart=" <> show tripStartTime <> " ttl=" <> show finalTtl
+          pure finalTtl
 
 postFrfsQuoteV2ConfirmUtil :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType)) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategories crisSdkResponse isSingleMode mbEnableOffer mbIsMockPayment integratedBppConfig mbTripId = do
