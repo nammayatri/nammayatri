@@ -62,6 +62,7 @@ types:
     - details: Maybe SosDetailsRes
     - triggerSource: Maybe ExternalSOSTriggerSource
     - riderDetails: Maybe RiderDetailsRes
+    - trackingUrl: Maybe Text
   SosDetailsRes:
     - id: Id Sos
     - personId: Id Customer

@@ -41,7 +41,6 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
 import Tools.Error
-import qualified Tools.Notifications as Notify
 import Tools.Ticket as Ticket
 
 sendSafetyCSAlert ::
@@ -80,8 +79,7 @@ createSafetyTicket person ride = do
   merchantConfig <- CQM.findById (person.merchantId) >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   let rideMocId = fromMaybe person.merchantOperatingCityId ride.merchantOperatingCityId
   rideMoc <- CQMOC.findById rideMocId >>= fromMaybeM (MerchantOperatingCityNotFound rideMocId.getId)
-  let trackLink = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
-      merchantShortId = merchantConfig.shortId.getShortId
+  let merchantShortId = merchantConfig.shortId.getShortId
       dashboardCityCode =
         case A.toJSON rideMoc.city of
           A.String code -> code
@@ -99,7 +97,7 @@ createSafetyTicket person ride = do
               ]
           )
           riderConfig.dashboardMediaFileUrlPattern
-      mediaLinks = [trackLink] <> dashboardRideInfoUrl
+      mediaLinks = dashboardRideInfoUrl
   phoneNumber <- mapM decrypt person.mobileNumber
   let rideInfo = buildRideInfo ride person phoneNumber
       kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
