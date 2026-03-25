@@ -7,3 +7,5 @@ CREATE EXTENSION IF NOT EXISTS postgis_topology;
 \c
 CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
 CREATE EXTENSION IF NOT EXISTS postgis_tiger_geocoder;
+-- Persist the migration environment so migrations can detect local vs non-local runs.
+ALTER DATABASE atlas_dev SET "myapp.migration_env" = 'local';
