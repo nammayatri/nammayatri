@@ -51,3 +51,18 @@ queueDriverPositionAPI = Proxy
 
 queueDriverPosition :: Text -> Text -> Id DP.Person -> ET.EulerClient QueueDriverPositionResp
 queueDriverPosition = ET.client queueDriverPositionAPI
+
+type QueueDriversAPI =
+  "internal"
+    :> "special-locations"
+    :> Capture "specialLocationId" Text
+    :> "queue"
+    :> Capture "vehicleType" Text
+    :> "drivers"
+    :> Get '[JSON] QueueDriversResponse
+
+queueDriversAPI :: Proxy QueueDriversAPI
+queueDriversAPI = Proxy
+
+queueDrivers :: Text -> Text -> ET.EulerClient QueueDriversResponse
+queueDrivers = ET.client queueDriversAPI

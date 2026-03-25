@@ -239,3 +239,15 @@ data QueueDriverPositionResp = QueueDriverPositionResp
     queueSize :: Int
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data QueueDriverEntry = QueueDriverEntry
+  { driverId :: Id DP.Person,
+    queuePosition :: Int
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data QueueDriversResponse = QueueDriversResponse
+  { drivers :: [QueueDriverEntry],
+    queueSize :: Int
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
