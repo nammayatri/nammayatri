@@ -153,8 +153,8 @@ types:
     - derive: "HttpInstance"
 
   TransactionTypeFilter:
-    - enum: "Order, Refund"
-    - derive: "HttpInstance"
+    - enum: "Order, Refund, Chargeback"
+    - derive: "ToParamSchema,HttpInstance"
 
   # ----- Subscription Purchase -----
   SubscriptionPurchaseListRes:

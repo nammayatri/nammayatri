@@ -40,6 +40,8 @@ library
       Lib.Finance.Invoice.Service
       Lib.Finance.Ledger.Interface
       Lib.Finance.Ledger.Service
+      Lib.Finance.Settlement.Ingestion
+      Lib.Finance.Settlement.Transformer
       Lib.Finance.StateMachine.Interface
       Lib.Finance.StateMachine.Service
       Lib.Finance.Storage.Queries.DirectTaxTransactionExtra
@@ -145,6 +147,7 @@ library
     , beam-core
     , beam-mysql
     , beam-postgres
+    , bytestring
     , containers
     , exceptions
     , mobility-core
