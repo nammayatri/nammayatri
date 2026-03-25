@@ -371,7 +371,10 @@ rideAssignedCommon booking ride driver veh = do
   driverAccountId <-
     if ride.onlinePayment && isValueAddNP
       then do
-        mDriverBankAccount <- runInReplica $ QDBA.findByPrimaryKey ride.driverId
+        mDriverBankAccount <-
+          QFDA.findByDriverId ride.driverId True >>= \case
+            Just fleetDriverAssociation -> QDBA.findByPrimaryKey (Id @DP.Person fleetDriverAssociation.fleetOwnerId)
+            Nothing -> QDBA.findByPrimaryKey ride.driverId
         return $ (.accountId) <$> mDriverBankAccount
       else pure Nothing
   pure $ (if ride.status == SRide.UPCOMING then ACL.ScheduledRideAssignedBuildReq else ACL.RideAssignedBuildReq) ACL.DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}
