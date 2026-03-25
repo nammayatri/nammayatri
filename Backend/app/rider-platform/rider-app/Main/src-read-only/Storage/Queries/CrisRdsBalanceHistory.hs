@@ -11,6 +11,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -30,9 +31,22 @@ findByDate dateIst = do findAllWithKV [Se.And [Se.Is Beam.dateIst $ Se.Eq dateIs
 
 findByDateAndConfig ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.CrisRdsBalanceHistory.CrisRdsBalanceHistory))
+  (Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.CrisRdsBalanceHistory.CrisRdsBalanceHistory])
 findByDateAndConfig dateIst integratedBppConfigId = do
-  findOneWithKV
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.dateIst $ Se.Eq dateIst,
+          Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)
+        ]
+    ]
+
+updateBalanceAndExecutionTimeByDateAndConfig ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ())
+updateBalanceAndExecutionTimeByDateAndConfig balance executionTime dateIst integratedBppConfigId = do
+  _now <- getCurrentTime
+  updateWithKV
+    [Se.Set Beam.balance balance, Se.Set Beam.executionTime executionTime, Se.Set Beam.updatedAt _now]
     [ Se.And
         [ Se.Is Beam.dateIst $ Se.Eq dateIst,
           Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)
