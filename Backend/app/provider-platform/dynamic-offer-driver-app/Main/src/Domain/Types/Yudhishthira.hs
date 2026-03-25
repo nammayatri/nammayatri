@@ -40,7 +40,8 @@ data TagData = TagData
 
 data EndRideTagData = EndRideTagData
   { ride :: DRide.Ride,
-    booking :: SRB.Booking
+    booking :: SRB.Booking,
+    isDriverSameAsCustomer :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
