@@ -1,0 +1,19 @@
+imports: {}
+
+module: SpecialZoneQueue
+
+apis:
+  - POST:
+      endpoint: /triggerNotify
+      auth: ApiAuthV2
+      request:
+        type: TriggerSpecialZoneQueueNotifyReq
+      response:
+        type: APISuccess
+
+types:
+  TriggerSpecialZoneQueueNotifyReq:
+    - gateId: Text
+    - vehicleType: Text
+    - driversToNotify: Int
+    - derive: "'HideSecrets"

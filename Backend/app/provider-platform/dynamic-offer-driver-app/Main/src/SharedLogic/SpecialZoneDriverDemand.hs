@@ -20,10 +20,12 @@ module SharedLogic.SpecialZoneDriverDemand
     incrementQueueSkipCount,
     resetQueueSkipCount,
     checkAndNotifyDriverDemand,
+    forceNotifyDriverDemand,
     handleQueueSkipIfApplicable,
   )
 where
 
+import Data.List (sortOn)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -109,73 +111,27 @@ checkAndNotifyDriverDemand ::
   m ()
 checkAndNotifyDriverDemand merchantOpCityId merchantId gate = do
   let gateId = gate.id.getId
+      specialLocationId = gate.specialLocationId.getId
   -- 1. Check demand
   mbDemandCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkGateSearchDemandKey gateId)
   let demandCount = fromMaybe 0 mbDemandCount
       demandThresholdVal = fromMaybe 2 gate.demandThreshold
   when (demandCount >= demandThresholdVal) $ do
     let minThreshold = fromMaybe 0 gate.minDriverThreshold
-    -- 2. Count drivers in pickup zone via LTS nearBy (small radius around gate)
+    -- 2. Count drivers in pickup zone via LTS nearBy
     driversNearGate <- LTSFlow.nearBy gate.point.lat gate.point.lon (Just False) Nothing 500 merchantId Nothing Nothing
-    -- Filter to those inside gate geometry using PostGIS
     driversInPickupZone <- filterM (isInsideGateGeometry gate.id) driversNearGate
     let pickupZoneCount = length driversInPickupZone
     when (pickupZoneCount < minThreshold) $ do
       let needed = minThreshold - pickupZoneCount
-          pickupZoneDriverIds = map (.driverId) driversInPickupZone
-      -- 3. Tier 1: Find parking drivers (in big zone but outside pickup zone)
-      -- Use gate point as center with larger radius to cover the big zone
+          cooldown = fromMaybe 900 gate.notificationCooldownInSec
+      -- 3. Find parking drivers (nearBy since we don't have vehicleType in search context)
       driversInBigZone <- LTSFlow.nearBy gate.point.lat gate.point.lon (Just False) Nothing 2000 merchantId Nothing Nothing
-      let parkingDrivers = filter (\d -> d.driverId `notElem` pickupZoneDriverIds) driversInBigZone
-      -- 4. Tier 2: If not enough parking drivers, get nearby drivers outside big zone
-      nearbyDrivers <-
-        if length parkingDrivers < needed
-          then do
-            let bigZoneDriverIds = map (.driverId) driversInBigZone
-            driversNearby <- LTSFlow.nearBy gate.point.lat gate.point.lon (Just False) Nothing 5000 merchantId Nothing Nothing
-            pure $ filter (\d -> d.driverId `notElem` bigZoneDriverIds) driversNearby
-          else pure []
-      let allCandidates = parkingDrivers ++ nearbyDrivers
-      -- 5. Filter by cooldown and notify
-      let cooldown = fromMaybe 900 gate.notificationCooldownInSec
-      eligible <- filterM (notRecentlyNotified gateId) allCandidates
+      let pickupZoneDriverIds = map (.driverId) driversInPickupZone
+          parkingDrivers = filter (\d -> d.driverId `notElem` pickupZoneDriverIds) driversInBigZone
+      eligible <- filterM (notRecentlyNotified gateId . (.driverId)) parkingDrivers
       let toNotify = take needed eligible
-      -- Look up SpecialLocation name
-      mbSpecialLocation <- Esq.runInReplica $ QSL.findById (Id gate.specialLocationId.getId)
-      let specialLocationName = maybe "" (.locationName) mbSpecialLocation
-      now <- getCurrentTime
-      let validTill = addUTCTime 30 now -- 30 second validity
-      forM_ toNotify $ \driver -> do
-        -- Check if driver already has an active non-expired request
-        existingRequests <- QSZQR.findActiveByDriverId driver.driverId DSZQR.Active
-        let hasActiveRequest = any (\r -> r.validTill > now) existingRequests
-        unless hasActiveRequest $ do
-          -- Create SpecialZoneQueueRequest entry
-          reqId <- generateGUID
-          let request =
-                DSZQR.SpecialZoneQueueRequest
-                  { id = reqId,
-                    driverId = driver.driverId,
-                    gateId = gateId,
-                    specialLocationId = gate.specialLocationId.getId,
-                    merchantId = merchantId,
-                    merchantOperatingCityId = merchantOpCityId,
-                    status = DSZQR.Active,
-                    response = Nothing,
-                    validTill = validTill,
-                    gateName = gate.name,
-                    specialLocationName = specialLocationName,
-                    vehicleType = "",
-                    createdAt = now,
-                    updatedAt = now
-                  }
-          QSZQR.create request
-          -- Send FCM notification
-          Notify.notifyPickupZoneRequest merchantOpCityId driver.driverId reqId gate.name specialLocationName validTill
-          -- Set cooldown
-          Redis.withCrossAppRedis $
-            Redis.setExp (mkGateDriverNotifiedKey gateId driver.driverId.getId) ("1" :: Text) cooldown
-          logInfo $ "Notified driver " <> driver.driverId.getId <> " to move to pickup zone at gate " <> gate.name
+      void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId "" cooldown (map (.driverId) toNotify)
   where
     isInsideGateGeometry gateInfoId driverLoc = do
       mbGate <- Esq.runInReplica $ QGI.findGateInfoIfDriverInsideGatePickupZone (LatLong driverLoc.lat driverLoc.lon)
@@ -183,9 +139,106 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate = do
         Just g -> g.id == gateInfoId
         Nothing -> False
 
-    notRecentlyNotified gId driverLoc = do
-      mbVal <- Redis.withCrossAppRedis $ Redis.get @Text (mkGateDriverNotifiedKey gId driverLoc.driverId.getId)
-      pure $ isNothing mbVal
+-- Force notify (dashboard trigger) — uses LTS queue order, skips demand/supply threshold checks
+forceNotifyDriverDemand ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    HasLocationService m r,
+    HasShortDurationRetryCfg r c,
+    HasRequestId r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id DM.Merchant ->
+  DGI.GateInfo ->
+  Text -> -- vehicleType
+  Int -> -- number of drivers to notify
+  m Int -- returns count of drivers actually notified
+forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed = do
+  let specialLocationId = gate.specialLocationId.getId
+      gateId = gate.id.getId
+      cooldown = fromMaybe 900 gate.notificationCooldownInSec
+  -- Get drivers from LTS queue sorted by queue position
+  queueResp <- LTSFlow.getQueueDrivers specialLocationId vehicleType
+  let sortedDrivers = sortOn (.queuePosition) queueResp.drivers
+      queueDriverIds = map (.driverId) sortedDrivers
+  eligible <- filterM (notRecentlyNotified gateId) queueDriverIds
+  let toNotify = take needed eligible
+  notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown toNotify
+
+-- Common notification logic: create SpecialZoneQueueRequest entries and send FCM
+notifyDrivers ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id DM.Merchant ->
+  DGI.GateInfo ->
+  Text -> -- specialLocationId
+  Text -> -- vehicleType
+  Int -> -- cooldown in seconds
+  [Id DP.Person] -> -- drivers to notify
+  m Int
+notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown driverIds = do
+  let gateId = gate.id.getId
+  mbSpecialLocation <- Esq.runInReplica $ QSL.findById (Id specialLocationId)
+  specialLocationName <- case mbSpecialLocation of
+    Just sl -> pure sl.locationName
+    Nothing -> do
+      logWarning $ "SpecialLocation not found for id: " <> specialLocationId <> ", using gate name as fallback"
+      pure gate.name
+  now <- getCurrentTime
+  let validTill = addUTCTime 30 now
+  foldM
+    ( \count driverId -> do
+        existingRequests <- QSZQR.findActiveByDriverId driverId DSZQR.Active
+        let hasActiveRequest = any (\r -> r.validTill > now) existingRequests
+        if hasActiveRequest
+          then pure count
+          else do
+            reqId <- generateGUID
+            let request =
+                  DSZQR.SpecialZoneQueueRequest
+                    { id = reqId,
+                      driverId = driverId,
+                      gateId = gateId,
+                      specialLocationId = specialLocationId,
+                      merchantId = merchantId,
+                      merchantOperatingCityId = merchantOpCityId,
+                      status = DSZQR.Active,
+                      response = Nothing,
+                      validTill = validTill,
+                      gateName = gate.name,
+                      specialLocationName = specialLocationName,
+                      vehicleType = vehicleType,
+                      createdAt = now,
+                      updatedAt = now
+                    }
+            QSZQR.create request
+            Notify.notifyPickupZoneRequest merchantOpCityId driverId reqId gate.name specialLocationName validTill
+            Redis.withCrossAppRedis $
+              Redis.setExp (mkGateDriverNotifiedKey gateId driverId.getId) ("1" :: Text) cooldown
+            logInfo $ "Notified driver " <> driverId.getId <> " to move to pickup zone at gate " <> gate.name
+            pure (count + 1)
+    )
+    (0 :: Int)
+    driverIds
+
+notRecentlyNotified ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
+  Text ->
+  Id DP.Person ->
+  m Bool
+notRecentlyNotified gId driverId = do
+  mbVal <- Redis.withCrossAppRedis $ Redis.get @Text (mkGateDriverNotifiedKey gId driverId.getId)
+  pure $ isNothing mbVal
 
 -- Queue skip handling
 

@@ -197,6 +197,7 @@ library
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
       Domain.Action.Dashboard.Management.SosMedia
+      Domain.Action.Dashboard.Management.SpecialZoneQueue
       Domain.Action.Dashboard.Management.System
       Domain.Action.Dashboard.Management.VehicleInfo
       Domain.Action.Dashboard.Management.Volunteer
@@ -900,6 +901,7 @@ library
       API.Action.Dashboard.Management.Revenue
       API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.Management.SosMedia
+      API.Action.Dashboard.Management.SpecialZoneQueue
       API.Action.Dashboard.Management.System
       API.Action.Dashboard.Management.VehicleInfo
       API.Action.Dashboard.Management.Volunteer

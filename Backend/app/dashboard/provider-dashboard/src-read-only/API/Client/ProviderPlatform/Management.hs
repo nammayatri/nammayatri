@@ -28,6 +28,7 @@ import qualified API.Types.ProviderPlatform.Management.PlanManagement
 import qualified API.Types.ProviderPlatform.Management.Revenue
 import qualified API.Types.ProviderPlatform.Management.Ride
 import qualified API.Types.ProviderPlatform.Management.SosMedia
+import qualified API.Types.ProviderPlatform.Management.SpecialZoneQueue
 import qualified API.Types.ProviderPlatform.Management.System
 import qualified API.Types.ProviderPlatform.Management.VehicleInfo
 import qualified API.Types.ProviderPlatform.Management.Volunteer
@@ -64,6 +65,7 @@ data ManagementAPIs = ManagementAPIs
     revenueDSL :: API.Types.ProviderPlatform.Management.Revenue.RevenueAPIs,
     rideDSL :: API.Types.ProviderPlatform.Management.Ride.RideAPIs,
     sosMediaDSL :: API.Types.ProviderPlatform.Management.SosMedia.SosMediaAPIs,
+    specialZoneQueueDSL :: API.Types.ProviderPlatform.Management.SpecialZoneQueue.SpecialZoneQueueAPIs,
     systemDSL :: API.Types.ProviderPlatform.Management.System.SystemAPIs,
     vehicleInfoDSL :: API.Types.ProviderPlatform.Management.VehicleInfo.VehicleInfoAPIs,
     volunteerDSL :: API.Types.ProviderPlatform.Management.Volunteer.VolunteerAPIs
@@ -95,12 +97,13 @@ mkManagementAPIs merchantId city token = do
   let revenueDSL = API.Types.ProviderPlatform.Management.Revenue.mkRevenueAPIs revenueClientDSL
   let rideDSL = API.Types.ProviderPlatform.Management.Ride.mkRideAPIs rideClientDSL
   let sosMediaDSL = API.Types.ProviderPlatform.Management.SosMedia.mkSosMediaAPIs sosMediaClientDSL
+  let specialZoneQueueDSL = API.Types.ProviderPlatform.Management.SpecialZoneQueue.mkSpecialZoneQueueAPIs specialZoneQueueClientDSL
   let systemDSL = API.Types.ProviderPlatform.Management.System.mkSystemAPIs systemClientDSL
   let vehicleInfoDSL = API.Types.ProviderPlatform.Management.VehicleInfo.mkVehicleInfoAPIs vehicleInfoClientDSL
   let volunteerDSL = API.Types.ProviderPlatform.Management.Volunteer.mkVolunteerAPIs volunteerClientDSL
   (ManagementAPIs {..})
   where
-    accountClientDSL :<|> bookingClientDSL :<|> coinsConfigClientDSL :<|> communicationClientDSL :<|> domainDiscountConfigClientDSL :<|> driverClientDSL :<|> driverCoinsClientDSL :<|> driverGoHomeClientDSL :<|> driverReferralClientDSL :<|> driverRegistrationClientDSL :<|> entityInfoClientDSL :<|> feedbackFormClientDSL :<|> financeManagementClientDSL :<|> knowledgeCenterClientDSL :<|> mediaClientDSL :<|> mediaFileDocumentClientDSL :<|> merchantClientDSL :<|> messageClientDSL :<|> nammaTagClientDSL :<|> payoutClientDSL :<|> planManagementClientDSL :<|> revenueClientDSL :<|> rideClientDSL :<|> sosMediaClientDSL :<|> systemClientDSL :<|> vehicleInfoClientDSL :<|> volunteerClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
+    accountClientDSL :<|> bookingClientDSL :<|> coinsConfigClientDSL :<|> communicationClientDSL :<|> domainDiscountConfigClientDSL :<|> driverClientDSL :<|> driverCoinsClientDSL :<|> driverGoHomeClientDSL :<|> driverReferralClientDSL :<|> driverRegistrationClientDSL :<|> entityInfoClientDSL :<|> feedbackFormClientDSL :<|> financeManagementClientDSL :<|> knowledgeCenterClientDSL :<|> mediaClientDSL :<|> mediaFileDocumentClientDSL :<|> merchantClientDSL :<|> messageClientDSL :<|> nammaTagClientDSL :<|> payoutClientDSL :<|> planManagementClientDSL :<|> revenueClientDSL :<|> rideClientDSL :<|> sosMediaClientDSL :<|> specialZoneQueueClientDSL :<|> systemClientDSL :<|> vehicleInfoClientDSL :<|> volunteerClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
 
 callManagementAPI ::
   forall m r b c.
