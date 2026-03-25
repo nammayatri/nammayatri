@@ -511,11 +511,12 @@ postFrfsSearch (mbPersonId, merchantId) mbCity mbIntegratedBPPConfigId mbNewServ
 
   merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOperatingCityId.getId)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) platformType
+  mbRiderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId Nothing
 
   -- If vehicle number is provided and serviceTier is not provided in request, try to get the service tier from OTP REST
   mbServiceTierFromVehicle <- case (req.vehicleNumber, req.serviceTier) of
     (Just vehicleNumber, Nothing) -> do
-      mbVehicleServiceType <- JMU.getVehicleServiceTypeFromInMem [integratedBPPConfig] vehicleNumber
+      mbVehicleServiceType <- JMU.getVehicleServiceTypeFromInMem mbRiderConfig [integratedBPPConfig] vehicleNumber
       return $ mbVehicleServiceType
     _ -> return Nothing
 
@@ -1301,6 +1302,7 @@ postFrfsRouteServiceability (mbPersonId, _merchantId) routeId req = do
 
   let cityId = person.merchantOperatingCityId
   integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig cityId Enums.BUS DIBC.MULTIMODAL
+  mbRiderConfig <- QRiderConfig.findByMerchantOperatingCityId cityId Nothing
 
   busesForRoutes <- CQMMB.getBusesForRoutes [routeId] integratedBPPConfig
 
@@ -1313,7 +1315,7 @@ postFrfsRouteServiceability (mbPersonId, _merchantId) routeId req = do
   routesWithLiveVehicles <-
     catMaybes
       <$> mapConcurrently
-        (\(r, s) -> JMRouteServiceability.buildRouteWithLiveVehicle r s integratedBPPConfig req.startStopCode req.endStopCode frfsTierMap Nothing 5)
+        (\(r, s) -> JMRouteServiceability.buildRouteWithLiveVehicle r s integratedBPPConfig req.startStopCode req.endStopCode frfsTierMap Nothing 5 mbRiderConfig)
         (zip busesForRoutes schedulesForRoutes)
 
   case routesWithLiveVehicles of

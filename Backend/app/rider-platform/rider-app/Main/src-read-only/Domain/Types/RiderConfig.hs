@@ -39,6 +39,7 @@ data RiderConfig = RiderConfig
     busTierSortingConfig :: Kernel.Prelude.Maybe [Domain.Types.RiderConfig.BusTierSortingConfig],
     busTrackingConfig :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.BusTrackingConfig,
     busTransitTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
+    cacheVehicleMetadata :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     cancellationPaymentDelay :: Kernel.Prelude.NominalDiffTime,
     cancellationRateCalculationThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationRateThresholdDaily :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
