@@ -49,6 +49,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import Tools.Auth
 import Tools.Error
+import qualified Tools.Notifications as Notify
 
 getSosTracking :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Sos -> Environment.Flow API.Types.RiderPlatform.Management.Sos.SosTrackingRes)
 getSosTracking _merchantShortId _opCity sosId = do
@@ -75,11 +76,15 @@ getSosDetails merchantShortId opCity sosId = do
             middleName = person.middleName,
             lastName = person.lastName
           }
+  let mbSosTrackingUrl = do
+        rideConfig <- mbRideConfig
+        pure $ Notify.buildSosTrackingUrl sos.id rideConfig.trackingShortUrlPattern
   pure $
     API.Types.RiderPlatform.Management.Sos.SosDetailsMaybeRes
       { API.Types.RiderPlatform.Management.Sos.details = Just $ convertToSosDetailsRes sos,
         API.Types.RiderPlatform.Management.Sos.triggerSource = triggerSource,
-        API.Types.RiderPlatform.Management.Sos.riderDetails = Just riderDetails
+        API.Types.RiderPlatform.Management.Sos.riderDetails = Just riderDetails,
+        API.Types.RiderPlatform.Management.Sos.trackingUrl = mbSosTrackingUrl
       }
 
 convertToSosDetailsRes :: SafetyDSos.Sos -> API.Types.RiderPlatform.Management.Sos.SosDetailsRes
