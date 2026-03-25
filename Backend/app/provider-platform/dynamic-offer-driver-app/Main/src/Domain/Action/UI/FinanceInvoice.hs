@@ -113,10 +113,12 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
             taxableValue = invoice.subtotal,
             totalAmountPayable = invoice.totalAmount,
             gstRate = (.gstRate) <$> mbTaxTxn,
-            cgstRate = (\t -> t.gstRate / 2.0) <$> mbTaxTxn,
-            sgstRate = (\t -> t.gstRate / 2.0) <$> mbTaxTxn,
+            cgstRate = mbTaxTxn >>= mkComponentRate (Just . (.cgstAmount)),
+            sgstRate = mbTaxTxn >>= mkComponentRate (Just . (.sgstAmount)),
+            igstRate = mbTaxTxn >>= mkComponentRate (Just . (.igstAmount)),
             sgstAmount = (.sgstAmount) <$> mbTaxTxn,
             cgstAmount = (.cgstAmount) <$> mbTaxTxn,
+            igstAmount = (.igstAmount) <$> mbTaxTxn,
             totalGstAmount = (.totalGstAmount) <$> mbTaxTxn,
             paymentMethod = mbPaymentMethod,
             issuedToName = invoice.issuedToName,
@@ -131,3 +133,8 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
             lineItems = Just invoice.lineItems,
             totalCredit = mbTotalCredit
           }
+
+    mkComponentRate getAmount txn = do
+      componentAmount <- getAmount txn
+      guard (txn.taxableValue > 0)
+      pure $ realToFrac (componentAmount / txn.taxableValue) * 100.0

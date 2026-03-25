@@ -1073,6 +1073,9 @@ validateInvoiceEntry entry = do
             errorMessage
           }
 
+  let roundTo2 :: HighPrecMoney -> HighPrecMoney
+      roundTo2 x = fromIntegral (round (x * 100) :: Integer) / 100
+
   -- Validate invoice exists in finance_invoice and basic invoice fields
   mbInvoice <- QFinanceInvoice.findById (Id entry.invoiceId)
   let invoiceErrors =
@@ -1080,13 +1083,13 @@ validateInvoiceEntry entry = do
           Nothing -> [mkError "invoiceId" "Invoice ID not found in records"]
           Just invoice ->
             catMaybes
-              [ if invoice.issuedAt /= entry.invoiceDate
+              [ if utctDay invoice.issuedAt /= utctDay entry.invoiceDate
                   then Just (mkError "invoiceDate" "Invoice date does not match records")
                   else Nothing,
                 if invoice.invoiceNumber /= entry.invoiceNumber
                   then Just (mkError "invoiceNumber" "Invoice number does not match records")
                   else Nothing,
-                if invoice.totalAmount /= entry.invoiceValue
+                if roundTo2 invoice.totalAmount /= roundTo2 entry.invoiceValue
                   then Just (mkError "invoiceValue" "Invoice value does not match records")
                   else Nothing
               ]
@@ -1098,10 +1101,10 @@ validateInvoiceEntry entry = do
 
   let taxErrors =
         catMaybes
-          [ if totalTaxableValue /= entry.baseValue
+          [ if roundTo2 totalTaxableValue /= roundTo2 entry.baseValue
               then Just (mkError "baseValue" "Base value does not match records")
               else Nothing,
-            if totalGstAmount /= entry.gst
+            if roundTo2 totalGstAmount /= roundTo2 entry.gst
               then Just (mkError "gst" "GST amount does not match records")
               else Nothing
           ]

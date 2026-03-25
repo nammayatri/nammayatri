@@ -24,6 +24,7 @@ module SharedLogic.Finance.Wallet
     todayRangeUTC,
     getNonRedeemableBalance,
     computeGstBreakdown,
+    computeGstBreakdownByPlace,
     financeCtxFromRide,
     buildFinanceCtx,
     walletReferenceD2DReferral,
@@ -39,6 +40,8 @@ module SharedLogic.Finance.Wallet
   )
 where
 
+import Control.Applicative ((<|>))
+import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverInformation as DDI
@@ -478,3 +481,59 @@ estimateWalletDeductions mbTdsRate baseFare =
   case mbTdsRate of
     Just rate | rate > 0 -> max 0 baseFare * realToFrac rate
     _ -> 0
+
+computeGstBreakdownByPlace ::
+  DTC.GstBreakup ->
+  Maybe Text -> -- supplier state
+  Maybe Text -> -- receiver state
+  Maybe Text -> -- supplier city
+  Maybe Text -> -- receiver city
+  HighPrecMoney ->
+  Maybe GstAmountBreakdown
+computeGstBreakdownByPlace gstBreakup supplierState receiverState supplierCity receiverCity totalGst
+  | totalGst <= 0 = Nothing
+  | otherwise =
+    case comparePlace supplierState receiverState supplierCity receiverCity of
+      Just IntraState -> computeGstBreakdown intraStateGstBreakup totalGst
+      Just InterState -> computeGstBreakdown interStateGstBreakup totalGst
+      Nothing -> computeGstBreakdown gstBreakup totalGst
+  where
+    comparePlace s1 s2 c1 c2 =
+      case (normalizeGeoComponent s1, normalizeGeoComponent s2) of
+        (Just leftState, Just rightState) ->
+          Just $
+            if leftState == rightState
+              then IntraState
+              else InterState
+        _ ->
+          case (normalizeGeoComponent c1, normalizeGeoComponent c2) of
+            (Just leftCity, Just rightCity) ->
+              Just $
+                if leftCity == rightCity
+                  then IntraState
+                  else InterState
+            _ -> Nothing
+
+    intraStateGstBreakup =
+      DTC.GstBreakup
+        { cgstPercentage = gstBreakup.cgstPercentage,
+          sgstPercentage = gstBreakup.sgstPercentage,
+          igstPercentage = Nothing
+        }
+
+    interStateGstBreakup =
+      DTC.GstBreakup
+        { cgstPercentage = Nothing,
+          sgstPercentage = Nothing,
+          igstPercentage =
+            gstBreakup.igstPercentage
+              <|> ((+) <$> gstBreakup.cgstPercentage <*> gstBreakup.sgstPercentage)
+        }
+
+data GstJurisdiction = IntraState | InterState
+
+normalizeGeoComponent :: Maybe Text -> Maybe Text
+normalizeGeoComponent mbText =
+  case T.toLower . T.strip <$> mbText of
+    Just value | not (T.null value) -> Just value
+    _ -> Nothing

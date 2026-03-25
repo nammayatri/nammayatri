@@ -149,6 +149,7 @@ apis:
         - rcNumber: Text
         - email: Text
         - personId: Id Driver
+        - walletId: Text
       response:
         type: DriverInfoRes
       migrate:
@@ -165,6 +166,7 @@ apis:
               - rcNumber: Text
               - email: Text
               - personId: Id Driver
+              - walletId: Text
             params:
               fleetOwnerId: Text
               mbFleet: Bool

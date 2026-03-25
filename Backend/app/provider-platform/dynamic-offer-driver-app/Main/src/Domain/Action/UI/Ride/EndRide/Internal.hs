@@ -56,6 +56,7 @@ import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.Plan as Plan
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.CancellationCharges as DCC
+import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.ConditionalCharges as DAC
 import Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverFee as DF
@@ -113,6 +114,8 @@ import Lib.Types.SpecialLocation hiding (Merchant, MerchantOperatingCity)
 import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import SharedLogic.Allocator
 import qualified SharedLogic.Analytics as Analytics
+import SharedLogic.CallBAPInternal (AppBackendBapInternal)
+import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import SharedLogic.DriverFee (calculatePlatformFeeAttr)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -128,6 +131,7 @@ import SharedLogic.TollsDetector
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
@@ -136,9 +140,6 @@ import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.VendorSplitDetails as CQVSD
 import qualified Storage.Queries.Booking as QRB
-import qualified Domain.Types.CancellationDuesDetails as DCDD
-import SharedLogic.CallBAPInternal (AppBackendBapInternal)
-import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified Storage.Queries.CancellationCharges as QCC
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.DailyStats as QDailyStats
@@ -523,6 +524,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
           let amount = baseFareForTds * realToFrac rate -- tdsRate is already decimal (0.01 = 1%)
           if amount > 0 then Just amount else Nothing
 
+    merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist booking.merchantOperatingCityId.getId)
     ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig
     let invoiceConfig =
           InvoiceConfig
@@ -546,7 +548,14 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                       then Just InvoiceLineItem {description = "Parking Charges", quantity = 1, unitPrice = parkingAmount, lineTotal = parkingAmount, isExternalCharge = True}
                       else Nothing
                   ],
-              gstBreakdown = computeGstBreakdown transporterConfig.taxConfig.rideGst gstAmount
+              gstBreakdown =
+                computeGstBreakdownByPlace
+                  transporterConfig.taxConfig.rideGst
+                  (Just $ show merchantOperatingCity.state)
+                  booking.fromLocation.address.state
+                  (Just $ show merchantOperatingCity.city)
+                  booking.fromLocation.address.city
+                  gstAmount
             }
     result <- runFinance ctx $ do
       if isOnline
