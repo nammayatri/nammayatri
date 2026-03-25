@@ -78,6 +78,7 @@ oldIdfyWebhookHandler secret val = do
         Verification.HyperVergeVerificationConfigRCDL _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.DigiLockerConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.TtenVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy -> Tten verfication config"
+        Verification.MorthConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 idfyWebhookHandler ::
@@ -106,6 +107,7 @@ idfyWebhookHandler merchantShortId secret val = do
         Verification.HyperVergeVerificationConfigRCDL _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.DigiLockerConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.TtenVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy -> Tten verfication config"
+        Verification.MorthConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 idfyWebhookV2Handler ::
@@ -135,6 +137,7 @@ idfyWebhookV2Handler merchantShortId opCity secret val = do
         Verification.HyperVergeVerificationConfigRCDL _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.DigiLockerConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.TtenVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy -> Tten verfication config"
+        Verification.MorthConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 onVerify :: Idfy.VerificationResponse -> Text -> Flow AckResponse
@@ -158,7 +161,7 @@ onVerify rsp respDump = do
     getResultStatus mbResult = mbResult >>= (\rslt -> (rslt.extraction_output >>= (.status)) <|> (rslt.source_output >>= (.status)))
     verifyDocument person verificationReq rslt mbRemPriorityList
       | isJust rslt.extraction_output =
-        maybe (pure Ack) (\resExtOp -> RC.onVerifyRC person (Just (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)) (Idfy.convertRCOutputToRCVerificationResponse resExtOp) mbRemPriorityList (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.documentImageId1 verificationReq.retryCount (Just verificationReq.status) (Just VT.Idfy)) rslt.extraction_output
+        maybe (\_ -> pure Ack) (\resExtOp -> RC.onVerifyRC person (Just (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)) (Idfy.convertRCOutputToRCVerificationResponse resExtOp) mbRemPriorityList (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.documentImageId1 verificationReq.retryCount (Just verificationReq.status) (Just VT.Idfy)) rslt.extraction_output Nothing
       | isJust rslt.source_output =
         maybe (pure Ack) ((\rq -> DL.onVerifyDL (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq) rq VT.Idfy) . Idfy.convertDLOutputToDLVerificationOutput) rslt.source_output
       | otherwise = pure Ack
@@ -166,12 +169,14 @@ onVerify rsp respDump = do
     handleIdfySourceDown :: DP.Person -> (IV.IdfyVerification -> Flow ()) -> DIdfyVerification.IdfyVerification -> Flow ()
     handleIdfySourceDown person retryFunc verificationReq = do
       unless (verificationReq.docType == DVC.VehicleRegistrationCertificate) $ retryFunc verificationReq
-      mbRemPriorityList <- CQO.getVerificationPriorityList verificationReq.driverId >>= \mbpl -> if mbpl == Just [] then return Nothing else return mbpl
+      mbRemPriorityList <-
+        CQO.getVerificationPriorityList verificationReq.driverId >>= \mbpl ->
+          if mbpl == Just [] then return Nothing else return mbpl
       rcNum <- decrypt verificationReq.documentNumber
       flip (maybe (retryFunc verificationReq)) mbRemPriorityList $
         \priorityList -> do
           logDebug $ "Idfy Source down trying with alternate service providers remaining !!!!!!" <> verificationReq.requestId
-          rsltresp' <- withTryCatch "verifyRC:handleIdfySourceDown" $ Verification.verifyRC person.merchantId person.merchantOperatingCityId (Just priorityList) (Verification.VerifyRCReq {rcNumber = rcNum, driverId = verificationReq.driverId.getId, token = Nothing, udinNo = Nothing})
+          rsltresp' <- withTryCatch "verifyRC:handleIdfySourceDown" $ Verification.verifyRC person.merchantId person.merchantOperatingCityId (Just priorityList) (Verification.VerifyRCReq {rcNumber = rcNum, driverId = verificationReq.driverId.getId, token = Nothing, udinNo = Nothing, engineNumber = Nothing, chassisNumber = Nothing, applicantMobile = Nothing})
           case rsltresp' of
             Left _ -> retryFunc verificationReq
             Right resp' -> do
@@ -183,7 +188,7 @@ onVerify rsp respDump = do
                     VT.HyperVergeRCDL -> HVQuery.create =<< RC.mkHyperVergeVerificationEntity person res.requestId now verificationReq.imageExtractionValidation verificationReq.documentNumber verificationReq.issueDateOnDoc verificationReq.vehicleCategory verificationReq.airConditioned verificationReq.oxygen verificationReq.ventilator verificationReq.documentImageId1 Nothing Nothing res.transactionId
                     _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> T.pack (show res.requestor))
                   CQO.setVerificationPriorityList person.id resp'.remPriorityList
-                Verification.SyncResp res -> void $ RC.onVerifyRC person Nothing res (Just resp'.remPriorityList) (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.documentImageId1 verificationReq.retryCount (Just verificationReq.status) Nothing
+                Verification.SyncResp res -> void $ RC.onVerifyRC person Nothing res.response (Just resp'.remPriorityList) (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.documentImageId1 verificationReq.retryCount (Just verificationReq.status) Nothing verificationReq.vehicleCategory
 
 scheduleRetryVerificationJob :: IV.IdfyVerification -> Flow ()
 scheduleRetryVerificationJob verificationReq = do

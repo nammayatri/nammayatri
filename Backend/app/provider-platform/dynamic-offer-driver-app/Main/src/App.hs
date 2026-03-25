@@ -38,6 +38,7 @@ import Kernel.External.SharedLogic.HyperVerge.Functions (prepareHyperVergeHttpMa
 import Kernel.External.Insurance.Interface (prepareIffcoTokioHttpManager)
 import Kernel.External.Tokenize (prepareJourneyMonitoringHttpManager)
 import Kernel.External.Verification.Interface.Idfy
+import Kernel.External.Verification.Interface (prepareMorthHttpManager)
 import Kernel.External.Verification.InternalScripts.FaceVerification (prepareInternalScriptsHttpManager)
 import Kernel.External.Verification.SafetyPortal.Config (prepareSafetyPortalHttpManager)
 import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
@@ -152,7 +153,8 @@ runDynamicOfferDriverApp' appCfg = do
                 Just (Just 150000, prepareGridlineHttpManager 150000),
                 Just (Just 10000, prepareHyperVergeHttpManager 10000),
                 Just (Just 10000, prepareJourneyMonitoringHttpManager 10000),
-                Just (Just 40000, prepareIffcoTokioHttpManager 40000)
+                Just (Just 40000, prepareIffcoTokioHttpManager 40000),
+                Just (Just 15000, prepareMorthHttpManager 15000)
               ]
 
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
