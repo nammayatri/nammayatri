@@ -28,13 +28,18 @@ CrisRdsBalanceHistory:
       where:
         and: [dateIst]
     findByDateAndConfig:
-      kvFunction: findOneWithKV
+      kvFunction: findAllWithKV
       where:
         and: [dateIst, integratedBppConfigId]
     findAllByIntegratedBppConfigId:
       kvFunction: findAllWithKV
       where:
         and: [integratedBppConfigId]
+    updateBalanceAndExecutionTimeByDateAndConfig:
+      kvFunction: updateWithKV
+      params: [balance, executionTime, updatedAt]
+      where:
+        and: [dateIst, integratedBppConfigId]
 
   excludedDefaultQueries:
     - createMany

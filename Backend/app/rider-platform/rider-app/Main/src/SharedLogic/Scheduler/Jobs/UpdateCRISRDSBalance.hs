@@ -20,11 +20,12 @@ import Domain.Types.IntegratedBPPConfig
 import ExternalBPP.ExternalAPI.Subway.CRIS.UpdateRDSBalance (getRDSBalance)
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
-import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobInWithCheck)
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.CrisRdsBalanceHistory as QCrisRdsBalanceHistory
@@ -52,75 +53,87 @@ updateCRISRDSBalanceJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ 
       let currentISTTime = DT.addUTCTime istOffset executionTime
           currentDay = DT.utctDay currentISTTime
 
-      (finalDateIst, nextJobDate) <- case balanceCheckTimeOfDay of
-        Just scheduleTimeOfDay -> do
-          let scheduledTimeOfDay = fromIntegral scheduleTimeOfDay :: DT.DiffTime
-              currentTimeOfDay = DT.utctDayTime currentISTTime
-              (scheduledDay, scheduledISTTime) =
-                if currentTimeOfDay >= scheduledTimeOfDay
-                  then (currentDay, DT.UTCTime currentDay scheduledTimeOfDay)
-                  else (DT.addDays (-1) currentDay, DT.UTCTime (DT.addDays (-1) currentDay) scheduledTimeOfDay)
-              scheduledUTCTime = DT.addUTCTime (negate istOffset) scheduledISTTime
-              timeDiff = diffUTCTime executionTime scheduledUTCTime
-              bufferSeconds = 300 :: DT.NominalDiffTime
-              withinBuffer = timeDiff >= 0 && timeDiff <= bufferSeconds
-
-          if withinBuffer
-            then do
-              logInfo $ "Within buffer (" <> show (floor timeDiff :: Integer) <> "s), using scheduled date: " <> show scheduledDay
-              pure (Just scheduledDay, DT.addDays 1 scheduledDay)
-            else do
-              logWarning $ "Outside buffer (" <> show (floor timeDiff :: Integer) <> "s), recording without date for monitoring only"
-              let nextJobDate =
+      let (targetDateIst, nextJobDate) = case balanceCheckTimeOfDay of
+            Just scheduleTimeOfDay ->
+              let scheduledTimeOfDay = fromIntegral scheduleTimeOfDay :: DT.DiffTime
+                  currentTimeOfDay = DT.utctDayTime currentISTTime
+                  scheduledDay =
+                    if currentTimeOfDay >= scheduledTimeOfDay
+                      then currentDay
+                      else DT.addDays (-1) currentDay
+                  scheduledISTTime = DT.UTCTime scheduledDay scheduledTimeOfDay
+                  scheduledUTCTime = DT.addUTCTime (negate istOffset) scheduledISTTime
+                  timeDiff = diffUTCTime executionTime scheduledUTCTime
+                  bufferSeconds = 7200 :: DT.NominalDiffTime
+                  dateIst =
+                    if timeDiff >= 0 && timeDiff <= bufferSeconds
+                      then scheduledDay
+                      else currentDay
+                  nextDate =
                     if currentTimeOfDay >= scheduledTimeOfDay
                       then DT.addDays 1 currentDay
                       else currentDay
-              pure (Nothing, nextJobDate)
-        Nothing -> pure (Just currentDay, DT.addDays 1 currentDay)
+               in (dateIst, nextDate)
+            Nothing -> (currentDay, DT.addDays 1 currentDay)
 
-      existingRecord <- case finalDateIst of
-        Just dateIst -> QCrisRdsBalanceHistory.findByDateAndConfig (Just dateIst) integratedBppConfigId
-        Nothing -> pure Nothing
-      result <-
-        withTryCatch "updateCRISRDSBalanceJob:recordBalance" $ case existingRecord of
-          Nothing -> do
-            balanceResp <- getRDSBalance config
+      let scheduledUTCForTarget = case balanceCheckTimeOfDay of
+            Just scheduleTimeOfDay ->
+              let scheduledTimeOfDay = fromIntegral scheduleTimeOfDay :: DT.DiffTime
+                  scheduledISTTime = DT.UTCTime targetDateIst scheduledTimeOfDay
+               in DT.addUTCTime (negate istOffset) scheduledISTTime
+            Nothing -> executionTime
+
+      let lockKey = "CRISRDSBalance:Lock:" <> show integratedBppConfigId <> ":" <> show targetDateIst
+      isLockAcquired <- Hedis.tryLockRedis lockKey 300
+      if isLockAcquired
+        then do
+          existingRecords <- QCrisRdsBalanceHistory.findByDateAndConfig (Just targetDateIst) integratedBppConfigId
+          result <-
+            withTryCatch "updateCRISRDSBalanceJob:recordBalance" $ case existingRecords of
+              [] -> do
+                balanceResp <- getRDSBalance config
+                now <- getCurrentTime
+                balanceHistoryId <- generateGUID
+                let balanceHistory =
+                      DCRBH.CrisRdsBalanceHistory
+                        { id = Id balanceHistoryId,
+                          integratedBppConfigId = integratedBppConfigId,
+                          balance = balanceResp.balance,
+                          executionTime = executionTime,
+                          dateIst = Just targetDateIst,
+                          createdAt = now,
+                          updatedAt = now
+                        }
+                QCrisRdsBalanceHistory.create balanceHistory
+                logInfo $ "Successfully recorded balance for date: " <> show targetDateIst
+              (existing : _) -> do
+                let existingDist = abs $ diffUTCTime existing.executionTime scheduledUTCForTarget
+                    currentDist = abs $ diffUTCTime executionTime scheduledUTCForTarget
+                if currentDist < existingDist
+                  then do
+                    balanceResp <- getRDSBalance config
+                    QCrisRdsBalanceHistory.updateBalanceAndExecutionTimeByDateAndConfig balanceResp.balance executionTime (Just targetDateIst) integratedBppConfigId
+                    logInfo $ "Updated balance for date: " <> show targetDateIst <> " (closer to scheduled time: " <> show (floor currentDist :: Integer) <> "s vs " <> show (floor existingDist :: Integer) <> "s)"
+                  else logInfo $ "Balance record already exists for date: " <> show targetDateIst <> " with closer execution time, skipping"
+          case result of
+            Left err -> logError $ "Failed to record balance: " <> show err
+            Right _ -> pure ()
+          whenJust balanceCheckTimeOfDay $ \scheduleTimeOfDay -> do
             now <- getCurrentTime
-            balanceHistoryId <- generateGUID
-            let balanceHistory =
-                  DCRBH.CrisRdsBalanceHistory
-                    { id = Id balanceHistoryId,
-                      integratedBppConfigId = integratedBppConfigId,
-                      balance = balanceResp.balance,
-                      executionTime = executionTime,
-                      dateIst = finalDateIst,
-                      createdAt = now,
-                      updatedAt = now
+            let targetTimeOfDay = fromIntegral scheduleTimeOfDay
+                nextTargetISTTime = DT.UTCTime nextJobDate targetTimeOfDay
+                nextTargetUTCTime = DT.addUTCTime (negate istOffset) nextTargetISTTime
+                scheduleAfter = max 60 $ diffUTCTime nextTargetUTCTime now
+                minScheduleTime = DT.addUTCTime (-3600) nextTargetUTCTime
+                maxScheduleTime = DT.addUTCTime 3600 nextTargetUTCTime
+                newJobData =
+                  UpdateCRISRDSBalanceJobData
+                    { integratedBPPConfigId = integratedBppConfigId
                     }
-            QCrisRdsBalanceHistory.create balanceHistory
-            case finalDateIst of
-              Just dateIst -> logInfo $ "Successfully recorded balance for date: " <> show dateIst
-              Nothing -> logInfo "Successfully recorded balance for monitoring (no target date)"
-          Just _ ->
-            logInfo $ "Balance record already exists for date: " <> (fromMaybe "monitoring" (show <$> finalDateIst)) <> ", skipping creation"
 
-      case result of
-        Left err -> logError $ "Failed to record balance: " <> show err
-        Right _ -> pure ()
-
-      whenJust balanceCheckTimeOfDay $ \scheduleTimeOfDay -> do
-        now <- getCurrentTime
-        let targetTimeOfDay = fromIntegral scheduleTimeOfDay
-            nextTargetISTTime = DT.UTCTime nextJobDate targetTimeOfDay
-            nextTargetUTCTime = DT.addUTCTime (negate istOffset) nextTargetISTTime
-            scheduleAfter = max 60 $ diffUTCTime nextTargetUTCTime now
-            newJobData =
-              UpdateCRISRDSBalanceJobData
-                { integratedBPPConfigId = integratedBppConfigId
-                }
-
-        createJobIn @_ @'UpdateCRISRDSBalance (Just integratedBppConfig.merchantId) (Just integratedBppConfig.merchantOperatingCityId) scheduleAfter (newJobData :: UpdateCRISRDSBalanceJobData)
-        logInfo $ "Scheduled next balance check for date: " <> show nextJobDate
+            createJobInWithCheck @_ @'UpdateCRISRDSBalance (Just integratedBppConfig.merchantId) (Just integratedBppConfig.merchantOperatingCityId) scheduleAfter minScheduleTime maxScheduleTime (show UpdateCRISRDSBalance) (Just 1) (newJobData :: UpdateCRISRDSBalanceJobData)
+            logInfo $ "Scheduled next balance check for date: " <> show nextJobDate
+        else logInfo $ "Could not acquire lock for date: " <> show targetDateIst <> ", another instance is handling it"
 
       return Complete
     _ -> throwError $ InternalError $ "Incorrect bpp config with id " <> (show $ integratedBppConfig.id)
