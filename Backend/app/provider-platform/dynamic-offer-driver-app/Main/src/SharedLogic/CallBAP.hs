@@ -137,6 +137,7 @@ import qualified Tools.Notifications as Notify
 import TransactionLogs.PushLogs
 import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
+import qualified Storage.Queries.FleetDriverAssociation as QFDA
 
 callOnSelectV2 ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
