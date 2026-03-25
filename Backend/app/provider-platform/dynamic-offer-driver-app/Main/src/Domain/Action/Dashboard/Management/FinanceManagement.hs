@@ -729,6 +729,7 @@ getFinanceManagementFinancePaymentSettlementList merchantShortId opCity mbFrom m
                 ( case report.txnType of
                     PgPaymentSettlementReport.ORDER -> API.Order
                     PgPaymentSettlementReport.REFUND -> API.Refund
+                    PgPaymentSettlementReport.CHARGEBACK -> API.Chargeback
                 ),
             chargedAmount = Just report.txnAmount,
             paymentStatus = Just $ show report.txnStatus,

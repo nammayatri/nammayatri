@@ -21,6 +21,7 @@ import Kernel.External.Payment.Interface as Payment
 import Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.Plasma as Plasma
 import Kernel.External.SMS as Sms
+import qualified Kernel.External.Settlement.Types as Settlement
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Verification as Verification
@@ -77,6 +78,7 @@ data ServiceName
   | JuspayWalletService Payment.PaymentService
   | PlasmaService Plasma.PlasmaService
   | InsuranceDeclarationService InsuranceProvider
+  | SettlementService Settlement.SettlementService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -107,6 +109,7 @@ instance Show ServiceName where
   show (JuspayWalletService s) = "JuspayWalletService_" <> show s
   show (PlasmaService s) = "Plasma_" <> show s
   show (InsuranceDeclarationService s) = "InsuranceDeclaration_" <> show s
+  show (SettlementService s) = "Settlement_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -209,6 +212,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "InsuranceDeclaration_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (SettlementService v1, r2)
+                 | r1 <- stripPrefix "Settlement_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -239,6 +246,7 @@ data ServiceConfigD (s :: UsageSafety)
   | JuspayWalletServiceConfig !PaymentServiceConfig
   | PlasmaServiceConfig !Plasma.PlasmaServiceConfig
   | InsuranceDeclarationServiceConfig !IffcoTokioConfig
+  | SettlementServiceConfig !Settlement.SettlementServiceConfig
   deriving (Generic, Eq, Show)
 
 type ServiceConfig = ServiceConfigD 'Safe

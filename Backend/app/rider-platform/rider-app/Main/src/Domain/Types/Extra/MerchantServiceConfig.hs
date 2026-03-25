@@ -26,6 +26,7 @@ import Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
 import qualified Text.Show as Show
 import Tools.Beam.UtilsTH
+import qualified Kernel.External.Settlement.Types as Settlement
 import Utils.Common.JWT.Config as GW
 
 -- Extra code goes here --
@@ -54,6 +55,7 @@ data ServiceName
   | MultiModalStaticDataService MultiModal.MultiModalService
   | InsuranceService Insurance.InsuranceService
   | SOSService SOS.SOSService
+  | SettlementService Settlement.SettlementService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -84,6 +86,7 @@ instance Show ServiceName where
   show (MultiModalStaticDataService s) = "MultiModalStaticData_" <> show s
   show (InsuranceService s) = "Insurance_" <> show s
   show (SOSService s) = "SOS_" <> show s
+  show (SettlementService s) = "Settlement_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -186,6 +189,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "SOS_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (SettlementService v1, r2)
+                 | r1 <- stripPrefix "Settlement_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -216,6 +223,7 @@ data ServiceConfigD (s :: UsageSafety)
   | MultiModalStaticDataServiceConfig !MultiModal.MultiModalServiceConfig
   | InsuranceServiceConfig !Insurance.InsuranceConfig
   | SOSServiceConfig !SOSInterface.SOSServiceConfig
+  | SettlementServiceConfig !Settlement.SettlementServiceConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe
@@ -253,6 +261,7 @@ instance Show (ServiceConfigD 'Safe) where
   show (MultiModalStaticDataServiceConfig cfg) = "MultiModalStaticDataServiceConfig " <> show cfg
   show (InsuranceServiceConfig cfg) = "InsuranceServiceConfig " <> show cfg
   show (SOSServiceConfig cfg) = "SOSServiceConfig " <> show cfg
+  show (SettlementServiceConfig cfg) = "SettlementServiceConfig " <> show cfg
 
 instance Show (ServiceConfigD 'Unsafe) where
   show (MapsServiceConfig cfg) = "MapsServiceConfig " <> show cfg
@@ -279,3 +288,4 @@ instance Show (ServiceConfigD 'Unsafe) where
   show (MultiModalStaticDataServiceConfig cfg) = "MultiModalStaticDataServiceConfig " <> show cfg
   show (InsuranceServiceConfig cfg) = "InsuranceServiceConfig " <> show cfg
   show (SOSServiceConfig cfg) = "SOSServiceConfig " <> show cfg
+  show (SettlementServiceConfig cfg) = "SettlementServiceConfig " <> show cfg

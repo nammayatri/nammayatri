@@ -20,6 +20,7 @@ import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
+import qualified Kernel.External.Settlement.Types as Settlement
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
@@ -85,6 +86,8 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.SOSService SOS.ERSS -> Domain.SOSServiceConfig . SOSInterface.ERSSConfig <$> valueToMaybe configJSON
     Domain.SOSService SOS.GJ112 -> Domain.SOSServiceConfig . SOSInterface.GJ112Config <$> valueToMaybe configJSON
     Domain.SOSService SOS.Trinity -> Domain.SOSServiceConfig . SOSInterface.TrinityConfig <$> valueToMaybe configJSON
+    Domain.SettlementService Settlement.HyperPG -> Domain.SettlementServiceConfig . Settlement.HyperPGConfig <$> valueToMaybe configJSON
+    Domain.SettlementService Settlement.BillDesk -> Domain.SettlementServiceConfig . Settlement.BillDeskConfig <$> valueToMaybe configJSON
 
 mkPaymentServiceConfig :: A.Value -> Payment.PaymentService -> Maybe Payment.PaymentServiceConfig
 mkPaymentServiceConfig configJSON = \case
@@ -167,6 +170,9 @@ getServiceNameConfigJson = \case
     SOSInterface.ERSSConfig cfg -> (Domain.SOSService SOS.ERSS, toJSON cfg)
     SOSInterface.GJ112Config cfg -> (Domain.SOSService SOS.GJ112, toJSON cfg)
     SOSInterface.TrinityConfig cfg -> (Domain.SOSService SOS.Trinity, toJSON cfg)
+  Domain.SettlementServiceConfig settlementCfg -> case settlementCfg of
+    Settlement.HyperPGConfig srcCfg -> (Domain.SettlementService Settlement.HyperPG, toJSON srcCfg)
+    Settlement.BillDeskConfig srcCfg -> (Domain.SettlementService Settlement.BillDesk, toJSON srcCfg)
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> (Payment.PaymentService, A.Value)
 getPaymentServiceConfigJson = \case

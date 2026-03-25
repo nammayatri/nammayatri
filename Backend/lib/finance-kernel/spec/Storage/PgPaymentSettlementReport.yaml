@@ -24,8 +24,8 @@ PgPaymentSettlementReport:
   types:
 
     TxnType:
-      enum: "ORDER,REFUND"
-      derive: "HttpInstance"
+      enum: "ORDER,REFUND,CHARGEBACK"
+      derive: "ToParamSchema"
 
     TxnStatus:
       enum: "SUCCESS,FAILED"
