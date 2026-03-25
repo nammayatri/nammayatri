@@ -1,0 +1,105 @@
+imports:
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+
+PPFRecon:
+  tableName: ppf_recon
+  derives: "Generic"
+
+  fields:
+    id: Id PPFRecon
+    domain: PPFDomain
+    networkOrderId: Text
+    currency: Text
+    transactionId: Text
+    collectorSubscriberId: Text
+    receiverSubscriberId: Text
+    orderAmount: ReconSettlementAmount
+    buyerAppCommission: ReconSettlementAmount
+    networkFee: Maybe ReconSettlementAmount
+    gstAmount: Maybe ReconSettlementAmount
+    settlementStatus: PPFSettlementStatus
+    utr: Maybe Text
+    settlementDate: Maybe UTCTime
+    settlementId: Text
+    merchantId: Text
+    merchantOperatingCityId: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    PPFDomain:
+      enum: "MOBILITY,FRFS"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+
+    PPFSettlementStatus:
+      enum: "SETTLED,PENDING,TO_BE_INITIATED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+
+    ReconSettlementAmount:
+      settled: HighPrecMoney
+      expected: Maybe HighPrecMoney
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <PPFDomain>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <PPFDomain>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <PPFSettlementStatus>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <PPFSettlementStatus>
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+
+  constraints:
+    networkOrderId: SecondaryKey
+
+  queries:
+    findByNetworkOrderId:
+      kvFunction: findOneWithKV
+      where:
+        and: [networkOrderId]
+
+    findByTransactionId:
+      kvFunction: findAllWithKV
+      where:
+        and: [transactionId]
+
+    findPendingReconciliation:
+      kvFunction: findAllWithKV
+      where:
+        and: [settlementStatus, merchantId]
+
+    updateSettlementStatusById:
+      kvFunction: updateWithKV
+      params: [settlementStatus, updatedAt]
+      where: id
+
+  beamFields:
+    orderAmount:
+      orderAmountSettled: HighPrecMoney
+      orderAmountExpected: Maybe HighPrecMoney
+    buyerAppCommission:
+      buyerAppCommissionSettled: HighPrecMoney
+      buyerAppCommissionExpected: Maybe HighPrecMoney
+    networkFee:
+      networkFeeSettled: Maybe HighPrecMoney
+      networkFeeExpected: Maybe HighPrecMoney
+    gstAmount:
+      gstAmountSettled: Maybe HighPrecMoney
+      gstAmountExpected: Maybe HighPrecMoney
+
+  fromTType:
+    orderAmount: Lib.Finance.Domain.Types.PPFRecon.ReconSettlementAmount orderAmountExpected orderAmountSettled|E
+    buyerAppCommission: Lib.Finance.Domain.Types.PPFRecon.ReconSettlementAmount buyerAppCommissionExpected buyerAppCommissionSettled|E
+    networkFee: Lib.Finance.Domain.Types.PPFRecon.ReconSettlementAmount <$> Kernel.Prelude.pure networkFeeExpected <*> networkFeeSettled|E
+    gstAmount: Lib.Finance.Domain.Types.PPFRecon.ReconSettlementAmount <$> Kernel.Prelude.pure gstAmountExpected <*> gstAmountSettled|E
+
+  toTType:
+    orderAmountSettled: (.settled)|I
+    orderAmountExpected: (.expected)|I
+    buyerAppCommissionSettled: (.settled)|I
+    buyerAppCommissionExpected: (.expected)|I
+    networkFeeSettled: Kernel.Prelude.fmap (.settled)|I
+    networkFeeExpected: (>>= (.expected))|I
+    gstAmountSettled: Kernel.Prelude.fmap (.settled)|I
+    gstAmountExpected: (>>= (.expected))|I

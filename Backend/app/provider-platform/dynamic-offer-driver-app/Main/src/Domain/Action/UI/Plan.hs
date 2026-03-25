@@ -1155,8 +1155,7 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
             forM_ vendorFees' $ \vf ->
               whenJust (subscriptionConfig.vendorMigrationMappings >>= find (\m -> m.oldVendorId == vf.vendorId)) $ \mapping ->
                 QVF.updateVendorId vf.driverFeeId mapping.oldVendorId mapping.newVendorId
-          finalInvoiceIdTuple <-
-            if hasMigrations && isJust mbInvoiceIdTuple
+          finalInvoiceIdTuple <- if hasMigrations && isJust mbInvoiceIdTuple
               then do
                 let (invoiceId, _) = fromJust mbInvoiceIdTuple
                 QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE invoiceId

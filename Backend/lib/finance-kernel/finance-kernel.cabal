@@ -40,6 +40,8 @@ library
       Lib.Finance.Invoice.Service
       Lib.Finance.Ledger.Interface
       Lib.Finance.Ledger.Service
+      Lib.Finance.Recon.Interface
+      Lib.Finance.Recon.Service
       Lib.Finance.StateMachine.Interface
       Lib.Finance.StateMachine.Service
       Lib.Finance.Storage.Queries.DirectTaxTransactionExtra
@@ -63,6 +65,7 @@ library
       Lib.Finance.Domain.Types.LedgerEntry
       Lib.Finance.Domain.Types.PgPaymentSettlementReport
       Lib.Finance.Domain.Types.PgPayoutSettlementReport
+      Lib.Finance.Domain.Types.PPFRecon
       Lib.Finance.Domain.Types.ReconciliationEntry
       Lib.Finance.Domain.Types.ReconciliationSummary
       Lib.Finance.Domain.Types.StateTransition
@@ -77,6 +80,7 @@ library
       Lib.Finance.Storage.Beam.LedgerEntry
       Lib.Finance.Storage.Beam.PgPaymentSettlementReport
       Lib.Finance.Storage.Beam.PgPayoutSettlementReport
+      Lib.Finance.Storage.Beam.PPFRecon
       Lib.Finance.Storage.Beam.ReconciliationEntry
       Lib.Finance.Storage.Beam.ReconciliationSummary
       Lib.Finance.Storage.Beam.StateTransition
@@ -91,8 +95,10 @@ library
       Lib.Finance.Storage.Queries.OrphanInstances.Invoice
       Lib.Finance.Storage.Queries.OrphanInstances.PgPaymentSettlementReport
       Lib.Finance.Storage.Queries.OrphanInstances.PgPayoutSettlementReport
+      Lib.Finance.Storage.Queries.OrphanInstances.PPFRecon
       Lib.Finance.Storage.Queries.PgPaymentSettlementReport
       Lib.Finance.Storage.Queries.PgPayoutSettlementReport
+      Lib.Finance.Storage.Queries.PPFRecon
       Lib.Finance.Storage.Queries.ReconciliationEntry
       Lib.Finance.Storage.Queries.ReconciliationSummary
       Lib.Finance.Storage.Queries.StateTransition

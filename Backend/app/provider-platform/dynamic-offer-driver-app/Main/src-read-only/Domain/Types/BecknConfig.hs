@@ -28,6 +28,7 @@ data BecknConfig = BecknConfig
     onTrackTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     onUpdateTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     paymentParamsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    ppfEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     registryUrl :: Servant.Client.Core.BaseUrl,
     settlementType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     settlementWindow :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

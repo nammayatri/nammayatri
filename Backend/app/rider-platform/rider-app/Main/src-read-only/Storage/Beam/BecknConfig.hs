@@ -24,6 +24,7 @@ data BecknConfigT f = BecknConfigT
     id :: B.C f Kernel.Prelude.Text,
     initTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     paymentParamsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    ppfEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     ratingTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     registryUrl :: B.C f Kernel.Prelude.Text,
     searchTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
