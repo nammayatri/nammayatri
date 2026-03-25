@@ -1539,3 +1539,61 @@ postFrfsFleetOperatorCurrentOperation (mbPersonId, merchantId) req = do
         current = fmap toTripInfo resp.current,
         upcoming = map toTripInfo resp.upcoming
       }
+
+postFrfsTripStopCrossed ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  FRFSTicketService.StopCrossedEventReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postFrfsTripStopCrossed _ req = do
+  logInfo $ "Stop crossed event received: waybillNo=" <> req.waybillNo <> ", tripNumber=" <> show req.tripNumber <> ", stopId=" <> req.stopId <> ", vehicleNumber=" <> req.vehicleNumber
+  let tripId = JMU.makeTripIdFromWaybillNoAndTripNo req.waybillNo req.tripNumber
+  processStopCrossedEvent tripId req.stopId
+  pure Kernel.Types.APISuccess.Success
+  where
+    findStopIdx :: [RouteStopMapping.RouteStopMapping] -> Text -> Maybe Int
+    findStopIdx mappings stopId = do
+      mapping <- find (\m -> m.stopCode == stopId) mappings
+      return mapping.sequenceNum
+
+    processStopCrossedEvent :: Text -> Text -> Environment.Flow ()
+    processStopCrossedEvent tripNumber stopId = do
+      bookings <- QFRFSTicketBooking.findAllConfirmedByTripId tripNumber
+      logInfo $ "Found " <> show (length bookings) <> " confirmed bookings for trip: " <> tripNumber
+      case bookings of
+        [] -> logInfo "No bookings found for this trip"
+        b : bookingList -> do
+          let routeCode = b.routeCode
+              merchantOpCityId = b.merchantOperatingCityId
+          mbBppConfig <- getBppConfig merchantOpCityId
+          forM_ mbBppConfig $ \bppConfig ->
+            handleRouteStopMappings stopId routeCode bppConfig (b : bookingList)
+
+    getBppConfig :: Id DMOC.MerchantOperatingCity -> Environment.Flow (Maybe DIBC.IntegratedBPPConfig)
+    getBppConfig merchantOpCityId = do
+      logInfo $ "Looking up BPP config for merchant operating city"
+      listToMaybe <$> SIBC.findAllIntegratedBPPConfig merchantOpCityId Enums.BUS DIBC.MULTIMODAL
+
+    handleRouteStopMappings :: Text -> Maybe Text -> DIBC.IntegratedBPPConfig -> [DFRFSTicketBooking.FRFSTicketBooking] -> Environment.Flow ()
+    handleRouteStopMappings _ Nothing _ _ = logInfo "No route code in booking"
+    handleRouteStopMappings stopId (Just routeCode) bppConfig bookings = do
+      routeStopMappings <- OTPRest.getRouteStopMappingByRouteCode routeCode bppConfig
+      logInfo $ "Found " <> show (length routeStopMappings) <> " route stops for route: " <> routeCode
+      let mbCrossedStopIdx = findStopIdx routeStopMappings stopId
+      forM_ mbCrossedStopIdx $ \csIdx -> do
+        logInfo $ "Crossed stop index: " <> show csIdx
+        notifyPassengersAtApproachingStop bookings csIdx
+
+    notifyPassengersAtApproachingStop :: [DFRFSTicketBooking.FRFSTicketBooking] -> Int -> Environment.Flow ()
+    notifyPassengersAtApproachingStop bookings crossedStopIdx = do
+      forM_ bookings $ \booking -> do
+        let passengerStopIdx = fromMaybe 0 booking.fromStopIdx
+        when (passengerStopIdx == crossedStopIdx + 2) $ do
+          mbJourneyId <- CQJourneyLeg.findJourneyIdByLegSearchId booking.searchId.getId
+          mbPerson <- QP.findById booking.riderId
+          forM_ mbPerson $ \person -> do
+            let routeName = fromMaybe "" booking.routeName
+                vehicleNo = fromMaybe "" booking.vehicleNumber
+            logInfo $ "Notifying passenger " <> person.id.getId <> " - bus approaching stop " <> show passengerStopIdx <> " for journeyId " <> show mbJourneyId
+            Notifications.notifyBusApproaching person vehicleNo routeName booking.tripId booking.fromStationName mbJourneyId

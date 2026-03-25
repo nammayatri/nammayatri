@@ -426,10 +426,20 @@ type API =
       :> Post
            '[JSON]
            API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationResp
+      :<|> TokenAuth
+      :> "frfs"
+      :> "trip"
+      :> "stopCrossed"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FRFSTicketService.StopCrossedEventReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = getFrfsConfig :<|> getFrfsAutocomplete :<|> getFrfsRoutes :<|> getFrfsStations :<|> postFrfsStationsPossibleStops :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> postFrfsBookingFeedback :<|> getFrfsTripRouteSeats :<|> getFrfsRouteSeatLayout :<|> postFrfsRouteServiceability :<|> getFrfsActiveRoutes :<|> getFrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation
+handler = getFrfsConfig :<|> getFrfsAutocomplete :<|> getFrfsRoutes :<|> getFrfsStations :<|> postFrfsStationsPossibleStops :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> postFrfsBookingFeedback :<|> getFrfsTripRouteSeats :<|> getFrfsRouteSeatLayout :<|> postFrfsRouteServiceability :<|> getFrfsActiveRoutes :<|> getFrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation :<|> postFrfsTripStopCrossed
 
 getFrfsConfig ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -717,3 +727,12 @@ postFrfsFleetOperatorCurrentOperation ::
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationResp
   )
 postFrfsFleetOperatorCurrentOperation a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsFleetOperatorCurrentOperation (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postFrfsTripStopCrossed ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.FRFSTicketService.StopCrossedEventReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postFrfsTripStopCrossed a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsTripStopCrossed (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

@@ -415,3 +415,15 @@ data SeatStatus
 data SeatWithStatus = SeatWithStatus {seat :: Domain.Types.Seat.Seat, status :: SeatStatus}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data StopCrossedEventReq = StopCrossedEventReq
+  { lat :: Kernel.Prelude.Double,
+    long :: Kernel.Prelude.Double,
+    stopId :: Data.Text.Text,
+    timestamp :: Kernel.Prelude.Int,
+    tripNumber :: Kernel.Prelude.Int,
+    vehicleNumber :: Data.Text.Text,
+    waybillNo :: Data.Text.Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

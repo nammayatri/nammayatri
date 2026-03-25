@@ -371,6 +371,16 @@ types:
     upcoming: "[OperatorTripInfo]"
     derive: "Show"
 
+  StopCrossedEventReq:
+    waybillNo: Text
+    tripNumber: Int
+    stopId: Text
+    lat: Double
+    long: Double
+    vehicleNumber: Text
+    timestamp: Int
+    derive: "Show"
+
 apis:
   # Get FRFS Config
   - GET:
@@ -675,3 +685,12 @@ apis:
         type: FleetOperatorCurrentOperationReq
       response:
         type: FleetOperatorCurrentOperationResp
+
+  # Stop Crossed Event - receives stop crossing events from location tracking service
+  - POST:
+      endpoint: /frfs/trip/stopCrossed
+      auth: TokenAuth
+      request:
+        type: StopCrossedEventReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
