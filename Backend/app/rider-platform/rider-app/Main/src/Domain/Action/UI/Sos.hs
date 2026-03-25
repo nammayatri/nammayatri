@@ -364,10 +364,7 @@ enableFollowRideInSos emergencyContacts = do
 createTicketForNewSos :: Person.Person -> DRide.Ride -> DRC.RiderConfig -> Id Merchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> SosReq -> Bool -> Flow (Id SafetyDSos.Sos, Maybe Text)
 createTicketForNewSos person ride riderConfig merchantId merchantOperatingCityId mbExternalReferenceId req shouldCreateKaptureTicket = do
   -- Check if SOS exists using shared-services cached query
-  cached <- SafetyCQSos.findByRideId (cast ride.id)
-  mbExistingSos <- case cached of
-    Just x -> pure (Just x)
-    Nothing -> SafetySos.findSosByRideId (cast ride.id)
+  mbExistingSos <- SafetyCQSos.findByRideId (cast ride.id)
 
   case mbExistingSos of
     Just existingSos -> do
