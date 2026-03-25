@@ -37,6 +37,7 @@ import qualified Domain.Types.RefundRequest as DRefundRequest
 import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
+import qualified Safety.Domain.Types.Sos as SSos
 import Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.RiderPreferredOption as DRPO
 import Domain.Types.SearchRequest as SearchRequest
@@ -131,6 +132,15 @@ buildTemplate paramVars template =
 
 buildTrackingUrl :: Id SRide.Ride -> [(Text, Text)] -> Text -> Text
 buildTrackingUrl rideId extraQueryParams trackingUrlPattern = (buildTemplate extraQueryParams trackingUrlPattern) <> rideId.getId
+
+buildSosTrackingUrl :: Id SSos.Sos -> Text -> Text
+buildSosTrackingUrl sosId trackingUrlPattern =
+  let patternWithSosId = T.replace "rideId=" "sosId=" trackingUrlPattern
+      urlWithVpReplaced =
+        if T.isInfixOf (templateText "vp") patternWithSosId
+          then buildTemplate [("vp", "sosTracking")] patternWithSosId
+          else T.replace "vp=shareRide" "vp=sosTracking" patternWithSosId
+   in urlWithVpReplaced <> sosId.getId
 
 notifyPerson ::
   ( ServiceFlow m r,
