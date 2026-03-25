@@ -515,7 +515,9 @@ postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId req = do
             vehicleCategory = req.vehicleCategory,
             vehicleDetails = Nothing,
             vehicleClass = Nothing,
-            isRCImageValidated = Nothing
+            isRCImageValidated = Nothing,
+            engineNumber = req.engineNumber,
+            chassisNumber = req.chassisNumber
           }
   void $ DomainRC.verifyRC False (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq False (Just personId)
   logTagInfo "dashboard -> Register RC For Fleet : " (show driver.id)
@@ -984,6 +986,8 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
               vehicleClass = Nothing,
               vehicleCategory = Just $ fromMaybe DVC.CAR vehicleCategory,
               udinNumber = Nothing,
+              engineNumber = Nothing,
+              chassisNumber = Nothing,
               ..
             },
           vehicleNumberHash,

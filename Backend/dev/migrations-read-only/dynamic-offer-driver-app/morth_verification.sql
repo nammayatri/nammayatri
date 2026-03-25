@@ -1,0 +1,20 @@
+CREATE TABLE atlas_driver_offer_bpp.morth_verification ();
+
+ALTER TABLE atlas_driver_offer_bpp.morth_verification ADD COLUMN doc_type text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.morth_verification ADD COLUMN document_number_encrypted text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.morth_verification ADD COLUMN document_number_hash text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.morth_verification ADD COLUMN driver_date_of_birth timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.morth_verification ADD COLUMN driver_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.morth_verification ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.morth_verification ADD COLUMN issue_date_on_doc timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.morth_verification ADD COLUMN message text ;
+ALTER TABLE atlas_driver_offer_bpp.morth_verification ADD COLUMN morth_response text ;
+ALTER TABLE atlas_driver_offer_bpp.morth_verification ADD COLUMN request_id text ;
+ALTER TABLE atlas_driver_offer_bpp.morth_verification ADD COLUMN status text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.morth_verification ADD COLUMN status_code integer ;
+ALTER TABLE atlas_driver_offer_bpp.morth_verification ADD COLUMN vehicle_category text ;
+ALTER TABLE atlas_driver_offer_bpp.morth_verification ADD COLUMN merchant_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.morth_verification ADD COLUMN merchant_operating_city_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.morth_verification ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.morth_verification ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.morth_verification ADD PRIMARY KEY ( id);
