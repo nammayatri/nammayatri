@@ -256,6 +256,8 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
             Just subscriptionPurchase -> do
               unless (status /= Payment.CHARGED) $ processSubscriptionPurchasePayment merchantId driver subscriptionPurchase
             Nothing -> do
+              when (order.entityName == Just DPayment.DRIVER_WALLET_TOPUP) $
+                processWalletTopupWebhook driver order status
               unless (status /= Payment.CHARGED) $ do
                 processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices
               QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
@@ -368,7 +370,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
             when (isJust mbVpa) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) mbVpa merchantOperatingCityId
           when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
             when (order.entityName == Just DPayment.DRIVER_WALLET_TOPUP) $
-              processWalletTopupWebhook driver order transactionStatus
+              processWalletTopupAndUpdateStatus driver order transactionStatus
             unless (transactionStatus /= Payment.CHARGED) $ do
               processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices
             notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName bankErrorCode True (serviceName, serviceConfig)
@@ -395,38 +397,8 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
     Payment.BadStatusResp -> pure ()
   pure Ack
   where
-    processWalletTopupWebhook ::
-      ( BeamFlow m r,
-        CacheFlow m r,
-        EsqDBFlow m r,
-        MonadFlow m
-      ) =>
-      DP.Person ->
-      DOrder.PaymentOrder ->
-      Payment.TransactionStatus ->
-      m ()
-    processWalletTopupWebhook driver order transactionStatus = do
-      when (transactionStatus == Payment.CHARGED) $ do
-        existing <- getEntriesByReference walletReferenceTopup (order.id.getId)
-        when (null existing) $ do
-          ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId)
-          let topupInvoiceConfig =
-                InvoiceConfig
-                  { invoiceType = FinanceInvoice.SubscriptionPurchase,
-                    issuedToType = "DRIVER",
-                    issuedToId = order.personId.getId,
-                    issuedToName = Nothing,
-                    issuedToAddress = Nothing,
-                    lineItems = [InvoiceLineItem {description = "Wallet Top-up", quantity = 1, unitPrice = order.amount, lineTotal = order.amount, isExternalCharge = False}],
-                    gstBreakdown = Nothing
-                  }
-          result <- runFinance ctx $ do
-            _ <- transfer PlatformAsset OwnerLiability order.amount walletReferenceTopup
-            invoice topupInvoiceConfig
-          void $ fromEitherM (\e -> WalletBalanceUpdateFailed ("wallet topup: " <> show e)) result
-          let notificationTitle = "Wallet Top-up Successful"
-              notificationMessage = "Your wallet has been topped up with Rs." <> show order.amount
-          sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY notificationTitle notificationMessage driver driver.deviceToken
+    processWalletTopupAndUpdateStatus driver order transactionStatus = do
+      processWalletTopupWebhook driver order transactionStatus
       QOrder.updateStatus order.id order.paymentServiceOrderId transactionStatus
 
     getInvoicesAndServiceWithServiceConfigByOrderId ::
@@ -443,6 +415,41 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
         CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName driver.merchantOperatingCityId Nothing serviceName'
           >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName')
       return (invoices', serviceName', serviceConfig, driver)
+
+processWalletTopupWebhook ::
+  ( BeamFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m
+  ) =>
+  DP.Person ->
+  DOrder.PaymentOrder ->
+  Payment.TransactionStatus ->
+  m ()
+processWalletTopupWebhook driver order transactionStatus = do
+  when (transactionStatus == Payment.CHARGED) $ do
+    let lockKey = "wallet:topup:lock:" <> order.id.getId
+    Redis.withLockRedis lockKey 60 $ do
+      existing <- getEntriesByReference walletReferenceTopup (order.id.getId)
+      when (null existing) $ do
+        ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId)
+        let topupInvoiceConfig =
+              InvoiceConfig
+                { invoiceType = FinanceInvoice.SubscriptionPurchase,
+                  issuedToType = "DRIVER",
+                  issuedToId = order.personId.getId,
+                  issuedToName = Nothing,
+                  issuedToAddress = Nothing,
+                  lineItems = [InvoiceLineItem {description = "Wallet Top-up", quantity = 1, unitPrice = order.amount, lineTotal = order.amount, isExternalCharge = False}],
+                  gstBreakdown = Nothing
+                }
+        result <- runFinance ctx $ do
+          _ <- transfer PlatformAsset OwnerLiability order.amount walletReferenceTopup
+          invoice topupInvoiceConfig
+        void $ fromEitherM (\e -> WalletBalanceUpdateFailed ("wallet topup: " <> show e)) result
+        let notificationTitle = "Wallet Top-up Successful"
+            notificationMessage = "Your wallet has been topped up with Rs." <> show order.amount
+        sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY notificationTitle notificationMessage driver driver.deviceToken
 
 ----------------------------------------------------------Juspay Webhook Handler For Payment Service Type----------------------------------------------------------
 
