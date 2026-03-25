@@ -148,7 +148,7 @@ findSosByPersonId ::
   m [DSos.Sos]
 findSosByPersonId personId = QSos.findByPersonId personId
 
--- | Find active SOS for a person (status is Pending or NotResolved).
+-- | Find active SOS for a person (status is Pending).
 -- Returns the most recent one by createdAt if multiple exist.
 findActiveSosByPersonId ::
   ( BeamFlow m r,
@@ -158,7 +158,7 @@ findActiveSosByPersonId ::
   Id Common.Person ->
   m (Maybe DSos.Sos)
 findActiveSosByPersonId personId = do
-  listToMaybe <$> QSos.findActiveByPersonId (Just 1) Nothing personId [DSos.Pending, DSos.NotResolved]
+  listToMaybe <$> QSos.findActiveByPersonId (Just 1) Nothing personId [DSos.Pending]
 
 findSosByRideId ::
   ( BeamFlow m r,
