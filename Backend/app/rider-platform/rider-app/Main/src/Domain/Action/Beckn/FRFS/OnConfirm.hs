@@ -196,7 +196,7 @@ onConfirm merchant booking' quoteCategories dOrder = do
   let booking = booking' {Booking.bppOrderId = Just dOrder.bppOrderId}
   let discountedTickets = fromMaybe 0 booking.discountedTickets
   -- Idempotency: use Redis lock to prevent duplicate ticket creation on concurrent BPP retries
-  tickets <- Redis.withLockRedis ("frfs:onconfirm:" <> booking.id.getId) 60 $ do
+  tickets <- Redis.withLockRedisAndReturnValue ("frfs:onconfirm:" <> booking.id.getId) 60 $ do
     existingTickets <- QTicket.findAllByTicketBookingId booking.id
     if not (null existingTickets)
       then do
