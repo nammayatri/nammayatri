@@ -1873,7 +1873,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
           logDebug $ "handleSingleVehicleRoute: no live data for vehicle=" <> vno <> " routeId=" <> routeId
           pure $ ApiTypes.RouteServiceabilityResp Nothing Nothing []
         Just singleBus -> do
-          mbServiceTier <- JLU.getVehicleServiceTypeFromInMem [ctx.integratedBPPConfig] vno
+          mbVehicleMetadata <- JMU.getVehicleMetadataFromInMem [ctx.integratedBPPConfig] vno
+          let mbServiceTier = mbVehicleMetadata <&> (\(_, metadata) -> metadata.serviceType)
           case mbServiceTier of
             Nothing -> do
               logError $ "handleSingleVehicleRoute: vehicle service type not found for vehicle=" <> vno
@@ -1884,8 +1885,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                   serviceTier
                   ctx.merchantOperatingCityId
                   ctx.integratedBPPConfig.id
-              mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [ctx.integratedBPPConfig] vno
-              mbVehicleTagNumber <- JMU.getVehicleTagNumberFromInMem [ctx.integratedBPPConfig] vno
+              let mbServiceSubTypes = mbVehicleMetadata >>= (\(_, metadata) -> metadata.serviceSubTypes)
+                  mbVehicleTagNumber = mbVehicleMetadata >>= (\(_, metadata) -> metadata.busTagNumber)
               enrichedEta <-
                 mapConcurrently
                   (JMRouteServiceability.enrichBusStopETA ctx.integratedBPPConfig)

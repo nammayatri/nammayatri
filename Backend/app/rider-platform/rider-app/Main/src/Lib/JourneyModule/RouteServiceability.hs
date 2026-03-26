@@ -86,13 +86,13 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
           ( \detail -> do
               let busLiveInfo = join $ lookup detail.vehicle_no busLiveInfoMap
               logDebug $ "getBusScheduleInfo: getBusLiveInfo vehicle=" <> detail.vehicle_no <> ", found=" <> show (isJust busLiveInfo) <> ", details=" <> show (fmap (\v -> (v.vehicle_number, v.latitude, v.longitude, v.timestamp, v.routes_info, v.bearing)) busLiveInfo)
-              mbServiceTier <- JMU.getVehicleServiceTypeFromInMem [integratedBPPConfig'] detail.vehicle_no
+              mbVehicleMetadata <- JMU.getVehicleMetadataFromInMem [integratedBPPConfig'] detail.vehicle_no
+              let mbServiceTier = mbVehicleMetadata <&> (\(_, metadata) -> metadata.serviceType)
               case mbServiceTier of
                 Just serviceTier -> do
                   let frfsServiceTier = lookup serviceTier frfsTierMap'
-                  -- Get service subtypes from in-memory cache
-                  mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [integratedBPPConfig'] detail.vehicle_no
-                  mbVehicleTagNumber <- JMU.getVehicleTagNumberFromInMem [integratedBPPConfig'] detail.vehicle_no
+                  let mbServiceSubTypes = mbVehicleMetadata >>= (\(_, metadata) -> metadata.serviceSubTypes)
+                      mbVehicleTagNumber = mbVehicleMetadata >>= (\(_, metadata) -> metadata.busTagNumber)
 
                   let combinedTripId = do
                         waybill <- detail.waybill_no
@@ -141,13 +141,13 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
         catMaybes
           <$> mapM
             ( \bus -> do
-                mbServiceTier <- JMU.getVehicleServiceTypeFromInMem [integratedBPPConfig'] bus.vehicleNumber
+                mbVehicleMetadata <- JMU.getVehicleMetadataFromInMem [integratedBPPConfig'] bus.vehicleNumber
+                let mbServiceTier = mbVehicleMetadata <&> (\(_, metadata) -> metadata.serviceType)
                 case mbServiceTier of
                   Just serviceTier -> do
                     let frfsServiceTier = lookup serviceTier frfsTierMap'
-                    -- Get service subtypes from in-memory cache
-                    mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [integratedBPPConfig'] bus.vehicleNumber
-                    mbVehicleTagNumber <- JMU.getVehicleTagNumberFromInMem [integratedBPPConfig'] bus.vehicleNumber
+                    let mbServiceSubTypes = mbVehicleMetadata >>= (\(_, metadata) -> metadata.serviceSubTypes)
+                        mbVehicleTagNumber = mbVehicleMetadata >>= (\(_, metadata) -> metadata.busTagNumber)
 
                     logDebug $ "getLiveVehicles: vehicle=" <> bus.vehicleNumber <> ", routeId=" <> bus.busData.route_id <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", position=(" <> show bus.busData.latitude <> "," <> show bus.busData.longitude <> ")" <> ", timestamp=" <> show bus.busData.timestamp <> ", eta=" <> show bus.busData.eta_data <> ", routeState=" <> show bus.busData.route_state <> ", routeNumber=" <> show bus.busData.route_number
                     enrichedEta <-
