@@ -704,7 +704,7 @@ cretateBookingResIfBookingAlreadyCreated :: PartnerOrganization -> DFTB.FRFSTick
 cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg = do
   merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show booking.merchantOperatingCityId)
   stations <- decodeFromText booking.stationsJson & fromMaybeM (InvalidStationJson (show booking.stationsJson))
-  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing booking.quoteId
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   let fareParameters = Utils.mkFareParameters (Utils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
   let routeStations = decodeFromText =<< booking.routeStationsJson
   let bookingRes =
@@ -748,7 +748,7 @@ cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg = do
 createNewBookingAndTriggerInit :: PartnerOrganization -> UpsertPersonAndQuoteConfirmReq -> DPOC.RegistrationConfig -> Flow UpsertPersonAndQuoteConfirmRes
 createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
   quote <- QQuote.findById req.quoteId >>= fromMaybeM (FRFSQuoteNotFound req.quoteId.getId)
-  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing req.quoteId
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId req.quoteId
   let selections =
         map
           ( \category ->

@@ -2204,7 +2204,7 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
         quotes <- maybe (pure []) (QFRFSQuote.findAllBySearchId . Id) journeyLeg.legSearchId
         mapM
           ( \quote -> do
-              quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing quote.id
+              quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
               return (quote, quoteCategories)
           )
           quotes

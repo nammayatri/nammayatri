@@ -341,12 +341,6 @@ FRFSQuoteCategory:
     findById:
       kvFunction: findOneWithKV
       where: id
-    findAllByQuoteId:
-      kvFunction: findAllWithOptionsKV
-      where: quoteId
-      orderBy:
-        field: categoryOrder
-        order: asc
     updateQuantityByQuoteCategoryId:
       kvFunction: updateWithKV
       params: [selectedQuantity, updatedAt]
@@ -359,6 +353,9 @@ FRFSQuoteCategory:
       kvFunction: updateWithKV
       params: [offeredPrice, updatedAt]
       where: quoteId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 FRFSTicketBooking:
   tableName: frfs_ticket_booking

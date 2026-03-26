@@ -125,7 +125,7 @@ onSearchHelper onSearchReq validatedReq integratedBPPConfig = do
       quotesCreatedByCacheWithQuoteCategories <-
         mapM
           ( \quote -> do
-              quoteCategories' <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing quote.id
+              quoteCategories' <- QFRFSQuoteCategory.findAllByQuoteId quote.id
               return (quote, quoteCategories')
           )
           quotesCreatedByCache
@@ -199,7 +199,7 @@ upsertFareCache onSearchReq validatedReq = do
       quotesCreatedByCacheWithQuoteCategories <-
         mapM
           ( \quote -> do
-              quoteCategories' <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing quote.id
+              quoteCategories' <- QFRFSQuoteCategory.findAllByQuoteId quote.id
               return (quote, quoteCategories')
           )
           quotesCreatedByCache
