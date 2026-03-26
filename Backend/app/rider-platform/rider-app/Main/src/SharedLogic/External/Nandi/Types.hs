@@ -770,6 +770,21 @@ instance FromJSON VehicleServiceTypeResponse where
     seatLayoutId <- v .:? "seatLayoutId"
     return VehicleServiceTypeResponse {..}
 
+data VehicleMetadataResponse = VehicleMetadataResponse
+  { serviceType :: BecknV2.FRFS.Enums.ServiceTierType,
+    serviceSubTypes :: Maybe [BecknV2.FRFS.Enums.ServiceSubType],
+    busTagNumber :: Maybe Text
+  }
+  deriving (Generic, ToJSON, ToSchema, Show)
+
+instance FromJSON VehicleMetadataResponse where
+  parseJSON = withObject "VehicleMetadataResponse" $ \v -> do
+    serviceType <- v .: "serviceType"
+    rawServiceSubTypes <- v .:? "serviceSubTypes" :: Parser (Maybe FilteredServiceSubTypes)
+    let serviceSubTypes = normalizeServiceSubTypes rawServiceSubTypes
+    busTagNumber <- v .:? "busTagNumber"
+    pure VehicleMetadataResponse {..}
+
 data BusScheduleTrip = BusScheduleTrip
   { schedule_number :: Maybe Text,
     route_id :: Text,

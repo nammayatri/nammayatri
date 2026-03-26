@@ -322,6 +322,7 @@ types:
 
   ScheduledVehicleInfo:
     vehicleNumber: Text
+    vehicleTagNumber: Maybe Text
     tripId: Maybe Text
     serviceTierType: ServiceTierType
     serviceTierName: Maybe Text
@@ -333,6 +334,7 @@ types:
 
   LiveVehicleInfo:
     number: Text
+    vehicleTagNumber: Maybe Text
     serviceTierType: ServiceTierType
     serviceTierName: Maybe Text
     locationUTCTimestamp: UTCTime
