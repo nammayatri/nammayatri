@@ -320,6 +320,7 @@ buildRideListItem QRide.RideItem {..} = do
     Common.RideListItem
       { rideId = cast @DRide.Ride @Common.Ride rideDetails.id,
         rideShortId = coerce @(ShortId DRide.Ride) @(ShortId Common.Ride) rideShortId,
+        displayBookingId = displayBookingId,
         customerName,
         customerPhoneNo,
         driverName = rideDetails.driverName,

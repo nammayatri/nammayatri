@@ -462,6 +462,7 @@ data RideItem = RideItem
     rideCreatedAt :: UTCTime,
     rideDetails :: RideDetails,
     riderDetails :: RiderDetails,
+    displayBookingId :: Maybe Text,
     customerName :: Maybe Text,
     fareDiff :: Maybe Price,
     fare :: Maybe Price,
@@ -706,7 +707,12 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
 
     mkRideItem :: (ShortId Ride, UTCTime, RideDetails.RideDetails, RiderDetails.RiderDetails, Booking.Booking, Maybe Price, Maybe Price, Maybe Price, Maybe DMPM.PaymentInstrument, Common.BookingStatus) -> RideItem
     mkRideItem (rideShortId, rideCreatedAt, rideDetails, riderDetails, booking, fareDiff, fare, estimatedFare, paymentInstrument, bookingStatus) =
-      RideItem {customerName = booking.riderName, tripCategory = booking.tripCategory, ..}
+      RideItem
+        { customerName = booking.riderName,
+          tripCategory = booking.tripCategory,
+          displayBookingId = booking.displayBookingId,
+          ..
+        }
 
     mkBookingStatusFilter :: [Ride.Ride] -> [Ride.Ride]
     mkBookingStatusFilter rides = case mbBookingStatus of
