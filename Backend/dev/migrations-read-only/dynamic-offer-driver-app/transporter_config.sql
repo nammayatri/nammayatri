@@ -785,15 +785,10 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_coins_to
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN tax_config json;
 
 
-
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_number_of_luggages integer ;
-
-
 ------- SQL updates -------
 
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN airport_entry_fee_enabled boolean ;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN tax_config text;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_number_of_luggages integer ;
 
 

@@ -24,8 +24,10 @@ import Domain.Action.UI.DriverWallet
   )
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ScheduledPayoutConfig as DSPC
 import qualified Domain.Types.TransporterConfig as DTConf
 import Kernel.External.Types (SchedulerFlow)
@@ -46,8 +48,6 @@ import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Domain.Types.FleetOwnerInformation as DFOI
-import qualified Domain.Types.Person as DP
 import qualified Storage.Queries.DriverInformationExtra as QDIE
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
 import qualified Storage.Queries.Person as QPerson
@@ -162,7 +162,11 @@ processWalletPayouts config jobData = do
         Redis.setExp driverCursorKey lastDriverId 86400
         for_ eligibleDriverInfos $ \driverInfo -> do
           fork ("ScheduledWalletPayout:Driver:" <> driverInfo.driverId.getId) $ do
-            processOneWalletPayout config transporterConfig merchantId merchantOpCityId
+            processOneWalletPayout
+              config
+              transporterConfig
+              merchantId
+              merchantOpCityId
               driverInfo.driverId driverInfo.payoutVpa (driverInfo.payoutVpaStatus == Just DI.MANUALLY_ADDED)
 
       -- Process fleet owners
@@ -173,7 +177,11 @@ processWalletPayouts config jobData = do
         Redis.setExp fleetCursorKey lastFleetId 86400
         for_ eligibleFleetInfos $ \fleetInfo -> do
           fork ("ScheduledWalletPayout:Fleet:" <> fleetInfo.fleetOwnerPersonId.getId) $ do
-            processOneWalletPayout config transporterConfig merchantId merchantOpCityId
+            processOneWalletPayout
+              config
+              transporterConfig
+              merchantId
+              merchantOpCityId
               fleetInfo.fleetOwnerPersonId fleetInfo.payoutVpa (fleetInfo.payoutVpaStatus == Just DFOI.MANUALLY_ADDED)
 
       if null eligibleDriverInfos && null eligibleFleetInfos

@@ -353,9 +353,7 @@ let jobInfoMapx =
         }
       , { mapKey = AllocatorJobType.Reconciliation, mapValue = True }
       , { mapKey = AllocatorJobType.ScheduledBatchPayout, mapValue = True }
-      , { mapKey = AllocatorJobType.SettlementReportIngestion
-        , mapValue = True
-        }
+      , { mapKey = AllocatorJobType.SettlementReportIngestion, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig =
@@ -399,7 +397,7 @@ let modelNamesMap =
 
 let tsServiceConfig = { url = "http://0.0.0.0:3001/" }
 
-let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
+let inMemConfig = { enableInMem = False, maxInMemSize = +100000000 }
 
 let driverFleetLocationListAPIRateLimitOptions =
       { limit = +5, limitResetTimeInSec = +30 }

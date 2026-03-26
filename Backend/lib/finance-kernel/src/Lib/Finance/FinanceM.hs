@@ -42,6 +42,7 @@ module Lib.Finance.FinanceM
     account,
     transfer,
     transfer_,
+    transferPending,
     transferAllowZero,
     getEntryIds,
     liftFinance,
@@ -82,7 +83,7 @@ import Lib.Finance.Error.Types (FinanceError (..))
 import Lib.Finance.Invoice.Interface (DirectTaxInput (..), GstAmountBreakdown, IndirectTaxInput (..), InvoiceInput (..), InvoiceLineItem)
 import Lib.Finance.Invoice.Service (createDirectTaxEntry, createIndirectTaxEntry, createInvoice)
 import Lib.Finance.Ledger.Interface (LedgerEntryInput (..))
-import Lib.Finance.Ledger.Service (createEntryWithBalanceUpdate)
+import Lib.Finance.Ledger.Service (createEntry, createEntryWithBalanceUpdate)
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 
 -- | The financial context for a transaction.
@@ -480,6 +481,43 @@ transfer_ fromRole toRole amount refType = do
             }
     _ <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
     pure ()
+
+-- | Like 'transfer' but creates entries with PENDING status and does NOT update
+--   account balances.  Use this for entries that will be settled later
+--   (e.g. rider payment obligations before payment capture).
+--   Automatically collects the entry ID.
+transferPending ::
+  (BeamFlow.BeamFlow m r) =>
+  AccountRole ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text -> -- Reference type
+  FinanceM m (Maybe (Id LE.LedgerEntry))
+transferPending fromRole toRole amount refType = do
+  if amount <= 0
+    then pure Nothing
+    else do
+      ctx <- ask
+      fromAcc <- account fromRole
+      toAcc <- account toRole
+      let entryInput =
+            LedgerEntryInput
+              { fromAccountId = fromAcc.id,
+                toAccountId = toAcc.id,
+                amount = amount,
+                currency = ctx.currency,
+                entryType = LE.Expense,
+                status = LE.PENDING,
+                referenceType = refType,
+                referenceId = ctx.referenceId,
+                metadata = Nothing,
+                merchantId = ctx.merchantId,
+                merchantOperatingCityId = ctx.merchantOpCityId,
+                settlementStatus = Nothing
+              }
+      result <- liftFinanceM (createEntry entryInput)
+      collectEntryId result.id
+      pure (Just result.id)
 
 -- | Like 'transfer' but allows zero-amount entries (e.g. placeholder TDS entries).
 --   Skips only for negative amounts.  Automatically collects the entry ID.

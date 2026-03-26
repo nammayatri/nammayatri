@@ -118,7 +118,7 @@ let cacConfig =
 
 let sendEmailRateLimitOptions = { limit = +3, limitResetTimeInSec = +600 }
 
-let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
+let inMemConfig = { enableInMem = False, maxInMemSize = +100000000 }
 
 in  { esqDBCfg
     , esqDBReplicaCfg

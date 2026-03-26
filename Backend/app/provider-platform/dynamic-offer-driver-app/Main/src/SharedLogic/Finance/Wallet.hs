@@ -27,6 +27,7 @@ module SharedLogic.Finance.Wallet
     computeGstBreakdownByPlace,
     financeCtxFromRide,
     buildFinanceCtx,
+    walletReferenceCommission,
     walletReferenceD2DReferral,
     walletReferenceAirportCashRecharge,
     walletReferenceAirportEntryFeeGST,
@@ -103,6 +104,9 @@ walletReferenceCustomerCancellationGST = "CustomerCancellationGST"
 walletReferenceTDSDeductionCancellation :: Text
 walletReferenceTDSDeductionCancellation = "TDSDeductionCancellation"
 
+walletReferenceCommission :: Text
+walletReferenceCommission = "Commission"
+
 walletReferenceD2DReferral :: Text
 walletReferenceD2DReferral = "D2DReferral"
 
@@ -141,6 +145,7 @@ walletCreditRefs =
     walletReferenceCustomerCancellationCharges,
     walletReferenceDriverCancellationCharges,
     walletReferenceCustomerCancellationGST,
+    walletReferenceCommission,
     walletReferenceWalletIncentive
   ]
 

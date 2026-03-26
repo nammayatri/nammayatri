@@ -88,7 +88,7 @@ let serviceClickhouseCfg =
 
 let dashboardClickhouseCfg = serviceClickhouseCfg
 
-let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
+let inMemConfig = { enableInMem = False, maxInMemSize = +100000000 }
 
 let consumerProperties =
       { groupId = "fleet-communication-dispatch"

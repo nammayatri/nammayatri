@@ -168,7 +168,6 @@ findFCMConfigWithFallback merchantOpCityId personId = do
 --     ]
 --     Nothing
 
-
 dynamicFCMNotifyPerson ::
   ( CacheFlow m r,
     EsqDBFlow m r,

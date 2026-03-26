@@ -96,7 +96,7 @@ let kafkaProducerCfg =
 
 let secondaryKafkaProducerCfg = Some kafkaProducerCfg
 
-let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
+let inMemConfig = { enableInMem = False, maxInMemSize = +100000000 }
 
 in  { esqDBCfg
     , esqDBReplicaCfg

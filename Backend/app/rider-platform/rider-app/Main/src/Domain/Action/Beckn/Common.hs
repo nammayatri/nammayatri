@@ -45,7 +45,6 @@ import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.PaymentInvoice as DPI
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.PersonStats as DPS
@@ -92,12 +91,12 @@ import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified SharedLogic.BehaviourManagement.CustomerCancellationRate as CCR
 import SharedLogic.Booking
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import qualified SharedLogic.Insurance as SI
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Payment as SPayment
-import qualified SharedLogic.PaymentInvoice as SPInvoice
 import qualified SharedLogic.ScheduledNotifications as SN
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.BppDetails as CQBPP
@@ -123,7 +122,6 @@ import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJL
-import qualified Storage.Queries.PaymentInvoiceExtra as QPaymentInvoiceExtra
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonStats as QPersonStats
 import qualified Storage.Queries.RecentLocation as SQRL
@@ -481,7 +479,7 @@ rideAssignedReqHandler req = do
       ride <- buildRide req' mbMerchant now rideStatus
       let applicationFeeAmount = fromMaybe 0 booking.commission
       -- Create payment intent for online payments, capture orderId for invoice creation
-      mbPaymentIntentResp <- case req'.onlinePaymentParameters of
+      _mbPaymentIntentResp <- case req'.onlinePaymentParameters of
         Just OnlinePaymentParameters {..} -> do
           let createPaymentIntentServiceReq =
                 DPayment.CreatePaymentIntentServiceReq
@@ -493,21 +491,23 @@ rideAssignedReqHandler req = do
                     receiptEmail = email,
                     driverAccountId
                   }
-          -- Lookup existing invoice to get order ID for retry handling
-          mbExistingInvoice <- QPaymentInvoiceExtra.findByRideIdAndTypeAndPurpose ride.id DPI.PAYMENT DPI.RIDE
-          let mbExistingOrderId = mbExistingInvoice >>= (.paymentOrderId)
+          -- Lookup existing order for retry handling via Redis-stored ledger entry IDs
+          mbExistingOrderId <- SPayment.getOrderIdForRide ride.id
+          let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId merchantOperatingCityId.getId booking.estimatedFare.currency booking.riderId.getId ride.id.getId Nothing Nothing
+              ledgerInfo =
+                Just $
+                  SPayment.RidePaymentLedgerInfo
+                    { rideFare = booking.estimatedFare.amount - applicationFeeAmount,
+                      gstAmount = 0, -- TODO: extract GST from fare breakup
+                      platformFee = applicationFeeAmount,
+                      financeCtx = ledgerCtx
+                    }
           -- Wrap makePaymentIntent in retry, capture result for orderId
           handle (\e -> SPayment.paymentErrorHandler booking e >> pure Nothing) $
             withShortRetry $
-              Just <$> SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode booking.riderId mbExistingOrderId createPaymentIntentServiceReq
+              Just <$> SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode booking.riderId (Just ride.id) mbExistingOrderId createPaymentIntentServiceReq ledgerInfo
         Nothing -> pure Nothing
-      -- Create PaymentInvoice after handle block (unified for online and cash payments)
-      -- This is outside the retry block to prevent duplicate invoices
-      merchant <- fromMaybeM (MerchantNotFound booking.merchantId.getId) mbMerchant
-      let mbTipAmount = ride.tipAmount <&> (.amount)
-      -- For online payments, use orderId from makePaymentIntent response
-      let mbPaymentOrderInfo = mbPaymentIntentResp <&> \resp -> (resp.orderId, booking.estimatedFare.amount, booking.estimatedFare.currency)
-      SPInvoice.createPaymentInvoiceAfterOrder merchant.shortId ride.id booking mbPaymentOrderInfo mbTipAmount now
+      -- Ledger entries are now created inside makePaymentIntent when RidePaymentLedgerInfo is provided
       triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
       let category = case booking.specialLocationTag of
             Just _ -> "specialLocation"
@@ -779,15 +779,18 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
               receiptEmail = email,
               driverAccountId
             }
-    -- Lookup existing invoice to get order ID for retry handling
-    mbExistingInvoice <- QPaymentInvoiceExtra.findByRideIdAndTypeAndPurpose ride.id DPI.PAYMENT DPI.RIDE
-    let mbExistingOrderId = mbExistingInvoice >>= (.paymentOrderId)
-    handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id mbExistingOrderId createPaymentIntentServiceReq)
-    -- Update invoice amount if fare changed (e.g., fare recalculation after toll, etc.)
-    whenJust mbExistingInvoice $ \existingInvoice -> do
-      when (existingInvoice.amount /= totalFare.amount) $ do
-        logInfo $ "Updating invoice amount from " <> show existingInvoice.amount <> " to " <> show totalFare.amount <> " for invoice: " <> existingInvoice.id.getId
-        QPaymentInvoiceExtra.updateAmount existingInvoice.id totalFare.amount
+    -- Lookup existing order for retry handling via Redis ledger entry IDs
+    mbExistingOrderId <- SPayment.getOrderIdForRide ride.id
+    let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency person.id.getId ride.id.getId Nothing Nothing
+        ledgerInfo =
+          Just $
+            SPayment.RidePaymentLedgerInfo
+              { rideFare = totalFare.amount - applicationFeeAmount,
+                gstAmount = 0, -- TODO: extract GST from fare breakup
+                platformFee = applicationFeeAmount,
+                financeCtx = ledgerCtx
+              }
+    handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just ride.id) mbExistingOrderId createPaymentIntentServiceReq ledgerInfo)
     logDebug $ "Scheduling execute payment intent job for order: " <> show scheduleAfter
     createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)
 
@@ -1038,16 +1041,14 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
           when ride.onlinePayment $ do
             logInfo $ "Cancel payment intent due to rider configs: rideId: " <> ride.id.getId
             void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
-            -- Update payment invoice status to CANCELLED
-            QPaymentInvoiceExtra.updatePaymentStatusByRideIdAndTypeAndPurpose ride.id DPI.PAYMENT DPI.RIDE DPI.CANCELLED
+        -- Ledger entries are voided inside cancelPaymentIntent
         _ -> pure ()
     when (isNothing cancellationFee) $
       whenJust mbRide $ \ride -> do
         when ride.onlinePayment $ do
           logInfo $ "Cancel payment intent as no cancellation fees found: rideId: " <> ride.id.getId
           void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
-          -- Update payment invoice status to CANCELLED
-          QPaymentInvoiceExtra.updatePaymentStatusByRideIdAndTypeAndPurpose ride.id DPI.PAYMENT DPI.RIDE DPI.CANCELLED
+  -- Ledger entries are voided inside cancelPaymentIntent
 
   unless (cancellationSource == DBCR.ByUser) $
     QBCR.upsert bookingCancellationReason

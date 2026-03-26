@@ -93,6 +93,7 @@ findAllByMerchantOpCityIdWithFilters merchantId merchantOpCityId mbFrom mbTo mbS
     (Se.Desc Beam.createdAt)
     mbLimit
     mbOffset
+
 findByOrderIdAndTxnType ::
   (BeamFlow m r) =>
   Text ->

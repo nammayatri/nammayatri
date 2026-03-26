@@ -475,6 +475,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       gstAmount = fromMaybe 0 fareParams.govtCharges
       tollAmount = fromMaybe 0 fareParams.tollCharges
       parkingAmount = fromMaybe 0 fareParams.parkingCharge
+      commissionAmount = fromMaybe 0 (ride.commission <|> booking.commission)
       baseFare = totalFare - gstAmount - tollAmount - parkingAmount
 
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
@@ -546,6 +547,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                       else Nothing,
                     if parkingAmount > 0
                       then Just InvoiceLineItem {description = "Parking Charges", quantity = 1, unitPrice = parkingAmount, lineTotal = parkingAmount, isExternalCharge = True}
+                      else Nothing,
+                    if commissionAmount > 0
+                      then Just InvoiceLineItem {description = "Platform Commission", quantity = 1, unitPrice = commissionAmount, lineTotal = commissionAmount, isExternalCharge = False}
                       else Nothing
                   ],
               gstBreakdown =
@@ -578,6 +582,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
           _ <- transfer OwnerLiability GovtIndirect gstAmount walletReferenceGSTCash
           whenJust mbTdsAmount $ \tdsAmount ->
             void $ transfer OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCash
+      -- Commission: Liability(DRIVER) -> Revenue(SELLER)
+      when (commissionAmount > 0) $
+        void $ transfer OwnerLiability SellerRevenue commissionAmount walletReferenceCommission
       -- Invoice is created inside FinanceM using auto-collected entry IDs
       invoice invoiceConfig
     case result of

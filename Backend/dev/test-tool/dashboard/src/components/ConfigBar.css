@@ -1,0 +1,107 @@
+.config-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+}
+.config-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.config-field {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 140px;
+}
+.config-field label {
+  font-size: 10px;
+  color: #8b949e;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.config-field input, .config-field select {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: inherit;
+  width: 100%;
+}
+.config-field input:focus, .config-field select:focus {
+  outline: 1px solid #58a6ff;
+  border-color: #58a6ff;
+}
+.config-field select:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.config-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.btn-run {
+  background: #238636; color: white; border: none; padding: 6px 18px;
+  border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px;
+}
+.btn-run:hover { background: #2ea043; }
+.btn-run:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-stop {
+  background: #da3633; color: white; border: none; padding: 6px 14px;
+  border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px;
+}
+.btn-stop:hover { background: #f85149; }
+.btn-stop:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.ctx-badge {
+  font-size: 9px; background: #238636; color: white; padding: 1px 5px;
+  border-radius: 3px; margin-left: 4px; vertical-align: middle;
+}
+.ctx-badge-warn {
+  font-size: 9px; background: #d29922; color: #0d1117; padding: 1px 5px;
+  border-radius: 3px; margin-left: 4px; vertical-align: middle;
+}
+
+.context-info {
+  padding-top: 6px;
+  border-top: 1px solid #21262d;
+}
+.ctx-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ctx-label {
+  font-size: 10px;
+  color: #8b949e;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.ctx-chip {
+  font-size: 10px;
+  background: #21262d;
+  color: #c9d1d9;
+  padding: 2px 8px;
+  border-radius: 10px;
+  cursor: default;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.chip-detail {
+  font-size: 9px;
+  color: #8b949e;
+  background: #30363d;
+  padding: 0 4px;
+  border-radius: 3px;
+}

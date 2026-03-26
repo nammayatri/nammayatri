@@ -786,7 +786,7 @@ DriverIntelligentPoolConfig:
     numRidesWeightage: int
     maxNumRides: int
     cancellationAndRideFrequencyRatioWindowOption: json
-    tax_config: json
+    taxConfig: json
 
   default:
     speedNormalizer: "28"
