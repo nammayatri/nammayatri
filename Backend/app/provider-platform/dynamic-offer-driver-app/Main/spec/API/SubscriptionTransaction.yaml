@@ -23,6 +23,7 @@ types:
     finalBalance: HighPrecMoney
     rideEarning: HighPrecMoney
     planPurchased: HighPrecMoney
+    expiryDeduction: HighPrecMoney
     entities: "[SubscriptionTransactionEntity]"
 apis:
   - GET:
