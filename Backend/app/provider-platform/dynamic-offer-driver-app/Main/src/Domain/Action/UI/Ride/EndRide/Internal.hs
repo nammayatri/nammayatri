@@ -499,7 +499,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
     let driverOrFleetPersonId = fromMaybe ride.driverId ride.fleetOwnerId
 
     let configTdsRate = transporterConfig.taxConfig.defaultTdsRate
-    mbTdsRate <- case ride.fleetOwnerId of
+    mbCustomTdsRate <- case ride.fleetOwnerId of
       Just fleetOwnerId -> do
         mbFleetInfo <- QFOI.findByPrimaryKey (cast fleetOwnerId)
         let currentRate = mbFleetInfo >>= (.tdsRate)
@@ -507,21 +507,25 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
           when (isNothing currentRate) $
             whenJust configTdsRate $ \rate ->
               QFOI.updateTdsRate (Just rate) (cast fleetOwnerId)
-        pure (currentRate <|> configTdsRate)
+        pure currentRate
       Nothing -> do
         let currentRate = driverInfo.tdsRate
         when (isNothing currentRate) $
           whenJust configTdsRate $ \rate ->
             QDI.updateTdsRate (Just rate) ride.driverId
-        pure (currentRate <|> configTdsRate)
+        pure currentRate
 
+    shouldApplyTdsToRide <- shouldApplyTds (isNothing ride.fleetOwnerId) (cast ride.driverId) transporterConfig
     mbPanCard <- QPanCard.findByDriverId driverOrFleetPersonId
-    let effectiveTdsRate = computeEffectiveTdsRate mbPanCard mbTdsRate (transporterConfig.taxConfig.defaultTdsRate) (transporterConfig.taxConfig.invalidPanTdsRate)
-        baseFareForTds = max 0 baseFare
-        mbTdsAmount = do
-          rate <- effectiveTdsRate
-          let amount = baseFareForTds * realToFrac rate -- tdsRate is already decimal (0.01 = 1%)
-          if amount > 0 then Just amount else Nothing
+    let baseFareForTds = max 0 baseFare
+        mbTdsAmount =
+          if shouldApplyTdsToRide
+            then do
+              let effectiveTdsRate = computeEffectiveTdsRate mbPanCard mbCustomTdsRate (transporterConfig.taxConfig.defaultTdsRate) (transporterConfig.taxConfig.invalidPanTdsRate)
+              rate <- effectiveTdsRate
+              let amount = baseFareForTds * realToFrac rate -- tdsRate is already decimal (0.01 = 1%)
+              if amount > 0 then Just amount else Nothing
+            else Nothing
 
     ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig
     let invoiceConfig =

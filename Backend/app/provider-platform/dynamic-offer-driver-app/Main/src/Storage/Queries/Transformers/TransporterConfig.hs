@@ -79,7 +79,8 @@ parseTaxConfig merchantOperatingCityId mbVal = do
             securityDepositGst = Nothing,
             defaultTdsRate = Nothing,
             subscriptionTdsRate = Nothing,
-            invalidPanTdsRate = 0
+            invalidPanTdsRate = 0,
+            independentDriverTdsDeductionThreshold = Nothing
           }
   parseFieldWithDefaultM "transporterConfig" "taxConfig" merchantOperatingCityId def parseTaxConfigWithDefault mbVal
 

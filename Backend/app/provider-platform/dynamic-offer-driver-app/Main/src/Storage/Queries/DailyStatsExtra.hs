@@ -91,6 +91,7 @@ deleteAllByDriverId ::
 deleteAllByDriverId driverId = do
   deleteWithKV [Se.Is Beam.driverId $ Se.Eq (getId driverId)]
 
+
 -- | Update only d2d (driver-to-driver) referral fields for payout. Customer referral uses updateReferralStatsByDriverId.
 updateD2dReferralStatsByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

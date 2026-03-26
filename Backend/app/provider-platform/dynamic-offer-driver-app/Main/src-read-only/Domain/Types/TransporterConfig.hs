@@ -419,6 +419,7 @@ data SubscriptionConfig = SubscriptionConfig
 data TaxConfig = TaxConfig
   { airportEntryFeeGst :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.GstBreakup,
     defaultTdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    independentDriverTdsDeductionThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     invalidPanTdsRate :: Kernel.Prelude.Double,
     rideGst :: Domain.Types.TransporterConfig.GstBreakup,
     securityDepositGst :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.GstBreakup,
