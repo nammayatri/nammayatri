@@ -64,7 +64,7 @@ onSelect _ reqBS = withFlowHandlerAPI $ do
               Just booking -> do
                 quoteCategories <- QQuoteCategory.findAllByQuoteId Nothing Nothing quote.id
                 merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (InternalError "MerchantOperatingCity not found")
-                bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (Utils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)}) >>= fromMaybeM (InternalError "Beckn Config not found")
+                bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (Utils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)}) >>= fromMaybeM (InternalError "Beckn Config not found")
                 rider <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
                 let mRiderName = rider.firstName <&> (\fName -> rider.lastName & maybe fName (\lName -> fName <> " " <> lName))
                 mRiderNumber <- mapM decrypt rider.mobileNumber

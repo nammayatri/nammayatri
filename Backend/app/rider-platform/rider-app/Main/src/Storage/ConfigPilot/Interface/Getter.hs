@@ -27,7 +27,6 @@ import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType)
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.CachedQueries.Person as QPerson
 import Storage.ConfigPilot.Interface.Types (ConfigDimensions (..))
 import Tools.Error
 
@@ -55,22 +54,13 @@ getConfigImpl ::
   m b
 getConfigImpl _dimensions wrappedConfig logicDomain merchantOpCityId = do
   mTxnId <- L.getOptionLocal TxnIdKey
-  mPersonId <- L.getOptionLocal PersonIdKey
-  personTags <- case mPersonId of
-    Just pid -> do
-      mbCityInfo <- QPerson.findCityInfoById (Id pid)
-      let tags = fromMaybe [] $ mbCityInfo >>= (.customerNammaTags)
-      pure $ map (.getTagNameValueExpiry) tags
-    Nothing -> pure []
-  let extraDims = A.object ["personTags" .= personTags]
-      wrappedConfigWithDims = wrappedConfig {LYT.extraDimensions = Just extraDims}
   activeElementVersions <-
     case mTxnId of
       Just txnId -> getTxnIdStickyVersions txnId
       Nothing -> getActiveRolloutVersionsWithToss
   allActiveElements <- CADLE.findByDomainAndVersions Nothing Nothing logicDomain activeElementVersions
   let baseLogics = map (.logic) allActiveElements
-  resp <- LYTU.runLogics baseLogics wrappedConfigWithDims
+  resp <- LYTU.runLogics baseLogics wrappedConfig
   case A.fromJSON resp.result of
     A.Success (cfg :: LYT.Config b) -> pure cfg.config
     A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to the config. " <> show e

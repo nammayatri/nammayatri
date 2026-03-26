@@ -108,7 +108,7 @@ runWithServiceConfig ::
 runWithServiceConfig func merchantId merchantOperatingCityId req = do
   let serviceName = DMSC.JuspayWalletService Payment.Juspay
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, serviceName = Just serviceName})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just serviceName})
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "JuspayWallet" (show Payment.Juspay))
   case merchantServiceConfig.serviceConfig of
     DMSC.JuspayWalletServiceConfig paymentCfg -> func paymentCfg req

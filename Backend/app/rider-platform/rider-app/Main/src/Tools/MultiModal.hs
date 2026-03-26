@@ -34,7 +34,7 @@ getMultiModalConfig merchantId merchantOperatingCityId = do
     getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, serviceName = Just (DMSC.MultiModalService merchantServiceUsageConfig.getMultiModalService)})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MultiModalService merchantServiceUsageConfig.getMultiModalService)})
       >>= fromMaybeM (InternalError $ "No MultiModal service provider configured for the merchant, merchantId:" <> merchantId.getId)
 
   case merchantServiceConfig.serviceConfig of
@@ -45,8 +45,8 @@ getTransitServiceReq :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOpe
 getTransitServiceReq = getMultiModalConfig
 
 getOTPRestServiceReq :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m BaseUrl
-getOTPRestServiceReq _merchantId merchantOperatingCityId = do
-  transitServiceReq <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, serviceName = Just (DMSC.MultiModalStaticDataService MultiModal.OTPTransit)}) >>= fromMaybeM (InternalError "No OTP Transit Service Config Found")
+getOTPRestServiceReq merchantId merchantOperatingCityId = do
+  transitServiceReq <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MultiModalStaticDataService MultiModal.OTPTransit)}) >>= fromMaybeM (InternalError "No OTP Transit Service Config Found")
   transitServiceReq' <- case transitServiceReq.serviceConfig of
     DMSC.MultiModalStaticDataServiceConfig multiModalServiceConfig -> return multiModalServiceConfig
     cfg -> throwError $ InternalError $ "Unknown Service Config in otprestservicereq" <> show cfg

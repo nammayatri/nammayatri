@@ -47,7 +47,7 @@ sendSMS merchantId merchantOperatingCityId = Sms.sendSMS handler
 
     getProviderConfig provider = do
       merchantSmsServiceConfig <-
-        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, serviceName = Just (DMSC.SmsService provider)})
+        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.SmsService provider)})
           >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
       case merchantSmsServiceConfig.serviceConfig of
         DMSC.SmsServiceConfig msc -> pure msc

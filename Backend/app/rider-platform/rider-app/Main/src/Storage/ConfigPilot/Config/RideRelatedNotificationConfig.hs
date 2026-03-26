@@ -32,10 +32,9 @@ instance ConfigDimensions RideRelatedNotificationConfigDimensions where
   getConfigType _ = RideRelatedNotificationConfig
   getConfigList a = do
     let mocId = a.merchantOperatingCityId
-    IM.withInMemCache (configPilotInMemKey RideRelatedNotificationConfig mocId) 3600 $ do
-      cfgs <- SCRRN.findAllByMerchantOperatingCityId (Id mocId) (Just [])
-      let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) cfgs
-      mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG RideRelatedNotificationConfig) (Id mocId)) configWrappers
+    cfgs <- IM.withInMemCache (configPilotInMemKey RideRelatedNotificationConfig mocId) 3600 $ SCRRN.findAllByMerchantOperatingCityId (Id mocId) (Just [])
+    let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) cfgs
+    mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG RideRelatedNotificationConfig) (Id mocId)) configWrappers
   filterByDimensions dims cfgs = filter matchesDims cfgs
     where
       matchesDims c =

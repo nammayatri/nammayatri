@@ -33,10 +33,9 @@ instance ConfigDimensions ExophoneDimensions where
   getConfigType _ = Exophone
   getConfigList a = do
     let mocId = a.merchantOperatingCityId
-    IM.withInMemCache (configPilotInMemKey Exophone mocId) 3600 $ do
-      cfgs <- CQExo.findAllByMerchantOperatingCityId (Id mocId)
-      let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) cfgs
-      mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG Exophone) (Id mocId)) configWrappers
+    cfgs <- IM.withInMemCache (configPilotInMemKey Exophone mocId) 3600 $ CQExo.findAllByMerchantOperatingCityId (Id mocId)
+    let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) cfgs
+    mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG Exophone) (Id mocId)) configWrappers
   filterByDimensions dims cfgs = filter matchesDims cfgs
     where
       matchesDims c =

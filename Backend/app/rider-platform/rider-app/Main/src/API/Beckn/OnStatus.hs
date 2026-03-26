@@ -20,6 +20,7 @@ import qualified Beckn.Types.Core.Taxi.API.OnStatus as OnStatus
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Domain.Action.Beckn.OnStatus as DOnStatus
 import Environment
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Logging
@@ -28,6 +29,7 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import Storage.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import qualified Storage.Queries.Booking as QRB
 import TransactionLogs.PushLogs
 
@@ -43,6 +45,7 @@ onStatus ::
 onStatus _ reqV2 = withFlowHandlerBecknAPI $
   withDynamicLogLevel "rider-onstatus-api" $ do
     transactionId <- Utils.getTransactionId reqV2.onStatusReqContext
+    L.setOptionLocal TxnIdKey transactionId
     Utils.withTransactionIdLogTag transactionId $ do
       logDebug $ "RIDER_ONSTATUS_API_DEBUG: Received on_status request for transactionId: " <> transactionId
       logTagError "onStatusAPIV2" $ "Received onStatus API call:-" <> show reqV2

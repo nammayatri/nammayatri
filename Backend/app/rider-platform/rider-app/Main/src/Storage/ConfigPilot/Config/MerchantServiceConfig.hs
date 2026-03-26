@@ -5,21 +5,33 @@ module Storage.ConfigPilot.Config.MerchantServiceConfig
   )
 where
 
+import Domain.Types.Common (UsageSafety (..))
+import Domain.Types.Extra.MerchantServiceConfig ()
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Kernel.Prelude
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Interface.Getter
 import Storage.ConfigPilot.Interface.Types
 import qualified Storage.Queries.MerchantServiceConfig as SQMSC
 import qualified Storage.Queries.Transformers.MerchantServiceConfig as TRMSC
+import Tools.Error
 
 data MerchantServiceConfigDimensions = MerchantServiceConfigDimensions
   { merchantOperatingCityId :: Text,
+    merchantId :: Text,
     serviceName :: Maybe DMSC.ServiceName
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
+
+deriving instance Show (DMSC.MerchantServiceConfigD 'Safe)
+
+deriving instance Show (DMSC.MerchantServiceConfigD 'Unsafe)
 
 instance ConfigTypeInfo 'MerchantServiceConfig where
   type DimensionsFor 'MerchantServiceConfig = MerchantServiceConfigDimensions
@@ -32,10 +44,23 @@ instance ConfigDimensions MerchantServiceConfigDimensions where
   getConfigType _ = MerchantServiceConfig
   getConfigList a = do
     let mocId = a.merchantOperatingCityId
-    cfgs <- SQMSC.findAllByMerchantOperatingCityId (Id mocId)
+    let mId = a.merchantId
+    cfgs <- IM.withInMemCache (configPilotInMemKey MerchantServiceConfig mId) 3600 $ SQMSC.findAllByMerchantId (Id mId)
     let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) cfgs
     mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG MerchantServiceConfig) (Id mocId)) configWrappers
-  filterByDimensions dims cfgs = filter matchesDims cfgs
+  filterByDimensions dims cfgs = filter matchesDimsMocId cfgs
     where
-      matchesDims c =
+      matchesDimsMocId c =
         maybe True (\sn -> fst (TRMSC.getServiceNameConfigJson c.serviceConfig) == sn) dims.serviceName
+          && c.merchantOperatingCityId == Id dims.merchantOperatingCityId
+  getConfig dims = do
+    allCfgs <- getConfigList dims
+    let foundCfg = filterByDimensions dims allCfgs
+    if null foundCfg
+      then do
+        logError $ "MerchantServiceConfig not found for merchantId: " <> dims.merchantId <> " mocId: " <> dims.merchantOperatingCityId <> " serviceName: " <> show dims.serviceName <> ". Falling back to default city."
+        merchant <- CQM.findById (Id dims.merchantId) >>= fromMaybeM (MerchantNotFound dims.merchantId)
+        defaultMoc <- CQMOC.findByMerchantShortIdAndCity merchant.shortId merchant.defaultCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show merchant.defaultCity)
+        let defaultDims = dims {merchantOperatingCityId = defaultMoc.id.getId}
+        pure $ filterByDimensions defaultDims allCfgs
+      else pure foundCfg

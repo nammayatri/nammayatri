@@ -36,8 +36,8 @@ data ErssReauthResp = ErssReauthResp
 postSosErssReauth :: ErssReauthReq -> Flow ErssReauthResp
 postSosErssReauth req = do
   let mocId = Id req.merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
-  _ <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound req.merchantOperatingCityId)
-  let mscDims = MerchantServiceConfigDimensions {merchantOperatingCityId = mocId.getId, serviceName = Just (DMSC.SOSService SOS.ERSS)}
+  merchantOperatingCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound req.merchantOperatingCityId)
+  let mscDims = MerchantServiceConfigDimensions {merchantOperatingCityId = mocId.getId, merchantId = merchantOperatingCity.merchantId.getId, serviceName = Just (DMSC.SOSService SOS.ERSS)}
   mbMerchantSvcCfg <- listToMaybe <$> getConfig mscDims
   case mbMerchantSvcCfg of
     Nothing ->

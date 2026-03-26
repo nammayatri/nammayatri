@@ -21,12 +21,14 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils
 import Data.Text as T
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
 import Environment
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import Storage.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import TransactionLogs.PushLogs
 
 type API = OnSelect.OnSelectAPIV2
@@ -40,6 +42,7 @@ onSelect ::
   FlowHandler AckResponse
 onSelect _ reqV2 = withFlowHandlerBecknAPI do
   transactionId <- Utils.getTransactionId reqV2.onSelectReqContext
+  L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do
     mbDOnSelectReq <- ACL.buildOnSelectReqV2 reqV2
     messageId <- Utils.getMessageIdText reqV2.onSelectReqContext

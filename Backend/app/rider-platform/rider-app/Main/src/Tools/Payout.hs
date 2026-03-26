@@ -49,7 +49,7 @@ runWithServiceConfigAndName ::
   m resp
 runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName mRoutingId req = do
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.getId, serviceName = Just serviceName})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.getId, merchantId = merchantId.getId, serviceName = Just serviceName})
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payout" (show Payout.Juspay))
   case merchantServiceConfig.serviceConfig of
     DMSC.PayoutServiceConfig vsc -> func vsc getRoutingId req
