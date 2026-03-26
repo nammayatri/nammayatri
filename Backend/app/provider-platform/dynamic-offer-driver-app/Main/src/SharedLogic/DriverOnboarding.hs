@@ -221,7 +221,7 @@ createDriverRCAssociationIfPossible ::
   VehicleRegistrationCertificate ->
   m ()
 createDriverRCAssociationIfPossible transporterConfig driverId rc = do
-  if transporterConfig.requiresOnboardingInspection /= Just True || rc.verificationStatus == Documents.VALID
+  if canCreateRCAssociation transporterConfig rc
     then do
       driverRCAssoc <- makeRCAssociation transporterConfig.merchantId transporterConfig.merchantOperatingCityId rc.id (convertTextToUTC (Just "2099-12-12"))
       DAQuery.create driverRCAssoc
@@ -257,7 +257,7 @@ createFleetRCAssociationIfPossible ::
   VehicleRegistrationCertificate ->
   m ()
 createFleetRCAssociationIfPossible transporterConfig fleetOwnerId rc = do
-  if transporterConfig.requiresOnboardingInspection /= Just True || rc.verificationStatus == Documents.VALID
+  if canCreateRCAssociation transporterConfig rc
     then do
       fleetRCAssoc <- makeFleetRCAssociation transporterConfig.merchantId transporterConfig.merchantOperatingCityId rc.id (convertTextToUTC (Just "2099-12-12"))
       FRCAssoc.create fleetRCAssoc
@@ -280,6 +280,12 @@ createFleetRCAssociationIfPossible transporterConfig fleetOwnerId rc = do
             createdAt = now,
             updatedAt = now
           }
+
+canCreateRCAssociation :: DTC.TransporterConfig -> VehicleRegistrationCertificate -> Bool
+canCreateRCAssociation transporterConfig rc =
+  transporterConfig.requiresOnboardingInspection /= Just True
+    || rc.verificationStatus == Documents.VALID
+    || (rc.verificationStatus == Documents.INVALID && not (null rc.failedRules))
 
 data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPIEntity
   { certificateNumber :: Text,
@@ -382,6 +388,23 @@ data CreateRCInput = CreateRCInput
     grossVehicleWeight :: Maybe Float,
     unladdenWeight :: Maybe Float
   }
+
+getExpiryFailures :: DTC.TransporterConfig -> CreateRCInput -> UTCTime -> [Text]
+getExpiryFailures transporterConfig input now =
+  if transporterConfig.rcExpiryChecks == Just True
+    then
+      mapMaybe
+        ( \(field, expiry) ->
+            if maybe False (< now) expiry
+              then Just (T.replace " " "" field <> "Expired")
+              else Nothing
+        )
+        [ ("Fitness Certificate", input.fitnessUpto),
+          ("Insurance", input.insuranceValidity),
+          ("Permit", input.permitValidityUpto),
+          ("PUC", input.pucValidityUpto)
+        ]
+    else []
 
 buildRC :: VerificationFlow m r => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> [Text] -> m (Maybe VehicleRegistrationCertificate)
 buildRC merchantId merchantOperatingCityId input failedRules = do

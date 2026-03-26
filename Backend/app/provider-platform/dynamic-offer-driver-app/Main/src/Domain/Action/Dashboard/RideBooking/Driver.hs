@@ -76,7 +76,9 @@ import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.DriverFee as SLDriverFee
+import qualified Domain.Types.DocumentVerificationConfig as ODC
 import SharedLogic.DriverOnboarding
+import SharedLogic.Reminder.Helper (createReminder)
 import qualified SharedLogic.Finance.Wallet as FWallet
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.Yudhishthira ()
@@ -182,9 +184,11 @@ postDriverEnable merchantShortId opCity reqDriverId = do
 
   mVehicle <- QVehicle.findById personId
   linkedRCs <- QRCAssociation.findAllLinkedByDriverId personId
+  rcs <- RCQuery.findAllById (map (.rcId) linkedRCs)
+  let hasValidRC = any (\rc -> rc.verificationStatus == Documents.VALID) rcs
 
-  when (transporterConfig.separateDriverVehicleEnablement /= Just True && isNothing mVehicle && null linkedRCs) $
-    throwError (InvalidRequest "Can't enable driver if no vehicle or no RCs are linked to them")
+  when (transporterConfig.separateDriverVehicleEnablement /= Just True && isNothing mVehicle && not hasValidRC) $
+    throwError (InvalidRequest "Can't enable driver if no vehicle or no valid RCs are linked to them")
 
   enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId driverId False
   logTagInfo "dashboard -> enableDriver : " (show personId)
@@ -861,7 +865,9 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
     whenJust mbLinkedVehicle $ \_ -> throwError VehicleAlreadyLinked
 
     allLinkedRCs <- QRCAssociation.findAllLinkedByDriverId personId
-    unless (length allLinkedRCs < transporterConfig.rcLimit) $ throwError (RCLimitReached transporterConfig.rcLimit)
+    rcs <- RCQuery.findAllById (map (.rcId) allLinkedRCs)
+    let validLinkedRCs = filter (\rc -> rc.verificationStatus /= Documents.INVALID) rcs
+    unless (length validLinkedRCs < transporterConfig.rcLimit) $ throwError (RCLimitReached transporterConfig.rcLimit)
 
   whenJust req.driverName $ \driverName -> do
     let updDriver = requestor {DP.firstName = driverName} :: DP.Person
@@ -886,21 +892,33 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
     throwError $ InvalidRequest "RC already exists for this vehicle number, please activate."
 
   let createRCInput = createRCInputFromVehicle req mbFleetOwnerId
-  mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput failures
+      expiryFailures = getExpiryFailures transporterConfig createRCInput now
+      allFailures = failures <> expiryFailures
+  mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput allFailures
   case mbNewRC of
     Just newRC -> do
-      when (newRC.verificationStatus == Documents.INVALID) $ do throwError (InvalidRequest $ "No valid mapping found for (vehicleClass: " <> req.vehicleClass <> ", manufacturer: " <> req.make <> " and model: " <> req.model <> ")")
+      let isInvalid = newRC.verificationStatus == Documents.INVALID
+      when (isInvalid && null newRC.failedRules) $
+        throwError (InvalidRequest $ "No valid mapping found for (vehicleClass: " <> req.vehicleClass <> ", manufacturer: " <> req.make <> " and model: " <> req.model <> ")")
       RCQuery.upsert newRC
       createRCAssociationIfNotExists personId requestor.role newRC transporterConfig now
 
-      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId (Just [])
-      -- as we create new rc, need to pass onboard inspection before activate rc and create vehicle
-      unless (transporterConfig.requiresOnboardingInspection == Just True || DCommon.checkFleetOwnerRole requestor.role) $ do
-        driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
-        let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' requestor merchant.id req.registrationNo newRC merchantOpCityId now req.vehicleTags
-        QVehicle.create vehicle
-        when (vehicle.variant == DV.SUV) $
-          QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId
+      unless isInvalid $ do
+        createReminder ODC.VehicleRegistrationCertificate personId merchant.id merchantOpCityId (Just newRC.id.getId) (Just newRC.fitnessExpiry) Nothing
+        whenJust newRC.pucExpiry $ \pucExpiry ->
+          createReminder ODC.VehiclePUC personId merchant.id merchantOpCityId (Just newRC.id.getId) (Just pucExpiry) Nothing
+        whenJust newRC.permitExpiry $ \permitExpiry ->
+          createReminder ODC.VehiclePermit personId merchant.id merchantOpCityId (Just newRC.id.getId) (Just permitExpiry) Nothing
+        whenJust newRC.insuranceValidity $ \insuranceValidity ->
+          createReminder ODC.VehicleInsurance personId merchant.id merchantOpCityId (Just newRC.id.getId) (Just insuranceValidity) Nothing
+        cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId (Just [])
+        -- as we create new rc, need to pass onboard inspection before activate rc and create vehicle
+        unless (transporterConfig.requiresOnboardingInspection == Just True || DCommon.checkFleetOwnerRole requestor.role) $ do
+          driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
+          let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' requestor merchant.id req.registrationNo newRC merchantOpCityId now req.vehicleTags
+          QVehicle.create vehicle
+          when (vehicle.variant == DV.SUV) $
+            QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId
       logTagInfo "dashboard -> addVehicle : " (show personId)
     Nothing -> throwError $ InvalidRequest "Registration Number is empty"
   pure Success

@@ -2390,7 +2390,9 @@ postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId mbRequestorI
   when (not isValidAssociation) $ do
     transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     allLinkedRCs <- DAQuery.findAllLinkedByDriverId driver.id
-    unless (length allLinkedRCs < transporterConfig.rcLimit) $ throwError (RCLimitReached transporterConfig.rcLimit)
+    rcs <- RCQuery.findAllById (map (.rcId) allLinkedRCs)
+    let validLinkedRCs = filter (\rc' -> rc'.verificationStatus /= Documents.INVALID) rcs
+    unless (length validLinkedRCs < transporterConfig.rcLimit) $ throwError (RCLimitReached transporterConfig.rcLimit)
     createDriverRCAssociationIfPossible transporterConfig driver.id rc
   return Success
 
