@@ -567,11 +567,11 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
           DriverReq driverReq -> Just driverReq.requestor
           CallBasedReq callBasedReq -> Just callBasedReq.requestor
           _ -> Nothing
-    driver <- maybe (QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) pure mbDriverFromReq
-    let mbDriverMobileHash = (.hash) <$> driver.mobileNumber
+    mbDriver <- maybe (QP.findById driverId) (pure . Just) mbDriverFromReq
     mbRiderDetails <- join <$> (QRiderDetails.findById `mapM` booking.riderId)
-    let mbRiderMobileHash = (.hash) . (.mobileNumber) <$> mbRiderDetails
-        isDriverSameAsCustomer = isJust mbDriverMobileHash && mbDriverMobileHash == mbRiderMobileHash
+    let mbDriverMobileHash = (.hash) <$> (mbDriver >>= (.mobileNumber))
+        mbRiderMobileHash = (.hash) . (.mobileNumber) <$> mbRiderDetails
+        isDriverSameAsCustomer = isJust mbDriverMobileHash && isJust mbRiderMobileHash && mbDriverMobileHash == mbRiderMobileHash
     newRideTags <- withTryCatch "computeNammaTags:RideEnd" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking isDriverSameAsCustomer))
     let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
     fork "updating time and latlong in advance ride if any" $ do
