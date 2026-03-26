@@ -40,7 +40,6 @@ import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.SearchTry
 import Domain.Types.ServiceTierType
-import qualified Domain.Types.SpecialZoneQueueRequest as DSZQR
 import Domain.Types.Trip as Trip
 import qualified Domain.Types.TripTransaction as DTT
 import qualified EulerHS.Prelude hiding (null)
@@ -155,6 +154,20 @@ findFCMConfigWithFallback merchantOpCityId personId = do
   case mbClientConfig of
     Just clientConfig -> let (DMCC.ClientFCMServiceConfig fcmCfg) = clientConfig.clientServiceConfig in pure fcmCfg
     Nothing -> findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId) <&> (.fcmConfig)
+
+-- dynamicFCMNotifyPerson
+--     merchantOpCityId
+--     driverId
+--     driver.deviceToken
+--     lang
+--     Nothing
+--     (createFCMReq "PICKUP_ZONE_REQUEST" requestId.getId FCM.Person identity)
+--     (Nothing :: Maybe EmptyDynamicParam)
+--     [ ("gateName", gateName),
+--       ("specialLocationName", specialLocationName)
+--     ]
+--     Nothing
+
 
 dynamicFCMNotifyPerson ::
   ( CacheFlow m r,
@@ -1656,18 +1669,28 @@ sendPickupInstructionNotification merchantOpCityId driver entityData = do
   -- Send notification
   FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) (clearDeviceToken driver.id) notificationData (FCMNotificationRecipient driver.id.getId driver.deviceToken) EulerHS.Prelude.id
 
+data PickupZoneRequestEntityData = PickupZoneRequestEntityData
+  { requestId :: Text,
+    gateName :: Text,
+    gateAddress :: Maybe Text,
+    specialLocationName :: Text,
+    specialLocationId :: Text,
+    gateId :: Text,
+    vehicleType :: Text,
+    validTill :: UTCTime,
+    requestType :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, Show)
+
 notifyPickupZoneRequest ::
   ( CacheFlow m r,
     EsqDBFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
-  Id DSZQR.SpecialZoneQueueRequest ->
-  Text ->
-  Text ->
-  UTCTime ->
+  PickupZoneRequestEntityData ->
   m ()
-notifyPickupZoneRequest merchantOpCityId driverId requestId gateName specialLocationName _validTill = do
+notifyPickupZoneRequest merchantOpCityId driverId entityData = do
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   let lang = fromMaybe ENGLISH driver.language
   dynamicFCMNotifyPerson
@@ -1676,9 +1699,9 @@ notifyPickupZoneRequest merchantOpCityId driverId requestId gateName specialLoca
     driver.deviceToken
     lang
     Nothing
-    (createFCMReq "PICKUP_ZONE_REQUEST" requestId.getId FCM.Person identity)
-    (Nothing :: Maybe EmptyDynamicParam)
-    [ ("gateName", gateName),
-      ("specialLocationName", specialLocationName)
+    (createFCMReq "PICKUP_ZONE_REQUEST" entityData.requestId FCM.Person identity)
+    (Just entityData)
+    [ ("gateName", entityData.gateName),
+      ("specialLocationName", entityData.specialLocationName)
     ]
     Nothing

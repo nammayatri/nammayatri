@@ -220,7 +220,19 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType coo
                       updatedAt = now
                     }
             QSZQR.create request
-            Notify.notifyPickupZoneRequest merchantOpCityId driverId reqId gate.name specialLocationName validTill
+            let entityData =
+                  Notify.PickupZoneRequestEntityData
+                    { requestId = reqId.getId,
+                      gateName = gate.name,
+                      gateAddress = gate.address,
+                      specialLocationName = specialLocationName,
+                      specialLocationId = specialLocationId,
+                      gateId = gateId,
+                      vehicleType = vehicleType,
+                      validTill = validTill,
+                      requestType = "PICKUP_ZONE_REQUEST"
+                    }
+            Notify.notifyPickupZoneRequest merchantOpCityId driverId entityData
             Redis.withCrossAppRedis $
               Redis.setExp (mkGateDriverNotifiedKey gateId driverId.getId) ("1" :: Text) cooldown
             logInfo $ "Notified driver " <> driverId.getId <> " to move to pickup zone at gate " <> gate.name
