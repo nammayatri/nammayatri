@@ -1885,6 +1885,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                   ctx.merchantOperatingCityId
                   ctx.integratedBPPConfig.id
               mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [ctx.integratedBPPConfig] vno
+              mbVehicleTagNumber <- JMU.getVehicleTagNumberFromInMem [ctx.integratedBPPConfig] vno
               enrichedEta <-
                 mapConcurrently
                   (JMRouteServiceability.enrichBusStopETA ctx.integratedBPPConfig)
@@ -1897,7 +1898,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                         locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral singleBus.busData.timestamp,
                         serviceTierType = serviceTier,
                         serviceTierName = (.shortName) <$> frfsServiceTier,
-                        serviceSubTypes = mbServiceSubTypes
+                        serviceSubTypes = mbServiceSubTypes,
+                        vehicleTagNumber = mbVehicleTagNumber
                       }
               pure $
                 ApiTypes.RouteServiceabilityResp

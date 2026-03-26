@@ -1543,10 +1543,10 @@ getVehicleServiceTypeFromInMem ::
   Text ->
   m (Maybe Spec.ServiceTierType)
 getVehicleServiceTypeFromInMem integratedBPPConfigs vehicleNumber = IM.withInMemCache ["CACHED_VEHICLE_TYPE", vehicleNumber] 43200 $ do
-  res <- getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing
-  case res of
-    Just (_, VehicleLiveRouteInfo {serviceType}) -> return $ Just serviceType
-    Nothing -> return Nothing
+  mbMbResult <-
+    SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
+      OTPRest.getVehicleMetadata config vehicleNumber
+  pure $ join mbMbResult <&> (.serviceType)
 
 -- | Get service subtypes for a vehicle, cached in-memory for 1 day (86400 seconds)
 getVehicleServiceSubTypesFromInMem ::
@@ -1556,8 +1556,37 @@ getVehicleServiceSubTypesFromInMem ::
   m (Maybe [Spec.ServiceSubType])
 getVehicleServiceSubTypesFromInMem integratedBPPConfigs vehicleNumber =
   IM.withInMemCache ["CACHED_VEHICLE_SERVICE_SUBTYPES", vehicleNumber] 86400 $ do
-    mbVehicleLiveRouteInfo <- getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing
-    pure $ mbVehicleLiveRouteInfo >>= (\(_, v) -> v.serviceSubTypes)
+    mbMbResult <-
+      SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
+        OTPRest.getVehicleMetadata config vehicleNumber
+    pure $ join mbMbResult >>= (.serviceSubTypes)
+
+getVehicleTagNumberFromInMem ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  [DIntegratedBPPConfig.IntegratedBPPConfig] ->
+  Text ->
+  m (Maybe Text)
+getVehicleTagNumberFromInMem integratedBPPConfigs vehicleNumber =
+  IM.withInMemCache ["CACHED_VEHICLE_TAG_NUMBER", vehicleNumber] 86400 $ do
+    mbMbResult <-
+      SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
+        OTPRest.getVehicleMetadata config vehicleNumber
+    pure $ join mbMbResult >>= (.busTagNumber)
+
+getVehicleMetadataFromInMem ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  [DIntegratedBPPConfig.IntegratedBPPConfig] ->
+  Text ->
+  m (Maybe (DIntegratedBPPConfig.IntegratedBPPConfig, NandiTypes.VehicleMetadataResponse))
+getVehicleMetadataFromInMem integratedBPPConfigs vehicleNumber =
+  IM.withInMemCache ["CACHED_VEHICLE_METADATA", vehicleNumber] 43200 $ do
+    mbMbResult <-
+      SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
+        (config,) <$> OTPRest.getVehicleMetadata config vehicleNumber
+    pure $
+      mbMbResult
+        >>= \(integratedBPPConfig, mbResult) ->
+          mbResult <&> (\result -> (integratedBPPConfig, result))
 
 getVehicleLiveRouteInfoUnsafe ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>

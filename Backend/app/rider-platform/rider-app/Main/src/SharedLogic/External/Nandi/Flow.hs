@@ -96,6 +96,15 @@ getVehicleServiceType baseUrl gtfsId vehicleNumber mbPassVerifyReq = do
         logError $ "Error getting vehicle service type: " <> show err
         pure Nothing
 
+getVehicleMetadata :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> m (Maybe VehicleMetadataResponse)
+getVehicleMetadata baseUrl gtfsId vehicleNumber = do
+  withShortRetry $
+    callAPI baseUrl (NandiAPI.getNandiVehicleMetadata gtfsId vehicleNumber) "getVehicleMetadata" NandiAPI.nandiVehicleMetadataAPI >>= \case
+      Right response -> pure (Just response)
+      Left err -> do
+        logError $ "Error getting vehicle metadata: " <> show err
+        pure Nothing
+
 getVehicleInfo :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> m (Maybe VehicleInfoResponse)
 getVehicleInfo baseUrl gtfsId vehicleNumber = do
   withShortRetry $
