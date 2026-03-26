@@ -39,6 +39,7 @@ import qualified Domain.Action.UI.StclMembership as DStclMembership
 import qualified Domain.Action.WebhookHandler as AWebhook
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Mandate as DM
 import qualified Domain.Types.Merchant as DM
@@ -116,7 +117,6 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import Storage.Queries.DriverPlan (findByDriverIdWithServiceName)
 import qualified Storage.Queries.DriverPlan as QDP
-import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Mandate as QM
@@ -157,6 +157,17 @@ getOrder (personId, _, _) orderId = do
   order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
   unless (order.personId == cast personId) $ throwError NotAnExecutor
   mkOrderAPIEntity order
+
+updatePayoutVpaAndStatusByRole ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  DP.Role ->
+  Id DPayment.Person ->
+  Text ->
+  m ()
+updatePayoutVpaAndStatusByRole role personId vpa = do
+  if DCommon.checkFleetOwnerRole role
+    then QFOI.updatePayoutVpaAndStatus (Just vpa) (Just DFOI.VIA_WEBHOOK) (cast personId)
+    else QDI.updatePayoutVpaAndStatus (Just vpa) (Just DI.VIA_WEBHOOK) (cast personId)
 
 mkOrderAPIEntity :: (EncFlow m r, HasKafkaProducer r) => DOrder.PaymentOrder -> m DOrder.PaymentOrderAPIEntity
 mkOrderAPIEntity DOrder.PaymentOrder {..} = do
@@ -247,10 +258,7 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
           let isPayoutRegistration = order.entityName == Just DPayment.PAYOUT_REGISTRATION
           when ((isOneTimeSecurityInvoice || isPayoutRegistration) && status == Payment.CHARGED) do
             whenJust payerVpa $ \vpa -> do
-              person' <- QP.findById (cast order.personId) >>= fromMaybeM (PersonNotFound order.personId.getId)
-              if DCommon.checkFleetOwnerRole person'.role
-                then QFOI.updatePayoutVpaAndStatus (Just vpa) (Just DFOI.VIA_WEBHOOK) (cast order.personId)
-                else QDI.updatePayoutVpaAndStatus (Just vpa) (Just DI.VIA_WEBHOOK) (cast order.personId)
+              updatePayoutVpaAndStatusByRole driver.role order.personId vpa
             logDebug $ "Updating Payout (Via getStatus) And Process Previous Payout For Person: " <> show order.personId <> " with Vpa: " <> show payerVpa
             when isPayoutRegistration $ do
               -- Store VPA on PaymentOrder
@@ -368,10 +376,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
           when (order.entityName == Just DPayment.PAYOUT_REGISTRATION && transactionStatus == Payment.CHARGED) do
             let mbVpa = payerVpa <|> ((.payerVpa) =<< upi)
             whenJust mbVpa $ \vpa -> do
-              person' <- QP.findById (cast order.personId) >>= fromMaybeM (PersonNotFound order.personId.getId)
-              if DCommon.checkFleetOwnerRole person'.role
-                then QFOI.updatePayoutVpaAndStatus (Just vpa) (Just DFOI.VIA_WEBHOOK) (cast order.personId)
-                else QDI.updatePayoutVpaAndStatus (Just vpa) (Just DI.VIA_WEBHOOK) (cast order.personId)
+              updatePayoutVpaAndStatusByRole driver.role order.personId vpa
             logDebug $ "Updating Payout And Process Previous Payout For Person: " <> show order.personId <> " with Vpa: " <> show mbVpa
             -- Store VPA on PaymentOrder
             QOrder.updateVpa order.id mbVpa

@@ -3,6 +3,7 @@ module Domain.Action.UI.ReferralPayout where
 import qualified API.Types.UI.ReferralPayout
 import Data.Text hiding (elem, filter, map)
 import Data.Time.Calendar
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.UI.Driver as DD
 import qualified Domain.Action.UI.Payout as DAP
 import qualified Domain.Types.DailyStats as DS
@@ -39,10 +40,10 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.DailyStats as QDS
 import qualified Storage.Queries.DailyStatsExtra as QDSE
-import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Storage.Queries.DriverInformation as DrInfo
-import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
+import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
@@ -138,6 +139,7 @@ postPayoutDeleteVpa (mbPersonId, _merchantId, merchantOpCityId) = do
       let mbVpa = mbFleetInfo >>= (.payoutVpa)
       unless (isJust mbVpa) $ throwError (InvalidRequest "Vpa Id does not Exists")
       void $ QFOI.updatePayoutVpaAndStatus Nothing Nothing personId
+      void $ QFOIE.updatePayoutRegAmountRefunded Nothing personId
     else do
       driverInfo <- runInReplica $ DrInfo.findByPrimaryKey personId >>= fromMaybeM DriverInfoNotFound
       unless (isJust driverInfo.payoutVpa) $ throwError (InvalidRequest "Vpa Id does not Exists")
@@ -229,9 +231,10 @@ getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = do
       (Just person.firstName)
       person.lastName
 
-  -- Store orderId on DriverInformation (fleet owners don't have this field)
-  unless isFleetOwner $
-    DrInfo.updatePayoutRegistrationOrderId (Just regResult.orderId.getId) personId
+  -- Store orderId for recovery/replay if webhook fails
+  if isFleetOwner
+    then QFOI.updatePayoutRegistrationOrderId (Just regResult.orderId.getId) personId
+    else DrInfo.updatePayoutRegistrationOrderId (Just regResult.orderId.getId) personId
   pure $
     DD.ClearDuesRes
       { orderId = Kernel.Types.Id.cast regResult.orderId,

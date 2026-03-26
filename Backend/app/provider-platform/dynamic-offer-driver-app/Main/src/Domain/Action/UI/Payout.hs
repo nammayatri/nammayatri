@@ -23,7 +23,7 @@ where
 import qualified Data.Aeson as A
 import Data.Time (utctDay)
 import qualified Domain.Action.UI.DriverCoin as DriverCoin
-import Domain.Action.UI.DriverWallet (makePayoutEntryIdsKey)
+import Domain.Action.UI.DriverWallet (counterpartyFromRole, makePayoutEntryIdsKey)
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.DriverFee as DDF
@@ -58,7 +58,6 @@ import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
-import Domain.Action.UI.DriverWallet (counterpartyFromRole)
 import SharedLogic.Finance.Wallet
 import SharedLogic.Merchant
 import Storage.Beam.Finance ()
@@ -204,9 +203,9 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                   Nothing -> pure Nothing
                   Just prId -> QPR.findById (Id prId)
 
-                person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-                let counterparty = counterpartyFromRole person.role
                 Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
+                  person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+                  let counterparty = counterpartyFromRole person.role
                   when (isSuccessStatus payoutStatus) $ do
                     -- Create wallet debit ledger entry only on confirmed success
                     transporterConfig <- SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)

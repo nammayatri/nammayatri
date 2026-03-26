@@ -44,6 +44,11 @@ updateFleetOwnerVerifiedStatus verified fleetOwnerPersonId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.verified verified, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
+updatePayoutRegistrationOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updatePayoutRegistrationOrderId payoutRegistrationOrderId fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.payoutRegistrationOrderId payoutRegistrationOrderId, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
 updateReferredByOperatorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateReferredByOperatorId referredByOperatorId fleetOwnerPersonId = do
   _now <- getCurrentTime

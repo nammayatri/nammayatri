@@ -134,10 +134,25 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN auto_pay_s
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN payout_registration_order_id text ;
+
+
+------- SQL updates -------
+
+
+------- SQL updates -------
+
 
 
 
 ------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
 
 
 

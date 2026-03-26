@@ -9,6 +9,7 @@ import qualified "dashboard-helper-api" Dashboard.Common as DC
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as RegV2
 import qualified Domain.Action.Dashboard.Management.DriverRegistration as MDR
 import qualified Domain.Action.UI.DriverOnboarding.BankAccountVerification as BankAccountVerification
+import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
 import Environment
@@ -18,6 +19,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
+import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
 import Tools.Error
 
 postPayoutAccount ::
@@ -27,7 +30,7 @@ postPayoutAccount ::
   Common.PayoutAccountReq ->
   Flow Common.PayoutAccountResp
 postPayoutAccount merchantShortId opCity requestorId req = do
-  fleetOwner <- RegV2.checkRequestorAcccessToFleet req.fleetOwnerId requestorId
+  fleetOwner <- RegV2.checkRequestorAccessToFleet req.fleetOwnerId requestorId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = fleetOwner.id
@@ -60,7 +63,7 @@ postPayoutAccountStatus ::
   Common.PayoutAccountStatusReq ->
   Flow Common.PayoutAccountStatusResp
 postPayoutAccountStatus merchantShortId opCity requestorId req = do
-  fleetOwner <- RegV2.checkRequestorAcccessToFleet req.fleetOwnerId requestorId
+  fleetOwner <- RegV2.checkRequestorAccessToFleet req.fleetOwnerId requestorId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = fleetOwner.id
@@ -69,6 +72,13 @@ postPayoutAccountStatus merchantShortId opCity requestorId req = do
     Common.BANK -> do
       bankRequestId <- req.bankRequestId & fromMaybeM (InvalidRequest "bankRequestId required for Bank status")
       bankInfoResp <- BankAccountVerification.getInfoBankAccount (personId, merchant.id, merchantOpCityId) bankRequestId
+      when (bankInfoResp.accountExists) $ do
+        mbFleetInfo <- QFOI.findByPrimaryKey personId
+        when (isNothing (mbFleetInfo >>= (.payoutVpa))) $
+          case (bankInfoResp.bankAccountNumber, bankInfoResp.ifscCode) of
+            (Just accNo, Just ifsc) ->
+              QFOIE.updatePayoutVpaAndStatus (Just (accNo <> "@" <> ifsc <> ".ifsc.npci")) (Just DFOI.MANUALLY_ADDED) personId
+            _ -> pure ()
       pure $
         Common.PayoutAccountStatusResp
           { accountType = Common.BANK,
