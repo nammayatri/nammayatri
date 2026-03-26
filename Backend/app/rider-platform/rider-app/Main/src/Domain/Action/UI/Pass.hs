@@ -815,7 +815,8 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
                         ( \b ->
                             case b.vehicle_number of
                               Just v -> do
-                                mbServiceTier <- JLU.getVehicleServiceTypeFromInMem integratedBPPConfigs v
+                                mbVehicleMetadata <- JLU.getVehicleMetadataFromInMem integratedBPPConfigs v
+                                let mbServiceTier = mbVehicleMetadata <&> (\(_, metadata) -> metadata.serviceType)
                                 return $ maybe False (`elem` applicableTiers) mbServiceTier
                               Nothing -> return False
                         )

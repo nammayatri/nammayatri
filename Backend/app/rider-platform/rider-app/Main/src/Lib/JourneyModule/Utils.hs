@@ -288,7 +288,8 @@ fetchLiveBusTimings routeCodes stopCode currentTime currentTimeIST integratedBpp
       ]
 
     getVehicleServiceType (vno, eta) = do
-      mbServiceTier <- getVehicleServiceTypeFromInMem [integratedBppConfig] vno
+      mbVehicleMetadata <- getVehicleMetadataFromInMem [integratedBppConfig] vno
+      let mbServiceTier = mbVehicleMetadata <&> (\(_, metadata) -> metadata.serviceType)
       return $ mbServiceTier <&> (vno,eta,)
 
     -- Fetches static schedules for all fallback routes concurrently then converts using the shared tier map
@@ -704,7 +705,8 @@ findUpcomingTrips routeCode stopCode mbServiceType currentTime mid mocid vc = do
   tripTimingsWithSubTypes <- (flip mapConcurrently) tripTimingsDrafts $ \(info, vehicleId) -> do
     if info.source == LIVE
       then do
-        mbServiceSubTypes <- getVehicleServiceSubTypesFromInMem integratedBPPConfigs vehicleId
+        mbVehicleMetadata <- getVehicleMetadataFromInMem integratedBPPConfigs vehicleId
+        let mbServiceSubTypes = mbVehicleMetadata >>= (\(_, metadata) -> metadata.serviceSubTypes)
         pure $ (info {serviceSubTypes = mbServiceSubTypes} :: UpcomingVehicleInfo)
       else pure info
 
