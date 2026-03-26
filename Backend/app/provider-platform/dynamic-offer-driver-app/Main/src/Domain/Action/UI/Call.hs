@@ -699,14 +699,20 @@ addCampaignData req merchantOpCityId = do
     _ -> throwError $ InternalError "Call service config not found"
   where
     chooseCampaignName ozonetelCfg currentLocalTimeOfDay =
-      case (ozonetelCfg.sosCampaignName, ozonetelCfg.expiryTime >>= parseCutoffTime) of
-        (Just sosCampaignName, Just cutoffTime)
-          | currentLocalTimeOfDay >= cutoffTime ->
-            sosCampaignName
+      case (ozonetelCfg.sosCampaignName, ozonetelCfg.fromTime >>= parseCampaignTime, ozonetelCfg.toTime >>= parseCampaignTime) of
+        (Just sosCampaignName, Just fromCampaignTime, Just toCampaignTime)
+          | isWithinCampaignWindow currentLocalTimeOfDay fromCampaignTime toCampaignTime ->
+              sosCampaignName
         _ -> ozonetelCfg.campaignName
 
-    parseCutoffTime :: Text -> Maybe TimeOfDay
-    parseCutoffTime valueText =
+    isWithinCampaignWindow :: TimeOfDay -> TimeOfDay -> TimeOfDay -> Bool
+    isWithinCampaignWindow currentTime fromCampaignTime toCampaignTime
+      -- Window wraps to next day (e.g. 12:00 to 11:59:59)
+      | fromCampaignTime > toCampaignTime = currentTime >= fromCampaignTime || currentTime <= toCampaignTime
+      | otherwise = currentTime >= fromCampaignTime && currentTime <= toCampaignTime
+
+    parseCampaignTime :: Text -> Maybe TimeOfDay
+    parseCampaignTime valueText =
       let parseWith format = parseTimeM True defaultTimeLocale format (T.unpack valueText)
        in case parseWith "%H:%M:%S" of
             Just t -> Just t
