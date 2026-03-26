@@ -210,8 +210,8 @@ scheduledRideTests =
       bufferTime = 1800 -- 30 minutes
    in testGroup
         "Scheduled Ride Determination"
-        [ testCase "scheduled: start time well beyond buffer (non-multimodal)" $
-            assertBool "" (isScheduledRide Nothing bufferTime now (addUTCTime 7200 now)),
+        [ testCase "not scheduled: Nothing isMultimodalSearch defaults to False via maybe False not" $
+            assertBool "" (not $ isScheduledRide Nothing bufferTime now (addUTCTime 7200 now)),
           testCase "scheduled: isMultimodalSearch is Just False" $
             assertBool "" (isScheduledRide (Just False) bufferTime now (addUTCTime 7200 now)),
           testCase "not scheduled: isMultimodalSearch is Just True" $
@@ -220,12 +220,12 @@ scheduledRideTests =
             assertBool "" (not $ isScheduledRide Nothing bufferTime now (addUTCTime 900 now)),
           testCase "not scheduled: start time exactly at buffer boundary" $
             assertBool "" (not $ isScheduledRide Nothing bufferTime now (addUTCTime bufferTime now)),
-          testCase "scheduled: start time 1 second past buffer" $
-            assertBool "" (isScheduledRide Nothing bufferTime now (addUTCTime (bufferTime + 1) now)),
+          testCase "not scheduled: Nothing isMultimodalSearch even 1 second past buffer" $
+            assertBool "" (not $ isScheduledRide Nothing bufferTime now (addUTCTime (bufferTime + 1) now)),
           testCase "not scheduled: start time in the past" $
             assertBool "" (not $ isScheduledRide Nothing bufferTime now (addUTCTime (-3600) now)),
           testCase "not scheduled: zero buffer but start equals now" $
             assertBool "" (not $ isScheduledRide Nothing 0 now now),
-          testCase "scheduled: zero buffer and start is 1 second after now" $
-            assertBool "" (isScheduledRide Nothing 0 now (addUTCTime 1 now))
+          testCase "not scheduled: Nothing isMultimodalSearch even with zero buffer" $
+            assertBool "" (not $ isScheduledRide Nothing 0 now (addUTCTime 1 now))
         ]
