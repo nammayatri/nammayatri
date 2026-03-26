@@ -676,17 +676,16 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
     when (panInfo.verificationStatus == Documents.VALID) $ do
       ImageQuery.deleteById req.imageId1
       throwError $ DocumentAlreadyValidated "PAN"
-  verificationStatus <-
+  (verificationStatus, mbNameFromGovtDB) <-
     if isDigiLockerFlow
-      then pure Documents.VALID
+      then pure (Documents.VALID, Nothing)
       else case mbPanVerificationService of
-        Just VI.HyperVerge -> do
-          callHyperVerge
-        Just VI.Idfy -> do
-          callIdfy person.id.getId
-        _ -> pure Documents.VALID
+        Just VI.HyperVerge -> callHyperVerge
+        Just VI.Idfy -> callIdfy person.id.getId
+        _ -> pure (Documents.VALID, Nothing)
 
-  QDPC.upsertPanRecord =<< buildPanCard merchantId person req verificationStatus (Just merchantOpCityId)
+  let updatedReq = req {API.Types.UI.DriverOnboardingV2.nameOnGovtDB = mbNameFromGovtDB <|> req.nameOnGovtDB}
+  QDPC.upsertPanRecord =<< buildPanCard merchantId person updatedReq verificationStatus (Just merchantOpCityId)
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (fromMaybe True transporterConfig.allowPanAadhaarLinkage) $ do
     mdriverPanCard <- QDPC.findByDriverId personId
@@ -715,7 +714,7 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
         throwError (ImageInvalidType (show DTO.PanCard) "")
       Redis.withLockRedisAndReturnValue (VRC.imageS3Lock (imageMetadata.s3Path)) 5 $
         S3.get $ T.unpack imageMetadata.s3Path
-    checkIfGenuineReq :: (ServiceFlow m r) => API.Types.UI.DriverOnboardingV2.DriverPanReq -> m ()
+    checkIfGenuineReq :: (ServiceFlow m r) => API.Types.UI.DriverOnboardingV2.DriverPanReq -> m (Maybe Text)
     checkIfGenuineReq API.Types.UI.DriverOnboardingV2.DriverPanReq {..} = do
       (txnId, valStatus) <- CME.fromMaybeM (Image.throwValidationError (Just imageId1) Nothing (Just "Cannot find necessary data for SDK response!!!!")) (return $ (,) <$> transactionId <*> validationStatus)
       hvResp <- Verification.verifySdkResp merchantId merchantOpCityId (VI.VerifySdkDataReq txnId)
@@ -730,15 +729,16 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
           when (isJust dateOfBirth && (formatUTCToDateString <$> dateOfBirth) /= (T.unpack <$> dob)) $ do
             logDebug $ "date of Birth and dob is : " <> show (formatUTCToDateString <$> dateOfBirth) <> " " <> show dob
             void $ Image.throwValidationError (Just imageId1) Nothing Nothing
-        _ -> void $ Image.throwValidationError (Just imageId1) Nothing Nothing
+          pure name
+        _ -> Image.throwValidationError (Just imageId1) Nothing Nothing >> pure Nothing
       where
         formatUTCToDateString :: UTCTime -> String
         formatUTCToDateString utcTime = formatTime defaultTimeLocale "%d-%m-%Y" utcTime
-    callHyperVerge :: Flow Documents.VerificationStatus
+    callHyperVerge :: Flow (Documents.VerificationStatus, Maybe Text)
     callHyperVerge = do
-      void $ checkIfGenuineReq req
-      pure Documents.VALID
-    callIdfy :: Text -> Flow Documents.VerificationStatus
+      mbNameFromGovtDB <- checkIfGenuineReq req
+      pure (Documents.VALID, mbNameFromGovtDB)
+    callIdfy :: Text -> Flow (Documents.VerificationStatus, Maybe Text)
     callIdfy personId = do
       image1 <- getImage req.imageId1
       resp <-
@@ -754,7 +754,7 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
           let extractedPanNo = removeSpaceAndDash <$> extractedPan.id_number
           unless (extractedPanNo == Just req.panNumber) $
             throwError $ InvalidRequest "Invalid Image, PAN number not matching."
-          pure Documents.VALID
+          pure (Documents.VALID, extractedPan.name_on_card)
         Nothing -> throwError $ InvalidRequest "Invalid PAN image"
 
 buildPanCard ::

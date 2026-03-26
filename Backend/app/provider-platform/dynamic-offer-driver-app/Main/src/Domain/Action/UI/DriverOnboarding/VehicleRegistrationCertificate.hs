@@ -249,7 +249,9 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (person.role == Person.DRIVER) $ do
     allLinkedRCs <- DAQuery.findAllLinkedByDriverId personId
-    unless (length allLinkedRCs < (transporterConfig.rcLimit + (if isDashboard then 1 else 0))) $ throwError (RCLimitReached transporterConfig.rcLimit)
+    rcs <- RCQuery.findAllById (map (.rcId) allLinkedRCs)
+    let validLinkedRCs = Kernel.Prelude.filter (\rc -> rc.verificationStatus /= Documents.INVALID) rcs
+    unless (length validLinkedRCs < (transporterConfig.rcLimit + (if isDashboard then 1 else 0))) $ throwError (RCLimitReached transporterConfig.rcLimit)
   let mbAirConditioned = maybe req.airConditioned (\category -> if category `elem` [DVC.CAR, DVC.AMBULANCE, DVC.BUS] then req.airConditioned else Just False) req.vehicleCategory
       (mbOxygen, mbVentilator) = maybe (req.oxygen, req.ventilator) (\category -> if category == DVC.AMBULANCE then (req.oxygen, req.ventilator) else (Just False, Just False)) req.vehicleCategory
 
@@ -533,23 +535,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
       isExcludedVehicleCategoryFromVerification = maybe False (`elem` (map show $ fromMaybe [] transporterConfig.vehicleCategoryExcludedFromVerification)) rcVerificationResponse.vehicleCategory
       vehicleCategory' = if isExcludedVehicleCategoryFromVerification then mapTextToVehicle rcVerificationResponse.vehicleCategory else mbVehicleCategory
       rcInput = createRCInput vehicleCategory' mbFleetOwnerId mbDocumentImageId mbDateOfRegistration mbVehicleModelYear mbGrossVehicleWeight mbUnladdenWeight
-      checks =
-        if transporterConfig.rcExpiryChecks == Just True
-          then
-            [ ("Fitness Certificate", convertTextToUTC rcVerificationResponse.fitnessUpto),
-              ("Insurance", convertTextToUTC rcVerificationResponse.insuranceValidity),
-              ("Permit", convertTextToUTC rcVerificationResponse.permitValidityUpto),
-              ("PUC", convertTextToUTC rcVerificationResponse.pucValidityUpto)
-            ]
-          else []
-      expiryFailures =
-        mapMaybe
-          ( \(field, expiry) ->
-              if maybe False (< now) expiry
-                then Just (T.replace " " "" field <> "Expired")
-                else Nothing
-          )
-          checks
+      expiryFailures = getExpiryFailures transporterConfig rcInput now
       allFailures = failures <> expiryFailures
   mVehicleRC <- do
     case mbVehicleVariant of
@@ -666,7 +652,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
     initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures = do
       case mVehicleRC of
         Just vehicleRC
-          | vehicleRC.verificationStatus == Documents.INVALID ->
+          | vehicleRC.verificationStatus == Documents.INVALID && null vehicleRC.failedRules ->
             throwError $
               InvalidRequest $
                 "No valid mapping found for (vehicleClass: "
@@ -679,57 +665,54 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                   <> fromMaybe "null" rcVerificationResponse.manufacturerModel
                   <> ")"
         Just vehicleRC -> do
+          let isInvalid = vehicleRC.verificationStatus == Documents.INVALID
           logInfo $ "initiateRCCreation: Upserting RC with verificationStatus=" <> show vehicleRC.verificationStatus <> ", failedRules=" <> show vehicleRC.failedRules <> ", registrationNumber=" <> show vehicleRC.unencryptedCertificateNumber <> ", vehicleVariant=" <> show vehicleRC.vehicleVariant <> ", vehicleClass=" <> show vehicleRC.vehicleClass
-          -- upsert vehicleRC
           RCQuery.upsert vehicleRC
           rc <- RCQuery.findByRCAndExpiry vehicleRC.certificateNumber vehicleRC.fitnessExpiry >>= fromMaybeM (RCNotFound (fromMaybe "" rcVerificationResponse.registrationNumber))
-          -- Create reminders for all expiry dates stored in RC when it's created/updated
-          -- Fitness expiry (VEHICLE_REGISTRATION_CERTIFICATE) - always present
-          createReminder
-            ODC.VehicleRegistrationCertificate
-            person.id
-            person.merchantId
-            person.merchantOperatingCityId
-            (Just $ rc.id.getId)
-            (Just rc.fitnessExpiry)
-            Nothing
-          -- PUC expiry
-          whenJust rc.pucExpiry $ \pucExpiry -> do
+          -- Create reminders only for non-INVALID RCs
+          unless isInvalid $ do
             createReminder
-              ODC.VehiclePUC
+              ODC.VehicleRegistrationCertificate
               person.id
               person.merchantId
               person.merchantOperatingCityId
               (Just $ rc.id.getId)
-              (Just pucExpiry)
+              (Just rc.fitnessExpiry)
               Nothing
-          -- Permit expiry
-          whenJust rc.permitExpiry $ \permitExpiry -> do
-            createReminder
-              ODC.VehiclePermit
-              person.id
-              person.merchantId
-              person.merchantOperatingCityId
-              (Just $ rc.id.getId)
-              (Just permitExpiry)
-              Nothing
-          -- Insurance validity
-          whenJust rc.insuranceValidity $ \insuranceValidity -> do
-            createReminder
-              ODC.VehicleInsurance
-              person.id
-              person.merchantId
-              person.merchantOperatingCityId
-              (Just $ rc.id.getId)
-              (Just insuranceValidity)
-              Nothing
+            whenJust rc.pucExpiry $ \pucExpiry ->
+              createReminder
+                ODC.VehiclePUC
+                person.id
+                person.merchantId
+                person.merchantOperatingCityId
+                (Just $ rc.id.getId)
+                (Just pucExpiry)
+                Nothing
+            whenJust rc.permitExpiry $ \permitExpiry ->
+              createReminder
+                ODC.VehiclePermit
+                person.id
+                person.merchantId
+                person.merchantOperatingCityId
+                (Just $ rc.id.getId)
+                (Just permitExpiry)
+                Nothing
+            whenJust rc.insuranceValidity $ \insuranceValidity ->
+              createReminder
+                ODC.VehicleInsurance
+                person.id
+                person.merchantId
+                person.merchantOperatingCityId
+                (Just $ rc.id.getId)
+                (Just insuranceValidity)
+                Nothing
+          -- Create associations always
           case person.role of
             Person.FLEET_OWNER -> do
               mbFleetAssoc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId person.id rc.id now
               when (isNothing mbFleetAssoc) $ do
                 createFleetRCAssociationIfPossible transporterConfig person.id rc
             _ -> do
-              -- linking to driver
               whenJust mbFleetOwnerId $ \fleetOwnerId -> do
                 mbFleetAssoc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId (Id fleetOwnerId) rc.id now
                 when (isNothing mbFleetAssoc) $ do
@@ -737,16 +720,16 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
               mbAssoc <- DAQuery.findLinkedByRCIdAndDriverId person.id rc.id now
               when (isNothing mbAssoc) $ do
                 createDriverRCAssociationIfPossible transporterConfig person.id rc
-              -- update vehicle details too if exists
-              mbVehicle <- VQuery.findByRegistrationNo =<< decrypt rc.certificateNumber
-              whenJust mbVehicle $ \vehicle -> do
-                when (rc.verificationStatus == Documents.VALID && isJust rc.vehicleVariant && null allFailures) $ do
-                  driverInfo <- DIQuery.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
-                  driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
-                  -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
-                  vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
-                  let updatedVehicle = makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now Nothing
-                  VQuery.upsert updatedVehicle
+              -- update vehicle details only for non-INVALID RCs
+              unless isInvalid $ do
+                mbVehicle <- VQuery.findByRegistrationNo =<< decrypt rc.certificateNumber
+                whenJust mbVehicle $ \vehicle -> do
+                  when (rc.verificationStatus == Documents.VALID && isJust rc.vehicleVariant && null allFailures) $ do
+                    driverInfo <- DIQuery.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
+                    driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
+                    vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
+                    let updatedVehicle = makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now Nothing
+                    VQuery.upsert updatedVehicle
               whenJust rcVerificationResponse.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey num
         Nothing -> pure ()
 

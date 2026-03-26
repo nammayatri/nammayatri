@@ -889,8 +889,12 @@ getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo =
   let entity = entityImagesInfo.entity
       mbS3Path = getS3PathFromVehicleImage entityImagesInfo docType mbRcImagesInfo
   case docType of
-    DVC.VehicleRegistrationCertificate ->
-      return (Just $ mapStatus vehicleRC.verificationStatus, vehicleRC.rejectReason, Nothing, Just vehicleRC.fitnessExpiry, mbS3Path)
+    DVC.VehicleRegistrationCertificate -> do
+      let status = mapStatus vehicleRC.verificationStatus
+          reason
+            | status == INVALID && not (null vehicleRC.failedRules) = Just $ T.intercalate ", " vehicleRC.failedRules
+            | otherwise = vehicleRC.rejectReason
+      return (Just status, reason, Nothing, Just vehicleRC.fitnessExpiry, mbS3Path)
     DVC.VehiclePermit -> do
       mbDoc <- case entity of
         IQuery.PersonEntity person -> listToMaybe <$> VPQuery.findByRcIdAndDriverId vehicleRC.id person.id
