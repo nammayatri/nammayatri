@@ -25,7 +25,7 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.RouteDetails as DRD
 import qualified Domain.Types.Seat as Seat
 import qualified Domain.Types.Trip as DTrip
-import EulerHS.Prelude hiding (all, and, any, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, minimumBy, null, readMaybe, toList, whenJust, concatMap)
+import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, minimumBy, null, readMaybe, toList, whenJust)
 import qualified ExternalBPP.CallAPI.Init as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Types as CallExternalBPP
 import Kernel.Beam.Functions as B
@@ -72,7 +72,7 @@ import Tools.Metrics.BAPMetrics (HasBAPMetrics)
 
 confirmAndUpsertBooking :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "cloudType" r (Maybe CloudType)) => Id Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking, FRFSUtils.FRFSFareParameters, [FRFSQuoteCategory.FRFSQuoteCategory], Bool)
 confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse isSingleMode mbIsMockPayment integratedBppConfig mbTripId = do
-  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing quote.id
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
   mbBooking <- QFRFSTicketBooking.findBySearchId quote.searchId
   riderConfig <-
     QRiderConfig.findByMerchantOperatingCityId integratedBppConfig.merchantOperatingCityId Nothing
