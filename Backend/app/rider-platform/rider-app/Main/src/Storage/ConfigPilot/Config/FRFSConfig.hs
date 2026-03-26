@@ -31,7 +31,6 @@ instance ConfigDimensions FRFSConfigDimensions where
   getConfigType _ = FRFSConfig
   getConfigList a = do
     let mocId = a.merchantOperatingCityId
-    IM.withInMemCache (configPilotInMemKey FRFSConfig mocId) 3600 $ do
-      cfg <- SCFRFS.findByMerchantOperatingCityId (Id mocId) (Just [])
-      let configWrapper = LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}
-      getConfigImpl a configWrapper (LYT.RIDER_CONFIG FRFSConfig) (Id mocId)
+    cfg <- IM.withInMemCache (configPilotInMemKey FRFSConfig mocId) 3600 $ SCFRFS.findByMerchantOperatingCityId (Id mocId) (Just [])
+    let configWrapper = LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}
+    getConfigImpl a configWrapper (LYT.RIDER_CONFIG FRFSConfig) (Id mocId)

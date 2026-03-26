@@ -18,6 +18,7 @@ import qualified Storage.Queries.BecknConfig as SQBC
 
 data BecknConfigDimensions = BecknConfigDimensions
   { merchantOperatingCityId :: Text,
+    merchantId :: Text,
     domain :: Maybe Text,
     vehicleCategory :: Maybe Enums.VehicleCategory
   }
@@ -34,12 +35,19 @@ instance ConfigDimensions BecknConfigDimensions where
   getConfigType _ = BecknConfig
   getConfigList a = do
     let mocId = a.merchantOperatingCityId
-    IM.withInMemCache (configPilotInMemKey BecknConfig mocId) 3600 $ do
-      cfgs <- SQBC.findAllByMerchantOperatingCityId (Just (Id mocId))
-      let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) cfgs
-      mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG BecknConfig) (Id mocId)) configWrappers
-  filterByDimensions dims cfgs = filter matchesDims cfgs
+    let mId = a.merchantId
+    cfgs <- IM.withInMemCache (configPilotInMemKey BecknConfig mId) 3600 $ SQBC.findByMerchantId (Just (Id mId))
+    let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) cfgs
+    mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG BecknConfig) (Id mocId)) configWrappers
+  filterByDimensions dims cfgs =
+    let foundCfg = filter matchesDimsMocId cfgs
+     in if null foundCfg
+          then maybeToList . listToMaybe $ filter matchesDims cfgs
+          else foundCfg
     where
+      matchesDimsMocId c =
+        matchesDims c
+          && c.merchantOperatingCityId == Just (Id dims.merchantOperatingCityId)
       matchesDims c =
         maybe True (\d -> c.domain == d) dims.domain
           && maybe True (\vc -> c.vehicleCategory == vc) dims.vehicleCategory

@@ -22,6 +22,7 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils
 import Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import Environment
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -30,6 +31,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import Storage.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import TransactionLogs.PushLogs
 
@@ -44,6 +46,7 @@ onSearch ::
   FlowHandler AckResponse
 onSearch _ reqV2 = withFlowHandlerBecknAPI do
   transactionId <- Utils.getTransactionId reqV2.onSearchReqContext
+  L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do
     logInfo $ "OnSearch received:-" <> show reqV2
     searchRequest <- runInReplica $ QSearchReq.findById (cast $ Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)

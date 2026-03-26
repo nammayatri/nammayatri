@@ -31,7 +31,6 @@ instance ConfigDimensions MerchantConfigDimensions where
   getConfigType _ = MerchantConfig
   getConfigList a = do
     let mocId = a.merchantOperatingCityId
-    IM.withInMemCache (configPilotInMemKey MerchantConfig mocId) 3600 $ do
-      cfgs <- SCMC.findAllByMerchantOperatingCityId (Id mocId) (Just [])
-      let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) cfgs
-      mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG MerchantConfig) (Id mocId)) configWrappers
+    cfgs <- IM.withInMemCache (configPilotInMemKey MerchantConfig mocId) 3600 $ SCMC.findAllByMerchantOperatingCityId (Id mocId) (Just [])
+    let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) cfgs
+    mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG MerchantConfig) (Id mocId)) configWrappers

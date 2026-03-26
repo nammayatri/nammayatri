@@ -31,7 +31,6 @@ instance ConfigDimensions MerchantPushNotificationDimensions where
   getConfigType _ = MerchantPushNotification
   getConfigList a = do
     let mocId = a.merchantOperatingCityId
-    IM.withInMemCache (configPilotInMemKey MerchantPushNotification mocId) 3600 $ do
-      cfgs <- SQMPN.findAllByMerchantOpCityId (Id mocId)
-      let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) cfgs
-      mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG MerchantPushNotification) (Id mocId)) configWrappers
+    cfgs <- IM.withInMemCache (configPilotInMemKey MerchantPushNotification mocId) 3600 $ SQMPN.findAllByMerchantOpCityId (Id mocId)
+    let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) cfgs
+    mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG MerchantPushNotification) (Id mocId)) configWrappers

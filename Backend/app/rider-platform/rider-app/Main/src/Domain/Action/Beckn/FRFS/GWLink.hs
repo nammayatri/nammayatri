@@ -51,7 +51,7 @@ getCustomCardTitleValueByTripType tripType =
 
 getserviceAccount :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id M.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> m TC.ServiceAccount
 getserviceAccount merchantId merchantOpCityId serviceName = do
-  merchantServiceConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, serviceName = Just serviceName}) >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "WalletService" (show GW.GoogleWallet))
+  merchantServiceConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Just serviceName}) >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "WalletService" (show GW.GoogleWallet))
   wsc <- case merchantServiceConfig.serviceConfig of
     DEMSC.WalletServiceConfig wsc' -> pure wsc'
     _ -> throwError $ InternalError $ "Unknown Service Config" <> " MerchantOperatingCityId :-" <> merchantOpCityId.getId

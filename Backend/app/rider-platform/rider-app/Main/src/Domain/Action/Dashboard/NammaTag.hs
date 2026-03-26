@@ -619,10 +619,10 @@ postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity req = do
       cfg <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId})
       pure LYTU.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
     LYTU.MerchantServiceConfig -> do
-      cfgs <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mocId, serviceName = dimLookup "serviceName" dims})
+      cfgs <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId, serviceName = dimLookup "serviceName" dims})
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.BecknConfig -> do
-      cfgs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = mocId, domain = dimLookup "domain" dims, vehicleCategory = dimLookup "vehicleCategory" dims})
+      cfgs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId, domain = dimLookup "domain" dims, vehicleCategory = dimLookup "vehicleCategory" dims})
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.MerchantPushNotification -> do
       cfgs <- getConfig (MerchantPushNotificationDimensions {merchantOperatingCityId = mocId})

@@ -22,6 +22,7 @@ import Data.Text as T
 import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
 import Domain.Types
 import Environment
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
@@ -29,6 +30,7 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import Storage.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import qualified Tools.Metrics as Metrics
@@ -45,6 +47,7 @@ onConfirm ::
   FlowHandler AckResponse
 onConfirm _ reqV2 = withFlowHandlerBecknAPI do
   transactionId <- Utils.getTransactionId reqV2.onConfirmReqContext
+  L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do
     bppSubscriberId <- Utils.getContextBppId reqV2.onConfirmReqContext
     isValueAddNP <- CQVAN.isValueAddNP bppSubscriberId

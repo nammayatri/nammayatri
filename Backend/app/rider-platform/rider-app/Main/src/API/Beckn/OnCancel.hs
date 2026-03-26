@@ -22,11 +22,13 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnCancel as DOnCancel
 import Environment
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import Storage.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Tools.Error
 import TransactionLogs.PushLogs
 
@@ -41,6 +43,7 @@ onCancel ::
   FlowHandler AckResponse
 onCancel _ req = withFlowHandlerBecknAPI do
   transactionId <- Utils.getTransactionId req.onCancelReqContext
+  L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "onCancel API Flow" $ "Received onCancel request:-" <> show req
     cancelMsg <- req.onCancelReqMessage & fromMaybeM (InvalidBecknSchema "Missing message in on_cancel")

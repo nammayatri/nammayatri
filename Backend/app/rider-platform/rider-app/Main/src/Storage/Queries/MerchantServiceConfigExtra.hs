@@ -39,6 +39,12 @@ import Storage.Queries.OrphanInstances.MerchantServiceConfig ()
 import qualified Utils.Common.JWT.Config as GW
 
 -- Extra code goes here --
+findAllByMerchantId ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id Merchant ->
+  m [MerchantServiceConfig]
+findAllByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamMSC.merchantId $ Se.Eq merchantId]
+
 findByMerchantOpCityIdAndService ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant ->

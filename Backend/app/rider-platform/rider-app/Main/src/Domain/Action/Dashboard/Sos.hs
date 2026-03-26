@@ -173,7 +173,7 @@ callExternalSOS sosId mbComments = do
         throwError $ InvalidRequest "External SOS trigger source is not DASHBOARD for this city"
       let sosServiceType = flowToSOSService sosConfig.flow
       merchantSvcCfg <-
-        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, serviceName = Just (DMSC.SOSService sosServiceType)})
+        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.SOSService sosServiceType)})
           >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "SOS" (show sosServiceType))
       case merchantSvcCfg.serviceConfig of
         DMSC.SOSServiceConfig specificConfig -> do
