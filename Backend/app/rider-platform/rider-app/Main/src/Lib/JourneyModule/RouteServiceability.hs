@@ -92,6 +92,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                   let frfsServiceTier = lookup serviceTier frfsTierMap'
                   -- Get service subtypes from in-memory cache
                   mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [integratedBPPConfig'] detail.vehicle_no
+                  mbVehicleTagNumber <- JMU.getVehicleTagNumberFromInMem [integratedBPPConfig'] detail.vehicle_no
 
                   let combinedTripId = do
                         waybill <- detail.waybill_no
@@ -126,6 +127,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                             vehicleNumber = detail.vehicle_no,
                             tripId = combinedTripId,
                             serviceSubTypes = mbServiceSubTypes,
+                            vehicleTagNumber = mbVehicleTagNumber,
                             availableSeats = availableSeatsCount
                           }
                 Nothing -> do
@@ -145,6 +147,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                     let frfsServiceTier = lookup serviceTier frfsTierMap'
                     -- Get service subtypes from in-memory cache
                     mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [integratedBPPConfig'] bus.vehicleNumber
+                    mbVehicleTagNumber <- JMU.getVehicleTagNumberFromInMem [integratedBPPConfig'] bus.vehicleNumber
 
                     logDebug $ "getLiveVehicles: vehicle=" <> bus.vehicleNumber <> ", routeId=" <> bus.busData.route_id <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", position=(" <> show bus.busData.latitude <> "," <> show bus.busData.longitude <> ")" <> ", timestamp=" <> show bus.busData.timestamp <> ", eta=" <> show bus.busData.eta_data <> ", routeState=" <> show bus.busData.route_state <> ", routeNumber=" <> show bus.busData.route_number
                     enrichedEta <-
@@ -159,7 +162,8 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                           locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral bus.busData.timestamp,
                           serviceTierType = serviceTier,
                           serviceTierName = (.shortName) <$> frfsServiceTier,
-                          serviceSubTypes = mbServiceSubTypes
+                          serviceSubTypes = mbServiceSubTypes,
+                          vehicleTagNumber = mbVehicleTagNumber
                         }
                   Nothing -> do
                     logError $ "Vehicle info not found for bus: " <> bus.vehicleNumber

@@ -30,6 +30,8 @@ type StopsByGtfsIdFuzzySearchAPI = "stops" :> Capture "gtfs_id" Text :> "fuzzy" 
 
 type VehicleServiceTypeAPI = "vehicle" :> Capture "gtfs_id" Text :> "service-type" :> Capture "vehicle_number" Text :> QueryParam "passVerifyReq" Bool :> Get '[JSON] VehicleServiceTypeResponse
 
+type VehicleMetadataAPI = "vehicle" :> Capture "gtfs_id" Text :> "metadata" :> Capture "vehicle_number" Text :> Get '[JSON] VehicleMetadataResponse
+
 type StopChildrenAPI = "station-children" :> Capture "gtfs_id" Text :> Capture "stop_code" Text :> Get '[JSON] [Text]
 
 type GtfsVersionAPI = "version" :> Capture "gtfs_id" Text :> Get '[JSON] Text
@@ -97,6 +99,9 @@ nandiStopsByGtfsIdFuzzySearchAPI = Proxy
 
 nandiVehicleServiceTypeAPI :: Proxy VehicleServiceTypeAPI
 nandiVehicleServiceTypeAPI = Proxy
+
+nandiVehicleMetadataAPI :: Proxy VehicleMetadataAPI
+nandiVehicleMetadataAPI = Proxy
 
 nandiStopChildrenAPI :: Proxy StopChildrenAPI
 nandiStopChildrenAPI = Proxy
@@ -181,6 +186,9 @@ getNandiStopsByGtfsIdFuzzySearch = ET.client nandiStopsByGtfsIdFuzzySearchAPI
 
 getNandiVehicleServiceType :: Text -> Text -> Maybe Bool -> ET.EulerClient VehicleServiceTypeResponse
 getNandiVehicleServiceType = ET.client nandiVehicleServiceTypeAPI
+
+getNandiVehicleMetadata :: Text -> Text -> ET.EulerClient VehicleMetadataResponse
+getNandiVehicleMetadata = ET.client nandiVehicleMetadataAPI
 
 getNandiStopChildren :: Text -> Text -> ET.EulerClient [Text]
 getNandiStopChildren = ET.client nandiStopChildrenAPI
