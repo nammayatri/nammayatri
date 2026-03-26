@@ -288,6 +288,7 @@ FRFSQuoteCategory:
       title: Maybe Text
       description: Maybe Text
       tnc: Maybe Text
+      categoryOrder: Maybe Int
     price:
       currency: Maybe Currency
       price: HighPrecMoney
@@ -305,7 +306,7 @@ FRFSQuoteCategory:
     price: Kernel.Types.Common.mkPrice currency price|E
     offeredPrice: Kernel.Types.Common.mkPrice currency offeredPrice|E
     finalPrice: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice|E
-    categoryMeta: Storage.Queries.Transformers.FRFSQuoteCategory.mkQuoteCategoryMetadata code title description tnc|E
+    categoryMeta: Storage.Queries.Transformers.FRFSQuoteCategory.mkQuoteCategoryMetadataWithOrder code title description tnc categoryOrder|E
     category: Kernel.Prelude.fromMaybe Domain.Types.FRFSQuoteCategoryType.ADULT category|E
     selectedQuantity: Kernel.Prelude.fromMaybe 0|I
     seatIds: fmap (fmap Kernel.Types.Id.Id) seatIds|E
@@ -319,6 +320,7 @@ FRFSQuoteCategory:
     title: (categoryMeta <&> (.title))|E
     description: (categoryMeta <&> (.description))|E
     tnc: (categoryMeta <&> (.tnc))|E
+    categoryOrder: (categoryMeta >>= (.categoryOrder))|E
     category: Kernel.Prelude.Just|I
     selectedQuantity: Kernel.Prelude.Just|I
     seatIds: (fmap Kernel.Types.Id.getId) <$> seatIds|E
@@ -333,14 +335,12 @@ FRFSQuoteCategory:
       title: Text
       description: Text
       tnc: Text
+      categoryOrder: Maybe Int
 
   queries:
     findById:
       kvFunction: findOneWithKV
       where: id
-    findAllByQuoteId:
-      kvFunction: findAllWithKV
-      where: quoteId
     updateQuantityByQuoteCategoryId:
       kvFunction: updateWithKV
       params: [selectedQuantity, updatedAt]
@@ -353,6 +353,9 @@ FRFSQuoteCategory:
       kvFunction: updateWithKV
       params: [offeredPrice, updatedAt]
       where: quoteId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 FRFSTicketBooking:
   tableName: frfs_ticket_booking
@@ -1149,6 +1152,7 @@ FRFSTicketCategoryMetadataConfig:
     domainCategoryValue: OfferedValue
     merchantOperatingCityId: Id MerchantOperatingCity
     vehicleCategory: VehicleCategory
+    categoryOrder: Maybe Int
   constraints:
     id: PrimaryKey
 
