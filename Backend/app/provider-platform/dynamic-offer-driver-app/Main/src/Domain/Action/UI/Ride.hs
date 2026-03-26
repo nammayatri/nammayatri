@@ -261,7 +261,7 @@ otpRideCreate driver otpCode booking clientId = do
   when isVehicleVariantNotAllowed $ throwError $ InvalidRequest "Wrong Vehicle Variant"
   when (booking.status `elem` [DRB.COMPLETED, DRB.CANCELLED]) $ throwError (BookingInvalidStatus $ show booking.status)
   driverInfo <- QDI.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
-  unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
+  unless (driverInfo.subscribed || isKaaliPeeliBooking booking) $ throwError DriverUnsubscribed
   unless (driverInfo.enabled || fromMaybe False transporterConfig.allowDisableDriverToTakeSpecialZoneRide) $ throwError DriverAccountDisabled
   when driverInfo.blocked $ throwError (DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag))
   unless booking.isDashboardRequest $ throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo False

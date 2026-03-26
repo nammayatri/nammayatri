@@ -68,7 +68,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculatorV2 as FCV2
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.IffcoTokioInsurance as IffcoInsurance
-import SharedLogic.Ride (calculateEstimatedEndTimeRange, getPayoutVpaForRide)
+import SharedLogic.Ride (calculateEstimatedEndTimeRange, getPayoutVpaForRide, isKaaliPeeliBooking)
 import qualified SharedLogic.ScheduledNotifications as SN
 import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig as SCTC
@@ -169,7 +169,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
   let driverKey = makeStartRideIdKey driverId
   Redis.setExp driverKey ride.id 60
   rateLimitStartRide driverId ride.id -- do we need it for dashboard?
-  unless (driverInfo.subscribed || openMarketAllow) $ throwError DriverUnsubscribed
+  unless (driverInfo.subscribed || openMarketAllow || isKaaliPeeliBooking booking) $ throwError DriverUnsubscribed
   case req of
     DriverReq driverReq -> do
       let requestor = driverReq.requestor

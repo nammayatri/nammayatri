@@ -75,6 +75,13 @@ import Tools.Error
 import Tools.Event
 import qualified Tools.Notifications as Notify
 
+-- | Used to allow unsubscribed drivers for special "Kaali Peeli" rides.
+isKaaliPeeliBooking :: DBooking.Booking -> Bool
+isKaaliPeeliBooking booking =
+  let nameLower = T.toLower booking.vehicleServiceTierName
+      tierNameOk = "kaali peeli" `T.isInfixOf` nameLower
+   in tierNameOk
+
 initializeRide ::
   Merchant ->
   DPerson.Person ->

@@ -40,6 +40,7 @@ import qualified Storage.Queries.RideExtra as QRE
 data BppTransactionJoinT f = BppTransactionJoinT
   { bookingCustomerName :: C f (Maybe Text),
     bookingTripCategory :: C f TripCategory,
+    bookingDisplayBookingId :: C f (Maybe Text),
     rideShortId :: C f (ShortId Ride),
     rideCurrency :: C f (Maybe Currency),
     rideCreatedAt :: C f UTCTime,
@@ -108,6 +109,7 @@ bppTransactionJoinTTable =
   BppTransactionJoinT
     { bookingCustomerName = "booking_customer_name",
       bookingTripCategory = "booking_trip_category",
+      bookingDisplayBookingId = "booking_display_booking_id",
       rideShortId = "ride_short_id",
       rideCurrency = "ride_currency",
       riderDetailsCancellationDues = "rider_details_cancellation_dues",
@@ -309,6 +311,7 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
           paymentInstrument = Nothing,
           bookingStatus = mkBookingStatus bppTxn,
           tripCategory = bppTxn.bookingTripCategory,
+          displayBookingId = bppTxn.bookingDisplayBookingId,
           ..
         }
 
