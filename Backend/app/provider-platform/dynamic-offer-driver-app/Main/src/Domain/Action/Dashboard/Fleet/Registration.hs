@@ -222,7 +222,8 @@ createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGst
             registeredAt = Nothing,
             isEligibleForSubscription = True,
             ticketPlaceId = mbTicketPlaceId,
-            merchantOperatingCityId = mbMerchantOperatingCityId
+            merchantOperatingCityId = mbMerchantOperatingCityId,
+            payoutRegistrationOrderId = Nothing
           }
   QFOI.create fleetOwnerInfo
 

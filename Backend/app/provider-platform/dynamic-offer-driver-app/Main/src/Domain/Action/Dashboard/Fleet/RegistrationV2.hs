@@ -11,7 +11,7 @@ module Domain.Action.Dashboard.Fleet.RegistrationV2
     castRoleToFleetType,
     postRegistrationV2RegisterBankAccountLink,
     getRegistrationV2RegisterBankAccountStatus,
-    checkRequestorAcccessToFleet,
+    checkRequestorAccessToFleet,
     castFleetType,
     sendFleetOnboardingSms,
   )
@@ -349,7 +349,8 @@ createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId mbTds
             isBlockedForScheduledPayout = Nothing,
             subscribed = Nothing,
             tollRouteBlockedTill = Nothing,
-            weeklyCancellationRateBlockingCooldown = Nothing
+            weeklyCancellationRateBlockingCooldown = Nothing,
+            payoutRegistrationOrderId = Nothing
           }
   QFOI.create fleetOwnerInfo
 
@@ -471,7 +472,7 @@ postRegistrationV2RegisterBankAccountLink ::
   Text ->
   Flow Common.FleetBankAccountLinkResp
 postRegistrationV2RegisterBankAccountLink _merchantShortId _opCity mbFleetOwnerId paymentMode requestorId = do
-  fleetOwner <- checkRequestorAcccessToFleet mbFleetOwnerId requestorId
+  fleetOwner <- checkRequestorAccessToFleet mbFleetOwnerId requestorId
   let fetchPersonStripeInfo = do
         fleetOwnerInfo <- runInReplica (QFOI.findByPrimaryKey fleetOwner.id) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
         stripeAddress <- fleetOwnerInfo.stripeAddress & fromMaybeM (InvalidRequest "Stripe address is required for opening a bank account")
@@ -495,14 +496,14 @@ getRegistrationV2RegisterBankAccountStatus ::
   Text ->
   Flow Common.FleetBankAccountResp
 getRegistrationV2RegisterBankAccountStatus _merchantShortId _opCity mbFleetOwnerId requestorId = do
-  fleetOwner <- checkRequestorAcccessToFleet mbFleetOwnerId requestorId
+  fleetOwner <- checkRequestorAccessToFleet mbFleetOwnerId requestorId
   castFleetBankAccountResp <$> SPBA.getPersonRegisterBankAccountStatus fleetOwner
 
 castFleetBankAccountResp :: Onboarding.BankAccountResp -> Common.FleetBankAccountResp
 castFleetBankAccountResp Onboarding.BankAccountResp {..} = Common.FleetBankAccountResp {..}
 
-checkRequestorAcccessToFleet :: Maybe Text -> Text -> Flow DP.Person
-checkRequestorAcccessToFleet mbFleetOwnerId requestorId = do
+checkRequestorAccessToFleet :: Maybe Text -> Text -> Flow DP.Person
+checkRequestorAccessToFleet mbFleetOwnerId requestorId = do
   requestor <- runInReplica $ QP.findById (Id @DP.Person requestorId) >>= fromMaybeM (PersonNotFound requestorId)
   case requestor.role of
     DP.ADMIN -> do

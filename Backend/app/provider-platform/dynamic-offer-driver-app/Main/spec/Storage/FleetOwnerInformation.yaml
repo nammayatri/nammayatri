@@ -54,6 +54,7 @@ FleetOwnerInformation:
     payoutRegAmountRefunded: Maybe HighPrecMoney
     tollRouteBlockedTill: Maybe UTCTime
     isBlockedForReferralPayout: Maybe Bool
+    payoutRegistrationOrderId: Maybe Text
 
   excludedFields: [merchantOperatingCityId]
   default:
@@ -67,7 +68,7 @@ FleetOwnerInformation:
       enum: "PENDING,ACTIVE,SUSPENDED,PAUSED_PSP,CANCELLED_PSP,MANDATE_FAILED,MANDATE_EXPIRED"
       derive: "HttpInstance"
     PayoutVpaStatus:
-      enum: "VIA_WEBHOOK, MANUALLY_ADDED, VERIFIED_BY_USER"
+      enum: "VIA_WEBHOOK,MANUALLY_ADDED,VERIFIED_BY_USER"
   beamType:
     isEligibleForSubscription: Maybe Bool
     stripeAddress: Maybe Value
@@ -154,6 +155,10 @@ FleetOwnerInformation:
       where: fleetOwnerPersonId
     deleteByFleetOwnerPersonId:
       kvFunction: deleteWithKV
+      where: fleetOwnerPersonId
+    updatePayoutRegistrationOrderId:
+      kvFunction: updateOneWithKV
+      params: [payoutRegistrationOrderId]
       where: fleetOwnerPersonId
     findAllByPrimaryKeys:
       kvFunction: findAllWithKV

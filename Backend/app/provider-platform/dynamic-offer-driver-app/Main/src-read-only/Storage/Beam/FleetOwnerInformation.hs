@@ -49,6 +49,7 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     panNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentPending :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     payoutRegAmountRefunded :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    payoutRegistrationOrderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     payoutVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     payoutVpaBankAccount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     payoutVpaStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.FleetOwnerInformation.PayoutVpaStatus),

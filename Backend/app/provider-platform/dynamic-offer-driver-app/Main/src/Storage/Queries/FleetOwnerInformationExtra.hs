@@ -6,6 +6,7 @@ import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
@@ -236,6 +237,19 @@ updatePayoutVpaAndStatus payoutVpa payoutVpaStatus fleetOwnerPersonId = do
   updateOneWithKV
     [ Se.Set Beam.payoutVpa payoutVpa,
       Se.Set Beam.payoutVpaStatus payoutVpaStatus,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
+updatePayoutRegAmountRefunded ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe Kernel.Types.Common.HighPrecMoney ->
+  Kernel.Types.Id.Id DP.Person ->
+  m ()
+updatePayoutRegAmountRefunded payoutRegAmountRefunded fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.payoutRegAmountRefunded payoutRegAmountRefunded,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
