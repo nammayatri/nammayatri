@@ -45,7 +45,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RiderDetails
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Yudhishthira as TY
-import EulerHS.Prelude hiding (whenJust)
+import EulerHS.Prelude hiding (threadDelay, whenJust)
 import Kernel.External.Maps
 import Kernel.Prelude hiding (any, elem, map, mapM_, notElem)
 import Kernel.Storage.Clickhouse.Config
@@ -208,8 +208,13 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                 DCP.accumulateCancellationPenalty (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableDriverWallet) booking ride rideTags transporterConfig driver
               Notify.notifyOnCancel ride.merchantOperatingCityId booking driver bookingCReason.source
             fork "cancelRide/ReAllocate - Notify BAP" $ do
+              logInfo $ "Attempting reallocation for bookingId: " <> booking.id.getId <> " after driver cancellation by driverId: " <> ride.driverId.getId
               isReallocated <- reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason isForceReallocation
-              unless isReallocated $ BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source userNoShowCharges
+              if isReallocated
+                then logInfo $ "Reallocation initiated successfully for bookingId: " <> booking.id.getId
+                else do
+                  logWarning $ "Reallocation failed for bookingId: " <> booking.id.getId <> " — notifying rider of cancellation"
+                  BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source userNoShowCharges
             computeEligibleUpgradeTiers ride transporterConfig
         )
         ( do
@@ -305,38 +310,51 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
         mbPanCard <- QPanCard.findByDriverId ride.driverId
         mbDriverInfo <- QDI.findById (cast ride.driverId)
         ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig
-        result <- runFinance ctx $ do
-          mapM_
-            ( \(amt, ref, dest) -> do
-                transfer_ BuyerAsset BuyerExternal amt ref
-                void $ transfer BuyerExternal dest amt ref
-            )
-            cancellationComponents
-          -- TDS: Liability(DRIVER/FLEET_OWNER) -> Liability(GOVERNMENT_DIRECT)
-          whenJust mbTdsAmount $ \tdsAmount ->
-            void $ transfer OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCancellation
-          invoice
-            InvoiceConfig
-              { invoiceType = Invoice.RideCancellation,
-                issuedToType = "CUSTOMER",
-                issuedToId = rid.getId,
-                issuedToName = booking.riderName,
-                issuedToAddress = booking.fromLocation.address.fullAddress,
-                gstBreakdown = computeGstBreakdown rideGst gstOnCancellation,
-                lineItems =
-                  catMaybes
-                    [ if baseCancellation > 0
-                        then Just InvoiceLineItem {description = "Customer Cancellation Fee", quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, isExternalCharge = False}
-                        else Nothing,
-                      if gstOnCancellation > 0
-                        then Just InvoiceLineItem {description = "GST on Cancellation Fee", quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, isExternalCharge = False}
-                        else Nothing
-                    ]
-              }
-        case result of
-          Left err -> logInfo $ "Failed to create cancellation ledger entries: " <> show err
-          Right _ -> pure ()
-        logInfo $ "Created customer cancellation ledger entries for bookingId: " <> booking.id.getId <> " base=" <> show baseCancellation <> " gst=" <> show gstOnCancellation <> " tds=" <> show mbTdsAmount
+        let financeAction = runFinance ctx $ do
+              mapM_
+                ( \(amt, ref, dest) -> do
+                    transfer_ BuyerAsset BuyerExternal amt ref
+                    void $ transfer BuyerExternal dest amt ref
+                )
+                cancellationComponents
+              -- TDS: Liability(DRIVER/FLEET_OWNER) -> Liability(GOVERNMENT_DIRECT)
+              whenJust mbTdsAmount $ \tdsAmount ->
+                void $ transfer OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCancellation
+              invoice
+                InvoiceConfig
+                  { invoiceType = Invoice.RideCancellation,
+                    issuedToType = "CUSTOMER",
+                    issuedToId = rid.getId,
+                    issuedToName = booking.riderName,
+                    issuedToAddress = booking.fromLocation.address.fullAddress,
+                    gstBreakdown = computeGstBreakdown rideGst gstOnCancellation,
+                    lineItems =
+                      catMaybes
+                        [ if baseCancellation > 0
+                            then Just InvoiceLineItem {description = "Customer Cancellation Fee", quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, isExternalCharge = False}
+                            else Nothing,
+                          if gstOnCancellation > 0
+                            then Just InvoiceLineItem {description = "GST on Cancellation Fee", quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, isExternalCharge = False}
+                            else Nothing
+                        ]
+                  }
+        -- Retry up to 3 times with backoff on failure
+        let tryFinance attempt = do
+              result <- financeAction
+              case result of
+                Left err -> do
+                  if attempt < 3
+                    then do
+                      logWarning $ "Cancellation ledger creation attempt " <> show attempt <> " failed for bookingId: " <> booking.id.getId <> " error: " <> show err <> " — retrying..."
+                      liftIO $ threadDelay (attempt * 1000000) -- backoff: 1s, 2s
+                      tryFinance (attempt + 1)
+                    else do
+                      logError $ "CRITICAL: Failed to create cancellation ledger entries after 3 attempts for bookingId: " <> booking.id.getId <> " error: " <> show err
+                      pure False
+                Right _ -> pure True
+        success <- tryFinance (1 :: Int)
+        when success $
+          logInfo $ "Created customer cancellation ledger entries for bookingId: " <> booking.id.getId <> " base=" <> show baseCancellation <> " gst=" <> show gstOnCancellation <> " tds=" <> show mbTdsAmount
     _ -> do
       logError "cancelRideTransaction: riderId in booking or cancellationFee is not present"
 
@@ -362,6 +380,9 @@ updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig = 
       currentTime = floor $ utcTimeToPOSIXSeconds now
       rideCreatedTime = floor $ utcTimeToPOSIXSeconds ride.createdAt
       driverArrivalTime = floor . utcTimeToPOSIXSeconds <$> (ride.driverArrivalTime)
+      timeSinceAcceptSec = currentTime - rideCreatedTime
+      estimatedTripDistanceMeters = fromIntegral <$> booking.estimatedDistance
+      estimatedFareAmount = Just booking.estimatedFare
       tagData =
         TY.CancelRideTagData
           { ride = ride{status = DRide.CANCELLED},

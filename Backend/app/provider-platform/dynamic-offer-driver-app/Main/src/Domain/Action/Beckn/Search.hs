@@ -89,6 +89,7 @@ import SharedLogic.BlockedRouteDetector
 import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculatorV2 as FCV2
+import qualified SharedLogic.FareTransparency as FareTransparency
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleMaps
 import qualified SharedLogic.Merchant as SMerchant
@@ -827,6 +828,39 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
       minFare = fareSum minFareParams (Just []) + maybe 0.0 (.minFee) mbDriverExtraFeeBounds
       maxFare = fareSum maxFareParams (Just []) + maybe 0.0 (.maxFee) mbDriverExtraFeeBounds + pickupChargesMaxx
   let isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
+
+  -- P0 FIX-01: Compute and log fare breakdown for transparency
+  let fareBreakdown = FareTransparency.buildFareBreakdown maxFareParams (realToFrac . DFP.congestionChargeMultiplierToCentesimal <$> fullFarePolicy.congestionChargeMultiplier)
+  logInfo $
+    "FareBreakdown for estimate "
+      <> show estimateId
+      <> ": baseFare=" <> show fareBreakdown.baseFare
+      <> ", distanceCharge=" <> show fareBreakdown.distanceCharge
+      <> ", surgeAmount=" <> show fareBreakdown.surgeAmount
+      <> ", tollCharges=" <> show fareBreakdown.tollCharges
+      <> ", platformFee=" <> show fareBreakdown.platformFee
+
+  -- P0 FIX-01: Compute surge info with human-readable reason
+  let surgeInfo = FareTransparency.buildSurgeInfo maxFareParams.congestionCharge fullFarePolicy.congestionChargeMultiplier fullFarePolicy.smartTipReason
+  whenJust surgeInfo $ \si ->
+    logInfo $
+      "SurgeInfo for estimate "
+        <> show estimateId
+        <> ": multiplier=" <> show si.congestionMultiplier
+        <> ", amount=" <> show si.congestionChargeAmount
+        <> ", reason=" <> show si.reason
+
+  -- P0 FIX-09: Compute toll estimation info
+  let tollEstInfo = FareTransparency.buildTollEstimationInfo tollCharges tollNames tollIds
+  when tollEstInfo.tollsEstimated $
+    logInfo $
+      "TollEstimation for estimate "
+        <> show estimateId
+        <> ": tollsEstimated=" <> show tollEstInfo.tollsEstimated
+        <> ", tollsMayChange=" <> show tollEstInfo.tollsMayChange
+        <> ", amount=" <> show tollEstInfo.estimatedTollAmount
+        <> ", plazas=" <> show tollEstInfo.tollPlazaNames
+
   pure
     DEst.Estimate
       { id = estimateId,

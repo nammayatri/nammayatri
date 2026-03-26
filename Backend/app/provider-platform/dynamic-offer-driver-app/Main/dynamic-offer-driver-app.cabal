@@ -490,6 +490,7 @@ library
       SharedLogic.FareCalculatorV2
       SharedLogic.FarePolicy
       SharedLogic.FareProduct
+      SharedLogic.FareTransparency
       SharedLogic.Finance.Prepaid
       SharedLogic.Finance.Reconciliation
       SharedLogic.Finance.Wallet

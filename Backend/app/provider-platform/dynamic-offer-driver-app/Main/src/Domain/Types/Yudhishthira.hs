@@ -26,7 +26,13 @@ data CancelRideTagData = CancelRideTagData
     currentTime :: Int,
     rideCreatedTime :: Int,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    driverArrivalTime :: Maybe Int
+    driverArrivalTime :: Maybe Int,
+    -- Time-based penalty inputs: seconds since driver accepted the ride
+    timeSinceAcceptSec :: Int,
+    -- Estimated trip distance in meters (for destination-aware penalty)
+    estimatedTripDistanceMeters :: Maybe Int,
+    -- Estimated fare (for fare-aware penalty)
+    estimatedFareAmount :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

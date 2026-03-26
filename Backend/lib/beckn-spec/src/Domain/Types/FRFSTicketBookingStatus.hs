@@ -18,3 +18,47 @@ data FRFSTicketBookingStatus
   | CANCEL_INITIATED
   | TECHNICAL_CANCEL_REJECTED
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | Validates whether a state transition is legal in the FRFS booking state machine.
+-- Returns True if the transition from the first status to the second is allowed.
+isValidTransition :: FRFSTicketBookingStatus -> FRFSTicketBookingStatus -> Bool
+isValidTransition from to
+  | from == to = True -- Identity transitions are always valid (idempotent)
+  | otherwise = case (from, to) of
+      -- Forward flow
+      (NEW, APPROVED) -> True
+      (NEW, PAYMENT_PENDING) -> True
+      (APPROVED, PAYMENT_PENDING) -> True
+      (PAYMENT_PENDING, CONFIRMING) -> True
+      (CONFIRMING, CONFIRMED) -> True
+      -- Failure transitions (any non-terminal state can fail)
+      (NEW, FAILED) -> True
+      (APPROVED, FAILED) -> True
+      (PAYMENT_PENDING, FAILED) -> True
+      (CONFIRMING, FAILED) -> True
+      -- Cancellation transitions
+      (NEW, CANCEL_INITIATED) -> True
+      (APPROVED, CANCEL_INITIATED) -> True
+      (PAYMENT_PENDING, CANCEL_INITIATED) -> True
+      (CONFIRMING, CANCEL_INITIATED) -> True
+      (CONFIRMED, CANCEL_INITIATED) -> True
+      (CANCEL_INITIATED, CANCELLED) -> True
+      (CANCEL_INITIATED, COUNTER_CANCELLED) -> True
+      (CANCELLED, COUNTER_CANCELLED) -> True
+      (CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED) -> True
+      -- Recovery transitions
+      (FAILED, PAYMENT_PENDING) -> True -- Retry after failure
+      -- All other transitions are invalid
+      _ -> False
+
+-- | Checks if a status represents a completed/resolved booking outcome.
+-- Note: CONFIRMED bookings can still be cancelled, and FAILED bookings
+-- can retry via PAYMENT_PENDING. "Completion" here means the primary
+-- booking workflow has reached an outcome, not that no transitions remain.
+isCompletionStatus :: FRFSTicketBookingStatus -> Bool
+isCompletionStatus CONFIRMED = True
+isCompletionStatus FAILED = True
+isCompletionStatus CANCELLED = True
+isCompletionStatus COUNTER_CANCELLED = True
+isCompletionStatus TECHNICAL_CANCEL_REJECTED = True
+isCompletionStatus _ = False

@@ -481,6 +481,7 @@ castCancellationSource = \case
   DBCReason.ByMerchant -> Common.ByMerchant
   DBCReason.ByAllocator -> Common.ByAllocator
   DBCReason.ByApplication -> Common.ByApplication
+  DBCReason.ByFleetOwner -> Common.ByMerchant
 
 bookingCancel ::
   (CacheFlow m r, EsqDBFlow m r) =>

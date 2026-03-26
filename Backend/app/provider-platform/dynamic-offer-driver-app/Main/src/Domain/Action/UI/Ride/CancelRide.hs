@@ -27,7 +27,10 @@ where
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
+import qualified Data.Aeson as A
 import qualified Data.Text as Text
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Encoding as TLE
 import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
 import qualified Domain.SharedLogic.Cancel as SharedCancel
 import qualified Domain.Types.Booking as SRB
@@ -212,11 +215,11 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
         DP.ADMIN -> do
           unless (authPerson.merchantId == driver.merchantId) $ throwError (RideDoesNotExist rideId.getId)
           logTagInfo "admin -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-          buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.CallBased)
+          buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride booking (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.CallBased)
         DP.FLEET_OWNER -> do
           when (ride.fleetOwnerId /= Just authPerson.id) $ throwError (RideDoesNotExist rideId.getId)
           logTagInfo "fleetOwner -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-          buildRideCancelationReason Nothing Nothing Nothing DBCR.ByFleetOwner ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.FleetOwner)
+          buildRideCancelationReason Nothing Nothing Nothing DBCR.ByFleetOwner ride booking (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.FleetOwner)
         _ -> do
           unless (authPerson.id == driverId) $ throwError NotAnExecutor
           goHomeConfig <- CGHC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId)))
@@ -242,19 +245,19 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
             Just dis -> if abs (toInteger dis) > disToPickupThreshold then logWarning ("Invalid disToPickup received:" <> show disToPickup) >> return Nothing else return (Just dis)
             Nothing -> return Nothing
           let currentDriverLocation = getCoordinates <$> mbLocation
-          buildRideCancelationReason currentDriverLocation updatedDisToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId) >>= \res -> return (res, cancellationCount, isGoToDisabled, driverGoHomeRequestId, Just dghInfo, Just goHomeConfig, disToPickup, DRide.Driver)
+          buildRideCancelationReason currentDriverLocation updatedDisToPickup (Just driverId) DBCR.ByDriver ride booking (Just driver.merchantId) >>= \res -> return (res, cancellationCount, isGoToDisabled, driverGoHomeRequestId, Just dghInfo, Just goHomeConfig, disToPickup, DRide.Driver)
       return (rideCancellationReason, mbCancellationCnt, isGoToDisabled, driverGoHomeRequestId, dghInfo, goHomeConfig, disToPickup, rideEndedBy)
     DashboardRequestorId (reqMerchantId, _) -> do
       unless (driver.merchantId == reqMerchantId) $ throwError (RideDoesNotExist rideId.getId)
       logTagInfo "dashboard -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.Dashboard) -- is it correct DBCR.ByMerchant?
+      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride booking (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.Dashboard) -- is it correct DBCR.ByMerchant?
     ApplicationRequestorId jobId -> do
       logTagInfo "Allocator -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id <> "JobId " <> jobId)
-      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByApplication ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.Allocator)
+      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByApplication ride booking (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.Allocator)
     MerchantRequestorId (reqMerchantId, mocId) -> do
       unless (driver.merchantId == reqMerchantId && mocId == driver.merchantOperatingCityId) $ throwError (RideDoesNotExist rideId.getId)
       logTagInfo "Allocator : ByMerchant -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.Allocator)
+      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride booking (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.Allocator)
 
   -- Lock Description: This is a Shared Lock held Between Booking Cancel for Customer & Driver, At a time only one of them can do the full Cancel to OnCancel/Reallocation flow.
   -- Lock Release: Held for 30 seconds and released at the end of the OnCancel/EstimateRepitition-OnUpdate/QuoteRepitition-OnUpdate.
@@ -271,8 +274,22 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
   pure (cancellationCnt, isGoToDisabled)
   where
     isValidRide ride = ride.status `elem` [DRide.NEW, DRide.UPCOMING]
-    buildRideCancelationReason currentDriverLocation disToPickup mbDriverId source ride merchantId = do
+    buildRideCancelationReason currentDriverLocation disToPickup mbDriverId source ride booking' merchantId = do
+      now <- getCurrentTime
       let CancelRideReq {..} = req
+          -- Enrich additionalInfo with cancellation metadata for analytics
+          timeSinceAcceptSec = round (diffUTCTime now ride.createdAt) :: Int
+          cancellationMeta =
+            A.object
+              [ "message" A..= additionalInfo,
+                "timeSinceAcceptSec" A..= timeSinceAcceptSec,
+                "distToPickupMeters" A..= disToPickup,
+                "estimatedDistance" A..= booking'.estimatedDistance,
+                "estimatedFare" A..= booking'.estimatedFare,
+                "source" A..= source,
+                "reasonCode" A..= reasonCode
+              ]
+          enrichedAdditionalInfo = Just $ TL.toStrict (TLE.decodeUtf8 (A.encode cancellationMeta))
       return $
         DBCR.BookingCancellationReason
           { bookingId = ride.bookingId,
@@ -281,6 +298,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
             source = source,
             reasonCode = Just reasonCode,
             driverId = mbDriverId,
+            additionalInfo = enrichedAdditionalInfo,
             driverCancellationLocation = currentDriverLocation,
             driverDistToPickup = disToPickup,
             distanceUnit = ride.distanceUnit,
