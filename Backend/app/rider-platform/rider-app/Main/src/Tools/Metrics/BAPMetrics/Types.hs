@@ -30,6 +30,7 @@ type HasBAPMetrics m r = HasFlowEnv m r ["bapMetrics" ::: BAPMetricsContainer, "
 data BAPMetricsContainer = BAPMetricsContainer
   { searchRequestCounter :: SearchRequestCounterMetric,
     rideCreatedCounter :: RideCreatedCounterMetric,
+    serviceabilityCheckCounter :: ServiceabilityCheckCounterMetric,
     busScanSearchRequestCounter :: BusScanSearchRequestCounterMetric,
     searchDurationTimeout :: Seconds,
     searchDuration :: SearchDurationMetric,
@@ -54,6 +55,8 @@ type FleetRouteMapMissingCounterMetric = P.Vector P.Label4 P.Counter
 
 type RideCreatedCounterMetric = P.Vector P.Label4 P.Counter
 
+type ServiceabilityCheckCounterMetric = P.Vector P.Label3 P.Counter
+
 type SearchDurationMetric = (P.Vector P.Label2 P.Histogram, P.Vector P.Label2 P.Counter)
 
 type DurationMetric = (P.Vector P.Label3 P.Histogram, P.Vector P.Label3 P.Counter)
@@ -70,6 +73,7 @@ registerBAPMetricsContainer searchDurationTimeout = do
   vehicleNoEtaCounter <- registerVehicleNoEtaCounterMetric
   busScanSearchRequestCounter <- registerBusScanSearchRequestCounterMetric
   rideCreatedCounter <- registerRideCreatedCounterMetric
+  serviceabilityCheckCounter <- registerServiceabilityCheckCounterMetric
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
   searchDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_search_frfs_round_trip" "beckn_search_frfs_round_trip_failure_counter"
   selectDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_select_frfs_round_trip" "beckn_select_frfs_round_trip_failure_counter"
@@ -98,6 +102,9 @@ registerBusScanSearchRequestCounterMetric = P.register $ P.vector ("merchant_nam
 
 registerRideCreatedCounterMetric :: IO RideCreatedCounterMetric
 registerRideCreatedCounterMetric = P.register $ P.vector ("merchant_id", "version", "category", "merchantOperatingCityId") $ P.counter $ P.Info "ride_created_count" ""
+
+registerServiceabilityCheckCounterMetric :: IO ServiceabilityCheckCounterMetric
+registerServiceabilityCheckCounterMetric = P.register $ P.vector ("merchantOperatingCityId", "result", "version") $ P.counter $ P.Info "serviceability_check_total" ""
 
 registerSearchDurationMetric :: Seconds -> IO SearchDurationMetric
 registerSearchDurationMetric searchDurationTimeout = do

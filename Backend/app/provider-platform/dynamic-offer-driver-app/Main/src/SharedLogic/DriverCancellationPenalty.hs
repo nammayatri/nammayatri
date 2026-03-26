@@ -151,6 +151,7 @@ accumulateCancellationPenalty ::
     Redis.HedisFlow m r,
     EventStreamFlow m r,
     Metrics.HasCoreMetrics r,
+    Metrics.HasBPPMetrics m r,
     HasShortDurationRetryCfg r c
   ) =>
   Bool -> -- isWalletEnabled
@@ -162,6 +163,7 @@ accumulateCancellationPenalty ::
   m ()
 accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterConfig driver = do
   when (validCancellationPenaltyApplicable `elem` rideTags && isJust booking.fareParams.driverCancellationPenaltyAmount) $ do
+    Metrics.incrementDriverPenaltyCount "cooldown" booking.merchantOperatingCityId.getId
     case booking.fareParams.driverCancellationPenaltyAmount of
       Just penaltyAmount ->
         if isWalletEnabled

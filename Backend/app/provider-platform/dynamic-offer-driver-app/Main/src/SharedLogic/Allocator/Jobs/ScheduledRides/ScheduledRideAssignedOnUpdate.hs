@@ -28,6 +28,7 @@ import qualified Kernel.External.Maps.Types as Maps
 import Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH
+import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
@@ -87,7 +88,9 @@ sendScheduledRideAssignedOnUpdate ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
-    CH.ClickhouseFlow m r
+    CH.ClickhouseFlow m r,
+    Metrics.HasBPPMetrics m r,
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
   ) =>
   Job 'ScheduledRideAssignedOnUpdate ->
   m ExecutionResult
@@ -294,7 +297,9 @@ cancelOrReallocate ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
-    CH.ClickhouseFlow m r
+    CH.ClickhouseFlow m r,
+    Metrics.HasBPPMetrics m r,
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
   ) =>
   DRide.Ride ->
   Text ->

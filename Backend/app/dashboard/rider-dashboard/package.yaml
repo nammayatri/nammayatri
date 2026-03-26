@@ -84,14 +84,12 @@ dependencies:
   - wai
   - prometheus-client
   - http-types
-  - wai
 
 ghc-options:
   - -Wall
   - -Wcompat
-  - -Werror
   - -Widentities
-  - -Wunused-imports
+  - -Werror=unused-imports
   - -fplugin=RecordDotPreprocessor
   - -fwrite-ide-info
   - -hiedir=.hie

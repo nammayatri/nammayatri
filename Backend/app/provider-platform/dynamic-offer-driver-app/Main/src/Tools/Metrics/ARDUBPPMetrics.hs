@@ -26,6 +26,17 @@ import Kernel.Utils.Time (getClockTimeInMs)
 import Prometheus as P
 import Tools.Metrics.ARDUBPPMetrics.Types as Reexport
 
+incrementRideCancelledCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> m ()
+incrementRideCancelledCount reason initiatedBy merchantName merchantOperatingCityId = do
+  bmContainer <- asks (.bppMetrics)
+  liftIO $ P.withLabel bmContainer.rideCancelledCounter (reason, initiatedBy, merchantName, merchantOperatingCityId) P.incCounter
+
+incrementDriverPenaltyCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> m ()
+incrementDriverPenaltyCount tier merchantOperatingCityId = do
+  bmContainer <- asks (.bppMetrics)
+  version <- asks (.version)
+  liftIO $ P.withLabel bmContainer.driverPenaltyCounter (tier, merchantOperatingCityId, version.getDeploymentVersion) P.incCounter
+
 putFareAndDistanceDeviations :: (MonadIO m, HasBPPMetrics m r) => Text -> Money -> Meters -> m ()
 putFareAndDistanceDeviations agencyName fareDiff distanceDiff = do
   countingDeviationMetric <- asks (.bppMetrics.countingDeviation)

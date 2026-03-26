@@ -32,8 +32,14 @@ type SearchDurationMetric = (P.Vector P.Label2 P.Histogram, P.Vector P.Label2 P.
 data BPPMetricsContainer = BPPMetricsContainer
   { searchDurationTimeout :: Seconds,
     searchDuration :: SearchDurationMetric,
-    countingDeviation :: CountingDeviationMetric
+    countingDeviation :: CountingDeviationMetric,
+    rideCancelledCounter :: RideCancelledCounterMetric,
+    driverPenaltyCounter :: DriverPenaltyCounterMetric
   }
+
+type RideCancelledCounterMetric = P.Vector P.Label4 P.Counter
+
+type DriverPenaltyCounterMetric = P.Vector P.Label3 P.Counter
 
 data CountingDeviationMetric = CountingDeviationMetric
   { realFareDeviation :: P.Vector P.Label2 P.Histogram,
@@ -44,7 +50,15 @@ registerBPPMetricsContainer :: Seconds -> IO BPPMetricsContainer
 registerBPPMetricsContainer searchDurationTimeout = do
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
   countingDeviation <- registerCountingDeviationMetric
+  rideCancelledCounter <- registerRideCancelledCounterMetric
+  driverPenaltyCounter <- registerDriverPenaltyCounterMetric
   return $ BPPMetricsContainer {..}
+
+registerRideCancelledCounterMetric :: IO RideCancelledCounterMetric
+registerRideCancelledCounterMetric = P.register $ P.vector ("reason", "initiated_by", "merchant_name", "merchantOperatingCityId") $ P.counter $ P.Info "ride_cancelled_count" ""
+
+registerDriverPenaltyCounterMetric :: IO DriverPenaltyCounterMetric
+registerDriverPenaltyCounterMetric = P.register $ P.vector ("tier", "merchantOperatingCityId", "version") $ P.counter $ P.Info "driver_penalty_applied_total" ""
 
 registerCountingDeviationMetric :: IO CountingDeviationMetric
 registerCountingDeviationMetric =

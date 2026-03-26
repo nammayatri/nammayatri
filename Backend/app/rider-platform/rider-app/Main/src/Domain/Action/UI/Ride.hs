@@ -74,6 +74,7 @@ import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Maps as MapSearch
+import qualified Tools.Metrics.BAPMetrics as BAPMetrics
 
 data PickupStage = OnTheWay | Reached | Reaching
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
@@ -152,7 +153,8 @@ editLocation ::
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    BAPMetrics.HasBAPMetrics m r
   ) =>
   Id SRide.Ride ->
   (Id SPerson.Person, Id DM.Merchant) ->

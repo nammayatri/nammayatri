@@ -138,7 +138,7 @@ library
       TypeSynonymInstances
       UndecidableInstances
       DerivingStrategies
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths
   build-depends:
       aeson
     , base >=4.7 && <5

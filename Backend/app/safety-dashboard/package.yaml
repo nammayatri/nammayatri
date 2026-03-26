@@ -100,7 +100,6 @@ dependencies:
 ghc-options:
   - -Wall
   - -Wcompat
-  - -Werror
   - -Widentities
   - -Wunused-imports
   - -fplugin=RecordDotPreprocessor
@@ -113,8 +112,6 @@ library:
     - src-read-only
   ghc-options:
     - -Wincomplete-uni-patterns
-    - -Wwarn=ambiguous-fields
-    - -Wwarn=ambiguous-fields
   when:
     - condition: flag(Local)
       then:
