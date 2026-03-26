@@ -533,15 +533,12 @@ buildApiEntityForRideOrJourneyOrPassWithCounts personId finalLimit bookings jour
         withTryCatch "getAllLegsInfo:buildJourneyApiEntity" (JMU.measureLatency (getAllLegsInfo journey.riderId journey.id) (show journey.id <> " getAllLegsInfo journey myrides measureLatency: "))
           >>= \case
             Left err -> do
-              logError $ "Error getting legs info for journeyId: " <> show journey.id <> ", skipping from booking list : " <> show err
+              logError $ "Error getting legs info for journeyId: " <> show journey.id <> " : " <> show err
               return []
             Right legsInfo -> do
+              when (null legsInfo) $ logError $ "No legs info for journeyId: " <> show journey.id
               return legsInfo
-      if null legsInfo
-        then do
-          logError $ "No legs info for journeyId: " <> show journey.id <> ", skipping from booking list"
-          return Nothing
-        else Just <$> generateJourneyInfoResponse journey legsInfo
+      Just <$> generateJourneyInfoResponse journey legsInfo
 
 favouriteBookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> DriverNo -> Flow FavouriteBookingListRes
 favouriteBookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId driver = do
