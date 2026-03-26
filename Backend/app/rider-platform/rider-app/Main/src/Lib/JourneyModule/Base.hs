@@ -495,7 +495,7 @@ startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer 
               maybe
                 (pure categorySelectionReq')
                 ( \pricingId -> do
-                    quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing (Id pricingId)
+                    quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId (Id pricingId)
                     let selectedQuoteCategories =
                           map
                             ( \quoteCategory ->

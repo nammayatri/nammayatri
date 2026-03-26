@@ -615,6 +615,7 @@ library
       Storage.Queries.FareBreakupExtra
       Storage.Queries.FeedbackBadgeExtra
       Storage.Queries.FeedbackFormExtra
+      Storage.Queries.FRFSQuoteCategoryExtra
       Storage.Queries.FRFSQuoteExtra
       Storage.Queries.FRFSSearchExtra
       Storage.Queries.FRFSTicketBookingExtra
@@ -1324,6 +1325,7 @@ library
       Storage.Queries.OrphanInstances.FeedbackBadge
       Storage.Queries.OrphanInstances.FeedbackForm
       Storage.Queries.OrphanInstances.FRFSQuote
+      Storage.Queries.OrphanInstances.FRFSQuoteCategory
       Storage.Queries.OrphanInstances.FRFSSearch
       Storage.Queries.OrphanInstances.FRFSTicketBooking
       Storage.Queries.OrphanInstances.FRFSTicketBookingPayment
