@@ -55,9 +55,11 @@ import Servant hiding (throwError)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import SharedLogic.Person (findPerson)
 import Storage.Beam.SystemConfigs ()
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Storage.Cac.TransporterConfig as SCT
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.Ride as QRide
 import Tools.Auth
 import Tools.Error
 import Utils.Common.Cac.KeyNameConstants
@@ -210,11 +212,21 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) clientId DRide
         |<|>| QBooking.findBookingBySpecialZoneOTP rideOtp now transporterConfig.specialZoneBookingOtpExpiry -- TODO :: Fix properly, when driver goes from one city to another, he should see the booking.
         >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
   void $ validateOtpRideStartRestriction driverInfo transporterConfig.otpRideStartRestrictionRadius booking.fromLocation
-  ride <- DRide.otpRideCreate requestor rideOtp booking clientId
-  let driverReq = RideStart.DriverStartRideReq {rideOtp, requestor, ..}
-  shandle <- RideStart.buildStartRideHandle merchantId merchantOpCityId (Just ride.id)
-  void $ RideStart.driverStartRide shandle ride.id driverReq
-  return ride
+  isLocked <- Redis.tryLockRedis (mkOtpRideLockKey booking.id) 30
+  if isLocked
+    then
+      finally
+        ( do
+            mbExistingRide <- QRide.findActiveByRBId booking.id
+            whenJust mbExistingRide $ \_ -> throwError (InvalidRequest "Ride already exists for this booking")
+            ride <- DRide.otpRideCreate requestor rideOtp booking clientId
+            let driverReq = RideStart.DriverStartRideReq {rideOtp, requestor, ..}
+            shandle <- RideStart.buildStartRideHandle merchantId merchantOpCityId (Just ride.id)
+            void $ RideStart.driverStartRide shandle ride.id driverReq
+            return ride
+        )
+        (Redis.unlockRedis (mkOtpRideLockKey booking.id))
+    else throwError (InvalidRequest "Ride creation already in progress for this OTP booking")
   where
     validateOtpRideStartRestriction driverInfo mbOtpRideStartRestrictionRadius pickupLocation = do
       case mbOtpRideStartRestrictionRadius of
@@ -231,6 +243,7 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) clientId DRide
                     else return ()
                 Nothing -> throwError DriverLocationOutOfRestictionBounds
         Nothing -> return ()
+    mkOtpRideLockKey bookingId = "OtpRideCreate:BookingId:" <> bookingId.getId
 
 endRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> EndRideReq -> FlowHandler RideEnd.EndRideResp
 endRide (requestorId, merchantId, merchantOpCityId) rideId EndRideReq {..} = withFlowHandlerAPI $ do
