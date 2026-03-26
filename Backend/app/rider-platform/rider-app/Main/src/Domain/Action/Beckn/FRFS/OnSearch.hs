@@ -413,7 +413,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
             price = category.price, -- Single Ticket Price
             offeredPrice = category.offeredPrice, -- Single Ticket Offered Price (Should be less than or equal to price)
             finalPrice = Nothing,
-            categoryMeta = TFQC.mkQuoteCategoryMetadata (ticketCategoryMetadataConfig' <&> (.code)) (ticketCategoryMetadataConfig' <&> (.title)) (ticketCategoryMetadataConfig' <&> (.description)) (ticketCategoryMetadataConfig' <&> (.tnc)),
+            categoryMeta = TFQC.mkQuoteCategoryMetadataWithOrder (ticketCategoryMetadataConfig' <&> (.code)) (ticketCategoryMetadataConfig' <&> (.title)) (ticketCategoryMetadataConfig' <&> (.description)) (ticketCategoryMetadataConfig' <&> (.tnc)) ((.categoryOrder) =<< ticketCategoryMetadataConfig'),
             merchantId = search.merchantId,
             merchantOperatingCityId = search.merchantOperatingCityId,
             selectedQuantity = if category.category == ADULT then search.quantity else 0, -- To Handle Partner Org

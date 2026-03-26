@@ -50,6 +50,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCate
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.category category,
+      Se.Set Beam.categoryOrder categoryOrder,
       Se.Set Beam.code code,
       Se.Set Beam.description description,
       Se.Set Beam.domainCategoryValue domainCategoryValue,
@@ -68,6 +69,7 @@ instance FromTType' Beam.FRFSTicketCategoryMetadataConfig Domain.Types.FRFSTicke
       Just
         Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig
           { category = category,
+            categoryOrder = categoryOrder,
             code = code,
             description = description,
             domainCategoryValue = domainCategoryValue,
@@ -85,6 +87,7 @@ instance ToTType' Beam.FRFSTicketCategoryMetadataConfig Domain.Types.FRFSTicketC
   toTType' (Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig {..}) = do
     Beam.FRFSTicketCategoryMetadataConfigT
       { Beam.category = category,
+        Beam.categoryOrder = categoryOrder,
         Beam.code = code,
         Beam.description = description,
         Beam.domainCategoryValue = domainCategoryValue,

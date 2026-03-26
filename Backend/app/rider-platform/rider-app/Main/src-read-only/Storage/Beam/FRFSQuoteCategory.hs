@@ -15,6 +15,7 @@ import Tools.Beam.UtilsTH
 data FRFSQuoteCategoryT f = FRFSQuoteCategoryT
   { bppItemId :: B.C f Kernel.Prelude.Text,
     category :: B.C f (Kernel.Prelude.Maybe Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType),
+    categoryOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     code :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     title :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

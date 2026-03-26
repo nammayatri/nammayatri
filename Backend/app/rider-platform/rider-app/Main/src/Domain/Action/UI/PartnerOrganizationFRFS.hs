@@ -687,7 +687,7 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                   price = frfsCachedData.price, -- Single Ticket Price
                   offeredPrice = frfsCachedData.price, -- Single Ticket Offered Price (Should be less than or equal to price)
                   finalPrice = Nothing,
-                  categoryMeta = TFQC.mkQuoteCategoryMetadata (ticketCategoryMetadataConfig' <&> (.code)) (ticketCategoryMetadataConfig' <&> (.title)) (ticketCategoryMetadataConfig' <&> (.description)) (ticketCategoryMetadataConfig' <&> (.tnc)),
+                  categoryMeta = TFQC.mkQuoteCategoryMetadataWithOrder (ticketCategoryMetadataConfig' <&> (.code)) (ticketCategoryMetadataConfig' <&> (.title)) (ticketCategoryMetadataConfig' <&> (.description)) (ticketCategoryMetadataConfig' <&> (.tnc)) ((.categoryOrder) =<< ticketCategoryMetadataConfig'),
                   merchantId = fromStation'.merchantId,
                   merchantOperatingCityId = fromStation.merchantOperatingCityId,
                   selectedQuantity = 1,
