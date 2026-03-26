@@ -1,0 +1,462 @@
+/* === Ride Flow Tree === */
+
+.ride-flow-tree {
+  padding: 24px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+/* --- Flow selector tabs --- */
+.flow-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #21262d;
+}
+.flow-selector-btn {
+  padding: 8px 20px;
+  border-radius: 6px;
+  border: 1px solid #30363d;
+  background: #161b22;
+  color: #8b949e;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.flow-selector-btn:hover:not(:disabled):not(.active) {
+  background: #1c2128;
+  color: #c9d1d9;
+  border-color: #484f58;
+}
+.flow-selector-btn.active {
+  background: #1f6feb;
+  border-color: #1f6feb;
+  color: #fff;
+}
+.flow-selector-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- Connector line between nodes --- */
+.tree-connector {
+  width: 2px;
+  height: 20px;
+  background: #30363d;
+  margin-left: 15px;
+}
+
+/* --- Pre-step: Driver Setup --- */
+.tree-prestep {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 0;
+}
+.tree-prestep.available {
+  border-color: #238636;
+}
+.tree-prestep-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.tree-prestep-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e1e4e8;
+}
+.tree-prestep-body {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+.tree-prestep-body .tree-config {
+  flex: 1;
+  min-width: 200px;
+  margin-bottom: 0;
+}
+
+.btn-driver-available {
+  padding: 8px 20px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  border: 1px solid #30363d;
+  background: #21262d;
+  color: #c9d1d9;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.btn-driver-available:hover:not(:disabled) {
+  background: #238636;
+  border-color: #238636;
+  color: #fff;
+}
+.btn-driver-available.active {
+  background: #238636;
+  border-color: #2ea043;
+  color: #fff;
+}
+.btn-driver-available:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- Tree Node --- */
+.tree-node {
+  position: relative;
+}
+.tree-node.disabled {
+  opacity: 0.4;
+}
+
+.tree-node-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+.tree-node-header:hover {
+  border-color: #484f58;
+  background: #1c2128;
+}
+.tree-node.active .tree-node-header {
+  border-color: #1f6feb;
+  background: #0d1117;
+}
+
+.tree-node-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tree-node-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tree-node-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e1e4e8;
+}
+.tree-node-tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.tag-driver { background: #1a3a2a; color: #3fb950; }
+.tag-rider  { background: #1a2a3a; color: #58a6ff; }
+.tag-system { background: #2a2a1a; color: #d29922; }
+
+.tree-node-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #30363d;
+  color: #8b949e;
+}
+.tree-node-check {
+  font-size: 11px;
+  color: #3fb950;
+  font-weight: 500;
+}
+.tree-node-fail-badge {
+  font-size: 11px;
+  color: #f85149;
+  font-weight: 500;
+}
+.tree-node-running-badge {
+  font-size: 11px;
+  color: #d29922;
+  font-weight: 500;
+}
+.tree-expand {
+  color: #484f58;
+  font-size: 10px;
+}
+
+/* --- Node dot (status indicator) --- */
+.tree-node-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.tree-node-dot.node-pending { background: #30363d; }
+.tree-node-dot.node-running { background: #d29922; animation: pulse 1s infinite; }
+.tree-node-dot.node-pass    { background: #3fb950; }
+.tree-node-dot.node-fail    { background: #f85149; }
+.tree-node-dot.node-skip    { background: #484f58; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* --- Node body (expanded content) --- */
+.tree-node-body {
+  margin-top: -1px;
+  padding: 16px;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+}
+
+/* --- Config area --- */
+.tree-config {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.tree-config-field {
+  flex: 1;
+  min-width: 160px;
+}
+.tree-config-field label {
+  display: block;
+  font-size: 11px;
+  color: #8b949e;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.tree-config-field select {
+  width: 100%;
+  padding: 6px 10px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #c9d1d9;
+  font-size: 13px;
+}
+.tree-config-field select:focus,
+.tree-config-field input:focus {
+  outline: none;
+  border-color: #1f6feb;
+}
+.tree-config-input {
+  width: 100%;
+  padding: 6px 10px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #c9d1d9;
+  font-size: 13px;
+}
+.tree-config-input::placeholder {
+  color: #484f58;
+}
+
+/* --- Steps within a node --- */
+.tree-steps {
+  margin-bottom: 12px;
+}
+
+.step-row {
+  margin-bottom: 2px;
+}
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.1s;
+}
+.step-header:hover {
+  background: #161b22;
+}
+.step-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.step-dot.pending { background: #30363d; }
+.step-dot.running { background: #d29922; animation: pulse 1s infinite; }
+.step-dot.pass    { background: #3fb950; }
+.step-dot.fail    { background: #f85149; }
+.step-dot.skip    { background: #484f58; }
+
+.step-name {
+  color: #c9d1d9;
+}
+.step-summary {
+  color: #58a6ff;
+  font-size: 11px;
+  margin-left: 4px;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.step-time {
+  color: #484f58;
+  font-size: 11px;
+  font-family: monospace;
+}
+.step-error {
+  color: #f85149;
+  font-size: 11px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.step-expand {
+  color: #484f58;
+  font-size: 9px;
+}
+.step-response {
+  margin: 4px 0 8px 25px;
+  padding: 10px;
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #8b949e;
+  max-height: 200px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* --- Node run button --- */
+.tree-node-actions {
+  display: flex;
+  gap: 8px;
+}
+.btn-run-node {
+  padding: 6px 16px;
+  border-radius: 6px;
+  border: 1px solid #30363d;
+  background: #21262d;
+  color: #c9d1d9;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-run-node:hover:not(:disabled) {
+  background: #1f6feb;
+  border-color: #1f6feb;
+  color: #fff;
+}
+.btn-run-node:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- Branch (children) --- */
+.tree-branch {
+  margin-left: 30px;
+  padding-left: 16px;
+  border-left: 2px solid #21262d;
+}
+
+/* --- Outcome tabs (fulfillment / driver cancel / customer cancel) --- */
+.outcome-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 4px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px 8px 0 0;
+  padding: 6px 8px 0;
+  border-bottom: none;
+}
+.outcome-tab {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 6px 6px 0 0;
+  background: transparent;
+  color: #8b949e;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-bottom: 2px solid transparent;
+}
+.outcome-tab:hover:not(:disabled):not(.active) {
+  color: #c9d1d9;
+  background: #21262d;
+}
+.outcome-tab.active {
+  color: #e1e4e8;
+  background: #0d1117;
+  border-bottom: 2px solid #1f6feb;
+}
+.outcome-tab:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* When outcome tabs are shown, remove top border-radius from the node below */
+.outcome-tabs + .tree-node .tree-node-header {
+  border-radius: 0 0 8px 8px;
+}
+
+/* --- Bottom actions --- */
+.tree-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #21262d;
+}
+.btn-run-all {
+  padding: 10px 28px;
+  border-radius: 6px;
+  border: none;
+  background: #238636;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-run-all:hover:not(:disabled) {
+  background: #2ea043;
+}
+.btn-run-all:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.tree-actions .btn-stop {
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: 1px solid #f85149;
+  background: transparent;
+  color: #f85149;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.tree-actions .btn-stop:hover:not(:disabled) {
+  background: #f8514922;
+}
+.tree-actions .btn-stop:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}

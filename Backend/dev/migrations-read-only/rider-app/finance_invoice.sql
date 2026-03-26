@@ -15,7 +15,7 @@ ALTER TABLE atlas_app.finance_invoice ADD COLUMN issued_to_address text ;
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN issued_to_id text NOT NULL;
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN issued_to_name text ;
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN issued_to_type text NOT NULL;
-ALTER TABLE atlas_app.finance_invoice ADD COLUMN line_items text NOT NULL;
+ALTER TABLE atlas_app.finance_invoice ADD COLUMN line_items jsonb NOT NULL;
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN merchant_id text NOT NULL;
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN merchant_operating_city_id text NOT NULL;
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN payment_order_id text ;
@@ -29,9 +29,3 @@ ALTER TABLE atlas_app.finance_invoice ADD COLUMN tax_breakdown text ;
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN total_amount double precision NOT NULL;
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.finance_invoice ADD PRIMARY KEY ( id);
-
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.finance_invoice ALTER COLUMN line_items TYPE jsonb USING line_items::jsonb;

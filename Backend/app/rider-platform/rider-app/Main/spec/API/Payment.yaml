@@ -13,7 +13,7 @@ imports:
   RefundPurpose: Domain.Types.RefundRequest
   FileType: AWS.S3
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
-  PaymentInvoice: Domain.Types.PaymentInvoice
+  Ride: Domain.Types.Ride
 
 module: RidePayment
 types:
@@ -153,9 +153,9 @@ apis:
       response:
         type: ClearDuesResp
   - POST:
-      endpoint: /payment/invoice/{invoiceId}/capture
+      endpoint: /payment/ride/{rideId}/capture
       auth: TokenAuth
       params:
-        invoiceId: Id PaymentInvoice
+        rideId: Id Ride
       response:
         type: APISuccess

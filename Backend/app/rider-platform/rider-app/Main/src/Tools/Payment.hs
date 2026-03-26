@@ -52,6 +52,9 @@ module Tools.Payment
     offerList,
     createRefund,
     getRefund,
+    createPayment,
+    refundPayment,
+    getRefundStatus,
   )
 where
 
@@ -74,6 +77,7 @@ import Kernel.External.Payment.Interface as Reexport hiding
     createCustomer,
     createEphemeralKeys,
     createOrder,
+    createPayment,
     createPaymentIntent,
     createRefund,
     createSetupIntent,
@@ -82,9 +86,11 @@ import Kernel.External.Payment.Interface as Reexport hiding
     getCustomer,
     getPaymentIntent,
     getRefund,
+    getRefundStatus,
     isSplitEnabled,
     offerList,
     orderStatus,
+    refundPayment,
     -- updateAmountInPaymentIntent,
     updateOrder,
     updatePaymentMethodInIntent,
@@ -171,6 +177,15 @@ createRefund = runWithServiceConfig1 Payment.createRefund (.createRefunds)
 
 getRefund :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> Payment.GetRefundReq -> m Payment.GetRefundResp
 getRefund = runWithServiceConfig1 Payment.getRefund (.getRefunds)
+
+createPayment :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> Maybe Text -> Payment.CreatePaymentReq -> m Payment.CreatePaymentResp
+createPayment = runWithServiceConfig2 Payment.createPayment (.createPaymentIntent)
+
+refundPayment :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> Maybe Text -> Payment.RefundPaymentReq -> m Payment.RefundPaymentResp
+refundPayment = runWithServiceConfig2 Payment.refundPayment (.createRefunds)
+
+getRefundStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> Payment.GetRefundReq -> m Payment.RefundPaymentResp
+getRefundStatus = runWithServiceConfig1 Payment.getRefundStatus (.getRefunds)
 
 runWithServiceConfigAndServiceName ::
   ServiceFlow m r =>

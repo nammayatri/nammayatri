@@ -68,6 +68,7 @@ import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QInd
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerExtra
 import SharedLogic.Finance.Wallet
   ( walletReferenceBaseRide,
+    walletReferenceCommission,
     walletReferenceCustomerCancellationCharges,
     walletReferenceCustomerCancellationGST,
     walletReferenceDriverCancellationCharges,
@@ -225,6 +226,7 @@ dsrVsLedgerRefTypes =
     walletReferenceCustomerCancellationCharges,
     walletReferenceDriverCancellationCharges,
     walletReferenceCustomerCancellationGST,
+    walletReferenceCommission,
     walletReferenceTollCharges,
     walletReferenceParkingCharges,
     walletReferenceTDSDeductionOnline,

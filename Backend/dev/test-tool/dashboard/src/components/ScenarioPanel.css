@@ -1,0 +1,116 @@
+.scenario-panel {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+}
+.scenario-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px;
+  border-bottom: 1px solid #30363d;
+}
+.scenario-header h2 { font-size: 18px; color: #e1e4e8; margin: 0; }
+.scenario-desc { color: #8b949e; font-size: 13px; margin-top: 6px; max-width: 600px; }
+.btn-run-scenario {
+  background: #238636; color: white; border: none; padding: 8px 20px;
+  border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; white-space: nowrap;
+}
+.btn-run-scenario:hover { background: #2ea043; }
+.btn-run-scenario:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.steps-list { padding: 8px 0; }
+
+.step {
+  padding: 10px 20px;
+  border-bottom: 1px solid #21262d;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.step:hover { background: #1c212833; }
+.step:last-child { border-bottom: none; }
+
+.step-main { display: flex; align-items: center; gap: 12px; }
+
+.step-num {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; flex-shrink: 0;
+}
+.num-pending { background: #21262d; color: #484f58; }
+.num-running { background: #d29922; color: #0d1117; animation: pulse 1s infinite; }
+.num-pass { background: #238636; color: white; }
+.num-fail { background: #da3633; color: white; }
+.num-skip { background: #21262d; color: #484f58; }
+
+.step-info { flex: 1; min-width: 0; }
+.step-name { font-size: 13px; font-weight: 500; color: #e1e4e8; }
+.step-path { font-size: 11px; color: #484f58; font-family: 'SF Mono', 'Fira Code', monospace; margin-top: 2px; }
+.step-note { color: #8b949e; font-style: italic; }
+.step-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.step-time { font-size: 11px; color: #484f58; min-width: 50px; text-align: right; }
+.btn-run-step {
+  background: #21262d; color: #8b949e; border: 1px solid #30363d;
+  width: 26px; height: 26px; border-radius: 4px; cursor: pointer;
+  font-size: 10px; display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.15s;
+}
+.step:hover .btn-run-step { opacity: 1; }
+.btn-run-step:hover { background: #238636; color: white; border-color: #238636; }
+.btn-run-step:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.method-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-family: 'SF Mono', monospace;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-right: 6px;
+}
+.method-get { background: #1f6feb33; color: #58a6ff; }
+.method-post { background: #23863633; color: #3fb950; }
+.method-put { background: #d2992233; color: #d29922; }
+.method-delete { background: #da363333; color: #f85149; }
+
+.step-response {
+  margin: 10px 0 4px 40px;
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.response-status {
+  padding: 6px 12px;
+  font-size: 11px;
+  color: #8b949e;
+  background: #161b22;
+  border-bottom: 1px solid #21262d;
+}
+.step-response pre {
+  padding: 10px 12px;
+  font-size: 11px;
+  color: #c9d1d9;
+  overflow-x: auto;
+  max-height: 200px;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.step-error-detail pre { color: #f85149; }
+
+/* Preset selector bar */
+.step-preset-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 20px 6px 60px; background: #0d111766;
+  border-bottom: 1px solid #21262d; font-size: 11px;
+}
+.step-preset-bar label { color: #8b949e; font-weight: 600; white-space: nowrap; }
+.step-preset-bar select {
+  background: #0d1117; border: 1px solid #30363d; color: #58a6ff;
+  padding: 3px 6px; border-radius: 3px; font-size: 11px; max-width: 300px;
+}
+.preset-desc { color: #484f58; font-style: italic; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.catalog-badge { font-size: 10px; margin-left: 4px; }
+
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }

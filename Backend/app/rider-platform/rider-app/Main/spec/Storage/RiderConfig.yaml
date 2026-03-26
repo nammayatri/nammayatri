@@ -20,7 +20,6 @@ imports:
   TimeOfDay: Data.Time
   Day: Data.Time
   JourneyOptionsSortingType: Domain.Types.MultimodalPreferences
-  PaymentPurpose: Domain.Types.PaymentInvoice
 
 RiderConfig:
   types:

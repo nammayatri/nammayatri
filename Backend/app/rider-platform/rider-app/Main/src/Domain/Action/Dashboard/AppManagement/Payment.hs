@@ -28,7 +28,6 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified "payment" Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified SharedLogic.Payment as SPayment
-import qualified SharedLogic.PaymentInvoice as SPInvoice
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QBooking
@@ -176,37 +175,33 @@ postPaymentRefundRequestRespond merchantShortId opCity orderId req = do
       booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
       driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
       let commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCity.id
-      let initiateStripeRefundReq =
-            DPayment.InitiateStripeRefundReq
+      let refundReq =
+            DPayment.RefundPaymentServiceReq
               { orderId = refundRequest.orderId,
-                transactionId = refundRequest.transactionId,
-                amount = (req.approvedAmount <&> (.amount)) <|> refundRequest.requestedAmount, -- full transaction.amount would be refunded in case if not specified
-                driverAccountId,
-                email = Nothing, -- driver email is not mandatory, as driver bank account already created
-                retryRefunds = fromMaybe False req.retryRefunds,
-                merchantOpCityId = commonMerchantOperatingCityId
+                merchantOpCityId = commonMerchantOperatingCityId,
+                driverAccountId = Just driverAccountId,
+                email = Nothing,
+                amount = (req.approvedAmount <&> (.amount)) <|> refundRequest.requestedAmount,
+                retryIfFailed = fromMaybe False req.retryRefunds
               }
-      SPayment.makeStripeRefund merchantOpCity.merchantId merchantOpCity.id booking.paymentMode initiateStripeRefundReq >>= \case
-        Left err -> do
-          logError $ "Failed to refund: orderId: " <> orderId.getId <> "; err: " <> err
+      SPayment.makeRefundPayment merchantOpCity.merchantId merchantOpCity.id booking.paymentMode refundReq >>= \case
+        Nothing -> do
+          logError $ "Failed to refund: orderId: " <> orderId.getId
           QRefundRequest.updateRefundIdAndStatus refundRequest.refundsId DRefundRequest.FAILED refundRequest.id
           let updRefundRequest = refundRequest{status = DRefundRequest.FAILED}
           QRide.updateRefundRequestStatus (Just updRefundRequest.status) rideId
           Notify.notifyRefunds updRefundRequest
           pure Common.RefundRequestRespondResp {status = updRefundRequest.status, refundStatus = Nothing, errorCode = Nothing}
-        Right result -> do
+        Just result -> do
           let updStatus = DRidePayment.castRefundRequestStatus result.status
-          when (refundRequest.refundsId /= Just result.refundsId || refundRequest.status /= updStatus) $ -- old status is APPROVED
-            QRefundRequest.updateRefundIdAndStatus (Just result.refundsId) updStatus refundRequest.id
+              refundId = Id result.refundId
+          when (refundRequest.refundsId /= Just refundId || refundRequest.status /= updStatus) $
+            QRefundRequest.updateRefundIdAndStatus (Just refundId) updStatus refundRequest.id
           when (refundRequest.status /= updStatus) $ do
-            let updRefundRequest = refundRequest{refundsId = Just result.refundsId, status = updStatus}
+            let updRefundRequest = refundRequest{refundsId = Just refundId, status = updStatus}
             QRide.updateRefundRequestStatus (Just updRefundRequest.status) rideId
             Notify.notifyRefunds updRefundRequest
-          -- Create or update refund invoice
-          let refundAmount = fromMaybe refundRequest.transactionAmount refundRequest.refundsAmount
-              invoiceStatus = SPInvoice.refundStatusToInvoiceStatus result.status
-              paymentPurpose = SPInvoice.refundPurposeToPaymentPurpose refundRequest.refundPurpose
-          SPInvoice.createOrUpdateRefundInvoice merchantShortId rideId orderId paymentPurpose invoiceStatus refundAmount refundRequest.currency merchantOpCity.merchantId merchantOpCity.id
+          -- Refund status tracked via Refunds table; ledger voided via webhook on success
           pure Common.RefundRequestRespondResp {status = updStatus, refundStatus = Just result.status, errorCode = result.errorCode}
 
     rejectRefunds refundRequest = do

@@ -260,7 +260,8 @@ filterDriversBySufficientBalance ::
   m [DI.DriverInformation]
 filterDriversBySufficientBalance merchant rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_ = do
   let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
-  if not isPrepaidSubscriptionAndWalletEnabled
+      hasPrepaidThresholds = isJust prepaidSubscriptionThreshold || isJust fleetPrepaidSubscriptionThreshold
+  if not (isPrepaidSubscriptionAndWalletEnabled && hasPrepaidThresholds)
     then pure driverInfos_
     else case rideFare of
       Just fare -> do

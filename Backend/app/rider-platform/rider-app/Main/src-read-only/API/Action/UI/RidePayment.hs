@@ -11,7 +11,6 @@ import qualified API.Types.UI.RidePayment
 import qualified Control.Lens
 import qualified Domain.Action.UI.RidePayment
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.PaymentInvoice
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
 import qualified Environment
@@ -131,10 +130,10 @@ type API =
            API.Types.UI.RidePayment.ClearDuesResp
       :<|> TokenAuth
       :> "payment"
-      :> "invoice"
+      :> "ride"
       :> Capture
-           "invoiceId"
-           (Kernel.Types.Id.Id Domain.Types.PaymentInvoice.PaymentInvoice)
+           "rideId"
+           (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
       :> "capture"
       :> Post
            '[JSON]
@@ -142,7 +141,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getPaymentMethods :<|> postPaymentMethodsMakeDefault :<|> getPaymentIntentSetup :<|> getPaymentIntentPayment :<|> postPaymentMethodUpdate :<|> deletePaymentMethodsDelete :<|> postPaymentAddTip :<|> getPaymentCustomer :<|> postPaymentRefundRequestCreate :<|> getPaymentRefundRequest :<|> getPaymentGetDueAmount :<|> postPaymentClearDues :<|> postPaymentInvoiceCapture
+handler = getPaymentMethods :<|> postPaymentMethodsMakeDefault :<|> getPaymentIntentSetup :<|> getPaymentIntentPayment :<|> postPaymentMethodUpdate :<|> deletePaymentMethodsDelete :<|> postPaymentAddTip :<|> getPaymentCustomer :<|> postPaymentRefundRequestCreate :<|> getPaymentRefundRequest :<|> getPaymentGetDueAmount :<|> postPaymentClearDues :<|> postPaymentRideCapture
 
 getPaymentMethods :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler API.Types.UI.RidePayment.PaymentMethodsResponse)
 getPaymentMethods a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.getPaymentMethods (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
@@ -236,11 +235,11 @@ postPaymentClearDues ::
   )
 postPaymentClearDues a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.postPaymentClearDues (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
-postPaymentInvoiceCapture ::
+postPaymentRideCapture ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Types.Id.Id Domain.Types.PaymentInvoice.PaymentInvoice ->
+    Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postPaymentInvoiceCapture a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.postPaymentInvoiceCapture (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postPaymentRideCapture a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.postPaymentRideCapture (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

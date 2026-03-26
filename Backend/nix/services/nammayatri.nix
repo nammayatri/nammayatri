@@ -184,6 +184,53 @@ in
             };
           };
 
+          # Test tools — dashboard, mock Stripe, context API
+          mock-stripe = {
+            imports = [ common ];
+            command = "${pkgs.python3}/bin/python3 dev/test-tool/mock-stripe/server.py --port 7081";
+            namespace = lib.mkForce "test";
+            depends_on."nammayatri-init".condition = "process_completed_successfully";
+            availability = {
+              restart = "on_failure";
+              backoff_seconds = 2;
+              max_restarts = 3;
+            };
+          };
+          test-context-api = {
+            imports = [ common ];
+            command = "${pkgs.python3.withPackages (ps: [ ps.psycopg2 ])}/bin/python3 dev/test-tool/context-api/server.py --port 7082";
+            namespace = lib.mkForce "test";
+            depends_on."db-primary".condition = "process_healthy";
+            availability = {
+              restart = "on_failure";
+              backoff_seconds = 2;
+              max_restarts = 3;
+            };
+          };
+          test-dashboard = {
+            imports = [ common ];
+            command = pkgs.writeShellApplication {
+              name = "test-dashboard";
+              runtimeInputs = [ pkgs.nodejs ];
+              text = ''
+                cd dev/test-tool/dashboard
+                if [ -d build ]; then
+                  npx serve -s build -l 7070 --no-clipboard
+                else
+                  echo "Dashboard not built. Run: cd dev/test-tool/dashboard && npm run build"
+                  sleep infinity
+                fi
+              '';
+            };
+            namespace = lib.mkForce "test";
+            depends_on."rider-app-exe".condition = "process_healthy";
+            availability = {
+              restart = "on_failure";
+              backoff_seconds = 2;
+              max_restarts = 3;
+            };
+          };
+
           dynamic-offer-driver-app-exe = {
             readiness_probe = {
               http_get = {

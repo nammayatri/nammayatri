@@ -91,10 +91,10 @@ getSubscriptionTransactions (mbDriverId, _, _) mbFrom mbLimit mbMaxAmount mbMinA
       entities <- forM paged $ \entry -> do
         transactionType <-
           if
-            | entry.referenceType == prepaidRideDebitReferenceType -> pure RIDE
-            | entry.referenceType == subscriptionCreditReferenceType -> pure PLAN_PURCHASE
-            | entry.referenceType == expiryCreditTransferReferenceType -> pure SUBSCRIPTION_EXPIRY
-            | otherwise -> throwError $ InternalError $ "Unknown reference type: " <> show entry.referenceType
+              | entry.referenceType == prepaidRideDebitReferenceType -> pure RIDE
+              | entry.referenceType == subscriptionCreditReferenceType -> pure PLAN_PURCHASE
+              | entry.referenceType == expiryCreditTransferReferenceType -> pure SUBSCRIPTION_EXPIRY
+              | otherwise -> throwError $ InternalError $ "Unknown reference type: " <> show entry.referenceType
         let (fromLocation, toLocation) =
               if entry.referenceType == prepaidRideDebitReferenceType
                 then case M.lookup (Id entry.referenceId) bookingMap of

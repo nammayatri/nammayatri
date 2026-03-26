@@ -1,0 +1,47 @@
+.sidebar {
+  width: 280px;
+  background: #161b22;
+  border-right: 1px solid #30363d;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.sidebar-logo {
+  padding: 20px 16px 4px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #58a6ff;
+}
+.sidebar-subtitle {
+  padding: 0 16px 16px;
+  font-size: 11px;
+  color: #484f58;
+  border-bottom: 1px solid #30363d;
+}
+.flow-group { margin-bottom: 4px; }
+.flow-group-title {
+  padding: 12px 16px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.flow-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 16px 7px 24px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #c9d1d9;
+  border-left: 2px solid transparent;
+}
+.flow-item:hover { background: #1c2128; }
+.flow-item.active { background: #1c2128; border-left-color: #58a6ff; color: #58a6ff; }
+.flow-item-name { flex: 1; }
+.flow-item-dot { font-size: 10px; margin-left: 8px; }
+.dot-pending { color: #484f58; }
+.dot-pass { color: #3fb950; }
+.dot-fail { color: #f85149; }
+.dot-running { color: #d29922; animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }

@@ -1905,13 +1905,16 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
   let cancellationPolicyMap = Map.fromList $ map (\cp -> (cp.id, cp)) cancellationPolicies
 
   -- Build CSV rows using pre-fetched maps (pure, no further DB calls)
-  let csvRows = concatMap (\fp ->
-        case Map.lookup fp.farePolicyId farePolicyMap of
-          Nothing -> []
-          Just farePolicy ->
-            let mbCancellationPolicy = farePolicy.cancellationFarePolicyId >>= (`Map.lookup` cancellationPolicyMap)
-            in farePolicyToCSVRows opCity merchantOpCity.distanceUnit fp farePolicy mbCancellationPolicy
-        ) fareProducts
+  let csvRows =
+        concatMap
+          ( \fp ->
+              case Map.lookup fp.farePolicyId farePolicyMap of
+                Nothing -> []
+                Just farePolicy ->
+                  let mbCancellationPolicy = farePolicy.cancellationFarePolicyId >>= (`Map.lookup` cancellationPolicyMap)
+                   in farePolicyToCSVRows opCity merchantOpCity.distanceUnit fp farePolicy mbCancellationPolicy
+          )
+          fareProducts
 
   let csvContent = TEnc.decodeUtf8 $ LBS.toStrict $ encodeByNameWith defaultEncodeOptions farePolicyCSVHeader csvRows
   return csvContent

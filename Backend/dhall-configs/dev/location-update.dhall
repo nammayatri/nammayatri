@@ -134,7 +134,7 @@ let cacConfig =
       , enableCac = False
       }
 
-let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
+let inMemConfig = { enableInMem = False, maxInMemSize = +100000000 }
 
 in  { hedisCfg
     , hedisClusterCfg

@@ -656,7 +656,7 @@ in  { logger_cfg
     , batch_size = 1
     , bucket_size = 30
     , nearby_bucket_threshold = 4
-    , blacklist_merchants = [ "favorit0-0000-0000-0000-00000favorit" ]
+    , blacklist_merchants = [] : List Text
     , request_timeout = 9000
     , log_unprocessible_req_body =
       [ "UNPROCESSIBLE_REQUEST"

@@ -4,7 +4,7 @@ let appCfg = ./rider-app.dhall
 
 let sec = ./secrets/rider-app.dhall
 
-let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
+let inMemConfig = { enableInMem = False, maxInMemSize = +100000000 }
 
 let schedulerConfig =
       { loggerConfig =

@@ -39,6 +39,7 @@ data CounterpartyType
   | AIRPORT
   | PG_PAYMENT_JUSPAY
   | PG_PAYOUT_JUSPAY
+  | RIDER
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AccountStatus))

@@ -56,7 +56,6 @@ import Domain.Types.Extra.MerchantPaymentMethod ()
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
-import qualified Domain.Types.PaymentInvoice as DPI
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
@@ -81,6 +80,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Ledger.Service
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -91,8 +91,8 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PersonWallet as QPersonWallet
 import Servant (BasicAuthData)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import qualified SharedLogic.Payment as SPayment
-import qualified SharedLogic.PaymentInvoice as SPInvoice
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -103,7 +103,6 @@ import Storage.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.EDCMachineMappingExtra as QEDCMachineMapping
-import qualified Storage.Queries.PaymentInvoiceExtra as QPaymentInvoiceExtra
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
@@ -711,6 +710,10 @@ stripeWebhookAction merchantOperatingCityId resp respDump = do
       refundsId <- (Id @DRefunds.Refunds <$>) $ refundInfo.refundsId & fromMaybeM (InvalidRequest "refundsId not found")
       Redis.whenWithLockRedis (DRidePayment.refundRequestProccessingKey orderId) 60 $ do
         void $ DPayment.stripeWebhookService commonMerchantOperatingCityId resp respDump stripeWebhookData
+        -- Void pending ledger entries on successful refund (reversal)
+        when (refundInfo.status == Payment.REFUND_SUCCESS) $
+          withRideIdFromOrder orderId $ \rideId ->
+            voidPendingLedgerEntries rideId ("refund webhook for order: " <> orderId.getId)
         QRefundRequest.findByRefundsId (Just refundsId) >>= \case
           Nothing -> logInfo $ "No refund request found for update in webhook with refundsId: " <> refundsId.getId
           Just refundRequest -> do
@@ -720,13 +723,47 @@ stripeWebhookAction merchantOperatingCityId resp respDump = do
               let updRefundRequest = refundRequest{status = updStatus}
               let rideId = cast @DOrder.PaymentOrder @DRide.Ride updRefundRequest.orderId
               QRide.updateRefundRequestStatus (Just updRefundRequest.status) rideId
-              -- Update refund invoice status using purpose from refund request
-              let paymentPurpose = SPInvoice.refundPurposeToPaymentPurpose refundRequest.refundPurpose
-                  invoiceStatus = SPInvoice.refundStatusToInvoiceStatus refundInfo.status
-              QPaymentInvoiceExtra.updatePaymentStatusByRideIdAndTypeAndPurpose rideId DPI.REFUNDS paymentPurpose invoiceStatus
               Notify.notifyRefunds updRefundRequest
       pure Ack
+    DPayment.OrderTxnWebhookData (_mbOrderShortId, orderTxn) -> do
+      ackResp <- DPayment.stripeWebhookService commonMerchantOperatingCityId resp respDump stripeWebhookData
+      whenJust _mbOrderShortId $ \orderShortId -> do
+        mbOrder <- QOrder.findByShortId (ShortId orderShortId)
+        whenJust mbOrder $ \order ->
+          withRideIdFromOrderObj order $ \rideId -> do
+            let status = orderTxn.transactionStatus
+            pendingEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries rideId
+            unless (null pendingEntries) $ do
+              let entryIds = map (.id) pendingEntries
+              case status of
+                KPayment.CHARGED -> do
+                  forM_ entryIds $ \entryId -> Lib.Finance.Ledger.Service.settleEntry entryId
+                  logInfo $ "Settled " <> show (length entryIds) <> " pending ledger entries via webhook for ride: " <> rideId
+                KPayment.CANCELLED -> do
+                  RidePaymentFinance.voidRidePaymentLedger entryIds
+                  logInfo $ "Voided " <> show (length entryIds) <> " pending ledger entries via webhook for ride: " <> rideId
+                _ -> pure ()
+      pure ackResp
     _ -> DPayment.stripeWebhookService commonMerchantOperatingCityId resp respDump stripeWebhookData
+
+-- | Look up rideId from a payment order's domainEntityId and run an action with it.
+withRideIdFromOrder :: Id DOrder.PaymentOrder -> (Text -> Flow ()) -> Flow ()
+withRideIdFromOrder orderId action = do
+  mbOrder <- QOrder.findById orderId
+  whenJust mbOrder $ \order -> withRideIdFromOrderObj order action
+
+withRideIdFromOrderObj :: DOrder.PaymentOrder -> (Text -> Flow ()) -> Flow ()
+withRideIdFromOrderObj order action =
+  whenJust order.domainEntityId $ \rideId ->
+    unless (Data.Text.null rideId) $ action rideId
+
+-- | Void all unsettled (PENDING or DUE) ledger entries for a ride.
+voidPendingLedgerEntries :: Text -> Text -> Flow ()
+voidPendingLedgerEntries rideId reason = do
+  pendingEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries rideId
+  unless (null pendingEntries) $ do
+    RidePaymentFinance.voidRidePaymentLedger (map (.id) pendingEntries)
+    logInfo $ "Voided " <> show (length pendingEntries) <> " pending ledger entries for ride: " <> rideId <> " reason: " <> reason
 
 ----------------------------------------- wallet apis -----------------------------------------------------
 

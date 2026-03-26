@@ -454,6 +454,7 @@ library
       SharedLogic.External.Nandi.API.Nandi
       SharedLogic.External.Nandi.Flow
       SharedLogic.External.Nandi.Types
+      SharedLogic.Finance.RidePayment
       SharedLogic.FRFSCancel
       SharedLogic.FRFSConfirm
       SharedLogic.FRFSFareCalculator
@@ -477,7 +478,6 @@ library
       SharedLogic.Offer
       SharedLogic.OTP
       SharedLogic.Payment
-      SharedLogic.PaymentInvoice
       SharedLogic.PaymentVendorSplits
       SharedLogic.Person
       SharedLogic.PersonDefaultEmergencyNumber
@@ -653,7 +653,6 @@ library
       Storage.Queries.PassExtra
       Storage.Queries.PassTypeExtra
       Storage.Queries.PassVerifyTransactionExtra
-      Storage.Queries.PaymentInvoiceExtra
       Storage.Queries.PersonExtra
       Storage.Queries.PersonStatsExtra
       Storage.Queries.PlaceBasedServiceConfigExtra
@@ -1009,7 +1008,6 @@ library
       Domain.Types.PassType
       Domain.Types.PassVerifyTransaction
       Domain.Types.PaymentCustomer
-      Domain.Types.PaymentInvoice
       Domain.Types.PaymentTransactionOfferPayout
       Domain.Types.PayoutConfig
       Domain.Types.Person
@@ -1169,7 +1167,6 @@ library
       Storage.Beam.PassType
       Storage.Beam.PassVerifyTransaction
       Storage.Beam.PaymentCustomer
-      Storage.Beam.PaymentInvoice
       Storage.Beam.PaymentTransactionOfferPayout
       Storage.Beam.PayoutConfig
       Storage.Beam.Person
@@ -1400,7 +1397,6 @@ library
       Storage.Queries.PassType
       Storage.Queries.PassVerifyTransaction
       Storage.Queries.PaymentCustomer
-      Storage.Queries.PaymentInvoice
       Storage.Queries.PaymentTransactionOfferPayout
       Storage.Queries.PayoutConfig
       Storage.Queries.Person
