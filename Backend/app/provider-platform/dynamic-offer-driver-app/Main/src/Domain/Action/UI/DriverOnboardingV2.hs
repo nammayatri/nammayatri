@@ -688,23 +688,61 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
 
   QDPC.upsertPanRecord =<< buildPanCard merchantId person req verificationStatus (Just merchantOpCityId)
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  when (fromMaybe True transporterConfig.allowPanAadhaarLinkage) $ do
+  let allowPanAadhaarLink = fromMaybe True transporterConfig.allowPanAadhaarLinkage
+  unless allowPanAadhaarLink $
+    logInfo $
+      "PanAadhaarLink postDriverRegisterPancard: skipped (allowPanAadhaarLinkage=false) driverId="
+        <> personId.getId
+  when allowPanAadhaarLink $ do
     mdriverPanCard <- QDPC.findByDriverId personId
+    when (isNothing mdriverPanCard) $
+      logInfo $
+        "PanAadhaarLink postDriverRegisterPancard: skipped (no DriverPanCard row yet after upsert — unexpected) driverId="
+          <> personId.getId
     whenJust mdriverPanCard $ \driverPanCard -> do
       panNumber <- decrypt driverPanCard.panCardNumber
       mbAadhaarCard <- QAadhaarCard.findByPrimaryKey person.id
       let mbAadhaarNumber = mbAadhaarCard >>= (.maskedAadhaarNumber)
+      when (isNothing mbAadhaarNumber) $
+        logInfo $
+          "PanAadhaarLink postDriverRegisterPancard: skipped (no maskedAadhaarNumber; Aadhaar not on file or field empty) driverId="
+            <> personId.getId
+            <> " hasAadhaarRow="
+            <> show (isJust mbAadhaarCard)
       whenJust mbAadhaarNumber $ \aadhaarNumber -> do
+        logInfo $
+          "PanAadhaarLink postDriverRegisterPancard: calling verifyPanAadhaarLinkAsync driverId="
+            <> personId.getId
         verifyRes <-
           Verification.verifyPanAadhaarLinkAsync person.merchantId merchantOpCityId $
             VI.VerifyPanAadhaarLinkAsyncReq {panNumber, aadhaarNumber, driverId = person.id.getId}
+        logInfo $
+          "PanAadhaarLink postDriverRegisterPancard: verifyPanAadhaarLinkAsync returned requestor="
+            <> show verifyRes.requestor
+            <> " requestId="
+            <> verifyRes.requestId
+            <> " driverId="
+            <> personId.getId
         case verifyRes.requestor of
           VerificationTypes.Idfy -> do
             encPan <- encrypt panNumber
             now <- getCurrentTime
             ivEntity <- mkIdfyVerificationEntityPanAadhaarLink person driverPanCard.documentImageId1 verifyRes.requestId now encPan
             IVQuery.create ivEntity
-          _ -> throwError $ InternalError ("Service provider not configured for PAN-Aadhaar linkage. Provider: " <> show verifyRes.requestor)
+            logInfo $
+              "PanAadhaarLink postDriverRegisterPancard: IdfyVerification row created requestId="
+                <> verifyRes.requestId
+                <> " driverId="
+                <> personId.getId
+          _ -> do
+            logError $
+              "PanAadhaarLink postDriverRegisterPancard: no IdfyVerification row — requestor is not Idfy requestor="
+                <> show verifyRes.requestor
+                <> " requestId="
+                <> verifyRes.requestId
+                <> " driverId="
+                <> personId.getId
+            throwError $ InternalError ("Service provider not configured for PAN-Aadhaar linkage. Provider: " <> show verifyRes.requestor)
   return Success
   where
     getImage :: Id Image.Image -> Flow Text
@@ -925,22 +963,58 @@ postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) 
   person <- PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbAadhaarCard <- QAadhaarCard.findByPrimaryKey personId
   let mbAadhaarNumber = mbAadhaarCard >>= (.maskedAadhaarNumber)
+  when (isNothing mbAadhaarNumber) $
+    logInfo $
+      "PanAadhaarLink postDriverRegisterAadhaarCard: skipped (no maskedAadhaarNumber after upsert) driverId="
+        <> personId.getId
   whenJust mbAadhaarNumber $ \aadhaarNumber -> do
     transporterConfig <- CQTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
-    when (fromMaybe True transporterConfig.allowPanAadhaarLinkage) $ do
+    let allowPanAadhaarLink = fromMaybe True transporterConfig.allowPanAadhaarLinkage
+    unless allowPanAadhaarLink $
+      logInfo $
+        "PanAadhaarLink postDriverRegisterAadhaarCard: skipped (allowPanAadhaarLinkage=false) driverId="
+          <> personId.getId
+    when allowPanAadhaarLink $ do
       mdriverPanCard <- QDPC.findByDriverId personId
+      when (isNothing mdriverPanCard) $
+        logInfo $
+          "PanAadhaarLink postDriverRegisterAadhaarCard: skipped (no DriverPanCard) driverId="
+            <> personId.getId
       whenJust mdriverPanCard $ \driverPanCard -> do
         panNumber <- decrypt driverPanCard.panCardNumber
+        logInfo $
+          "PanAadhaarLink postDriverRegisterAadhaarCard: calling verifyPanAadhaarLinkAsync driverId="
+            <> personId.getId
         verifyRes <-
           Verification.verifyPanAadhaarLinkAsync person.merchantId merchantOperatingCityId $
             VI.VerifyPanAadhaarLinkAsyncReq {panNumber, aadhaarNumber, driverId = person.id.getId}
+        logInfo $
+          "PanAadhaarLink postDriverRegisterAadhaarCard: verifyPanAadhaarLinkAsync returned requestor="
+            <> show verifyRes.requestor
+            <> " requestId="
+            <> verifyRes.requestId
+            <> " driverId="
+            <> personId.getId
         case verifyRes.requestor of
           VerificationTypes.Idfy -> do
             encPan <- encrypt panNumber
             now <- getCurrentTime
             ivEntity <- mkIdfyVerificationEntityPanAadhaarLink person driverPanCard.documentImageId1 verifyRes.requestId now encPan
             IVQuery.create ivEntity
-          _ -> throwError $ InternalError ("Service provider not configured for PAN-Aadhaar linkage. Provider: " <> show verifyRes.requestor)
+            logInfo $
+              "PanAadhaarLink postDriverRegisterAadhaarCard: IdfyVerification row created requestId="
+                <> verifyRes.requestId
+                <> " driverId="
+                <> personId.getId
+          _ -> do
+            logError $
+              "PanAadhaarLink postDriverRegisterAadhaarCard: no IdfyVerification row — requestor is not Idfy requestor="
+                <> show verifyRes.requestor
+                <> " requestId="
+                <> verifyRes.requestId
+                <> " driverId="
+                <> personId.getId
+            throwError $ InternalError ("Service provider not configured for PAN-Aadhaar linkage. Provider: " <> show verifyRes.requestor)
 
   return Success
   where
