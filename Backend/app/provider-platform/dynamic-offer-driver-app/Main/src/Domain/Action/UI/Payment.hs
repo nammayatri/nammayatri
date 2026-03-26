@@ -76,7 +76,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance
   ( AccountRole (OwnerLiability, PlatformAsset),
-    GstAmountBreakdown (..),
     InvoiceConfig (..),
     InvoiceLineItem (..),
     getEntriesByReference,
@@ -736,15 +735,20 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
   let paidAmount = driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst
   let referenceId = fromMaybe driverFee.id.getId ((.getId) <$> driverFee.planId)
   mbPanCard <- QPanCard.findByDriverId person.id
+  transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist person.merchantOperatingCityId.getId)
+  let totalGst = driverFee.platformFee.cgst + driverFee.platformFee.sgst
+      gstBreakdown =
+        computeGstBreakdownByPlace
+          transporterConfig.taxConfig.rideGst
+          (Just $ show merchant.state)
+          (Just $ show merchantOperatingCity.state)
+          (Just $ show merchant.city)
+          (Just $ show merchantOperatingCity.city)
+          totalGst
   if DCommon.checkFleetOwnerRole person.role
     then do
-      let fleetGstBreakdown =
-            Just
-              GstAmountBreakdown
-                { cgstAmount = Just driverFee.platformFee.cgst,
-                  sgstAmount = Just driverFee.platformFee.sgst,
-                  igstAmount = Nothing
-                }
       newBalance <-
         creditPrepaidBalance
           counterpartyFleetOwner
@@ -752,7 +756,7 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
           creditAmount
           paidAmount
           Nothing
-          fleetGstBreakdown
+          gstBreakdown
           driverFee.currency
           merchantId.getId
           person.merchantOperatingCityId.getId
@@ -763,13 +767,6 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
           >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
       pure (fst newBalance, Just person.id)
     else do
-      let driverGstBreakdown =
-            Just
-              GstAmountBreakdown
-                { cgstAmount = Just driverFee.platformFee.cgst,
-                  sgstAmount = Just driverFee.platformFee.sgst,
-                  igstAmount = Nothing
-                }
       newBalance <-
         creditPrepaidBalance
           counterpartyDriver
@@ -777,7 +774,7 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
           creditAmount
           paidAmount
           Nothing
-          driverGstBreakdown
+          gstBreakdown
           driverFee.currency
           merchantId.getId
           person.merchantOperatingCityId.getId

@@ -29,6 +29,7 @@ data SubscriptionTransactionEntity = SubscriptionTransactionEntity
 
 data SubscriptionTransactionResponse = SubscriptionTransactionResponse
   { entities :: [SubscriptionTransactionEntity],
+    expiryDeduction :: Kernel.Types.Common.HighPrecMoney,
     finalBalance :: Kernel.Types.Common.HighPrecMoney,
     planPurchased :: Kernel.Types.Common.HighPrecMoney,
     rideEarning :: Kernel.Types.Common.HighPrecMoney,

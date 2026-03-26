@@ -566,7 +566,7 @@ getDriverFleetOperatorInfo merchantShortId opCity apiTokenInfo mbMobileCountryCo
   res <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetOperatorInfo) mbMobileCountryCode mbMobileNumber mbPersonId mbWalletId
 
   pure
-    res {Common.approvedBy = mbPerson >>= (.approvedBy) <&> getId}
+    res {Common.approvedBy = (mbPerson >>= (.approvedBy) <&> getId) <|> res.approvedBy}
 
 postDriverFleetLocationList :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.DriverLocationListReq -> Environment.Flow Common.DriverLocationListResp)
 postDriverFleetLocationList merchantShortId opCity apiTokenInfo req = do

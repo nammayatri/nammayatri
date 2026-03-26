@@ -2072,6 +2072,8 @@ getDriverFleetOperatorInfo merchantShortId opCity mbMobileCountryCode mbMobileNu
       pure person.id.getId
     (Nothing, Nothing, Just walletId) -> do
       account <- QFinanceAccount.findById (Id walletId) >>= fromMaybeM (InvalidRequest $ "Wallet account not found: " <> walletId)
+      unless (account.counterpartyType == Just FLEET_OWNER) $
+        throwError (InvalidRequest $ "WalletId does not belong to a FLEET_OWNER account: " <> walletId)
       counterpartyId <- fromMaybeM (InvalidRequest $ "Wallet account missing counterpartyId: " <> walletId) account.counterpartyId
       pure counterpartyId
     _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"personId\", \"walletId\" is required"
