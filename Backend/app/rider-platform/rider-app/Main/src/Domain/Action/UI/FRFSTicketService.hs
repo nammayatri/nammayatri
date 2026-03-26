@@ -515,8 +515,8 @@ postFrfsSearch (mbPersonId, merchantId) mbCity mbIntegratedBPPConfigId mbNewServ
   -- If vehicle number is provided and serviceTier is not provided in request, try to get the service tier from OTP REST
   mbServiceTierFromVehicle <- case (req.vehicleNumber, req.serviceTier) of
     (Just vehicleNumber, Nothing) -> do
-      mbVehicleServiceType <- JMU.getVehicleServiceTypeFromInMem [integratedBPPConfig] vehicleNumber
-      return $ mbVehicleServiceType
+      mbVehicleMetadata <- JMU.getVehicleMetadataFromInMem [integratedBPPConfig] vehicleNumber
+      return $ mbVehicleMetadata <&> (\(_, metadata) -> metadata.serviceType)
     _ -> return Nothing
 
   -- Use service tier from vehicle if available, otherwise use from request
