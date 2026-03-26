@@ -92,13 +92,13 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
           if canarySlot
             then do
               logInfo $ "PT Circuit Breaker: Canary booking request for " <> show ptMode
-              attemptConfirm ptMode cbConfig True
+              attemptConfirm ptMode cbConfig True integratedBPPConfig
             else do
               logWarning $ "PT Circuit Breaker: Booking circuit OPEN for " <> show ptMode <> ", rejecting request"
               return $ Left "Booking service temporarily unavailable. Please try again in a few minutes."
-        else attemptConfirm ptMode cbConfig False
+        else attemptConfirm ptMode cbConfig False integratedBPPConfig
   where
-    attemptConfirm ptMode cbConfig isCanary = do
+    attemptConfirm ptMode cbConfig isCanary integratedBPPConfig = do
       result <- withTryCatch "callExternalBPP:confirmFlow" $ do
         frfsConfig <-
           CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
