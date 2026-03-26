@@ -1893,22 +1893,27 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
   -- Fetch all enabled fare products for this city
   fareProducts <- CQFProduct.findAllFareProductByMerchantOpCityId merchantOpCity.id
 
-  -- For each fare product, fetch the associated fare policy and convert to CSV rows
-  csvRows <- forM fareProducts $ \fp -> do
-    mbFarePolicy <- CQFP.findById Nothing fp.farePolicyId
-    case mbFarePolicy of
-      Nothing -> do
-        logTagWarning "FarePolicyExport" $ "Fare policy not found for fare product: " <> show fp.id
-        return Nothing
-      Just farePolicy -> do
-        mbCancellationPolicy <- case farePolicy.cancellationFarePolicyId of
-          Just cfpId -> QCFP.findById cfpId
-          Nothing -> return Nothing
-        let csvRowList = farePolicyToCSVRows opCity merchantOpCity.distanceUnit fp farePolicy mbCancellationPolicy
-        return $ Just csvRowList
+  -- Deduplicate and batch-fetch fare policies (avoids N+1 queries)
+  let uniqueFpIds = DL.nub $ map (.farePolicyId) fareProducts
+  logTagInfo "FarePolicyExport" $ "Found " <> show (length fareProducts) <> " fare products with " <> show (length uniqueFpIds) <> " unique fare policies"
+  farePolicies <- catMaybes <$> mapM (CQFP.findById Nothing) uniqueFpIds
+  let farePolicyMap = Map.fromList $ map (\fp -> (fp.id, fp)) farePolicies
 
-  let validRows = concat (catMaybes csvRows)
-  let csvContent = TEnc.decodeUtf8 $ LBS.toStrict $ encodeByNameWith defaultEncodeOptions farePolicyCSVHeader validRows
+  -- Deduplicate and batch-fetch cancellation policies
+  let uniqueCfpIds = DL.nub $ catMaybes $ map (.cancellationFarePolicyId) farePolicies
+  cancellationPolicies <- catMaybes <$> mapM QCFP.findById uniqueCfpIds
+  let cancellationPolicyMap = Map.fromList $ map (\cp -> (cp.id, cp)) cancellationPolicies
+
+  -- Build CSV rows using pre-fetched maps (pure, no further DB calls)
+  let csvRows = concatMap (\fp ->
+        case Map.lookup fp.farePolicyId farePolicyMap of
+          Nothing -> []
+          Just farePolicy ->
+            let mbCancellationPolicy = farePolicy.cancellationFarePolicyId >>= (`Map.lookup` cancellationPolicyMap)
+            in farePolicyToCSVRows opCity merchantOpCity.distanceUnit fp farePolicy mbCancellationPolicy
+        ) fareProducts
+
+  let csvContent = TEnc.decodeUtf8 $ LBS.toStrict $ encodeByNameWith defaultEncodeOptions farePolicyCSVHeader csvRows
   return csvContent
   where
     -- Convert FareProduct + FarePolicy to list of FarePolicyCSVRows (one per distance slab section)
@@ -2003,6 +2008,58 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                       "" :: Text, -- platformFeeInfo fields empty for progressive
                       perMinSectionsList
                     )
+              FarePolicy.RentalDetails details ->
+                let (wc, wt, fw) = case details.waitingChargeInfo of
+                      Just wci -> (extractWaitingCharge wci.waitingCharge, extractWaitingChargeType wci.waitingCharge, showT wci.freeWaitingTime)
+                      Nothing -> ("0", "PerMinuteWaitingCharge", "0")
+                    (nc, nt) = case details.nightShiftCharge of
+                      Just (FarePolicy.ProgressiveNightShiftCharge val) -> (showT val, "ProgressiveNightShiftCharge")
+                      Just (FarePolicy.ConstantNightShiftCharge val) -> (showT val, "ConstantNightShiftCharge")
+                      Nothing -> ("", "")
+                 in ( "",
+                      showT details.baseFare,
+                      showT details.deadKmFare,
+                      "",
+                      "",
+                      wc,
+                      wt,
+                      nc,
+                      nt,
+                      fw,
+                      [],
+                      "" :: Text,
+                      "" :: Text,
+                      "" :: Text,
+                      "" :: Text,
+                      "" :: Text,
+                      []
+                    )
+              FarePolicy.InterCityDetails details ->
+                let (wc, wt, fw) = case details.waitingChargeInfo of
+                      Just wci -> (extractWaitingCharge wci.waitingCharge, extractWaitingChargeType wci.waitingCharge, showT wci.freeWaitingTime)
+                      Nothing -> ("0", "PerMinuteWaitingCharge", "0")
+                    (nc, nt) = case details.nightShiftCharge of
+                      Just (FarePolicy.ProgressiveNightShiftCharge val) -> (showT val, "ProgressiveNightShiftCharge")
+                      Just (FarePolicy.ConstantNightShiftCharge val) -> (showT val, "ConstantNightShiftCharge")
+                      Nothing -> ("", "")
+                 in ( "",
+                      showT details.baseFare,
+                      showT details.deadKmFare,
+                      "",
+                      "",
+                      wc,
+                      wt,
+                      nc,
+                      nt,
+                      fw,
+                      [],
+                      "" :: Text,
+                      "" :: Text,
+                      "" :: Text,
+                      "" :: Text,
+                      "" :: Text,
+                      []
+                    )
               _ -> ("", "", "", "", "", "0", "PerMinuteWaitingCharge", "", "", "0", [], "", "", "", "", "", [])
 
           -- Driver extra fee bounds (all elements, not just the first)
@@ -2011,33 +2068,39 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
               Just bounds -> NE.toList bounds
               Nothing -> []
 
-          -- Rental details
-          (perExtraMinRateVal, includedKmPerHrVal, plannedPerKmRateVal, maxAddKmsVal, totalAddKmsVal, rideDurVal, bufferKmsVal, bufferMetersVal, perHourChargeVal) =
+          -- Rental details (with full lists for multi-row export)
+          (perExtraMinRateVal, includedKmPerHrVal, plannedPerKmRateVal, maxAddKmsVal, totalAddKmsVal, rentalDistBuffersList, perHourChargeVal, nonProgressivePerExtraKmRateVal) =
             case farePolicy.farePolicyDetails of
               FarePolicy.RentalDetails details ->
-                let firstBuffer = NE.head details.distanceBuffers
-                 in ( showT details.perExtraMinRate,
-                      showT details.includedKmPerHr,
-                      showT details.plannedPerKmRate,
-                      showT details.maxAdditionalKmsLimit,
-                      showT details.totalAdditionalKmsLimit,
-                      showT firstBuffer.rideDuration,
-                      showT firstBuffer.bufferKms,
-                      showT firstBuffer.bufferMeters,
-                      showT details.perHourCharge
-                    )
-              _ -> ("", "", "", "", "", "", "", "", "")
-
-          -- Rental/InterCity pricing slabs
-          (timePct, distPct, farePct, actualTimePct, actualDistPct) =
-            case farePolicy.farePolicyDetails of
-              FarePolicy.RentalDetails details ->
-                let firstSlab = NE.head details.pricingSlabs
-                 in (showT firstSlab.timePercentage, showT firstSlab.distancePercentage, showT firstSlab.farePercentage, showT firstSlab.includeActualTimePercentage, showT firstSlab.includeActualDistPercentage)
+                ( showT details.perExtraMinRate,
+                  showT details.includedKmPerHr,
+                  showT details.plannedPerKmRate,
+                  showT details.maxAdditionalKmsLimit,
+                  showT details.totalAdditionalKmsLimit,
+                  map (\b -> (showT b.rideDuration, showT b.bufferKms, showT b.bufferMeters)) (NE.toList details.distanceBuffers),
+                  showT details.perHourCharge,
+                  showT details.perExtraKmRate
+                )
               FarePolicy.InterCityDetails details ->
-                let firstSlab = NE.head details.pricingSlabs
-                 in (showT firstSlab.timePercentage, showT firstSlab.distancePercentage, showT firstSlab.farePercentage, showT firstSlab.includeActualTimePercentage, showT firstSlab.includeActualDistPercentage)
-              _ -> ("", "", "", "", "")
+                ( showT details.perExtraMinRate,
+                  "",
+                  "",
+                  "",
+                  "",
+                  [],
+                  showT details.perHourCharge,
+                  showT details.perExtraKmRate
+                )
+              _ -> ("", "", "", "", "", [], "", "")
+
+          -- Rental/InterCity pricing slabs (full lists for multi-row export)
+          pricingSlabsList =
+            case farePolicy.farePolicyDetails of
+              FarePolicy.RentalDetails details ->
+                map (\s -> (showT s.timePercentage, showT s.distancePercentage, showT s.farePercentage, showT s.includeActualTimePercentage, showT s.includeActualDistPercentage)) (NE.toList details.pricingSlabs)
+              FarePolicy.InterCityDetails details ->
+                map (\s -> (showT s.timePercentage, showT s.distancePercentage, showT s.farePercentage, showT s.includeActualTimePercentage, showT s.includeActualDistPercentage)) (NE.toList details.pricingSlabs)
+              _ -> []
 
           -- InterCity details
           (perKmOneWay, perKmRoundTrip, kmPerExtraHour, perDayMaxHour, perDayMaxMins, defaultWaitDest, stateEntryPermit) =
@@ -2071,6 +2134,19 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                   length driverExtraFeeBoundsList,
                   length perMinSections
                 ]
+            FarePolicy.RentalDetails _ ->
+              maximum
+                [ 1,
+                  length pricingSlabsList,
+                  length rentalDistBuffersList,
+                  length driverExtraFeeBoundsList
+                ]
+            FarePolicy.InterCityDetails _ ->
+              maximum
+                [ 1,
+                  length pricingSlabsList,
+                  length driverExtraFeeBoundsList
+                ]
             _ -> 1
 
           -- Build a row for a given section index
@@ -2078,10 +2154,22 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
             let -- Get the per-extra-km-rate section values for this index
                 (extraKmStart, perExtraKm, baseFareDeprec) =
                   case progressiveSections of
-                    [] -> ("0", "0", "0")
+                    [] -> ("", nonProgressivePerExtraKmRateVal, "")
                     _ ->
                       let section = progressiveSections !! min sectionIdx (length progressiveSections - 1)
                        in (showT section.startDistance, showT section.perExtraKmRate, showT section.baseFareDepreciation)
+
+                -- Get rental distance buffer values for this index
+                (rowRideDur, rowBufKms, rowBufMeters) =
+                  case rentalDistBuffersList of
+                    [] -> ("", "", "")
+                    _ -> rentalDistBuffersList !! min sectionIdx (length rentalDistBuffersList - 1)
+
+                -- Get rental/intercity pricing slab values for this index
+                (rowTimePct, rowDistPct, rowFarePct, rowActualTimePct, rowActualDistPct) =
+                  case pricingSlabsList of
+                    [] -> ("", "", "", "", "")
+                    _ -> pricingSlabsList !! min sectionIdx (length pricingSlabsList - 1)
 
                 -- Get the driver extra fee bounds values for this index
                 (driverAddStart, driverMinFee, driverMaxFee, driverStepFee, driverDefaultStep) =
@@ -2177,14 +2265,14 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     plannedPerKmRate = plannedPerKmRateVal,
                     maxAdditionalKmsLimit = maxAddKmsVal,
                     totalAdditionalKmsLimit = totalAddKmsVal,
-                    timePercentage = timePct,
-                    distancePercentage = distPct,
-                    farePercentage = farePct,
-                    includeActualTimePercentage = actualTimePct,
-                    includeActualDistPercentage = actualDistPct,
-                    rideDuration = rideDurVal,
-                    bufferKms = bufferKmsVal,
-                    bufferMeters = bufferMetersVal,
+                    timePercentage = rowTimePct,
+                    distancePercentage = rowDistPct,
+                    farePercentage = rowFarePct,
+                    includeActualTimePercentage = rowActualTimePct,
+                    includeActualDistPercentage = rowActualDistPct,
+                    rideDuration = rowRideDur,
+                    bufferKms = rowBufKms,
+                    bufferMeters = rowBufMeters,
                     perHourCharge = perHourChargeVal,
                     perKmRateOneWay = perKmOneWay,
                     perKmRateRoundTrip = perKmRoundTrip,
