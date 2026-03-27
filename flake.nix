@@ -73,23 +73,9 @@
     # Question: move this to common?
     services-flake.url = "github:juspay/services-flake";
 
-    # We cannot use southern-zone-latest here, because the sha256 will change
-    # over time.  NOTE: This file is not permanent, find the available one at
-    # https://download.geofabrik.de/asia/india/
-    # NOTE: If you change this, also change `openStreetDataFileName` in osrm.nix
-    osrm-pbf.url = "https://download.geofabrik.de/asia/india/southern-zone-240101.osm.pbf";
-    osrm-pbf.flake = false;
-
-    # Amazonka 2.0 tagged release
-    # amazonka-2.0 flake seems broken still.
-    amazonka-git.url = "github:brendanhay/amazonka?ref=2.0.0";
-    amazonka-git.flake = false;
-
-    google-cloud-haskell.url = "github:tusharad/google-cloud-haskell";
-    google-cloud-haskell.flake = false;
-
-    json-logic-hs.url = "github:nammayatri/json-logic-hs";
-    json-logic-hs.flake = false;
+    # Non-flake source dependencies (amazonka, google-cloud-haskell, json-logic-hs,
+    # osrm-pbf) are pinned in Backend/nix/sources.nix via fetchTarball/fetchurl
+    # to avoid the ~1.5s per-input verification overhead.
   };
 
   outputs = inputs:

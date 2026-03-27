@@ -11,6 +11,7 @@
   ];
   perSystem = { config, self', pkgs, lib, system, ... }:
     let
+      sources = import ./nix/sources.nix;
       # Packages to exclude from CI builds (not needed for production deployment)
       ciExcludedPackages = [
         "hunit-tests"
@@ -134,18 +135,18 @@
             ]);
         };
         packages = {
-          amazonka.source = inputs.amazonka-git + /lib/amazonka;
-          amazonka-core.source = inputs.amazonka-git + /lib/amazonka-core;
-          amazonka-test.source = inputs.amazonka-git + /lib/amazonka-test;
-          amazonka-sso.source = inputs.amazonka-git + /lib/services/amazonka-sso;
-          amazonka-sts.source = inputs.amazonka-git + /lib/services/amazonka-sts;
-          amazonka-ses.source = inputs.amazonka-git + /lib/services/amazonka-ses;
+          amazonka.source = sources.amazonka-git + "/lib/amazonka";
+          amazonka-core.source = sources.amazonka-git + "/lib/amazonka-core";
+          amazonka-test.source = sources.amazonka-git + "/lib/amazonka-test";
+          amazonka-sso.source = sources.amazonka-git + "/lib/services/amazonka-sso";
+          amazonka-sts.source = sources.amazonka-git + "/lib/services/amazonka-sts";
+          amazonka-ses.source = sources.amazonka-git + "/lib/services/amazonka-ses";
           streamly.source = "0.8.3";
           unicode-data.source = "0.3.1";
           namma-dsl.source = inputs.namma-dsl + /lib/namma-dsl;
-          json-logic-hs.source = inputs.json-logic-hs;
-          google-cloud-pubsub.source = inputs.google-cloud-haskell + /lib/google-cloud-pubsub;
-          google-cloud-common.source = inputs.google-cloud-haskell + /lib/google-cloud-common;
+          json-logic-hs.source = sources.json-logic-hs;
+          google-cloud-pubsub.source = sources.google-cloud-haskell + "/lib/google-cloud-pubsub";
+          google-cloud-common.source = sources.google-cloud-haskell + "/lib/google-cloud-common";
         };
         settings = {
           alchemist.custom = cacConfig;
