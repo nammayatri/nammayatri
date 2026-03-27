@@ -83,6 +83,7 @@ import SharedLogic.FRFSStatus
 import SharedLogic.FRFSUtils
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.PTCircuitBreaker as PTCircuitBreaker
 import qualified SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper as SeatHold
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
@@ -635,9 +636,12 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
   (quotes :: [DFRFSQuote.FRFSQuote]) <- B.runInReplica $ QFRFSQuote.findAllBySearchId searchId_
   quotesWithCategories <- mapM (\quote -> (quote,) <$> QFRFSQuoteCategory.findAllByQuoteId quote.id) quotes
   mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just searchId_.getId)
+  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = search.merchantOperatingCityId.getId})
+  let cbConfig = PTCircuitBreaker.parseCircuitBreakerConfig (mbRiderConfig >>= (.ptCircuitBreakerConfig))
+      ptMode = PTCircuitBreaker.vehicleCategoryToPTMode search.vehicleType
+  observingFailures <- PTCircuitBreaker.checkObservingFailures ptMode PTCircuitBreaker.BookingAPI search.merchantOperatingCityId cbConfig
   sortedQuotesWithCategories <- case search.vehicleType of
     Spec.BUS -> do
-      mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = search.merchantOperatingCityId.getId})
       let cfgMap = maybe (JourneyUtils.toCfgMap JourneyUtils.defaultBusTierSortingConfig) JourneyUtils.toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
       let cfgMap' = FRFSUtils.adjustCfgMapForPreferredTier (mbJourneyLeg >>= (.userPreferredServiceTier)) cfgMap
       let serviceTierTypeFromQuote quote quoteCategories = JourneyUtils.getServiceTierFromQuote quoteCategories quote <&> (.serviceTierType)
@@ -681,6 +685,7 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
               eventDiscountAmount = quote.eventDiscountAmount,
               integratedBppConfigId = quote.integratedBppConfigId,
               stations = fromMaybe [] stations,
+              observingFailures = Just observingFailures,
               ..
             }
     )

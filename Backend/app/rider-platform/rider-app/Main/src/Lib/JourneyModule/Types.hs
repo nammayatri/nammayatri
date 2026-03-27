@@ -305,7 +305,8 @@ data LegInfo = LegInfo
     entrance :: Maybe MultiModalLegGate,
     exit :: Maybe MultiModalLegGate,
     validTill :: Maybe UTCTime,
-    hasApplicablePasses :: Maybe Bool
+    hasApplicablePasses :: Maybe Bool,
+    observingFailures :: Maybe Bool
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -674,7 +675,8 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
         entrance = journeyLeg.osmEntrance,
         exit = journeyLeg.osmExit,
         validTill = Nothing,
-        hasApplicablePasses = Just False
+        hasApplicablePasses = Just False,
+        observingFailures = Nothing
       }
   where
     getBookingDetailsConstructor :: DBooking.BookingDetails -> Text
@@ -753,7 +755,8 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} journeyLeg = do
         entrance = journeyLeg.osmEntrance,
         exit = journeyLeg.osmExit,
         validTill = Nothing,
-        hasApplicablePasses = Just False
+        hasApplicablePasses = Just False,
+        observingFailures = Nothing
       }
 
 mkWalkLegInfoFromWalkLegData :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id DP.Person -> DJL.JourneyLeg -> m LegInfo
@@ -797,7 +800,8 @@ mkWalkLegInfoFromWalkLegData personId legData@DJL.JourneyLeg {..} = do
         entrance = straightLineEntrance,
         exit = straightLineExit,
         validTill = Nothing,
-        hasApplicablePasses = Just False
+        hasApplicablePasses = Just False,
+        observingFailures = Nothing
       }
   where
     mkLocation now location name =
@@ -900,7 +904,8 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
         entrance = Nothing,
         exit = Nothing,
         validTill = (if null qrValidity then Nothing else Just $ maximum qrValidity) <|> Just booking.validTill,
-        hasApplicablePasses = Nothing
+        hasApplicablePasses = Nothing,
+        observingFailures = Nothing
       }
   where
     mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters totalBookingAmount integratedBPPConfig = do
@@ -1125,15 +1130,16 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
         Spec.BUS -> fromMaybe True (mRiderConfig >>= (.busTicketAllowed))
         Spec.SUBWAY -> fromMaybe True (mRiderConfig >>= (.suburbanTicketAllowed))
 
+  let ptMode = PTCircuitBreaker.vehicleCategoryToPTMode vehicleType
+  let cbConfig = PTCircuitBreaker.parseCircuitBreakerConfig (mRiderConfig >>= (.ptCircuitBreakerConfig))
   isCanaryAllowed <-
     if not isTicketAllowed
       then do
-        let ptMode = PTCircuitBreaker.vehicleCategoryToPTMode vehicleType
-        let cbConfig = PTCircuitBreaker.parseCircuitBreakerConfig (mRiderConfig >>= (.ptCircuitBreakerConfig))
         case cbConfig.booking of
           Nothing -> return False
           Just cfg -> PTCircuitBreaker.tryAcquireOrCheckCanarySlot id.getId ptMode PTCircuitBreaker.BookingAPI merchantOperatingCityId cfg.canaryAllowedPerWindow cfg.canaryWindowSeconds
       else return False
+  observingFailures <- PTCircuitBreaker.checkObservingFailures ptMode PTCircuitBreaker.BookingAPI merchantOperatingCityId cbConfig
 
   let bookingAllowedForVehicleType =
         case vehicleType of
@@ -1185,7 +1191,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
         entrance = Nothing,
         exit = Nothing,
         validTill = (mbQuote <&> (.validTill)) <|> (frfsSearch.validTill),
-        hasApplicablePasses = Just hasApplicablePass
+        hasApplicablePasses = Just hasApplicablePass,
+        observingFailures = Just observingFailures
       }
   where
     shouldMatchDeviceId :: DPurchasedPass.PurchasedPass -> Maybe Text -> Bool
