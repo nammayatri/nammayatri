@@ -30,8 +30,8 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
-import Storage.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import Storage.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.PushLogs
