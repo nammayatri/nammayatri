@@ -159,6 +159,7 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
     castSubscriptionPurchaseStatus :: API.SubscriptionPurchaseStatus -> DSP.SubscriptionPurchaseStatus
     castSubscriptionPurchaseStatus = \case
       API.SubscriptionPending -> DSP.PENDING
+      API.SubscriptionPurchased -> DSP.PURCHASED
       API.SubscriptionActive -> DSP.ACTIVE
       API.SubscriptionExpired -> DSP.EXPIRED
       API.SubscriptionFailed -> DSP.FAILED
@@ -277,7 +278,7 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
             planValidityDays = planValidityDays,
             planGeography = planGeography,
             planVehicleCategory = Just $ show plan.vehicleCategory,
-            subscriptionStartDate = subscription.startDate <|> Just subscription.purchaseTimestamp,
+            subscriptionStartDate = subscription.startDate,
             subscriptionEndDate = subscription.expiryDate,
             subscriptionStatus = Just $ show subscription.status,
             baseAmount = baseAmount,

@@ -353,9 +353,7 @@ let jobInfoMapx =
         }
       , { mapKey = AllocatorJobType.Reconciliation, mapValue = True }
       , { mapKey = AllocatorJobType.ScheduledBatchPayout, mapValue = True }
-      , { mapKey = AllocatorJobType.SettlementReportIngestion
-        , mapValue = True
-        }
+      , { mapKey = AllocatorJobType.SettlementReportIngestion, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig =

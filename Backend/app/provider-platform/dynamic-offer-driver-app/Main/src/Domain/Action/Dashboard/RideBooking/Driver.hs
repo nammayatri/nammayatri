@@ -41,6 +41,7 @@ import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.Driver as Driver
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.AadhaarCard
+import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import Domain.Types.DriverFee as DDF
 import Domain.Types.DriverInformation
@@ -79,11 +80,10 @@ import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.DriverFee as SLDriverFee
-import qualified Domain.Types.DocumentVerificationConfig as ODC
 import SharedLogic.DriverOnboarding
-import SharedLogic.Reminder.Helper (createReminder)
 import qualified SharedLogic.Finance.Wallet as FWallet
 import SharedLogic.Merchant (findMerchantByShortId)
+import SharedLogic.Reminder.Helper (createReminder)
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant as CQM

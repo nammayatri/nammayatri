@@ -691,16 +691,16 @@ handleSubscriptionExpiry purchase = do
         merchantOperatingCityId = purchase.merchantOperatingCityId.getId
         referenceId = purchase.id.getId
 
-    -- Fetch all other ACTIVE subscriptions (excluding the one being expired)
-    allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId purchase.ownerType PREPAID_SUBSCRIPTION
-    let otherActive = filter (\p -> p.id /= purchase.id) allActive
-        otherActiveCredits = sum $ map (.planRideCredit) otherActive
+    -- Preserve credits from other paid-but-not-expired purchases.
+    allPaidTracked <- QSPE.findAllActiveAndPurchasedByOwnerAndServiceName ownerId purchase.ownerType PREPAID_SUBSCRIPTION
+    let otherTracked = filter (\p -> p.id /= purchase.id) allPaidTracked
+        retainedCredits = sum $ map (.planRideCredit) otherTracked
 
     -- Get current unified balance
     mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId
     let currentBalance = fromMaybe 0 mbBalance
         -- Credits attributable to the expiring subscription
-        expiredCredits = max 0 (currentBalance - otherActiveCredits)
+        expiredCredits = max 0 (currentBalance - retainedCredits)
 
     when (expiredCredits > 0) $ do
       -- Calculate proportional revenue amount from planFee
@@ -762,41 +762,64 @@ handleSubscriptionExpiry purchase = do
     QSP.updateStatusById DSP.EXPIRED purchase.id
     logInfo $ "Subscription " <> purchase.id.getId <> " expired. Expired credits: " <> show expiredCredits
 
--- | After a ride debit, check if the oldest ACTIVE subscription should be marked EXHAUSTED.
--- FIFO logic: if the current balance is at or below the sum of newer subscriptions' credits,
--- the oldest subscription's credits are fully used up.
--- Returns (contributing purchase IDs, whether any were exhausted).
--- If any were exhausted, the caller should call activateNextQueuedPurchaseExpiry
--- and schedule follow-up jobs.
+-- | After a ride debit, walk tracked prepaid purchases in FIFO order and determine:
+--   1. which purchases contributed to this ride,
+--   2. which purchases are now exhausted,
+--   3. which purchase should be ACTIVE after this ride.
+-- All paid plans contribute to the pooled balance immediately, so this function infers
+-- contribution/exhaustion boundaries from the remaining pooled balance after the debit.
+-- Returns (contributingPurchaseIds, maybeNewlyActivatedPurchaseWithExpiry).
 checkAndMarkExhaustedSubscriptions ::
   (BeamFlow m r) =>
   CounterpartyType ->
   Text -> -- Owner ID
   DSP.SubscriptionOwnerType ->
-  m ([Id DSP.SubscriptionPurchase], Bool)
+  m ([Id DSP.SubscriptionPurchase], Maybe (Id DSP.SubscriptionPurchase, UTCTime))
 checkAndMarkExhaustedSubscriptions counterpartyType ownerId ownerType = do
-  allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
+  trackedPurchases <- QSPE.findAllActiveAndPurchasedByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
   mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId
   let currentBalance = fromMaybe 0 mbBalance
-      -- Sort by purchaseTimestamp ASC (already from query), process FIFO
-      sorted = DL.sortOn (.purchaseTimestamp) allActive
-  go sorted currentBalance [] False
-  where
-    go [] _ acc exhausted = pure (acc, exhausted)
-    go [single] _ acc exhausted = pure (acc <> [single.id], exhausted) -- Last one is always contributing
-    go (oldest : rest) balance acc exhausted = do
-      let restCredits = sum $ map (.planRideCredit) rest
-      if balance <= restCredits
-        then do
-          -- Oldest subscription's credits are fully consumed
-          QSP.updateStatusById DSP.EXHAUSTED oldest.id
-          logInfo $ "Subscription " <> oldest.id.getId <> " marked EXHAUSTED"
-          -- Continue checking (there might be more to exhaust)
-          go rest balance (acc <> [oldest.id]) True
-        else pure (acc <> [oldest.id], exhausted) -- Oldest is partially consumed
+      orderedPurchases = DL.sortOn (.purchaseTimestamp) trackedPurchases
+      (contributingIds, exhaustedPurchases, mbFinalActivePurchase) = classifyTrackedPurchases currentBalance orderedPurchases
 
--- | Activate the expiry timer for the next queued subscription purchase.
--- A queued purchase is ACTIVE but has expiryDate = Nothing (its timer hasn't started).
+  mapM_
+    ( \purchase -> do
+        QSP.updateStatusById DSP.EXHAUSTED purchase.id
+        logInfo $ "Subscription " <> purchase.id.getId <> " marked EXHAUSTED"
+    )
+    exhaustedPurchases
+
+  activatedPurchase <- case mbFinalActivePurchase of
+    Just purchase | purchase.status == DSP.PURCHASED -> do
+      mbPlan <- QPlan.findByPrimaryKey purchase.planId
+      case mbPlan of
+        Just plan -> do
+          now <- getCurrentTime
+          let expiryDate = fmap (\days -> addUTCTime (fromIntegral (days * 60 * 60 * 24)) now) plan.validityInDays
+          QSPE.updateStatusExpiryAndStartDateById DSP.ACTIVE expiryDate (Just now) purchase.id
+          logInfo $ "Activated subscription " <> purchase.id.getId <> " during ride settlement with expiryDate: " <> show expiryDate <> " startDate: " <> show now
+          pure $ (purchase.id,) <$> expiryDate
+        Nothing -> do
+          logInfo $ "Plan not found for activated subscription during ride settlement: " <> purchase.planId.getId
+          pure Nothing
+    _ -> pure Nothing
+
+  pure (contributingIds, activatedPurchase)
+  where
+    classifyTrackedPurchases balance purchases = go purchases (sum $ map (.planRideCredit) purchases) [] []
+      where
+        go [] _ contributing exhausted = (reverse contributing, reverse exhausted, Nothing)
+        go (purchase : rest) suffixCredits contributing exhausted =
+          let laterCredits = suffixCredits - purchase.planRideCredit
+           in if balance <= laterCredits
+                then go rest laterCredits (purchase.id : contributing) (purchase : exhausted)
+                else
+                  if balance < suffixCredits
+                    then (reverse (purchase.id : contributing), reverse exhausted, Just purchase)
+                    else (reverse contributing, reverse exhausted, Just purchase)
+
+-- | Promote the next queued PURCHASED subscription into the current ACTIVE slot.
+-- Callers are expected to hold the owner-level running balance lock.
 -- Called after an exhaustion or expiry event to cascade to the next FIFO purchase.
 -- Returns Just (purchaseId, expiryDate) if a purchase was activated, Nothing otherwise.
 -- The caller is responsible for scheduling the ExpireSubscriptionPurchase job.
@@ -806,21 +829,24 @@ activateNextQueuedPurchaseExpiry ::
   DSP.SubscriptionOwnerType ->
   m (Maybe (Id DSP.SubscriptionPurchase, UTCTime))
 activateNextQueuedPurchaseExpiry ownerId ownerType = do
-  allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
-  let sorted = DL.sortOn (.purchaseTimestamp) allActive
-      -- Find first ACTIVE purchase with no expiryDate (queued)
-      queued = filter (\p -> isNothing p.expiryDate) sorted
-  case queued of
-    (nextPurchase : _) -> do
-      mbPlan <- QPlan.findByPrimaryKey nextPurchase.planId
-      case mbPlan of
-        Just plan -> do
-          now <- getCurrentTime
-          let expiryDate = fmap (\days -> addUTCTime (fromIntegral (days * 60 * 60 * 24)) now) plan.validityInDays
-          QSPE.updateExpiryAndStartDateById expiryDate (Just now) nextPurchase.id
-          logInfo $ "Activated expiry for queued subscription " <> nextPurchase.id.getId <> " with expiryDate: " <> show expiryDate <> " startDate: " <> show now
-          pure $ (nextPurchase.id,) <$> expiryDate
-        Nothing -> do
-          logInfo $ "Plan not found for queued subscription: " <> nextPurchase.planId.getId
-          pure Nothing
-    [] -> pure Nothing
+  mbActive <- QSPE.findCurrentActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
+  case mbActive of
+    Just activePurchase -> do
+      logInfo $ "Skipping queued activation because ACTIVE subscription already exists: " <> activePurchase.id.getId
+      pure Nothing
+    Nothing -> do
+      purchased <- QSPE.findAllPurchasedByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
+      case DL.sortOn (.purchaseTimestamp) purchased of
+        (nextPurchase : _) -> do
+          mbPlan <- QPlan.findByPrimaryKey nextPurchase.planId
+          case mbPlan of
+            Just plan -> do
+              now <- getCurrentTime
+              let expiryDate = fmap (\days -> addUTCTime (fromIntegral (days * 60 * 60 * 24)) now) plan.validityInDays
+              QSPE.updateStatusExpiryAndStartDateById DSP.ACTIVE expiryDate (Just now) nextPurchase.id
+              logInfo $ "Activated expiry for queued subscription " <> nextPurchase.id.getId <> " with expiryDate: " <> show expiryDate <> " startDate: " <> show now
+              pure $ (nextPurchase.id,) <$> expiryDate
+            Nothing -> do
+              logInfo $ "Plan not found for queued subscription: " <> nextPurchase.planId.getId
+              pure Nothing
+        [] -> pure Nothing
