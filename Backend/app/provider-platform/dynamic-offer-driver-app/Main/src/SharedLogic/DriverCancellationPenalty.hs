@@ -163,7 +163,7 @@ accumulateCancellationPenalty ::
   m ()
 accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterConfig driver = do
   when (validCancellationPenaltyApplicable `elem` rideTags && isJust booking.fareParams.driverCancellationPenaltyAmount) $ do
-    Metrics.incrementDriverPenaltyCount "cooldown" booking.merchantOperatingCityId.getId
+    Metrics.incrementDriverPenaltyCount "cancellation_penalty" booking.merchantOperatingCityId.getId
     case booking.fareParams.driverCancellationPenaltyAmount of
       Just penaltyAmount ->
         if isWalletEnabled

@@ -52,6 +52,7 @@ library
       Lib.Finance.Storage.Queries.ReconciliationSummaryExtra
       Lib.Finance.Tax.Interface
       Lib.Finance.Tax.Types
+      Tools.Beam.UtilsTH
       Lib.Finance.Domain.Types.Account
       Lib.Finance.Domain.Types.AuditEntry
       Lib.Finance.Domain.Types.CurrentState
@@ -137,7 +138,7 @@ library
       TypeSynonymInstances
       UndecidableInstances
       DerivingStrategies
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson
     , base >=4.7 && <5

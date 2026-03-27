@@ -75,36 +75,36 @@ registerBAPMetricsContainer searchDurationTimeout = do
   rideCreatedCounter <- registerRideCreatedCounterMetric
   serviceabilityCheckCounter <- registerServiceabilityCheckCounterMetric
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
-  searchDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_search_frfs_round_trip" "beckn_search_frfs_round_trip_failure_counter"
-  selectDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_select_frfs_round_trip" "beckn_select_frfs_round_trip_failure_counter"
-  initDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_init_frfs_round_trip" "beckn_init_frfs_round_trip_failure_counter"
-  confirmDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_confirm_frfs_round_trip" "beckn_confirm_frfs_round_trip_failure_counter"
-  cancelDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_cancel_frfs_round_trip" "beckn_cancel_frfs_round_trip_failure_counter"
-  initDuration <- registerDurationMetric searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_init_round_trip" "beckn_init_round_trip_failure_counter"
-  confirmDuration <- registerDurationMetric searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_confirm_round_trip" "beckn_confirm_round_trip_failure_counter"
-  createOrderDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_create_order_frfs_round_trip" "beckn_create_order_frfs_round_trip_failure_counter"
+  searchDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchant_operating_city_id" "beckn_search_frfs_round_trip" "beckn_search_frfs_round_trip_failure_counter"
+  selectDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchant_operating_city_id" "beckn_select_frfs_round_trip" "beckn_select_frfs_round_trip_failure_counter"
+  initDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchant_operating_city_id" "beckn_init_frfs_round_trip" "beckn_init_frfs_round_trip_failure_counter"
+  confirmDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchant_operating_city_id" "beckn_confirm_frfs_round_trip" "beckn_confirm_frfs_round_trip_failure_counter"
+  cancelDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchant_operating_city_id" "beckn_cancel_frfs_round_trip" "beckn_cancel_frfs_round_trip_failure_counter"
+  initDuration <- registerDurationMetric searchDurationTimeout "merchant_name" "version" "merchant_operating_city_id" "beckn_init_round_trip" "beckn_init_round_trip_failure_counter"
+  confirmDuration <- registerDurationMetric searchDurationTimeout "merchant_name" "version" "merchant_operating_city_id" "beckn_confirm_round_trip" "beckn_confirm_round_trip_failure_counter"
+  createOrderDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchant_operating_city_id" "beckn_create_order_frfs_round_trip" "beckn_create_order_frfs_round_trip_failure_counter"
   return $ BAPMetricsContainer {..}
 
 registerSearchRequestCounterMetric :: IO SearchRequestCounterMetric
-registerSearchRequestCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId") $ P.counter $ P.Info "search_request_count" ""
+registerSearchRequestCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchant_operating_city_id") $ P.counter $ P.Info "search_request_count" ""
 
 registerBusScannetCounterMetric :: IO BusScannetCounterMetric
-registerBusScannetCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId", "vehicle_number") $ P.counter $ P.Info "scanned_bus_counter" ""
+registerBusScannetCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchant_operating_city_id", "vehicle_number") $ P.counter $ P.Info "scanned_bus_counter" ""
 
 registerFleetRouteMapMissingCounterMetric :: IO FleetRouteMapMissingCounterMetric
-registerFleetRouteMapMissingCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId", "vehicle_number") $ P.counter $ P.Info "fleet_route_map_missing_counter" ""
+registerFleetRouteMapMissingCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchant_operating_city_id", "vehicle_number") $ P.counter $ P.Info "fleet_route_map_missing_counter" ""
 
 registerVehicleNoEtaCounterMetric :: IO VehicleNoEtaCounterMetric
-registerVehicleNoEtaCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId", "source") $ P.counter $ P.Info "vehicle_no_eta_count" ""
+registerVehicleNoEtaCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchant_operating_city_id", "source") $ P.counter $ P.Info "vehicle_no_eta_count" ""
 
 registerBusScanSearchRequestCounterMetric :: IO BusScanSearchRequestCounterMetric
-registerBusScanSearchRequestCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId") $ P.counter $ P.Info "bus_scan_search_request_count" ""
+registerBusScanSearchRequestCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchant_operating_city_id") $ P.counter $ P.Info "bus_scan_search_request_count" ""
 
 registerRideCreatedCounterMetric :: IO RideCreatedCounterMetric
-registerRideCreatedCounterMetric = P.register $ P.vector ("merchant_id", "version", "category", "merchantOperatingCityId") $ P.counter $ P.Info "ride_created_count" ""
+registerRideCreatedCounterMetric = P.register $ P.vector ("merchant_id", "version", "category", "merchant_operating_city_id") $ P.counter $ P.Info "ride_created_count" ""
 
 registerServiceabilityCheckCounterMetric :: IO ServiceabilityCheckCounterMetric
-registerServiceabilityCheckCounterMetric = P.register $ P.vector ("merchantOperatingCityId", "result", "version") $ P.counter $ P.Info "serviceability_check_total" ""
+registerServiceabilityCheckCounterMetric = P.register $ P.vector ("city", "result", "version") $ P.counter $ P.Info "serviceability_check_total" ""
 
 registerSearchDurationMetric :: Seconds -> IO SearchDurationMetric
 registerSearchDurationMetric searchDurationTimeout = do

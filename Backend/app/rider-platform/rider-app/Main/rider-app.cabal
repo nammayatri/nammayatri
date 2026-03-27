@@ -234,6 +234,7 @@ library
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent
       Domain.Action.UI.Cancel
+      Domain.Action.UI.CancellationChargesWaiveOff
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.Conductor.Stats
       Domain.Action.UI.Confirm
@@ -537,6 +538,7 @@ library
       Storage.CachedQueries.FRFSGtfsStageFare
       Storage.CachedQueries.HotSpotConfig
       Storage.CachedQueries.IntegratedBPPConfig
+      Storage.CachedQueries.JourneyLeg
       Storage.CachedQueries.Maps.LocationMapCache
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.Merchant
@@ -762,6 +764,7 @@ library
       API.Action.UI.AttractionRecommend
       API.Action.UI.BBPS
       API.Action.UI.Cac
+      API.Action.UI.CancellationChargesWaiveOff
       API.Action.UI.CRIS
       API.Action.UI.CustomerReferral
       API.Action.UI.DeletedPerson
@@ -848,6 +851,7 @@ library
       API.Types.UI.AlertWebhook
       API.Types.UI.AttractionRecommend
       API.Types.UI.BBPS
+      API.Types.UI.CancellationChargesWaiveOff
       API.Types.UI.CRIS
       API.Types.UI.CustomerReferral
       API.Types.UI.DeletedPerson
@@ -1476,7 +1480,7 @@ library
       UndecidableInstances
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , amazonka-core

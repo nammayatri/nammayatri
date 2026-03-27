@@ -131,6 +131,7 @@ library:
     - -Wcompat
     - -Widentities
     - -fhide-source-paths
+    - -Werror
   dependencies:
     - mobility-core
     - beckn-spec

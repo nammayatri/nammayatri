@@ -55,10 +55,10 @@ registerBPPMetricsContainer searchDurationTimeout = do
   return $ BPPMetricsContainer {..}
 
 registerRideCancelledCounterMetric :: IO RideCancelledCounterMetric
-registerRideCancelledCounterMetric = P.register $ P.vector ("reason", "initiated_by", "merchant_name", "merchantOperatingCityId") $ P.counter $ P.Info "ride_cancelled_count" ""
+registerRideCancelledCounterMetric = P.register $ P.vector ("reason", "initiated_by", "merchant_name", "merchant_operating_city_id") $ P.counter $ P.Info "ride_cancelled_total" ""
 
 registerDriverPenaltyCounterMetric :: IO DriverPenaltyCounterMetric
-registerDriverPenaltyCounterMetric = P.register $ P.vector ("tier", "merchantOperatingCityId", "version") $ P.counter $ P.Info "driver_penalty_applied_total" ""
+registerDriverPenaltyCounterMetric = P.register $ P.vector ("tier", "merchant_operating_city_id", "version") $ P.counter $ P.Info "driver_penalty_applied_total" ""
 
 registerCountingDeviationMetric :: IO CountingDeviationMetric
 registerCountingDeviationMetric =

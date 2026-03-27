@@ -167,7 +167,7 @@ library
       TemplateHaskell
       DerivingStrategies
       EmptyDataDecls
-  ghc-options: -Wall -Wcompat -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -fhide-source-paths -Wincomplete-uni-patterns
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -fhide-source-paths -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -257,7 +257,7 @@ executable unified-dashboard-exe
       TemplateHaskell
       DerivingStrategies
       EmptyDataDecls
-  ghc-options: -Wall -Wcompat -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5

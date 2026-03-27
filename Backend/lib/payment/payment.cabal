@@ -49,6 +49,7 @@ library
       Lib.Payment.Storage.Queries.PayoutOrderExtra
       Lib.Payment.Storage.Queries.PayoutRequestExtra
       Lib.Payment.Storage.Queries.RefundsExtra
+      Tools.Beam.UtilsTH
       Lib.Payment.Domain.Types.PaymentOrderOffer
       Lib.Payment.Domain.Types.PaymentOrderSplit
       Lib.Payment.Domain.Types.PayoutOrder
@@ -117,7 +118,7 @@ library
       TypeSynonymInstances
       UndecidableInstances
       DerivingStrategies
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson
     , base >=4.7 && <5
