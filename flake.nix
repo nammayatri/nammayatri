@@ -80,9 +80,6 @@
     osrm-pbf.url = "https://download.geofabrik.de/asia/india/southern-zone-240101.osm.pbf";
     osrm-pbf.flake = false;
 
-    easy-purescript-nix.url = "github:justinwoo/easy-purescript-nix/a90bd941297497c83205f0a64f30c5188a2a4fda";
-    easy-purescript-nix.flake = false;
-
     # Amazonka 2.0 tagged release
     # amazonka-2.0 flake seems broken still.
     amazonka-git.url = "github:brendanhay/amazonka?ref=2.0.0";
