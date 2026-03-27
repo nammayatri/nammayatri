@@ -1,6 +1,7 @@
-{ inputs, ... }:
+_:
 let
-  openStreetDataFile = inputs.osrm-pbf;
+  sources = import ./sources.nix;
+  openStreetDataFile = sources.osrm-pbf;
   openStreetDataFileName = "southern-zone-230101";
   cityName = "bangalore";
   customPort = "5001";

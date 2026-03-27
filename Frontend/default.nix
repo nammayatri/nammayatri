@@ -1,10 +1,7 @@
-{ inputs, ... }:
+_:
 {
-  imports = [
-  ];
   perSystem = { config, self', system, pkgs, lib, ... }:
-    let easy-ps = import inputs.easy-purescript-nix { inherit pkgs; };
-    in {
+    {
       pre-commit.settings.imports = [
         ./nix/pre-commit.nix
       ];

@@ -11,6 +11,7 @@
   ];
   perSystem = { config, self', pkgs, lib, system, ... }:
     let
+      sources = import ./nix/sources.nix;
       # Packages to exclude from CI builds (not needed for production deployment)
       ciExcludedPackages = [
         "hunit-tests"
@@ -116,10 +117,7 @@
         # "packages" and "apps" are excluded from autoWire so we can filter out
         # ciExcludedPackages from the flake's top-level outputs (used by devour-flake in om ci run).
         autoWire = [ "checks" ];
-        devShell.tools = _: {
-          inherit (self'.packages)
-            arion;
-        };
+        devShell.tools = _: { };
         # NOTE: aarch64-linux builds are currently experiencing an assembly error:
         # "/build/ghc612_0/ghc_329.s:160652:0: error: conditional branch out of range"
         # This is a known issue with GHC's code generation on ARM architectures.
@@ -137,18 +135,18 @@
             ]);
         };
         packages = {
-          amazonka.source = inputs.amazonka-git + /lib/amazonka;
-          amazonka-core.source = inputs.amazonka-git + /lib/amazonka-core;
-          amazonka-test.source = inputs.amazonka-git + /lib/amazonka-test;
-          amazonka-sso.source = inputs.amazonka-git + /lib/services/amazonka-sso;
-          amazonka-sts.source = inputs.amazonka-git + /lib/services/amazonka-sts;
-          amazonka-ses.source = inputs.amazonka-git + /lib/services/amazonka-ses;
+          amazonka.source = sources.amazonka-git + "/lib/amazonka";
+          amazonka-core.source = sources.amazonka-git + "/lib/amazonka-core";
+          amazonka-test.source = sources.amazonka-git + "/lib/amazonka-test";
+          amazonka-sso.source = sources.amazonka-git + "/lib/services/amazonka-sso";
+          amazonka-sts.source = sources.amazonka-git + "/lib/services/amazonka-sts";
+          amazonka-ses.source = sources.amazonka-git + "/lib/services/amazonka-ses";
           streamly.source = "0.8.3";
           unicode-data.source = "0.3.1";
           namma-dsl.source = inputs.namma-dsl + /lib/namma-dsl;
-          json-logic-hs.source = inputs.json-logic-hs;
-          google-cloud-pubsub.source = inputs.google-cloud-haskell + /lib/google-cloud-pubsub;
-          google-cloud-common.source = inputs.google-cloud-haskell + /lib/google-cloud-common;
+          json-logic-hs.source = sources.json-logic-hs;
+          google-cloud-pubsub.source = sources.google-cloud-haskell + "/lib/google-cloud-pubsub";
+          google-cloud-common.source = sources.google-cloud-haskell + "/lib/google-cloud-common";
         };
         settings = {
           alchemist.custom = cacConfig;
@@ -243,7 +241,7 @@
         lib.filterAttrs (name: _: !(builtins.elem name ciExcludedApps)) allHaskellApps;
 
       devShells.backend = pkgs.mkShell {
-        name = builtins.traceVerbose "devShells.backend" "ny-backend";
+        name = "ny-backend";
         meta.description = "Backend development environment for nammayatri";
         packages = with pkgs; [
           redis # redis-cli is used in scripts.nix
@@ -266,11 +264,14 @@
           config.pre-commit.devShell
           config.haskellProjects.default.outputs.devShell
           config.flake-root.devShell
-          inputs.haskell-cac.devShells.${system}.haskell-cac
         ];
-        shellHook = ''
-          export DYLD_LIBRARY_PATH="${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib"
-        '';
+        shellHook =
+          let cacLib = "${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib"; in
+          ''
+            export LIBRARY_PATH="${cacLib}"
+            export LD_LIBRARY_PATH="${cacLib}"
+            export DYLD_LIBRARY_PATH="${cacLib}"
+          '';
       };
     };
 }
