@@ -243,7 +243,7 @@
         lib.filterAttrs (name: _: !(builtins.elem name ciExcludedApps)) allHaskellApps;
 
       devShells.backend = pkgs.mkShell {
-        name = builtins.traceVerbose "devShells.backend" "ny-backend";
+        name = "ny-backend";
         meta.description = "Backend development environment for nammayatri";
         packages = with pkgs; [
           redis # redis-cli is used in scripts.nix
@@ -266,11 +266,14 @@
           config.pre-commit.devShell
           config.haskellProjects.default.outputs.devShell
           config.flake-root.devShell
-          inputs.haskell-cac.devShells.${system}.haskell-cac
         ];
-        shellHook = ''
-          export DYLD_LIBRARY_PATH="${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib"
-        '';
+        shellHook =
+          let cacLib = "${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib"; in
+          ''
+            export LIBRARY_PATH="${cacLib}"
+            export LD_LIBRARY_PATH="${cacLib}"
+            export DYLD_LIBRARY_PATH="${cacLib}"
+          '';
       };
     };
 }
