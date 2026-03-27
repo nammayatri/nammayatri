@@ -87,6 +87,13 @@ apis:
       auth: ApiAuthV2
       response:
         type: "[NammaTagV2]"
+  - GET:
+      endpoint: /tag/details
+      auth: ApiAuthV2
+      mandatoryQuery:
+        tagName: Text
+      response:
+        type: NammaTagV2
   - POST:
       endpoint: /query/create
       auth: ApiAuthV2
@@ -111,6 +118,14 @@ apis:
         type: ChakraQueryDeleteReq
       response:
         type: APISuccess
+  - GET:
+      endpoint: /query/details
+      auth: ApiAuthV2
+      mandatoryQuery:
+        chakra: Chakra
+        queryName: Text
+      response:
+        type: ChakraQueriesAPIEntity
   - POST:
       endpoint: /appDynamicLogic/verify
       auth: ApiAuthV2
