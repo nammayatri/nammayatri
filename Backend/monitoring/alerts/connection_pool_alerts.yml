@@ -47,6 +47,7 @@ groups:
             New requests may block waiting for a connection.
 
       # Pool metrics not being reported (monitor thread may have died)
+      # Note: absent() without label selectors won't detect per-pod outages in multi-replica deployments
       - alert: PgPoolMetricsAbsent
         expr: absent(db_pool_size)
         for: 5m

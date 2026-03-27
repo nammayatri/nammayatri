@@ -1,7 +1,7 @@
 # Kafka Topic Configuration Reference
 
 Recommended partition counts, retention, and compression settings for all
-Namma Yatri Kafka topics. These are enforced in the dev environment via
+Namma Yatri Kafka topics. These are recommended in the dev environment via
 `nix/services/nammayatri.nix` init script and should be mirrored in
 production Kafka cluster configuration.
 
@@ -21,7 +21,7 @@ production Kafka cluster configuration.
 
 | Topic                | Partitions | Retention | Compression | Consumer Groups                                          | Notes                                           |
 |----------------------|------------|-----------|-------------|----------------------------------------------------------|-------------------------------------------------|
-| `location-updates`   | 12         | 24h       | lz4         | `location-update-consumer`, `driver-availability-consumer` | Continuous driver location pings; highest volume |
+| `location-updates`   | 12         | 24h       | lz4         | `location-update-consumer`, `driver-availability-consumer` | Continuous driver location pings; highest volume. Note: Dev configs use placeholder group IDs; consult prod dhall configs for actual values. |
 
 ### Medium Throughput
 
@@ -37,15 +37,17 @@ production Kafka cluster configuration.
 
 | Topic                          | Partitions | Retention      | Compression | Notes                          |
 |--------------------------------|------------|----------------|-------------|--------------------------------|
-| `ExophoneData`                 | 1          | 72h (default)  | lz4         | Call tracking events           |
+| `ExophoneData`                 | 1          | 72h (default)  | lz4         | Call tracking events. Producers: rider-app, dynamic-offer-driver-app |
 | `AutoCompleteData`             | 1          | 72h (default)  | lz4         | Search autocomplete analytics  |
 | `RouteCollection`              | 1          | 72h (default)  | lz4         | Route data events              |
 | `EventTracker`                 | 1          | 72h (default)  | lz4         | Driver event tracking metrics  |
-| `MarketingParamsData`          | 1          | 72h (default)  | lz4         | Marketing attribution          |
-| `MarketingParamsPreLoginData`  | 1          | 72h (default)  | lz4         | Pre-login marketing params     |
+| `MarketingParamsData`          | 1          | 72h (default)  | lz4         | Marketing attribution. Producers: rider-app, dynamic-offer-driver-app |
+| `MarketingParamsPreLoginData`  | 1          | 72h (default)  | lz4         | Pre-login marketing params. Producers: rider-app, dynamic-offer-driver-app |
 | `metro-webview-events`         | 1          | 72h (default)  | lz4         | Metro webview telemetry        |
 
 ## Consumer Group Reference
+
+> **Note:** Dev configs use placeholder group IDs; consult prod dhall configs for actual values.
 
 | Consumer Group                  | Topic(s)                          | Consumer Type       | Config File                           |
 |---------------------------------|-----------------------------------|---------------------|---------------------------------------|

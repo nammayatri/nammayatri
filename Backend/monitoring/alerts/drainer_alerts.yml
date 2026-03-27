@@ -30,8 +30,8 @@ groups:
       # Sustained high query failure rate
       - alert: DrainerQueryFailureRateHigh
         expr: >
-          sum(rate(query_execution_failure_error[5m])) > 0.1
-          or sum(rate(driver_query_execution_failure_error[5m])) > 0.1
+          sum by (job, instance)(rate(query_execution_failure_error[5m])) > 0.1
+          or sum by (job, instance)(rate(driver_query_execution_failure_error[5m])) > 0.1
         for: 5m
         labels:
           severity: critical
@@ -55,16 +55,31 @@ groups:
             Check RIDER_DRAINER_STOP / DRIVER_DRAINER_STOP Redis keys
             and drainer logs for the root cause.
 
-      # Drainer not emitting any metrics (process completely dead)
-      - alert: DrainerAbsent
-        expr: absent(drainer_stop_status) or absent(driver_drainer_stop_status)
+      # Rider drainer not emitting any metrics (process completely dead)
+      # Note: absent() without label selectors won't detect per-pod outages in multi-replica deployments
+      - alert: RiderDrainerAbsent
+        expr: absent(drainer_stop_status)
         for: 5m
         labels:
           severity: critical
         annotations:
-          summary: "Drainer process is not running"
+          summary: "rider-app-drainer process is not running"
           description: >
-            No metrics received from drainer for 5+ minutes.
+            No metrics received from rider-app-drainer for 5+ minutes.
+            The drainer process may have crashed or failed to start.
+            Check pod/container status.
+
+      # Driver drainer not emitting any metrics (process completely dead)
+      # Note: absent() without label selectors won't detect per-pod outages in multi-replica deployments
+      - alert: DriverDrainerAbsent
+        expr: absent(driver_drainer_stop_status)
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "dynamic-offer-driver-drainer process is not running"
+          description: >
+            No metrics received from dynamic-offer-driver-drainer for 5+ minutes.
             The drainer process may have crashed or failed to start.
             Check pod/container status.
 
@@ -89,8 +104,8 @@ groups:
       # High drain latency indicates DB slowness
       - alert: DrainerHighLatency
         expr: >
-          histogram_quantile(0.95, rate(query_drain_latency_bucket[5m])) > 5
-          or histogram_quantile(0.95, rate(driver_query_drain_latency_bucket[5m])) > 5
+          histogram_quantile(0.95, rate(query_drain_latency_bucket[5m])) > 5 # Unit: seconds
+          or histogram_quantile(0.95, rate(driver_query_drain_latency_bucket[5m])) > 5 # Unit: seconds
         for: 5m
         labels:
           severity: warning
