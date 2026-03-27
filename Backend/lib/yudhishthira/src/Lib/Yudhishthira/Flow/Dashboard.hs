@@ -710,6 +710,11 @@ getNammaTagQueryAll chakra_ = do
   chakraQueries <- QChakraQueries.findAllByChakra chakra_
   return $ (\LYTCQ.ChakraQueries {..} -> Lib.Yudhishthira.Types.ChakraQueriesAPIEntity {..}) <$> chakraQueries
 
+getChakraQueryDetails :: BeamFlow m r => Lib.Yudhishthira.Types.Chakra -> Text -> m Lib.Yudhishthira.Types.ChakraQueriesAPIEntity
+getChakraQueryDetails chakra_ queryName_ = do
+  LYTCQ.ChakraQueries {..} <- QChakraQueries.findByPrimaryKey chakra_ queryName_ >>= fromMaybeM (InvalidRequest $ "ChakraQuery not found: " <> queryName_)
+  return Lib.Yudhishthira.Types.ChakraQueriesAPIEntity {chakra, queryName, queryResults, queryText, queryType = fromMaybe Lib.Yudhishthira.Types.CLICKHOUSE queryType}
+
 groupByTimeBounds :: [AppDynamicLogicRollout] -> [[AppDynamicLogicRollout]]
 groupByTimeBounds = groupBy sameTimeBounds
 
