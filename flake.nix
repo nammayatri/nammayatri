@@ -46,7 +46,14 @@
 
     location-tracking-service = {
       url = "github:nammayatri/location-tracking-service";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "common/flake-parts";
+        treefmt-nix.follows = "common/treefmt-nix";
+        process-compose-flake.follows = "common/process-compose-flake";
+        pre-commit-hooks-nix.follows = "common/pre-commit-hooks-nix";
+        services-flake.follows = "services-flake";
+      };
     };
 
     # https://github.com/nammayatri/passetto/pull/8
