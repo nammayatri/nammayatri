@@ -39,7 +39,6 @@ import qualified Domain.Types.RefundRequest as DRefundRequest
 import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
-import qualified Safety.Domain.Types.Sos as SSos
 import Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.RiderPreferredOption as DRPO
 import Domain.Types.SearchRequest as SearchRequest
@@ -65,6 +64,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Safety.Domain.Types.Common as SafetyCommon
+import qualified Safety.Domain.Types.Sos as SSos
 import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import SharedLogic.JobScheduler

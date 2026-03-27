@@ -1,18 +1,20 @@
 module Domain.Action.UI.Sos where
 
-import API.Types.UI.Sos
-import AWS.S3 as S3
 -- Domain.Types.Sos removed - using Safety.Domain.Types.Sos everywhere
 
 -- Keep for mockSosKey only
 
+import API.Types.UI.Sos
+import AWS.S3 as S3
 import Control.Applicative
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Foldable as Foldable
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as List
 import Data.Text as T hiding (map)
+import qualified Data.Text.Encoding as TE
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.Time.Format
 import qualified Domain.Action.UI.Call as DUCall
@@ -60,6 +62,7 @@ import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Safety.Storage.Queries.SafetySettingsExtra as QSafetyExtra
+import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import qualified SharedLogic.External.LocationTrackingService.Types as LTSTypes
 import SharedLogic.JobScheduler
@@ -1244,3 +1247,42 @@ flowToSOSService :: DRC.ExternalSOSFlow -> SOS.SOSService
 flowToSOSService DRC.ERSS = SOS.ERSS
 flowToSOSService DRC.GJ112 = SOS.GJ112
 flowToSOSService DRC.Trinity = SOS.Trinity
+
+postSosErssStatusUpdate :: API.Types.UI.Sos.ErssStatusUpdateReq -> Flow API.Types.UI.Sos.ErssStatusUpdateRes
+postSosErssStatusUpdate req = do
+  erssStatusUpdateRateLimitOptions <- asks (.erssStatusUpdateRateLimitOptions)
+  checkSlidingWindowLimitWithOptions erssStatusUpdateHitsCountKey erssStatusUpdateRateLimitOptions
+  mbSosDetails <- SafetyQSos.findByExternalReferenceId (Just req.idErss)
+  case mbSosDetails of
+    Nothing ->
+      pure $
+        API.Types.UI.Sos.ErssStatusUpdateRes
+          { resultCode = "OPERATION_FAILURE",
+            resultString = Nothing,
+            errorMsg = Just $ "No SOS found for tracking ID: " <> req.idErss,
+            message = Nothing,
+            payLoad = Nothing
+          }
+    Just sosDetails -> postSosErssStatusUpdateInternal req sosDetails
+
+postSosErssStatusUpdateInternal :: API.Types.UI.Sos.ErssStatusUpdateReq -> SafetyDSos.Sos -> Flow API.Types.UI.Sos.ErssStatusUpdateRes
+postSosErssStatusUpdateInternal req sosDetails = do
+  let previousStatus = sosDetails.externalReferenceStatus
+      newStatus = req.currentStatus
+      newEntry = ExternalStatusEntry {status = newStatus, idErss = req.idErss, lastUpdatedTime = req.lastUpdatedTime}
+      existingHistory = maybe [] (\h -> fromMaybe [] (A.decode (LBS.fromStrict $ TE.encodeUtf8 h))) sosDetails.externalStatusHistory :: [ExternalStatusEntry]
+      updatedHistory = existingHistory <> [newEntry]
+      updatedHistoryJson = Just $ TE.decodeUtf8 $ LBS.toStrict $ A.encode updatedHistory
+
+  SafetyQSos.updateExternalReferenceStatus (Just newStatus) updatedHistoryJson sosDetails.id
+
+  logInfo $ "ERSS status update received for SOS " <> sosDetails.id.getId <> ": " <> fromMaybe "none" previousStatus <> " -> " <> newStatus
+
+  pure $
+    API.Types.UI.Sos.ErssStatusUpdateRes
+      { resultCode = "OPERATION_SUCCESS",
+        resultString = Just "Status update received successfully",
+        errorMsg = Nothing,
+        message = Nothing,
+        payLoad = Nothing
+      }

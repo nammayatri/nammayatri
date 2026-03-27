@@ -20,13 +20,13 @@ import Kernel.External.Payout.Interface as Payout
 import Kernel.External.SMS as Sms
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
+import qualified Kernel.External.Settlement.Types as Settlement
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
 import qualified Text.Show as Show
 import Tools.Beam.UtilsTH
-import qualified Kernel.External.Settlement.Types as Settlement
 import Utils.Common.JWT.Config as GW
 
 -- Extra code goes here --

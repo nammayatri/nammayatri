@@ -8,6 +8,7 @@ import qualified Data.Text
 import qualified Domain.Types.Ride
 import qualified Domain.Types.RiderConfig
 import EulerHS.Prelude hiding (id)
+import qualified EulerHS.Prelude
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -17,6 +18,27 @@ import Servant
 import Tools.Auth
 
 data CallPoliceAPI = CallPoliceAPI {rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ErssStatusUpdateReq = ErssStatusUpdateReq
+  { idSource :: Kernel.Prelude.Maybe Data.Text.Text,
+    idErss :: Data.Text.Text,
+    currentStatus :: Data.Text.Text,
+    statusDesc :: Kernel.Prelude.Maybe Data.Text.Text,
+    comments :: Kernel.Prelude.Maybe Data.Text.Text,
+    lastUpdatedTime :: Kernel.Prelude.Maybe EulerHS.Prelude.Integer
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ErssStatusUpdateRes = ErssStatusUpdateRes
+  { resultCode :: Data.Text.Text,
+    resultString :: Kernel.Prelude.Maybe Data.Text.Text,
+    errorMsg :: Kernel.Prelude.Maybe Data.Text.Text,
+    message :: Kernel.Prelude.Maybe Data.Text.Text,
+    payLoad :: Kernel.Prelude.Maybe Data.Text.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
