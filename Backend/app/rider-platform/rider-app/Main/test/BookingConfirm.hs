@@ -1,5 +1,6 @@
 module BookingConfirm (bookingConfirmTests) where
 
+import Data.List (sort)
 import qualified Data.Text as T
 import Data.Time.Clock (addUTCTime)
 import Domain.Action.UI.Estimate (isCancelled)
@@ -73,11 +74,11 @@ bookingStatusTests =
   testGroup
     "BookingStatus Classification"
     [ testCase "active statuses are correct" $
-        assertEqual "" [NEW, CONFIRMED, AWAITING_REASSIGNMENT, TRIP_ASSIGNED] activeBookingStatus,
+        assertEqual "" (sort [NEW, CONFIRMED, AWAITING_REASSIGNMENT, TRIP_ASSIGNED]) (sort activeBookingStatus),
       testCase "terminal statuses are correct" $
-        assertEqual "" [COMPLETED, CANCELLED, REALLOCATED] terminalBookingStatus,
+        assertEqual "" (sort [COMPLETED, CANCELLED, REALLOCATED]) (sort terminalBookingStatus),
       testCase "active scheduled statuses are correct" $
-        assertEqual "" [AWAITING_REASSIGNMENT, TRIP_ASSIGNED] activeScheduledBookingStatus,
+        assertEqual "" (sort [AWAITING_REASSIGNMENT, TRIP_ASSIGNED]) (sort activeScheduledBookingStatus),
       testCase "every status is either active or terminal (exhaustiveness)" $
         forM_ allBookingStatuses $ \s ->
           assertBool

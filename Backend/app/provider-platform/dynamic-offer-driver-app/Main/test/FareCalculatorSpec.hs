@@ -13,6 +13,13 @@ import Kernel.Types.Id
 import SharedLogic.FareCalculator
 import Test.Hspec
 
+-- | Local helper that wraps computeRideDiscount for a simpler test interface.
+-- Takes a FareParameters and a discount percentage, extracting the relevant
+-- charges from the FareParameters to pass to computeRideDiscount.
+calculateBusinessDiscount :: FareParameters -> Double -> Maybe HighPrecMoney
+calculateBusinessDiscount fp pct =
+  computeRideDiscount fp.fareParametersDetails fp.baseFare fp.congestionCharge fp.nightShiftCharge fp.stopCharges pct
+
 -- ---------------------------------------------------------------------------
 -- Helpers
 -- ---------------------------------------------------------------------------
