@@ -1251,10 +1251,21 @@ postSosErssStatusUpdate :: API.Types.UI.Sos.ErssStatusUpdateReq -> Flow API.Type
 postSosErssStatusUpdate req = do
   erssStatusUpdateRateLimitOptions <- asks (.erssStatusUpdateRateLimitOptions)
   checkSlidingWindowLimitWithOptions erssStatusUpdateHitsCountKey erssStatusUpdateRateLimitOptions
-  sosDetails <-
-    SafetyQSos.findByExternalReferenceId (Just req.idErss)
-      >>= fromMaybeM (InvalidRequest $ "No SOS found for tracking ID: " <> req.idErss)
+  mbSosDetails <- SafetyQSos.findByExternalReferenceId (Just req.idErss)
+  case mbSosDetails of
+    Nothing ->
+      pure $
+        API.Types.UI.Sos.ErssStatusUpdateRes
+          { resultCode = "OPERATION_FAILURE",
+            resultString = Nothing,
+            errorMsg = Just $ "No SOS found for tracking ID: " <> req.idErss,
+            message = Nothing,
+            payLoad = Nothing
+          }
+    Just sosDetails -> postSosErssStatusUpdateInternal req sosDetails
 
+postSosErssStatusUpdateInternal :: API.Types.UI.Sos.ErssStatusUpdateReq -> SafetyDSos.Sos -> Flow API.Types.UI.Sos.ErssStatusUpdateRes
+postSosErssStatusUpdateInternal req sosDetails = do
   let previousStatus = sosDetails.externalReferenceStatus
       newStatus = req.currentStatus
       newEntry = ExternalStatusEntry {status = newStatus, idErss = req.idErss, lastUpdatedTime = req.lastUpdatedTime}
@@ -1263,9 +1274,6 @@ postSosErssStatusUpdate req = do
       updatedHistoryJson = Just $ TE.decodeUtf8 $ LBS.toStrict $ A.encode updatedHistory
 
   SafetyQSos.updateExternalReferenceStatus (Just newStatus) updatedHistoryJson sosDetails.id
-
-  when (newStatus == "RESOLVED") $ do
-    SafetyQSos.updateStatus SafetyDSos.Resolved sosDetails.id
 
   logInfo $ "ERSS status update received for SOS " <> sosDetails.id.getId <> ": " <> fromMaybe "none" previousStatus <> " -> " <> newStatus
 
