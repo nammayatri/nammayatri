@@ -116,10 +116,7 @@
         # "packages" and "apps" are excluded from autoWire so we can filter out
         # ciExcludedPackages from the flake's top-level outputs (used by devour-flake in om ci run).
         autoWire = [ "checks" ];
-        devShell.tools = _: {
-          inherit (self'.packages)
-            arion;
-        };
+        devShell.tools = _: { };
         # NOTE: aarch64-linux builds are currently experiencing an assembly error:
         # "/build/ghc612_0/ghc_329.s:160652:0: error: conditional branch out of range"
         # This is a known issue with GHC's code generation on ARM architectures.
