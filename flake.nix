@@ -45,15 +45,10 @@
       };
     };
 
-    location-tracking-service = {
-      url = "github:nammayatri/location-tracking-service";
-      inputs = {
-        # Note: nixpkgs, crane, and rust-overlay must NOT follow our versions.
-        # LTS's rust toolchain requires its paired nixpkgs (platform.rust attr)
-        # and its paired crane/rust-overlay (Cargo.lock v4 format).
-        services-flake.follows = "services-flake";
-      };
-    };
+    # Note: location-tracking-service must keep ALL its own inputs.
+    # Its Rust toolchain (crane, rust-overlay) and nixpkgs are version-paired;
+    # overriding any of them breaks the build.
+    location-tracking-service.url = "github:nammayatri/location-tracking-service";
 
     # https://github.com/nammayatri/passetto/pull/8
     passetto = {
