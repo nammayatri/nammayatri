@@ -9,6 +9,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified BecknV2.FRFS.Enums as Spec
+import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Storage.Beam.FRFSTicketBooking as Beam
 import Storage.Queries.OrphanInstances.FRFSTicketBooking ()
 
@@ -103,3 +104,26 @@ findAllConfirmedByTripId tripId = do
     [ Se.Is Beam.tripId $ Se.Eq (Just tripId),
       Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED
     ]
+
+updateFRFSTicketBookingVehicleDataBySearchId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe Text ->
+  Maybe DJourneyLeg.BusBoardingMethod ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Spec.ServiceTierType ->
+  Text ->
+  m ()
+updateFRFSTicketBookingVehicleDataBySearchId vehicleNumber vehicleNumberSource waybillId scheduleNo depotNo serviceTierType searchId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.finalBoardedVehicleNumber vehicleNumber,
+      Se.Set Beam.finalBoardedVehicleNumberSource vehicleNumberSource,
+      Se.Set Beam.finalBoardedWaybillId waybillId,
+      Se.Set Beam.finalBoardedScheduleNo scheduleNo,
+      Se.Set Beam.finalBoardedDepotNo depotNo,
+      Se.Set Beam.finalBoardedVehicleServiceTierType serviceTierType,
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.searchId $ Se.Eq searchId]

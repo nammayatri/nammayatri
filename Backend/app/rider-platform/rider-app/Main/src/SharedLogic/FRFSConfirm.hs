@@ -617,8 +617,6 @@ buildJourneyAndLeg booking fareParameters = do
         journeyLeg.finalBoardedScheduleNo
         journeyLeg.finalBoardedDepotNo
         journeyLeg.finalBoardedBusServiceTierType
-        journeyLeg.busConductorId
-        journeyLeg.busDriverId
         booking.searchId.getId
   where
     mkBookingJourneyCreateKey = "booking:journey:create:bookingId-" <> booking.id.getId

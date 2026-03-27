@@ -2507,8 +2507,6 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
       vehicleLiveRouteInfo.scheduleNo
       vehicleLiveRouteInfo.depot
       (Just vehicleLiveRouteInfo.serviceType)
-      journeyLeg.busConductorId
-      journeyLeg.busDriverId
       legSearchId
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey updatedLegs
