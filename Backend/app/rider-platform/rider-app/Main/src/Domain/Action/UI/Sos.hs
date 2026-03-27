@@ -539,13 +539,10 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
               mediaLinks = dashboardRideInfoUrl
           case sosDetails.ticketId of
             Just ticketId -> do
-              let comment =
-                    "Audio recording/shared media uploaded. Links: "
-                      <> T.intercalate ", " mediaLinks
               void $
                 withTryCatch "updateTicket:sendSosTracking" $
                   withShortRetry $
-                    Ticket.updateTicket (person.merchantId) person.merchantOperatingCityId (Ticket.UpdateTicketReq comment ticketId Ticket.IN)
+                    Ticket.updateTicket (person.merchantId) person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = "Audio recording/shared media uploaded.", ticketId = ticketId, subStatus = Ticket.IN, rideDescription = Nothing, issueDetails = Just Ticket.UpdateIssueDetails {mediaFiles = Just mediaLinks, issueDescription = Nothing, issueId = Nothing, subCategory = Nothing, vehicleCategory = Nothing, category = Nothing}}
             Nothing -> do
               -- Fallback: create a separate ticket only when SOS has no ticketId (e.g. ticket creation failed earlier)
               void $
@@ -580,7 +577,7 @@ callUpdateTicket person sosDetails mbComment = do
   case sosDetails.ticketId of
     Just ticketId -> do
       fork "update ticket request" $
-        void $ Ticket.updateTicket (person.merchantId) person.merchantOperatingCityId (Ticket.UpdateTicketReq (fromMaybe "" mbComment) ticketId Ticket.IN)
+        void $ Ticket.updateTicket (person.merchantId) person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = fromMaybe "" mbComment, ticketId = ticketId, subStatus = Ticket.IN, rideDescription = Nothing, issueDetails = Nothing}
       pure APISuccess.Success
     Nothing -> pure APISuccess.Success
 
