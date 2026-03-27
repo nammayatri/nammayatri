@@ -15,11 +15,15 @@
     # Backend inputs
     shared-kernel = {
       url = "github:nammayatri/shared-kernel";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        common.follows = "common";
+      };
     };
 
     namma-dsl = {
       url = "github:nammayatri/namma-dsl";
+      inputs.common.follows = "common";
     };
 
     haskell-cac = {
@@ -40,7 +44,10 @@
       };
     };
 
-    location-tracking-service.url = "github:nammayatri/location-tracking-service";
+    location-tracking-service = {
+      url = "github:nammayatri/location-tracking-service";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # https://github.com/nammayatri/passetto/pull/8
     passetto = {
