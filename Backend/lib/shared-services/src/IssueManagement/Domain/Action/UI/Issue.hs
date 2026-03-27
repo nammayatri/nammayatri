@@ -843,7 +843,7 @@ updateTicketStatus issueReport status merchantId merchantOperatingCityId issueHa
       ticketResponse <-
         withTryCatch
           "updateTicket:updateIssue"
-          (issueHandle.updateTicket merchantId merchantOperatingCityId (TIT.UpdateTicketReq comment ticketId status))
+          (issueHandle.updateTicket merchantId merchantOperatingCityId TIT.UpdateTicketReq {comment = comment, ticketId = ticketId, subStatus = status, rideDescription = Nothing, issueDetails = Nothing})
       case ticketResponse of
         Left err -> logTagInfo "Update Ticket API failed - " $ show err
         Right _ -> return ()
