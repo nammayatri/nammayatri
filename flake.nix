@@ -52,6 +52,8 @@
         treefmt-nix.follows = "common/treefmt-nix";
         process-compose-flake.follows = "common/process-compose-flake";
         pre-commit-hooks-nix.follows = "common/pre-commit-hooks-nix";
+        crane.follows = "common/crane";
+        rust-overlay.follows = "common/rust-overlay";
         services-flake.follows = "services-flake";
       };
     };
