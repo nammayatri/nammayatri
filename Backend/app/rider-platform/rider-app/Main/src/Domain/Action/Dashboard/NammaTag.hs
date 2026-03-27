@@ -4,6 +4,9 @@ module Domain.Action.Dashboard.NammaTag
   ( postNammaTagTagCreate,
     postNammaTagTagUpdate,
     deleteNammaTagTagDelete,
+    getNammaTagTagAll,
+    getNammaTagTagDetails,
+    getNammaTagQueryDetails,
     postNammaTagQueryCreate,
     postNammaTagQueryUpdate,
     deleteNammaTagQueryDelete,
@@ -120,6 +123,14 @@ postNammaTagTagUpdate _merchantShortId _opCity req = YudhishthiraFlow.postTagUpd
 
 deleteNammaTagTagDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 deleteNammaTagTagDelete _merchantShortId _opCity tagName = YudhishthiraFlow.deleteTag tagName
+
+getNammaTagTagDetails :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Environment.Flow Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2
+getNammaTagTagDetails merchantShortId opCity tagName = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  QNammaTagV2.findByPrimaryKey (cast merchantOperatingCity.id) tagName >>= fromMaybeM (InvalidRequest $ "NammaTag not found: " <> tagName)
+
+getNammaTagQueryDetails :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.Chakra -> Text -> Environment.Flow LYTU.ChakraQueriesAPIEntity
+getNammaTagQueryDetails _merchantShortId _opCity chakra queryName = YudhishthiraFlow.getChakraQueryDetails chakra queryName
 
 postNammaTagQueryCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ChakraQueriesAPIEntity -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postNammaTagQueryCreate _merchantShortId _opCity req = YudhishthiraFlow.postQueryCreate req
