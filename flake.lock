@@ -289,27 +289,6 @@
         "type": "github"
       }
     },
-    "crane_2": {
-      "inputs": {
-        "nixpkgs": [
-          "haskell-cac",
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1711681752,
-        "narHash": "sha256-LEg6/dmEFxx6Ygti5DO9MOhGNpyB7zdxdWtzv/FCTXk=",
-        "owner": "ipetkov",
-        "repo": "crane",
-        "rev": "ada0fb4dcce4561acb1eb17c59b7306d9d4a95f3",
-        "type": "github"
-      },
-      "original": {
-        "owner": "ipetkov",
-        "repo": "crane",
-        "type": "github"
-      }
-    },
     "cryptostore": {
       "flake": false,
       "locked": {
@@ -868,7 +847,10 @@
         "common": [
           "common"
         ],
-        "crane": "crane_2",
+        "crane": [
+          "common",
+          "crane"
+        ],
         "nixpkgs": [
           "common",
           "nixpkgs"
