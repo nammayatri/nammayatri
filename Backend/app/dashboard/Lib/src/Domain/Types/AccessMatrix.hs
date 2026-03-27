@@ -446,7 +446,8 @@ data AccessMatrixItem = AccessMatrixItem
 
 data MerchantCityList = MerchantCityList
   { merchantId :: ShortId Merchant,
-    cityList :: [City.City]
+    cityList :: [City.City],
+    operatingCityWithNames :: [Text] -- Sending city names also as FE needs to show the list of cities while assigning role to user
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

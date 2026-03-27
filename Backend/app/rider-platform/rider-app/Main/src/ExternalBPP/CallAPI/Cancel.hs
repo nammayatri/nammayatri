@@ -17,7 +17,8 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
-import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
+import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 
@@ -42,7 +43,7 @@ cancel ::
 cancel merchant merchantOperatingCity bapConfig cancellationType booking = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   frfsConfig <-
-    CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
+    getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
   unless (frfsConfig.isCancellationAllowed) $ throwError CancellationNotSupported
   when (cancellationType == Spec.SOFT_CANCEL) $

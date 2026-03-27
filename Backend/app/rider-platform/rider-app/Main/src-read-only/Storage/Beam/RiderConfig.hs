@@ -38,6 +38,7 @@ data RiderConfigT f = RiderConfigT
     busTierSortingConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     busTrackingConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     busTransitTypes :: B.C f (Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType]),
+    busTripTtl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cancellationPaymentDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     cancellationRateCalculationThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cancellationRateThresholdDaily :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

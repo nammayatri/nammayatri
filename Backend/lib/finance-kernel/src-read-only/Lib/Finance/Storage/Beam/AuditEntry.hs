@@ -5,11 +5,11 @@ module Lib.Finance.Storage.Beam.AuditEntry where
 
 import qualified Data.Aeson
 import qualified Database.Beam as B
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Lib.Finance.Domain.Types.AuditEntry
+import Tools.Beam.UtilsTH
 
 data AuditEntryT f = AuditEntryT
   { action :: (B.C f Lib.Finance.Domain.Types.AuditEntry.AuditAction),

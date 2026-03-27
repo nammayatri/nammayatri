@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.Dashboard.Management.FinanceManagement
   ( getFinanceManagementSubscriptionPurchaseList,
     getFinanceManagementInvoiceList,
@@ -13,14 +11,11 @@ module Domain.Action.Dashboard.Management.FinanceManagement
 where
 
 import qualified API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement as API
-import Control.Monad (forM)
 import qualified Dashboard.Common
 import Data.List (nub, partition)
-import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time (addUTCTime)
 import Domain.Action.UI.Plan (getPlanAmount)
-import qualified Domain.Types.FleetOwnerInformation as FleetOwnerInfo
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -29,16 +24,15 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
-import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
-import Kernel.Prelude (UTCTime, identity, listToMaybe)
+import Kernel.Prelude (UTCTime, listToMaybe)
 import qualified Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id (Id (..), ShortId (..), cast)
-import Kernel.Utils.Common (getCurrentTime, secondsToNominalDiffTime)
+import Kernel.Utils.Common (secondsToNominalDiffTime)
 import Kernel.Utils.Error (fromMaybeM, throwError)
-import Lib.Finance.Domain.Types.Account (AccountType (..), CounterpartyType (..))
+import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
 import qualified Lib.Finance.Domain.Types.Account as Account
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
@@ -48,7 +42,6 @@ import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as PgPayment
 import qualified Lib.Finance.Domain.Types.ReconciliationEntry as ReconciliationEntry
 import qualified Lib.Finance.Domain.Types.ReconciliationSummary as ReconSummary
 import qualified Lib.Finance.Ledger.Service as LedgerService
-import qualified Lib.Finance.Storage.Queries.Account as QAccount
 import qualified Lib.Finance.Storage.Queries.DirectTaxTransactionExtra as QDirectTax
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
@@ -62,10 +55,9 @@ import qualified Lib.Finance.Storage.Queries.ReconciliationSummaryExtra as QReco
 import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as PaymentTransaction
 import qualified Lib.Payment.Domain.Types.Refunds as PaymentRefund
+import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
+import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
-import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
-import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
-import qualified Lib.Scheduler.JobStorageType.DB.Table as SchedulerJobT
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QSchedulerJob
 import SharedLogic.Allocator (AllocatorJobType (..), ReconciliationJobData (..))
 import qualified SharedLogic.Finance.Wallet as WalletService
@@ -75,14 +67,11 @@ import qualified Storage.Cac.TransporterConfig as QTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Plan as CQPlan
 import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
-import qualified Storage.Queries.FleetOwnerInformation as QFleetOwnerInfo
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SubscriptionPurchase as QSubscriptionPurchase
-import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
 import Tools.Encryption (decryptWithDefault)
-import Tools.Error
 
 defaultPageLimit :: Int
 defaultPageLimit = 20
@@ -449,7 +438,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
       -- Get payment method from payment_transaction via invoice.paymentOrderId
       mbPaymentMethod <- case invoice.paymentOrderId of
         Just orderId -> do
-          txns <- QPaymentTransaction.findAllByOrderId (Id orderId)
+          txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
           pure $ listToMaybe txns >>= (.paymentMethod)
         Nothing -> pure Nothing
 
@@ -740,6 +729,7 @@ getFinanceManagementFinancePaymentSettlementList merchantShortId opCity mbFrom m
                 ( case report.txnType of
                     PgPaymentSettlementReport.ORDER -> API.Order
                     PgPaymentSettlementReport.REFUND -> API.Refund
+                    PgPaymentSettlementReport.CHARGEBACK -> API.Chargeback
                 ),
             chargedAmount = Just report.txnAmount,
             paymentStatus = Just $ show report.txnStatus,
@@ -806,9 +796,9 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
         Nothing -> pure []
         Just order -> do
           -- Get all PaymentTransactions for this order → ORDER entries
-          paymentTransactions <- QPaymentTransaction.findAllByOrderId order.id
+          paymentTransactions <- HQPaymentTransaction.findAllByOrderId order.id
           -- Get all Refunds for this order → REFUND entries
-          refunds <- QRefunds.findAllByOrderId order.shortId
+          refunds <- HQRefunds.findAllByOrderId order.shortId
 
           -- Resolve payer context (shared across all entries for this subscription)
           payerContext <- resolvePayerContext subscription

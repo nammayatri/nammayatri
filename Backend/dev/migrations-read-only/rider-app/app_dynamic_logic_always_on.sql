@@ -1,0 +1,9 @@
+CREATE TABLE atlas_app.app_dynamic_logic_always_on ();
+
+ALTER TABLE atlas_app.app_dynamic_logic_always_on ADD COLUMN domain text NOT NULL;
+ALTER TABLE atlas_app.app_dynamic_logic_always_on ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.app_dynamic_logic_always_on ADD COLUMN "order" integer NOT NULL;
+ALTER TABLE atlas_app.app_dynamic_logic_always_on ADD COLUMN version integer NOT NULL;
+ALTER TABLE atlas_app.app_dynamic_logic_always_on ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.app_dynamic_logic_always_on ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.app_dynamic_logic_always_on ADD PRIMARY KEY ( domain, merchant_operating_city_id, version);

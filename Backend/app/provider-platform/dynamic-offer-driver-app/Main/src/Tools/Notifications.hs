@@ -155,6 +155,20 @@ findFCMConfigWithFallback merchantOpCityId personId = do
     Just clientConfig -> let (DMCC.ClientFCMServiceConfig fcmCfg) = clientConfig.clientServiceConfig in pure fcmCfg
     Nothing -> findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId) <&> (.fcmConfig)
 
+-- dynamicFCMNotifyPerson
+--     merchantOpCityId
+--     driverId
+--     driver.deviceToken
+--     lang
+--     Nothing
+--     (createFCMReq "PICKUP_ZONE_REQUEST" requestId.getId FCM.Person identity)
+--     (Nothing :: Maybe EmptyDynamicParam)
+--     [ ("gateName", gateName),
+--       ("specialLocationName", specialLocationName)
+--     ]
+--     Nothing
+
+
 dynamicFCMNotifyPerson ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -1654,3 +1668,40 @@ sendPickupInstructionNotification merchantOpCityId driver entityData = do
   logInfo $ "PickupInstructionNotification: Notification data: " <> show notificationData
   -- Send notification
   FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) (clearDeviceToken driver.id) notificationData (FCMNotificationRecipient driver.id.getId driver.deviceToken) EulerHS.Prelude.id
+
+data PickupZoneRequestEntityData = PickupZoneRequestEntityData
+  { requestId :: Text,
+    gateName :: Text,
+    gateAddress :: Maybe Text,
+    specialLocationName :: Text,
+    specialLocationId :: Text,
+    gateId :: Text,
+    vehicleType :: Text,
+    validTill :: UTCTime,
+    requestType :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, Show)
+
+notifyPickupZoneRequest ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  PickupZoneRequestEntityData ->
+  m ()
+notifyPickupZoneRequest merchantOpCityId driverId entityData = do
+  driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  let lang = fromMaybe ENGLISH driver.language
+  dynamicFCMNotifyPerson
+    merchantOpCityId
+    driverId
+    driver.deviceToken
+    lang
+    Nothing
+    (createFCMReq "PICKUP_ZONE_REQUEST" entityData.requestId FCM.Person identity)
+    (Just entityData)
+    [ ("gateName", entityData.gateName),
+      ("specialLocationName", entityData.specialLocationName)
+    ]
+    Nothing

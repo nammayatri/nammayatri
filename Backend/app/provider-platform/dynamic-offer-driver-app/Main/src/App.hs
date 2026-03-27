@@ -34,8 +34,10 @@ import Kernel.Beam.Types (KafkaConn (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
 import Kernel.External.AadhaarVerification.Gridline.Config
+import Kernel.External.Insurance.Interface (prepareIffcoTokioHttpManager)
 import Kernel.External.SharedLogic.HyperVerge.Functions (prepareHyperVergeHttpManager)
 import Kernel.External.Tokenize (prepareJourneyMonitoringHttpManager)
+import Kernel.External.Verification.Interface (prepareMorthHttpManager)
 import Kernel.External.Verification.Interface.Idfy
 import Kernel.External.Verification.InternalScripts.FaceVerification (prepareInternalScriptsHttpManager)
 import Kernel.External.Verification.SafetyPortal.Config (prepareSafetyPortalHttpManager)
@@ -150,7 +152,9 @@ runDynamicOfferDriverApp' appCfg = do
                 Just (Just 10000, prepareSafetyPortalHttpManager 10000),
                 Just (Just 150000, prepareGridlineHttpManager 150000),
                 Just (Just 10000, prepareHyperVergeHttpManager 10000),
-                Just (Just 10000, prepareJourneyMonitoringHttpManager 10000)
+                Just (Just 10000, prepareJourneyMonitoringHttpManager 10000),
+                Just (Just 40000, prepareIffcoTokioHttpManager 40000),
+                Just (Just 15000, prepareMorthHttpManager 15000)
               ]
 
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))

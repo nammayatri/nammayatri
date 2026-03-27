@@ -14,12 +14,17 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.MerchantPushNotification
+  {-# WARNING
+    "This module contains direct calls to the table and redis. \
+  \ Use Storage.ConfigPilot.Config.MerchantPushNotification (getConfig) instead for reads."
+    #-}
   ( create,
     findAllByMerchantOpCityId,
     findMatchingMerchantPN,
     findMatchingMerchantPNInRideFlow,
     findAllByMerchantOpCityIdInRideFlow,
     clearCache,
+    updateByPrimaryKey,
   )
 where
 
@@ -90,3 +95,8 @@ clearCache merchantOpCityId messageKey tripCategory =
     (cast merchantOpCityId)
     (LYT.RIDER_CONFIG LYT.MerchantPushNotification)
     Nothing
+
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantPushNotification -> m ()
+updateByPrimaryKey cfg = do
+  Queries.updateByPrimaryKey cfg
+  clearCache cfg.merchantOperatingCityId cfg.key cfg.tripCategory

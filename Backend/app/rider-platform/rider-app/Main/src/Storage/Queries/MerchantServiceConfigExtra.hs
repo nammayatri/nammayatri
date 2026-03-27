@@ -22,6 +22,7 @@ import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
+import qualified Kernel.External.Settlement.Types as Settlement
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
@@ -38,6 +39,12 @@ import Storage.Queries.OrphanInstances.MerchantServiceConfig ()
 import qualified Utils.Common.JWT.Config as GW
 
 -- Extra code goes here --
+findAllByMerchantId ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id Merchant ->
+  m [MerchantServiceConfig]
+findAllByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamMSC.merchantId $ Se.Eq merchantId]
+
 findByMerchantOpCityIdAndService ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant ->
@@ -181,3 +188,6 @@ getServiceNameConfigJSON = \case
     SOSInterface.ERSSConfig cfg -> (Domain.SOSService SOS.ERSS, toJSON cfg)
     SOSInterface.GJ112Config cfg -> (Domain.SOSService SOS.GJ112, toJSON cfg)
     SOSInterface.TrinityConfig cfg -> (Domain.SOSService SOS.Trinity, toJSON cfg)
+  Domain.SettlementServiceConfig settlementCfg -> case settlementCfg of
+    Settlement.HyperPGConfig srcCfg -> (Domain.SettlementService Settlement.HyperPG, toJSON srcCfg)
+    Settlement.BillDeskConfig srcCfg -> (Domain.SettlementService Settlement.BillDesk, toJSON srcCfg)

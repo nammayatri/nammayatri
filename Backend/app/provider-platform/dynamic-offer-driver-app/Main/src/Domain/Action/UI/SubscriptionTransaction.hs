@@ -63,7 +63,7 @@ getSubscriptionTransactions (mbDriverId, _, _) mbFrom mbLimit mbMaxAmount mbMinA
   case mbAccount of
     Nothing -> pure emptyResponse
     Just acc -> do
-      let referenceTypes = [prepaidRideDebitReferenceType, subscriptionCreditReferenceType]
+      let referenceTypes = [prepaidRideDebitReferenceType, subscriptionCreditReferenceType, expiryCreditTransferReferenceType]
       entries <-
         findByAccountWithFilters
           acc.id
@@ -75,13 +75,13 @@ getSubscriptionTransactions (mbDriverId, _, _) mbFrom mbLimit mbMaxAmount mbMinA
           (Just referenceTypes)
       let downSorted = sortOn (Down . (.timestamp)) entries
           upSorted = sortOn (.timestamp) entries
-          rideEntries = filter (\e -> e.referenceType == prepaidRideDebitReferenceType) downSorted
-          planEntries = filter (\e -> e.referenceType == subscriptionCreditReferenceType) downSorted
-          pagedRides = take limit . drop offset $ rideEntries
-          pagedPlans = take limit . drop offset $ planEntries
-          paged = sortOn (Down . (.timestamp)) (pagedRides <> pagedPlans)
+          rideEntries = filter (\e -> e.referenceType == prepaidRideDebitReferenceType) entries
+          planEntries = filter (\e -> e.referenceType == subscriptionCreditReferenceType) entries
+          expiryEntries = filter (\e -> e.referenceType == expiryCreditTransferReferenceType) entries
+          paged = take limit . drop offset $ downSorted
           rideEarning = sum $ map (.amount) rideEntries
           planPurchased = sum $ map (.amount) planEntries
+          expiryDeduction = sum $ map (.amount) expiryEntries
           startingBalance = computeStartingBalance acc.id upSorted
           finalBalance = computeFinalBalance acc.id upSorted
       -- Enrich ride entries with booking locations
@@ -89,8 +89,13 @@ getSubscriptionTransactions (mbDriverId, _, _) mbFrom mbLimit mbMaxAmount mbMinA
       bookings <- if null bookingIds then pure [] else QBookingE.findByIds bookingIds
       let bookingMap = M.fromList $ map (\b -> (b.id, (b.fromLocation, b.toLocation))) bookings
       entities <- forM paged $ \entry -> do
-        let transactionType = if entry.referenceType == prepaidRideDebitReferenceType then RIDE else PLAN_PURCHASE
-            (fromLocation, toLocation) =
+        transactionType <-
+          if
+            | entry.referenceType == prepaidRideDebitReferenceType -> pure RIDE
+            | entry.referenceType == subscriptionCreditReferenceType -> pure PLAN_PURCHASE
+            | entry.referenceType == expiryCreditTransferReferenceType -> pure SUBSCRIPTION_EXPIRY
+            | otherwise -> throwError $ InternalError $ "Unknown reference type: " <> show entry.referenceType
+        let (fromLocation, toLocation) =
               if entry.referenceType == prepaidRideDebitReferenceType
                 then case M.lookup (Id entry.referenceId) bookingMap of
                   Just (fromLoc, toLoc) -> (Just fromLoc, toLoc)
@@ -114,6 +119,7 @@ getSubscriptionTransactions (mbDriverId, _, _) mbFrom mbLimit mbMaxAmount mbMinA
             finalBalance,
             rideEarning,
             planPurchased,
+            expiryDeduction,
             entities
           }
   where
@@ -124,6 +130,7 @@ getSubscriptionTransactions (mbDriverId, _, _) mbFrom mbLimit mbMaxAmount mbMinA
           finalBalance = 0,
           rideEarning = 0,
           planPurchased = 0,
+          expiryDeduction = 0,
           entities = []
         }
     computeStartingBalance accountId entries =

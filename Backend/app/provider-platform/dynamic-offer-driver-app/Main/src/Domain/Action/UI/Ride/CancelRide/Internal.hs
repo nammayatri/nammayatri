@@ -84,11 +84,13 @@ import qualified SharedLogic.UserCancellationDues as UserCancellationDues
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
+import qualified Kernel.Utils.Version as Version
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverQuote as QDQ
@@ -96,6 +98,7 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
+import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Constants
 import Tools.DynamicLogic
@@ -288,6 +291,7 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
         QCDD.create cancellationDuesDetails
       -- Customer cancellation ledger entries (wallet path)
       when (isPrepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableDriverWallet && fee.amount > 0) $ do
+        merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist booking.merchantOperatingCityId.getId)
         let rideGst = transporterConfig.taxConfig.rideGst
             gstPct = fromMaybe 0 rideGst.cgstPercentage + fromMaybe 0 rideGst.sgstPercentage + fromMaybe 0 rideGst.igstPercentage
             gstOnCancellation = if gstPct > 0 then fee.amount * gstPct / (1 + gstPct) else 0
@@ -322,7 +326,14 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
                 issuedToId = rid.getId,
                 issuedToName = booking.riderName,
                 issuedToAddress = booking.fromLocation.address.fullAddress,
-                gstBreakdown = computeGstBreakdown rideGst gstOnCancellation,
+                gstBreakdown =
+                  computeGstBreakdownByPlace
+                    rideGst
+                    (Just $ show merchantOperatingCity.state)
+                    booking.fromLocation.address.state
+                    (Just $ show merchantOperatingCity.city)
+                    booking.fromLocation.address.city
+                    gstOnCancellation,
                 lineItems =
                   catMaybes
                     [ if baseCancellation > 0
@@ -479,6 +490,8 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
              in Just expectedDistance
           else Nothing
       driverWaitingTime = if isJust ride.driverArrivalTime then Just (round $ diffUTCTime now (fromJust ride.driverArrivalTime)) else Nothing
+  mbSearchRequest <- QSR.findByTransactionIdAndMerchantId booking.transactionId booking.providerId
+  let userSdkVersionText = Version.versionToText <$> (mbSearchRequest >>= (.userSdkVersion))
   let logicInput =
         UserCancellationDues.UserCancellationDuesData
           { cancelledBy = cancellationType,
@@ -498,7 +511,8 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
             cancellationDueRides = riderDetails.cancellationDueRides,
             serviceTier = booking.vehicleServiceTier,
             tripCategory = booking.tripCategory,
-            cancellationReasonSelected = reasonCode
+            cancellationReasonSelected = reasonCode,
+            userSdkVersion = userSdkVersionText
           }
   if transporterConfig.canAddCancellationFee
     then do

@@ -388,3 +388,9 @@ ALTER TABLE atlas_app.ride ADD COLUMN sos_id character varying(36) ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN cancellation_fee_status text ;

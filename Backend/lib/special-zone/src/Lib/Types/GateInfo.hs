@@ -31,11 +31,15 @@ data GateInfoFull = GateInfoFull
     gateType :: GateType,
     gateTags :: Maybe [Text],
     walkDescription :: Maybe Text,
-    entryFeeAmount :: Maybe Double
+    entryFeeAmount :: Maybe Double,
+    minDriverThreshold :: Maybe Int,
+    demandThreshold :: Maybe Int,
+    notificationCooldownInSec :: Maybe Int,
+    maxRideSkipsBeforeQueueRemoval :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
-data GateType = Pickup | Drop
+data GateType = Pickup | Drop | Parking
   deriving (Read, Show, Generic, Eq, FromJSON, ToJSON, ToSchema)
 
 data GateInfo = GateInfo
@@ -54,6 +58,10 @@ data GateInfo = GateInfo
     merchantOperatingCityId :: Maybe (Id MerchantOperatingCity),
     gateTags :: Maybe [Text],
     walkDescription :: Maybe Text,
-    entryFeeAmount :: Maybe Double
+    entryFeeAmount :: Maybe Double,
+    minDriverThreshold :: Maybe Int,
+    demandThreshold :: Maybe Int,
+    notificationCooldownInSec :: Maybe Int,
+    maxRideSkipsBeforeQueueRemoval :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)

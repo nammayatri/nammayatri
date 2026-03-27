@@ -15,6 +15,7 @@ import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 type API =
   "disability"
@@ -27,4 +28,4 @@ handler :: FlowServer API
 handler = listDisabilities
 
 listDisabilities :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler [Disability.Disability]
-listDisabilities = withFlowHandlerAPI . DDisability.listDisabilities
+listDisabilities (personId, merchantId) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DDisability.listDisabilities (personId, merchantId)

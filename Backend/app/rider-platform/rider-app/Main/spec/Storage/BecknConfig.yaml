@@ -54,6 +54,10 @@ BecknConfig:
       kvFunction: findAllWithKV
       where:
         and: [merchantId, domain]
+    findByMerchantId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId]
     findById:
       kvFunction: findOneWithKV
       where: id

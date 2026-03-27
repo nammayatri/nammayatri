@@ -27,6 +27,7 @@ data RouteStopTimeTable = RouteStopTimeTable
     stopCode :: Kernel.Prelude.Text,
     timeOfArrival :: Kernel.Prelude.TimeOfDay,
     timeOfDeparture :: Kernel.Prelude.TimeOfDay,
+    predictedArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     tripId :: Kernel.Types.Id.Id Domain.Types.RouteStopTimeTable.RouteStopTimeTable,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),

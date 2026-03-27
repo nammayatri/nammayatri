@@ -20,6 +20,7 @@ import qualified Domain.Types.DailyStats as DS
 import Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PayoutConfig as DPC
 import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.VehicleCategory as DVC
@@ -90,6 +91,8 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
       dStatsList = filter (\ds -> totalPayoutCount ds <= transporterConfig.maxPayoutReferralForADay) dailyStatsForEveryDriverList -- total = customer + d2d
   statsWithVpaList <- mapM getStatsWithVpaList dStatsList
   let dailyStatsWithVpaList = filter (\dsv -> (isJust dsv.payoutVpa && dsv.dInfo.payoutVpaStatus /= Just DI.MANUALLY_ADDED) && (dsv.dInfo.isBlockedForReferralPayout /= Just True)) statsWithVpaList -- filter blocked drivers
+  -- Process registration refunds independently of daily-stats batch
+  processScheduledRegistrationRefunds merchantOpCityId payoutConfigList
   if null dailyStatsForEveryDriverList
     then do
       when toScheduleNextPayout $ do
@@ -179,7 +182,7 @@ callPayoutHandler ::
   [DPC.PayoutConfig] ->
   DS.PayoutStatus ->
   m ()
-callPayoutHandler DS.DailyStats {..} driverInfo payoutVpa payoutConfigList statusForRetry = do
+callPayoutHandler DS.DailyStats {..} _driverInfo payoutVpa payoutConfigList statusForRetry = do
   mbVehicle <- QV.findById driverId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   let payoutConfig' = find (\payoutConfig -> payoutConfig.vehicleCategory == vehicleCategory) payoutConfigList
@@ -200,23 +203,9 @@ callPayoutHandler DS.DailyStats {..} driverInfo payoutVpa payoutConfigList statu
                 QDailyStats.updatePayoutStatusById DS.Processing id
                 QDailyStats.updatePayoutOrderId (Just uid) id
               phoneNo <- mapM decrypt person.mobileNumber
-              refundRegistrationAmt <-
-                if driverInfo.payoutVpaStatus == Just DI.VIA_WEBHOOK && isNothing driverInfo.payoutRegAmountRefunded
-                  then do
-                    mbDriverFee <- QDF.findLatestByFeeTypeAndStatusWithServiceName DF.PAYOUT_REGISTRATION [DF.CLEARED] driverId DPlan.YATRI_SUBSCRIPTION
-                    case mbDriverFee of
-                      Just driverFee -> do
-                        now <- getCurrentTime
-                        let registrationFee = driverFee.platformFee
-                            registrationAmount = sum [registrationFee.cgst, registrationFee.sgst, registrationFee.fee]
-                        QDF.updateStatus DF.REFUND_PENDING driverFee.id now
-                        QDI.updatePayoutRegAmountRefunded (Just registrationAmount) driverId
-                        pure registrationAmount
-                      _ -> pure 0.0
-                  else pure 0.0
               let directBase = d2dReferralEarnings + referralEarnings
                   entityName = DLP.DRIVER_DAILY_STATS
-                  amount = directBase + refundRegistrationAmt
+                  amount = directBase
               if directBase <= payoutConfig.thresholdPayoutAmountPerPerson
                 then do
                   logDebug $ "calling create payoutOrder with driverId: " <> driverId.getId <> " | amount: " <> show directBase <> " | orderId: " <> show uid
@@ -274,3 +263,60 @@ mkManualLinkErrorTrackingByDailyStatsIdKey dailyStatsId = "ErrCntPayout:DsId:" <
 
 getRescheduledTime :: (MonadFlow m) => NominalDiffTime -> m UTCTime
 getRescheduledTime gap = addUTCTime gap <$> getCurrentTime
+
+-- | Process registration refunds for drivers who paid ₹2 but have no referral earnings.
+--   The existing callPayoutHandler bundles refund with referral earnings, but drivers
+--   who never qualify for referral were never refunded. This picks up those cases.
+processScheduledRegistrationRefunds ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    MonadFlow m,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasKafkaProducer r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  [DPC.PayoutConfig] ->
+  m ()
+processScheduledRegistrationRefunds merchantOpCityId payoutConfigList = do
+  pendingRefundFees <- QDF.findPendingRegistrationRefunds (Just 50) (cast merchantOpCityId) DPlan.YATRI_SUBSCRIPTION
+  for_ pendingRefundFees $ \driverFee -> do
+    let driverId = driverFee.driverId
+    driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+    when (driverInfo.payoutVpaStatus == Just DI.VIA_WEBHOOK && isNothing driverInfo.payoutRegAmountRefunded && isJust driverInfo.payoutVpa) $ do
+      whenJust driverInfo.payoutVpa $ \vpa -> do
+        fork ("processing registration refund for DriverId: " <> driverId.getId) $ do
+          let refundLockKey = "PayoutRegRefund:DriverId-" <> driverId.getId
+          gotLock <- Redis.tryLockRedis refundLockKey 300
+          when gotLock $ do
+            mbVehicle <- QV.findById driverId
+            let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
+            let mbPayoutConfig = find (\pc -> pc.vehicleCategory == vehicleCategory) payoutConfigList
+            whenJust mbPayoutConfig $ \payoutConfig -> do
+              person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+              merchantOperatingCity <- CQMOC.findById (cast driverFee.merchantOperatingCityId) >>= fromMaybeM (MerchantOperatingCityNotFound driverFee.merchantOperatingCityId.getId)
+              uid <- generateGUID
+              now <- getCurrentTime
+              let registrationFee = driverFee.platformFee
+                  registrationAmount = sum [registrationFee.cgst, registrationFee.sgst, registrationFee.fee]
+              when (registrationAmount > 0) $ do
+                -- Claim: mark fee as REFUND_PENDING and record refunded amount
+                QDF.updateStatus DF.REFUND_PENDING driverFee.id now
+                QDI.updatePayoutRegAmountRefunded (Just registrationAmount) driverId
+                -- Attempt payout; rollback on failure
+                phoneNo <- mapM decrypt person.mobileNumber
+                payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
+                let createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid registrationAmount phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType False
+                    entityName = DLP.DRIVER_DAILY_STATS
+                    createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId payoutServiceName (Just person.id.getId)
+                logDebug $ "Initiating scheduled registration refund for driverId: " <> driverId.getId <> " | amount: " <> show registrationAmount <> " | orderId: " <> uid
+                result <- try @_ @SomeException $ Payout.createPayoutService (cast person.merchantId) (Just $ cast driverFee.merchantOperatingCityId) (cast driverId) Nothing (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
+                case result of
+                  Right _ -> pure ()
+                  Left err -> do
+                    -- Rollback: revert fee to CLEARED, clear refunded amount
+                    logError $ "Registration refund payout failed for driverId: " <> driverId.getId <> " | error: " <> show err
+                    rollbackNow <- getCurrentTime
+                    QDF.updateStatus DF.CLEARED driverFee.id rollbackNow
+                    QDI.updatePayoutRegAmountRefunded Nothing driverId

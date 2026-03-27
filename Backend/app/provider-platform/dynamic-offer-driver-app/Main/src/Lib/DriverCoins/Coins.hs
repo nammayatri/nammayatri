@@ -28,6 +28,7 @@ module Lib.DriverCoins.Coins
     incrementMetroRideCount,
     EventFlow,
     runCancellationLogic,
+    updateEventAndGetCoinsvalue,
   )
 where
 

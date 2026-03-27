@@ -27,6 +27,8 @@ data MerchantT f = MerchantT
     shortId :: B.C f Text,
     serverNames :: B.C f [Domain.ServerName],
     is2faMandatory :: B.C f Bool,
+    twoFaOtpTTLInSecs :: B.C f (Maybe Int),
+    twoFaMaxOtpVerifyAttempts :: B.C f (Maybe Int),
     defaultOperatingCity :: B.C f City,
     supportedOperatingCities :: B.C f [City],
     domain :: B.C f (Maybe Text),

@@ -48,6 +48,7 @@ import qualified API.Action.UI.ReferralPayout as ReferralPayout
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.SpecialLocation as SpecialLocation
 import qualified API.Action.UI.SpecialLocationWarrior as SpecialLocationWarrior
+import qualified API.Action.UI.SpecialZoneQueue as SpecialZoneQueue
 import qualified API.Action.UI.StclMembership as StclMembership
 import qualified API.Action.UI.SubscriptionTransaction as SubscriptionTransaction
 import qualified API.Action.UI.TicketKapture as TicketKapture
@@ -75,6 +76,7 @@ import qualified API.UI.OrgAdmin as OrgAdmin
 import qualified API.UI.Payment as Payment
 import qualified API.UI.Performance as Performance
 import qualified API.UI.Plan as Plan
+import qualified API.UI.QueueRank as QueueRank
 import qualified API.UI.Rating as Rating
 import qualified API.UI.Registration as Registration
 import qualified API.UI.Ride as Ride
@@ -131,6 +133,7 @@ type API =
            :<|> City.API
            :<|> LmsModule.API
            :<|> SpecialLocation.API
+           :<|> SpecialZoneQueue.API
            :<|> Reels.API
            :<|> Cac.API
            :<|> EditBooking.API
@@ -160,6 +163,7 @@ type API =
            :<|> DriverSafetySettings.API
            :<|> PersonDefaultEmergencyContact.API
            :<|> CancellationReasonLookup.API
+           :<|> QueueRank.API
        )
 
 handler :: FlowServer API
@@ -202,6 +206,7 @@ handler =
     :<|> City.handler
     :<|> LmsModule.handler
     :<|> SpecialLocation.handler
+    :<|> SpecialZoneQueue.handler
     :<|> Reels.handler
     :<|> Cac.handler
     :<|> EditBooking.handler
@@ -231,3 +236,4 @@ handler =
     :<|> DriverSafetySettings.handler
     :<|> PersonDefaultEmergencyContact.handler
     :<|> CancellationReasonLookup.handler
+    :<|> QueueRank.handler

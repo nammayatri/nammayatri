@@ -44,6 +44,7 @@ data FareParameters = FareParameters
     congestionCharge :: Maybe HighPrecMoney,
     petCharges :: Maybe HighPrecMoney,
     driverAllowance :: Maybe HighPrecMoney,
+    airportConvenienceFee :: Maybe HighPrecMoney,
     businessDiscount :: Maybe HighPrecMoney,
     personalDiscount :: Maybe HighPrecMoney,
     priorityCharges :: Maybe HighPrecMoney,

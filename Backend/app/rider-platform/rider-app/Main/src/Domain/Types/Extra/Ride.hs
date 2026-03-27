@@ -76,6 +76,7 @@ data RideAPIEntity = RideAPIEntity
     insuredAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tipAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     paymentStatus :: Domain.Types.Ride.PaymentStatus,
-    refundRequestStatus :: Maybe Domain.Types.RefundRequest.RefundRequestStatus
+    refundRequestStatus :: Maybe Domain.Types.RefundRequest.RefundRequestStatus,
+    cancellationFeeStatus :: Maybe Domain.Types.Ride.CancellationFeeStatus
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

@@ -233,3 +233,21 @@ instance ToJSON RideInfo where
                 "vipName" .= vipName
               ]
         ]
+
+data QueueDriverPositionResp = QueueDriverPositionResp
+  { queuePositionRange :: Maybe (Int, Int),
+    queueSize :: Int
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data QueueDriverEntry = QueueDriverEntry
+  { driverId :: Id DP.Person,
+    queuePosition :: Int
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data QueueDriversResponse = QueueDriversResponse
+  { drivers :: [QueueDriverEntry],
+    queueSize :: Int
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)

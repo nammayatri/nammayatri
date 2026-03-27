@@ -29,6 +29,7 @@ import Kernel.Beam.Functions as B
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.External.Encryption
 import Kernel.External.Types (SchedulerFlow, ServiceFlow, VerificationFlow)
+import qualified Kernel.External.Verification.Interface.Types as VerificationIntTypes
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
@@ -97,12 +98,14 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
     callVerifyDL documentNum person verificationReq = do
       whenJust verificationReq.driverDateOfBirth $ \dob -> do
         verifyRes <-
-          Verification.verifyDLAsync person.merchantId person.merchantOperatingCityId $
-            Verification.VerifyDLAsyncReq {dlNumber = documentNum, dateOfBirth = dob, driverId = person.id.getId, returnState = Just True}
-        case verifyRes.requestor of
-          VT.Idfy -> IVQuery.create =<< mkIdfyNewVerificationEntity verificationReq verifyRes.requestId
-          VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperNewVergeVerificationEntity verifyRes.requestId verificationReq verifyRes.transactionId
-          _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> (show verifyRes.requestor))
+          Verification.verifyDL person.merchantId person.merchantOperatingCityId $
+            Verification.VerifyDLReq {dlNumber = documentNum, dateOfBirth = dob, driverId = person.id.getId, returnState = Just True, applicantMobile = Nothing}
+        case verifyRes of
+          VerificationIntTypes.AsyncDLResp res -> case res.requestor of
+            VT.Idfy -> IVQuery.create =<< mkIdfyNewVerificationEntity verificationReq res.requestId
+            VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperNewVergeVerificationEntity res.requestId verificationReq res.transactionId
+            _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> show res.requestor)
+          VerificationIntTypes.SyncDLResp _ -> throwError $ InternalError "Service provider not configured to return DL verification sync responses in retry flow"
 
 mkHyperNewVergeVerificationEntity :: MonadFlow m => Text -> DIdfyVerification.IdfyVerification -> Maybe Text -> m DHVVerification.HyperVergeVerification
 mkHyperNewVergeVerificationEntity reqId DIdfyVerification.IdfyVerification {..} transactionId = do

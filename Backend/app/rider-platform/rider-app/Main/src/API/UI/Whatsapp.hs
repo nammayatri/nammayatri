@@ -21,11 +21,11 @@ import Environment (FlowHandler, FlowServer)
 import EulerHS.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
-import Kernel.Utils.Common (withFlowHandlerAPI)
 import Kernel.Utils.Logging
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 type API =
   "whatsapp"
@@ -39,4 +39,4 @@ handler :: FlowServer API
 handler = whatsAppOptAPI
 
 whatsAppOptAPI :: (Id Person.Person, Id Merchant.Merchant) -> Whatsapp.OptAPIRequest -> FlowHandler APISuccess
-whatsAppOptAPI (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . Whatsapp.whatsAppOptAPI personId
+whatsAppOptAPI (personId, _) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId . Whatsapp.whatsAppOptAPI personId

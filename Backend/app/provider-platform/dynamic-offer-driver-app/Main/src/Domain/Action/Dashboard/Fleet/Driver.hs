@@ -174,6 +174,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
+import qualified Lib.Finance.Storage.Queries.Account as QFinanceAccount
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
@@ -2009,10 +2010,10 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
   whenJust req.mobileNo $ \reqMobileNo -> do
     mobileNumberHash <- getDbHash reqMobileNo
     let countryCodeFallback = P.getCountryMobileCode merchantOpCity.country
-    person <- QPerson.findByMobileNumberAndMerchantAndRole (fromMaybe countryCodeFallback req.mobileCountryCode) mobileNumberHash merchant.id DP.FLEET_OWNER
+    person <- QPerson.findByMobileNumberAndMerchantAndRole (fromMaybe countryCodeFallback req.mobileCountryCode) mobileNumberHash merchant.id driver.role
     when (isJust person) $ throwError (MobileNumberAlreadyLinked reqMobileNo)
   whenJust req.email $ \reqEmail -> do
-    person <- QPerson.findByEmailAndMerchantIdAndRole (Just reqEmail) merchant.id DP.FLEET_OWNER
+    person <- QPerson.findByEmailAndMerchantIdAndRole (Just reqEmail) merchant.id driver.role
     when (isJust person) $ throwError (EmailAlreadyLinked reqEmail)
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
@@ -2025,8 +2026,9 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
             DP.firstName = fromMaybe driver.firstName req.firstName,
             DP.lastName = req.lastName
           }
-  mbUpdFleetOwnerinfo <- do
-    fleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
+  -- Update fleet owner info only if the record exists (fleet owners have it, operators don't)
+  mbFleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId)
+  whenJust mbFleetOwnerInfo $ \fleetOwnerInfo -> do
     reqStripeIdNumber <- forM req.stripeIdNumber encrypt
     let updFleetOwnerInfo =
           fleetOwnerInfo
@@ -2036,19 +2038,45 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
               DFOI.fleetName = req.fleetName <|> fleetOwnerInfo.fleetName,
               DFOI.fleetType = fromMaybe fleetOwnerInfo.fleetType (DRegV2.castFleetType <$> req.fleetType)
             }
-    pure $ Just updFleetOwnerInfo
+    FOI.updateFleetOwnerInfo updFleetOwnerInfo
 
   QPerson.updateFleetOwnerDetails personId updDriver
-  whenJust mbUpdFleetOwnerinfo FOI.updateFleetOwnerInfo
   pure Success
 
 ---------------------------------------------------------------------
 getDriverFleetOperatorInfo ::
   ShortId DM.Merchant ->
   Context.City ->
-  Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
   Flow Common.FleetOwnerInfoRes
-getDriverFleetOperatorInfo merchantShortId opCity personId = do
+getDriverFleetOperatorInfo merchantShortId opCity mbMobileCountryCode mbMobileNumber mbPersonId mbWalletId = do
+  when (length (catMaybes [mbPersonId, mbMobileNumber, mbWalletId]) /= 1) $
+    throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"personId\", \"walletId\" is required"
+  when (isJust mbMobileCountryCode && isNothing mbMobileNumber) $
+    throwError $ InvalidRequest "\"mobileCountryCode\" can be used only with \"mobileNumber\""
+  merchant <- findMerchantByShortId merchantShortId
+  personId <- case (mbPersonId, mbMobileNumber, mbWalletId) of
+    (Just pid, _, _) -> pure pid
+    (_, Just mobileNumber, _) -> do
+      mobileNumberHash <- getDbHash mobileNumber
+      person <-
+        QPerson.findByMobileNumberAndMerchantAndRoles
+          (fromMaybe "+91" mbMobileCountryCode)
+          mobileNumberHash
+          merchant.id
+          [DP.FLEET_OWNER, DP.OPERATOR]
+          >>= fromMaybeM (PersonDoesNotExist mobileNumber)
+      pure person.id.getId
+    (Nothing, Nothing, Just walletId) -> do
+      account <- QFinanceAccount.findById (Id walletId) >>= fromMaybeM (InvalidRequest $ "Wallet account not found: " <> walletId)
+      unless (account.counterpartyType == Just FLEET_OWNER) $
+        throwError (InvalidRequest $ "WalletId does not belong to a FLEET_OWNER account: " <> walletId)
+      counterpartyId <- fromMaybeM (InvalidRequest $ "Wallet account missing counterpartyId: " <> walletId) account.counterpartyId
+      pure counterpartyId
+    _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"personId\", \"walletId\" is required"
   getDriverFleetOwnerInfo merchantShortId opCity (Id personId)
 
 getDriverFleetOwnerInfo :: -- Deprecated, use getDriverFleetOperatorInfo
@@ -2390,7 +2418,9 @@ postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId mbRequestorI
   when (not isValidAssociation) $ do
     transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     allLinkedRCs <- DAQuery.findAllLinkedByDriverId driver.id
-    unless (length allLinkedRCs < transporterConfig.rcLimit) $ throwError (RCLimitReached transporterConfig.rcLimit)
+    rcs <- RCQuery.findAllById (map (.rcId) allLinkedRCs)
+    let validLinkedRCs = filter (\rc' -> rc'.verificationStatus /= Documents.INVALID) rcs
+    unless (length validLinkedRCs < transporterConfig.rcLimit) $ throwError (RCLimitReached transporterConfig.rcLimit)
     createDriverRCAssociationIfPossible transporterConfig driver.id rc
   return Success
 

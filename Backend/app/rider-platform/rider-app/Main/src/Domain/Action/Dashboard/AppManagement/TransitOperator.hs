@@ -36,6 +36,7 @@ import qualified Data.Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv (FromNamedRecord (..), Header, decodeByName, (.:))
+import qualified Data.Map.Strict as Map
 import qualified Data.Vector as V
 import qualified Domain.Action.UI.TransitOperator as DTOp
 import qualified Domain.Types.DeviceVehicleMapping
@@ -191,12 +192,14 @@ transitOperatorUpsertDeviceVehicleMapping ::
 transitOperatorUpsertDeviceVehicleMapping merchantShortId opCity req = do
   (_, gtfsId) <- DTOp.resolveBaseUrlAndGtfsId merchantShortId opCity BecknV2.OnDemand.Enums.BUS
   csvRows <- readCsv req.file
+  existingList <- QDvm.findAllByGtfsId gtfsId
+  let existingMap = Map.fromList [(m.deviceId, m) | m <- existingList]
 
   unprocessedEntries <- fmap catMaybes $
     forM csvRows $ \row -> do
       result <-
         withTryCatch "upsertDeviceVehicleMapping" $
-          upsertRow row.device_id row.fleet_id gtfsId
+          upsertRow existingMap row.device_id row.fleet_id gtfsId
       case result of
         Left err -> do
           logError $ "Error upserting device vehicle mapping: " <> row.device_id <> "error: " <> show err
@@ -218,11 +221,10 @@ transitOperatorUpsertDeviceVehicleMapping merchantShortId opCity req = do
         Left err -> throwError (InvalidRequest $ show err)
         Right (_, v) -> pure $ V.toList v
 
-    upsertRow :: Text -> Text -> Text -> Environment.Flow ()
-    upsertRow deviceId vehicleNo gtfsId = do
+    upsertRow :: Map.Map Text Domain.Types.DeviceVehicleMapping.DeviceVehicleMapping -> Text -> Text -> Text -> Environment.Flow ()
+    upsertRow existingMap deviceId vehicleNo gtfsId = do
       now <- getCurrentTime
-      existing <- QDvm.findByDeviceIdAndGtfsId deviceId gtfsId
-      case existing of
+      case Map.lookup deviceId existingMap of
         Just dvm ->
           QDvm.updateByPrimaryKey
             Domain.Types.DeviceVehicleMapping.DeviceVehicleMapping
@@ -234,7 +236,7 @@ transitOperatorUpsertDeviceVehicleMapping merchantShortId opCity req = do
                 merchantId = Kernel.Prelude.Nothing,
                 merchantOperatingCityId = Kernel.Prelude.Nothing
               }
-        Nothing -> do
+        Nothing ->
           QDvm.create
             Domain.Types.DeviceVehicleMapping.DeviceVehicleMapping
               { deviceId = deviceId,

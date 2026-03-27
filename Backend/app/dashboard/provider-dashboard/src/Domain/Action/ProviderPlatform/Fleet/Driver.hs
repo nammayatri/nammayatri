@@ -550,20 +550,23 @@ getDriverFleetAssignments merchantShortId opCity apiTokenInfo limit offset from 
   let memberPersonId = apiTokenInfo.personId.getId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetAssignments) memberPersonId limit offset from to vehicleNo mainAssignmentId mbBookingId
 
-getDriverFleetOperatorInfo :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow Common.FleetOwnerInfoRes)
-getDriverFleetOperatorInfo merchantShortId opCity apiTokenInfo mbMobileCountryCode mbMobileNumber mbPersonId = do
+getDriverFleetOperatorInfo :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow Common.FleetOwnerInfoRes)
+getDriverFleetOperatorInfo merchantShortId opCity apiTokenInfo mbMobileCountryCode mbMobileNumber mbPersonId mbWalletId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  person <- case (mbPersonId, mbMobileNumber) of
-    (Just pid, _) -> QP.findById (Id pid) >>= fromMaybeM (PersonNotFound pid)
+  unless (length (catMaybes [mbPersonId, mbMobileNumber, mbWalletId]) == 1) $
+    throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"personId\", \"walletId\" is required"
+  when (isJust mbMobileCountryCode && isNothing mbMobileNumber) $
+    throwError $ InvalidRequest "\"mobileCountryCode\" can be used only with \"mobileNumber\""
+  mbPerson <- case (mbPersonId, mbMobileNumber) of
+    (Just pid, _) -> Just <$> (QP.findById (Id pid) >>= fromMaybeM (PersonNotFound pid))
     (_, Just mobileNumber) -> do
       let mobileCountryCode = fromMaybe "+91" mbMobileCountryCode
-      QP.findByMobileNumber mobileNumber mobileCountryCode >>= fromMaybeM (PersonNotFound mobileNumber)
-    (Nothing, Nothing) ->
-      throwError $ InvalidRequest "Either personId or mobile number must be provided."
-  res <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetOperatorInfo) person.id.getId
+      Just <$> (QP.findByMobileNumber mobileNumber mobileCountryCode >>= fromMaybeM (PersonNotFound mobileNumber))
+    _ -> pure Nothing
+  res <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetOperatorInfo) mbMobileCountryCode mbMobileNumber mbPersonId mbWalletId
 
   pure
-    res {Common.approvedBy = person.approvedBy <&> getId}
+    res {Common.approvedBy = (mbPerson >>= (.approvedBy) <&> getId) <|> res.approvedBy}
 
 postDriverFleetLocationList :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.DriverLocationListReq -> Environment.Flow Common.DriverLocationListResp)
 postDriverFleetLocationList merchantShortId opCity apiTokenInfo req = do

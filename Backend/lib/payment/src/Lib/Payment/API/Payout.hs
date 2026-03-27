@@ -17,6 +17,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error (GenericError (InvalidRequest))
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common (fromMaybeM, throwError)
+import qualified Lib.Finance.Domain.Types.StateTransition as ST
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import Lib.Payment.API.Payout.Types
 import Lib.Payment.Domain.Types.Common (EntityName)
@@ -137,7 +138,7 @@ buildPayoutResp ::
   PayoutRequest ->
   m PayoutRequestResp
 buildPayoutResp payoutRequest = do
-  history <- PayoutHistory.getPayoutHistory "PayoutRequest" payoutRequest.id.getId
+  history <- PayoutHistory.getPayoutHistory ST.PayoutRequest payoutRequest.id.getId
   let statusHistory = mapMaybe toStatusEvent history
   pure $
     PayoutRequestResp

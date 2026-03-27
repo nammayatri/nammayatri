@@ -158,13 +158,13 @@ let defaultImports =
         , _generationType = GeneratorType.DOMAIN_HANDLER
         }
       , { _simpleImports = [ "Data.Aeson" ] : List Text
-        , _qualifiedImports = [ "!Kernel.Beam.Lib.UtilsTH" ]
+        , _qualifiedImports = [ "!Tools.Beam.UtilsTH" ]
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.DOMAIN_TYPE
         }
       , { _simpleImports =
           [ "Kernel.Prelude"
-          , "Kernel.Beam.Lib.UtilsTH"
+          , "Tools.Beam.UtilsTH"
           , "Kernel.External.Encryption"
           ]
         , _qualifiedImports = [ "Database.Beam as B" ]

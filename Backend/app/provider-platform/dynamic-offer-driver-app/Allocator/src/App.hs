@@ -66,6 +66,7 @@ import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate (
 import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver (sendScheduledRideNotificationsToDriver, sendTagActionNotification)
 import SharedLogic.Allocator.Jobs.SendFeedbackPN (sendFeedbackPN)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
+import SharedLogic.Allocator.Jobs.Settlement.SettlementReportIngestion (runSettlementReportIngestionJob)
 import SharedLogic.Allocator.Jobs.Subscription.ExpireSubscriptionPurchase (expireSubscriptionPurchase)
 import SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
 import SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
@@ -150,6 +151,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . expireSubscriptionPurchase)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledBatchPayout)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runReconciliationJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runSettlementReportIngestionJob)
     }
 
 runDriverOfferAllocator ::

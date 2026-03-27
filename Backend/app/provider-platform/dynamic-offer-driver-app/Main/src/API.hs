@@ -20,6 +20,7 @@ import qualified API.IGM as IGM
 import qualified API.Internal as Internal
 import qualified API.UI as UI
 import qualified API.UnifiedDashboard as UnifiedDashboard
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import Data.OpenApi
 import qualified Domain.Action.UI.DriverOnboarding.DigiLockerCallback as DigiLockerCallback
@@ -40,6 +41,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.BasicAuth ()
 import Kernel.Utils.Servant.HTML
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Servant hiding (serveDirectoryWebApp)
 import Servant.OpenApi
 import Storage.Beam.SystemConfigs ()
@@ -69,6 +71,7 @@ type MainAPI =
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> QueryParam "city" Context.City
              :> QueryParam "serviceName" Plan.ServiceNames
+             :> QueryParam "paymentServiceType" DOrder.PaymentServiceType
              :> "v2"
              :> Juspay.JuspayWebhookAPI
          )
@@ -182,11 +185,16 @@ juspayWebhookHandlerV2 ::
   ShortId DM.Merchant ->
   Maybe Context.City ->
   Maybe Plan.ServiceNames ->
+  Maybe DOrder.PaymentServiceType ->
   BasicAuthData ->
-  Value ->
+  Aeson.Value ->
   FlowHandler AckResponse
-juspayWebhookHandlerV2 merchantShortId mbOpCity mbServiceName secret value' =
-  withFlowHandlerAPI $ Payment.juspayWebhookHandler merchantShortId mbOpCity mbServiceName secret value'
+juspayWebhookHandlerV2 merchantShortId mbOpCity mbServiceName mbPaymentServiceType secret webhookPayload = do
+  case mbPaymentServiceType of
+    Just paymentServiceType -> do
+      withFlowHandlerAPI $ Payment.juspayWebhookHandlerForPaymentServiceType merchantShortId mbOpCity paymentServiceType secret webhookPayload
+    Nothing -> do
+      withFlowHandlerAPI $ Payment.juspayWebhookHandler merchantShortId mbOpCity mbServiceName secret webhookPayload
 
 safetyWebhookHandler ::
   ShortId DM.Merchant ->

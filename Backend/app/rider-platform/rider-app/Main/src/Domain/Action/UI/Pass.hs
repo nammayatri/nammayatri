@@ -67,10 +67,12 @@ import SharedLogic.Offer as SOffer
 import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Storage.CachedQueries.Pass as CQPass
 import qualified Storage.CachedQueries.PassType as CQPassType
 import qualified Storage.CachedQueries.Translations as QT
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.PassCategoryExtra as QPassCategory
 import qualified Storage.Queries.PassExtra as QPass
 import qualified Storage.Queries.PassTypeExtra as QPassType
@@ -606,6 +608,10 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
 
   let daysToExpire = fromIntegral $ DT.diffDays purchasedPass.endDate today
 
+  passes <- CQPass.findAllByPassTypeIdAndEnabled purchasedPass.passTypeId True
+  let maxSwitchCount = case listToMaybe passes >>= (.passConfig) of
+        Just pc -> pc.maxSwitchCount
+        Nothing -> 1
   mbLastVerified <- QPassVerifyTransaction.findLastVerifiedVehicleNumberByPurchasePassId purchasedPass.id
   let lastVerifiedVehicleNumber = fmap fst mbLastVerified
   let isAutoVerified = (mbLastVerified >>= snd) == Just True
@@ -620,7 +626,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         status = purchasedPass.status,
         startDate = purchasedPass.startDate,
         deviceMismatch,
-        deviceSwitchAllowed = purchasedPass.deviceSwitchCount == 0,
+        deviceSwitchAllowed = purchasedPass.deviceSwitchCount < maxSwitchCount,
         profilePicture = purchasedPass.profilePicture <|> person.profilePicture,
         daysToExpire = daysToExpire,
         purchaseDate = DT.utctDay purchasedPass.createdAt,
@@ -798,7 +804,7 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
       then do
         case (passVerifyReq.currentLat, passVerifyReq.currentLon) of
           (Just lat, Just lon) -> do
-            riderConfig <- QRiderConfig.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+            riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
             case integratedBPPConfigs of
               [] -> throwError (PassVerificationFailed purchasedPassId.getId "No integrated BPP config available for auto activation")
               (nearbyConfig : _) -> do
@@ -993,7 +999,8 @@ getMultimodalPassTransactions (mbCallerPersonId, _) mbLimitParam mbOffsetParam =
 buildPurchasedPassPaymentAPIEntity :: DPurchasedPassPayment.PurchasedPassPayment -> PassAPI.PurchasedPassTransactionAPIEntity
 buildPurchasedPassPaymentAPIEntity purchasedPassPayment =
   PassAPI.PurchasedPassTransactionAPIEntity
-    { startDate = purchasedPassPayment.startDate,
+    { id = purchasedPassPayment.id,
+      startDate = purchasedPassPayment.startDate,
       endDate = purchasedPassPayment.endDate,
       status = purchasedPassPayment.status,
       amount = purchasedPassPayment.amount,

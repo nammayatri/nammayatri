@@ -35,6 +35,7 @@ import qualified SharedLogic.CallBPPInternal as BPPInternal
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 import Tools.Metrics.BAPMetrics (incrementServiceabilityCheckCount)
 
 -------- Serviceability----------
@@ -68,7 +69,7 @@ checkOrignServiceability ::
   (Id Person.Person, Id Merchant.Merchant) ->
   ServiceabilityReq ->
   FlowHandler DServiceability.ServiceabilityRes
-checkOrignServiceability settingAccessor (personId, merchantId) ServiceabilityReq {..} = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+checkOrignServiceability settingAccessor (personId, merchantId) ServiceabilityReq {..} = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
   res <- DServiceability.checkServiceability settingAccessor (personId, merchantId) location True True
   let result = if res.serviceable then "serviceable" else "unserviceable"
       cityLabel = maybe "unknown" show res.city
@@ -80,7 +81,7 @@ checkDestinationServiceability ::
   (Id Person.Person, Id Merchant.Merchant) ->
   ServiceabilityReq ->
   FlowHandler DServiceability.ServiceabilityRes
-checkDestinationServiceability settingAccessor (personId, merchantId) ServiceabilityReq {..} = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+checkDestinationServiceability settingAccessor (personId, merchantId) ServiceabilityReq {..} = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
   res <- DServiceability.checkServiceability settingAccessor (personId, merchantId) location True False
   let result = if res.serviceable then "serviceable" else "unserviceable"
       cityLabel = maybe "unknown" show res.city
@@ -91,7 +92,7 @@ checkForIsInterCity ::
   (Id Person.Person, Id Merchant.Merchant) ->
   BPPInternal.IsIntercityReq ->
   FlowHandler BPPInternal.IsIntercityResp
-checkForIsInterCity (personId, merchantId) req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+checkForIsInterCity (personId, merchantId) req = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   eitherResp <- withTryCatch "getIsInterCity:checkForIsInterCity" (BPPInternal.getIsInterCity merchant req)
   case eitherResp of

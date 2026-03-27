@@ -7,6 +7,7 @@ imports:
   Pass: Domain.Types.Pass
   PassDocumentType: Domain.Types.Pass
   PurchasedPass: Domain.Types.PurchasedPass
+  PurchasedPassPayment: Domain.Types.PurchasedPassPayment
   StatusType: Domain.Types.PurchasedPass
   HighPrecMoney: Kernel.Types.Common
   ServiceTierType: BecknV2.FRFS.Enums
@@ -111,6 +112,7 @@ types:
     derive: "Show"
 
   PurchasedPassTransactionAPIEntity:
+    id: Id PurchasedPassPayment
     passName: Maybe Text
     passCode: Text
     createdAt: UTCTime

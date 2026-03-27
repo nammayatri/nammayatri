@@ -115,6 +115,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
+import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.StopInformation as QSI
 import Tools.DynamicLogic (getAppDynamicLogic)
 import Tools.Error
@@ -565,7 +566,16 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                hasStops = Just (not $ null ride.stops),
                commission = finalCommission
               }
-    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking))
+    let mbDriverFromReq = case req of
+          DriverReq driverReq -> Just driverReq.requestor
+          CallBasedReq callBasedReq -> Just callBasedReq.requestor
+          _ -> Nothing
+    mbDriver <- maybe (QP.findById driverId) (pure . Just) mbDriverFromReq
+    mbRiderDetails <- join <$> (QRiderDetails.findById `mapM` booking.riderId)
+    let mbDriverMobileHash = (.hash) <$> (mbDriver >>= (.mobileNumber))
+        mbRiderMobileHash = (.hash) . (.mobileNumber) <$> mbRiderDetails
+        isDriverSameAsCustomer = isJust mbDriverMobileHash && isJust mbRiderMobileHash && mbDriverMobileHash == mbRiderMobileHash
+    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking isDriverSameAsCustomer))
     let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
     fork "updating time and latlong in advance ride if any" $ do
       whenJust advanceRide $ \advanceRide' -> do

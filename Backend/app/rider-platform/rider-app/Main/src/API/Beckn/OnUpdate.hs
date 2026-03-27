@@ -20,11 +20,13 @@ import qualified Beckn.Types.Core.Taxi.API.OnUpdate as OnUpdate
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
 import Environment
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import Storage.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import qualified Storage.Queries.Booking as QRB
 import Tools.Error
 import TransactionLogs.PushLogs
@@ -40,6 +42,7 @@ onUpdate ::
   FlowHandler AckResponse
 onUpdate _ reqV2 = withFlowHandlerBecknAPI do
   transactionId <- Utils.getTransactionId reqV2.onUpdateReqContext
+  L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "onUpdateAPIV2" $ "Received onUpdate API call:-" <> show reqV2
     mbDOnUpdateReq <- ACL.buildOnUpdateReqV2 reqV2

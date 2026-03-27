@@ -200,6 +200,7 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
   case mValidatedImage of
     Just validatedImage
       | imageType /= DVC.DriverLicense,
+        imageType /= DVC.ProfilePhoto,
         isJust workflowTransactionId ->
         return $ ImageValidateResponse validatedImage.id
     _ -> do

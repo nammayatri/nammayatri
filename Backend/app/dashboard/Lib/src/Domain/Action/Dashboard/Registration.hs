@@ -14,7 +14,9 @@
 
 module Domain.Action.Dashboard.Registration where
 
+import qualified Data.HashMap.Strict as HM
 import Data.List (groupBy, sortOn)
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Person as DP
 import qualified Domain.Types.Merchant as DMerchant
@@ -27,7 +29,7 @@ import Domain.Types.Role as DRole
 import qualified Domain.Types.ServerName as DTServer
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (encrypt)
+import Kernel.External.Encryption (decrypt, encrypt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -52,6 +54,7 @@ import Tools.Auth
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Merchant
 import Tools.Error
+import qualified Tools.InternalClient as InternalClient
 import qualified Tools.Utils as Utils
 
 data LoginReq = LoginReq
@@ -65,7 +68,18 @@ data Enable2FAReq = Enable2FAReq
   { email :: Text,
     password :: Text,
     merchantId :: ShortId DMerchant.Merchant,
-    city :: Maybe City.City
+    city :: Maybe City.City,
+    otp :: Maybe Text -- Existing authenticator TOTP for re-setup (skip phone OTP)
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+data Initiate2FASetupReq = Initiate2FASetupReq
+  { email :: Maybe Text,
+    password :: Maybe Text,
+    merchantId :: ShortId DMerchant.Merchant,
+    city :: Maybe City.City,
+    otp :: Maybe Text, -- Existing authenticator TOTP for re-setup (skip phone OTP)
+    token :: Maybe Text -- Auth token for logged-in users (e.g., during merchant switch)
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -73,6 +87,30 @@ newtype Enable2FARes = Enable2FARes
   { qrcode :: Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+data Initiate2FASetupRes = Initiate2FASetupRes
+  { requestId :: Maybe Text, -- Present when phone OTP flow is initiated
+    qrcode :: Maybe Text, -- Present when TOTP verified and new QR code generated
+    message :: Text
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+data Verify2FASetupReq = Verify2FASetupReq
+  { requestId :: Text,
+    otp :: Text
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+-- Stored in Redis for pending 2FA setup requests
+data Pending2FASetupData = Pending2FASetupData
+  { personId :: Id DP.Person,
+    merchantId :: Id DMerchant.Merchant,
+    merchantShortId :: ShortId DMerchant.Merchant,
+    city :: City.City,
+    otp :: Text,
+    email :: Text
+  }
+  deriving (Show, Generic, FromJSON, ToJSON)
 
 data LoginRes = LoginRes
   { authToken :: Text,
@@ -222,12 +260,21 @@ handle2FA ::
 handle2FA secretKey otp = case (secretKey, otp) of
   (Just key, Just userOtp) -> do
     generatedOtp <- L.runIO (Utils.genTOTP key)
-    if generatedOtp == read (T.unpack userOtp)
+    if show generatedOtp == T.unpack userOtp
       then pure (True, "Logged in successfully")
       else pure (False, "Google Authenticator OTP does not match")
   (_, Nothing) -> pure (False, "Google Authenticator OTP is required")
   (Nothing, _) -> pure (False, "Secret key not found for 2FA")
 
+-- Redis keys for 2FA setup flow
+make2FASetupKey :: Text -> Text
+make2FASetupKey requestId = "Dashboard:2FA:Setup:" <> requestId
+
+make2FASetupAttemptsKey :: Text -> Text
+make2FASetupAttemptsKey requestId = "Dashboard:2FA:Attempts:" <> requestId
+
+-- | Step 1: Validate credentials, send OTP to registered phone, return requestId.
+-- | Deprecated: Use initiate2FaSetup + verify2FaSetup instead.
 enable2fa ::
   ( BeamFlow m r,
     Redis.HedisFlow m r,
@@ -246,6 +293,117 @@ enable2fa Enable2FAReq {..} = do
   MA.updatePerson2faForMerchant person.id merchant.id key
   let qrCodeUri = Utils.generateAuthenticatorURI key email merchant.shortId
   pure $ Enable2FARes qrCodeUri
+
+-- | Validate credentials and either:
+-- 1. If user provides a valid TOTP (has existing authenticator): regenerate secret, return new QR code directly
+-- 2. Otherwise: send OTP to registered phone, return requestId for verify2FaSetup
+initiate2FASetup ::
+  ( BeamFlow m r,
+    Redis.HedisFlow m r,
+    Auth.AuthFlow m r,
+    HasFlowEnv m r '["sendEmailRateLimitOptions" ::: APIRateLimitOptions],
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    EncFlow m r
+  ) =>
+  Initiate2FASetupReq ->
+  m Initiate2FASetupRes
+initiate2FASetup Initiate2FASetupReq {..} = do
+  person <- case token of
+    Just authToken -> do
+      (personId, _merchantId, _city) <- Auth.verifyPerson authToken
+      QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    Nothing -> do
+      email_ <- email & fromMaybeM (InvalidRequest "Email is required when token is not provided")
+      password_ <- password & fromMaybeM (InvalidRequest "Password is required when token is not provided")
+      sendEmailRateLimitOptions <- asks (.sendEmailRateLimitOptions)
+      checkSlidingWindowLimitWithOptions (makeEmailHitsCountKey (Just email_)) sendEmailRateLimitOptions
+      QP.findByEmailAndPassword email_ password_ >>= fromMaybeM (PersonDoesNotExist email_)
+  personEmail <- case email of
+    Just e -> pure e
+    Nothing -> do
+      encEmail <- person.email & fromMaybeM (InvalidRequest "Person does not have an email set")
+      decrypt encEmail
+  merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
+  let city' = fromMaybe merchant.defaultOperatingCity city
+  merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city' >>= fromMaybeM AccessDenied
+  -- If user has existing authenticator and provides valid TOTP, re-setup directly
+  case (merchantAccess.secretKey, otp) of
+    (Just existingKey, Just userOtp) -> do
+      generatedOtp <- L.runIO (Utils.genTOTP existingKey)
+      if show generatedOtp == T.unpack userOtp
+        then do
+          -- TOTP valid, generate new secret directly
+          newKey <- L.runIO Utils.generateSecretKey
+          MA.updatePerson2faForMerchant person.id merchant.id newKey
+          let qrCodeUri = Utils.generateAuthenticatorURI newKey personEmail merchant.shortId
+          pure $ Initiate2FASetupRes {requestId = Nothing, qrcode = Just qrCodeUri, message = "2FA re-setup successful"}
+        else throwError (InvalidRequest "Invalid authenticator code")
+    _ -> do
+      -- No existing authenticator or no TOTP provided: phone OTP flow
+      decryptedMobileNumber <- decrypt person.mobileNumber
+      let phoneNumber = person.mobileCountryCode <> decryptedMobileNumber
+      reqId <- generateGUID
+      -- Send OTP via BPP internal SMS API (BPP generates the OTP)
+      let smsReq =
+            InternalClient.SendSMSReq
+              { phoneNumber = phoneNumber,
+                messageKey = "SEND_TOTP",
+                templateVars = Map.empty,
+                isOtp = Just True
+              }
+      smsRes <- InternalClient.callBPPInternalSendSMS (getShortId merchantId) city' smsReq
+      otpCode <- smsRes.otp & fromMaybeM (InternalError "OTP not returned from BPP")
+      let pendingData =
+            Pending2FASetupData
+              { personId = person.id,
+                merchantId = merchant.id,
+                merchantShortId = merchant.shortId,
+                city = city',
+                otp = otpCode,
+                email = personEmail
+              }
+      let otpTTL = fromMaybe 300 merchant.twoFaOtpTTLInSecs
+      Redis.setExp (make2FASetupKey reqId) pendingData otpTTL
+      logInfo $ "2FA setup OTP sent for person: " <> person.id.getId
+      pure $ Initiate2FASetupRes {requestId = Just reqId, qrcode = Nothing, message = "OTP sent to registered mobile number"}
+
+-- | Step 2: Verify phone OTP, generate TOTP secret, return QR code.
+-- Works for both first-time setup and reset.
+verify2FASetup ::
+  ( BeamFlow m r,
+    Redis.HedisFlow m r,
+    EncFlow m r
+  ) =>
+  Verify2FASetupReq ->
+  m Enable2FARes
+verify2FASetup Verify2FASetupReq {..} = do
+  let redisKey = make2FASetupKey requestId
+      attemptsKey = make2FASetupAttemptsKey requestId
+  pendingData <- Redis.get @Pending2FASetupData redisKey >>= fromMaybeM (InvalidRequest "2FA setup request expired or not found")
+  merchant <- QMerchant.findById pendingData.merchantId >>= fromMaybeM (MerchantDoesNotExist pendingData.merchantId.getId)
+  let maxAttempts = fromMaybe 5 merchant.twoFaMaxOtpVerifyAttempts
+      otpTTL = fromMaybe 300 merchant.twoFaOtpTTLInSecs
+  -- Check attempt limit
+  attempts <- fromMaybe 0 <$> Redis.get @Int attemptsKey
+  when (attempts >= maxAttempts) $ do
+    Redis.del redisKey
+    Redis.del attemptsKey
+    throwError (InvalidRequest "Too many OTP attempts. Please initiate 2FA setup again.")
+  -- Verify OTP
+  if pendingData.otp == otp
+    then do
+      -- Clean up Redis
+      Redis.del redisKey
+      Redis.del attemptsKey
+      -- Generate TOTP secret and enable 2FA
+      key <- L.runIO Utils.generateSecretKey
+      MA.updatePerson2faForMerchant pendingData.personId pendingData.merchantId key
+      let qrCodeUri = Utils.generateAuthenticatorURI key pendingData.email pendingData.merchantShortId
+      pure $ Enable2FARes qrCodeUri
+    else do
+      Redis.setExp attemptsKey (attempts + 1) otpTTL
+      throwError (InvalidRequest "Invalid OTP")
 
 generateToken ::
   ( BeamFlow m r,

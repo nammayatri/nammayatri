@@ -69,8 +69,8 @@ import qualified Lib.JourneyModule.State.Utils as JMStateUtils
 import Lib.JourneyModule.Utils
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import Lib.Payment.Storage.Beam.BeamFlow
+import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
-import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as YTypes
 import SharedLogic.Booking (getfareBreakups)
@@ -81,8 +81,9 @@ import qualified SharedLogic.PTCircuitBreaker as PTCircuitBreaker
 import qualified SharedLogic.Ride as DARide
 import qualified SharedLogic.Search as SLSearch
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
@@ -832,7 +833,7 @@ mkLegInfoFromFrfsBooking ::
 mkLegInfoFromFrfsBooking booking journeyLeg = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   tickets <- QFRFSTicket.findAllByTicketBookingId (booking.id)
-  frfsQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing booking.quoteId
+  frfsQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   let categories = map mkCategoryInfoResponse frfsQuoteCategories
   let categoryBookingDetails =
         mapMaybe
@@ -907,7 +908,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
       let paymentOrderIds = nub $ map (.paymentOrderId) bookingPayments
       paymentOrders <- mapMaybeM QPaymentOrder.findById paymentOrderIds
       let orderShortIds = map (.shortId) paymentOrders
-      refunds <- concat <$> mapM QRefunds.findAllByOrderId orderShortIds
+      refunds <- concat <$> mapM HQRefunds.findAllByOrderId orderShortIds
       let refunds' = map (\refundEntry -> LegRefundInfo {id = refundEntry.id, amount = totalBookingAmount.amount, status = refundEntry.status, arn = refundEntry.arn, completedAt = refundEntry.completedAt, updatedAt = refundEntry.updatedAt, createdAt = refundEntry.createdAt}) refunds
       let refundBloc = listToMaybe refunds'
       let adultTicketQuantity = find (\priceItem -> priceItem.categoryType == ADULT) fareParameters.priceItems <&> (.quantity)
@@ -940,7 +941,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
           let routeCode = journeyLegDetail.routeCode
 
           mbQuote <- QFRFSQuote.findById booking.quoteId
-          quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing booking.quoteId
+          quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
           let mbSelectedServiceTier = getServiceTierFromQuote quoteCategories =<< mbQuote
 
           (mTripStartTime, mBookedStopETA) <- case (booking.tripId, booking.routeCode) of
@@ -1006,7 +1007,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                 }
         Spec.SUBWAY -> do
           mbQuote <- QFRFSQuote.findById booking.quoteId
-          quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing booking.quoteId
+          quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
           let mbSelectedServiceTier = getServiceTierFromQuote quoteCategories =<< mbQuote
           mbPerson <- QPerson.findById booking.riderId
           imeiNumber <- decrypt `mapM` (mbPerson >>= (.imeiNumber))
@@ -1082,7 +1083,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
   let startTime = journeyLeg.fromDepartureTime
 
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity frfsSearch
-  mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing
+  mRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
   person <- QPerson.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
   let isPTBookingAllowedForUser = ("PTBookingAllowed#Yes" `elem` (maybe [] (map YTypes.getTagNameValueExpiry) person.customerNammaTags))
   let isPTBookingNotAllowedForUser = ("PTBookingAllowed#No" `elem` (maybe [] (map YTypes.getTagNameValueExpiry) person.customerNammaTags))
@@ -1092,7 +1093,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
   (mbServiceTier, mbQuote, quoteCategories, mbFareParameters) <- case journeyLeg.legPricingId of
     Just quoteId -> do
       mbQuote <- QFRFSQuote.findById (Id quoteId)
-      frfsQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing (Id quoteId)
+      frfsQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId (Id quoteId)
       let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories frfsQuoteCategories)
       let mbSelectedServiceTier = getServiceTierFromQuote frfsQuoteCategories =<< mbQuote
       pure (mbSelectedServiceTier, mbQuote, frfsQuoteCategories, Just fareParameters)

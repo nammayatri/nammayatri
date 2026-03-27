@@ -14,6 +14,7 @@ import qualified Lib.Yudhishthira.Storage.Beam.AppDynamicLogicElement as Beam
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as BeamFlow
 import Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogicElement
 import qualified Lib.Yudhishthira.Types
+import qualified Lib.Yudhishthira.Types.AppDynamicLogicElement
 import Sequelize as Se
 
 -- Extra code goes here --
@@ -30,3 +31,8 @@ deleteByDomainAndVersion domain version = do
           Se.Is Beam.version $ Se.Eq version
         ]
     ]
+
+findByDomainAndVersions ::
+  (BeamFlow.BeamFlow m r) =>
+  (Maybe Int -> Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> [Kernel.Prelude.Int] -> m [Lib.Yudhishthira.Types.AppDynamicLogicElement.AppDynamicLogicElement])
+findByDomainAndVersions limit offset domain versions = do findAllWithOptionsKV [Se.And [Se.Is Beam.domain $ Se.Eq domain, Se.Is Beam.version $ Se.In versions]] (Se.Asc Beam.order) limit offset

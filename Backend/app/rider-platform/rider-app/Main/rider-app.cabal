@@ -64,6 +64,7 @@ library
       API.Internal.RideSearchExpired
       API.Internal.Sos
       API.Internal.StopEvents
+      API.Internal.UpdateCancellationFeeStatus
       API.Internal.ViolationDetection
       API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
       API.Types.Dashboard.AppManagement.OrphanInstances.TicketDashboard
@@ -223,6 +224,7 @@ library
       Domain.Action.Internal.RideSearchExpired
       Domain.Action.Internal.Sos
       Domain.Action.Internal.StopEvents
+      Domain.Action.Internal.UpdateCancellationFeeStatus
       Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.AadhaarVerification
       Domain.Action.UI.AlertWebhook
@@ -559,6 +561,7 @@ library
       Storage.CachedQueries.PartnerOrganization
       Storage.CachedQueries.PartnerOrgConfig
       Storage.CachedQueries.PartnerOrgStation
+      Storage.CachedQueries.Pass
       Storage.CachedQueries.PassType
       Storage.CachedQueries.Person
       Storage.CachedQueries.Person.PersonFlowStatus
@@ -591,6 +594,20 @@ library
       Storage.Clickhouse.QuoteBreakup
       Storage.Clickhouse.Ride
       Storage.Clickhouse.Sos
+      Storage.ConfigPilot.Config.BecknConfig
+      Storage.ConfigPilot.Config.CommonConfig
+      Storage.ConfigPilot.Config.Exophone
+      Storage.ConfigPilot.Config.FRFSConfig
+      Storage.ConfigPilot.Config.MerchantConfig
+      Storage.ConfigPilot.Config.MerchantPushNotification
+      Storage.ConfigPilot.Config.MerchantServiceConfig
+      Storage.ConfigPilot.Config.MerchantServiceUsageConfig
+      Storage.ConfigPilot.Config.PayoutConfig
+      Storage.ConfigPilot.Config.RiderConfig
+      Storage.ConfigPilot.Config.RideRelatedNotificationConfig
+      Storage.ConfigPilot.Interface.Getter
+      Storage.ConfigPilot.Interface.Setter
+      Storage.ConfigPilot.Interface.Types
       Storage.GraphqlQueries.Client
       Storage.GraphqlQueries.RouteStopTimeTable
       Storage.GraphqlQueries.Types
@@ -612,6 +629,7 @@ library
       Storage.Queries.FareBreakupExtra
       Storage.Queries.FeedbackBadgeExtra
       Storage.Queries.FeedbackFormExtra
+      Storage.Queries.FRFSQuoteCategoryExtra
       Storage.Queries.FRFSQuoteExtra
       Storage.Queries.FRFSSearchExtra
       Storage.Queries.FRFSTicketBookingExtra
@@ -699,6 +717,7 @@ library
       Tools.Constants
       Tools.Error
       Tools.Event
+      Tools.FlowHandling
       Tools.HTTPManager
       Tools.Insurance
       Tools.InvoicePDF
@@ -1321,6 +1340,7 @@ library
       Storage.Queries.OrphanInstances.FeedbackBadge
       Storage.Queries.OrphanInstances.FeedbackForm
       Storage.Queries.OrphanInstances.FRFSQuote
+      Storage.Queries.OrphanInstances.FRFSQuoteCategory
       Storage.Queries.OrphanInstances.FRFSSearch
       Storage.Queries.OrphanInstances.FRFSTicketBooking
       Storage.Queries.OrphanInstances.FRFSTicketBookingPayment

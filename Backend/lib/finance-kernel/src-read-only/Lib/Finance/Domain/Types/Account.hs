@@ -4,10 +4,10 @@
 module Lib.Finance.Domain.Types.Account where
 
 import Data.Aeson
-import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Tools.Beam.UtilsTH
 
 data Account = Account
   { accountType :: Lib.Finance.Domain.Types.Account.AccountType,
@@ -36,13 +36,13 @@ data CounterpartyType
   | FLEET_OWNER
   | GOVERNMENT_DIRECT
   | GOVERNMENT_INDIRECT
+  | AIRPORT
   | PG_PAYMENT_JUSPAY
   | PG_PAYOUT_JUSPAY
-  | AIRPORT
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''AccountType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AccountStatus))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''CounterpartyType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AccountType))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''AccountStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CounterpartyType))

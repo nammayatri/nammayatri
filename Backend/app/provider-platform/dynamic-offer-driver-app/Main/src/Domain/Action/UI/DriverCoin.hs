@@ -18,7 +18,6 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Dr
 import Data.OpenApi hiding (description, title, value)
 import qualified Data.Text as Text
 import Data.Time (UTCTime (UTCTime, utctDay), addDays)
-import qualified Domain.Action.UI.Payout as DAP
 import Domain.Types.Coins.CoinHistory
 import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
@@ -27,13 +26,15 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Plan as DPlan
 import Domain.Types.PurchaseHistory
-import Domain.Types.TransporterConfig ()
+import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as VecVarient
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
+import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
 import qualified Kernel.External.Payout.Types as PT
-import Kernel.External.Types (Language (..))
+import Kernel.External.Types (Language (..), ServiceFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
@@ -43,9 +44,12 @@ import qualified Lib.DriverCoins.Coins as Coins
 import Lib.DriverCoins.Types
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PayoutOrder as DPO
+import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import SharedLogic.DriverFee (delCoinAdjustedInSubscriptionByDriverIdKey, getCoinAdjustedInSubscriptionByDriverIdKey)
 import qualified SharedLogic.Merchant as SMerchant
+import Storage.Beam.Payment ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
@@ -189,7 +193,17 @@ sumExpiredCoinsOnThatDate coinHistories time todayStart = do
         Just expiration -> expiration >= todayStart && expiration < time
         Nothing -> False
 
-getCoinUsageSummary :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Integer -> Maybe Integer -> Maybe CoinRedemptionType -> Flow CoinsUsageRes
+getCoinUsageSummary ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    PaymentBeamFlow.BeamFlow m r
+  ) =>
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Maybe Integer ->
+  Maybe Integer ->
+  Maybe CoinRedemptionType ->
+  m CoinsUsageRes
 getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) mbLimit mbOffset mbCoinRedemptionType = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
@@ -223,12 +237,11 @@ getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) mbLimit mbOffset m
         coinConvertedToCashUsedForLatestDues = coinConvertedToCashUsage
       }
   where
-    toUsageHistoryItem :: PurchaseHistory -> Flow CoinUsageHistoryItem
     toUsageHistoryItem historyItem = do
       (payoutOrderStatus, vpa) <- case historyItem.payoutOrderIdForDirectPayout of
         Just payoutOrderId -> do
           payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId.getId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId.getId)
-          pure $ (Just $ DAP.castPayoutOrderStatus payoutOrder.status, payoutOrder.vpa)
+          pure $ (Just $ castPayoutOrderStatus payoutOrder.status, payoutOrder.vpa)
         Nothing -> pure (Nothing, Nothing)
       pure $
         CoinUsageHistoryItem
@@ -256,7 +269,18 @@ accumulateCoins targetAmount = takeCoinsRequired (targetAmount, []) False
         then takeCoinsRequired (afterTaking, (coinHis.id.getId, coinsTaken, Used) : result) False coinHistories
         else takeCoinsRequired (afterTaking, (coinHis.id.getId, coinsTaken + afterTaking, coinStatus) : result) True []
 
-useCoinsHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> ConvertCoinToCashReq -> Flow APISuccess
+useCoinsHandler ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    EncFlow m r,
+    ServiceFlow m r,
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    PaymentBeamFlow.BeamFlow m r
+  ) =>
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  ConvertCoinToCashReq ->
+  m APISuccess
 useCoinsHandler (driverId, merchantId, merchantOpCityId) ConvertCoinToCashReq {..} = do
   isLocked <- withLockDriverId
   if isLocked
@@ -274,7 +298,18 @@ useCoinsHandler (driverId, merchantId, merchantOpCityId) ConvertCoinToCashReq {.
       return isLocked
     mkLockKey = "ConvertCoinToCash:DriverId:" <> driverId.getId
 
-handler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> ConvertCoinToCashReq -> Flow APISuccess
+handler ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    EncFlow m r,
+    ServiceFlow m r,
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    PaymentBeamFlow.BeamFlow m r
+  ) =>
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  ConvertCoinToCashReq ->
+  m APISuccess
 handler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {..} = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
@@ -304,25 +339,7 @@ handler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {..} = do
     then do
       payoutOrderId <-
         case coinRedemptionType of
-          Just DirectPayout -> do
-            unless (fromMaybe False transporterConfig.enableCoinsToDirectPayout) $
-              throwError $ InvalidRequest "Coins to direct payout is not enabled"
-            payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehCategory) merchantOpCityId.getId)
-            case payoutConfig.coinRedemptionMinimumLimit of
-              Just coinRedemptionMinimumLimit -> when (calculatedAmount < coinRedemptionMinimumLimit) $ throwError $ InvalidRequest "Calculated amount is less than the coin redemption minimum limit"
-              Nothing -> throwError $ InvalidRequest "Coin redemption minimum limit is not set"
-            uid <- generateGUID
-            phoneNo <- mapM decrypt driver.mobileNumber
-            driverInformation <- QDriverInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
-            vpa <- driverInformation.payoutVpa & fromMaybeM (InvalidRequest "Driver has no payout VPA")
-            payoutServiceName <- Payout.decidePayoutService (DEMSC.PayoutService PT.Juspay) driver.clientSdkVersion driver.merchantOperatingCityId
-            merchantOperatingCity <- CQMOC.findById (cast merchantOpCityId) >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-            let createPayoutOrderReq = DPayment.mkCreatePayoutOrderReq uid calculatedAmount phoneNo driver.email driverId.getId "converted from coins" (Just driver.firstName) vpa payoutConfig.orderType False
-                entityName = DPayment.COINS_REDEMPTION
-                createPayoutOrderCall = Payout.createPayoutOrder driver.merchantId merchantOpCityId payoutServiceName (Just driver.id.getId)
-            void $ DPayment.createPayoutService (cast merchantId_) (Just $ cast merchantOpCityId) (cast driverId) (Just [driverId.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
-            void $ QDS.updateCoinsFieldsForDirectPayout driverId calculatedAmount
-            return $ Just $ Id uid
+          Just DirectPayout -> redeemCoins driverId merchantId_ merchantOpCityId transporterConfig vehCategory driver calculatedAmount
           _ -> do
             void $ QDS.updateCoinFieldsByDriverId driverId calculatedAmount
             return Nothing
@@ -360,6 +377,75 @@ handler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {..} = do
   where
     noDriverPlan :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> m Bool
     noDriverPlan driverId_ = isNothing <$> SQPlan.findByDriverIdAndServiceName driverId_ DPlan.YATRI_SUBSCRIPTION
+
+redeemCoins ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    EncFlow m r,
+    ServiceFlow m r,
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    PaymentBeamFlow.BeamFlow m r
+  ) =>
+  Id SP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DTC.TransporterConfig ->
+  DVC.VehicleCategory ->
+  SP.Person ->
+  HighPrecMoney ->
+  m (Maybe (Id DPO.PayoutOrder))
+redeemCoins driverId merchantId merchantOpCityId transporterConfig vehCategory driver calculatedAmount = do
+  unless (fromMaybe False transporterConfig.enableCoinsToDirectPayout) $
+    throwError $ InvalidRequest "Coins to direct payout is not enabled"
+  payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehCategory) merchantOpCityId.getId)
+  case payoutConfig.coinRedemptionMinimumLimit of
+    Just coinRedemptionMinimumLimit -> when (calculatedAmount < coinRedemptionMinimumLimit) $ throwError $ InvalidRequest "Calculated amount is less than the coin redemption minimum limit"
+    Nothing -> throwError $ InvalidRequest "Coin redemption minimum limit is not set"
+  uid <- generateGUID
+  phoneNo <- mapM decrypt driver.mobileNumber
+  driverInformation <- QDriverInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+  vpa <- driverInformation.payoutVpa & fromMaybeM (InvalidRequest "Driver has no payout VPA")
+  payoutServiceName <- Payout.decidePayoutService (DEMSC.PayoutService PT.Juspay) driver.clientSdkVersion driver.merchantOperatingCityId
+  merchantOperatingCity <- CQMOC.findById (cast merchantOpCityId) >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+  let createPayoutOrderReq = DPayment.mkCreatePayoutOrderReq uid calculatedAmount phoneNo driver.email driverId.getId "converted from coins" (Just driver.firstName) vpa payoutConfig.orderType False
+      entityName = DPayment.COINS_REDEMPTION
+      createPayoutOrderCall = Payout.createPayoutOrder driver.merchantId merchantOpCityId payoutServiceName (Just driver.id.getId)
+  void $ DPayment.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast driverId) (Just [driverId.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
+  void $ QDS.updateCoinsFieldsForDirectPayout driverId calculatedAmount
+  pure $ Just $ Id uid
+
+refundCoins ::
+  ( Coins.EventFlow m r,
+    PaymentBeamFlow.BeamFlow m r
+  ) =>
+  Id SP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Text ->
+  m ()
+refundCoins driverId merchantId merchantOperatingCityId payoutOrderId = do
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId)
+  mbVehicle <- QVeh.findById driverId
+  let vehCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
+      numCoins = round (payoutOrder.amount.amount / transporterConfig.coinConversionRate)
+  void $ Coins.updateEventAndGetCoinsvalue driverId merchantId merchantOperatingCityId CoinsRedemptionRefund Nothing numCoins (Just payoutOrder.id.getId) vehCategory
+  Coins.updateDriverCoins driverId numCoins transporterConfig.timeDiffFromUtc
+  QDS.updateCoinsFieldsForDirectPayout driverId (negate payoutOrder.amount.amount)
+
+castPayoutOrderStatus :: Payout.PayoutOrderStatus -> DS.PayoutStatus
+castPayoutOrderStatus payoutOrderStatus =
+  case payoutOrderStatus of
+    Payout.SUCCESS -> DS.Success
+    Payout.FULFILLMENTS_SUCCESSFUL -> DS.Success
+    Payout.ERROR -> DS.Failed
+    Payout.FAILURE -> DS.Failed
+    Payout.FULFILLMENTS_FAILURE -> DS.Failed
+    Payout.CANCELLED -> DS.ManualReview
+    Payout.FULFILLMENTS_CANCELLED -> DS.ManualReview
+    Payout.FULFILLMENTS_MANUAL_REVIEW -> DS.ManualReview
+    _ -> DS.Processing
 
 getRideStatusPastDays :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow RideStatusPastDaysRes
 getRideStatusPastDays (driverId, merchantId_, merchantOpCityId) = do

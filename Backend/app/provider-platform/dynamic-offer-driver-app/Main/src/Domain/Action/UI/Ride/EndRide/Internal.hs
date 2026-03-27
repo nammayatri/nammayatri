@@ -45,6 +45,7 @@ where
 
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AKey
+import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import qualified Data.Map as M
 import qualified Data.Text as T
@@ -55,6 +56,7 @@ import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.Plan as Plan
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.CancellationCharges as DCC
+import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.ConditionalCharges as DAC
 import Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverFee as DF
@@ -112,6 +114,8 @@ import Lib.Types.SpecialLocation hiding (Merchant, MerchantOperatingCity)
 import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import SharedLogic.Allocator
 import qualified SharedLogic.Analytics as Analytics
+import SharedLogic.CallBAPInternal (AppBackendBapInternal)
+import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import SharedLogic.DriverFee (calculatePlatformFeeAttr)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -127,6 +131,7 @@ import SharedLogic.TollsDetector
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
@@ -183,7 +188,10 @@ endRideTransaction ::
     ClickhouseFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    CoreMetrics m
   ) =>
   Id DP.Driver ->
   SRB.Booking ->
@@ -254,7 +262,18 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
         QRD.updateCancellationDuesPaid cancellationDues riderDetails.id.getId
         QRD.updateNoOfTimesCanellationDuesPaid riderDetails.id.getId
         QRD.updateCancellationDues 0 riderDetails.id >> QCC.create cancellationCharges
-        QCDD.updateAllPendingToPaidByRiderId riderDetails.id
+        pendingDues <- QCDD.findAllPendingByRiderId riderDetails.id
+        let pendingIds = (.id) <$> pendingDues
+            bppRideIds = (\d -> d.rideId.getId) <$> pendingDues
+        unless (null pendingIds) $ do
+          QCDD.updateStatusByIds DCDD.PAID pendingIds
+          appBackendBapInternal <- asks (.appBackendBapInternal)
+          fork "updateCancellationFeeStatusOnBAP" $ do
+            void $
+              CallBAPInternal.updateCancellationFeeStatus
+                appBackendBapInternal.apiKey
+                appBackendBapInternal.url
+                (CallBAPInternal.UpdateCancellationFeeStatusReq {bppRideIds = bppRideIds})
       -- QRD.updateDisputeChancesUsedAndCancellationDues (max 0 (riderDetails.disputeChancesUsed - calDisputeChances)) 0 (riderDetails.id) >> QCC.create cancellationCharges
       _ -> logWarning $ "Unable to update customer cancellation dues as RiderDetailsId is NULL with rideId " <> ride.id.getId
   merchant <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
@@ -505,6 +524,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
           let amount = baseFareForTds * realToFrac rate -- tdsRate is already decimal (0.01 = 1%)
           if amount > 0 then Just amount else Nothing
 
+    merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist booking.merchantOperatingCityId.getId)
     ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig
     let invoiceConfig =
           InvoiceConfig
@@ -528,7 +548,14 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                       then Just InvoiceLineItem {description = "Parking Charges", quantity = 1, unitPrice = parkingAmount, lineTotal = parkingAmount, isExternalCharge = True}
                       else Nothing
                   ],
-              gstBreakdown = computeGstBreakdown transporterConfig.taxConfig.rideGst gstAmount
+              gstBreakdown =
+                computeGstBreakdownByPlace
+                  transporterConfig.taxConfig.rideGst
+                  (Just $ show merchantOperatingCity.state)
+                  booking.fromLocation.address.state
+                  (Just $ show merchantOperatingCity.city)
+                  booking.fromLocation.address.city
+                  gstAmount
             }
     result <- runFinance ctx $ do
       if isOnline

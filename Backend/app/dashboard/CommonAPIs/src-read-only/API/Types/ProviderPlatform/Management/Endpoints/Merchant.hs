@@ -617,6 +617,7 @@ data UpdateFarePolicyReq = UpdateFarePolicyReq
     nightShiftCharge :: Kernel.Prelude.Maybe NightShiftChargeAPIEntity,
     petCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     driverAllowance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    airportConvenienceFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     businessDiscountPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     personalDiscountPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Double
   }

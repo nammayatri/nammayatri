@@ -45,11 +45,13 @@ import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Cancel
 import Storage.Beam.SystemConfigs ()
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.CachedQueries.BecknConfig as QBC
+import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Auth
 import Tools.Error
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 -------- Select Flow --------
 type API =
@@ -82,7 +84,7 @@ handler =
     :<|> selectResult
 
 select :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> FlowHandler DSelect.DSelectResultRes
-select (personId, merchantId) estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+select (personId, merchantId) estimateId req = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
   Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
     dSelectReq <- DSelect.select personId estimateId req
     becknReq <- ACL.buildSelectReqV2 dSelectReq
@@ -91,8 +93,7 @@ select (personId, merchantId) estimateId req = withFlowHandlerAPI . withPersonId
   let searchRequestId = estimate.requestId
   searchRequest <- QSearchRequest.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   autoAssignEnabled <- searchRequest.autoAssignEnabled & fromMaybeM (InternalError "Invalid autoAssignEnabled")
-  bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId searchRequest.merchantId "MOBILITY" searchRequest.merchantOperatingCityId
-  bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
+  bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId, merchantId = searchRequest.merchantId.getId, domain = Just "MOBILITY", vehicleCategory = Nothing})) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId)
   selectTtl <- bapConfig.selectTTLSec & fromMaybeM (InternalError "Invalid ttl")
   ttlInInt <-
     if autoAssignEnabled
@@ -105,7 +106,7 @@ select (personId, merchantId) estimateId req = withFlowHandlerAPI . withPersonId
   pure DSelect.DSelectResultRes {selectTtl = ttlInInt}
 
 select2 :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> FlowHandler DSelect.MultimodalSelectRes
-select2 (personId, merchantId) estimateId = withFlowHandlerAPI . select2' (personId, merchantId) estimateId
+select2 (personId, merchantId) estimateId req = withFlowHandlerAPIPersonId personId $ select2' (personId, merchantId) estimateId req
 
 select2' :: (DSelect.SelectFlow m r c, DSearch.SearchRequestFlow m r, HasFlowEnv m r '["slackCfg" ::: SlackConfig], HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions], HasFlowEnv m r '["searchLimitExceedNotificationTemplate" ::: Text]) => (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> m DSelect.MultimodalSelectRes
 select2' (personId, merchantId) estimateId req = withPersonIdLogTag personId $ do
@@ -122,13 +123,13 @@ select2' (personId, merchantId) estimateId req = withPersonIdLogTag personId $ d
     Left _ -> pure DSelect.MultimodalSelectRes {journeyId = Nothing, result = "Success"}
 
 selectList :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
-selectList (personId, merchantId) = withFlowHandlerAPI . selectList' (personId, merchantId)
+selectList (personId, merchantId) estimateId = withFlowHandlerAPIPersonId personId $ selectList' (personId, merchantId) estimateId
 
 selectList' :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> Flow DSelect.SelectListRes
 selectList' (personId, _) = withPersonIdLogTag personId . DSelect.selectList
 
 selectResult :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.QuotesResultResponse
-selectResult (personId, merchantId) = withFlowHandlerAPI . selectResult' (personId, merchantId)
+selectResult (personId, merchantId) estimateId = withFlowHandlerAPIPersonId personId $ selectResult' (personId, merchantId) estimateId
 
 selectResult' :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> Flow DSelect.QuotesResultResponse
 selectResult' (personId, _) = withPersonIdLogTag personId . DSelect.selectResult

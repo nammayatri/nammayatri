@@ -32,16 +32,18 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as DPaymentTransaction
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
+import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
-import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.PaymentInvoice as SPInvoice
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.PaymentCustomer as QPaymentCustomer
@@ -404,7 +406,7 @@ postPaymentRefundRequestCreate (mbPersonId, _) rideId req = do
 
     -- We need earliest transaction in case if we have more than one transaction (ride fare and ride tip)
     -- Later we can add transactions differentiation based on purpose: RIDE_FARE | RIDE_TIP | CANCELLATION_FEE
-    transaction <- QPaymentTransaction.findEarliestChargedTransactionByOrderId orderId >>= fromMaybeM (InvalidRequest "No transaction found for refund")
+    transaction <- HQPaymentTransaction.findEarliestChargedTransactionByOrderId orderId >>= fromMaybeM (InvalidRequest "No transaction found for refund")
 
     whenJust req.requestedAmount $ \requestedAmount -> do
       unless (requestedAmount.currency == transaction.currency) $
@@ -553,10 +555,12 @@ fetchPaymentRefundRequestInfo h refreshRefunds rideId = do
         ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
         booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
         driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
+        let commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity refundRequest.merchantOperatingCityId
         let refreshStripeRefundReq =
               DPayment.RefreshStripeRefundReq
                 { orderId = refundRequest.orderId,
-                  driverAccountId
+                  driverAccountId,
+                  merchantOpCityId = commonMerchantOperatingCityId
                 }
         result <- SPayment.refreshStripeRefund refundRequest.merchantId refundRequest.merchantOperatingCityId booking.paymentMode refreshStripeRefundReq
         let updStatus = castRefundRequestStatus result.status
@@ -617,7 +621,7 @@ getPaymentGetDueAmount ::
 getPaymentGetDueAmount (mbPersonId, _) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  riderConfig <- runInReplica $ QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
   let excludedPurposes = case riderConfig >>= (.duesExcludedPaymentPurposes) of
         Nothing -> [] -- No config = don't exclude anything
         Just textList -> mapMaybe (readMaybe . Text.unpack) textList :: [DPI.PaymentPurpose]
@@ -695,7 +699,7 @@ postPaymentClearDues (mbPersonId, merchantId) req = do
   currency <- duesResp.currency & fromMaybeM (InvalidRequest "Currency required when dues present")
 
   -- 2. Get failed invoices to link as parents (same exclusion as Get Dues: config-based)
-  riderConfig <- runInReplica $ QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
   let excludedPurposes = case riderConfig >>= (.duesExcludedPaymentPurposes) of
         Nothing -> [] -- No config = don't exclude anything
         Just textList -> mapMaybe (readMaybe . Text.unpack) textList :: [DPI.PaymentPurpose]

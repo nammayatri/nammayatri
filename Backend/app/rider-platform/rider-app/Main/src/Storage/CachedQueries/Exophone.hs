@@ -14,6 +14,10 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Exophone
+  {-# WARNING
+    "This module contains direct calls to the table and redis. \
+  \ Use Storage.ConfigPilot.Config.Exophone (getConfig) instead for reads."
+    #-}
   ( create,
     findByPhone,
     findAllByMerchantOperatingCityId,
@@ -23,6 +27,7 @@ module Storage.CachedQueries.Exophone
     clearCache,
     findByPrimaryPhone,
     findByMerchantOperatingCityIdAndService,
+    updateByPrimaryKey,
   )
 where
 
@@ -118,3 +123,9 @@ updateAffectedPhones = Queries.updateAffectedPhones
 
 deleteByMerchantOperatingCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m ()
 deleteByMerchantOperatingCityId = Queries.deleteByMerchantOperatingCityId
+
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Exophone -> m ()
+updateByPrimaryKey cfg = do
+  Queries.updateByPrimaryKey cfg
+  exophones <- Queries.findAllByMerchantOperatingCityId cfg.merchantOperatingCityId
+  clearCache cfg.merchantOperatingCityId exophones

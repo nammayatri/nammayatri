@@ -39,6 +39,7 @@ data SpecialLocationFull = SpecialLocationFull
     createdAt :: UTCTime,
     priority :: Int,
     enabled :: Bool,
+    isOpenMarketEnabled :: Bool,
     isQueueEnabled :: Maybe Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
@@ -122,19 +123,19 @@ buildSpecialLocationWithGates specialLocation = do
   gates <- Esq.runInReplica $ QGI.findAllGatesBySpecialLocationIdWithoutGeoJson specialLocation.id
   pure specialLocation {D.gates = map (\(GD.GateInfo {..}) -> D.GatesInfo {..}) gates}
 
-fullSpecialLocationRedisKey :: Text
-fullSpecialLocationRedisKey = "SpecialLocation:Full"
+fullSpecialLocationRedisKey :: Text -> Text
+fullSpecialLocationRedisKey city = "SpecialLocation:Full:" <> city
 
-specialLocationWarriorRedisKey :: Text -> Text
-specialLocationWarriorRedisKey category = "SpecialLocation:Warrior" <> category
+specialLocationWarriorRedisKey :: Text -> Text -> Text
+specialLocationWarriorRedisKey category mocId = "SpecialLocation:Warrior:" <> category <> ":" <> mocId
 
 findFullSpecialLocationsByMerchantOperatingCityId :: (Transactionable m, CacheFlow m r) => Text -> m [SpecialLocationFull]
 findFullSpecialLocationsByMerchantOperatingCityId mocId = do
-  Hedis.safeGet fullSpecialLocationRedisKey >>= \case
+  Hedis.safeGet (fullSpecialLocationRedisKey mocId) >>= \case
     Just a -> pure a
     Nothing -> do
       specialLocations <- findFullSpecialLocationsByMerchantOperatingCityId' mocId
-      Hedis.set fullSpecialLocationRedisKey specialLocations
+      Hedis.set (fullSpecialLocationRedisKey mocId) specialLocations
       pure specialLocations
 
 findFullSpecialLocationsByMerchantOperatingCityId' :: (Transactionable m, CacheFlow m r) => Text -> m [SpecialLocationFull]
@@ -176,13 +177,35 @@ findAllSpecialLocationsWithGeoJSON mocId mbLimit mbOffset mbLocationType = do
       return (specialLocation, F.getGeomGeoJSON)
   mapM makeFullSpecialLocation mbRes
 
+findAllSpecialLocationsWithGeoJSONAllCities ::
+  (Transactionable m) =>
+  Maybe Int ->
+  Maybe Int ->
+  Maybe D.SpecialLocationType ->
+  m [SpecialLocationFull]
+findAllSpecialLocationsWithGeoJSONAllCities mbLimit mbOffset mbLocationType = do
+  mbRes <-
+    Esq.findAll $ do
+      specialLocation <- from $ table @SpecialLocationT
+      where_ $
+        case mbLocationType of
+          Just locationType -> specialLocation ^. SpecialLocationLocationType ==. just (val locationType)
+          Nothing -> val True
+      orderBy [asc (specialLocation ^. SpecialLocationPriority)]
+
+      forM_ mbLimit (limit . fromIntegral)
+      forM_ mbOffset (offset . fromIntegral)
+
+      return (specialLocation, F.getGeomGeoJSON)
+  mapM makeFullSpecialLocation mbRes
+
 findSpecialLocationsWarriorByMerchantOperatingCityId :: (Transactionable m, CacheFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> m [D.SpecialLocation]
 findSpecialLocationsWarriorByMerchantOperatingCityId mocId category = do
-  Hedis.safeGet (specialLocationWarriorRedisKey category) >>= \case
+  Hedis.safeGet (specialLocationWarriorRedisKey category mocId) >>= \case
     Just a -> pure a
     Nothing -> do
       specialLocations <- findSpecialLocationsWarriorByMerchantOperatingCityId' mocId category
-      Hedis.set (specialLocationWarriorRedisKey category) specialLocations
+      Hedis.set (specialLocationWarriorRedisKey category mocId) specialLocations
       pure specialLocations
 
 findSpecialLocationsWarriorByMerchantOperatingCityId' :: (Transactionable m, CacheFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> m [D.SpecialLocation]

@@ -14,10 +14,15 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.BecknConfig
+  {-# WARNING
+    "This module contains direct calls to the table and redis. \
+  \ Use Storage.ConfigPilot.Config.BecknConfig (getConfig) instead for reads."
+    #-}
   ( findAll,
     findByMerchantIdDomainAndVehicle,
     findByMerchantIdDomainandMerchantOperatingCityId,
     findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback,
+    updateByPrimaryKey,
   )
 where
 
@@ -84,3 +89,6 @@ cacheMerchantIdDomainandMerchantOperatingCityId merchantId domain merchantOperat
 
 makeMerchantIdDomainandMerchantOperatingCityIdKey :: Id Merchant -> Text -> Id MerchantOperatingCity -> Text
 makeMerchantIdDomainandMerchantOperatingCityIdKey merchantId domain merchantOperatingCityId = "CachedQueries:BecknConfig:MerchantId:" <> merchantId.getId <> ":Domain:" <> domain <> ":MerchantOperatingCityId:" <> merchantOperatingCityId.getId
+
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => BecknConfig -> m ()
+updateByPrimaryKey = Queries.updateByPrimaryKey

@@ -1,12 +1,10 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.UI.FinanceInvoice
   ( getSubscriptionInvoices,
   )
 where
 
 import qualified API.Types.UI.FinanceInvoice as API
-import Data.Time (UTCTime (UTCTime), utctDay)
+import Data.Time (UTCTime)
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
@@ -16,11 +14,11 @@ import Kernel.Prelude (listToMaybe)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (fromMaybeM)
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtra
-import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
+import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import Storage.Beam.Payment ()
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SubscriptionPurchase as QSubscriptionPurchase
@@ -92,7 +90,7 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
       -- Point query: PaymentTransaction by payment_order_id (if present)
       mbPaymentMethod <- case invoice.paymentOrderId of
         Just orderId -> do
-          txns <- QPaymentTransaction.findAllByOrderId (Id orderId)
+          txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
           pure $ listToMaybe txns >>= (.paymentMethod)
         Nothing -> pure Nothing
 
@@ -115,10 +113,12 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
             taxableValue = invoice.subtotal,
             totalAmountPayable = invoice.totalAmount,
             gstRate = (.gstRate) <$> mbTaxTxn,
-            cgstRate = (\t -> t.gstRate / 2.0) <$> mbTaxTxn,
-            sgstRate = (\t -> t.gstRate / 2.0) <$> mbTaxTxn,
+            cgstRate = mbTaxTxn >>= mkComponentRate (Just . (.cgstAmount)),
+            sgstRate = mbTaxTxn >>= mkComponentRate (Just . (.sgstAmount)),
+            igstRate = mbTaxTxn >>= mkComponentRate (Just . (.igstAmount)),
             sgstAmount = (.sgstAmount) <$> mbTaxTxn,
             cgstAmount = (.cgstAmount) <$> mbTaxTxn,
+            igstAmount = (.igstAmount) <$> mbTaxTxn,
             totalGstAmount = (.totalGstAmount) <$> mbTaxTxn,
             paymentMethod = mbPaymentMethod,
             issuedToName = invoice.issuedToName,
@@ -133,3 +133,8 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
             lineItems = Just invoice.lineItems,
             totalCredit = mbTotalCredit
           }
+
+    mkComponentRate getAmount txn = do
+      componentAmount <- getAmount txn
+      guard (txn.taxableValue > 0)
+      pure $ realToFrac (componentAmount / txn.taxableValue) * 100.0

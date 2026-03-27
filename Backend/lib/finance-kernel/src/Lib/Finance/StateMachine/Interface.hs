@@ -27,9 +27,9 @@ data ActorInfo = ActorInfo
 defaultValidTransitions :: M.Map PaymentState (M.Map PaymentEvent PaymentState)
 defaultValidTransitions =
   M.fromList
-    [ (Pending, M.fromList [(Authorize, Authorized), (Fail, Failed), (Cancel, Cancelled)]),
-      (Authorized, M.fromList [(Capture, Captured), (Fail, Failed), (Cancel, Cancelled)]),
-      (Captured, M.fromList [(Settle, Settled), (Refund, Refunded), (Fail, Failed)]),
-      (Settled, M.fromList [(Refund, Refunded)])
-      -- Failed, Refunded, Cancelled are terminal states (no outgoing transitions)
+    [ (PENDING, M.fromList [(AUTHORIZE, AUTHORIZED), (FAIL, FAILED), (CANCEL, CANCELLED)]),
+      (AUTHORIZED, M.fromList [(CAPTURE, CAPTURED), (FAIL, FAILED), (CANCEL, CANCELLED)]),
+      (CAPTURED, M.fromList [(SETTLE, SETTLED), (REFUND, REFUNDED), (FAIL, FAILED)]),
+      (SETTLED, M.fromList [(REFUND, REFUNDED)])
+      -- FAILED, REFUNDED, CANCELLED are terminal states (no outgoing transitions)
     ]

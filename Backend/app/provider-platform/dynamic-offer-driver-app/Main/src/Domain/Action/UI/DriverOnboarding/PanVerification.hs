@@ -140,8 +140,8 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
         case mbPanVerificationService of
           Just VI.HyperVerge -> do
             let panReq = DO.DriverPanReq {panNumber = req.panNumber, imageId1 = Id req.imageId, imageId2 = Nothing, consent = True, nameOnCard = Nothing, dateOfBirth = Nothing, consentTimestamp = Nothing, validationStatus = Nothing, verifiedBy = Nothing, transactionId = Nothing, nameOnGovtDB = Nothing, docType = Nothing}
-            void $ checkIfGenuineReq panReq person
-            panCardDetails <- buildPanCard person Nothing Nothing Nothing (Just verifyBy) (Id req.imageId) req.panNumber (Just Documents.VALID)
+            mbNameFromGovtDB <- checkIfGenuineReq panReq person
+            panCardDetails <- buildPanCard person Nothing mbNameFromGovtDB Nothing (Just verifyBy) (Id req.imageId) req.panNumber (Just Documents.VALID)
             DPQuery.create panCardDetails
           Just VI.Idfy -> do
             void $ callIdfy person mdriverPanInformation driverDocument transporterConfig
@@ -200,6 +200,12 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
       let validateExtractedPan resp = case resp.extractedPan of
             Just extractedPan -> do
               let extractedPanNo = removeSpaceAndDash <$> extractedPan.id_number
+              when (verifyBy /= DPan.FRONTEND_SDK) $
+                unless (extractedPanNo == (Just $ removeSpaceAndDash req.panNumber)) $
+                  throwImageError (Id req.imageId) $
+                    ImageDocumentNumberMismatch
+                      (maybe "null" maskText extractedPanNo)
+                      (maskText req.panNumber)
               let extractedNameOnCard = extractedPan.name_on_card
               logInfo ("extractedNameOnCard: " <> show extractedNameOnCard)
               logInfo ("panName: " <> show panName)
@@ -245,7 +251,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
 
       pure Success
 
-    checkIfGenuineReq :: (ServiceFlow m r) => API.Types.UI.DriverOnboardingV2.DriverPanReq -> Person.Person -> m ()
+    checkIfGenuineReq :: (ServiceFlow m r) => API.Types.UI.DriverOnboardingV2.DriverPanReq -> Person.Person -> m (Maybe Text)
     checkIfGenuineReq API.Types.UI.DriverOnboardingV2.DriverPanReq {..} person = do
       (txnId, valStatus) <- CME.fromMaybeM (Image.throwValidationError (Just imageId1) Nothing (Just "Cannot find necessary data for SDK response!!!!")) (return $ (,) <$> transactionId <*> validationStatus)
       hvResp <- Verification.verifySdkResp person.merchantId merchantOpCityId (VI.VerifySdkDataReq txnId)
@@ -260,7 +266,8 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
           when (isJust dateOfBirth && (formatUTCToDateString <$> dateOfBirth) /= (T.unpack <$> dobFromResp)) $ do
             logDebug $ "date of Birth and dob is : " <> show (formatUTCToDateString <$> dateOfBirth) <> " " <> show dobFromResp
             void $ Image.throwValidationError (Just imageId1) Nothing Nothing
-        _ -> void $ Image.throwValidationError (Just imageId1) Nothing Nothing
+          pure nameFromResp
+        _ -> Image.throwValidationError (Just imageId1) Nothing Nothing >> pure Nothing
       where
         formatUTCToDateString :: UTCTime -> String
         formatUTCToDateString = formatTime defaultTimeLocale "%d-%m-%Y"

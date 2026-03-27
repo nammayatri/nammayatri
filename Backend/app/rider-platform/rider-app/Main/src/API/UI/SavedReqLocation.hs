@@ -32,6 +32,7 @@ import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 type API =
   "savedLocation"
@@ -53,10 +54,10 @@ handler =
     :<|> deleteSavedReqLocation
 
 createSavedReqLocation :: (Id Person.Person, Id Merchant.Merchant) -> DSavedReqLocation.CreateSavedReqLocationReq -> FlowHandler APISuccess.APISuccess
-createSavedReqLocation (riderId, _) = withFlowHandlerAPI . withPersonIdLogTag riderId . DSavedReqLocation.createSavedReqLocation riderId
+createSavedReqLocation (riderId, _) = withFlowHandlerAPIPersonId riderId . withPersonIdLogTag riderId . DSavedReqLocation.createSavedReqLocation riderId
 
 getSavedReqLocations :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DSavedReqLocation.SavedReqLocationsListRes
-getSavedReqLocations (riderId, _) = withFlowHandlerAPI . withPersonIdLogTag riderId $ DSavedReqLocation.getSavedReqLocations riderId
+getSavedReqLocations (riderId, _) = withFlowHandlerAPIPersonId riderId . withPersonIdLogTag riderId $ DSavedReqLocation.getSavedReqLocations riderId
 
 deleteSavedReqLocation :: (Id Person.Person, Id Merchant.Merchant) -> Text -> FlowHandler APISuccess.APISuccess
-deleteSavedReqLocation (riderId, _) = withFlowHandlerAPI . withPersonIdLogTag riderId . DSavedReqLocation.deleteSavedReqLocation riderId
+deleteSavedReqLocation (riderId, _) = withFlowHandlerAPIPersonId riderId . withPersonIdLogTag riderId . DSavedReqLocation.deleteSavedReqLocation riderId

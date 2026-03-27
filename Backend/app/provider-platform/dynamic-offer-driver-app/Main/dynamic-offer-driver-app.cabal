@@ -74,6 +74,7 @@ library
       API.Internal.ReportACIssue
       API.Internal.ReportIssue
       API.Internal.Ride
+      API.Internal.SendSMS
       API.Internal.SpecialLocationList
       API.Internal.SpecialLocationUpsert
       API.Internal.StopDetection
@@ -101,6 +102,7 @@ library
       API.UI.Payment
       API.UI.Performance
       API.UI.Plan
+      API.UI.QueueRank
       API.UI.Rating
       API.UI.Registration
       API.UI.Ride
@@ -195,6 +197,7 @@ library
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
       Domain.Action.Dashboard.Management.SosMedia
+      Domain.Action.Dashboard.Management.SpecialZoneQueue
       Domain.Action.Dashboard.Management.System
       Domain.Action.Dashboard.Management.VehicleInfo
       Domain.Action.Dashboard.Management.Volunteer
@@ -237,6 +240,7 @@ library
       Domain.Action.Internal.ReportACIssue
       Domain.Action.Internal.ReportIssue
       Domain.Action.Internal.Ride
+      Domain.Action.Internal.SendSMS
       Domain.Action.Internal.SpecialLocationUpsert
       Domain.Action.Internal.StopDetection
       Domain.Action.Internal.ViolationDetection
@@ -308,6 +312,7 @@ library
       Domain.Action.UI.PlaceNameCache
       Domain.Action.UI.Plan
       Domain.Action.UI.PriceBreakup
+      Domain.Action.UI.QueueRank
       Domain.Action.UI.Rating
       Domain.Action.UI.Reels
       Domain.Action.UI.ReferralPayout
@@ -331,6 +336,7 @@ library
       Domain.Action.UI.Sos
       Domain.Action.UI.SpecialLocation
       Domain.Action.UI.SpecialLocationWarrior
+      Domain.Action.UI.SpecialZoneQueue
       Domain.Action.UI.StclMembership
       Domain.Action.UI.SubscriptionTransaction
       Domain.Action.UI.TicketKapture
@@ -437,6 +443,7 @@ library
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPoolUnified
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
+      SharedLogic.Allocator.Jobs.Settlement.SettlementReportIngestion
       SharedLogic.Allocator.Jobs.Subscription.ExpireSubscriptionPurchase
       SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
       SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
@@ -474,6 +481,7 @@ library
       SharedLogic.External.LocationTrackingService.API.DriverLocation
       SharedLogic.External.LocationTrackingService.API.DriversLocation
       SharedLogic.External.LocationTrackingService.API.EndRide
+      SharedLogic.External.LocationTrackingService.API.ManualQueueRemove
       SharedLogic.External.LocationTrackingService.API.NearBy
       SharedLogic.External.LocationTrackingService.API.RideDetails
       SharedLogic.External.LocationTrackingService.API.StartRide
@@ -515,6 +523,7 @@ library
       SharedLogic.SearchTry
       SharedLogic.SearchTryLocker
       SharedLogic.SpecialLocationUpsert
+      SharedLogic.SpecialZoneDriverDemand
       SharedLogic.SyncRide
       SharedLogic.TollsDetector
       SharedLogic.Type
@@ -766,6 +775,7 @@ library
       Storage.Queries.SearchRequestExtra
       Storage.Queries.SearchRequestForDriverExtra
       Storage.Queries.SearchTryExtra
+      Storage.Queries.SpecialZoneQueueRequestExtra
       Storage.Queries.StationExtra
       Storage.Queries.Status
       Storage.Queries.StclMembershipExtra
@@ -892,6 +902,7 @@ library
       API.Action.Dashboard.Management.Revenue
       API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.Management.SosMedia
+      API.Action.Dashboard.Management.SpecialZoneQueue
       API.Action.Dashboard.Management.System
       API.Action.Dashboard.Management.VehicleInfo
       API.Action.Dashboard.Management.Volunteer
@@ -938,6 +949,7 @@ library
       API.Action.UI.Sos
       API.Action.UI.SpecialLocation
       API.Action.UI.SpecialLocationWarrior
+      API.Action.UI.SpecialZoneQueue
       API.Action.UI.StclMembership
       API.Action.UI.SubscriptionTransaction
       API.Action.UI.Tokenization
@@ -1010,6 +1022,7 @@ library
       API.Types.UI.SocialLogin
       API.Types.UI.Sos
       API.Types.UI.SpecialLocationWarrior
+      API.Types.UI.SpecialZoneQueue
       API.Types.UI.StclMembership
       API.Types.UI.SubscriptionTransaction
       API.Types.UI.Tokenization
@@ -1179,6 +1192,7 @@ library
       Domain.Types.SearchRequest
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchTry
+      Domain.Types.SpecialZoneQueueRequest
       Domain.Types.Station
       Domain.Types.StclMembership
       Domain.Types.StopInformation
@@ -1356,6 +1370,7 @@ library
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchTry
+      Storage.Beam.SpecialZoneQueueRequest
       Storage.Beam.Station
       Storage.Beam.StclMembership
       Storage.Beam.StopInformation
@@ -1589,6 +1604,7 @@ library
       Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.OrphanInstances.SearchRequestForDriver
       Storage.Queries.OrphanInstances.SearchTry
+      Storage.Queries.OrphanInstances.SpecialZoneQueueRequest
       Storage.Queries.OrphanInstances.Station
       Storage.Queries.OrphanInstances.StclMembership
       Storage.Queries.OrphanInstances.SubscriptionPurchase
@@ -1634,6 +1650,7 @@ library
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchTry
+      Storage.Queries.SpecialZoneQueueRequest
       Storage.Queries.Station
       Storage.Queries.StclMembership
       Storage.Queries.StopInformation

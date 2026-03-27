@@ -20,11 +20,13 @@ import qualified Beckn.Types.Core.Taxi.API.OnTrack as OnTrack
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Domain.Action.Beckn.OnTrack as DOnTrack
 import Environment
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Beckn.Ack
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import Storage.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import qualified Storage.Queries.Booking as QRB
 import Tools.Error
 import TransactionLogs.PushLogs
@@ -40,6 +42,7 @@ onTrack ::
   FlowHandler AckResponse
 onTrack _ reqV2 = withFlowHandlerBecknAPI do
   transactionId <- Utils.getTransactionId reqV2.onTrackReqContext
+  L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "onTrackAPIV2" $ "Received onTrack API call:-" <> show reqV2
     mbDOnTrackReq <- ACL.buildOnTrackReqV2 reqV2

@@ -51,7 +51,12 @@ data RiderDetailsRes = RiderDetailsRes {firstName :: Kernel.Prelude.Maybe Kernel
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SosDetailsMaybeRes = SosDetailsMaybeRes {details :: Kernel.Prelude.Maybe SosDetailsRes, triggerSource :: Kernel.Prelude.Maybe ExternalSOSTriggerSource, riderDetails :: Kernel.Prelude.Maybe RiderDetailsRes}
+data SosDetailsMaybeRes = SosDetailsMaybeRes
+  { details :: Kernel.Prelude.Maybe SosDetailsRes,
+    triggerSource :: Kernel.Prelude.Maybe ExternalSOSTriggerSource,
+    riderDetails :: Kernel.Prelude.Maybe RiderDetailsRes,
+    trackingUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

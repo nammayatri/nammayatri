@@ -22,10 +22,14 @@ create = createWithKV
 createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Finance.Domain.Types.CurrentState.CurrentState] -> m ())
 createMany = traverse_ create
 
-findByEntity :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Lib.Finance.Domain.Types.CurrentState.CurrentState))
+findByEntity ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Lib.Finance.Domain.Types.StateTransition.PaymentEntityType -> Kernel.Prelude.Text -> m (Maybe Lib.Finance.Domain.Types.CurrentState.CurrentState))
 findByEntity entityType entityId = do findOneWithKV [Se.And [Se.Is Beam.entityType $ Se.Eq entityType, Se.Is Beam.entityId $ Se.Eq entityId]]
 
-updateState :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Finance.Domain.Types.StateTransition.PaymentState -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
+updateState ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Lib.Finance.Domain.Types.StateTransition.PaymentState -> Lib.Finance.Domain.Types.StateTransition.PaymentEntityType -> Kernel.Prelude.Text -> m ())
 updateState currentState entityType entityId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.currentState currentState, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.entityType $ Se.Eq entityType, Se.Is Beam.entityId $ Se.Eq entityId]]

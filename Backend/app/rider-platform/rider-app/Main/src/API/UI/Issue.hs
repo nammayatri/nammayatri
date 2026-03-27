@@ -56,9 +56,10 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQPerson
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Getter (getConfig)
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingExtra as QBE
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
@@ -123,7 +124,7 @@ castFindFRFSTicketBookingById ticketBookingId = do
   frfsTicketBooking <- runInReplica $ QFTB.findById (cast ticketBookingId)
   mapM
     ( \booking -> do
-        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing booking.quoteId
+        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
         let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
         return $ castFRFSTicketBooking fareParameters booking
     )
@@ -388,7 +389,7 @@ reportIssue driverOfferBaseUrl driverOfferApiKey bppRideId issueReportType = do
 buildMerchantConfig :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Maybe (Id Common.Person) -> Flow MerchantConfig
 buildMerchantConfig merchantId merchantOpCityId _mbPersonId = do
   merchant <- CQM.findById (cast merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  riderConfig <- QRC.findByMerchantOperatingCityId (cast merchantOpCityId) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   return
     MerchantConfig
       { mediaFileSizeUpperLimit = merchant.mediaFileSizeUpperLimit,
@@ -443,7 +444,7 @@ createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ d
     throwError $ InvalidRequest "Only one issue can be raised at a time."
 
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
 
   mbIGMReq <- case (req.rideId, req.ticketBookingId) of
     (Just rideId, _) -> buildOnDemandIGMIssueReq rideId
@@ -500,7 +501,7 @@ createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ d
       pure $ Just issueId
 
     processTicketBookingIssue ticketBooking category option merchant person igmConfig reqBody = do
-      quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing ticketBooking.quoteId
+      quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId ticketBooking.quoteId
       let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
       frfsTicketBookingDetails <- fromFRFSTicketBooking ticketBooking fareParameters
       merchantOperatingCity <- CQMOC.findById frfsTicketBookingDetails.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show frfsTicketBookingDetails.merchantOperatingCityId)
@@ -561,7 +562,7 @@ igmIssueStatus (personId, merchantId) = withFlowHandlerAPI $ do
         then QB.findById (Id issue.bookingId) >>= fromMaybeM (BookingNotFound issue.bookingId) >>= \b -> pure (fromBooking b, b.providerUrl)
         else
           QFTB.findById (Id issue.bookingId) >>= fromMaybeM (TicketBookingNotFound issue.bookingId) >>= \tb -> do
-            quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing tb.quoteId
+            quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId tb.quoteId
             let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
             liftA2 (,) (fromFRFSTicketBooking tb fareParameters) (parseBaseUrl tb.bppSubscriberUrl)
 
@@ -590,7 +591,7 @@ resolveIGMIssue (personId, merchantId) issueReportId response rating = do
           return $ fromBooking booking
         Spec.PUBLIC_TRANSPORT -> do
           frfsBooking <- QFTB.findById (Id igmIssue.bookingId) >>= fromMaybeM (FRFSTicketBookingNotFound igmIssue.bookingId)
-          quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing frfsBooking.quoteId
+          quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId frfsBooking.quoteId
           let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
           fromFRFSTicketBooking frfsBooking fareParameters
       option <- maybe (return Nothing) (`QIO.findById` CUSTOMER) issueReport.optionId

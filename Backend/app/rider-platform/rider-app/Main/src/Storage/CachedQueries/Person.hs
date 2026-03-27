@@ -15,11 +15,14 @@
 module Storage.CachedQueries.Person
   ( findCityInfoById,
     updateCityInfoById,
+    updateCustomerTags,
     findPersonStatsById,
     clearPSCache,
+    clearCityInfoCache,
   )
 where
 
+import Data.List (nub)
 import Domain.Action.UI.Person
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
@@ -29,6 +32,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Beckn.Context (City)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Types as YTypes
 import qualified Storage.Queries.Person as Queries
 import qualified Storage.Queries.PersonStats as QPS
 
@@ -41,16 +45,23 @@ findCityInfoById personId = do
 updateCityInfoById :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id Person -> City -> Id DMOC.MerchantOperatingCity -> m ()
 updateCityInfoById personId city merchantOperatingCityId = do
   Queries.updateCityInfoById personId city merchantOperatingCityId
-  clearCache personId
+  clearCityInfoCache personId
+
+updateCustomerTags :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe [YTypes.TagNameValueExpiry] -> Id Person -> m ()
+updateCustomerTags tags personId = do
+  let tagsNubbed = nub <$> tags
+  Queries.updateCustomerTags tagsNubbed personId
+  clearCityInfoCache personId
 
 cachePersonCityInfo :: (CacheFlow m r, MonadFlow m) => PersonCityInformation -> m ()
 cachePersonCityInfo personCityInfo = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey personCityInfo.personId
-  Hedis.setExp idKey personCityInfo expTime
+      tagsNubbed = (personCityInfo {customerNammaTags = nub <$> personCityInfo.customerNammaTags} :: PersonCityInformation)
+  Hedis.setExp idKey tagsNubbed expTime
 
-clearCache :: (CacheFlow m r, MonadFlow m) => Id Person -> m ()
-clearCache personId = do
+clearCityInfoCache :: (CacheFlow m r, MonadFlow m) => Id Person -> m ()
+clearCityInfoCache personId = do
   Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeIdKey personId)
 
 makeIdKey :: Id Person -> Text
