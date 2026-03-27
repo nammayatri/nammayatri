@@ -96,7 +96,8 @@ mkFP bf dkf ekf =
       driverCancellationPenaltyAmount = Nothing,
       paymentProcessingFee = Nothing,
       rideVat = Nothing,
-      tollVat = Nothing
+      tollVat = Nothing,
+      airportConvenienceFee = Nothing
     }
 
 -- Field setter helpers to avoid ambiguous record update with DuplicateRecordFields
