@@ -32,6 +32,10 @@ module Domain.Action.ProviderPlatform.Management.NammaTag
     getNammaTagConfigPilotGetUiTableData,
     postNammaTagConfigPilotGetPatchedElement,
     getNammaTagAppDynamicLogicDomainsAndEvents,
+    getNammaTagTagAll,
+    getNammaTagConfigPilotAlwaysOnList,
+    getNammaTagTagDetails,
+    getNammaTagQueryDetails,
   )
 where
 
