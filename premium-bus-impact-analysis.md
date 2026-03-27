@@ -40,7 +40,7 @@
 | Issue | Finding ID | Actual Count | Riders Affected | % of Total Riders |
 |---|---|---|---|---|
 | Orphaned payments (charged, no ticket) | F14/F16 | 97 payments | 96 riders | 0.06% |
-| Post-departure bookings (<10min validity) | PB-3 | 6,066 bookings | 2,976 riders | 1.95% |
+| Post-departure bookings (<10 min validity) | PB-3 | 6,066 bookings | 2,976 riders | 1.95% |
 | Pending/abandoned bookings | — | 79,410 bookings | 59,186 riders | 15.85% |
 | Zero cancellations processed | F7 | 0 cancelled | — | Cancellation flow may be broken entirely |
 | Refunds completed | — | 0 refunded | — | No refunds processed since launch |
@@ -169,8 +169,8 @@ WHERE vehicle_type = 'BUS'
   AND created_at >= '2026-03-11'
 ```
 
-**Expected:** Non-zero = users who booked buses that departed <10min after booking
-**Post-fix target:** Zero (booking rejected if departure < 10min away)
+**Expected:** Non-zero = users who booked buses that departed <10 min after booking
+**Post-fix target:** Zero (booking rejected if departure < 10 min away)
 
 ---
 
