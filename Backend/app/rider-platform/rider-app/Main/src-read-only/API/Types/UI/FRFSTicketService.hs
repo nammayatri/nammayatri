@@ -156,6 +156,7 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
+    observingFailures :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     price :: Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     quantity :: Kernel.Prelude.Int,

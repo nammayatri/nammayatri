@@ -30,6 +30,7 @@ module SharedLogic.PTCircuitBreaker
     parseCircuitBreakerConfig,
     vehicleCategoryToPTMode,
     defaultCircuitBreakerConfig,
+    checkObservingFailures,
     -- New exports for top-level caching
     makeFareCacheKey,
     clearFareCache,
@@ -60,7 +61,8 @@ import qualified Storage.Queries.PTCircuitBreakerHistory as QPTCBH
 -- | Threshold configuration for triggering circuit breaker
 data ThresholdConfig = ThresholdConfig
   { failureCount :: Int,
-    windowSeconds :: Int
+    windowSeconds :: Int,
+    warningFailureCount :: Maybe Int -- Optional warning threshold, below failureCount, for surfacing degraded service
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
@@ -86,14 +88,14 @@ defaultCircuitBreakerConfig =
     { fare =
         Just
           APICircuitBreakerConfig
-            { thresholds = [ThresholdConfig 120 60],
+            { thresholds = [ThresholdConfig 120 60 Nothing],
               canaryAllowedPerWindow = 120,
               canaryWindowSeconds = 60
             },
       booking =
         Just
           APICircuitBreakerConfig
-            { thresholds = [ThresholdConfig 120 60],
+            { thresholds = [ThresholdConfig 120 60 Nothing],
               canaryAllowedPerWindow = 120,
               canaryWindowSeconds = 60
             }
@@ -428,6 +430,45 @@ resetProbeCounter ::
 resetProbeCounter mode apiType mocId = do
   let key = mkProbeCounterKey mocId mode apiType
   void $ Hedis.del key
+
+-- | Check if failure count has crossed the warning threshold (but not yet the full circuit-open threshold).
+-- Returns True when service degradation should be surfaced to the user (observingFailures).
+checkObservingFailures ::
+  (MonadFlow m, Hedis.HedisFlow m r) =>
+  PTMode ->
+  APIType ->
+  Id MerchantOperatingCity ->
+  CircuitBreakerConfig ->
+  m Bool
+checkObservingFailures mode apiType mocId config = do
+  let apiConfig = case apiType of
+        FareAPI -> config.fare
+        BookingAPI -> config.booking
+  case apiConfig of
+    Nothing -> return False
+    Just cfg -> checkWarningThresholds mocId mode apiType cfg.thresholds
+
+-- | Internal helper: check warning threshold for each configured threshold window
+checkWarningThresholds ::
+  (MonadFlow m, Hedis.HedisFlow m r) =>
+  Id MerchantOperatingCity ->
+  PTMode ->
+  APIType ->
+  [ThresholdConfig] ->
+  m Bool
+checkWarningThresholds mocId mode apiType thresholds = do
+  now <- getCurrentTime
+  let key = mkFailureKey mocId mode apiType
+  results <- forM thresholds $ \threshold ->
+    case threshold.warningFailureCount of
+      Nothing -> return False
+      Just warningCount -> do
+        let windowStart = addUTCTime (fromIntegral (negate threshold.windowSeconds)) now
+            minScore = utcToMilliseconds windowStart
+            maxScore = utcToMilliseconds now
+        count <- Hedis.zCount key minScore maxScore
+        return (fromIntegral count >= warningCount)
+  return $ or results
 
 -- | Get the first threshold's failure count from config (used for 2x probing)
 getFirstThresholdFailureCount :: Maybe APICircuitBreakerConfig -> Int

@@ -75,6 +75,7 @@ types:
     eventDiscountAmount: Maybe HighPrecMoney
     integratedBppConfigId: Id IntegratedBPPConfig
     categories: [CategoryInfoResponse]
+    observingFailures: Maybe Bool
 
     derive: "Show"
 
