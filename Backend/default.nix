@@ -1,4 +1,7 @@
-{ inputs, ... }:
+{ ... }:
+let
+  sources = import ../nix/sources.nix;
+in
 {
   imports = [
     ./nix/debug.nix
@@ -11,7 +14,6 @@
   ];
   perSystem = { config, self', pkgs, lib, system, ... }:
     let
-      sources = import ./nix/sources.nix;
       # Packages to exclude from CI builds (not needed for production deployment)
       ciExcludedPackages = [
         "hunit-tests"
@@ -96,6 +98,17 @@
           maintainers = with lib.maintainers; [ patrickbr ];
         };
       };
+      cac_client = pkgs.rustPlatform.buildRustPackage {
+        pname = "cac_client";
+        version = "0.0.1";
+        src = sources.haskell-cac + "/rust/cac_client";
+        cargoLock.lockFile = sources.haskell-cac + "/rust/cac_client/Cargo.lock";
+        nativeBuildInputs = [ pkgs.pkg-config ];
+        buildInputs = [ pkgs.openssl pkgs.libiconv ]
+          ++ lib.optionals pkgs.stdenv.isDarwin (with pkgs.darwin.apple_sdk.frameworks; [
+            Security SystemConfiguration
+          ]);
+      };
       localBuild = builtins.getEnv "NIX_LOCAL_BUILD" != "";
     in
     {
@@ -109,11 +122,8 @@
 
       haskellProjects.default = {
         projectRoot = ./.;
-        imports = [
-          inputs.beckn-gateway.haskellFlakeProjectModules.output
-          # inputs.namma-dsl.haskellFlakeProjectModules.output
-          inputs.haskell-cac.haskellFlakeProjectModules.output
-        ];
+        # Inlined from beckn-gateway, shared-kernel, euler-hs, and haskell-cac
+        # haskellFlakeProjectModules (previously imported as flake inputs).
         # "packages" and "apps" are excluded from autoWire so we can filter out
         # ciExcludedPackages from the flake's top-level outputs (used by devour-flake in om ci run).
         autoWire = [ "checks" ];
@@ -135,6 +145,7 @@
             ]);
         };
         packages = {
+          # Local to nammayatri
           amazonka.source = sources.amazonka-git + "/lib/amazonka";
           amazonka-core.source = sources.amazonka-git + "/lib/amazonka-core";
           amazonka-test.source = sources.amazonka-git + "/lib/amazonka-test";
@@ -143,10 +154,55 @@
           amazonka-ses.source = sources.amazonka-git + "/lib/services/amazonka-ses";
           streamly.source = "0.8.3";
           unicode-data.source = "0.3.1";
-          namma-dsl.source = inputs.namma-dsl + /lib/namma-dsl;
+          namma-dsl.source = sources.namma-dsl + "/lib/namma-dsl";
           json-logic-hs.source = sources.json-logic-hs;
           google-cloud-pubsub.source = sources.google-cloud-haskell + "/lib/google-cloud-pubsub";
           google-cloud-common.source = sources.google-cloud-haskell + "/lib/google-cloud-common";
+
+          # From haskell-cac
+          haskell-cac.source = sources.haskell-cac + "/haskell";
+
+          # From beckn-gateway
+          beckn-gateway.source = sources.beckn-gateway + "/app/gateway";
+          mock-registry.source = sources.beckn-gateway + "/app/mock-registry";
+
+          # From shared-kernel
+          mobility-core.source = sources.shared-kernel + "/lib/mobility-core";
+          passetto-client.source = sources.passetto-hs + "/client";
+          passetto-core.source = sources.passetto-hs + "/core";
+
+          # From euler-hs
+          euler-hs.source = sources.euler-hs;
+          hedis.source = sources.hedis;
+          cereal.source = sources.cereal;
+          servant-mock.source = sources.servant-mock;
+          tinylog.source = sources.tinylog;
+
+          # From euler-events-hs
+          euler-events-hs.source = sources.euler-events-hs;
+
+          # From juspay-extra
+          juspay-extra.source = sources.juspay-extra;
+
+          # From sequelize (+ beam deps)
+          sequelize.source = sources.sequelize;
+          beam-core.source = sources.beam + "/beam-core";
+          beam-migrate.source = sources.beam + "/beam-migrate";
+          beam-sqlite.source = sources.beam + "/beam-sqlite";
+          beam-postgres.source = sources.beam + "/beam-postgres";
+          beam-mysql.source = sources.beam-mysql;
+          mysql-haskell.source = sources.mysql-haskell;
+          bytestring-lexing.source = sources.bytestring-lexing;
+          word24.source = sources.word24;
+
+          # From clickhouse-haskell
+          clickhouse-haskell.source = sources.clickhouse-haskell;
+
+          # From prometheus-haskell
+          prometheus-client.source = sources.prometheus-haskell + "/prometheus-client";
+          prometheus-metrics-ghc.source = sources.prometheus-haskell + "/prometheus-metrics-ghc";
+          prometheus-proc.source = sources.prometheus-haskell + "/prometheus-proc";
+          wai-middleware-prometheus.source = sources.prometheus-haskell + "/wai-middleware-prometheus";
         };
         settings = {
           alchemist.custom = cacConfig;
@@ -194,6 +250,47 @@
           cryptostore.check = false;
           google-cloud-pubsub.check = false;
           google-cloud-common.check = false;
+
+          # From haskell-cac: cac_client C library
+          cac_client.custom = _: cac_client;
+
+          # From shared-kernel settings
+          generic-deriving.check = false;
+
+          # From euler-hs settings
+          hedis = { jailbreak = true; check = false; };
+          tinylog = { jailbreak = true; check = false; };
+          servant-mock.check = false;
+          cereal.check = false;
+
+          # From sequelize/beam deps
+          bytestring-lexing = { jailbreak = true; check = false; };
+          beam-core.jailbreak = true;
+          beam-migrate.jailbreak = true;
+          beam-mysql.jailbreak = true;
+          beam-sqlite = { jailbreak = true; check = false; };
+          beam-postgres = { jailbreak = true; check = false; };
+          mysql-haskell = { jailbreak = true; check = false; };
+          word24 = { jailbreak = true; check = false; broken = false; };
+          tcp-streams = { jailbreak = true; check = false; };
+          wire-streams = { jailbreak = true; check = false; };
+          binary-parsers = { jailbreak = true; check = false; };
+
+          # From prometheus-haskell
+          prometheus-client.check = false;
+          wai-middleware-prometheus.check = false;
+
+          # Disable checks for upstream packages with version bound issues
+          servant.check = false;
+          servant-server.check = false;
+          servant-client.check = false;
+          servant-client-core.check = false;
+          euler-hs.check = false;
+          euler-events-hs.check = false;
+          passetto-client.check = false;
+          passetto-core.check = false;
+          sequelize.check = false;
+          clickhouse-haskell.check = false;
         };
       };
 
