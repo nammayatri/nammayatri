@@ -64,7 +64,8 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
             minWalletAmountForCashRides = Nothing,
             minimumWalletPayoutAmount = 0,
             payoutCutOffDays = 7,
-            payoutFee = Nothing
+            payoutFee = Nothing,
+            earningsBalanceWarningPct = Nothing
           }
   parseFieldWithDefaultM "transporterConfig" "driverWalletConfig" merchantOperatingCityId def parseDriverWalletConfigWithDefault mbVal
 

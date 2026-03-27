@@ -125,6 +125,7 @@ data HandlerEnv = HandlerEnv
     serviceClickhouseCfg :: ClickhouseCfg,
     kafkaClickhouseCfg :: ClickhouseCfg,
     broadcastMessageTopic :: KafkaTopic,
+    fleetCommunicationDispatchTopic :: Text,
     selfBaseUrl :: BaseUrl,
     appBackendBapInternal :: AppBackendBapInternal,
     mlPricingInternal :: MLPricingInternal,

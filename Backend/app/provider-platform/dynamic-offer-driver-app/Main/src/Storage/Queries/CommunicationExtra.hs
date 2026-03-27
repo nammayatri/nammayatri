@@ -62,3 +62,27 @@ updateCommunication commId mbTitle mbBody mbHtmlBody mbContentType mbChannels mb
 
 deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Communication.Communication -> m ()
 deleteById commId = deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId commId)]
+
+findIdsByDomain ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Domain.Types.Communication.CommunicationDomain ->
+  m [Kernel.Types.Id.Id Domain.Types.Communication.Communication]
+findIdsByDomain domain =
+  findAllWithKV [Se.Is Beam.domain $ Se.Eq domain]
+    <&> map (.id)
+
+findIdsByDomainWithLimitOffset ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Domain.Types.Communication.CommunicationDomain ->
+  Maybe Int ->
+  Maybe Int ->
+  m [Kernel.Types.Id.Id Domain.Types.Communication.Communication]
+findIdsByDomainWithLimitOffset domain mbLimit mbOffset = do
+  let limitVal = min 200 $ fromMaybe 50 mbLimit
+      offsetVal = fromMaybe 0 mbOffset
+  findAllWithOptionsKV
+    [Se.Is Beam.domain $ Se.Eq domain]
+    (Se.Desc Beam.createdAt)
+    (Just limitVal)
+    (Just offsetVal)
+    <&> map (.id)

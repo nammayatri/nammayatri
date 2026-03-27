@@ -498,6 +498,7 @@ library
       SharedLogic.Finance.Prepaid
       SharedLogic.Finance.Reconciliation
       SharedLogic.Finance.Wallet
+      SharedLogic.FinancialCommunication
       SharedLogic.Fleet
       SharedLogic.FleetOperatorStats
       SharedLogic.FleetVehicleStats

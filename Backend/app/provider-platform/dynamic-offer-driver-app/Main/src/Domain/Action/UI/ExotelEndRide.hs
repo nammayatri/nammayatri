@@ -25,15 +25,12 @@ import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Sms.Config (SmsConfig)
-import Kernel.Storage.Clickhouse.Config
-import qualified Kernel.Storage.ClickhouseV2 as CHV2
-import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
-import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.PersonExtra as QPerson
 import qualified Storage.Queries.Ride as QRide
@@ -42,16 +39,12 @@ import Tools.Error
 type AckResp = AckResponse
 
 callBasedEndRide ::
-  ( EsqDBFlow m r,
+  ( EndRide.EndRideFlow m r,
+    EsqDBFlow m r,
     CacheFlow m r,
-    HasField "enableAPILatencyLogging" r Bool,
-    HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     EncFlow m r,
-    LT.HasLocationService m r,
     HasShortDurationRetryCfg r c,
-    HasKafkaProducer r,
-    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
     HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]

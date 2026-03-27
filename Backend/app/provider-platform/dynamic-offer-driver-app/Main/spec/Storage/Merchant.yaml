@@ -901,6 +901,7 @@ TransporterConfig:
       maxWalletPayoutsPerDay: Maybe Int
       minimumWalletPayoutAmount: HighPrecMoney
       minWalletAmountForCashRides: Maybe HighPrecMoney
+      earningsBalanceWarningPct: Maybe Int
       payoutCutOffDays: Int
       payoutFee: Maybe PayoutFeeConfig
       forceOnlineLedger: Maybe Bool
@@ -908,6 +909,8 @@ TransporterConfig:
     SubscriptionConfig:
       prepaidSubscriptionThreshold: Maybe HighPrecMoney
       fleetPrepaidSubscriptionThreshold: Maybe HighPrecMoney
+      subscriptionBalanceWarningPct: Maybe Int
+      fleetSubscriptionBalanceWarningPct: Maybe Int
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     GstBreakup:
       cgstPercentage: Maybe HighPrecMoney
@@ -1201,6 +1204,7 @@ TransporterConfig:
     driverSearchBlacklistDurationSeconds: Maybe Seconds
     driverRiderBlacklistDurationSeconds: Maybe Seconds
     tdsFromEmail: Maybe Text
+    enableFinancialNotifications: Maybe Bool
 
   beamType:
     currency: Maybe Currency

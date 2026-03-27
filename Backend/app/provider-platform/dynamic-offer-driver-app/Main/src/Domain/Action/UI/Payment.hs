@@ -101,6 +101,7 @@ import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.EventTracking as SEVT
 import SharedLogic.Finance.Prepaid
 import SharedLogic.Finance.Wallet
+import SharedLogic.FinancialCommunication (FinancialEventType (..), resolveFleetOwner, sendFinancialNotification)
 import SharedLogic.Merchant
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
@@ -185,6 +186,8 @@ getStatus ::
     MonadFlow m,
     JobCreatorEnv r,
     HasField "schedulerType" r SchedulerType,
+    HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -291,6 +294,8 @@ getStatusV2 ::
     MonadFlow m,
     JobCreatorEnv r,
     HasField "schedulerType" r SchedulerType,
+    HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -498,7 +503,9 @@ processPayment ::
     CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text
   ) =>
   Id DM.Merchant ->
   DP.Driver ->
@@ -530,7 +537,9 @@ processNonClearedDriverFees ::
     CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -549,7 +558,9 @@ processSubscriptionPurchasePayment ::
     EsqDBFlow m r,
     EncFlow m r,
     JobCreatorEnv r,
-    HasField "schedulerType" r SchedulerType
+    HasField "schedulerType" r SchedulerType,
+    HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -659,14 +670,37 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                   <> show (SPayment.roundToTwoDecimalPlaces creditAmount)
                   <> " is successful"
               prepaidRechargeTitle = "Recharge Successful!"
-          sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage person person.deviceToken
+          mbFleetOwnerId <- resolveFleetOwner person.id
+          case mbFleetOwnerId of
+            Nothing ->
+              sendNotificationToDriver
+                person.merchantOperatingCityId
+                FCM.SHOW
+                Nothing
+                FCM.PREPAID_RECHARGE_SUCCESS
+                prepaidRechargeTitle
+                prepaidRechargeMessage
+                person
+                person.deviceToken
+            Just _ ->
+              sendFinancialNotification
+                merchantId
+                person.merchantOperatingCityId
+                person
+                mbFleetOwnerId
+                FE_SUBSCRIPTION_RECHARGE
+                prepaidRechargeTitle
+                prepaidRechargeMessage
+                Nothing
 
 updatePrepaidBalanceAndExpiry ::
   ( MonadFlow m,
     CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -731,7 +765,28 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
               <> show (SPayment.roundToTwoDecimalPlaces driverFee.totalEarnings)
               <> " is successful"
           prepaidRechargeTitle = "Recharge Successful!"
-      sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage person person.deviceToken
+      mbFleetOwnerId <- resolveFleetOwner person.id
+      case mbFleetOwnerId of
+        Nothing ->
+          sendNotificationToDriver
+            person.merchantOperatingCityId
+            FCM.SHOW
+            Nothing
+            FCM.PREPAID_RECHARGE_SUCCESS
+            prepaidRechargeTitle
+            prepaidRechargeMessage
+            person
+            person.deviceToken
+        Just _ ->
+          sendFinancialNotification
+            merchantId
+            person.merchantOperatingCityId
+            person
+            mbFleetOwnerId
+            FE_SUBSCRIPTION_RECHARGE
+            prepaidRechargeTitle
+            prepaidRechargeMessage
+            Nothing
       pure (fst newBalance, Nothing)
 
 updatePaymentStatus ::

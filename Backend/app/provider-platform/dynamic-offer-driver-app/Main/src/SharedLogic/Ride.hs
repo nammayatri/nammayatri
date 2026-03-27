@@ -14,6 +14,7 @@
 
 module SharedLogic.Ride where
 
+import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
@@ -54,6 +55,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculatorV2 as FCV2
 import qualified SharedLogic.FarePolicy as SFP
 import SharedLogic.Finance.Prepaid
+import qualified SharedLogic.FinancialCommunication as FinComm
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -102,6 +104,8 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
           Nothing -> (counterpartyDriver, driver.id.getId)
     mbAccount <- getPrepaidAccountByOwner counterpartyType ownerId
     whenJust mbAccount $ \_ -> do
+      -- Lock callback must be m (); use IORef to signal low balance without holding the lock for notifications.
+      blockedRef <- liftIO $ newIORef False
       Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 $ do
         mbAvailableBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId
         let gstAmount = fromMaybe 0 booking.fareParams.govtCharges
@@ -112,19 +116,35 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
               Just _ -> transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold
               Nothing -> transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold
             balance = fromMaybe 0 mbAvailableBalance
-        when (balance < rideFare + threshold) $ throwError (InvalidRequest "Low balance.")
-        _ <-
-          createPrepaidHold
-            counterpartyType
-            ownerId
-            rideFare
-            booking.currency
-            booking.providerId.getId
-            booking.merchantOperatingCityId.getId
-            booking.id.getId
-            Nothing
-            >>= fromEitherM (\err -> InternalError ("Failed to create prepaid hold: " <> show err))
-        pure ()
+        if balance < rideFare + threshold
+          then liftIO $ writeIORef blockedRef True
+          else do
+            void $
+              createPrepaidHold
+                counterpartyType
+                ownerId
+                rideFare
+                booking.currency
+                booking.providerId.getId
+                booking.merchantOperatingCityId.getId
+                booking.id.getId
+                Nothing
+                >>= fromEitherM (\err -> InternalError ("Failed to create prepaid hold: " <> show err))
+      blocked <- liftIO $ readIORef blockedRef
+      when blocked $ do
+        let mbFleetOwnerId' = (.getId) <$> mFleetOwnerId
+        void $
+          withTryCatch "rideAllocationBlocked:sendFinancialNotification" $
+            FinComm.sendFinancialNotification
+              merchantId
+              booking.merchantOperatingCityId
+              driver
+              mbFleetOwnerId'
+              FinComm.FE_RIDE_ALLOCATION_BLOCKED
+              "Ride Blocked - Low Balance"
+              "Your balance is too low to accept this ride. Please recharge your subscription."
+              (Just "Recharge from the app to continue taking rides.")
+        throwError (InvalidRequest "Low balance.")
   otpCode <-
     case mbOtpCode of
       Just otp -> pure otp

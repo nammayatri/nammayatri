@@ -49,6 +49,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import qualified Data.Map as M
 import qualified Data.Text as T
+import qualified Data.IORef as IOR
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import qualified Domain.Action.Dashboard.Common as DCommon
@@ -123,6 +124,7 @@ import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.Finance.Prepaid
 import SharedLogic.Finance.Wallet
+import qualified SharedLogic.FinancialCommunication as FinComm
 import qualified SharedLogic.FleetVehicleStats as FVS
 import SharedLogic.Reminder.Helper (checkAndCreateRemindersForRidesThreshold)
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
@@ -191,6 +193,8 @@ endRideTransaction ::
     HasField "blackListedJobs" r [Text],
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text,
     CoreMetrics m
   ) =>
   Id DP.Driver ->
@@ -309,6 +313,8 @@ processEndRideFinance ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
+    HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text,
     BeamFlow m r
   ) =>
   Merchant ->
@@ -359,9 +365,10 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
     processEndRidePrepaidSubscription fare = do
       case ride.fleetOwnerId of
         Just fleetOwnerId -> do
+          fleetSubNotifRef <- liftIO $ IOR.newIORef (Nothing :: Maybe (FinComm.FinancialEventType, Text, Text, Maybe Text))
           Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey fleetOwnerId.getId) 10 10 $ do
             revenueAmount <- getPrepaidRevenueAmount fare
-            _ <-
+            newBalance <-
               debitPrepaidBalance
                 counterpartyFleetOwner
                 fleetOwnerId.getId
@@ -388,8 +395,24 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
                   $ ExpireSubscriptionPurchaseJobData
                     { subscriptionPurchaseId = nextPurchaseId
                     }
-            pure ()
+            let subscriptionConfig = thresholdConfig.subscriptionConfig
+                fleetBlockingThreshold = fromMaybe 0 subscriptionConfig.fleetPrepaidSubscriptionThreshold
+                fleetWarningThreshold = case subscriptionConfig.fleetSubscriptionBalanceWarningPct of
+                  Just pct -> fleetBlockingThreshold * fromIntegral (100 + pct) / 100
+                  Nothing -> 0
+            when (newBalance < fleetBlockingThreshold) $
+              liftIO $ IOR.writeIORef fleetSubNotifRef (Just (FinComm.FE_SUBSCRIPTION_BLOCKING, "Subscription Balance Critical!", "Your fleet subscription balance is too low. Please recharge immediately to continue taking rides.", Just "Recharge your subscription from the app."))
+            when (newBalance < fleetWarningThreshold && newBalance >= fleetBlockingThreshold) $
+              liftIO $ IOR.writeIORef fleetSubNotifRef (Just (FinComm.FE_SUBSCRIPTION_LOW_WARNING, "Low Balance Alert!", "Your fleet subscription balance is Rs." <> show newBalance <> ". This may block future rides. Please recharge soon.", Nothing))
+          mbFleetSubNotif <- liftIO $ IOR.readIORef fleetSubNotifRef
+          whenJust mbFleetSubNotif $ \(eventType, title, body, mbAction) -> do
+            driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+            void $ withTryCatch "fleetSubscription:sendFinancialNotification" $
+              FinComm.sendFinancialNotification booking.providerId booking.merchantOperatingCityId driver (Just fleetOwnerId.getId) eventType title body mbAction
         Nothing -> do
+          driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+          mbFleetOwnerId <- FinComm.resolveFleetOwner driverId
+          driverSubNotifRef <- liftIO $ IOR.newIORef (Nothing :: Maybe (FinComm.FinancialEventType, Text, Text, Maybe Text))
           Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
             revenueAmount <- getPrepaidRevenueAmount fare
             newBalance <-
@@ -404,7 +427,6 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
                 booking.id.getId
                 Nothing
                 >>= fromEitherM (\err -> InternalError ("Failed to debit prepaid balance: " <> show err))
-            driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
             let balanceUpdateMessage = "Thank you for taking the ride. Your updated subscription balance is Rs." <> show newBalance
                 balanceUpdatedTitle = "Subscription balance updated!"
             sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_BALANCE_UPDATE balanceUpdatedTitle balanceUpdateMessage driver driver.deviceToken
@@ -424,12 +446,34 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
                     { subscriptionPurchaseId = nextPurchaseId
                     }
             let subscriptionConfig = thresholdConfig.subscriptionConfig
-            let prepaidSubscriptionThreshold = subscriptionConfig.prepaidSubscriptionThreshold
-            when (newBalance < fromMaybe 0 prepaidSubscriptionThreshold) $ do
+                prepaidSubscriptionThreshold = subscriptionConfig.prepaidSubscriptionThreshold
+                blockingThreshold = fromMaybe 0 prepaidSubscriptionThreshold
+                warningThreshold = case subscriptionConfig.subscriptionBalanceWarningPct of
+                  Just pct -> blockingThreshold * fromIntegral (100 + pct) / 100
+                  Nothing -> 0
+            when (newBalance < blockingThreshold) $ do
               logInfo $ "Prepaid subscription balance is less than threshold for driver: " <> show driverId.getId
               let unsubscribedMessage = "Your subscription balance is low. Please recharge to get rides"
                   unsubscribedTitle = "Low Balance Alert!"
-              sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_UNSUBSCRIBED unsubscribedTitle unsubscribedMessage driver driver.deviceToken
+              case mbFleetOwnerId of
+                Nothing ->
+                  sendNotificationToDriver
+                    driver.merchantOperatingCityId
+                    FCM.SHOW
+                    Nothing
+                    FCM.DRIVER_UNSUBSCRIBED
+                    unsubscribedTitle
+                    unsubscribedMessage
+                    driver
+                    driver.deviceToken
+                Just _ ->
+                  liftIO $ IOR.writeIORef driverSubNotifRef (Just (FinComm.FE_SUBSCRIPTION_BLOCKING, "Subscription Balance Critical!", "Your subscription balance is too low. Please recharge immediately to continue taking rides.", Just "Recharge your subscription from the app."))
+            when (newBalance < warningThreshold && newBalance >= blockingThreshold) $
+              liftIO $ IOR.writeIORef driverSubNotifRef (Just (FinComm.FE_SUBSCRIPTION_LOW_WARNING, "Low Balance Alert!", "Your subscription balance is Rs." <> show newBalance <> ". This may block future rides. Please recharge soon.", Nothing))
+          mbDriverSubNotif <- liftIO $ IOR.readIORef driverSubNotifRef
+          whenJust mbDriverSubNotif $ \(eventType, title, body, mbAction) ->
+            void $ withTryCatch "driverSubscription:sendFinancialNotification" $
+              FinComm.sendFinancialNotification booking.providerId booking.merchantOperatingCityId driver mbFleetOwnerId eventType title body mbAction
 
     getPrepaidRevenueAmount fare = do
       (ownerType', ownerId') <- case ride.fleetOwnerId of
@@ -461,7 +505,9 @@ createDriverWalletTransaction ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text
   ) =>
   Ride.Ride ->
   SRB.Booking ->
@@ -480,6 +526,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       commissionAmount = fromMaybe 0 (ride.commission <|> booking.commission)
       baseFare = totalFare - taxAmount - tollAmount - tollVatAmount - parkingAmount
 
+  walletNotifRef <- liftIO $ IOR.newIORef (Nothing :: Maybe (FinComm.FinancialEventType, Text, Text, Maybe Text))
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
     isOnline <- do
       let forceOnline = fromMaybe False transporterConfig.driverWalletConfig.forceOnlineLedger
@@ -608,6 +655,29 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       Right (mbInvoiceId, _entryIds) -> do
         let mbInvoiceIdText = (.getId) <$> mbInvoiceId
         QRB.updateFinanceInvoiceId booking.id mbInvoiceIdText
+
+    let walletConfig = transporterConfig.driverWalletConfig
+    let (walletOwnerType, walletOwnerId) =
+          case ride.fleetOwnerId of
+            Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
+            Nothing -> (counterpartyDriver, ride.driverId.getId)
+    mbWalletBalance <- getWalletBalanceByOwner walletOwnerType walletOwnerId
+    whenJust mbWalletBalance $ \walletBalance -> do
+      let blockingThreshold = fromMaybe 0 walletConfig.minWalletAmountForCashRides
+          warningThreshold = case walletConfig.earningsBalanceWarningPct of
+            Just pct -> blockingThreshold * fromIntegral (100 + pct) / 100
+            Nothing -> 0
+      when (walletBalance < warningThreshold || walletBalance < blockingThreshold) $ do
+        when (walletBalance < blockingThreshold) $
+          liftIO $ IOR.writeIORef walletNotifRef (Just (FinComm.FE_EARNINGS_BLOCKING, "Cash Rides Blocked", "Your earnings balance (Rs." <> show walletBalance <> ") is insufficient for cash rides.", Just "Complete online rides or top up your wallet to resume cash rides."))
+        when (walletBalance < warningThreshold && walletBalance >= blockingThreshold) $
+          liftIO $ IOR.writeIORef walletNotifRef (Just (FinComm.FE_EARNINGS_LOW_WARNING, "Earnings Balance Low", "Your earnings balance is Rs." <> show walletBalance <> ". Cash rides may be blocked soon.", Nothing))
+  mbWalletNotif <- liftIO $ IOR.readIORef walletNotifRef
+  whenJust mbWalletNotif $ \(eventType, title, body, mbAction) -> do
+    walletDriver <- maybe (QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)) pure mbDriver
+    mbWalletFleetOwnerId <- FinComm.resolveFleetOwner ride.driverId
+    void $ withTryCatch "walletBalance:sendFinancialNotification" $
+      FinComm.sendFinancialNotification booking.providerId booking.merchantOperatingCityId walletDriver mbWalletFleetOwnerId eventType title body mbAction
 
 makeWalletRunningBalanceLockKey :: Text -> Text
 makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId
