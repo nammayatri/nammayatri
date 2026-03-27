@@ -21,6 +21,6 @@
 
   osrm-pbf = builtins.fetchurl {
     url = "https://download.geofabrik.de/asia/india/southern-zone-240101.osm.pbf";
-    sha256 = "sha256-cyhgTR+py8e5RBTHM94ZAIxTe5V3fy8peba+4bp/IVQ=";
+    sha256 = "sha256-X6lL/orc9vJbVgtaKmufBcwFiggmM7C07M+FmadU0D8=";
   };
 }
