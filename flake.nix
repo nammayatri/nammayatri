@@ -48,14 +48,9 @@
     location-tracking-service = {
       url = "github:nammayatri/location-tracking-service";
       inputs = {
-        nixpkgs.follows = "nixpkgs";
-        flake-parts.follows = "common/flake-parts";
-        treefmt-nix.follows = "common/treefmt-nix";
-        process-compose-flake.follows = "common/process-compose-flake";
-        pre-commit-hooks-nix.follows = "common/pre-commit-hooks-nix";
-        # Note: crane and rust-overlay must NOT follow common's versions
-        # because location-tracking-service needs a newer Cargo that supports
-        # Cargo.lock v4 format.
+        # Note: nixpkgs, crane, and rust-overlay must NOT follow our versions.
+        # LTS's rust toolchain requires its paired nixpkgs (platform.rust attr)
+        # and its paired crane/rust-overlay (Cargo.lock v4 format).
         services-flake.follows = "services-flake";
       };
     };
