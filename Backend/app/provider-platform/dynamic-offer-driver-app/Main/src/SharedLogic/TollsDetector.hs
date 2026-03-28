@@ -178,7 +178,8 @@ getAggregatedTollChargesAndNamesOnRoute mbDriverId route@(p1 : p2 : ps) tolls (t
 -}
 getTollInfoOnRoute :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe (Id DP.Driver) -> RoutePoints -> m (Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool))
 getTollInfoOnRoute merchantOperatingCityId mbDriverId route = do
-  tolls <- B.runInReplica $ findAllTollsByMerchantOperatingCity merchantOperatingCityId
+  allTolls <- B.runInReplica $ findAllTollsByMerchantOperatingCity merchantOperatingCityId
+  let tolls = filter (.enabled) allTolls
   if not $ null tolls
     then do
       let boundingBox = getBoundingBox route

@@ -35,5 +35,8 @@ cacheAllTollsByMerchantOperatingCity merchantOpCityId tolls = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeTollsKeyByMerchantOperatingCityId merchantOpCityId) tolls expTime
 
+clearTollCache :: (CacheFlow m r) => Id MerchantOperatingCity -> m ()
+clearTollCache merchantOpCityId = Hedis.del (makeTollsKeyByMerchantOperatingCityId merchantOpCityId)
+
 makeTollsKeyByMerchantOperatingCityId :: Id MerchantOperatingCity -> Text
 makeTollsKeyByMerchantOperatingCityId merchantOpCityId = "CachedQueries:Toll:MerchantOpCityId-" <> getId merchantOpCityId

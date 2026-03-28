@@ -1,0 +1,33 @@
+imports: {}
+
+module: Toll
+
+apis:
+  - GET:
+      endpoint: /list
+      auth: ApiAuthV2
+      response:
+        type: "[TollRes]"
+
+  - PUT:
+      endpoint: /update
+      auth: ApiAuthV2
+      request:
+        type: UpdateTollReq
+      response:
+        type: APISuccess
+
+types:
+  TollRes:
+    - id: Text
+    - name: Text
+    - enabled: Bool
+    - isAutoRickshawAllowed: Bool
+    - isTwoWheelerAllowed: Maybe Bool
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+    - derive: "'HideSecrets"
+  UpdateTollReq:
+    - tollId: Text
+    - enabled: Bool
+    - derive: "'HideSecrets"

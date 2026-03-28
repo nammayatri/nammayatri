@@ -29,6 +29,7 @@ import qualified API.Types.ProviderPlatform.Management.Ride
 import qualified API.Types.ProviderPlatform.Management.SosMedia
 import qualified API.Types.ProviderPlatform.Management.SpecialZoneQueue
 import qualified API.Types.ProviderPlatform.Management.System
+import qualified API.Types.ProviderPlatform.Management.Toll
 import qualified API.Types.ProviderPlatform.Management.VehicleInfo
 import qualified API.Types.ProviderPlatform.Management.Volunteer
 import qualified Data.List
@@ -65,6 +66,7 @@ data ManagementUserActionType
   | SOS_MEDIA API.Types.ProviderPlatform.Management.SosMedia.SosMediaUserActionType
   | SPECIAL_ZONE_QUEUE API.Types.ProviderPlatform.Management.SpecialZoneQueue.SpecialZoneQueueUserActionType
   | SYSTEM API.Types.ProviderPlatform.Management.System.SystemUserActionType
+  | TOLL API.Types.ProviderPlatform.Management.Toll.TollUserActionType
   | VEHICLE_INFO API.Types.ProviderPlatform.Management.VehicleInfo.VehicleInfoUserActionType
   | VOLUNTEER API.Types.ProviderPlatform.Management.Volunteer.VolunteerUserActionType
   deriving stock (Generic, Eq, Ord)
@@ -98,6 +100,7 @@ instance Text.Show.Show ManagementUserActionType where
     SOS_MEDIA e -> "SOS_MEDIA/" <> show e
     SPECIAL_ZONE_QUEUE e -> "SPECIAL_ZONE_QUEUE/" <> show e
     SYSTEM e -> "SYSTEM/" <> show e
+    TOLL e -> "TOLL/" <> show e
     VEHICLE_INFO e -> "VEHICLE_INFO/" <> show e
     VOLUNTEER e -> "VOLUNTEER/" <> show e
 
@@ -324,6 +327,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "SYSTEM/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( TOLL v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "TOLL/" r,
                    ( v1,
                      r2
                      ) <-

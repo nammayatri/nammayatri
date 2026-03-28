@@ -87,6 +87,7 @@ library:
   - AddVehicleUnitTests
   - DriverOperationHubUnitTests
   - CreateRequestUnitTests
+  - TollConfigurationUnitTests
 
 executables:
   hunit-tests:

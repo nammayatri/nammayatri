@@ -31,3 +31,7 @@ ALTER TABLE atlas_driver_offer_bpp.toll ALTER COLUMN currency TYPE character var
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.toll ADD COLUMN is_two_wheeler_allowed boolean  default false;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.toll ADD COLUMN enabled boolean NOT NULL DEFAULT true;

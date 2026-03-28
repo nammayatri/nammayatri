@@ -17,6 +17,7 @@ Toll:
     tollEndGates : "[LineSegment]"
     isAutoRickshawAllowed : Bool
     isTwoWheelerAllowed : Maybe Bool
+    enabled : Bool
     price: Price
     createdAt : UTCTime
     updatedAt : UTCTime
@@ -29,6 +30,7 @@ Toll:
   default:
     isAutoRickshawAllowed: 'false'
     isTwoWheelerAllowed: 'false'
+    enabled: 'true'
 
   constraints:
     id: PrimaryKey
@@ -50,3 +52,6 @@ Toll:
       kvFunction: findAllWithKV
       where:
         eq: [merchantOperatingCityId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

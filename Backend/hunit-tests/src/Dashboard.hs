@@ -15,6 +15,7 @@ import DriverDocumentUploadUnitTests (driverDocumentUploadUnitTests)
 import DriverOperationHubUnitTests (driverOperationHubUnitTests)
 import RegistrationUnitTests (registrationUnitTests)
 import Test.Tasty (TestTree, testGroup)
+import TollConfigurationUnitTests (tollConfigurationUnitTests)
 import VehicleAssociationUnitTests (vehicleAssociationUnitTests)
 
 -- Main test suite for all dashboard unit tests
@@ -27,5 +28,6 @@ dashboardUnitTests =
       driverDocumentUploadUnitTests,
       driverOperationHubUnitTests,
       addVehicleUnitTests,
-      createRequestUnitTests
+      createRequestUnitTests,
+      tollConfigurationUnitTests
     ]

@@ -14,6 +14,7 @@ import Tools.Beam.UtilsTH
 
 data TollT f = TollT
   { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    enabled :: B.C f Kernel.Prelude.Bool,
     id :: B.C f Kernel.Prelude.Text,
     isAutoRickshawAllowed :: B.C f Kernel.Prelude.Bool,
     isTwoWheelerAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

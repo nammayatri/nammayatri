@@ -29,6 +29,7 @@ library
       AddVehicleUnitTests
       DriverOperationHubUnitTests
       CreateRequestUnitTests
+      TollConfigurationUnitTests
   hs-source-dirs:
       src
   default-extensions:

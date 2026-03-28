@@ -35,7 +35,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Toll.Toll {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.isAutoRickshawAllowed isAutoRickshawAllowed,
+    [ Se.Set Beam.enabled enabled,
+      Se.Set Beam.isAutoRickshawAllowed isAutoRickshawAllowed,
       Se.Set Beam.isTwoWheelerAllowed isTwoWheelerAllowed,
       Se.Set Beam.name name,
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),
@@ -54,6 +55,7 @@ instance FromTType' Beam.Toll Domain.Types.Toll.Toll where
       Just
         Domain.Types.Toll.Toll
           { createdAt = createdAt,
+            enabled = enabled,
             id = Kernel.Types.Id.Id id,
             isAutoRickshawAllowed = isAutoRickshawAllowed,
             isTwoWheelerAllowed = isTwoWheelerAllowed,
@@ -70,6 +72,7 @@ instance ToTType' Beam.Toll Domain.Types.Toll.Toll where
   toTType' (Domain.Types.Toll.Toll {..}) = do
     Beam.TollT
       { Beam.createdAt = createdAt,
+        Beam.enabled = enabled,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isAutoRickshawAllowed = isAutoRickshawAllowed,
         Beam.isTwoWheelerAllowed = isTwoWheelerAllowed,
