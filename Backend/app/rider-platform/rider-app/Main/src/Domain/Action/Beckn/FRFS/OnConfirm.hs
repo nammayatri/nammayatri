@@ -20,7 +20,7 @@ import BecknV2.FRFS.Utils
 import Data.Aeson
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Lazy as BL
-import Data.HashMap.Strict
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time.Clock.POSIX hiding (getCurrentTime)
@@ -45,7 +45,7 @@ import ExternalBPP.CallAPI.Cancel
 import Kernel.Beam.Functions
 import Kernel.External.Encryption as ENC
 import Kernel.External.Types (SchedulerFlow)
-import Kernel.Prelude as Prelude hiding (lookup)
+import Kernel.Prelude as Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -190,17 +190,26 @@ onConfirm merchant booking' quoteCategories dOrder = do
   Metrics.finishMetrics Metrics.CONFIRM_FRFS merchant.name dOrder.transactionId booking'.merchantOperatingCityId.getId
   let booking = booking' {Booking.bppOrderId = Just dOrder.bppOrderId}
   let discountedTickets = fromMaybe 0 booking.discountedTickets
-  tickets <- createTickets booking dOrder.tickets discountedTickets
-  let mbPaymentHoldId = listToMaybe quoteCategories >>= (.holdId)
-  let effectiveHoldId = mbPaymentHoldId <|> booking'.holdId
-  whenJust effectiveHoldId $ \holdId -> do
-    whenJust booking'.tripId $ \tripId -> do
-      logInfo $ "OnConfirm:onConfirm finalizing seat hold bookingId=" <> booking.id.getId <> " holdId=" <> holdId <> " tripId=" <> tripId
-      SeatBooking.confirmBooking tripId holdId
-      SeatBooking.releaseAbandonedHolds tripId booking.id.getId holdId
-  void $ QTicket.createMany tickets
+  -- Idempotency: use Redis lock to prevent duplicate ticket creation on concurrent BPP retries
+  tickets <- Redis.withLockRedisAndReturnValue ("frfs:onconfirm:" <> booking.id.getId) 60 $ do
+    existingTickets <- QTicket.findAllByTicketBookingId booking.id
+    if not (null existingTickets)
+      then do
+        logInfo $ "Tickets already exist for booking " <> booking.id.getId <> ", re-running post-confirm finalization"
+        pure existingTickets
+      else do
+        ts <- createTickets booking dOrder.tickets discountedTickets
+        let mbPaymentHoldId = listToMaybe quoteCategories >>= (.holdId)
+        let effectiveHoldId = mbPaymentHoldId <|> booking'.holdId
+        whenJust effectiveHoldId $ \holdId -> do
+          whenJust booking'.tripId $ \tripId -> do
+            logInfo $ "OnConfirm:onConfirm finalizing seat hold bookingId=" <> booking.id.getId <> " holdId=" <> holdId <> " tripId=" <> tripId
+            SeatBooking.confirmBooking tripId holdId
+            SeatBooking.releaseAbandonedHolds tripId booking.id.getId holdId
+        void $ QTicket.createMany ts
+        pure ts
+  -- Common post-confirm finalization path (runs for both new and existing tickets)
   mbJourneyId <- FRFSUtils.getJourneyIdFromBooking booking
-  -- Update journey expiry time based on maximum ticket validity using the created tickets
   whenJust mbJourneyId $ \journeyId -> do
     QJourneyExtra.updateLongestJourneyExpiryTimeWithTickets journeyId tickets
   void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
@@ -216,7 +225,7 @@ onConfirm merchant booking' quoteCategories dOrder = do
     walletPOCfg <- do
       pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.WALLET_CLASS_NAME >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.WALLET_CLASS_NAME)
       DPOC.getWalletClassNameConfig pOrgCfg.config
-    let mbClassName = lookup booking.providerId walletPOCfg.className
+    let mbClassName = HM.lookup booking.providerId walletPOCfg.className
     whenJust mbClassName $ \className -> do
       fork ("adding googleJWTUrl" <> " Booking Id: " <> booking.id.getId) $ do
         let serviceName = DEMSC.WalletService GW.GoogleWallet
@@ -460,7 +469,7 @@ mkTransitObjects pOrgId booking ticket person serviceAccount className sortIndex
   walletQRTypeCfg <- do
     qrCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.WALLET_QR_TYPE >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.WALLET_QR_TYPE)
     DPOC.getWalletQRTypeConfig qrCfg.config
-  let mbPeriodMillis = lookup booking.merchantOperatingCityId.getId walletQRTypeCfg.qrType
+  let mbPeriodMillis = HM.lookup booking.merchantOperatingCityId.getId walletQRTypeCfg.qrType
   let mbRotatingBarcode = mkRotatingBarcode ticket.qrData mbPeriodMillis
   frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = fromStation.merchantOperatingCityId.getId}) >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
   let passengerName' = fromMaybe "-" person.firstName

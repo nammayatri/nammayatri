@@ -167,9 +167,16 @@ cancel req merchant booking mbActiveSearchTry = do
           case mbRide of
             Just ride -> do
               rideTags <- updateNammaTagsForCancelledRide booking ride bookingCR transporterConfig
-              when (validDriverCancellation `elem` rideTags) $ do
+              let isDriverAskedToCancel = bookingCR.reasonCode == Just (DTCR.CancellationReasonCode "DRIVER_ASKED_TO_CANCEL")
+                  penaltiesEnabled = transporterConfig.enableCancellationPenalties == Just True
+              when (validDriverCancellation `elem` rideTags || (isDriverAskedToCancel && penaltiesEnabled)) $ do
                 let windowSize = toInteger $ fromMaybe 7 transporterConfig.cancellationRateWindow
                 void $ SCR.incrementCancelledCount ride.driverId windowSize
+              when (isDriverAskedToCancel && penaltiesEnabled) $ do
+                driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+                driverInfo <- QDI.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
+                unless (driverInfo.onRide) $
+                  SCR.nudgeOrBlockDriver transporterConfig driver driverInfo
               case booking.riderId of
                 Just riderId -> do
                   riderDetails <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)

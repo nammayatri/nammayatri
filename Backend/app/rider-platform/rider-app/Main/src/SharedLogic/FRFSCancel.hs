@@ -104,11 +104,25 @@ checkRefundAndCancellationCharges bookingId refundAmount cancellationCharges = d
   booking <- runInReplica $ QTBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   case booking of
     DFRFSTicketBooking.FRFSTicketBooking {refundAmount = Just rfAmount, cancellationCharges = Just charges} -> do
-      when (Just rfAmount /= Just refundAmount) $
-        throwError $ InternalError $ "Refund Amount mismatch in onCancel Req " <> "refundAmount: " <> show refundAmount <> " rfAmount: " <> show rfAmount
-      when (Just charges /= Just cancellationCharges) $
-        throwError $ InternalError $ "Cancellation Charges mismatch in onCancel Req " <> "cancellationCharges: " <> show cancellationCharges <> " charges: " <> show charges
-    _ -> throwError $ InternalError "Refund Amount or Cancellation Charges not found in booking"
+      let refundOk = isWithinTolerance rfAmount refundAmount
+      let chargesOk = isWithinTolerance charges cancellationCharges
+      unless refundOk $
+        logWarning $ "Refund Amount mismatch in onCancel Req (keeping stored amount) " <> "refundAmount: " <> show refundAmount <> " rfAmount: " <> show rfAmount
+      unless chargesOk $
+        logWarning $ "Cancellation Charges mismatch in onCancel Req (keeping stored amount) " <> "cancellationCharges: " <> show cancellationCharges <> " charges: " <> show charges
+      let maybeRefund = if refundOk then Just refundAmount else Nothing
+      let maybeCharges = if chargesOk then Just cancellationCharges else Nothing
+      void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId maybeRefund maybeCharges Nothing bookingId
+    _ -> do
+      logWarning $ "Refund Amount or Cancellation Charges not found in booking for bookingId: " <> bookingId.getId
+      void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just refundAmount) (Just cancellationCharges) Nothing bookingId
+  where
+    isWithinTolerance :: HighPrecMoney -> HighPrecMoney -> Bool
+    isWithinTolerance expected actual =
+      let diff = abs (expected - actual)
+          percentTolerance = abs expected * 0.01
+          tolerance = max percentTolerance 1
+       in diff <= tolerance
 
 sendTicketCancelSMS :: Maybe Text -> Maybe Text -> DFRFSTicketBooking.FRFSTicketBooking -> FRFSUtils.FRFSFareParameters -> Flow ()
 sendTicketCancelSMS mRiderNumber mRiderMobileCountryCode booking fareParameters =

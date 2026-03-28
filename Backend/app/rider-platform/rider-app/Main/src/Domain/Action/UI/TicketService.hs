@@ -1309,7 +1309,9 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
     updateBookedAndBlockedSeats serviceCatId tbsc visitDate = do
       seatManagement <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId visitDate >>= fromMaybeM (TicketSeatManagementNotFound serviceCatId.getId (show visitDate))
       QTSM.updateBlockedSeats (seatManagement.blocked - tbsc.bookedSeats) serviceCatId visitDate
-      QTSM.safeUpdateBookedSeats (seatManagement.booked + tbsc.bookedSeats) serviceCatId visitDate
+      let newBookedCount = seatManagement.booked + tbsc.bookedSeats
+      QTSM.safeUpdateBookedSeats newBookedCount serviceCatId visitDate
+      verifyBookedSeatsUpdate serviceCatId visitDate newBookedCount
 
     updateBlockedSeats :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> DTB.TicketBookingServiceCategory -> Data.Time.Calendar.Day -> Environment.Flow ()
     updateBlockedSeats serviceCatId tbsc visitDate = do
@@ -1537,7 +1539,9 @@ createDirectBookingForCash (personId, merchantId) mbRequestorId placeId req = do
     updateBookedAndBlockedSeats serviceCatId tbsc visitDate = do
       seatManagement <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId visitDate >>= fromMaybeM (TicketSeatManagementNotFound serviceCatId.getId (show visitDate))
       QTSM.updateBlockedSeats (seatManagement.blocked - tbsc.bookedSeats) serviceCatId visitDate
-      QTSM.safeUpdateBookedSeats (seatManagement.booked + tbsc.bookedSeats) serviceCatId visitDate
+      let newBookedCount = seatManagement.booked + tbsc.bookedSeats
+      QTSM.safeUpdateBookedSeats newBookedCount serviceCatId visitDate
+      verifyBookedSeatsUpdate serviceCatId visitDate newBookedCount
 
 -- Cash collection handler that mimics the success flow of getTicketBookingsStatus
 postTicketBookingsCashCollect :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow Kernel.Types.APISuccess.APISuccess
@@ -1628,7 +1632,9 @@ postTicketBookingsCashCollect (mbPersonId, merchantId) _shortId@(Kernel.Types.Id
     updateBookedAndBlockedSeats serviceCatId tbsc visitDate = do
       seatManagement <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId visitDate >>= fromMaybeM (TicketSeatManagementNotFound serviceCatId.getId (show visitDate))
       QTSM.updateBlockedSeats (seatManagement.blocked - tbsc.bookedSeats) serviceCatId visitDate
-      QTSM.safeUpdateBookedSeats (seatManagement.booked + tbsc.bookedSeats) serviceCatId visitDate
+      let newBookedCount = seatManagement.booked + tbsc.bookedSeats
+      QTSM.safeUpdateBookedSeats newBookedCount serviceCatId visitDate
+      verifyBookedSeatsUpdate serviceCatId visitDate newBookedCount
 
     updateBlockedSeats :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> DTB.TicketBookingServiceCategory -> Data.Time.Calendar.Day -> Environment.Flow ()
     updateBlockedSeats serviceCatId tbsc visitDate = do
@@ -2011,6 +2017,7 @@ tryChangeBookedSeats categoryId newBookedSeats visitDate = do
               throwError $ InvalidRequest "Cannot change max capacity as there might be more blocked + booked seats than the new max capacity"
             else do
               QTSM.safeUpdateBookedSeats newBookedSeats categoryId visitDate
+              verifyBookedSeatsUpdate categoryId visitDate newBookedSeats
 
 tryBlockSeat :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory, Int) -> Environment.Flow BlockResult
 tryBlockSeat personId visitDate (categoryId, numberOfUnits) = withActiveRequestCounter tryBlockServiceCategory
@@ -2582,3 +2589,28 @@ getTicketFleetVehiclesV2 (_, merchantId) placeId mbLimit mbOffset mbSearchString
           driverName = fleetVehicleInfo.driverName,
           isActive = fleetVehicleInfo.isActive
         }
+
+-- | Verify that safeUpdateBookedSeats actually updated the row.
+-- Logs a warning if the update was a no-op (e.g. due to NULL maxCapacity
+-- or the booked count already being higher).
+verifyBookedSeatsUpdate :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> Int -> Environment.Flow ()
+verifyBookedSeatsUpdate serviceCatId visitDate expectedBooked = do
+  mbUpdatedSeat <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId visitDate
+  case mbUpdatedSeat of
+    Just sm ->
+      when (sm.booked /= expectedBooked) $
+        logWarning $
+          "safeUpdateBookedSeats was a no-op for serviceCategoryId="
+            <> serviceCatId.getId
+            <> " date="
+            <> show visitDate
+            <> " expected="
+            <> show expectedBooked
+            <> " actual="
+            <> show sm.booked
+    Nothing ->
+      logWarning $
+        "safeUpdateBookedSeats: seat management row not found after update for serviceCategoryId="
+          <> serviceCatId.getId
+          <> " date="
+          <> show visitDate

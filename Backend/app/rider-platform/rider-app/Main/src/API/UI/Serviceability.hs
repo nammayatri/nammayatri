@@ -36,6 +36,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import Tools.Auth
 import Tools.FlowHandling (withFlowHandlerAPIPersonId)
+import Tools.Metrics.BAPMetrics (incrementServiceabilityCheckCount)
 
 -------- Serviceability----------
 type API =
@@ -69,7 +70,11 @@ checkOrignServiceability ::
   ServiceabilityReq ->
   FlowHandler DServiceability.ServiceabilityRes
 checkOrignServiceability settingAccessor (personId, merchantId) ServiceabilityReq {..} = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
-  DServiceability.checkServiceability settingAccessor (personId, merchantId) location True True
+  res <- DServiceability.checkServiceability settingAccessor (personId, merchantId) location True True
+  let result = if res.serviceable then "serviceable" else "unserviceable"
+      cityLabel = maybe "unknown" show res.city
+  incrementServiceabilityCheckCount cityLabel result "origin"
+  return res
 
 checkDestinationServiceability ::
   (GeofencingConfig -> GeoRestriction) ->
@@ -77,7 +82,11 @@ checkDestinationServiceability ::
   ServiceabilityReq ->
   FlowHandler DServiceability.ServiceabilityRes
 checkDestinationServiceability settingAccessor (personId, merchantId) ServiceabilityReq {..} = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
-  DServiceability.checkServiceability settingAccessor (personId, merchantId) location True False
+  res <- DServiceability.checkServiceability settingAccessor (personId, merchantId) location True False
+  let result = if res.serviceable then "serviceable" else "unserviceable"
+      cityLabel = maybe "unknown" show res.city
+  incrementServiceabilityCheckCount cityLabel result "destination"
+  return res
 
 checkForIsInterCity ::
   (Id Person.Person, Id Merchant.Merchant) ->

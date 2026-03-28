@@ -45,7 +45,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person as CQP
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
-import Storage.Queries.Geometry (findGeometriesContaining)
+import Storage.Queries.Geometry (findGeometriesContaining, findGeometriesWithinBuffer)
 import Tools.Error
 
 data RestrictedHours = RestrictedHours
@@ -70,7 +70,9 @@ data ServiceabilityRes = ServiceabilityRes
     blockRadius :: Maybe Int,
     isMetroServiceable :: Maybe Bool, -- deprecated
     isSubwayServiceable :: Maybe Bool, -- deprecated
-    ptRestrictedHours :: Maybe PTRestrictedHours
+    ptRestrictedHours :: Maybe PTRestrictedHours,
+    nearestCityName :: Maybe Text,
+    nearestCityDistanceM :: Maybe Double
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -121,9 +123,20 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
             isMetroServiceable = Just (not isOutsideMetroBusinessHours),
             isSubwayServiceable = Just (not isOutsideSubwayBusinessHours),
             ptRestrictedHours = Just ptRestrictedHours,
+            nearestCityName = Nothing,
+            nearestCityDistanceM = Nothing,
             ..
           }
-    Nothing ->
+    Nothing -> do
+      logWarning $ "Serviceability check failed: serviceable=False for lat=" <> show location.lat <> " lon=" <> show location.lon
+      -- Find nearest operating city for the error response
+      merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+      cities <- CQMOC.findAllByMerchantIdAndState merchantId merchant.defaultState
+      let cityDistances = map (\c -> (distanceBetweenInMeters location (LatLong c.lat c.long), c.city)) cities
+          nearest = listToMaybe $ sortBy (comparing fst) cityDistances
+          (nearestCityName, nearestCityDistanceM) = case nearest of
+            Just (dist, nearCity) -> (Just $ show nearCity, Just $ realToFrac dist)
+            Nothing -> (Nothing, Nothing)
       return
         ServiceabilityRes
           { city = Nothing,
@@ -196,8 +209,23 @@ getNearestOperatingCityHelper merchant geoRestriction latLong merchantCityState 
         Below logic is to find the nearest operating city for the pickup location.
         If the pickup location is in the operating city, then return the city.
         If the pickup location is not in the city, then return the nearest city for that state else the merchant default city.
+        If strict containment fails, a 500m buffer zone is tried as fallback for GPS edge cases.
       -}
       geoms <- B.runInReplica $ findGeometriesContaining latLong regions
+      if null geoms
+        then do
+          -- No exact geometry match; try 500m buffer for GPS inaccuracy at polygon edges
+          bufferGeoms <- B.runInReplica $ findGeometriesWithinBuffer latLong regions 500
+          if null bufferGeoms
+            then do
+              logWarning $ "No geometry found within 500m buffer for latLong: " <> show latLong <> " for regions: " <> show regions
+              return Nothing
+            else do
+              logInfo $ "Location matched via 500m buffer zone for latLong: " <> show latLong
+              resolveGeometries bufferGeoms
+        else resolveGeometries geoms
+  where
+    resolveGeometries geoms =
       case filter (\geom -> geom.city /= Context.City "AnyCity") geoms of
         [] ->
           find (\geom -> geom.city == Context.City "AnyCity") geoms & \case
@@ -206,7 +234,7 @@ getNearestOperatingCityHelper merchant geoRestriction latLong merchantCityState 
               let nearestOperatingCity = maybe merchantCityState (\p -> CityState {city = snd p, state = anyCityGeom.state}) (listToMaybe $ sortBy (comparing fst) cities)
               return $ Just $ NearestOperatingAndCurrentCity {currentCity = CityState {city = anyCityGeom.city, state = anyCityGeom.state}, nearestOperatingCity}
             Nothing -> do
-              logError $ "No geometry found for latLong: " <> show latLong <> " for regions: " <> show regions
+              logError $ "No geometry found for latLong: " <> show latLong
               return Nothing
         (g : _) -> do
           -- Nearest operating city and source city are same

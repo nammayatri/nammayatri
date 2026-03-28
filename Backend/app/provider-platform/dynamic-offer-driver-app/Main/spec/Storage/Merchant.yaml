@@ -1199,6 +1199,7 @@ TransporterConfig:
     enableDirectWalletIncentives: Maybe Bool
     driverSearchBlacklistDurationSeconds: Maybe Seconds
     driverRiderBlacklistDurationSeconds: Maybe Seconds
+    enableCancellationPenalties: Maybe Bool # Master switch for cancellation penalty system (per merchant/city)
 
   beamType:
     currency: Maybe Currency
@@ -1634,6 +1635,17 @@ TransporterConfig:
     enableScheduleReallocation: "true"
     dailyConditionCooldownTimeHours: "24"
     weeklyConditionCooldownTimeHours: "168"
+    cancellationRateWindow: "7"
+    cancellationRateCalculationThreshold: "5"
+    cancellationRateThresholdDaily: "25"
+    cancellationRateThresholdWeekly: "15"
+    dailyMinRidesForBlocking: "3"
+    weeklyMinRidesForBlocking: "10"
+    dailyMinRidesForNudging: "2"
+    weeklyMinRidesForNudging: "5"
+    dailyOffenceSuspensionTimeHours: "1"
+    weeklyOffenceSuspensionTimeHours: "4"
+    enableCancellationPenalties: "false"
     disableListScheduledBookingAPI: "false"
     recentScheduledBookingsSafeLimit: "50"
     minDistanceForStopFcm: "100"

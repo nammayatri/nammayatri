@@ -211,6 +211,7 @@ data QuoteBreakupTitle
   | NIGHT_CHARGES -- v2.1.0: night shift charges (spec name)
   | WAITING_CHARGES -- v2.1.0: waiting charges (spec name)
   | PARKING_CHARGES -- v2.1.0: parking charges (spec name)
+  | PAYMENT_PROCESSING_FEE
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data CancellationReasonId

@@ -157,6 +157,9 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       tollVatCaption = show Enums.TOLL_VAT
       mbTollVatItem = mkBreakupItem tollVatCaption . mkPrice <$> fareParams.tollVat
 
+      paymentProcessingFeeCaption = show Enums.PAYMENT_PROCESSING_FEE
+      mbPaymentProcessingFeeItem = mkBreakupItem paymentProcessingFeeCaption . mkPrice <$> fareParams.paymentProcessingFee
+
       detailsBreakups = processFareParamsDetails fareParams.fareParametersDetails
       additionalChargesBreakup = map (\addCharges -> mkBreakupItem (show $ castAdditionalChargeCategoriesToEnum addCharges.chargeCategory) $ mkPrice addCharges.charge) fareParams.conditionalCharges
   catMaybes
@@ -189,7 +192,8 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbReturnFeeChargeItem,
       mbBoothChargeItem,
       mbBaseVatItem,
-      mbTollVatItem
+      mbTollVatItem,
+      mbPaymentProcessingFeeItem
     ]
     <> detailsBreakups
     <> additionalChargesBreakup

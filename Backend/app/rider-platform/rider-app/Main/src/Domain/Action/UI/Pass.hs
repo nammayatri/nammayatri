@@ -789,6 +789,13 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
   unless (purchasedPass.personId == personId) $ throwError AccessDenied
   istTime <- getLocalCurrentTime (19800 :: Seconds)
   unless (purchasedPass.startDate <= DT.utctDay istTime) $ throwError (PassActivationNotReady purchasedPassId.getId $ "Pass will be active from " <> show purchasedPass.startDate)
+  let today = DT.utctDay istTime
+  unless (purchasedPass.endDate >= today) $ throwError PassExpired
+  let normalizedStatus =
+        if purchasedPass.status == DPurchasedPass.PreBooked && purchasedPass.startDate <= today
+          then DPurchasedPass.Active
+          else purchasedPass.status
+  unless (normalizedStatus == DPurchasedPass.Active) $ throwError PassNotActive
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
 
   -- If autoActivated is requested, find the nearest fleet (vehicle number) from user location

@@ -2,7 +2,6 @@
 
 module Storage.Queries.InterCityTravelCities where
 
-import Data.Either
 import qualified Database.Beam as B
 import qualified Domain.Types.InterCityTravelCities
 import qualified Domain.Types.Merchant
@@ -57,7 +56,11 @@ findInterCityAreasContainingGps gps = do
                 containsPoint' (gps.lon, gps.lat)
             )
             $ B.all_ (BeamCommon.interCityTravelCities BeamCommon.atlasDB)
-  catMaybes <$> mapM fromTType' (fromRight [] geoms)
+  case geoms of
+    Left err -> do
+      logError $ "findInterCityAreasContainingGps: DB query failed: " <> show err
+      pure []
+    Right rows -> catMaybes <$> mapM fromTType' rows
 
 instance FromTType' Beam.InterCityTravelCities Domain.Types.InterCityTravelCities.InterCityTravelCities where
   fromTType' (Beam.InterCityTravelCitiesT {..}) = do

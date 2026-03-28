@@ -105,6 +105,7 @@ import qualified Storage.Cac.TransporterConfig as QTC
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as MerchantS
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -184,7 +185,8 @@ data ServiceHandle m = ServiceHandle
     getRouteAndDistanceBetweenPoints :: LatLong -> LatLong -> [LatLong] -> Meters -> m ([LatLong], Meters),
     findPaymentMethodByIdAndMerchantId :: Id DMPM.MerchantPaymentMethod -> Id DMOC.MerchantOperatingCity -> m (Maybe DMPM.MerchantPaymentMethod),
     sendDashboardSms :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Sms.DashboardMessageType -> Maybe DRide.Ride -> Id DP.Person -> Maybe SRB.Booking -> HighPrecMoney -> m (),
-    uiDistanceCalculation :: Id DRide.Ride -> Maybe Int -> Maybe Int -> m ()
+    uiDistanceCalculation :: Id DRide.Ride -> Maybe Int -> Maybe Int -> m (),
+    getDirectFarePolicy :: Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Id DMOC.MerchantOperatingCity -> Bool -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Maybe UTCTime -> Maybe Int -> Maybe CacKey -> [LYT.ConfigVersionMap] -> Maybe Text -> m DFP.FullFarePolicy
   }
 
 buildEndRideHandle ::
@@ -215,7 +217,8 @@ buildEndRideHandle merchantId merchantOpCityId rideId = do
         getRouteAndDistanceBetweenPoints = RideEndInt.getRouteAndDistanceBetweenPoints merchantId merchantOpCityId,
         findPaymentMethodByIdAndMerchantId = CQMPM.findByIdAndMerchantOpCityId,
         sendDashboardSms = Sms.sendDashboardSms,
-        uiDistanceCalculation = QRide.updateUiDistanceCalculation
+        uiDistanceCalculation = QRide.updateUiDistanceCalculation,
+        getDirectFarePolicy = FarePolicy.getFarePolicy
       }
 
 -- Helper function to get driver number from Person record
@@ -737,10 +740,34 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
         rideDetail <- QRD.findById ride.id -- replica?
         pure $ (.vehicleAge) =<< rideDetail
       else pure Nothing
+  -- Vehicle tier mismatch detection: when the actual vehicle is a lower tier than
+  -- what was booked (e.g., Wagon R dispatched for Sedan booking), use the lower
+  -- tier's fare policy so the customer pays for the vehicle they actually got.
+  effectiveServiceTier <- do
+    cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions
+    let mbActualDefaultTier = ride.vehicleVariant >>= \variant ->
+          find (\vst -> variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
+        mbBookedTier = find (\vst -> vst.serviceTierType == booking.vehicleServiceTier) cityServiceTiers
+    case (mbActualDefaultTier, mbBookedTier) of
+      (Just actualTier, Just bookedTier)
+        | actualTier.priority > bookedTier.priority -> do
+            logTagInfo "VehicleTierMismatch" $
+              "Booked tier: " <> show booking.vehicleServiceTier
+                <> " (priority " <> show bookedTier.priority <> ")"
+                <> ", Actual vehicle tier: " <> show actualTier.serviceTierType
+                <> " (priority " <> show actualTier.priority <> ")"
+                <> ". Adjusting fare to lower tier policy."
+            pure actualTier.serviceTierType
+      _ -> pure booking.vehicleServiceTier
+  let tierMismatch = effectiveServiceTier /= booking.vehicleServiceTier
   farePolicy <-
-    if recomputeWithLatestPricing
-      then getFarePolicyOnEndRide (Just $ getCoordinates booking.fromLocation) (Just . getCoordinates =<< booking.toLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) finalDuration (getCoordinates tripEndPoint) booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
-      else getFarePolicyByEstOrQuoteId (Just $ getCoordinates booking.fromLocation) (Just . getCoordinates =<< booking.toLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) finalDuration booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
+    if tierMismatch
+      then
+        getDirectFarePolicy (Just $ getCoordinates booking.fromLocation) (Just . getCoordinates =<< booking.toLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) finalDuration booking.merchantOperatingCityId booking.isDashboardRequest booking.tripCategory effectiveServiceTier booking.area (Just booking.startTime) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
+      else
+        if recomputeWithLatestPricing
+          then getFarePolicyOnEndRide (Just $ getCoordinates booking.fromLocation) (Just . getCoordinates =<< booking.toLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) finalDuration (getCoordinates tripEndPoint) booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
+          else getFarePolicyByEstOrQuoteId (Just $ getCoordinates booking.fromLocation) (Just . getCoordinates =<< booking.toLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) finalDuration booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
   QRide.updateFinalFarePolicyId (Just farePolicy.id) ride.id
   if farePolicy.disableRecompute == Just True
     then return (fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing)
@@ -795,6 +822,28 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
           <> show (realToFrac @_ @Double fareDiff)
           <> ", Distance difference: "
           <> show distanceDiff
+      -- Per-component fare reconciliation logging for overcharge detection
+      let estParams = booking.fareParams
+      logTagInfo "FareReconciliation" $
+        "RideId: " <> ride.id.getId
+          <> ", BookingId: " <> booking.id.getId
+          <> ", EstimatedFare: " <> show (realToFrac @_ @Double estimatedFare)
+          <> ", FinalFare: " <> show (realToFrac @_ @Double finalFare)
+          <> ", FareDeltaPct: " <> show (if estimatedFare > 0 then realToFrac @_ @Double (fareDiff * 100 / estimatedFare) else 0.0 :: Double)
+          <> ", DistanceDelta: " <> show distanceDiff
+          <> ", EstBaseFare: " <> show (realToFrac @_ @Double estParams.baseFare)
+          <> ", FinalBaseFare: " <> show (realToFrac @_ @Double fareParams.baseFare)
+          <> ", EstWaiting: " <> show (realToFrac @_ @Double <$> estParams.waitingCharge)
+          <> ", FinalWaiting: " <> show (realToFrac @_ @Double <$> fareParams.waitingCharge)
+          <> ", EstToll: " <> show (realToFrac @_ @Double <$> estParams.tollCharges)
+          <> ", FinalToll: " <> show (realToFrac @_ @Double <$> fareParams.tollCharges)
+          <> ", EstNightShift: " <> show (realToFrac @_ @Double <$> estParams.nightShiftCharge)
+          <> ", FinalNightShift: " <> show (realToFrac @_ @Double <$> fareParams.nightShiftCharge)
+          <> ", EstCongestion: " <> show (realToFrac @_ @Double <$> estParams.congestionCharge)
+          <> ", FinalCongestion: " <> show (realToFrac @_ @Double <$> fareParams.congestionCharge)
+          <> ", VehicleTierMismatch: " <> show tierMismatch
+          <> ", BookedTier: " <> show booking.vehicleServiceTier
+          <> ", EffectiveTier: " <> show effectiveServiceTier
       putDiffMetric merchantId fareDiff distanceDiff
       return (recalcDistance, finalFare, Just fareParams)
 

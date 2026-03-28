@@ -723,6 +723,12 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId) quoteId mbIsMockPayment req = do
             quoteCategories
 
   quote <- B.runInReplica $ QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
+  now <- getCurrentTime
+  when (quote.vehicleType == Spec.BUS) $ do
+    let minimumBookingWindowSeconds = 600 :: NominalDiffTime -- 10 minutes
+        minimumBookingDeadline = addUTCTime minimumBookingWindowSeconds now
+    unless (quote.validTill > minimumBookingDeadline) $
+      throwError $ FRFSBusDepartureTooClose quote.id.getId
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
   case integratedBppConfig.providerConfig of
     DIBC.ONDC _ | quote.vehicleType == Spec.BUS -> do
