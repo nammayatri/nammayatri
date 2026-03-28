@@ -200,6 +200,7 @@ library
       Domain.Action.Dashboard.Management.SosMedia
       Domain.Action.Dashboard.Management.SpecialZoneQueue
       Domain.Action.Dashboard.Management.System
+      Domain.Action.Dashboard.Management.Toll
       Domain.Action.Dashboard.Management.VehicleInfo
       Domain.Action.Dashboard.Management.Volunteer
       Domain.Action.Dashboard.Operator.Driver
@@ -906,6 +907,7 @@ library
       API.Action.Dashboard.Management.SosMedia
       API.Action.Dashboard.Management.SpecialZoneQueue
       API.Action.Dashboard.Management.System
+      API.Action.Dashboard.Management.Toll
       API.Action.Dashboard.Management.VehicleInfo
       API.Action.Dashboard.Management.Volunteer
       API.Action.Dashboard.Operator
@@ -1660,6 +1662,7 @@ library
       Storage.Queries.SubscriptionPurchase
       Storage.Queries.SurgePricing
       Storage.Queries.Toll
+      Storage.Queries.TollExtra
       Storage.Queries.Translations
       Storage.Queries.TransporterConfig
       Storage.Queries.TripAlertRequest

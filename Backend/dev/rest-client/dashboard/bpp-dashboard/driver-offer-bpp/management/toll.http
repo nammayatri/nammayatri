@@ -1,0 +1,82 @@
+# Toll Configuration API smoke tests
+# Access tokens with different roles
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
+@customer = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer}}
+
+###
+# @name listTolls_success
+# Expected: 200 OK with array of TollRes objects, each having an 'enabled' field
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/BANGALORE/management/toll/list
+token: {{juspay_admin}}
+
+###
+# @name listTolls_verifyEnabledField
+# Expected: 200 OK — verify response contains 'enabled' boolean field in each item
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/BANGALORE/management/toll/list
+token: {{juspay_ops}}
+
+###
+# @name updateToll_disableToll
+# Expected: 200 OK {"result": "Success"} — toll is disabled
+PUT {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/BANGALORE/management/toll/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{
+  "tollId": "replace-with-valid-toll-id",
+  "enabled": false
+}
+
+###
+# @name updateToll_enableToll
+# Expected: 200 OK {"result": "Success"} — toll is re-enabled
+PUT {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/BANGALORE/management/toll/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{
+  "tollId": "replace-with-valid-toll-id",
+  "enabled": true
+}
+
+###
+# @name updateToll_unknownTollId
+# Expected: 400 Bad Request — InvalidRequest "Toll not found: ..."
+PUT {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/BANGALORE/management/toll/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{
+  "tollId": "non-existent-toll-id-00000000",
+  "enabled": false
+}
+
+###
+# @name updateToll_wrongCity
+# Expected: 400 Bad Request — "Toll does not belong to this merchant city"
+PUT {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/CHENNAI/management/toll/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{
+  "tollId": "replace-with-toll-id-from-different-city",
+  "enabled": false
+}
+
+###
+# @name listTolls_noAuth
+# Expected: 401 Unauthorized — missing auth token
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/BANGALORE/management/toll/list
+
+###
+# @name updateToll_wrongRole
+# Expected: 403 Forbidden — customer role not permitted for toll management
+PUT {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/BANGALORE/management/toll/update
+token: {{customer}}
+content-type: application/json
+
+{
+  "tollId": "replace-with-valid-toll-id",
+  "enabled": false
+}
