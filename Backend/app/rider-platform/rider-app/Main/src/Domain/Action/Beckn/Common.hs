@@ -82,6 +82,7 @@ import qualified Kernel.Utils.Time as KUT
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -503,9 +504,28 @@ rideAssignedReqHandler req = do
                       financeCtx = ledgerCtx
                     }
           -- Wrap makePaymentIntent in retry, capture result for orderId
-          handle (\e -> SPayment.paymentErrorHandler booking e >> pure Nothing) $
+          mbPaymentResp <- handle (\e -> SPayment.paymentErrorHandler booking e >> throwError (InvalidRequest "Payment failed, booking cancelled")) $
             withShortRetry $
               Just <$> SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode booking.riderId (Just ride.id) mbExistingOrderId createPaymentIntentServiceReq ledgerInfo
+          -- Check if PI is in a capturable state — only STARTED (requires_capture) and CHARGED (already captured) are valid
+          whenJust mbPaymentResp $ \paymentResp -> do
+            mbOrder <- QPaymentOrder.findById paymentResp.orderId
+            whenJust mbOrder $ \order ->
+              when (order.status `notElem` [Payment.STARTED, Payment.CHARGED]) $ do
+                let reason = case order.status of
+                      Payment.PENDING_VBV -> "Your card requires additional authentication. Please use a different payment method."
+                      Payment.CANCELLED -> "Payment was cancelled. Please try again."
+                      Payment.AUTHENTICATION_FAILED -> "Card authentication failed. Please use a different payment method."
+                      Payment.AUTHORIZATION_FAILED -> "Card authorization failed. Please use a different payment method."
+                      Payment.JUSPAY_DECLINED -> "Payment was declined. Please use a different payment method."
+                      _ -> "Payment could not be processed. Please try again with a different payment method."
+                logError $ "Payment intent in non-capturable status " <> show order.status <> ", cancelling ride. PI: " <> paymentResp.paymentIntentId
+                handle (\(_ :: SomeException) -> pure ()) $
+                  SPayment.cancelPaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode ride.id
+                let paymentError = toException (Payment.CardError (Payment.StripeErrorInfo {errorCode = Just (show order.status), errorMessage = Just reason}))
+                SPayment.paymentErrorHandler booking paymentError
+                throwError $ InvalidRequest "Payment non-capturable, booking cancelled"
+          pure mbPaymentResp
         Nothing -> pure Nothing
       -- Ledger entries are now created inside makePaymentIntent when RidePaymentLedgerInfo is provided
       triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}

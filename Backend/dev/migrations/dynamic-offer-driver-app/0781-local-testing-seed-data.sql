@@ -654,3 +654,9 @@ BEGIN
       AND trip_category = 'OneWay_OneWayOnDemandDynamicOffer';
   END IF;
 END $$;
+
+-- Disable driver-rider blocklist for local dev (prevents same driver being blocked after cancellation)
+UPDATE atlas_driver_offer_bpp.transporter_config
+SET driver_rider_blacklist_duration_seconds = 0,
+    driver_search_blacklist_duration_seconds = 0
+WHERE merchant_operating_city_id IN ('lynx-par-city-hels-0000-000000000000', 'bt-partn-city-delh-0000-000000000000');

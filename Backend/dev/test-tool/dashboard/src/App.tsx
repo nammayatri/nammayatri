@@ -137,12 +137,34 @@ function buildRideFlowSteps(): Record<string, Step[]> {
           const ride = d.rideList?.[0] || d.ride;
           ctx.rideId = ride?.id;
           ctx.rideOtp = ride?.rideOtp || ride?.otp;
+          if (d.status === 'CANCELLED' || d.status === 'COMPLETED') {
+            ctx.bookingTerminal = true;
+            const cr = d.cancellationReason;
+            if (cr && typeof cr === 'object') {
+              ctx.cancellationReason = `${cr.source || '?'} — ${cr.reasonCode || '?'}${cr.additionalInfo ? ': ' + cr.additionalInfo : ''} (${cr.reasonStage || ''})`;
+            } else {
+              ctx.cancellationReason = d.status;
+            }
+          }
         },
         assert: (d) => {
+          const status = d.status;
+          // Terminal states — stop polling immediately
+          if (status === 'CANCELLED') return null;
+          if (status === 'COMPLETED') return null;
           const ride = d.rideList?.[0] || d.ride;
           return ride?.id ? null : 'No ride in booking yet';
         },
         summary: (d) => {
+          const status = d.status;
+          if (status === 'CANCELLED') {
+            const cr = d.cancellationReason;
+            if (cr && typeof cr === 'object') {
+              return `CANCELLED — ${cr.source || '?'}: ${cr.reasonCode || '?'}${cr.additionalInfo ? ' — ' + cr.additionalInfo : ''}`;
+            }
+            return 'CANCELLED';
+          }
+          if (status === 'COMPLETED') return 'COMPLETED';
           const ride = d.rideList?.[0] || d.ride;
           if (!ride) return '';
           return `OTP: ${ride.rideOtp || ride.otp || '?'} | Driver: ${ride.driverName || '?'}`;
@@ -151,6 +173,7 @@ function buildRideFlowSteps(): Record<string, Step[]> {
     'fulfillment': [
       { id: 'driver-ride-list', name: 'Get Active Ride (Driver)', method: 'GET', service: 'driver',
         path: '/driver/ride/list?onlyActive=true&limit=1', auth: true,
+        poll: { intervalMs: 2000, timeoutMs: 10000 },
         save: (d, ctx) => {
           const rides = d.list || d;
           const active = Array.isArray(rides) ? rides[0] : null;
@@ -192,6 +215,7 @@ function buildRideFlowSteps(): Record<string, Step[]> {
     'driver-cancel': [
       { id: 'driver-ride-list-cancel', name: 'Get Active Ride (Driver)', method: 'GET', service: 'driver',
         path: '/driver/ride/list?onlyActive=true&limit=1', auth: true,
+        poll: { intervalMs: 2000, timeoutMs: 10000 },
         save: (d, ctx) => {
           const rides = d.list || d;
           const active = Array.isArray(rides) ? rides[0] : null;
@@ -256,12 +280,13 @@ function buildDuesFlowSteps(): Record<string, Step[]> {
     'capture-payment': [
       { id: 'capture-payment', name: 'Capture Payment', method: 'POST', service: 'rider',
         path: (ctx) => {
-          const rideId = ctx.captureRideId || (ctx.dueRides?.[0]?.rideId) || ctx.driverRideId || ctx.rideId;
+          // captureRideId is always freshly set from initCtx before execution
+          const rideId = ctx.captureRideId || (ctx.dueRides?.[0]?.rideId) || ctx.rideId;
           return `/payment/ride/${rideId}/capture`;
         }, auth: true,
         assert: (d) => (d?.result === 'Success' || d === 'Success') ? null : `Capture failed: ${JSON.stringify(d)}`,
         summary: (_d, ctx) => {
-          const rideId = ctx.captureRideId || (ctx.dueRides?.[0]?.rideId) || ctx.driverRideId || ctx.rideId;
+          const rideId = ctx.captureRideId || (ctx.dueRides?.[0]?.rideId) || ctx.rideId;
           return `rideId: ${rideId?.substring(0, 8) || '?'}...`;
         } },
     ],
@@ -313,6 +338,8 @@ function App() {
 
   const abortRef = useRef(false);
   const ctxRef = useRef<Record<string, any>>({});
+  const captureRideIdRef = useRef(captureRideId);
+  captureRideIdRef.current = captureRideId; // always up to date
 
   const catalog = useMemo(() => buildApiCatalog(selectedCity), [selectedCity]);
   const allSteps = useMemo(() => {
@@ -343,13 +370,32 @@ function App() {
     }).then(resp => {
       const list = resp.data?.list || [];
       setPaymentMethods(list);
-      const defaultId = resp.data?.defaultPaymentMethodId || (list.length > 0 ? list[0].cardId : '');
-      setSelectedPaymentMethodId(defaultId);
+      if (list.length > 0) {
+        const defaultId = resp.data?.defaultPaymentMethodId || list[0].cardId;
+        setSelectedPaymentMethodId(defaultId);
+      } else {
+        setSelectedPaymentMethodId('');
+        // Auto-switch to cash if no cards available and we're in card mode
+        if (paymentPreset === 'with-card-payment') {
+          setPaymentPreset('cash-payment');
+        }
+      }
     }).catch(() => {
       setPaymentMethods([]);
       setSelectedPaymentMethodId('');
     }).finally(() => setPaymentMethodsLoading(false));
   }, [needPaymentMethods, config.token]);
+
+  // Auto-fill captureRideId from booking details response (rider-side rideId)
+  useEffect(() => {
+    const bookingResult = stepResults['get-booking'];
+    if (bookingResult?.status === 'pass' && bookingResult.response) {
+      const ride = bookingResult.response.rideList?.[0] || bookingResult.response.ride;
+      if (ride?.id && !captureRideId) {
+        setCaptureRideId(ride.id);
+      }
+    }
+  }, [stepResults, captureRideId]);
 
   // Reset location indices when city changes
   useEffect(() => {
@@ -495,12 +541,18 @@ function App() {
     setRunningNodeId(nodeId);
     setIsRunning(true);
     initCtx();
+    // Always sync latest captureRideId from input
+    ctxRef.current.captureRideId = captureRideIdRef.current || undefined;
     log('info', `-- Running: ${nodeId} --`);
 
     for (const step of steps) {
       if (abortRef.current) break;
       const ok = await executeStep(step);
       if (!ok) break;
+      if (ctxRef.current.bookingTerminal) {
+        log('warn', `Booking is ${ctxRef.current.bookingStatus} — ${ctxRef.current.cancellationReason || 'terminal state'}. Stopping.`);
+        break;
+      }
       await new Promise(r => setTimeout(r, 300));
     }
     setIsRunning(false);
@@ -569,6 +621,7 @@ function App() {
     for (const nodeId of nodeOrder) {
       if (abortRef.current) break;
       setRunningNodeId(nodeId);
+      ctxRef.current.captureRideId = captureRideIdRef.current || undefined;
       log('info', `-- Running: ${nodeId} --`);
       const steps = allSteps[nodeId];
       let failed = false;
@@ -576,6 +629,11 @@ function App() {
         if (abortRef.current) { failed = true; break; }
         const ok = await executeStep(step);
         if (!ok) { failed = true; break; }
+        if (ctxRef.current.bookingTerminal) {
+          log('warn', `Booking is ${ctxRef.current.bookingStatus} — ${ctxRef.current.cancellationReason || 'terminal state'}. Stopping flow.`);
+          failed = true;
+          break;
+        }
         await new Promise(r => setTimeout(r, 300));
       }
       if (failed) break;

@@ -377,6 +377,32 @@ BEGIN
   FROM atlas_app.merchant_payment_method WHERE merchant_operating_city_id = v_base_city_id ON CONFLICT DO NOTHING;
 END $$;
 
+-- Fix cancel_ttl_sec (required for BECKN cancel flow — paymentErrorHandler crashes without it)
+UPDATE atlas_app.beckn_config
+SET cancel_ttl_sec = 120
+WHERE merchant_operating_city_id IN ('lynx-cit-hels-inki-0000-000000000000', 'bharat-t-city-delh-0000-000000000000')
+AND cancel_ttl_sec IS NULL;
+
+-- Create Payment_StripeTest row from the existing Payment_Stripe (which has serviceMode=Test from the bulk update above)
+INSERT INTO atlas_app.merchant_service_config (service_name, merchant_id, merchant_operating_city_id, config_json, created_at, updated_at)
+SELECT 'Payment_StripeTest', merchant_id, merchant_operating_city_id, config_json, now(), now()
+FROM atlas_app.merchant_service_config
+WHERE service_name = 'Payment_Stripe'
+AND merchant_operating_city_id IN ('lynx-cit-hels-inki-0000-000000000000', 'bharat-t-city-delh-0000-000000000000')
+ON CONFLICT DO NOTHING;
+
+-- Fix Payment_Stripe serviceMode to Live (serviceMode=Test causes service name mismatch in ConfigPilot lookup)
+UPDATE atlas_app.merchant_service_config
+SET config_json = jsonb_set(config_json::jsonb, '{serviceMode}', '"Live"')
+WHERE service_name = 'Payment_Stripe'
+AND merchant_operating_city_id IN ('lynx-cit-hels-inki-0000-000000000000', 'bharat-t-city-delh-0000-000000000000')
+AND config_json::jsonb->>'serviceMode' = 'Test';
+
+-- Remove MultiModal configs that reference cluster-internal URLs (break local dev)
+DELETE FROM atlas_app.merchant_service_config
+WHERE merchant_operating_city_id IN ('lynx-cit-hels-inki-0000-000000000000', 'bharat-t-city-delh-0000-000000000000')
+AND service_name LIKE '%MultiModal%';
+
 -- exophone (required for confirm flow — virtual phone number for driver-rider masking)
 INSERT INTO atlas_app.exophone (id, merchant_id, merchant_operating_city_id, primary_phone, backup_phone, is_primary_down, call_service, created_at, updated_at)
 SELECT md5(random()::text)::uuid, m.id, moc.id, '+910000000001', '+910000000001', false, 'Exotel', now(), now()
