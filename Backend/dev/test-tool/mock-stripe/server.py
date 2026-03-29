@@ -22,6 +22,7 @@ Supports configurable behaviors:
   - pm_card_authRequired   -> returns requires_action (3DS)
   - pm_card_declined       -> returns card_declined error
   - pm_card_insufficient   -> returns insufficient_funds error
+  - pm_card_noIncremental  -> succeeds for auth, but fails incremental authorization (issuer unsupported)
 
 Endpoints implemented (matching shared-kernel Stripe/Flow.hs):
   POST /v1/customers                          -> create customer
@@ -79,6 +80,8 @@ payment_methods_store = {
     "pm_card_authRequired": {"id": "pm_card_authRequired", "type": "card", "card": {"brand": "visa", "last4": "3220", "exp_month": 12, "exp_year": 2030, "country": None}},
     "pm_card_declined": {"id": "pm_card_declined", "type": "card", "card": {"brand": "visa", "last4": "0002", "exp_month": 12, "exp_year": 2030, "country": None}},
     "pm_card_insufficient": {"id": "pm_card_insufficient", "type": "card", "card": {"brand": "visa", "last4": "9995", "exp_month": 12, "exp_year": 2030, "country": None}},
+    "pm_card_captureFail": {"id": "pm_card_captureFail", "type": "card", "card": {"brand": "visa", "last4": "1881", "exp_month": 3, "exp_year": 2028, "country": None}},
+    "pm_card_noIncremental": {"id": "pm_card_noIncremental", "type": "card", "card": {"brand": "visa", "last4": "7777", "exp_month": 9, "exp_year": 2029, "country": None}},
 }
 
 
@@ -196,6 +199,15 @@ def mk_capture(pi_id, params):
     if pi["status"] not in ("requires_capture",):
         return stripe_error("invalid_request_error", None,
                             f"This PaymentIntent's status is {pi['status']}, which is not a capturable status.", 400)
+
+    # Simulate capture failure for pm_card_captureFail
+    if pi.get("payment_method") == "pm_card_captureFail":
+        pi["status"] = "requires_capture"  # stays uncaptured
+        pi["latest_charge"] = gen_id("ch")
+        return stripe_error("card_error", "card_declined",
+                            "The card was declined when attempting to capture the payment. "
+                            "The customer's bank refused the charge.", 402)
+
     pi["status"] = "succeeded"
     pi["latest_charge"] = gen_id("ch")
     if params.get("amount_to_capture"):
@@ -229,11 +241,39 @@ def mk_confirm(pi_id, params):
 
 
 def mk_increment_authorization(pi_id, params):
+    """Stripe increment_authorization behavior:
+    - Only works on PIs in requires_capture status
+    - Fails for cards that don't support incremental auth (issuer/network level)
+    - Fails with amount_too_large if card limit exceeded
+    - On success, updates amount and returns PI object
+    - On failure, returns error and PI amount is unchanged
+
+    Failure reasons (per Stripe docs):
+    - payment_intent_unexpected_state: PI not in requires_capture
+    - amount_too_large: exceeds card/issuer limit
+    - card_declined: issuer doesn't support incremental auth for this card
+    - charge_exceeds_transaction_limit: network-level limit
+    """
     pi = payment_intents.get(pi_id)
     if not pi:
         return stripe_error("invalid_request_error", None, f"No such payment_intent: '{pi_id}'", 404)
+    if pi["status"] != "requires_capture":
+        return stripe_error("invalid_request_error", "payment_intent_unexpected_state",
+            f"This PaymentIntent's status is {pi['status']}. Incremental authorization requires status requires_capture.", 400)
+    # Cards that don't support incremental authorization
+    pm_id = pi.get("payment_method", "")
+    no_incremental_cards = ("pm_card_noIncremental", "pm_card_declined", "pm_card_insufficient")
+    if pm_id in no_incremental_cards:
+        return stripe_error("card_error", "card_declined",
+            "The card issuer does not support incremental authorization.", 402)
     new_amount = int(params.get("amount", pi["amount"]))
+    # Amount limit check
+    if new_amount > 100000:
+        return stripe_error("card_error", "amount_too_large",
+            "The charge amount exceeds the maximum amount allowed for the card.", 402)
     pi["amount"] = new_amount
+    if params.get("application_fee_amount"):
+        pi["application_fee_amount"] = int(params["application_fee_amount"])
     return mk_payment_intent_resp(pi), 200
 
 
@@ -553,6 +593,7 @@ def main():
     print(f"    pm_card_authRequired  -> Requires 3DS (requires_action)")
     print(f"    pm_card_declined      -> Card declined (402)")
     print(f"    pm_card_insufficient  -> Insufficient funds (402)")
+    print(f"    pm_card_noIncremental -> Auth OK, incremental auth fails (issuer unsupported)")
     print(f"\n  Press Ctrl+C to stop\n")
 
     try:

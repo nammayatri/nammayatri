@@ -504,9 +504,10 @@ rideAssignedReqHandler req = do
                       financeCtx = ledgerCtx
                     }
           -- Wrap makePaymentIntent in retry, capture result for orderId
-          mbPaymentResp <- handle (\e -> SPayment.paymentErrorHandler booking e >> throwError (InvalidRequest "Payment failed, booking cancelled")) $
-            withShortRetry $
-              Just <$> SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode booking.riderId (Just ride.id) mbExistingOrderId createPaymentIntentServiceReq ledgerInfo
+          mbPaymentResp <-
+            handle (\e -> SPayment.paymentErrorHandler booking e >> throwError (InvalidRequest "Payment failed, booking cancelled")) $
+              withShortRetry $
+                Just <$> SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode booking.riderId (Just ride.id) mbExistingOrderId createPaymentIntentServiceReq ledgerInfo
           -- Check if PI is in a capturable state — only STARTED (requires_capture) and CHARGED (already captured) are valid
           whenJust mbPaymentResp $ \paymentResp -> do
             mbOrder <- QPaymentOrder.findById paymentResp.orderId

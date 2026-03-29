@@ -108,11 +108,7 @@ Person:
     totalRidesCount: Maybe Int
     blockedCount : Maybe Int
     registeredViaPartnerOrgId : Maybe (Id PartnerOrganization)
-    customerPaymentId : Maybe CustomerId
-    customerTestPaymentId : Maybe CustomerId
     juspayCustomerPaymentID: Maybe CustomerId
-    defaultPaymentMethodId: Maybe PaymentMethodId
-    defaultTestPaymentMethodId: Maybe PaymentMethodId
     enableOtpLessRide : Maybe Bool
     deviceId : Maybe Text
     informPoliceSos : Bool
@@ -358,29 +354,9 @@ Person:
       kvFunction: findOneWithKV
       where: customerReferralCode
 
-    updateCustomerPaymentId:
-      kvFunction: updateWithKV
-      params: [customerPaymentId]
-      where: id
-
-    updateTestCustomerPaymentId:
-      kvFunction: updateWithKV
-      params: [customerTestPaymentId]
-      where: id
-
     updateJuspayCustomerPaymentId:
       kvFunction: updateWithKV
       params: [juspayCustomerPaymentID]
-      where: id
-
-    updateDefaultPaymentMethodId:
-      kvFunction: updateWithKV
-      params: [defaultPaymentMethodId]
-      where: id
-
-    updateDefaultTestPaymentMethodId:
-      kvFunction: updateWithKV
-      params: [defaultTestPaymentMethodId]
       where: id
 
     updatePaymentMode:

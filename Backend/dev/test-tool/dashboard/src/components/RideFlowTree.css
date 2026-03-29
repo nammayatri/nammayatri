@@ -265,6 +265,19 @@
 .tree-config-input::placeholder {
   color: #484f58;
 }
+.tree-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #c9d1d9;
+  cursor: pointer;
+  padding: 6px 0;
+}
+.tree-checkbox-label input[type="checkbox"] {
+  accent-color: #1f6feb;
+  cursor: pointer;
+}
 
 /* --- Steps within a node --- */
 .tree-steps {
@@ -366,6 +379,43 @@
 .btn-run-node:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+.btn-skip-node {
+  padding: 6px 16px;
+  border-radius: 6px;
+  border: 1px solid #30363d;
+  background: transparent;
+  color: #8b949e;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-skip-node:hover:not(:disabled) {
+  border-color: #d29922;
+  color: #d29922;
+}
+.btn-skip-node.active {
+  border-color: #d29922;
+  background: #d2992215;
+  color: #d29922;
+}
+.btn-skip-node:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Skipped node styling */
+.tree-node.skipped .tree-node-header {
+  opacity: 0.5;
+}
+.tree-node.skipped .tree-node-body {
+  opacity: 0.5;
+}
+.tree-node-skip-badge {
+  font-size: 11px;
+  color: #d29922;
+  font-weight: 500;
 }
 
 /* --- Branch (children) --- */

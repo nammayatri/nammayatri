@@ -47,6 +47,10 @@ interface Props {
   onCaptureRideIdChange: (id: string) => void;
   tipAmount: number;
   onTipAmountChange: (amount: number) => void;
+  skipTip: boolean;
+  onSkipTipChange: (skip: boolean) => void;
+  rideEndMode: string;
+  onRideEndModeChange: (mode: string) => void;
   // Actions
   onMakeDriverAvailable: () => void;
   onRunNode: (nodeId: string) => void;
@@ -55,6 +59,8 @@ interface Props {
   driverAvailable: boolean;
   selectedOutcome: string;
   onOutcomeChange: (outcome: string) => void;
+  skippedNodes: Record<string, boolean>;
+  onToggleSkipNode: (nodeId: string) => void;
 }
 
 function statusIcon(status: StepStatus | undefined): string {
@@ -104,10 +110,12 @@ export const RideFlowTree: React.FC<Props> = ({
   paymentPreset, onPaymentPresetChange,
   paymentMethods, selectedPaymentMethodId, onPaymentMethodChange, paymentMethodsLoading,
   captureRideId, onCaptureRideIdChange,
-  tipAmount, onTipAmountChange,
+  tipAmount, onTipAmountChange, skipTip, onSkipTipChange,
+  rideEndMode, onRideEndModeChange,
   onMakeDriverAvailable, onRunNode, onRunAll, onStop,
   driverAvailable,
   selectedOutcome: selectedOutcomeProp, onOutcomeChange,
+  skippedNodes, onToggleSkipNode,
 }) => {
   const locations = getLocationsForCity(city);
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({ discovery: true });
@@ -120,6 +128,7 @@ export const RideFlowTree: React.FC<Props> = ({
     'fulfillment': { id: 'fulfillment', title: 'Ride Fulfillment', tag: 'driver', steps: [
         { id: 'driver-ride-list', name: 'Get Active Ride (Driver)', method: 'GET', service: 'driver', path: '/placeholder', auth: true },
         { id: 'ride-start', name: 'Start Ride', method: 'POST', service: 'driver', path: '/placeholder', auth: true },
+        { id: 'inflate-distance', name: 'Inflate Traveled Distance (3x)', method: 'POST', service: 'internal' as const, path: '/placeholder', auth: false },
         { id: 'ride-end', name: 'End Ride', method: 'POST', service: 'driver', path: '/placeholder', auth: true },
     ] },
     'driver-cancel': { id: 'driver-cancel', title: 'Driver Cancellation', tag: 'driver', steps: [
@@ -184,13 +193,14 @@ export const RideFlowTree: React.FC<Props> = ({
   );
 
   const renderNode = (node: TreeNode, index: number, isLast: boolean) => {
-    const ns = nodeStatus(node, results);
+    const isSkipped = skippedNodes[node.id] || false;
+    const ns = isSkipped ? 'skip' as StepStatus : nodeStatus(node, results);
     const isExpanded = expandedNodes[node.id] ?? false;
     const isActive = runningNodeId === node.id;
     const isDisabled = node.id === 'cancellation'; // coming soon
 
     return (
-      <div key={node.id} className={`tree-node ${isActive ? 'active' : ''} ${isDisabled ? 'disabled' : ''}`}>
+      <div key={node.id} className={`tree-node ${isActive ? 'active' : ''} ${isDisabled ? 'disabled' : ''} ${isSkipped ? 'skipped' : ''}`}>
         {/* Connector line */}
         {index > 0 && <div className="tree-connector" />}
 
@@ -203,9 +213,10 @@ export const RideFlowTree: React.FC<Props> = ({
             {isDisabled && <span className="tree-node-badge">Coming Soon</span>}
           </div>
           <div className="tree-node-right">
-            {ns === 'pass' && <span className="tree-node-check">Done</span>}
-            {ns === 'fail' && <span className="tree-node-fail-badge">Failed</span>}
-            {ns === 'running' && <span className="tree-node-running-badge">Running...</span>}
+            {isSkipped && <span className="tree-node-skip-badge">Skipped</span>}
+            {!isSkipped && ns === 'pass' && <span className="tree-node-check">Done</span>}
+            {!isSkipped && ns === 'fail' && <span className="tree-node-fail-badge">Failed</span>}
+            {!isSkipped && ns === 'running' && <span className="tree-node-running-badge">Running...</span>}
             {!isDisabled && <span className="tree-expand">{isExpanded ? '\u25BC' : '\u25B6'}</span>}
           </div>
         </div>
@@ -245,6 +256,20 @@ export const RideFlowTree: React.FC<Props> = ({
               </div>
             )}
 
+            {/* Config area for fulfillment node */}
+            {node.id === 'fulfillment' && (
+              <div className="tree-config">
+                <div className="tree-config-field">
+                  <label>Ride End Location</label>
+                  <select value={rideEndMode} onChange={e => onRideEndModeChange(e.target.value)}>
+                    <option value="actual">Actual Destination (no recompute)</option>
+                    <option value="downward-recompute">Pickup Location (downward recompute)</option>
+                    <option value="upward-recompute">3x Overshoot (upward recompute)</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
             {/* Config area for add-tip node */}
             {node.id === 'add-tip' && (
               <div className="tree-config">
@@ -256,7 +281,14 @@ export const RideFlowTree: React.FC<Props> = ({
                     min={1}
                     value={tipAmount}
                     onChange={e => onTipAmountChange(Number(e.target.value) || 0)}
+                    disabled={skipTip}
                   />
+                </div>
+                <div className="tree-config-field" style={{ maxWidth: 120, display: 'flex', alignItems: 'flex-end' }}>
+                  <label className="tree-checkbox-label">
+                    <input type="checkbox" checked={skipTip} onChange={e => onSkipTipChange(e.target.checked)} />
+                    Skip Tip
+                  </label>
                 </div>
               </div>
             )}
@@ -303,14 +335,21 @@ export const RideFlowTree: React.FC<Props> = ({
               ))}
             </div>
 
-            {/* Run button */}
+            {/* Node actions */}
             <div className="tree-node-actions">
               <button
                 className="btn-run-node"
                 onClick={() => onRunNode(node.id)}
-                disabled={isRunning}
+                disabled={isRunning || isSkipped}
               >
                 Run {node.title}
+              </button>
+              <button
+                className={`btn-skip-node ${isSkipped ? 'active' : ''}`}
+                onClick={() => onToggleSkipNode(node.id)}
+                disabled={isRunning}
+              >
+                {isSkipped ? 'Unskip' : 'Skip'}
               </button>
             </div>
           </div>

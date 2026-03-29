@@ -207,6 +207,12 @@ class ContextHandler(BaseHTTPRequestHandler):
 
         return True
 
+    def _read_json_body(self):
+        content_len = int(self.headers.get("Content-Length", 0))
+        if content_len > 0:
+            return json.loads(self.rfile.read(content_len))
+        return {}
+
     def _handle(self, method):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
@@ -215,8 +221,37 @@ class ContextHandler(BaseHTTPRequestHandler):
         if path.startswith("/proxy/"):
             return self._proxy(method)
 
-        # API endpoints (GET only)
-        if method != "GET":
+        # POST API endpoints
+        if method == "POST" and path == "/api/inflate-distance":
+            body = self._read_json_body()
+            ride_id = body.get("rideId")
+            multiplier = body.get("multiplier", 3)
+            if not ride_id:
+                self._send_json({"error": "rideId required"}, 400)
+                return True
+            try:
+                conn = get_conn()
+                conn.autocommit = True
+                cur = conn.cursor()
+                cur.execute("""
+                    UPDATE atlas_driver_offer_bpp.ride r
+                    SET traveled_distance = COALESCE(
+                        (SELECT estimated_distance FROM atlas_driver_offer_bpp.booking WHERE id = r.booking_id), 5000
+                    ) * %s
+                    WHERE r.id = %s
+                """, (multiplier, ride_id))
+                rows = cur.rowcount
+                conn.close()
+                if rows > 0:
+                    self._send_json({"result": "Success", "rowsUpdated": rows, "multiplier": multiplier})
+                else:
+                    self._send_json({"error": f"No ride found with id {ride_id}"}, 404)
+            except Exception as e:
+                self._send_json({"error": str(e)}, 500)
+            return True
+
+        # GET API endpoints
+        if method != "GET" and not path.startswith("/proxy/"):
             self._send_json({"error": "method not allowed"}, 405)
             return True
 

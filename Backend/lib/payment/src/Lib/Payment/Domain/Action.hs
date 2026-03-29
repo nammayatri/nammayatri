@@ -355,8 +355,9 @@ createPaymentService ::
   CreatePaymentServiceReq ->
   (PInterface.CreatePaymentReq -> m PInterface.CreatePaymentResp) ->
   (Payment.PaymentIntentId -> m PInterface.CreatePaymentResp) -> -- cancel callback for retry
+  Maybe (Payment.PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()) -> -- incremental auth callback (optional)
   m (Maybe CreatePaymentServiceResp)
-createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mbValidity paymentServiceType req createPaymentCall cancelPaymentCall = do
+createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mbValidity paymentServiceType req createPaymentCall cancelPaymentCall mbIncrementAuthCall = do
   mbExistingOrder <- case mbExistingOrderId of
     Just existingId -> QOrder.findById existingId
     Nothing -> pure Nothing
@@ -382,10 +383,23 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
           let paymentIntentId = fromMaybe existingOrder.paymentServiceOrderId existingTxn.txnId
           if req.amount > existingTxn.amount
             then do
-              -- Amount increased: cancel old intent, create new one
-              logError $ "Amount increased, cancelling old payment intent: " <> paymentIntentId <> " and creating new one"
-              cancelOldTransaction existingTxn paymentIntentId
-              createNewPayment (Just existingOrder)
+              -- Amount increased: try incremental authorization first, fall back to cancel+create
+              case mbIncrementAuthCall of
+                Just incrementAuthCall -> do
+                  let newAppFee = fromMaybe 0 req.applicationFeeAmount
+                  incrementResult <- withTryCatch "incrementAuth:handleExistingOrder" $ withShortRetry $ incrementAuthCall paymentIntentId req.amount newAppFee
+                  case incrementResult of
+                    Right _ -> do
+                      logInfo $ "Incremental authorization succeeded for: " <> paymentIntentId <> "; new amount: " <> show req.amount
+                      updateExistingTransaction paymentIntentId existingOrder existingTxn
+                    Left err -> do
+                      logWarning $ "Incremental authorization failed for: " <> paymentIntentId <> "; error: " <> show err <> "; falling back to cancel+create"
+                      cancelOldTransaction existingTxn paymentIntentId
+                      createNewPayment (Just existingOrder)
+                Nothing -> do
+                  logInfo $ "No incremental auth callback, cancelling old payment intent: " <> paymentIntentId <> " and creating new one"
+                  cancelOldTransaction existingTxn paymentIntentId
+                  createNewPayment (Just existingOrder)
             else do
               -- Amount same or decreased: update existing transaction
               updateExistingTransaction paymentIntentId existingOrder existingTxn

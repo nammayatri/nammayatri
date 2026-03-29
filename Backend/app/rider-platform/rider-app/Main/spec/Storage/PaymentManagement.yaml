@@ -2,6 +2,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   CustomerId: Kernel.External.Payment.Interface.Types
+  PaymentMethodId: Kernel.External.Payment.Interface.Types
   PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
 
 
@@ -11,9 +12,11 @@ PaymentCustomer:
   derives: "Generic, ToJSON, FromJSON, Show"
 
   fields:
+    personId : Maybe (Id Domain.Types.Person.Person)
     clientAuthToken : Maybe Text
     clientAuthTokenExpiry : Maybe UTCTime
     customerId : CustomerId
+    defaultPaymentMethodId : Maybe PaymentMethodId
     paymentMode : Maybe PaymentMode
 
   default:
@@ -25,11 +28,22 @@ PaymentCustomer:
       where:
         and: [customerId, paymentMode]
 
+    findByPersonIdAndPaymentMode:
+      kvFunction: findOneWithKV
+      where:
+        and: [personId, paymentMode]
+
     updateCATAndExipry:
       kvFunction: updateWithKV
       params: [clientAuthToken, clientAuthTokenExpiry]
       where:
         and: [customerId, paymentMode]
+
+    updateDefaultPaymentMethodId:
+      kvFunction: updateWithKV
+      params: [defaultPaymentMethodId]
+      where:
+        and: [personId, paymentMode]
 
   constraints:
     customerId: PrimaryKey

@@ -72,6 +72,8 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
           Just order | order.status == PaymentInterface.CHARGED -> do
             logInfo $ "Payment order already charged for ride: " <> rideId.getId <> ", marking payment as completed"
             QRide.markPaymentStatus DRide.Completed rideId
+          Just order | order.status == PaymentInterface.CANCELLED -> do
+            logInfo $ "Payment order already cancelled for ride: " <> rideId.getId <> ", skipping capture"
           _ -> do
             -- Proceed with payment capture
             QRide.markPaymentStatus DRide.Initiated rideId
@@ -95,11 +97,12 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
                     }
             -- Use ledger entry IDs from Redis if available, otherwise no existing order
             let mbExistingOrderId = mbOrderId
-            let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId booking.merchantOperatingCityId.getId fareWithTip.currency person.id.getId rideId.getId Nothing Nothing
+            -- ledgerInfo uses ride fare only (without tip) — tip has its own ledger entry via createTipLedger
+            let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId booking.merchantOperatingCityId.getId fare.currency person.id.getId rideId.getId Nothing Nothing
                 ledgerInfo =
                   Just $
                     SPayment.RidePaymentLedgerInfo
-                      { rideFare = fareWithTip.amount - applicationFeeAmount,
+                      { rideFare = fare.amount - applicationFeeAmount,
                         gstAmount = 0, -- TODO: extract GST from fare breakup
                         platformFee = applicationFeeAmount,
                         financeCtx = ledgerCtx

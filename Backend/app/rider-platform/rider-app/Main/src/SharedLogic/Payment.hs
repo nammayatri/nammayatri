@@ -32,6 +32,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerToo
 import Kernel.Types.CacheFlow
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -55,6 +56,7 @@ import qualified Storage.Queries.FRFSRecon as QRecon
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.ParkingTransaction as QPT
+import qualified Storage.Queries.PaymentCustomer as QPaymentCustomer
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
@@ -564,20 +566,20 @@ data RidePaymentLedgerInfo = RidePaymentLedgerInfo
     financeCtx :: FinanceCtx
   }
 
--- | Redis key for mapping rideId → orderId (replaces PaymentInvoice link).
-rideToOrderRedisKey :: Text -> Text
-rideToOrderRedisKey rideId = "RideToPaymentOrderId:" <> rideId
-
--- | Store rideId → orderId mapping in Redis.
-storeRideToOrderMapping :: (Redis.HedisFlow m r) => Id Ride.Ride -> Id DOrder.PaymentOrder -> m ()
-storeRideToOrderMapping rideId orderId =
-  Redis.setExp (rideToOrderRedisKey rideId.getId) orderId.getId (86400 * 7 :: Int) -- 7 day expiry
-
--- | Retrieve orderId for a rideId from Redis.
-getOrderIdForRide :: (Redis.HedisFlow m r) => Id Ride.Ride -> m (Maybe (Id DOrder.PaymentOrder))
+-- | Retrieve the ride payment order for a rideId (domainEntityId = rideId).
+--   Returns only the ride PI order, NOT the tip PI order (which uses "tip:<rideId>").
+getOrderIdForRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Ride.Ride -> m (Maybe (Id DOrder.PaymentOrder))
 getOrderIdForRide rideId = do
-  mbOrderId <- Redis.get @Text (rideToOrderRedisKey rideId.getId)
-  pure $ Id <$> mbOrderId
+  mbOrder <- QPaymentOrder.findByDomainEntityId rideId.getId
+  pure $ (.id) <$> mbOrder
+
+-- | Retrieve ALL payment orders for a ride (ride PI + tip PI).
+--   Useful for capture, refund, and status operations that need to act on all orders.
+getAllOrdersForRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Ride.Ride -> m [DOrder.PaymentOrder]
+getAllOrdersForRide rideId = do
+  mbRideOrder <- QPaymentOrder.findByDomainEntityId rideId.getId
+  mbTipOrder <- QPaymentOrder.findByDomainEntityId ("tip:" <> rideId.getId)
+  pure $ catMaybes [mbRideOrder, mbTipOrder]
 
 makePaymentIntent ::
   ( MonadFlow m,
@@ -612,6 +614,8 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
               sdkPayload = Nothing,
               paymentLinks = Nothing
             }
+      incrementAuthCall piId amount applicationFeeAmount =
+        TPayment.updateAmountInPaymentIntent merchantId merchantOpCityId paymentMode piId amount applicationFeeAmount
       serviceReq =
         DPayment.CreatePaymentServiceReq
           { amount = req.amount,
@@ -637,26 +641,40 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
             basket = Nothing,
             domainEntityId = (.getId) <$> mbRideId
           }
-  mbServiceResp <- DPayment.createPaymentService commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbExistingOrderId Nothing DOrder.Normal serviceReq createPaymentCall cancelPaymentCall
+  mbServiceResp <- DPayment.createPaymentService commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbExistingOrderId Nothing DOrder.Normal serviceReq createPaymentCall cancelPaymentCall (Just incrementAuthCall)
   serviceResp <- mbServiceResp & fromMaybeM (InternalError "Payment order expired, please try again")
   let resp =
         DPayment.CreatePaymentIntentServiceResp
           { paymentIntentId = serviceResp.paymentServiceOrderId,
             orderId = serviceResp.orderId
           }
-  -- Store rideId → orderId mapping for later lookups (replaces PaymentInvoice link)
-  whenJust mbRideId $ \rideId -> storeRideToOrderMapping rideId resp.orderId
-  -- Create PENDING ledger entries after successful payment creation (skip if entries already exist for this ride)
+  -- Create or update PENDING core ride ledger entries (RideFare, GST, PlatformFee) after successful payment creation.
+  -- Tip and cancellation entries are managed separately — not touched here.
   whenJust mbLedgerInfo $ \ledgerInfo -> do
     existingEntries <- RidePaymentFinance.findRidePaymentEntries ledgerInfo.financeCtx.referenceId
-    if null existingEntries
+    let coreEntries = filter (\e -> e.referenceType `elem` RidePaymentFinance.coreRidePaymentRefTypes) existingEntries
+        pendingCoreEntries = filter (\e -> e.status == LE.PENDING) coreEntries
+        newTotal = ledgerInfo.rideFare + ledgerInfo.gstAmount + ledgerInfo.platformFee
+        oldTotal = sum $ map (.amount) pendingCoreEntries
+    if null coreEntries
       then do
+        -- First time: create core ride ledger entries
         result <- RidePaymentFinance.createRidePaymentLedger ledgerInfo.financeCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.platformFee
         case result of
-          Right _ledgerResult ->
-            logInfo $ "Created PENDING ride payment ledger entries for order: " <> resp.orderId.getId
+          Right _ -> logInfo $ "Created PENDING ride payment ledger entries for order: " <> resp.orderId.getId
           Left err -> logError $ "Failed to create ride payment ledger entries: " <> show err
-      else logInfo $ "Skipping ledger creation — " <> show (length existingEntries) <> " entries already exist for ride: " <> ledgerInfo.financeCtx.referenceId
+      else
+        if not (null pendingCoreEntries) && newTotal /= oldTotal
+          then do
+            -- Fare recomputed: void old PENDING core entries, create new ones with updated amounts
+            let entryIds = map (.id) pendingCoreEntries
+            RidePaymentFinance.voidRidePaymentLedger entryIds
+            logInfo $ "Voided " <> show (length entryIds) <> " stale PENDING entries (old=" <> show oldTotal <> " new=" <> show newTotal <> ") for ride: " <> ledgerInfo.financeCtx.referenceId
+            result <- RidePaymentFinance.createRidePaymentLedger ledgerInfo.financeCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.platformFee
+            case result of
+              Right _ -> logInfo $ "Created updated PENDING ledger entries for recomputed fare"
+              Left err -> logError $ "Failed to create updated ledger entries: " <> show err
+          else logInfo $ "Skipping ledger creation — core entries already exist for ride: " <> ledgerInfo.financeCtx.referenceId
   pure resp
 
 cancelPaymentIntent ::
@@ -676,8 +694,10 @@ cancelPaymentIntent ::
 cancelPaymentIntent merchantId merchantOpCityId paymentMode rideId = do
   let cancelPaymentIntentCall = TPayment.cancelPaymentIntent merchantId merchantOpCityId paymentMode
       commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
-  DPayment.cancelPaymentIntentService commonMerchantOperatingCityId (cast @Ride.Ride @DPayment.Ride rideId) cancelPaymentIntentCall
-  -- Void unsettled ledger entries (PENDING or DUE) from DB after successful cancellation
+  -- Cancel at Stripe — tolerate failures (PI may already be cancelled/captured/expired)
+  handle (\(e :: SomeException) -> logError $ "Cancel payment intent failed for ride " <> rideId.getId <> ": " <> show e) $
+    DPayment.cancelPaymentIntentService commonMerchantOperatingCityId (cast @Ride.Ride @DPayment.Ride rideId) cancelPaymentIntentCall
+  -- Void unsettled ledger entries (PENDING or DUE) regardless of Stripe cancel result
   pendingEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries rideId.getId
   unless (null pendingEntries) $ do
     let entryIds = map (.id) pendingEntries
@@ -839,18 +859,12 @@ isOnlinePayment :: Maybe Merchant.Merchant -> Booking.Booking -> Bool
 isOnlinePayment mbMerchant booking = maybe False (.onlinePayment) mbMerchant && booking.paymentInstrument /= Just DMPM.Cash
 
 -- in case if person.paymentMode was already changed, we use booking.paymentMode for old completed rides
-getCustomerAndPaymentMethod :: (MonadThrow m, Log m) => Booking.Booking -> Person.Person -> m (Payment.CustomerId, Payment.PaymentMethodId)
+getCustomerAndPaymentMethod :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking.Booking -> Person.Person -> m (Payment.CustomerId, Payment.PaymentMethodId)
 getCustomerAndPaymentMethod booking person = do
   let paymentMode = fromMaybe DMPM.LIVE booking.paymentMode
-  case paymentMode of
-    DMPM.LIVE -> do
-      customerPaymentId <- person.customerPaymentId & fromMaybeM (PersonFieldNotPresent "customerPaymentId")
-      paymentMethodId <- person.defaultPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultPaymentMethodId")
-      pure (customerPaymentId, paymentMethodId)
-    DMPM.TEST -> do
-      customerPaymentId <- person.customerTestPaymentId & fromMaybeM (PersonFieldNotPresent "customerTestPaymentId")
-      paymentMethodId <- person.defaultTestPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultTestPaymentMethodId")
-      pure (customerPaymentId, paymentMethodId)
+  paymentCustomer <- QPaymentCustomer.findByPersonIdAndPaymentMode (Just person.id) (Just paymentMode) >>= fromMaybeM (PersonFieldNotPresent "paymentCustomer")
+  paymentMethodId <- paymentCustomer.defaultPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultPaymentMethodId")
+  pure (paymentCustomer.customerId, paymentMethodId)
 
 updateDefaultPersonPaymentMethodId ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -859,9 +873,7 @@ updateDefaultPersonPaymentMethodId ::
   m ()
 updateDefaultPersonPaymentMethodId person paymentMethodId = do
   let paymentMode = fromMaybe DMPM.LIVE person.paymentMode
-  case paymentMode of
-    DMPM.LIVE -> QPerson.updateDefaultPaymentMethodId paymentMethodId person.id
-    DMPM.TEST -> QPerson.updateDefaultTestPaymentMethodId paymentMethodId person.id
+  QPaymentCustomer.updateDefaultPaymentMethodId paymentMethodId (Just person.id) (Just paymentMode)
 
 -------------------------------------------------------------------------------------------------------
 ------------------------------------- Pending Payment Validation --------------------------------------

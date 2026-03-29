@@ -4,7 +4,7 @@ export interface Step {
   id: string;
   name: string;
   method: 'GET' | 'POST' | 'PUT' | 'DELETE';
-  service: 'rider' | 'driver' | 'lts';
+  service: 'rider' | 'driver' | 'lts' | 'internal';
   path: string | ((ctx: Record<string, any>) => string);
   auth?: boolean;
   body?: (ctx: Record<string, any>) => any;
@@ -12,7 +12,7 @@ export interface Step {
   save?: (data: any, ctx: Record<string, any>) => void;
   note?: string;
   extraHeaders?: Record<string, string> | ((ctx: Record<string, any>) => Record<string, string>);
-  skip?: boolean;
+  skip?: boolean | ((ctx: Record<string, any>) => boolean);
   useCatalog?: string;
   // Polling: retry the step every intervalMs until assert passes or timeoutMs reached
   poll?: { intervalMs: number; timeoutMs: number };

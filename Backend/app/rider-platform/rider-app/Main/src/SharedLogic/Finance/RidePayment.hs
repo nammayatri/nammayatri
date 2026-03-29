@@ -44,6 +44,7 @@ module SharedLogic.Finance.RidePayment
     findDueRidePaymentEntries,
     markEntriesAsDue,
     isRidePaymentSettled,
+    coreRidePaymentRefTypes,
     allRidePaymentRefTypes,
   )
 where
@@ -323,6 +324,14 @@ createCancellationFeeLedger ctx cancellationFee cancellationGST = do
 -- ---------------------------------------------------------------------------
 -- 6. Query helpers (replaces PaymentInvoice reads)
 -- ---------------------------------------------------------------------------
+
+-- | Core ride fare reference types (excludes tip and cancellation).
+coreRidePaymentRefTypes :: [Text]
+coreRidePaymentRefTypes =
+  [ ridePaymentRefRideFare,
+    ridePaymentRefGST,
+    ridePaymentRefPlatformFee
+  ]
 
 -- | All ride payment reference types.
 allRidePaymentRefTypes :: [Text]

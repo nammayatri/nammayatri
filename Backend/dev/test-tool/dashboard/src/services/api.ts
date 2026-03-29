@@ -103,7 +103,7 @@ export async function callStep(
     path = step.path;
   }
 
-  const proxyPrefix = step.service === 'rider' ? '/proxy/rider' : step.service === 'lts' ? '/proxy/lts' : '/proxy/driver';
+  const proxyPrefix = step.service === 'rider' ? '/proxy/rider' : step.service === 'lts' ? '/proxy/lts' : step.service === 'internal' ? '' : '/proxy/driver';
   const url = `${PROXY_BASE}${proxyPrefix}${path}`;
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };

@@ -28,7 +28,7 @@ module Tools.Payment
     createPaymentIntent,
     updatePaymentMethodInIntent,
     capturePaymentIntent,
-    -- updateAmountInPaymentIntent,
+    updateAmountInPaymentIntent,
     createSetupIntent,
     deleteCard,
     getPaymentIntent,
@@ -91,7 +91,7 @@ import Kernel.External.Payment.Interface as Reexport hiding
     offerList,
     orderStatus,
     refundPayment,
-    -- updateAmountInPaymentIntent,
+    updateAmountInPaymentIntent,
     updateOrder,
     updatePaymentMethodInIntent,
   )
@@ -162,9 +162,8 @@ updatePaymentMethodInIntent = runWithServiceConfig2 Payment.updatePaymentMethodI
 capturePaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()
 capturePaymentIntent = runWithServiceConfig3 Payment.capturePaymentIntent (.capturePaymentIntent)
 
--- currently we don't support incremental authorization, so this is not used
--- updateAmountInPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()
--- updateAmountInPaymentIntent = runWithServiceConfig3 Payment.updateAmountInPaymentIntent (.updateAmountInPaymentIntent)
+updateAmountInPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()
+updateAmountInPaymentIntent = runWithServiceConfig3 Payment.updateAmountInPaymentIntent (.updateAmountInPaymentIntent)
 
 createSetupIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> CustomerId -> m CreateSetupIntentResp
 createSetupIntent = runWithServiceConfig1 Payment.createSetupIntent (.createSetupIntent)

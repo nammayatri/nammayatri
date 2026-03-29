@@ -14,3 +14,13 @@ ALTER TABLE atlas_app.payment_customer ADD PRIMARY KEY ( customer_id);
 ALTER TABLE atlas_app.payment_customer ADD COLUMN payment_mode text  default 'LIVE';
 ALTER TABLE atlas_app.payment_customer DROP CONSTRAINT payment_customer_pkey;
 ALTER TABLE atlas_app.payment_customer ADD PRIMARY KEY ( customer_id, payment_mode);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payment_customer ADD COLUMN person_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payment_customer ADD COLUMN default_payment_method_id text ;

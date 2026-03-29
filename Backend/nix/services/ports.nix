@@ -15,6 +15,9 @@
   nginx = 8085;
   passetto-db = 5422;
   passetto-service = 8021;
+  mock-stripe = 7081;
+  context-api = 7082;
+  test-dashboard = 3000;
   # osrm-server port is not configurable atm
   # osrm-server = 5001;
 }

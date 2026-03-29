@@ -196,16 +196,41 @@ function buildRideFlowSteps(): Record<string, Step[]> {
         },
         assert: (d) => (d?.result === 'Success' || d === 'Success') ? null : `Start ride failed: ${JSON.stringify(d)}`,
         summary: (_d, ctx) => `OTP: ${ctx.rideOtp || '?'}` },
+      // For upward recompute: inflate traveledDistance in DB so it's >> estimatedDistance
+      // This simulates a driver who drove much farther than the estimated route
+      { id: 'inflate-distance', name: 'Inflate Traveled Distance (3x)', method: 'POST', service: 'internal',
+        path: '/api/inflate-distance',
+        auth: false,
+        skip: (ctx) => ctx.rideEndMode !== 'upward-recompute',
+        body: (ctx) => ({ rideId: ctx.driverRideId, multiplier: 3 }),
+        assert: (d) => d?.result === 'Success' ? null : `Failed: ${JSON.stringify(d)}`,
+        summary: () => 'traveled_distance set to 3x estimated' },
       { id: 'ride-end', name: 'End Ride', method: 'POST', service: 'driver',
         path: (ctx) => `/driver/ride/${ctx.driverRideId}/end`, auth: true,
         body: (ctx) => {
-          const dest = ctx.searchDestination || ctx.searchOrigin || { lat: 10.0739, lon: 76.2733 };
+          const origin = ctx.searchOrigin || { lat: 10.0739, lon: 76.2733 };
+          let dest;
+          if (ctx.rideEndMode === 'downward-recompute') {
+            dest = origin; // same as pickup → distance ≈ 0
+          } else if (ctx.rideEndMode === 'upward-recompute') {
+            // End far beyond destination (3x overshoot point)
+            const realDest = ctx.searchDestination || { lat: origin.lat + 0.15, lon: origin.lon + 0.15 };
+            dest = { lat: origin.lat + (realDest.lat - origin.lat) * 3, lon: origin.lon + (realDest.lon - origin.lon) * 3 };
+          } else {
+            dest = ctx.searchDestination || origin;
+          }
           return { point: { lat: dest.lat, lon: dest.lon }, endRideOtp: null, uiDistanceCalculationWithAccuracy: null, uiDistanceCalculationWithoutAccuracy: null, odometer: null, driverGpsTurnedOff: null };
+        },
+        summary: (_d, ctx) => {
+          if (ctx.rideEndMode === 'downward-recompute') return 'Ended at pickup (downward recompute)';
+          if (ctx.rideEndMode === 'upward-recompute') return 'Ended 3x beyond destination (upward recompute)';
+          return 'Ended at destination';
         } },
     ],
     'add-tip': [
       { id: 'add-tip', name: 'Add Tip', method: 'POST', service: 'rider',
         path: (ctx) => `/payment/${ctx.rideId}/addTip`, auth: true,
+        skip: (ctx) => !ctx.paymentMethodId || ctx.skipTip,
         body: (ctx) => ({
           amount: { amount: ctx.tipAmount || 50, currency: ctx.duesCurrency || 'EUR' },
         }),
@@ -335,6 +360,9 @@ function App() {
   const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
   const [captureRideId, setCaptureRideId] = useState('');
   const [tipAmount, setTipAmount] = useState(50);
+  const [rideEndMode, setRideEndMode] = useState<'actual' | 'downward-recompute' | 'upward-recompute'>('actual');
+  const [skipTip, setSkipTip] = useState(false);
+  const [skippedNodes, setSkippedNodes] = useState<Record<string, boolean>>({});
 
   const abortRef = useRef(false);
   const ctxRef = useRef<Record<string, any>>({});
@@ -438,10 +466,19 @@ function App() {
       paymentMethodId: paymentPreset === 'with-card-payment' ? selectedPaymentMethodId : null,
       captureRideId: captureRideId || undefined,
       tipAmount,
+      skipTip,
+      rideEndMode,
     });
   }, [selectedCity, selectedDriverToken, selectedDriverVariant, selectedDriverMerchantId, driverLocationIdx, fromLocationIdx, toLocationIdx, paymentPreset, selectedPaymentMethodId]);
 
   const executeStep = useCallback(async (step: Step): Promise<boolean> => {
+    // Dynamic skip check
+    const shouldSkip = typeof step.skip === 'function' ? step.skip(ctxRef.current) : step.skip;
+    if (shouldSkip) {
+      setStepResults(prev => ({ ...prev, [step.id]: { stepId: step.id, status: 'skip', durationMs: 0 } }));
+      return true;
+    }
+
     setStepResults(prev => ({ ...prev, [step.id]: { stepId: step.id, status: 'running', durationMs: 0 } }));
 
     const catalogApi = step.useCatalog ? catalog[step.useCatalog] : undefined;
@@ -620,6 +657,10 @@ function App() {
     });
     for (const nodeId of nodeOrder) {
       if (abortRef.current) break;
+      if (skippedNodes[nodeId]) {
+        log('info', `-- Skipping: ${nodeId} --`);
+        continue;
+      }
       setRunningNodeId(nodeId);
       ctxRef.current.captureRideId = captureRideIdRef.current || undefined;
       log('info', `-- Running: ${nodeId} --`);
@@ -712,6 +753,10 @@ function App() {
               onCaptureRideIdChange={setCaptureRideId}
               tipAmount={tipAmount}
               onTipAmountChange={setTipAmount}
+              skipTip={skipTip}
+              onSkipTipChange={setSkipTip}
+              rideEndMode={rideEndMode}
+              onRideEndModeChange={(m) => setRideEndMode(m as 'actual' | 'downward-recompute')}
               onMakeDriverAvailable={makeDriverAvailable}
               onRunNode={runNodeSteps}
               onRunAll={runAll}
@@ -719,6 +764,8 @@ function App() {
               driverAvailable={driverAvailable}
               selectedOutcome={selectedOutcome}
               onOutcomeChange={setSelectedOutcome}
+              skippedNodes={skippedNodes}
+              onToggleSkipNode={(id) => setSkippedNodes(prev => ({ ...prev, [id]: !prev[id] }))}
             />
           </div>
           <div className="log-resize-handle" onMouseDown={onResizeStart} />
