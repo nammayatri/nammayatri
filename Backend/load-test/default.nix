@@ -54,11 +54,8 @@
           kafka-consumers-exe.disabled = true;
           provider-dashboard-exe.disabled = true;
           producer-exe.disabled = true;
-          public-transport-rider-platform-exe.disabled = true;
-          public-transport-search-consumer-exe.disabled = true;
           rider-dashboard-exe.disabled = true;
           search-result-aggregator-exe.disabled = true;
-          special-zone-exe.disabled = true;
 
           load-test-init = {
             imports = [ common ];
