@@ -43,8 +43,8 @@ export function startLocationPinger(ctx: Record<string, any>, log?: (level: 'inf
 
   const ping = async () => {
     await ensureMerchantId();
-    const origin = ctx.searchOrigin || { lat: 10.0739, lon: 76.2733 };
-    const token = ctx.driverToken;
+    const origin = ctx.searchOrigin || ctx.driverLocation || { lat: 10.0739, lon: 76.2733 };
+    const token = ctx.driverPersonId || ctx.driverToken;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'vt': ctx.driverVehicleVariant || 'SUV',
@@ -108,8 +108,9 @@ export async function callStep(
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (step.auth) {
-    // Use driver token for driver/lts steps, rider token otherwise
-    const token = (step.service === 'driver' || step.service === 'lts') ? (ctx.driverToken || config.token) : config.token;
+    // Use driver person_id for LTS (it stores by person_id, not auth token), driver token for driver API, rider token otherwise
+    const token = step.service === 'lts' ? (ctx.driverPersonId || ctx.driverToken || config.token)
+      : (step.service === 'driver') ? (ctx.driverToken || config.token) : config.token;
     if (token) headers['token'] = token;
   }
 
