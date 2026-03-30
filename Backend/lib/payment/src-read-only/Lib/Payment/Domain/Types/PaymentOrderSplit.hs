@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Lib.Payment.Domain.Types.PaymentOrderSplit where
@@ -25,5 +24,3 @@ data PaymentOrderSplit = PaymentOrderSplit
     vendorId :: Kernel.Prelude.Text
   }
   deriving (Generic)
-
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''Kernel.External.Payment.Interface.Types.MBY)
