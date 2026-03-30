@@ -35,7 +35,8 @@ data GateInfoFull = GateInfoFull
     minDriverThreshold :: Maybe Int,
     demandThreshold :: Maybe Int,
     notificationCooldownInSec :: Maybe Int,
-    maxRideSkipsBeforeQueueRemoval :: Maybe Int
+    maxRideSkipsBeforeQueueRemoval :: Maybe Int,
+    pickupZoneArrivalTimeoutInSec :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -62,6 +63,7 @@ data GateInfo = GateInfo
     minDriverThreshold :: Maybe Int,
     demandThreshold :: Maybe Int,
     notificationCooldownInSec :: Maybe Int,
-    maxRideSkipsBeforeQueueRemoval :: Maybe Int
+    maxRideSkipsBeforeQueueRemoval :: Maybe Int,
+    pickupZoneArrivalTimeoutInSec :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)

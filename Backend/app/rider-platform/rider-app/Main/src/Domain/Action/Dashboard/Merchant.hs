@@ -437,11 +437,12 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             gateType = D.Pickup,
             merchantId = specialLocation.merchantId,
             merchantOperatingCityId = specialLocation.merchantOperatingCityId,
-            entryFeeAmount = Nothing,
-            minDriverThreshold = Nothing,
-            demandThreshold = Nothing,
-            notificationCooldownInSec = Nothing,
-            maxRideSkipsBeforeQueueRemoval = Nothing,
+            entryFeeAmount = mbGate >>= (.entryFeeAmount),
+            minDriverThreshold = mbGate >>= (.minDriverThreshold),
+            demandThreshold = mbGate >>= (.demandThreshold),
+            notificationCooldownInSec = mbGate >>= (.notificationCooldownInSec),
+            maxRideSkipsBeforeQueueRemoval = mbGate >>= (.maxRideSkipsBeforeQueueRemoval),
+            pickupZoneArrivalTimeoutInSec = mbGate >>= (.pickupZoneArrivalTimeoutInSec),
             ..
           }
 
@@ -1565,7 +1566,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 minDriverThreshold = Nothing,
                 demandThreshold = Nothing,
                 notificationCooldownInSec = Nothing,
-                maxRideSkipsBeforeQueueRemoval = Nothing
+                maxRideSkipsBeforeQueueRemoval = Nothing,
+                pickupZoneArrivalTimeoutInSec = Nothing
               }
       return (city, locationName, (specialLocation, gateInfo), mbSpecialLocationId)
 

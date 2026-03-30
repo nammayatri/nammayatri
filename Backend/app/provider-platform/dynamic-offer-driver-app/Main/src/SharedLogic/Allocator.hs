@@ -87,6 +87,7 @@ data AllocatorJobType
   | Reconciliation
   | ScheduledBatchPayout
   | SettlementReportIngestion
+  | CheckPickupZoneArrival
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -135,6 +136,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SReconciliation jobData = AnyJobInfo <$> restoreJobInfo SReconciliation jobData
   restoreAnyJobInfo SScheduledBatchPayout jobData = AnyJobInfo <$> restoreJobInfo SScheduledBatchPayout jobData
   restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
+  restoreAnyJobInfo SCheckPickupZoneArrival jobData = AnyJobInfo <$> restoreJobInfo SCheckPickupZoneArrival jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -530,3 +532,18 @@ data SettlementReportIngestionJobData = SettlementReportIngestionJobData
 instance JobInfoProcessor 'SettlementReportIngestion
 
 type instance JobContent 'SettlementReportIngestion = SettlementReportIngestionJobData
+
+data CheckPickupZoneArrivalJobData = CheckPickupZoneArrivalJobData
+  { requestId :: Text,
+    driverId :: Id DP.Person,
+    gateId :: Text,
+    specialLocationId :: Text,
+    vehicleType :: Text,
+    merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'CheckPickupZoneArrival
+
+type instance JobContent 'CheckPickupZoneArrival = CheckPickupZoneArrivalJobData

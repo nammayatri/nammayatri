@@ -14,9 +14,15 @@ import qualified Domain.Types.SpecialZoneQueueRequest
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Types.APISuccess
+import Kernel.Types.Common (Seconds (..))
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Queries.GateInfo as QGI
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import SharedLogic.Allocator (AllocatorJobType (..), CheckPickupZoneArrivalJobData (..))
+import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
 import Tools.Error
 
@@ -71,4 +77,21 @@ postSpecialZoneQueueRequestRespond (mbPersonId, _merchantId, _merchantOpCityId) 
           then Domain.Types.SpecialZoneQueueRequest.Ignored
           else req.response
   QSZQR.updateResponse (Just actualResponse) Domain.Types.SpecialZoneQueueRequest.Expired requestId
+  -- Schedule no-show check if driver accepted
+  when (actualResponse == Domain.Types.SpecialZoneQueueRequest.Accept) $ do
+    mbGate <- Esq.runInReplica $ QGI.findById (Kernel.Types.Id.Id request.gateId)
+    let timeoutSec = maybe 1200 (fromMaybe 1200 . (.pickupZoneArrivalTimeoutInSec)) mbGate
+    createJobIn @_ @'CheckPickupZoneArrival
+      (Just request.merchantId)
+      (Just request.merchantOperatingCityId)
+      (secondsToNominalDiffTime $ Seconds timeoutSec)
+      CheckPickupZoneArrivalJobData
+        { requestId = requestId.getId,
+          driverId = personId,
+          gateId = request.gateId,
+          specialLocationId = request.specialLocationId,
+          vehicleType = request.vehicleType,
+          merchantId = request.merchantId,
+          merchantOperatingCityId = request.merchantOperatingCityId
+        }
   pure Kernel.Types.APISuccess.Success

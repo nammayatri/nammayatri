@@ -1,6 +1,10 @@
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
-module Domain.Action.ProviderPlatform.Management.SpecialZoneQueue (postSpecialZoneQueueTriggerNotify) where
+module Domain.Action.ProviderPlatform.Management.SpecialZoneQueue
+  ( postSpecialZoneQueueTriggerNotify,
+    getSpecialZoneQueueQueueStats,
+  )
+where
 
 import qualified API.Client.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.SpecialZoneQueue
@@ -23,3 +27,8 @@ postSpecialZoneQueueTriggerNotify merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.specialZoneQueueDSL.postSpecialZoneQueueTriggerNotify) req)
+
+getSpecialZoneQueueQueueStats :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Management.SpecialZoneQueue.SpecialZoneQueueStatsRes)
+getSpecialZoneQueueQueueStats merchantShortId opCity apiTokenInfo gateId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.specialZoneQueueDSL.getSpecialZoneQueueQueueStats) gateId
