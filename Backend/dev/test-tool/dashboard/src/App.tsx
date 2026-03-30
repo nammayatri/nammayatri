@@ -71,7 +71,11 @@ function buildRideFlowSteps(): Record<string, Step[]> {
         save: (d, ctx) => {
           ctx.estimates = d.estimates || [];
           ctx.quotes = d.quotes || [];
-          if (d.estimates?.length > 0) ctx.selectedEstimateId = d.estimates[0].id;
+          if (d.estimates?.length > 0) {
+            const driverVariant = ctx.driverVehicleVariant;
+            const match = driverVariant && d.estimates.find((e: any) => e.vehicleVariant === driverVariant);
+            ctx.selectedEstimateId = match ? match.id : d.estimates[0].id;
+          }
         },
         assert: (d) => (d.estimates?.length > 0) ? null : 'No estimates yet',
         summary: (d) => {
@@ -344,6 +348,7 @@ function App() {
   const [selectedDriverToken, setSelectedDriverToken] = useState('');
   const [selectedDriverVariant, setSelectedDriverVariant] = useState('');
   const [selectedDriverMerchantId, setSelectedDriverMerchantId] = useState('');
+  const [selectedDriverPersonId, setSelectedDriverPersonId] = useState('');
   const [driverAvailable, setDriverAvailable] = useState(false);
   const [stepResults, setStepResults] = useState<Record<string, StepResult>>({});
 
@@ -449,13 +454,14 @@ function App() {
 
   const initCtx = useCallback(() => {
     const locs = getLocationsForCity(selectedCity);
-    const driverLoc = locs[driverLocationIdx]?.gps || locs[0]?.gps;
     const fromLoc = locs[fromLocationIdx];
+    const driverLoc = locs[driverLocationIdx]?.gps || fromLoc?.gps || locs[0]?.gps;
     const toLoc = locs[toLocationIdx] || locs[Math.min(1, locs.length - 1)];
 
     // Merge base config into existing context — preserves values saved by previous steps
     Object.assign(ctxRef.current, {
       driverToken: selectedDriverToken || '',
+      driverPersonId: selectedDriverPersonId || '',
       driverVehicleVariant: selectedDriverVariant || 'SUV',
       driverMerchantId: selectedDriverMerchantId || '',
       driverLocation: driverLoc,
@@ -726,7 +732,7 @@ function App() {
     <div className="app">
       <div className="main">
         <ConfigBar config={config} onChange={setConfig} onRun={runAll} onStop={stop} isRunning={isRunning}
-          onCityChange={setSelectedCity} onDriverChange={(token, variant, merchantId) => { setSelectedDriverToken(token); setSelectedDriverVariant(variant || ''); setSelectedDriverMerchantId(merchantId || ''); }} />
+          onCityChange={setSelectedCity} onDriverChange={(token, variant, merchantId, personId) => { setSelectedDriverToken(token); setSelectedDriverVariant(variant || ''); setSelectedDriverMerchantId(merchantId || ''); setSelectedDriverPersonId(personId || ''); }} />
         <div className="content-wrapper">
           <div className="content">
             <RideFlowTree

@@ -10,7 +10,7 @@ interface Props {
   onStop: () => void;
   isRunning: boolean;
   onCityChange?: (city: string) => void;
-  onDriverChange?: (driverToken: string, vehicleVariant?: string, merchantId?: string) => void;
+  onDriverChange?: (driverToken: string, vehicleVariant?: string, merchantId?: string, driverPersonId?: string) => void;
 }
 
 export const ConfigBar: React.FC<Props> = ({ config, onChange, onRun, onStop, isRunning, onCityChange, onDriverChange }) => {
@@ -66,7 +66,7 @@ export const ConfigBar: React.FC<Props> = ({ config, onChange, onRun, onStop, is
           const merchantDrivers = d.filter((dr: DriverInfo) => dr.merchant?.includes(firstMerchant) || dr.merchant?.includes(firstMerchant.replace('_PARTNER', '')));
           if (merchantDrivers.length > 0) {
             setSelectedDriver(merchantDrivers[0].token);
-            onDriverChange?.(merchantDrivers[0].token, merchantDrivers[0].vehicle_variant, merchantDrivers[0].merchant_id);
+            onDriverChange?.(merchantDrivers[0].token, merchantDrivers[0].vehicle_variant, merchantDrivers[0].merchant_id, merchantDrivers[0].person_id);
           }
         }
       } else {
@@ -109,7 +109,7 @@ export const ConfigBar: React.FC<Props> = ({ config, onChange, onRun, onStop, is
     const merchantDrivers = drivers.filter(d => d.merchant?.includes(merchant) || d.merchant?.includes(merchant.replace('_PARTNER', '')));
     if (merchantDrivers.length > 0) {
       setSelectedDriver(merchantDrivers[0].token);
-      onDriverChange?.(merchantDrivers[0].token, merchantDrivers[0].vehicle_variant, merchantDrivers[0].merchant_id);
+      onDriverChange?.(merchantDrivers[0].token, merchantDrivers[0].vehicle_variant, merchantDrivers[0].merchant_id, merchantDrivers[0].person_id);
     }
   };
 
@@ -187,7 +187,7 @@ export const ConfigBar: React.FC<Props> = ({ config, onChange, onRun, onStop, is
             </div>
             <div className="config-field" style={{ flex: 1.5 }}>
               <label>Driver ({driversForMerchant.length})</label>
-              <select value={selectedDriver} onChange={e => { setSelectedDriver(e.target.value); const d = driversForMerchant.find(dr => dr.token === e.target.value); onDriverChange?.(e.target.value, d?.vehicle_variant, d?.merchant_id); }}>
+              <select value={selectedDriver} onChange={e => { setSelectedDriver(e.target.value); const d = driversForMerchant.find(dr => dr.token === e.target.value); onDriverChange?.(e.target.value, d?.vehicle_variant, d?.merchant_id, d?.person_id); }}>
                 <option value="">— Select Driver —</option>
                 {driversForMerchant.map(d => (
                   <option key={d.token} value={d.token}>
