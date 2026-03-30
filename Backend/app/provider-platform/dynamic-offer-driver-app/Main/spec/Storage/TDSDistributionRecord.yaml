@@ -1,0 +1,67 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+TDSDistributionRecord:
+  tableName: tds_distribution_record
+
+  types:
+    TDSDistributionStatus:
+      enum: "PENDING, SENT, FAILED, MISSING_FILE, MISSING_MANIFEST, MISMATCH"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  fields:
+    id: Id TDSDistributionRecord
+    driverId: Maybe (Id Person)
+    emailAddress: Maybe Text
+    # Manifest object in S3 (CSV/JSON); PDF rows live in tds_distribution_pdf_file
+    s3FilePath: Maybe Text
+    fileName: Maybe Text
+    assessmentYear: Text
+    quarter: Text
+    status: TDSDistributionStatus
+    retryCount: Int
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+
+  sqlType:
+    emailAddress: character varying(255)
+    s3FilePath: character varying(512)
+    fileName: character varying(512)
+    assessmentYear: character varying(20)
+    quarter: character varying(10)
+    status: character varying(30)
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllByStatus:
+      kvFunction: findAllWithKV
+      where: status
+
+    findAllByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+
+    updateStatusAndRetryCount:
+      kvFunction: updateOneWithKV
+      params: [status, retryCount]
+      where: id
+
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <TDSDistributionStatus>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <TDSDistributionStatus>
