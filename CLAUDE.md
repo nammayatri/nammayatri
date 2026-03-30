@@ -136,3 +136,4 @@ Types: feat, fix, chore, ci, docs, perf, refactor, test
 | `14-testing-and-debugging.md` | Debugging patterns |
 | `15-conventions.md` | Haskell conventions |
 | `16-status-definitions.md` | Status enums, state transitions |
+| `17-testing-framework.md` | Config sync, integration tests, mock servers, test tools |

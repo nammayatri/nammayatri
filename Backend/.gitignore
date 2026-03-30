@@ -53,3 +53,8 @@ load-test/scripts/__pycache__
 load-test/pyvenv.cfg
 load-test/output
 load-test/tokens
+dev/config-sync/.venv
+dev/config-sync/assets/data
+dev/config-sync/assets/patches.json
+dev/config-sync/assets/environments.json
+dev/config-sync/assets/master_to_local_sql/

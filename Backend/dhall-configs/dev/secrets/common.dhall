@@ -1,4 +1,4 @@
-let topSecret = ./top-secret.dhall
+let topSecret = ./top-secret-template.dhall
 
 let globalCommon = ../../generic/common.dhall
 

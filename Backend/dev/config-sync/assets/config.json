@@ -1,0 +1,528 @@
+{
+  "_comment": "Config tables registry with primary key dimensions for upsert. Curated from YAML specs + migrations + Beam schemas.",
+  "_last_reviewed": "2026-03-26",
+  "atlas_app": {
+    "geometry": {
+      "dim": []
+    },
+    "system_configs": {
+      "dim": []
+    },
+    "merchant": {
+      "dim": []
+    },
+    "merchant_config": {
+      "dim": []
+    },
+    "merchant_operating_city": {
+      "dim": []
+    },
+    "merchant_state": {
+      "dim": []
+    },
+    "merchant_service_config": {
+      "dim": []
+    },
+    "merchant_service_usage_config": {
+      "dim": []
+    },
+    "merchant_message": {
+      "dim": []
+    },
+    "merchant_push_notification": {
+      "dim": []
+    },
+    "merchant_payment_method": {
+      "dim": []
+    },
+    "rider_config": {
+      "dim": []
+    },
+    "ui_rider_config": {
+      "dim": []
+    },
+    "beckn_config": {
+      "dim": []
+    },
+    "integrated_bpp_config": {
+      "dim": []
+    },
+    "beckn_vehicle_config": {
+      "dim": []
+    },
+    "notification_sounds_config": {
+      "dim": []
+    },
+    "ride_related_notification_config": {
+      "dim": []
+    },
+    "payout_config": {
+      "dim": []
+    },
+    "insurance_config": {
+      "dim": []
+    },
+    "bbps_config": {
+      "dim": []
+    },
+    "value_add_np": {
+      "dim": []
+    },
+    "exophone": {
+      "dim": []
+    },
+    "white_list_org": {
+      "dim": []
+    },
+    "black_list_org": {
+      "dim": []
+    },
+    "feedback_form": {
+      "dim": []
+    },
+    "issue_config": {
+      "dim": []
+    },
+    "igm_config": {
+      "dim": []
+    },
+    "partner_organization": {
+      "dim": []
+    },
+    "partner_org_config": {
+      "dim": []
+    },
+    "partner_org_station": {
+      "dim": []
+    },
+    "translations": {
+      "dim": []
+    },
+    "issue_category": {
+      "dim": []
+    },
+    "issue_option": {
+      "dim": []
+    },
+    "issue_message": {
+      "dim": []
+    },
+    "issue_translation": {
+      "dim": []
+    },
+    "bpp_details": {
+      "dim": []
+    },
+    "cancellation_reason": {
+      "dim": []
+    },
+    "ticket_place": {
+      "dim": []
+    },
+    "ticket_service": {
+      "dim": []
+    },
+    "ticket_sub_place": {
+      "dim": []
+    },
+    "special_occasion": {
+      "dim": []
+    },
+    "business_hour": {
+      "dim": []
+    },
+    "service_category": {
+      "dim": []
+    },
+    "seat_management": {
+      "dim": []
+    },
+    "merchant_onboarding_step_config": {
+      "dim": []
+    },
+    "frfs_fare_policy": {
+      "dim": []
+    },
+    "frfs_route_fare_product": {
+      "dim": []
+    },
+    "frfs_stage_fare": {
+      "dim": []
+    },
+    "frfs_gtfs_stage_fare": {
+      "dim": []
+    },
+    "frfs_ticket_category_metadata_config": {
+      "dim": []
+    },
+    "frfs_vehicle_service_tier": {
+      "dim": []
+    },
+    "route_stop_calender": {
+      "dim": []
+    },
+    "route_trip_mapping": {
+      "dim": []
+    },
+    "route_polylines": {
+      "dim": []
+    },
+    "stop_information": {
+      "dim": []
+    },
+    "popular_location": {
+      "dim": []
+    },
+    "pass_type": {
+      "dim": []
+    },
+    "pass_category": {
+      "dim": []
+    },
+    "hot_spot_config": {
+      "dim": []
+    },
+    "place_based_service_config": {
+      "dim": []
+    },
+    "frfs_config": {
+      "dim": []
+    },
+    "disability": {
+      "dim": []
+    },
+    "disability_translation": {
+      "dim": []
+    },
+    "service_people_category": {
+      "dim": []
+    },
+    "route_trip_stop_mapping": {
+      "dim": []
+    }
+  },
+  "atlas_driver_offer_bpp": {
+    "geometry": {
+      "dim": []
+    },
+    "system_configs": {
+      "dim": []
+    },
+    "merchant": {
+      "dim": []
+    },
+    "merchant_operating_city": {
+      "dim": []
+    },
+    "merchant_state": {
+      "dim": []
+    },
+    "merchant_service_config": {
+      "dim": []
+    },
+    "merchant_service_usage_config": {
+      "dim": []
+    },
+    "merchant_message": {
+      "dim": []
+    },
+    "merchant_push_notification": {
+      "dim": []
+    },
+    "merchant_payment_method": {
+      "dim": []
+    },
+    "merchant_overlay": {
+      "dim": []
+    },
+    "transporter_config": {
+      "dim": []
+    },
+    "driver_pool_config": {
+      "dim": []
+    },
+    "driver_intelligent_pool_config": {
+      "dim": []
+    },
+    "ui_driver_config": {
+      "dim": []
+    },
+    "beckn_config": {
+      "dim": []
+    },
+    "leader_board_configs": {
+      "dim": []
+    },
+    "subscription_config": {
+      "dim": []
+    },
+    "domain_discount_config": {
+      "dim": []
+    },
+    "reminder_config": {
+      "dim": []
+    },
+    "ride_related_notification_config": {
+      "dim": []
+    },
+    "payout_config": {
+      "dim": []
+    },
+    "scheduled_payout_config": {
+      "dim": []
+    },
+    "go_home_config": {
+      "dim": []
+    },
+    "document_verification_config": {
+      "dim": []
+    },
+    "fleet_owner_document_verification_config": {
+      "dim": []
+    },
+    "rc_validation_rules": {
+      "dim": []
+    },
+    "coin_config": {
+      "dim": []
+    },
+    "monetary_reward_config": {
+      "dim": []
+    },
+    "fare_product": {
+      "dim": []
+    },
+    "plan": {
+      "dim": []
+    },
+    "plan_translation": {
+      "dim": []
+    },
+    "vehicle_service_tier": {
+      "dim": []
+    },
+    "toll": {
+      "dim": []
+    },
+    "cancellation_fare_policy": {
+      "dim": []
+    },
+    "surge_pricing": {
+      "dim": []
+    },
+    "value_add_np": {
+      "dim": []
+    },
+    "exophone": {
+      "dim": []
+    },
+    "white_list_org": {
+      "dim": []
+    },
+    "black_list_org": {
+      "dim": []
+    },
+    "driver_block_reason": {
+      "dim": []
+    },
+    "blocked_route": {
+      "dim": []
+    },
+    "vendor_split_details": {
+      "dim": []
+    },
+    "fleet_config": {
+      "dim": []
+    },
+    "issue_config": {
+      "dim": []
+    },
+    "igm_config": {
+      "dim": []
+    },
+    "translations": {
+      "dim": []
+    },
+    "vehicle_details": {
+      "dim": []
+    },
+    "feedback_form_v2": {
+      "dim": []
+    },
+    "issue_category": {
+      "dim": []
+    },
+    "issue_option": {
+      "dim": []
+    },
+    "issue_message": {
+      "dim": []
+    },
+    "issue_translation": {
+      "dim": []
+    },
+    "cancellation_reason": {
+      "dim": []
+    },
+    "bap_metadata": {
+      "dim": []
+    },
+    "registry_map_fallback": {
+      "dim": []
+    },
+    "call_feedback_options": {
+      "dim": []
+    },
+    "message_dictionary": {
+      "dim": []
+    },
+    "knowledge_center": {
+      "dim": []
+    },
+    "operation_hub": {
+      "dim": []
+    },
+    "kiosk_location": {
+      "dim": []
+    },
+    "kiosk_location_translation": {
+      "dim": []
+    },
+    "common_driver_onboarding_documents": {
+      "dim": []
+    },
+    "namma_tag": {
+      "dim": []
+    },
+    "namma_tag_v2": {
+      "dim": []
+    },
+    "namma_tag_trigger": {
+      "dim": []
+    },
+    "namma_tag_trigger_v2": {
+      "dim": []
+    },
+    "app_dynamic_logic_element": {
+      "dim": []
+    },
+    "app_dynamic_logic_rollout": {
+      "dim": []
+    },
+    "time_bound_config": {
+      "dim": []
+    },
+    "station": {
+      "dim": []
+    },
+    "route": {
+      "dim": []
+    },
+    "route_trip_stop_mapping": {
+      "dim": []
+    },
+    "fleet_route_association": {
+      "dim": []
+    },
+    "onboarding_document_configs": {
+      "dim": []
+    },
+    "fare_policy": {
+      "dim": []
+    },
+    "fare_policy_progressive_details": {
+      "dim": []
+    },
+    "fare_policy_progressive_details_per_extra_km_rate_section": {
+      "dim": []
+    },
+    "fare_policy_progressive_details_per_min_rate_section": {
+      "dim": []
+    },
+    "fare_policy_slabs_details_slab": {
+      "dim": []
+    },
+    "fare_policy_driver_extra_fee_bounds": {
+      "dim": []
+    },
+    "fare_policy_inter_city_details": {
+      "dim": []
+    },
+    "fare_policy_inter_city_details_pricing_slabs": {
+      "dim": []
+    },
+    "fare_policy_rental_details": {
+      "dim": []
+    },
+    "fare_policy_rental_details_distance_buffers": {
+      "dim": []
+    },
+    "fare_policy_rental_details_pricing_slabs": {
+      "dim": []
+    },
+    "fare_policy_ambulance_details_slab": {
+      "dim": []
+    }
+  },
+  "atlas_bap_dashboard": {
+    "merchant": {
+      "dim": []
+    },
+    "merchant_access": {
+      "dim": []
+    },
+    "role": {
+      "dim": []
+    },
+    "access_matrix": {
+      "dim": []
+    },
+    "system_configs": {
+      "dim": []
+    },
+    "merchant_operating_city": {
+      "dim": []
+    }
+  },
+  "atlas_bpp_dashboard": {
+    "merchant": {
+      "dim": []
+    },
+    "system_configs": {
+      "dim": []
+    },
+    "merchant_operating_city": {
+      "dim": []
+    }
+  },
+  "atlas_safety_dashboard": {
+    "system_configs": {
+      "dim": []
+    },
+    "merchant": {
+      "dim": []
+    },
+    "merchant_configs": {
+      "dim": []
+    },
+    "portal_configs": {
+      "dim": []
+    }
+  },
+  "atlas_registry": {
+    "subscriber": {
+      "dim": []
+    }
+  },
+  "atlas_special_zone": {
+    "special_zone": {
+      "dim": []
+    },
+    "tag_category_mapping": {
+      "dim": []
+    },
+    "entry_exit": {
+      "dim": []
+    }
+  }
+}

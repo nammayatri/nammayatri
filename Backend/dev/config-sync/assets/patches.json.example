@@ -1,0 +1,71 @@
+{
+  "_comment": "Patch rules applied after export, before import. Keyed by transfer direction.",
+
+  "master_to_local": {
+    "_comment": "Patches when moving master (sandbox) config to local dev environment.",
+
+    "global_replacements": [
+      {"_comment": "Beckn gateway URLs",
+       "find": "https://beta.beckn.uat.juspay.net/dev/gateway/v1",  "replace": "http://localhost:8015/v1"},
+      {"find": "https://api.sandbox.moving.tech/dev/gateway/v1",     "replace": "http://localhost:8015/v1"}
+    ],
+
+    "schema_replacements": {},
+    "table_overrides": {},
+
+    "dimension_overrides": {
+      "_comment": "system_configs.id: master uses _v2 suffix, local does not. Only change the row where id matches.",
+      "atlas_app": {
+        "system_configs": [
+          { "where": {"id": "atlas_app_v2"}, "set": {"id": "atlas_app"} }
+        ]
+      },
+      "atlas_driver_offer_bpp": {
+        "system_configs": [
+          { "where": {"id": "atlas_driver_offer_bpp_v2"}, "set": {"id": "atlas_driver_offer_bpp"} }
+        ]
+      }
+    }
+  },
+
+  "prod_to_local": {
+    "_comment": "Patches when moving prod config to local. Similar to master_to_local but with prod URLs.",
+
+    "global_replacements": [
+      {"find": "https://api.nammayatri.in",           "replace": "http://localhost:8016"},
+      {"find": "https://driver.nammayatri.in",        "replace": "http://localhost:8014"},
+
+      {"find": "https://beta.beckn.uat.juspay.net/dev/gateway/v1",  "replace": "http://localhost:8015/v1"},
+      {"find": "https://api.sandbox.moving.tech/dev/gateway/v1",     "replace": "http://localhost:8015/v1"},
+
+      {"find": "https://beta.beckn.uat.juspay.net/dev/registry",    "replace": "http://localhost:8020"},
+      {"find": "https://api.sandbox.moving.tech/dev/registry",       "replace": "http://localhost:8020"},
+      {"find": "https://staging.registry.ondc.org",                  "replace": "http://localhost:8020"},
+      {"find": "https://prod.registry.ondc.org",                     "replace": "http://localhost:8020"},
+
+      {"find": "http://beckn-osrm",                                  "replace": "http://localhost:5000"},
+      {"find": "https://fcm.googleapis.com/v1/projects/jp-beckn-dev/messages:send/",
+       "replace": "http://localhost:4545/fcm"}
+    ],
+
+    "schema_replacements": {},
+    "table_overrides": {},
+    "dimension_overrides": {}
+  },
+
+  "prod_to_master": {
+    "_comment": "Prod to master — minimal patches, both are remote environments.",
+    "global_replacements": [],
+    "schema_replacements": {},
+    "table_overrides": {},
+    "dimension_overrides": {}
+  },
+
+  "env_to_local": {
+    "_comment": "Staging env to local.",
+    "global_replacements": [],
+    "schema_replacements": {},
+    "table_overrides": {},
+    "dimension_overrides": {}
+  }
+}

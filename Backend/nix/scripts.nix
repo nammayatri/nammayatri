@@ -276,6 +276,196 @@ _:
           ./run-tests.sh
         '';
       };
+
+      run-mobility-stack-test = {
+        category = "Backend";
+        description = ''
+          Start the full mobility stack, import config from master, run integration tests, then stop everything.
+          Usage: , run-mobility-stack-test [test-args]
+          Example: , run-mobility-stack-test rides NY_Bangalore
+        '';
+        exec =
+          let
+            # All ports that run-mobility-stack-dev uses
+            systemPorts = [
+              5434 5435           # postgres primary + replica
+              6379                # redis
+              30001 30002 30003 30004 30005 30006  # redis cluster
+              2181 29092          # zookeeper + kafka
+              8085                # nginx
+              5422 8079           # passetto db + service
+              5001                # osrm
+            ];
+            servicePorts = [
+              8013                # rider-app
+              8016                # driver-app
+              8015                # beckn-gateway
+              8018                # provider-dashboard
+              8019                # mock-google
+              8020                # mock-registry
+              8080                # mock-server (python)
+              8081                # location-tracking-service
+              4343                # mock-sms
+              4545                # mock-fcm
+              6235                # mock-idfy
+            ];
+            allPorts = systemPorts ++ servicePorts;
+            portCheckStr = builtins.concatStringsSep " " (map builtins.toString allPorts);
+            serviceHealthPorts = builtins.concatStringsSep " " (map builtins.toString [ 8013 8016 ]);
+          in
+          ''
+            set -euo pipefail
+
+            FLAKE="''${FLAKE_ROOT}"
+            STACK_PID=""
+            TEST_EXIT=1
+
+            cleanup() {
+              echo ""
+              echo "═══════════════════════════════════════"
+              echo "  Stopping mobility stack..."
+              echo "═══════════════════════════════════════"
+              if [ -n "$STACK_PID" ]; then
+                kill "$STACK_PID" 2>/dev/null || true
+                wait "$STACK_PID" 2>/dev/null || true
+              fi
+              # Kill any remaining services on known ports
+              for port in ${portCheckStr}; do
+                pid=$(${pkgs.lsof}/bin/lsof -ti:"$port" 2>/dev/null || true)
+                if [ -n "$pid" ]; then
+                  echo "$pid" | xargs kill -9 2>/dev/null || true
+                fi
+              done
+              echo "  Done."
+              exit "$TEST_EXIT"
+            }
+            trap cleanup EXIT INT TERM
+
+            # ── Step 1: Check if ports are free, wait up to 5 mins ──
+            echo ""
+            echo "═══════════════════════════════════════"
+            echo "  Step 1: Checking ports..."
+            echo "═══════════════════════════════════════"
+
+            MAX_WAIT=300
+            INTERVAL=30
+            WAITED=0
+
+            while true; do
+              BUSY=""
+              for port in ${portCheckStr}; do
+                if ${pkgs.lsof}/bin/lsof -ti:"$port" >/dev/null 2>&1; then
+                  BUSY="$BUSY $port"
+                fi
+              done
+
+              if [ -z "$BUSY" ]; then
+                echo "  All ports free."
+                break
+              fi
+
+              if [ "$WAITED" -ge "$MAX_WAIT" ]; then
+                echo "  ERROR: Ports still busy after ''${MAX_WAIT}s:$BUSY"
+                echo "  Run: , kill-svc-ports"
+                TEST_EXIT=1
+                exit 1
+              fi
+
+              echo "  Ports busy:$BUSY — waiting ''${INTERVAL}s ($WAITED/''${MAX_WAIT}s)..."
+              sleep "$INTERVAL"
+              WAITED=$((WAITED + INTERVAL))
+            done
+
+            # ── Step 2: Start the mobility stack in background ──
+            echo ""
+            echo "═══════════════════════════════════════"
+            echo "  Step 2: Starting mobility stack..."
+            echo "═══════════════════════════════════════"
+
+            export DEV=1
+            nix run .#run-mobility-stack-dev &
+            STACK_PID=$!
+
+            # ── Step 3: Wait for core services to be healthy ──
+            echo ""
+            echo "═══════════════════════════════════════"
+            echo "  Step 3: Waiting for services..."
+            echo "═══════════════════════════════════════"
+
+            MAX_HEALTH_WAIT=600
+            HEALTH_WAITED=0
+
+            while true; do
+              ALL_HEALTHY=true
+              for port in ${serviceHealthPorts}; do
+                if ! curl -sf "http://localhost:$port" >/dev/null 2>&1; then
+                  ALL_HEALTHY=false
+                  break
+                fi
+              done
+
+              if [ "$ALL_HEALTHY" = true ]; then
+                echo "  All services healthy!"
+                break
+              fi
+
+              if [ "$HEALTH_WAITED" -ge "$MAX_HEALTH_WAIT" ]; then
+                echo "  ERROR: Services not healthy after ''${MAX_HEALTH_WAIT}s"
+                TEST_EXIT=1
+                exit 1
+              fi
+
+              echo "  Waiting for services... ($HEALTH_WAITED/''${MAX_HEALTH_WAIT}s)"
+              sleep 15
+              HEALTH_WAITED=$((HEALTH_WAITED + 15))
+            done
+
+            # ── Step 4: Import config from master ──
+            # Passetto is already running as part of run-mobility-stack-dev (process-compose)
+            echo ""
+            echo "═══════════════════════════════════════"
+            echo "  Step 4: Importing config from master..."
+            echo "═══════════════════════════════════════"
+
+            cd "$FLAKE/Backend/dev/config-sync"
+            ${pkgs.python3.withPackages (ps: [ ps.psycopg2 ps.requests ])}/bin/python3 config_transfer.py import --from master --to local || {
+              echo "  WARNING: Config import failed, continuing with existing data..."
+            }
+
+            # ── Step 5: Run post-import setup ──
+            echo ""
+            echo "═══════════════════════════════════════"
+            echo "  Step 5: Running post-import setup..."
+            echo "═══════════════════════════════════════"
+
+            ${pkgs.postgresql}/bin/psql -h localhost -p 5434 -U atlas_superuser -d atlas_dev \
+              -f "$FLAKE/Backend/dev/config-sync/post-import-setup.sql" || {
+              echo "  WARNING: Post-import setup failed, continuing..."
+            }
+
+            # ── Step 6: Run integration tests ──
+            echo ""
+            echo "═══════════════════════════════════════"
+            echo "  Step 6: Running integration tests..."
+            echo "═══════════════════════════════════════"
+
+            cd "$FLAKE/Backend/dev/integration-tests"
+            if ./run-tests.sh "$@"; then
+              TEST_EXIT=0
+              echo ""
+              echo "═══════════════════════════════════════"
+              echo "  ALL TESTS PASSED"
+              echo "═══════════════════════════════════════"
+            else
+              TEST_EXIT=$?
+              echo ""
+              echo "═══════════════════════════════════════"
+              echo "  TESTS FAILED (exit code: $TEST_EXIT)"
+              echo "═══════════════════════════════════════"
+            fi
+            # cleanup runs via trap
+          '';
+      };
     };
   };
 }
