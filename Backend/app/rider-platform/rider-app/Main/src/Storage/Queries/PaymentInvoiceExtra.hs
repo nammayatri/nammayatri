@@ -36,6 +36,27 @@ findByRideIdAndTypeAndPurpose rideId invoiceType purpose =
         ]
     ]
 
+
+-- | Main ride fare payment invoice only: @RIDE@ (fare) or @RIDE_TIP@ (fare+tip merged on one order).
+-- Excludes standalone @TIP@ invoices and other purposes so @findOne@ is not ambiguous when
+-- a ride has both a main fare intent and a separate tip payment invoice.
+findByRideIdAndTypeForMainFare ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DRide.Ride ->
+  DPI.InvoiceType ->
+  m (Maybe DPI.PaymentInvoice)
+findByRideIdAndTypeForMainFare rideId invoiceType =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamPI.rideId $ Se.Eq (getId rideId),
+          Se.Is BeamPI.invoiceType $ Se.Eq invoiceType,
+          Se.Or
+            [ Se.Is BeamPI.paymentPurpose $ Se.Eq DPI.RIDE,
+              Se.Is BeamPI.paymentPurpose $ Se.Eq DPI.RIDE_TIP
+            ]
+        ]
+    ]
+
 -- | Update payment status for refund invoice by rideId, invoiceType, and paymentPurpose.
 -- Used to update specific refund invoice status when multiple purposes exist.
 updatePaymentStatusByRideIdAndTypeAndPurpose ::

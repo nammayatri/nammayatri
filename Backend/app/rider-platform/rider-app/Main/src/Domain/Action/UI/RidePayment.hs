@@ -118,22 +118,26 @@ buildCreateCustomer createCustomerResp paymentMode = do
 getCustomerPaymentId :: Domain.Types.Person.Person -> Environment.Flow CustomerId
 getCustomerPaymentId person = do
   let paymentMode = fromMaybe DMPM.LIVE person.paymentMode
-  let mbCustomerId =
-        case paymentMode of
-          DMPM.LIVE -> person.customerPaymentId
-          DMPM.TEST -> person.customerTestPaymentId
-  case mbCustomerId of
+  case customerIdFor paymentMode person of
     Just customerId -> return customerId
     Nothing -> do
-      --- Create a customer in payment service if not there ---
-      mbEmailDecrypted <- mapM decrypt person.email
-      phoneDecrypted <- mapM decrypt person.mobileNumber
-      let req = CreateCustomerReq {email = mbEmailDecrypted, name = person.firstName, phone = phoneDecrypted, lastName = Nothing, objectReferenceId = Nothing, mobileCountryCode = Nothing, optionsGetClientAuthToken = Nothing}
-      customer <- TPayment.createCustomer person.merchantId person.merchantOperatingCityId person.paymentMode req
-      case paymentMode of
-        DMPM.LIVE -> QPerson.updateCustomerPaymentId (Just customer.customerId) person.id
-        DMPM.TEST -> QPerson.updateTestCustomerPaymentId (Just customer.customerId) person.id
-      return customer.customerId
+      let lockKey = "stripe:customer:create:lock:" <> person.id.getId
+      Redis.withLockRedisAndReturnValue lockKey 60 $ do
+        freshPerson <- QPerson.findById person.id >>= fromMaybeM (PersonNotFound person.id.getId)
+        case customerIdFor paymentMode freshPerson of
+          Just customerId -> return customerId
+          Nothing -> do
+            mbEmailDecrypted <- mapM decrypt freshPerson.email
+            phoneDecrypted <- mapM decrypt freshPerson.mobileNumber
+            let req = CreateCustomerReq {email = mbEmailDecrypted, name = freshPerson.firstName, phone = phoneDecrypted, lastName = Nothing, objectReferenceId = Nothing, mobileCountryCode = Nothing, optionsGetClientAuthToken = Nothing}
+            customer <- TPayment.createCustomer freshPerson.merchantId freshPerson.merchantOperatingCityId freshPerson.paymentMode req
+            case paymentMode of
+              DMPM.LIVE -> QPerson.updateCustomerPaymentId (Just customer.customerId) freshPerson.id
+              DMPM.TEST -> QPerson.updateTestCustomerPaymentId (Just customer.customerId) freshPerson.id
+            return customer.customerId
+  where
+    customerIdFor DMPM.LIVE p = p.customerPaymentId
+    customerIdFor DMPM.TEST p = p.customerTestPaymentId
 
 checkIfPaymentMethodExists :: Domain.Types.Person.Person -> PaymentMethodId -> Environment.Flow Bool
 checkIfPaymentMethodExists person paymentMethodId = do

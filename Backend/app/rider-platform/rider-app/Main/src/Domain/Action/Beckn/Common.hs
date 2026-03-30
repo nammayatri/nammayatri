@@ -498,6 +498,11 @@ rideAssignedReqHandler req = do
             withShortRetry $
               Just <$> SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode booking.riderId mbExistingOrderId createPaymentIntentServiceReq
         Nothing -> pure Nothing
+      -- Block ride assignment if the Stripe card requires 3DS authentication (requires_action)
+      whenJust mbPaymentIntentResp $ \resp -> do
+        logDebug $ "makePaymentIntent on ride assign: paymentIntentStatus=" <> show resp.paymentIntentStatus
+        when (resp.paymentIntentStatus == Payment.RequiresAction) $
+          throwError $ InvalidRequest "Payment requires 3DS authentication. Please verify your card to proceed."
       -- Create PaymentInvoice after handle block (unified for online and cash payments)
       -- This is outside the retry block to prevent duplicate invoices
       merchant <- fromMaybeM (MerchantNotFound booking.merchantId.getId) mbMerchant

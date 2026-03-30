@@ -108,6 +108,17 @@ buildSearchReq messageId subscriber req context actualBapUri = do
   transactionId_ <- BecknV2.OnDemand.Utils.Common.getTransactionId context
   logDebug $ "Phone Number at bap side is: " <> show (Beckn.OnDemand.Utils.Search.buildCustomerPhoneNumber req)
   logDebug $ "Phone Number at bap side is: " <> show customerPhoneNum_
+  let paymentTagGroups = req.searchReqMessageIntent >>= (.intentPayment) >>= (.paymentTags)
+      stripeTestFromSettlementTerms = Utils.getTagV2 Tags.SETTLEMENT_TERMS Tags.STRIPE_TEST paymentTagGroups
+      stripeTestFromBapTerms = Utils.getTagV2 Tags.BAP_TERMS Tags.STRIPE_TEST paymentTagGroups
+      stripeTestFromBppTerms = Utils.getTagV2 Tags.BPP_TERMS Tags.STRIPE_TEST paymentTagGroups
+  logDebug $
+    "[BPP][Search][PaymentTag] messageId=" <> messageId
+      <> " transactionId=" <> transactionId_
+      <> " SETTLEMENT_TERMS/STRIPE_TEST=" <> show stripeTestFromSettlementTerms
+      <> " BAP_TERMS/STRIPE_TEST=" <> show stripeTestFromBapTerms
+      <> " BPP_TERMS/STRIPE_TEST=" <> show stripeTestFromBppTerms
+      <> " resolvedPaymentMode=" <> show paymentMode
   pure $
     Domain.Action.Beckn.Search.DSearchReq
       { bapCountry = bapCountry_,

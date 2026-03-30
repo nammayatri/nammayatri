@@ -11,9 +11,11 @@ let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
 let schedulerConfig =
       { loggerConfig =
               common.loggerConfig
-          //  { logRawSql = True
+          //  { logToConsole = False
+              , logToFile = False
+              , logRawSql = False
               , logFilePath = "/tmp/driver-offer-scheduler.log"
-              , prettyPrinting = True
+              , prettyPrinting = False
               }
       , esqDBCfg = appCfg.esqDBCfg
       , esqDBReplicaCfg = appCfg.esqDBReplicaCfg
@@ -41,18 +43,20 @@ let schedulerConfig =
       , block = +10000
       , readCount = +1
       , kafkaProducerCfg = appCfg.kafkaProducerCfg
-      , secondaryKafkaProducerCfg = appCfg.secondaryKafkaProducerCfg
       , cacConfig = appCfg.cacConfig
       , inMemConfig
-      , hedisSecondaryClusterCfg = appCfg.hedisSecondaryClusterCfg
-      , blackListedJobs = [] : List Text
       }
 
 in  { appCfg =
             appCfg
         //  { loggerConfig =
                     appCfg.loggerConfig
-                //  { logFilePath = "/tmp/driver-offer-allocator.log" }
+                //  { logToConsole = False
+                    , logToFile = False
+                    , logRawSql = False
+                    , logFilePath = "/tmp/driver-offer-allocator.log"
+                    , prettyPrinting = False
+                    }
             }
     , schedulerConfig
     }

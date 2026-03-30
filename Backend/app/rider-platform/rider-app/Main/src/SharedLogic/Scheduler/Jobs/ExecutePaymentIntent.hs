@@ -62,7 +62,7 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
     logDebug "Executing payment intent"
     -- Check if payment is already completed (idempotent check using invoice status)
     ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-    mbInvoiceForCheck <- QPaymentInvoiceExtra.findByRideIdAndTypeAndPurpose rideId DPI.PAYMENT DPI.RIDE
+    mbInvoiceForCheck <- QPaymentInvoiceExtra.findByRideIdAndTypeForMainFare rideId DPI.PAYMENT
     let isPaymentCaptured = maybe False (\inv -> inv.paymentStatus == DPI.CAPTURED) mbInvoiceForCheck
     if isPaymentCaptured
       then logInfo $ "Payment already captured (invoice status) for ride: " <> rideId.getId <> ", skipping"

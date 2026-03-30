@@ -442,6 +442,9 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     case merchant.gatewayAndRegistryPriorityList of
       (NY : _) -> asks (.nyGatewayUrl)
       _ -> asks (.ondcGatewayUrl)
+      -- todo remove this after testing
+  let hasStripeTestTag = person.paymentMode == Just DMPM.TEST
+  logDebug $ "[BAP][Search][PaymentTag] searchRequestId=" <> searchRequest.id.getId <> " personPaymentMode=" <> show person.paymentMode <> " hasStripeTestTag=" <> show hasStripeTestTag
   return $
     SearchRes -- TODO: cleanup this reponse field based on what is not required for beckn type conversions
       { searchRequest = searchRequest,

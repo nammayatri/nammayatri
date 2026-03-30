@@ -168,7 +168,8 @@ data PayoutPaymentStatus = PayoutPaymentStatus
 
 data CreatePaymentIntentServiceResp = CreatePaymentIntentServiceResp
   { paymentIntentId :: Text,
-    orderId :: Id DOrder.PaymentOrder
+    orderId :: Id DOrder.PaymentOrder,
+    paymentIntentStatus :: Payment.PaymentIntentStatus
   }
   deriving (Show, Eq, Generic)
 
@@ -220,7 +221,7 @@ createPaymentIntentService merchantId merchantOpCityId personId mbExistingOrderI
       logInfo $ "Created new order and payment intent: " <> createPaymentIntentResp.paymentIntentId <> "; amount: " <> show createPaymentIntentReq.amount <> "; applicationFeeAmount: " <> show createPaymentIntentReq.applicationFeeAmount
       QOrder.create paymentOrder
       HQTransaction.create merchantOpCityId transaction (Just "create payment intent service")
-      return CreatePaymentIntentServiceResp {paymentIntentId = createPaymentIntentResp.paymentIntentId, orderId = newOrderId}
+      return CreatePaymentIntentServiceResp {paymentIntentId = createPaymentIntentResp.paymentIntentId, orderId = newOrderId, paymentIntentStatus = createPaymentIntentResp.status}
     Just existingOrder -> do
       transactions <- HQTransaction.findAllByOrderId existingOrder.id
       let mbInProgressTransaction = find (isInProgress . (.status)) transactions
@@ -271,7 +272,7 @@ createPaymentIntentService merchantId merchantOpCityId personId mbExistingOrderI
       logInfo $ "Created new payment intent: " <> createPaymentIntentResp.paymentIntentId
       QOrder.updateAmountAndPaymentIntentId existingOrder.id newOrderAmount createPaymentIntentResp.paymentIntentId
       HQTransaction.create merchantOpCityId transaction (Just "create new transaction for existing order")
-      return CreatePaymentIntentServiceResp {paymentIntentId = createPaymentIntentResp.paymentIntentId, orderId = existingOrder.id}
+      return CreatePaymentIntentServiceResp {paymentIntentId = createPaymentIntentResp.paymentIntentId, orderId = existingOrder.id, paymentIntentStatus = createPaymentIntentResp.status}
 
     updateOldTransaction paymentIntentId newTransactionAmount newApplicationFeeAmount existingOrder existingTransaction = do
       let newOrderAmount = createPaymentIntentServiceReq.amount
@@ -281,7 +282,7 @@ createPaymentIntentService merchantId merchantOpCityId personId mbExistingOrderI
       when (newTransactionAmount /= existingTransaction.amount || newApplicationFeeAmount /= existingTransaction.applicationFeeAmount) $ do
         logInfo $ "Updated transaction amount: " <> paymentIntentId <> "; amount: " <> show newTransactionAmount <> "; applicationFeeAmount: " <> show newApplicationFeeAmount
         HQTransaction.updateAmount merchantOpCityId existingTransaction newTransactionAmount newApplicationFeeAmount (Just "update old transaction")
-      return CreatePaymentIntentServiceResp {paymentIntentId = existingOrder.paymentServiceOrderId, orderId = existingOrder.id}
+      return CreatePaymentIntentServiceResp {paymentIntentId = existingOrder.paymentServiceOrderId, orderId = existingOrder.id, paymentIntentStatus = Payment.caseToPaymentIntentStatus existingTransaction.status}
 
     buildPaymentOrder_ ::
       ( EncFlow m r,
