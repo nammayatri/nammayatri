@@ -1,0 +1,1034 @@
+{
+	"info": {
+		"_postman_id": "4f993caa-30c9-4b57-a223-20047896779e",
+		"name": "Metro Auto Refund Flow",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "12243220",
+		"description": "FRFS metro booking with auto refund"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Parse the response body",
+							"let response = pm.response.json();",
+							"",
+							"// Check if 'authId' exists in the response and store it in an environment variable",
+							"if (response.authId) {",
+							"    postman.setEnvironmentVariable(\"authId\", response.authId);",
+							"    console.log(\"authId saved:\", response.authId);",
+							"} else {",
+							"    console.log(\"authId not found in the response\");",
+							"}"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"mobileNumber\": \"{{_test_rider_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"NAMMA_YATRI\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/auth",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"auth"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Auth Verification",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Parse the response body",
+							"let response = pm.response.json();",
+							"",
+							"// Check if 'authId' exists in the response and store it in an environment variable",
+							"if (response.token) {",
+							"    postman.setEnvironmentVariable(\"token\", response.token);",
+							"    console.log(\"token saved:\", response.token);",
+							"} else {",
+							"    console.log(\"token not found in the response\");",
+							"}"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"otp\": \"7891\",\n    \"deviceToken\": \"42379nksf712943912\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/auth/:authId/verify",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"auth",
+						":authId",
+						"verify"
+					],
+					"variable": [
+						{
+							"key": "authId",
+							"value": "{{authId}}"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Origin Serviceability",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// All values come from environment: vehicle_type, platform_type, origin_lat, origin_lon"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var jsonData = pm.response.json();",
+							"// City comes from environment, no need to detect from std code",
+							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "apikey",
+					"apikey": [
+						{
+							"key": "value",
+							"value": "{{token}}",
+							"type": "string"
+						},
+						{
+							"key": "key",
+							"value": "token",
+							"type": "string"
+						},
+						{
+							"key": "in",
+							"value": "header",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{customer_token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{ \n    \"location\" : {\n        \"lat\": {{origin_lat}},\n        \"lon\": {{origin_lon}}\n    }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/serviceability/origin",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"serviceability",
+						"origin"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "FRFS Config",
+			"request": {
+				"auth": {
+					"type": "apikey",
+					"apikey": [
+						{
+							"key": "value",
+							"value": "{{token}}",
+							"type": "string"
+						},
+						{
+							"key": "key",
+							"value": "token",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl_app}}/frfs/config?vehicleType=\"{{vehicle_type}}\"&city={{city}}",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"frfs",
+						"config"
+					],
+					"query": [
+						{
+							"key": "vehicleType",
+							"value": "\"{{vehicle_type}}\""
+						},
+						{
+							"key": "city",
+							"value": "{{city}}"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "FRFS Autocomplete (Select Route)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var jsonData = JSON.parse(responseBody);",
+							"if(jsonData.routes.length) {",
+							"postman.setEnvironmentVariable(\"route_code\", jsonData.routes[0].code);",
+							"postman.setEnvironmentVariable(\"integrated_bpp_config_id\", jsonData.routes[0].integratedBppConfigId);",
+							"}",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "apikey",
+					"apikey": [
+						{
+							"key": "value",
+							"value": "{{token}}",
+							"type": "string"
+						},
+						{
+							"key": "key",
+							"value": "token",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl_app}}/frfs/autocomplete?vehicleType=\"{{vehicle_type}}\"&city={{city}}&location={{origin_lat}},{{origin_lon}}&input=A&limit=10&offset=0&platformType=\"{{platform_type}}\"",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"frfs",
+						"autocomplete"
+					],
+					"query": [
+						{
+							"key": "vehicleType",
+							"value": "\"{{vehicle_type}}\""
+						},
+						{
+							"key": "city",
+							"value": "{{city}}"
+						},
+						{
+							"key": "location",
+							"value": "{{origin_lat}},{{origin_lon}}"
+						},
+						{
+							"key": "input",
+							"value": "A"
+						},
+						{
+							"key": "limit",
+							"value": "10"
+						},
+						{
+							"key": "offset",
+							"value": "0"
+						},
+						{
+							"key": "platformType",
+							"value": "\"{{platform_type}}\""
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Stations",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var jsonData = JSON.parse(responseBody);",
+							"postman.setEnvironmentVariable(\"start_stop_code\", jsonData[0].code);",
+							"postman.setEnvironmentVariable(\"end_stop_code\", jsonData[jsonData.length - 1].code);"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "apikey",
+					"apikey": [
+						{
+							"key": "value",
+							"value": "{{token}}",
+							"type": "string"
+						},
+						{
+							"key": "key",
+							"value": "token",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl_app}}/frfs/stations?city={{city}}&routeCode={{route_code}}&minimalData=true&vehicleType=\"{{vehicle_type}}\"&integrated_bpp_config_id={{integrated_bpp_config_id}}&platformType=\"{{platform_type}}\"",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"frfs",
+						"stations"
+					],
+					"query": [
+						{
+							"key": "city",
+							"value": "{{city}}"
+						},
+						{
+							"key": "startStationCode",
+							"value": "{{start_stop_code}}",
+							"disabled": true
+						},
+						{
+							"key": "routeCode",
+							"value": "{{route_code}}"
+						},
+						{
+							"key": "endStationCode",
+							"value": "{{end_stop_code}}",
+							"type": "text",
+							"disabled": true
+						},
+						{
+							"key": "minimalData",
+							"value": "true"
+						},
+						{
+							"key": "vehicleType",
+							"value": "\"{{vehicle_type}}\""
+						},
+						{
+							"key": "integrated_bpp_config_id",
+							"value": "{{integrated_bpp_config_id}}"
+						},
+						{
+							"key": "platformType",
+							"value": "\"{{platform_type}}\""
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Search",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var jsonData = JSON.parse(responseBody);",
+							"postman.setEnvironmentVariable(\"frfs_searchId\", jsonData.searchId);",
+							"if (jsonData.quotes?.length > 0) {",
+							"    postman.setEnvironmentVariable(\"frfs_quoteId\", jsonData.quotes[0].quoteId);",
+							"    postman.setEnvironmentVariable(\"frfs_quote_category_id\", jsonData.quotes[0].categories[0].categoryId);",
+							"}",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "apikey",
+					"apikey": [
+						{
+							"key": "value",
+							"value": "{{token}}",
+							"type": "string"
+						},
+						{
+							"key": "key",
+							"value": "token",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"fromStationCode\": \"{{start_stop_code}}\",\n    \"toStationCode\": \"{{end_stop_code}}\",  \n    \"routeCode\": \"{{route_code}}\",\n    \"quantity\": 1,\n    \"minimalData\": true\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/frfs/search?vehicleType=\"{{vehicle_type}}\"&city={{city}}&integratedBppConfigId={{integrated_bpp_config_id}}",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"frfs",
+						"search"
+					],
+					"query": [
+						{
+							"key": "vehicleType",
+							"value": "\"{{vehicle_type}}\""
+						},
+						{
+							"key": "city",
+							"value": "{{city}}"
+						},
+						{
+							"key": "integratedBppConfigId",
+							"value": "{{integrated_bpp_config_id}}"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Quotes",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Wait for async BPP callback to deliver quotes",
+							"const start = Date.now();",
+							"while (Date.now() - start < 5000) { /* busy wait */ }"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var jsonData = pm.response.json();",
+							"if (jsonData.length > 0) {",
+							"    pm.environment.set('frfs_quoteId', jsonData[0].quoteId);",
+							"    pm.environment.set('frfs_quote_category_id', jsonData[0].categories[0].categoryId);",
+							"    console.log('Quote:', jsonData[0].quoteId, 'Category:', jsonData[0].categories[0].categoryId);",
+							"}",
+							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+							"pm.test('Has quotes', function () { pm.expect(jsonData).to.be.an('array').that.is.not.empty; });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "apikey",
+					"apikey": [
+						{
+							"key": "value",
+							"value": "{{token}}",
+							"type": "string"
+						},
+						{
+							"key": "key",
+							"value": "token",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl_app}}/frfs/search/:searchId/quote",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"frfs",
+						"search",
+						":searchId",
+						"quote"
+					],
+					"variable": [
+						{
+							"key": "searchId",
+							"value": "{{frfs_searchId}}"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Confirm Quote V2",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var jsonData = JSON.parse(responseBody);",
+							"if (jsonData.bookingId) postman.setEnvironmentVariable(\"frfs_bookingId\", jsonData.bookingId);"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "apikey",
+					"apikey": [
+						{
+							"key": "value",
+							"value": "{{token}}",
+							"type": "string"
+						},
+						{
+							"key": "key",
+							"value": "token",
+							"type": "string"
+						},
+						{
+							"key": "in",
+							"value": "header",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"offered\": [\n        {\n            \"quoteCategoryId\": \"{{frfs_quote_category_id}}\",\n            \"quantity\": 1\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/frfs/quote/v2/:quoteId/confirm",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"frfs",
+						"quote",
+						"v2",
+						":quoteId",
+						"confirm"
+					],
+					"variable": [
+						{
+							"key": "quoteId",
+							"value": "{{frfs_quoteId}}"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Payment Info",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Wait for rider-app to create the Juspay payment order",
+							"const start = Date.now();",
+							"while (Date.now() - start < 3000) { /* busy wait */ }"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('Booking status:', d.status, 'Payment status:', d.payment ? d.payment.status : 'N/A');",
+							"if (d.payment && d.payment.paymentOrder) {",
+							"    var po = d.payment.paymentOrder;",
+							"    pm.environment.set('payment_order_id', po.id || '');",
+							"    pm.environment.set('payment_order_short_id', po.order_id || '');",
+							"    console.log('Payment order id:', po.id, 'short_id:', po.order_id);",
+							"}",
+							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+							"pm.test('Has payment info', function () {",
+							"    pm.expect(d.payment).to.not.be.undefined;",
+							"    pm.expect(d.payment.paymentOrder).to.not.be.undefined;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "apikey",
+					"apikey": [
+						{
+							"key": "value",
+							"value": "{{token}}",
+							"type": "string"
+						},
+						{
+							"key": "key",
+							"value": "token",
+							"type": "string"
+						},
+						{
+							"key": "in",
+							"value": "header",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl_app}}/frfs/booking/:bookingId/status",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"frfs",
+						"booking",
+						":bookingId",
+						"status"
+					],
+					"variable": [
+						{
+							"key": "bookingId",
+							"value": "{{frfs_bookingId}}"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Payment Status \u2192 CHARGED",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var ids = [];",
+							"var orderId = pm.environment.get('payment_order_id');",
+							"var shortId = pm.environment.get('payment_order_short_id');",
+							"if (orderId) ids.push(orderId);",
+							"if (shortId) ids.push(shortId);",
+							"pm.variables.set('_payment_ids_json', JSON.stringify(ids));"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Updated', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/status",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"mock",
+						"status"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\"service\": \"juspay\", \"id\": {{_payment_ids_json}}, \"status\": \"CHARGED\", \"data\": {\"amount\": 10.0}}"
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Booking Status (Trigger Confirm)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const s=Date.now(); while(Date.now()-s<5000){}"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d=pm.response.json(); console.log('Status:', d.status);",
+							"pm.test('200', function(){pm.response.to.have.status(200);});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"auth": {
+					"type": "apikey",
+					"apikey": [
+						{
+							"key": "value",
+							"value": "{{token}}",
+							"type": "string"
+						},
+						{
+							"key": "key",
+							"value": "token",
+							"type": "string"
+						},
+						{
+							"key": "in",
+							"value": "header",
+							"type": "string"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/frfs/booking/:bookingId/status",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"frfs",
+						"booking",
+						":bookingId",
+						"status"
+					],
+					"variable": [
+						{
+							"key": "bookingId",
+							"value": "{{frfs_bookingId}}"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Payment Status \u2192 AUTO_REFUNDED",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var ids = [];",
+							"var orderId = pm.environment.get('payment_order_id');",
+							"var shortId = pm.environment.get('payment_order_short_id');",
+							"if (orderId) ids.push(orderId);",
+							"if (shortId) ids.push(shortId);",
+							"pm.variables.set('_payment_ids_json', JSON.stringify(ids));"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Updated', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/status",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"mock",
+						"status"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\"service\": \"juspay\", \"id\": {{_payment_ids_json}}, \"status\": \"AUTO_REFUNDED\", \"data\": {\"amount\": 10.0}}"
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Booking Status (Verify Auto Refund)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const s=Date.now(); while(Date.now()-s<5000){}"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d=pm.response.json();",
+							"console.log('Final Status:', d.status, 'Payment:', d.payment?d.payment.status:'N/A');",
+							"pm.test('200', function(){pm.response.to.have.status(200);});",
+							"pm.test('Payment is REFUNDED', function(){pm.expect(d.payment.status).to.be.oneOf(['REFUNDED','REFUND_PENDING']);});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"auth": {
+					"type": "apikey",
+					"apikey": [
+						{
+							"key": "value",
+							"value": "{{token}}",
+							"type": "string"
+						},
+						{
+							"key": "key",
+							"value": "token",
+							"type": "string"
+						},
+						{
+							"key": "in",
+							"value": "header",
+							"type": "string"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/frfs/booking/:bookingId/status",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"frfs",
+						"booking",
+						":bookingId",
+						"status"
+					],
+					"variable": [
+						{
+							"key": "bookingId",
+							"value": "{{frfs_bookingId}}"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					"if (!pm.collectionVariables.get('_test_rider_number')) {",
+					"    var rNum = '7' + String(Math.floor(100000000 + Math.random() * 899999999));",
+					"    pm.collectionVariables.set('_test_rider_number', rNum);",
+					"    console.log('Test rider:', rNum);",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "authId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": ""
+		},
+		{
+			"key": "searchId",
+			"value": ""
+		},
+		{
+			"key": "journeyId",
+			"value": ""
+		},
+		{
+			"key": "walkFirstJourneyId",
+			"value": ""
+		},
+		{
+			"key": "upcoming-inplan-leg-lat",
+			"value": ""
+		},
+		{
+			"key": "upcoming-inplan-leg-lon",
+			"value": ""
+		},
+		{
+			"key": "bookingUpdateRequestId",
+			"value": ""
+		},
+		{
+			"key": "extendLeg-bookingUpdateRequestId",
+			"value": ""
+		},
+		{
+			"key": "extendLeg-distance",
+			"value": ""
+		},
+		{
+			"key": "extendLeg-duration",
+			"value": ""
+		},
+		{
+			"key": "extendLeg-fare",
+			"value": ""
+		},
+		{
+			"key": "extendLeg-minFare",
+			"value": ""
+		},
+		{
+			"key": "extendLeg-maxFare",
+			"value": ""
+		}
+	]
+}

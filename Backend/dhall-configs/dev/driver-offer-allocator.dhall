@@ -13,6 +13,8 @@ let schedulerConfig =
               common.loggerConfig
           //  { logRawSql = True
               , logFilePath = "/tmp/driver-offer-scheduler.log"
+              , logToConsole = False
+              , logToFile = False
               , prettyPrinting = True
               }
       , esqDBCfg = appCfg.esqDBCfg

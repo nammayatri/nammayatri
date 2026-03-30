@@ -59,14 +59,10 @@ in
         "mock-sms-exe"
         "provider-dashboard-exe"
         "producer-exe"
-        "public-transport-rider-platform-exe"
-        "public-transport-search-consumer-exe"
         "rider-app-exe"
         "rider-dashboard-exe"
         "search-result-aggregator-exe"
         "kafka-consumers-exe"
-        "special-zone-exe"
-        "safety-dashboard-exe"
         "unified-dashboard-exe"
       ];
 
@@ -184,10 +180,11 @@ in
             };
           };
 
-          # Test tools — dashboard, mock Stripe, context API
-          mock-stripe = {
+          # Test tools — dashboard, mock servers, context API
+          # Unified mock server for Juspay, Stripe, PayTM, Acko, SOS, WhatsApp, CMRL, CRIS, etc.
+          mock-server = {
             imports = [ common ];
-            command = "${pkgs.python3}/bin/python3 dev/test-tool/mock-stripe/server.py --port 7081";
+            command = "${pkgs.python3}/bin/python3 dev/mock-servers/server.py --port 8080";
             namespace = lib.mkForce "test";
             depends_on."nammayatri-init".condition = "process_completed_successfully";
             availability = {

@@ -89,7 +89,7 @@ in  { hedisCfg
     , esqDBReplicaCfg
     , loggerConfig =
             common.loggerConfig
-        //  { logFilePath = "/tmp/producer.log", prettyPrinting = True }
+        //  { logFilePath = "/tmp/producer.log", prettyPrinting = True, logToConsole = False, logToFile = False }
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
     , waitTimeMilliSec = +1000.0

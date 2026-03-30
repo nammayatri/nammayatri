@@ -13,7 +13,7 @@ const defaultConfig: Config = {
   riderUrl: 'http://localhost:8013',
   driverUrl: 'http://localhost:8016',
   token: '',
-  stripeUrl: 'http://localhost:7081',
+  stripeUrl: 'http://localhost:8080/stripe',
 };
 
 function loadConfig(): Config {

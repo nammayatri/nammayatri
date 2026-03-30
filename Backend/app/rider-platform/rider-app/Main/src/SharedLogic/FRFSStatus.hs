@@ -313,15 +313,15 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
 
     buildPaymentObject booking paymentBooking paymentBookingStatus =
       let paymentStatusAPI =
-            case booking.status of
-              DFRFSTicketBooking.FAILED -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.FAILED
-              DFRFSTicketBooking.COUNTER_CANCELLED -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUNDED
+            case paymentBooking.status of
+              DFRFSTicketBookingPayment.REFUND_PENDING -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUND_PENDING
+              DFRFSTicketBookingPayment.REFUND_INITIATED -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUND_INITIATED
+              DFRFSTicketBookingPayment.REFUND_FAILED -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUND_FAILED
+              DFRFSTicketBookingPayment.REFUNDED -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUNDED
               _ ->
-                case paymentBooking.status of
-                  DFRFSTicketBookingPayment.REFUND_PENDING -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUND_PENDING
-                  DFRFSTicketBookingPayment.REFUND_INITIATED -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUND_INITIATED
-                  DFRFSTicketBookingPayment.REFUND_FAILED -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUND_FAILED
-                  DFRFSTicketBookingPayment.REFUNDED -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUNDED
+                case booking.status of
+                  DFRFSTicketBooking.FAILED -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.FAILED
+                  DFRFSTicketBooking.COUNTER_CANCELLED -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUNDED
                   _ ->
                     case paymentBookingStatus of
                       FRFSTicketService.REFUNDED -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUNDED

@@ -13,7 +13,17 @@ result-*
 
 # Backend ignores
 dist-newstyle
-/data
+Backend/dev/config-sync/assets/environments.json
+Backend/dev/config-sync/assets/patches.json
+Backend/dev/config-sync/assets/data/*
+!Backend/dev/config-sync/assets/data/.gitkeep
+Backend/dev/config-sync/master_to_local_sql/
+Backend/dev/config-sync/*_import*.sql
+Backend/dev/config-sync/__pycache__/
+Backend/dev/integration-tests/reports/
+Backend/dev/integration-tests/Master.postman_environment.json
+.venv/
+__pycache__ 
 # process-compose log files
 *.log
 

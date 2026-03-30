@@ -1,0 +1,13 @@
+certifi==2026.2.25
+charset-normalizer==3.4.6
+idna==3.11
+markdown-it-py==4.0.0
+mdurl==0.1.2
+psycopg2-binary==2.9.11
+Pygments==2.19.2
+python-dotenv==1.2.2
+requests==2.32.5
+rich==14.3.3
+urllib3==2.6.3
+websockets==16.0
+wheel==0.45.1
