@@ -70,6 +70,8 @@ types:
     currency: Currency
     ridesCleared: "[Id Ride]"
     errorMessage: Maybe Text
+  VpaFromNumberResp:
+    vpa: Text
 apis:
   - GET:
       endpoint: /payment/methods
@@ -159,3 +161,15 @@ apis:
         rideId: Id Ride
       response:
         type: APISuccess
+  - POST:
+      endpoint: /payment/verifyVpa
+      auth: TokenAuth
+      mandatoryQuery:
+        vpa: Text
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /payment/vpaFromNumber
+      auth: TokenAuth
+      response:
+        type: VpaFromNumberResp
