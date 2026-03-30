@@ -21,6 +21,7 @@ module Domain.Action.UI.Payout
 where
 
 import Data.Time (utctDay)
+import qualified Domain.Action.UI.DriverCoin as DriverCoin
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.DriverFee as DDF
@@ -149,7 +150,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
               Just DPayment.COINS_REDEMPTION -> do
                 let driverId = Id payoutOrder.customerId
                 fork "Update Payout Status and Transactions for Coins Redemption" $ do
-                  callPayoutService driverId payoutConfig payoutOrderId
+                  callPayoutServiceForCoinsRedemption driverId payoutConfig payoutOrderId merchantOperatingCityId merchantId
               Just DPayment.BACKLOG -> do
                 whenJust payoutOrder.entityIds $ \entityIds -> do
                   fork "Update Payout Status for Backlog" $ do
@@ -244,6 +245,17 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
       let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrderId, mbExpand = payoutConfig.expand}
           createPayoutOrderStatusCall = Payout.payoutOrderStatus driver.merchantId driver.merchantOperatingCityId paymentServiceName (Just $ getId driverId)
       void $ DPayment.payoutStatusService (cast driver.merchantId) (cast driver.id) createPayoutOrderStatusReq createPayoutOrderStatusCall
+
+    callPayoutServiceForCoinsRedemption driverId payoutConfig payoutOrderId merchantOperatingCityId merchantId = do
+      driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+      paymentServiceName <- Payout.decidePayoutService (DEMSC.PayoutService TPayout.Juspay) driver.clientSdkVersion driver.merchantOperatingCityId
+      let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrderId, mbExpand = payoutConfig.expand}
+          createPayoutOrderStatusCall = Payout.payoutOrderStatus driver.merchantId driver.merchantOperatingCityId paymentServiceName (Just $ getId driverId)
+      payoutStatusResp <- DPayment.payoutStatusService (cast driver.merchantId) (cast driver.id) createPayoutOrderStatusReq createPayoutOrderStatusCall
+      case payoutStatusResp.status of
+        Payout.FULFILLMENTS_FAILURE ->
+          DriverCoin.refundCoins driverId merchantId merchantOperatingCityId payoutStatusResp.orderId
+        _ -> pure ()
 
     updateStatsWithLock merchantId merchantOperatingCityId payoutStatus payoutOrderId payoutConfig dStatsId = do
       let dPayoutStatus = castPayoutOrderStatus payoutStatus
