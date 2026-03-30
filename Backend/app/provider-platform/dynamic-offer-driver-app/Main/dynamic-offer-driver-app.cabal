@@ -780,6 +780,7 @@ library
       Storage.Queries.Status
       Storage.Queries.StclMembershipExtra
       Storage.Queries.SubscriptionPurchaseExtra
+      Storage.Queries.TDSDistributionPdfFileExtra
       Storage.Queries.Transformers.Booking
       Storage.Queries.Transformers.BookingLocation
       Storage.Queries.Transformers.CancellationReason
@@ -1199,6 +1200,8 @@ library
       Domain.Types.SubscriptionConfig
       Domain.Types.SubscriptionPurchase
       Domain.Types.SurgePricing
+      Domain.Types.TDSDistributionPdfFile
+      Domain.Types.TDSDistributionRecord
       Domain.Types.Toll
       Domain.Types.Translations
       Domain.Types.TransporterConfig
@@ -1377,6 +1380,8 @@ library
       Storage.Beam.SubscriptionConfig
       Storage.Beam.SubscriptionPurchase
       Storage.Beam.SurgePricing
+      Storage.Beam.TDSDistributionPdfFile
+      Storage.Beam.TDSDistributionRecord
       Storage.Beam.Toll
       Storage.Beam.Translations
       Storage.Beam.TransporterConfig
@@ -1608,6 +1613,7 @@ library
       Storage.Queries.OrphanInstances.Station
       Storage.Queries.OrphanInstances.StclMembership
       Storage.Queries.OrphanInstances.SubscriptionPurchase
+      Storage.Queries.OrphanInstances.TDSDistributionPdfFile
       Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.TransporterConfig
       Storage.Queries.OrphanInstances.TripAlertRequest
@@ -1657,6 +1663,8 @@ library
       Storage.Queries.SubscriptionConfig
       Storage.Queries.SubscriptionPurchase
       Storage.Queries.SurgePricing
+      Storage.Queries.TDSDistributionPdfFile
+      Storage.Queries.TDSDistributionRecord
       Storage.Queries.Toll
       Storage.Queries.Translations
       Storage.Queries.TransporterConfig

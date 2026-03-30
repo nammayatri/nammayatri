@@ -1,0 +1,36 @@
+imports:
+  TDSDistributionRecord: Domain.Types.TDSDistributionRecord
+
+TDSDistributionPdfFile:
+  tableName: tds_distribution_pdf_file
+
+  # dsl-config.dhall injects merchantId / merchantOperatingCityId / timestamps by default; omit them for this table.
+  excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]
+
+  fields:
+    id: Id TDSDistributionPdfFile
+    tdsDistributionRecordId: Maybe (Id TDSDistributionRecord)
+    s3FilePath: Text
+    fileName: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    tdsDistributionRecordId: "!SecondaryKey"
+
+  sqlType:
+    s3FilePath: character varying(512)
+    fileName: character varying(512)
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllByTdsDistributionRecordId:
+      kvFunction: findAllWithKV
+      where: tdsDistributionRecordId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
