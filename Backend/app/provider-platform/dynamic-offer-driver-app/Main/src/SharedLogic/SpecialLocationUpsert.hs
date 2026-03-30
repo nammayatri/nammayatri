@@ -77,7 +77,12 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     pickupPriority :: Text,
     dropPriority :: Text,
     specialLocationId :: Text,
-    isQueueEnabled :: Maybe Text
+    isQueueEnabled :: Maybe Text,
+    gateInfoMinDriverThreshold :: Maybe Text,
+    gateInfoDemandThreshold :: Maybe Text,
+    gateInfoNotificationCooldownInSec :: Maybe Text,
+    gateInfoMaxRideSkipsBeforeQueueRemoval :: Maybe Text,
+    gateInfoPickupZoneArrivalTimeoutInSec :: Maybe Text
   }
   deriving (Show)
 
@@ -107,6 +112,11 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> r .: "drop_priority"
       <*> r .: "special_location_id"
       <*> optional (r .: "is_queue_enabled")
+      <*> optional (r .: "gate_info_min_driver_threshold")
+      <*> optional (r .: "gate_info_demand_threshold")
+      <*> optional (r .: "gate_info_notification_cooldown_in_sec")
+      <*> optional (r .: "gate_info_max_ride_skips_before_queue_removal")
+      <*> optional (r .: "gate_info_pickup_zone_arrival_timeout_in_sec")
 
 ---------------------------------------------------------------------
 -- CSV Helper Functions
@@ -263,10 +273,11 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             gateTags = gateInfoGateTags,
             walkDescription = gateInfoWalkDescription,
             entryFeeAmount = gateInfoEntryFeeAmount,
-            minDriverThreshold = Nothing,
-            demandThreshold = Nothing,
-            notificationCooldownInSec = Nothing,
-            maxRideSkipsBeforeQueueRemoval = Nothing
+            minDriverThreshold = readMaybeCSVField idx (fromMaybe "" row.gateInfoMinDriverThreshold) "Gate Info (min_driver_threshold)",
+            demandThreshold = readMaybeCSVField idx (fromMaybe "" row.gateInfoDemandThreshold) "Gate Info (demand_threshold)",
+            notificationCooldownInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoNotificationCooldownInSec) "Gate Info (notification_cooldown_in_sec)",
+            maxRideSkipsBeforeQueueRemoval = readMaybeCSVField idx (fromMaybe "" row.gateInfoMaxRideSkipsBeforeQueueRemoval) "Gate Info (max_ride_skips_before_queue_removal)",
+            pickupZoneArrivalTimeoutInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoPickupZoneArrivalTimeoutInSec) "Gate Info (pickup_zone_arrival_timeout_in_sec)"
           }
   return (city, locationName, (specialLocation, gateInfo), pickupPriority, dropPriority, mbSpecialLocationId)
 

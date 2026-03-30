@@ -3,7 +3,6 @@
 
 module API.Types.ProviderPlatform.Management.Endpoints.SpecialZoneQueue where
 
-import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
@@ -15,6 +14,18 @@ import qualified Kernel.Types.HideSecrets
 import Servant
 import Servant.Client
 
+data SpecialZoneQueueStatsRes = SpecialZoneQueueStatsRes
+  { gateId :: Kernel.Prelude.Text,
+    gateName :: Kernel.Prelude.Text,
+    specialLocationName :: Kernel.Prelude.Text,
+    vehicleStats :: [VehicleQueueStats],
+    totalDriversInQueue :: Kernel.Prelude.Int,
+    totalInPickupZone :: Kernel.Prelude.Int,
+    totalOutsidePickupZone :: Kernel.Prelude.Int
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data TriggerSpecialZoneQueueNotifyReq = TriggerSpecialZoneQueueNotifyReq {gateId :: Kernel.Prelude.Text, vehicleType :: Kernel.Prelude.Text, driversToNotify :: Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -22,27 +33,30 @@ data TriggerSpecialZoneQueueNotifyReq = TriggerSpecialZoneQueueNotifyReq {gateId
 instance Kernel.Types.HideSecrets.HideSecrets TriggerSpecialZoneQueueNotifyReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("specialZoneQueue" :> PostSpecialZoneQueueTriggerNotify)
+data VehicleQueueStats = VehicleQueueStats {vehicleType :: Kernel.Prelude.Text, totalInQueue :: Kernel.Prelude.Int, inPickupZone :: Kernel.Prelude.Int, outsidePickupZone :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+type API = ("specialZoneQueue" :> (PostSpecialZoneQueueTriggerNotify :<|> GetSpecialZoneQueueQueueStats))
 
 type PostSpecialZoneQueueTriggerNotify = ("triggerNotify" :> ReqBody ('[JSON]) TriggerSpecialZoneQueueNotifyReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
-newtype SpecialZoneQueueAPIs = SpecialZoneQueueAPIs {postSpecialZoneQueueTriggerNotify :: (TriggerSpecialZoneQueueNotifyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)}
+type GetSpecialZoneQueueQueueStats = ("queueStats" :> Capture "gateId" Kernel.Prelude.Text :> Get ('[JSON]) SpecialZoneQueueStatsRes)
+
+data SpecialZoneQueueAPIs = SpecialZoneQueueAPIs
+  { postSpecialZoneQueueTriggerNotify :: (TriggerSpecialZoneQueueNotifyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    getSpecialZoneQueueQueueStats :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient SpecialZoneQueueStatsRes)
+  }
 
 mkSpecialZoneQueueAPIs :: (Client EulerHS.Types.EulerClient API -> SpecialZoneQueueAPIs)
 mkSpecialZoneQueueAPIs specialZoneQueueClient = (SpecialZoneQueueAPIs {..})
   where
-    postSpecialZoneQueueTriggerNotify = specialZoneQueueClient
+    postSpecialZoneQueueTriggerNotify :<|> getSpecialZoneQueueQueueStats = specialZoneQueueClient
 
 data SpecialZoneQueueUserActionType
   = POST_SPECIAL_ZONE_QUEUE_TRIGGER_NOTIFY
+  | GET_SPECIAL_ZONE_QUEUE_QUEUE_STATS
   deriving stock (Show, Read, Generic, Eq, Ord)
-  deriving anyclass (ToSchema)
-
-instance ToJSON SpecialZoneQueueUserActionType where
-  toJSON (POST_SPECIAL_ZONE_QUEUE_TRIGGER_NOTIFY) = Data.Aeson.String "POST_SPECIAL_ZONE_QUEUE_TRIGGER_NOTIFY"
-
-instance FromJSON SpecialZoneQueueUserActionType where
-  parseJSON (Data.Aeson.String "POST_SPECIAL_ZONE_QUEUE_TRIGGER_NOTIFY") = pure POST_SPECIAL_ZONE_QUEUE_TRIGGER_NOTIFY
-  parseJSON _ = fail "POST_SPECIAL_ZONE_QUEUE_TRIGGER_NOTIFY expected"
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 $(Data.Singletons.TH.genSingletons [(''SpecialZoneQueueUserActionType)])

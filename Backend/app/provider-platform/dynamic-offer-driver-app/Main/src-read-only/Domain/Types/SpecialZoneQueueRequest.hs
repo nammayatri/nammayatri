@@ -29,7 +29,7 @@ data SpecialZoneQueueRequest = SpecialZoneQueueRequest
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data SpecialZoneQueueRequestResponse = Accept | Reject | Ignored deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data SpecialZoneQueueRequestResponse = Accept | Reject | Ignored | NoShow deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SpecialZoneQueueRequestStatus = Active | Expired deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

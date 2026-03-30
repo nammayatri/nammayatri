@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.gate_info ADD COLUMN pickup_zone_arrival_timeout_in_sec integer;

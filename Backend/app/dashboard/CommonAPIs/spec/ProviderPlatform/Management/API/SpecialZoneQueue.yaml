@@ -11,9 +11,32 @@ apis:
       response:
         type: APISuccess
 
+  - GET:
+      endpoint: /queueStats/{gateId}
+      auth: ApiAuthV2
+      params:
+        gateId: Text
+      response:
+        type: SpecialZoneQueueStatsRes
+
 types:
   TriggerSpecialZoneQueueNotifyReq:
     - gateId: Text
     - vehicleType: Text
     - driversToNotify: Int
     - derive: "'HideSecrets"
+
+  VehicleQueueStats:
+    - vehicleType: Text
+    - totalInQueue: Int
+    - inPickupZone: Int
+    - outsidePickupZone: Int
+
+  SpecialZoneQueueStatsRes:
+    - gateId: Text
+    - gateName: Text
+    - specialLocationName: Text
+    - vehicleStats: "[VehicleQueueStats]"
+    - totalDriversInQueue: Int
+    - totalInPickupZone: Int
+    - totalOutsidePickupZone: Int
