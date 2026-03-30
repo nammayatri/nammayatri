@@ -10,7 +10,6 @@ import qualified Kernel.External.Payment.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Lib.Payment.Domain.Types.PaymentOrderSplit
 
 data PaymentOrderSplitT f = PaymentOrderSplitT
   { currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),

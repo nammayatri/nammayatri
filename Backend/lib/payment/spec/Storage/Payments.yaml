@@ -58,9 +58,6 @@ PaymentOrderSplit:
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
 
-  domainInstance:
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <Kernel.External.Payment.Interface.Types.MBY>
-
 
 PaymentOrderOffer:
   tableName: payment_order_offer
