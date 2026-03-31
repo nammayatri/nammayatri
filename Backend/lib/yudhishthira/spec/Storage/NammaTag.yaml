@@ -94,3 +94,35 @@ NammaTagTrigger:
     deleteAllByTagName:
       kvFunction: deleteWithKV
       where: tagName
+
+NammaTagTriggerV2:
+  tableName: namma_tag_trigger_v2
+  fields:
+    merchantOperatingCityId: Id MerchantOperatingCity
+    tagName: Text
+    event: ApplicationEvent
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    event: PrimaryKey
+    tagName: PrimaryKey
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"
+
+  queries:
+    findAllByMerchantOperatingCityIdAndEvent:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, event]
+    deleteAllByMerchantOperatingCityIdAndTagName:
+      kvFunction: deleteWithKV
+      where:
+        and: [merchantOperatingCityId, tagName]
+    findAllByMerchantOperatingCityIdAndTagName:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, tagName]
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
