@@ -31,6 +31,7 @@ import qualified API.Internal.QuoteRespond as QuoteRespond
 import qualified API.Internal.ReportACIssue as ReportACIssue
 import qualified API.Internal.ReportIssue as ReportIssue
 import qualified API.Internal.Ride as Ride
+import qualified API.Internal.LiveActivityUpdate as LiveActivityUpdate
 import qualified API.Internal.SendSMS as SendSMS
 import qualified API.Internal.SpecialLocationList as SpecialLocationList
 import qualified API.Internal.SpecialLocationUpsert as SpecialLocationUpsert
@@ -74,6 +75,7 @@ type API =
            :<|> GeometryList.API
            :<|> GeometryUpdate.API
            :<|> SendSMS.API
+           :<|> LiveActivityUpdate.API
        )
 
 handler :: FlowServer API
@@ -110,3 +112,4 @@ handler =
     :<|> GeometryList.handler
     :<|> GeometryUpdate.handler
     :<|> SendSMS.handler
+    :<|> LiveActivityUpdate.handler

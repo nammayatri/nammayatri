@@ -49,6 +49,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
+import qualified Kernel.External.Notification.FCM.Flow as FCMFlow
 import qualified Kernel.External.Notification.FCM.Types as FCMType
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude (getField)
@@ -219,6 +220,31 @@ dynamicNotifyPerson person notiData dynamicParams entity tripCategory dynamicTem
               }
       --logDebug $ "DFCM - " <> show notiData.notificationKey <> " Title -> " <> show title <> " body - " <> show body
       notifyPerson person.merchantId merchantOperatingCityId person.id notificationData liveActivityReq
+
+sendLiveActivityLocationUpdate ::
+  ServiceFlow m r =>
+  Person.Person ->
+  FCMType.LiveActivityReq ->
+  m ()
+sendLiveActivityLocationUpdate person liveReq = do
+  let merchantId = person.merchantId
+      merchantOperatingCityId = person.merchantOperatingCityId
+  merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+  merchantNotifCfg <-
+    getOneConfig
+      ( MerchantServiceConfigDimensions
+          { merchantOperatingCityId = merchantOperatingCityId.getId,
+            merchantId = merchantId.getId,
+            serviceName = Just (DMSC.NotificationService $ merchantConfig.notifyPerson)
+          }
+      )
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "notification" "FCM")
+  case merchantNotifCfg.serviceConfig of
+    DMSC.NotificationServiceConfig (Notification.FCMConfig fcmConfig) ->
+      FCMFlow.updateLiveActivity fcmConfig
+        (FCMType.FCMNotificationRecipient person.id.getId (FCMType.FCMRecipientToken <$> person.deviceToken))
+        liveReq
+    _ -> pure ()
 
 --------------------------------------------------------------------------------------------------
 

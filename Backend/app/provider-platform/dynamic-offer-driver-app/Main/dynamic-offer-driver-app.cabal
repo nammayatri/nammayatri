@@ -66,6 +66,7 @@ library
       API.Internal.GeometryList
       API.Internal.GeometryUpdate
       API.Internal.KnowYourDriver
+      API.Internal.LiveActivityUpdate
       API.Internal.Multimodal
       API.Internal.PickupInstruction
       API.Internal.PopulateTipAmount
@@ -233,6 +234,7 @@ library
       Domain.Action.Internal.FleetBookingInformation
       Domain.Action.Internal.FleetVehiclesAssociation
       Domain.Action.Internal.KnowYourDriver
+      Domain.Action.Internal.LiveActivityUpdate
       Domain.Action.Internal.PickupInstruction
       Domain.Action.Internal.PopulateTipAmount
       Domain.Action.Internal.ProcessingChangeOnline

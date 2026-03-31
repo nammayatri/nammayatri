@@ -343,3 +343,38 @@ updateCancellationFeeStatus apiKey internalUrl request = do
   logInfo "CallBAPInternal: Calling BAP internal API for updating cancellation fee status"
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (updateCancellationFeeStatusClient (Just apiKey) request) "UpdateCancellationFeeStatus" updateCancellationFeeStatusAPI
+
+data DriverLiveActivityReq = DriverLiveActivityReq
+  { bppRideId :: Text,
+    driverLat :: Double,
+    driverLon :: Double,
+    ridePhase :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON)
+
+type DriverLiveActivityAPI =
+  "internal"
+    :> "driverLiveActivity"
+    :> Header "token" Text
+    :> ReqBody '[JSON] DriverLiveActivityReq
+    :> Post '[JSON] APISuccess
+
+driverLiveActivityClient :: Maybe Text -> DriverLiveActivityReq -> EulerClient APISuccess
+driverLiveActivityClient = client (Proxy @DriverLiveActivityAPI)
+
+driverLiveActivityAPI :: Proxy DriverLiveActivityAPI
+driverLiveActivityAPI = Proxy
+
+driverLiveActivity ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  DriverLiveActivityReq ->
+  m APISuccess
+driverLiveActivity apiKey internalUrl request = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (driverLiveActivityClient (Just apiKey) request) "DriverLiveActivity" driverLiveActivityAPI

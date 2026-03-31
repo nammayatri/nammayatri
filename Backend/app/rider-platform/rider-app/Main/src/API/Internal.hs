@@ -10,6 +10,7 @@ import qualified API.Action.UI.MeterRideInternal as MeterRideInternal
 import qualified API.Internal.Auth as Auth
 import qualified API.Internal.Cac as Cac
 import qualified API.Internal.DriverArrivalNotf as DriverArrivalNotf
+import qualified API.Internal.DriverLiveActivity as DriverLiveActivity
 import qualified API.Internal.EKDLiveCallFeedback as EKDLiveCallFeedback
 import qualified API.Internal.FRFS as FRFS
 import qualified API.Internal.FrequentLocUser as FrequentLocUser
@@ -33,6 +34,7 @@ type API =
            :<|> StopEvents.API
            :<|> FrequentLocUser.API
            :<|> DriverArrivalNotf.API
+           :<|> DriverLiveActivity.API
            :<|> MeterRideInternal.API
            :<|> InsuranceInternal.API
            :<|> ViolationDetection.API
@@ -53,6 +55,7 @@ handler =
     :<|> StopEvents.handler
     :<|> FrequentLocUser.handler
     :<|> DriverArrivalNotf.handler
+    :<|> DriverLiveActivity.handler
     :<|> MeterRideInternal.handler
     :<|> InsuranceInternal.handler
     :<|> ViolationDetection.handler
