@@ -50,10 +50,13 @@ import qualified ConfigPilotFrontend.Types as CPT
 import qualified Dashboard.Common as Common
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as AT
+import qualified Data.ByteString.Lazy as BSL
 import Data.Default.Class
+import qualified Data.Map.Strict as Map
 import Data.OpenApi (ToSchema)
 import Data.Singletons
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as TE
 import qualified Domain.Types.BecknConfig as DTBC
 import qualified Domain.Types.Exophone as DTE
 import qualified Domain.Types.FRFSConfig as DFRFS
@@ -84,7 +87,7 @@ import qualified Lib.Yudhishthira.SchemaInstances ()
 import Lib.Yudhishthira.SchemaTH
 import Lib.Yudhishthira.SchemaUtils
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
-import qualified Lib.Yudhishthira.Storage.Queries.NammaTag as QNammaTag
+import qualified Lib.Yudhishthira.Storage.Queries.NammaTagTriggerV2 as QNammaTagTriggerV2
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTagV2 as QNammaTagV2
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types
@@ -171,15 +174,24 @@ deleteNammaTagTagDelete merchantShortId opCity tagName = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   YudhishthiraFlow.deleteTag (cast merchantOperatingCity.id) tagName
 
-getNammaTagTagAll :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.Flow [Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2]
+getNammaTagTagAll :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.Flow [LYTU.NammaTagDetailsResp]
 getNammaTagTagAll merchantShortId opCity = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  QNammaTagV2.findAllByMerchantOperatingCityId (cast merchantOperatingCity.id)
+  let mocId = cast merchantOperatingCity.id
+  tags <- QNammaTagV2.findAllByMerchantOperatingCityId mocId
+  allTriggers <- QNammaTagTriggerV2.findAllByMerchantOperatingCityId mocId
+  let triggerMap = Map.fromListWith (++) [(t.tagName, [t.event]) | t <- allTriggers]
+  return $ map (\tag -> mkNammaTagDetailsResp tag (fromMaybe [] (Map.lookup tag.name triggerMap)) Map.empty) tags
 
-getNammaTagTagDetails :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Environment.Flow Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2
+getNammaTagTagDetails :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Environment.Flow LYTU.NammaTagDetailsResp
 getNammaTagTagDetails merchantShortId opCity tagName = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  QNammaTagV2.findByPrimaryKey (cast merchantOperatingCity.id) tagName >>= fromMaybeM (InvalidRequest $ "NammaTag not found: " <> tagName)
+  let mocId = cast merchantOperatingCity.id
+  tag <- QNammaTagV2.findByPrimaryKey mocId tagName >>= fromMaybeM (InvalidRequest $ "NammaTag not found: " <> tagName)
+  triggers <- QNammaTagTriggerV2.findAllByMerchantOperatingCityIdAndTagName mocId tagName
+  let events = map (.event) triggers
+      inputDataMap = Map.fromList $ map (\e -> (show e, C.getLogicInputDef e)) events
+  return $ mkNammaTagDetailsResp tag events inputDataMap
 
 -- ChakraQueries are global (not merchant-scoped), so merchant/city params are intentionally unused
 getNammaTagQueryDetails :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.Chakra -> Text -> Environment.Flow LYTU.ChakraQueriesAPIEntity
@@ -385,10 +397,12 @@ getNammaTagAppDynamicLogicDomainsAndEvents ::
   Kernel.Types.Beckn.Context.City ->
   Maybe Bool ->
   Environment.Flow LYTU.NammaTagEventsOrNammaTagNamesResp
-getNammaTagAppDynamicLogicDomainsAndEvents _merchantShortId _opCity mbFetchNammaTagNames =
+getNammaTagAppDynamicLogicDomainsAndEvents merchantShortId opCity mbFetchNammaTagNames =
   case mbFetchNammaTagNames of
     Just True -> do
-      tags <- QNammaTag.findAll
+      merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+      let mocId = cast merchantOperatingCity.id
+      tags <- QNammaTagV2.findAllByMerchantOperatingCityId mocId
       return $ LYTU.NammaTagNames (map (.name) tags)
     _ -> return $ LYTU.NammaTagEvents LYTU.allValues
 
@@ -616,6 +630,23 @@ addCustomerTag (Just tags) tag = tags ++ [tag]
 removeCustomerTag :: Maybe [Text] -> Text -> [Text]
 removeCustomerTag Nothing _ = []
 removeCustomerTag (Just tags) tag = filter (/= tag) tags
+
+mkNammaTagDetailsResp :: Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2 -> [LYTU.ApplicationEvent] -> Map.Map Text (Maybe A.Value) -> LYTU.NammaTagDetailsResp
+mkNammaTagDetailsResp tag events inputDataMap =
+  LYTU.NammaTagDetailsResp
+    { actionEngine = tag.actionEngine,
+      category = tag.category,
+      description = tag.description,
+      tagInfo = TE.decodeUtf8 $ BSL.toStrict $ A.encode tag.info,
+      name = tag.name,
+      possibleValues = tag.possibleValues,
+      rule = tag.rule,
+      validity = tag.validity,
+      tagStages = events,
+      defaultInputDataPerEvent = inputDataMap,
+      createdAt = tag.createdAt,
+      updatedAt = tag.updatedAt
+    }
 
 postNammaTagConfigPilotGetConfigWithDimensions :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ConfigPilotGetConfigRequest -> Environment.Flow LYTU.TableDataResp
 postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity req = do

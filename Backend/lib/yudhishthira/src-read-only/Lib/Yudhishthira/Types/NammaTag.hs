@@ -29,6 +29,6 @@ data TagInfo = Application | KaalChakra Lib.Yudhishthira.Types.NammaTag.KaalChak
 
 data TagType = ApplicationTag | KaalChakraTag | ManualTag deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''TagInfo)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TagInfo))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''TagType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TagType))
