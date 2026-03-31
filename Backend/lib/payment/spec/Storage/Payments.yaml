@@ -5,28 +5,28 @@ imports:
   Currency: Kernel.Types.Common
   Price: Kernel.Types.Common
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
-  AccountDetailsType : Kernel.External.Payout.Juspay.Types.Payout
-  EntityName : Lib.Payment.Domain.Types.Common
+  AccountDetailsType: Kernel.External.Payout.Juspay.Types.Payout
+  EntityName: Lib.Payment.Domain.Types.Common
   EncryptedHashedField: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
   MBY: Kernel.External.Payment.Interface.Types
-
+  OfferState: Kernel.External.Payment.Interface.Types
 
 PaymentOrderSplit:
   tableName: payment_order_split
   derives: "Generic"
   fields:
-    id : Id PaymentOrderSplit
-    paymentOrderId : Id PaymentOrder
-    vendorId : Text
-    transactionId : Maybe Text
-    amount : Price
+    id: Id PaymentOrderSplit
+    paymentOrderId: Id PaymentOrder
+    vendorId: Text
+    transactionId: Maybe Text
+    amount: Price
     mdrBorneBy: MBY
     merchantCommission: Price
     merchantId: Text
-    merchantOperatingCityId : Maybe Text
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    merchantOperatingCityId: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   constraints:
     id: PrimaryKey
@@ -58,21 +58,20 @@ PaymentOrderSplit:
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
 
-
 PaymentOrderOffer:
   tableName: payment_order_offer
   derives: "Generic"
   fields:
-    id : Id PaymentOrderOffer
-    paymentOrderId : Id PaymentOrder
-    offer_id : Text
-    offer_code : Text
-    status: Text
+    id: Id PaymentOrderOffer
+    paymentOrderId: Id PaymentOrder
+    offer_id: Text
+    offer_code: Text
+    status: OfferState
     responseJSON: Text
     merchantId: Text
     merchantOperatingCityId: Text
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   constraints:
     id: PrimaryKey

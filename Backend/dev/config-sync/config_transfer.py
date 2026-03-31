@@ -47,6 +47,8 @@ ASSETS_DIR = SCRIPT_DIR / "assets"
 DATA_DIR = ASSETS_DIR / "data"
 TMP_DIR = DATA_DIR / "tmp"
 
+_RE_ENCRYPT = re.compile(r'0\.1\.0\|[0-9]+\|[A-Za-z0-9+/=]{16,}')
+
 VALID_ENVS = {"prod", "master", "env", "local"}
 ALLOWED_TRANSFERS = {
     ("prod", "local"), ("prod", "master"),
@@ -321,6 +323,8 @@ def apply_patches_to_table(table_name, table_data, schema, patch_config):
     all_reps = [r for r in global_reps + schema_reps if "find" in r]
     count = 0
 
+    reencrypt = patch_config.get("reencrypt_foreign_values", True)
+
     for row in table_data["rows"]:
         for col in list(row.keys()):
             if not isinstance(row[col], str):
@@ -329,6 +333,9 @@ def apply_patches_to_table(table_name, table_data, schema, patch_config):
             # Global string replacements (URLs etc)
             for r in all_reps:
                 row[col] = row[col].replace(r["find"], r["replace"])
+            # Re-encrypt foreign Passetto values with local keys
+            if reencrypt and _RE_ENCRYPT.search(row[col]):
+                row[col] = _reencrypt_foreign_values(row[col])
             if row[col] != orig:
                 count += 1
 
@@ -394,6 +401,25 @@ def _resolve_value(val, row):
     if val.startswith("ENCRYPT:"):
         return _encrypt_via_obj(val[8:])
     return val
+
+
+_reencrypt_cache = {}
+
+def _reencrypt_foreign_values(text):
+    """Replace all 0.1.0|N|... encrypted tokens with locally-encrypted dummy values.
+
+    Master and local Passetto use different keys, so master-encrypted values
+    can't be decrypted locally. For local testing, re-encrypt a dummy placeholder
+    so the app can decrypt without errors. Mock services don't check real credentials.
+    """
+    def _replace(m):
+        orig = m.group(0)
+        if orig in _reencrypt_cache:
+            return _reencrypt_cache[orig]
+        replacement = _encrypt_via_obj("test-dummy-key")
+        _reencrypt_cache[orig] = replacement
+        return replacement
+    return _RE_ENCRYPT.sub(_replace, text)
 
 
 _encrypt_cache = {}
@@ -484,16 +510,19 @@ def generate_delete_sql(schema, table, dim_cols, dim_values, total_rows):
     return "\n".join(lines) + "\n"
 
 
-def generate_insert_sql(schema, table, rows, src_columns, target_cols, head_row, not_null_cols=None):
+def generate_insert_sql(schema, table, rows, src_columns, target_cols, head_row, not_null_cols=None, col_types=None):
     """Generate INSERT statements for a batch of rows.
 
     CSV COPY exports NULL as empty string. Convert empty strings back to NULL,
-    except for NOT NULL columns where empty string is kept as-is.
+    except for NOT NULL text columns where empty string is kept as-is.
+    For non-text NOT NULL columns (integer, etc.), empty strings become DEFAULT.
     """
     if not rows:
         return ""
 
     not_null_cols = not_null_cols or set()
+    col_types = col_types or {}
+    _text_types = {"text", "character", "character varying", "json", "jsonb"}
     tgt_cols = target_cols if target_cols is not None else src_columns
     insert_cols = [c for c in tgt_cols if c in src_columns or c in head_row]
     col_list = ", ".join(f'"{c}"' for c in insert_cols)
@@ -504,9 +533,14 @@ def generate_insert_sql(schema, table, rows, src_columns, target_cols, head_row,
         for c in insert_cols:
             if c in row:
                 val = row[c]
-                # CSV gives "" for NULL — convert to NULL unless column is NOT NULL
-                if val == "" and c not in not_null_cols:
-                    vals.append("NULL")
+                if val == "":
+                    if c not in not_null_cols:
+                        vals.append("NULL")
+                    elif col_types.get(c) not in _text_types:
+                        # NOT NULL non-text column (e.g., integer): empty string is invalid, use DEFAULT
+                        vals.append("DEFAULT")
+                    else:
+                        vals.append(escape_sql_value(val))
                 else:
                     vals.append(escape_sql_value(val))
             elif c in head_row:
@@ -531,10 +565,18 @@ def cmd_export(args):
     if args.schemas:
         config_tables = {s: config_tables[s] for s in args.schemas if s in config_tables}
 
-    # Clean tmp
+    table_filter = set(args.tables) if hasattr(args, 'tables') and args.tables else None
+
+    # Clean tmp (only for filtered tables if specified)
     for schema in config_tables:
         tmp_schema_dir = TMP_DIR / from_env / schema
-        if tmp_schema_dir.exists():
+        if table_filter:
+            for t in table_filter:
+                tf = tmp_schema_dir / f"{t}.json"
+                td = tmp_schema_dir / t
+                if tf.exists(): tf.unlink()
+                if td.exists(): shutil.rmtree(td)
+        elif tmp_schema_dir.exists():
             shutil.rmtree(tmp_schema_dir)
 
     max_workers = args.parallel if hasattr(args, 'parallel') and args.parallel else 4
@@ -542,6 +584,10 @@ def cmd_export(args):
 
     for schema, schema_config in sorted(config_tables.items()):
         tables = table_names_for_schema(schema_config)
+        if table_filter:
+            tables = [t for t in tables if t in table_filter]
+            if not tables:
+                continue
         print(f"{'=' * 60}")
         print(f"{schema} ({len(tables)} tables, {max_workers} parallel)")
         print(f"{'=' * 60}")
@@ -622,10 +668,22 @@ def cmd_export(args):
         tmp_schema_dir = TMP_DIR / from_env / schema
         if IS_DEV:
             dest = DATA_DIR / from_env / schema
-            if dest.exists():
-                shutil.rmtree(dest)
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(tmp_schema_dir), str(dest))
+            if table_filter and dest.exists():
+                # Merge: only replace exported tables, keep others
+                for item in tmp_schema_dir.iterdir():
+                    target = dest / item.name
+                    if target.exists():
+                        if target.is_dir():
+                            shutil.rmtree(target)
+                        else:
+                            target.unlink()
+                    shutil.move(str(item), str(target))
+                shutil.rmtree(tmp_schema_dir)
+            else:
+                if dest.exists():
+                    shutil.rmtree(dest)
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(tmp_schema_dir), str(dest))
             print(f"  Promoted to {dest}")
         else:
             if not args.s3_bucket:
@@ -878,7 +936,6 @@ _AUDIT_SAFE_DOMAINS = {
 _RE_HTTPS = re.compile(r'https://([^/\s"\\,}{)\]]+)([^\s"\\,}{)\]]*)')
 _RE_HTTP_NON_LOCAL = re.compile(
     r'http://(?!localhost)(?!0\.0\.0\.0)(?!127\.0\.0\.1)([^\s"\\,}{)\]]+)')
-_RE_ENCRYPT = re.compile(r'0\.1\.0\|[0-9]+\|[A-Za-z0-9+/=]{16,}')
 _RE_SVC_CLUSTER = re.compile(r'[a-z0-9-]+\.[a-z]+\.svc\.cluster\.local')
 _RE_IP_PORT = re.compile(r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+)')
 
@@ -1072,10 +1129,11 @@ def cmd_import(args):
 
             tgt_cols = None
             not_null_cols = set()
+            col_types = {}
             head_row = {}
             if target_cursor:
                 try:
-                    cols_result, _, not_null_cols = fetch_target_table_columns(target_cursor, target_db_schema, table)
+                    cols_result, col_types, not_null_cols = fetch_target_table_columns(target_cursor, target_db_schema, table)
                     tgt_cols = cols_result if cols_result else None
                     head_row = fetch_target_table_head(target_cursor, target_db_schema, table)
                 except Exception as e:
@@ -1118,7 +1176,7 @@ def cmd_import(args):
             for _, batch_rows in iter_table_rows(base, "", schema, table):
                 insert_sql = generate_insert_sql(
                     target_db_schema, table, batch_rows, columns,
-                    tgt_cols, head_row, not_null_cols=not_null_cols
+                    tgt_cols, head_row, not_null_cols=not_null_cols, col_types=col_types
                 )
                 insert_file = schema_sql_dir / f"{table}_insert_{batch_idx:04d}.sql"
                 insert_file.write_text(insert_sql)
@@ -1151,18 +1209,16 @@ def cmd_import(args):
         print(f"\nDry run complete. Review SQL files, then run without --dry-run to execute.")
         return
 
-    # ── Load post-import SQL (will be executed inside the last schema's transaction) ──
-    patch_config = load_patches().get(direction, {})
-    post_sql_script = patch_config.get("post_import_sql", {}).get("script")
-    post_sql_text = None
-    if post_sql_script:
-        post_sql_path = SCRIPT_DIR / post_sql_script.split("/")[-1]
-        if not post_sql_path.exists():
-            post_sql_path = SCRIPT_DIR.parent.parent / post_sql_script
-        if post_sql_path.exists():
-            post_sql_text = post_sql_path.read_text()
-        else:
-            print(f"  WARNING: post-import SQL not found: {post_sql_script}")
+    # ── Discover feature-migration SQL files (will be executed after all schema imports) ──
+    feature_migrations_dir = SCRIPT_DIR.parent / "feature-migrations"
+    feature_migration_files = []
+    if feature_migrations_dir.is_dir():
+        feature_migration_files = sorted(
+            f for f in feature_migrations_dir.iterdir()
+            if f.suffix == ".sql" and not f.name.startswith("_")
+        )
+    if feature_migration_files:
+        print(f"  Found {len(feature_migration_files)} feature-migration(s) to run after import.")
 
     # ── Execute SQL files per schema (each schema may need a different DB user) ──
     # Group run_order by schema
@@ -1174,18 +1230,6 @@ def cmd_import(args):
 
     print(f"\nExecuting {len(run_order)} SQL files against {to_env}...")
     total_executed = 0
-    post_sql_executed = False
-
-    # Determine which schema's transaction should include the post-import SQL.
-    # The SQL references atlas_bpp_dashboard / atlas_bap_dashboard tables, so
-    # run it in that connection (same DB user, same transaction).
-    # Fall back to the last schema if that one isn't being imported.
-    post_sql_schema = None
-    if post_sql_text:
-        if "atlas_bpp_dashboard" in schema_files:
-            post_sql_schema = "atlas_bpp_dashboard"
-        else:
-            post_sql_schema = list(schema_files.keys())[-1]
 
     for schema_name, files in schema_files.items():
         target_db = get_db_config(env_config, to_env, schema_name)
@@ -1254,13 +1298,6 @@ def cmd_import(args):
             if skipped:
                 print(f"    Skipped (data has dupes): {', '.join(skipped)}")
 
-            # ── Post-import SQL: run once inside the matching schema's transaction ──
-            if schema_name == post_sql_schema and post_sql_text and not post_sql_executed:
-                print(f"    Running post-import SQL ({post_sql_script})...")
-                cursor.execute(post_sql_text)
-                post_sql_executed = True
-                print(f"    Post-import SQL complete.")
-
             cursor.execute("SET session_replication_role = 'origin';")  # re-enable FK checks
             cursor.execute("COMMIT;")
             total_executed += len(files)
@@ -1273,6 +1310,29 @@ def cmd_import(args):
         finally:
             cursor.close()
             conn.close()
+
+    # ── Run feature-migrations (each file may reference multiple schemas) ──
+    if feature_migration_files:
+        # Use the target env's default connection (all schemas accessible on local)
+        first_schema = list(schema_files.keys())[0]
+        fm_db = get_db_config(env_config, to_env, first_schema)
+        fm_conn = get_connection(fm_db)
+        fm_cursor = fm_conn.cursor()
+        try:
+            print(f"\nRunning {len(feature_migration_files)} feature-migration(s)...")
+            for fm_file in feature_migration_files:
+                print(f"  {fm_file.name}...")
+                fm_cursor.execute("BEGIN;")
+                fm_cursor.execute(fm_file.read_text())
+                fm_cursor.execute("COMMIT;")
+            print(f"  Feature-migrations complete.")
+        except Exception as e:
+            fm_conn.rollback()
+            print(f"  FAILED at {fm_file.name}: {e}", file=sys.stderr)
+            sys.exit(1)
+        finally:
+            fm_cursor.close()
+            fm_conn.close()
 
     print(f"\nAll done — {total_executed} SQL files executed across {len(schema_files)} schemas.")
 
@@ -1381,6 +1441,7 @@ Examples:
     p_exp = sub.add_parser("export", help="Export raw config from source DB")
     p_exp.add_argument("--from", dest="source_env", required=True, choices=VALID_ENVS)
     p_exp.add_argument("--schema", dest="schemas", action="append")
+    p_exp.add_argument("--table", dest="tables", action="append", help="Export only specific tables (e.g. --table fare_policy --table fare_product)")
     p_exp.add_argument("--parallel", type=int, default=4, help="Number of parallel table exports")
     p_exp.add_argument("--s3-bucket")
     p_exp.add_argument("--s3-prefix", default="config-sync")

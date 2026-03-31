@@ -63,6 +63,7 @@ data Estimate = Estimate
     providerUrl :: Servant.Client.Core.BaseUrl,
     qar :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
+    selectedOfferId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierShortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     smartTipReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

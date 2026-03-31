@@ -1,6 +1,7 @@
 module SharedLogic.Offer where
 
 import qualified Data.Aeson as A
+import Data.Time (utctDay)
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
@@ -10,13 +11,15 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Types as JL
+import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Storage.Queries.PersonDailyOfferStats as QPersonDailyOfferStats
+import qualified Lib.Payment.Storage.Queries.PersonOfferStats as QPersonOfferStats
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
@@ -25,17 +28,29 @@ import Storage.Beam.Payment ()
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.PersonStats as QPersonStats
 import qualified Tools.DynamicLogic as TDL
 import Tools.Error
 import qualified Tools.Payment as TPayment
+
+data CumulativeOfferRespI = CumulativeOfferRespI
+  { offerTitle :: Text,
+    offerDescription :: Text,
+    offerSponsoredBy :: [Text],
+    offerIds :: [Text],
+    offerListResp :: Payment.OfferListResp
+  }
+  deriving (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data CumulativeOfferResp = CumulativeOfferResp
   { offerTitle :: Text,
     offerDescription :: Text,
     offerSponsoredBy :: [Text],
-    offerIds :: [Text]
+    offerIds :: [Text],
+    offerListResp :: [OfferRespAPIEntity]
   }
-  deriving (Generic, Show, Read)
+  deriving (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data CumulativeOfferReq = CumulativeOfferReq
@@ -44,9 +59,23 @@ data CumulativeOfferReq = CumulativeOfferReq
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
+data OfferRespAPIEntity = OfferRespAPIEntity
+  { offerId :: Text,
+    offerTitle :: Maybe Text,
+    offerDescription :: Maybe Text,
+    offerTnc :: Maybe Text,
+    offerSponsoredBy :: Maybe Text,
+    amountSaved :: HighPrecMoney,
+    postOfferAmount :: HighPrecMoney
+  }
+  deriving (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 -------------------------------------------------------------------------------------------------------
 ----------------------------------- Fetch Offers List With Caching ------------------------------------
 -------------------------------------------------------------------------------------------------------
+isDomainOffersEnabled :: DOrder.PaymentServiceType -> Bool
+isDomainOffersEnabled paymentServiceType = paymentServiceType `elem` [DOrder.OnlineRideHailing, DOrder.RideHailing]
 
 invalidateOfferListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> m ()
 invalidateOfferListCache person merchantOperatingCityId paymentServiceType price = do
@@ -54,8 +83,8 @@ invalidateOfferListCache person merchantOperatingCityId paymentServiceType price
   req <- mkOfferListReq person price
   let customerId = fromMaybe person.id.getId (req.customer <&> (.customerId))
       version = fromMaybe "N/A" riderConfig.offerListCacheVersion
-      key = makeOfferListCacheKey version paymentServiceType customerId
-  Redis.withCrossAppRedis $ Redis.del key
+  let mbAmount = if isDomainOffersEnabled paymentServiceType then Just price.amount else Nothing
+  DPayment.invalidateOfferListCacheService customerId version paymentServiceType mbAmount
 
 offerListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> m Payment.OfferListResp
 offerListCache merchantId personId merchantOperatingCityId paymentServiceType price = do
@@ -64,19 +93,51 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
   req <- mkOfferListReq person price
   let customerId = fromMaybe person.id.getId (req.customer <&> (.customerId))
       version = fromMaybe "N/A" riderConfig.offerListCacheVersion
-      key = makeOfferListCacheKey version paymentServiceType customerId
-  Redis.withCrossAppRedis $ do
-    Redis.get key >>= \case
-      Just a -> return a
-      Nothing ->
-        ( \resp -> do
-            Redis.setExp key resp (31 * 86400) -- Cache for 31 days
-            return resp
-        )
-          =<< TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType (Just customerId) person.clientSdkVersion req
+  if isDomainOffersEnabled paymentServiceType
+    then do
+      let domainOfferCall = \_ -> do
+            personOfferStats <- QPersonOfferStats.findAllByPersonId personId.getId
+            today <- utctDay <$> getCurrentTime
+            mbPersonDailyOfferStats <- QPersonDailyOfferStats.findByPersonIdAndDate personId.getId today
+            mbPersonStats <- QPersonStats.findByPersonId personId
+            let domainContext =
+                  Just $
+                    A.object
+                      [ "personOfferStats" A..= personOfferStats,
+                        "personDailyOfferStats" A..= mbPersonDailyOfferStats,
+                        "personStats" A..= mbPersonStats
+                      ]
+            DPayment.listDomainOffers merchantId.getId merchantOperatingCityId.getId price.amount price.currency domainContext
+      DPayment.offerListService customerId version paymentServiceType (Just price.amount) (6 * 3600) domainOfferCall req
+    else do
+      let offerListCall = TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType (Just customerId) person.clientSdkVersion
+      DPayment.offerListService customerId version paymentServiceType Nothing (31 * 86400) offerListCall req
+
+selectedOfferListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> Text -> m Payment.OfferListResp
+selectedOfferListCache merchantId personId merchantOperatingCityId paymentServiceType price offerId = do
+  resp <- offerListCache merchantId personId merchantOperatingCityId paymentServiceType price
+  let filteredOffers = filter (\o -> o.offerId == offerId) resp.offerResp
+      filteredCombo =
+        resp.bestOfferCombination <&> \combo ->
+          Payment.BestOfferCombination
+            { offers = filter (\o -> o.offerId == offerId) combo.offers,
+              orderBreakup = combo.orderBreakup
+            }
+  pure
+    Payment.OfferListResp
+      { offerResp = filteredOffers,
+        bestOfferCombination = filteredCombo
+      }
+
+getSelectedOffer :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> Text -> m (Maybe OfferRespAPIEntity)
+getSelectedOffer merchantId personId merchantOperatingCityId paymentServiceType price offerId = do
+  resp <- selectedOfferListCache merchantId personId merchantOperatingCityId paymentServiceType price offerId
+  case listToMaybe resp.offerResp of
+    Nothing -> pure Nothing
+    Just offer -> pure $ Just $ mkOfferRespAPIEntity offer
 
 mkCumulativeOfferResp :: (MonadFlow m, EncFlow m r, BeamFlow m r, ClickhouseFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> [JL.LegInfo] -> m (Maybe CumulativeOfferResp)
-mkCumulativeOfferResp merchantOperatingCityId offerListResp legInfos = do
+mkCumulativeOfferResp merchantOperatingCityId offerListRes legInfos = do
   now <- getCurrentTime
   (logics, _) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) LYT.CUMULATIVE_OFFER_POLICY now Nothing Nothing
   if null logics
@@ -85,14 +146,33 @@ mkCumulativeOfferResp merchantOperatingCityId offerListResp legInfos = do
       pure Nothing
     else do
       logInfo $ "Running cumulative offer logic with " <> show (length logics) <> " rules"
-      result <- LYDL.runLogicsWithDebugLog LYDL.Rider (cast merchantOperatingCityId) LYT.CUMULATIVE_OFFER_POLICY logics (CumulativeOfferReq offerListResp legInfos)
-      case A.fromJSON result.result :: A.Result CumulativeOfferResp of
+      result <- LYDL.runLogicsWithDebugLog LYDL.Rider (cast merchantOperatingCityId) LYT.CUMULATIVE_OFFER_POLICY logics (CumulativeOfferReq offerListRes legInfos)
+      case A.fromJSON result.result :: A.Result CumulativeOfferRespI of
         A.Success logicResult -> do
           logInfo $ "Cumulative offer logic result: " <> show logicResult
-          pure $ Just logicResult
+          pure $ Just $ mkCumulativeOfferRespFromI logicResult
         A.Error err -> do
           logError $ "Failed to parse cumulative offer logic result: " <> show err
           pure Nothing
+  where
+    mkCumulativeOfferRespFromI :: CumulativeOfferRespI -> CumulativeOfferResp
+    mkCumulativeOfferRespFromI CumulativeOfferRespI {..} = do
+      CumulativeOfferResp
+        { offerListResp = map mkOfferRespAPIEntity offerListResp.offerResp,
+          ..
+        }
+
+mkOfferRespAPIEntity :: Payment.OfferResp -> OfferRespAPIEntity
+mkOfferRespAPIEntity Payment.OfferResp {..} = do
+  OfferRespAPIEntity
+    { offerId = offerId,
+      offerTitle = offerDescription.title,
+      offerDescription = offerDescription.description,
+      offerTnc = offerDescription.tnc,
+      offerSponsoredBy = offerDescription.sponsoredBy,
+      amountSaved = discountAmount,
+      postOfferAmount = finalOrderAmount
+    }
 
 mkOfferListReq :: (MonadFlow m, EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Price -> m Payment.OfferListReq
 mkOfferListReq person price = do
@@ -114,6 +194,3 @@ mkOfferListReq person price = do
         numOfRides = 0,
         offerListingMetric = Nothing
       }
-
-makeOfferListCacheKey :: Text -> DOrder.PaymentServiceType -> Text -> Text
-makeOfferListCacheKey version serviceType customerId = "OfferList:CId" <> customerId <> ":V-" <> version <> ":ST-" <> show serviceType

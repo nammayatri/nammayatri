@@ -477,9 +477,6 @@
     "access_matrix": {
       "dim": []
     },
-    "system_configs": {
-      "dim": []
-    },
     "merchant_operating_city": {
       "dim": []
     }
@@ -488,40 +485,21 @@
     "merchant": {
       "dim": []
     },
-    "system_configs": {
+    "merchant_access": {
+      "dim": []
+    },
+    "role": {
+      "dim": []
+    },
+    "access_matrix": {
       "dim": []
     },
     "merchant_operating_city": {
       "dim": []
     }
   },
-  "atlas_safety_dashboard": {
-    "system_configs": {
-      "dim": []
-    },
-    "merchant": {
-      "dim": []
-    },
-    "merchant_configs": {
-      "dim": []
-    },
-    "portal_configs": {
-      "dim": []
-    }
-  },
   "atlas_registry": {
     "subscriber": {
-      "dim": []
-    }
-  },
-  "atlas_special_zone": {
-    "special_zone": {
-      "dim": []
-    },
-    "tag_category_mapping": {
-      "dim": []
-    },
-    "entry_exit": {
       "dim": []
     }
   }

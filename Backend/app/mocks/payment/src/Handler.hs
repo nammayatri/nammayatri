@@ -29,6 +29,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrderOffer as DOffer
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTxn
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import Lib.Payment.Storage.Beam.BeamFlow ()
+import qualified Lib.Payment.Storage.Beam.Offer as BeamOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
 import qualified Lib.Payment.Storage.Beam.PaymentOrderOffer as BeamOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrderSplit as BeamPOS
@@ -36,6 +37,8 @@ import qualified Lib.Payment.Storage.Beam.PaymentTransaction as BeamPT
 import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamPOO
 import qualified Lib.Payment.Storage.Beam.PayoutRequest as BeamPR
 import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamPOT
+import qualified Lib.Payment.Storage.Beam.PersonDailyOfferStats as BeamPersonDailyOfferStats
+import qualified Lib.Payment.Storage.Beam.PersonOfferStats as BeamPersonOfferStats
 import qualified Lib.Payment.Storage.Beam.PersonWallet as BeamPW
 import qualified Lib.Payment.Storage.Beam.Refunds as BeamRF
 import qualified Lib.Payment.Storage.Beam.WalletRewardPosting as BeamWRP
@@ -81,6 +84,15 @@ instance HasSchemaName BeamWRP.WalletRewardPostingT where
   schemaName _ = "atlas_app"
 
 instance HasSchemaName BeamPW.PersonWalletT where
+  schemaName _ = "atlas_app"
+
+instance HasSchemaName BeamOffer.OfferT where
+  schemaName _ = "atlas_app"
+
+instance HasSchemaName BeamPersonDailyOfferStats.PersonDailyOfferStatsT where
+  schemaName _ = "atlas_app"
+
+instance HasSchemaName BeamPersonOfferStats.PersonOfferStatsT where
   schemaName _ = "atlas_app"
 
 server :: FlowServer API
@@ -420,7 +432,7 @@ buildJuspayOrderData order mTxn refunds offers = do
       Juspay.Offer
         { offer_id = Just offer.offer_id,
           offer_code = Just offer.offer_code,
-          status = fromMaybe Payment.OFFER_INITIATED (readMaybe (T.unpack offer.status))
+          status = offer.status
         }
 
     domainRefundToJuspay :: DRefunds.Refunds -> Juspay.RefundsData

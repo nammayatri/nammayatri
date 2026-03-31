@@ -16,6 +16,7 @@
 module Storage.Beam.Payment where
 
 import qualified Data.Text as T
+import qualified Lib.Payment.Storage.Beam.Offer as BeamOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
 import qualified Lib.Payment.Storage.Beam.PaymentOrderOffer as BeamOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrderSplit as BeamSplit
@@ -23,6 +24,8 @@ import qualified Lib.Payment.Storage.Beam.PaymentTransaction as BeamPT
 import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamP
 import qualified Lib.Payment.Storage.Beam.PayoutRequest as BeamPR
 import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamT
+import qualified Lib.Payment.Storage.Beam.PersonDailyOfferStats as BeamPDOS
+import qualified Lib.Payment.Storage.Beam.PersonOfferStats as BeamPOS
 import qualified Lib.Payment.Storage.Beam.PersonWallet as BeamPW
 import qualified Lib.Payment.Storage.Beam.Refunds as BeamRF
 import qualified Lib.Payment.Storage.Beam.WalletRewardPosting as BeamWRP
@@ -56,4 +59,13 @@ instance HasSchemaName BeamWRP.WalletRewardPostingT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamPW.PersonWalletT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamPDOS.PersonDailyOfferStatsT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamPOS.PersonOfferStatsT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamOffer.OfferT where
   schemaName _ = T.pack currentSchemaName

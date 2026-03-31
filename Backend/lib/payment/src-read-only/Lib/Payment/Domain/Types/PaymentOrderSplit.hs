@@ -9,6 +9,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Lib.Payment.Domain.Types.PaymentOrder
+import qualified Tools.Beam.UtilsTH
 
 data PaymentOrderSplit = PaymentOrderSplit
   { amount :: Kernel.Types.Common.Price,

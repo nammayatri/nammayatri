@@ -33,10 +33,12 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude hiding (hPutStr)
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Utils.Common hiding (HasField)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.Booking as QBooking
@@ -56,6 +58,8 @@ partnerInvoiceDataExportJob ::
     SchedulerFlow r,
     EsqDBReplicaFlow m r,
     ServiceFlow m r,
+    ClickhouseFlow m r,
+    BeamFlow m r,
     JobCreator r m,
     HasField "sftpConfig" r SFTPConfig
   ) =>
@@ -111,7 +115,10 @@ enrichLogEntry ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    ServiceFlow m r,
+    ClickhouseFlow m r,
+    BeamFlow m r
   ) =>
   DPIL.PartnerInvoiceDataLog ->
   m (Maybe PBSAPI.InvoiceDataRes)

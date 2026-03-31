@@ -82,6 +82,7 @@ import qualified Kernel.Utils.Time as KUT
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
@@ -97,6 +98,7 @@ import qualified SharedLogic.Insurance as SI
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.Offer as SOffer
 import SharedLogic.Payment as SPayment
 import qualified SharedLogic.ScheduledNotifications as SN
 import Storage.Beam.Yudhishthira ()
@@ -507,7 +509,7 @@ rideAssignedReqHandler req = do
           mbPaymentResp <-
             handle (\e -> SPayment.paymentErrorHandler booking e >> throwError (InvalidRequest "Payment failed, booking cancelled")) $
               withShortRetry $
-                Just <$> SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode booking.riderId (Just ride.id) mbExistingOrderId createPaymentIntentServiceReq ledgerInfo
+                Just <$> SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode booking.riderId (Just ride.id) mbExistingOrderId DOrder.OnlineRideHailing createPaymentIntentServiceReq ledgerInfo booking.selectedOfferId
           -- Check if PI is in a capturable state — only STARTED (requires_capture) and CHARGED (already captured) are valid
           whenJust mbPaymentResp $ \paymentResp -> do
             mbOrder <- QPaymentOrder.findById paymentResp.orderId
@@ -811,7 +813,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
                 platformFee = applicationFeeAmount,
                 financeCtx = ledgerCtx
               }
-    handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just ride.id) mbExistingOrderId createPaymentIntentServiceReq ledgerInfo)
+    handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just ride.id) mbExistingOrderId DOrder.OnlineRideHailing createPaymentIntentServiceReq ledgerInfo booking.selectedOfferId)
     logDebug $ "Scheduling execute payment intent job for order: " <> show scheduleAfter
     createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)
 
@@ -832,6 +834,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   QRide.updateMultiple updRide.id updRide
   QFareBreakup.createMany breakups
   QPFS.clearCache booking.riderId
+  fork "invalidateOfferListCache:rideCompleted" $
+    SOffer.invalidateOfferListCache person booking.merchantOperatingCityId DOrder.RideHailing booking.estimatedTotalFare
   createRecentLocationForTaxi booking
   checkAndUpdateJourneyTerminalStatusForNormalRide booking DJourney.COMPLETED
 
@@ -1043,6 +1047,9 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
       QRB.updateStatus booking.id DRB.CANCELLED
       QBPL.makeAllInactiveByBookingId booking.id
       checkAndUpdateJourneyTerminalStatusForNormalRide booking DJourney.CANCELLED
+  fork "invalidateOfferListCache:bookingCancelled" $ do
+    person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+    SOffer.invalidateOfferListCache person booking.merchantOperatingCityId DOrder.RideHailing booking.estimatedTotalFare
   whenJust mbRide $ \ride -> void $ do
     void $ QRide.updateCancellationChargesOnCancel (maybe Nothing (Just . (.amount)) cancellationFee) ride.id
     whenJust cancellationFee $ \_ ->

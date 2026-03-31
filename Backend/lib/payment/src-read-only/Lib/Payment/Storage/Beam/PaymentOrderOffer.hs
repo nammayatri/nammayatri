@@ -6,20 +6,21 @@ module Lib.Payment.Storage.Beam.PaymentOrderOffer where
 import qualified Database.Beam as B
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
+import qualified Kernel.External.Payment.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 
 data PaymentOrderOfferT f = PaymentOrderOfferT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    offer_code :: (B.C f Kernel.Prelude.Text),
-    offer_id :: (B.C f Kernel.Prelude.Text),
-    paymentOrderId :: (B.C f Kernel.Prelude.Text),
-    responseJSON :: (B.C f Kernel.Prelude.Text),
-    status :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    offer_code :: B.C f Kernel.Prelude.Text,
+    offer_id :: B.C f Kernel.Prelude.Text,
+    paymentOrderId :: B.C f Kernel.Prelude.Text,
+    responseJSON :: B.C f Kernel.Prelude.Text,
+    status :: B.C f Kernel.External.Payment.Interface.Types.OfferState,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +30,6 @@ instance B.Table PaymentOrderOfferT where
 
 type PaymentOrderOffer = PaymentOrderOfferT Identity
 
-$(enableKVPG (''PaymentOrderOfferT) [('id)] [[('paymentOrderId)]])
+$(enableKVPG ''PaymentOrderOfferT ['id] [['paymentOrderId]])
 
-$(mkTableInstancesGenericSchema (''PaymentOrderOfferT) "payment_order_offer")
+$(mkTableInstancesGenericSchema ''PaymentOrderOfferT "payment_order_offer")

@@ -53,6 +53,7 @@ type API =
     :> QueryParam "paymentMethodId" Payment.PaymentMethodId
     :> QueryParam "paymentInstrument" DMPM.PaymentInstrument
     :> QueryParam "isAdvancedBookingEnabled" Bool
+    :> QueryParam "selectedOfferId" Text
     :> Post '[JSON] ConfirmRes
 
 data ConfirmRes = ConfirmRes
@@ -74,8 +75,9 @@ confirm ::
   Maybe Payment.PaymentMethodId ->
   Maybe DMPM.PaymentInstrument ->
   Maybe Bool ->
+  Maybe Text ->
   FlowHandler ConfirmRes
-confirm (personId, merchantId) quoteId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled = withFlowHandlerAPIPersonId personId $ confirm' (personId, merchantId) quoteId Nothing mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled
+confirm (personId, merchantId) quoteId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled mbSelectedOfferId = withFlowHandlerAPIPersonId personId $ confirm' (personId, merchantId) quoteId Nothing mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled mbSelectedOfferId
 
 confirm' ::
   (Id SP.Person, Id Merchant.Merchant) ->
@@ -84,12 +86,13 @@ confirm' ::
   Maybe Payment.PaymentMethodId ->
   Maybe DMPM.PaymentInstrument ->
   Maybe Bool ->
+  Maybe Text ->
   Flow ConfirmRes
-confirm' (personId, _) quoteId mbDashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled =
+confirm' (personId, _) quoteId mbDashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled mbSelectedOfferId =
   withPersonIdLogTag personId $ do
     -- BoothOnline (Paytm EDC) always requires payment before confirm; derived from paymentInstrument only
     let requiresPaymentBeforeConfirm = mbPaymentInstrument == Just DMPM.BoothOnline && mbPaymentMethodId == Just "PAYTM_EDC"
-    dConfirmRes <- DConfirm.confirm personId quoteId mbDashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled requiresPaymentBeforeConfirm
+    dConfirmRes <- DConfirm.confirm personId quoteId mbDashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled requiresPaymentBeforeConfirm mbSelectedOfferId
     becknInitReq <- ACL.buildInitReqV2 dConfirmRes
     moc <- CQMOC.findByMerchantIdAndCity dConfirmRes.merchant.id dConfirmRes.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> dConfirmRes.merchant.id.getId <> "-city-" <> show dConfirmRes.city)
     bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = moc.id.getId, merchantId = dConfirmRes.merchant.id.getId, domain = Just "MOBILITY", vehicleCategory = Nothing})) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show dConfirmRes.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId)

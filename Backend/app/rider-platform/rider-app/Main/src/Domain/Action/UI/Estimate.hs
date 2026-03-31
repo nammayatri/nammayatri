@@ -28,6 +28,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Offer as SOffer
 import qualified Storage.CachedQueries.BppDetails as CQBppDetails
 import qualified Storage.CachedQueries.ValueAddNP as QNP
 import Tools.Error
@@ -80,7 +81,8 @@ data EstimateAPIEntity = EstimateAPIEntity
     isReferredRide :: Bool,
     isInsured :: Maybe Bool,
     estimateTags :: Maybe [Text],
-    insuredAmount :: Maybe Text
+    insuredAmount :: Maybe Text,
+    offer :: Maybe SOffer.CumulativeOfferResp
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -98,8 +100,8 @@ data EstimateBreakupAPIEntity = EstimateBreakupAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-mkEstimateAPIEntity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Bool -> Estimate -> m EstimateAPIEntity
-mkEstimateAPIEntity isReferredRide (Estimate {..}) = do
+mkEstimateAPIEntity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Bool -> Maybe SOffer.CumulativeOfferResp -> Estimate -> m EstimateAPIEntity
+mkEstimateAPIEntity isReferredRide offer (Estimate {..}) = do
   valueAddNPRes <- QNP.isValueAddNP providerId
   (bppDetails :: BppDetails) <- CQBppDetails.findBySubscriberIdAndDomain providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found " <> providerId)
   let mbBaseFareEB = find (\x -> x.title == show Enums.BASE_FARE) estimateBreakupList

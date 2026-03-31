@@ -63,6 +63,7 @@ import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.Person as SLP
 import qualified SharedLogic.Serviceability as Serviceability
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
@@ -73,6 +74,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import Kernel.External.Types (ServiceFlow)
 import qualified Tools.Maps as MapSearch
 
 data PickupStage = OnTheWay | Reached | Reaching
@@ -107,7 +109,8 @@ getRideStatus ::
     EncFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    ServiceFlow m r
   ) =>
   Id SRide.Ride ->
   Id SPerson.Person ->
@@ -125,7 +128,9 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
   decRider <- decrypt rider
   safetySettings <- Lib.findSafetySettingsWithFallback (cast personId) (Lib.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults rider))
   isSafetyCenterDisabled <- SLP.checkSafetyCenterDisabled rider safetySettings
-  ride' <- buildRideAPIEntity ride
+  merchant <- CQM.findById booking.merchantId
+  let isOnlinePayment = maybe False (.onlinePayment) merchant
+  ride' <- buildRideAPIEntity (personId, booking, isOnlinePayment) ride
   return $
     GetRideStatusResp
       { fromLocation = makeLocationAPIEntity booking.fromLocation,

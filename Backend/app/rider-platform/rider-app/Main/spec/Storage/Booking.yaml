@@ -254,6 +254,7 @@ Booking:
     paymentMode: Maybe PaymentMode
     dashboardAgentId: Maybe Text
     displayBookingId: Maybe Text
+    selectedOfferId: Maybe Text
     requiresPaymentBeforeConfirm: Bool
 
   beamFields:

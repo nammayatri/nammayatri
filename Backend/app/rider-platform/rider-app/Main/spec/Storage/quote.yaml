@@ -108,6 +108,7 @@ Quote:
     validTill : UTCTime
     vehicleIconUrl: Maybe BaseUrl
     isSafetyPlus : Bool
+    selectedOfferId: Maybe Text
   derives: "Generic, Show"
 
   beamFields:

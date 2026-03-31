@@ -91,6 +91,7 @@ data Booking = Booking
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    selectedOfferId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierShortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

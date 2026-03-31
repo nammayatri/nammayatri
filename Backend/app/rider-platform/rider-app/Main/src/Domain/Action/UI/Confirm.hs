@@ -74,9 +74,11 @@ confirm ::
   Maybe DMPM.PaymentInstrument ->
   Maybe Bool ->
   Bool ->
+  Maybe Text ->
   m SConfirm.DConfirmRes
-confirm personId quoteId dashboardAgentId paymentMethodId paymentInstrument isAdvanceBookingEnabled requiresPaymentBeforeConfirm = do
-  quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
+confirm personId quoteId dashboardAgentId paymentMethodId paymentInstrument isAdvanceBookingEnabled requiresPaymentBeforeConfirm mbSelectedOfferId = do
+  quote' <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
+  let quote = quote' {DQuote.selectedOfferId = mbSelectedOfferId} -- Post validation, in SConfirm.confirm -> buildBooking this `selectedOfferId` is persisted.
   merchant <- CQM.findById quote.merchantId >>= fromMaybeM (MerchantNotFound quote.merchantId.getId)
   SPayment.validatePaymentInstrument merchant paymentInstrument paymentMethodId
   whenJust isAdvanceBookingEnabled $ \isAdvanceBookingEnabled' -> do

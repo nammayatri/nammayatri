@@ -373,7 +373,8 @@ let riderClickhouseCfg =
 
 let nearByDriverAPIRateLimitOptions = { limit = +5, limitResetTimeInSec = +30 }
 
-let seatBookingConfirmAPIRateLimitOptions = { limit = +1, limitResetTimeInSec = +30 }
+let seatBookingConfirmAPIRateLimitOptions =
+      { limit = +1, limitResetTimeInSec = +30 }
 
 let sosTrackingRateLimitOptions = { limit = +60, limitResetTimeInSec = +60 }
 

@@ -88,6 +88,7 @@ dependencies:
   - postgresql-simple
   - sequelize
   - finance-kernel
+  - yudhishthira
 
 
 ghc-options:

@@ -29,7 +29,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 
 import status_store
-from services import juspay, stripe, paytm, exotel, acko, sos, kapture, whatsapp, mmi, nextbillion, gridline, transit, hyperverge, gullak, openai, cmrl, cris, ebix
+from services import juspay, stripe, paytm, exotel, acko, sos, kapture, whatsapp, mmi, nextbillion, gridline, transit, hyperverge, gullak, openai, cmrl, cris, ebix, mlpricing
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("mock-server")
@@ -57,6 +57,7 @@ ROUTES = [
     ("/cmrl",        cmrl,        "cmrl"),
     ("/cris",        cris,        "cris"),
     ("/ebix",        ebix,        "ebix"),
+    ("/mlpricing",   mlpricing,   "mlpricing"),
 ]
 
 
@@ -113,6 +114,14 @@ class MockHandler(BaseHTTPRequestHandler):
 
         if path == "/" or path == "/health":
             return self._json({"status": "UP", "service": "mock-server"})
+
+        # ── Flush Redis (for test orchestration) ──
+        if path == "/flush-redis" and self.command == "POST":
+            import subprocess
+            subprocess.run(["redis-cli", "-p", "6379", "FLUSHALL"], capture_output=True)
+            for p in [30001, 30002, 30003, 30004, 30005, 30006]:
+                subprocess.run(["redis-cli", "-p", str(p), "-c", "FLUSHALL"], capture_output=True)
+            return self._json({"flushed": True})
 
         # ── Route to service handler with middleware override check ──
         for prefix, module, svc_name in ROUTES:

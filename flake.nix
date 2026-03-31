@@ -63,6 +63,9 @@
     osrm-pbf.url = "https://download.geofabrik.de/asia/india/southern-zone-240101.osm.pbf";
     osrm-pbf.flake = false;
 
+    osrm-pbf-finland.url = "https://download.geofabrik.de/europe/finland-260101.osm.pbf";
+    osrm-pbf-finland.flake = false;
+
     easy-purescript-nix.url = "github:justinwoo/easy-purescript-nix/a90bd941297497c83205f0a64f30c5188a2a4fda";
     easy-purescript-nix.flake = false;
 

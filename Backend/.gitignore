@@ -54,6 +54,8 @@ load-test/pyvenv.cfg
 load-test/output
 load-test/tokens
 dev/config-sync/.venv
+dev/integration-tests/data/test-logs
+dev/integration-tests/reports
 dev/config-sync/assets/data
 dev/config-sync/assets/patches.json
 dev/config-sync/assets/environments.json
