@@ -18,15 +18,3 @@ INSERT INTO atlas_bpp_dashboard.registration_token (id, token, person_id, create
 	('88c0375f-5885-4dab-acc9-27552c31db88', '88ef2a2a-b014-4a86-b1c0-e453e8b0b688', 'favorit-fleet-owner-0000000000000000', now ()),
 	('favorit-rental-fleet-token-id-000000', 'favorit-rental_fleet-token-000000000', 'favorit-rental_fleet-owner-000000000', now ()),
 	('favorit-operator-token-id-0000000000', 'favorit-operator-token0-000000000000', 'favorit-operator-0-0000-000000000000', now ());
-
--- Admin token for Bangalore with correct merchant_id and operating_city
-INSERT INTO atlas_bpp_dashboard.registration_token (id, token, person_id, merchant_id, operating_city, enabled, created_at)
-VALUES (
-    'local-admin-token-blr-id-00000000000',
-    'local-admin-token-bangalore-namma-yatri',
-    '3680f4b5-dce4-4d03-aa8c-5405690e87bd',
-    '94bbea0d-3c52-479b-81f5-eca4969ae797',
-    'Bangalore',
-    true,
-    now()
-);

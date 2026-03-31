@@ -13,8 +13,8 @@
 					"    // Finnish mobile: 04X XXXXXXX (10 digits starting with 04)",
 					"    var dNum = '04' + Math.floor(10000000 + Math.random() * 89999999);",
 					"    var rNum = '04' + Math.floor(10000000 + Math.random() * 89999999);",
-					"    // Finnish plate: ABC-123",
-					"    var regNo = String.fromCharCode(65+Math.floor(Math.random()*26)) + String.fromCharCode(65+Math.floor(Math.random()*26)) + String.fromCharCode(65+Math.floor(Math.random()*26)) + '-' + String(Math.floor(100+Math.random()*899));",
+					"    // Finnish plate: ABC123 (no hyphen — API requires ^[0-9A-Z]*$)",
+					"    var regNo = String.fromCharCode(65+Math.floor(Math.random()*26)) + String.fromCharCode(65+Math.floor(Math.random()*26)) + String.fromCharCode(65+Math.floor(Math.random()*26)) + String(Math.floor(100+Math.random()*899));",
 					"    pm.collectionVariables.set('_test_driver_number', dNum);",
 					"    pm.collectionVariables.set('_test_rider_number', rNum);",
 					"    pm.collectionVariables.set('_test_reg_no', regNo);",
@@ -26,6 +26,154 @@
 		}
 	],
 	"item": [
+		{
+			"name": "Switch City for Setup (Dashboard)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.environment.set('dashboard_token', d.authToken);",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{dashboard_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{city}}\"}"
+				},
+				"url": {
+					"raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+					"host": [
+						"{{dashboard_base_url}}"
+					],
+					"path": [
+						"user",
+						"switchMerchantAndCity"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Cumulative Offer Logic (BAP)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('Logic version:', d.version, 'updated:', d.isRuleUpdated);",
+							"if (d.version) { pm.environment.set('offer_logic_version', d.version); }",
+							"pm.test('Logic created', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{bap_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/nammaTag/appDynamicLogic/verify",
+					"host": [
+						"{{bap_dashboard_url}}"
+					],
+					"path": [
+						"bap",
+						"{{bap_short_id}}",
+						"{{city}}",
+						"nammaTag",
+						"appDynamicLogic",
+						"verify"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\"domain\":{\"tag\":\"CUMULATIVE_OFFER_POLICY\"},\"shouldUpdateRule\":true,\"updatePassword\":\"dummy-password\",\"description\":\"First Ride Discount Offer\",\"inputData\":[{\"offerListResp\":{\"bestOfferCombination\":null,\"offerResp\":[]},\"extraParams\":[]}],\"rules\":[{\"cat\":[{\"var\":\"\"},{\"offerTitle\":\"First Ride Offer\"},{\"offerDescription\":\"10% off on your first ride\"},{\"offerSponsoredBy\":[\"NammaYatri\"]},{\"offerIds\":[\"first-ride-offer-helsinki\"]}]}]}"
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Rollout Offer Logic (BAP)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const start = Date.now(); while (Date.now() - start < 5000) {}"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Rollout success', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{bap_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/nammaTag/appDynamicLogic/upsertLogicRollout",
+					"host": [
+						"{{bap_dashboard_url}}"
+					],
+					"path": [
+						"bap",
+						"{{bap_short_id}}",
+						"{{city}}",
+						"nammaTag",
+						"appDynamicLogic",
+						"upsertLogicRollout"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "[{\"domain\":{\"tag\":\"CUMULATIVE_OFFER_POLICY\"},\"timeBounds\":\"Unbounded\",\"rollout\":[{\"rolloutPercentage\":100,\"version\":{{offer_logic_version}},\"versionDescription\":\"First Ride Offer\"}]}]"
+				}
+			},
+			"response": []
+		},
 		{
 			"name": "Driver Auth",
 			"event": [
@@ -192,7 +340,7 @@
 				},
 				"body": {
 					"mode": "raw",
-					"raw": "{\"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"{{vehicle_class}}\", \"colour\": \"White\", \"model\": \"VOLVO XC90\", \"make\": \"Volvo\", \"vehicleCategory\": \"{{vehicle_category}}\", \"variant\": \"{{vehicle_variant}}\", \"category\": \"{{vehicle_category}}\"}"
+					"raw": "{\"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"{{vehicle_class}}\", \"colour\": \"White\", \"model\": \"MARUTI BREZZA\", \"make\": \"Maruti\", \"vehicleCategory\": \"{{vehicle_category}}\", \"variant\": \"{{vehicle_variant}}\", \"category\": \"{{vehicle_category}}\"}"
 				}
 			},
 			"response": []
@@ -297,6 +445,294 @@
 				"body": {
 					"mode": "raw",
 					"raw": "[{\"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"ts\": \"{{current_time}}\"}]"
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Go Online Without Bank Account (Blocked)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Blocked without bank account', function () { pm.response.to.have.status(400); });",
+							"var d = pm.response.json();",
+							"pm.test('Error is DRIVER_BANK_ACCOUNT_NOT_FOUND', function () { pm.expect(d.errorCode).to.equal('DRIVER_BANK_ACCOUNT_NOT_FOUND'); });",
+							"console.log('Correctly blocked:', d.errorCode);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"driver",
+						"setActivity"
+					],
+					"query": [
+						{
+							"key": "active",
+							"value": "true"
+						},
+						{
+							"key": "mode",
+							"value": "%22ONLINE%22"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Verify Bank Account (Dashboard)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.environment.set('bank_verify_request_id', d.requestId);",
+							"console.log('Bank verify requestId:', d.requestId);",
+							"pm.test('Verification initiated', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/verify/bankAccount",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{driver_id}}",
+						"verify",
+						"bankAccount"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\"bankAccountNo\": \"1234567890\", \"bankIfscCode\": \"HDFC0001234\"}"
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Poll Bank Account Status (Dashboard)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('Bank account status:', JSON.stringify(d));",
+							"pm.test('Bank account verified', function () { pm.response.to.have.status(200); });",
+							"pm.test('Account exists', function () { pm.expect(d.accountExists).to.be.true; });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/info/{{bank_verify_request_id}}/bankAccount",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{driver_id}}",
+						"info",
+						"{{bank_verify_request_id}}",
+						"bankAccount"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Go Online Without Charges Enabled (Blocked)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Blocked - charges not enabled (400)', function () { pm.response.to.have.status(400); });",
+							"var d = pm.response.json();",
+							"pm.test('Error is DRIVER_CHARGES_DISABLED', function () { pm.expect(d.errorCode).to.equal('DRIVER_CHARGES_DISABLED'); });",
+							"console.log('Correctly blocked:', d.errorCode);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"driver",
+						"setActivity"
+					],
+					"query": [
+						{
+							"key": "active",
+							"value": "true"
+						},
+						{
+							"key": "mode",
+							"value": "%22ONLINE%22"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Bank Account Link (Stripe Connect)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('Account link:', JSON.stringify(d));",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_namma_P}}/driver/register/bankAccount/link?paymentMode=%22LIVE%22",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"driver",
+						"register",
+						"bankAccount",
+						"link"
+					],
+					"query": [
+						{
+							"key": "paymentMode",
+							"value": "%22LIVE%22"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Bank Account Status (Stripe)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('Bank account status:', JSON.stringify(d));",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"pm.test('Charges enabled', function () { pm.expect(d.chargesEnabled).to.be.true; });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_namma_P}}/driver/register/bankAccount/status",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"driver",
+						"register",
+						"bankAccount",
+						"status"
+					]
 				}
 			},
 			"response": []
@@ -853,7 +1289,8 @@
 							"if (d.list && d.list.length > 0) {",
 							"    var b = d.list[0];",
 							"    pm.environment.set('customer_bookingId', b.id);",
-							"    console.log('Booking:', b.id, 'Status:', b.status);",
+							"    pm.environment.set('ride_otp', b.rideList[0].rideOtp);",
+							"    console.log('Booking:', b.id, 'Status:', b.status, 'RideOTP:', b.rideList[0].rideOtp);",
 							"}",
 							"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
 						],
@@ -910,8 +1347,7 @@
 							"var d = pm.response.json();",
 							"if (d.list && d.list.length > 0) {",
 							"    pm.environment.set('driver_ride_id', d.list[0].id);",
-							"    pm.environment.set('ride_otp', d.list[0].rideOtp);",
-							"    console.log('Ride:', d.list[0].id, 'OTP:', d.list[0].rideOtp);",
+							"    console.log('Ride:', d.list[0].id);",
 							"}",
 							"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
 						],
@@ -1046,55 +1482,6 @@
 			"response": []
 		},
 		{
-			"name": "Update Payment Status (Mock)",
-			"event": [
-				{
-					"listen": "prerequest",
-					"script": {
-						"exec": [
-							"const start = Date.now(); while (Date.now() - start < 2000) {}"
-						],
-						"type": "text/javascript"
-					}
-				},
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"var d = pm.response.json();",
-							"console.log('Mock status update:', JSON.stringify(d));",
-							"pm.test('Status updated', function () { pm.response.to.have.status(200); });"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"url": {
-					"raw": "{{mockServerUrl}}/mock/status",
-					"host": [
-						"{{mockServerUrl}}"
-					],
-					"path": [
-						"mock",
-						"status"
-					]
-				},
-				"body": {
-					"mode": "raw",
-					"raw": "{\"service\": \"stripe\", \"id\": [\"{{customer_bookingId}}\"], \"status\": \"succeeded\"}"
-				}
-			},
-			"response": []
-		},
-		{
 			"name": "Verify Booking Completed",
 			"event": [
 				{
@@ -1111,14 +1498,17 @@
 					"script": {
 						"exec": [
 							"var d = pm.response.json();",
-							"if (d.list && d.list.length > 0) {",
-							"    var b = d.list[0];",
-							"    console.log('Final booking:', b.id, 'Status:', b.status);",
-							"}",
+							"var b = d.list && d.list[0];",
+							"var ride = b && b.rideList && b.rideList[0];",
+							"if (b) { console.log('Final booking:', b.id, 'Status:', b.status); }",
+							"if (ride) { console.log('Ride offer:', JSON.stringify(ride.selectedOffer)); }",
 							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-							"pm.test('Ride completed', function () {",
-							"    pm.expect(d.list[0].status).to.equal('COMPLETED');",
-							"});"
+							"pm.test('Ride completed', function () { pm.expect(b.status).to.equal('COMPLETED'); });",
+							"if (ride && ride.selectedOffer) {",
+							"    pm.test('Selected offer has offerId', function () { pm.expect(ride.selectedOffer).to.have.property('offerId'); });",
+							"    pm.test('Selected offer has amountSaved', function () { pm.expect(ride.selectedOffer).to.have.property('amountSaved'); });",
+							"    pm.test('Selected offer has postOfferAmount', function () { pm.expect(ride.selectedOffer).to.have.property('postOfferAmount'); });",
+							"}"
 						],
 						"type": "text/javascript"
 					}

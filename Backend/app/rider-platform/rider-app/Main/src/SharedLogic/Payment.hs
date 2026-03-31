@@ -581,7 +581,7 @@ getAllOrdersForRide rideId = do
   mbTipOrder <- QPaymentOrder.findByDomainEntityId ("tip:" <> rideId.getId)
   pure $ catMaybes [mbRideOrder, mbTipOrder]
 
-makePaymentIntent ::
+type MakePaymentIntentConstraints m r c =
   ( MonadFlow m,
     EncFlow m r,
     EsqDBFlow m r,
@@ -589,17 +589,53 @@ makePaymentIntent ::
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     FinanceBeamFlow.BeamFlow m r
-  ) =>
+  )
+
+makePaymentIntent ::
+  MakePaymentIntentConstraints m r c =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe DMPM.PaymentMode ->
   Id Person.Person ->
-  Maybe (Id Ride.Ride) -> -- rideId for ride→order mapping
-  Maybe (Id DOrder.PaymentOrder) -> -- existing order ID (for retry handling)
+  Maybe (Id Ride.Ride) ->
+  Maybe (Id DOrder.PaymentOrder) ->
+  DOrder.PaymentServiceType ->
   DPayment.CreatePaymentIntentServiceReq ->
-  Maybe RidePaymentLedgerInfo -> -- optional ledger info for ride payments
+  Maybe RidePaymentLedgerInfo ->
+  Maybe Text ->
   m DPayment.CreatePaymentIntentServiceResp
-makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbExistingOrderId req mbLedgerInfo = do
+makePaymentIntent = makePaymentIntentFlow False
+
+makeDebtPaymentIntent ::
+  MakePaymentIntentConstraints m r c =>
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe DMPM.PaymentMode ->
+  Id Person.Person ->
+  Maybe (Id Ride.Ride) ->
+  Maybe (Id DOrder.PaymentOrder) ->
+  DOrder.PaymentServiceType ->
+  DPayment.CreatePaymentIntentServiceReq ->
+  Maybe RidePaymentLedgerInfo ->
+  Maybe Text ->
+  m DPayment.CreatePaymentIntentServiceResp
+makeDebtPaymentIntent = makePaymentIntentFlow True
+
+makePaymentIntentFlow ::
+  MakePaymentIntentConstraints m r c =>
+  Bool ->
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe DMPM.PaymentMode ->
+  Id Person.Person ->
+  Maybe (Id Ride.Ride) ->
+  Maybe (Id DOrder.PaymentOrder) ->
+  DOrder.PaymentServiceType ->
+  DPayment.CreatePaymentIntentServiceReq ->
+  Maybe RidePaymentLedgerInfo ->
+  Maybe Text ->
+  m DPayment.CreatePaymentIntentServiceResp
+makePaymentIntentFlow _isDebtPayment merchantId merchantOpCityId paymentMode personId mbRideId mbExistingOrderId paymentServiceType req mbLedgerInfo mbOfferId = do
   let commonMerchantId = cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
       commonPersonId = cast @Person.Person @DPayment.Person personId
@@ -641,7 +677,7 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
             basket = Nothing,
             domainEntityId = (.getId) <$> mbRideId
           }
-  mbServiceResp <- DPayment.createPaymentService commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbExistingOrderId Nothing DOrder.Normal serviceReq createPaymentCall cancelPaymentCall (Just incrementAuthCall)
+  mbServiceResp <- DPayment.createPaymentService commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbExistingOrderId Nothing paymentServiceType serviceReq createPaymentCall cancelPaymentCall (Just incrementAuthCall) mbOfferId
   serviceResp <- mbServiceResp & fromMaybeM (InternalError "Payment order expired, please try again")
   let resp =
         DPayment.CreatePaymentIntentServiceResp
@@ -716,15 +752,16 @@ chargePaymentIntent ::
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe DMPM.PaymentMode ->
+  DOrder.PaymentServiceType ->
   Payment.PaymentIntentId ->
   Id Ride.Ride -> -- rideId for looking up pending ledger entries
   Text -> -- settlement reason (e.g. "RidePaymentCaptured", "TipPaymentCaptured")
   m Bool
-chargePaymentIntent merchantId merchantOpCityId paymentMode paymentIntentId rideId settledReason = do
+chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType paymentIntentId rideId settledReason = do
   let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId paymentMode
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId paymentMode
       commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
-  charged <- DPayment.chargePaymentIntentService commonMerchantOperatingCityId paymentIntentId capturePaymentIntentCall getPaymentIntentCall
+  charged <- DPayment.chargePaymentIntentService commonMerchantOperatingCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall
   -- Find all unsettled ledger entries (PENDING or DUE) for this ride
   unsettledEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries rideId.getId
   unless (null unsettledEntries) $ do
@@ -830,14 +867,15 @@ makeCxCancellationPayment ::
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe DMPM.PaymentMode ->
+  DOrder.PaymentServiceType ->
   Payment.PaymentIntentId ->
   HighPrecMoney ->
   m Bool
-makeCxCancellationPayment merchantId merchantOpCityId paymentMode paymentIntentId cancellationAmount = do
+makeCxCancellationPayment merchantId merchantOpCityId paymentMode paymentServiceType paymentIntentId cancellationAmount = do
   let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId paymentMode
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId paymentMode
       commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
-  DPayment.updateForCXCancelPaymentIntentService commonMerchantOperatingCityId paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancellationAmount
+  DPayment.updateForCXCancelPaymentIntentService commonMerchantOperatingCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancellationAmount
 
 validatePaymentInstrument :: (MonadThrow m, Log m) => Merchant.Merchant -> Maybe DMPM.PaymentInstrument -> Maybe Payment.PaymentMethodId -> m ()
 validatePaymentInstrument merchant mbPaymentInstrument mbPaymentMethodId = do
@@ -925,7 +963,7 @@ capturePendingPaymentIfExists person merchantOperatingCityId = do
             whenJust mbOrder $ \order -> do
               let paymentIntentId = order.paymentServiceOrderId
               -- chargePaymentIntent will mark entries as DUE on failure, SETTLED on success
-              paymentCharged <- chargePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode paymentIntentId ride.id RidePaymentFinance.settledReasonRidePayment
+              paymentCharged <- chargePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing paymentIntentId ride.id RidePaymentFinance.settledReasonRidePayment
               if paymentCharged
                 then do
                   logInfo $ "Successfully captured payment for ride " <> ride.id.getId

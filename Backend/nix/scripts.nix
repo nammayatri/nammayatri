@@ -265,18 +265,6 @@ _:
         '';
       };
 
-      run-integration-tests = {
-        category = "Backend";
-        description = ''
-          Run integration tests using newman cli
-        '';
-        exec = ''
-          set -x
-          cd "''${FLAKE_ROOT}/Backend/newman-tests"
-          ./run-tests.sh
-        '';
-      };
-
       run-mobility-stack-test = {
         category = "Backend";
         description = ''
@@ -288,29 +276,38 @@ _:
           let
             # All ports that run-mobility-stack-dev uses
             systemPorts = [
-              5434 5435           # postgres primary + replica
-              6379                # redis
-              30001 30002 30003 30004 30005 30006  # redis cluster
-              2181 29092          # zookeeper + kafka
-              8085                # nginx
-              5422 8079           # passetto db + service
-              5001                # osrm
+              5434
+              5435 # postgres primary + replica
+              6379 # redis
+              30001
+              30002
+              30003
+              30004
+              30005
+              30006 # redis cluster
+              2181
+              29092 # zookeeper + kafka
+              8085 # nginx
+              5422
+              8079 # passetto db + service
+              5001 # osrm
             ];
             servicePorts = [
-              8013                # rider-app
-              8016                # driver-app
-              8015                # beckn-gateway
-              8018                # provider-dashboard
-              8019                # mock-google
-              8020                # mock-registry
-              8080                # mock-server (python)
-              8081                # location-tracking-service
-              4343                # mock-sms
-              4545                # mock-fcm
-              6235                # mock-idfy
+              8013 # rider-app
+              8016 # driver-app
+              8015 # beckn-gateway
+              8018 # provider-dashboard
+              8019 # mock-google
+              8020 # mock-registry
+              8080 # mock-server (python)
+              8081 # location-tracking-service
+              4343 # mock-sms
+              4545 # mock-fcm
+              6235 # mock-idfy
             ];
             allPorts = systemPorts ++ servicePorts;
             portCheckStr = builtins.concatStringsSep " " (map builtins.toString allPorts);
+            servicePortStr = builtins.concatStringsSep " " (map builtins.toString servicePorts);
             serviceHealthPorts = builtins.concatStringsSep " " (map builtins.toString [ 8013 8016 ]);
           in
           ''
@@ -432,16 +429,79 @@ _:
               echo "  WARNING: Config import failed, continuing with existing data..."
             }
 
-            # ── Step 5: Run post-import setup ──
+            # ── Step 5: Restart services to refresh in-memory config ──
             echo ""
             echo "═══════════════════════════════════════"
-            echo "  Step 5: Running post-import setup..."
+            echo "  Step 5: Restarting services..."
             echo "═══════════════════════════════════════"
 
-            ${pkgs.postgresql}/bin/psql -h localhost -p 5434 -U atlas_superuser -d atlas_dev \
-              -f "$FLAKE/Backend/dev/config-sync/post-import-setup.sql" || {
-              echo "  WARNING: Post-import setup failed, continuing..."
-            }
+            # Kill service processes one by one (infrastructure stays up)
+            for port in ${servicePortStr}; do
+              pid=$(${pkgs.lsof}/bin/lsof -ti:"$port" 2>/dev/null || true)
+              if [ -n "$pid" ]; then
+                echo "  Stopping service on port $port (pid $pid)..."
+                echo "$pid" | xargs kill 2>/dev/null || true
+              fi
+            done
+            sleep 2
+            # Force-kill any stragglers
+            for port in ${servicePortStr}; do
+              pid=$(${pkgs.lsof}/bin/lsof -ti:"$port" 2>/dev/null || true)
+              if [ -n "$pid" ]; then
+                echo "  Force-killing straggler on port $port..."
+                echo "$pid" | xargs kill -9 2>/dev/null || true
+              fi
+            done
+
+            # Flush Redis caches so services load fresh config
+            ${pkgs.redis}/bin/redis-cli FLUSHALL 2>/dev/null || true
+            ${pkgs.redis}/bin/redis-cli -p 30001 -c FLUSHALL 2>/dev/null || true
+            echo "  Redis flushed."
+
+            # Stop the whole stack and restart (ensures all processes come back)
+            if [ -n "$STACK_PID" ]; then
+              kill "$STACK_PID" 2>/dev/null || true
+              wait "$STACK_PID" 2>/dev/null || true
+              STACK_PID=""
+            fi
+            # Clean up any remaining processes
+            for port in ${portCheckStr}; do
+              pid=$(${pkgs.lsof}/bin/lsof -ti:"$port" 2>/dev/null || true)
+              if [ -n "$pid" ]; then
+                echo "$pid" | xargs kill -9 2>/dev/null || true
+              fi
+            done
+
+            echo "  Restarting mobility stack..."
+            nix run .#run-mobility-stack-dev &
+            STACK_PID=$!
+
+            # Wait for services to be healthy again
+            HEALTH_WAITED=0
+            while true; do
+              ALL_HEALTHY=true
+              for port in ${serviceHealthPorts}; do
+                if ! curl -sf "http://localhost:$port" >/dev/null 2>&1; then
+                  ALL_HEALTHY=false
+                  break
+                fi
+              done
+
+              if [ "$ALL_HEALTHY" = true ]; then
+                echo "  All services restarted and healthy!"
+                break
+              fi
+
+              if [ "$HEALTH_WAITED" -ge "$MAX_HEALTH_WAIT" ]; then
+                echo "  ERROR: Services not healthy after restart (''${MAX_HEALTH_WAIT}s)"
+                TEST_EXIT=1
+                exit 1
+              fi
+
+              echo "  Waiting for services after restart... ($HEALTH_WAITED/''${MAX_HEALTH_WAIT}s)"
+              sleep 15
+              HEALTH_WAITED=$((HEALTH_WAITED + 15))
+            done
 
             # ── Step 6: Run integration tests ──
             echo ""

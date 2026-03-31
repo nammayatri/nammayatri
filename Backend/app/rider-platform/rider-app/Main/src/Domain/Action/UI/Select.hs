@@ -139,7 +139,8 @@ data DSelectReq = DSelectReq
     disabilityDisable :: Maybe Bool,
     billingCategory :: Maybe BillingCategory,
     preferSafetyPlus :: Maybe Bool,
-    driverPreference :: Maybe [Text]
+    driverPreference :: Maybe [Text],
+    selectedOfferId :: Maybe Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -306,6 +307,7 @@ select2 personId estimateId req@DSelectReq {..} = do
   QSearchRequest.updateMultipleByRequestId searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2) isAdvancedBookingEnabled
   QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory}
   QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
+  QEstimate.updateSelectedOfferId selectedOfferId estimateId
   QDOffer.updateStatus DDO.INACTIVE estimateId
   when (isJust mbCustomerExtraFee || isJust req.paymentMethodId || isJust req.paymentInstrument) $ do
     void $ QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id mbCustomerExtraFee req.paymentMethodId req.paymentInstrument

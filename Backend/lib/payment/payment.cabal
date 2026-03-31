@@ -53,22 +53,29 @@ library
       Lib.Payment.Storage.Queries.PayoutRequestExtra
       Lib.Payment.Storage.Queries.RefundsExtra
       Tools.Beam.UtilsTH
+      Lib.Payment.Domain.Types.Offer
       Lib.Payment.Domain.Types.PaymentOrderOffer
       Lib.Payment.Domain.Types.PaymentOrderSplit
       Lib.Payment.Domain.Types.PayoutOrder
       Lib.Payment.Domain.Types.PayoutRequest
       Lib.Payment.Domain.Types.PayoutTransaction
+      Lib.Payment.Domain.Types.PersonDailyOfferStats
+      Lib.Payment.Domain.Types.PersonOfferStats
       Lib.Payment.Domain.Types.PersonWallet
       Lib.Payment.Domain.Types.Refunds
       Lib.Payment.Domain.Types.WalletRewardPosting
+      Lib.Payment.Storage.Beam.Offer
       Lib.Payment.Storage.Beam.PaymentOrderOffer
       Lib.Payment.Storage.Beam.PaymentOrderSplit
       Lib.Payment.Storage.Beam.PayoutOrder
       Lib.Payment.Storage.Beam.PayoutRequest
       Lib.Payment.Storage.Beam.PayoutTransaction
+      Lib.Payment.Storage.Beam.PersonDailyOfferStats
+      Lib.Payment.Storage.Beam.PersonOfferStats
       Lib.Payment.Storage.Beam.PersonWallet
       Lib.Payment.Storage.Beam.Refunds
       Lib.Payment.Storage.Beam.WalletRewardPosting
+      Lib.Payment.Storage.Queries.Offer
       Lib.Payment.Storage.Queries.OrphanInstances.PayoutOrder
       Lib.Payment.Storage.Queries.OrphanInstances.Refunds
       Lib.Payment.Storage.Queries.PaymentOrderOffer
@@ -76,6 +83,8 @@ library
       Lib.Payment.Storage.Queries.PayoutOrder
       Lib.Payment.Storage.Queries.PayoutRequest
       Lib.Payment.Storage.Queries.PayoutTransaction
+      Lib.Payment.Storage.Queries.PersonDailyOfferStats
+      Lib.Payment.Storage.Queries.PersonOfferStats
       Lib.Payment.Storage.Queries.PersonWallet
       Lib.Payment.Storage.Queries.Refunds
       Lib.Payment.Storage.Queries.WalletRewardPosting
@@ -152,6 +161,7 @@ library
     , time
     , unordered-containers
     , uri-encode
+    , yudhishthira
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4

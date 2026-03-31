@@ -338,7 +338,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
 
       when (searchRequest.isMeterRideSearch == Just True) $ do
         quoteForMeterRide <- listToMaybe quotes & fromMaybeM (InvalidRequest "Quote for meter ride doesn't exist")
-        void $ DConfirm.confirm searchRequest.riderId quoteForMeterRide.id Nothing Nothing Nothing Nothing False
+        void $ DConfirm.confirm searchRequest.riderId quoteForMeterRide.id Nothing Nothing Nothing Nothing False Nothing
 
       whenJust mbRequiredEstimate $ \requiredEstimate -> do
         shouldAutoSelect <- SLCF.createFares requestId.getId requiredEstimate.id.getId
@@ -376,7 +376,8 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
                 disabilityDisable = Nothing,
                 billingCategory = Nothing,
                 preferSafetyPlus = Nothing,
-                driverPreference = Nothing
+                driverPreference = Nothing,
+                selectedOfferId = Nothing
               }
       void $ DSelect.select2' (personId, merchant.id) estimateId selectReq
     {- Author: Hemant Mangla
@@ -542,6 +543,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion boostSearchPreSel
         vehicleCategory = Just vehicleCategory,
         qar = qar,
         estimateTags = Nothing,
+        selectedOfferId = Nothing,
         ..
       }
 
@@ -597,6 +599,7 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
         tripCategory = Just tripCategory,
         isSafetyPlus = False,
         billingCategory = SLT.PERSONAL,
+        selectedOfferId = Nothing,
         ..
       }
 

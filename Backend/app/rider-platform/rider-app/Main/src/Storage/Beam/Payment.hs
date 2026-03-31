@@ -17,6 +17,7 @@ module Storage.Beam.Payment where
 
 import qualified Data.Text as T
 -- Finance-kernel beam imports
+
 import qualified Lib.Finance.Storage.Beam.Account as BeamAccount
 import qualified Lib.Finance.Storage.Beam.AuditEntry as BeamAudit
 import qualified Lib.Finance.Storage.Beam.CurrentState as BeamCurrentState
@@ -30,6 +31,7 @@ import qualified Lib.Finance.Storage.Beam.PgPayoutSettlementReport as BeamPgPayo
 import qualified Lib.Finance.Storage.Beam.ReconciliationEntry as BeamReconciliationEntry
 import qualified Lib.Finance.Storage.Beam.ReconciliationSummary as BeamReconciliationSummary
 import qualified Lib.Finance.Storage.Beam.StateTransition as BeamStateTransition
+import qualified Lib.Payment.Storage.Beam.Offer as BeamOF
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
 import qualified Lib.Payment.Storage.Beam.PaymentOrderOffer as BeamOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrderSplit as BeamSplit
@@ -37,6 +39,8 @@ import qualified Lib.Payment.Storage.Beam.PaymentTransaction as BeamPT
 import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamP
 import qualified Lib.Payment.Storage.Beam.PayoutRequest as BeamPR
 import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamT
+import qualified Lib.Payment.Storage.Beam.PersonDailyOfferStats as BeamPDOS
+import qualified Lib.Payment.Storage.Beam.PersonOfferStats as BeamPOS
 import qualified Lib.Payment.Storage.Beam.PersonWallet as BeamPW
 import qualified Lib.Payment.Storage.Beam.Refunds as BeamRF
 import qualified Lib.Payment.Storage.Beam.WalletRewardPosting as BeamWRP
@@ -110,4 +114,13 @@ instance HasSchemaName BeamReconciliationSummary.ReconciliationSummaryT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamStateTransition.StateTransitionT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamOF.OfferT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamPOS.PersonOfferStatsT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamPDOS.PersonDailyOfferStatsT where
   schemaName _ = T.pack currentSchemaName

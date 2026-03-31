@@ -45,6 +45,9 @@ import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Location as DL
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Quote as SQuote
 import qualified Domain.Types.RideStatus as DRide
 import Domain.Types.RiderConfig (VehicleServiceTierOrderConfig)
@@ -70,12 +73,15 @@ import Kernel.Utils.Common
 import Kernel.Utils.JSON (objectWithSingleFieldParsing)
 import qualified Kernel.Utils.Schema as S
 import qualified Lib.JourneyModule.Base as JM
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.MetroOffer (MetroOffer)
 import qualified SharedLogic.MetroOffer as Metro
+import qualified SharedLogic.Offer as SOffer
 import SharedLogic.Quote
 import qualified SharedLogic.Search as SLS
 import qualified Storage.CachedQueries.BppDetails as CQBPP
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
@@ -190,7 +196,8 @@ getQuotes searchRequestId mbAllowMultiple = do
   let lockKey = estimateBuildLockKey searchRequestId.getId
   Redis.withLockRedisAndReturnValue lockKey 5 $ do
     offers <- getOffers searchRequest
-    estimates' <- getEstimates searchRequestId (isJust searchRequest.driverIdentifier) -- TODO(MultiModal): only check for estimates which are done
+    merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
+    estimates' <- getEstimates searchRequest.merchantId person.id searchRequest.merchantOperatingCityId searchRequestId (isJust searchRequest.driverIdentifier) merchant.onlinePayment
     riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
 
     let vehicleServiceTierOrderConfig = maybe [] (.userServiceTierOrderConfig) riderConfig
@@ -287,10 +294,19 @@ getOffers searchRequest = do
     creationTime (PublicTransport PublicTransportQuote {createdAt}) = createdAt
     creationTime (OnMeterRide QuoteAPIEntity {createdAt}) = createdAt
 
-getEstimates :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> Bool -> m [UEstimate.EstimateAPIEntity]
-getEstimates searchRequestId isReferredRide = do
+getEstimates :: Id DM.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> Id SSR.SearchRequest -> Bool -> Bool -> Flow [UEstimate.EstimateAPIEntity]
+getEstimates merchantId personId mocId searchRequestId isReferredRide onlinePayment = do
   estimateList <- runInReplica $ QEstimate.findAllBySRId searchRequestId
-  estimates <- mapM (UEstimate.mkEstimateAPIEntity isReferredRide) (sortByEstimatedFare estimateList)
+  let paymentServiceType = if onlinePayment then DOrder.OnlineRideHailing else DOrder.RideHailing
+  estimates <- forM (sortByEstimatedFare estimateList) $ \estimate -> do
+    mbOffer <-
+      withTryCatch
+        "getEstimates:offerListCache"
+        (SOffer.offerListCache merchantId personId mocId paymentServiceType estimate.estimatedFare)
+        >>= \case
+          Left _ -> pure Nothing
+          Right resp -> SOffer.mkCumulativeOfferResp mocId resp []
+    UEstimate.mkEstimateAPIEntity isReferredRide mbOffer estimate
   return . sortBy (compare `on` (.createdAt)) $ estimates
 
 sortByEstimatedFare :: (HasField "estimatedFare" r Price) => [r] -> [r]

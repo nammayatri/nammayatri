@@ -7,7 +7,7 @@ import qualified "this" Domain.Types.Person
 import qualified "this" Domain.Types.Quote
 import qualified Environment
 import qualified Kernel.External.Payment.Interface
-import qualified Kernel.Prelude
+import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -24,4 +24,4 @@ postConfirmRideSearchQuotes ::
   Environment.Flow API.UI.Confirm.ConfirmRes
 postConfirmRideSearchQuotes merchantShortId _opCity personId quoteId dashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled = do
   m <- findMerchantByShortId merchantShortId
-  API.UI.Confirm.confirm' (personId, m.id) quoteId dashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled
+  API.UI.Confirm.confirm' (personId, m.id) quoteId dashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled Nothing

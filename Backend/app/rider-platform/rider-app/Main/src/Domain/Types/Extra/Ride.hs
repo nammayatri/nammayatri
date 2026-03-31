@@ -16,6 +16,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Confidence
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Time
+import qualified SharedLogic.Offer
 import qualified SharedLogic.Type as SLT
 
 -- Extra code goes here --
@@ -77,6 +78,7 @@ data RideAPIEntity = RideAPIEntity
     tipAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     paymentStatus :: Domain.Types.Ride.PaymentStatus,
     refundRequestStatus :: Maybe Domain.Types.RefundRequest.RefundRequestStatus,
-    cancellationFeeStatus :: Maybe Domain.Types.Ride.CancellationFeeStatus
+    cancellationFeeStatus :: Maybe Domain.Types.Ride.CancellationFeeStatus,
+    selectedOffer :: Kernel.Prelude.Maybe SharedLogic.Offer.OfferRespAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

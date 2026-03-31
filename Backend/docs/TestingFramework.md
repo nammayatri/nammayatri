@@ -103,7 +103,7 @@ python config_transfer.py validate --schema atlas_app
 | `environments.json.example` | Template with placeholder hosts | ✅ |
 | `patches.json` | URL replacements, dimension overrides, ENCRYPT: rules | ❌ |
 | `patches.json.example` | Template with example patches | ✅ |
-| `post-import-setup.sql` | Dashboard access INSERTs (can't be in patches.json) | ✅ |
+| `../feature-migrations/` | Ordered SQL files run after import (e.g., dashboard access) | ✅ |
 | `assets/data/` | Exported/patched JSON data | ❌ |
 
 ### Patching System
@@ -546,7 +546,7 @@ Python server providing DB access for the dashboard:
 # Terminal 2: Import config (first time or after config changes)
 cd Backend/dev/config-sync
 python config_transfer.py import --from master --to local
-psql -h localhost -p 5434 -U atlas_superuser -d atlas_dev -f post-import-setup.sql
+for f in $(ls ../../feature-migrations/*.sql 2>/dev/null | sort); do psql -h localhost -p 5434 -U atlas_superuser -d atlas_dev -f "$f"; done
 redis-cli FLUSHALL
 
 # Terminal 3: Run tests
@@ -567,7 +567,7 @@ This command:
 2. Starts `run-mobility-stack-dev` in background
 3. Waits for rider-app and driver-app health (up to 10 min)
 4. Runs `config_transfer.py import`
-5. Runs `post-import-setup.sql`
+5. Runs `dev/feature-migrations/*.sql` (sorted)
 6. Flushes Redis
 7. Runs `./run-tests.sh` with passthrough args
 8. Kills all services on exit
@@ -583,7 +583,7 @@ This command:
    - `driver_merchant_id`, `bap_merchant_id`, `dashboard_merchant_id`
    - `vehicle_variant`, `vehicle_class`, `vehicle_category` (for ride flows)
    - `vehicle_type`, `platform_type` (for FRFS flows)
-2. Add city to `post-import-setup.sql` merchant_access loop
+2. Add city to `dev/feature-migrations/0001-dashboard-access-setup.sql` merchant_access loop
 3. No collection changes needed
 
 ### Adding a New Test Flow

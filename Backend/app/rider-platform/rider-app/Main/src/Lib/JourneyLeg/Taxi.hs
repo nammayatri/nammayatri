@@ -134,7 +134,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
                     disabilityDisable = Nothing,
                     billingCategory = Nothing,
                     preferSafetyPlus = Nothing,
-                    driverPreference = Nothing
+                    driverPreference = Nothing,
+                    selectedOfferId = Nothing
                   }
           void $ DSelect.select2' (req.personId, req.merchantId) estimate.id selectReq
         Nothing -> CFFM.setConfirmOnceGetFare req.searchId

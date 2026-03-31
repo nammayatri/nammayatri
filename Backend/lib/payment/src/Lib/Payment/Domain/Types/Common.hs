@@ -29,3 +29,9 @@ data PaymentFulfillmentStatus
   deriving (Eq, Ord, Read, Show, FromJSON, ToJSON, Generic, ToSchema, ToParamSchema)
 
 $(mkBeamInstancesForEnum ''PaymentFulfillmentStatus)
+
+data PayoutStatus = Verifying | Processing | Success | Failed | ManualReview | PendingForVpa | Initialized
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(mkBeamInstancesForEnumAndList ''PayoutStatus)
+$(mkHttpInstancesForEnum ''PayoutStatus)

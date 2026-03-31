@@ -24,8 +24,8 @@ Syncs configuration tables from a master (staging/prod) database to local dev, w
 Master DB ──export──→ JSON files ──patch──→ Patched JSON ──import──→ Local DB
               │                      │                          │
          config.json            patches.json              passetto (encrypt)
-         (table list)     (URL replacements,             post-import-setup.sql
-                          dimension overrides,            (dashboard access)
+         (table list)     (URL replacements,             feature-migrations/*.sql
+                          dimension overrides,            (post-import SQL)
                           ENCRYPT: re-encryption)
 ```
 
@@ -64,7 +64,7 @@ python config_transfer.py discover
 | `environments.json.example` | Template for environments.json | Yes |
 | `patches.json` | URL replacements, dimension overrides, ENCRYPT: rules | **No** (has ENCRYPT: values) |
 | `patches.json.example` | Template for patches.json | Yes |
-| `post-import-setup.sql` | Dashboard access setup (INSERT operations) | Yes |
+| `../feature-migrations/*.sql` | Ordered SQL files run after import (e.g., dashboard access) | Yes |
 | `assets/data/` | Exported/patched JSON data files | **No** (master config data) |
 
 ### Patching System (`patches.json`)

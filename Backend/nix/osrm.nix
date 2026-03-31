@@ -1,11 +1,12 @@
 { inputs, ... }:
 let
-  openStreetDataFile = inputs.osrm-pbf;
-  openStreetDataFileName = "southern-zone-230101";
-  cityName = "bangalore";
+  indiaDataFile = inputs.osrm-pbf;
+  finlandDataFile = inputs.osrm-pbf-finland;
+  dataName = "combined";
   customPort = "5001";
-  # Bangalore bounding box - slightly reduced area to test
-  bbox = "77.5500,12.9000,77.6500,13.0000"; # Central Bangalore for testing
+  # Bounding boxes for routing data extraction
+  indiaBbox = "77.5500,12.9000,77.6500,13.0000"; # Central Bangalore
+  finlandBbox = "24.0,60.0,25.5,60.5"; # Helsinki metro area
 in
 {
   perSystem = { pkgs, lib, ... }: {
@@ -18,13 +19,27 @@ in
             }
             ''
               mkdir $out && cd $out
-              cp ${openStreetDataFile} input.osm.pbf
-              osmium tags-filter input.osm.pbf w/highway -o roads.pbf
-              osmium extract --bbox ${bbox} --strategy complete_ways --input-format osm.pbf --output-format osm.pbf roads.pbf -o ${cityName}.osm.pbf
-              rm input.osm.pbf roads.pbf
-              osrm-extract --threads 1 -p ${pkgs.osrm-backend}/share/osrm/profiles/car.lua ${cityName}.osm.pbf
-              osrm-partition ${cityName}.osrm
-              osrm-customize ${cityName}.osrm
+
+              # Extract India roads
+              cp ${indiaDataFile} india_input.osm.pbf
+              osmium tags-filter india_input.osm.pbf w/highway -o india_roads.pbf
+              osmium extract --bbox ${indiaBbox} --strategy complete_ways india_roads.pbf -o india.osm.pbf
+              rm india_input.osm.pbf india_roads.pbf
+
+              # Extract Finland roads
+              cp ${finlandDataFile} finland_input.osm.pbf
+              osmium tags-filter finland_input.osm.pbf w/highway -o finland_roads.pbf
+              osmium extract --bbox ${finlandBbox} --strategy complete_ways finland_roads.pbf -o finland.osm.pbf
+              rm finland_input.osm.pbf finland_roads.pbf
+
+              # Merge both regions
+              osmium merge india.osm.pbf finland.osm.pbf -o ${dataName}.osm.pbf
+              rm india.osm.pbf finland.osm.pbf
+
+              # Build OSRM routing data
+              osrm-extract --threads 1 -p ${pkgs.osrm-backend}/share/osrm/profiles/car.lua ${dataName}.osm.pbf
+              osrm-partition ${dataName}.osrm
+              osrm-customize ${dataName}.osrm
             '';
         osrm-server = pkgs.writeShellApplication {
           name = "osrm-server";
@@ -34,7 +49,7 @@ in
             osrm-routed \
               --algorithm mld \
               --port ${customPort} \
-              ${osrm-data}/${cityName}.osrm
+              ${osrm-data}/${dataName}.osrm
           '';
         };
       };

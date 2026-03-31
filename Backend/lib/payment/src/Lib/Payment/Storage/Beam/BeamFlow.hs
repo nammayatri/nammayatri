@@ -11,12 +11,14 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Lib.Payment.Storage.Beam.BeamFlow where
 
 import Kernel.Beam.Lib.UtilsTH as Reexport
 import Kernel.Types.Common as Reexport hiding (id)
 import Kernel.Utils.Common
+import qualified Lib.Payment.Storage.Beam.Offer as BeamOF
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
 import qualified Lib.Payment.Storage.Beam.PaymentOrderOffer as BeamOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrderSplit as BeamPOS
@@ -24,6 +26,8 @@ import qualified Lib.Payment.Storage.Beam.PaymentTransaction as BeamPT
 import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamPOO
 import qualified Lib.Payment.Storage.Beam.PayoutRequest as BeamPR
 import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamPOT
+import qualified Lib.Payment.Storage.Beam.PersonDailyOfferStats as BeamPDOS
+import qualified Lib.Payment.Storage.Beam.PersonOfferStats as BeamPOS2
 import qualified Lib.Payment.Storage.Beam.PersonWallet as BeamPW
 import qualified Lib.Payment.Storage.Beam.Refunds as BeamRF
 import qualified Lib.Payment.Storage.Beam.WalletRewardPosting as BeamWRP
@@ -41,5 +45,8 @@ type BeamFlow m r =
     HasSchemaName BeamPOS.PaymentOrderSplitT,
     HasSchemaName BeamOffer.PaymentOrderOfferT,
     HasSchemaName BeamPW.PersonWalletT,
-    HasSchemaName BeamWRP.WalletRewardPostingT
+    HasSchemaName BeamWRP.WalletRewardPostingT,
+    HasSchemaName BeamOF.OfferT,
+    HasSchemaName BeamPOS2.PersonOfferStatsT,
+    HasSchemaName BeamPDOS.PersonDailyOfferStatsT
   )

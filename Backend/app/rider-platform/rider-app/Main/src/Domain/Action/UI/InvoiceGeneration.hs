@@ -23,11 +23,14 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RideStatus as DRide
 import qualified Email.Flow as Email
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow)
 import qualified SharedLogic.Booking as SB
 import qualified SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -72,6 +75,9 @@ generateInvoice ::
     EncFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
+    ServiceFlow m r,
+    ClickhouseFlow m r,
+    BeamFlow m r,
     HasField "emailServiceConfig" r Email.EmailServiceConfig
   ) =>
   (Id DP.Person, Id DM.Merchant) ->

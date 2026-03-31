@@ -64,7 +64,7 @@ For overriding responses by matching a field in the incoming request:
 1. Create a new environment file: `Local_<PREFIX>_<City>.postman_environment.json`
 2. Set city-specific values (merchant IDs, coordinates, merchant short IDs)
 3. Collections are shared across cities — no city-specific logic in collections
-4. If the city needs a dashboard token, ensure `merchant_access` exists (via `post-import-setup.sql`)
+4. If the city needs a dashboard token, ensure `merchant_access` exists (via `dev/feature-migrations/0001-dashboard-access-setup.sql`)
 
 ## Adding a New Flow
 

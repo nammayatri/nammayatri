@@ -234,8 +234,10 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
       FRFSMultiModalBooking -> pure $ DMSC.MultiModalPaymentService Payment.Juspay
       FRFSPassPurchase -> pure $ DMSC.PassPaymentService Payment.Juspay
       ParkingBooking -> pure $ DMSC.ParkingPaymentService Payment.Juspay
-      STCL -> pure $ DMSC.MembershipPaymentService Payment.Juspay
       RideBooking -> decidePaymentService (DMSC.PaymentService rideBookingPaymentService) clientSdkVersion
+      OnlineRideHailing -> pure $ DMSC.PaymentService Payment.Stripe
+      RideHailing -> pure $ DMSC.PaymentService Payment.Juspay
+      STCL -> pure $ DMSC.MembershipPaymentService Payment.Juspay
 
 decidePaymentService :: (ServiceFlow m r) => DMSC.ServiceName -> Maybe Version -> m DMSC.ServiceName
 decidePaymentService paymentServiceName clientSdkVersion = do
@@ -577,8 +579,10 @@ getIsSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServiceTyp
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
       FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
       ParkingBooking -> DMSC.ParkingPaymentService Payment.Juspay
-      STCL -> DMSC.MembershipPaymentService Payment.Juspay
       RideBooking -> DMSC.PaymentService rideBookingPaymentService
+      RideHailing -> DMSC.PaymentService Payment.Juspay
+      OnlineRideHailing -> DMSC.PaymentService Payment.Stripe
+      STCL -> DMSC.MembershipPaymentService Payment.Juspay
 
 getIsPercentageSplit ::
   (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -614,8 +618,10 @@ getIsPercentageSplit merchantId merchantOperatingCityId mbPlaceId paymentService
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
       FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
       ParkingBooking -> DMSC.ParkingPaymentService Payment.Juspay
-      STCL -> DMSC.MembershipPaymentService Payment.Juspay
       RideBooking -> DMSC.PaymentService rideBookingPaymentService
+      RideHailing -> DMSC.PaymentService Payment.Juspay
+      OnlineRideHailing -> DMSC.PaymentService Payment.Stripe
+      STCL -> DMSC.MembershipPaymentService Payment.Juspay
 
 getIsRefundSplitEnabled ::
   (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -651,8 +657,10 @@ getIsRefundSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServ
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
       FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
       ParkingBooking -> DMSC.ParkingPaymentService Payment.Juspay
-      STCL -> DMSC.MembershipPaymentService Payment.Juspay
       RideBooking -> DMSC.PaymentService rideBookingPaymentService
+      RideHailing -> DMSC.PaymentService Payment.Juspay
+      OnlineRideHailing -> DMSC.PaymentService Payment.Stripe
+      STCL -> DMSC.MembershipPaymentService Payment.Juspay
 
 getPaymentOrderValidity ::
   (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -692,8 +700,10 @@ getPaymentOrderValidity merchantId merchantOperatingCityId mbPlaceId paymentServ
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
       FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
       ParkingBooking -> DMSC.ParkingPaymentService Payment.Juspay
-      STCL -> DMSC.MembershipPaymentService Payment.Juspay
       RideBooking -> DMSC.PaymentService rideBookingPaymentService
+      RideHailing -> DMSC.PaymentService Payment.Juspay
+      OnlineRideHailing -> DMSC.PaymentService Payment.Stripe
+      STCL -> DMSC.MembershipPaymentService Payment.Juspay
 
 extractSplitSettlementDetailsAmount :: Maybe SplitSettlementDetails -> Maybe SplitSettlementDetailsAmount
 extractSplitSettlementDetailsAmount Nothing = Nothing
@@ -734,8 +744,10 @@ fetchGatewayReferenceId merchantId merchantOperatingCityId mbPlaceId paymentServ
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
       FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
       ParkingBooking -> DMSC.ParkingPaymentService Payment.Juspay
-      STCL -> DMSC.MembershipPaymentService Payment.Juspay
       RideBooking -> DMSC.PaymentService rideBookingPaymentService
+      RideHailing -> DMSC.PaymentService Payment.Juspay
+      OnlineRideHailing -> DMSC.PaymentService Payment.Stripe
+      STCL -> DMSC.MembershipPaymentService Payment.Juspay
 
 fetchOfferSKUConfig ::
   (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -772,4 +784,6 @@ fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceT
       FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
       ParkingBooking -> DMSC.ParkingPaymentService Payment.Juspay
       RideBooking -> DMSC.PaymentService rideBookingPaymentService
+      RideHailing -> DMSC.PaymentService Payment.Juspay
+      OnlineRideHailing -> DMSC.PaymentService Payment.Stripe
       STCL -> DMSC.MembershipPaymentService Payment.Juspay

@@ -47,23 +47,29 @@ import EulerHS.Prelude hiding (elem, find, id, length, map, null)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface as Payment
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import SharedLogic.Booking (getfareBreakups)
+import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.Type as SLT
 -- Keep for mockSosKey only
 
 import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -270,7 +276,7 @@ data DeliveryPersonDetailsAPIEntity = DeliveryPersonDetailsAPIEntity
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 makeBookingAPIEntity ::
-  (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, ClickhouseFlow m r, BeamFlow m r) =>
   Id Person.Person ->
   Booking ->
   Maybe DRide.Ride ->
@@ -288,7 +294,9 @@ makeBookingAPIEntity ::
   m BookingAPIEntity
 makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreakups fareBreakups mbExophone paymentMethodId hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon mbCancellationReason = do
   bookingDetails <- mkBookingAPIDetails booking requesterId
-  rides <- mapM buildRideAPIEntity allRides
+  merchant <- CQM.findById booking.merchantId
+  let isOnlinePayment = maybe False (.onlinePayment) merchant
+  rides <- mapM (buildRideAPIEntity (requesterId, booking, isOnlinePayment)) allRides
   person <- QP.findById requesterId >>= fromMaybeM (PersonNotFound requesterId.getId)
   riderMobile <- mapM decrypt person.mobileNumber
   let providerNum = fromMaybe "+91" bppDetails.supportNumber
@@ -496,7 +504,7 @@ getActiveSos' mbRide personId = do
           return $ mockSos <&> (.status)
         Just sos -> return $ Just sos.status
 
-buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Booking -> Id Person.Person -> m BookingAPIEntity
+buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, ClickhouseFlow m r, BeamFlow m r) => Booking -> Id Person.Person -> m BookingAPIEntity
 buildBookingAPIEntity booking personId = do
   mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
   mbRide <- runInReplica $ QRide.findByRBId booking.id
@@ -537,14 +545,25 @@ buildBookingStatusAPIEntity booking = do
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
 
--- TODO move to Domain.Types.Ride.Extra
-buildRideAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => DRide.Ride -> m RideAPIEntity
-buildRideAPIEntity DRide.Ride {..} = do
+buildRideAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r) => (Id Person.Person, Booking, Bool) -> DRide.Ride -> m RideAPIEntity
+buildRideAPIEntity (requesterId, booking, isOnlinePayment) DRide.Ride {..} = do
   stopsInfo <- if (fromMaybe False hasStops) then QSI.findAllByRideId id else return []
   let oneYearAgo = - (365 * 24 * 60 * 60)
       driverRegisteredAt' = fromMaybe (addUTCTime oneYearAgo createdAt) driverRegisteredAt
       driverRating' = driverRating <|> Just (toCentesimal 500) -- TODO::remove this default value
       vehicleColor' = fromMaybe "NA" vehicleColor -- TODO::remove this default value
+  selectedOffer <- case booking.selectedOfferId of
+    Nothing -> pure Nothing
+    Just offerId -> do
+      let paymentServiceType = if isOnlinePayment then DOrder.OnlineRideHailing else DOrder.RideHailing
+          rideFare = fromMaybe booking.estimatedTotalFare totalFare
+      result <-
+        withTryCatch
+          "buildRideAPIEntity:getSelectedOffer"
+          (SOffer.getSelectedOffer booking.merchantId requesterId booking.merchantOperatingCityId paymentServiceType rideFare offerId)
+      case result of
+        Left _ -> pure Nothing
+        Right resp -> pure resp
   return $
     RideAPIEntity
       { shortRideId = shortId,

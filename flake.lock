@@ -2960,6 +2960,18 @@
         "url": "https://download.geofabrik.de/asia/india/southern-zone-240101.osm.pbf"
       }
     },
+    "osrm-pbf-finland": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-r64dk41D2rGgLK3OffZtw9ZNrtuG8Ccfo+uUg8zq2sw=",
+        "type": "file",
+        "url": "https://download.geofabrik.de/europe/finland-260101.osm.pbf"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://download.geofabrik.de/europe/finland-260101.osm.pbf"
+      }
+    },
     "passetto": {
       "inputs": {
         "cryptostore": "cryptostore",
@@ -3383,6 +3395,7 @@
           "nixpkgs"
         ],
         "osrm-pbf": "osrm-pbf",
+        "osrm-pbf-finland": "osrm-pbf-finland",
         "passetto": "passetto",
         "services-flake": "services-flake_2",
         "shared-kernel": "shared-kernel"

@@ -133,6 +133,7 @@ Estimate:
     qar : Maybe Double
     estimateTags: Maybe [Text]
     insuredAmount: Maybe Text
+    selectedOfferId: Maybe Text
     isMultimodalSearch: Maybe Bool
 
   constraints:
@@ -298,6 +299,11 @@ Estimate:
     updateStatus:
       kvFunction: updateOneWithKV
       params: [updatedAt, status]
+      where: id
+
+    updateSelectedOfferId:
+      kvFunction: updateOneWithKV
+      params: [selectedOfferId]
       where: id
 
     updateStatusAndProviderUrl:

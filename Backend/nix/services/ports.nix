@@ -17,6 +17,7 @@
   passetto-service = 8021;
   context-api = 7082;
   test-dashboard = 3000;
+  mock-server = 8080;
   # osrm-server port is not configurable atm
   # osrm-server = 5001;
 }

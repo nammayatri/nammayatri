@@ -16,13 +16,34 @@
 
 set -euo pipefail
 
+# Parse flags (can appear anywhere in args)
+VERBOSE=false
+VERBOSE_PRETTY=false
+DEBUG_MODE=false
+DEBUG_ERRORS_ONLY=false
+args=()
+for arg in "$@"; do
+    case "$arg" in
+        --verbose|-v) VERBOSE=true ;;
+        --verbose-pretty|-vp) VERBOSE=true; VERBOSE_PRETTY=true ;;
+        -de) DEBUG_MODE=true; DEBUG_ERRORS_ONLY=true ;;
+        -d) DEBUG_MODE=true ;;
+        *) args+=("$arg") ;;
+    esac
+done
+set -- "${args[@]+"${args[@]}"}"
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 RIDE_DIR="$SCRIPT_DIR/collections/RideBookingFlow"
 ONLINE_DIR="$SCRIPT_DIR/collections/OnlineRideBookingFlow"
+ONLINE_OFFERS_DIR="$SCRIPT_DIR/collections/OnlineRideBookingOffers"
+OFFLINE_OFFERS_DIR="$SCRIPT_DIR/collections/OfflineRideBookingOffers"
 BUS_DIR="$SCRIPT_DIR/collections/BusTicketBookingFlow"
 METRO_DIR="$SCRIPT_DIR/collections/MetroTicketBookingFlow"
 SUBWAY_DIR="$SCRIPT_DIR/collections/SubwayTicketBookingFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
+TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
+DEBUG_RUNNER="$SCRIPT_DIR/debug-runner.py"
 
 DB_HOST="localhost"
 DB_PORT="5434"
@@ -96,6 +117,56 @@ list_suites() {
     done
 }
 
+# ── Pretty print JSON report (request/response) ──
+
+_pretty_print_json_report() {
+    local json_file="$1"
+    [ -f "$json_file" ] || return 0
+    python3 -c "
+import json, sys
+
+with open('$json_file') as f:
+    report = json.load(f)
+
+for item in report.get('run', {}).get('executions', []):
+    name = item.get('item', {}).get('name', '?')
+    req = item.get('request', {})
+    resp = item.get('response', {})
+
+    method = req.get('method', '?')
+    url = req.get('url', {})
+    url_str = url if isinstance(url, str) else url.get('raw', str(url))
+
+    print(f'\n\033[1m→ {name}\033[0m')
+    print(f'  {method} {url_str}')
+
+    # Request body
+    body = req.get('body', {})
+    if body and body.get('raw'):
+        print(f'  \033[36m↑ Request:\033[0m')
+        try:
+            print(json.dumps(json.loads(body['raw']), indent=2, ensure_ascii=False))
+        except (json.JSONDecodeError, TypeError):
+            print(f'  {body[\"raw\"]}')
+
+    # Response
+    status = resp.get('code', '?')
+    resp_body = resp.get('body', '') or resp.get('stream', {})
+    print(f'  \033[33m↓ Response ({status}):\033[0m')
+    if isinstance(resp_body, str) and resp_body:
+        try:
+            print(json.dumps(json.loads(resp_body), indent=2, ensure_ascii=False))
+        except (json.JSONDecodeError, TypeError):
+            print(f'  {resp_body[:500]}')
+    elif isinstance(resp_body, dict) and resp_body.get('data'):
+        try:
+            text = bytes(resp_body['data']).decode('utf-8')
+            print(json.dumps(json.loads(text), indent=2, ensure_ascii=False))
+        except Exception:
+            print(f'  (binary data, {len(resp_body.get(\"data\", []))} bytes)')
+" 2>/dev/null || true
+}
+
 # ── Run a single collection with a given environment ──
 
 run_single() {
@@ -112,12 +183,49 @@ run_single() {
     mkdir -p "$REPORTS_DIR"
     echo "Running: $suite_name ($env_name)"
 
-    newman run "$collection" \
-        -e "$env_file" \
-        --bail \
-        --timeout-request 15000 \
-        --reporters cli \
-        || { echo "FAILED: $suite_name ($env_name)"; return 1; }
+    # Debug mode: delegate to Python debug runner for per-API log capture
+    if [ "$DEBUG_MODE" = true ]; then
+        local debug_flags=()
+        if [ "$DEBUG_ERRORS_ONLY" = true ]; then
+            debug_flags+=(--errors-only)
+        fi
+        if [ "$VERBOSE" = true ]; then
+            debug_flags+=(--verbose)
+        fi
+        python3 "$DEBUG_RUNNER" "$collection" "$env_file" "$TEST_LOGS_DIR" \
+            --bail --timeout-request 15000 \
+            "${debug_flags[@]+"${debug_flags[@]}"}" \
+            || { echo "FAILED: $suite_name ($env_name)"; return 1; }
+        echo "PASSED: $suite_name ($env_name)"
+        return 0
+    fi
+
+    local verbose_flags=()
+    if [ "$VERBOSE" = true ]; then
+        verbose_flags+=(--verbose)
+    fi
+
+    if [ "$VERBOSE_PRETTY" = true ]; then
+        # Run with JSON reporter, then pretty-print request/response
+        local json_out="$REPORTS_DIR/${suite_name}_${env_name}.json"
+        newman run "$collection" \
+            -e "$env_file" \
+            --bail \
+            --timeout-request 15000 \
+            --reporters cli,json \
+            --reporter-json-export "$json_out" \
+            "${verbose_flags[@]+"${verbose_flags[@]}"}" \
+            || { _pretty_print_json_report "$json_out"; echo "FAILED: $suite_name ($env_name)"; return 1; }
+        _pretty_print_json_report "$json_out"
+    else
+        newman run "$collection" \
+            -e "$env_file" \
+            --bail \
+            --timeout-request 15000 \
+            --reporters cli \
+            "${verbose_flags[@]+"${verbose_flags[@]}"}" \
+            || { echo "FAILED: $suite_name ($env_name)"; return 1; }
+    fi
 
     echo "PASSED: $suite_name ($env_name)"
 }
@@ -271,10 +379,57 @@ run_bus() { run_frfs "$BUS_DIR" "BUS" "${1:-}" "${2:-}"; }
 run_metro() { run_frfs "$METRO_DIR" "METRO" "${1:-}" "${2:-}"; }
 run_subway() { run_frfs "$SUBWAY_DIR" "SUBWAY" "${1:-}" "${2:-}"; }
 run_online() { run_frfs "$ONLINE_DIR" "ONLINE RIDE" "${1:-}" "${2:-}"; }
+run_online_offers() { run_frfs "$ONLINE_OFFERS_DIR" "ONLINE RIDE OFFERS" "${1:-}" "${2:-}"; }
+run_offline_offers() { run_frfs "$OFFLINE_OFFERS_DIR" "OFFLINE RIDE OFFERS" "${1:-}" "${2:-}"; }
+
+# ── Help ──
+
+show_help() {
+    echo "Usage: ./run-tests.sh [COMMAND] [CITY] [SUITE]"
+    echo ""
+    echo "Run integration tests via Newman against the local dev environment."
+    echo ""
+    echo "Commands:"
+    echo "  (none)              Run all ride booking suites for all cities"
+    echo "  rides               Run all ride booking suites for all cities"
+    echo "  bus                 Run all bus ticket booking suites"
+    echo "  metro               Run all metro ticket booking suites"
+    echo "  subway              Run all subway ticket booking suites"
+    echo "  online              Run online (Stripe) ride booking suites"
+    echo "  online-offers       Run online ride discount offer suites"
+    echo "  offline-offers      Run offline ride cashback offer suites"
+    echo "  --list              List all available suites and cities"
+    echo "  --check             Check for stuck DB entities"
+    echo "  -d                  Debug: capture per-API service logs to assets/test-logs/"
+    echo "  -de                 Debug errors: capture service logs only for failed APIs"
+    echo "  --verbose, -v       Show API request/response details"
+    echo "  --verbose-pretty, -vp  Full request/response JSON pretty-printed"
+    echo "  --help, -h          Show this help"
+    echo ""
+    echo "Examples (top-level to granular):"
+    echo "  ./run-tests.sh                                    # All ride suites, all cities"
+    echo "  ./run-tests.sh rides                              # All ride suites, all cities"
+    echo "  ./run-tests.sh rides NY_Bangalore                 # All ride suites for Bangalore"
+    echo "  ./run-tests.sh rides NY_Bangalore 01-AutoRideFlow # Specific suite + city"
+    echo "  ./run-tests.sh bus                                # All bus suites, all cities"
+    echo "  ./run-tests.sh bus FRFS_Chennai                   # Bus suites for Chennai"
+    echo "  ./run-tests.sh metro FRFS_Bangalore               # Metro suites for Bangalore"
+    echo "  ./run-tests.sh subway                             # All subway suites"
+    echo "  ./run-tests.sh online                             # Online (Stripe) ride suites"
+    echo "  ./run-tests.sh online-offers                      # Online discount offer suites"
+    echo "  ./run-tests.sh offline-offers                     # Offline cashback offer suites"
+    echo "  ./run-tests.sh rides NY_Bangalore -v              # Verbose — show request/response"
+    echo "  ./run-tests.sh online BF_Helsinki -vp             # Pretty-print full JSON request/response"
+    echo "  ./run-tests.sh online BF_Helsinki -d              # Debug: per-API service logs for all APIs"
+    echo "  ./run-tests.sh online BF_Helsinki -de             # Debug: per-API service logs for errors only"
+}
 
 # ── Main ──
 
 case "${1:-}" in
+    --help|-h)
+        show_help
+        ;;
     --setup)
         setup
         ;;
@@ -298,6 +453,12 @@ case "${1:-}" in
         ;;
     online)
         run_online "${2:-}" "${3:-}"
+        ;;
+    online-offers)
+        run_online_offers "${2:-}" "${3:-}"
+        ;;
+    offline-offers)
+        run_offline_offers "${2:-}" "${3:-}"
         ;;
     "")
         run_rides

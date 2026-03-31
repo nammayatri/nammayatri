@@ -157,7 +157,8 @@ let defaultImports =
         , _generationType = GeneratorType.DOMAIN_HANDLER
         }
       , { _simpleImports = [] : List Text
-        , _qualifiedImports = [ "!Kernel.Beam.Lib.UtilsTH" ]
+        , _qualifiedImports =
+          [ "!Kernel.Beam.Lib.UtilsTH", "!Tools.Beam.UtilsTH" ]
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.DOMAIN_TYPE
         }
@@ -165,6 +166,7 @@ let defaultImports =
           [ "Kernel.Prelude"
           , "Kernel.Beam.Lib.UtilsTH"
           , "Kernel.External.Encryption"
+          , "Lib.Payment.Storage.Beam.BeamFlow ()"
           ]
         , _qualifiedImports = [ "Database.Beam as B" ]
         , _packageImports = [] : List PackageImport

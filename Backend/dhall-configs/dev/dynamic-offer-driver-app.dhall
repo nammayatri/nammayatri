@@ -239,7 +239,7 @@ let appBackendBapInternal =
 
 let mlPricingInternal =
       { name = "PRICING"
-      , url = "http://localhost:8013/"
+      , url = "http://localhost:8080/mlpricing"
       , apiKey = sec.mlPricingApiKey
       , internalKey = sec.internalKey
       }
