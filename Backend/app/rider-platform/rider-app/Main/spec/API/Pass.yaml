@@ -94,6 +94,7 @@ types:
     lastVerifiedVehicleNumber: Maybe Text
     isAutoVerified: Bool
     status: StatusType
+    createdAt: UTCTime
     purchaseDate: Day
     daysToExpire: Int
     startDate: Day
