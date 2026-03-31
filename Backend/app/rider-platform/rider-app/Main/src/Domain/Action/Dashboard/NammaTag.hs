@@ -255,7 +255,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
     LYTU.CUMULATIVE_OFFER_POLICY -> do
       defaultVal <- fromMaybeM (InvalidRequest "CumulativeOfferReq not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @CumulativeOfferReq))
       logicData :: CumulativeOfferReq <- YudhishthiraFlow.createLogicData defaultVal (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy CumulativeOfferResp) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy CumulativeOfferRespI) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.PICKUP_ETA_CALCULATION -> do
       logicData :: PickupETA.PickupETAInput <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy PickupETA.PickupETAResult) _riderConfig.dynamicLogicUpdatePassword req logicData
