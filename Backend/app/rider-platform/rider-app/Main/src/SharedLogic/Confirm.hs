@@ -153,6 +153,11 @@ confirm DConfirmReq {..} = do
   case activeBooking of
     Just booking | not (isMeterRide quote.quoteDetails) -> DQuote.processActiveBooking booking (Just searchRequest.riderPreferredOption) OnConfirm
     _ -> pure ()
+
+  existingBookingForQuote <- QRideB.findByQuoteId (Just quote.id)
+  whenJust existingBookingForQuote $ \existingBooking ->
+    unless (existingBooking.status `elem` DRB.terminalBookingStatus) $
+      throwError $ InvalidRequest ("Booking already exists for quoteId: " <> quote.id.getId)
   -- when (searchRequest.validTill < now) $
   --   throwError SearchRequestExpired
   unless (searchRequest.riderId == personId) $ QSReq.updateRiderId personId searchRequest.id
