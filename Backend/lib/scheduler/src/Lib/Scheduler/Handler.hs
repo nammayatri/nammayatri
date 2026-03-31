@@ -59,7 +59,11 @@ handler hnd = do
   schedulerType <- asks (.schedulerType)
   maxThreads <- asks (.maxThreads)
   case schedulerType of
-    RedisBased -> loopGracefully $ replicate maxThreads (runnerIterationRedis hnd runTask)
+    RedisBased -> do
+      key <- asks (.streamName)
+      groupName <- asks (.groupName)
+      ensureConsumerGroupExists key groupName
+      loopGracefully $ replicate maxThreads (runnerIterationRedis hnd runTask)
     DbBased -> loopGracefully $ replicate maxThreads (dbBasedHandlerLoop hnd runTask)
   where
     runTask :: AnyJob t -> SchedulerM ()
@@ -90,6 +94,14 @@ dbBasedHandlerLoop hnd runTask = do
 
 mapConcurrently :: Traversable t => (a -> SchedulerM ()) -> t a -> SchedulerM ()
 mapConcurrently action = mapM_ (fork "mapThread" . action)
+
+ensureConsumerGroupExists :: Text -> Text -> SchedulerM ()
+ensureConsumerGroupExists key groupName = do
+  let lastEntryId :: Text = "$"
+  isGroupExist <- Hedis.withMasterRedis $ Hedis.xInfoGroups key
+  unless isGroupExist $ do
+    logInfo $ "Consumer group " <> groupName <> " does not exist for stream " <> key <> ", creating it"
+    Hedis.withMasterRedis $ Hedis.xGroupCreate key groupName lastEntryId
 
 runnerIterationRedis :: forall t. (JobProcessor t, FromJSON t) => SchedulerHandle t -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
 runnerIterationRedis SchedulerHandle {..} runTask = do
