@@ -2465,9 +2465,9 @@ getTicketPlaceAvailability (_, _merchantId) placeId mbForceFresh _mbIsClosed = d
     if forceFresh
       then do
         invalidateTicketPlaceAvailabilityCache placeId
-        logInfo $ "Invalidated cache for place: " <> placeId.getId
+        logDebug $ "Invalidated cache for place: " <> placeId.getId
       else do
-        logInfo $ "Not invalidating cache for place: " <> placeId.getId
+        logDebug $ "Not invalidating cache for place: " <> placeId.getId
 
   currentMonthClosedDays <- getCachedOrCalculateClosedDays placeId year month
   nextMonthClosedDays <- getCachedOrCalculateClosedDays placeId nextYear nextMonth
@@ -2480,12 +2480,12 @@ invalidateTicketPlaceAvailabilityCache placeId = do
     let cacheKey = mkTicketPlaceAvailabilityCacheKey placeId month
     Redis.del cacheKey
 
-  logInfo $ "Invalidated availability cache for place: " <> placeId.getId
+  logDebug $ "Invalidated availability cache for place: " <> placeId.getId
 
 -- Call this function when ticket place rules are updated
 invalidateCacheForTicketPlace :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.Flow ()
 invalidateCacheForTicketPlace placeId = do
-  logInfo $ "Invalidating cache for ticket place: " <> placeId.getId
+  logDebug $ "Invalidating cache for ticket place: " <> placeId.getId
   invalidateTicketPlaceAvailabilityCache placeId
 
 getTicketPlace ::

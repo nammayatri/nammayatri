@@ -535,7 +535,7 @@ reconcileBookingWithLedgerEntries jobType booking mbRide = do
     let existingStatusMap = getReconciliationStatus booking.reconciliationStatus
     case getReconStatusForJob existingStatusMap jobType of
       Just existingStatus -> do
-        logInfo $ "Booking " <> booking.id.getId <> " already reconciled for " <> show jobType <> ": " <> show existingStatus
+        logDebug $ "Booking " <> booking.id.getId <> " already reconciled for " <> show jobType <> ": " <> show existingStatus
         pure $
           ReconciliationResult
             { reconStatus = existingStatus,
@@ -553,7 +553,7 @@ reconcileBookingWithLedgerEntries jobType booking mbRide = do
         let updatedStatusMap = updateReconStatus existingStatusMap jobType result.reconStatus
             newStatusValue = Just $ mkReconciliationStatusValue updatedStatusMap
         QBooking.updateReconciliationStatus booking.id newStatusValue
-        logInfo $ "Booking " <> booking.id.getId <> " reconciled for " <> show jobType <> " with status: " <> show result.reconStatus
+        logDebug $ "Booking " <> booking.id.getId <> " reconciled for " <> show jobType <> " with status: " <> show result.reconStatus
         pure result
 
 -- ────────────────────────────────────────────────────────────────────

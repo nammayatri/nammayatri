@@ -75,9 +75,9 @@ getUtsData ::
   m DecodedUtsData
 getUtsData config = do
   let req = UtsRequest {app = config.appCode}
-  logInfo $ "UTS request: " <> show req
+  logDebug $ "UTS request: " <> show req
   resp <- callCRISAPI config utsAPI (eulerClientFn req) "getUtsData"
-  logInfo $ "UTS response: " <> show resp
+  logDebug $ "UTS response: " <> show resp
 
   utsKey <- decrypt config.utsDataKey
 
@@ -87,7 +87,7 @@ getUtsData config = do
       case decryptResponseData resp.utsData utsKey of
         Left err -> throwError $ CRISError $ "Failed to decrypt key data: " <> T.pack err
         Right decryptedJson -> do
-          logInfo $ "Decrypted uts data: " <> decryptedJson
+          logDebug $ "Decrypted uts data: " <> decryptedJson
           case eitherDecode (LBS.fromStrict $ TE.encodeUtf8 decryptedJson) :: Either String DecodedUtsData of
             Left err -> throwError $ CRISError $ "Failed to parse uts data: " <> T.pack err
             Right utsData -> pure utsData

@@ -73,13 +73,13 @@ getRDSBalance config = do
   crisBalanceResponse :: CRISBalanceResponse <- case eitherDecode (encode encryptedResponse) of
     Left err -> throwError (CRISError $ "Failed to parse encrypted getRDSBalance Resp: " <> T.pack (show err))
     Right encResp -> do
-      logInfo $ "getRDSBalance Resp Code: " <> responseCode encResp
+      logDebug $ "getRDSBalance Resp Code: " <> responseCode encResp
       if encResp.responseCode == "0"
         then do
           case decryptResponseData (responseData encResp) decryptionKey of
             Left err -> throwError (CRISError $ "Failed to decrypt getRDSBalance Resp: " <> T.pack err)
             Right decryptedJson -> do
-              logInfo $ "getRDSBalance Decrypted Resp: " <> decryptedJson
+              logDebug $ "getRDSBalance Decrypted Resp: " <> decryptedJson
               case eitherDecode (LBS.fromStrict $ TE.encodeUtf8 decryptedJson) of
                 Left err -> throwError (CRISError $ "Failed to decode getRDSBalance Resp: " <> T.pack (show err))
                 Right balanceResp -> pure balanceResp

@@ -28,12 +28,12 @@ expireSubscriptionPurchase ::
   m ExecutionResult
 expireSubscriptionPurchase Job {id = jobId, jobInfo} = withLogTag ("JobId-" <> jobId.getId) $ do
   let jobData = jobInfo.jobData
-  logInfo $ "Processing subscription expiry for: " <> jobData.subscriptionPurchaseId.getId
+  logDebug $ "Processing subscription expiry for: " <> jobData.subscriptionPurchaseId.getId
 
   mbPurchase <- QSP.findByPrimaryKey jobData.subscriptionPurchaseId
   case mbPurchase of
     Nothing -> do
-      logInfo $ "Subscription purchase not found: " <> jobData.subscriptionPurchaseId.getId
+      logDebug $ "Subscription purchase not found: " <> jobData.subscriptionPurchaseId.getId
       pure Complete
     Just purchase -> do
       handleSubscriptionExpiry purchase

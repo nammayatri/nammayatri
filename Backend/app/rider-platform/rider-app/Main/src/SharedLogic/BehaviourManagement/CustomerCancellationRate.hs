@@ -230,7 +230,7 @@ nudgeOrBlockCustomer riderConfig customer = do
             Notify.sendCustomerCancellationRateNudge customer "CUSTOMER_CANCELLATION_RATE_NUDGE_DAILY" dailyCancellationRate
           when (maybe False (\threshold -> maybe False (\minRidesNudge -> maybe False (\minRidesBlock -> canNudgeCustomer threshold minRidesNudge minRidesBlock monthlyCancellationRate monthlyAssignedCount) monthlyMinRidesforBlocking) monthlyMinRidesforNudging) cancellationRateThresholdMonthly) $ do
             Notify.sendCustomerCancellationRateNudge customer "CUSTOMER_CANCELLATION_RATE_NUDGE_MONTHLY" monthlyCancellationRate
-    _ -> logInfo "cancellationRateWindow or cancellationRateBasedNudgingAndBlockingConfig not found in rider config"
+    _ -> logDebug "cancellationRateWindow or cancellationRateBasedNudgingAndBlockingConfig not found in rider config"
   where
     canNudgeCustomer cancellationRateThreshold minAssignedRides maxAssignedRides cancellationRate rideAssignedCount =
       (cancellationRate > cancellationRateThreshold) && (rideAssignedCount > minAssignedRides && rideAssignedCount <= maxAssignedRides)

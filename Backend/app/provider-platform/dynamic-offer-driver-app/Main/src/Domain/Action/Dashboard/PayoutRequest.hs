@@ -173,7 +173,7 @@ upsertScheduledPayoutConfig merchantShortId opCity req = do
                 DSPC.updatedAt = now
               }
       QSPC.updateByPrimaryKey updated
-      logInfo $ "Updated ScheduledPayoutConfig for " <> show req.payoutCategory <> " in city " <> merchantOpCity.id.getId
+      logDebug $ "Updated ScheduledPayoutConfig for " <> show req.payoutCategory <> " in city " <> merchantOpCity.id.getId
     Nothing -> do
       now <- getCurrentTime
       let newConfig =
@@ -197,5 +197,5 @@ upsertScheduledPayoutConfig merchantShortId opCity req = do
                 DSPC.updatedAt = now
               }
       QSPC.create newConfig
-      logInfo $ "Created ScheduledPayoutConfig for " <> show req.payoutCategory <> " in city " <> merchantOpCity.id.getId
+      logDebug $ "Created ScheduledPayoutConfig for " <> show req.payoutCategory <> " in city " <> merchantOpCity.id.getId
   pure Success

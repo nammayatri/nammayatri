@@ -234,7 +234,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                         Just entryIds -> do
                           settleWalletEntries (map Id entryIds) payoutReq.id.getId
                           Redis.del (makePayoutEntryIdsKey payoutReq.id.getId)
-                        Nothing -> logInfo $ "No stashed entry IDs found for payoutRequest " <> payoutReq.id.getId
+                        Nothing -> logDebug $ "No stashed entry IDs found for payoutRequest " <> payoutReq.id.getId
 
                   -- Update PayoutRequest status
                   whenJust mbPayoutReq $ \payoutReq -> do

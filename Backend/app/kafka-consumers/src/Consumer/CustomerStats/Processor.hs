@@ -41,7 +41,7 @@ updateCustomerStats event _ = do
       let personId = Id pId
           mbOperatingCityId = Id <$> event.merchantOperatingCityId
       case mbOperatingCityId of
-        Nothing -> logInfo "No merchant operating city id found"
+        Nothing -> logDebug "No merchant operating city id found"
         Just merchantOperatingCityId -> do
           personStats <-
             runInReplica $
@@ -63,7 +63,7 @@ updateCustomerStats event _ = do
               now <- getCurrentTime
               if isJust maxTimevalue && (diffUTCTime (fromMaybe now maxTimevalue) eventCreatedAt > 0)
                 then do
-                  logInfo $ "Event is older than the last event of the same type for personId: " <> personId.getId
+                  logDebug $ "Event is older than the last event of the same type for personId: " <> personId.getId
                 else do
                   case event.eventType of
                     RideEnded -> do

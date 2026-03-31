@@ -150,7 +150,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
   if null mappings
     then do
       -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
-      logInfo "Accessing Booking Location Table"
+      logDebug "Accessing Booking Location Table"
       pickupLoc <- upsertFromLocationAndMappingForOldData (Id <$> fromLocationId) id merchantId merchantOperatingCityId
       upsertToLocationAndMappingForOldData toLocationId id merchantId merchantOperatingCityId
       bookingDetails <- case mbTripCategory of

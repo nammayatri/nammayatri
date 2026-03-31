@@ -37,7 +37,7 @@ postEkdLiveCallFeedback mbToken req = withFlowHandlerAPI $ do
   internalAPIKey <- asks (.internalAPIKey)
   unless (Just internalAPIKey == mbToken) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
-  logInfo "Received internal notification request for EKD live call feedback"
+  logDebug "Received internal notification request for EKD live call feedback"
   ride <- B.runInReplica $ QRide.findByBPPRideId (Id req.rideId) >>= fromMaybeM (RideDoesNotExist req.rideId)
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   logDebug $ "Sending EKD_LIVE_CALL_FEEDBACK FCM to rider for rideId: " <> req.rideId <> ", bookingId: " <> ride.bookingId.getId <> ", riderId: " <> booking.riderId.getId

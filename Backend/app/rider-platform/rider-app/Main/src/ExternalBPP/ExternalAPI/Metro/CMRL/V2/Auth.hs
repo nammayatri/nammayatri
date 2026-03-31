@@ -77,7 +77,7 @@ resetAuthToken config = do
     then do
       logInfo $ "[CMRLV2:Auth] Acquired Redis lock for token refresh for merchantId: " <> config.merchantId
       let unlockLock = do
-            logInfo $ "[CMRLV2:Auth] Releasing Redis lock for merchantId: " <> config.merchantId
+            logDebug $ "[CMRLV2:Auth] Releasing Redis lock for merchantId: " <> config.merchantId
             Hedis.unlockRedis lockKey
 
       auth <-
@@ -86,7 +86,7 @@ resetAuthToken config = do
             mbToken <- Hedis.get (authTokenKey config.merchantId)
             case mbToken of
               Just token -> do
-                logInfo $ "[CMRLV2:Auth] Token found in cache after acquiring lock for merchantId: " <> config.merchantId
+                logDebug $ "[CMRLV2:Auth] Token found in cache after acquiring lock for merchantId: " <> config.merchantId
                 return token
               Nothing -> do
                 logInfo $ "[CMRLV2:Auth] Requesting new auth token from: " <> showBaseUrl config.networkHostUrl
@@ -95,7 +95,7 @@ resetAuthToken config = do
                 authRes <-
                   callAPI config.networkHostUrl (ET.client authAPI authReq) "authCMRLV2" authAPI
                     >>= fromEitherM (ExternalAPICallError (Just "CMRL_V2_AUTH_API") config.networkHostUrl)
-                logInfo $ "[CMRLV2:Auth] Successfully obtained auth token, expires_in: " <> show authRes.expires_in <> "s, key_index: " <> show authRes.key_index
+                logDebug $ "[CMRLV2:Auth] Successfully obtained auth token, expires_in: " <> show authRes.expires_in <> "s, key_index: " <> show authRes.key_index
                 let tokenExpiry = authRes.expires_in * 90 `div` 100
                 Hedis.setExp (authTokenKey config.merchantId) authRes.access_token tokenExpiry
                 Hedis.setExp (refreshTokenKey config.merchantId) authRes.refresh_token (7 * 24 * 3600)
@@ -105,7 +105,7 @@ resetAuthToken config = do
           `finally` unlockLock
       return auth
     else do
-      logInfo $ "[CMRLV2:Auth] Redis lock already held by another pod for, waiting 2 seconds"
+      logDebug $ "[CMRLV2:Auth] Redis lock already held by another pod for, waiting 2 seconds"
       threadDelay 2000000
       getAuthToken config
 
@@ -144,5 +144,5 @@ callCMRLV2API config eulerClientFunc description proxy = do
             Just err -> throwError err
             Nothing -> throwError $ InternalError "CMRL V2 API Failed"
     Right resp -> do
-      logInfo $ "[CMRLV2:API] API call successful: " <> description
+      logDebug $ "[CMRLV2:API] API call successful: " <> description
       return resp

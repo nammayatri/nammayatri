@@ -41,7 +41,7 @@ handler key interpolate path = withFlowHandlerAPI' $ do
   snapToRoadIdentityMode <- asks (.snapToRoadIdentityMode)
   if snapToRoadIdentityMode
     then do
-      logInfo "Using identical snap to road response"
+      logDebug "Using identical snap to road response"
       pure $ QSnapToRoad.mkIdenticalResponse route
     else do
       availableRoutes <- QSnapToRoad.getAvailableRoutes
@@ -56,7 +56,7 @@ handler key interpolate path = withFlowHandlerAPI' $ do
           QSnapToRoad.saveNewResponse route snapToRoadResponse availableRoutes
           pure snapToRoadResponse
         Just savedRouteId -> do
-          logInfo "Using cached snapToRoad result from file"
+          logDebug "Using cached snapToRoad result from file"
           QSnapToRoad.findResponseByRouteId savedRouteId
 
 parseRoute :: Text -> Either Text [GoogleMaps.Place]

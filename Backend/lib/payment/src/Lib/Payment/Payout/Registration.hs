@@ -207,7 +207,7 @@ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city = d
   mbExisting <- PayoutRequest.getPayoutRequestByEntity (Just DCommon.REGISTRATION_REFUND) orderId.getId
   case mbExisting of
     Just existing -> do
-      logInfo $ "Registration refund already exists for order " <> orderId.getId <> " (PayoutRequest: " <> existing.id.getId <> "), skipping"
+      logDebug $ "Registration refund already exists for order " <> orderId.getId <> " (PayoutRequest: " <> existing.id.getId <> "), skipping"
       pure Nothing
     Nothing -> do
       -- 4. Get VPA from order.vpa (stored during processRegistrationPayment)

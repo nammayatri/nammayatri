@@ -33,7 +33,7 @@ import Kernel.External.Encryption (EncFlow, decrypt)
 import Kernel.Prelude
 import Kernel.Types.Common (Currency (..), HighPrecMoney)
 import Kernel.Types.Id
-import Kernel.Utils.Common (addUTCTime, getCurrentTime, logInfo)
+import Kernel.Utils.Common (addUTCTime, getCurrentTime, logDebug, logInfo)
 import Lib.Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry
@@ -756,7 +756,7 @@ handleSubscriptionExpiry purchase = do
           _ <- createEntryWithBalanceUpdate creditTransferEntry
           pure ()
         _ -> do
-          logInfo $ "Failed to get accounts for subscription expiry: " <> referenceId
+          logDebug $ "Failed to get accounts for subscription expiry: " <> referenceId
           pure ()
 
     QSP.updateStatusById DSP.EXPIRED purchase.id
@@ -821,6 +821,6 @@ activateNextQueuedPurchaseExpiry ownerId ownerType = do
           logInfo $ "Activated expiry for queued subscription " <> nextPurchase.id.getId <> " with expiryDate: " <> show expiryDate <> " startDate: " <> show now
           pure $ (nextPurchase.id,) <$> expiryDate
         Nothing -> do
-          logInfo $ "Plan not found for queued subscription: " <> nextPurchase.planId.getId
+          logDebug $ "Plan not found for queued subscription: " <> nextPurchase.planId.getId
           pure Nothing
     [] -> pure Nothing

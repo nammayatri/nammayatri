@@ -20,7 +20,7 @@ import qualified Domain.Types.Role as DRole
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, logInfo)
+import Kernel.Utils.Common (fromMaybeM, logDebug)
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Merchant as QMerchant
@@ -32,9 +32,9 @@ getMerchantWithCityList ::
   BeamFlow m r =>
   m [DMatrix.MerchantCityList]
 getMerchantWithCityList = do
-  logInfo "[AccessMatrix.getMerchantWithCityList] START"
+  logDebug "[AccessMatrix.getMerchantWithCityList] START"
   merchantList <- B.runInReplica QMerchant.findAllMerchants
-  logInfo $ "[AccessMatrix.getMerchantWithCityList] findAllMerchants done, count=" <> show (length merchantList)
+  logDebug $ "[AccessMatrix.getMerchantWithCityList] findAllMerchants done, count=" <> show (length merchantList)
   let merchantCityList = map (\merchant -> DMatrix.MerchantCityList merchant.shortId merchant.supportedOperatingCities (map (T.pack . show) merchant.supportedOperatingCities)) merchantList
   pure merchantCityList
 
@@ -45,11 +45,11 @@ getAccessMatrix ::
   Maybe Integer ->
   m DMatrix.AccessMatrixAPIEntity
 getAccessMatrix _ mbLimit mbOffset = do
-  logInfo $ "[AccessMatrix.getAccessMatrix] START | limit=" <> show mbLimit <> " offset=" <> show mbOffset
+  logDebug $ "[AccessMatrix.getAccessMatrix] START | limit=" <> show mbLimit <> " offset=" <> show mbOffset
   roles <- B.runInReplica $ QRole.findAllByLimitOffset mbLimit mbOffset
-  logInfo $ "[AccessMatrix.getAccessMatrix] findAllByLimitOffset done, roles count=" <> show (length roles)
+  logDebug $ "[AccessMatrix.getAccessMatrix] findAllByLimitOffset done, roles count=" <> show (length roles)
   accessMatrixItems <- B.runInReplica $ QMatrix.findAllByRoles roles
-  logInfo $ "[AccessMatrix.getAccessMatrix] findAllByRoles done, items count=" <> show (length accessMatrixItems)
+  logDebug $ "[AccessMatrix.getAccessMatrix] findAllByRoles done, items count=" <> show (length accessMatrixItems)
   pure $ DMatrix.mkAccessMatrixAPIEntity roles accessMatrixItems
 
 getAccessMatrixByRole ::
@@ -58,9 +58,9 @@ getAccessMatrixByRole ::
   Id DRole.Role ->
   m DMatrix.AccessMatrixRowAPIEntity
 getAccessMatrixByRole _ roleId = do
-  logInfo $ "[AccessMatrix.getAccessMatrixByRole] START | roleId=" <> roleId.getId
+  logDebug $ "[AccessMatrix.getAccessMatrixByRole] START | roleId=" <> roleId.getId
   role <- B.runInReplica $ QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-  logInfo "[AccessMatrix.getAccessMatrixByRole] findById done"
+  logDebug "[AccessMatrix.getAccessMatrixByRole] findById done"
   accessMatrixItems <- B.runInReplica $ QMatrix.findAllByRoleId roleId
-  logInfo $ "[AccessMatrix.getAccessMatrixByRole] findAllByRoleId done, items count=" <> show (length accessMatrixItems)
+  logDebug $ "[AccessMatrix.getAccessMatrixByRole] findAllByRoleId done, items count=" <> show (length accessMatrixItems)
   pure $ DMatrix.mkAccessMatrixRowAPIEntity accessMatrixItems role

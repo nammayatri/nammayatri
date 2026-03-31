@@ -365,13 +365,13 @@ getDigiLockerFile ::
   DigiTypes.DigiLockerGetFileReq ->
   m BSL.ByteString
 getDigiLockerFile _merchantId merchantOpCityId req = do
-  logInfo $
+  logDebug $
     "Tools.Verification.getDigiLockerFile - Request: merchantOpCityId="
       <> merchantOpCityId.getId
       <> ", uri="
       <> req.uri
   resp <- callService merchantOpCityId DigiLocker Verification.getFile req
-  logInfo $
+  logDebug $
     "Tools.Verification.getDigiLockerFile - Response bytes: "
       <> show (BSL.length resp)
   pure resp

@@ -59,7 +59,7 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig drive
   unless (null existingFDAssociations) $ do
     if merchant.overwriteAssociation == Just True
       then forM_ existingFDAssociations $ \existingAssociation -> do
-        logInfo $ "End existing fleet driver association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "driverId: " <> existingAssociation.driverId.getId
+        logDebug $ "End existing fleet driver association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "driverId: " <> existingAssociation.driverId.getId
         QFDA.endFleetDriverAssociation existingAssociation.fleetOwnerId existingAssociation.driverId
         Analytics.handleDriverAnalyticsAndFlowStatus
           transporterConfig
@@ -91,7 +91,7 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig drive
   unless (null existingDOAssociations) $ do
     if merchant.overwriteAssociation == Just True
       then forM_ existingDOAssociations $ \existingAssociation -> do
-        logInfo $ "End existing operator driver association: operatorId: " <> existingAssociation.operatorId <> "driverId: " <> existingAssociation.driverId.getId
+        logDebug $ "End existing operator driver association: operatorId: " <> existingAssociation.operatorId <> "driverId: " <> existingAssociation.driverId.getId
         QDOA.endOperatorDriverAssociation existingAssociation.operatorId existingAssociation.driverId
         Analytics.handleDriverAnalyticsAndFlowStatus
           transporterConfig
@@ -129,7 +129,7 @@ endFleetAssociationsIfAllowed merchant merchantOpCityId transporterConfig fleetO
   -- Otherwise, allow multiple operators (no action needed)
   when (merchant.overwriteAssociation == Just True && notNull existingFOAssociations) $ do
     forM_ existingFOAssociations $ \existingAssociation -> do
-      logInfo $ "End existing fleet operator association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "operatorId: " <> existingAssociation.operatorId
+      logDebug $ "End existing fleet operator association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "operatorId: " <> existingAssociation.operatorId
       QFOA.endFleetOperatorAssociation (Id existingAssociation.fleetOwnerId) (Id existingAssociation.operatorId)
       let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
       when allowCacheDriverFlowStatus $ do

@@ -85,7 +85,7 @@ sendScheduledBatchPayout Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) d
     Just config ->
       if not config.isEnabled
         then do
-          logInfo $ "Scheduled payout disabled for " <> show category
+          logDebug $ "Scheduled payout disabled for " <> show category
           pure Complete
         else processCategory config jobData
 
@@ -112,10 +112,10 @@ processCategory config jobData = do
   case config.payoutCategory of
     DPayment.DRIVER_WALLET_TRANSACTION -> processWalletPayouts config jobData
     DPayment.DRIVER_DAILY_STATS -> do
-      logInfo "REFERRAL: not yet implemented in unified framework. Use the legacy DriverReferralPayout job."
+      logDebug "REFERRAL: not yet implemented in unified framework. Use the legacy DriverReferralPayout job."
       pure Complete
     DPayment.SPECIAL_ZONE_PAYOUT -> do
-      logInfo "SPECIAL_ZONE: not yet implemented in unified framework."
+      logDebug "SPECIAL_ZONE: not yet implemented in unified framework."
       pure Complete
     other -> do
       logWarning $ "Unsupported payout category for scheduled batch: " <> show other
@@ -148,7 +148,7 @@ processWalletPayouts config jobData = do
   let walletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableWalletPayout
   if not walletEnabled
     then do
-      logInfo "Wallet payouts disabled at transporter level"
+      logDebug "Wallet payouts disabled at transporter level"
       pure Complete
     else do
       let driverCursorKey = "ScheduledBatchPayout:Cursor:" <> merchantOpCityId.getId <> ":" <> show config.payoutCategory

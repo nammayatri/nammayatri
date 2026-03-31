@@ -40,9 +40,9 @@ kaalChakraAction mbMerchantOperatingCityId personId mbAction notificationKey = d
   whenJust mbAction $ \action -> do
     case action of
       SAFE_TO_UNSAFE_COHORT -> do
-        logInfo $ "Kaal chakra action: " <> show action <> "; personId: " <> show personId
+        logDebug $ "Kaal chakra action: " <> show action <> "; personId: " <> show personId
       UNSAFE_TO_SAFE_COHORT -> do
-        logInfo $ "Kaal chakra action: " <> show action <> "; personId: " <> show personId
+        logDebug $ "Kaal chakra action: " <> show action <> "; personId: " <> show personId
 
 scheduleTagActionNotificationJob ::
   ( MonadFlow m,

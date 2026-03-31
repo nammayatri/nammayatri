@@ -62,7 +62,7 @@ pullDocuments ::
   Flow APISuccess
 pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
-  logInfo $ "PullDocument - Starting pull for DriverId: " <> driverId.getId <> ", DocType: " <> show req.docType
+  logDebug $ "PullDocument - Starting pull for DriverId: " <> driverId.getId <> ", DocType: " <> show req.docType
 
   person <- PersonQuery.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
 
@@ -109,9 +109,9 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
 
   mbPullResp <-
     ( do
-        logInfo $ "PullDocument - Calling DigiLocker pull API with session merchant: " <> sessionMerchantId.getId <> ", opCity: " <> sessionMerchantOpCityId.getId
+        logDebug $ "PullDocument - Calling DigiLocker pull API with session merchant: " <> sessionMerchantId.getId <> ", opCity: " <> sessionMerchantOpCityId.getId
         pullResp <- Verification.pullDigiLockerDrivingLicense sessionMerchantId sessionMerchantOpCityId pullReq
-        logInfo $ "PullDocument - Successfully pulled DL document, URI: " <> pullResp.uri
+        logDebug $ "PullDocument - Successfully pulled DL document, URI: " <> pullResp.uri
         return $ Just pullResp
       )
       `catch` \(err :: DigiLockerError.DigiLockerError) -> do
@@ -124,14 +124,14 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
 
   mbExtractedResp <-
     ( do
-        logInfo $ "PullDocument - Fetching and extracting DL data with session merchant: " <> sessionMerchantId.getId <> ", opCity: " <> sessionMerchantOpCityId.getId
+        logDebug $ "PullDocument - Fetching and extracting DL data with session merchant: " <> sessionMerchantId.getId <> ", opCity: " <> sessionMerchantOpCityId.getId
         let extractReq =
               DigiTypes.DigiLockerExtractDLReq
                 { accessToken = accessToken,
                   uri = pullResp.uri
                 }
         extractedResp <- Verification.fetchAndExtractVerifiedDL sessionMerchantId sessionMerchantOpCityId extractReq
-        logInfo $ "PullDocument - Successfully extracted DL data"
+        logDebug $ "PullDocument - Successfully extracted DL data"
         return $ Just extractedResp
       )
       `catch` \(err :: DigiLockerError.DigiLockerError) -> do
@@ -144,14 +144,14 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
 
   mbPdfBytes <-
     ( do
-        logInfo $ "PullDocument - Fetching PDF from DigiLocker with session merchant: " <> sessionMerchantId.getId <> ", opCity: " <> sessionMerchantOpCityId.getId
+        logDebug $ "PullDocument - Fetching PDF from DigiLocker with session merchant: " <> sessionMerchantId.getId <> ", opCity: " <> sessionMerchantOpCityId.getId
         let fileReq =
               DigiTypes.DigiLockerGetFileReq
                 { accessToken = accessToken,
                   uri = pullResp.uri
                 }
         pdfBytes <- Verification.getDigiLockerFile sessionMerchantId sessionMerchantOpCityId fileReq
-        logInfo $ "PullDocument - Successfully fetched PDF"
+        logDebug $ "PullDocument - Successfully fetched PDF"
         return $ Just pdfBytes
       )
       `catch` \(err :: DigiLockerError.DigiLockerError) -> do
@@ -163,12 +163,12 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
   pdfBytes <- mbPdfBytes & fromMaybeM (InternalError "PDF bytes is Nothing")
 
   ( do
-      logInfo $ "PullDocument - Verifying and storing DL data in database"
+      logDebug $ "PullDocument - Verifying and storing DL data in database"
       verifyAndStoreDL session person pdfBytes extractedResp
-      logInfo $ "PullDocument - Successfully stored DL in database"
+      logDebug $ "PullDocument - Successfully stored DL in database"
 
       updateDocStatusField session.id req.docType (DocStatus.docStatusToText DocStatus.DOC_SUCCESS) (Just "200") (Just "Driver License verified and stored successfully via pull")
-      logInfo $ "PullDocument - Successfully completed pull operation for DriverId: " <> driverId.getId
+      logDebug $ "PullDocument - Successfully completed pull operation for DriverId: " <> driverId.getId
     )
     `catch` \(err :: DigiLockerError.DigiLockerError) -> do
       let (errorCode, errorDesc) = extractDigiLockerError err
@@ -184,7 +184,7 @@ verifySessionActive session docType = do
   let sessionAge = diffUTCTime now session.createdAt
   let oneHour = 3600 :: NominalDiffTime
 
-  logInfo $ "PullDocument - Session age: " <> show sessionAge <> ", One hour: " <> show oneHour
+  logDebug $ "PullDocument - Session age: " <> show sessionAge <> ", One hour: " <> show oneHour
 
   when (sessionAge > oneHour) $ do
     updateDocStatusField session.id docType "FAILED" (Just "PULL_DOC_FAILED") (Just "DigiLocker session expired")
@@ -194,7 +194,7 @@ verifySessionActive session docType = do
     updateDocStatusField session.id docType "FAILED" (Just "PULL_DOC_FAILED") (Just $ "DigiLocker session is not authorized. Current status: " <> show session.sessionStatus)
     throwError DigiLockerSessionUnauthorized
 
-  logInfo $ "PullDocument - Verified session is active and within 1 hour"
+  logDebug $ "PullDocument - Verified session is active and within 1 hour"
 
 verifyAndStoreDL ::
   DDV.DigilockerVerification ->
@@ -215,7 +215,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
     dlFlow.expiryDate
       & fromMaybeM (InternalError "DL expiry not found in DigiLocker XML")
 
-  logInfo $ "PullDocument - Extracted DL data: DL=" <> dlNumber <> ", Name=" <> show dlFlow.name <> ", Expiry=" <> show dlExpiry
+  logDebug $ "PullDocument - Extracted DL data: DL=" <> dlNumber <> ", Name=" <> show dlFlow.name <> ", Expiry=" <> show dlExpiry
 
   now <- Kernel.Utils.Common.getCurrentTime
   whenJust dlFlow.dob $ \dobText -> do
@@ -235,7 +235,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
     when (existingDL.verificationStatus == Documents.VALID) $
       throwError $ DocumentAlreadyValidated "DL"
 
-  logInfo $ "PullDocument - No blocking duplicate DL found, proceeding with upload"
+  logDebug $ "PullDocument - No blocking duplicate DL found, proceeding with upload"
 
   let pdfBase64 = base64Encode (BSL.toStrict pdfBytes)
   let imageReq =
@@ -251,10 +251,10 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
           }
 
   Image.ImageValidateResponse {imageId} <- Image.validateImage False Nothing Nothing (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
-  logInfo $ "PullDocument - Uploaded DL PDF to S3 (DigiLocker verified), ImageId: " <> imageId.getId
+  logDebug $ "PullDocument - Uploaded DL PDF to S3 (DigiLocker verified), ImageId: " <> imageId.getId
 
   let vehicleCategory = session.vehicleCategory
-  logInfo $ "PullDocument - Using vehicle category from session: " <> show vehicleCategory
+  logDebug $ "PullDocument - Using vehicle category from session: " <> show vehicleCategory
 
   documentVerificationConfig <-
     CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory
@@ -264,7 +264,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
       Nothing
       >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show DVC.DriverLicense <> " for category " <> show vehicleCategory))
 
-  logInfo $ "PullDocument - Retrieved DocumentVerificationConfig for category: " <> show vehicleCategory
+  logDebug $ "PullDocument - Retrieved DocumentVerificationConfig for category: " <> show vehicleCategory
 
   let covDetails = case dlFlow.classOfVehicles of
         Just covs -> Just (createCovDetails covs)
@@ -276,7 +276,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
         dlFlow.dateOfIssue >>= \dateText ->
           parseTimeM True defaultTimeLocale "%d-%m-%Y" (T.unpack dateText)
 
-  logInfo $ "PullDocument - Calling onVerifyDLHandler with COVs: " <> show dlFlow.classOfVehicles <> ", VehicleCategory: " <> show vehicleCategory
+  logDebug $ "PullDocument - Calling onVerifyDLHandler with COVs: " <> show dlFlow.classOfVehicles <> ", VehicleCategory: " <> show vehicleCategory
   DLModule.onVerifyDLHandler
     person
     (Just dlNumber)
@@ -290,7 +290,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
     dlFlow.name
     dateOfIssueUTC
     (Just vehicleCategory)
-  logInfo $ "PullDocument - Successfully stored DL via onVerifyDLHandler for DriverId: " <> person.id.getId
+  logDebug $ "PullDocument - Successfully stored DL via onVerifyDLHandler for DriverId: " <> person.id.getId
 
 updateDocStatusField ::
   Id DDV.DigilockerVerification ->
@@ -312,7 +312,7 @@ updateDocStatusField sessionId docType statusText respCode respDesc = do
     let currentDocStatusMap = session.docStatus
     let updatedDocStatusMap = DocStatus.updateDocStatus docType docStatusEnum respCode respDesc currentDocStatusMap
     QDV.updateDocStatus updatedDocStatusMap sessionId
-    logInfo $ "PullDocument - Updated docStatus for " <> show docType <> " to " <> statusText
+    logDebug $ "PullDocument - Updated docStatus for " <> show docType <> " to " <> statusText
 
 base64Encode :: BS.ByteString -> Text
 base64Encode = TE.decodeUtf8 . B64.encode

@@ -1664,7 +1664,7 @@ sendPickupInstructionNotification merchantOpCityId driver entityData = do
           }
       title = FCM.FCMNotificationTitle "Pickup Instructions"
       body = FCMNotificationBody $ fromMaybe "You have received pickup instructions" entityData.instruction
-  logInfo $ "PickupInstructionNotification: Notification data: " <> show notificationData
+  logDebug $ "PickupInstructionNotification: Notification data: " <> show notificationData
   -- Send notification
   FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) (clearDeviceToken driver.id) notificationData (FCMNotificationRecipient driver.id.getId driver.deviceToken) EulerHS.Prelude.id
 

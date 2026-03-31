@@ -30,7 +30,7 @@ import qualified Kernel.External.Payout.Interface.Types as IPayout
 import Kernel.Prelude
 import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id (Id (..))
-import Kernel.Utils.Common (HighPrecMoney, MonadFlow, fromMaybeM, generateGUID, getCurrentTime, logDebug, logError, logInfo, throwError)
+import Kernel.Utils.Common (HighPrecMoney, MonadFlow, fromMaybeM, generateGUID, getCurrentTime, logDebug, logError, throwError)
 import qualified Lib.Finance.Domain.Types.StateTransition as ST
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -246,7 +246,7 @@ executePayoutRequestInternal ::
 executePayoutRequestInternal payoutRequest payoutCall = do
   if not (isPayoutExecutable payoutRequest)
     then do
-      logInfo $ "PayoutRequest " <> payoutRequest.id.getId <> " not executable (status: " <> show payoutRequest.status <> "), skipping"
+      logDebug $ "PayoutRequest " <> payoutRequest.id.getId <> " not executable (status: " <> show payoutRequest.status <> "), skipping"
       pure Nothing
     else do
       orderId <- generateGUID

@@ -202,7 +202,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             -- don't update device id if existing different device id pass is active or prebooked
             when (pendingPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $ do
               QPurchasedPass.updateDeviceIdById deviceId 0 pendingPass.id
-              logInfo $ "Reusing existing purchased pass " <> pendingPass.id.getId <> " and updated deviceId to " <> deviceId
+              logDebug $ "Reusing existing purchased pass " <> pendingPass.id.getId <> " and updated deviceId to " <> deviceId
             return $ Just pendingPass
           Nothing -> return Nothing
 

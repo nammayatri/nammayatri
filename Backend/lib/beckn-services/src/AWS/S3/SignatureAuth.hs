@@ -202,7 +202,7 @@ modFlowRtWithS3AuthManagers ::
 modFlowRtWithS3AuthManagers flowRt appEnv s3AwsConfig = do
   let managersSetting = prepareS3AuthManager flowRt appEnv s3AwsConfig
   managers <- createManagers managersSetting
-  logInfo "Loaded S3 http manager - "
+  logDebug "Loaded S3 http manager - "
   pure $ flowRt {R._httpClientManagers = managers}
 
 mkS3MbManager :: (HasLog r) => R.FlowRuntime -> r -> S3Config -> Maybe (HMS.HashMap Text ManagerSettings)

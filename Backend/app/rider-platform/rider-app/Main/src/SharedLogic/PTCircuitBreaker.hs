@@ -375,7 +375,7 @@ clearFareCache ::
   Text ->
   m ()
 clearFareCache key = do
-  logInfo $ "PT Circuit Breaker: Clearing cached fares for key: " <> key
+  logDebug $ "PT Circuit Breaker: Clearing cached fares for key: " <> key
   void $ Hedis.del key
 
 -- | Get failure count within a specific window

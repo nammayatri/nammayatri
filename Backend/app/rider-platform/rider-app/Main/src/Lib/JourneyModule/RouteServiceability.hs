@@ -107,7 +107,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                         case mStopIndices of
                           Just (fromIdx, toIdx) -> do
                             avail <- SeatBooking.getAvailableSeatCount layoutId tripId fromIdx toIdx
-                            logInfo $ "seatAvailability routeId=" <> routeId' <> " tripId=" <> tripId <> " vehicle=" <> detail.vehicle_no <> " available=" <> show avail
+                            logDebug $ "seatAvailability routeId=" <> routeId' <> " tripId=" <> tripId <> " vehicle=" <> detail.vehicle_no <> " available=" <> show avail
                             return (avail > 0, Just avail)
                           _ -> return (True, Nothing)
                     Nothing -> return (True, Nothing)

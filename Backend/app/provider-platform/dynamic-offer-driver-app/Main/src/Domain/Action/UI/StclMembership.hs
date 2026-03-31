@@ -297,20 +297,20 @@ stclMemberShipOrderStatusHandler ::
   Id DOrder.PaymentOrder ->
   m ()
 stclMemberShipOrderStatusHandler paymentStatusResp paymentOrderId = do
-  logInfo $ "STCL Membership Order Status Handler - Payment Order ID: " <> show paymentOrderId
-  logInfo $ "STCL Membership Order Status Handler - Payment Status Response: " <> show paymentStatusResp
+  logDebug $ "STCL Membership Order Status Handler - Payment Order ID: " <> show paymentOrderId
+  logDebug $ "STCL Membership Order Status Handler - Payment Status Response: " <> show paymentStatusResp
 
   -- Extract payment status string
   let paymentStatusText = case paymentStatusResp of
         LibPayment.PaymentStatus {status} -> Just $ show status
         LibPayment.MandatePaymentStatus {status} -> Just $ show status
         _ -> Nothing
-  logInfo $ "Payment Status Text: " <> show paymentStatusText
+  logDebug $ "Payment Status Text: " <> show paymentStatusText
 
   -- Find StclMembership by orderId (orderId is the same as membership.id)
   -- Convert Id PaymentOrder to Id StclMembership using the underlying Text
   let membershipId = Kernel.Types.Id.Id (paymentOrderId.getId)
-  logInfo $ "Looking up membership with ID: " <> show membershipId
+  logDebug $ "Looking up membership with ID: " <> show membershipId
   mbMembership <- QStclMembership.findById membershipId
 
   -- If not found by ID, try looking up by shortId (from payment order)
@@ -321,7 +321,7 @@ stclMemberShipOrderStatusHandler paymentStatusResp paymentOrderId = do
       paymentOrder <- QOrder.findById paymentOrderId
       case paymentOrder of
         Just order -> do
-          logInfo $ "Membership not found by ID, trying shortId: " <> show order.shortId.getShortId
+          logDebug $ "Membership not found by ID, trying shortId: " <> show order.shortId.getShortId
           QStclMembership.findByShortId (Just order.shortId.getShortId)
         Nothing -> do
           logError $ "Payment order not found: " <> show paymentOrderId
@@ -329,7 +329,7 @@ stclMemberShipOrderStatusHandler paymentStatusResp paymentOrderId = do
 
   case mbMembership' of
     Just membership -> do
-      logInfo $ "Found membership: " <> show membership.id <> ", current status: " <> show membership.status
+      logDebug $ "Found membership: " <> show membership.id <> ", current status: " <> show membership.status
       let newStatus = case paymentStatusResp of
             LibPayment.PaymentStatus {status}
               | status == PaymentTypes.CHARGED -> Domain.SUBMITTED
@@ -338,15 +338,15 @@ stclMemberShipOrderStatusHandler paymentStatusResp paymentOrderId = do
               | status == PaymentTypes.CHARGED -> Domain.SUBMITTED
               | otherwise -> Domain.PENDING
             _ -> Domain.PENDING
-      logInfo $ "Updating membership to status: " <> show newStatus <> ", paymentStatus: " <> show paymentStatusText
+      logDebug $ "Updating membership to status: " <> show newStatus <> ", paymentStatus: " <> show paymentStatusText
       -- When status becomes SUBMITTED, update application count and share range FIRST (before status update)
       -- so findLatestSubmittedMembership doesn't return the current record
       when (newStatus == Domain.SUBMITTED) $ do
         QStclMembership.updateApplicationAndShareCounts membership.id membership.numberOfShares
-        logInfo $ "Updated application and share counts for SUBMITTED membership"
+        logDebug $ "Updated application and share counts for SUBMITTED membership"
       -- Update membership with new status and payment status
       -- updateStatusAndPaymentStatus generates updatedAt internally
       QStclMembership.updateStatusAndPaymentStatus newStatus paymentStatusText membership.id
-      logInfo $ "Successfully updated membership"
+      logDebug $ "Successfully updated membership"
     Nothing -> do
       logError $ "Membership not found for payment order ID: " <> show paymentOrderId <> ", membership ID: " <> show membershipId

@@ -87,7 +87,7 @@ checkRefundStatusJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
     let maxRetries = riderConfig.refundStatusUpdateRetries
     if currentRetries >= maxRetries
       then do
-        logInfo $ "Maximum retries reached for refund " <> refundId.getId <> ". Stopping further checks."
+        logDebug $ "Maximum retries reached for refund " <> refundId.getId <> ". Stopping further checks."
       else do
         let nextSchedule = riderConfig.refundStatusUpdateInterval * (2 ^ currentRetries)
             newJobData =
@@ -96,7 +96,7 @@ checkRefundStatusJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
                   numberOfRetries = currentRetries + 1
                 }
         createJobIn @_ @'CheckRefundStatus (Just person.merchantId) (Just person.merchantOperatingCityId) nextSchedule (newJobData :: CheckRefundStatusJobData)
-        logInfo $ "Scheduled next refund status check for " <> refundId.getId <> " in " <> show nextSchedule <> " (retry " <> show (currentRetries + 1) <> "/" <> show maxRetries <> ")"
+        logDebug $ "Scheduled next refund status check for " <> refundId.getId <> " in " <> show nextSchedule <> " (retry " <> show (currentRetries + 1) <> "/" <> show maxRetries <> ")"
   return Complete
 
 processRefundStatus ::

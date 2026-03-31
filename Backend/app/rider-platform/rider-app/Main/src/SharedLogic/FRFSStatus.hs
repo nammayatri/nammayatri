@@ -83,7 +83,7 @@ frfsBookingStatus ::
   (DJL.JourneyLeg -> Id DFRFSQuote.FRFSQuote -> m ()) ->
   m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusResponseHandler booking' person switchFRFSQuoteTier = do
-  logInfo $ "frfsBookingStatus for booking: " <> show booking'
+  logDebug $ "frfsBookingStatus for booking: " <> show booking'
   let bookingId = booking'.id
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking'.merchantOperatingCityId.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory booking'.vehicleType)}) >>= fromMaybeM (InternalError "Beckn Config not found")
@@ -96,14 +96,14 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   merchantOperatingCity <- getMerchantOperatingCityFromBooking booking
   let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
-  logInfo $ "Booking status: " <> show booking.status
+  logDebug $ "Booking status: " <> show booking.status
   case booking.status of
     DFRFSTicketBooking.NEW -> buildFRFSTicketBookingStatusAPIRes booking quoteCategories Nothing
     DFRFSTicketBooking.FAILED -> do
       withPaymentStatusResponseHandler $ \(paymentBooking, paymentOrder, paymentStatusResp) -> do
-        logInfo $ "payment status resp: " <> show paymentStatusResp
+        logDebug $ "payment status resp: " <> show paymentStatusResp
         let paymentBookingStatus = maybe FRFSTicketService.NEW makeTicketBookingPaymentAPIStatus (paymentStatusResp <&> (.status))
-        logInfo $ "payment booking status: " <> show paymentBookingStatus
+        logDebug $ "payment booking status: " <> show paymentBookingStatus
         when (paymentBookingStatus == FRFSTicketService.FAILURE) do
           void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.FAILED paymentBooking.id
           let mPrice = Common.mkPrice (Just booking'.totalPrice.currency) (HighPrecMoney $ toRational (0 :: Int))
@@ -135,7 +135,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
           `orElseM` buildFRFSTicketBookingStatusAPIRes booking quoteCategories (buildPaymentObject booking paymentBooking paymentBookingStatus)
     DFRFSTicketBooking.APPROVED -> do
       withPaymentStatusResponseHandler $ \(paymentBooking, paymentOrder, paymentStatusResp) -> do
-        logInfo $ "payment status response: " <> show paymentStatusResp
+        logDebug $ "payment status response: " <> show paymentStatusResp
         let paymentBookingStatus = maybe FRFSTicketService.NEW makeTicketBookingPaymentAPIStatus (paymentStatusResp <&> (.status))
         if paymentBookingStatus == FRFSTicketService.FAILURE
           then do
@@ -167,9 +167,9 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                 buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentObj
     DFRFSTicketBooking.PAYMENT_PENDING -> do
       withPaymentStatusResponseHandler $ \(paymentBooking, paymentOrder, paymentStatusResp) -> do
-        logInfo $ "paymentStatusResp: " <> show paymentStatusResp
+        logDebug $ "paymentStatusResp: " <> show paymentStatusResp
         let paymentBookingStatus = maybe FRFSTicketService.NEW makeTicketBookingPaymentAPIStatus (paymentStatusResp <&> (.status))
-        logInfo $ "paymentBookingStatus: " <> show paymentBookingStatus
+        logDebug $ "paymentBookingStatus: " <> show paymentBookingStatus
         bookingApiResp <-
           if paymentBookingStatus == FRFSTicketService.FAILURE
             then do
@@ -244,7 +244,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                           let mbPaymentObj = paymentStatusAPI <&> \status -> FRFSTicketService.FRFSBookingPaymentAPI {status, paymentOrder = Nothing, transactionId = Nothing}
                           buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories mbPaymentObj
                         else do
-                          logInfo $ "payment success in payment pending: " <> show booking
+                          logDebug $ "payment success in payment pending: " <> show booking
                           paymentOrder_ <- buildCreateOrderResp paymentOrder commonPersonId merchantOperatingCity.id booking
                           txn <- HQPaymentTransaction.findNewTransactionByOrderId paymentOrder.id
                           let paymentStatus_ = if isNothing txn then FRFSTicketService.NEW else paymentBookingStatus
@@ -515,7 +515,7 @@ addPaymentoffersTags ::
   DP.Person ->
   m ()
 addPaymentoffersTags totalPrice person = do
-  logInfo $ "Add payment offer tag, personId: " <> person.id.getId <> ", totalPrice: " <> show totalPrice
+  logDebug $ "Add payment offer tag, personId: " <> person.id.getId <> ", totalPrice: " <> show totalPrice
   withTryCatch "addPaymentoffersTags:offerListCache" (SOffer.offerListCache person.merchantId person.id person.merchantOperatingCityId DPaymentOrder.Normal totalPrice)
     >>= \case
       Left err -> do
@@ -533,7 +533,7 @@ addPaymentoffersTags totalPrice person = do
               newTags = map LYT.TagNameValueExpiry offerTags
               updatedTags = filteredCurrentTags <> newTags
           CQPerson.updateCustomerTags (Just updatedTags) person.id
-          logInfo $ "Added payment offer tags for person: " <> person.id.getId <> ", tags: " <> show offerTags
+          logDebug $ "Added payment offer tags for person: " <> person.id.getId <> ", tags: " <> show offerTags
   where
     createPaymentOfferTags :: [Payment.OfferResp] -> [Text]
     createPaymentOfferTags offers = do

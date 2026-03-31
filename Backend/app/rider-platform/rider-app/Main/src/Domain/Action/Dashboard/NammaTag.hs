@@ -489,7 +489,7 @@ postNammaTagUpdateCustomerTag merchantShortId opCity userId req = do
   let personId = cast @Common.User @DP.Person userId
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   when (req.isAddingTag && maybe False (LYTU.elemTagNameValue req.tag) person.customerNammaTags) $
-    logInfo "Tag already exists, update expiry"
+    logDebug "Tag already exists, update expiry"
   -- merchant access checking
   unless (merchantOpCityId == person.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   mbNammTag <- YudhishthiraFlow.verifyTag (cast merchantOpCityId) req.tag

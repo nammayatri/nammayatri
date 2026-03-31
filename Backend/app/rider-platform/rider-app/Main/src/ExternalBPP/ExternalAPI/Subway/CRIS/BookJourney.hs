@@ -167,7 +167,7 @@ getBookJourney ::
   CRISBookingRequest ->
   m CRISBookingResponse
 getBookJourney config request = do
-  logInfo $ "Booking request object: " <> show request
+  logDebug $ "Booking request object: " <> show request
 
   -- 1. Construct and encrypt the request
   let jsonStr = constructBookingJson request
@@ -206,7 +206,7 @@ getBookJourney config request = do
           logError $ "Failed to decrypt ticket data: " <> T.pack err
           throwError $ CRISError $ "Failed to decrypt ticket data"
         Right decryptedJson -> do
-          logInfo $ "Decrypted ticket data: " <> decryptedJson
+          logDebug $ "Decrypted ticket data: " <> decryptedJson
           case eitherDecode (LBS.fromStrict $ TE.encodeUtf8 decryptedJson) of
             Left err -> do
               logError $ "Failed to parse ticket data: " <> T.pack err
@@ -317,7 +317,7 @@ createOrder config integratedBPPConfig booking quoteCategories = do
             bankDeductedAmount = chargeableAmount,
             tpBookType = tpBookType
           }
-  logInfo $ "GetBookJourney: " <> show bookJourneyReq
+  logDebug $ "GetBookJourney: " <> show bookJourneyReq
 
   bookJourneyResp <- getBookJourney config bookJourneyReq
   qrValidityTime <- parseTicketValidity bookJourneyResp.showTicketValidity

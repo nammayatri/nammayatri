@@ -13,7 +13,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (logInfo)
+import Kernel.Utils.Common (logDebug)
 import SharedLogic.Merchant (findMerchantByShortId)
 
 getProfileDetail ::
@@ -22,11 +22,11 @@ getProfileDetail ::
   Kernel.Types.Id.Id Domain.Types.Person.Person ->
   Environment.Flow Domain.Action.UI.Profile.ProfileRes
 getProfileDetail merchantShortId _opCity personId = do
-  logInfo $ "[RiderApp.Dashboard.Profile.getProfileDetail] START | personId: " <> show personId
+  logDebug $ "[RiderApp.Dashboard.Profile.getProfileDetail] START | personId: " <> show personId
   m <- findMerchantByShortId merchantShortId
-  logInfo "[RiderApp.Dashboard.Profile.getProfileDetail] findMerchantByShortId done, calling getPersonDetails'"
+  logDebug "[RiderApp.Dashboard.Profile.getProfileDetail] findMerchantByShortId done, calling getPersonDetails'"
   result <- API.UI.Profile.getPersonDetails' (personId, m.id) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-  logInfo "[RiderApp.Dashboard.Profile.getProfileDetail] getPersonDetails' done"
+  logDebug "[RiderApp.Dashboard.Profile.getProfileDetail] getPersonDetails' done"
   pure result
 
 postProfileUpdate ::

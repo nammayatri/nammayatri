@@ -120,7 +120,7 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
           then filter (\vf -> vf.driverFeeId `elem` driverFeeIds) vendorFees
           else vendorFees
   splitSettlementDetails <- if splitEnabled then mkSplitSettlementDetails currentVendorFees amount else pure Nothing
-  logInfo $ "split details: " <> show splitSettlementDetails
+  logDebug $ "split details: " <> show splitSettlementDetails
   when (amount <= 0) $ throwError (InternalError "Invalid Amount :- should be greater than 0")
   unless (isJust existingInvoice) $ QIN.createMany invoices
   let createOrderReq =
@@ -167,7 +167,7 @@ mkSplitSettlementDetails vendorFees totalAmount = do
       vendorSplits = catMaybes mbVendorSplits
   let totalVendorAmount = roundToTwoDecimalPlaces $ sum $ map (\Split {amount} -> amount) vendorSplits
       marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
-  logInfo $ "totalVendorAmount: " <> show totalVendorAmount <> " marketplaceAmount: " <> show marketplaceAmount <> " totalAmount: " <> show totalAmount
+  logDebug $ "totalVendorAmount: " <> show totalVendorAmount <> " marketplaceAmount: " <> show marketplaceAmount <> " totalAmount: " <> show totalAmount
   when (marketplaceAmount < 0) $ do
     logError $ "Marketplace amount is negative: " <> show marketplaceAmount <> " for vendorFees: " <> show vendorFees <> "totalVendorAmount: " <> show totalVendorAmount <> " totalAmount: " <> show totalAmount
     throwError (InternalError "Marketplace amount is negative")

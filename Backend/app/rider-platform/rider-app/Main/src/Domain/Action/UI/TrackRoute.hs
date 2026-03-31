@@ -47,7 +47,7 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId personCityInfo.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) (fromMaybe DIBC.APPLICATION mbPlatformType)
-  logInfo $ "mbSelectedSourceStopId: " <> show mbSelectedSourceStopId <> " and mbSelectedDestinationStopId: " <> show mbSelectedDestinationStopId
+  logDebug $ "mbSelectedSourceStopId: " <> show mbSelectedSourceStopId <> " and mbSelectedDestinationStopId: " <> show mbSelectedDestinationStopId
   routeIdsToTrack <-
     case (mbSelectedSourceStopId, mbSelectedDestinationStopId) of
       (Just sourceStopId, Just destinationStopId) -> do
@@ -55,7 +55,7 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
           then pure [routeCode]
           else do
             routeCodes <- JMU.getRouteCodesFromTo sourceStopId destinationStopId integratedBPPConfig
-            logInfo $ "possibleRoutes between two stops: " <> show routeCodes
+            logDebug $ "possibleRoutes between two stops: " <> show routeCodes
             pure $ List.nub $ [routeCode] <> routeCodes
       _ -> pure [routeCode]
   riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = personCityInfo.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist personCityInfo.merchantOperatingCityId.getId)
@@ -64,7 +64,7 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
   let currentLocation = (\ss -> LatLong <$> ss.lat <*> ss.lon) =<< mbSourceStop
   vehicleTrackingWithRoutes <- concatMapM (\routeIdToTrack -> map (routeIdToTrack,) <$> trackVehicles personId merchantId personCityInfo.merchantOperatingCityId vehicleType routeIdToTrack (fromMaybe DIBC.APPLICATION mbPlatformType) currentLocation (Just integratedBPPConfig.id)) routeIdsToTrack
   let deduplicatedVehicles = List.nubBy (\a b -> (snd a).vehicleId == (snd b).vehicleId) vehicleTrackingWithRoutes
-  logInfo $ "deduplicatedVehicles: " <> show deduplicatedVehicles
+  logDebug $ "deduplicatedVehicles: " <> show deduplicatedVehicles
   let includeNullUpcomingStops = fromMaybe False riderConfig.includeVehiclesWithNoEta
   vehiclesYetToReachSelectedStop <- filterVehiclesYetToReachSelectedStop includeNullUpcomingStops personCityInfo.merchantOperatingCityId deduplicatedVehicles
   let (confirmedHighBuses, ghostBuses) = List.partition (\a -> ((snd a).vehicleInfo >>= (.routeState)) == Just CQMMB.ConfirmedHigh) vehiclesYetToReachSelectedStop

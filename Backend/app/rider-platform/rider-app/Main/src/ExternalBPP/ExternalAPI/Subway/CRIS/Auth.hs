@@ -55,7 +55,7 @@ resetAuthToken config = do
       logInfo "Acquired Redis lock for token refresh"
 
       let unlockLock = do
-            logInfo "Released Redis lock after token refresh"
+            logDebug "Released Redis lock after token refresh"
             Hedis.unlockRedis getCRISTokenRefreshLockKey
 
       tokenRes <-
@@ -71,7 +71,7 @@ resetAuthToken config = do
       Hedis.setExp getCRISTokenKey (tokenRes.access_token) (tokenRes.expires_in * 90 `div` 100)
       return $ tokenRes.access_token
     else do
-      logInfo "Redis lock already held by another pod, waiting 3 seconds for token refresh"
+      logDebug "Redis lock already held by another pod, waiting 3 seconds for token refresh"
 
       threadDelay 3000000
 

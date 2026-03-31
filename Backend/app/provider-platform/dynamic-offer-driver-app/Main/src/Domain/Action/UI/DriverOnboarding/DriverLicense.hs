@@ -170,9 +170,9 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
           [] -> return ()
           res -> do
             let description = encodeToText res
-            logInfo $ "Success: " <> show description
+            logDebug $ "Success: " <> show description
             ticket <- TT.createTicket merchantId merchantOpCityId (mkTicket description transporterConfig)
-            logInfo $ "Ticket: " <> show ticket
+            logDebug $ "Ticket: " <> show ticket
             return ()
   let runBody = do
         when (VC.isNameCompareRequired transporterConfig verifyBy) $

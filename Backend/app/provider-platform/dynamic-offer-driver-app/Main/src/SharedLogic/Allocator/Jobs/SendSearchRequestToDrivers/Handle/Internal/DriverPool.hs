@@ -668,7 +668,7 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
   updateVersionInSearchReq mbVersion
   let onlyNewDriversWithCustomerInfo = map updateDriverPoolWithActualDistResult onlyNewDrivers
   let taggedDriverPoolInput = TaggedDriverPoolInput {drivers = onlyNewDriversWithCustomerInfo, needOnRideDrivers = isOnRidePool, batchNum}
-  logInfo $
+  logDebug $
     "DriverPreference pooling input: customerNammaTags=" <> show customerNammaTags
       <> " | drivers=["
       <> mconcat
@@ -905,7 +905,7 @@ incrementBatchNum ::
   m ()
 incrementBatchNum searchTryId = do
   res <- Redis.withCrossAppRedis $ Redis.incr (poolBatchNumKey searchTryId)
-  logInfo $ "Increment batch num to " <> show res <> "."
+  logDebug $ "Increment batch num to " <> show res <> "."
   return ()
 
 getPoolRadiusStep :: (Redis.HedisFlow m r) => Id DST.SearchTry -> m PoolRadiusStep
@@ -925,7 +925,7 @@ incrementPoolRadiusStep ::
   m ()
 incrementPoolRadiusStep searchTryId = do
   res <- Redis.withCrossAppRedis $ Redis.incr (poolRadiusStepKey searchTryId)
-  logInfo $ "Increment radius step to " <> show res <> "."
+  logDebug $ "Increment radius step to " <> show res <> "."
   return ()
 
 isBookAny :: [DVST.ServiceTierType] -> Bool

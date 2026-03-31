@@ -76,7 +76,7 @@ sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
   merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOperatingCityId merchant Nothing
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY jobData.vehicleCategory
   driverIds <- nub <$> getBatchedDriverIds merchantId merchantOpCityId jobId jobData.condition jobData.freeTrialDays jobData.timeDiffFromUtc jobData.driverPaymentCycleDuration jobData.driverPaymentCycleStartTime jobData.overlayBatchSize serviceName vehicleCategory
-  logInfo $ "The Job " <> jobId.getId <> " is scheduled for following driverIds " <> show driverIds
+  logDebug $ "The Job " <> jobId.getId <> " is scheduled for following driverIds " <> show driverIds
   let (conditionKey, isVehCatBased) = castConditionsToSchedulerTypeAndIsVehCatBased jobData.condition
   driverIdsLength <- getSendOverlaySchedulerDriverIdsLength merchantOpCityId (if isVehCatBased then Just vehicleCategory else Nothing) (Just conditionKey)
   if driverIdsLength > 0 || (invoiceOverlayCondition jobData.condition && not (null driverIds))

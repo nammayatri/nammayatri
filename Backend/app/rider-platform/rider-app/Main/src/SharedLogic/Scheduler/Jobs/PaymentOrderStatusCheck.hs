@@ -75,7 +75,7 @@ paymentOrderStatusCheckJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   now <- getCurrentTime
   allRecentNonTerminalOrders <- QPaymentOrder.findAllNonTerminalOrders (addUTCTime (intToNominalDiffTime (-3600)) now)
 
-  logInfo $ "Found " <> show (length allRecentNonTerminalOrders) <> " payment orders with status not CHARGED (or CHARGED with pending refunds) created within the last hour"
+  logDebug $ "Found " <> show (length allRecentNonTerminalOrders) <> " payment orders with status not CHARGED (or CHARGED with pending refunds) created within the last hour"
 
   mapM_
     ( \paymentOrder -> do
@@ -86,11 +86,11 @@ paymentOrderStatusCheckJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
           Left err -> do
             logError $ "Payment order status check failed for order " <> paymentOrder.id.getId <> ": " <> show err
           Right _ -> do
-            logInfo $ "Payment order status check succeeded for order " <> paymentOrder.id.getId
+            logDebug $ "Payment order status check succeeded for order " <> paymentOrder.id.getId
     )
     allRecentNonTerminalOrders
 
-  logInfo $ "Completed payment order status check for " <> show (length allRecentNonTerminalOrders) <> " orders"
+  logDebug $ "Completed payment order status check for " <> show (length allRecentNonTerminalOrders) <> " orders"
 
   -- Schedule the next run in 1 hour
   let newJobData =

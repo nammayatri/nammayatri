@@ -101,7 +101,7 @@ checkDebugLogFlags ::
 checkDebugLogFlags mocId identifier' = do
   let enabledKey = mkDebugEnabledKey mocId identifier'
   mbEnabled :: Maybe Text <- Hedis.get enabledKey
-  logInfo $ "JsonLogicDebug: checkFlags key=" <> enabledKey <> " enabled=" <> show mbEnabled
+  logDebug $ "JsonLogicDebug: checkFlags key=" <> enabledKey <> " enabled=" <> show mbEnabled
   case mbEnabled of
     Just "1" -> do
       mbStartStr :: Maybe Text <- Hedis.get (mkDebugStartTimeKey mocId identifier')
@@ -114,7 +114,7 @@ checkDebugLogFlags mocId identifier' = do
             endT <- ISO.iso8601ParseM (T.unpack endStr)
             pure $ now >= startT && now <= endT
       let result = fromMaybe False mbInWindow
-      logInfo $ "JsonLogicDebug: startTime=" <> show mbStartStr <> " endTime=" <> show mbEndStr <> " now=" <> show now <> " inWindow=" <> show result
+      logDebug $ "JsonLogicDebug: startTime=" <> show mbStartStr <> " endTime=" <> show mbEndStr <> " now=" <> show now <> " inWindow=" <> show result
       pure result
     _ -> pure False
 

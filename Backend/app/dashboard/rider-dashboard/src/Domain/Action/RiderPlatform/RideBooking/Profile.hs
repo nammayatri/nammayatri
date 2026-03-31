@@ -15,7 +15,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (logInfo)
+import Kernel.Utils.Common (logDebug)
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
@@ -23,11 +23,11 @@ import Tools.Auth.Merchant
 
 getProfileDetail :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow Domain.Action.UI.Profile.ProfileRes)
 getProfileDetail merchantShortId opCity apiTokenInfo customerId = do
-  logInfo $ "[Dashboard.Profile.getProfileDetail] START | customerId: " <> show customerId
+  logDebug $ "[Dashboard.Profile.getProfileDetail] START | customerId: " <> show customerId
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  logInfo "[Dashboard.Profile.getProfileDetail] merchantCityAccessCheck done, calling rider-app"
+  logDebug "[Dashboard.Profile.getProfileDetail] merchantCityAccessCheck done, calling rider-app"
   result <- API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.profileDSL.getProfileDetail) customerId
-  logInfo "[Dashboard.Profile.getProfileDetail] rider-app call returned"
+  logDebug "[Dashboard.Profile.getProfileDetail] rider-app call returned"
   pure result
 
 postProfileUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Profile.UpdateProfileReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)

@@ -231,10 +231,10 @@ postNyRegularSubscriptionsConfirm (mPersonId, merchantId) req = do
           today = Time.utctDay localCurrentTime
           localScheduledTime = Time.UTCTime today (Time.timeOfDayToTime updatedSubscription.scheduledTimeOfDay)
           minGap = KUT.secondsToNominalDiffTime riderConfig.nyRegularMinGapSeconds
-      logInfo $ "[NYREGULAR] utcOffset: " <> show utcOffset
-      logInfo $ "[NYREGULAR] localCurrentTime: " <> show localCurrentTime
-      logInfo $ "[NYREGULAR] localScheduledTime: " <> show localScheduledTime
-      logInfo $ "[NYREGULAR] minGap: " <> show minGap
+      logDebug $ "[NYREGULAR] utcOffset: " <> show utcOffset
+      logDebug $ "[NYREGULAR] localCurrentTime: " <> show localCurrentTime
+      logDebug $ "[NYREGULAR] localScheduledTime: " <> show localScheduledTime
+      logDebug $ "[NYREGULAR] minGap: " <> show minGap
       nextInstanceTimesLocal <- getNextScheduledInstanceTimes minGap localScheduledTime updatedSubscription localCurrentTime
 
       for_ nextInstanceTimesLocal $ \nextInstanceScheduledTimeLocal -> do
@@ -243,15 +243,15 @@ postNyRegularSubscriptionsConfirm (mPersonId, merchantId) req = do
             jobExecutionBuffer = fromIntegral (- executionTimeOffsetMinutes) * 60 -- Configurable minutes before scheduled time
             jobExecutionTimeLocal = Time.addUTCTime jobExecutionBuffer jobScheduledTimeLocal
             jobExecutionTimeUtc = Time.addUTCTime (-1 * utcOffset) jobExecutionTimeLocal
-        logInfo $ "[NYREGULAR] jobScheduledTimeLocal: " <> show jobScheduledTimeLocal
-        logInfo $ "[NYREGULAR] jobExecutionTimeLocal: " <> show jobExecutionTimeLocal
-        logInfo $ "[NYREGULAR] jobExecutionTimeUtc: " <> show jobExecutionTimeUtc
+        logDebug $ "[NYREGULAR] jobScheduledTimeLocal: " <> show jobScheduledTimeLocal
+        logDebug $ "[NYREGULAR] jobExecutionTimeLocal: " <> show jobExecutionTimeLocal
+        logDebug $ "[NYREGULAR] jobExecutionTimeUtc: " <> show jobExecutionTimeUtc
         jobCreationTime <- getCurrentTime -- current time for scheduleAfter calculation
-        logInfo $ "[NYREGULAR] jobCreationTime: " <> show jobCreationTime
+        logDebug $ "[NYREGULAR] jobCreationTime: " <> show jobCreationTime
         when (jobExecutionTimeUtc <= jobCreationTime) $ do
           throwM (InvalidRequest $ "Job execution time " <> show jobExecutionTimeLocal <> " is not in the future. Current time: " <> show jobCreationTime)
         let scheduleAfter = Time.diffUTCTime jobExecutionTimeUtc jobCreationTime
-        logInfo $ "[NYREGULAR] scheduleAfter: " <> show scheduleAfter
+        logDebug $ "[NYREGULAR] scheduleAfter: " <> show scheduleAfter
         currentHash <- calculateSubscriptionSchedulingHash updatedSubscription
         let jobData =
               NyRegularInstanceJobData
@@ -262,7 +262,7 @@ postNyRegularSubscriptionsConfirm (mPersonId, merchantId) req = do
                 }
 
         -- Log before creating job
-        logInfo $
+        logDebug $
           "Creating NyRegularInstance job for confirmed subscription " <> updatedSubscription.id.getId
             <> " at "
             <> show jobScheduledTimeLocal
@@ -276,7 +276,7 @@ postNyRegularSubscriptionsConfirm (mPersonId, merchantId) req = do
             updatedSubscription.merchantOperatingCityId
             scheduleAfter
             jobData
-        logInfo $ "Created NyRegularInstance job for confirmed subscription " <> updatedSubscription.id.getId <> " at " <> show jobScheduledTimeLocal
+        logDebug $ "Created NyRegularInstance job for confirmed subscription " <> updatedSubscription.id.getId <> " at " <> show jobScheduledTimeLocal
 
   mapNySubscriptionToApiEntity updatedSubscription
 
@@ -303,7 +303,7 @@ getNextScheduledInstanceTimes ::
   KUT.UTCTime ->
   Environment.Flow [KUT.UTCTime]
 getNextScheduledInstanceTimes minGap localScheduledTime sub now = do
-  logInfo $ "[NYREGULAR] getNextScheduledInstanceTimes called for subscription: " <> sub.id.getId
+  logDebug $ "[NYREGULAR] getNextScheduledInstanceTimes called for subscription: " <> sub.id.getId
   logDebug $ "[NYREGULAR] Input parameters - minGap: " <> show minGap <> ", localScheduledTime: " <> show localScheduledTime <> ", now: " <> show now
   logDebug $ "[NYREGULAR] Subscription status: " <> show sub.status
   let today = Time.utctDay now
@@ -323,13 +323,13 @@ getNextScheduledInstanceTimes minGap localScheduledTime sub now = do
 
       if isScheduledTimeAfterMinGap && not inPause
         then do
-          logInfo $ "[NYREGULAR] Returning scheduled time " <> show localScheduledTime <> " for subscription " <> sub.id.getId
+          logDebug $ "[NYREGULAR] Returning scheduled time " <> show localScheduledTime <> " for subscription " <> sub.id.getId
           pure [localScheduledTime]
         else do
-          logInfo $ "[NYREGULAR] Not returning scheduled time for subscription " <> sub.id.getId <> " - isScheduledTimeAfterMinGap: " <> show isScheduledTimeAfterMinGap <> ", inPause: " <> show inPause
+          logDebug $ "[NYREGULAR] Not returning scheduled time for subscription " <> sub.id.getId <> " - isScheduledTimeAfterMinGap: " <> show isScheduledTimeAfterMinGap <> ", inPause: " <> show inPause
           pure []
     else do
-      logInfo $ "[NYREGULAR] Today (" <> show dayOfWeekStr <> ") is not in recurrence days for subscription " <> sub.id.getId
+      logDebug $ "[NYREGULAR] Today (" <> show dayOfWeekStr <> ") is not in recurrence days for subscription " <> sub.id.getId
       pure []
 
 postNyRegularSubscriptionsUpdate ::
@@ -372,7 +372,7 @@ postNyRegularSubscriptionsUpdate (mPersonId, _) req = do
   let significantChange = didSchedulingParametersChange currentSubscription finalUpdatedSubscription
 
   when significantChange $ do
-    logInfo $ "Significant scheduling change detected for subscription: " <> finalUpdatedSubscription.id.getId
+    logDebug $ "Significant scheduling change detected for subscription: " <> finalUpdatedSubscription.id.getId
 
     -- Fetch RiderConfig to get the correct timeDiffFromUtc
     riderConfig <-
@@ -403,22 +403,22 @@ postNyRegularSubscriptionsUpdate (mPersonId, _) req = do
 
       -- Attempt to acquire a lock for this specific instance creation attempt
       lockAcquired <- Hedis.setNxExpire jobDuplicationKey (24 * 60 * 60) True
-      logInfo $ "[NYREGULAR] lockAcquired: " <> show lockAcquired
-      logInfo $ "[NYREGULAR] jobDuplicationKey: " <> jobDuplicationKey
-      logInfo $ "[NYREGULAR] nextInstanceScheduledTimeLocal: " <> show nextInstanceScheduledTimeLocal
-      logInfo $ "[NYREGULAR] finalUpdatedSubscription.id: " <> finalUpdatedSubscription.id.getId
-      logInfo $ "[NYREGULAR] newSchedulingHash: " <> show newSchedulingHash
-      logInfo $ "[NYREGULAR] Time.formatTime Time.defaultTimeLocale \"%Y%m%d%H%M%S\" nextInstanceScheduledTime: " <> T.pack (Time.formatTime Time.defaultTimeLocale "%Y%m%d%H%M%S" nextInstanceScheduledTime)
-      logInfo $ "[NYREGULAR] nextInstanceScheduledTime: " <> show nextInstanceScheduledTime
+      logDebug $ "[NYREGULAR] lockAcquired: " <> show lockAcquired
+      logDebug $ "[NYREGULAR] jobDuplicationKey: " <> jobDuplicationKey
+      logDebug $ "[NYREGULAR] nextInstanceScheduledTimeLocal: " <> show nextInstanceScheduledTimeLocal
+      logDebug $ "[NYREGULAR] finalUpdatedSubscription.id: " <> finalUpdatedSubscription.id.getId
+      logDebug $ "[NYREGULAR] newSchedulingHash: " <> show newSchedulingHash
+      logDebug $ "[NYREGULAR] Time.formatTime Time.defaultTimeLocale \"%Y%m%d%H%M%S\" nextInstanceScheduledTime: " <> T.pack (Time.formatTime Time.defaultTimeLocale "%Y%m%d%H%M%S" nextInstanceScheduledTime)
+      logDebug $ "[NYREGULAR] nextInstanceScheduledTime: " <> show nextInstanceScheduledTime
       when lockAcquired $ do
-        logInfo $ "Acquired lock for proactive job creation: " <> jobDuplicationKey
+        logDebug $ "Acquired lock for proactive job creation: " <> jobDuplicationKey
         mExistingLog <- QNyRegularInstanceLog.findBySubscriptionIdAndScheduledTime finalUpdatedSubscription.id nextInstanceScheduledTime
         let shouldCreateJob = case mExistingLog of
               Nothing -> True
               Just logEntry ->
                 logEntry.automationStatus
                   `elem` [NyRegularInstanceLog.PENDING, NyRegularInstanceLog.FAILED_NO_OFFER, NyRegularInstanceLog.FAILED_BPP_ERROR]
-        logInfo $ "[NYREGULAR] shouldCreateJob: " <> show shouldCreateJob
+        logDebug $ "[NYREGULAR] shouldCreateJob: " <> show shouldCreateJob
         when shouldCreateJob $ do
           let jobScheduledTime = nextInstanceScheduledTime
               executionTimeOffsetMinutes = fromMaybe 15 (riderConfig.nyRegularExecutionTimeOffsetMinutes)
@@ -438,7 +438,7 @@ postNyRegularSubscriptionsUpdate (mPersonId, _) req = do
                     }
 
             -- Log before creating job
-            logInfo $
+            logDebug $
               "Proactively creating NyRegularInstance job for subscription " <> finalUpdatedSubscription.id.getId
                 <> " at "
                 <> show jobScheduledTime
@@ -452,7 +452,7 @@ postNyRegularSubscriptionsUpdate (mPersonId, _) req = do
                 finalUpdatedSubscription.merchantOperatingCityId
                 scheduleAfter
                 jobData
-            logInfo $ "Proactively created NyRegularInstance job for " <> finalUpdatedSubscription.id.getId <> " at " <> show jobScheduledTime
+            logDebug $ "Proactively created NyRegularInstance job for " <> finalUpdatedSubscription.id.getId <> " at " <> show jobScheduledTime
 
   mapNySubscriptionToApiEntity finalUpdatedSubscription
 

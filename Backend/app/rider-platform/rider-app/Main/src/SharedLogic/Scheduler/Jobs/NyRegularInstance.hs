@@ -16,7 +16,7 @@ import Kernel.Types.Common (Seconds, getCurrentTime)
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common (CacheFlow, type (:::))
-import Kernel.Utils.Logging (logError, logInfo, withLogTag)
+import Kernel.Utils.Logging (logDebug, logError, withLogTag)
 import Kernel.Utils.Servant.Client (RetryCfg)
 import Lib.Scheduler (ExecutionResult (..), Job (..))
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
@@ -63,7 +63,7 @@ runNyRegularInstanceJob Job {id = jobId, jobInfo} = withLogTag ("JobId-" <> jobI
       jobScheduledTime = jobDataDetails.scheduledTime
       expectedHash = jobDataDetails.expectedSchedulingHash
 
-  logInfo $ "Running NyRegularInstance job " <> show jobId <> " for subscription " <> show subscriptionId <> " scheduled at " <> show jobScheduledTime
+  logDebug $ "Running NyRegularInstance job " <> show jobId <> " for subscription " <> show subscriptionId <> " scheduled at " <> show jobScheduledTime
 
   mCurrentSubscription <- QNyRegularSubscription.findById subscriptionId
 
@@ -76,7 +76,7 @@ runNyRegularInstanceJob Job {id = jobId, jobInfo} = withLogTag ("JobId-" <> jobI
 
       if (show currentLiveHash) /= expectedHash
         then do
-          logInfo $
+          logDebug $
             "Terminating NyRegularInstance job " <> show jobId
               <> ". Subscription "
               <> show subscriptionId
@@ -87,7 +87,7 @@ runNyRegularInstanceJob Job {id = jobId, jobInfo} = withLogTag ("JobId-" <> jobI
               <> "."
           return $ Terminate "Subscription scheduling state changed"
         else do
-          logInfo $ "Subscription " <> show subscriptionId <> " state is consistent for job " <> show jobId <> ". Proceeding."
+          logDebug $ "Subscription " <> show subscriptionId <> " state is consistent for job " <> show jobId <> ". Proceeding."
           searchId <- NySubscription.triggerSubscriptionSearch currentSubscription
           now <- getCurrentTime
           void . NyRegularInstanceLog.create $

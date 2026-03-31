@@ -534,7 +534,7 @@ postFrfsSearch (mbPersonId, merchantId) mbCity mbIntegratedBPPConfigId mbNewServ
             }
         ]
       (blacklistedServiceTiers, blacklistedFareQuoteTypes) = JMU.getBlacklistedFilters Nothing mbNewServiceTiers
-  logInfo $
+  logDebug $
     "FRFS Search params → "
       <> "vehicleNumber="
       <> show req.vehicleNumber
@@ -1260,7 +1260,7 @@ getFrfsTripRouteSeats (mbPersonId, _merchantId) tripId routeId mbFromStopCode mb
   shouldRun <- Hedis.setNxExpire "frfs:seat_hold_reaper_lock" (fromMaybe 120 seatBookingCleanupTtl') ("1" :: Text)
   when shouldRun $
     fork "frfs-seat-hold-reaper" SeatHold.seatHoldReaperImpl
-  logInfo $ "FRFSTicketService:getFrfsTripRouteSeats routeId=" <> routeId <> " tripId=" <> tripId <> " vehicleNumber=" <> show vehicleNumber <> " from=" <> show mbFromStopCode <> " to=" <> show mbToStopCode
+  logDebug $ "FRFSTicketService:getFrfsTripRouteSeats routeId=" <> routeId <> " tripId=" <> tripId <> " vehicleNumber=" <> show vehicleNumber <> " from=" <> show mbFromStopCode <> " to=" <> show mbToStopCode
 
   let cityId = personCityInfo.merchantOperatingCityId
   integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig cityId Enums.BUS DIBC.MULTIMODAL
@@ -1284,7 +1284,7 @@ getFrfsTripRouteSeats (mbPersonId, _merchantId) tripId routeId mbFromStopCode mb
   seatLayout <- QSeatLayout.findById seatLayoutId >>= fromMaybeM (InvalidRequest "SeatLayout not found")
   let seatListWithStatus = map (applyQuotaLogic fromIdx toIdx) rawSeatListWithStatus
   let availCount = length $ filter (\s -> s.status == API.Types.UI.FRFSTicketService.AVAILABLE) seatListWithStatus
-  logInfo $ "FRFSTicketService:getFrfsTripRouteSeats tripId=" <> tripId <> " totalSeats=" <> show (length seatListWithStatus) <> " available=" <> show availCount
+  logDebug $ "FRFSTicketService:getFrfsTripRouteSeats tripId=" <> tripId <> " totalSeats=" <> show (length seatListWithStatus) <> " available=" <> show availCount
   return $ SeatLayoutResp {seatLayout = seatLayout, seats = seatListWithStatus}
   where
     applyQuotaLogic :: Int -> Int -> SeatWithStatus -> SeatWithStatus
@@ -1301,7 +1301,7 @@ getFrfsRouteSeatLayout ::
   Kernel.Prelude.Maybe Data.Text.Text ->
   Environment.Flow API.Types.UI.FRFSTicketService.SeatLayoutDetailsResp
 getFrfsRouteSeatLayout (mbPersonId, _merchantId) routeId mbVehicleNumber = do
-  logInfo $ "FRFSTicketService:getFrfsRouteSeatLayout routeId=" <> routeId <> " vehicleNumber=" <> show mbVehicleNumber
+  logDebug $ "FRFSTicketService:getFrfsRouteSeatLayout routeId=" <> routeId <> " vehicleNumber=" <> show mbVehicleNumber
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
@@ -1316,7 +1316,7 @@ getFrfsRouteSeatLayout (mbPersonId, _merchantId) routeId mbVehicleNumber = do
 
   seats <- CQSeat.findAllByLayoutId seatLayoutId
   seatLayout <- QSeatLayout.findById seatLayoutId >>= fromMaybeM (InvalidRequest "SeatLayout not found")
-  logInfo $ "FRFSTicketService:getFrfsRouteSeatLayout routeId=" <> routeId <> " seatLayoutId=" <> seatLayoutId.getId <> " seatCount=" <> show (length seats)
+  logDebug $ "FRFSTicketService:getFrfsRouteSeatLayout routeId=" <> routeId <> " seatLayoutId=" <> seatLayoutId.getId <> " seatCount=" <> show (length seats)
   return $ SeatLayoutDetailsResp {seatLayout = seatLayout, seats = seats}
 
 postFrfsRouteServiceability ::
@@ -1327,7 +1327,7 @@ postFrfsRouteServiceability ::
   FRFSTicketService.FRFSRouteServiceabilityReq ->
   Environment.Flow API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
 postFrfsRouteServiceability (mbPersonId, _merchantId) routeId req = do
-  logInfo $ "FRFSTicketService:postFrfsRouteServiceability routeId=" <> routeId
+  logDebug $ "FRFSTicketService:postFrfsRouteServiceability routeId=" <> routeId
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
@@ -1546,7 +1546,7 @@ postFrfsFleetOperatorCurrentOperation (mbPersonId, merchantId) req = do
   gimsOps <- NandiFlow.gimsCurrentOperation baseUrl gtfsId anchor
   let redisKey = gimsOps.waybill_no <> ":tripnumber"
   mbPrevTrip <- Hedis.get redisKey
-  logInfo $ "Current operation for waybill " <> gimsOps.waybill_no <> " is trip number " <> show mbPrevTrip
+  logDebug $ "Current operation for waybill " <> gimsOps.waybill_no <> " is trip number " <> show mbPrevTrip
   let prevTrip = fromMaybe 0 (mbPrevTrip :: Maybe Int)
   resp <- NandiFlow.gimsCurrentTripDetails baseUrl gtfsId GimsCurrentTripDetailsReq {previous_trip_number = prevTrip, conductor_token = req.conductorToken, driver_token = req.driverToken, vehicle_number = req.vehicleNumber}
 

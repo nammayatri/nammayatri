@@ -48,7 +48,7 @@ pkcs7Unpad bs
 -- Function to encrypt the request payload
 encryptPayload :: (MonadFlow m) => Text -> Text -> m Text
 encryptPayload jsonStr clientKey = do
-  logInfo $ "Exact JSON before encryption: " <> jsonStr
+  logDebug $ "Exact JSON before encryption: " <> jsonStr
   let eitherCipher = cipherInit clientKey
   case eitherCipher of
     Left err -> throwError $ CRISError (show err)
@@ -58,7 +58,7 @@ encryptPayload jsonStr clientKey = do
           encrypted = CT.ecbEncrypt cipher paddedPlaintext
           encryptedBase64 = decodeUtf8 $ B64.encode encrypted
 
-      logInfo $ "Encrypted Payload: " <> encryptedBase64
+      logDebug $ "Encrypted Payload: " <> encryptedBase64
       pure encryptedBase64
 
 -- Function to decrypt response data

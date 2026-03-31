@@ -51,11 +51,11 @@ crisReconJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let oneHourAgo = addUTCTime (intToNominalDiffTime (-3600 * checkSince)) now -- checking for last (checkSince hours)
   recentFailedBookings <- QFRFSTicketBooking.findAllByProviderNameAndCreatedAtAfterAndStatus "CRIS Subway" oneHourAgo FRFSTicketBookingStatus.FAILED
 
-  logInfo $ "Found " <> show (length recentFailedBookings) <> " failed CRIS ticket bookings created within the last hour"
+  logDebug $ "Found " <> show (length recentFailedBookings) <> " failed CRIS ticket bookings created within the last hour"
 
   case recentFailedBookings of
     [] -> do
-      logInfo $ "No failed CRIS ticket bookings found created within the last hour"
+      logDebug $ "No failed CRIS ticket bookings found created within the last hour"
       return Complete
     (firstBooking : _) -> do
       integratedBppConfig <- QIntegratedBPPConfig.findById firstBooking.integratedBppConfigId >>= fromMaybeM (InvalidRequest $ "integratedBppConfig not found for id: " <> show firstBooking.integratedBppConfigId)

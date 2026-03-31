@@ -49,7 +49,7 @@ calculateCongestionChargeAvgTaxi Job {id, jobInfo} = withLogTag ("JobId-" <> id.
   result <- Est.calulateCongestionByGeohash from now
   -- query2Result <- SRFD.calulateAcceptanceCountByGeohashAndServiceTier from now
   -- let queryResult = SRFD.concatFun query1Result query2Result
-  logInfo $ "CongestionChargeCalculation clickhouse result : -" <> show result
+  logDebug $ "CongestionChargeCalculation clickhouse result : -" <> show result
   mapM_ (updateGeohashCongestion congestionChargeCalculationTTLInSec) result
   return (ReSchedule nextScheduleT)
 
@@ -85,7 +85,7 @@ calculateAndUpdateCityCongestion now from congestionChargeCalculationTTLInSec = 
   value <- Est.calulateCongestionByCity from now
   -- query2Result <- SRFD.calulateAcceptanceCountByCityAndServiceTier from now
   -- let queryResult = SRFD.concatFun' query2Result query1Result
-  logInfo $ "CongestionChargeCalculation clickhouse result : -" <> show value
+  logDebug $ "CongestionChargeCalculation clickhouse result : -" <> show value
   mapM_ (updateCityCongestion congestionChargeCalculationTTLInSec) value
 
 updateCityCongestion ::
@@ -120,7 +120,7 @@ calculateAndUpdateGeohashAndDistanceBinCongestion now from congestionChargeCalcu
   result <- Est.calulateCongestionByGeohashAndDistanceBin from now
   -- query2Result <- SRFD.calulateAcceptanceCountByGeohashAndServiceTierAndDistanceBin from now
   -- let queryResult = SRFD.concatFun'' query1Result query2Result
-  logInfo $ "CongestionChargeCalculation clickhouse result : -" <> show result
+  logDebug $ "CongestionChargeCalculation clickhouse result : -" <> show result
   mapM_ (updateGeohashAndDistanceBinCongestion congestionChargeCalculationTTLInSec) result
 
 updateGeohashAndDistanceBinCongestion ::

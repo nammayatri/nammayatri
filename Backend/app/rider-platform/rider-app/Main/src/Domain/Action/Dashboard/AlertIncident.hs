@@ -28,7 +28,7 @@ getAlertIncidentAlertsIncidents _merchantShortId _opCity fromTime toTime = do
   let actualFromTime = fromMaybe (addUTCTime (-86400) now) fromTime
       actualToTime = fromMaybe now toTime
 
-  logInfo $
+  logDebug $
     "Fetching alert incidents from ClickHouse: fromTime="
       <> show actualFromTime
       <> ", toTime="
@@ -38,7 +38,7 @@ getAlertIncidentAlertsIncidents _merchantShortId _opCity fromTime toTime = do
   incidents <- CHAlertIncident.findIncidentsByTimeRange actualFromTime actualToTime
 
   let totalCount = length incidents
-  logInfo $ "Found " <> show totalCount <> " incidents"
+  logDebug $ "Found " <> show totalCount <> " incidents"
 
   -- Convert to response type
   let incidentInfos = map toAlertIncidentInfo incidents

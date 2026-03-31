@@ -22,7 +22,7 @@ import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Types.Id
 import Kernel.Utils.Common (throwError)
 import Kernel.Utils.Error.FlowHandling (withFlowHandlerAPI')
-import Kernel.Utils.Logging (logInfo)
+import Kernel.Utils.Logging (logDebug)
 import qualified Lib.Payment.Domain.Action as PaymentAction
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentOrderOffer as DOffer
@@ -96,7 +96,7 @@ externalPaymentHandler merchantShortId mCity mServiceType paymentStatusResp =
   withFlowHandlerAPI' $
     case paymentStatusResp of
       PaymentAction.PaymentStatus {..} -> do
-        logInfo $
+        logDebug $
           "Mock Payment: Processing payment for orderId: "
             <> getId orderId
 
@@ -168,9 +168,9 @@ externalPaymentHandler merchantShortId mCity mServiceType paymentStatusResp =
                 amountRefunded
                 splitSettlementResponse
 
-        logInfo $ "Mock Payment: Webhook Payload: " <> T.pack (show webhookPayload)
+        logDebug $ "Mock Payment: Webhook Payload: " <> T.pack (show webhookPayload)
 
-        logInfo $
+        logDebug $
           "Mock Payment: Calling Juspay Sandbox Webhook: "
             <> T.pack webhookUrl
 
@@ -194,11 +194,11 @@ externalPaymentHandler merchantShortId mCity mServiceType paymentStatusResp =
             respStatusCode =
               statusCode $ HTTP.responseStatus response
 
-        logInfo $
+        logDebug $
           "Mock Payment: Juspay response status: "
             <> T.pack (show respStatusCode)
 
-        logInfo $
+        logDebug $
           "Mock Payment: Juspay response body: "
             <> TE.decodeUtf8 (LBS.toStrict responseBody)
 

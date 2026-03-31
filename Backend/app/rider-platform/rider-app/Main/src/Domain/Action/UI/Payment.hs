@@ -264,12 +264,12 @@ pollPaytmEdcPaymentStatus merchantId _merchantOperatingCityId personId orderId =
             let paymentServiceType = fromMaybe DOrder.Normal order.paymentServiceType
             if isTerminalStatus order.status
               then do
-                logInfo $ "PaytmEDC poll: Order " <> orderId.getId <> " already terminal: " <> show order.status
+                logDebug $ "PaytmEDC poll: Order " <> orderId.getId <> " already terminal: " <> show order.status
                 when (paymentServiceType == DOrder.RideBooking && order.status /= Payment.CHARGED) $
                   cancelBookingOnPollFailure order
                 Redis.del pollKey
               else do
-                logInfo $ "PaytmEDC poll attempt " <> show attempt <> "/" <> show maxAttempts <> " for order " <> orderId.getId
+                logDebug $ "PaytmEDC poll attempt " <> show attempt <> "/" <> show maxAttempts <> " for order " <> orderId.getId
                 let fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast order.merchantId) order.id
                 eitherResult <-
                   withTryCatch "PaytmEDC:StatusPoll" $
@@ -326,7 +326,7 @@ pollPaytmEdcPaymentStatus merchantId _merchantOperatingCityId personId orderId =
                       void $ QBPL.makeAllInactiveByBookingId booking.id
                       logInfo $ "PaytmEDC poll: Successfully cancelled booking " <> bookingIdText <> " due to poll failures"
                     Left cancelErr -> logError $ "PaytmEDC poll: Failed to cancel booking " <> bookingIdText <> ": " <> show cancelErr
-                else logInfo $ "PaytmEDC poll: Booking " <> bookingIdText <> " already in non-cancellable state: " <> show booking.status
+                else logDebug $ "PaytmEDC poll: Booking " <> bookingIdText <> " already in non-cancellable state: " <> show booking.status
             Nothing -> logError $ "PaytmEDC poll: Booking not found for domainEntityId: " <> bookingIdText
         Nothing -> logError $ "PaytmEDC poll: PaymentOrder " <> paymentOrder.id.getId <> " has no domainEntityId, cannot cancel booking"
 
@@ -715,7 +715,7 @@ stripeWebhookAction merchantOperatingCityId resp respDump = do
           withRideIdFromOrder orderId $ \rideId ->
             voidPendingLedgerEntries rideId ("refund webhook for order: " <> orderId.getId)
         QRefundRequest.findByRefundsId (Just refundsId) >>= \case
-          Nothing -> logInfo $ "No refund request found for update in webhook with refundsId: " <> refundsId.getId
+          Nothing -> logDebug $ "No refund request found for update in webhook with refundsId: " <> refundsId.getId
           Just refundRequest -> do
             let updStatus = DRidePayment.castRefundRequestStatus refundInfo.status
             unless (refundRequest.status == updStatus) $ do

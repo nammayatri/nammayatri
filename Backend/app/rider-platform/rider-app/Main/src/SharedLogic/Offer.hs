@@ -81,14 +81,14 @@ mkCumulativeOfferResp merchantOperatingCityId offerListResp legInfos = do
   (logics, _) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) LYT.CUMULATIVE_OFFER_POLICY now Nothing Nothing
   if null logics
     then do
-      logInfo "No cumulative offer logic found."
+      logDebug "No cumulative offer logic found."
       pure Nothing
     else do
-      logInfo $ "Running cumulative offer logic with " <> show (length logics) <> " rules"
+      logDebug $ "Running cumulative offer logic with " <> show (length logics) <> " rules"
       result <- LYDL.runLogicsWithDebugLog LYDL.Rider (cast merchantOperatingCityId) LYT.CUMULATIVE_OFFER_POLICY logics (CumulativeOfferReq offerListResp legInfos)
       case A.fromJSON result.result :: A.Result CumulativeOfferResp of
         A.Success logicResult -> do
-          logInfo $ "Cumulative offer logic result: " <> show logicResult
+          logDebug $ "Cumulative offer logic result: " <> show logicResult
           pure $ Just logicResult
         A.Error err -> do
           logError $ "Failed to parse cumulative offer logic result: " <> show err

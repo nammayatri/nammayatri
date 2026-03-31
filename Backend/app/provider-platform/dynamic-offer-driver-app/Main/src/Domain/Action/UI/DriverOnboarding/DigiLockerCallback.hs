@@ -65,7 +65,7 @@ digiLockerCallbackHandler ::
   Text ->
   Flow AckResponse
 digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
-  logInfo $ "DigiLocker OAuth Callback Received - State: " <> stateParam
+  logDebug $ "DigiLocker OAuth Callback Received - State: " <> stateParam
 
   when (T.null stateParam) $ do
     logError "DigiLocker callback - Missing required state parameter. Cannot identify driver."
@@ -84,10 +84,10 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
       if errorCode == "access_denied"
         then do
           QDV.updateSessionStatus DDV.CONSENT_DENIED (Just errorCode) (Just errorMsg) session.id
-          logInfo $ "DigiLocker callback - Updated session status to CONSENT_DENIED for DriverId: " <> session.driverId.getId <> ", StateId: " <> session.stateId
+          logDebug $ "DigiLocker callback - Updated session status to CONSENT_DENIED for DriverId: " <> session.driverId.getId <> ", StateId: " <> session.stateId
         else do
           QDV.updateSessionStatus DDV.FAILED (Just errorCode) (Just errorMsg) session.id
-          logInfo $ "DigiLocker callback - Updated session status to FAILED for DriverId: " <> session.driverId.getId <> ", StateId: " <> session.stateId <> ", ErrorCode: " <> errorCode
+          logDebug $ "DigiLocker callback - Updated session status to FAILED for DriverId: " <> session.driverId.getId <> ", StateId: " <> session.stateId <> ", ErrorCode: " <> errorCode
 
     throwError $ DigiLockerOAuthError errorCode errorMsg
 
@@ -96,7 +96,7 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
       logError $ "DigiLocker callback - Missing authorization code" <> driverIdStr
       whenJust mbSession $ \session -> do
         QDV.updateSessionStatus DDV.FAILED (Just "MISSING_CODE") (Just "DigiLocker callback received without authorization code") session.id
-        logInfo $ "DigiLocker callback - Updated session status to FAILED for DriverId: " <> session.driverId.getId <> ", StateId: " <> session.stateId <> ", ErrorCode: MISSING_CODE"
+        logDebug $ "DigiLocker callback - Updated session status to FAILED for DriverId: " <> session.driverId.getId <> ", StateId: " <> session.stateId <> ", ErrorCode: MISSING_CODE"
       throwError DigiLockerMissingAuthorizationCode
     Just codeVal ->
       if T.null codeVal
@@ -104,14 +104,14 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
           logError $ "DigiLocker callback - Authorization code is empty" <> driverIdStr
           whenJust mbSession $ \session -> do
             QDV.updateSessionStatus DDV.FAILED (Just "EMPTY_CODE") (Just "DigiLocker callback received with empty authorization code") session.id
-            logInfo $ "DigiLocker callback - Updated session status to FAILED for DriverId: " <> session.driverId.getId <> ", StateId: " <> session.stateId <> ", ErrorCode: EMPTY_CODE"
+            logDebug $ "DigiLocker callback - Updated session status to FAILED for DriverId: " <> session.driverId.getId <> ", StateId: " <> session.stateId <> ", ErrorCode: EMPTY_CODE"
           throwError DigiLockerEmptyAuthorizationCode
         else return codeVal
 
   session <- QDV.findByStateId stateParam >>= fromMaybeM DigiLockerInvalidStateParameter
   let driverId = session.driverId
   let stateId = session.stateId
-  logInfo $ "DigiLocker callback - Found session for DriverId: " <> driverId.getId <> ", StateId: " <> stateId
+  logDebug $ "DigiLocker callback - Found session for DriverId: " <> driverId.getId <> ", StateId: " <> stateId
 
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
 
@@ -124,7 +124,7 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
     throwError DigiLockerNotEnabled
 
   digiLockerConfig <- SDDigilocker.getDigiLockerConfig person.merchantOperatingCityId
-  logInfo $ "DigiLocker callback - Loaded DigiLocker config for DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", merchantOpCityId: " <> person.merchantOperatingCityId.getId <> ", baseUrl: " <> show digiLockerConfig.url
+  logDebug $ "DigiLocker callback - Loaded DigiLocker config for DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", merchantOpCityId: " <> person.merchantOperatingCityId.getId <> ", baseUrl: " <> show digiLockerConfig.url
 
   let tokenReq =
         InterfaceTypes.TokenizationReq
@@ -142,7 +142,7 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
             redirectUri = digiLockerConfig.redirectUri
           }
 
-  logInfo $ "DigiLocker callback - Calling Tokenize.tokenize for DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", codeVerifier present: " <> show (isJust tokenReq.codeVerifier) <> ", state: present"
+  logDebug $ "DigiLocker callback - Calling Tokenize.tokenize for DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", codeVerifier present: " <> show (isJust tokenReq.codeVerifier) <> ", state: present"
   tokenResp <-
     Tokenize.tokenize (InterfaceTypes.DigilockerTokenizationServiceConfig tokenizeConfig) tokenReq
       `catchAny` \err -> do
@@ -150,43 +150,43 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
         QDV.updateSessionStatus DDV.FAILED (Just "TOKEN_API_FAILED") (Just $ T.pack $ show err) session.id
         throwError DigiLockerTokenExchangeFailed
 
-  logInfo $ "DigiLocker callback - Token API success for DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ". Access token obtained, scope: " <> show tokenResp.scope
+  logDebug $ "DigiLocker callback - Token API success for DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ". Access token obtained, scope: " <> show tokenResp.scope
 
   let accessTokenPlain = tokenResp.token
   let scope = tokenResp.scope
   let expiresAt = tokenResp.expiresAt
 
-  logInfo $ "DigiLocker callback - Before encryption, accessToken (plain, first 20 chars): " <> T.take 20 accessTokenPlain <> "..."
+  logDebug $ "DigiLocker callback - Before encryption, accessToken (plain, first 20 chars): " <> T.take 20 accessTokenPlain <> "..."
   accessTokenEncrypted <- encrypt accessTokenPlain
-  logInfo $ "DigiLocker callback - After encryption, accessToken encrypted (first 20 chars): " <> T.take 20 (unEncrypted accessTokenEncrypted) <> "..."
+  logDebug $ "DigiLocker callback - After encryption, accessToken encrypted (first 20 chars): " <> T.take 20 (unEncrypted accessTokenEncrypted) <> "..."
   QDVExtra.updateAccessToken (Just accessTokenEncrypted) expiresAt (Just code) scope stateParam
 
   requiredDocs <- getRequiredDocuments person.merchantOperatingCityId session.vehicleCategory
   alreadyVerifiedDocs <- getAlreadyVerifiedDocuments driverId
   let unavailableDocs = filter (`notElem` alreadyVerifiedDocs) (map (.documentType) requiredDocs)
 
-  logInfo $ "DigiLocker callback - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Required docs: " <> show (map (.documentType) requiredDocs)
-  logInfo $ "DigiLocker callback - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Already verified: " <> show alreadyVerifiedDocs
-  logInfo $ "DigiLocker callback - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Unavailable docs: " <> show unavailableDocs
+  logDebug $ "DigiLocker callback - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Required docs: " <> show (map (.documentType) requiredDocs)
+  logDebug $ "DigiLocker callback - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Already verified: " <> show alreadyVerifiedDocs
+  logDebug $ "DigiLocker callback - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Unavailable docs: " <> show unavailableDocs
 
   let scopeText = fromMaybe "" scope
   let parsedDocs = parseDigiLockerScope scopeText
 
   let (consentGranted, consentDenied) = checkDocumentConsent unavailableDocs parsedDocs
 
-  logInfo $ "DigiLocker callback - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Consent granted for: " <> show consentGranted
-  logInfo $ "DigiLocker callback - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Consent denied for: " <> show consentDenied
+  logDebug $ "DigiLocker callback - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Consent granted for: " <> show consentGranted
+  logDebug $ "DigiLocker callback - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Consent denied for: " <> show consentDenied
 
   if not (null consentDenied)
     then do
       QDV.updateSessionStatus DDV.CONSENT_DENIED Nothing (Just $ "Missing consent for: " <> T.intercalate ", " (map show consentDenied)) session.id
       logWarning $ "DigiLocker callback - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Missing consent for required documents: " <> show consentDenied
-      logInfo $ "DigiLocker callback - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Scope stored for debugging. Parse scope to see granted vs denied docs."
+      logDebug $ "DigiLocker callback - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Scope stored for debugging. Parse scope to see granted vs denied docs."
       return Ack
     else do
       let initialDocStatus = initializeDocStatus unavailableDocs parsedDocs
       QDV.updateDocStatus initialDocStatus session.id
-      logInfo $ "DigiLocker callback - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Initialized docStatus for " <> show (length unavailableDocs) <> " documents"
+      logDebug $ "DigiLocker callback - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Initialized docStatus for " <> show (length unavailableDocs) <> " documents"
 
       QDV.updateSessionStatus DDV.SUCCESS Nothing Nothing session.id
 
@@ -197,7 +197,7 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
             logError $ "DigiLocker - Catastrophic failure in background job - Error: " <> show err <> ", DriverId: " <> driverId.getId <> ", StateId: " <> stateId
             QDV.updateSessionStatus DDV.FAILED (Just "FORK_FAILED") (Just $ T.pack $ show err) session.id
 
-      logInfo $ "DigiLocker callback - Successfully completed callback processing for DriverId: " <> driverId.getId <> ", StateId: " <> stateId
+      logDebug $ "DigiLocker callback - Successfully completed callback processing for DriverId: " <> driverId.getId <> ", StateId: " <> stateId
       return Ack
 
 getRequiredDocuments ::
@@ -330,7 +330,7 @@ processDocuments ::
 processDocuments session person _digiLockerConfig accessToken parsedDocs unavailableDocs = do
   let driverId = session.driverId
   let stateId = session.stateId
-  logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Starting document processing for " <> show (length unavailableDocs) <> " documents"
+  logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Starting document processing for " <> show (length unavailableDocs) <> " documents"
 
   let sessionMerchantId = session.merchantId
   let sessionMerchantOpCityId = session.merchantOperatingCityId
@@ -339,7 +339,7 @@ processDocuments session person _digiLockerConfig accessToken parsedDocs unavail
     logError $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Mismatched merchant/city context. Session: merchantId=" <> sessionMerchantId.getId <> ", merchantOpCityId=" <> sessionMerchantOpCityId.getId <> ", Person: merchantId=" <> person.merchantId.getId <> ", merchantOpCityId=" <> person.merchantOperatingCityId.getId
     throwError DigiLockerMismatchedMerchantContext
 
-  logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Validated session context: merchantId=" <> sessionMerchantId.getId <> ", merchantOpCityId=" <> sessionMerchantOpCityId.getId
+  logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Validated session context: merchantId=" <> sessionMerchantId.getId <> ", merchantOpCityId=" <> sessionMerchantOpCityId.getId
 
   forM_ unavailableDocs $ \docType -> do
     ( do
@@ -351,10 +351,10 @@ processDocuments session person _digiLockerConfig accessToken parsedDocs unavail
             case availability of
               PullRequired -> do
                 updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_PULL_REQUIRED) Nothing Nothing
-                logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Marked " <> show docType <> " as PULL_REQUIRED (user needs to enter details)"
+                logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Marked " <> show docType <> " as PULL_REQUIRED (user needs to enter details)"
               ConsentDenied -> do
                 updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_CONSENT_DENIED) (Just "NO_CONSENT") (Just "User denied consent")
-                logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Marked " <> show docType <> " as CONSENT_DENIED"
+                logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Marked " <> show docType <> " as CONSENT_DENIED"
               Issued uri -> do
                 processIssuedDocument session person sessionMerchantId sessionMerchantOpCityId accessToken docType uri
       )
@@ -362,7 +362,7 @@ processDocuments session person _digiLockerConfig accessToken parsedDocs unavail
         logError $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Failed to process " <> show docType <> ": " <> show err
         updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_FAILED) (Just "PROCESSING_ERROR") (Just $ T.pack $ show err)
 
-  logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Completed processing all documents"
+  logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Completed processing all documents"
 
 processIssuedDocument ::
   DDV.DigilockerVerification ->
@@ -376,26 +376,26 @@ processIssuedDocument ::
 processIssuedDocument session person sessionMerchantId sessionMerchantOpCityId accessToken docType uri = do
   let driverId = session.driverId
   let stateId = session.stateId
-  logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Processing issued document: " <> show docType <> ", URI: " <> uri
+  logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Processing issued document: " <> show docType <> ", URI: " <> uri
 
   mbPdfData <-
     if docType == DVC.AadhaarCard
       then do
-        logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Skipping PDF fetch for Aadhaar (not supported by DigiLocker)"
+        logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Skipping PDF fetch for Aadhaar (not supported by DigiLocker)"
         return Nothing
       else
         ( do
-            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Fetching PDF for " <> show docType
+            logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Fetching PDF for " <> show docType
             let fileReq =
                   DigiTypes.DigiLockerGetFileReq
                     { accessToken = accessToken,
                       uri = uri
                     }
-            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling getDigiLockerFile with uri: " <> uri <> ", merchantOpCityId: " <> sessionMerchantOpCityId.getId
-            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", getDigiLockerFile input: merchantId=" <> sessionMerchantId.getId <> ", merchantOpCityId=" <> sessionMerchantOpCityId.getId <> ", uri=" <> uri
+            logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling getDigiLockerFile with uri: " <> uri <> ", merchantOpCityId: " <> sessionMerchantOpCityId.getId
+            logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", getDigiLockerFile input: merchantId=" <> sessionMerchantId.getId <> ", merchantOpCityId=" <> sessionMerchantOpCityId.getId <> ", uri=" <> uri
             pdfBytes <- Verification.getDigiLockerFile sessionMerchantId sessionMerchantOpCityId fileReq
-            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", getDigiLockerFile output bytes: " <> show (BSL.length pdfBytes)
-            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Successfully fetched PDF for " <> show docType
+            logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", getDigiLockerFile output bytes: " <> show (BSL.length pdfBytes)
+            logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Successfully fetched PDF for " <> show docType
             return $ Just pdfBytes
         )
           `catch` \(err :: DigiLockerError.DigiLockerError) -> do
@@ -408,14 +408,14 @@ processIssuedDocument session person sessionMerchantId sessionMerchantOpCityId a
     if docType == DVC.AadhaarCard
       then
         ( do
-            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Fetching raw Aadhaar XML for S3 storage"
+            logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Fetching raw Aadhaar XML for S3 storage"
             let extractReq =
                   DigiTypes.DigiLockerExtractAadhaarReq
                     { accessToken = accessToken
                     }
-            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling getVerifiedAadhaarXML for merchantOpCityId: " <> sessionMerchantOpCityId.getId
+            logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling getVerifiedAadhaarXML for merchantOpCityId: " <> sessionMerchantOpCityId.getId
             xmlText <- Verification.getVerifiedAadhaarXML sessionMerchantId sessionMerchantOpCityId extractReq
-            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Successfully fetched Aadhaar XML"
+            logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Successfully fetched Aadhaar XML"
             return $ Just xmlText
         )
           `catch` \(err :: DigiLockerError.DigiLockerError) -> do
@@ -429,14 +429,14 @@ processIssuedDocument session person sessionMerchantId sessionMerchantOpCityId a
     (Nothing, DVC.AadhaarCard)
       | isJust mbAadhaarXml ->
         ( do
-            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Extracting Aadhaar data from XML"
+            logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Extracting Aadhaar data from XML"
             let extractReq =
                   DigiTypes.DigiLockerExtractAadhaarReq
                     { accessToken = accessToken
                     }
-            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling fetchAndExtractVerifiedAadhaar for merchantOpCityId: " <> sessionMerchantOpCityId.getId
+            logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling fetchAndExtractVerifiedAadhaar for merchantOpCityId: " <> sessionMerchantOpCityId.getId
             extractedResp <- Verification.fetchAndExtractVerifiedAadhaar sessionMerchantId sessionMerchantOpCityId extractReq
-            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Successfully extracted Aadhaar data"
+            logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Successfully extracted Aadhaar data"
             return $ Just (ExtractedAadhaar extractedResp)
         )
           `catch` \(err :: DigiLockerError.DigiLockerError) -> do
@@ -447,15 +447,15 @@ processIssuedDocument session person sessionMerchantId sessionMerchantOpCityId a
     (Nothing, _) -> return Nothing
     (Just _pdfBytes, DVC.PanCard) ->
       ( do
-          logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Fetching and extracting PAN data"
+          logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Fetching and extracting PAN data"
           let extractReq =
                 DigiTypes.DigiLockerExtractPanReq
                   { accessToken = accessToken,
                     uri = uri
                   }
-          logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling fetchAndExtractVerifiedPan with uri: " <> uri <> ", merchantOpCityId: " <> sessionMerchantOpCityId.getId
+          logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling fetchAndExtractVerifiedPan with uri: " <> uri <> ", merchantOpCityId: " <> sessionMerchantOpCityId.getId
           extractedResp <- Verification.fetchAndExtractVerifiedPan sessionMerchantId sessionMerchantOpCityId extractReq
-          logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Successfully extracted PAN data"
+          logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Successfully extracted PAN data"
           return $ Just (ExtractedPan extractedResp)
       )
         `catch` \(err :: DigiLockerError.DigiLockerError) -> do
@@ -465,15 +465,15 @@ processIssuedDocument session person sessionMerchantId sessionMerchantOpCityId a
           return Nothing
     (Just _pdfBytes, DVC.DriverLicense) ->
       ( do
-          logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Fetching and extracting DL data"
+          logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Fetching and extracting DL data"
           let extractReq =
                 DigiTypes.DigiLockerExtractDLReq
                   { accessToken = accessToken,
                     uri = uri
                   }
-          logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling fetchAndExtractVerifiedDL with uri: " <> uri <> ", merchantOpCityId: " <> sessionMerchantOpCityId.getId
+          logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling fetchAndExtractVerifiedDL with uri: " <> uri <> ", merchantOpCityId: " <> sessionMerchantOpCityId.getId
           extractedResp <- Verification.fetchAndExtractVerifiedDL sessionMerchantId sessionMerchantOpCityId extractReq
-          logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Successfully extracted DL data"
+          logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Successfully extracted DL data"
           return $ Just (ExtractedDL extractedResp)
       )
         `catch` \(err :: DigiLockerError.DigiLockerError) -> do
@@ -489,11 +489,11 @@ processIssuedDocument session person sessionMerchantId sessionMerchantOpCityId a
   case (mbPdfData, mbAadhaarXml, mbExtractedData) of
     (Nothing, Just xmlText, Just (ExtractedAadhaar aadhaarResp)) -> do
       ( do
-          logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Verifying and storing Aadhaar card data (XML only, no PDF)"
+          logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Verifying and storing Aadhaar card data (XML only, no PDF)"
           let xmlBytes = BSL.fromStrict (TE.encodeUtf8 xmlText)
           verifyAndStoreAadhaar session person xmlBytes aadhaarResp
           updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_SUCCESS) (Just "Document Verification Successfull") (Just "Aadhaar card verified and stored successfully")
-          logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Aadhaar card verification completed"
+          logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Aadhaar card verification completed"
         )
         `catch` \(err :: DigiLockerError.DigiLockerError) -> do
           let (errorCode, errorDesc) = extractDigiLockerError err
@@ -503,18 +503,18 @@ processIssuedDocument session person sessionMerchantId sessionMerchantOpCityId a
       ( do
           case extractedData of
             ExtractedPan panResp -> do
-              logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Verifying and storing PAN card data"
+              logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Verifying and storing PAN card data"
               verifyAndStorePAN session person pdfBytes panResp
               updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_SUCCESS) (Just "Document Verification Successfull") (Just "PAN card verified and stored successfully")
-              logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", PAN card verification completed"
+              logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", PAN card verification completed"
             ExtractedAadhaar _ -> do
               logWarning $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Unexpected: Aadhaar with PDF data"
               throwError $ InternalError "Aadhaar should not have PDF data"
             ExtractedDL dlResp -> do
-              logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Verifying and storing Driver License data"
+              logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Verifying and storing Driver License data"
               verifyAndStoreDL session person pdfBytes dlResp
               updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_SUCCESS) (Just "Document Verification Successfull") (Just "Driver License verified and stored successfully")
-              logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Driver License verification completed"
+              logDebug $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Driver License verification completed"
         )
         `catch` \(err :: DigiLockerError.DigiLockerError) -> do
           let (errorCode, errorDesc) = extractDigiLockerError err
@@ -540,7 +540,7 @@ verifyAndStorePAN session person pdfBytes extractedPan = do
       & fromMaybeM (InternalError "PAN number not found in DigiLocker XML")
   let maskedPan = maskText panNumber
 
-  logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Extracted PAN data: PAN=" <> maskedPan <> ", Name=" <> show panFlow.name
+  logDebug $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Extracted PAN data: PAN=" <> maskedPan <> ", Name=" <> show panFlow.name
 
   mbExistingPan <- QDPC.findUnInvalidByPanNumber panNumber
   whenJust mbExistingPan $ \existingPan -> do
@@ -551,7 +551,7 @@ verifyAndStorePAN session person pdfBytes extractedPan = do
     when (existingPan.verificationStatus == Documents.VALID) $
       throwError $ DocumentAlreadyValidated "PAN"
 
-  logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", No duplicate PAN found, proceeding with upload"
+  logDebug $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", No duplicate PAN found, proceeding with upload"
 
   let pdfBase64 = base64Encode (BSL.toStrict pdfBytes)
   let imageReq =
@@ -567,7 +567,7 @@ verifyAndStorePAN session person pdfBytes extractedPan = do
           }
 
   Image.ImageValidateResponse {imageId} <- Image.validateImage False Nothing Nothing (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
-  logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Uploaded PAN PDF to S3, ImageId: " <> imageId.getId
+  logDebug $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Uploaded PAN PDF to S3, ImageId: " <> imageId.getId
 
   let panReq =
         APITypes.DriverPanReq
@@ -592,7 +592,7 @@ verifyAndStorePAN session person pdfBytes extractedPan = do
       True
       panReq
 
-  logInfo $ "DigiLocker - Successfully stored PAN card via postDriverRegisterPancardHelper for DriverId: " <> person.id.getId <> ", StateId: " <> stateId
+  logDebug $ "DigiLocker - Successfully stored PAN card via postDriverRegisterPancardHelper for DriverId: " <> person.id.getId <> ", StateId: " <> stateId
 
 verifyAndStoreAadhaar ::
   DDV.DigilockerVerification ->
@@ -606,11 +606,11 @@ verifyAndStoreAadhaar session person xmlBytes extractedAadhaar = do
     extractedAadhaar.extractedAadhaar
       & fromMaybeM (InternalError "Aadhaar data not found in DigiLocker response")
 
-  logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Extracted Aadhaar data: Name=" <> show aadhaarFlow.fullName <> ", DOB=" <> show aadhaarFlow.dob
+  logDebug $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Extracted Aadhaar data: Name=" <> show aadhaarFlow.fullName <> ", DOB=" <> show aadhaarFlow.dob
 
   DriverOnboardingV2.validateAadhaarChecks person.id
 
-  logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", No duplicate Aadhaar found, proceeding with upload"
+  logDebug $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", No duplicate Aadhaar found, proceeding with upload"
 
   let xmlBase64 = base64Encode (BSL.toStrict xmlBytes)
 
@@ -627,7 +627,7 @@ verifyAndStoreAadhaar session person xmlBytes extractedAadhaar = do
           }
 
   Image.ImageValidateResponse {imageId} <- Image.validateImage False Nothing Nothing (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
-  logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Uploaded Aadhaar XML to S3, ImageId: " <> imageId.getId
+  logDebug $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Uploaded Aadhaar XML to S3, ImageId: " <> imageId.getId
 
   now <- getCurrentTime
   let aadhaarReq =
@@ -650,7 +650,7 @@ verifyAndStoreAadhaar session person xmlBytes extractedAadhaar = do
     person.merchantOperatingCityId
     aadhaarReq
 
-  logInfo $ "DigiLocker - Successfully stored Aadhaar card for DriverId: " <> person.id.getId <> ", StateId: " <> stateId
+  logDebug $ "DigiLocker - Successfully stored Aadhaar card for DriverId: " <> person.id.getId <> ", StateId: " <> stateId
 
 verifyAndStoreDL ::
   DDV.DigilockerVerification ->
@@ -675,7 +675,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
 
   let maskedDl = maskText dlNumber
 
-  logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Extracted DL data: DL=" <> maskedDl <> ", Name=" <> show dlFlow.name <> ", Expiry=" <> show dlExpiry
+  logDebug $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Extracted DL data: DL=" <> maskedDl <> ", Name=" <> show dlFlow.name <> ", Expiry=" <> show dlExpiry
 
   now <- getCurrentTime
   whenJust dlFlow.dob $ \dobText -> do
@@ -695,7 +695,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
     when (existingDL.verificationStatus == Documents.VALID) $
       throwError $ DocumentAlreadyValidated "DL"
 
-  logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", No blocking duplicate DL found, proceeding with upload"
+  logDebug $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", No blocking duplicate DL found, proceeding with upload"
 
   let pdfBase64 = base64Encode (BSL.toStrict pdfBytes)
   let imageReq =
@@ -711,10 +711,10 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
           }
 
   Image.ImageValidateResponse {imageId} <- Image.validateImage False Nothing Nothing (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
-  logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Uploaded DL PDF to S3, ImageId: " <> imageId.getId
+  logDebug $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Uploaded DL PDF to S3, ImageId: " <> imageId.getId
 
   let vehicleCategory = session.vehicleCategory
-  logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Using vehicle category from session: " <> show vehicleCategory
+  logDebug $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Using vehicle category from session: " <> show vehicleCategory
 
   documentVerificationConfig <-
     CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory
@@ -724,7 +724,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
       Nothing
       >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show DVC.DriverLicense <> " for category " <> show vehicleCategory))
 
-  logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Retrieved DocumentVerificationConfig for category: " <> show vehicleCategory
+  logDebug $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Retrieved DocumentVerificationConfig for category: " <> show vehicleCategory
 
   let covDetails = createCovDetails <$> dlFlow.classOfVehicles
   normalizedExpiryDay <-
@@ -734,14 +734,14 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
         logError $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Unable to normalize DL expiry; original value: " <> dlExpiry
         throwError $ InternalError "Unable to parse DigiLocker DL expiry date"
   let normalizedExpiryText = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d" normalizedExpiryDay
-  logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Normalized DL expiry to: " <> normalizedExpiryText
+  logDebug $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Normalized DL expiry to: " <> normalizedExpiryText
   let dobText = dlFlow.dob
 
   let dateOfIssueUTC =
         dlFlow.dateOfIssue >>= \dateText ->
           parseTimeM True defaultTimeLocale "%d-%m-%Y" (T.unpack dateText)
 
-  logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Calling onVerifyDLHandler with COVs: " <> show dlFlow.classOfVehicles <> ", VehicleCategory: " <> show vehicleCategory
+  logDebug $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Calling onVerifyDLHandler with COVs: " <> show dlFlow.classOfVehicles <> ", VehicleCategory: " <> show vehicleCategory
 
   DLModule.onVerifyDLHandler
     person
@@ -756,7 +756,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
     dlFlow.name
     dateOfIssueUTC
     (Just vehicleCategory)
-  logInfo $ "DigiLocker - Successfully stored DL via onVerifyDLHandler for DriverId: " <> person.id.getId <> ", StateId: " <> stateId
+  logDebug $ "DigiLocker - Successfully stored DL via onVerifyDLHandler for DriverId: " <> person.id.getId <> ", StateId: " <> stateId
 
 updateDocStatusField ::
   Id DDV.DigilockerVerification ->
@@ -778,7 +778,7 @@ updateDocStatusField sessionId docType statusText respCode respDesc = do
     let currentDocStatusMap = session.docStatus
     let updatedDocStatusMap = DocStatus.updateDocStatus docType docStatusEnum respCode respDesc currentDocStatusMap
     QDV.updateDocStatus updatedDocStatusMap sessionId
-    logInfo $ "DigiLocker - DriverId: " <> session.driverId.getId <> ", StateId: " <> session.stateId <> ", Updated docStatus for " <> show docType <> " to " <> statusText
+    logDebug $ "DigiLocker - DriverId: " <> session.driverId.getId <> ", StateId: " <> session.stateId <> ", Updated docStatus for " <> show docType <> " to " <> statusText
 
 extractDigiLockerError :: DigiLockerError.DigiLockerError -> (Text, Text)
 extractDigiLockerError err = case err of

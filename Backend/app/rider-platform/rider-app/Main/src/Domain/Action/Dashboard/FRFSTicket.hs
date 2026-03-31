@@ -32,7 +32,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common (fromMaybeM, throwError)
-import Kernel.Utils.Logging (logInfo)
+import Kernel.Utils.Logging (logDebug)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -174,11 +174,11 @@ putFRFSTicketFrfsRouteFareUpsert merchantShortId opCity _routeCode integratedBPP
 
         case existingFares of
           Nothing -> do
-            logInfo $ "No matching fare found for route " <> row.routeCode <> " with startStopCode " <> row.startStopCode <> " and endStopCode " <> row.endStopCode
+            logDebug $ "No matching fare found for route " <> row.routeCode <> " with startStopCode " <> row.startStopCode <> " and endStopCode " <> row.endStopCode
             pure [(row.routeCode, row.startStopCode, row.endStopCode)]
           _ -> do
             QRSF.updateFareByStopCodes value farePolicy.id row.startStopCode row.endStopCode DTFRFSQuoteCategoryType.ADULT
-            logInfo $ "Updated fare for route " <> row.routeCode <> " from " <> row.startStopCode <> " to " <> row.endStopCode <> " with amount " <> show value
+            logDebug $ "Updated fare for route " <> row.routeCode <> " from " <> row.startStopCode <> " to " <> row.endStopCode <> " with amount " <> show value
             pure []
 
   let allUnprocessedFares = concat unprocessedFares

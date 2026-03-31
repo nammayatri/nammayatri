@@ -28,7 +28,7 @@ import EulerHS.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Common as C hiding (Offset)
 import qualified Kernel.Types.SlidingWindowCounters as SWT
-import Kernel.Utils.Logging (logInfo, logTagDebug)
+import Kernel.Utils.Logging (logDebug, logTagDebug)
 import qualified Kernel.Utils.SlidingWindowCounters as SW
 
 getTimeDiffInteger :: SWT.TimePair -> Integer
@@ -77,9 +77,9 @@ calculateAvailableTime merchantId driverId (fstTime : restTimeSeries) = do
           )
           M.empty
           activeTimePairs
-  logInfo $ "Location Updates Timeseries: " <> show (fstTime : restTimeSeries)
-  logInfo $ "ActiveTime pairs " <> show activeTimePairs
-  logInfo $ "availabilityInWindow " <> show availabilityInWindow
+  logDebug $ "Location Updates Timeseries: " <> show (fstTime : restTimeSeries)
+  logDebug $ "ActiveTime pairs " <> show activeTimePairs
+  logDebug $ "availabilityInWindow " <> show availabilityInWindow
   void $ M.traverseWithKey (createOrUpdateDriverAvailability merchantId driverId mkLastTimeStampKey) availabilityInWindow
   where
     mkLastTimeStampKey = "DA:LAT:" <> driverId

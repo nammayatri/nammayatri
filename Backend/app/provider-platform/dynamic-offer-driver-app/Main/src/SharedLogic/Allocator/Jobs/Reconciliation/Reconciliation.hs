@@ -172,9 +172,9 @@ runReconciliationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
                   endTime = UTCTime todayDayIST (secondsToDiffTime 86399),
                   reconciliationType = show reconType
                 }
-        logInfo $ "Scheduling next reconciliation job for: " <> show nextJobData
+        logDebug $ "Scheduling next reconciliation job for: " <> show nextJobData
         JC.createJobIn @_ @'Reconciliation (Just mId) (Just mOpCityId) scheduleAfter nextJobData
-        logInfo "Scheduled next reconciliation job successfully"
+        logDebug "Scheduled next reconciliation job successfully"
 
 -- 1. DSR vs Net Earnings Ledger Reconciliation
 doReconciliationDsrVsLedger ::
@@ -190,7 +190,7 @@ doReconciliationDsrVsLedger ::
   UTCTime ->
   m ExecutionResult
 doReconciliationDsrVsLedger merchantId merchantOpCityId startTime endTime now = do
-  logInfo "Starting DSR vs Ledger reconciliation"
+  logDebug "Starting DSR vs Ledger reconciliation"
 
   -- Get all completed/cancelled bookings in the date range
   bookings <- QBooking.findAllByStatusAndDateRange merchantOpCityId [DB.COMPLETED, DB.CANCELLED] startTime endTime
@@ -270,7 +270,7 @@ doReconciliationDsrVsSubscription ::
   UTCTime ->
   m ExecutionResult
 doReconciliationDsrVsSubscription merchantId merchantOpCityId startTime endTime now = do
-  logInfo "Starting DSR vs Subscription reconciliation"
+  logDebug "Starting DSR vs Subscription reconciliation"
 
   -- Get all completed bookings in date range
   bookings <- QBooking.findAllByStatusAndDateRange merchantOpCityId [DB.COMPLETED] startTime endTime
@@ -311,7 +311,7 @@ doReconciliationDssrVsSubscription ::
   UTCTime ->
   m ExecutionResult
 doReconciliationDssrVsSubscription merchantId merchantOpCityId startTime endTime now = do
-  logInfo "Starting DSSR vs Subscription reconciliation"
+  logDebug "Starting DSSR vs Subscription reconciliation"
 
   -- Get all active subscription purchases in date range
   subscriptions <- QSubPurchase.findActiveByDateRange merchantOpCityId startTime endTime
@@ -352,7 +352,7 @@ doReconciliationPgPaymentVsSubscription ::
   UTCTime ->
   m ExecutionResult
 doReconciliationPgPaymentVsSubscription merchantId merchantOpCityId startTime endTime now = do
-  logInfo "Starting PG-Payment Settlement vs Subscription reconciliation"
+  logDebug "Starting PG-Payment Settlement vs Subscription reconciliation"
 
   pgReports <- QPgPaymentSettlement.findByTxnDateRangeAndStatus merchantId.getId merchantOpCityId.getId startTime endTime
 
@@ -439,7 +439,7 @@ doReconciliationPgPayoutVsPayoutRequest ::
   UTCTime ->
   m ExecutionResult
 doReconciliationPgPayoutVsPayoutRequest merchantId merchantOpCityId startTime endTime now = do
-  logInfo "Starting PG-Payout Settlement vs Payout Request reconciliation"
+  logDebug "Starting PG-Payout Settlement vs Payout Request reconciliation"
 
   pgReports <- QPgPayoutSettlement.findByTxnDateRangeAndStatus merchantId.getId merchantOpCityId.getId startTime endTime
 

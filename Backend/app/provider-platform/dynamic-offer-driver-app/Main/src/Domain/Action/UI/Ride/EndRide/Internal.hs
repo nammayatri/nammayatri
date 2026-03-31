@@ -238,9 +238,9 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
   let currency = booking.currency
   let customerCancellationDues = fromMaybe 0.0 newFareParams.customerCancellationDues
-  logInfo $ "customerCancellationDues: newFareParams.customerCancellationDues: " <> show customerCancellationDues <> " ride.id: " <> show ride.id.getId <> " thresholdConfig.canAddCancellationFee: " <> show thresholdConfig.canAddCancellationFee
+  logDebug $ "customerCancellationDues: newFareParams.customerCancellationDues: " <> show customerCancellationDues <> " ride.id: " <> show ride.id.getId <> " thresholdConfig.canAddCancellationFee: " <> show thresholdConfig.canAddCancellationFee
   let cancellationDues = fromMaybe 0.0 booking.fareParams.customerCancellationDues
-  logInfo $ "cancellationDues: booking cancellationDues: " <> show cancellationDues <> " ride.id: " <> show ride.id.getId <> " thresholdConfig.canAddCancellationFee: " <> show thresholdConfig.canAddCancellationFee
+  logDebug $ "cancellationDues: booking cancellationDues: " <> show cancellationDues <> " ride.id: " <> show ride.id.getId <> " thresholdConfig.canAddCancellationFee: " <> show thresholdConfig.canAddCancellationFee
   when (thresholdConfig.canAddCancellationFee && cancellationDues > 0.0) $ do
     case mbRiderDetails of
       Just riderDetails -> do

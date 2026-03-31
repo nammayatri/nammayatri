@@ -33,7 +33,7 @@ frfsSeatHoldReaper Job {jobInfo} = do
       merchantOperatingCityId' = jobData.merchantOperatingCityId
   void $ seatHoldReaperImpl
   createJobIn @_ @'FRFSSeatHoldReaper (Just merchantId') (Just merchantOperatingCityId') (intToNominalDiffTime 120) (jobData :: FRFSSeatHoldReaperJobData)
-  logInfo "Scheduled next FRFSSeatHoldReaper job to run in 120 seconds"
+  logDebug "Scheduled next FRFSSeatHoldReaper job to run in 120 seconds"
   pure Complete
 
 seatHoldReaperImpl ::

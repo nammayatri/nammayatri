@@ -68,7 +68,7 @@ sendSpecialZonePayout Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
 
         case mbPayoutRequest of
           Nothing -> do
-            logInfo $ "PayoutRequest record not found for id: " <> show payoutRequestId
+            logDebug $ "PayoutRequest record not found for id: " <> show payoutRequestId
             pure Complete
           Just payoutRequest ->
             executeSpecialZonePayout payoutRequest

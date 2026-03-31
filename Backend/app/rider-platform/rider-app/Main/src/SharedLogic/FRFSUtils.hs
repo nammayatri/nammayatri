@@ -847,8 +847,8 @@ createPaymentOrder ::
   Bool ->
   m (Maybe DOrder.PaymentOrder)
 createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket isMockPayment = do
-  logInfo $ "createPayments vendorSplitArr" <> show vendorSplitArr
-  logInfo $ "createPayments basket" <> show basket
+  logDebug $ "createPayments vendorSplitArr" <> show vendorSplitArr
+  logDebug $ "createPayments basket" <> show basket
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   personEmail <- mapM decrypt person.email
   (orderId, orderShortId) <- getPaymentIds
@@ -1189,8 +1189,8 @@ convertVendorDetails ::
 convertVendorDetails splitDetailsZippedByBooking vendorDetailsToIncludeByDefault isFRFSTestingEnabled = do
   let validVendorSplitDetails = concat $ map (\ele -> createVendorSplitForBooking ele) splitDetailsZippedByBooking
   finalSplits <- ensureAllRequiredVendorsExist validVendorSplitDetails
-  logInfo $ "validVendorSplitDetails" <> show validVendorSplitDetails
-  logInfo $ "finalSplits" <> show finalSplits
+  logDebug $ "validVendorSplitDetails" <> show validVendorSplitDetails
+  logDebug $ "finalSplits" <> show finalSplits
   return finalSplits
   where
     createVendorSplitForBooking (bookingId, (amount, vd)) = map (\splitDetails -> toPaymentVendorDetails bookingId.getId amount splitDetails) vd

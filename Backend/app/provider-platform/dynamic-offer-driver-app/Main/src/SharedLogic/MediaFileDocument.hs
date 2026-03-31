@@ -326,7 +326,7 @@ mediaFileDocumentComplete Job {id, jobInfo, merchantOperatingCityId = mbMerchant
             (_, False) -> cleanMediaFileDocument mediaFileDocument "File size exceeds maximum limit"
         Left (err :: SomeException) -> cleanMediaFileDocument mediaFileDocument $ "File was not found: err: " <> show err
     cleanMediaFileDocument mediaFileDocument message = do
-      logInfo $ "Remove MediaFileDocument: " <> mediaFileDocument.id.getId <> "; status: " <> show mediaFileDocument.status <> "; message: " <> message
+      logDebug $ "Remove MediaFileDocument: " <> mediaFileDocument.id.getId <> "; status: " <> show mediaFileDocument.status <> "; message: " <> message
       QMFD.deleteById mediaFileDocument.id
       let s3Path = T.unpack mediaFileDocument.s3Path
       catch (S3.delete s3Path) $ \(err :: SomeException) -> do

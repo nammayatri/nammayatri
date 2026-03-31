@@ -74,7 +74,7 @@ getPickupETAFromModel timeDiffFromUtc speedInMps distanceInMeters mbVersion merc
 
   if null allLogics
     then do
-      logInfo $ "No PickupETALogics found for merchantOperatingCityId: " <> show merchantOperatingCityId
+      logDebug $ "No PickupETALogics found for merchantOperatingCityId: " <> show merchantOperatingCityId
       return Nothing
     else do
       let inputData =
@@ -84,7 +84,7 @@ getPickupETAFromModel timeDiffFromUtc speedInMps distanceInMeters mbVersion merc
               }
 
       response <- withTryCatch "runLogics:getPickupETAFromModel" $ LYDL.runLogicsWithDebugLog LYDL.Rider (cast merchantOperatingCityId) LYT.PICKUP_ETA_CALCULATION allLogics inputData
-      logInfo $ "PickupETA Req Logics: " <> show allLogics <> " and data is: " <> show inputData <> " and response is: " <> show response
+      logDebug $ "PickupETA Req Logics: " <> show allLogics <> " and data is: " <> show inputData <> " and response is: " <> show response
 
       case response of
         Left e -> do

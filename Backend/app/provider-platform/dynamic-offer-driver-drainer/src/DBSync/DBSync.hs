@@ -95,7 +95,7 @@ parseDBCommand dbStreamKey entries =
       void $ publishDBSyncMetric $ Event.ParseDBCommandError "UNPARSABLE_OBJECT" "UNPARSABLE_OBJECT"
       isForcePushEnabled <- fromMaybe False <$> getValueFromRedis C.forceDrainEnabledKey
       if isForcePushEnabled
-        then EL.logInfo ("UNKNOWN_COMMAND" :: Text) (show cmd)
+        then EL.logDebug ("UNKNOWN_COMMAND" :: Text) (show cmd)
         else stopDrainer
       pure Nothing
   where
@@ -216,7 +216,7 @@ process dbStreamKey count = do
   case commands of
     Left err -> do
       void $ publishDBSyncMetric Event.PeekDBCommandError
-      EL.logInfo ("PEEK_DB_COMMAND_ERROR" :: Text) $ show err
+      EL.logDebug ("PEEK_DB_COMMAND_ERROR" :: Text) $ show err
       pure 0
     Right Nothing -> do
       pure 0

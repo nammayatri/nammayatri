@@ -97,7 +97,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
     if not (null allSeatIds)
       then case firstTripId of
         Just tripId -> do
-          logInfo $ "FRFSConfirm:confirmAndUpsertBooking seatHold flow personId=" <> personId.getId <> " tripId=" <> tripId <> " seatCount=" <> show (length allSeatIds)
+          logDebug $ "FRFSConfirm:confirmAndUpsertBooking seatHold flow personId=" <> personId.getId <> " tripId=" <> tripId <> " seatCount=" <> show (length allSeatIds)
           let routeStations :: Maybe [FRFSTicketService.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
               mbRouteCode = listToMaybe (fromMaybe [] routeStations) <&> (.code)
           case mbRouteCode of
@@ -142,7 +142,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
   (rider, dConfirmRes) <- confirm isMultiInitAllowed fareParameters mbBooking mbHoldCtxForAll firstTripId
 
   whenJust mbHoldCtxForAll $ \(holdId, _, _) -> do
-    logInfo $ "FRFSConfirm:confirmAndUpsertBooking tracking hold bookingId=" <> dConfirmRes.id.getId <> " holdId=" <> holdId
+    logDebug $ "FRFSConfirm:confirmAndUpsertBooking tracking hold bookingId=" <> dConfirmRes.id.getId <> " holdId=" <> holdId
     SeatBooking.trackHoldForBooking dConfirmRes.id.getId holdId (fromMaybe 600 riderConfig.seatBookingTtl)
 
   return (rider, dConfirmRes, fareParameters, updatedQuoteCategories, isMultiInitAllowed)

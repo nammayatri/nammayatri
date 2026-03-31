@@ -95,7 +95,7 @@ releaseSeatsIfHeld booking quoteCategories = do
   let allSeatIds = nub $ concatMap (fromMaybe [] . (.seatIds)) quoteCategories
   case (booking.tripId, booking.fromStopIdx, booking.toStopIdx) of
     (Just tripId, Just fromIdx, Just toIdx) | not (null allSeatIds) -> do
-      logInfo $ "Releasing seats on cancel for bookingId: " <> booking.id.getId <> ", tripId: " <> tripId
+      logDebug $ "Releasing seats on cancel for bookingId: " <> booking.id.getId <> ", tripId: " <> tripId
       SeatBooking.releaseConfirmedSeats tripId allSeatIds fromIdx toIdx
     _ -> pure ()
 

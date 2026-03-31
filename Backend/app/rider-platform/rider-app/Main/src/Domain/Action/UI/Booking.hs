@@ -108,7 +108,7 @@ bookingStatus bookingId (personId, _merchantId) = runInMultiCloud $ do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   fork "booking status update" $ checkBookingsForStatus [booking]
   fork "creating cache for emergency contact SOS" $ emergencyContactSOSCache booking personId
-  logInfo $ "booking: test " <> show booking
+  logDebug $ "booking: test " <> show booking
   void $ handleConfirmTtlExpiry booking
   SRB.buildBookingAPIEntity booking booking.riderId
 
@@ -116,7 +116,7 @@ bookingStatusPolling :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchan
 bookingStatusPolling bookingId _ = runInMultiCloud $ do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   fork "booking status update" $ checkBookingsForStatus [booking]
-  logInfo $ "booking: test " <> show booking
+  logDebug $ "booking: test " <> show booking
   handleConfirmTtlExpiry booking
   SRB.buildBookingStatusAPIEntity booking
 
@@ -175,7 +175,7 @@ checkBookingsForStatus [] = pure ()
 
 getBookingList :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Maybe Text -> Bool -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Maybe (Id DMOC.MerchantOperatingCity) -> Flow ([SRB.Booking], [SRB.Booking])
 getBookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId = do
-  logInfo $ "getBookingList: Executing query for personId=" <> show mbPersonId <> ", merchantId=" <> show merchantId <> ", onlyActive=" <> show mbOnlyActive
+  logDebug $ "getBookingList: Executing query for personId=" <> show mbPersonId <> ", merchantId=" <> show merchantId <> ", onlyActive=" <> show mbOnlyActive
   let mbFromDate = millisecondsToUTC <$> mbFromDate'
       mbToDate = millisecondsToUTC <$> mbToDate'
   let mbOnlyDashboard = if onlyDashboard then Just True else Nothing
@@ -195,7 +195,7 @@ getBookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset
 
 getJourneyList :: Id Person.Person -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [DJ.JourneyStatus] -> Maybe Bool -> Flow [DJ.Journey]
 getJourneyList personId mbLimit mbOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess = do
-  logInfo $ "getJourneyList: Executing query for personId=" <> show personId <> ", limit=" <> show mbLimit <> ", offset=" <> show mbOffset
+  logDebug $ "getJourneyList: Executing query for personId=" <> show personId <> ", limit=" <> show mbLimit <> ", offset=" <> show mbOffset
   let mbFromDate = millisecondsToUTC <$> mbFromDate'
       mbToDate = millisecondsToUTC <$> mbToDate'
   SQJ.findAllByRiderId personId mbLimit mbOffset mbFromDate mbToDate mbJourneyStatusList mbIsPaymentSuccess
@@ -209,7 +209,7 @@ bookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mb
   where
     returnResonseAndClearStuckRides allbookings rbList personId = do
       fork "booking list status update" $ checkBookingsForStatus allbookings
-      logInfo $ "rbList: test " <> show rbList
+      logDebug $ "rbList: test " <> show rbList
       BookingListRes <$> traverse (`SRB.buildBookingAPIEntity` personId) rbList
 
 getPassList :: Id Merchant.Merchant -> Id Person.Person -> Maybe Int -> Maybe Int -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe [Domain.Types.PassType.PassEnum] -> Flow [DPurchasedPass.PurchasedPass]
@@ -270,10 +270,10 @@ applyMasterDbIfGcp computation = do
   mbCloudType <- asks (.cloudType)
   case mbCloudType of
     Just cloudType | cloudType == GCP -> do
-      logInfo "applyMasterDbIfGcp: CloudType is GCP, routing queries to Master DB (AWS)"
+      logDebug "applyMasterDbIfGcp: CloudType is GCP, routing queries to Master DB (AWS)"
       B.runInMasterDb computation
     _ -> do
-      logInfo $ "applyMasterDbIfGcp: CloudType is " <> show mbCloudType <> ", using default replica/local DB"
+      logDebug $ "applyMasterDbIfGcp: CloudType is " <> show mbCloudType <> ", using default replica/local DB"
       computation
 
 bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SLT.BillingCategory] -> [SLT.RideType] -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Maybe Bool -> Maybe SRB.BookingRequestType -> Maybe Bool -> Maybe [Domain.Types.PassType.PassEnum] -> Flow BookingListResV2
@@ -387,13 +387,13 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
       case mbAllbookings of
         Just allbookings -> do
           fork "booking list status update" $ checkBookingsForStatus allbookings
-          logInfo $ "rbList: test " <> show rbList
+          logDebug $ "rbList: test " <> show rbList
         Nothing -> do
           fork "booking list status update" $
             applyMasterDbIfGcp $ do
               (rbList_, allbookings_) <- getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
               checkBookingsForStatus allbookings_
-              logInfo $ "rbList: test " <> show rbList_
+              logDebug $ "rbList: test " <> show rbList_
 
 data MergedItem = MBooking SRB.Booking | MJourney DJ.Journey | MPass DPurchasedPass.PurchasedPass
 

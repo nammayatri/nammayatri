@@ -51,7 +51,7 @@ prodLoopStatus (ProdLoopStatusReq {..}) = do
             let deviceToken = person.deviceToken
             let language = fromMaybe ENGLISH person.language
             entityData <- CallFeedbackFCM.makeCallFeedbackEntity (Id callId) "EKD_LIVE_CALL_FEEDBACK" operatingCityId language
-            logInfo $ "entityData: " <> show entityData
+            logDebug $ "entityData: " <> show entityData
             void $ TN.sendDriverEKDLiveFCM operatingCityId (Id personId) deviceToken language entityData
 
             -- Notify Rider App via BAP Internal
