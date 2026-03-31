@@ -1975,3 +1975,24 @@ instance IsHTTPError TripAlertRequestError where
     TripAlertRequestNotFound _ -> E404
 
 instance IsAPIError TripAlertRequestError
+
+data AdminRequestError
+  = AdminRequestDoesNotExist Text
+  | AdminRequestAlreadyExists Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''AdminRequestError
+
+instance IsBaseError AdminRequestError where
+  toMessage (AdminRequestDoesNotExist id) = Just $ "Admin request matches passed data \"" <> id <> "\" does not exist."
+  toMessage (AdminRequestAlreadyExists referenceId) = Just $ "Admin request \"" <> referenceId <> "\" already exists."
+
+instance IsHTTPError AdminRequestError where
+  toErrorCode = \case
+    AdminRequestDoesNotExist _ -> "ADMIN_REQUEST_DOES_NOT_EXIST"
+    AdminRequestAlreadyExists _ -> "ADMIN_REQUEST_ALREADY_EXISTS"
+  toHttpCode = \case
+    AdminRequestDoesNotExist _ -> E400
+    AdminRequestAlreadyExists _ -> E400
+
+instance IsAPIError AdminRequestError

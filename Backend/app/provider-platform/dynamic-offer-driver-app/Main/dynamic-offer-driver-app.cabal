@@ -155,6 +155,7 @@ library
       Domain.Action.Beckn.Track
       Domain.Action.Beckn.Update
       Domain.Action.Common.PayoutRequest
+      Domain.Action.Dashboard.AppManagement.AdminRequest
       Domain.Action.Dashboard.AppManagement.Driver
       Domain.Action.Dashboard.AppManagement.DriverSubscription
       Domain.Action.Dashboard.AppManagement.DriverWallet
@@ -661,6 +662,7 @@ library
       Storage.Clickhouse.Vehicle
       Storage.Clickhouse.VehicleRegistrationCertificate
       Storage.Queries.AadhaarCardExtra
+      Storage.Queries.AdminRequestExtra
       Storage.Queries.BackgroundVerificationExtra
       Storage.Queries.Booking.Internal
       Storage.Queries.BookingCancellationReasonExtra
@@ -867,6 +869,7 @@ library
       Tools.Verification
       Tools.Whatsapp
       API.Action.Dashboard.AppManagement
+      API.Action.Dashboard.AppManagement.AdminRequest
       API.Action.Dashboard.AppManagement.Driver
       API.Action.Dashboard.AppManagement.DriverSubscription
       API.Action.Dashboard.AppManagement.DriverWallet
@@ -971,9 +974,11 @@ library
       API.Action.UnifiedDashboard.RideBooking
       API.Action.UnifiedDashboard.RideBooking.HealthCheck
       API.Types.Dashboard.AppManagement
+      API.Types.Dashboard.AppManagement.AdminRequest
       API.Types.Dashboard.AppManagement.Driver
       API.Types.Dashboard.AppManagement.DriverSubscription
       API.Types.Dashboard.AppManagement.DriverWallet
+      API.Types.Dashboard.AppManagement.Endpoints.AdminRequest
       API.Types.Dashboard.AppManagement.Endpoints.Driver
       API.Types.Dashboard.AppManagement.Endpoints.DriverSubscription
       API.Types.Dashboard.AppManagement.Endpoints.DriverWallet
@@ -1051,6 +1056,7 @@ library
       Domain.Types.AadhaarCard
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify
+      Domain.Types.AdminRequest
       Domain.Types.AlertRequest
       Domain.Types.BackgroundVerification
       Domain.Types.BapMetadata
@@ -1231,6 +1237,7 @@ library
       Storage.Beam.AadhaarCard
       Storage.Beam.AadhaarOtpReq
       Storage.Beam.AadhaarOtpVerify
+      Storage.Beam.AdminRequest
       Storage.Beam.AlertRequest
       Storage.Beam.BackgroundVerification
       Storage.Beam.BapMetadata
@@ -1416,6 +1423,7 @@ library
       Storage.Queries.AadhaarCard
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify
+      Storage.Queries.AdminRequest
       Storage.Queries.AlertRequest
       Storage.Queries.BackgroundVerification
       Storage.Queries.BapMetadata
@@ -1534,6 +1542,7 @@ library
       Storage.Queries.OperationHub
       Storage.Queries.OperationHubRequests
       Storage.Queries.OrphanInstances.AadhaarCard
+      Storage.Queries.OrphanInstances.AdminRequest
       Storage.Queries.OrphanInstances.AlertRequest
       Storage.Queries.OrphanInstances.BackgroundVerification
       Storage.Queries.OrphanInstances.Booking

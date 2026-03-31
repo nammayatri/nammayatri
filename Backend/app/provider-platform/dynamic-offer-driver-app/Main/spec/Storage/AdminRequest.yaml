@@ -1,0 +1,67 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+
+AdminRequest:
+  tableName: admin_request
+  fields:
+    id: Id AdminRequest
+    personId: Id Person # Input Driver ID / Fleet Owner ID to make the adjustment for
+    actionType: ActionType
+    adjustmentType: Maybe AdjustmentType # relevant only for LedgerAdjustment
+    referenceType: Maybe Text # relevant only for LedgerAdjustment
+    referenceId: Text
+    referenceTable: ReferenceTable
+    amount: HighPrecMoney
+    currency: Currency
+    source: Maybe AdjustmentSource # relevant only for LedgerAdjustment
+    description: Maybe Text
+    adminMakerId: Id Person
+    adminCheckerId: Maybe (Id Person)
+    adminMakerName: Text
+    adminCheckerName: Maybe Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    status: AdminRequestStatus
+    errorMessage: Maybe Text
+
+  types:
+    ActionType:
+      enum: "LedgerAdjustment, FailedPayoutReTrigger, TDSReimbursement"
+      derive: "HttpInstance"
+    AdjustmentType:
+      enum: "Debit, Credit"
+      derive: "HttpInstance"
+    AdjustmentSource:
+      enum: "BuyerApp, Internal"
+      derive: "HttpInstance"
+    AdminRequestStatus:
+      enum: "PENDING, APPROVED, REJECTED, FAILED"
+      derive: "HttpInstance"
+    ReferenceTable:
+      enum: "BOOKING, RIDE, PAYOUT_REQUEST"
+      derive: "HttpInstance"
+
+  constraints:
+    id: PrimaryKey
+    referenceId: "SecondaryKey"
+
+  queries:
+    findByReferenceIdAndStatuses:
+      kvFunction: findOneWithKV
+      where:
+        and:
+         -  eq: [referenceId]
+         -  in: [status]
+    updateStatusErrorMessageAndAdminChecker:
+      kvFunction: updateOneWithKV
+      params: [status, errorMessage, adminCheckerId, adminCheckerName]
+      where: id
+
+  excludedDefaultQueries:
+    - createMany
+    - updateByPrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

@@ -131,7 +131,7 @@ payoutDashboardHandler cfg =
       when req.verify $ verifyVpaForUpdate req
       cfg.handleUpdateVpa req
 
-    canRetry status = status `elem` [AUTO_PAY_FAILED, FAILED, PROCESSING, INITIATED]
+    canRetry status = status `elem` PayoutRequest.retryablePayoutStatuses
 
 buildPayoutResp ::
   (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r) =>
