@@ -4399,6 +4399,6 @@ postDriverFleetScheduledBookingReassign merchantShortId _opCity fleetOwnerId Com
   when newBooking.isScheduled $ void $ SBooking.addScheduledBookingInRedis newBooking
 
   -- 8. Assign to new driver immediately (reuse merchant, transporterConfig, newBooking to avoid duplicate queries)
-  void $ UIDriver.acceptScheduledBookingWithPreFetched merchant transporterConfig newBooking newDriver clientId
+  void $ UIDriver.acceptScheduledBookingWithPreFetched merchant transporterConfig newBooking newDriver clientId (Just newBooking)
 
   pure Success
