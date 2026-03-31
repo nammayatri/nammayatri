@@ -209,7 +209,7 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) clientId DRide
   booking <-
     runInReplica $
       QBooking.findBookingBySpecialZoneOTPAndCity merchantOpCityId.getId rideOtp now transporterConfig.specialZoneBookingOtpExpiry
-        |<|>| QBooking.findBookingBySpecialZoneOTP rideOtp now transporterConfig.specialZoneBookingOtpExpiry -- TODO :: Fix properly, when driver goes from one city to another, he should see the booking.
+        |<|>| QBooking.findBookingBySpecialZoneOTP merchantId.getId rideOtp now transporterConfig.specialZoneBookingOtpExpiry -- TODO :: Fix properly, when driver goes from one city to another, he should see the booking.
         >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
   void $ validateOtpRideStartRestriction driverInfo transporterConfig.otpRideStartRestrictionRadius booking.fromLocation
   isLocked <- Redis.tryLockRedis (mkOtpRideLockKey booking.id) 30
