@@ -34,14 +34,30 @@ deleteAllByMerchantOperatingCityIdAndTagName merchantOperatingCityId tagName = d
         ]
     ]
 
+findAllByMerchantOperatingCityId ::
+  (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> m ([Lib.Yudhishthira.Types.NammaTagTriggerV2.NammaTagTriggerV2]))
+findAllByMerchantOperatingCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+
 findAllByMerchantOperatingCityIdAndEvent ::
   (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.ApplicationEvent -> m [Lib.Yudhishthira.Types.NammaTagTriggerV2.NammaTagTriggerV2])
+  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.ApplicationEvent -> m ([Lib.Yudhishthira.Types.NammaTagTriggerV2.NammaTagTriggerV2]))
 findAllByMerchantOperatingCityIdAndEvent merchantOperatingCityId event = do
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.event $ Se.Eq event
+        ]
+    ]
+
+findAllByMerchantOperatingCityIdAndTagName ::
+  (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Kernel.Prelude.Text -> m ([Lib.Yudhishthira.Types.NammaTagTriggerV2.NammaTagTriggerV2]))
+findAllByMerchantOperatingCityIdAndTagName merchantOperatingCityId tagName = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.tagName $ Se.Eq tagName
         ]
     ]
 

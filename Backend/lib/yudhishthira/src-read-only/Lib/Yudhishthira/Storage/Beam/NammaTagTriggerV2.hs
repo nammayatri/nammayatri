@@ -11,11 +11,11 @@ import qualified Lib.Yudhishthira.Types
 import Tools.Beam.UtilsTH
 
 data NammaTagTriggerV2T f = NammaTagTriggerV2T
-  { createdAt :: B.C f Kernel.Prelude.UTCTime,
-    event :: B.C f Lib.Yudhishthira.Types.ApplicationEvent,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    tagName :: B.C f Kernel.Prelude.Text,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    event :: (B.C f Lib.Yudhishthira.Types.ApplicationEvent),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    tagName :: (B.C f Kernel.Prelude.Text),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -25,6 +25,6 @@ instance B.Table NammaTagTriggerV2T where
 
 type NammaTagTriggerV2 = NammaTagTriggerV2T Identity
 
-$(enableKVPG ''NammaTagTriggerV2T ['event, 'merchantOperatingCityId, 'tagName] [])
+$(enableKVPG (''NammaTagTriggerV2T) [('event), ('merchantOperatingCityId), ('tagName)] [])
 
-$(mkTableInstancesGenericSchema ''NammaTagTriggerV2T "namma_tag_trigger_v2")
+$(mkTableInstancesGenericSchema (''NammaTagTriggerV2T) "namma_tag_trigger_v2")

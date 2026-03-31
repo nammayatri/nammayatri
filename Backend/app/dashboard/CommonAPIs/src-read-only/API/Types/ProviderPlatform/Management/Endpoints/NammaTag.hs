@@ -12,7 +12,6 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Lib.BehaviorTracker.Types
 import qualified Lib.Yudhishthira.Types
-import qualified Lib.Yudhishthira.Types.NammaTagV2
 import Servant
 import Servant.Client
 
@@ -26,9 +25,9 @@ type PostNammaTagTagUpdate = ("tag" :> "update" :> ReqBody ('[JSON]) Lib.Yudhish
 
 type DeleteNammaTagTagDelete = ("tag" :> "delete" :> MandatoryQueryParam "tagName" Kernel.Prelude.Text :> Delete ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
-type GetNammaTagTagAll = ("tag" :> "all" :> Get ('[JSON]) [Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2])
+type GetNammaTagTagAll = ("tag" :> "all" :> Get ('[JSON]) [Lib.Yudhishthira.Types.NammaTagDetailsResp])
 
-type GetNammaTagTagDetails = ("tag" :> "details" :> MandatoryQueryParam "tagName" Kernel.Prelude.Text :> Get ('[JSON]) Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2)
+type GetNammaTagTagDetails = ("tag" :> "details" :> MandatoryQueryParam "tagName" Kernel.Prelude.Text :> Get ('[JSON]) Lib.Yudhishthira.Types.NammaTagDetailsResp)
 
 type PostNammaTagQueryCreate = ("query" :> "create" :> ReqBody ('[JSON]) Lib.Yudhishthira.Types.ChakraQueriesAPIEntity :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
@@ -158,8 +157,8 @@ data NammaTagAPIs = NammaTagAPIs
     postNammaTagTagVerify :: (Lib.Yudhishthira.Types.VerifyNammaTagRequest -> EulerHS.Types.EulerClient Lib.Yudhishthira.Types.VerifyNammaTagResponse),
     postNammaTagTagUpdate :: (Lib.Yudhishthira.Types.UpdateNammaTagRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     deleteNammaTagTagDelete :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getNammaTagTagAll :: (EulerHS.Types.EulerClient [Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2]),
-    getNammaTagTagDetails :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2),
+    getNammaTagTagAll :: (EulerHS.Types.EulerClient [Lib.Yudhishthira.Types.NammaTagDetailsResp]),
+    getNammaTagTagDetails :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient Lib.Yudhishthira.Types.NammaTagDetailsResp),
     postNammaTagQueryCreate :: (Lib.Yudhishthira.Types.ChakraQueriesAPIEntity -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     postNammaTagQueryUpdate :: (Lib.Yudhishthira.Types.ChakraQueryUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     deleteNammaTagQueryDelete :: (Lib.Yudhishthira.Types.ChakraQueryDeleteReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),

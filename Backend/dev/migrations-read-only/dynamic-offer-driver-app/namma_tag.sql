@@ -35,3 +35,17 @@ ALTER TABLE atlas_driver_offer_bpp.namma_tag ADD COLUMN action_engine json ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.namma_tag ALTER COLUMN validity TYPE integer;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

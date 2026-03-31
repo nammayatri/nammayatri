@@ -198,3 +198,10 @@ NammaTagTriggerV2:
       kvFunction: deleteWithKV
       where:
         and: [merchantOperatingCityId, tagName]
+    findAllByMerchantOperatingCityIdAndTagName:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, tagName]
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
