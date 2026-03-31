@@ -1169,7 +1169,7 @@ validateInvoiceEntry entry = do
               ]
 
   -- Validate GST/tax details
-  taxTxns <- QIndirectTaxExtra.findByReferenceId entry.invoiceId
+  taxTxns <- QIndirectTaxExtra.findByInvoiceNumber entry.invoiceNumber
   let totalTaxableValue = sum $ map (.taxableValue) taxTxns
       totalGstAmount = sum $ map (.totalGstAmount) taxTxns
 
