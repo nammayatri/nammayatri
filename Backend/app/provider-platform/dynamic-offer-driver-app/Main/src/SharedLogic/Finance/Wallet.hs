@@ -68,6 +68,7 @@ import Storage.Queries.FleetOwnerInformation as QFOI
 
 -- Reference type constants (PascalCase, abbreviations in all caps)
 
+-- TODO refactor to strict Haskell type
 walletReferenceBaseRide :: Text
 walletReferenceBaseRide = "BaseRide"
 

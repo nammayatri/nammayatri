@@ -20,6 +20,7 @@ module Lib.Payment.Payout.Request
     retryPayoutWith,
     toPaymentState,
     getStatusMessage,
+    retryablePayoutStatuses,
   )
 where
 
@@ -393,3 +394,6 @@ toPaymentEvent RETRYING = ST.RETRY
 toPaymentEvent FAILED = ST.FAIL
 toPaymentEvent CASH_PAID = ST.CREDIT
 toPaymentEvent CASH_PENDING = ST.INITIATE
+
+retryablePayoutStatuses :: [PayoutRequestStatus]
+retryablePayoutStatuses = [AUTO_PAY_FAILED, FAILED, PROCESSING, INITIATED]
