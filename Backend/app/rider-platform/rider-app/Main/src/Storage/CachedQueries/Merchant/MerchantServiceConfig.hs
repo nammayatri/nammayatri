@@ -18,7 +18,8 @@ module Storage.CachedQueries.Merchant.MerchantServiceConfig
     "This module contains direct calls to the table and redis. \
   \ Use Storage.ConfigPilot.Config.MerchantServiceConfig (getConfig) instead for reads."
     #-}
-  ( findByMerchantOpCityIdAndService,
+  ( create,
+    findByMerchantOpCityIdAndService,
     clearCache,
     cacheMerchantServiceConfig,
     upsertMerchantServiceConfig,
@@ -58,8 +59,10 @@ import Kernel.Utils.Common
 import qualified Storage.Queries.MerchantServiceConfig as Queries
 import qualified Utils.Common.JWT.Config as GW
 
--- create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
--- create = Queries.create
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
+create val = do
+  Queries.create val
+  clearCache val.merchantId val.merchantOperatingCityId (getServiceName val)
 
 -- findAllMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [MerchantServiceConfig]
 -- findAllMerchantOpCityId id =
@@ -90,110 +93,6 @@ cacheMerchantServiceConfig merchantServiceConfig = do
   let idKey = makeMerchantIdAndServiceKey merchantServiceConfig.merchantId merchantServiceConfig.merchantOperatingCityId (getServiceName merchantServiceConfig)
   logDebug ("cacheMerchantServiceConfig: setting idKey=" <> idKey <> " expTime=" <> show expTime)
   Hedis.setExp idKey (coerce @MerchantServiceConfig @(MerchantServiceConfigD 'Unsafe) merchantServiceConfig) expTime
-  where
-    stripePaymentService :: (Payment.PaymentService -> ServiceName) -> Stripe.StripeCfg -> ServiceName
-    stripePaymentService wrap cfg =
-      wrap $ case cfg.serviceMode of
-        Just Stripe.Test -> Payment.StripeTest
-        _ -> Payment.Stripe
-
-    getServiceName :: MerchantServiceConfig -> ServiceName
-    getServiceName msc = case msc.serviceConfig of
-      MapsServiceConfig mapsCfg -> case mapsCfg of
-        Maps.GoogleConfig _ -> MapsService Maps.Google
-        Maps.OSRMConfig _ -> MapsService Maps.OSRM
-        Maps.MMIConfig _ -> MapsService Maps.MMI
-        Maps.NextBillionConfig _ -> MapsService Maps.NextBillion
-      SmsServiceConfig smsCfg -> case smsCfg of
-        Sms.ExotelSmsConfig _ -> SmsService Sms.ExotelSms
-        Sms.MyValueFirstConfig _ -> SmsService Sms.MyValueFirst
-        Sms.GupShupConfig _ -> SmsService Sms.GupShup
-        Sms.TwillioSmsConfig _ -> SmsService Sms.TwillioSms
-        Sms.DigoEngageSmsConfig _ -> SmsService Sms.DigoEngage
-        Sms.VonageSmsConfig _ -> SmsService Sms.VonageSms
-        Sms.KarixSmsConfig _ -> SmsService Sms.KarixSms
-        Sms.PinbixSmsConfig _ -> SmsService Sms.PinbixSms
-      WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
-        Whatsapp.GupShupConfig _ -> WhatsappService Whatsapp.GupShup
-        Whatsapp.TataCommunicationsConfig _ -> WhatsappService Whatsapp.TataCommunications
-        Whatsapp.KarixConfig _ -> WhatsappService Whatsapp.Karix
-      AadhaarVerificationServiceConfig aadhaarVerifictaionCfg -> case aadhaarVerifictaionCfg of
-        AadhaarVerification.GridlineConfig _ -> AadhaarVerificationService AadhaarVerification.Gridline
-      CallServiceConfig callCfg -> case callCfg of
-        Call.ExotelConfig _ -> CallService Call.Exotel
-        Call.TwillioCallConfig _ -> CallService Call.TwillioCall
-        Call.TataClickToCallConfig _ -> CallService Call.TataClickToCall
-        Call.OzonetelConfig _ -> CallService Call.Ozonetel
-      NotificationServiceConfig notificationCfg -> case notificationCfg of
-        Notification.FCMConfig _ -> NotificationService Notification.FCM
-        Notification.PayTMConfig _ -> NotificationService Notification.PayTM
-        Notification.GRPCConfig _ -> NotificationService Notification.GRPC
-      PaymentServiceConfig paymentCfg -> case paymentCfg of
-        Payment.JuspayConfig _ -> PaymentService Payment.Juspay
-        Payment.StripeConfig cfg -> stripePaymentService PaymentService cfg
-        Payment.PaytmEDCConfig _ -> PaymentService Payment.PaytmEDC
-      MetroPaymentServiceConfig paymentCfg -> case paymentCfg of
-        Payment.JuspayConfig _ -> MetroPaymentService Payment.Juspay
-        Payment.StripeConfig cfg -> stripePaymentService MetroPaymentService cfg
-        Payment.PaytmEDCConfig _ -> MetroPaymentService Payment.PaytmEDC
-      BusPaymentServiceConfig paymentCfg -> case paymentCfg of
-        Payment.JuspayConfig _ -> BusPaymentService Payment.Juspay
-        Payment.StripeConfig cfg -> stripePaymentService BusPaymentService cfg
-        Payment.PaytmEDCConfig _ -> BusPaymentService Payment.PaytmEDC
-      BbpsPaymentServiceConfig paymentCfg -> case paymentCfg of
-        Payment.JuspayConfig _ -> BbpsPaymentService Payment.Juspay
-        Payment.StripeConfig cfg -> stripePaymentService BbpsPaymentService cfg
-        Payment.PaytmEDCConfig _ -> BbpsPaymentService Payment.PaytmEDC
-      MultiModalPaymentServiceConfig paymentCfg -> case paymentCfg of
-        Payment.JuspayConfig _ -> MultiModalPaymentService Payment.Juspay
-        Payment.StripeConfig cfg -> stripePaymentService MultiModalPaymentService cfg
-        Payment.PaytmEDCConfig _ -> MultiModalPaymentService Payment.PaytmEDC
-      PassPaymentServiceConfig paymentCfg -> case paymentCfg of
-        Payment.JuspayConfig _ -> PassPaymentService Payment.Juspay
-        Payment.StripeConfig cfg -> stripePaymentService PassPaymentService cfg
-        Payment.PaytmEDCConfig _ -> PassPaymentService Payment.PaytmEDC
-      ParkingPaymentServiceConfig paymentCfg -> case paymentCfg of
-        Payment.JuspayConfig _ -> ParkingPaymentService Payment.Juspay
-        Payment.StripeConfig cfg -> stripePaymentService ParkingPaymentService cfg
-        Payment.PaytmEDCConfig _ -> ParkingPaymentService Payment.PaytmEDC
-      MembershipPaymentServiceConfig paymentCfg -> case paymentCfg of
-        Payment.JuspayConfig _ -> MembershipPaymentService Payment.Juspay
-        Payment.StripeConfig cfg -> stripePaymentService MembershipPaymentService cfg
-        Payment.PaytmEDCConfig _ -> MembershipPaymentService Payment.PaytmEDC
-      IssueTicketServiceConfig ticketCfg -> case ticketCfg of
-        Ticket.KaptureConfig _ -> IssueTicketService Ticket.Kapture
-      IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
-        IncidentReport.ERSSConfig _ -> IncidentReportService IncidentReport.ERSS
-      TokenizationServiceConfig tokenizationCfg -> case tokenizationCfg of
-        Tokenize.JourneyMonitoringTokenizationServiceConfig _ -> TokenizationService Tokenize.JourneyMonitoring
-        Tokenize.HyperVergeTokenizationServiceConfig _ -> TokenizationService Tokenize.HyperVerge
-        Tokenize.GullakTokenizationServiceConfig _ -> TokenizationService Tokenize.Gullak
-        Tokenize.DigilockerTokenizationServiceConfig _ -> TokenizationService Tokenize.Digilocker
-        Tokenize.TtenTokenizationServiceConfig _ -> TokenizationService Tokenize.Tten
-      PayoutServiceConfig payoutCfg -> case payoutCfg of
-        Payout.JuspayConfig _ -> PayoutService Payout.Juspay
-      MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
-        MultiModal.GoogleTransitConfig _ -> MultiModalService MultiModal.GoogleTransit
-        MultiModal.OTPTransitConfig _ -> MultiModalService MultiModal.OTPTransit
-      WalletServiceConfig walletCfg -> case walletCfg of
-        GW.GoogleWalletConfig _ -> WalletService GW.GoogleWallet
-      JuspayWalletServiceConfig paymentCfg -> case paymentCfg of
-        Payment.JuspayConfig _ -> JuspayWalletService Payment.Juspay
-        Payment.StripeConfig _ -> JuspayWalletService Payment.Stripe
-        Payment.PaytmEDCConfig _ -> JuspayWalletService Payment.PaytmEDC
-      MultiModalStaticDataServiceConfig multiModalStaticDataCfg -> case multiModalStaticDataCfg of
-        MultiModal.GoogleTransitConfig _ -> MultiModalStaticDataService MultiModal.GoogleTransit
-        MultiModal.OTPTransitConfig _ -> MultiModalStaticDataService MultiModal.OTPTransit
-      InsuranceServiceConfig insuranceCfg -> case insuranceCfg of
-        Insurance.AckoInsuranceConfig _ -> InsuranceService Insurance.Acko
-        Insurance.IffcoTokioInsuranceConfig _ -> InsuranceService Insurance.IffcoTokio
-      SOSServiceConfig sosCfg -> case sosCfg of
-        SOSInterface.ERSSConfig _ -> SOSService SOS.ERSS
-        SOSInterface.GJ112Config _ -> SOSService SOS.GJ112
-        SOSInterface.TrinityConfig _ -> SOSService SOS.Trinity
-      SettlementServiceConfig settlementCfg -> case settlementCfg of
-        Settlement.HyperPGConfig _ -> SettlementService Settlement.HyperPG
-        Settlement.BillDeskConfig _ -> SettlementService Settlement.BillDesk
 
 makeMerchantIdAndServiceKey :: Id Merchant -> Id DMOC.MerchantOperatingCity -> ServiceName -> Text
 makeMerchantIdAndServiceKey id mocId serviceName = "CachedQueries:MerchantServiceConfig:MerchantId-" <> id.getId <> ":MechantOperatingCityId:-" <> mocId.getId <> ":ServiceName-" <> show serviceName
@@ -203,5 +102,111 @@ clearCache :: Hedis.HedisFlow m r => Id Merchant -> Id DMOC.MerchantOperatingCit
 clearCache merchantId mocId serviceName = do
   Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantIdAndServiceKey merchantId mocId serviceName)
 
+stripePaymentService :: (Payment.PaymentService -> ServiceName) -> Stripe.StripeCfg -> ServiceName
+stripePaymentService wrap cfg =
+  wrap $ case cfg.serviceMode of
+    Just Stripe.Test -> Payment.StripeTest
+    _ -> Payment.Stripe
+
+getServiceName :: MerchantServiceConfig -> ServiceName
+getServiceName msc = case msc.serviceConfig of
+  MapsServiceConfig mapsCfg -> case mapsCfg of
+    Maps.GoogleConfig _ -> MapsService Maps.Google
+    Maps.OSRMConfig _ -> MapsService Maps.OSRM
+    Maps.MMIConfig _ -> MapsService Maps.MMI
+    Maps.NextBillionConfig _ -> MapsService Maps.NextBillion
+  SmsServiceConfig smsCfg -> case smsCfg of
+    Sms.ExotelSmsConfig _ -> SmsService Sms.ExotelSms
+    Sms.MyValueFirstConfig _ -> SmsService Sms.MyValueFirst
+    Sms.GupShupConfig _ -> SmsService Sms.GupShup
+    Sms.TwillioSmsConfig _ -> SmsService Sms.TwillioSms
+    Sms.DigoEngageSmsConfig _ -> SmsService Sms.DigoEngage
+    Sms.VonageSmsConfig _ -> SmsService Sms.VonageSms
+    Sms.KarixSmsConfig _ -> SmsService Sms.KarixSms
+    Sms.PinbixSmsConfig _ -> SmsService Sms.PinbixSms
+  WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
+    Whatsapp.GupShupConfig _ -> WhatsappService Whatsapp.GupShup
+    Whatsapp.TataCommunicationsConfig _ -> WhatsappService Whatsapp.TataCommunications
+    Whatsapp.KarixConfig _ -> WhatsappService Whatsapp.Karix
+  AadhaarVerificationServiceConfig aadhaarVerifictaionCfg -> case aadhaarVerifictaionCfg of
+    AadhaarVerification.GridlineConfig _ -> AadhaarVerificationService AadhaarVerification.Gridline
+  CallServiceConfig callCfg -> case callCfg of
+    Call.ExotelConfig _ -> CallService Call.Exotel
+    Call.TwillioCallConfig _ -> CallService Call.TwillioCall
+    Call.TataClickToCallConfig _ -> CallService Call.TataClickToCall
+    Call.OzonetelConfig _ -> CallService Call.Ozonetel
+  NotificationServiceConfig notificationCfg -> case notificationCfg of
+    Notification.FCMConfig _ -> NotificationService Notification.FCM
+    Notification.PayTMConfig _ -> NotificationService Notification.PayTM
+    Notification.GRPCConfig _ -> NotificationService Notification.GRPC
+  PaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig _ -> PaymentService Payment.Juspay
+    Payment.StripeConfig stripeCfg -> stripePaymentService PaymentService stripeCfg
+    Payment.PaytmEDCConfig _ -> PaymentService Payment.PaytmEDC
+  MetroPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig _ -> MetroPaymentService Payment.Juspay
+    Payment.StripeConfig stripeCfg -> stripePaymentService MetroPaymentService stripeCfg
+    Payment.PaytmEDCConfig _ -> MetroPaymentService Payment.PaytmEDC
+  BusPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig _ -> BusPaymentService Payment.Juspay
+    Payment.StripeConfig stripeCfg -> stripePaymentService BusPaymentService stripeCfg
+    Payment.PaytmEDCConfig _ -> BusPaymentService Payment.PaytmEDC
+  BbpsPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig _ -> BbpsPaymentService Payment.Juspay
+    Payment.StripeConfig stripeCfg -> stripePaymentService BbpsPaymentService stripeCfg
+    Payment.PaytmEDCConfig _ -> BbpsPaymentService Payment.PaytmEDC
+  MultiModalPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig _ -> MultiModalPaymentService Payment.Juspay
+    Payment.StripeConfig stripeCfg -> stripePaymentService MultiModalPaymentService stripeCfg
+    Payment.PaytmEDCConfig _ -> MultiModalPaymentService Payment.PaytmEDC
+  PassPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig _ -> PassPaymentService Payment.Juspay
+    Payment.StripeConfig stripeCfg -> stripePaymentService PassPaymentService stripeCfg
+    Payment.PaytmEDCConfig _ -> PassPaymentService Payment.PaytmEDC
+  ParkingPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig _ -> ParkingPaymentService Payment.Juspay
+    Payment.StripeConfig stripeCfg -> stripePaymentService ParkingPaymentService stripeCfg
+    Payment.PaytmEDCConfig _ -> ParkingPaymentService Payment.PaytmEDC
+  MembershipPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig _ -> MembershipPaymentService Payment.Juspay
+    Payment.StripeConfig stripeCfg -> stripePaymentService MembershipPaymentService stripeCfg
+    Payment.PaytmEDCConfig _ -> MembershipPaymentService Payment.PaytmEDC
+  IssueTicketServiceConfig ticketCfg -> case ticketCfg of
+    Ticket.KaptureConfig _ -> IssueTicketService Ticket.Kapture
+  IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
+    IncidentReport.ERSSConfig _ -> IncidentReportService IncidentReport.ERSS
+  TokenizationServiceConfig tokenizationCfg -> case tokenizationCfg of
+    Tokenize.JourneyMonitoringTokenizationServiceConfig _ -> TokenizationService Tokenize.JourneyMonitoring
+    Tokenize.HyperVergeTokenizationServiceConfig _ -> TokenizationService Tokenize.HyperVerge
+    Tokenize.GullakTokenizationServiceConfig _ -> TokenizationService Tokenize.Gullak
+    Tokenize.DigilockerTokenizationServiceConfig _ -> TokenizationService Tokenize.Digilocker
+    Tokenize.TtenTokenizationServiceConfig _ -> TokenizationService Tokenize.Tten
+  PayoutServiceConfig payoutCfg -> case payoutCfg of
+    Payout.JuspayConfig _ -> PayoutService Payout.Juspay
+  MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
+    MultiModal.GoogleTransitConfig _ -> MultiModalService MultiModal.GoogleTransit
+    MultiModal.OTPTransitConfig _ -> MultiModalService MultiModal.OTPTransit
+  WalletServiceConfig walletCfg -> case walletCfg of
+    GW.GoogleWalletConfig _ -> WalletService GW.GoogleWallet
+  JuspayWalletServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig _ -> JuspayWalletService Payment.Juspay
+    Payment.StripeConfig _ -> JuspayWalletService Payment.Stripe
+    Payment.PaytmEDCConfig _ -> JuspayWalletService Payment.PaytmEDC
+  MultiModalStaticDataServiceConfig multiModalStaticDataCfg -> case multiModalStaticDataCfg of
+    MultiModal.GoogleTransitConfig _ -> MultiModalStaticDataService MultiModal.GoogleTransit
+    MultiModal.OTPTransitConfig _ -> MultiModalStaticDataService MultiModal.OTPTransit
+  InsuranceServiceConfig insuranceCfg -> case insuranceCfg of
+    Insurance.AckoInsuranceConfig _ -> InsuranceService Insurance.Acko
+    Insurance.IffcoTokioInsuranceConfig _ -> InsuranceService Insurance.IffcoTokio
+  SOSServiceConfig sosCfg -> case sosCfg of
+    SOSInterface.ERSSConfig _ -> SOSService SOS.ERSS
+    SOSInterface.GJ112Config _ -> SOSService SOS.GJ112
+    SOSInterface.TrinityConfig _ -> SOSService SOS.Trinity
+  SettlementServiceConfig settlementCfg -> case settlementCfg of
+    Settlement.HyperPGConfig _ -> SettlementService Settlement.HyperPG
+    Settlement.BillDeskConfig _ -> SettlementService Settlement.BillDesk
+
 upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
-upsertMerchantServiceConfig = Queries.upsertMerchantServiceConfig
+upsertMerchantServiceConfig cfg = do
+  Queries.upsertMerchantServiceConfig cfg
+  clearCache cfg.merchantId cfg.merchantOperatingCityId (getServiceName cfg)

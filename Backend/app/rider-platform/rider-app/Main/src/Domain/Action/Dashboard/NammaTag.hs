@@ -118,17 +118,17 @@ import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNoti
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Getter (invalidateConfigInMem)
 import Storage.ConfigPilot.Interface.Types (getConfig)
-import qualified Storage.Queries.BecknConfig as SQBecknConfig
-import qualified Storage.Queries.Exophone as SQExophone
-import qualified Storage.Queries.FRFSConfig as SQFRFSConfig
-import qualified Storage.Queries.MerchantConfig as SQMerchantConfig
-import qualified Storage.Queries.MerchantPushNotification as SQMerchantPN
-import qualified Storage.Queries.MerchantServiceConfig as SQMerchantSC
-import qualified Storage.Queries.MerchantServiceUsageConfig as SQMerchantSUC
-import qualified Storage.Queries.PayoutConfig as SQPayoutConfig
+import qualified Storage.CachedQueries.BecknConfig as SQBecknConfig
+import qualified Storage.CachedQueries.Exophone as SQExophone
+import qualified Storage.CachedQueries.FRFSConfig as SQFRFSConfig
+import qualified Storage.CachedQueries.MerchantConfig as SQMerchantConfig
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as SQMerchantPN
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as SQMerchantSC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as SQMerchantSUC
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as SQPayoutConfig
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.RideRelatedNotificationConfig as SQRRNC
-import qualified Storage.Queries.RiderConfig as SQRiderConfig
+import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SQRRNC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as SQRiderConfig
 import qualified Storage.Queries.UiRiderConfig as SQU
 import Storage.Queries.UiRiderConfigExtra ()
 import qualified Tools.ConfigPilot as TC
@@ -735,7 +735,7 @@ postNammaTagConfigPilotCreateRow merchantShortId opCity req = do
       invalidateConfigInMem LYTU.RiderConfig
     LYTU.FRFSConfig -> do
       cfg :: DFRFS.FRFSConfig <- parseConfigData req.configData
-      existing <- SQFRFSConfig.findByMerchantOperatingCityId mocId
+      existing <- SQFRFSConfig.findByMerchantOperatingCityId mocId Nothing
       when (isJust existing) $ throwError $ InvalidRequest "FRFSConfig already exists for this merchantOperatingCityId"
       SQFRFSConfig.create cfg
       invalidateConfigInMem LYTU.FRFSConfig

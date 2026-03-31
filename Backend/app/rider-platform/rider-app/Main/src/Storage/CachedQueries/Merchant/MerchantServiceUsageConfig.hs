@@ -42,7 +42,9 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.MerchantServiceUsageConfig as Queries
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceUsageConfig -> m ()
-create = Queries.create
+create val = do
+  Queries.create val
+  clearCache val.merchantOperatingCityId
 
 getMerchantServiceUsageConfigFromDB :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)
 getMerchantServiceUsageConfigFromDB id = do
@@ -78,4 +80,6 @@ clearCache merchantOperatingCityId = do
   Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantOperatingCityIdKey merchantOperatingCityId)
 
 updateMerchantServiceUsageConfig :: (CacheFlow m r, EsqDBFlow m r) => MerchantServiceUsageConfig -> m ()
-updateMerchantServiceUsageConfig = Queries.updateMerchantServiceUsageConfig
+updateMerchantServiceUsageConfig cfg = do
+  Queries.updateMerchantServiceUsageConfig cfg
+  clearCache cfg.merchantOperatingCityId
