@@ -95,8 +95,12 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
+import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
+import qualified Kernel.External.Payment.Interface.Types as Payment
+import qualified Kernel.External.Payout.Types as PT
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -105,6 +109,7 @@ import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BusinessLicense as QBL
@@ -128,10 +133,12 @@ import qualified Storage.Queries.VehicleInsurance as QVI
 import qualified Storage.Queries.VehicleNOC as QVNOC
 import qualified Storage.Queries.VehiclePUC as QVPUC
 import qualified Storage.Queries.VehiclePermit as QVPermit
+import qualified Storage.Queries.Vehicle as QVeh
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error
 import Tools.Notifications as Notify
+import qualified Tools.Payout as TP
 import qualified Tools.SMS as Sms
 
 -- TDS Certificate validation (kept in sync with UI DriverOnboardingV2 flow)
@@ -189,7 +196,7 @@ validateInvoiceEntry entry = do
                   else Nothing
               ]
 
-  taxTxns <- QIndirectTaxExtra.findByReferenceId entry.invoiceId
+  taxTxns <- QIndirectTaxExtra.findByInvoiceNumber entry.invoiceNumber
   let totalTaxableValue = Kernel.Prelude.sum $ map (.taxableValue) taxTxns
       totalGstAmount = Kernel.Prelude.sum $ map (.totalGstAmount) taxTxns
 
@@ -1527,7 +1534,28 @@ getDriverRegistrationPayoutOrderStatus merchantShortId opCity driverId orderId =
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
-  ReferralPayout.getPayoutOrderStatus (Just personId, merchant.id, merchantOpCityId) orderId
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  paymentOrder <- QOrder.findById (Id orderId) >>= fromMaybeM (InvalidRequest "UPI registration order not found")
+  mbVehicle <- QVeh.findById personId
+  let vehicleCategory = fromMaybe DVCat.AUTO_CATEGORY ((.category) =<< mbVehicle)
+  payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
+  payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
+  let payoutOrderStatusReq = PayoutTypes.PayoutOrderStatusReq {orderId = orderId, mbExpand = payoutConfig.expand}
+  statusResp <- TP.payoutOrderStatus merchant.id merchantOpCityId payoutServiceName (Just $ getId personId) payoutOrderStatusReq
+  let newTxnStatus = mapPayoutStatusToTxnStatus statusResp.status
+  QOrder.updateStatus paymentOrder.id paymentOrder.paymentServiceOrderId newTxnStatus
+  pure statusResp
+
+mapPayoutStatusToTxnStatus :: PayoutTypes.PayoutOrderStatus -> Payment.TransactionStatus
+mapPayoutStatusToTxnStatus = \case
+  PayoutTypes.SUCCESS -> Payment.CHARGED
+  PayoutTypes.FULFILLMENTS_SUCCESSFUL -> Payment.CHARGED
+  PayoutTypes.ERROR -> Payment.AUTHENTICATION_FAILED
+  PayoutTypes.FAILURE -> Payment.AUTHENTICATION_FAILED
+  PayoutTypes.FULFILLMENTS_FAILURE -> Payment.AUTHENTICATION_FAILED
+  PayoutTypes.CANCELLED -> Payment.CANCELLED
+  PayoutTypes.FULFILLMENTS_CANCELLED -> Payment.CANCELLED
+  _ -> Payment.PENDING_VBV
 
 postDriverRegistrationDeleteBankAccount :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
 postDriverRegistrationDeleteBankAccount merchantShortId opCity driverId = do
