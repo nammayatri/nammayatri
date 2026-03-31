@@ -57,7 +57,7 @@ findBySTId searchTryId = do
   maybe (pure Nothing) (\dQ -> findOneWithKV [Se.Is BeamB.quoteId $ Se.Eq $ getId $ DDQ.id dQ]) mbDriverQuote
 
 findByQuoteId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe Booking)
-findByQuoteId quoteId = findOneWithKV [Se.Is BeamB.quoteId $ Se.Eq quoteId]
+findByQuoteId quoteId = findAllWithKV [Se.Is BeamB.quoteId $ Se.Eq quoteId] <&> listToMaybe
 
 findByTransactionId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe Booking)
 findByTransactionId txnId =
