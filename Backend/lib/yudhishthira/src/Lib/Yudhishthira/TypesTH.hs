@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Lib.Yudhishthira.TypesTH (generateGenericDefault, GenericDefaults (..)) where
+module Lib.Yudhishthira.TypesTH (generateGenericDefault, generateGenericDefaultWithOverrides, GenericDefaults (..)) where
 
 import Control.Monad
 import Data.Aeson
@@ -73,8 +73,10 @@ getFieldDefaultValues fieldTypeName = do
 
 -- below just to ease the process a little
 generateGenericDefault :: Name -> Q [Dec]
-generateGenericDefault typeName = do
-  let overrides = []
+generateGenericDefault = generateGenericDefaultWithOverrides []
+
+generateGenericDefaultWithOverrides :: [(String, [String])] -> Name -> Q [Dec]
+generateGenericDefaultWithOverrides overrides typeName = do
   res <- reify typeName
   result <- case res of
     -- [(Ghci1.val,Bang NoSourceUnpackedness NoSourceStrictness,AppT (AppT (ConT Data.HashMap.Internal.HashMap) (ConT Data.Text.Internal.Text)) (ConT Data.Text.Internal.Text))]
