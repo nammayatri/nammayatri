@@ -73,7 +73,7 @@ data UpgradeTierTagData = UpgradeTierTagData
   deriving (Generic, Show, FromJSON, ToJSON)
 
 $(YTH.generateGenericDefault ''TagData)
-$(YTH.generateGenericDefault ''EndRideTagData)
+$(YTH.generateGenericDefaultWithOverrides [("isDriverSameAsCustomer", ["False"])] ''EndRideTagData)
 $(YTH.generateGenericDefault ''CancelRideTagData)
 $(YTH.generateGenericDefault ''SelectTagData)
 $(YTH.generateGenericDefault ''PenaltyCheckTagData)
