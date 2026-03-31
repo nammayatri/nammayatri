@@ -27,6 +27,7 @@ module Storage.CachedQueries.Exophone
     clearCache,
     findByPrimaryPhone,
     findByMerchantOperatingCityIdAndService,
+    clearCacheByService,
     updateByPrimaryKey,
   )
 where
@@ -83,8 +84,9 @@ clearCache merchantOperatingCityId exophones = Hedis.runInMultiCloudRedisWrite $
     Hedis.del (makePhoneKey exophone.primaryPhone)
     Hedis.del (makePhoneKey exophone.backupPhone)
 
--- clearAllCache :: Hedis.HedisFlow m r => m ()
--- clearAllCache = Hedis.delByPattern patternKey
+clearCacheByService :: Hedis.HedisFlow m r => Id DMOC.MerchantOperatingCity -> CallService -> m ()
+clearCacheByService merchantOperatingCityId service =
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantOperatingCityIdAndServiceKey merchantOperatingCityId service)
 
 -- test with empty list
 cacheExophones :: CacheFlow m r => Id DMOC.MerchantOperatingCity -> [Exophone] -> m ()
@@ -114,18 +116,26 @@ makePhoneKey phone = "CachedQueries:Exophones:Phone-" <> phone
 makeMerchantOperatingCityIdAndServiceKey :: Id DMOC.MerchantOperatingCity -> CallService -> Text
 makeMerchantOperatingCityIdAndServiceKey merchantOperatingCityId service = "CachedQueries:Exophones:MerchantOperatingCityId-" <> merchantOperatingCityId.getId <> ":CallService-" <> show service
 
--- create :: Exophone -> Esq.SqlDB ()
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Exophone -> m ()
-create = Queries.create
+create val = do
+  Queries.create val
+  clearCache val.merchantOperatingCityId [val]
+  clearCacheByService val.merchantOperatingCityId val.callService
 
 updateAffectedPhones :: (MonadFlow m, EsqDBFlow m r) => [Text] -> m ()
 updateAffectedPhones = Queries.updateAffectedPhones
 
 deleteByMerchantOperatingCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m ()
-deleteByMerchantOperatingCityId = Queries.deleteByMerchantOperatingCityId
+deleteByMerchantOperatingCityId merchantOperatingCityId = do
+  exophones <- Queries.findAllByMerchantOperatingCityId merchantOperatingCityId
+  Queries.deleteByMerchantOperatingCityId merchantOperatingCityId
+  clearCache merchantOperatingCityId exophones
+  forM_ exophones $ \exophone ->
+    clearCacheByService merchantOperatingCityId exophone.callService
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Exophone -> m ()
 updateByPrimaryKey cfg = do
   Queries.updateByPrimaryKey cfg
   exophones <- Queries.findAllByMerchantOperatingCityId cfg.merchantOperatingCityId
   clearCache cfg.merchantOperatingCityId exophones
+  clearCacheByService cfg.merchantOperatingCityId cfg.callService

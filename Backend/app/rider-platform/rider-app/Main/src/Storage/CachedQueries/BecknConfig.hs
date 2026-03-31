@@ -18,10 +18,12 @@ module Storage.CachedQueries.BecknConfig
     "This module contains direct calls to the table and redis. \
   \ Use Storage.ConfigPilot.Config.BecknConfig (getConfig) instead for reads."
     #-}
-  ( findAll,
+  ( create,
+    findAll,
     findByMerchantIdDomainAndVehicle,
     findByMerchantIdDomainandMerchantOperatingCityId,
     findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback,
+    clearCache,
     updateByPrimaryKey,
   )
 where
@@ -38,6 +40,11 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.BecknConfig as BeamM
 import qualified Storage.Queries.BecknConfig as Queries
+
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => BecknConfig -> m ()
+create val = do
+  Queries.create val
+  clearCache val
 
 findAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [BecknConfig]
 findAll = findAllWithKV [Se.Is BeamM.id $ Se.Not $ Se.Eq $ getId ""]
@@ -90,5 +97,15 @@ cacheMerchantIdDomainandMerchantOperatingCityId merchantId domain merchantOperat
 makeMerchantIdDomainandMerchantOperatingCityIdKey :: Id Merchant -> Text -> Id MerchantOperatingCity -> Text
 makeMerchantIdDomainandMerchantOperatingCityIdKey merchantId domain merchantOperatingCityId = "CachedQueries:BecknConfig:MerchantId:" <> merchantId.getId <> ":Domain:" <> domain <> ":MerchantOperatingCityId:" <> merchantOperatingCityId.getId
 
+clearCache :: (CacheFlow m r, EsqDBFlow m r) => BecknConfig -> m ()
+clearCache cfg = do
+  whenJust cfg.merchantId $ \merchantId -> do
+    Hedis.del (makeMerchantIdDomainKey merchantId cfg.domain cfg.vehicleCategory)
+    whenJust cfg.merchantOperatingCityId $ \mocId -> do
+      Hedis.del (makeMerchantIdDomainVehicleAndMerchantOperatingCityIdKey mocId merchantId cfg.domain cfg.vehicleCategory)
+      Hedis.del (makeMerchantIdDomainandMerchantOperatingCityIdKey merchantId cfg.domain mocId)
+
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => BecknConfig -> m ()
-updateByPrimaryKey = Queries.updateByPrimaryKey
+updateByPrimaryKey cfg = do
+  Queries.updateByPrimaryKey cfg
+  clearCache cfg

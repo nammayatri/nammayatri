@@ -35,7 +35,9 @@ import Kernel.Utils.Common
 import qualified Storage.Queries.RiderConfig as Queries
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => RiderConfig -> m ()
-create = Queries.create
+create val = do
+  Queries.create val
+  clearCache val.merchantOperatingCityId
 
 findByMerchantOperatingCityIdInRideFlow ::
   (CacheFlow m r, EsqDBFlow m r) =>

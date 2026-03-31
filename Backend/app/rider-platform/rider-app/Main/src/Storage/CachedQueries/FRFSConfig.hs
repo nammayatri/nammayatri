@@ -13,7 +13,8 @@
 -}
 
 module Storage.CachedQueries.FRFSConfig
-  ( findByMerchantOperatingCityId,
+  ( create,
+    findByMerchantOperatingCityId,
     findByMerchantOperatingCityIdInRideFlow,
     clearCache,
     updateByPrimaryKey,
@@ -23,23 +24,38 @@ where
 import Domain.Types.FRFSConfig
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as LYT
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.FRFSConfig as Queries
-import qualified Tools.DynamicLogic as DynamicLogic
+
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSConfig.FRFSConfig -> m ()
+create val = do
+  Queries.create val
+  clearCache val.merchantOperatingCityId
 
 findByMerchantOperatingCityIdInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> [LYT.ConfigVersionMap] -> m (Maybe Domain.Types.FRFSConfig.FRFSConfig)
 findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId configInExperimentVersions = do
   findByMerchantOperatingCityId merchantOperatingCityId (Just configInExperimentVersions)
 
 findByMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r) => Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Maybe [LYT.ConfigVersionMap] -> m (Maybe Domain.Types.FRFSConfig.FRFSConfig)
-findByMerchantOperatingCityId merchantOperatingCityId mbConfigInExperimentVersions = do
-  DynamicLogic.findOneConfig (cast merchantOperatingCityId) (LYT.RIDER_CONFIG LYT.FRFSConfig) mbConfigInExperimentVersions Nothing (Queries.findByMerchantOperatingCityId merchantOperatingCityId)
+findByMerchantOperatingCityId merchantOperatingCityId _mbConfigInExperimentVersions =
+  Hedis.safeGet (makeMerchantOperatingCityIdKey merchantOperatingCityId) >>= \case
+    Just config -> return $ Just config
+    Nothing -> flip whenJust (cacheFRFSConfig merchantOperatingCityId) /=<< Queries.findByMerchantOperatingCityId merchantOperatingCityId
+
+cacheFRFSConfig :: (CacheFlow m r) => Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.FRFSConfig.FRFSConfig -> m ()
+cacheFRFSConfig cityId config = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.setExp (makeMerchantOperatingCityIdKey cityId) config expTime
+
+makeMerchantOperatingCityIdKey :: Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Text
+makeMerchantOperatingCityIdKey id = "CachedQueries:FRFSConfig:MerchantOperatingCityId-" <> id.getId
 
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ()
-clearCache merchantOperatingCityId = DynamicLogic.clearConfigCache (cast merchantOperatingCityId) (LYT.RIDER_CONFIG LYT.FRFSConfig) Nothing
+clearCache merchantOperatingCityId = Hedis.del (makeMerchantOperatingCityIdKey merchantOperatingCityId)
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSConfig.FRFSConfig -> m ()
 updateByPrimaryKey cfg = do

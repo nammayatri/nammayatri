@@ -35,47 +35,44 @@ import Domain.Types.Trip
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Types as DLanguage
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as LYT
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.MerchantPushNotification as Queries
-import qualified Tools.DynamicLogic as DynamicLogic
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantPushNotification -> m ()
-create = Queries.create
+create val = do
+  Queries.create val
+  clearCache val.merchantOperatingCityId val.key val.tripCategory
 
 findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe [LYT.ConfigVersionMap] -> m [MerchantPushNotification]
-findAllByMerchantOpCityId id mbConfigVersionMap =
-  DynamicLogic.findAllConfigs (cast id) (LYT.RIDER_CONFIG LYT.MerchantPushNotification) mbConfigVersionMap Nothing (Queries.findAllByMerchantOpCityId id)
+findAllByMerchantOpCityId id _mbConfigVersionMap =
+  Hedis.safeGet (makeMerchantOpCityIdAllKey id) >>= \case
+    Just configs -> return configs
+    Nothing -> cacheAllMerchantPNs id /=<< Queries.findAllByMerchantOpCityId id
 
 findMatchingMerchantPN :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Maybe TripCategory -> Maybe Notification.SubCategory -> Maybe DLanguage.Language -> Maybe [LYT.ConfigVersionMap] -> m (Maybe MerchantPushNotification)
-findMatchingMerchantPN merchantOperatingCityId messageKey tripCategory subCategory personLanguage mbConfigVersionMap = do
-  merchantPNs <-
-    DynamicLogic.findAllConfigsWithCacheKey
-      (cast merchantOperatingCityId)
-      (LYT.RIDER_CONFIG LYT.MerchantPushNotification)
-      mbConfigVersionMap
-      Nothing
-      (Queries.findAllByMerchantOpCityAndMessageKeyAndTripCategory merchantOperatingCityId messageKey tripCategory)
-      (makeMerchantOpCityIdAndMessageKeyAndTripCategory merchantOperatingCityId messageKey tripCategory)
-
+findMatchingMerchantPN merchantOperatingCityId messageKey tripCategory subCategory personLanguage _mbConfigVersionMap = do
+  merchantPNs <- findAllByMessageKeyAndTripCategory merchantOperatingCityId messageKey tripCategory
   if null merchantPNs
     then do
-      pnsWithOutTripCategory <-
-        DynamicLogic.findAllConfigsWithCacheKey
-          (cast merchantOperatingCityId)
-          (LYT.RIDER_CONFIG LYT.MerchantPushNotification)
-          mbConfigVersionMap
-          Nothing
-          (Queries.findAllByMerchantOpCityAndMessageKeyAndTripCategory merchantOperatingCityId messageKey Nothing)
-          (makeMerchantOpCityIdAndMessageKeyAndTripCategory merchantOperatingCityId messageKey Nothing)
+      pnsWithOutTripCategory <- findAllByMessageKeyAndTripCategory merchantOperatingCityId messageKey Nothing
       return $ findMatchingNotification pnsWithOutTripCategory
     else return $ findMatchingNotification merchantPNs
   where
     findMatchingNotification pns =
       find (\pn -> Just pn.language == personLanguage && pn.fcmSubCategory == subCategory) pns
         <|> find (\pn -> pn.language == DLanguage.ENGLISH && pn.fcmSubCategory == subCategory) pns
+
+findAllByMessageKeyAndTripCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Maybe TripCategory -> m [MerchantPushNotification]
+findAllByMessageKeyAndTripCategory merchantOperatingCityId messageKey tripCategory =
+  Hedis.safeGet (makeMerchantOpCityIdAndMessageKeyAndTripCategory merchantOperatingCityId messageKey tripCategory) >>= \case
+    Just configs -> return configs
+    Nothing ->
+      cacheMerchantPNsByKey merchantOperatingCityId messageKey tripCategory
+        /=<< Queries.findAllByMerchantOpCityAndMessageKeyAndTripCategory merchantOperatingCityId messageKey tripCategory
 
 findMatchingMerchantPNInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Maybe TripCategory -> Maybe Notification.SubCategory -> Maybe DLanguage.Language -> [LYT.ConfigVersionMap] -> m (Maybe MerchantPushNotification)
 findMatchingMerchantPNInRideFlow merchantOperatingCityId messageKey tripCategory subCategory personLanguage configVersionMap =
@@ -85,16 +82,26 @@ findAllByMerchantOpCityIdInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id Merc
 findAllByMerchantOpCityIdInRideFlow id configVersionMap =
   findAllByMerchantOpCityId id (Just configVersionMap)
 
+cacheAllMerchantPNs :: (CacheFlow m r) => Id MerchantOperatingCity -> [MerchantPushNotification] -> m ()
+cacheAllMerchantPNs cityId configs = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.setExp (makeMerchantOpCityIdAllKey cityId) configs expTime
+
+cacheMerchantPNsByKey :: (CacheFlow m r) => Id MerchantOperatingCity -> Text -> Maybe TripCategory -> [MerchantPushNotification] -> m ()
+cacheMerchantPNsByKey cityId messageKey tripCategory configs = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.setExp (makeMerchantOpCityIdAndMessageKeyAndTripCategory cityId messageKey tripCategory) configs expTime
+
+makeMerchantOpCityIdAllKey :: Id MerchantOperatingCity -> Text
+makeMerchantOpCityIdAllKey id = "CachedQueries:MerchantPushNotification:MerchantOperatingCityId-" <> id.getId <> "-all"
+
 makeMerchantOpCityIdAndMessageKeyAndTripCategory :: Id MerchantOperatingCity -> Text -> Maybe TripCategory -> Text
 makeMerchantOpCityIdAndMessageKeyAndTripCategory id messageKey tripCategory = "CachedQueries:MerchantPushNotification:MerchantOperatingCityId-" <> id.getId <> ":MessageKey-" <> messageKey <> ":TripCategory-" <> show tripCategory
 
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Maybe TripCategory -> m ()
-clearCache merchantOpCityId messageKey tripCategory =
-  DynamicLogic.clearConfigCacheWithPrefix
-    (makeMerchantOpCityIdAndMessageKeyAndTripCategory merchantOpCityId messageKey tripCategory)
-    (cast merchantOpCityId)
-    (LYT.RIDER_CONFIG LYT.MerchantPushNotification)
-    Nothing
+clearCache merchantOpCityId messageKey tripCategory = do
+  Hedis.del (makeMerchantOpCityIdAndMessageKeyAndTripCategory merchantOpCityId messageKey tripCategory)
+  Hedis.del (makeMerchantOpCityIdAllKey merchantOpCityId)
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantPushNotification -> m ()
 updateByPrimaryKey cfg = do
