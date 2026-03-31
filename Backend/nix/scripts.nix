@@ -288,26 +288,34 @@ _:
           let
             # All ports that run-mobility-stack-dev uses
             systemPorts = [
-              5434 5435           # postgres primary + replica
-              6379                # redis
-              30001 30002 30003 30004 30005 30006  # redis cluster
-              2181 29092          # zookeeper + kafka
-              8085                # nginx
-              5422 8079           # passetto db + service
-              5001                # osrm
+              5434
+              5435 # postgres primary + replica
+              6379 # redis
+              30001
+              30002
+              30003
+              30004
+              30005
+              30006 # redis cluster
+              2181
+              29092 # zookeeper + kafka
+              8085 # nginx
+              5422
+              8079 # passetto db + service
+              5001 # osrm
             ];
             servicePorts = [
-              8013                # rider-app
-              8016                # driver-app
-              8015                # beckn-gateway
-              8018                # provider-dashboard
-              8019                # mock-google
-              8020                # mock-registry
-              8080                # mock-server (python)
-              8081                # location-tracking-service
-              4343                # mock-sms
-              4545                # mock-fcm
-              6235                # mock-idfy
+              8013 # rider-app
+              8016 # driver-app
+              8015 # beckn-gateway
+              8018 # provider-dashboard
+              8019 # mock-google
+              8020 # mock-registry
+              8080 # mock-server (python)
+              8081 # location-tracking-service
+              4343 # mock-sms
+              4545 # mock-fcm
+              6235 # mock-idfy
             ];
             allPorts = systemPorts ++ servicePorts;
             portCheckStr = builtins.concatStringsSep " " (map builtins.toString allPorts);

@@ -42,30 +42,30 @@ checkPickupZoneArrival Job {id = jobId, jobInfo} = withLogTag ("JobId-" <> jobId
       return Complete
     Just request
       | request.response == Just DSZQR.NoShow -> do
-          logInfo $ "Request " <> jobData.requestId <> " already marked NoShow, skipping"
-          return Complete
+        logInfo $ "Request " <> jobData.requestId <> " already marked NoShow, skipping"
+        return Complete
       | otherwise -> do
-          mbGate <- Esq.runInReplica $ QGI.findById (Id gateId)
-          case mbGate of
-            Nothing -> do
-              logWarning $ "Gate " <> gateId <> " not found for arrival check"
-              return Complete
-            Just gate -> do
-              driversNearGate <- LTSFlow.nearBy gate.point.lat gate.point.lon (Just False) Nothing 500 merchantId Nothing Nothing
-              isInPickupZone <- case find (\d -> d.driverId == driverId) driversNearGate of
-                Just dl -> do
-                  mbGateCheck <- Esq.runInReplica $ QGI.findGateInfoIfDriverInsideGatePickupZone (LatLong dl.lat dl.lon)
-                  pure $ case mbGateCheck of
-                    Just g -> g.id == gate.id
-                    Nothing -> False
-                Nothing -> pure False
-              if isInPickupZone
-                then do
-                  logInfo $ "Driver " <> driverId.getId <> " arrived at pickup zone gate " <> gateId
-                  return Complete
-                else do
-                  logWarning $ "Driver " <> driverId.getId <> " no-show at gate " <> gateId <> ", removing from queue"
-                  -- Remove from queue first; if this fails, job will retry and NoShow won't be set
-                  void $ LTSFlow.manualQueueRemove specialLocationId vehicleType merchantId driverId
-                  QSZQR.updateResponse (Just DSZQR.NoShow) DSZQR.Expired (Id jobData.requestId)
-                  return Complete
+        mbGate <- Esq.runInReplica $ QGI.findById (Id gateId)
+        case mbGate of
+          Nothing -> do
+            logWarning $ "Gate " <> gateId <> " not found for arrival check"
+            return Complete
+          Just gate -> do
+            driversNearGate <- LTSFlow.nearBy gate.point.lat gate.point.lon (Just False) Nothing 500 merchantId Nothing Nothing
+            isInPickupZone <- case find (\d -> d.driverId == driverId) driversNearGate of
+              Just dl -> do
+                mbGateCheck <- Esq.runInReplica $ QGI.findGateInfoIfDriverInsideGatePickupZone (LatLong dl.lat dl.lon)
+                pure $ case mbGateCheck of
+                  Just g -> g.id == gate.id
+                  Nothing -> False
+              Nothing -> pure False
+            if isInPickupZone
+              then do
+                logInfo $ "Driver " <> driverId.getId <> " arrived at pickup zone gate " <> gateId
+                return Complete
+              else do
+                logWarning $ "Driver " <> driverId.getId <> " no-show at gate " <> gateId <> ", removing from queue"
+                -- Remove from queue first; if this fails, job will retry and NoShow won't be set
+                void $ LTSFlow.manualQueueRemove specialLocationId vehicleType merchantId driverId
+                QSZQR.updateResponse (Just DSZQR.NoShow) DSZQR.Expired (Id jobData.requestId)
+                return Complete

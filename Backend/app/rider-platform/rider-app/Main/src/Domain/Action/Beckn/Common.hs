@@ -525,6 +525,13 @@ rideAssignedReqHandler req = do
                   SPayment.cancelPaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode ride.id
                 let paymentError = toException (Payment.CardError (Payment.StripeErrorInfo {errorCode = Just (show order.status), errorMessage = Just reason}))
                 SPayment.paymentErrorHandler booking paymentError
+                -- Immediately mark booking cancelled + notify so frontend exits search screen
+                -- without waiting for BPP's async on_cancel callback
+                void $ QRB.updateStatus booking.id DRB.CANCELLED
+                QPFS.updateStatus booking.riderId DPFS.IDLE
+                bppDetailsPF <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> booking.providerId)
+                otherPartiesPF <- Notify.getAllOtherRelatedPartyPersons booking
+                Notify.notifyOnBookingCancelled booking DBCR.ByApplication bppDetailsPF Nothing otherPartiesPF
                 throwError $ InvalidRequest "Payment non-capturable, booking cancelled"
           pure mbPaymentResp
         Nothing -> pure Nothing
