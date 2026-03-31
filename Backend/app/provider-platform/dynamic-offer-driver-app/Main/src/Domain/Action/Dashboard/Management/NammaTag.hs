@@ -44,10 +44,13 @@ where
 import qualified ConfigPilotFrontend.Flow as CPF
 import qualified ConfigPilotFrontend.Types as CPT
 import qualified Data.Aeson as A
+import qualified Data.ByteString.Lazy as BSL
 import Data.Default.Class (Default (..))
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Map.Strict as Map
 import Data.Singletons
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as TE
 import qualified Domain.Types.DriverPoolConfig as DTD
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantMessage as DTM
@@ -179,10 +182,15 @@ postNammaTagTagVerify _merchantShortId _opCity LYT.VerifyNammaTagRequest {..} = 
 deleteNammaTagTagDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 deleteNammaTagTagDelete _merchantShortId _opCity tagName = YudhishthiraFlow.deleteTag tagName
 
-getNammaTagTagDetails :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Text -> Environment.Flow Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2
+getNammaTagTagDetails :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Text -> Environment.Flow LYT.NammaTagDetailsResp
 getNammaTagTagDetails merchantShortId opCity tagName = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  QNammaTagV2.findByPrimaryKey (cast merchantOperatingCity.id) tagName >>= fromMaybeM (InvalidRequest $ "NammaTag not found: " <> tagName)
+  let mocId = cast merchantOperatingCity.id
+  tag <- QNammaTagV2.findByPrimaryKey mocId tagName >>= fromMaybeM (InvalidRequest $ "NammaTag not found: " <> tagName)
+  triggers <- QNammaTagTriggerV2.findAllByMerchantOperatingCityIdAndTagName mocId tagName
+  let events = map (.event) triggers
+      inputDataMap = Map.fromList $ map (\e -> (show e, C.getLogicInputDef e)) events
+  return $ mkNammaTagDetailsResp tag events inputDataMap
 
 -- ChakraQueries are global (not merchant-scoped), so merchant/city params are intentionally unused
 getNammaTagQueryDetails :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.Chakra -> Prelude.Text -> Environment.Flow LYT.ChakraQueriesAPIEntity
@@ -350,10 +358,12 @@ getNammaTagAppDynamicLogicDomainsAndEvents ::
   Kernel.Types.Beckn.Context.City ->
   Maybe Bool ->
   Environment.Flow LYT.NammaTagEventsOrNammaTagNamesResp
-getNammaTagAppDynamicLogicDomainsAndEvents _merchantShortId _opCity mbFetchNammaTagNames =
+getNammaTagAppDynamicLogicDomainsAndEvents merchantShortId opCity mbFetchNammaTagNames =
   case mbFetchNammaTagNames of
     Just True -> do
-      tags <- QNammaTag.findAll
+      merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+      let mocId = cast merchantOperatingCity.id
+      tags <- QNammaTagV2.findAllByMerchantOperatingCityId mocId
       return $ LYT.NammaTagNames (map (.name) tags)
     _ -> return $ LYT.NammaTagEvents LYT.allValues
 
