@@ -35,6 +35,53 @@ findAllActiveByOwnerAndServiceName ownerId ownerType serviceName =
     Nothing
     Nothing
 
+findCurrentActiveByOwnerAndServiceName ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  SubscriptionOwnerType ->
+  ServiceNames ->
+  m (Maybe SubscriptionPurchase)
+findCurrentActiveByOwnerAndServiceName ownerId ownerType serviceName =
+  listToMaybe <$> findAllActiveByOwnerAndServiceName ownerId ownerType serviceName
+
+findAllPurchasedByOwnerAndServiceName ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  SubscriptionOwnerType ->
+  ServiceNames ->
+  m [SubscriptionPurchase]
+findAllPurchasedByOwnerAndServiceName ownerId ownerType serviceName =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.ownerId $ Se.Eq ownerId,
+          Se.Is Beam.ownerType $ Se.Eq ownerType,
+          Se.Is Beam.status $ Se.Eq PURCHASED,
+          Se.Is Beam.serviceName $ Se.Eq serviceName
+        ]
+    ]
+    (Se.Asc Beam.purchaseTimestamp)
+    Nothing
+    Nothing
+
+findAllActiveAndPurchasedByOwnerAndServiceName ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  SubscriptionOwnerType ->
+  ServiceNames ->
+  m [SubscriptionPurchase]
+findAllActiveAndPurchasedByOwnerAndServiceName ownerId ownerType serviceName =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.ownerId $ Se.Eq ownerId,
+          Se.Is Beam.ownerType $ Se.Eq ownerType,
+          Se.Is Beam.status $ Se.In [ACTIVE, PURCHASED],
+          Se.Is Beam.serviceName $ Se.Eq serviceName
+        ]
+    ]
+    (Se.Asc Beam.purchaseTimestamp)
+    Nothing
+    Nothing
+
 -- | Find the latest active, non-expired subscription.
 -- Using the provided expiry handler callback to process any expired subscriptions found.
 findLatestActiveByOwnerAndServiceName ::
@@ -51,8 +98,8 @@ findLatestActiveByOwnerAndServiceName handleExpiry ownerId ownerType serviceName
   let (expired, valid) = partition (isExpired now) allActive
   -- Handle expired subscriptions (fallback for failed scheduler jobs)
   mapM_ handleExpiry expired
-  -- Return latest non-expired (last in ASC-sorted list)
-  pure $ listToMaybe $ reverse valid
+  -- Return the current non-expired ACTIVE purchase.
+  pure $ listToMaybe valid
   where
     isExpired now purchase = case purchase.expiryDate of
       Just expiry -> expiry <= now
@@ -210,18 +257,20 @@ findActiveByDateRange merchantOpCityId startTime endTime =
           ]
       ]
 
--- | Update the expiryDate and startDate for a specific subscription purchase.
--- Used when activating a queued purchase's expiry timer (deferred FIFO logic).
-updateExpiryAndStartDateById ::
+-- | Update status, expiryDate and startDate for a specific subscription purchase.
+-- Used when promoting a PURCHASED subscription into the current ACTIVE slot.
+updateStatusExpiryAndStartDateById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  SubscriptionPurchaseStatus ->
   Maybe UTCTime ->
   Maybe UTCTime ->
   Id SubscriptionPurchase ->
   m ()
-updateExpiryAndStartDateById newExpiryDate newStartDate purchaseId = do
+updateStatusExpiryAndStartDateById newStatus newExpiryDate newStartDate purchaseId = do
   now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.expiryDate newExpiryDate,
+    [ Se.Set Beam.status newStatus,
+      Se.Set Beam.expiryDate newExpiryDate,
       Se.Set Beam.startDate newStartDate,
       Se.Set Beam.updatedAt now
     ]

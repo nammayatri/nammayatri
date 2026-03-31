@@ -1,0 +1,354 @@
+PREPAID SUBSCRIPTION FIFO TEST CASES
+
+Purpose
+- Validate pooled prepaid balance behavior.
+- Validate FIFO lifecycle behavior for ACTIVE, PURCHASED, EXHAUSTED, EXPIRED.
+- Validate ride.subscriptionPurchaseIds population for rides that span multiple purchases.
+
+Core Invariants
+- Paid prepaid balance is pooled immediately after successful payment.
+- Exactly one subscription_purchase should be ACTIVE at a time.
+- Zero or more subscription_purchase rows may be PURCHASED.
+- Zero or more subscription_purchase rows may be EXHAUSTED or EXPIRED.
+- Rides should be allowed as long as pooled prepaid balance is sufficient.
+- If one ride spans multiple purchases, ride.subscriptionPurchaseIds should include all contributing purchase ids in FIFO order.
+
+Terminology
+- P1, P2, P3... are subscription purchases ordered by purchaseTimestamp ASC.
+- RC means plan ride credit.
+- Balance means pooled prepaid balance after successful purchase credits and ride debits.
+
+==================================================
+1. HAPPY FLOW
+==================================================
+
+TC-H1: Single purchase, single ride, partial debit
+Setup:
+- P1 RC=500
+Expected after purchase:
+- P1 ACTIVE
+- Balance=500
+Action:
+- End one ride with debit=100
+Expected:
+- Balance=400
+- P1 remains ACTIVE
+- ride.subscriptionPurchaseIds=[P1]
+- No activation of another purchase
+
+TC-H2: Single purchase, exact exhaustion
+Setup:
+- P1 RC=500
+Action:
+- End one ride with debit=500
+Expected:
+- Balance=0
+- P1 becomes EXHAUSTED
+- ride.subscriptionPurchaseIds=[P1]
+- No ACTIVE purchase remains
+
+TC-H3: Two purchases, second remains queued
+Setup:
+- P1 RC=500
+- P2 RC=600
+Expected after purchase:
+- P1 ACTIVE
+- P2 PURCHASED
+- Balance=1100
+Action:
+- End one ride with debit=100
+Expected:
+- Balance=1000
+- P1 remains ACTIVE
+- P2 remains PURCHASED
+- ride.subscriptionPurchaseIds=[P1]
+
+==================================================
+2. MULTIPLE DEBIT / MULTI-PURCHASE CONTRIBUTION
+==================================================
+
+TC-M1: Ride crosses one subscription boundary
+Setup:
+- P1 RC=500
+- P2 RC=600
+Expected before ride:
+- P1 ACTIVE
+- P2 PURCHASED
+- Balance=1100
+Action:
+- End one ride with debit=700
+Expected:
+- Balance=400
+- P1 becomes EXHAUSTED
+- P2 becomes ACTIVE
+- ride.subscriptionPurchaseIds=[P1,P2]
+
+TC-M2: Ride crosses multiple boundaries
+Setup:
+- P1 RC=500
+- P2 RC=600
+- P3 RC=4000
+- P4 RC=100
+- P5 RC=10
+Expected before ride:
+- P1 ACTIVE
+- P2,P3,P4,P5 PURCHASED
+- Balance=5210
+Action:
+- End one ride with debit=1200
+Expected:
+- Balance=4010
+- P1 becomes EXHAUSTED
+- P2 becomes EXHAUSTED
+- P3 becomes ACTIVE
+- P4,P5 remain PURCHASED
+- ride.subscriptionPurchaseIds=[P1,P2,P3]
+
+TC-M3: Sequential rides from same balance pool
+Setup:
+- P1 RC=500
+- P2 RC=600
+- P3 RC=4000
+- P4 RC=100
+- P5 RC=10
+Actions:
+- Ride1 debit=1000
+- Ride2 debit=450
+- Ride3 debit=10
+- Ride4 debit=2000
+- Ride5 debit=10
+Expected after each ride:
+- Ride1: ids should include [P1,P2], current ACTIVE should become P2 or P3 depending on exact remaining pooled inference; final post-ride state must not leave more than one ACTIVE
+- Ride2 onward: all debits should be allowed while pooled balance > 0
+- Every exhausted purchase should move to EXHAUSTED in FIFO order
+- The last partially contributing purchase of each ride should remain or become ACTIVE
+- Each ride.subscriptionPurchaseIds should contain all FIFO-contributing purchase ids for that ride
+
+TC-M4: Single large ride consumes all purchases
+Setup:
+- P1 RC=100
+- P2 RC=50
+- P3 RC=25
+Action:
+- End one ride with debit=175
+Expected:
+- Balance=0
+- P1,P2,P3 all become EXHAUSTED
+- ride.subscriptionPurchaseIds=[P1,P2,P3]
+- No ACTIVE purchase remains
+
+==================================================
+3. RIDE CREDITS LESS / MORE CASES
+==================================================
+
+TC-R1: Ride debit less than ACTIVE remaining credit
+Setup:
+- P1 RC=1000
+- P2 RC=500
+Action:
+- Ride debit=200
+Expected:
+- P1 ACTIVE
+- P2 PURCHASED
+- ride.subscriptionPurchaseIds=[P1]
+
+TC-R2: Ride debit more than ACTIVE but less than ACTIVE+next
+Setup:
+- P1 RC=300
+- P2 RC=700
+Action:
+- Ride debit=500
+Expected:
+- P1 EXHAUSTED
+- P2 ACTIVE
+- ride.subscriptionPurchaseIds=[P1,P2]
+
+TC-R3: Ride debit more than total balance
+Setup:
+- P1 RC=300
+- P2 RC=200
+Action:
+- Attempt ride debit=600
+Expected:
+- Ride should be blocked or debit flow should fail based on existing prepaid insufficiency behavior
+- No silent negative pooled balance
+- No incorrect status changes
+
+==================================================
+4. STATUS TRANSITION CASES
+==================================================
+
+TC-S1: Multiple purchases on same day
+Setup:
+- Buy 5 prepaid plans on same day with RC=500,600,4000,100,10
+Expected after purchases:
+- P1 ACTIVE
+- P2,P3,P4,P5 PURCHASED
+- Balance=5210
+
+TC-S2: PURCHASED should not show as started
+Setup:
+- P1 ACTIVE
+- P2 PURCHASED
+Expected:
+- P2 startDate=NULL
+- P2 expiryDate=NULL
+- Dashboard subscriptionStartDate should be NULL for P2
+
+TC-S3: PURCHASED becomes ACTIVE on first actual usage boundary
+Setup:
+- P1 RC=500 ACTIVE
+- P2 RC=600 PURCHASED
+Action:
+- Ride debit consumes P1 and enters P2
+Expected:
+- P2 startDate set
+- P2 expiryDate set
+- P2 ACTIVE
+
+TC-S4: PURCHASED promoted and exhausted in same ride
+Setup:
+- P1 RC=500 ACTIVE
+- P2 RC=100 PURCHASED
+Action:
+- Ride debit=650
+Expected:
+- P1 EXHAUSTED
+- P2 EXHAUSTED
+- ride.subscriptionPurchaseIds=[P1,P2]
+- No ACTIVE purchase remains
+
+==================================================
+5. EXPIRY FLOWS
+==================================================
+
+TC-E1: ACTIVE purchase expires with queued PURCHASED behind it
+Setup:
+- P1 ACTIVE with expiry in past
+- P2 PURCHASED
+Action:
+- Run ExpireSubscriptionPurchase job for P1
+Expected:
+- P1 EXPIRED
+- Expiry revenue recognition/credit transfer executed once
+- P2 becomes ACTIVE
+- P2 startDate set
+- P2 expiryDate set
+
+TC-E2: Expiry job runs after purchase already EXHAUSTED
+Setup:
+- P1 already EXHAUSTED
+Action:
+- Run ExpireSubscriptionPurchase job for P1
+Expected:
+- Job should skip terminal state
+- P1 must remain EXHAUSTED
+- No EXHAUSTED -> EXPIRED regression
+
+TC-E3: Late expiry versus ride debit
+Setup:
+- P1 near expiry
+- Ride debit and expiry job race
+Expected:
+- Owner lock serializes both
+- Final state should have at most one ACTIVE
+- No double activation of next purchase
+- No duplicate expiry processing
+
+==================================================
+6. CONCURRENCY / RACE CASES
+==================================================
+
+TC-C1: Two successful purchases in parallel
+Setup:
+- No active prepaid plan
+Action:
+- Two purchase success flows run nearly together
+Expected:
+- Only one ends ACTIVE
+- Other ends PURCHASED
+
+TC-C2: Ride debit and purchase success in parallel
+Setup:
+- P1 ACTIVE, pooled balance available
+Action:
+- One ride ends while another purchase payment succeeds
+Expected:
+- Owner lock serializes flow
+- No more than one ACTIVE at end
+- New purchase either remains PURCHASED or becomes ACTIVE only if no ACTIVE remains
+
+TC-C3: Ride debit and expiry job in parallel
+Setup:
+- P1 ACTIVE, P2 PURCHASED
+Action:
+- Ride completion and expiry job overlap
+Expected:
+- No duplicate activation of P2
+- No duplicate expiry job scheduling for same promoted purchase
+- No EXHAUSTED -> EXPIRED regression
+
+==================================================
+7. DASHBOARD / API / REPORTING
+==================================================
+
+TC-D1: Subscription purchase list shows PURCHASED distinctly
+Setup:
+- P1 ACTIVE
+- P2 PURCHASED
+Expected:
+- API and dashboard should show P2 as PURCHASED
+
+TC-D2: latestManualPaymentDate should use purchase time
+Setup:
+- P1 bought on Day1
+- P2 bought on Day2 as PURCHASED
+- Later P2 becomes ACTIVE on Day5
+Expected:
+- latestManualPaymentDate should remain Day2
+- It must not jump to Day5 because of activation
+
+TC-D3: subscriptionStartDate in finance dashboard
+Setup:
+- P2 PURCHASED and not yet activated
+Expected:
+- subscriptionStartDate=NULL
+- purchasedAt=purchaseTimestamp
+
+==================================================
+8. LEGACY DATA / MIGRATION
+==================================================
+
+TC-L1: Legacy queued ACTIVE rows normalized by migration
+Setup:
+- Existing prepaid data has multiple ACTIVE rows where only first has startDate/expiryDate and later ones have NULL startDate/expiryDate
+Action:
+- Run migration 0784
+Expected:
+- First real live row stays ACTIVE
+- Queued NULL-timer rows become PURCHASED
+
+TC-L2: Post-migration invariant
+Expected:
+- For each owner/serviceName PREPAID_SUBSCRIPTION:
+  - at most one ACTIVE
+  - remaining queued rows PURCHASED
+
+==================================================
+9. KNOWN LIMITATION TO DISCUSS
+==================================================
+
+Open discussion item:
+- Current implementation restores multi-subscription ride IDs, but it still does not store exact debit amount per purchase for a ride.
+- Example:
+  - P1 contributes 500
+  - P2 contributes 200
+  - ride.subscriptionPurchaseIds can store [P1,P2]
+  - but exact 500/200 split is not persisted yet
+
+Suggested follow-up if needed:
+- Add a dedicated allocation table or ledger metadata for:
+  - ride_id
+  - subscription_purchase_id
+  - debited_amount
+  - sequence_number

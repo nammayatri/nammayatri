@@ -644,15 +644,13 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
             referenceId = latestPurchase.id.getId
             isFleetOwner = DCommon.checkFleetOwnerRole person.role
             counterpartyType = if isFleetOwner then counterpartyFleetOwner else counterpartyDriver
-        -- Check if there are other ACTIVE purchases with expiry already set (deferred FIFO)
         let ownerType = if isFleetOwner then DSP.FLEET_OWNER else DSP.DRIVER
-        existingActive <- QSPE.findAllActiveByOwnerAndServiceName person.id.getId ownerType DP.PREPAID_SUBSCRIPTION
-        let hasActiveWithExpiry = any (\p -> isJust p.expiryDate) existingActive
-            -- Only set expiry if no other active purchase has one (this is the first/only active plan)
+        mbExistingActive <- QSPE.findCurrentActiveByOwnerAndServiceName person.id.getId ownerType DP.PREPAID_SUBSCRIPTION
+        let purchaseStatus = maybe DSP.ACTIVE (const DSP.PURCHASED) mbExistingActive
             expiryDate =
-              if hasActiveWithExpiry
-                then Nothing -- Queued: timer starts when predecessor exhausts/expires
-                else fmap (\days -> addUTCTime (fromIntegral (days * 60 * 60 * 24)) now) plan.validityInDays
+              if purchaseStatus == DSP.ACTIVE
+                then fmap (\days -> addUTCTime (fromIntegral (days * 60 * 60 * 24)) now) plan.validityInDays
+                else Nothing
         -- Fetch merchant for issuedByName and issuedByAddress
         merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
         -- Fetch operating city for issuedToAddress
@@ -708,14 +706,14 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
             >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
         let updatedPurchase =
               latestPurchase
-                { status = DSP.ACTIVE,
+                { status = purchaseStatus,
                   purchaseTimestamp = now,
                   expiryDate = expiryDate,
-                  startDate = if isJust expiryDate then Just now else Nothing,
+                  startDate = if purchaseStatus == DSP.ACTIVE then Just now else Nothing,
                   financeInvoiceId = mbInvoiceId
                 }
         QSP.updateByPrimaryKey updatedPurchase
-        -- Schedule expiry job only if expiry was set (not queued)
+        -- Schedule expiry job only for the current ACTIVE purchase.
         whenJust expiryDate $ \expiry -> do
           let delay = diffUTCTime expiry now
           createJobIn @_ @'ExpireSubscriptionPurchase
@@ -820,7 +818,7 @@ updatePaymentStatus driverId merchantOpCityId serviceName = do
     DP.PREPAID_SUBSCRIPTION -> do
       person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
-      mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType serviceName
+      mbPurchase <- QSPE.findCurrentActiveByOwnerAndServiceName ownerId ownerType serviceName
       pure $ ADPlan.mkSyntheticDriverPlanFromPurchase <$> mbPurchase
     _ -> findByDriverIdWithServiceName (cast driverId) serviceName -- what if its changed? needed inside lock?
   plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing (mbDriverPlan >>= (.vehicleCategory))

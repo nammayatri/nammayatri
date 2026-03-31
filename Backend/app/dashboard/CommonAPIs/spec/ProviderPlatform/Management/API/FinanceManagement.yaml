@@ -137,7 +137,7 @@ apis:
 
 types:
   SubscriptionPurchaseStatus:
-    - enum: "SubscriptionPending, SubscriptionActive, SubscriptionExpired, SubscriptionFailed, SubscriptionExhausted"
+    - enum: "SubscriptionPending, SubscriptionPurchased, SubscriptionActive, SubscriptionExpired, SubscriptionFailed, SubscriptionExhausted"
     - derive: "HttpInstance"
 
   PgGateway:

@@ -327,6 +327,7 @@ data SubscriptionPurchaseListRes = SubscriptionPurchaseListRes {totalItems :: Ke
 
 data SubscriptionPurchaseStatus
   = SubscriptionPending
+  | SubscriptionPurchased
   | SubscriptionActive
   | SubscriptionExpired
   | SubscriptionFailed

@@ -57,7 +57,6 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as SOrder
 import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, getStartTimeAndEndTimeRange, mkCachedKeyTotalRidesByDriverId, roundToHalf)
-import SharedLogic.Finance.Prepaid (handleSubscriptionExpiry)
 import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.Payment
 import qualified SharedLogic.Payment as SPayment
@@ -414,7 +413,7 @@ getSubcriptionStatusWithPlanPrepaid ::
 getSubcriptionStatusWithPlanPrepaid driverId = do
   person <- QPerson.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
-  mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType PREPAID_SUBSCRIPTION
+  mbPurchase <- QSPE.findCurrentActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
   pure (Nothing, mkSyntheticDriverPlanFromPurchase <$> mbPurchase)
 
 updateSubscriptionStatusGeneric ::
@@ -515,7 +514,7 @@ planList (personId, merchantId, merchantOpCityId) serviceName _mbLimit _mbOffset
   mDriverPlan <- case serviceName of
     PREPAID_SUBSCRIPTION -> do
       let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
-      mbPurchase <- B.runInReplica $ QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType PREPAID_SUBSCRIPTION
+      mbPurchase <- B.runInReplica $ QSPE.findCurrentActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
       pure $ mkSyntheticDriverPlanFromPurchase <$> mbPurchase
     _ -> B.runInReplica $ QDPlan.findByDriverIdWithServiceName personId serviceName
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -555,8 +554,9 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
   let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
   latestManualPaymentDate <- case serviceName of
     PREPAID_SUBSCRIPTION -> do
-      purchases <- QSP.findAllByOwnerAndStatus ownerId ownerType DSP.ACTIVE
-      pure $ listToMaybe (sortOn (Down . (.updatedAt)) purchases) <&> (.updatedAt)
+      activePurchases <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
+      purchasedPlans <- QSPE.findAllPurchasedByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
+      pure $ listToMaybe (sortOn (Down . (.purchaseTimestamp)) (activePurchases <> purchasedPlans)) <&> (.purchaseTimestamp)
     _ -> do
       latestManualPayment <- QDF.findLatestByFeeTypeAndStatusWithServiceName DF.RECURRING_INVOICE [DF.CLEARED, DF.COLLECTED_CASH] driverId serviceName
       pure $ latestManualPayment <&> (.updatedAt)

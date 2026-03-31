@@ -339,7 +339,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
       if DCommon.checkFleetOwnerRole person.role
         then pure (DSP.FLEET_OWNER, person.id.getId)
         else pure (DSP.DRIVER, person.id.getId)
-  mbPrepaidPurchase <- QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType PREPAID_SUBSCRIPTION
+  mbPrepaidPurchase <- QSPE.findCurrentActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
   let serviceName = if isJust mbPrepaidPurchase then PREPAID_SUBSCRIPTION else YATRI_SUBSCRIPTION
 
   -- 1. Subscription Flow — route by serviceName
@@ -373,21 +373,19 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
                 booking.id.getId
                 Nothing
                 >>= fromEitherM (\err -> InternalError ("Failed to debit prepaid balance: " <> show err))
-            (contributingPurchaseIds, anyExhausted) <- checkAndMarkExhaustedSubscriptions counterpartyFleetOwner fleetOwnerId.getId DSP.FLEET_OWNER
+            (contributingPurchaseIds, mbActivatedPurchase) <- checkAndMarkExhaustedSubscriptions counterpartyFleetOwner fleetOwnerId.getId DSP.FLEET_OWNER
             unless (null contributingPurchaseIds) $
               QRide.updateSubscriptionPurchaseIds (Just contributingPurchaseIds) ride.id
-            when anyExhausted $ do
-              mbActivated <- activateNextQueuedPurchaseExpiry fleetOwnerId.getId DSP.FLEET_OWNER
-              whenJust mbActivated $ \(nextPurchaseId, expiry) -> do
-                now <- getCurrentTime
-                let delay = diffUTCTime expiry now
-                createJobIn @_ @'ExpireSubscriptionPurchase
-                  (Just booking.providerId)
-                  (Just booking.merchantOperatingCityId)
-                  delay
-                  $ ExpireSubscriptionPurchaseJobData
-                    { subscriptionPurchaseId = nextPurchaseId
-                    }
+            whenJust mbActivatedPurchase $ \(nextPurchaseId, expiry) -> do
+              now <- getCurrentTime
+              let delay = diffUTCTime expiry now
+              createJobIn @_ @'ExpireSubscriptionPurchase
+                (Just booking.providerId)
+                (Just booking.merchantOperatingCityId)
+                delay
+                $ ExpireSubscriptionPurchaseJobData
+                  { subscriptionPurchaseId = nextPurchaseId
+                  }
             pure ()
         Nothing -> do
           Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
@@ -408,21 +406,19 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
             let balanceUpdateMessage = "Thank you for taking the ride. Your updated subscription balance is Rs." <> show newBalance
                 balanceUpdatedTitle = "Subscription balance updated!"
             sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_BALANCE_UPDATE balanceUpdatedTitle balanceUpdateMessage driver driver.deviceToken
-            (contributingPurchaseIds, anyExhausted) <- checkAndMarkExhaustedSubscriptions counterpartyDriver ride.driverId.getId DSP.DRIVER
+            (contributingPurchaseIds, mbActivatedPurchase) <- checkAndMarkExhaustedSubscriptions counterpartyDriver ride.driverId.getId DSP.DRIVER
             unless (null contributingPurchaseIds) $
               QRide.updateSubscriptionPurchaseIds (Just contributingPurchaseIds) ride.id
-            when anyExhausted $ do
-              mbActivated <- activateNextQueuedPurchaseExpiry ride.driverId.getId DSP.DRIVER
-              whenJust mbActivated $ \(nextPurchaseId, expiry) -> do
-                now' <- getCurrentTime
-                let delay = diffUTCTime expiry now'
-                createJobIn @_ @'ExpireSubscriptionPurchase
-                  (Just booking.providerId)
-                  (Just booking.merchantOperatingCityId)
-                  delay
-                  $ ExpireSubscriptionPurchaseJobData
-                    { subscriptionPurchaseId = nextPurchaseId
-                    }
+            whenJust mbActivatedPurchase $ \(nextPurchaseId, expiry) -> do
+              now' <- getCurrentTime
+              let delay = diffUTCTime expiry now'
+              createJobIn @_ @'ExpireSubscriptionPurchase
+                (Just booking.providerId)
+                (Just booking.merchantOperatingCityId)
+                delay
+                $ ExpireSubscriptionPurchaseJobData
+                  { subscriptionPurchaseId = nextPurchaseId
+                  }
             let subscriptionConfig = thresholdConfig.subscriptionConfig
             let prepaidSubscriptionThreshold = subscriptionConfig.prepaidSubscriptionThreshold
             when (newBalance < fromMaybe 0 prepaidSubscriptionThreshold) $ do
@@ -439,7 +435,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
           if DCommon.checkFleetOwnerRole person.role
             then pure (DSP.FLEET_OWNER, person.id.getId)
             else pure (DSP.DRIVER, person.id.getId)
-      mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId' ownerType' PREPAID_SUBSCRIPTION
+      mbPurchase <- QSPE.findCurrentActiveByOwnerAndServiceName ownerId' ownerType' PREPAID_SUBSCRIPTION
       let mbSyntheticPlan = Plan.mkSyntheticDriverPlanFromPurchase <$> mbPurchase
       plan <- getPlan mbSyntheticPlan PREPAID_SUBSCRIPTION booking.merchantOperatingCityId Nothing Nothing
       case plan of
