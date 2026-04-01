@@ -48,6 +48,16 @@ defaultDriverDomainConfig =
                     BTT.mkPeriodConfig "weekly" 7
                   ]
               }
+          ),
+          ( "ISSUE_BREACH_EXTRA_FARE",
+            BTT.CounterConfig
+              { windowSizeDays = 30, -- default; actual value comes from TransporterConfig.issueBreachConfig.ibCountWindowSizeInDays
+                counters = [BTT.ACTION_COUNT, BTT.ELIGIBLE_COUNT],
+                periods =
+                  [ BTT.mkPeriodConfig "daily" 1,
+                    BTT.mkPeriodConfig "weekly" 7
+                  ]
+              }
           )
         ],
       blockReasonTags =

@@ -14,6 +14,7 @@
 
 module Domain.Action.Internal.ReportIssue where
 
+import qualified Data.Aeson as A
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import Domain.Types.Ride
 import Domain.Types.ServiceTierType
@@ -25,7 +26,13 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.BehaviorEngine.Orchestrator as BEOrch
+import qualified Lib.BehaviorTracker.Snapshot as BTSnap
+import qualified Lib.BehaviorTracker.Types as BTT
+import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
+import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.BehaviourManagement.IssueBreach (IssueBreachType (..))
+import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
 import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
 import SharedLogic.DriverOnboarding
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -37,6 +44,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import Tools.DynamicLogic (getAppDynamicLogic)
 import Tools.Error
 import qualified Tools.Notifications as Notify
 import Utils.Common.Cac.KeyNameConstants
@@ -74,8 +82,54 @@ handleExtraFareMitigation ride serviceTierType = do
   when isRideAllowedForCounting $
     whenJust ibConfig $ \config -> do
       QDI.updateExtraFareMitigation (pure True) ride.driverId
+      -- Keep old counter increment for backward compat
       IBM.incrementIssueBreachCounter EXTRA_FARE_MITIGATION ride.driverId (toInteger config.ibCountWindowSizeInDays)
-      IBM.issueBreachMitigation EXTRA_FARE_MITIGATION transporterConfig driverInfo
+      -- Framework pipeline: build snapshot + orchestrate + dispatch consequences
+      let windowSize = toInteger config.ibCountWindowSizeInDays
+          counterConfig =
+            BTT.CounterConfig
+              { windowSizeDays = windowSize,
+                counters = [BTT.ACTION_COUNT, BTT.ELIGIBLE_COUNT],
+                periods =
+                  [ BTT.mkPeriodConfig "daily" 1,
+                    BTT.mkPeriodConfig "weekly" 7
+                  ]
+              }
+      eventTime <- getCurrentTime
+      let actionEvent =
+            BTT.ActionEvent
+              { entityType = BTT.DRIVER,
+                entityId = ride.driverId.getId,
+                actionType = "ISSUE_BREACH_EXTRA_FARE",
+                merchantOperatingCityId = ride.merchantOperatingCityId.getId,
+                flowContext = A.object [],
+                eventData =
+                  A.object
+                    [ "issueType" A..= ("EXTRA_FARE_MITIGATION" :: Text),
+                      "serviceTierType" A..= (show serviceTierType :: Text),
+                      "blocked" A..= driverInfo.blocked,
+                      "softBlockActive" A..= isJust driverInfo.softBlockStiers,
+                      "onRide" A..= driverInfo.onRide
+                    ],
+                timestamp = eventTime
+              }
+          entityState = A.object []
+          cooldownTags = ["ExtraFareDaily", "ExtraFareWeekly"]
+          fetchRules = \domain -> do
+            localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+            getAppDynamicLogic (cast ride.merchantOperatingCityId) domain localTime Nothing Nothing
+      snapshot <- BTSnap.buildSnapshotWithCooldowns counterConfig actionEvent entityState cooldownTags
+      output <- BEOrch.orchestrate snapshot LYDL.Driver (cast ride.merchantOperatingCityId) LYT.ISSUE_BREACH_BEHAVIOR fetchRules
+      logInfo $ "Issue Breach behavior evaluation: consequences=" <> show (length output.consequences) <> ", communications=" <> show (length output.communications)
+      let dispatchCtx =
+            BehaviorDispatch.DispatchContext
+              { merchantId = transporterConfig.merchantId,
+                merchantOperatingCityId = ride.merchantOperatingCityId,
+                counterConfig = Just counterConfig,
+                actionEvent = Just actionEvent
+              }
+      BehaviorDispatch.handleConsequences dispatchCtx ride.driverId output.consequences
+      BehaviorDispatch.handleCommunications ride.driverId output.communications
 
 handleDrunkAndDriveViolation :: Ride -> Flow ()
 handleDrunkAndDriveViolation ride = do
