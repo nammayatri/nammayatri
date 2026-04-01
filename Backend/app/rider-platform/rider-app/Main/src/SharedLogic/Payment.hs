@@ -18,7 +18,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ParkingTransaction as DPT
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
-import qualified Lib.Payment.Domain.Types.Offer as DOffer
 import qualified Domain.Types.Ride as Ride
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Payment.Interface as Payment
@@ -38,6 +37,7 @@ import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.Offer as DOffer
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
@@ -881,18 +881,20 @@ isOnlinePayment mbMerchant booking = maybe False (.onlinePayment) mbMerchant && 
 getCustomerAndPaymentMethod :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking.Booking -> Person.Person -> m (Payment.CustomerId, Payment.PaymentMethodId)
 getCustomerAndPaymentMethod booking person = do
   let paymentMode = fromMaybe DMPM.LIVE booking.paymentMode
+  logDebug $ "getCustomerAndPaymentMethod: " <> show booking.id.getId <> " " <> show person.id.getId <> " " <> show paymentMode
   paymentCustomer <- QPaymentCustomer.findByPersonIdAndPaymentMode (Just person.id) (Just paymentMode) >>= fromMaybeM (PersonFieldNotPresent "paymentCustomer")
+  logDebug $ "paymentCustomer: " <> show paymentCustomer
   paymentMethodId <- paymentCustomer.defaultPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultPaymentMethodId")
   pure (paymentCustomer.customerId, paymentMethodId)
 
 updateDefaultPersonPaymentMethodId ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   Person.Person ->
-  Maybe Payment.PaymentMethodId ->
+  Payment.PaymentMethodId ->
   m ()
 updateDefaultPersonPaymentMethodId person paymentMethodId = do
   let paymentMode = fromMaybe DMPM.LIVE person.paymentMode
-  QPaymentCustomer.updateDefaultPaymentMethodId paymentMethodId (Just person.id) (Just paymentMode)
+  QPaymentCustomer.updateDefaultPaymentMethodId (Just paymentMethodId) (Just person.id) (Just paymentMode)
 
 getOfferAmount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DOffer.Offer -> HighPrecMoney -> m (Maybe DPayment.ComputedOfferAmount)
 getOfferAmount offerId amount = do

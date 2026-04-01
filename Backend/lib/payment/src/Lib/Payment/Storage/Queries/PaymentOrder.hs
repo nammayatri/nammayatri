@@ -51,6 +51,14 @@ findByDomainEntityId domainEntityId =
     Nothing
     <&> listToMaybe
 
+findAllByDomainEntityId :: BeamFlow m r => Text -> m [DOrder.PaymentOrder]
+findAllByDomainEntityId domainEntityId =
+  findAllWithOptionsKV
+    [Se.Is BeamPO.domainEntityId $ Se.Eq $ Just domainEntityId]
+    (Se.Desc BeamPO.createdAt)
+    Nothing
+    Nothing
+
 create :: BeamFlow m r => DOrder.PaymentOrder -> m ()
 create = createWithKV
 

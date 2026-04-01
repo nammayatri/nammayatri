@@ -38,6 +38,7 @@ import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
 import qualified Beckn.Types.Core.Taxi.Common.RideCompletedQuote as Quote
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified BecknV2.OnDemand.Enums as EventEnum
+import qualified BecknV2.OnDemand.Tags as BecknV2Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as UtilsV2
 import BecknV2.OnDemand.Utils.Payment (mkPaymentTags)
@@ -321,6 +322,17 @@ tfCompleteReqToOrder Common.DRideCompletedReq {..} mbFarePolicy becknConfig = do
   let farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
   let items = UtilsOU.tfItems ride booking merchant.shortId.getShortId Nothing farePolicy booking.paymentId
   let payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig booking
+      commissionTag = do
+        c <- ride.commission
+        BecknV2Tags.buildTagGroups [BecknV2Tags.COMMISSION BecknV2Tags.~= highPrecMoneyToText c]
+      paymentWithCommission =
+        payment
+          { Spec.paymentTags = case (payment.paymentTags, commissionTag) of
+              (Just existing, Just extra) -> Just (existing <> extra)
+              (Just existing, Nothing) -> Just existing
+              (Nothing, Just extra) -> Just extra
+              (Nothing, Nothing) -> Nothing
+          }
   let orderSettlementTags = mkOrderSettlementTags bppConfig merchant
   pure $
     Spec.Order
@@ -328,7 +340,7 @@ tfCompleteReqToOrder Common.DRideCompletedReq {..} mbFarePolicy becknConfig = do
         orderTags = Just orderSettlementTags,
         orderStatus = Just $ show EventEnum.COMPLETE, -- Keep COMPLETE for backward compat until all BAPs upgraded
         orderFulfillments = Just [fulfillment],
-        orderPayments = Just [payment],
+        orderPayments = Just [paymentWithCommission],
         orderQuote = Just quote,
         orderBilling = Nothing,
         orderCancellation = Nothing,

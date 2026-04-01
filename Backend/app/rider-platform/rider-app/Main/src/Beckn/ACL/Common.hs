@@ -246,6 +246,11 @@ parseRideCompletedEvent order msgId txnId = do
       tripEndLocation = getLocationFromTagV2 personTagsGroup Tag.CURRENT_LOCATION Tag.CURRENT_LOCATION_LAT Tag.CURRENT_LOCATION_LON
       rideEndTime = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentStops) >>= Utils.getDropLocation >>= (.stopTime) >>= (.timeTimestamp)
       paymentStatus = order.orderPayments >>= listToMaybe >>= (.paymentStatus) >>= readMaybe . T.unpack
+      commission = do
+        payment <- order.orderPayments >>= listToMaybe
+        tags <- payment.paymentTags
+        txt <- getTagV2' Tag.SETTLEMENT_DETAILS Tag.COMMISSION (Just tags)
+        highPrecMoneyFromText txt
   pure $
     Common.RideCompletedReq
       { bookingDetails,
