@@ -35,8 +35,6 @@ imports:
   GetPatchedElementReq: Lib.Yudhishthira.Types
   GetPatchedElementResp: Lib.Yudhishthira.Types
   UiConfigGetVersionResponse: Lib.Yudhishthira.Types
-  NammaTagV2: Lib.Yudhishthira.Types.NammaTagV2
-  NammaTagDetailsResp: Lib.Yudhishthira.Types
   Value: Data.Aeson
   NammaTagEventsOrNammaTagNamesResp: Lib.Yudhishthira.Types
 
@@ -86,14 +84,14 @@ apis:
       endpoint: /tag/all
       auth: ApiAuthV2
       response:
-        type: "[NammaTagDetailsResp]"
+        type: "[NammaTagV2]"
   - GET:
       endpoint: /tag/details
       auth: ApiAuthV2
       mandatoryQuery:
         tagName: Text
       response:
-        type: NammaTagDetailsResp
+        type: NammaTagV2
   - POST:
       endpoint: /query/create
       auth: ApiAuthV2

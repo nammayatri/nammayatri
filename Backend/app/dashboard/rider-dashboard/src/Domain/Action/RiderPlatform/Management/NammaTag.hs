@@ -231,7 +231,11 @@ getNammaTagAppDynamicLogicDomainsAndEvents merchantShortId opCity apiTokenInfo f
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagAppDynamicLogicDomainsAndEvents) fetchNammaTagNames
 
-getNammaTagTagAll :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow [Lib.Yudhishthira.Types.NammaTagDetailsResp])
+<<<<<<< HEAD
+=======
+
+>>>>>>> 5a93589626 (backend/fix: Address PR review - fix exports and cleanup)
+getNammaTagTagAll :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow [Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2])
 getNammaTagTagAll merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagTagAll)
@@ -241,6 +245,10 @@ getNammaTagConfigPilotAlwaysOnList merchantShortId opCity apiTokenInfo domain = 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagConfigPilotAlwaysOnList) domain
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 5a93589626 (backend/fix: Address PR review - fix exports and cleanup)
 postNammaTagConfigPilotGetConfigWithDimensions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.ConfigPilotGetConfigRequest -> Environment.Flow Lib.Yudhishthira.Types.TableDataResp)
 postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
@@ -258,7 +266,11 @@ postNammaTagConfigPilotCreateRow merchantShortId opCity apiTokenInfo req = do
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.postNammaTagConfigPilotCreateRow) req)
 
-getNammaTagTagDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow Lib.Yudhishthira.Types.NammaTagDetailsResp)
+<<<<<<< HEAD
+=======
+
+>>>>>>> 5a93589626 (backend/fix: Address PR review - fix exports and cleanup)
+getNammaTagTagDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2)
 getNammaTagTagDetails merchantShortId opCity apiTokenInfo tagName = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagTagDetails) tagName

@@ -37,10 +37,10 @@ postNammaTagTagVerify a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Das
 deleteNammaTagTagDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 deleteNammaTagTagDelete a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.NammaTag.deleteNammaTagTagDelete a3 a2 a1
 
-getNammaTagTagAll :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowHandler [Lib.Yudhishthira.Types.NammaTagDetailsResp])
+getNammaTagTagAll :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowHandler [Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2])
 getNammaTagTagAll a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.NammaTag.getNammaTagTagAll a2 a1
 
-getNammaTagTagDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.FlowHandler Lib.Yudhishthira.Types.NammaTagDetailsResp)
+getNammaTagTagDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.FlowHandler Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2)
 getNammaTagTagDetails a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.NammaTag.getNammaTagTagDetails a3 a2 a1
 
 postNammaTagQueryCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.ChakraQueriesAPIEntity -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

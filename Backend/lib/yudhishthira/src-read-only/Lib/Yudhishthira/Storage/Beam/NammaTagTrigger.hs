@@ -24,6 +24,6 @@ instance B.Table NammaTagTriggerT where
 
 type NammaTagTrigger = NammaTagTriggerT Identity
 
-$(enableKVPG (''NammaTagTriggerT) [('event), ('tagName)] [])
+$(enableKVPG ''NammaTagTriggerT ['event, 'tagName] [])
 
-$(mkTableInstancesGenericSchema (''NammaTagTriggerT) "namma_tag_trigger")
+$(mkTableInstancesGenericSchema ''NammaTagTriggerT "namma_tag_trigger")
