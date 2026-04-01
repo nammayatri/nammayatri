@@ -443,6 +443,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             notificationCooldownInSec = mbGate >>= (.notificationCooldownInSec),
             maxRideSkipsBeforeQueueRemoval = mbGate >>= (.maxRideSkipsBeforeQueueRemoval),
             pickupZoneArrivalTimeoutInSec = mbGate >>= (.pickupZoneArrivalTimeoutInSec),
+            pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
             ..
           }
 
@@ -1567,7 +1568,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 demandThreshold = Nothing,
                 notificationCooldownInSec = Nothing,
                 maxRideSkipsBeforeQueueRemoval = Nothing,
-                pickupZoneArrivalTimeoutInSec = Nothing
+                pickupZoneArrivalTimeoutInSec = Nothing,
+                pickupRequestResponseTimeoutInSec = Nothing
               }
       return (city, locationName, (specialLocation, gateInfo), mbSpecialLocationId)
 

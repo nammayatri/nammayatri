@@ -193,7 +193,8 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType coo
       logWarning $ "SpecialLocation not found for id: " <> specialLocationId <> ", using gate name as fallback"
       pure gate.name
   now <- getCurrentTime
-  let validTill = addUTCTime 30 now
+  let responseTimeoutSec = fromMaybe 15 gate.pickupRequestResponseTimeoutInSec
+      validTill = addUTCTime (fromIntegral responseTimeoutSec) now
   foldM
     ( \count driverId -> do
         existingRequests <- QSZQR.findActiveByDriverId driverId DSZQR.Active

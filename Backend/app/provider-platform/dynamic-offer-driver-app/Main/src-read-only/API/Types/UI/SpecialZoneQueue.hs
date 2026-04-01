@@ -15,10 +15,15 @@ data SpecialZoneQueueRequestListRes = SpecialZoneQueueRequestListRes {requests :
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SpecialZoneQueueRequestRes = SpecialZoneQueueRequestRes
-  { gateName :: Kernel.Prelude.Text,
+  { currentSkipCount :: Kernel.Prelude.Int,
+    gateId :: Kernel.Prelude.Text,
+    gateName :: Kernel.Prelude.Text,
+    maxSkipsBeforeQueueRemoval :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     requestId :: Kernel.Types.Id.Id Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest,
+    specialLocationId :: Kernel.Prelude.Text,
     specialLocationName :: Kernel.Prelude.Text,
-    validTill :: Kernel.Prelude.UTCTime
+    validTill :: Kernel.Prelude.UTCTime,
+    vehicleType :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

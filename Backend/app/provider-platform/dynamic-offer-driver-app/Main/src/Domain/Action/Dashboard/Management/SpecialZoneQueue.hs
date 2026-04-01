@@ -18,8 +18,8 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
-import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
+import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error
@@ -54,25 +54,27 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
         -- Drivers that are both in this vehicle type's queue AND inside the pickup zone
         inPickupZone = length $ filter (`elem` pickupZoneDriverIds) queuedDriverIds
         outsidePickupZone = totalInQueue - inPickupZone
-    pure SZQT.VehicleQueueStats
-      { vehicleType = vt,
-        totalInQueue = totalInQueue,
-        inPickupZone = inPickupZone,
-        outsidePickupZone = max 0 outsidePickupZone
-      }
+    pure
+      SZQT.VehicleQueueStats
+        { vehicleType = vt,
+          totalInQueue = totalInQueue,
+          inPickupZone = inPickupZone,
+          outsidePickupZone = max 0 outsidePickupZone
+        }
   let nonEmptyStats = filter (\s -> s.totalInQueue > 0) vehicleStats
       totalDrivers = sum $ map (.totalInQueue) nonEmptyStats
       totalInZone = sum $ map (.inPickupZone) nonEmptyStats
       totalOutside = sum $ map (.outsidePickupZone) nonEmptyStats
-  pure SZQT.SpecialZoneQueueStatsRes
-    { gateId = gateId,
-      gateName = gate.name,
-      specialLocationName = specialLocationName,
-      vehicleStats = nonEmptyStats,
-      totalDriversInQueue = totalDrivers,
-      totalInPickupZone = totalInZone,
-      totalOutsidePickupZone = totalOutside
-    }
+  pure
+    SZQT.SpecialZoneQueueStatsRes
+      { gateId = gateId,
+        gateName = gate.name,
+        specialLocationName = specialLocationName,
+        vehicleStats = nonEmptyStats,
+        totalDriversInQueue = totalDrivers,
+        totalInPickupZone = totalInZone,
+        totalOutsidePickupZone = totalOutside
+      }
   where
     isInsideGateGeometry gateInfoId driverLoc = do
       mbGate <- Esq.runInReplica $ QGI.findGateInfoIfDriverInsideGatePickupZone (LatLong driverLoc.lat driverLoc.lon)
