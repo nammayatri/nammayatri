@@ -2,7 +2,6 @@ module Domain.Action.UI.Performance where
 
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.PayoutConfig as DPC
 import qualified Domain.Types.Person as SP
 import Domain.Types.RiderDetails ()
 import qualified Domain.Types.VehicleCategory as DVC
@@ -29,8 +28,7 @@ data Results = Results
     payoutVpa :: Maybe Text,
     eligiblePayoutAmount :: HighPrecMoney,
     payoutAmountPaid :: HighPrecMoney,
-    lastPayoutAt :: Maybe UTCTime,
-    vpaVerificationMode :: Maybe DPC.VpaVerificationMode
+    lastPayoutAt :: Maybe UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -53,4 +51,4 @@ getDriverPerformance (driverId, _, merchantOpCityId) = do
   let eligiblePayoutAmount = driverStats.totalPayoutEarnings
       totalPayoutAmountPaid = fromMaybe 0.0 driverStats.totalPayoutAmountPaid
   mbLatestPayoutOrder <- QPayoutOrder.findLatestPaidPayoutByCustomerId driverId.getId
-  pure $ PerformanceRes (Results (length allRefferedCustomers) (length ridesTakenList) totalReferredDrivers payoutConfig.isPayoutEnabled di.payoutVpa eligiblePayoutAmount totalPayoutAmountPaid (mbLatestPayoutOrder <&> (.createdAt)) (Just payoutConfig.vpaVerificationMode))
+  pure $ PerformanceRes (Results (length allRefferedCustomers) (length ridesTakenList) totalReferredDrivers payoutConfig.isPayoutEnabled di.payoutVpa eligiblePayoutAmount totalPayoutAmountPaid (mbLatestPayoutOrder <&> (.createdAt)))
