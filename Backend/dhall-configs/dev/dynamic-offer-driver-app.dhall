@@ -294,6 +294,7 @@ let AllocatorJobType =
       | Reconciliation
       | ScheduledBatchPayout
       | SettlementReportIngestion
+      | CheckPickupZoneArrival
       >
 
 let jobInfoMapx =
@@ -354,6 +355,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.Reconciliation, mapValue = True }
       , { mapKey = AllocatorJobType.ScheduledBatchPayout, mapValue = True }
       , { mapKey = AllocatorJobType.SettlementReportIngestion, mapValue = True }
+      , { mapKey = AllocatorJobType.CheckPickupZoneArrival, mapValue = True}
       ]
 
 let LocationTrackingeServiceConfig =
