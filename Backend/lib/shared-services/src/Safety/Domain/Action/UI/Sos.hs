@@ -20,6 +20,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Safety.Domain.Types.Common as Common
+import Safety.Tools.Error
 import qualified Safety.Domain.Types.SafetySettings as DSafetySettings
 import qualified Safety.Domain.Types.Sos as DSos
 import Safety.Storage.BeamFlow
@@ -221,18 +222,18 @@ markSosAsSafe ::
   m MarkSosAsSafeResult
 markSosAsSafe sosId personId mbIsEndLiveTracking mbIsRideEnded = do
   -- Fetch SOS details (shared-services DB)
-  sosDetails <- B.runInReplica $ QSos.findById sosId >>= fromMaybeM (InvalidRequest $ "SOS not found: " <> sosId.getId)
+  sosDetails <- B.runInReplica $ QSos.findById sosId >>= fromMaybeM (SosNotFound sosId.getId)
   unless (sosDetails.personId == personId) $
-    throwError $ InvalidRequest "SOS does not belong to the specified person"
+    throwError $ SosNotAuthorized sosId.getId
   -- Validate SOS status
   when (sosDetails.status == DSos.Resolved) $
-    throwError $ InvalidRequest "Sos already resolved."
+    throwError $ SosAlreadyResolved sosId.getId
 
   -- Fetch safetySettings (shared-services DB)
   mbSafetySettings <- QSafetySettings.findByPersonId personId
   safetySettings <- case mbSafetySettings of
     Just ss -> return ss
-    Nothing -> throwError $ InvalidRequest $ "SafetySettings not found for personId: " <> personId.getId
+    Nothing -> throwError $ SosSafetySettingsNotFound personId.getId
 
   let wasLiveTracking = sosDetails.sosState == Just DSos.LiveTracking
       shouldStopTracking = fromMaybe True mbIsEndLiveTracking
@@ -241,9 +242,7 @@ markSosAsSafe sosId personId mbIsEndLiveTracking mbIsRideEnded = do
       shouldTransitionToLiveTracking = sosDetails.entityType == Just DSos.NonRide && sosDetails.sosState == Just DSos.SosActive && mbIsEndLiveTracking == Just False
 
   when (not shouldMarkAsResolved && not shouldTransitionToLiveTracking) $
-    throwError $
-      InvalidRequest
-        "Nothing to update: SOS is already in LiveTracking state or request is a no-op"
+    throwError $ SosNoActionRequired sosId.getId
 
   now <- getCurrentTime
   let updatedSosDetails =
