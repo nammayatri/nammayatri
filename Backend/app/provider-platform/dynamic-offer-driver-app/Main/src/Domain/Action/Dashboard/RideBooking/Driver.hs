@@ -64,6 +64,7 @@ import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
+import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -890,7 +891,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
     Nothing -> pure []
     Just rules -> do
       let rcValidationReq = DomainRC.RCValidationReq {mYManufacturing = req.mYManufacturing, fuelType = req.fuelType, vehicleClass = Just req.vehicleClass, manufacturer = Just req.make, model = Just req.model}
-      DomainRC.validateRCResponse rcValidationReq rules
+      DomainRC.validateRCResponse rcValidationReq rules (fromMaybe ENGLISH requestor.language)
   -- Create RC for vehicle before verifying it
   let mbFleetOwnerId = bool Nothing (Just $ requestor.id.getId) (DCommon.checkFleetOwnerRole requestor.role)
 
