@@ -22,6 +22,7 @@ module Lib.ConsequenceEngine.Types
     ChargeFeeParams (..),
     NudgeParams (..),
     WarnParams (..),
+    IncrementCounterParams (..),
     ConsequenceHandler (..),
     ConsequenceResult (..),
   )
@@ -51,6 +52,7 @@ data ConsequenceAction
   | HardBlock HardBlockParams
   | PermanentBlock PermanentBlockParams
   | ChargeFee ChargeFeeParams
+  | IncrementCounter IncrementCounterParams
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Parameters for a nudge (warning only, no restrictions)
@@ -70,7 +72,9 @@ data WarnParams = WarnParams
 data SoftBlockParams = SoftBlockParams
   { blockDurationHours :: Int,
     blockedFeatures :: [Text], -- service tier names
-    blockReason :: Text
+    blockReason :: Text,
+    blockReasonTag :: Maybe Text,
+    cooldownHours :: Maybe Int
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -78,7 +82,9 @@ data SoftBlockParams = SoftBlockParams
 data FeatureBlockParams = FeatureBlockParams
   { blockDurationHours :: Int,
     featureName :: Text, -- "TOLL_ROUTES", "AC", etc.
-    blockReason :: Text
+    blockReason :: Text,
+    blockReasonTag :: Maybe Text,
+    cooldownHours :: Maybe Int
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -86,13 +92,15 @@ data FeatureBlockParams = FeatureBlockParams
 data HardBlockParams = HardBlockParams
   { blockDurationHours :: Int,
     blockReason :: Text,
-    cooldownHours :: Maybe Int
+    cooldownHours :: Maybe Int,
+    blockReasonTag :: Maybe Text
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Parameters for permanent block (requires manual review)
 data PermanentBlockParams = PermanentBlockParams
-  { blockReason :: Text
+  { blockReason :: Text,
+    blockReasonTag :: Maybe Text
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -101,6 +109,12 @@ data ChargeFeeParams = ChargeFeeParams
   { penaltyAmount :: Double,
     currency :: Text,
     chargeReason :: Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | Parameters for counter increment (rule decides when to increment)
+data IncrementCounterParams = IncrementCounterParams
+  { counterType :: Text -- "ACTION_COUNT", "ELIGIBLE_COUNT"
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 

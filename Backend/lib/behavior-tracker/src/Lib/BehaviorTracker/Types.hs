@@ -20,6 +20,13 @@ module Lib.BehaviorTracker.Types
     PeriodConfig (..),
     CounterValues (..),
     BehaviorSnapshot (..),
+    BlockType (..),
+    BlockInfo (..),
+    CooldownInfo (..),
+    ActiveBlockInfo (..),
+    ActiveCooldownInfo (..),
+    BehaviorDomainConfig (..),
+    EntityBehaviorVisibility (..),
     defaultCounterValues,
     mkPeriodConfig,
   )
@@ -41,6 +48,10 @@ data EntityType = DRIVER | RIDER
 
 -- | Which counter to maintain for an action
 data CounterType = ACTION_COUNT | ELIGIBLE_COUNT
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | Block type classification (matches ConsequenceAction variants)
+data BlockType = HARD_BLOCK | SOFT_BLOCK | FEATURE_BLOCK | PERMANENT_BLOCK
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Input event from caller
@@ -95,6 +106,65 @@ defaultCounterValues =
       rate = 0
     }
 
+-- | Stored as JSON value in block Redis keys
+data BlockInfo = BlockInfo
+  { blockType :: BlockType,
+    blockReason :: Text,
+    reasonTag :: Text,
+    blockedAt :: UTCTime,
+    expiresAt :: Maybe UTCTime,
+    extraParams :: Value
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | Stored as JSON value in cooldown Redis keys
+data CooldownInfo = CooldownInfo
+  { reasonTag :: Text,
+    setAt :: UTCTime,
+    expiresAt :: UTCTime
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | Active block info returned by visibility layer (includes remaining TTL)
+data ActiveBlockInfo = ActiveBlockInfo
+  { blockType :: BlockType,
+    blockReason :: Text,
+    reasonTag :: Text,
+    blockedAt :: UTCTime,
+    expiresAt :: Maybe UTCTime,
+    remainingSeconds :: Integer,
+    extraParams :: Value
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | Active cooldown info returned by visibility layer
+data ActiveCooldownInfo = ActiveCooldownInfo
+  { reasonTag :: Text,
+    setAt :: UTCTime,
+    expiresAt :: UTCTime,
+    remainingSeconds :: Integer
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | Config for visibility layer: which action types and reason tags to query
+data BehaviorDomainConfig = BehaviorDomainConfig
+  { actionTypes :: [(Text, CounterConfig)], -- (actionType, its counter config)
+    blockReasonTags :: [Text], -- known reason tags to probe
+    blockTypes :: [BlockType] -- which block types to probe per tag
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | Full visibility response for an entity
+data EntityBehaviorVisibility = EntityBehaviorVisibility
+  { entityId :: Text,
+    entityType :: EntityType,
+    counters :: Map.Map Text (Map.Map Text CounterValues), -- actionType -> periodName -> values
+    activeBlocks :: [ActiveBlockInfo],
+    activeCooldowns :: [ActiveCooldownInfo],
+    queriedAt :: UTCTime
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
 -- | The unified output — everything downstream needs
 data BehaviorSnapshot = BehaviorSnapshot
   { entityType :: EntityType,
@@ -102,6 +172,7 @@ data BehaviorSnapshot = BehaviorSnapshot
     actionType :: Text,
     merchantOperatingCityId :: Text,
     counters :: Map.Map Text CounterValues, -- keyed by periodName
+    cooldowns :: Map.Map Text Bool, -- reasonTag -> isActive (True = in cooldown)
     flowContext :: Value, -- passthrough from ActionEvent
     eventData :: Value, -- passthrough from ActionEvent
     entityState :: Value, -- caller-provided entity state
@@ -117,6 +188,7 @@ instance Default BehaviorSnapshot where
         actionType = "",
         merchantOperatingCityId = "",
         counters = Map.empty,
+        cooldowns = Map.empty,
         flowContext = A.Object mempty,
         eventData = A.Object mempty,
         entityState = A.Object mempty,

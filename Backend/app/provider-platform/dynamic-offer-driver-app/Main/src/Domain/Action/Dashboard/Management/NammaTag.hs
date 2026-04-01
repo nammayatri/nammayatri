@@ -39,6 +39,7 @@ module Domain.Action.Dashboard.Management.NammaTag
     getNammaTagConfigPilotUiConfigDetails,
     getNammaTagConfigPilotGetUiTableData,
     postNammaTagConfigPilotGetPatchedElement,
+    getNammaTagBehaviorVisibility,
   )
 where
 
@@ -83,6 +84,7 @@ import qualified Lib.Yudhishthira.Types.Common as C
 import qualified Lib.Yudhishthira.Types.NammaTagV2
 import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.Allocator (AllocatorJobType (..))
+import qualified SharedLogic.BehaviourManagement.Visibility as BehaviorVisibility
 import SharedLogic.CancellationCoins
 import SharedLogic.DriverPool.Config (Config (..))
 import SharedLogic.DriverPool.Types
@@ -597,3 +599,21 @@ postNammaTagConfigPilotGetPatchedElement _merchantShortId _opCity req = do
 --             configWrapper
 --             mbCfgs
 --   mapM_ SCMT.update configsToUpdate
+
+-- | Get behavior visibility for any entity (driver/rider).
+-- Returns all tracked counters, active blocks (with TTL), and active cooldowns.
+-- Config-driven: no Redis SCAN, queries known action types and reason tags.
+getNammaTagBehaviorVisibility ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Text -> -- entityType: "DRIVER" or "RIDER"
+  Text -> -- entityId
+  Environment.Flow BTT.EntityBehaviorVisibility
+getNammaTagBehaviorVisibility merchantShortId opCity entityTypeText entityId = do
+  entityType <- case entityTypeText of
+    "DRIVER" -> pure BTT.DRIVER
+    "RIDER" -> pure BTT.RIDER
+    other -> throwError $ InvalidRequest $ "Invalid entityType: " <> other <> ". Expected DRIVER or RIDER."
+  merchant <- findMerchantByShortId merchantShortId
+  _merchantOpCityId <- CQMOC.getMerchantOpCityId Prelude.Nothing merchant (Prelude.Just opCity)
+  BehaviorVisibility.getEntityBehaviorVisibility entityType entityId Prelude.Nothing

@@ -27,9 +27,11 @@ flag Local
 library
   exposed-modules:
       Lib.BehaviorTracker.Accumulator
+      Lib.BehaviorTracker.BlockTracker
       Lib.BehaviorTracker.Recorder
       Lib.BehaviorTracker.Snapshot
       Lib.BehaviorTracker.Types
+      Lib.BehaviorTracker.Visibility
   other-modules:
       Paths_behavior_tracker
   hs-source-dirs:

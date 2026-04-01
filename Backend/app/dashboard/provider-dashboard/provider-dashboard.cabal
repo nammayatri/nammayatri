@@ -204,6 +204,7 @@ library
     , beam-core
     , beckn-services
     , beckn-spec
+    , behavior-tracker
     , bytestring
     , containers
     , dashboard-helper-api
@@ -292,6 +293,7 @@ executable provider-dashboard-exe
     , beam-core
     , beckn-services
     , beckn-spec
+    , behavior-tracker
     , bytestring
     , containers
     , dashboard-helper-api

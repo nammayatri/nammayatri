@@ -89,6 +89,7 @@ dependencies:
   - beckn-services
   - utf8-string
   - yudhishthira
+  - behavior-tracker
   - shared-services
   - beam-core
   - sequelize
