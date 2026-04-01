@@ -57,7 +57,7 @@ import Control.Monad.Extra hiding (fromMaybeM, whenJust)
 import Data.Aeson hiding (Success)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
-import Data.Text as T hiding (elem, find, length, map, null, zip)
+import qualified Data.Text as T hiding (elem, find, length, map, zip)
 import Data.Time (Day, utctDay)
 import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.DocumentVerificationConfig as ODC
@@ -80,7 +80,7 @@ import Environment
 import Kernel.Beam.Functions
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.External.Encryption
-import Kernel.External.Types (SchedulerFlow, ServiceFlow, VerificationFlow)
+import Kernel.External.Types (Language (..), SchedulerFlow, ServiceFlow, VerificationFlow)
 import qualified Kernel.External.Verification.Interface as VI
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude hiding (find)
@@ -121,6 +121,7 @@ import qualified Storage.Queries.MorthVerification as MorthQuery
 import qualified Storage.Queries.Person as Person
 import Storage.Queries.RCValidationRules
 import Storage.Queries.Ride as RQuery
+import qualified Storage.Queries.TranslationsExtra as QTranslation
 import qualified Storage.Queries.Vehicle as VQuery
 import qualified Storage.Queries.VehicleDetails as CQVD
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
@@ -528,9 +529,10 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
   transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   rcValidationRules <- findByCityId person.merchantOperatingCityId
   let rcValidationReq = RCValidationReq {mYManufacturing = convertTextToDay (rcVerificationResponse.mYManufacturing <> Just "-01"), fuelType = rcVerificationResponse.fuelType, vehicleClass = rcVerificationResponse.vehicleClass, manufacturer = rcVerificationResponse.manufacturer, model = rcVerificationResponse.manufacturerModel}
+  let lang = fromMaybe ENGLISH person.language
   failures <- case rcValidationRules of
     Nothing -> pure []
-    Just rules -> validateRCResponse rcValidationReq rules
+    Just rules -> validateRCResponse rcValidationReq rules lang
   let mbReqStatus = if null failures then mbReqStatus' else Just "failed"
       isExcludedVehicleCategoryFromVerification = maybe False (`elem` (map show $ fromMaybe [] transporterConfig.vehicleCategoryExcludedFromVerification)) rcVerificationResponse.vehicleCategory
       vehicleCategory' = if isExcludedVehicleCategoryFromVerification then mapTextToVehicle rcVerificationResponse.vehicleCategory else mbVehicleCategory
@@ -748,11 +750,11 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
       Just "TOTO" -> Just DVC.TOTO
       _ -> Nothing
 
-validateRCResponse :: MonadFlow m => RCValidationReq -> RCValidationRules -> m [Text]
-validateRCResponse rc rule = do
+validateRCResponse :: forall r m. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => RCValidationReq -> RCValidationRules -> Language -> m [Text]
+validateRCResponse rc rule language = do
   now <- getCurrentTime
-  let fuelValid = maybe True (\ft -> isNothing rule.fuelType || Kernel.Prelude.any (\ftRule -> ftRule `isInfixOf` ft) (map T.toLower $ fromMaybe [] rule.fuelType)) (T.toLower <$> rc.fuelType)
-      vehicleClassValid = maybe True (\vc -> isNothing rule.vehicleClass || Kernel.Prelude.any (\vcRule -> vcRule `isInfixOf` vc) (map T.toLower $ fromMaybe [] rule.vehicleClass)) (T.toLower <$> rc.vehicleClass)
+  let fuelValid = maybe True (\ft -> isNothing rule.fuelType || Kernel.Prelude.any (\ftRule -> ftRule `T.isInfixOf` ft) (map T.toLower $ fromMaybe [] rule.fuelType)) (T.toLower <$> rc.fuelType)
+      vehicleClassValid = maybe True (\vc -> isNothing rule.vehicleClass || Kernel.Prelude.any (\vcRule -> vcRule `T.isInfixOf` vc) (map T.toLower $ fromMaybe [] rule.vehicleClass)) (T.toLower <$> rc.vehicleClass)
 
       manufacturerValid = case rule.vehicleOEM of
         Nothing -> True
@@ -764,14 +766,36 @@ validateRCResponse rc rule = do
 
       vehicleAge = getVehicleAge rc.mYManufacturing now
       vehicleAgeValid = ((.getMonths) <$> vehicleAge) <= rule.maxVehicleAge
-      failures =
+      failureKeysWithValues =
         catMaybes
-          [ if not fuelValid then Just ("InvalidFuelType:" <> fromMaybe "" rc.fuelType) else Nothing,
-            if not vehicleClassValid then Just ("InvalidVehicleClass:" <> fromMaybe "" rc.vehicleClass) else Nothing,
-            if not manufacturerValid then Just ("InvalidOEM:" <> fromMaybe "" (rc.manufacturer <|> rc.model)) else Nothing,
-            if not vehicleAgeValid then Just ("InvalidManufacturingYear:" <> maybe "" (T.take 7 . T.pack . show) rc.mYManufacturing) else Nothing
+          [ if not fuelValid then Just ("InvalidFuelType", fromMaybe "" rc.fuelType) else Nothing,
+            if not vehicleClassValid then Just ("InvalidVehicleClass", fromMaybe "" rc.vehicleClass) else Nothing,
+            if not manufacturerValid then Just ("InvalidOEM", fromMaybe "" (rc.manufacturer <|> rc.model)) else Nothing,
+            if not vehicleAgeValid then Just ("InvalidManufacturingYear", maybe "" (T.take 7 . T.pack . show) rc.mYManufacturing) else Nothing
           ]
-  return failures
+  forM failureKeysWithValues $ \(messageKey, value) ->
+    resolveTranslations language messageKey value
+
+resolveTranslations :: forall r m. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Language -> Text -> Text -> m Text
+resolveTranslations language messageKey value = do
+  mbTranslation <- QTranslation.findByErrorAndLanguage messageKey language
+  let translatedMessage = maybe messageKey (.message) mbTranslation
+      placeholder = failureValuePlaceholder messageKey
+      renderedMessage = maybe translatedMessage (\ph -> T.replace ph value translatedMessage) placeholder
+  pure $
+    if T.null value
+      then maybe translatedMessage (\ph -> T.replace ph "" translatedMessage) placeholder
+      else case placeholder of
+        Just ph | ph `T.isInfixOf` translatedMessage -> renderedMessage
+        _ -> translatedMessage <> ": " <> value
+
+failureValuePlaceholder :: Text -> Maybe Text
+failureValuePlaceholder = \case
+  "InvalidFuelType" -> Just "{#fuelType#}"
+  "InvalidVehicleClass" -> Just "{#vehicleClass#}"
+  "InvalidOEM" -> Just "{#manufacturer#}"
+  "InvalidManufacturingYear" -> Just "{#year#}"
+  _ -> Nothing
 
 compareRegistrationDates :: Maybe Text -> Maybe UTCTime -> Bool
 compareRegistrationDates actualDate providedDate =
