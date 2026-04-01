@@ -74,6 +74,10 @@ module Lib.Yudhishthira.Types
     GetPatchedElementResp (..),
     NammaTagEventsOrNammaTagNamesResp (..),
     NammaTagDetailsResp (..),
+    AlwaysOnPatchInfo (..),
+    AlwaysOnListResp (..),
+    ConfigPilotGetConfigRequest (..),
+    ConfigPilotCreateRowRequest (..),
   )
 where
 
