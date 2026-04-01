@@ -205,6 +205,7 @@ library
     , base >=4.7 && <5
     , beckn-services
     , beckn-spec
+    , behavior-tracker
     , bytestring
     , casing
     , cassava

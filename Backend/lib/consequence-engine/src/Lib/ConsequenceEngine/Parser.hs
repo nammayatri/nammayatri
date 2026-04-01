@@ -38,6 +38,7 @@ parseDirective directive =
     "HARD_BLOCK" -> parseParams directive.params HardBlock
     "PERMANENT_BLOCK" -> parseParams directive.params PermanentBlock
     "CHARGE_FEE" -> parseParams directive.params ChargeFee
+    "INCREMENT_COUNTER" -> parseParams directive.params IncrementCounter
     unknown -> Left $ "Unknown consequence type: " <> unknown
 
 -- | Parse all directives, collecting successes and errors

@@ -39,6 +39,7 @@ imports:
   NammaTagV2: Lib.Yudhishthira.Types.NammaTagV2
   Value: Data.Aeson
   NammaTagEventsOrNammaTagNamesResp: Lib.Yudhishthira.Types
+  EntityBehaviorVisibility: Lib.BehaviorTracker.Types
 
 module: NammaTag
 
@@ -354,3 +355,11 @@ apis:
         type: GetPatchedElementResp
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+  - GET:
+      endpoint: /behaviorVisibility/{entityType}/{entityId}
+      auth: ApiAuthV2
+      params:
+        entityType: Text
+        entityId: Text
+      response:
+        type: EntityBehaviorVisibility

@@ -57,6 +57,7 @@ recordAndSnapshot config event entityState = do
         actionType = event.actionType,
         merchantOperatingCityId = event.merchantOperatingCityId,
         counters = counterMap,
+        cooldowns = Map.empty,
         flowContext = event.flowContext,
         eventData = event.eventData,
         entityState = entityState,

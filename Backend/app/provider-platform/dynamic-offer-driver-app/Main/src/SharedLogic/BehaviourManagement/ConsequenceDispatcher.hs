@@ -19,13 +19,18 @@ module SharedLogic.BehaviourManagement.ConsequenceDispatcher
   )
 where
 
+import qualified Data.Aeson as A
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.BehaviorTracker.BlockTracker as BT
+import qualified Lib.BehaviorTracker.Recorder as BTRecorder
+import qualified Lib.BehaviorTracker.Types as BTT
 import qualified Lib.CommunicationEngine.Parser as CMParser
 import qualified Lib.CommunicationEngine.Types as CMT
 import qualified Lib.ConsequenceEngine.Parser as CEParser
@@ -33,26 +38,21 @@ import qualified Lib.ConsequenceEngine.Types as CET
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import Tools.Error (BlockReasonFlag (..))
 
--- | App-level context needed by some consequence handlers (e.g. HardBlock, PermanentBlock).
+-- | App-level context needed by some consequence handlers.
 -- Callsites construct this from booking/ride context.
 data DispatchContext = DispatchContext
   { merchantId :: Id DM.Merchant,
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    counterConfig :: Maybe BTT.CounterConfig,
+    actionEvent :: Maybe BTT.ActionEvent
   }
 
 -- | Dispatch all consequence directives for a driver.
---
--- Consequence type → driver-app action:
---   FeatureBlock   → updateTollRouteBlockedTill (TOLL_ROUTES), extensible for other features
---   SoftBlock      → updateSoftBlock (blocks from specific service tiers)
---   HardBlock      → updateDynamicBlockedStateWithActivity (full block with expiry)
---   PermanentBlock → updateBlockedState (permanent, requires manual unblock)
---   Nudge/Warn     → no DB change; communication pipeline handles notification
---   ChargeFee      → payment system integration (TBD)
 handleConsequences ::
   ( MonadFlow m,
     EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    Redis.HedisFlow m r
   ) =>
   DispatchContext ->
   Id DP.Person ->
@@ -72,7 +72,8 @@ handleConsequences ctx driverId directives = do
 dispatchConsequence ::
   ( MonadFlow m,
     EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    Redis.HedisFlow m r
   ) =>
   DispatchContext ->
   Id DP.Person ->
@@ -87,13 +88,18 @@ dispatchConsequence ctx driverId = \case
     case params.featureName of
       "TOLL_ROUTES" -> QDriverInformation.updateTollRouteBlockedTill (Just blockUntil) (cast driverId)
       other -> logWarning $ "Unknown feature for FeatureBlock: " <> other
+    let tag = fromMaybe params.featureName params.blockReasonTag
+    BT.writeBlockAndCooldownKeys BTT.DRIVER driverId.getId BTT.FEATURE_BLOCK tag params.blockDurationHours params.blockReason (A.toJSON params.featureName) params.cooldownHours
   CET.SoftBlock params -> do
     logWarning $ "Soft blocking driver " <> driverId.getId <> " from tiers: " <> show params.blockedFeatures <> ", duration: " <> show params.blockDurationHours <> "h"
     now <- getCurrentTime
     let blockUntil = addUTCTime (fromIntegral params.blockDurationHours * 3600) now
     QDriverInformation.updateSoftBlock Nothing (Just blockUntil) (Just params.blockReason) (cast driverId)
+    let tag = fromMaybe "SOFT_BLOCK" params.blockReasonTag
+    BT.writeBlockAndCooldownKeys BTT.DRIVER driverId.getId BTT.SOFT_BLOCK tag params.blockDurationHours params.blockReason (A.toJSON params.blockedFeatures) params.cooldownHours
   CET.HardBlock params -> do
     logWarning $ "Hard blocking driver " <> driverId.getId <> ", duration: " <> show params.blockDurationHours <> "h"
+    let reasonFlag = parseBlockReasonFlag params.blockReasonTag
     QDriverInformation.updateDynamicBlockedStateWithActivity
       (cast driverId)
       (Just params.blockReason)
@@ -104,9 +110,11 @@ dispatchConsequence ctx driverId = \case
       ctx.merchantOperatingCityId
       DTDBT.Application
       True
-      (Just False) -- set active = False
-      Nothing -- no mode change
-      CancellationRate -- default reason flag; callers can extend
+      (Just False)
+      Nothing
+      reasonFlag
+    let tag = fromMaybe "HARD_BLOCK" params.blockReasonTag
+    BT.writeBlockAndCooldownKeys BTT.DRIVER driverId.getId BTT.HARD_BLOCK tag params.blockDurationHours params.blockReason (A.Object mempty) params.cooldownHours
   CET.PermanentBlock params -> do
     logWarning $ "Permanently blocking driver " <> driverId.getId <> ", reason: " <> params.blockReason
     QDriverInformation.updateBlockedState
@@ -116,11 +124,38 @@ dispatchConsequence ctx driverId = \case
       ctx.merchantId
       ctx.merchantOperatingCityId
       DTDBT.Application
+    let tag = fromMaybe "PERMANENT_BLOCK" params.blockReasonTag
+    BT.writeBlockKey BTT.DRIVER driverId.getId BTT.PERMANENT_BLOCK tag 0 params.blockReason (A.Object mempty)
   CET.Nudge _params -> pure ()
   CET.Warn _params -> pure ()
   CET.ChargeFee params -> do
     logInfo $ "Charge fee requested for driver " <> driverId.getId <> ": " <> show params.penaltyAmount <> " " <> params.currency
     pure ()
+  CET.IncrementCounter params -> do
+    case (ctx.counterConfig, ctx.actionEvent) of
+      (Just config, Just event) -> do
+        let mbCounterType = case params.counterType of
+              "ACTION_COUNT" -> Just BTT.ACTION_COUNT
+              "ELIGIBLE_COUNT" -> Just BTT.ELIGIBLE_COUNT
+              _ -> Nothing
+        case mbCounterType of
+          Just counterType -> do
+            logInfo $ "Incrementing counter " <> params.counterType <> " for driver " <> driverId.getId
+            BTRecorder.incrementCounterOnly config event.entityType event.entityId event.actionType counterType
+          Nothing -> logWarning $ "Unknown counterType '" <> params.counterType <> "' for driver " <> driverId.getId
+      _ -> logWarning $ "INCREMENT_COUNTER consequence for driver " <> driverId.getId <> " but no counterConfig/actionEvent in DispatchContext"
+
+-- | Map blockReasonTag text to BlockReasonFlag enum
+parseBlockReasonFlag :: Maybe Text -> BlockReasonFlag
+parseBlockReasonFlag = \case
+  Just "CancellationRateDaily" -> CancellationRateDaily
+  Just "CancellationRateWeekly" -> CancellationRateWeekly
+  Just "CancellationRate" -> CancellationRate
+  Just "ExtraFareDaily" -> ExtraFareDaily
+  Just "ExtraFareWeekly" -> ExtraFareWeekly
+  Just "DrunkAndDriveViolation" -> DrunkAndDriveViolation
+  Just "ByDashboard" -> ByDashboard
+  _ -> CancellationRate -- default fallback
 
 -- | Dispatch all communication directives for a driver.
 handleCommunications ::

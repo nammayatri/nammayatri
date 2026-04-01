@@ -457,6 +457,7 @@ library
       SharedLogic.BehaviourManagement.GpsTollBehavior
       SharedLogic.BehaviourManagement.IssueBreach
       SharedLogic.BehaviourManagement.IssueBreachMitigation
+      SharedLogic.BehaviourManagement.Visibility
       SharedLogic.BlockedRouteDetector
       SharedLogic.Booking
       SharedLogic.Cac

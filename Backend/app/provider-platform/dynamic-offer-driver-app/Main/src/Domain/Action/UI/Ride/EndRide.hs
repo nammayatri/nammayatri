@@ -632,14 +632,16 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
               fetchRules = \domain -> do
                 localTime <- getLocalCurrentTime thresholdConfig.timeDiffFromUtc
                 getAppDynamicLogic (cast booking.merchantOperatingCityId) domain localTime Nothing Nothing
-          output <-
-            if gpsTurnedOff
-              then BEOrch.recordAndOrchestrate counterConfig actionEvent entityState LYDL.Driver (cast booking.merchantOperatingCityId) LYT.GPS_TOLL_BEHAVIOR fetchRules
-              else do
-                snapshot <- BTSnap.buildSnapshot counterConfig actionEvent entityState
-                BEOrch.orchestrate snapshot LYDL.Driver (cast booking.merchantOperatingCityId) LYT.GPS_TOLL_BEHAVIOR fetchRules
+          snapshot <- BTSnap.buildSnapshot counterConfig actionEvent entityState
+          output <- BEOrch.orchestrate snapshot LYDL.Driver (cast booking.merchantOperatingCityId) LYT.GPS_TOLL_BEHAVIOR fetchRules
           logInfo $ "GPS Toll Behavior evaluation result: consequences=" <> show (length output.consequences) <> ", communications=" <> show (length output.communications)
-          let dispatchCtx = BehaviorDispatch.DispatchContext {merchantId = booking.providerId, merchantOperatingCityId = booking.merchantOperatingCityId}
+          let dispatchCtx =
+                BehaviorDispatch.DispatchContext
+                  { merchantId = booking.providerId,
+                    merchantOperatingCityId = booking.merchantOperatingCityId,
+                    counterConfig = Just counterConfig,
+                    actionEvent = Just actionEvent
+                  }
           BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
           BehaviorDispatch.handleCommunications driverId output.communications
 

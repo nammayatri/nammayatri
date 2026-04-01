@@ -18,6 +18,7 @@ module Lib.DriverScore
 where
 
 import Control.Applicative (liftA2)
+import qualified Data.Aeson as A
 import Data.Time (utctDay)
 import qualified Domain.Types.Common as SRD
 import qualified Domain.Types.DailyStats as DDS
@@ -31,14 +32,22 @@ import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.VehicleVariant as DVV
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.BehaviorEngine.Orchestrator as BEOrch
+import qualified Lib.BehaviorTracker.Recorder as BTRecorder
+import qualified Lib.BehaviorTracker.Snapshot as BTSnap
+import qualified Lib.BehaviorTracker.Types as BTT
 import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler.Environment
+import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
+import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
 import SharedLogic.BehaviourManagement.IssueBreach (IssueBreachType (..))
 import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
 import qualified SharedLogic.DriverPool as DP
@@ -54,16 +63,17 @@ import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails
 import qualified Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as RQ
 import Tools.Constants
+import Tools.DynamicLogic (getAppDynamicLogic)
 import Tools.Error
 import Tools.MarketingEvents as TM
 import Tools.Metrics (CoreMetrics)
 import Utils.Common.Cac.KeyNameConstants
 
-driverScoreEventHandler :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasLocationService m r, EncFlow m r, JobCreator r m, HasFlowEnv m r '["maxNotificationShards" ::: Int], HasShortDurationRetryCfg r c, HasKafkaProducer r) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
+driverScoreEventHandler :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasLocationService m r, EncFlow m r, JobCreator r m, HasFlowEnv m r '["maxNotificationShards" ::: Int], HasShortDurationRetryCfg r c, HasKafkaProducer r, ClickhouseFlow m r) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
 driverScoreEventHandler merchantOpCityId payload = fork "DRIVER_SCORE_EVENT_HANDLER" do
   eventPayloadHandler merchantOpCityId payload
 
-eventPayloadHandler :: (Redis.HedisFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, CoreMetrics m, HasLocationService m r, MonadFlow m, JobCreator r m, HasFlowEnv m r '["maxNotificationShards" ::: Int], HasShortDurationRetryCfg r c, HasKafkaProducer r) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
+eventPayloadHandler :: (Redis.HedisFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, CoreMetrics m, HasLocationService m r, MonadFlow m, JobCreator r m, HasFlowEnv m r '["maxNotificationShards" ::: Int], HasShortDurationRetryCfg r c, HasKafkaProducer r, ClickhouseFlow m r) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
 eventPayloadHandler merchantOpCityId DST.OnDriverAcceptingSearchRequest {..} = do
   DP.removeSearchReqIdFromMap merchantId driverId searchReqId
   case response of
@@ -77,6 +87,9 @@ eventPayloadHandler merchantOpCityId DST.OnDriverAcceptingSearchRequest {..} = d
 eventPayloadHandler merchantOpCityId DST.OnNewRideAssigned {..} = do
   windowSize <- SCR.getWindowSize merchantOpCityId
   void $ SCR.incrementAssignedCount driverId windowSize
+  -- Also increment via behavior-tracker for framework-based evaluation
+  let btCounterConfig = BTT.CounterConfig {windowSizeDays = windowSize, counters = [BTT.ELIGIBLE_COUNT], periods = []}
+  BTRecorder.incrementCounterOnly btCounterConfig BTT.DRIVER driverId.getId "RIDE_CANCELLATION" BTT.ELIGIBLE_COUNT
   mbDriverStats <- B.runInReplica $ DSQ.findById (cast driverId)
   -- mbDriverStats <- DSQ.findById (cast driverId)
   void $ case mbDriverStats of
@@ -93,8 +106,50 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
     void $ SCR.incrementCancelledCount driverId windowSize
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
   IBM.issueBreachMitigation EXTRA_FARE_MITIGATION merchantConfig driverInfo
-  when (doCancellationRateBasedBlocking == Just True && not (driverInfo.onRide)) $
-    SCR.nudgeOrBlockDriver merchantConfig driver driverInfo
+  when (doCancellationRateBasedBlocking == Just True && not (driverInfo.onRide)) $ do
+    -- Use behavior management framework for cancellation rate evaluation
+    let windowSize = toInteger $ fromMaybe 7 merchantConfig.cancellationRateWindow
+        counterConfig =
+          BTT.CounterConfig
+            { windowSizeDays = windowSize,
+              counters = [BTT.ACTION_COUNT, BTT.ELIGIBLE_COUNT],
+              periods =
+                [ BTT.mkPeriodConfig "daily" 1,
+                  BTT.mkPeriodConfig "weekly" 7
+                ]
+            }
+    eventTime <- getCurrentTime
+    let actionEvent =
+          BTT.ActionEvent
+            { entityType = BTT.DRIVER,
+              entityId = driverId.getId,
+              actionType = "RIDE_CANCELLATION",
+              merchantOperatingCityId = merchantOpCityId.getId,
+              flowContext = A.object [],
+              eventData =
+                A.object
+                  [ "validDriverCancellation" A..= (validDriverCancellation `elem` rideTags),
+                    "onRide" A..= driverInfo.onRide
+                  ],
+              timestamp = eventTime
+            }
+        entityState = A.object []
+        cooldownTags = ["CancellationRateDaily", "CancellationRateWeekly"]
+        fetchRules = \domain -> do
+          localTime <- getLocalCurrentTime merchantConfig.timeDiffFromUtc
+          getAppDynamicLogic (cast merchantOpCityId) domain localTime Nothing Nothing
+    snapshot <- BTSnap.buildSnapshotWithCooldowns counterConfig actionEvent entityState cooldownTags
+    output <- BEOrch.orchestrate snapshot LYDL.Driver (cast merchantOpCityId) LYT.CANCELLATION_RATE_BEHAVIOR fetchRules
+    logInfo $ "CancellationRate behavior evaluation: consequences=" <> show (length output.consequences) <> ", communications=" <> show (length output.communications)
+    let dispatchCtx =
+          BehaviorDispatch.DispatchContext
+            { merchantId = merchantId,
+              merchantOperatingCityId = merchantOpCityId,
+              counterConfig = Just counterConfig,
+              actionEvent = Just actionEvent
+            }
+    BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
+    BehaviorDispatch.handleCommunications driverId output.communications
   mbDriverStats <- B.runInReplica $ DSQ.findById (cast driverId)
   -- mbDriverStats <- DSQ.findById (cast driverId)
   driverStats <- getDriverStats currency distanceUnit mbDriverStats driverId rideFare
