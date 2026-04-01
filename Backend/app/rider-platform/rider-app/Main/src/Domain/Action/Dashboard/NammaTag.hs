@@ -129,7 +129,6 @@ getNammaTagTagDetails merchantShortId opCity tagName = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   QNammaTagV2.findByPrimaryKey (cast merchantOperatingCity.id) tagName >>= fromMaybeM (InvalidRequest $ "NammaTag not found: " <> tagName)
 
--- ChakraQueries are global (not merchant-scoped), so merchant/city params are intentionally unused
 getNammaTagQueryDetails :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.Chakra -> Text -> Environment.Flow LYTU.ChakraQueriesAPIEntity
 getNammaTagQueryDetails _merchantShortId _opCity chakra queryName = YudhishthiraFlow.getChakraQueryDetails chakra queryName
 
