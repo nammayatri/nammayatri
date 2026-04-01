@@ -552,7 +552,7 @@ buildRideAPIEntity (requesterId, booking, isOnlinePayment) DRide.Ride {..} = do
       driverRegisteredAt' = fromMaybe (addUTCTime oneYearAgo createdAt) driverRegisteredAt
       driverRating' = driverRating <|> Just (toCentesimal 500) -- TODO::remove this default value
       vehicleColor' = fromMaybe "NA" vehicleColor -- TODO::remove this default value
-  selectedOffer <- case booking.selectedOfferId of
+  selectedOffers <- case booking.selectedOfferId of
     Nothing -> pure Nothing
     Just offerId -> do
       let paymentServiceType = if isOnlinePayment then DOrder.OnlineRideHailing else DOrder.RideHailing
@@ -563,7 +563,15 @@ buildRideAPIEntity (requesterId, booking, isOnlinePayment) DRide.Ride {..} = do
           (SOffer.getSelectedOffer booking.merchantId requesterId booking.merchantOperatingCityId paymentServiceType rideFare offerId)
       case result of
         Left _ -> pure Nothing
-        Right resp -> pure resp
+        Right Nothing -> pure Nothing
+        Right (Just offer) ->
+          pure $
+            Just
+              SOffer.OffersRespAPIEntity
+                { offers = [offer],
+                  totalAmountSaved = offer.amountSaved,
+                  totalPostOfferAmount = offer.postOfferAmount
+                }
   return $
     RideAPIEntity
       { shortRideId = shortId,

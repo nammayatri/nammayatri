@@ -60,6 +60,10 @@ module Lib.Payment.Domain.Action
     -- Legacy types kept for internal compatibility
     CreatePaymentIntentServiceResp (..),
     CreatePaymentIntentServiceReq (..),
+    -- Offer computation and application
+    ComputedOfferAmount (..),
+    computeOfferAmount,
+    applyOfferWithoutPaymentService,
   )
 where
 
@@ -94,6 +98,7 @@ import qualified Kernel.Utils.Text as TU
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import Lib.Payment.Domain.Types.Common
 import qualified Lib.Payment.Domain.Types.Offer as DOffer
+import qualified Lib.Payment.Domain.Types.OfflineOffer as DOfflineOffer
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentOrderOffer as DPaymentOrderOffer
 import qualified Lib.Payment.Domain.Types.PaymentOrderSplit as DPaymentOrderSplit
@@ -110,6 +115,7 @@ import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQTransaction
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.Offer as QOffer
+import qualified Lib.Payment.Storage.Queries.OfflineOffer as QOfflineOffer
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrderOffer as QPaymentOrderOffer
 import qualified Lib.Payment.Storage.Queries.PaymentOrderSplit as QPaymentOrderSplit
@@ -192,6 +198,8 @@ data CreatePaymentIntentServiceResp = CreatePaymentIntentServiceResp
 data CreatePaymentIntentServiceReq = CreatePaymentIntentServiceReq
   { amount :: HighPrecMoney,
     applicationFeeAmount :: HighPrecMoney,
+    discountAmount :: HighPrecMoney,
+    offerId :: Maybe (Id DOffer.Offer),
     currency :: Currency,
     customer :: Payment.CustomerId,
     paymentMethod :: Payment.PaymentMethodId,
@@ -271,14 +279,7 @@ chargePaymentIntentService merchantOpCityId _paymentServiceType paymentIntentId 
   transaction <- HQTransaction.findByTxnId paymentIntentId >>= fromMaybeM (InternalError $ "No transaction found while charge payment intent: " <> paymentIntentId)
   if transaction.status `notElem` [Payment.CHARGED, Payment.CANCELLED, Payment.AUTO_REFUNDED]
     then do
-      -- Compute charge amount after applying DISCOUNT offers (CASHBACK doesn't reduce charge)
-      initiatedOffers <- filter (\o -> o.status == PInterface.OFFER_INITIATED) <$> QPaymentOrderOffer.findByPaymentOrder transaction.orderId
-      domainOffers <- catMaybes <$> mapM (\o -> QOffer.findById (Id o.offer_id)) initiatedOffers
-      let (chargeAmount, totalDisc) = computeOffersAmount domainOffers transaction.amount
-      when (totalDisc > 0) $
-        logInfo $ "Applying offer discount: original=" <> show transaction.amount <> " discount=" <> show totalDisc <> " charge=" <> show chargeAmount
-      logInfo $ "Capture payment intent: " <> paymentIntentId <> "; amount: " <> show chargeAmount <> "; applicationFeeAmount: " <> show transaction.applicationFeeAmount
-      resp <- withTryCatch "capturePaymentIntentCall:chargePaymentIntentService" $ withShortRetry $ capturePaymentIntentCall paymentIntentId chargeAmount transaction.applicationFeeAmount
+      resp <- withTryCatch "capturePaymentIntentCall:chargePaymentIntentService" $ withShortRetry $ capturePaymentIntentCall paymentIntentId transaction.amount transaction.applicationFeeAmount
       case resp of
         Left exec -> do
           let err = fromException @Payment.StripeError exec
@@ -297,7 +298,7 @@ chargePaymentIntentService merchantOpCityId _paymentServiceType paymentIntentId 
           let updStatus = Payment.castToTransactionStatus paymentIntentResp.status
           HQTransaction.updateStatusAndError merchantOpCityId transaction updStatus Nothing Nothing (Just "charge payment intent service")
           QOrder.updateStatus transaction.orderId paymentIntentId updStatus
-          when (updStatus == Payment.CHARGED && not (null initiatedOffers)) $ do
+          when (updStatus == Payment.CHARGED) $ do
             mbOrder <- QOrder.findById transaction.orderId
             whenJust mbOrder $ \order ->
               void $
@@ -305,12 +306,6 @@ chargePaymentIntentService merchantOpCityId _paymentServiceType paymentIntentId 
                   applyOfferService transaction.orderId order.personId.getId
           pure True
     else pure False
-  where
-    computeOffersAmount :: [DOffer.Offer] -> HighPrecMoney -> (HighPrecMoney, HighPrecMoney)
-    computeOffersAmount offers amt =
-      let results = map (`computeOfferAmount` amt) offers
-          totalDisc = sum $ map (.discountAmount) results
-       in (max 0 (amt - totalDisc), totalDisc)
 
 -- unified payment service ------------------------------------------
 
@@ -339,6 +334,10 @@ data CreatePaymentServiceReq = CreatePaymentServiceReq
     optionsGetUpiDeepLinks :: Maybe Bool,
     metadataExpiryInMins :: Maybe Int,
     basket :: Maybe [Payment.Basket],
+    -- Offer-specific
+    offerId :: Maybe Text,
+    discountAmount :: Maybe HighPrecMoney,
+    payoutAmount :: Maybe HighPrecMoney,
     -- Domain linkage
     domainEntityId :: Maybe Text -- rideId or bookingId for later lookups
   }
@@ -387,9 +386,8 @@ createPaymentService ::
   (PInterface.CreatePaymentReq -> m PInterface.CreatePaymentResp) ->
   (Payment.PaymentIntentId -> m PInterface.CreatePaymentResp) -> -- cancel callback for retry
   Maybe (Payment.PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()) -> -- incremental auth callback (optional)
-  Maybe Text ->
   m (Maybe CreatePaymentServiceResp)
-createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mbValidity paymentServiceType req createPaymentCall cancelPaymentCall mbIncrementAuthCall mbOfferId = do
+createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mbValidity paymentServiceType req createPaymentCall cancelPaymentCall mbIncrementAuthCall = do
   mbExistingOrder <- case mbExistingOrderId of
     Just existingId -> QOrder.findById existingId
     Nothing -> pure Nothing
@@ -567,7 +565,8 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
         Nothing -> do
           QOrder.create paymentOrder
           logInfo $ "Created new payment order: " <> newOrderId.getId <> "; paymentServiceOrderId: " <> resp.paymentServiceOrderId
-      void $ withTryCatch "buildPaymentOffer:createPaymentService" $ buildPaymentOffer newOrderId mbOfferId merchantId mbMerchantOpCityId
+      whenJust req.offerId $ \_ ->
+        void $ withTryCatch "buildPaymentOffer:createPaymentService" $ buildPaymentOffer newOrderId (Id <$> req.offerId) req.discountAmount req.payoutAmount merchantId mbMerchantOpCityId
       -- Create transaction record for the new payment intent
       whenJust (cast <$> mbMerchantOpCityId) $ \mocId -> do
         transaction <- buildPaymentTransaction paymentOrder (mkDefaultOrderTxnFromResp resp) Nothing
@@ -1170,15 +1169,55 @@ applyOfferService ::
   m ()
 applyOfferService paymentOrderId personId = do
   existingOffers <- QPaymentOrderOffer.findByPaymentOrder paymentOrderId
-  unless (null existingOffers) $ do
+  let offerInitiatedPaymentOrderOffer = filter (\offer -> offer.status == PInterface.OFFER_INITIATED) existingOffers
+  unless (null offerInitiatedPaymentOrderOffer) $ do
     now <- getCurrentTime
     order <- QOrder.findById paymentOrderId >>= fromMaybeM (PaymentOrderDoesNotExist paymentOrderId.getId)
-    forM_ existingOffers $ \paymentOffer -> do
+    forM_ offerInitiatedPaymentOrderOffer $ \paymentOffer -> do
       QPaymentOrderOffer.updateByPrimaryKey paymentOffer {DPaymentOrderOffer.status = PInterface.OFFER_AVAILED, DPaymentOrderOffer.updatedAt = now}
-      mbOffer <- QOffer.findById (Id paymentOffer.offer_id)
-      whenJust mbOffer $ \offer -> do
-        let computedOfferAmount = computeOfferAmount offer order.amount
-        upsertOfferStats paymentOrderId offer.id personId computedOfferAmount order.currency paymentOffer.merchantId paymentOffer.merchantOperatingCityId now
+      upsertOfferStats paymentOrderId (Id paymentOffer.offer_id) personId paymentOffer.discountAmount paymentOffer.payoutAmount order.currency paymentOffer.merchantId paymentOffer.merchantOperatingCityId now
+
+-- | Apply offer without a payment order (e.g., when offer fully covers fare or cash ride).
+--   Uses OfflineOffer table for idempotency — skips if already applied for this referenceId.
+--   Computes discount/cashback and upserts person offer stats.
+applyOfferWithoutPaymentService ::
+  (EncFlow m r, PaymentBeamFlow.BeamFlow m r) =>
+  Text -> -- referenceId (bookingId)
+  Text -> -- offerId
+  Text -> -- personId
+  Maybe HighPrecMoney -> -- discount amount
+  Maybe HighPrecMoney -> -- payout amount
+  Currency ->
+  Text -> -- merchantId
+  Text -> -- merchantOperatingCityId
+  m ()
+applyOfferWithoutPaymentService referenceId offerId personId discountAmount payoutAmount currency merchantId merchantOperatingCityId = do
+  existingOffers <- QOfflineOffer.findByReferenceId referenceId
+  unless (null existingOffers) $ do
+    logInfo $ "Offline offer already applied for referenceId=" <> referenceId <> ", skipping"
+    return ()
+  when (null existingOffers) $ do
+    mbOffer <- QOffer.findById (Id offerId)
+    whenJust mbOffer $ \offer -> do
+      now <- getCurrentTime
+      offlineOfferId <- generateGUID
+      let offlineOffer =
+            DOfflineOffer.OfflineOffer
+              { id = offlineOfferId,
+                referenceId = referenceId,
+                offerId = offer.id.getId,
+                offerCode = offer.offerCode,
+                status = PInterface.OFFER_AVAILED,
+                discountAmount = discountAmount,
+                payoutAmount = payoutAmount,
+                merchantId = merchantId,
+                merchantOperatingCityId = merchantOperatingCityId,
+                createdAt = now,
+                updatedAt = now
+              }
+      QOfflineOffer.create offlineOffer
+      upsertOfferStats (Id referenceId) offer.id personId discountAmount payoutAmount currency merchantId merchantOperatingCityId now
+      logInfo $ "Applied offline offer: referenceId=" <> referenceId <> " offerId=" <> offerId <> " discount=" <> show discountAmount <> " cashback=" <> show payoutAmount
 
 -- common helper for stats upsert
 upsertOfferStats ::
@@ -1186,13 +1225,14 @@ upsertOfferStats ::
   Id DOrder.PaymentOrder ->
   Id DOffer.Offer ->
   Text ->
-  ComputedOfferAmount ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
   Currency ->
   Text ->
   Text ->
   UTCTime ->
   m ()
-upsertOfferStats paymentOrderId offerIdTyped personId computedOfferAmount payoutCurr merchantId merchantOperatingCityId now = do
+upsertOfferStats paymentOrderId offerIdTyped personId discountAmount payoutAmount payoutCurr merchantId merchantOperatingCityId now = do
   Redis.whenWithLockRedis upsertOfferStatsKey 60 $ do
     upsertOfferStatsHandler
   where
@@ -1221,8 +1261,8 @@ upsertOfferStats paymentOrderId offerIdTyped personId computedOfferAmount payout
         Just ds ->
           QPersonDailyOfferStats.updateByPrimaryKey
             ds
-              { DPersonDailyOfferStats.totalDiscountAmount = ds.totalDiscountAmount + computedOfferAmount.discountAmount,
-                DPersonDailyOfferStats.totalCashbackAmount = ds.totalCashbackAmount + computedOfferAmount.payoutAmount,
+              { DPersonDailyOfferStats.totalDiscountAmount = ds.totalDiscountAmount + fromMaybe 0.0 discountAmount,
+                DPersonDailyOfferStats.totalCashbackAmount = ds.totalCashbackAmount + fromMaybe 0.0 payoutAmount,
                 DPersonDailyOfferStats.offerCount = ds.offerCount + 1,
                 DPersonDailyOfferStats.updatedAt = now
               }
@@ -1233,8 +1273,8 @@ upsertOfferStats paymentOrderId offerIdTyped personId computedOfferAmount payout
               { id = dailyId,
                 personId = personId,
                 date = today,
-                totalDiscountAmount = computedOfferAmount.discountAmount,
-                totalCashbackAmount = computedOfferAmount.payoutAmount,
+                totalDiscountAmount = fromMaybe 0.0 discountAmount,
+                totalCashbackAmount = fromMaybe 0.0 payoutAmount,
                 offerCount = 1,
                 payoutStatus = Initialized,
                 currency = payoutCurr,
@@ -1249,34 +1289,38 @@ upsertOfferStats paymentOrderId offerIdTyped personId computedOfferAmount payout
 buildPaymentOffer ::
   (EncFlow m r, PaymentBeamFlow.BeamFlow m r) =>
   Id DOrder.PaymentOrder ->
-  Maybe Text ->
+  Maybe (Id DOffer.Offer) ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
   m ()
-buildPaymentOffer paymentOrderId mbOfferId merchantId merchantOperatingCityId = do
-  whenJust mbOfferId $ \offerId -> do
-    mbOffer <- QOffer.findById (Id offerId)
-    whenJust mbOffer $ \offer -> do
-      Redis.whenWithLockRedis (offerProccessingLockKey paymentOrderId.getId) 60 $ do
-        existingOffers <- QPaymentOrderOffer.findByPaymentOrder paymentOrderId
-        when (null existingOffers) $ do
-          now <- getCurrentTime
-          poOfferId <- generateGUID
-          let paymentOrderOffer =
-                DPaymentOrderOffer.PaymentOrderOffer
-                  { id = poOfferId,
-                    paymentOrderId = paymentOrderId,
-                    offer_id = offer.id.getId,
-                    offer_code = offer.offerCode,
-                    status = PInterface.OFFER_INITIATED,
-                    responseJSON = encodeToText $ PInterface.Offer {offerId = Just offer.id.getId, offerCode = Just offer.offerCode, status = PInterface.OFFER_INITIATED},
-                    merchantId = merchantId.getId,
-                    merchantOperatingCityId = maybe "" ((.getId) . cast) merchantOperatingCityId,
-                    createdAt = now,
-                    updatedAt = now
-                  }
-          QPaymentOrderOffer.create paymentOrderOffer
-          logInfo $ "Created payment order offer for paymentOrderId: " <> paymentOrderId.getId <> " offerId: " <> offerId
+buildPaymentOffer paymentOrderId offerId discountAmount payoutAmount merchantId merchantOperatingCityId = do
+  Redis.whenWithLockRedis (offerProccessingLockKey paymentOrderId.getId) 60 $ do
+    existingOffers <- QPaymentOrderOffer.findByPaymentOrder paymentOrderId
+    when (null existingOffers) $ do
+      offer <- case offerId of
+        Just oid -> QOffer.findById oid >>= fromMaybeM (InternalError "Offer not found")
+        Nothing -> throwError (InternalError "Offer not found")
+      now <- getCurrentTime
+      poOfferId <- generateGUID
+      let paymentOrderOffer =
+            DPaymentOrderOffer.PaymentOrderOffer
+              { id = poOfferId,
+                paymentOrderId = paymentOrderId,
+                offer_id = offer.id.getId,
+                offer_code = offer.offerCode,
+                status = PInterface.OFFER_INITIATED,
+                responseJSON = encodeToText $ PInterface.Offer {offerId = Just offer.id.getId, offerCode = Just offer.offerCode, status = PInterface.OFFER_INITIATED},
+                discountAmount = discountAmount,
+                payoutAmount = payoutAmount,
+                merchantId = merchantId.getId,
+                merchantOperatingCityId = maybe "" ((.getId) . cast) merchantOperatingCityId,
+                createdAt = now,
+                updatedAt = now
+              }
+      QPaymentOrderOffer.create paymentOrderOffer
+      logInfo $ "Created payment order offer for paymentOrderId: " <> paymentOrderId.getId <> " offerId: " <> show offerId
 
 offerProccessingLockKey :: Text -> Text
 offerProccessingLockKey paymentOrderId = "Offer:Processing:PaymentOrderId:" <> paymentOrderId
@@ -1323,6 +1367,8 @@ buildOrderOffer paymentOrderId mbOffers merchantId merchantOperatingCityId = do
             offer_code = offerCodeText,
             status = offerStatus,
             responseJSON = responseJsonText,
+            discountAmount = Nothing,
+            payoutAmount = Nothing,
             merchantId = merchantIdText,
             merchantOperatingCityId = merchantOperatingCityIdText,
             createdAt = now,

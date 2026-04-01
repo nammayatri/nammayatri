@@ -27,16 +27,16 @@ BEGIN
     created_at, updated_at
   ) VALUES (
     v_offer_id,
-    'FIRST_RIDE_10PCT_DISCOUNT',
+    'FIRST_RIDE_100PCT_DISCOUNT',
     'DISCOUNT',
     'PERCENTAGE',
-    10.0,          -- 10% discount
-    500.0,         -- max discount capped at 500 EUR cents (5 EUR)
-    'First Ride Discount',
-    'Get 10% off on your first ride! Maximum discount of €5.',
+    100.0,         -- 100% discount
+    10.0,          -- max discount capped at €10
+    'First Ride Free',
+    'Your first ride is on us! 100% off up to €10.',
     'BRIDGE_FINLAND',
-    'Valid for first ride only. Cannot be combined with other offers.',
-    '{"<=":[{"var":"offerAppliedCount"},0]}',  -- eligible only if offerAppliedCount <= 0
+    'Valid for first ride only. Maximum discount €10. Cannot be combined with other offers.',
+    '{"and":[{">=":[{"var":"personStats.completedRides"},1]},{"==":[{"var":"personOfferStats"},[]]}]}',  -- eligible if completed >= 1 ride AND no previous offer usage
     'EUR',
     true,
     v_merchant_id,

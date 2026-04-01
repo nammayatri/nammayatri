@@ -30,6 +30,7 @@ import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTxn
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import Lib.Payment.Storage.Beam.BeamFlow ()
 import qualified Lib.Payment.Storage.Beam.Offer as BeamOffer
+import qualified Lib.Payment.Storage.Beam.OfflineOffer as BeamOfflineOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
 import qualified Lib.Payment.Storage.Beam.PaymentOrderOffer as BeamOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrderSplit as BeamPOS
@@ -93,6 +94,9 @@ instance HasSchemaName BeamPersonDailyOfferStats.PersonDailyOfferStatsT where
   schemaName _ = "atlas_app"
 
 instance HasSchemaName BeamPersonOfferStats.PersonOfferStatsT where
+  schemaName _ = "atlas_app"
+
+instance HasSchemaName BeamOfflineOffer.OfflineOfferT where
   schemaName _ = "atlas_app"
 
 server :: FlowServer API

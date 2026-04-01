@@ -1,0 +1,3 @@
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_slabs_details_slab ALTER COLUMN platform_fee_charge TYPE json USING platform_fee_charge::text::json;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_slabs_details_slab ALTER COLUMN platform_fee_cgst TYPE double precision USING platform_fee_cgst::double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_slabs_details_slab ALTER COLUMN platform_fee_sgst TYPE double precision USING platform_fee_sgst::double precision;

@@ -17,6 +17,7 @@ module Storage.Beam.Payment where
 
 import qualified Data.Text as T
 import qualified Lib.Payment.Storage.Beam.Offer as BeamOffer
+import qualified Lib.Payment.Storage.Beam.OfflineOffer as BeamOfflineOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
 import qualified Lib.Payment.Storage.Beam.PaymentOrderOffer as BeamOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrderSplit as BeamSplit
@@ -68,4 +69,7 @@ instance HasSchemaName BeamPOS.PersonOfferStatsT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamOffer.OfferT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamOfflineOffer.OfflineOfferT where
   schemaName _ = T.pack currentSchemaName

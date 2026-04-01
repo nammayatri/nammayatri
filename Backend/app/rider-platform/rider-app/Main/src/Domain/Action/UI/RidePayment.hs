@@ -26,7 +26,6 @@ import Kernel.Types.APISuccess
 import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Error
-import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -50,6 +49,7 @@ import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Payment as TPayment
+import Kernel.Types.Id
 
 data DFareBreakup = DFareBreakup
   { amount :: Price,
@@ -261,6 +261,8 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         let createPaymentIntentServiceReq =
               DPayment.CreatePaymentIntentServiceReq
                 { amount = tipRequest.amount.amount,
+                  discountAmount = 0,
+                  offerId = Nothing,
                   applicationFeeAmount = 0, -- No platform commission for tips
                   currency = tipRequest.amount.currency,
                   customer = customerPaymentId,
@@ -271,16 +273,17 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         let tipAmount = mkPrice (Just tipRequest.amount.currency) tipRequest.amount.amount
         -- Create tip PI with distinct domainEntityId so it doesn't conflict with ride PI in findByDomainEntityId
         let tipDomainRideId = Kernel.Types.Id.Id @Domain.Types.Ride.Ride ("tip:" <> rideId.getId)
-        tipPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just tipDomainRideId) Nothing DOrder.OnlineRideHailing createPaymentIntentServiceReq Nothing booking.selectedOfferId
-        -- Create separate PENDING tip ledger entry
-        let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency person.id.getId rideId.getId Nothing Nothing
-        void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
-        -- Capture tip — settlement happens automatically inside chargePaymentIntent
-        tipPaymentCaptured <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing tipPaymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonTipPayment
-        -- Update tip amount ONLY after successful capture
-        if tipPaymentCaptured
-          then QRide.updateTipByRideId (Just tipAmount) rideId
-          else logError $ "Failed to capture tip payment intent: " <> tipPaymentIntentResp.paymentIntentId
+        mbTipPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just tipDomainRideId) Nothing DOrder.OnlineRideHailing createPaymentIntentServiceReq Nothing
+        whenJust mbTipPaymentIntentResp $ \tipPaymentIntentResp -> do
+          -- Create separate PENDING tip ledger entry
+          let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency person.id.getId rideId.getId Nothing Nothing
+          void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
+          -- Capture tip — settlement happens automatically inside chargePaymentIntent
+          tipPaymentCaptured <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing tipPaymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonTipPayment
+          -- Update tip amount ONLY after successful capture
+          if tipPaymentCaptured
+            then QRide.updateTipByRideId (Just tipAmount) rideId
+            else logError $ "Failed to capture tip payment intent: " <> tipPaymentIntentResp.paymentIntentId
       else do
         -- Tip added before payment is captured (NotInitiated or Initiated)
         -- Update existing payment intent (amount = fare + tip), create separate tip ledger entries
@@ -291,6 +294,8 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         let createPaymentIntentServiceReq =
               DPayment.CreatePaymentIntentServiceReq
                 { amount = fareWithTip.amount,
+                  discountAmount = fromMaybe 0 ride.discountAmount,
+                  offerId = Id <$> booking.selectedOfferId,
                   applicationFeeAmount,
                   currency = fareWithTip.currency,
                   customer = customerPaymentId,
@@ -301,17 +306,27 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         -- Lookup existing order for retry handling
         mbExistingOrderId <- SPayment.getOrderIdForRide rideId
         -- Update the PI amount to include tip — pass Nothing for ledgerInfo so core ride entries aren't touched
-        paymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.OnlineRideHailing createPaymentIntentServiceReq Nothing booking.selectedOfferId
-        -- Create separate PENDING tip ledger entry via dedicated function
-        let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency person.id.getId rideId.getId Nothing Nothing
-        void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
-        -- Capture immediately — old auth was cancelled, new PI needs fresh capture
-        paymentCaptured <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment
-        if paymentCaptured
-          then QRide.markPaymentStatus Domain.Types.Ride.Completed rideId
-          else do
-            QRide.markPaymentStatus Domain.Types.Ride.Failed rideId
-            logError $ "Failed to capture payment intent after tip: " <> paymentIntentResp.paymentIntentId
+        mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.OnlineRideHailing createPaymentIntentServiceReq Nothing
+        case mbPaymentIntentResp of
+          Nothing -> do
+            -- Offer fully covers fare, no payment needed
+            logInfo $ "Post-offer amount <= 0, skipping charge for ride: " <> ride.id.getId
+            whenJust booking.selectedOfferId $ \offerId ->
+              void $
+                withTryCatch "applyOfferWithoutPayment:executeJob" $
+                  DPayment.applyOfferWithoutPaymentService booking.id.getId offerId person.id.getId ride.discountAmount ride.payoutAmount fareWithTip.currency person.merchantId.getId booking.merchantOperatingCityId.getId
+            QRide.markPaymentStatus Domain.Types.Ride.Completed rideId
+          Just paymentIntentResp -> do
+            -- Create separate PENDING tip ledger entry via dedicated function
+            let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency person.id.getId rideId.getId Nothing Nothing
+            void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
+            -- Capture immediately — old auth was cancelled, new PI needs fresh capture
+            paymentCaptured <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment
+            if paymentCaptured
+              then QRide.markPaymentStatus Domain.Types.Ride.Completed rideId
+              else do
+                QRide.markPaymentStatus Domain.Types.Ride.Failed rideId
+                logError $ "Failed to capture payment intent after tip: " <> paymentIntentResp.paymentIntentId
         QRide.updateTipByRideId (Just tipAmount) rideId
     createFareBreakup
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -679,6 +694,8 @@ postPaymentClearDues (mbPersonId, merchantId) req = do
           DPayment.CreatePaymentIntentServiceReq
             { amount = duesResp.totalDueAmount,
               applicationFeeAmount = debtApplicationFeeAmount,
+              discountAmount = 0,
+              offerId = Nothing,
               currency = currency,
               customer = customerPaymentId,
               paymentMethod = paymentMethodId,
@@ -693,12 +710,16 @@ postPaymentClearDues (mbPersonId, merchantId) req = do
               { rideFare = duesResp.totalDueAmount - debtApplicationFeeAmount,
                 gstAmount = 0,
                 platformFee = debtApplicationFeeAmount,
+                offerDiscountAmount = 0,
                 financeCtx = debtLedgerCtx
               }
+
+    -- TODO :: Handle payment order missing by discount here
     paymentIntentResp <-
-      SPayment.makeDebtPaymentIntent
+      SPayment.makePaymentIntent
         person.merchantId booking.merchantOperatingCityId booking.paymentMode
-        person.id (Just rideId) Nothing DOrder.OnlineRideHailing createPaymentIntentServiceReq debtLedgerInfo booking.selectedOfferId
+        person.id (Just rideId) Nothing DOrder.OnlineRideHailing createPaymentIntentServiceReq debtLedgerInfo
+      >>= fromMaybeM (InternalError "Payment order expired, please try again")
 
     -- 5. Debt settlement is now simply: capture pending entries
     --    No separate DEBT_SETTLEMENT invoice needed — settling PENDING entries IS the settlement

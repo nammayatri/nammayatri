@@ -39,6 +39,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import Kernel.Types.Id
 
 executePaymentIntentJob ::
   ( EncFlow m r,
@@ -90,6 +91,8 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
                   DPayment.CreatePaymentIntentServiceReq
                     { amount = fareWithTip.amount,
                       applicationFeeAmount,
+                      discountAmount = fromMaybe 0.0 booking.discountAmount,
+                      offerId = Id <$> booking.selectedOfferId,
                       currency = fareWithTip.currency,
                       customer = customerPaymentId,
                       paymentMethod = paymentMethodId,
@@ -106,15 +109,26 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
                       { rideFare = fare.amount - applicationFeeAmount,
                         gstAmount = 0, -- TODO: extract GST from fare breakup
                         platformFee = applicationFeeAmount,
+                        offerDiscountAmount = fromMaybe 0.0 booking.discountAmount,
                         financeCtx = ledgerCtx
                       }
-            paymentIntentResp <- SPayment.makePaymentIntent person.merchantId booking.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.OnlineRideHailing createPaymentIntentServiceReq ledgerInfo booking.selectedOfferId
-            paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment
-            if paymentCharged
-              then QRide.markPaymentStatus DRide.Completed ride.id
-              else do
-                QRide.markPaymentStatus DRide.Failed ride.id
-                logError $ "Failed to charge payment intent for ride: " <> ride.id.getId
+            mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId booking.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.OnlineRideHailing createPaymentIntentServiceReq ledgerInfo
+            case mbPaymentIntentResp of
+              Nothing -> do
+                -- Offer fully covers fare, no payment needed
+                logInfo $ "Post-offer amount <= 0, skipping charge for ride: " <> ride.id.getId
+                whenJust booking.selectedOfferId $ \offerId ->
+                  void $
+                    withTryCatch "applyOfferWithoutPayment:executeJob" $
+                      DPayment.applyOfferWithoutPaymentService booking.id.getId offerId person.id.getId booking.discountAmount booking.payoutAmount fareWithTip.currency person.merchantId.getId booking.merchantOperatingCityId.getId
+                QRide.markPaymentStatus DRide.Completed ride.id
+              Just paymentIntentResp -> do
+                paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment
+                if paymentCharged
+                  then QRide.markPaymentStatus DRide.Completed ride.id
+                  else do
+                    QRide.markPaymentStatus DRide.Failed ride.id
+                    logError $ "Failed to charge payment intent for ride: " <> ride.id.getId
 
             -- Handle tip payment orders (FALLBACK: check for pending tip ledger entries)
             tipEntries <- RidePaymentFinance.findRidePaymentEntries rideId.getId

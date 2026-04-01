@@ -58,6 +58,7 @@ import Kernel.External.MultiModal.Utils
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude hiding (whenJust)
 import Kernel.Sms.Config (SmsConfig)
+import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.APISuccess
@@ -120,7 +121,6 @@ import qualified Tools.Notifications as Notifications
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
 import qualified UrlShortner.Common as UrlShortner
-import qualified Kernel.Storage.Esqueleto as DB
 
 getFrfsRoutes ::
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
@@ -747,7 +747,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId) quoteId mbIsMockPayment req = do
       postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer mbIsMockPayment integratedBppConfig req.tripId
   where
     rateLimitKey :: Text -> Text -> Text
-    rateLimitKey personId' tripId'= "BAP:FRFS_CONFIRM_RATE_LIMIT:" <> personId' <> ":" <> tripId'
+    rateLimitKey personId' tripId' = "BAP:FRFS_CONFIRM_RATE_LIMIT:" <> personId' <> ":" <> tripId'
 
 postFrfsQuoteConfirm :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasFlowEnv m r '["seatBookingConfirmAPIRateLimitOptions" ::: APIRateLimitOptions], HasField "cloudType" r (Maybe CloudType)) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Maybe Bool -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId mbIsMockPayment = do
