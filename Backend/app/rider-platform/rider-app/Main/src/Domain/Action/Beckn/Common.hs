@@ -238,7 +238,8 @@ data RideCompletedReq = RideCompletedReq
     endOdometerReading :: Maybe Centesimal,
     rideEndTime :: Maybe UTCTime,
     paymentStatus :: Maybe DRB.PaymentStatus,
-    isValidRide :: Maybe Bool
+    isValidRide :: Maybe Bool,
+    commission :: Maybe HighPrecMoney
   }
 
 data ValidatedRideCompletedReq = ValidatedRideCompletedReq
@@ -257,7 +258,8 @@ data ValidatedRideCompletedReq = ValidatedRideCompletedReq
     ride :: DRide.Ride,
     person :: DPerson.Person,
     paymentStatus :: Maybe DRB.PaymentStatus,
-    isValidRide :: Maybe Bool
+    isValidRide :: Maybe Bool,
+    commission :: Maybe HighPrecMoney
   }
 
 data ValidatedFarePaidReq = ValidatedFarePaidReq
@@ -752,7 +754,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
     case booking.selectedOfferId of
       Just offerId -> SPayment.getOfferAmount (Id offerId) totalFare.amount
       Nothing -> pure Nothing
-  let updRide =
+  let rideCommission = maybe booking.commission Just commission
+      updRide =
         ride{status = DRide.COMPLETED,
              fare = Just fare,
              totalFare = Just totalFare,
@@ -764,9 +767,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
              endOdometerReading,
              discountAmount = calculatedOffer <&> (.discountAmount),
              payoutAmount = calculatedOffer <&> (.payoutAmount),
-             -- Commission is provider-side data. On BAP side, booking.commission will be Nothing.
-             -- If commission is needed, it should be calculated here or received from BPP.
-             commission = booking.commission
+             commission = rideCommission
             }
   breakups <- traverse (buildFareBreakup ride.id) fareBreakups
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
@@ -802,7 +803,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         withTryCatch "applyOfferWithoutPayment:cashRide" $
           DPayment.applyOfferWithoutPaymentService booking.id.getId offerId person.id.getId (calculatedOffer <&> (.discountAmount)) (calculatedOffer <&> (.payoutAmount)) totalFare.currency person.merchantId.getId person.merchantOperatingCityId.getId
   when onlinePayment $ do
-    let applicationFeeAmount = fromMaybe 0 booking.commission
+    let applicationFeeAmount = fromMaybe (fromMaybe 0 booking.commission) commission
     let scheduleAfter = riderConfig.executePaymentDelay
         executePaymentIntentJobData = ExecutePaymentIntentJobData {personId = person.id, rideId = ride.id, fare = totalFare, applicationFeeAmount = applicationFeeAmount}
     logDebug $ "Update payment intent for order: " <> ride.id.getId
@@ -833,7 +834,18 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
                 offerDiscountAmount = maybe 0 (.discountAmount) calculatedOffer,
                 financeCtx = ledgerCtx
               }
-    handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just ride.id) mbExistingOrderId DOrder.OnlineRideHailing createPaymentIntentServiceReq ledgerInfo)
+    withTryCatch "makePaymentIntent:onRideCompleted"
+      (withShortRetry (void $ SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just ride.id) mbExistingOrderId DOrder.OnlineRideHailing createPaymentIntentServiceReq ledgerInfo))
+      >>= \case
+        Right _ -> pure ()
+        Left err ->
+          logError $
+            "makePaymentIntent failed at ride end bookingId="
+              <> booking.id.getId
+              <> " rideId="
+              <> ride.id.getId
+              <> ": "
+              <> show err
     logDebug $ "Scheduling execute payment intent job for order: " <> show scheduleAfter
     createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)
 

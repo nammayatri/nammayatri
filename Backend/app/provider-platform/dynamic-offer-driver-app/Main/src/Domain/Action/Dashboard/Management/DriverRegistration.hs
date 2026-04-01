@@ -63,6 +63,7 @@ import qualified Domain.Types.CommonDriverOnboardingDocuments as DCommonDoc
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.DriverPanCard as DPan
+import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -80,7 +81,9 @@ import Kernel.Beam.Functions
 import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.External.Encryption (decrypt, encrypt, hash)
 import qualified Kernel.External.Notification.FCM.Types as FCM
+import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payout.Interface.Types as PayoutTypes
+import qualified Kernel.External.Payout.Types as PT
 import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.External.Types as Lang
 import Kernel.External.Verification.Interface.Types
@@ -95,9 +98,6 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
-import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
-import qualified Kernel.External.Payment.Interface.Types as Payment
-import qualified Kernel.External.Payout.Types as PT
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
@@ -109,8 +109,8 @@ import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BusinessLicense as QBL
 import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDriverOnboardingDocuments
@@ -128,12 +128,12 @@ import Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QDriver
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Translations as QTranslations
+import qualified Storage.Queries.Vehicle as QVeh
 import qualified Storage.Queries.VehicleFitnessCertificate as QFC
 import qualified Storage.Queries.VehicleInsurance as QVI
 import qualified Storage.Queries.VehicleNOC as QVNOC
 import qualified Storage.Queries.VehiclePUC as QVPUC
 import qualified Storage.Queries.VehiclePermit as QVPermit
-import qualified Storage.Queries.Vehicle as QVeh
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error

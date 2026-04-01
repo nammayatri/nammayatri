@@ -157,7 +157,8 @@ confirm DConfirmReq {..} = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   when (merchant.onlinePayment && paymentInstrument `notElem` [Just DMPM.Cash, Just DMPM.BoothOnline]) $ do
     when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
-    SPayment.updateDefaultPersonPaymentMethodId person paymentMethodId -- Make payment method as default payment method for customer
+    whenJust paymentMethodId $ \pmId ->
+      SPayment.updateDefaultPersonPaymentMethodId person pmId -- Make payment method as default payment method for customer
   activeBooking <- QRideB.findLatestSelfAndPartyBookingByRiderId personId --This query also checks for booking parties
   case activeBooking of
     Just booking | not (isMeterRide quote.quoteDetails) -> DQuote.processActiveBooking booking searchRequest.isDashboardRequest OnConfirm

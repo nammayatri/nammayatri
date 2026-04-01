@@ -26,6 +26,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -49,7 +50,6 @@ import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Payment as TPayment
-import Kernel.Types.Id
 
 data DFareBreakup = DFareBreakup
   { amount :: Price,
@@ -108,19 +108,23 @@ buildCreateCustomer personId createCustomerResp paymentMode = do
 
 getOrCreatePaymentCustomer :: Domain.Types.Person.Person -> Environment.Flow DPaymentCustomer.PaymentCustomer
 getOrCreatePaymentCustomer person = do
+  logInfo $ "getOrCreatePaymentCustomer: " <> person.id.getId <> " " <> show person.paymentMode
   let paymentMode = fromMaybe DMPM.LIVE person.paymentMode
-  mbCustomer <- QPaymentCustomer.findByPersonIdAndPaymentMode (Just person.id) (Just paymentMode)
-  case mbCustomer of
-    Just customer -> return customer
-    Nothing -> do
-      -- Create a customer in payment service if not there
-      mbEmailDecrypted <- mapM decrypt person.email
-      phoneDecrypted <- mapM decrypt person.mobileNumber
-      let req = CreateCustomerReq {email = mbEmailDecrypted, name = person.firstName, phone = phoneDecrypted, lastName = Nothing, objectReferenceId = Nothing, mobileCountryCode = Nothing, optionsGetClientAuthToken = Nothing}
-      customerResp <- TPayment.createCustomer person.merchantId person.merchantOperatingCityId person.paymentMode req
-      paymentCustomer <- buildCreateCustomer person.id customerResp paymentMode
-      QPaymentCustomer.create paymentCustomer
-      return paymentCustomer
+      lockKey = "PaymentCustomer:Create:" <> person.id.getId <> ":" <> show paymentMode
+  Redis.withLockRedisAndReturnValue lockKey 60 $ do
+    -- Re-check inside the lock: another concurrent request may have already created it
+    mbCustomer <- QPaymentCustomer.findByPersonIdAndPaymentMode (Just person.id) (Just paymentMode)
+    case mbCustomer of
+      Just customer -> return customer
+      Nothing -> do
+        -- Create a customer in payment service if not there
+        mbEmailDecrypted <- mapM decrypt person.email
+        phoneDecrypted <- mapM decrypt person.mobileNumber
+        let req = CreateCustomerReq {email = mbEmailDecrypted, name = person.firstName, phone = phoneDecrypted, lastName = Nothing, objectReferenceId = Nothing, mobileCountryCode = Nothing, optionsGetClientAuthToken = Nothing}
+        customerResp <- TPayment.createCustomer person.merchantId person.merchantOperatingCityId person.paymentMode req
+        paymentCustomer <- buildCreateCustomer person.id customerResp paymentMode
+        QPaymentCustomer.create paymentCustomer
+        return paymentCustomer
 
 checkIfPaymentMethodExists :: Domain.Types.Person.Person -> PaymentMethodId -> Environment.Flow Bool
 checkIfPaymentMethodExists person paymentMethodId = do
@@ -143,7 +147,8 @@ getPaymentMethods (mbPersonId, _) = do
   let defaultPaymentMethodId = paymentCustomer.defaultPaymentMethodId
   when (maybe False (\dpm -> dpm `notElem` savedPaymentMethodIds) defaultPaymentMethodId) $ do
     let firstSavedPaymentMethodId = listToMaybe savedPaymentMethodIds
-    SPayment.updateDefaultPersonPaymentMethodId person firstSavedPaymentMethodId
+    whenJust firstSavedPaymentMethodId $ \pmId ->
+      SPayment.updateDefaultPersonPaymentMethodId person pmId
   return $ API.Types.UI.RidePayment.PaymentMethodsResponse {list = resp, defaultPaymentMethodId}
 
 postPaymentMethodsMakeDefault ::
@@ -158,7 +163,7 @@ postPaymentMethodsMakeDefault (mbPersonId, _) paymentMethodId = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   checkIfPaymentMethodExists person paymentMethodId >>= \case
     False -> throwError $ InvalidRequest "Payment method doesn't belong to Customer"
-    True -> SPayment.updateDefaultPersonPaymentMethodId person (Just paymentMethodId) >> pure Success
+    True -> SPayment.updateDefaultPersonPaymentMethodId person paymentMethodId >> pure Success
 
 getPaymentIntentSetup ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -214,7 +219,7 @@ postPaymentMethodUpdate (mbPersonId, _) rideId newPaymentMethodId = do
   orderId <- SPayment.getOrderIdForRide rideId >>= fromMaybeM (InternalError $ "No payment order found for the ride " <> rideId.getId)
   order <- runInReplica $ QPaymentOrder.findById orderId >>= fromMaybeM (InternalError $ "No payment order found for the ride " <> rideId.getId)
   TPayment.updatePaymentMethodInIntent person.merchantId person.merchantOperatingCityId person.paymentMode order.paymentServiceOrderId newPaymentMethodId
-  SPayment.updateDefaultPersonPaymentMethodId person (Just newPaymentMethodId)
+  SPayment.updateDefaultPersonPaymentMethodId person newPaymentMethodId
   -- Update booking payment method
   return Success
 
@@ -719,7 +724,7 @@ postPaymentClearDues (mbPersonId, merchantId) req = do
       SPayment.makePaymentIntent
         person.merchantId booking.merchantOperatingCityId booking.paymentMode
         person.id (Just rideId) Nothing DOrder.OnlineRideHailing createPaymentIntentServiceReq debtLedgerInfo
-      >>= fromMaybeM (InternalError "Payment order expired, please try again")
+        >>= fromMaybeM (InternalError "Payment order expired, please try again")
 
     -- 5. Debt settlement is now simply: capture pending entries
     --    No separate DEBT_SETTLEMENT invoice needed — settling PENDING entries IS the settlement

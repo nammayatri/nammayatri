@@ -220,17 +220,28 @@ cancelPaymentIntentService ::
   (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
   m ()
 cancelPaymentIntentService merchantOpCityId rideId cancelPaymentIntentCall = do
-  mbExistingOrder <- QOrder.findById (cast rideId)
-  case mbExistingOrder of
-    Nothing -> logError $ "In cancel Payment Intent no order found for rideId : " <> rideId.getId
-    Just existingOrder -> do
+  orders <- QOrder.findAllByDomainEntityId rideId.getId
+  let cancelableOrders =
+        filter (\o -> o.status `notElem` [Payment.CHARGED, Payment.CANCELLED]) orders
+  case cancelableOrders of
+    [] ->
+      if null orders
+        then logError $ "In cancel Payment Intent no order found for rideId : " <> rideId.getId
+        else
+          logDebug $
+            "cancelPaymentIntentService: no cancelable orders for rideId "
+              <> rideId.getId
+              <> " (all "
+              <> show (length orders)
+              <> " order(s) already CHARGED or CANCELLED)"
+    _ -> forM_ cancelableOrders $ \existingOrder -> do
       resp <- withTryCatch "cancelPaymentIntentCall:cancelPaymentIntent" $ cancelPaymentIntentCall existingOrder.paymentServiceOrderId
       case resp of
         Left exec -> do
           let err = fromException @Payment.StripeError exec
               errorCode = err <&> toErrorCode
               errorMessage = err >>= toMessage
-          logError $ "Error while cancelling payment intent : " <> show err <> "error code : " <> show errorCode <> "error message : " <> show errorMessage
+          logError $ "Error while cancelling payment intent : " <> show err <> "error code : " <> show errorCode <> "error message : " <> show errorMessage <> " orderId: " <> existingOrder.id.getId
         Right paymentIntentResp -> do
           transaction <- HQTransaction.findByTxnId existingOrder.paymentServiceOrderId >>= fromMaybeM (InternalError $ "No transaction found while cancel payment intent: " <> existingOrder.paymentServiceOrderId)
           let updStatus = Payment.castToTransactionStatus paymentIntentResp.status
