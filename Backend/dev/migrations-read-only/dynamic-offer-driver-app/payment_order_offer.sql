@@ -11,3 +11,10 @@ ALTER TABLE atlas_driver_offer_bpp.payment_order_offer ADD COLUMN response_json 
 ALTER TABLE atlas_driver_offer_bpp.payment_order_offer ADD COLUMN status text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.payment_order_offer ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.payment_order_offer ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.payment_order_offer ADD COLUMN payout_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.payment_order_offer ADD COLUMN discount_amount double precision ;

@@ -394,3 +394,18 @@ ALTER TABLE atlas_app.ride ADD COLUMN sos_id character varying(36) ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ADD COLUMN cancellation_fee_status text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN payout_amount double precision ;
+ALTER TABLE atlas_app.ride ADD COLUMN discount_amount double precision ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

@@ -342,6 +342,10 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
   bookingParties <- buildPartiesLinks id
   deploymentVersion <- asks (.version)
   (isInsured, insuredAmount, driverInsuredAmount) <- isBookingInsured
+  calculatedOffer <-
+    case quote.selectedOfferId of
+      Just offerId -> SPayment.getOfferAmount (Id offerId) quote.estimatedTotalFare.amount
+      Nothing -> pure Nothing
   return $
     ( DRB.Booking
         { id = bookingId,
@@ -414,6 +418,8 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           -- If commission is needed on BAP, it should flow from BPP via Beckn protocol extension.
           commission = Nothing,
           selectedOfferId = quote.selectedOfferId,
+          discountAmount = calculatedOffer <&> (.discountAmount),
+          payoutAmount = calculatedOffer <&> (.payoutAmount),
           ..
         },
       bookingParties

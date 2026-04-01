@@ -71,6 +71,14 @@ data OfferRespAPIEntity = OfferRespAPIEntity
   deriving (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data OffersRespAPIEntity = OffersRespAPIEntity
+  { offers :: [OfferRespAPIEntity],
+    totalAmountSaved :: HighPrecMoney,
+    totalPostOfferAmount :: HighPrecMoney
+  }
+  deriving (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 -------------------------------------------------------------------------------------------------------
 ----------------------------------- Fetch Offers List With Caching ------------------------------------
 -------------------------------------------------------------------------------------------------------

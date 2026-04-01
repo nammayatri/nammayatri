@@ -5,6 +5,7 @@ imports:
   Currency: Kernel.Types.Common
   PayoutStatus: Lib.Payment.Domain.Types.Common
   Value: Data.Aeson
+  OfferState: Kernel.External.Payment.Interface.Types
 
 Offer:
   tableName: offer
@@ -135,6 +136,40 @@ PersonDailyOfferStats:
       kvFunction: findAllWithKV
       where:
         and: [date, payoutStatus]
+
+  defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+
+OfflineOffer:
+  tableName: offline_offer
+  derives: "Generic"
+  fields:
+    id: Id OfflineOffer
+    referenceId: Text
+    offerId: Text
+    offerCode: Text
+    discountAmount: Maybe HighPrecMoney
+    payoutAmount: Maybe HighPrecMoney
+    status: OfferState
+    merchantId: Text
+    merchantOperatingCityId: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    referenceId: SecondaryKey
+
+  extraIndexes:
+    - columns: [referenceId, offerId]
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByReferenceId:
+      kvFunction: findAllWithKV
+      where: referenceId
 
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

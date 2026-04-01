@@ -50,6 +50,7 @@ import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude hiding (HasField)
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
@@ -74,7 +75,6 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
-import Kernel.External.Types (ServiceFlow)
 import qualified Tools.Maps as MapSearch
 
 data PickupStage = OnTheWay | Reached | Reaching

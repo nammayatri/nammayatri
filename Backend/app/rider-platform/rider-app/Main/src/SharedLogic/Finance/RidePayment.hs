@@ -21,6 +21,7 @@ module SharedLogic.Finance.RidePayment
     ridePaymentRefTip,
     ridePaymentRefCancellationFee,
     ridePaymentRefCancellationGST,
+    ridePaymentRefOfferDiscount,
 
     -- * Settlement reason constants
     settledReasonRidePayment,
@@ -81,6 +82,9 @@ ridePaymentRefCancellationFee = "CancellationFee"
 
 ridePaymentRefCancellationGST :: Text
 ridePaymentRefCancellationGST = "CancellationGST"
+
+ridePaymentRefOfferDiscount :: Text
+ridePaymentRefOfferDiscount = "OfferDiscount"
 
 -- ---------------------------------------------------------------------------
 -- Settlement reason constants
@@ -150,13 +154,19 @@ createRidePaymentLedger ::
   HighPrecMoney -> -- rideFare (without GST)
   HighPrecMoney -> -- gstAmount
   HighPrecMoney -> -- platformFee (application fee / commission)
+  HighPrecMoney -> -- offerDiscountAmount (marketplace absorbs, 0 for no offer or CASHBACK)
   m (Either FinanceError RidePaymentLedgerResult)
-createRidePaymentLedger ctx rideFare gstAmount platformFee = do
+createRidePaymentLedger ctx rideFare gstAmount platformFee offerDiscountAmount = do
   result <- runFinance ctx $ do
-    -- PENDING entries: Liability(RIDER) → Asset(BUYER)
+    -- PENDING entries: Liability(RIDER) → Asset(BUYER) for full fare
     _ <- transferPending OwnerLiability BuyerAsset rideFare ridePaymentRefRideFare
     _ <- transferPending OwnerLiability BuyerAsset gstAmount ridePaymentRefGST
     _ <- transferPending OwnerLiability BuyerAsset platformFee ridePaymentRefPlatformFee
+
+    -- Offer discount: Asset(BUYER) → Liability(BUYER) — marketplace absorbs the cost
+    when (offerDiscountAmount > 0) $ do
+      _ <- transferPending BuyerAsset OwnerLiability offerDiscountAmount ridePaymentRefOfferDiscount
+      pure ()
 
     -- Create Draft invoice with line items
     invoice
@@ -188,6 +198,13 @@ createRidePaymentLedger ctx rideFare gstAmount platformFee = do
                     quantity = 1,
                     unitPrice = platformFee,
                     lineTotal = platformFee,
+                    isExternalCharge = False
+                  },
+                InvoiceLineItem
+                  { description = ridePaymentRefOfferDiscount,
+                    quantity = 1,
+                    unitPrice = negate offerDiscountAmount,
+                    lineTotal = negate offerDiscountAmount,
                     isExternalCharge = False
                   }
               ],
@@ -330,7 +347,8 @@ coreRidePaymentRefTypes :: [Text]
 coreRidePaymentRefTypes =
   [ ridePaymentRefRideFare,
     ridePaymentRefGST,
-    ridePaymentRefPlatformFee
+    ridePaymentRefPlatformFee,
+    ridePaymentRefOfferDiscount
   ]
 
 -- | All ride payment reference types.
@@ -339,6 +357,7 @@ allRidePaymentRefTypes =
   [ ridePaymentRefRideFare,
     ridePaymentRefGST,
     ridePaymentRefPlatformFee,
+    ridePaymentRefOfferDiscount,
     ridePaymentRefTip,
     ridePaymentRefCancellationFee,
     ridePaymentRefCancellationGST

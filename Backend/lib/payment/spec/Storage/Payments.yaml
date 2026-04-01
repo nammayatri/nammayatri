@@ -67,6 +67,8 @@ PaymentOrderOffer:
     offer_id: Text
     offer_code: Text
     status: OfferState
+    discountAmount: Maybe HighPrecMoney
+    payoutAmount: Maybe HighPrecMoney
     responseJSON: Text
     merchantId: Text
     merchantOperatingCityId: Text

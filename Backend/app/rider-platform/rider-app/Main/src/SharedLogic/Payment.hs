@@ -18,6 +18,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ParkingTransaction as DPT
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
+import qualified Lib.Payment.Domain.Types.Offer as DOffer
 import qualified Domain.Types.Ride as Ride
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Payment.Interface as Payment
@@ -40,6 +41,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
+import qualified Lib.Payment.Storage.Queries.Offer as QOffer
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.CallBPP as CallBPP
@@ -563,6 +565,7 @@ data RidePaymentLedgerInfo = RidePaymentLedgerInfo
   { rideFare :: HighPrecMoney, -- fare without GST
     gstAmount :: HighPrecMoney,
     platformFee :: HighPrecMoney, -- application fee / platform commission
+    offerDiscountAmount :: HighPrecMoney, -- discount absorbed by marketplace (0 for CASHBACK or no offer)
     financeCtx :: FinanceCtx
   }
 
@@ -602,116 +605,94 @@ makePaymentIntent ::
   DOrder.PaymentServiceType ->
   DPayment.CreatePaymentIntentServiceReq ->
   Maybe RidePaymentLedgerInfo ->
-  Maybe Text ->
-  m DPayment.CreatePaymentIntentServiceResp
-makePaymentIntent = makePaymentIntentFlow False
-
-makeDebtPaymentIntent ::
-  MakePaymentIntentConstraints m r c =>
-  Id Merchant.Merchant ->
-  Id DMOC.MerchantOperatingCity ->
-  Maybe DMPM.PaymentMode ->
-  Id Person.Person ->
-  Maybe (Id Ride.Ride) ->
-  Maybe (Id DOrder.PaymentOrder) ->
-  DOrder.PaymentServiceType ->
-  DPayment.CreatePaymentIntentServiceReq ->
-  Maybe RidePaymentLedgerInfo ->
-  Maybe Text ->
-  m DPayment.CreatePaymentIntentServiceResp
-makeDebtPaymentIntent = makePaymentIntentFlow True
-
-makePaymentIntentFlow ::
-  MakePaymentIntentConstraints m r c =>
-  Bool ->
-  Id Merchant.Merchant ->
-  Id DMOC.MerchantOperatingCity ->
-  Maybe DMPM.PaymentMode ->
-  Id Person.Person ->
-  Maybe (Id Ride.Ride) ->
-  Maybe (Id DOrder.PaymentOrder) ->
-  DOrder.PaymentServiceType ->
-  DPayment.CreatePaymentIntentServiceReq ->
-  Maybe RidePaymentLedgerInfo ->
-  Maybe Text ->
-  m DPayment.CreatePaymentIntentServiceResp
-makePaymentIntentFlow _isDebtPayment merchantId merchantOpCityId paymentMode personId mbRideId mbExistingOrderId paymentServiceType req mbLedgerInfo mbOfferId = do
-  let commonMerchantId = cast @Merchant.Merchant @DPayment.Merchant merchantId
-      commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
-      commonPersonId = cast @Person.Person @DPayment.Person personId
-      createPaymentCall = TPayment.createPayment merchantId merchantOpCityId paymentMode Nothing
-      cancelPaymentCall piId = do
-        cancelResp <- TPayment.cancelPaymentIntent merchantId merchantOpCityId paymentMode piId
-        pure
-          PInterface.CreatePaymentResp
-            { paymentServiceOrderId = cancelResp.paymentIntentId,
-              clientSecret = cancelResp.clientSecret,
-              status = Payment.castToTransactionStatus cancelResp.status,
-              sdkPayload = Nothing,
-              paymentLinks = Nothing
-            }
-      incrementAuthCall piId amount applicationFeeAmount =
-        TPayment.updateAmountInPaymentIntent merchantId merchantOpCityId paymentMode piId amount applicationFeeAmount
-      serviceReq =
-        DPayment.CreatePaymentServiceReq
-          { amount = req.amount,
-            currency = req.currency,
-            customerId = req.customer,
-            customerEmail = fromMaybe "" req.receiptEmail,
-            customerPhone = "",
-            customerFirstName = Nothing,
-            customerLastName = Nothing,
-            paymentMethodId = Just req.paymentMethod,
-            driverAccountId = Just req.driverAccountId,
-            applicationFeeAmount = Just req.applicationFeeAmount,
-            receiptEmail = req.receiptEmail,
-            splitSettlementDetails = Nothing,
-            createMandate = Nothing,
-            mandateMaxAmount = Nothing,
-            mandateFrequency = Nothing,
-            mandateStartDate = Nothing,
-            mandateEndDate = Nothing,
-            metadataGatewayReferenceId = Nothing,
-            optionsGetUpiDeepLinks = Nothing,
-            metadataExpiryInMins = Nothing,
-            basket = Nothing,
-            domainEntityId = (.getId) <$> mbRideId
-          }
-  mbServiceResp <- DPayment.createPaymentService commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbExistingOrderId Nothing paymentServiceType serviceReq createPaymentCall cancelPaymentCall (Just incrementAuthCall) mbOfferId
-  serviceResp <- mbServiceResp & fromMaybeM (InternalError "Payment order expired, please try again")
-  let resp =
-        DPayment.CreatePaymentIntentServiceResp
-          { paymentIntentId = serviceResp.paymentServiceOrderId,
-            orderId = serviceResp.orderId
-          }
-  -- Create or update PENDING core ride ledger entries (RideFare, GST, PlatformFee) after successful payment creation.
-  -- Tip and cancellation entries are managed separately — not touched here.
-  whenJust mbLedgerInfo $ \ledgerInfo -> do
-    existingEntries <- RidePaymentFinance.findRidePaymentEntries ledgerInfo.financeCtx.referenceId
-    let coreEntries = filter (\e -> e.referenceType `elem` RidePaymentFinance.coreRidePaymentRefTypes) existingEntries
-        pendingCoreEntries = filter (\e -> e.status == LE.PENDING) coreEntries
-        newTotal = ledgerInfo.rideFare + ledgerInfo.gstAmount + ledgerInfo.platformFee
-        oldTotal = sum $ map (.amount) pendingCoreEntries
-    if null coreEntries
-      then do
-        -- First time: create core ride ledger entries
-        result <- RidePaymentFinance.createRidePaymentLedger ledgerInfo.financeCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.platformFee
-        case result of
-          Right _ -> logInfo $ "Created PENDING ride payment ledger entries for order: " <> resp.orderId.getId
-          Left err -> logError $ "Failed to create ride payment ledger entries: " <> show err
-      else
-        if not (null pendingCoreEntries) && newTotal /= oldTotal
+  m (Maybe DPayment.CreatePaymentIntentServiceResp)
+makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbExistingOrderId paymentServiceType req mbLedgerInfo = do
+  let effectiveAmount = req.amount - req.discountAmount
+  -- If offer fully covers the fare, skip payment service (treat as cash/free ride flow)
+  if effectiveAmount <= 0
+    then do
+      logInfo $ "Post-offer amount <= 0, skipping payment intent creation for ride: " <> show ((.getId) <$> mbRideId)
+      pure Nothing
+    else do
+      let commonMerchantId = cast @Merchant.Merchant @DPayment.Merchant merchantId
+          commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
+          commonPersonId = cast @Person.Person @DPayment.Person personId
+          createPaymentCall = TPayment.createPayment merchantId merchantOpCityId paymentMode Nothing
+          cancelPaymentCall piId = do
+            cancelResp <- TPayment.cancelPaymentIntent merchantId merchantOpCityId paymentMode piId
+            pure
+              PInterface.CreatePaymentResp
+                { paymentServiceOrderId = cancelResp.paymentIntentId,
+                  clientSecret = cancelResp.clientSecret,
+                  status = Payment.castToTransactionStatus cancelResp.status,
+                  sdkPayload = Nothing,
+                  paymentLinks = Nothing
+                }
+          incrementAuthCall piId amount applicationFeeAmount =
+            TPayment.updateAmountInPaymentIntent merchantId merchantOpCityId paymentMode piId amount applicationFeeAmount
+          serviceReq =
+            DPayment.CreatePaymentServiceReq
+              { amount = effectiveAmount,
+                currency = req.currency,
+                customerId = req.customer,
+                customerEmail = fromMaybe "" req.receiptEmail,
+                customerPhone = "",
+                customerFirstName = Nothing,
+                customerLastName = Nothing,
+                paymentMethodId = Just req.paymentMethod,
+                driverAccountId = Just req.driverAccountId,
+                applicationFeeAmount = Just req.applicationFeeAmount,
+                receiptEmail = req.receiptEmail,
+                splitSettlementDetails = Nothing,
+                createMandate = Nothing,
+                mandateMaxAmount = Nothing,
+                mandateFrequency = Nothing,
+                mandateStartDate = Nothing,
+                mandateEndDate = Nothing,
+                metadataGatewayReferenceId = Nothing,
+                optionsGetUpiDeepLinks = Nothing,
+                metadataExpiryInMins = Nothing,
+                basket = Nothing,
+                offerId = req.offerId <&> (.getId),
+                discountAmount = Just req.discountAmount,
+                payoutAmount = Nothing,
+                domainEntityId = (.getId) <$> mbRideId
+              }
+      mbServiceResp <- DPayment.createPaymentService commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbExistingOrderId Nothing paymentServiceType serviceReq createPaymentCall cancelPaymentCall (Just incrementAuthCall)
+      serviceResp <- mbServiceResp & fromMaybeM (InternalError "Payment order expired, please try again")
+      let resp =
+            DPayment.CreatePaymentIntentServiceResp
+              { paymentIntentId = serviceResp.paymentServiceOrderId,
+                orderId = serviceResp.orderId
+              }
+      -- Create or update PENDING core ride ledger entries (RideFare, GST, PlatformFee) after successful payment creation.
+      -- Tip and cancellation entries are managed separately — not touched here.
+      whenJust mbLedgerInfo $ \ledgerInfo -> do
+        existingEntries <- RidePaymentFinance.findRidePaymentEntries ledgerInfo.financeCtx.referenceId
+        let coreEntries = filter (\e -> e.referenceType `elem` RidePaymentFinance.coreRidePaymentRefTypes) existingEntries
+            pendingCoreEntries = filter (\e -> e.status == LE.PENDING) coreEntries
+            newTotal = ledgerInfo.rideFare + ledgerInfo.gstAmount + ledgerInfo.platformFee
+            oldTotal = sum $ map (.amount) pendingCoreEntries
+        if null coreEntries
           then do
-            -- Fare recomputed: void old PENDING core entries, create new ones with updated amounts
-            let entryIds = map (.id) pendingCoreEntries
-            RidePaymentFinance.voidRidePaymentLedger entryIds
-            logInfo $ "Voided " <> show (length entryIds) <> " stale PENDING entries (old=" <> show oldTotal <> " new=" <> show newTotal <> ") for ride: " <> ledgerInfo.financeCtx.referenceId
-            result <- RidePaymentFinance.createRidePaymentLedger ledgerInfo.financeCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.platformFee
+            -- First time: create core ride ledger entries
+            result <- RidePaymentFinance.createRidePaymentLedger ledgerInfo.financeCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.platformFee ledgerInfo.offerDiscountAmount
             case result of
-              Right _ -> logInfo $ "Created updated PENDING ledger entries for recomputed fare"
-              Left err -> logError $ "Failed to create updated ledger entries: " <> show err
-          else logInfo $ "Skipping ledger creation — core entries already exist for ride: " <> ledgerInfo.financeCtx.referenceId
-  pure resp
+              Right _ -> logInfo $ "Created PENDING ride payment ledger entries for order: " <> resp.orderId.getId
+              Left err -> logError $ "Failed to create ride payment ledger entries: " <> show err
+          else
+            if not (null pendingCoreEntries) && newTotal /= oldTotal
+              then do
+                -- Fare recomputed: void old PENDING core entries, create new ones with updated amounts
+                let entryIds = map (.id) pendingCoreEntries
+                RidePaymentFinance.voidRidePaymentLedger entryIds
+                logInfo $ "Voided " <> show (length entryIds) <> " stale PENDING entries (old=" <> show oldTotal <> " new=" <> show newTotal <> ") for ride: " <> ledgerInfo.financeCtx.referenceId
+                result <- RidePaymentFinance.createRidePaymentLedger ledgerInfo.financeCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.platformFee ledgerInfo.offerDiscountAmount
+                case result of
+                  Right _ -> logInfo $ "Created updated PENDING ledger entries for recomputed fare"
+                  Left err -> logError $ "Failed to create updated ledger entries: " <> show err
+              else logInfo $ "Skipping ledger creation — core entries already exist for ride: " <> ledgerInfo.financeCtx.referenceId
+      pure (Just resp)
 
 cancelPaymentIntent ::
   ( MonadFlow m,
@@ -912,6 +893,18 @@ updateDefaultPersonPaymentMethodId ::
 updateDefaultPersonPaymentMethodId person paymentMethodId = do
   let paymentMode = fromMaybe DMPM.LIVE person.paymentMode
   QPaymentCustomer.updateDefaultPaymentMethodId paymentMethodId (Just person.id) (Just paymentMode)
+
+getOfferAmount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DOffer.Offer -> HighPrecMoney -> m (Maybe DPayment.ComputedOfferAmount)
+getOfferAmount offerId amount = do
+  mbOffer <- QOffer.findById offerId
+  case mbOffer of
+    Just offer -> do
+      let computed = DPayment.computeOfferAmount offer amount
+      logInfo $ "Offer " <> offerId.getId <> " applied: amount=" <> show amount <> " postOffer=" <> show computed.postOfferAmount <> " discount=" <> show computed.discountAmount
+      pure $ Just computed
+    Nothing -> do
+      logError $ "Offer not found: " <> offerId.getId <> ", proceeding with full amount"
+      pure Nothing
 
 -------------------------------------------------------------------------------------------------------
 ------------------------------------- Pending Payment Validation --------------------------------------

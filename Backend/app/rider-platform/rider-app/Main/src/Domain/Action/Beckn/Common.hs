@@ -403,6 +403,8 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         commission = booking.commission,
         cloudType = cloudType,
         sosId = Nothing,
+        discountAmount = Nothing,
+        payoutAmount = Nothing,
         ..
       }
 
@@ -487,6 +489,8 @@ rideAssignedReqHandler req = do
           let createPaymentIntentServiceReq =
                 DPayment.CreatePaymentIntentServiceReq
                   { amount = booking.estimatedFare.amount,
+                    discountAmount = fromMaybe 0 booking.discountAmount,
+                    offerId = Id <$> booking.selectedOfferId,
                     applicationFeeAmount,
                     currency = booking.estimatedFare.currency,
                     customer = customerPaymentId,
@@ -502,6 +506,7 @@ rideAssignedReqHandler req = do
                   SPayment.RidePaymentLedgerInfo
                     { rideFare = booking.estimatedFare.amount - applicationFeeAmount,
                       gstAmount = 0, -- TODO: extract GST from fare breakup
+                      offerDiscountAmount = fromMaybe 0 booking.discountAmount,
                       platformFee = applicationFeeAmount,
                       financeCtx = ledgerCtx
                     }
@@ -509,7 +514,7 @@ rideAssignedReqHandler req = do
           mbPaymentResp <-
             handle (\e -> SPayment.paymentErrorHandler booking e >> throwError (InvalidRequest "Payment failed, booking cancelled")) $
               withShortRetry $
-                Just <$> SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode booking.riderId (Just ride.id) mbExistingOrderId DOrder.OnlineRideHailing createPaymentIntentServiceReq ledgerInfo booking.selectedOfferId
+                SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode booking.riderId (Just ride.id) mbExistingOrderId DOrder.OnlineRideHailing createPaymentIntentServiceReq ledgerInfo
           -- Check if PI is in a capturable state — only STARTED (requires_capture) and CHARGED (already captured) are valid
           whenJust mbPaymentResp $ \paymentResp -> do
             mbOrder <- QPaymentOrder.findById paymentResp.orderId
@@ -743,6 +748,10 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   mbMerchant <- CQM.findById booking.merchantId
   whenJust mbAdvRide $ do \advRide -> when (advRide.id /= ride.id) $ QRide.updateshowDriversPreviousRideDropLoc False advRide.id
   let distanceUnit = ride.distanceUnit
+  calculatedOffer <-
+    case booking.selectedOfferId of
+      Just offerId -> SPayment.getOfferAmount (Id offerId) totalFare.amount
+      Nothing -> pure Nothing
   let updRide =
         ride{status = DRide.COMPLETED,
              fare = Just fare,
@@ -753,6 +762,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
              rideEndTime,
              paymentStatus = if SPayment.isOnlinePayment mbMerchant booking then DRide.NotInitiated else DRide.Completed,
              endOdometerReading,
+             discountAmount = calculatedOffer <&> (.discountAmount),
+             payoutAmount = calculatedOffer <&> (.payoutAmount),
              -- Commission is provider-side data. On BAP side, booking.commission will be Nothing.
              -- If commission is needed, it should be calculated here or received from BPP.
              commission = booking.commission
@@ -784,6 +795,12 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
 
   -- we should create job for collecting money from customer
   let onlinePayment = SPayment.isOnlinePayment mbMerchant booking
+  -- For cash rides with offers, apply offer without payment
+  unless onlinePayment $
+    whenJust booking.selectedOfferId $ \offerId ->
+      void $
+        withTryCatch "applyOfferWithoutPayment:cashRide" $
+          DPayment.applyOfferWithoutPaymentService booking.id.getId offerId person.id.getId (calculatedOffer <&> (.discountAmount)) (calculatedOffer <&> (.payoutAmount)) totalFare.currency person.merchantId.getId person.merchantOperatingCityId.getId
   when onlinePayment $ do
     let applicationFeeAmount = fromMaybe 0 booking.commission
     let scheduleAfter = riderConfig.executePaymentDelay
@@ -795,6 +812,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
     let createPaymentIntentServiceReq =
           DPayment.CreatePaymentIntentServiceReq
             { amount = totalFare.amount,
+              discountAmount = maybe 0 (.discountAmount) calculatedOffer,
+              offerId = Id <$> booking.selectedOfferId,
               applicationFeeAmount,
               currency = totalFare.currency,
               customer = customerPaymentId,
@@ -811,9 +830,10 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
               { rideFare = totalFare.amount - applicationFeeAmount,
                 gstAmount = 0, -- TODO: extract GST from fare breakup
                 platformFee = applicationFeeAmount,
+                offerDiscountAmount = maybe 0 (.discountAmount) calculatedOffer,
                 financeCtx = ledgerCtx
               }
-    handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just ride.id) mbExistingOrderId DOrder.OnlineRideHailing createPaymentIntentServiceReq ledgerInfo booking.selectedOfferId)
+    handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just ride.id) mbExistingOrderId DOrder.OnlineRideHailing createPaymentIntentServiceReq ledgerInfo)
     logDebug $ "Scheduling execute payment intent job for order: " <> show scheduleAfter
     createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)
 

@@ -487,3 +487,19 @@ ALTER TABLE atlas_app.booking ADD COLUMN selected_offer_id text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN payout_amount double precision ;
+ALTER TABLE atlas_app.booking ADD COLUMN discount_amount double precision ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
