@@ -116,6 +116,13 @@ incrementVehicleNoEtaCounter merchantName merchantOperatingCityId source = do
   let counter = bmContainer.vehicleNoEtaCounter
   liftIO $ P.withLabel counter (merchantName, version.getDeploymentVersion, merchantOperatingCityId, source) P.incCounter
 
+incrementEmptyVehiclesCounter :: HasBAPMetrics m r => Text -> Text -> Text -> m ()
+incrementEmptyVehiclesCounter merchantName merchantOperatingCityId serviceTier = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  let emptyVehiclesCounter = bmContainer.emptyVehiclesCounter
+  liftIO $ P.withLabel emptyVehiclesCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId, serviceTier) P.incCounter
+
 putSearchDuration :: MonadIO m => P.Vector P.Label2 P.Histogram -> Text -> DeploymentVersion -> Double -> m ()
 putSearchDuration searchDurationHistogram merchantName version duration = liftIO $ P.withLabel searchDurationHistogram (merchantName, version.getDeploymentVersion) (`P.observe` duration)
 
