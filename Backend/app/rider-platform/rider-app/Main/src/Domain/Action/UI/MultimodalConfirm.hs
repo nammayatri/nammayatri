@@ -164,6 +164,7 @@ import System.IO.Unsafe (unsafePerformIO)
 import Tools.Error
 import qualified Tools.Error as StationError
 import qualified Tools.Metrics as Metrics
+import qualified Tools.Metrics.BAPMetrics as BAPMetrics
 import Tools.MultiModal as MM
 import qualified Tools.MultiModal as TMultiModal
 import qualified Tools.Payment as Payment
@@ -498,7 +499,7 @@ postMultimodalRiderLocation ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   ApiTypes.RiderLocationReq ->
   Environment.Flow ApiTypes.JourneyStatusResp
-postMultimodalRiderLocation _ journeyId mbFleetNo req = do
+postMultimodalRiderLocation (_, merchantId) journeyId mbFleetNo req = do
   (journeyStatus, legs) <- getMultimodalJourneyStatusAndLegs journeyId mbFleetNo
   let concatLegs =
         concatMap
@@ -508,6 +509,16 @@ postMultimodalRiderLocation _ journeyId mbFleetNo req = do
           )
           legs
   let busLeg = find (\leg -> leg.mode == DTrip.Bus && leg.status == JL.Ongoing) concatLegs
+  -- Check if there's an ongoing bus leg but no live vehicle position or no ETA data
+  case busLeg of
+    Just leg -> do
+      let hasVehiclePosition = any (\vp -> isJust vp.position) leg.vehiclePositions
+      let hasETA = any (\vp -> not (null vp.upcomingStops)) leg.vehiclePositions
+      when (not hasVehiclePosition || not hasETA) $ do
+        logDebug "postMultimodalRiderLocation: Ongoing bus leg has no position or no ETA, incrementing empty vehicles counter"
+        forM_ leg.serviceTierType $ \tierType ->
+          BAPMetrics.incrementEmptyVehiclesCounter (merchantId.getId) leg.merchantOperatingCityId.getId (show tierType)
+    Nothing -> pure ()
   addPoint journeyId req ((.fleetNo) =<< busLeg)
   return journeyStatus
 
