@@ -9,9 +9,14 @@ module: SpecialZoneQueue
 types:
   SpecialZoneQueueRequestRes:
     requestId: Id SpecialZoneQueueRequest
+    gateId: Text
     gateName: Text
+    specialLocationId: Text
     specialLocationName: Text
+    vehicleType: Text
     validTill: UTCTime
+    currentSkipCount: Int
+    maxSkipsBeforeQueueRemoval: Maybe Int
 
   SpecialZoneQueueRequestListRes:
     requests: "[SpecialZoneQueueRequestRes]"

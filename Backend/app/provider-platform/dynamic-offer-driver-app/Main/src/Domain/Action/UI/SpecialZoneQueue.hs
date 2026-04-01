@@ -15,6 +15,7 @@ import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common (Seconds (..))
 import qualified Kernel.Types.Id
@@ -22,6 +23,7 @@ import Kernel.Utils.Common
 import qualified Lib.Queries.GateInfo as QGI
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator (AllocatorJobType (..), CheckPickupZoneArrivalJobData (..))
+import SharedLogic.SpecialZoneDriverDemand (mkQueueSkipCountKey)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
 import Tools.Error
@@ -37,24 +39,34 @@ getSpecialZoneQueueRequest (mbPersonId, _merchantId, _merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person id")
   now <- getCurrentTime
   activeRequests <- QSZQR.findActiveByDriverId personId Domain.Types.SpecialZoneQueueRequest.Active
-  validRequests <- collectValid now activeRequests
+  validRequests <- collectValid now personId activeRequests
   pure $ API.Types.UI.SpecialZoneQueue.SpecialZoneQueueRequestListRes {requests = validRequests}
   where
-    collectValid _ [] = pure []
-    collectValid now (req : rest) =
+    collectValid _ _ [] = pure []
+    collectValid now personId (req : rest) =
       if req.validTill < now
         then do
           QSZQR.updateResponse (Just Domain.Types.SpecialZoneQueueRequest.Ignored) Domain.Types.SpecialZoneQueueRequest.Expired req.id
-          collectValid now rest
+          collectValid now personId rest
         else do
+          -- Get skip count from Redis
+          mbSkipCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkQueueSkipCountKey req.specialLocationId personId.getId)
+          -- Get max skips from gate config
+          mbGate <- Esq.runInReplica $ QGI.findById (Kernel.Types.Id.Id req.gateId)
+          let maxSkips = mbGate >>= (.maxRideSkipsBeforeQueueRemoval)
           let res =
                 API.Types.UI.SpecialZoneQueue.SpecialZoneQueueRequestRes
                   { requestId = req.id,
+                    gateId = req.gateId,
                     gateName = req.gateName,
+                    specialLocationId = req.specialLocationId,
                     specialLocationName = req.specialLocationName,
-                    validTill = req.validTill
+                    vehicleType = req.vehicleType,
+                    validTill = req.validTill,
+                    currentSkipCount = fromMaybe 0 mbSkipCount,
+                    maxSkipsBeforeQueueRemoval = maxSkips
                   }
-          rest' <- collectValid now rest
+          rest' <- collectValid now personId rest
           pure (res : rest')
 
 postSpecialZoneQueueRequestRespond ::
