@@ -33,6 +33,7 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import Domain.Types.DocumentVerificationConfig (DocumentVerificationConfig)
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DriverLicense as Domain
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.HyperVergeVerification as Domain
@@ -261,7 +262,7 @@ verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverD
           _ -> throwError $ InternalError ("Service provider not configured to return DL verification async responses. Provider Name : " <> (show res.requestor))
         VerificationIntTypes.SyncDLResp resp -> do
           when (resp.requestor == VT.Morth) $ do
-            let mbStatus = if isJust resp.response.status then "SUCCESS" else "FAILED"
+            let mbStatus = DocStatus.docStatusEnumToText $ if isJust resp.response.status then DocStatus.DOC_SUCCESS else DocStatus.DOC_FAILED
             morthEntity <- VC.mkMorthVerificationEntity person Nothing DTO.DriverLicense encryptedDL mbStatus dateOfIssue (Just driverDateOfBirth) mbVehicleCategory Nothing Nothing (Just $ show resp.response) now
             MorthQuery.create morthEntity
           onVerifyDLHandler person resp.response.licenseNumber (resp.response.t_validity_to <|> resp.response.nt_validity_to <|> Just "2099-12-12") resp.response.covs resp.response.driverName resp.response.dob documentVerificationConfig imageId1 imageId2 nameOnTheCard dateOfIssue mbVehicleCategory

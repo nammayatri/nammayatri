@@ -61,6 +61,7 @@ import Data.Text as T hiding (elem, find, length, map, null, zip)
 import Data.Time (Day, utctDay)
 import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.DocumentVerificationConfig as ODC
+import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.HyperVergeVerification as Domain
@@ -397,7 +398,7 @@ verifyRCFlow person merchantOpCityId rcNumber imageId dateOfRegistration mbVehic
         throwError (InvalidRequest "vehicleCategory is required when using Morth for RC verification")
       case resp.requestor of
         VT.Morth -> do
-          let mbStatus = if isJust resp.response.status then "SUCCESS" else "FAILED"
+          let mbStatus = DocStatus.docStatusEnumToText $ if isJust resp.response.status then DocStatus.DOC_SUCCESS else DocStatus.DOC_FAILED
           morthEntity <- mkMorthVerificationEntity person Nothing ODC.VehicleRegistrationCertificate encryptedRC mbStatus dateOfRegistration Nothing mbVehicleCategory Nothing Nothing (Just $ show resp.response) now
           MorthQuery.create morthEntity
         _ -> logError $ "Handle this case if we want to store the response in the database for provider: " <> show resp.requestor

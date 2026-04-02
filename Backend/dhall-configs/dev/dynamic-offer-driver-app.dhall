@@ -296,6 +296,7 @@ let AllocatorJobType =
       | SettlementReportIngestion
       | CheckPickupZoneArrival
       | ScheduledTDSDistribution
+      | IffcoTokioInsurance
       >
 
 let jobInfoMapx =
@@ -358,6 +359,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.SettlementReportIngestion, mapValue = True }
       , { mapKey = AllocatorJobType.CheckPickupZoneArrival, mapValue = True }
       , { mapKey = AllocatorJobType.ScheduledTDSDistribution, mapValue = True }
+      , { mapKey = AllocatorJobType.IffcoTokioInsurance, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig =

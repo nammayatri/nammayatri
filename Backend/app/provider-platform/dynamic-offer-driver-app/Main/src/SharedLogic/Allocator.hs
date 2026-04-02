@@ -89,6 +89,7 @@ data AllocatorJobType
   | SettlementReportIngestion
   | CheckPickupZoneArrival
   | ScheduledTDSDistribution
+  | IffcoTokioInsurance
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -139,6 +140,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
   restoreAnyJobInfo SCheckPickupZoneArrival jobData = AnyJobInfo <$> restoreJobInfo SCheckPickupZoneArrival jobData
   restoreAnyJobInfo SScheduledTDSDistribution jobData = AnyJobInfo <$> restoreJobInfo SScheduledTDSDistribution jobData
+  restoreAnyJobInfo SIffcoTokioInsurance jobData = AnyJobInfo <$> restoreJobInfo SIffcoTokioInsurance jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -560,3 +562,15 @@ data ScheduledTDSDistributionJobData = ScheduledTDSDistributionJobData
 instance JobInfoProcessor 'ScheduledTDSDistribution
 
 type instance JobContent 'ScheduledTDSDistribution = ScheduledTDSDistributionJobData
+
+data IffcoTokioInsuranceJobData = IffcoTokioInsuranceJobData
+  { merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    batchSize :: Int,
+    offset :: Int,
+    autoSchedule :: Bool
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'IffcoTokioInsurance
+
+type instance JobContent 'IffcoTokioInsurance = IffcoTokioInsuranceJobData
