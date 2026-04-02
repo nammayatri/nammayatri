@@ -159,7 +159,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as DebugLog
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
-import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, ReconciliationJobData, ScheduledBatchPayoutJobData, SupplyDemandRequestJobData)
+import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, ReconciliationJobData, ScheduledBatchPayoutJobData, SupplyDemandRequestJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import qualified SharedLogic.DriverFee as SDF
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -445,6 +445,13 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
           case jobData' of
             Just jobData -> do
               createJobIn @_ @'ScheduledBatchPayout (Just jobData.merchantId) (Just jobData.merchantOperatingCityId) diffTimeS (jobData :: ScheduledBatchPayoutJobData)
+              pure Success
+            Nothing -> throwError $ InternalError "invalid job data"
+        Just Common.IffcoTokioInsuranceTrigger -> do
+          let jobData' = decodeFromText jobDataRaw :: Maybe IffcoTokioInsuranceJobData
+          case jobData' of
+            Just jobData -> do
+              createJobIn @_ @'IffcoTokioInsurance Nothing (Just jobData.merchantOperatingCityId) diffTimeS (jobData :: IffcoTokioInsuranceJobData)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         _ -> throwError $ InternalError "invalid job name"

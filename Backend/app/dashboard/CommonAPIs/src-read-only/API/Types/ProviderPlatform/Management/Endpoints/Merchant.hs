@@ -429,6 +429,7 @@ data JobName
   | CongestionChargeCalculation
   | ReconciliationTrigger
   | ScheduledBatchPayoutTrigger
+  | IffcoTokioInsuranceTrigger
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

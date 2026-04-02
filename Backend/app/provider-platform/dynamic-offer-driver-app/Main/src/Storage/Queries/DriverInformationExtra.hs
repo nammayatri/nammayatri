@@ -525,3 +525,23 @@ findEligibleForScheduledPayout merchantOpCityId batchSize mbLastDriverId = do
     (Se.Asc BeamDI.driverId)
     (Just batchSize)
     Nothing
+
+-- | Fetch drivers who are currently on a ride with ride started, belonging to any of the given cities.
+-- Uses limit/offset for pagination.
+findOnRideDriversWithRideStartedByMerchantOpCityIds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Id DMOC.MerchantOperatingCity] ->
+  Int ->
+  Int ->
+  m [DriverInformation]
+findOnRideDriversWithRideStartedByMerchantOpCityIds merchantOpCityIds limitVal offsetVal =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamDI.onRide $ Se.Eq True,
+          Se.Is BeamDI.hasRideStarted $ Se.Eq (Just True),
+          Se.Is BeamDI.merchantOperatingCityId $ Se.In (Just . getId <$> merchantOpCityIds)
+        ]
+    ]
+    (Se.Asc BeamDI.driverId)
+    (Just limitVal)
+    (Just offsetVal)
