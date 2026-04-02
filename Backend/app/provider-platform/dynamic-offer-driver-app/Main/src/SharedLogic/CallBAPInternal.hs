@@ -343,3 +343,40 @@ updateCancellationFeeStatus apiKey internalUrl request = do
   logInfo "CallBAPInternal: Calling BAP internal API for updating cancellation fee status"
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (updateCancellationFeeStatusClient (Just apiKey) request) "UpdateCancellationFeeStatus" updateCancellationFeeStatusAPI
+
+-- Offer Discount API
+
+type OfferDiscountAPI =
+  "internal"
+    :> "offerDiscount"
+    :> Header "token" Text
+    :> Capture "bppBookingId" Text
+    :> QueryParam "fareAmount" HighPrecMoney
+    :> Get '[JSON] OfferDiscountResp
+
+newtype OfferDiscountResp = OfferDiscountResp
+  { discountAmount :: Maybe HighPrecMoney
+  }
+  deriving (Generic, ToJSON, FromJSON)
+
+offerDiscountClient :: Maybe Text -> Text -> Maybe HighPrecMoney -> EulerClient OfferDiscountResp
+offerDiscountClient = client (Proxy @OfferDiscountAPI)
+
+offerDiscountAPI :: Proxy OfferDiscountAPI
+offerDiscountAPI = Proxy
+
+getOfferDiscount ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  HighPrecMoney ->
+  m OfferDiscountResp
+getOfferDiscount apiKey internalUrl bppBookingId fareAmount = do
+  logInfo $ "CallBAPInternal: Getting offer discount for bppBookingId: " <> bppBookingId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (offerDiscountClient (Just apiKey) bppBookingId (Just fareAmount)) "GetOfferDiscount" offerDiscountAPI

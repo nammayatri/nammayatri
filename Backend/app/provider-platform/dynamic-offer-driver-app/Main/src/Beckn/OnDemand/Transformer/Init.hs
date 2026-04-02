@@ -17,6 +17,7 @@ import qualified Domain.Types.Trip as Trip
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Error
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber
@@ -57,6 +58,7 @@ buildDInitReq subscriber req isValueAddNP = do
   let isAdvanceBookingEnabled = Just $ getAdvancedBookingEnabled orderItem.itemTags
   let (isInsured, insuredAmount) = getIsInsured orderItem.itemTags
   let displayBookingId = getDisplayBookingId orderItem.itemTags
+  let discountAmount = getOfferDiscountAmount orderItem.itemTags
   pure $ Domain.Action.Beckn.Init.InitReq {bapCity = bapCity_, bapCountry = bapCountry_, bapId = bapId_, bapUri = bapUri_, fulfillmentId = fulfillmentId_, maxEstimatedDistance = maxEstimatedDistance_, paymentMethodInfo = paymentMethodInfo_, vehicleVariant = vehicleVariant_, bppSubscriberId = bppSubscriberId_, estimateId = estimateId, riderGender = riderGender, ..}
 
 getDeliveryDetails :: Maybe [Spec.TagGroup] -> Maybe Domain.Action.Beckn.Init.InitReqDetails
@@ -140,3 +142,7 @@ getIsInsured tagGroups =
 
 getDisplayBookingId :: Maybe [Spec.TagGroup] -> Maybe Text
 getDisplayBookingId = Utils.getTagV2 Tag.BOOKING_INFO Tag.DISPLAY_BOOKING_ID
+
+getOfferDiscountAmount :: Maybe [Spec.TagGroup] -> Maybe Kernel.Types.Common.HighPrecMoney
+getOfferDiscountAmount tagGroups =
+  Utils.getTagV2 Tag.OFFER_INFO Tag.DISCOUNT_AMOUNT tagGroups >>= readMaybe . T.unpack

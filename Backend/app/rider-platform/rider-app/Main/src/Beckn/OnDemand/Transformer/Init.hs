@@ -147,7 +147,8 @@ mkItemTags res =
       itemTags' = mkAdvancedBookingEnabledTagGroup res : itemTags
       itemTags'' = mkInsuranceTagGroup res : itemTags'
       itemTags''' = maybe itemTags'' (\displayId -> mkDisplayBookingIdTagGroup displayId : itemTags'') res.booking.displayBookingId
-   in itemTags'''
+      itemTags'''' = mkOfferInfoTagGroup res : itemTags'''
+   in itemTags''''
 
 mkDisplayBookingIdTagGroup :: Data.Text.Text -> Spec.TagGroup
 mkDisplayBookingIdTagGroup displayBookingId =
@@ -169,6 +170,13 @@ mkInsuranceTagGroup res =
     Tags.INSURANCE_INFO
     [ Tags.mkTag Tags.IS_INSURED (Just $ show $ fromMaybe False res.isInsured),
       Tags.mkTag Tags.INSURED_AMOUNT res.insuredAmount
+    ]
+
+mkOfferInfoTagGroup :: SharedLogic.Confirm.DConfirmRes -> Spec.TagGroup
+mkOfferInfoTagGroup res =
+  Tags.getFullTagGroup
+    Tags.OFFER_INFO
+    [ Tags.mkTag Tags.DISCOUNT_AMOUNT (show <$> res.booking.discountAmount)
     ]
 
 mkDeliveryTagGroup :: SharedLogic.Confirm.DConfirmRes -> [Spec.TagGroup]

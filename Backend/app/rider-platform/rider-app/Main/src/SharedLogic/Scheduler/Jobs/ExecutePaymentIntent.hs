@@ -87,11 +87,12 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking person
             driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
             email <- mapM decrypt person.email
-            let createPaymentIntentServiceReq =
+            let discountAmount = fromMaybe 0.0 ride.discountAmount
+                createPaymentIntentServiceReq =
                   DPayment.CreatePaymentIntentServiceReq
                     { amount = fareWithTip.amount,
                       applicationFeeAmount,
-                      discountAmount = fromMaybe 0.0 booking.discountAmount,
+                      discountAmount,
                       offerId = Id <$> booking.selectedOfferId,
                       currency = fareWithTip.currency,
                       customer = customerPaymentId,
@@ -106,26 +107,22 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
                 ledgerInfo =
                   Just $
                     SPayment.RidePaymentLedgerInfo
-                      { rideFare = fare.amount - applicationFeeAmount,
+                      { rideFare = fare.amount - applicationFeeAmount - discountAmount,
                         gstAmount = 0, -- TODO: extract GST from fare breakup
                         platformFee = applicationFeeAmount,
-                        offerDiscountAmount = fromMaybe 0.0 booking.discountAmount,
+                        offerDiscountAmount = discountAmount,
+                        cashbackPayoutAmount = fromMaybe 0.0 booking.payoutAmount,
                         financeCtx = ledgerCtx
                       }
             mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId booking.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.OnlineRideHailing createPaymentIntentServiceReq ledgerInfo
             case mbPaymentIntentResp of
-              Nothing -> do
-                -- Offer fully covers fare, no payment needed
-                logInfo $ "Post-offer amount <= 0, skipping charge for ride: " <> ride.id.getId
-                whenJust booking.selectedOfferId $ \offerId ->
-                  void $
-                    withTryCatch "applyOfferWithoutPayment:executeJob" $
-                      DPayment.applyOfferWithoutPaymentService booking.id.getId offerId person.id.getId booking.discountAmount booking.payoutAmount fareWithTip.currency person.merchantId.getId booking.merchantOperatingCityId.getId
-                QRide.markPaymentStatus DRide.Completed ride.id
+              Nothing -> SPayment.zeroEffectivePaymentDueToOffer person.merchantId booking.merchantOperatingCityId ride.id person.id booking.selectedOfferId fareWithTip.currency ledgerInfo
               Just paymentIntentResp -> do
                 paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment
                 if paymentCharged
-                  then QRide.markPaymentStatus DRide.Completed ride.id
+                  then do
+                    -- Apply offer stats after successful charge
+                    QRide.markPaymentStatus DRide.Completed ride.id
                   else do
                     QRide.markPaymentStatus DRide.Failed ride.id
                     logError $ "Failed to charge payment intent for ride: " <> ride.id.getId

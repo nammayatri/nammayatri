@@ -295,11 +295,12 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         let tipAmount = mkPrice (Just tipRequest.amount.currency) tipRequest.amount.amount
         totalFare <- ride.totalFare & fromMaybeM (RideFieldNotPresent "totalFare")
         fareWithTip <- totalFare `addPrice` tipAmount
-        let applicationFeeAmount = fromMaybe 0 booking.commission
+        let applicationFeeAmount = fromMaybe 0 ride.commission
+            discountAmount = fromMaybe 0.0 ride.discountAmount
         let createPaymentIntentServiceReq =
               DPayment.CreatePaymentIntentServiceReq
                 { amount = fareWithTip.amount,
-                  discountAmount = fromMaybe 0 ride.discountAmount,
+                  discountAmount,
                   offerId = Id <$> booking.selectedOfferId,
                   applicationFeeAmount,
                   currency = fareWithTip.currency,
@@ -314,26 +315,36 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.OnlineRideHailing createPaymentIntentServiceReq Nothing
         case mbPaymentIntentResp of
           Nothing -> do
-            -- Offer fully covers fare, no payment needed
-            logInfo $ "Post-offer amount <= 0, skipping charge for ride: " <> ride.id.getId
-            whenJust booking.selectedOfferId $ \offerId ->
-              void $
-                withTryCatch "applyOfferWithoutPayment:executeJob" $
-                  DPayment.applyOfferWithoutPaymentService booking.id.getId offerId person.id.getId ride.discountAmount ride.payoutAmount fareWithTip.currency person.merchantId.getId booking.merchantOperatingCityId.getId
-            QRide.markPaymentStatus Domain.Types.Ride.Completed rideId
+            let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency person.id.getId ride.id.getId Nothing Nothing
+                ledgerInfo =
+                  Just $
+                    SPayment.RidePaymentLedgerInfo
+                      { rideFare = totalFare.amount - applicationFeeAmount - discountAmount,
+                        gstAmount = 0, -- TODO: extract GST from fare breakup
+                        platformFee = applicationFeeAmount,
+                        offerDiscountAmount = discountAmount,
+                        cashbackPayoutAmount = fromMaybe 0.0 booking.payoutAmount,
+                        financeCtx = ledgerCtx
+                      }
+            -- Create separate PENDING tip ledger entry via dedicated function
+            let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency person.id.getId rideId.getId Nothing Nothing
+            void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
+            when (ride.status == Domain.Types.RideStatus.COMPLETED) $ do
+              SPayment.zeroEffectivePaymentDueToOffer person.merchantId person.merchantOperatingCityId rideId person.id booking.selectedOfferId fareWithTip.currency ledgerInfo
           Just paymentIntentResp -> do
             -- Create separate PENDING tip ledger entry via dedicated function
             let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency person.id.getId rideId.getId Nothing Nothing
             void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
             -- Capture immediately — old auth was cancelled, new PI needs fresh capture
-            paymentCaptured <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment
-            if paymentCaptured
-              then QRide.markPaymentStatus Domain.Types.Ride.Completed rideId
-              else do
-                QRide.markPaymentStatus Domain.Types.Ride.Failed rideId
-                logError $ "Failed to capture payment intent after tip: " <> paymentIntentResp.paymentIntentId
+            when (ride.status == Domain.Types.RideStatus.COMPLETED) $ do
+              paymentCaptured <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment
+              if paymentCaptured
+                then QRide.markPaymentStatus Domain.Types.Ride.Completed rideId
+                else do
+                  QRide.markPaymentStatus Domain.Types.Ride.Failed rideId
+                  logError $ "Failed to capture payment intent after tip: " <> paymentIntentResp.paymentIntentId
         QRide.updateTipByRideId (Just tipAmount) rideId
-    createFareBreakup
+        createFareBreakup
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     void $ CallBPPInternal.populateTipAmount merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId tipRequest.amount.amount
   return Success
@@ -674,9 +685,10 @@ postPaymentClearDues (mbPersonId, merchantId) req = do
   let _excludedPurposes = case riderConfig >>= (.duesExcludedPaymentPurposes) of
         Nothing -> [] :: [Text] -- No config = don't exclude anything
         Just textList -> textList -- Reference type strings used directly for filtering
-  let rideId = Kernel.Prelude.head duesResp.rides & (.rideId)
+  rideId <- listToMaybe duesResp.rides <&> (.rideId) & fromMaybeM (InvalidRequest "No ride id found")
   Redis.withWaitAndLockRedis (SPayment.paymentJobExecLockKey rideId.getId) 10 20 $ do
-    ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+    ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+
     -- Find DUE ledger entries (capture was attempted and failed)
     pendingEntries <- RidePaymentFinance.findDueRidePaymentEntries rideId.getId
 
@@ -695,11 +707,12 @@ postPaymentClearDues (mbPersonId, merchantId) req = do
 
     -- 4. Create NEW payment order for debt settlement
     let debtApplicationFeeAmount = fromMaybe 0 booking.commission
+        discountAmount = fromMaybe 0.0 ride.discountAmount
     let createPaymentIntentServiceReq =
           DPayment.CreatePaymentIntentServiceReq
             { amount = duesResp.totalDueAmount,
               applicationFeeAmount = debtApplicationFeeAmount,
-              discountAmount = 0,
+              discountAmount,
               offerId = Nothing,
               currency = currency,
               customer = customerPaymentId,
@@ -712,14 +725,14 @@ postPaymentClearDues (mbPersonId, merchantId) req = do
         debtLedgerInfo =
           Just $
             SPayment.RidePaymentLedgerInfo
-              { rideFare = duesResp.totalDueAmount - debtApplicationFeeAmount,
+              { rideFare = duesResp.totalDueAmount - debtApplicationFeeAmount - discountAmount,
                 gstAmount = 0,
                 platformFee = debtApplicationFeeAmount,
-                offerDiscountAmount = 0,
+                offerDiscountAmount = discountAmount,
+                cashbackPayoutAmount = 0, -- debt settlement doesn't have cashback
                 financeCtx = debtLedgerCtx
               }
 
-    -- TODO :: Handle payment order missing by discount here
     paymentIntentResp <-
       SPayment.makePaymentIntent
         person.merchantId booking.merchantOperatingCityId booking.paymentMode

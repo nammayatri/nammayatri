@@ -14,6 +14,7 @@ import qualified API.Internal.EKDLiveCallFeedback as EKDLiveCallFeedback
 import qualified API.Internal.FRFS as FRFS
 import qualified API.Internal.FrequentLocUser as FrequentLocUser
 import qualified API.Internal.GetPickupInstructions as GetPickupInstructions
+import qualified API.Internal.OfferDiscount as OfferDiscount
 import qualified API.Internal.Rating as Rating
 import qualified API.Internal.RideSearchExpired as RideSearchExpired
 import qualified API.Internal.Sos as Sos
@@ -42,6 +43,7 @@ type API =
            :<|> EKDLiveCallFeedback.API
            :<|> Sos.API
            :<|> UpdateCancellationFeeStatus.API
+           :<|> OfferDiscount.API
        )
 
 handler :: FlowServer API
@@ -62,3 +64,4 @@ handler =
     :<|> EKDLiveCallFeedback.handler
     :<|> Sos.handler
     :<|> UpdateCancellationFeeStatus.handler
+    :<|> OfferDiscount.handler

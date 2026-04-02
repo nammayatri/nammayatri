@@ -235,3 +235,8 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN ledger_write_mode boolean 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN finance_invoice_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN discount_amount double precision ;
