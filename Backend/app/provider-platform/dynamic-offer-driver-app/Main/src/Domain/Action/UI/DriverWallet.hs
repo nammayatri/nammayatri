@@ -38,7 +38,6 @@ import Data.List (partition)
 import qualified Data.Map.Strict as Map
 import qualified Data.Time
 import Domain.Action.UI.Plan hiding (mkDriverFee)
-import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import Domain.Types.Extra.Plan
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity

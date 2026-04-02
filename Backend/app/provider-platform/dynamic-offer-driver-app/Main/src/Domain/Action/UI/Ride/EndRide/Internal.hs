@@ -38,7 +38,6 @@ module Domain.Action.UI.Ride.EndRide.Internal
     getMonth,
     pickedWaypointsForEditDestination,
     pickNWayPoints,
-    makeWalletRunningBalanceLockKey,
     makeSubscriptionRunningBalanceLockKey,
   )
 where
@@ -608,9 +607,6 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       Right (mbInvoiceId, _entryIds) -> do
         let mbInvoiceIdText = (.getId) <$> mbInvoiceId
         QRB.updateFinanceInvoiceId booking.id mbInvoiceIdText
-
-makeWalletRunningBalanceLockKey :: Text -> Text
-makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId
 
 sendReferralFCM ::
   ( CacheFlow m r,

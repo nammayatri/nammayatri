@@ -21,6 +21,7 @@ data AccountInput = AccountInput
     counterpartyType :: Maybe CounterpartyType,
     counterpartyId :: Maybe Text,
     currency :: Currency,
+    description :: Maybe Text,
     merchantId :: Text,
     merchantOperatingCityId :: Text
   }
