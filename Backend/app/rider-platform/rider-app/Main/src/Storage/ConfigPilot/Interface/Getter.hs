@@ -77,7 +77,7 @@ getConfigImpl _dimensions wrappedConfig logicDomain merchantOpCityId = do
           pure versions
 
     getActiveRolloutVersionsWithToss = do
-      allActiveRollouts <- CADLR.findByMerchantOpCityAndDomain merchantOpCityId logicDomain
+      allActiveRollouts <- CADLR.findActiveByMerchantOpCityAndDomain merchantOpCityId logicDomain
       let nonBaseRollouts = filter (\r -> r.isBaseVersion /= Just True) allActiveRollouts
       let cumulativeRollouts = buildCumulativeRollouts nonBaseRollouts
       toss <- getRandomInRange (1, 100 :: Int)

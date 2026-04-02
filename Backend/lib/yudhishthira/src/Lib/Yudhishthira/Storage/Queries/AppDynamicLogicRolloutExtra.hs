@@ -43,6 +43,23 @@ deleteByPrimaryKey (Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogi
         ]
     ]
 
+findActiveByMerchantOpCityAndDomain ::
+  (BeamFlow.BeamFlow m r) =>
+  Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
+  Lib.Yudhishthira.Types.LogicDomain ->
+  m [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout]
+findActiveByMerchantOpCityAndDomain merchantOperatingCityId domain =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.domain $ Se.Eq domain,
+          Se.Or
+            [ Se.Is Beam.isBaseVersion $ Se.Eq (Just True),
+              Se.Is Beam.experimentStatus $ Se.Eq (Just Lib.Yudhishthira.Types.RUNNING)
+            ]
+        ]
+    ]
+
 findByCityAndDomainAndIsBase ::
   (BeamFlow.BeamFlow m r) =>
   ( Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
