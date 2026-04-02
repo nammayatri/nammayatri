@@ -74,7 +74,9 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , smsUserName = sec.smsUserName
     , smsPassword = sec.smsPassword
     , InfoBIPConfig = sec.InfoBIPConfig
-    , passetto = { _1 = "localhost", _2 = 8079 }
+    -- Use 127.0.0.1 so the app and curl hit the same Passetto instance (avoids
+    -- localhost resolving to IPv6 vs IPv4 differently per client).
+    , passetto = { _1 = "127.0.0.1", _2 = 8079 }
     , googleCfg
     , mockGoogleCfg
     , googleTranslateUrl = "https://www.googleapis.com/"

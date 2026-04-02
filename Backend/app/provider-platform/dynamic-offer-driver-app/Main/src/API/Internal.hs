@@ -32,6 +32,7 @@ import qualified API.Internal.ReportACIssue as ReportACIssue
 import qualified API.Internal.ReportIssue as ReportIssue
 import qualified API.Internal.Ride as Ride
 import qualified API.Internal.SendSMS as SendSMS
+import qualified API.Internal.SettlementReportIngestion as SettlementReportIngestion
 import qualified API.Internal.SpecialLocationList as SpecialLocationList
 import qualified API.Internal.SpecialLocationUpsert as SpecialLocationUpsert
 import qualified API.Internal.StopDetection as StopDetection
@@ -74,6 +75,7 @@ type API =
            :<|> GeometryList.API
            :<|> GeometryUpdate.API
            :<|> SendSMS.API
+           :<|> SettlementReportIngestion.API
        )
 
 handler :: FlowServer API
@@ -110,3 +112,4 @@ handler =
     :<|> GeometryList.handler
     :<|> GeometryUpdate.handler
     :<|> SendSMS.handler
+    :<|> SettlementReportIngestion.handler

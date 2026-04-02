@@ -75,6 +75,7 @@ library
       API.Internal.ReportIssue
       API.Internal.Ride
       API.Internal.SendSMS
+      API.Internal.SettlementReportIngestion
       API.Internal.SpecialLocationList
       API.Internal.SpecialLocationUpsert
       API.Internal.StopDetection
@@ -242,6 +243,7 @@ library
       Domain.Action.Internal.ReportIssue
       Domain.Action.Internal.Ride
       Domain.Action.Internal.SendSMS
+      Domain.Action.Internal.SettlementReportIngestion
       Domain.Action.Internal.SpecialLocationUpsert
       Domain.Action.Internal.StopDetection
       Domain.Action.Internal.ViolationDetection

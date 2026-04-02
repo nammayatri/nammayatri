@@ -10,7 +10,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-FLAKE_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# flake.nix is at nammayatri/ (three levels up from dev/config-sync), not Backend/
+FLAKE_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 SOCKET_DIR="$HOME/NY/socket/passetto-db"
 PG_PORT=5422
 PG_DATA="$HOME/NY/data/passetto-db"
@@ -23,14 +24,24 @@ find_passetto() {
         return 0
     fi
 
-    # 2. Try nix build from flake
+    # 2. Try nix build (top-level package, if the flake exposes it)
     local pkg=""
-    if [ -f "$FLAKE_ROOT/flake.nix" ]; then
-        local system
-        system=$(nix eval --impure --expr 'builtins.currentSystem' 2>/dev/null | tr -d '"') || true
-        if [ -n "$system" ]; then
-            echo "Building passetto via nix..."
-            pkg=$(cd "$FLAKE_ROOT" && nix build ".#packages.${system}.passetto-service" --no-link --print-out-paths 2>/dev/null) || true
+    local system
+    system=$(nix eval --impure --expr 'builtins.currentSystem' 2>/dev/null | tr -d '"') || true
+    if [ -f "$FLAKE_ROOT/flake.nix" ] && [ -n "$system" ]; then
+        echo "Building passetto via nix (top-level flake package)..."
+        pkg=$(cd "$FLAKE_ROOT" && nix build ".#packages.${system}.passetto-service" --no-link --print-out-paths 2>/dev/null) || true
+    fi
+
+    # 2b. nammayatri does not expose passetto at top level; build locked passetto input (see flake.lock nodes.passetto)
+    if { [ -z "$pkg" ] || [ ! -d "$pkg" ]; } && [ -n "$system" ] && command -v jq >/dev/null 2>&1 && [ -f "$FLAKE_ROOT/flake.lock" ]; then
+        local owner repo rev
+        owner=$(jq -r '.nodes.passetto.locked.owner // empty' "$FLAKE_ROOT/flake.lock")
+        repo=$(jq -r '.nodes.passetto.locked.repo // empty' "$FLAKE_ROOT/flake.lock")
+        rev=$(jq -r '.nodes.passetto.locked.rev // empty' "$FLAKE_ROOT/flake.lock")
+        if [ -n "$owner" ] && [ -n "$repo" ] && [ -n "$rev" ]; then
+            echo "Building passetto from flake.lock (github:${owner}/${repo}@${rev:0:7})..."
+            pkg=$(nix build "github:${owner}/${repo}/${rev}#packages.${system}.passetto-service" --no-link --print-out-paths 2>/dev/null) || true
         fi
     fi
 
