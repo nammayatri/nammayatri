@@ -284,7 +284,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
           let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency person.id.getId rideId.getId Nothing Nothing
           void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
           -- Capture tip — settlement happens automatically inside chargePaymentIntent
-          tipPaymentCaptured <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing tipPaymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonTipPayment
+          tipPaymentCaptured <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing tipPaymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonTipPayment booking.riderId
           -- Update tip amount ONLY after successful capture
           if tipPaymentCaptured
             then QRide.updateTipByRideId (Just tipAmount) rideId
@@ -337,7 +337,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
             void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
             -- Capture immediately — old auth was cancelled, new PI needs fresh capture
             when (ride.status == Domain.Types.RideStatus.COMPLETED) $ do
-              paymentCaptured <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment
+              paymentCaptured <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment booking.riderId
               if paymentCaptured
                 then QRide.markPaymentStatus Domain.Types.Ride.Completed rideId
                 else do
@@ -755,7 +755,7 @@ postPaymentClearDues (mbPersonId, merchantId) req = do
         SPayment.chargePaymentIntent
           person.merchantId booking.merchantOperatingCityId booking.paymentMode
           DOrder.OnlineRideHailing
-          paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonDebtSettlement
+          paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonDebtSettlement booking.riderId
 
     case captureResult of
       Right True -> do
@@ -857,6 +857,7 @@ postPaymentRideCapture (mbPersonId, _merchantId) rideId = do
         paymentIntentId
         ride.id
         RidePaymentFinance.settledReasonRidePayment
+        booking.riderId
     if paymentCharged
       then do
         -- Settlement already done inside chargePaymentIntent

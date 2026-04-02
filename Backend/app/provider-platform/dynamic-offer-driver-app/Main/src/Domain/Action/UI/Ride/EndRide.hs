@@ -31,11 +31,11 @@ where
 import qualified Beckn.OnDemand.Utils.Common as BODUC
 import qualified Data.Aeson as A
 import Data.Either.Extra (eitherToMaybe)
+-- import qualified Lib.Yudhishthira.Event as Yudhishthira
+import qualified Data.HashMap.Strict as HM
 import Data.Maybe (listToMaybe)
 import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Data.Text as Text
--- import qualified Lib.Yudhishthira.Event as Yudhishthira
-import qualified Data.HashMap.Strict as HM
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.Ride.Common as DUIRideCommon
@@ -551,8 +551,9 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
           appBackendBapInternal <- asks (.appBackendBapInternal)
           case ride.fare of
             Just newFare -> do
-              result <- withTryCatch "getOfferDiscount:endRideTransaction" $
-                CallBAPInternal.getOfferDiscount appBackendBapInternal.internalKey appBackendBapInternal.url booking.id.getId newFare
+              result <-
+                withTryCatch "getOfferDiscount:endRideTransaction" $
+                  CallBAPInternal.getOfferDiscount appBackendBapInternal.internalKey appBackendBapInternal.url booking.id.getId newFare
               case result of
                 Right resp -> pure resp.discountAmount
                 Left _ -> pure Nothing

@@ -741,12 +741,13 @@ chargePaymentIntent ::
   Payment.PaymentIntentId ->
   Id Ride.Ride -> -- rideId for looking up pending ledger entries
   Text -> -- settlement reason (e.g. "RidePaymentCaptured", "TipPaymentCaptured")
+  Id Person.Person -> -- personId for looking up payment customer
   m Bool
-chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType paymentIntentId rideId settledReason = do
+chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType paymentIntentId rideId settledReason personId = do
   let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId paymentMode
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId paymentMode
       commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
-  charged <- DPayment.chargePaymentIntentService commonMerchantOperatingCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall
+  charged <- DPayment.chargePaymentIntentService commonMerchantOperatingCityId paymentServiceType paymentIntentId (cast personId) capturePaymentIntentCall getPaymentIntentCall
   -- Find all unsettled ledger entries (PENDING or DUE) for this ride
   unsettledEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries rideId.getId
   unless (null unsettledEntries) $ do
@@ -855,12 +856,13 @@ makeCxCancellationPayment ::
   DOrder.PaymentServiceType ->
   Payment.PaymentIntentId ->
   HighPrecMoney ->
+  Id Person.Person ->
   m Bool
-makeCxCancellationPayment merchantId merchantOpCityId paymentMode paymentServiceType paymentIntentId cancellationAmount = do
+makeCxCancellationPayment merchantId merchantOpCityId paymentMode paymentServiceType paymentIntentId cancellationAmount personId = do
   let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId paymentMode
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId paymentMode
       commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
-  DPayment.updateForCXCancelPaymentIntentService commonMerchantOperatingCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancellationAmount
+  DPayment.updateForCXCancelPaymentIntentService commonMerchantOperatingCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancellationAmount (cast personId)
 
 validatePaymentInstrument :: (MonadThrow m, Log m) => Merchant.Merchant -> Maybe DMPM.PaymentInstrument -> Maybe Payment.PaymentMethodId -> m ()
 validatePaymentInstrument merchant mbPaymentInstrument mbPaymentMethodId = do
@@ -962,7 +964,7 @@ capturePendingPaymentIfExists person merchantOperatingCityId = do
             whenJust mbOrder $ \order -> do
               let paymentIntentId = order.paymentServiceOrderId
               -- chargePaymentIntent will mark entries as DUE on failure, SETTLED on success
-              paymentCharged <- chargePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing paymentIntentId ride.id RidePaymentFinance.settledReasonRidePayment
+              paymentCharged <- chargePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing paymentIntentId ride.id RidePaymentFinance.settledReasonRidePayment booking.riderId
               if paymentCharged
                 then do
                   logInfo $ "Successfully captured payment for ride " <> ride.id.getId

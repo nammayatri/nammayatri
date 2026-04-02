@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module SharedLogic.Offer where
 
 import qualified Data.Aeson as A
@@ -5,6 +7,8 @@ import Data.Time (utctDay)
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.PersonStats as DPS
+import Domain.Types.Yudhishthira ()
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (ServiceFlow)
@@ -18,10 +22,13 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Domain.Types.PersonDailyOfferStats as DPDOS
+import qualified Lib.Payment.Domain.Types.PersonOfferStats as DPOS
 import qualified Lib.Payment.Storage.Queries.PersonDailyOfferStats as QPersonDailyOfferStats
 import qualified Lib.Payment.Storage.Queries.PersonOfferStats as QPersonOfferStats
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
+import qualified Lib.Yudhishthira.TypesTH as YTH
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
@@ -79,6 +86,15 @@ data OffersRespAPIEntity = OffersRespAPIEntity
   deriving (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data OfferEligibilityInput = OfferEligibilityInput
+  { personOfferStats :: [DPOS.PersonOfferStats],
+    personDailyOfferStats :: Maybe DPDOS.PersonDailyOfferStats,
+    personStats :: Maybe DPS.PersonStats
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+$(YTH.generateGenericDefault ''OfferEligibilityInput)
+
 -------------------------------------------------------------------------------------------------------
 ----------------------------------- Fetch Offers List With Caching ------------------------------------
 -------------------------------------------------------------------------------------------------------
@@ -109,11 +125,12 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
             mbPersonStats <- QPersonStats.findByPersonId personId
             let domainContext =
                   Just $
-                    A.object
-                      [ "personOfferStats" A..= personOfferStats,
-                        "personDailyOfferStats" A..= mbPersonDailyOfferStats,
-                        "personStats" A..= mbPersonStats
-                      ]
+                    A.toJSON
+                      OfferEligibilityInput
+                        { personOfferStats = personOfferStats,
+                          personDailyOfferStats = mbPersonDailyOfferStats,
+                          personStats = mbPersonStats
+                        }
             DPayment.listDomainOffers merchantId.getId merchantOperatingCityId.getId price.amount price.currency domainContext
       DPayment.offerListService customerId version paymentServiceType (6 * 3600) False domainOfferCall req
     else do
