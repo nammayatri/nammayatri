@@ -127,6 +127,7 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
             DMSC.SettlementServiceConfig settlementCfg -> case settlementCfg of
               HyperPGConfig srcCfg -> Just (service, srcCfg)
               BillDeskConfig srcCfg -> Just (service, srcCfg)
+              YesBizConfig srcCfg -> Just (service, srcCfg)
             _ -> Nothing
           Nothing -> Nothing
       pure $ catMaybes configs

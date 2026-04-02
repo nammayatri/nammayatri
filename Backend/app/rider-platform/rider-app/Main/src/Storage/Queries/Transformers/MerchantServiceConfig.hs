@@ -88,6 +88,7 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.SOSService SOS.Trinity -> Domain.SOSServiceConfig . SOSInterface.TrinityConfig <$> valueToMaybe configJSON
     Domain.SettlementService Settlement.HyperPG -> Domain.SettlementServiceConfig . Settlement.HyperPGConfig <$> valueToMaybe configJSON
     Domain.SettlementService Settlement.BillDesk -> Domain.SettlementServiceConfig . Settlement.BillDeskConfig <$> valueToMaybe configJSON
+    Domain.SettlementService Settlement.YesBiz -> Domain.SettlementServiceConfig . Settlement.YesBizConfig <$> valueToMaybe configJSON
 
 mkPaymentServiceConfig :: A.Value -> Payment.PaymentService -> Maybe Payment.PaymentServiceConfig
 mkPaymentServiceConfig configJSON = \case
@@ -173,6 +174,7 @@ getServiceNameConfigJson = \case
   Domain.SettlementServiceConfig settlementCfg -> case settlementCfg of
     Settlement.HyperPGConfig srcCfg -> (Domain.SettlementService Settlement.HyperPG, toJSON srcCfg)
     Settlement.BillDeskConfig srcCfg -> (Domain.SettlementService Settlement.BillDesk, toJSON srcCfg)
+    Settlement.YesBizConfig srcCfg -> (Domain.SettlementService Settlement.YesBiz, toJSON srcCfg)
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> (Payment.PaymentService, A.Value)
 getPaymentServiceConfigJson = \case
