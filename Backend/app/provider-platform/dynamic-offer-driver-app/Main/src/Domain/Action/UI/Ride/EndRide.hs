@@ -35,7 +35,7 @@ import Data.Maybe (listToMaybe)
 import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Data.Text as Text
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
-
+import qualified Data.HashMap.Strict as HM
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.Ride.Common as DUIRideCommon
@@ -91,6 +91,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
 import qualified SharedLogic.CallBAP as CallBAP
+import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
@@ -243,7 +244,9 @@ type EndRideFlow m r =
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     LT.HasLocationService m r,
     HasKafkaProducer r,
-    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
+    HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   )
 
 driverEndRide ::
@@ -548,11 +551,11 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
           appBackendBapInternal <- asks (.appBackendBapInternal)
           case ride.fare of
             Just newFare -> do
-              withTryCatch "getOfferDiscount:endRideTransaction" $ do
+              result <- withTryCatch "getOfferDiscount:endRideTransaction" $
                 CallBAPInternal.getOfferDiscount appBackendBapInternal.internalKey appBackendBapInternal.url booking.id.getId newFare
-                >>= \case
-                  Just discountAmount -> pure $ Just discountAmount
-                  Nothing -> pure Nothing
+              case result of
+                Right resp -> pure resp.discountAmount
+                Left _ -> pure Nothing
             Nothing -> pure Nothing
         else pure Nothing
     let baseFareParams = fromMaybe booking.fareParams mbUpdatedFareParams

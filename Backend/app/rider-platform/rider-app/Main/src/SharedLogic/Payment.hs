@@ -49,7 +49,7 @@ import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.JobScheduler
 import qualified SharedLogic.JobScheduler as JobScheduler
-import SharedLogic.Offer
+import SharedLogic.Offer (invalidateOfferListCache)
 import Storage.Beam.Payment ()
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
