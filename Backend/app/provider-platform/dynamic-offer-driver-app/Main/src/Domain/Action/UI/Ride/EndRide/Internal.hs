@@ -471,12 +471,14 @@ createDriverWalletTransaction ::
   Maybe DP.Person ->
   m ()
 createDriverWalletTransaction ride booking fareParams driverInfo transporterConfig mbDriver = do
-  let totalFare = fromMaybe 0 ride.fare
-      gstAmount = fromMaybe 0 fareParams.govtCharges
+  let isVat = fromMaybe False fareParams.isVatTaxType
+      totalFare = fromMaybe 0 ride.fare
+      taxAmount = fromMaybe 0 fareParams.govtCharges -- GST or VAT (merged by FareCalculatorV2)
       tollAmount = fromMaybe 0 fareParams.tollCharges
+      tollVatAmount = fromMaybe 0 fareParams.tollVat
       parkingAmount = fromMaybe 0 fareParams.parkingCharge
       commissionAmount = fromMaybe 0 (ride.commission <|> booking.commission)
-      baseFare = totalFare - gstAmount - tollAmount - parkingAmount
+      baseFare = totalFare - taxAmount - tollAmount - tollVatAmount - parkingAmount
 
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
     isOnline <- do
@@ -527,6 +529,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
 
     merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist booking.merchantOperatingCityId.getId)
     ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig
+    -- Toll line item includes tollVat (toll + tollVat combined as one external charge)
+    let tollWithVat = tollAmount + tollVatAmount
+
     let invoiceConfig =
           InvoiceConfig
             { invoiceType = Invoice.Ride,
@@ -539,11 +544,14 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                   [ if baseFare > 0
                       then Just InvoiceLineItem {description = "Base Fare", quantity = 1, unitPrice = baseFare, lineTotal = baseFare, isExternalCharge = False}
                       else Nothing,
-                    if gstAmount > 0
-                      then Just InvoiceLineItem {description = "GST", quantity = 1, unitPrice = gstAmount, lineTotal = gstAmount, isExternalCharge = False}
+                    if taxAmount > 0
+                      then Just InvoiceLineItem {description = "Tax", quantity = 1, unitPrice = taxAmount, lineTotal = taxAmount, isExternalCharge = False}
                       else Nothing,
                     if tollAmount > 0
                       then Just InvoiceLineItem {description = "Toll Charges", quantity = 1, unitPrice = tollAmount, lineTotal = tollAmount, isExternalCharge = True}
+                      else Nothing,
+                    if tollVatAmount > 0
+                      then Just InvoiceLineItem {description = "Toll Charges Tax", quantity = 1, unitPrice = tollVatAmount, lineTotal = tollVatAmount, isExternalCharge = True}
                       else Nothing,
                     if parkingAmount > 0
                       then Just InvoiceLineItem {description = "Parking Charges", quantity = 1, unitPrice = parkingAmount, lineTotal = parkingAmount, isExternalCharge = True}
@@ -559,16 +567,23 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                   booking.fromLocation.address.state
                   (Just $ show merchantOperatingCity.city)
                   booking.fromLocation.address.city
-                  gstAmount
+                  taxAmount,
+              isVat = isVat,
+              issuedToTaxNo = Nothing, -- Ride invoice: Nothing. Commission/Subscription invoice: fleet's VAT/GST number
+              issuedByTaxNo = Nothing -- populated from Merchant.gstin via FinanceCtx.merchantGstin in invoice()
             }
+    let taxRefOnline = if isVat then walletReferenceVATOnline else walletReferenceGSTOnline
+        taxRefCash = if isVat then walletReferenceVATCash else walletReferenceGSTCash
     result <- runFinance ctx $ do
       if isOnline
         then do
           -- Online: Asset(BUYER) -> External(BUYER) -> destination for each component
-          let onlineComponents =
+          -- tollWithVat goes to driver wallet as one combined toll transfer
+          let taxDest = if isVat then OwnerLiability else GovtIndirect
+              onlineComponents =
                 [ (baseFare, walletReferenceBaseRide, OwnerLiability),
-                  (gstAmount, walletReferenceGSTOnline, GovtIndirect),
-                  (tollAmount, walletReferenceTollCharges, OwnerLiability),
+                  (taxAmount, taxRefOnline, taxDest),
+                  (tollWithVat, walletReferenceTollCharges, OwnerLiability),
                   (parkingAmount, walletReferenceParkingCharges, OwnerLiability)
                 ]
           forM_ onlineComponents $ \(amt, ref, dest) -> do
@@ -578,8 +593,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
           whenJust mbTdsAmount $ \tdsAmount ->
             void $ transfer OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionOnline
         else do
-          -- Cash: Liability -> Liability transfers
-          _ <- transfer OwnerLiability GovtIndirect gstAmount walletReferenceGSTCash
+          -- Cash: GST deducted from wallet to govt, VAT stays in driver wallet (no deduction)
+          unless isVat $
+            void $ transfer OwnerLiability GovtIndirect taxAmount taxRefCash
           whenJust mbTdsAmount $ \tdsAmount ->
             void $ transfer OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCash
       -- Commission: Liability(DRIVER) -> Revenue(SELLER)

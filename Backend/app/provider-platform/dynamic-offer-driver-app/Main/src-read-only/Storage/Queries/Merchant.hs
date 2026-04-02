@@ -79,6 +79,7 @@ updateByPrimaryKey (Domain.Types.Merchant.Merchant {..}) = do
       Se.Set Beam.toTime toTime,
       Se.Set Beam.uniqueKeyId uniqueKeyId,
       Se.Set Beam.updatedAt _now,
+      Se.Set Beam.vatNumber vatNumber,
       Se.Set Beam.verified verified
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

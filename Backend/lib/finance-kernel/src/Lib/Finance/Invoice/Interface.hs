@@ -49,6 +49,7 @@ data InvoiceInput = InvoiceInput
     supplierName :: Maybe Text,
     supplierAddress :: Maybe Text,
     supplierGSTIN :: Maybe Text,
+    supplierTaxNo :: Maybe Text,
     supplierId :: Maybe Text,
     gstinOfParty :: Maybe Text,
     panOfParty :: Maybe Text,
@@ -62,7 +63,11 @@ data InvoiceInput = InvoiceInput
     dueAt :: Maybe UTCTime,
     merchantId :: Text,
     merchantOperatingCityId :: Text,
-    merchantShortId :: Text
+    merchantShortId :: Text,
+    -- VAT integration fields
+    isVat :: Bool,
+    issuedToTaxNo :: Maybe Text,
+    issuedByTaxNo :: Maybe Text
   }
   deriving (Eq, Show, Generic)
 
@@ -75,22 +80,26 @@ data GstAmountBreakdown = GstAmountBreakdown
   }
   deriving (Eq, Show, Generic)
 
--- | Input for creating a standalone indirect tax (GST) transaction
+-- | Input for creating a standalone indirect tax (GST/VAT) transaction
 --   without an invoice.
 data IndirectTaxInput = IndirectTaxInput
   { transactionType :: IndirectTax.TransactionType,
     referenceId :: Text,
     taxableValue :: HighPrecMoney,
-    totalGstAmount :: HighPrecMoney,
+    totalTaxAmount :: HighPrecMoney, -- renamed from totalGstAmount: the actual tax amount (GST or VAT)
     gstBreakdown :: Maybe GstAmountBreakdown,
-    gstCreditType :: GstCreditType,
+    taxCreditType :: GstCreditType,
     counterpartyId :: Text,
     gstinOfParty :: Maybe Text,
     sacCode :: Maybe Text,
     externalCharges :: Maybe HighPrecMoney,
     invoiceNumber :: Maybe Text,
     merchantId :: Text,
-    merchantOperatingCityId :: Text
+    merchantOperatingCityId :: Text,
+    -- VAT integration fields
+    isVat :: Bool,
+    issuedToTaxNo :: Maybe Text,
+    issuedByTaxNo :: Maybe Text
   }
   deriving (Eq, Show, Generic)
 

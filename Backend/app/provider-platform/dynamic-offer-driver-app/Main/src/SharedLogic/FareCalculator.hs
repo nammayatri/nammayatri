@@ -151,9 +151,6 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       boothChargeCaption = show Enums.BOOTH_CHARGE
       mbBoothChargeItem = mkBreakupItem boothChargeCaption . mkPrice <$> fareParams.boothCharge
 
-      baseVatCaption = show Enums.RIDE_VAT
-      mbBaseVatItem = mkBreakupItem baseVatCaption . mkPrice <$> fareParams.rideVat
-
       tollVatCaption = show Enums.TOLL_VAT
       mbTollVatItem = mkBreakupItem tollVatCaption . mkPrice <$> fareParams.tollVat
 
@@ -188,7 +185,6 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbLuggageChargeItem,
       mbReturnFeeChargeItem,
       mbBoothChargeItem,
-      mbBaseVatItem,
       mbTollVatItem
     ]
     <> detailsBreakups
@@ -292,7 +288,7 @@ fareSum fareParams conditionalChargeCategories = do
 -- - Base fare components (baseFare, serviceCharge, waitingCharge, etc.)
 -- - Additional charges (petCharges, stopCharges, priorityCharges, etc.)
 -- - Policy-specific details (progressive/rental/intercity components)
--- - VAT charges (rideVat, tollVat) from calculateFareParametersV2
+-- - VAT charges (tollVat) from calculateFareParametersV2 (rideVat is merged into govtCharges)
 -- - Payment processing fee
 -- - Conditional charges (filtered by category)
 --
@@ -326,7 +322,6 @@ pureFareSum fareParams conditionalChargeCategories = do
     + fromMaybe 0.0 (fareParams.cardCharge >>= (.onFare))
     + fromMaybe 0.0 (fareParams.cardCharge >>= (.fixed))
     + fromMaybe 0.0 fareParams.paymentProcessingFee
-    + fromMaybe 0.0 fareParams.rideVat
     + fromMaybe 0.0 fareParams.tollVat
     -- Commission is intentionally excluded - stored for breakdown only
     + (sum $ map (.charge) (filter (\addCharges -> maybe True (KP.elem addCharges.chargeCategory) conditionalChargeCategories) fareParams.conditionalCharges))
@@ -524,7 +519,7 @@ calculateFareParameters params = do
             businessDiscount = businessDiscount,
             personalDiscount = personalDiscount,
             paymentProcessingFee = Nothing,
-            rideVat = Nothing,
+            isVatTaxType = Nothing,
             tollVat = Nothing
           }
   KP.forM_ debugLogs $ logTagInfo ("FareCalculator:FarePolicyId:" <> show fp.id.getId)

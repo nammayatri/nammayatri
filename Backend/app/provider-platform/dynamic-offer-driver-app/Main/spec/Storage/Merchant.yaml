@@ -79,6 +79,7 @@ Merchant:
     mobileNumber: Maybe Text
     mobileCountryCode: Maybe Text
     gstin: Maybe Text
+    vatNumber: Maybe Text
     fromTime: Maybe UTCTime
     toTime: Maybe UTCTime
     headCount: Maybe Int

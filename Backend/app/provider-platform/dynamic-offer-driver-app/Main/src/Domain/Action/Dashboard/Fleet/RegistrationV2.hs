@@ -315,6 +315,7 @@ createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId mbTds
             verified = False,
             gstNumber = Nothing,
             gstNumberDec = Nothing,
+            vatNumber = Nothing,
             gstImageId = Nothing,
             businessLicenseImageId = Nothing,
             businessLicenseNumber = Nothing,

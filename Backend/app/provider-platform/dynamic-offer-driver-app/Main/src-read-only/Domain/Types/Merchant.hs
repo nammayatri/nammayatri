@@ -51,6 +51,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     toTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     uniqueKeyId :: Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
+    vatNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     verified :: Kernel.Prelude.Bool
   }
   deriving (Generic, Show)

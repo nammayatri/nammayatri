@@ -81,6 +81,10 @@ recordPGFeeLedgerEntries feeType config merchantId merchantOpCityId referenceId 
             issuedByAddress = Nothing,
             supplierName = Nothing,
             supplierGSTIN = Nothing,
+            merchantGstin = Nothing,
+            supplierVatNumber = Nothing,
+            supplierAddress = Nothing,
+            merchantVatNumber = Nothing,
             supplierId = Nothing,
             panOfParty = Nothing,
             panType = Nothing,
@@ -99,13 +103,16 @@ recordPGFeeLedgerEntries feeType config merchantId merchantOpCityId referenceId 
             { transactionType = IndirectTax.PGFee,
               referenceId = referenceId,
               taxableValue = config.pgBaseFee,
-              totalGstAmount = gstAmount,
+              totalTaxAmount = gstAmount,
               gstBreakdown = Nothing, -- will default to 50/50 CGST/SGST split
-              gstCreditType = Input, -- PG fee GST is input credit (claimable)
+              taxCreditType = Input, -- PG fee GST is input credit (claimable)
               counterpartyId = merchantId,
               gstinOfParty = config.pgGstinOfParty,
               sacCode = Just "998516", -- SAC for payment processing services
-              externalCharges = Nothing
+              externalCharges = Nothing,
+              isVat = False, -- PG fees are always GST
+              issuedToTaxNo = Nothing,
+              issuedByTaxNo = Nothing
             }
   case result of
     Left err -> pure $ Left err

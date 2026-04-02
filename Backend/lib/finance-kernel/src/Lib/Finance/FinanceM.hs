@@ -64,6 +64,7 @@ module Lib.Finance.FinanceM
   )
 where
 
+import Control.Applicative ((<|>))
 import Control.Monad.Except (ExceptT, MonadError, runExceptT, throwError)
 import Control.Monad.State.Strict (MonadState, StateT, gets, modify', runStateT)
 import Kernel.Prelude
@@ -103,6 +104,10 @@ data FinanceCtx = FinanceCtx
     issuedByAddress :: Maybe Text,
     supplierName :: Maybe Text,
     supplierGSTIN :: Maybe Text,
+    supplierVatNumber :: Maybe Text, -- fleet owner's VAT registration number
+    supplierAddress :: Maybe Text, -- fleet owner's address (from stripeAddress) for VAT invoices
+    merchantGstin :: Maybe Text, -- merchant's own GSTIN, for issued_by_tax_no (GST)
+    merchantVatNumber :: Maybe Text, -- merchant's VAT number, for issued_by_tax_no (VAT)
     supplierId :: Maybe Text,
     panOfParty :: Maybe Text,
     panType :: Maybe Text,
@@ -119,7 +124,11 @@ data InvoiceConfig = InvoiceConfig
     issuedToName :: Maybe Text,
     issuedToAddress :: Maybe Text,
     lineItems :: [InvoiceLineItem],
-    gstBreakdown :: Maybe GstAmountBreakdown
+    gstBreakdown :: Maybe GstAmountBreakdown,
+    -- VAT integration fields
+    isVat :: Bool,
+    issuedToTaxNo :: Maybe Text,
+    issuedByTaxNo :: Maybe Text
   }
   deriving (Eq, Show, Generic)
 
@@ -590,8 +599,9 @@ invoice config = do
                 issuedByName = ctx.merchantName,
                 issuedByAddress = ctx.issuedByAddress,
                 supplierName = ctx.supplierName,
-                supplierAddress = ctx.issuedByAddress,
+                supplierAddress = if config.isVat then ctx.supplierAddress <|> ctx.issuedByAddress else ctx.issuedByAddress,
                 supplierGSTIN = ctx.supplierGSTIN,
+                supplierTaxNo = if config.isVat then ctx.supplierVatNumber else ctx.supplierGSTIN,
                 supplierId = ctx.supplierId,
                 gstinOfParty = Nothing,
                 panOfParty = ctx.panOfParty,
@@ -605,24 +615,31 @@ invoice config = do
                 dueAt = Nothing,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
-                merchantShortId = fromMaybe ctx.merchantId ctx.merchantShortId
+                merchantShortId = fromMaybe ctx.merchantId ctx.merchantShortId,
+                -- VAT integration fields
+                isVat = config.isVat,
+                issuedToTaxNo = config.issuedToTaxNo,
+                issuedByTaxNo = if config.isVat then ctx.merchantVatNumber else ctx.merchantGstin
               }
       inv <- liftFinanceM (createInvoice invoiceInput ids)
       pure (Just inv.id)
 
--- | Caller-provided config for recording a standalone indirect tax (GST) entry.
+-- | Caller-provided config for recording a standalone indirect tax (GST/VAT) entry.
 --   merchantId and merchantOperatingCityId come from FinanceCtx.
 data IndirectTaxConfig = IndirectTaxConfig
   { transactionType :: IndirectTax.TransactionType,
     referenceId :: Text,
     taxableValue :: HighPrecMoney,
-    totalGstAmount :: HighPrecMoney,
+    totalTaxAmount :: HighPrecMoney,
     gstBreakdown :: Maybe GstAmountBreakdown,
-    gstCreditType :: GstCreditType,
+    taxCreditType :: GstCreditType,
     counterpartyId :: Text,
     gstinOfParty :: Maybe Text,
     sacCode :: Maybe Text,
-    externalCharges :: Maybe HighPrecMoney
+    externalCharges :: Maybe HighPrecMoney,
+    isVat :: Bool,
+    issuedToTaxNo :: Maybe Text,
+    issuedByTaxNo :: Maybe Text
   }
   deriving (Eq, Show, Generic)
 
@@ -672,16 +689,19 @@ recordIndirectTax config = do
           { transactionType = config.transactionType,
             referenceId = config.referenceId,
             taxableValue = config.taxableValue,
-            totalGstAmount = config.totalGstAmount,
+            totalTaxAmount = config.totalTaxAmount,
             gstBreakdown = config.gstBreakdown,
-            gstCreditType = config.gstCreditType,
+            taxCreditType = config.taxCreditType,
             counterpartyId = config.counterpartyId,
             gstinOfParty = config.gstinOfParty,
             sacCode = config.sacCode,
             externalCharges = config.externalCharges,
             invoiceNumber = Nothing,
             merchantId = ctx.merchantId,
-            merchantOperatingCityId = ctx.merchantOpCityId
+            merchantOperatingCityId = ctx.merchantOpCityId,
+            isVat = config.isVat,
+            issuedToTaxNo = config.issuedToTaxNo,
+            issuedByTaxNo = config.issuedByTaxNo
           }
   txn <- lift (createIndirectTaxEntry input)
   pure txn.id

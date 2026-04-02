@@ -36,6 +36,7 @@ Invoice:
     supplierName: Maybe Text
     supplierAddress: Maybe Text
     supplierGSTIN: Maybe Text
+    supplierTaxNo: Maybe Text
     supplierId: Maybe Text
     lineItems: Value
     subtotal: HighPrecMoney

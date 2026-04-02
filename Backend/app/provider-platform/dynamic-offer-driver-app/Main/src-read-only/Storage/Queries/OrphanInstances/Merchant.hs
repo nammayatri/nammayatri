@@ -56,6 +56,7 @@ instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
             toTime = toTime,
             uniqueKeyId = uniqueKeyId,
             updatedAt = updatedAt,
+            vatNumber = vatNumber,
             verified = verified
           }
 
@@ -98,5 +99,6 @@ instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
         Beam.toTime = toTime,
         Beam.uniqueKeyId = uniqueKeyId,
         Beam.updatedAt = updatedAt,
+        Beam.vatNumber = vatNumber,
         Beam.verified = verified
       }

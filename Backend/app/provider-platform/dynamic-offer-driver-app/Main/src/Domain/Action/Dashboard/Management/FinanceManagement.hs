@@ -410,7 +410,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
       -- Get GST details from indirect tax transaction
       indirectTaxTxns <- QIndirectTax.findByInvoiceNumber invoice.invoiceNumber
 
-      let (taxableValue, gstRate, gstAmount, cgstAmount, sgstAmount, gstinOfParty, sacCode) = case indirectTaxTxns of
+      let (taxableValue, gstRate, gstAmount, cgstAmount, sgstAmount, gstinOfParty, sacCode, mbTaxRate, mbIssuedToTaxNo, mbIssuedByTaxNo) = case indirectTaxTxns of
             (txn : _) ->
               ( Just txn.taxableValue,
                 Just txn.gstRate,
@@ -418,9 +418,12 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
                 Just txn.cgstAmount,
                 Just txn.sgstAmount,
                 txn.gstinOfParty,
-                txn.sacCode
+                txn.sacCode,
+                txn.taxRate,
+                txn.issuedToTaxNo,
+                txn.issuedByTaxNo
               )
-            _ -> (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+            _ -> (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
 
       -- Get TDS details from direct tax transaction by invoiceNumber
       directTaxTxns <- QDirectTax.findByInvoiceNumber invoice.invoiceNumber
@@ -465,6 +468,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
             supplierName = invoice.supplierName,
             supplierAddress = invoice.supplierAddress,
             supplierGstin = invoice.supplierGSTIN,
+            supplierTaxNo = invoice.supplierTaxNo,
             issuedToName = invoice.issuedToName,
             issuedToAddress = invoice.issuedToAddress,
             issuedByName = invoice.issuedByName,
@@ -474,7 +478,10 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
             paymentMethod = mbPaymentMethod,
             taxableValueOfServiceSupplied = Just invoice.subtotal,
             lineItems = invoice.lineItems,
-            generatedAt = invoice.createdAt
+            generatedAt = invoice.createdAt,
+            taxRate = mbTaxRate,
+            issuedToTaxNo = mbIssuedToTaxNo,
+            issuedByTaxNo = mbIssuedByTaxNo
           }
 
     extractIds :: LedgerEntry.LedgerEntry -> ([Text], [Text]) -> ([Text], [Text])

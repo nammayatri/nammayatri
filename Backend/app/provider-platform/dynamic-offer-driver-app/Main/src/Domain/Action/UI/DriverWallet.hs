@@ -228,6 +228,8 @@ referenceTypeToItemName ref
   | ref == walletReferenceTopup = "Wallet Top-up"
   | ref == walletReferenceGSTOnline = "GST (Online)"
   | ref == walletReferenceGSTCash = "GST (Cash)"
+  | ref == walletReferenceVATOnline = "VAT (Online)"
+  | ref == walletReferenceVATCash = "VAT (Cash)"
   | ref == walletReferenceTDSDeductionOnline = "TDS (Online)"
   | ref == walletReferenceTDSDeductionCash = "TDS (Cash)"
   | ref == walletReferencePayout = "Withdrawal"
@@ -547,6 +549,10 @@ mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId = do
         issuedByAddress = address,
         supplierName = supplierName,
         supplierGSTIN = supplierGSTIN,
+        merchantGstin = Nothing,
+        supplierVatNumber = Nothing,
+        supplierAddress = Nothing,
+        merchantVatNumber = Nothing,
         supplierId = supplierId,
         panOfParty = Nothing,
         panType = Nothing,
@@ -580,7 +586,10 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
               issuedToName = Nothing,
               issuedToAddress = Nothing,
               lineItems = [InvoiceLineItem {description = "Airport Cash Recharge", quantity = 1, unitPrice = amount, lineTotal = amount, isExternalCharge = False}],
-              gstBreakdown = Nothing
+              gstBreakdown = Nothing,
+              isVat = False,
+              issuedToTaxNo = Nothing,
+              issuedByTaxNo = Nothing
             }
     result <- runFinance ctx $ do
       _ <- transfer PlatformAsset OwnerLiability amount walletReferenceAirportCashRecharge

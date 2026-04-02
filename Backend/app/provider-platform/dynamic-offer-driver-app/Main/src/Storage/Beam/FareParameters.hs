@@ -73,7 +73,7 @@ data FareParametersT f = FareParametersT
     merchantId :: B.C f (Maybe Text),
     merchantOperatingCityId :: B.C f (Maybe Text),
     paymentProcessingFee :: B.C f (Maybe HighPrecMoney),
-    rideVat :: B.C f (Maybe HighPrecMoney),
+    isVatTaxType :: B.C f (Maybe Bool),
     tollVat :: B.C f (Maybe HighPrecMoney),
     commission :: B.C f (Maybe HighPrecMoney)
   }

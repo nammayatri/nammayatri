@@ -132,12 +132,17 @@ applyConfiguredCharges farePolicy fareParams = do
       pure $ if tollVatAmount > 0 then Just tollVatAmount else Nothing
     Nothing -> pure Nothing -- No toll VAT if not configured
 
-  -- Return updated fare parameters with new breakdown fields
+  -- Merge rideVat into govtCharges so downstream flow (EndRide transfers, invoice,
+  -- indirect_tax_transaction) picks it up automatically via the existing govtCharges path.
+  let hasVatConfig = isJust farePolicy.vatChargeConfig
+      mergedGovtCharges = fromMaybe 0 fareParams.govtCharges + fromMaybe 0 rideVatValue
+
   -- Note: Commission is NOT stored in FareParameters - it's calculated separately via calculateCommission and stored in Booking/Ride tables
   pure $
     fareParams
       { paymentProcessingFee = Nothing, -- TODO: Will be enhanced when payment context is available
-        rideVat = rideVatValue,
+        govtCharges = if mergedGovtCharges > 0 then Just mergedGovtCharges else fareParams.govtCharges,
+        isVatTaxType = Just hasVatConfig,
         tollVat = tollVatValue
       }
 
@@ -259,7 +264,6 @@ buildComponentMap FareParameters {..} =
             (LuggageChargeComponent, maybeZero luggageCharge),
             (CustomerCancellationChargeComponent, maybeZero customerCancellationDues),
             (PlatformFeeComponent, maybeZero platformFee),
-            (RideVatComponent, maybeZero rideVat),
             (TollVatComponent, maybeZero tollVat)
           ]
       -- Detail map: Additional components based on fare policy type

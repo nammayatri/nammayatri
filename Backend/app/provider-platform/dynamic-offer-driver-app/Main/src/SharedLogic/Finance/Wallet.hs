@@ -28,6 +28,8 @@ module SharedLogic.Finance.Wallet
     financeCtxFromRide,
     buildFinanceCtx,
     walletReferenceCommission,
+    walletReferenceVATOnline,
+    walletReferenceVATCash,
     walletReferenceD2DReferral,
     walletReferenceAirportCashRecharge,
     walletReferenceAirportEntryFeeGST,
@@ -51,6 +53,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Payment.Stripe.Types as Stripe
 import Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.Documents as Documents
@@ -107,6 +110,12 @@ walletReferenceTDSDeductionCancellation = "TDSDeductionCancellation"
 walletReferenceCommission :: Text
 walletReferenceCommission = "Commission"
 
+walletReferenceVATOnline :: Text
+walletReferenceVATOnline = "VATOnline"
+
+walletReferenceVATCash :: Text
+walletReferenceVATCash = "VATCash"
+
 walletReferenceD2DReferral :: Text
 walletReferenceD2DReferral = "D2DReferral"
 
@@ -146,7 +155,9 @@ walletCreditRefs =
     walletReferenceDriverCancellationCharges,
     walletReferenceCustomerCancellationGST,
     walletReferenceCommission,
-    walletReferenceWalletIncentive
+    walletReferenceWalletIncentive,
+    walletReferenceVATOnline,
+    walletReferenceVATCash
   ]
 
 -- Time helpers (shared across getWalletTransactions, postWalletPayout, postWalletTopup)
@@ -229,19 +240,24 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig =
   mbMerchant <- CQM.findById merchantId
   mbMerchantOpCity <- CQMOC.findById booking.merchantOperatingCityId
   let mName = mbMerchant <&> (.name)
+      mGstin = mbMerchant >>= (.gstin)
+      mVatNumber = mbMerchant >>= (.vatNumber)
       mShortId = mbMerchant <&> (.shortId.getShortId)
       address =
         mbMerchantOpCity <&> \city ->
           show city.city <> ", " <> show city.state <> ", " <> show city.country
   -- Resolve supplier info (fleet owner or driver) and detect LDC custom rate
   let configDefaultTdsRate = transporterConfig.taxConfig.defaultTdsRate
-  (sName, sGSTIN, sId, hasCustomRate) <- case ride.fleetOwnerId of
+  (sName, sGSTIN, sVatNumber, sAddress, sId, hasCustomRate) <- case ride.fleetOwnerId of
     Just fleetOwnerId -> do
       mbFleetInfo <- QFOI.findByPrimaryKey (cast fleetOwnerId)
       let customRate = mbFleetInfo >>= (.tdsRate) >>= \r -> if configDefaultTdsRate == Just r then Nothing else Just r
+          formattedAddress = mbFleetInfo >>= (.stripeAddress) <&> formatStripeAddress
       pure
         ( mbFleetInfo >>= (.fleetName),
           mbFleetInfo >>= (.gstNumberDec),
+          mbFleetInfo >>= (.vatNumber),
+          formattedAddress,
           Just fleetOwnerId.getId,
           isJust customRate
         )
@@ -249,6 +265,8 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig =
       let customRate = mbDriverInfo >>= (.tdsRate) >>= \r -> if configDefaultTdsRate == Just r then Nothing else Just r
       pure
         ( mbDriver <&> \d -> d.firstName <> maybe "" (" " <>) d.lastName,
+          Nothing,
+          Nothing,
           Nothing,
           Just ride.driverId.getId,
           isJust customRate
@@ -271,6 +289,10 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig =
         issuedByAddress = address,
         supplierName = sName,
         supplierGSTIN = sGSTIN,
+        supplierVatNumber = sVatNumber,
+        supplierAddress = sAddress,
+        merchantGstin = mGstin,
+        merchantVatNumber = mVatNumber,
         supplierId = sId,
         panOfParty = panDecrypted,
         panType = panTypeText,
@@ -292,6 +314,11 @@ computeTdsRateReason mbPanCard hasCustomRate =
                 if panAadhaarLinked
                   then PAN_AADHAR_LINKAGE
                   else PAN
+
+-- | Format a Stripe Address into a single text string for supplier_address on invoices.
+formatStripeAddress :: Stripe.Address -> Text
+formatStripeAddress addr =
+  T.intercalate ", " $ catMaybes [addr.line1, addr.line2, addr.city, addr.state, addr.postal_code, addr.country]
 
 -- | Build a minimal FinanceCtx without invoice fields (for callers that
 --   only need transfers, not invoices).
@@ -317,6 +344,10 @@ financeCtxFromRide booking ride mbPanCard = do
         issuedByAddress = Nothing,
         supplierName = Nothing,
         supplierGSTIN = Nothing,
+        supplierVatNumber = Nothing,
+        supplierAddress = Nothing,
+        merchantGstin = Nothing,
+        merchantVatNumber = Nothing,
         supplierId = Nothing,
         panOfParty = panDecrypted,
         panType = panTypeText,

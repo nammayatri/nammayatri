@@ -480,7 +480,10 @@ processWalletTopupWebhook driver order transactionStatus = do
                   issuedToName = Nothing,
                   issuedToAddress = Nothing,
                   lineItems = [InvoiceLineItem {description = "Wallet Top-up", quantity = 1, unitPrice = order.amount, lineTotal = order.amount, isExternalCharge = False}],
-                  gstBreakdown = Nothing
+                  gstBreakdown = Nothing,
+                  isVat = False,
+                  issuedToTaxNo = Nothing,
+                  issuedByTaxNo = Nothing
                 }
         result <- runFinance ctx $ do
           _ <- transfer PlatformAsset OwnerLiability order.amount walletReferenceTopup

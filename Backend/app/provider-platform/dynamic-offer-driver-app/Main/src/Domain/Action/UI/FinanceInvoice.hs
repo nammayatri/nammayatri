@@ -128,10 +128,15 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
             supplierAddress = invoice.supplierAddress,
             supplierName = invoice.supplierName,
             supplierGSTIN = invoice.supplierGSTIN,
+            supplierTaxNo = invoice.supplierTaxNo,
             gstinOfParty = mbTaxTxn >>= (.gstinOfParty),
             sacCode = mbTaxTxn >>= (.sacCode),
             lineItems = Just invoice.lineItems,
-            totalCredit = mbTotalCredit
+            totalCredit = mbTotalCredit,
+            -- VAT integration: new generic tax fields from indirect_tax_transaction
+            taxRate = mbTaxTxn >>= (.taxRate),
+            issuedToTaxNo = mbTaxTxn >>= (.issuedToTaxNo),
+            issuedByTaxNo = mbTaxTxn >>= (.issuedByTaxNo)
           }
 
     mkComponentRate getAmount txn = do

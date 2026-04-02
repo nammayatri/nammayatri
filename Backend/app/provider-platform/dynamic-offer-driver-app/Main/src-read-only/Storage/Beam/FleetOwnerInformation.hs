@@ -62,6 +62,7 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     tdsRate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     ticketPlaceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     tollRouteBlockedTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    vatNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     verified :: B.C f Kernel.Prelude.Bool,
     weeklyCancellationRateBlockingCooldown :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

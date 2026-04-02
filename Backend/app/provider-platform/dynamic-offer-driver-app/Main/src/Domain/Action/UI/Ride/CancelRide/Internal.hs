@@ -342,7 +342,10 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
                       if gstOnCancellation > 0
                         then Just InvoiceLineItem {description = "GST on Cancellation Fee", quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, isExternalCharge = False}
                         else Nothing
-                    ]
+                    ],
+                isVat = False,
+                issuedToTaxNo = Nothing,
+                issuedByTaxNo = Nothing
               }
         case result of
           Left err -> logInfo $ "Failed to create cancellation ledger entries: " <> show err

@@ -36,6 +36,7 @@ data Invoice = Invoice
     supplierGSTIN :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     supplierId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     supplierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    supplierTaxNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     taxBreakdown :: Kernel.Prelude.Maybe Data.Aeson.Value,
     totalAmount :: Kernel.Types.Common.HighPrecMoney,
     updatedAt :: Kernel.Prelude.UTCTime

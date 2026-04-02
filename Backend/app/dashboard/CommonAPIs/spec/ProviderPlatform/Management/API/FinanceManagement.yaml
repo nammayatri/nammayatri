@@ -253,6 +253,7 @@ types:
     - supplierName: Maybe Text
     - supplierAddress: Maybe Text
     - supplierGstin: Maybe Text
+    - supplierTaxNo: Maybe Text
     - issuedToName: Maybe Text
     - issuedToAddress: Maybe Text
     - issuedByName: Maybe Text
@@ -263,6 +264,9 @@ types:
     - taxableValueOfServiceSupplied: Maybe HighPrecMoney
     - lineItems: Value
     - generatedAt: UTCTime
+    - taxRate: Maybe Double
+    - issuedToTaxNo: Maybe Text
+    - issuedByTaxNo: Maybe Text
 
   # ----- Reconciliation -----
   ReconciliationRes:
