@@ -30,7 +30,7 @@ import Control.Applicative (liftA2)
 import Control.Monad.Extra hiding (fromMaybeM, whenJust)
 import qualified Control.Monad.Extra as CME
 import Data.Aeson hiding (Success)
-import Data.Text as T hiding (elem, find, length, map, zip)
+import Data.Text as T hiding (elem, filter, find, length, map, zip)
 import Data.Time (defaultTimeLocale, formatTime)
 import Data.Tuple.Extra (both)
 import qualified Domain.Action.Dashboard.Common as DCommon
@@ -53,7 +53,7 @@ import Kernel.External.Encryption
 import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.External.Verification.Interface as VI
 import qualified Kernel.External.Verification.Types as VT
-import Kernel.Prelude hiding (find, null)
+import Kernel.Prelude hiding (find)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Documents as Documents
@@ -75,6 +75,7 @@ import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as Person
 import Tools.Error
+import qualified Tools.Utils as Utils
 import qualified Tools.Verification as Verification
 import Utils.Common.Cac.KeyNameConstants
 
@@ -122,7 +123,10 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
     Just False -> do
       panHash <- getDbHash req.panNumber
       panInfoList <- DPQuery.findAllByEncryptedPanNumber panHash
-      when (length panInfoList > 1) $ throwError PanAlreadyLinked
+      let otherDriverIds = filter (/= person.id) (map (.driverId) panInfoList)
+      unless (Kernel.Prelude.null otherDriverIds) $ do
+        Utils.cleanupUploadedImages [Id req.imageId] person.id
+        throwError PanAlreadyLinked
       panPersonDetails <- Person.getDriversByIdIn (map (.driverId) panInfoList)
       let getRoles = map (.role) panPersonDetails
       when (person.role `elem` getRoles) $ throwError PanAlreadyLinked
@@ -233,8 +237,9 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
       case mdriverPanInformation of
         Just driverPanInformation -> do
           let verificationStatus = driverPanInformation.verificationStatus
-          when (verificationStatus == Documents.VALID) $
-            throwError PanAlreadyLinked
+          when (verificationStatus == Documents.VALID) $ do
+            Utils.cleanupUploadedImages [Id req.imageId] person.id
+            throwError $ DocumentAlreadyValidated "PAN"
 
           resp <- Verification.extractPanImage person.merchantId merchantOpCityId extractReq
           extractedPan <- validateExtractedPan resp

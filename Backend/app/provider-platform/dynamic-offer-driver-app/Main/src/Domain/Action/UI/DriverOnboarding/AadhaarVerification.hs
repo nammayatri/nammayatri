@@ -42,7 +42,7 @@ import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (DbHash, decrypt, encrypt, getDbHash)
-import Kernel.Prelude hiding (null)
+import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Documents as Documents
@@ -67,6 +67,7 @@ import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.Person as Person
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error
+import qualified Tools.Utils as Utils
 import qualified Tools.Verification as Verification
 import Utils.Common.Cac.KeyNameConstants
 
@@ -396,7 +397,14 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
     (Just False, Just aadhaarNumber) -> do
       aadhaarHash <- getDbHash aadhaarNumber
       aadhaarInfoList <- QAadhaarCard.findAllByEncryptedAadhaarNumber (Just aadhaarHash)
-      when (length aadhaarInfoList > 1) $ throwError AadhaarAlreadyLinked
+      let otherDriverIds = filter (/= person.id) (map (.driverId) aadhaarInfoList)
+      unless (null otherDriverIds) $ do
+        Utils.cleanupUploadedImages
+          ( [Id req.aadhaarFrontImageId]
+              <> maybe [] (\backImageId -> [Id backImageId]) req.aadhaarBackImageId
+          )
+          person.id
+        throwError AadhaarAlreadyLinked
       aadhaarPersonDetails <- Person.getDriversByIdIn (map (.driverId) aadhaarInfoList)
       let getRoles = map (.role) aadhaarPersonDetails
       when (person.role `elem` getRoles) $ throwError AadhaarAlreadyLinked
@@ -419,7 +427,13 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
   let runBody = do
         aadhaarInfo <- QAadhaarCard.findByPrimaryKey person.id
         whenJust aadhaarInfo $ \aadhaarInfoData -> do
-          when (aadhaarInfoData.verificationStatus == Documents.VALID) $ throwError AadhaarAlreadyLinked
+          when (aadhaarInfoData.verificationStatus == Documents.VALID) $ do
+            Utils.cleanupUploadedImages
+              ( [Id req.aadhaarFrontImageId]
+                  <> maybe [] (\backImageId -> [Id backImageId]) req.aadhaarBackImageId
+              )
+              person.id
+            throwError $ DocumentAlreadyValidated "Aadhaar"
         resp <- Verification.extractAadhaarImage person.merchantId merchantOpCityId extractReq
         mbAadhaarNumber <- case resp.extractedAadhaar of
           Just extractedAadhaarData -> do

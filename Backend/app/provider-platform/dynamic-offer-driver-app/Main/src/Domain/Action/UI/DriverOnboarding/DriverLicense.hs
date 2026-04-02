@@ -74,6 +74,7 @@ import qualified Storage.Queries.Person as Person
 import qualified Tools.DriverBackgroundVerification as DriverBackgroundVerification
 import Tools.Error
 import qualified Tools.Ticket as TT
+import qualified Tools.Utils as Utils
 import qualified Tools.Verification as Verification
 import Utils.Common.Cac.KeyNameConstants
 
@@ -184,11 +185,15 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
               if fromMaybe False documentVerificationConfig.allowLicenseTransfer
                 then pure ()
                 else -- unlinkDLFromDriver driverLicense.driverId
-                  throwImageError imageId1 DLAlreadyLinked
+                  do
+                    Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
+                    throwImageError imageId1 DLAlreadyLinked
             if fromMaybe False documentVerificationConfig.allowLicenseTransfer
               then pure ()
               else unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated
-            when (driverLicense.verificationStatus == Documents.VALID && not (fromMaybe False documentVerificationConfig.allowLicenseTransfer)) $ throwError DLAlreadyUpdated
+            when (driverLicense.verificationStatus == Documents.VALID && not (fromMaybe False documentVerificationConfig.allowLicenseTransfer)) $ do
+              Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
+              throwError $ DocumentAlreadyValidated "DL"
             if documentVerificationConfig.doStrictVerifcation
               then do
                 when (driverLicense.verificationStatus == Documents.INVALID) $ throwError DLInvalid
@@ -196,7 +201,9 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
               else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
           Nothing -> do
             mDriverDL <- Query.findByDriverId personId
-            when (isJust mDriverDL) $ throwImageError imageId1 DriverAlreadyLinked
+            when (isJust mDriverDL) $ do
+              Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
+              throwImageError imageId1 DriverAlreadyLinked
             if documentVerificationConfig.doStrictVerifcation
               then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
               else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing (Just . T.pack . show . utctDay $ driverDateOfBirth) documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
