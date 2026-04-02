@@ -271,6 +271,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     subscriptionConfig :: Domain.Types.TransporterConfig.SubscriptionConfig,
     subscriptionStartTime :: Kernel.Prelude.UTCTime,
     taxConfig :: Domain.Types.TransporterConfig.TaxConfig,
+    tdsFromEmail :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     thresholdCancellationPercentageToUnlist :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     thresholdCancellationScore :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     timeDiffFromUtc :: Kernel.Types.Common.Seconds,

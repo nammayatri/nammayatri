@@ -88,6 +88,7 @@ data AllocatorJobType
   | ScheduledBatchPayout
   | SettlementReportIngestion
   | CheckPickupZoneArrival
+  | ScheduledTDSDistribution
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -137,6 +138,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SScheduledBatchPayout jobData = AnyJobInfo <$> restoreJobInfo SScheduledBatchPayout jobData
   restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
   restoreAnyJobInfo SCheckPickupZoneArrival jobData = AnyJobInfo <$> restoreJobInfo SCheckPickupZoneArrival jobData
+  restoreAnyJobInfo SScheduledTDSDistribution jobData = AnyJobInfo <$> restoreJobInfo SScheduledTDSDistribution jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -547,3 +549,13 @@ data CheckPickupZoneArrivalJobData = CheckPickupZoneArrivalJobData
 instance JobInfoProcessor 'CheckPickupZoneArrival
 
 type instance JobContent 'CheckPickupZoneArrival = CheckPickupZoneArrivalJobData
+data ScheduledTDSDistributionJobData = ScheduledTDSDistributionJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    batchSize :: Maybe Int
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'ScheduledTDSDistribution
+
+type instance JobContent 'ScheduledTDSDistribution = ScheduledTDSDistributionJobData

@@ -16,7 +16,6 @@ TDSDistributionRecord:
     driverId: Maybe (Id Person)
     emailAddress: Maybe Text
     # Manifest object in S3 (CSV/JSON); PDF rows live in tds_distribution_pdf_file
-    s3FilePath: Maybe Text
     fileName: Maybe Text
     assessmentYear: Text
     quarter: Text
@@ -33,7 +32,6 @@ TDSDistributionRecord:
 
   sqlType:
     emailAddress: character varying(255)
-    s3FilePath: character varying(512)
     fileName: character varying(512)
     assessmentYear: character varying(20)
     quarter: character varying(10)
