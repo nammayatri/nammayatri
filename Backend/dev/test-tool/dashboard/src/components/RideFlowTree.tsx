@@ -61,6 +61,23 @@ interface Props {
   onOutcomeChange: (outcome: string) => void;
   skippedNodes: Record<string, boolean>;
   onToggleSkipNode: (nodeId: string) => void;
+  // Fleet onboarding
+  fleetType?: string;
+  onFleetTypeChange?: (type: string) => void;
+  fleetMobile?: string;
+  onFleetMobileChange?: (mobile: string) => void;
+  aadhaarNumber?: string;
+  onAadhaarNumberChange?: (num: string) => void;
+  panNumber?: string;
+  onPanNumberChange?: (num: string) => void;
+  gstNumber?: string;
+  onGstNumberChange?: (num: string) => void;
+  requiresAdminApproval?: boolean;
+  onRequiresAdminApprovalChange?: (val: boolean) => void;
+  adminEmail?: string;
+  onAdminEmailChange?: (email: string) => void;
+  adminPassword?: string;
+  onAdminPasswordChange?: (password: string) => void;
 }
 
 function statusIcon(status: StepStatus | undefined): string {
@@ -116,6 +133,10 @@ export const RideFlowTree: React.FC<Props> = ({
   driverAvailable,
   selectedOutcome: selectedOutcomeProp, onOutcomeChange,
   skippedNodes, onToggleSkipNode,
+  fleetType, onFleetTypeChange, fleetMobile, onFleetMobileChange,
+  aadhaarNumber, onAadhaarNumberChange, panNumber, onPanNumberChange, gstNumber, onGstNumberChange,
+  requiresAdminApproval, onRequiresAdminApprovalChange,
+  adminEmail, onAdminEmailChange, adminPassword, onAdminPasswordChange,
 }) => {
   const locations = getLocationsForCity(city);
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({ discovery: true });
@@ -178,7 +199,43 @@ export const RideFlowTree: React.FC<Props> = ({
     ] },
   ];
 
-  const nodes = activeFlowId === 'dues-flow' ? duesNodes : rideNodes;
+  const adminApprovalNode: TreeNode = { id: 'fleet-admin-approve', title: 'Admin Approval', tag: 'system', steps: [
+      { id: 'admin-login', name: 'Admin Login', method: 'POST', service: 'provider-dashboard', path: '/placeholder', auth: false },
+      { id: 'fetch-unverified', name: 'Fetch Unverified Accounts', method: 'GET', service: 'provider-dashboard', path: '/placeholder', auth: true },
+      { id: 'approve-fleet', name: 'Approve Fleet Owner', method: 'POST', service: 'provider-dashboard', path: '/placeholder', auth: true },
+      { id: 'fleet-verify-enabled', name: 'Verify Fleet Enabled', method: 'GET', service: 'provider-dashboard', path: '/placeholder', auth: true },
+  ] };
+
+  const docUploadNode: TreeNode = { id: 'fleet-doc-upload', title: 'Document Upload', tag: 'system', steps: [
+      { id: 'upload-aadhaar-front', name: 'Upload Aadhaar Front', method: 'POST', service: 'provider-dashboard', path: '/placeholder', auth: true },
+      { id: 'upload-aadhaar-back', name: 'Upload Aadhaar Back', method: 'POST', service: 'provider-dashboard', path: '/placeholder', auth: true },
+      { id: 'upload-pan', name: 'Upload PAN Card', method: 'POST', service: 'provider-dashboard', path: '/placeholder', auth: true },
+      { id: 'upload-gst', name: 'Upload GST Certificate', method: 'POST', service: 'provider-dashboard', path: '/placeholder', auth: true },
+  ] };
+
+  const docVerifyNode: TreeNode = { id: 'fleet-verify-docs', title: 'Document Verification', tag: 'system', steps: [
+      { id: 'configure-mock-idfy', name: 'Configure Mock Idfy', method: 'POST', service: 'mock-idfy', path: '/configure', auth: false },
+      { id: 'verify-aadhaar', name: 'Verify Aadhaar', method: 'POST', service: 'provider-dashboard', path: '/placeholder', auth: true },
+      { id: 'verify-pan', name: 'Verify PAN', method: 'POST', service: 'provider-dashboard', path: '/placeholder', auth: true },
+      { id: 'verify-gst', name: 'Verify GST', method: 'POST', service: 'provider-dashboard', path: '/placeholder', auth: true },
+  ] };
+
+  const fleetNodes: TreeNode[] = [
+    { id: 'fleet-auth', title: 'Fleet Login', tag: 'system', steps: [
+        { id: 'fleet-login-otp', name: 'Send OTP', method: 'POST', service: 'provider-dashboard', path: '/placeholder', auth: false },
+        { id: 'fleet-verify-otp', name: 'Verify OTP', method: 'POST', service: 'provider-dashboard', path: '/placeholder', auth: false },
+        { id: 'fleet-profile', name: 'Get Profile', method: 'GET', service: 'provider-dashboard', path: '/placeholder', auth: true },
+    ] },
+    ...(requiresAdminApproval
+      ? [adminApprovalNode]
+      : [docUploadNode, docVerifyNode,
+         { id: 'fleet-register', title: 'Complete Registration', tag: 'system' as const, steps: [
+             { id: 'fleet-register', name: 'Complete Registration', method: 'POST' as const, service: 'provider-dashboard' as const, path: '/placeholder', auth: true },
+             { id: 'fleet-verify-profile', name: 'Verify Fleet Status', method: 'GET' as const, service: 'provider-dashboard' as const, path: '/placeholder', auth: true },
+         ] }]),
+  ];
+
+  const nodes = activeFlowId === 'fleet-onboarding' ? fleetNodes : activeFlowId === 'dues-flow' ? duesNodes : rideNodes;
   const showDriverSetup = activeFlowId === 'ride-flow';
 
   const renderLocationSelect = (label: string, value: number, onChange: (idx: number) => void, locs: LocationPreset[]) => (
@@ -224,6 +281,57 @@ export const RideFlowTree: React.FC<Props> = ({
         {/* Node body (expanded) */}
         {isExpanded && !isDisabled && (
           <div className="tree-node-body">
+            {/* Config area for fleet auth node */}
+            {node.id === 'fleet-auth' && (
+              <div className="tree-config">
+                <div className="tree-config-field">
+                  <label>Fleet Type</label>
+                  <select value={fleetType || 'NORMAL_FLEET'} onChange={e => onFleetTypeChange?.(e.target.value)}>
+                    <option value="NORMAL_FLEET">Individual Fleet</option>
+                    <option value="BUSINESS_FLEET">Business Fleet</option>
+                  </select>
+                </div>
+                <div className="tree-config-field">
+                  <label>Mobile Number</label>
+                  <input type="text" value={fleetMobile || ''} onChange={e => onFleetMobileChange?.(e.target.value)} placeholder="9999900001" style={{ width: 120 }} />
+                </div>
+                <div className="tree-config-field">
+                  <label>Approval</label>
+                  <label className="tree-checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                    <input type="checkbox" checked={requiresAdminApproval || false} onChange={e => onRequiresAdminApprovalChange?.(e.target.checked)} />
+                    Admin Approval
+                  </label>
+                </div>
+                {requiresAdminApproval && (
+                  <>
+                    <div className="tree-config-field">
+                      <label>Admin Email</label>
+                      <input type="text" value={adminEmail || ''} onChange={e => onAdminEmailChange?.(e.target.value)} placeholder="admin@example.com" style={{ width: 160 }} />
+                    </div>
+                    <div className="tree-config-field">
+                      <label>Admin Password</label>
+                      <input type="password" value={adminPassword || ''} onChange={e => onAdminPasswordChange?.(e.target.value)} placeholder="password" style={{ width: 120 }} />
+                    </div>
+                  </>
+                )}
+                {!requiresAdminApproval && (
+                  <>
+                    <div className="tree-config-field">
+                      <label>Aadhaar No.</label>
+                      <input type="text" value={aadhaarNumber || ''} onChange={e => onAadhaarNumberChange?.(e.target.value)} placeholder="123456789012" style={{ width: 120 }} />
+                    </div>
+                    <div className="tree-config-field">
+                      <label>PAN No.</label>
+                      <input type="text" value={panNumber || ''} onChange={e => onPanNumberChange?.(e.target.value)} placeholder="ABCDE1234F" style={{ width: 100 }} />
+                    </div>
+                    <div className="tree-config-field">
+                      <label>GST No.</label>
+                      <input type="text" value={gstNumber || ''} onChange={e => onGstNumberChange?.(e.target.value)} placeholder="22ABCDE1234F1Z5" style={{ width: 140 }} />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
             {/* Config area for discovery node */}
             {node.id === 'discovery' && (
               <div className="tree-config">

@@ -45,11 +45,16 @@ export interface VariantInfo {
   currency: string;
 }
 
+export interface AdminCredentials {
+  [merchantShortId: string]: { email: string; password: string };
+}
+
 export interface TestContext {
   merchants: { rider_merchants: MerchantInfo[]; driver_merchants: MerchantInfo[] };
   riders: RiderInfo[];
   drivers: DriverInfo[];
   variants: VariantInfo[];
+  admin_credentials: AdminCredentials;
 }
 
 function safeArray<T>(val: any): T[] {
@@ -68,6 +73,7 @@ export async function fetchTestContext(): Promise<TestContext | null> {
       riders: safeArray(d?.riders),
       drivers: safeArray(d?.drivers),
       variants: safeArray(d?.variants),
+      admin_credentials: d?.admin_credentials || {},
     };
   } catch {
     return null;

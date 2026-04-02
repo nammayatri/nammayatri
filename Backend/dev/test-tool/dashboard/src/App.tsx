@@ -330,11 +330,208 @@ function buildDuesFlowSteps(): Record<string, Step[]> {
   };
 }
 
+// Minimal 1x1 white PNG for document upload testing
+const TEST_IMAGE_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg==';
+
+function buildFleetOnboardingSteps(requiresAdminApproval: boolean): Record<string, Step[]> {
+  const fleetPath = (ctx: Record<string, any>, suffix: string) =>
+    `/bpp/driver-offer/${ctx.merchantShortId || 'NAMMA_YATRI_PARTNER'}/${ctx.fleetCity || 'Kochi'}/${suffix}`;
+
+  // Admin-approval steps: admin logs in, fetches unverified accounts and approves
+  const adminApprovalSteps: Record<string, Step[]> = {
+    'fleet-admin-approve': [
+      { id: 'admin-login', name: 'Admin Login', method: 'POST', service: 'provider-dashboard',
+        path: '/user/login',
+        auth: false,
+        body: (ctx) => ({
+          email: ctx.adminEmail || '',
+          password: ctx.adminPassword || '',
+        }),
+        save: (d, ctx) => { ctx.adminToken = d.authToken; },
+        assert: (d) => d.authToken ? null : 'Admin login failed — check email/password',
+        summary: (d) => `token: ${d.authToken?.substring(0, 8)}...` },
+
+      { id: 'fetch-unverified', name: 'Fetch Unverified Accounts', method: 'GET', service: 'provider-dashboard',
+        path: (ctx) => fleetPath(ctx, `account/fetchUnverifiedAccounts?mobileNumber=${encodeURIComponent(ctx.fleetMobile || '')}`),
+        auth: true,
+        extraHeaders: (ctx) => ({ token: ctx.adminToken || '' }),
+        save: (d, ctx) => {
+          const items = d.listItems || d;
+          if (Array.isArray(items) && items.length > 0) {
+            ctx.unverifiedFleetPersonId = items[0].id;
+          }
+        },
+        assert: (d) => {
+          const items = d.listItems || d;
+          return (Array.isArray(items) && items.length > 0) ? null : 'No unverified accounts found';
+        },
+        summary: (d) => {
+          const items = d.listItems || d;
+          return `found: ${Array.isArray(items) ? items.length : 0} accounts`;
+        } },
+
+      { id: 'approve-fleet', name: 'Approve Fleet Owner', method: 'POST', service: 'provider-dashboard',
+        path: (ctx) => fleetPath(ctx, 'account/verifyAccount'),
+        auth: true,
+        extraHeaders: (ctx) => ({ token: ctx.adminToken || '' }),
+        body: (ctx) => ({
+          status: 'Approved',
+          fleetOwnerId: ctx.unverifiedFleetPersonId || ctx.fleetOwnerId,
+        }),
+        summary: () => 'Fleet approved by admin' },
+
+      { id: 'fleet-verify-enabled', name: 'Verify Fleet Enabled', method: 'GET', service: 'provider-dashboard',
+        path: '/user/profile', auth: true,
+        assert: (d) => d.verified ? null : 'Fleet not enabled after approval',
+        summary: (d) => d.verified ? 'Fleet enabled' : 'Fleet not enabled' },
+    ],
+  };
+
+  return {
+    'fleet-auth': [
+      { id: 'fleet-login-otp', name: 'Send OTP', method: 'POST', service: 'provider-dashboard',
+        path: (ctx) => fleetPath(ctx, 'fleet/v2/login/otp'),
+        body: (ctx) => ({
+          mobileNumber: ctx.fleetMobile || '9999900001',
+          mobileCountryCode: '+91',
+        }),
+        summary: () => 'OTP sent' },
+
+      { id: 'fleet-verify-otp', name: 'Verify OTP', method: 'POST', service: 'provider-dashboard',
+        path: (ctx) => fleetPath(ctx, 'fleet/v2/verify/otp'),
+        body: (ctx) => ({
+          mobileNumber: ctx.fleetMobile || '9999900001',
+          mobileCountryCode: '+91',
+          otp: '7891',
+        }),
+        save: (d, ctx) => { ctx.fleetAuthToken = d.authToken; },
+        assert: (d) => d.authToken ? null : 'Missing authToken',
+        summary: () => 'OTP verified' },
+
+      { id: 'fleet-profile', name: 'Get Profile', method: 'GET', service: 'provider-dashboard',
+        path: '/user/profile', auth: true,
+        save: (d, ctx) => {
+          ctx.fleetOwnerId = d.id;
+          ctx.fleetVerified = d.verified;
+        },
+        assert: (d) => d.id ? null : 'Missing profile id',
+        summary: (d) => `id: ${d.id?.substring(0, 8)}... verified: ${d.verified}` },
+    ],
+
+    // Branching: admin approval (Lynx) vs doc verification (MSIL)
+    ...(requiresAdminApproval ? adminApprovalSteps : {
+    'fleet-doc-upload': [
+      { id: 'upload-aadhaar-front', name: 'Upload Aadhaar Front', method: 'POST', service: 'provider-dashboard',
+        path: (ctx) => fleetPath(ctx, `driver/${ctx.fleetOwnerId}/document/upload`),
+        auth: true,
+        body: () => ({ imageBase64: TEST_IMAGE_BASE64, imageType: 'AadhaarCard' }),
+        save: (d, ctx) => { ctx.aadhaarFrontImageId = d.imageId; },
+        assert: (d) => d.imageId ? null : 'Missing imageId',
+        summary: (d) => `imageId: ${d.imageId?.substring(0, 8)}...` },
+
+      { id: 'upload-aadhaar-back', name: 'Upload Aadhaar Back', method: 'POST', service: 'provider-dashboard',
+        path: (ctx) => fleetPath(ctx, `driver/${ctx.fleetOwnerId}/document/upload`),
+        auth: true,
+        body: () => ({ imageBase64: TEST_IMAGE_BASE64, imageType: 'AadhaarCard' }),
+        save: (d, ctx) => { ctx.aadhaarBackImageId = d.imageId; },
+        assert: (d) => d.imageId ? null : 'Missing imageId',
+        summary: (d) => `imageId: ${d.imageId?.substring(0, 8)}...` },
+
+      { id: 'upload-pan', name: 'Upload PAN Card', method: 'POST', service: 'provider-dashboard',
+        path: (ctx) => fleetPath(ctx, `driver/${ctx.fleetOwnerId}/document/upload`),
+        auth: true,
+        body: () => ({ imageBase64: TEST_IMAGE_BASE64, imageType: 'PanCard' }),
+        save: (d, ctx) => { ctx.panImageId = d.imageId; },
+        assert: (d) => d.imageId ? null : 'Missing imageId',
+        summary: (d) => `imageId: ${d.imageId?.substring(0, 8)}...` },
+
+      { id: 'upload-gst', name: 'Upload GST Certificate', method: 'POST', service: 'provider-dashboard',
+        path: (ctx) => fleetPath(ctx, `driver/${ctx.fleetOwnerId}/document/upload`),
+        auth: true,
+        body: () => ({ imageBase64: TEST_IMAGE_BASE64, imageType: 'GSTCertificate' }),
+        save: (d, ctx) => { ctx.gstImageId = d.imageId; },
+        skip: (ctx) => ctx.fleetType !== 'BUSINESS_FLEET',
+        assert: (d) => d.imageId ? null : 'Missing imageId',
+        summary: (d) => `imageId: ${d.imageId?.substring(0, 8)}...` },
+    ],
+
+    'fleet-verify-docs': [
+      { id: 'configure-mock-idfy', name: 'Configure Mock Idfy', method: 'POST', service: 'mock-idfy',
+        path: '/configure',
+        auth: false,
+        body: (ctx) => ({
+          aadhaarNumber: ctx.aadhaarNumber || '123456789012',
+          panNumber: ctx.panNumber || 'ABCDE1234F',
+          gstNumber: ctx.gstNumber || '22ABCDE1234F1Z5',
+        }),
+        summary: (d) => `aadhaar: ${d.aadhaarNumber}, pan: ${d.panNumber}, gst: ${d.gstNumber}` },
+
+      { id: 'verify-aadhaar', name: 'Verify Aadhaar', method: 'POST', service: 'provider-dashboard',
+        path: (ctx) => fleetPath(ctx, 'onboarding/verify/%22VERIFY_AADHAAR%22'),
+        auth: true,
+        body: (ctx) => ({
+          driverId: ctx.fleetOwnerId,
+          identifierNumber: ctx.aadhaarNumber || '123456789012',
+          imageId: ctx.aadhaarFrontImageId,
+          optionalImageId: ctx.aadhaarBackImageId,
+        }),
+        summary: (d) => `enableFleetOwner: ${d.enableFleetOwner}` },
+
+      { id: 'verify-pan', name: 'Verify PAN', method: 'POST', service: 'provider-dashboard',
+        path: (ctx) => fleetPath(ctx, 'onboarding/verify/%22VERIFY_PAN%22'),
+        auth: true,
+        body: (ctx) => ({
+          driverId: ctx.fleetOwnerId,
+          identifierNumber: ctx.panNumber || 'ABCDE1234F',
+          imageId: ctx.panImageId,
+        }),
+        summary: (d) => `enableFleetOwner: ${d.enableFleetOwner}` },
+
+      { id: 'verify-gst', name: 'Verify GST', method: 'POST', service: 'provider-dashboard',
+        path: (ctx) => fleetPath(ctx, 'onboarding/verify/%22VERIFY_GST%22'),
+        auth: true,
+        body: (ctx) => ({
+          driverId: ctx.fleetOwnerId,
+          identifierNumber: ctx.gstNumber || '22ABCDE1234F1Z5',
+          imageId: ctx.gstImageId,
+        }),
+        skip: (ctx) => ctx.fleetType !== 'BUSINESS_FLEET',
+        summary: (d) => `enableFleetOwner: ${d.enableFleetOwner}` },
+    ],
+    }),
+
+    'fleet-register': [
+      { id: 'fleet-register', name: 'Complete Registration', method: 'POST', service: 'provider-dashboard',
+        path: (ctx) => fleetPath(ctx, `fleet/v2/register?requestorId=${ctx.fleetOwnerId || ''}`),
+        auth: true,
+        body: (ctx) => ({
+          firstName: 'Test',
+          lastName: 'Fleet',
+          email: `testfleet${Date.now()}@test.com`,
+          fleetType: ctx.fleetType || 'NORMAL_FLEET',
+          personId: ctx.fleetOwnerId,
+        }),
+        poll: { intervalMs: 2000, timeoutMs: 15000 },
+        assert: (d) => d.result === 'Success' ? null : (d.errorMessage || d.errorCode || 'Registration failed'),
+        summary: (d) => d.enabled !== undefined ? `enabled: ${d.enabled}` : `result: ${d.result || JSON.stringify(d)}` },
+
+      { id: 'fleet-verify-profile', name: 'Verify Fleet Status', method: 'GET', service: 'provider-dashboard',
+        path: '/user/profile', auth: true,
+        summary: (d) => {
+          if (d.verified) return 'Fleet enabled';
+          return 'Fleet onboarded but not enabled';
+        } },
+    ],
+  };
+}
+
 const FLOWS: FlowDef[] = [
   { id: 'ride-flow', name: 'Ride Flow', description: 'Full ride: search, book, start, end',
     nodes: {}, nodeOrder: ['discovery', 'driver-accept', 'booking', 'fulfillment'], hasDriverSetup: true },
   { id: 'dues-flow', name: 'Clear Pending Dues', description: 'Check and clear payment dues from previous rides',
     nodes: {}, nodeOrder: ['check-dues', 'capture-payment', 'clear-dues', 'cancellation-dues'] },
+  { id: 'fleet-onboarding', name: 'Fleet Onboarding', description: 'Register fleet owner with document verification',
+    nodes: {}, nodeOrder: ['fleet-auth', 'fleet-doc-upload', 'fleet-verify-docs', 'fleet-register'], hasDriverSetup: false },
 ];
 
 function App() {
@@ -350,6 +547,17 @@ function App() {
   const [selectedDriverMerchantId, setSelectedDriverMerchantId] = useState('');
   const [selectedDriverPersonId, setSelectedDriverPersonId] = useState('');
   const [driverAvailable, setDriverAvailable] = useState(false);
+  // Fleet onboarding state
+  const [fleetType, setFleetType] = useState<'NORMAL_FLEET' | 'BUSINESS_FLEET'>('NORMAL_FLEET');
+  const [fleetMobile, setFleetMobile] = useState(() => `99999${String(Date.now()).slice(-5)}`);
+  const [merchantShortId, setMerchantShortId] = useState('NAMMA_YATRI_PARTNER');
+  const [requiresAdminApproval, setRequiresAdminApproval] = useState(false);
+  const [adminEmail, setAdminEmail] = useState('admin@msil.test');
+  const [adminPassword, setAdminPassword] = useState('msil1234');
+  // Doc numbers — must match mock-idfy extraction output for happy path
+  const [aadhaarNumber, setAadhaarNumber] = useState('123456789012');
+  const [panNumber, setPanNumber] = useState('ABCDE1234F');
+  const [gstNumber, setGstNumber] = useState('22ABCDE1234F1Z5');
   const [stepResults, setStepResults] = useState<Record<string, StepResult>>({});
 
   // Location selections
@@ -377,8 +585,9 @@ function App() {
   const catalog = useMemo(() => buildApiCatalog(selectedCity), [selectedCity]);
   const allSteps = useMemo(() => {
     if (activeFlowId === 'dues-flow') return buildDuesFlowSteps();
+    if (activeFlowId === 'fleet-onboarding') return buildFleetOnboardingSteps(requiresAdminApproval);
     return buildRideFlowSteps();
-  }, [activeFlowId]);
+  }, [activeFlowId, requiresAdminApproval]);
   const activeFlow = FLOWS.find(f => f.id === activeFlowId) || FLOWS[0];
 
   const log = useCallback((level: LogEntry['level'], message: string, extra?: { request?: LogEntry['request']; response?: LogEntry['response'] }) => {
@@ -474,8 +683,18 @@ function App() {
       tipAmount,
       skipTip,
       rideEndMode,
+      // Fleet onboarding context
+      fleetType,
+      fleetMobile,
+      fleetCity: selectedCity,
+      merchantShortId,
+      aadhaarNumber,
+      panNumber,
+      gstNumber,
+      adminEmail,
+      adminPassword,
     });
-  }, [selectedCity, selectedDriverToken, selectedDriverVariant, selectedDriverMerchantId, driverLocationIdx, fromLocationIdx, toLocationIdx, paymentPreset, selectedPaymentMethodId]);
+  }, [selectedCity, selectedDriverToken, selectedDriverVariant, selectedDriverMerchantId, selectedDriverPersonId, driverLocationIdx, fromLocationIdx, toLocationIdx, paymentPreset, selectedPaymentMethodId, captureRideId, tipAmount, skipTip, rideEndMode, fleetType, fleetMobile, merchantShortId, aadhaarNumber, panNumber, gstNumber, adminEmail, adminPassword]);
 
   const executeStep = useCallback(async (step: Step): Promise<boolean> => {
     // Dynamic skip check
@@ -654,7 +873,12 @@ function App() {
 
     // Run each node in order
     // Replace 'fulfillment' in node order with the selected outcome, add tip after fulfillment
-    const nodeOrder = activeFlow.nodeOrder.flatMap(n => {
+    const baseNodeOrder = activeFlowId === 'fleet-onboarding'
+      ? (requiresAdminApproval
+        ? ['fleet-auth', 'fleet-admin-approve']
+        : ['fleet-auth', 'fleet-doc-upload', 'fleet-verify-docs', 'fleet-register'])
+      : activeFlow.nodeOrder;
+    const nodeOrder = baseNodeOrder.flatMap(n => {
       if (n === 'fulfillment') {
         if (selectedOutcome === 'fulfillment') return ['fulfillment', 'add-tip'];
         return [selectedOutcome];
@@ -732,7 +956,9 @@ function App() {
     <div className="app">
       <div className="main">
         <ConfigBar config={config} onChange={setConfig} onRun={runAll} onStop={stop} isRunning={isRunning}
-          onCityChange={setSelectedCity} onDriverChange={(token, variant, merchantId, personId) => { setSelectedDriverToken(token); setSelectedDriverVariant(variant || ''); setSelectedDriverMerchantId(merchantId || ''); setSelectedDriverPersonId(personId || ''); }} />
+          onCityChange={setSelectedCity} onDriverChange={(token, variant, merchantId, personId) => { setSelectedDriverToken(token); setSelectedDriverVariant(variant || ''); setSelectedDriverMerchantId(merchantId || ''); setSelectedDriverPersonId(personId || ''); }}
+          onMerchantShortIdChange={setMerchantShortId}
+          onAdminCredentialsChange={(email, password) => { setAdminEmail(email); setAdminPassword(password); }} />
         <div className="content-wrapper">
           <div className="content">
             <RideFlowTree
@@ -772,6 +998,22 @@ function App() {
               onOutcomeChange={setSelectedOutcome}
               skippedNodes={skippedNodes}
               onToggleSkipNode={(id) => setSkippedNodes(prev => ({ ...prev, [id]: !prev[id] }))}
+              fleetType={fleetType}
+              onFleetTypeChange={(t) => setFleetType(t as 'NORMAL_FLEET' | 'BUSINESS_FLEET')}
+              fleetMobile={fleetMobile}
+              onFleetMobileChange={setFleetMobile}
+              aadhaarNumber={aadhaarNumber}
+              onAadhaarNumberChange={setAadhaarNumber}
+              panNumber={panNumber}
+              onPanNumberChange={setPanNumber}
+              gstNumber={gstNumber}
+              onGstNumberChange={setGstNumber}
+              requiresAdminApproval={requiresAdminApproval}
+              onRequiresAdminApprovalChange={setRequiresAdminApproval}
+              adminEmail={adminEmail}
+              onAdminEmailChange={setAdminEmail}
+              adminPassword={adminPassword}
+              onAdminPasswordChange={setAdminPassword}
             />
           </div>
           <div className="log-resize-handle" onMouseDown={onResizeStart} />

@@ -13,6 +13,7 @@ Endpoints:
   GET  /api/variants             → Vehicle variants
   ANY  /proxy/rider/*            → Proxy to rider-app (localhost:8013)
   ANY  /proxy/driver/*           → Proxy to driver-app (localhost:8016)
+  ANY  /proxy/provider-dashboard/*            → Proxy to provider-dashboard (localhost:8018)
 
 Port: 7082
 """
@@ -124,12 +125,22 @@ def get_variants(city_id=None):
     return query(sql, params)
 
 
+def get_admin_credentials():
+    """Return known admin credentials per merchant for the test dashboard.
+    These are created in provider-dashboard seed migrations with known email/password."""
+    return {
+        "MSIL_PARTNER": {"email": "admin@msil.test", "password": "msil1234"},
+        "LYNX_PARTNER": {"email": "admin@lynx.test", "password": "lynx1234"},
+    }
+
+
 def get_full_context():
     return {
         "merchants": get_merchants(),
         "riders": get_riders(),
         "drivers": get_drivers(),
         "variants": get_variants(),
+        "admin_credentials": get_admin_credentials(),
     }
 
 
@@ -158,14 +169,22 @@ class ContextHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
 
-        # Determine target — rider uses /v2 prefix, driver uses /ui prefix, lts direct
+        # Determine target — rider uses /v2 prefix, driver uses /ui prefix, lts direct, fleet direct
         LTS_URL = os.environ.get("LTS_URL", "http://localhost:8081")
-        if path.startswith("/proxy/rider/"):
+        PROVIDER_DASHBOARD_URL = os.environ.get("PROVIDER_DASHBOARD_URL", "http://localhost:8018")
+        MOCK_IDFY_URL = os.environ.get("MOCK_IDFY_URL", "http://localhost:6235")
+        if path.startswith("/proxy/mock-idfy/"):
+            target_base = MOCK_IDFY_URL
+            target_path = path[len("/proxy/mock-idfy"):]
+        elif path.startswith("/proxy/rider/"):
             target_base = RIDER_URL
             target_path = "/v2" + path[len("/proxy/rider"):]
         elif path.startswith("/proxy/lts/"):
             target_base = LTS_URL
             target_path = "/ui" + path[len("/proxy/lts"):]
+        elif path.startswith("/proxy/provider-dashboard/"):
+            target_base = PROVIDER_DASHBOARD_URL
+            target_path = path[len("/proxy/provider-dashboard"):]
         elif path.startswith("/proxy/driver/"):
             target_base = DRIVER_URL
             target_path = "/ui" + path[len("/proxy/driver"):]

@@ -4,7 +4,7 @@ export interface Step {
   id: string;
   name: string;
   method: 'GET' | 'POST' | 'PUT' | 'DELETE';
-  service: 'rider' | 'driver' | 'lts' | 'internal';
+  service: 'rider' | 'driver' | 'lts' | 'internal' | 'provider-dashboard' | 'mock-idfy';
   path: string | ((ctx: Record<string, any>) => string);
   auth?: boolean;
   body?: (ctx: Record<string, any>) => any;

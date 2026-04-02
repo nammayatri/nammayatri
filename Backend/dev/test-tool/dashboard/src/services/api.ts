@@ -103,13 +103,19 @@ export async function callStep(
     path = step.path;
   }
 
-  const proxyPrefix = step.service === 'rider' ? '/proxy/rider' : step.service === 'lts' ? '/proxy/lts' : step.service === 'internal' ? '' : '/proxy/driver';
+  const proxyPrefix = step.service === 'rider' ? '/proxy/rider'
+    : step.service === 'lts' ? '/proxy/lts'
+    : step.service === 'provider-dashboard' ? '/proxy/provider-dashboard'
+    : step.service === 'mock-idfy' ? '/proxy/mock-idfy'
+    : step.service === 'internal' ? ''
+    : '/proxy/driver';
   const url = `${PROXY_BASE}${proxyPrefix}${path}`;
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (step.auth) {
-    // Use driver person_id for LTS (it stores by person_id, not auth token), driver token for driver API, rider token otherwise
+    // Use driver person_id for LTS, fleet auth token for fleet, driver token for driver API, rider token otherwise
     const token = step.service === 'lts' ? (ctx.driverPersonId || ctx.driverToken || config.token)
+      : step.service === 'provider-dashboard' ? (ctx.fleetAuthToken || config.token)
       : (step.service === 'driver') ? (ctx.driverToken || config.token) : config.token;
     if (token) headers['token'] = token;
   }

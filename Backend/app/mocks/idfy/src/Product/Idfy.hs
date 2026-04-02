@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Product.Idfy (verifyDL, verifyRC, validateImage, extractDLImage, extractRCImage) where
+module Product.Idfy (verifyDL, verifyRC, verifyPan, verifyGst, verifyPanAadhaarLink, validateImage, extractDLImage, extractRCImage, extractPanImage, extractGSTImage, extractAadhaarImage, nameCompare, configureMock) where
 
 import App.Types
 import Common
@@ -47,6 +47,39 @@ verifyRC apiKey accountId req = withFlowHandlerAPI $ do
     waitMilliSec <- asks (.callbackWaitTimeMilliSec)
     threadDelayMilliSec waitMilliSec
     void $ buildSuccessRC req reqId now >>= sendRCVerification
+  pure $ Idfy.IdfySuccess {request_id = reqId, _a = Nothing}
+
+verifyPan :: Maybe ApiKey -> Maybe AccountId -> Idfy.PanVerificationRequest -> FlowHandler Idfy.IdfySuccess
+verifyPan apiKey accountId req = withFlowHandlerAPI $ do
+  verifyAuth apiKey accountId
+  reqId <- generateGUID
+  now <- getCurrentTime
+  fork "pan verificaton callback" $ do
+    waitMilliSec <- asks (.callbackWaitTimeMilliSec)
+    threadDelayMilliSec waitMilliSec
+    void $ buildSuccessPan req reqId now >>= sendPanVerification
+  pure $ Idfy.IdfySuccess {request_id = reqId, _a = Nothing}
+
+verifyGst :: Maybe ApiKey -> Maybe AccountId -> Idfy.GstVerificationRequest -> FlowHandler Idfy.IdfySuccess
+verifyGst apiKey accountId req = withFlowHandlerAPI $ do
+  verifyAuth apiKey accountId
+  reqId <- generateGUID
+  now <- getCurrentTime
+  fork "gst verificaton callback" $ do
+    waitMilliSec <- asks (.callbackWaitTimeMilliSec)
+    threadDelayMilliSec waitMilliSec
+    void $ buildSuccessGst req reqId now >>= sendGstVerification
+  pure $ Idfy.IdfySuccess {request_id = reqId, _a = Nothing}
+
+verifyPanAadhaarLink :: Maybe ApiKey -> Maybe AccountId -> Idfy.PanAadhaarLinkRequest -> FlowHandler Idfy.IdfySuccess
+verifyPanAadhaarLink apiKey accountId req = withFlowHandlerAPI $ do
+  verifyAuth apiKey accountId
+  reqId <- generateGUID
+  now <- getCurrentTime
+  fork "pan aadhaar link verificaton callback" $ do
+    waitMilliSec <- asks (.callbackWaitTimeMilliSec)
+    threadDelayMilliSec waitMilliSec
+    void $ buildSuccessPanAadhaarLink req reqId now >>= sendPanVerification
   pure $ Idfy.IdfySuccess {request_id = reqId, _a = Nothing}
 
 verifyAuth :: Maybe ApiKey -> Maybe AccountId -> Flow ()
@@ -118,3 +151,97 @@ extractRCImage apiKey accountId _req = withFlowHandlerAPI $ do
             wheel_base = Just "wheel_base",
             status = Just "status"
           }
+
+extractPanImage :: Maybe ApiKey -> Maybe AccountId -> Idfy.ImageExtractRequest -> FlowHandler Idfy.PanExtractionResponse
+extractPanImage apiKey accountId _req = withFlowHandlerAPI $ do
+  verifyAuth apiKey accountId
+  docConfig <- asks (.mockDocConfigRef) >>= liftIO . readIORef
+  buildMeaninglessIdfyResponse $
+    Just $
+      Idfy.ExtractionOutput $
+        Idfy.PanExtractionOutput
+          { age = Nothing,
+            date_of_birth = Just "1990-01-01",
+            date_of_issue = Nothing,
+            fathers_name = Just "FATHER NAME",
+            id_number = Just docConfig.panNumber,
+            is_scanned = Just True,
+            minor = Just False,
+            name_on_card = Just "TEST FLEET OWNER",
+            pan_type = Just "Individual"
+          }
+
+extractGSTImage :: Maybe ApiKey -> Maybe AccountId -> Idfy.ImageExtractRequest -> FlowHandler Idfy.GSTExtractionResponse
+extractGSTImage apiKey accountId _req = withFlowHandlerAPI $ do
+  verifyAuth apiKey accountId
+  docConfig <- asks (.mockDocConfigRef) >>= liftIO . readIORef
+  buildMeaninglessIdfyResponse $
+    Just $
+      Idfy.ExtractionOutput $
+        Idfy.GSTExtractionOutput
+          { address = Just "123 Test Street",
+            constitution_of_business = Just "Private Limited Company",
+            date_of_liability = Just "2020-01-01",
+            gstin = Just docConfig.gstNumber,
+            is_provisional = Just False,
+            legal_name = Just "TEST FLEET PVT LTD",
+            pan_number = Just docConfig.panNumber,
+            trade_name = Just "TEST FLEET",
+            type_of_registration = Just "Regular",
+            valid_from = Just "2020-01-01",
+            valid_upto = Nothing
+          }
+
+extractAadhaarImage :: Maybe ApiKey -> Maybe AccountId -> Idfy.AadharVerificationReqest -> FlowHandler Idfy.AadhaarExtractionResponse
+extractAadhaarImage apiKey accountId _req = withFlowHandlerAPI $ do
+  verifyAuth apiKey accountId
+  docConfig <- asks (.mockDocConfigRef) >>= liftIO . readIORef
+  buildMeaninglessIdfyResponse $
+    Just $
+      Idfy.AadhaarResult
+        { extraction_output =
+            Idfy.AadhaarExtractionOutput
+              { address = Just "123 Test Street, Delhi",
+                date_of_birth = Just "1990-01-01",
+                district = Just "Delhi",
+                fathers_name = Just "FATHER NAME",
+                gender = Just "MALE",
+                house_number = Just "123",
+                id_number = Just docConfig.aadhaarNumber,
+                is_scanned = Just True,
+                name_on_card = Just "TEST FLEET OWNER",
+                pincode = Just "110001",
+                state = Just "Delhi",
+                street_address = Just "Test Street",
+                year_of_birth = Just "1990"
+              },
+          qr_output =
+            Idfy.AadhaarQROutput
+              { address = Nothing,
+                date_of_birth = Nothing,
+                district = Nothing,
+                gender = Nothing,
+                house_number = Nothing,
+                id_number = Nothing,
+                name_on_card = Nothing,
+                pincode = Nothing,
+                state = Nothing,
+                street_address = Nothing,
+                year_of_birth = Nothing
+              }
+        }
+
+nameCompare :: Maybe ApiKey -> Maybe AccountId -> Idfy.NameCompareRequest -> FlowHandler Idfy.NameCompareResponse
+nameCompare apiKey accountId _req = withFlowHandlerAPI $ do
+  verifyAuth apiKey accountId
+  buildMeaninglessIdfyResponse $
+    Just $
+      Idfy.NameCompareResponseData
+        { match_output = Idfy.NameMatchOutput {name_match = 100}
+        }
+
+configureMock :: MockDocConfig -> FlowHandler MockDocConfig
+configureMock newConfig = withFlowHandlerAPI $ do
+  ref <- asks (.mockDocConfigRef)
+  liftIO $ writeIORef ref newConfig
+  pure newConfig

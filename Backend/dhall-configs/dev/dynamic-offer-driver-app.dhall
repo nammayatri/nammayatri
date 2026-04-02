@@ -203,9 +203,9 @@ let eventStreamMappings =
 
 let apiRateLimitOptions = { limit = +20, limitResetTimeInSec = +1 }
 
-let sendOtpRateLimitOptions = { limit = +3, limitResetTimeInSec = +600 }
+let sendOtpRateLimitOptions = { limit = +100, limitResetTimeInSec = +1 }
 
-let externalServiceRateLimitOptions = { limit = +3, limitResetTimeInSec = +600 }
+let externalServiceRateLimitOptions = { limit = +100, limitResetTimeInSec = +1 }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
