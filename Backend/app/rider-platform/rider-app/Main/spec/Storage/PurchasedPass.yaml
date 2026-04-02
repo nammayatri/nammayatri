@@ -75,7 +75,14 @@ PurchasedPass:
   constraints:
     id: PrimaryKey
     passNumber: SecondaryKey
-    personId: "!SecondaryKey"
+    endDate: SecondaryKey
+    personId: SecondaryKey
+
+  extraIndexes:
+    - columns: [endDate, merchantOperatingCityId, merchantId]
+      unique: false
+    - columns: [personId, status]
+      unique: false
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -100,6 +107,25 @@ PurchasedPass:
       kvFunction: updateWithKV
       params: [preferredSource, preferredDestination]
       where: id
+
+    findAllByEndDate:
+      kvFunction: findAllWithKV
+      where: endDate
+
+    findAllByEndDateMerchantOperatingCityIdAndMerchantId:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - endDate
+          - merchantOperatingCityId
+          - merchantId
+
+    findAllByPersonIdsAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [personId]
+          - status
 
 PurchasedPassPayment:
   tableName: purchased_pass_payment

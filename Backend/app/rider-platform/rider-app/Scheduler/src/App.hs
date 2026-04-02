@@ -59,6 +59,7 @@ import "rider-app" SharedLogic.Scheduler.Jobs.MetroBusinessHour
 import "rider-app" SharedLogic.Scheduler.Jobs.NyRegularInstance
 import "rider-app" SharedLogic.Scheduler.Jobs.NyRegularMaster
 import "rider-app" SharedLogic.Scheduler.Jobs.PartnerInvoiceDataExport
+import "rider-app" SharedLogic.Scheduler.Jobs.PassExpiryReminderMaster
 import "rider-app" SharedLogic.Scheduler.Jobs.PaymentOrderStatusCheck
 import "rider-app" SharedLogic.Scheduler.Jobs.Payout.MetroIncentivePayout
 import "rider-app" SharedLogic.Scheduler.Jobs.PostRideSafetyNotification
@@ -120,6 +121,7 @@ schedulerHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . paymentOrderStatusCheckJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . updateMetroBusinessHour)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runNyRegularMasterJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runPassExpiryReminderMaster)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runNyRegularInstanceJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockCustomer)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . updateCRISRDSBalanceJob)

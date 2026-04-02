@@ -52,6 +52,6 @@ instance B.Table PurchasedPassT where
 
 type PurchasedPass = PurchasedPassT Identity
 
-$(enableKVPG ''PurchasedPassT ['id] [['passNumber], ['personId]])
+$(enableKVPG ''PurchasedPassT ['id] [['endDate], ['passNumber], ['personId]])
 
 $(mkTableInstances ''PurchasedPassT "purchased_pass")
