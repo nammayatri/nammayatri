@@ -28,6 +28,23 @@ import Kernel.Utils.Shutdown
 import System.Environment (lookupEnv)
 import Types.Common
 
+-- | Configurable document numbers for mock extraction responses.
+-- The test dashboard can set these via POST /configure before running verification.
+data MockDocConfig = MockDocConfig
+  { aadhaarNumber :: Text,
+    panNumber :: Text,
+    gstNumber :: Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+defaultMockDocConfig :: MockDocConfig
+defaultMockDocConfig =
+  MockDocConfig
+    { aadhaarNumber = "123456789012",
+      panNumber = "ABCDE1234F",
+      gstNumber = "22ABCDE1234F1Z5"
+    }
+
 data AppCfg = AppCfg
   { port :: Int,
     loggerConfig :: LoggerConfig,
@@ -63,7 +80,8 @@ data AppEnv = AppEnv
     shouldLogRequestId :: Bool,
     sessionId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
-    url :: Maybe Text
+    url :: Maybe Text,
+    mockDocConfigRef :: IORef MockDocConfig
   }
   deriving (Generic)
 
@@ -79,6 +97,7 @@ buildAppEnv AppCfg {..} = do
   let sessionId = Nothing
   let kafkaProducerForART = Nothing
   let url = Nothing
+  mockDocConfigRef <- newIORef defaultMockDocConfig
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

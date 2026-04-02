@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Config } from '../types';
-import { fetchTestContext, RiderInfo, DriverInfo, VariantInfo, MerchantInfo } from '../services/context';
+import { fetchTestContext, RiderInfo, DriverInfo, VariantInfo, MerchantInfo, AdminCredentials } from '../services/context';
 import './ConfigBar.css';
 
 interface Props {
@@ -11,11 +11,14 @@ interface Props {
   isRunning: boolean;
   onCityChange?: (city: string) => void;
   onDriverChange?: (driverToken: string, vehicleVariant?: string, merchantId?: string, driverPersonId?: string) => void;
+  onMerchantShortIdChange?: (shortId: string) => void;
+  onAdminCredentialsChange?: (email: string, password: string) => void;
 }
 
-export const ConfigBar: React.FC<Props> = ({ config, onChange, onRun, onStop, isRunning, onCityChange, onDriverChange }) => {
+export const ConfigBar: React.FC<Props> = ({ config, onChange, onRun, onStop, isRunning, onCityChange, onDriverChange, onMerchantShortIdChange, onAdminCredentialsChange }) => {
   const [riderMerchants, setRiderMerchants] = useState<MerchantInfo[]>([]);
-  const [, setDriverMerchants] = useState<MerchantInfo[]>([]);
+  const [driverMerchants, setDriverMerchants] = useState<MerchantInfo[]>([]);
+  const [adminCreds, setAdminCreds] = useState<AdminCredentials>({});
   const [riders, setRiders] = useState<RiderInfo[]>([]);
   const [drivers, setDrivers] = useState<DriverInfo[]>([]);
   const [variants, setVariants] = useState<VariantInfo[]>([]);
@@ -46,6 +49,8 @@ export const ConfigBar: React.FC<Props> = ({ config, onChange, onRun, onStop, is
         setRiders(r);
         setDrivers(d);
         setVariants(v);
+        const ac = ctx.admin_credentials || {};
+        setAdminCreds(ac);
         setContextLoaded(true);
 
         // Auto-select first merchant + city + rider
@@ -57,6 +62,12 @@ export const ConfigBar: React.FC<Props> = ({ config, onChange, onRun, onStop, is
           if (cities.length > 0) {
             setSelectedCity(cities[0].city);
             onCityChange?.(cities[0].city);
+            // Find matching driver merchant (convention: rider "FOO" → driver "FOO_PARTNER")
+            const driverMerch = dm.find((m: MerchantInfo) => m.short_id === firstMerchant + '_PARTNER') || dm.find((m: MerchantInfo) => m.short_id === firstMerchant);
+            const driverShortId = driverMerch?.short_id || firstMerchant;
+            onMerchantShortIdChange?.(driverShortId);
+            const creds = ac[driverShortId];
+            if (creds) onAdminCredentialsChange?.(creds.email, creds.password);
           }
           const merchantRiders = r.filter((ri: RiderInfo) => ri.merchant === firstMerchant);
           if (merchantRiders.length > 0 && !config.token) {
@@ -100,6 +111,11 @@ export const ConfigBar: React.FC<Props> = ({ config, onChange, onRun, onStop, is
     if (cities.length > 0) {
       setSelectedCity(cities[0].city);
       onCityChange?.(cities[0].city);
+      const driverMerch = driverMerchants.find(m => m.short_id === merchant + '_PARTNER') || driverMerchants.find(m => m.short_id === merchant);
+      const driverShortId = driverMerch?.short_id || merchant;
+      onMerchantShortIdChange?.(driverShortId);
+      const creds = adminCreds[driverShortId];
+      if (creds) onAdminCredentialsChange?.(creds.email, creds.password);
     }
     const merchantRiders = riders.filter(r => r.merchant === merchant);
     if (merchantRiders.length > 0) {
