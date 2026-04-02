@@ -19,6 +19,7 @@ module SharedLogic.Finance.Wallet
     getWalletAccountByOwner,
     getWalletBalanceByOwner,
     createWalletEntryDelta,
+    createAdjustmentWalletEntryDelta,
     utcToLocalDay,
     payoutCutoffTimeUTC,
     todayRangeUTC,
@@ -38,6 +39,7 @@ module SharedLogic.Finance.Wallet
     computeTdsRateReason,
     computeEffectiveTdsRate,
     estimateWalletDeductions,
+    makeWalletRunningBalanceLockKey,
   )
 where
 
@@ -338,7 +340,37 @@ createWalletEntryDelta ::
   Text -> -- Reference ID
   Maybe Value ->
   m (Either FinanceError HighPrecMoney)
-createWalletEntryDelta counterpartyType ownerId delta currency merchantId merchantOperatingCityId referenceType referenceId metadata = do
+createWalletEntryDelta = createWalletEntryDelta' False
+
+createAdjustmentWalletEntryDelta ::
+  (BeamFlow m r) =>
+  CounterpartyType ->
+  Text -> -- Owner ID
+  HighPrecMoney -> -- Delta (positive credit, negative debit)
+  Currency ->
+  Text -> -- Merchant ID
+  Text -> -- Merchant operating city ID
+  Text -> -- Reference type
+  Text -> -- Reference ID
+  Maybe Value ->
+  m (Either FinanceError HighPrecMoney)
+createAdjustmentWalletEntryDelta = createWalletEntryDelta' True
+
+-- for internal use only
+createWalletEntryDelta' ::
+  (BeamFlow m r) =>
+  Bool ->
+  CounterpartyType ->
+  Text -> -- Owner ID
+  HighPrecMoney -> -- Delta (positive credit, negative debit)
+  Currency ->
+  Text -> -- Merchant ID
+  Text -> -- Merchant operating city ID
+  Text -> -- Reference type
+  Text -> -- Reference ID
+  Maybe Value ->
+  m (Either FinanceError HighPrecMoney)
+createWalletEntryDelta' isAdjustment counterpartyType ownerId delta currency merchantId merchantOperatingCityId referenceType referenceId metadata = do
   if delta == 0
     then do
       mbBalance <- getWalletBalanceByOwner counterpartyType ownerId
@@ -349,15 +381,20 @@ createWalletEntryDelta counterpartyType ownerId delta currency merchantId mercha
               { accountType = Liability,
                 counterpartyType = Just counterpartyType,
                 counterpartyId = Just ownerId,
+                description = Nothing,
                 currency = currency,
                 merchantId = merchantId,
                 merchantOperatingCityId = merchantOperatingCityId
               }
-          platformInput =
+          platformInput = do
+            let (accountType', counterpartyType', counterpartyId') = case referenceType of
+                  _ | referenceType == walletReferenceWalletIncentive -> (Expense, Just counterpartyType, Just ownerId)
+                  _ -> (Asset, Just SELLER, Just merchantId)
             AccountInput
-              { accountType = Asset,
-                counterpartyType = Just SELLER,
-                counterpartyId = Just merchantId,
+              { accountType = accountType',
+                counterpartyType = counterpartyType',
+                counterpartyId = counterpartyId',
+                description = Nothing,
                 currency = currency,
                 merchantId = merchantId,
                 merchantOperatingCityId = merchantOperatingCityId
@@ -368,8 +405,8 @@ createWalletEntryDelta counterpartyType ownerId delta currency merchantId mercha
         (Right ownerAccount, Right platformAccount) -> do
           let (fromAcc, toAcc, amount, eType) =
                 if delta > 0
-                  then (platformAccount.id, ownerAccount.id, delta, Lib.Finance.Domain.Types.LedgerEntry.Expense)
-                  else (ownerAccount.id, platformAccount.id, abs delta, Lib.Finance.Domain.Types.LedgerEntry.Revenue)
+                  then (platformAccount.id, ownerAccount.id, delta, if isAdjustment then Lib.Finance.Domain.Types.LedgerEntry.Adjustment else Lib.Finance.Domain.Types.LedgerEntry.Expense)
+                  else (ownerAccount.id, platformAccount.id, abs delta, if isAdjustment then Lib.Finance.Domain.Types.LedgerEntry.Adjustment else Lib.Finance.Domain.Types.LedgerEntry.Revenue)
           let entryInput =
                 LedgerEntryInput
                   { fromAccountId = fromAcc,
@@ -543,3 +580,6 @@ normalizeGeoComponent mbText =
   case T.toLower . T.strip <$> mbText of
     Just value | not (T.null value) -> Just value
     _ -> Nothing
+
+makeWalletRunningBalanceLockKey :: Text -> Text
+makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId
