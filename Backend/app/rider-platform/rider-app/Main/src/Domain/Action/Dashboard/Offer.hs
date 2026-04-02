@@ -1,14 +1,16 @@
 module Domain.Action.Dashboard.Offer
-  ( createOffer,
-    updateOffer,
-    listOffers,
-    toggleOfferActive,
-    CreateOfferReq (..),
-    UpdateOfferReq (..),
+  ( postOfferCreate,
+    postOfferUpdate,
+    getOfferList,
+    postOfferToggle,
+    postOfferValidateEligibility,
+    getOfferEligibilitySchema,
   )
 where
 
+import qualified API.Types.RiderPlatform.Management.Offer as Common
 import Control.Applicative ((<|>))
+import qualified Data.Aeson as A
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
@@ -20,43 +22,19 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.Offer as DOffer
 import qualified Lib.Payment.Storage.Queries.Offer as QOffer
+import qualified Lib.Yudhishthira.Tools.Utils as LYUtils
+import qualified Lib.Yudhishthira.TypesTH as YTH
+import SharedLogic.Offer (OfferEligibilityInput)
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 
-data CreateOfferReq = CreateOfferReq
-  { offerCode :: Text,
-    offerType :: DOffer.OfferType,
-    discountType :: DOffer.DiscountType,
-    discountValue :: HighPrecMoney,
-    maxDiscount :: Maybe HighPrecMoney,
-    title :: Maybe Text,
-    description :: Maybe Text,
-    sponsoredBy :: Maybe Text,
-    tnc :: Maybe Text,
-    offerEligibilityJsonLogic :: Maybe Value,
-    currency :: Currency
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
-
-data UpdateOfferReq = UpdateOfferReq
-  { discountValue :: Maybe HighPrecMoney,
-    maxDiscount :: Maybe HighPrecMoney,
-    title :: Maybe Text,
-    description :: Maybe Text,
-    sponsoredBy :: Maybe Text,
-    tnc :: Maybe Text,
-    offerEligibilityJsonLogic :: Maybe Value,
-    isActive :: Maybe Bool
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
-
-createOffer ::
+postOfferCreate ::
   ShortId DM.Merchant ->
   Context.City ->
-  CreateOfferReq ->
+  Common.CreateOfferReq ->
   Flow APISuccess
-createOffer merchantShortId opCity req = do
+postOfferCreate merchantShortId opCity req = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   now <- getCurrentTime
@@ -84,13 +62,13 @@ createOffer merchantShortId opCity req = do
   QOffer.create offer
   pure Success
 
-updateOffer ::
+postOfferUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
   Id DOffer.Offer ->
-  UpdateOfferReq ->
+  Common.UpdateOfferReq ->
   Flow APISuccess
-updateOffer merchantShortId opCity offerId req = do
+postOfferUpdate merchantShortId opCity offerId req = do
   _merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   _merchantOpCity <- CQMOC.findByMerchantIdAndCity _merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> _merchant.id.getId <> "-city-" <> show opCity)
   offer <- QOffer.findById offerId >>= fromMaybeM (InvalidRequest $ "Offer not found: " <> offerId.getId)
@@ -110,24 +88,89 @@ updateOffer merchantShortId opCity offerId req = do
   QOffer.updateByPrimaryKey updatedOffer
   pure Success
 
-listOffers ::
+getOfferList ::
   ShortId DM.Merchant ->
   Context.City ->
-  Flow [DOffer.Offer]
-listOffers merchantShortId opCity = do
+  Flow [Common.OfferResp]
+getOfferList merchantShortId opCity = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
-  QOffer.findAllActiveByMerchant merchant.id.getId merchantOpCity.id.getId True
+  activeOffers <- QOffer.findAllActiveByMerchant merchant.id.getId merchantOpCity.id.getId True
+  inactiveOffers <- QOffer.findAllActiveByMerchant merchant.id.getId merchantOpCity.id.getId False
+  pure $ map mkOfferResp (activeOffers <> inactiveOffers)
 
-toggleOfferActive ::
+mkOfferResp :: DOffer.Offer -> Common.OfferResp
+mkOfferResp offer =
+  Common.OfferResp
+    { id = offer.id,
+      offerCode = offer.offerCode,
+      offerType = offer.offerType,
+      discountType = offer.discountType,
+      discountValue = offer.discountValue,
+      maxDiscount = offer.maxDiscount,
+      title = offer.title,
+      description = offer.description,
+      sponsoredBy = offer.sponsoredBy,
+      tnc = offer.tnc,
+      offerEligibilityJsonLogic = offer.offerEligibilityJsonLogic,
+      currency = offer.currency,
+      isActive = offer.isActive,
+      createdAt = offer.createdAt,
+      updatedAt = offer.updatedAt
+    }
+
+postOfferToggle ::
   ShortId DM.Merchant ->
   Context.City ->
   Id DOffer.Offer ->
   Flow APISuccess
-toggleOfferActive merchantShortId opCity offerId = do
+postOfferToggle merchantShortId opCity offerId = do
   _merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   _merchantOpCity <- CQMOC.findByMerchantIdAndCity _merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> _merchant.id.getId <> "-city-" <> show opCity)
   offer <- QOffer.findById offerId >>= fromMaybeM (InvalidRequest $ "Offer not found: " <> offerId.getId)
   now <- getCurrentTime
   QOffer.updateByPrimaryKey offer {DOffer.isActive = not offer.isActive, DOffer.updatedAt = now}
   pure Success
+
+postOfferValidateEligibility ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.ValidateOfferEligibilityReq ->
+  Flow Common.ValidateOfferEligibilityResp
+postOfferValidateEligibility merchantShortId opCity req = do
+  _merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  _merchantOpCity <- CQMOC.findByMerchantIdAndCity _merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> _merchant.id.getId <> "-city-" <> show opCity)
+  offer <- QOffer.findById req.offerId >>= fromMaybeM (InvalidRequest $ "Offer not found: " <> req.offerId.getId)
+  case offer.offerEligibilityJsonLogic of
+    Nothing ->
+      pure
+        Common.ValidateOfferEligibilityResp
+          { eligible = True,
+            offerCode = offer.offerCode,
+            errors = []
+          }
+    Just logic -> do
+      logicResp <- LYUtils.runLogics [logic] req.inputData
+      case logicResp.result of
+        A.Bool result ->
+          pure
+            Common.ValidateOfferEligibilityResp
+              { eligible = result,
+                offerCode = offer.offerCode,
+                errors = map toText logicResp.errors
+              }
+        _ ->
+          pure
+            Common.ValidateOfferEligibilityResp
+              { eligible = False,
+                offerCode = offer.offerCode,
+                errors = ["Logic did not return a boolean result"] <> map toText logicResp.errors
+              }
+
+getOfferEligibilitySchema ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Flow Common.OfferEligibilitySchemaResp
+getOfferEligibilitySchema _ _ = do
+  let defaultVal = maybe (A.object []) A.toJSON (listToMaybe $ YTH.genDef (Proxy @OfferEligibilityInput))
+  pure Common.OfferEligibilitySchemaResp {defaultValue = defaultVal}

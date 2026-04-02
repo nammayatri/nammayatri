@@ -31,8 +31,8 @@ import qualified Lib.BehaviorTracker.Snapshot as BTSnap
 import qualified Lib.BehaviorTracker.Types as BTT
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
-import SharedLogic.BehaviourManagement.IssueBreach (IssueBreachType (..))
 import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
+import SharedLogic.BehaviourManagement.IssueBreach (IssueBreachType (..))
 import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
 import SharedLogic.DriverOnboarding
 import qualified Storage.Cac.TransporterConfig as SCTC

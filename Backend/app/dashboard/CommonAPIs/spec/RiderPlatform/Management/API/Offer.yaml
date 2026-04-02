@@ -1,0 +1,113 @@
+imports:
+  Value: Data.Aeson
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  Offer: Lib.Payment.Domain.Types.Offer
+  OfferType: Lib.Payment.Domain.Types.Offer
+  DiscountType: Lib.Payment.Domain.Types.Offer
+  UTCTime: Kernel.Prelude
+
+module: Offer
+
+apis:
+  - POST:
+      endpoint: /create
+      auth: ApiAuthV2
+      request:
+        type: CreateOfferReq
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /{offerId}/update
+      auth: ApiAuthV2
+      params:
+        offerId: Id Offer
+      request:
+        type: UpdateOfferReq
+      response:
+        type: APISuccess
+
+  - GET:
+      endpoint: /list
+      auth: ApiAuthV2
+      response:
+        type: "[OfferResp]"
+
+  - POST:
+      endpoint: /{offerId}/toggle
+      auth: ApiAuthV2
+      params:
+        offerId: Id Offer
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /validateEligibility
+      auth: ApiAuthV2
+      request:
+        type: ValidateOfferEligibilityReq
+      response:
+        type: ValidateOfferEligibilityResp
+
+  - GET:
+      endpoint: /eligibilitySchema
+      auth: ApiAuthV2
+      response:
+        type: OfferEligibilitySchemaResp
+
+types:
+  CreateOfferReq:
+    - offerCode: Text
+    - offerType: OfferType
+    - discountType: DiscountType
+    - discountValue: HighPrecMoney
+    - maxDiscount: Maybe HighPrecMoney
+    - title: Maybe Text
+    - description: Maybe Text
+    - sponsoredBy: Maybe Text
+    - tnc: Maybe Text
+    - offerEligibilityJsonLogic: Maybe Value
+    - currency: Currency
+    - derive: "'HideSecrets"
+
+  UpdateOfferReq:
+    - discountValue: Maybe HighPrecMoney
+    - maxDiscount: Maybe HighPrecMoney
+    - title: Maybe Text
+    - description: Maybe Text
+    - sponsoredBy: Maybe Text
+    - tnc: Maybe Text
+    - offerEligibilityJsonLogic: Maybe Value
+    - isActive: Maybe Bool
+    - derive: "'HideSecrets"
+
+  OfferResp:
+    - id: Id Offer
+    - offerCode: Text
+    - offerType: OfferType
+    - discountType: DiscountType
+    - discountValue: HighPrecMoney
+    - maxDiscount: Maybe HighPrecMoney
+    - title: Maybe Text
+    - description: Maybe Text
+    - sponsoredBy: Maybe Text
+    - tnc: Maybe Text
+    - offerEligibilityJsonLogic: Maybe Value
+    - currency: Currency
+    - isActive: Bool
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+
+  ValidateOfferEligibilityReq:
+    - offerId: Id Offer
+    - inputData: Value
+    - derive: "'HideSecrets"
+
+  ValidateOfferEligibilityResp:
+    - eligible: Bool
+    - offerCode: Text
+    - errors: "[Text]"
+
+  OfferEligibilitySchemaResp:
+    - defaultValue: Value

@@ -18,6 +18,7 @@ module Domain.Action.UI.ExotelEndRide
   )
 where
 
+import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.Ride.EndRide as EndRide
 import Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
@@ -28,11 +29,10 @@ import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
-import qualified Data.HashMap.Strict as HM
-import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.PersonExtra as QPerson

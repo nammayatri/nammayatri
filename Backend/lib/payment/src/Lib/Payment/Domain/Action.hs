@@ -41,7 +41,6 @@ module Lib.Payment.Domain.Action
     getTransactionStatus,
     offerListService,
     invalidateOfferListCacheService,
-    applyOfferService,
     listDomainOffers,
     createWalletService,
     walletPostingService,
@@ -260,12 +259,13 @@ updateForCXCancelPaymentIntentService ::
   (Payment.PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()) ->
   (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
   HighPrecMoney ->
+  Id Person ->
   m Bool
-updateForCXCancelPaymentIntentService merchantOpCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancelTransactionAmount = do
+updateForCXCancelPaymentIntentService merchantOpCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancelTransactionAmount personId = do
   transaction <- HQTransaction.findByTxnId paymentIntentId >>= fromMaybeM (InternalError $ "No transaction found while update payment intent: " <> paymentIntentId)
   let newApplicationFeeAmount = transaction.applicationFeeAmount -- not changing application fee amount
   updateOldTransaction newApplicationFeeAmount transaction
-  chargePaymentIntentService merchantOpCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall
+  chargePaymentIntentService merchantOpCityId paymentServiceType paymentIntentId personId capturePaymentIntentCall getPaymentIntentCall
   where
     updateOldTransaction newApplicationFeeAmount transaction = do
       let newOrderAmount = cancelTransactionAmount -- changing whole amount with cancellation
@@ -283,10 +283,11 @@ chargePaymentIntentService ::
   Id MerchantOperatingCity ->
   DOrder.PaymentServiceType ->
   Payment.PaymentIntentId ->
+  Id Person ->
   (Payment.PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()) ->
   (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
   m Bool
-chargePaymentIntentService merchantOpCityId _paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall = do
+chargePaymentIntentService merchantOpCityId _paymentServiceType paymentIntentId personId capturePaymentIntentCall getPaymentIntentCall = do
   transaction <- HQTransaction.findByTxnId paymentIntentId >>= fromMaybeM (InternalError $ "No transaction found while charge payment intent: " <> paymentIntentId)
   if transaction.status `notElem` [Payment.CHARGED, Payment.CANCELLED, Payment.AUTO_REFUNDED]
     then do
@@ -309,6 +310,7 @@ chargePaymentIntentService merchantOpCityId _paymentServiceType paymentIntentId 
           let updStatus = Payment.castToTransactionStatus paymentIntentResp.status
           HQTransaction.updateStatusAndError merchantOpCityId transaction updStatus Nothing Nothing (Just "charge payment intent service")
           QOrder.updateStatus transaction.orderId paymentIntentId updStatus
+          applyOfferService transaction.orderId personId.getId
           pure True
     else pure False
 
@@ -1308,28 +1310,27 @@ buildPaymentOffer paymentOrderId offerId discountAmount payoutAmount merchantId 
   Redis.whenWithLockRedis (offerProccessingLockKey paymentOrderId.getId) 60 $ do
     existingOffers <- QPaymentOrderOffer.findByPaymentOrder paymentOrderId
     when (null existingOffers) $ do
-      offer <- case offerId of
-        Just oid -> QOffer.findById oid >>= fromMaybeM (InternalError "Offer not found")
-        Nothing -> throwError (InternalError "Offer not found")
-      now <- getCurrentTime
-      poOfferId <- generateGUID
-      let paymentOrderOffer =
-            DPaymentOrderOffer.PaymentOrderOffer
-              { id = poOfferId,
-                paymentOrderId = paymentOrderId,
-                offer_id = offer.id.getId,
-                offer_code = offer.offerCode,
-                status = PInterface.OFFER_INITIATED,
-                responseJSON = encodeToText $ PInterface.Offer {offerId = Just offer.id.getId, offerCode = Just offer.offerCode, status = PInterface.OFFER_INITIATED},
-                discountAmount = discountAmount,
-                payoutAmount = payoutAmount,
-                merchantId = merchantId.getId,
-                merchantOperatingCityId = maybe "" ((.getId) . cast) merchantOperatingCityId,
-                createdAt = now,
-                updatedAt = now
-              }
-      QPaymentOrderOffer.create paymentOrderOffer
-      logInfo $ "Created payment order offer for paymentOrderId: " <> paymentOrderId.getId <> " offerId: " <> show offerId
+      whenJust offerId $ \oid -> do
+        offer <- QOffer.findById oid >>= fromMaybeM (InternalError "Offer not found")
+        now <- getCurrentTime
+        poOfferId <- generateGUID
+        let paymentOrderOffer =
+              DPaymentOrderOffer.PaymentOrderOffer
+                { id = poOfferId,
+                  paymentOrderId = paymentOrderId,
+                  offer_id = offer.id.getId,
+                  offer_code = offer.offerCode,
+                  status = PInterface.OFFER_INITIATED,
+                  responseJSON = encodeToText $ PInterface.Offer {offerId = Just offer.id.getId, offerCode = Just offer.offerCode, status = PInterface.OFFER_INITIATED},
+                  discountAmount = discountAmount,
+                  payoutAmount = payoutAmount,
+                  merchantId = merchantId.getId,
+                  merchantOperatingCityId = maybe "" ((.getId) . cast) merchantOperatingCityId,
+                  createdAt = now,
+                  updatedAt = now
+                }
+        QPaymentOrderOffer.create paymentOrderOffer
+        logInfo $ "Created payment order offer for paymentOrderId: " <> paymentOrderId.getId <> " offerId: " <> show offerId
 
 offerProccessingLockKey :: Text -> Text
 offerProccessingLockKey paymentOrderId = "Offer:Processing:PaymentOrderId:" <> paymentOrderId

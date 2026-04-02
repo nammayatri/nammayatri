@@ -764,6 +764,7 @@ library
       API.Action.Dashboard.Management.Media
       API.Action.Dashboard.Management.Merchant
       API.Action.Dashboard.Management.NammaTag
+      API.Action.Dashboard.Management.Offer
       API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.Management.Sos
       API.Action.Dashboard.Management.SosMedia

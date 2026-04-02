@@ -796,12 +796,16 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
 
   -- we should create job for collecting money from customer
   let onlinePayment = SPayment.isOnlinePayment mbMerchant booking
+      applicationFeeAmount' = fromMaybe 0 booking.commission
+      discountAmount' = fromMaybe 0.0 updRide.discountAmount
 
   if not onlinePayment
-    then pure ()
+    then do
+      whenJust booking.selectedOfferId $ \offerId -> do
+        void $
+          withTryCatch "applyOfferWithoutPayment:executeJob" $
+            DPayment.applyOfferWithoutPaymentService ride.id.getId offerId person.id.getId updRide.discountAmount updRide.payoutAmount totalFare.currency person.merchantId.getId person.merchantOperatingCityId.getId
     else do
-      let applicationFeeAmount' = fromMaybe 0 booking.commission
-          discountAmount' = fromMaybe 0.0 updRide.discountAmount
       let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency person.id.getId ride.id.getId Nothing Nothing
           ledgerInfo =
             Just $

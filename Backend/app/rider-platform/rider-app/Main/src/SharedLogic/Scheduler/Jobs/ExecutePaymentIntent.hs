@@ -118,7 +118,7 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             case mbPaymentIntentResp of
               Nothing -> SPayment.zeroEffectivePaymentDueToOffer person.merchantId booking.merchantOperatingCityId ride.id person.id booking.selectedOfferId fareWithTip.currency ledgerInfo
               Just paymentIntentResp -> do
-                paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment
+                paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment booking.riderId
                 if paymentCharged
                   then do
                     -- Apply offer stats after successful charge
@@ -166,7 +166,7 @@ cancelExecutePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
   mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   when (isNothing ride.cancellationFeeIfCancelled) $ do
     QRide.updateCancellationFeeIfCancelledField (Just cancellationAmount.amount) rideId
-  paymentCharged <- SPayment.makeCxCancellationPayment booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing order.paymentServiceOrderId cancellationAmount.amount
+  paymentCharged <- SPayment.makeCxCancellationPayment booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing order.paymentServiceOrderId cancellationAmount.amount booking.riderId
   when paymentCharged $ QRide.markPaymentStatus DRide.Completed rideId
   void $
     CallBPPInternal.customerCancellationDuesSync
