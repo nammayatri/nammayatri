@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Common (sendDLVerification, sendRCVerification, buildMeaninglessIdfyResponse) where
+module Common (sendDLVerification, sendRCVerification, sendPanVerification, sendGstVerification, buildMeaninglessIdfyResponse) where
 
 import App.Types
 import EulerHS.Prelude
@@ -38,6 +38,12 @@ sendDLVerification = sendVerification "DLVerificationResult"
 
 sendRCVerification :: VerificationResponse -> Flow AckResponse
 sendRCVerification = sendVerification "RCVerificationResult"
+
+sendPanVerification :: VerificationResponse -> Flow AckResponse
+sendPanVerification = sendVerification "PanVerificationResult"
+
+sendGstVerification :: VerificationResponse -> Flow AckResponse
+sendGstVerification = sendVerification "GstVerificationResult"
 
 callWebhookAPI :: CallAPI m r api res
 callWebhookAPI = callApiUnwrappingApiError (identity @Error) Nothing Nothing Nothing

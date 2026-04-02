@@ -160,3 +160,93 @@ buildSuccessDL IdfyRequest {..} request_id now = do
           _type = "ind_driving_license",
           result = Just (DLResult (SourceOutput result))
         }
+
+buildSuccessPan :: (MonadIO m) => PanVerificationRequest -> Text -> UTCTime -> m VerificationResponse
+buildSuccessPan IdfyRequest {..} request_id now = do
+  let result =
+        PanVerificationOutput
+          { aadhaar_seeding_status = Just True,
+            pan_status = Just "VALID",
+            name_match = Just True,
+            dob_match = Just True,
+            status = Just "id_found",
+            input_details = Nothing
+          }
+  pure $
+    VerificationResponse $
+      IdfyResponse
+        { action = "verify_with_source",
+          completed_at = Just now,
+          created_at = now,
+          group_id = group_id,
+          request_id = request_id,
+          status = "completed",
+          task_id = task_id,
+          _type = "ind_pan",
+          result = Just (PanResult (SourceOutput result))
+        }
+
+buildSuccessPanAadhaarLink :: (MonadIO m) => PanAadhaarLinkRequest -> Text -> UTCTime -> m VerificationResponse
+buildSuccessPanAadhaarLink IdfyRequest {..} request_id now = do
+  let result =
+        PanAadhaarLinkOutput
+          { is_linked = Just True,
+            message = Just "Aadhaar is linked with PAN",
+            status = Just "id_found"
+          }
+  pure $
+    VerificationResponse $
+      IdfyResponse
+        { action = "verify_with_source",
+          completed_at = Just now,
+          created_at = now,
+          group_id = group_id,
+          request_id = request_id,
+          status = "completed",
+          task_id = task_id,
+          _type = "pan_aadhaar_link",
+          result = Just (PanAadhaarLinkResult (SourceOutput result))
+        }
+
+buildSuccessGst :: (MonadIO m) => GstVerificationRequest -> Text -> UTCTime -> m VerificationResponse
+buildSuccessGst IdfyRequest {..} request_id now = do
+  let gstNumber =
+        case _data of
+          GstVerificationData {..} -> gstin
+  let result =
+        GstVerificationOutput
+          { additional_place_of_business_fields = Nothing,
+            centre_jurisdiction = Just "RANGE-I",
+            centre_jurisdiction_code = Nothing,
+            constitution_of_business = Just "Private Limited Company",
+            date_of_cancellation = Nothing,
+            date_of_registration = Just "2020-01-01",
+            gstin = Just gstNumber,
+            gstin_status = Just "Active",
+            last_updated_date = Nothing,
+            legal_name = Just "TEST FLEET PVT LTD",
+            nature_of_business_activity = Nothing,
+            principal_place_of_business_fields = Nothing,
+            source = Just "GSTIN",
+            state_jurisdiction_code = Nothing,
+            status = Just "id_found",
+            taxpayer_type = Just "Regular",
+            trade_name = Just "TEST FLEET",
+            einvoice_status = Nothing,
+            status_details = Nothing,
+            is_sez = Nothing,
+            filing_details = Nothing
+          }
+  pure $
+    VerificationResponse $
+      IdfyResponse
+        { action = "verify_with_source",
+          completed_at = Just now,
+          created_at = now,
+          group_id = group_id,
+          request_id = request_id,
+          status = "completed",
+          task_id = task_id,
+          _type = "ind_gst_certificate",
+          result = Just (GstResult (SourceOutput result))
+        }
