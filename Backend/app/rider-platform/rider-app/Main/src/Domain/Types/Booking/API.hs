@@ -175,7 +175,8 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     driversPreviousRideDropLocLon :: Maybe Double,
     stopInfo :: [DSI.StopInformation],
     batchConfig :: Maybe BatchConfig,
-    isSafetyPlus :: Bool
+    isSafetyPlus :: Bool,
+    cancellationReason :: Maybe BookingCancellationReasonAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -504,6 +505,9 @@ getActiveSos' mbRide personId = do
           return $ mockSos <&> (.status)
         Just sos -> return $ Just sos.status
 
+makeCancellationReasonAPIEntity :: BookingCancellationReason -> BookingCancellationReasonAPIEntity
+makeCancellationReasonAPIEntity BookingCancellationReason {..} = BookingCancellationReasonAPIEntity {..}
+
 buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, ClickhouseFlow m r, BeamFlow m r) => Booking -> Id Person.Person -> m BookingAPIEntity
 buildBookingAPIEntity booking personId = do
   mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
@@ -520,9 +524,6 @@ buildBookingAPIEntity booking personId = do
       then QBCR.findByRideBookingId booking.id
       else return Nothing
   makeBookingAPIEntity personId booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon (makeCancellationReasonAPIEntity <$> mbCancellationReason)
-  where
-    makeCancellationReasonAPIEntity :: BookingCancellationReason -> BookingCancellationReasonAPIEntity
-    makeCancellationReasonAPIEntity BookingCancellationReason {..} = BookingCancellationReasonAPIEntity {..}
 
 --Note :- if you are adding and extra field in BookingStatusAPIEntity then add it in BookingAPIEntity as well
 buildBookingStatusAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> m BookingStatusAPIEntity
@@ -540,7 +541,11 @@ buildBookingStatusAPIEntity booking = do
       talkedWithDriver = fromMaybe False (mbActiveRide >>= (.talkedWithDriver))
       isSafetyPlus = fromMaybe False $ mbActiveRide <&> (.isSafetyPlus)
   sosStatus <- getActiveSos' mbActiveRide booking.riderId
-  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus
+  mbCancellationReason <-
+    if booking.status == CANCELLED
+      then QBCR.findByRideBookingId booking.id
+      else return Nothing
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus (makeCancellationReasonAPIEntity <$> mbCancellationReason)
 
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
