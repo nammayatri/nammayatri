@@ -330,23 +330,26 @@ stclMemberShipOrderStatusHandler paymentStatusResp paymentOrderId = do
   case mbMembership' of
     Just membership -> do
       logInfo $ "Found membership: " <> show membership.id <> ", current status: " <> show membership.status
-      let newStatus = case paymentStatusResp of
-            LibPayment.PaymentStatus {status}
-              | status == PaymentTypes.CHARGED -> Domain.SUBMITTED
-              | otherwise -> Domain.PENDING
-            LibPayment.MandatePaymentStatus {status}
-              | status == PaymentTypes.CHARGED -> Domain.SUBMITTED
-              | otherwise -> Domain.PENDING
-            _ -> Domain.PENDING
-      logInfo $ "Updating membership to status: " <> show newStatus <> ", paymentStatus: " <> show paymentStatusText
-      -- When status becomes SUBMITTED, update application count and share range FIRST (before status update)
-      -- so findLatestSubmittedMembership doesn't return the current record
-      when (newStatus == Domain.SUBMITTED) $ do
-        QStclMembership.updateApplicationAndShareCounts membership.id membership.numberOfShares
-        logInfo $ "Updated application and share counts for SUBMITTED membership"
-      -- Update membership with new status and payment status
-      -- updateStatusAndPaymentStatus generates updatedAt internally
-      QStclMembership.updateStatusAndPaymentStatus newStatus paymentStatusText membership.id
-      logInfo $ "Successfully updated membership"
+      -- Monotonic guard: once SUBMITTED, never regress regardless of replayed or out-of-order webhooks
+      if membership.status == Domain.SUBMITTED
+        then logInfo $ "Membership already SUBMITTED, skipping update (idempotent)"
+        else do
+          let newStatus = case paymentStatusResp of
+                LibPayment.PaymentStatus {status}
+                  | status == PaymentTypes.CHARGED -> Domain.SUBMITTED
+                  | otherwise -> Domain.PENDING
+                LibPayment.MandatePaymentStatus {status}
+                  | status == PaymentTypes.CHARGED -> Domain.SUBMITTED
+                  | otherwise -> Domain.PENDING
+                _ -> Domain.PENDING
+          logInfo $ "Updating membership to status: " <> show newStatus <> ", paymentStatus: " <> show paymentStatusText
+          -- When transitioning to SUBMITTED, update application count and share range FIRST (before status update)
+          -- so findLatestSubmittedMembership doesn't return the current record.
+          -- Guard against current status to ensure counts are only incremented once.
+          when (newStatus == Domain.SUBMITTED && membership.status /= Domain.SUBMITTED) $ do
+            QStclMembership.updateApplicationAndShareCounts membership.id membership.numberOfShares
+            logInfo $ "Updated application and share counts for SUBMITTED membership"
+          QStclMembership.updateStatusAndPaymentStatus newStatus paymentStatusText membership.id
+          logInfo $ "Successfully updated membership"
     Nothing -> do
       logError $ "Membership not found for payment order ID: " <> show paymentOrderId <> ", membership ID: " <> show membershipId
