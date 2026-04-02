@@ -123,6 +123,7 @@ getConfigJSON = \case
   Domain.SettlementServiceConfig settlementCfg -> case settlementCfg of
     Settlement.HyperPGConfig srcCfg -> toJSON srcCfg
     Settlement.BillDeskConfig srcCfg -> toJSON srcCfg
+    Settlement.YesBizConfig srcCfg -> toJSON srcCfg
 
 getServiceName :: Domain.ServiceConfig -> Domain.ServiceName
 getServiceName = \case
@@ -203,6 +204,7 @@ getServiceName = \case
   Domain.SettlementServiceConfig settlementCfg -> case settlementCfg of
     Settlement.HyperPGConfig _ -> Domain.SettlementService Settlement.HyperPG
     Settlement.BillDeskConfig _ -> Domain.SettlementService Settlement.BillDesk
+    Settlement.YesBizConfig _ -> Domain.SettlementService Settlement.YesBiz
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> Payment.PaymentService
 getPaymentServiceConfigJson = \case
@@ -277,6 +279,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.InsuranceDeclarationService Domain.IffcoTokio -> Domain.InsuranceDeclarationServiceConfig <$> eitherValue configJSON
   Domain.SettlementService Settlement.HyperPG -> Domain.SettlementServiceConfig . Settlement.HyperPGConfig <$> eitherValue configJSON
   Domain.SettlementService Settlement.BillDesk -> Domain.SettlementServiceConfig . Settlement.BillDeskConfig <$> eitherValue configJSON
+  Domain.SettlementService Settlement.YesBiz -> Domain.SettlementServiceConfig . Settlement.YesBizConfig <$> eitherValue configJSON
 
 eitherValue :: FromJSON a => A.Value -> Either Text a
 eitherValue value = case A.fromJSON value of

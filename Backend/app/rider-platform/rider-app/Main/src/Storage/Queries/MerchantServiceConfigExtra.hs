@@ -191,3 +191,4 @@ getServiceNameConfigJSON = \case
   Domain.SettlementServiceConfig settlementCfg -> case settlementCfg of
     Settlement.HyperPGConfig srcCfg -> (Domain.SettlementService Settlement.HyperPG, toJSON srcCfg)
     Settlement.BillDeskConfig srcCfg -> (Domain.SettlementService Settlement.BillDesk, toJSON srcCfg)
+    Settlement.YesBizConfig srcCfg -> (Domain.SettlementService Settlement.YesBiz, toJSON srcCfg)

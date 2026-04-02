@@ -205,6 +205,7 @@ getServiceName msc = case msc.serviceConfig of
   SettlementServiceConfig settlementCfg -> case settlementCfg of
     Settlement.HyperPGConfig _ -> SettlementService Settlement.HyperPG
     Settlement.BillDeskConfig _ -> SettlementService Settlement.BillDesk
+    Settlement.YesBizConfig _ -> SettlementService Settlement.YesBiz
 
 upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig cfg = do
