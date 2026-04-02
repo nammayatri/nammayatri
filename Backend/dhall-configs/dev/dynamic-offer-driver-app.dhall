@@ -498,7 +498,7 @@ in  { esqDBCfg
     , kvConfigUpdateFrequency
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
     , schedulerSetName = "Scheduled_Jobs"
-    , schedulerType = common.schedulerType.RedisBased
+    , schedulerType = common.schedulerType.DbBased
     , ltsCfg = LocationTrackingeServiceConfig
     , modelNamesMap
     , incomingAPIResponseTimeout = +15

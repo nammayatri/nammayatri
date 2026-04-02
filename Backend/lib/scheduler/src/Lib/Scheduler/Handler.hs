@@ -20,6 +20,10 @@ module Lib.Scheduler.Handler
   )
 where
 
+import Kernel.Storage.Queries.SystemConfigs as QSC
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
+import qualified Kernel.Utils.Common as KUC
 import Control.Monad.Catch
 import qualified Control.Monad.Catch as C
 import qualified Data.ByteString as BS
@@ -40,6 +44,7 @@ import Kernel.Utils.Time ()
 import Lib.Scheduler.Environment
 import Lib.Scheduler.JobHandler
 import Lib.Scheduler.Types
+
 
 data SchedulerHandle t = SchedulerHandle
   { jobHandlers :: JobHandlersList t,
@@ -74,9 +79,14 @@ handler hnd = do
 
     mkRunningJobKey jobId = "RunnningJob:" <> jobId
 
-dbBasedHandlerLoop :: (JobProcessor t, FromJSON t) => SchedulerHandle t -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
+dbBasedHandlerLoop :: (JobProcessor t, FromJSON t, HasSchemaName BeamSC.SystemConfigsT) => SchedulerHandle t -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
 dbBasedHandlerLoop hnd runTask = do
   logInfo "Starting runner iteration 1"
+
+  kvConfigs <- QSC.findById "kv_configs" >>= pure . decodeFromText' @Tables
+  L.setOption KBT.Tables (fromMaybe KUC.defaultTableData kvConfigs)
+
+
   iterSessionId <- generateGUIDText
   before <- getCurrentTime
   withLogTag iterSessionId $ logInfo "Starting runner iteration"

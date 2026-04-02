@@ -105,7 +105,7 @@ in  { hedisCfg
     , entryId = "*"
     , reviverInterval = +2
     , reviveThreshold = +2
-    , schedulerType = common.schedulerType.RedisBased
+    , schedulerType = common.schedulerType.DbBased
     , maxShards = +5
     , metricsPort = +9990
     , kvConfigUpdateFrequency

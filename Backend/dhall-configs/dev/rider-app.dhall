@@ -467,7 +467,7 @@ in  { esqDBCfg
     , jobInfoMapx
     , internalEndPointMap = common.internalEndPointMap
     , schedulerSetName = "Scheduled_Jobs_Rider"
-    , schedulerType = common.schedulerType.RedisBased
+    , schedulerType = common.schedulerType.DbBased
     , _version = "2.1.0"
     , hotSpotExpiry = +604800
     , cacConfig
