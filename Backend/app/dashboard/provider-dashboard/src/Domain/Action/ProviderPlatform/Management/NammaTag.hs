@@ -33,7 +33,6 @@ module Domain.Action.ProviderPlatform.Management.NammaTag
     postNammaTagConfigPilotGetPatchedElement,
     getNammaTagAppDynamicLogicDomainsAndEvents,
     getNammaTagTagAll,
-    getNammaTagConfigPilotAlwaysOnList,
     getNammaTagTagDetails,
     getNammaTagQueryDetails,
   )
@@ -231,11 +230,6 @@ getNammaTagTagAll :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> 
 getNammaTagTagAll merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagTagAll)
-
-getNammaTagConfigPilotAlwaysOnList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow Lib.Yudhishthira.Types.AlwaysOnListResp)
-getNammaTagConfigPilotAlwaysOnList merchantShortId opCity apiTokenInfo domain = do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagConfigPilotAlwaysOnList) domain
 
 getNammaTagTagDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow Lib.Yudhishthira.Types.NammaTagDetailsResp)
 getNammaTagTagDetails merchantShortId opCity apiTokenInfo tagName = do

@@ -33,10 +33,6 @@ module Domain.Action.RiderPlatform.Management.NammaTag
     getNammaTagConfigPilotUiConfigDetails,
     getNammaTagConfigPilotGetUiTableData,
     getNammaTagTagAll,
-    getNammaTagConfigPilotAlwaysOnList,
-    postNammaTagConfigPilotGetConfigWithDimensions,
-    getNammaTagConfigPilotGetDimensionSchema,
-    postNammaTagConfigPilotCreateRow,
     getNammaTagTagDetails,
     getNammaTagQueryDetails,
   )
@@ -231,39 +227,10 @@ getNammaTagAppDynamicLogicDomainsAndEvents merchantShortId opCity apiTokenInfo f
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagAppDynamicLogicDomainsAndEvents) fetchNammaTagNames
 
-<<<<<<< HEAD
-
-getNammaTagTagAll :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow [Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2])
-=======
 getNammaTagTagAll :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow [Lib.Yudhishthira.Types.NammaTagDetailsResp])
->>>>>>> ef9560a32c (backend/feat: Add NammaTag and ChakraQuery detail lookup APIs with enriched responses)
 getNammaTagTagAll merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagTagAll)
-
-getNammaTagConfigPilotAlwaysOnList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow Lib.Yudhishthira.Types.AlwaysOnListResp)
-getNammaTagConfigPilotAlwaysOnList merchantShortId opCity apiTokenInfo domain = do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagConfigPilotAlwaysOnList) domain
-
-
-postNammaTagConfigPilotGetConfigWithDimensions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.ConfigPilotGetConfigRequest -> Environment.Flow Lib.Yudhishthira.Types.TableDataResp)
-postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity apiTokenInfo req = do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
-  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.postNammaTagConfigPilotGetConfigWithDimensions) req)
-
-getNammaTagConfigPilotGetDimensionSchema :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.ConfigType -> Environment.Flow Lib.Yudhishthira.Types.DomainSchemaResp)
-getNammaTagConfigPilotGetDimensionSchema merchantShortId opCity apiTokenInfo configType = do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagConfigPilotGetDimensionSchema) configType
-
-postNammaTagConfigPilotCreateRow :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.ConfigPilotCreateRowRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postNammaTagConfigPilotCreateRow merchantShortId opCity apiTokenInfo req = do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
-  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.postNammaTagConfigPilotCreateRow) req)
-
 
 getNammaTagTagDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow Lib.Yudhishthira.Types.NammaTagDetailsResp)
 getNammaTagTagDetails merchantShortId opCity apiTokenInfo tagName = do
