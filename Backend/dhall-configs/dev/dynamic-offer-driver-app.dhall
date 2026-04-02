@@ -295,6 +295,7 @@ let AllocatorJobType =
       | ScheduledBatchPayout
       | SettlementReportIngestion
       | CheckPickupZoneArrival
+      | ScheduledTDSDistribution
       >
 
 let jobInfoMapx =
@@ -355,7 +356,8 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.Reconciliation, mapValue = True }
       , { mapKey = AllocatorJobType.ScheduledBatchPayout, mapValue = True }
       , { mapKey = AllocatorJobType.SettlementReportIngestion, mapValue = True }
-      , { mapKey = AllocatorJobType.CheckPickupZoneArrival, mapValue = True }
+      , { mapKey = AllocatorJobType.CheckPickupZoneArrival, mapValue = True}
+      , { mapKey = AllocatorJobType.ScheduledTDSDistribution, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig =

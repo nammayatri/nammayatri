@@ -17,7 +17,6 @@ module SharedLogic.Allocator.Jobs.Settlement.SettlementReportIngestion
   )
 where
 
-import Data.IORef (newIORef, readIORef, writeIORef)
 import qualified Data.Map.Strict as M
 import Data.Time.Calendar (addDays)
 import Data.Time.Clock (UTCTime (UTCTime), secondsToDiffTime, utctDay)
@@ -39,6 +38,10 @@ import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator (AllocatorJobType (..), SettlementReportIngestionJobData (..))
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+
+-- | Lock TTL reduced from 3600s to 600s (10 minutes) to avoid long lock holds
+lockTTLSeconds :: Int
+lockTTLSeconds = 600
 
 runSettlementReportIngestionJob ::
   ( BeamFlow m r,
@@ -64,42 +67,51 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
       merchantOperatingCityId = jobData.merchantOperatingCityId
 
   let lockKey = "SettlementIngestion:" <> merchantId.getId <> ":" <> merchantOperatingCityId.getId
-  resultRef <- liftIO $ newIORef Complete
 
-  mbResult <- Hedis.whenWithLockRedisAndReturnValue lockKey 3600 $ do
+  -- Acquire lock only for the ingestion phase, not for scheduling
+  mbResult <- Hedis.whenWithLockRedisAndReturnValue lockKey lockTTLSeconds $ do
     logInfo "Starting settlement report ingestion, fetching configs from MerchantServiceConfig"
 
     settlementConfigs <- getSettlementConfigs merchantId merchantOperatingCityId
     if null settlementConfigs
       then do
         logWarning "No SettlementService configs found in MerchantServiceConfig"
-        liftIO $ writeIORef resultRef Complete
+        pure True -- success, nothing to do
       else do
-        hasFailure <- liftIO $ newIORef False
-        forM_ settlementConfigs $ \(service, sourceConfig) -> do
+        -- Process each service independently, catch errors per-service to avoid one failure blocking others
+        results <- forM settlementConfigs $ \(service, sourceConfig) -> do
           logInfo $ "Processing settlement service: " <> show service
-          result <- ingestPaymentSettlementReport sourceConfig service merchantId.getId merchantOperatingCityId.getId
-          logInfo $ "Ingestion result for " <> show service <> ": " <> show result
-          when (result.totalFailed > 0) $ do
-            logError $
-              "Settlement ingestion for " <> show service <> " had " <> show result.totalFailed
-                <> " failures out of "
-                <> show result.totalParsed
-                <> " rows"
-            liftIO $ writeIORef hasFailure True
+          serviceResult <-
+            try @_ @SomeException $
+              ingestPaymentSettlementReport sourceConfig service merchantId.getId merchantOperatingCityId.getId
+          case serviceResult of
+            Left err -> do
+              logError $ "Settlement ingestion for " <> show service <> " threw exception: " <> show err
+              pure False
+            Right result -> do
+              logInfo $ "Ingestion result for " <> show service <> ": " <> show result
+              when (result.totalFailed > 0) $
+                logError $
+                  "Settlement ingestion for " <> show service <> " had " <> show result.totalFailed
+                    <> " failures out of "
+                    <> show result.totalParsed
+                    <> " rows"
+              pure (result.totalFailed == 0)
 
-        failed <- liftIO $ readIORef hasFailure
-        if failed
-          then liftIO $ writeIORef resultRef Retry
-          else do
-            scheduleNextIngestionJob merchantId merchantOperatingCityId jobData
-            liftIO $ writeIORef resultRef Complete
+        pure $ and results -- True if all services succeeded
 
   case mbResult of
     Left () -> do
       logWarning $ "Settlement ingestion lock contention, will retry: " <> lockKey
       pure Retry
-    Right () -> liftIO $ readIORef resultRef
+    Right allSucceeded -> do
+      -- Schedule next run regardless of partial failures (to avoid missing runs)
+      scheduleNextIngestionJob merchantId merchantOperatingCityId jobData
+      if allSucceeded
+        then pure Complete
+        else do
+          logWarning "Some settlement services had failures, but scheduling next run anyway"
+          pure Complete
   where
     getSettlementConfigs ::
       (BeamFlow m r, CacheFlow m r, EsqDBFlow m r) =>

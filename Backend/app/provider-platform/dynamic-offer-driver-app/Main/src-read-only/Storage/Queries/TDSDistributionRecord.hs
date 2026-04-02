@@ -64,7 +64,6 @@ updateByPrimaryKey (Domain.Types.TDSDistributionRecord.TDSDistributionRecord {..
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.quarter quarter,
       Se.Set Beam.retryCount retryCount,
-      Se.Set Beam.s3FilePath s3FilePath,
       Se.Set Beam.status status,
       Se.Set Beam.updatedAt _now
     ]
@@ -85,7 +84,6 @@ instance FromTType' Beam.TDSDistributionRecord Domain.Types.TDSDistributionRecor
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             quarter = quarter,
             retryCount = retryCount,
-            s3FilePath = s3FilePath,
             status = status,
             updatedAt = updatedAt
           }
@@ -103,7 +101,6 @@ instance ToTType' Beam.TDSDistributionRecord Domain.Types.TDSDistributionRecord.
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.quarter = quarter,
         Beam.retryCount = retryCount,
-        Beam.s3FilePath = s3FilePath,
         Beam.status = status,
         Beam.updatedAt = updatedAt
       }

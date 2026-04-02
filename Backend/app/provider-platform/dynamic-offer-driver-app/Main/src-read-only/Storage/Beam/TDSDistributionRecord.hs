@@ -22,7 +22,6 @@ data TDSDistributionRecordT f = TDSDistributionRecordT
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     quarter :: (B.C f Kernel.Prelude.Text),
     retryCount :: (B.C f Kernel.Prelude.Int),
-    s3FilePath :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     status :: (B.C f Domain.Types.TDSDistributionRecord.TDSDistributionStatus),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }

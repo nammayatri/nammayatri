@@ -29,6 +29,7 @@ import qualified Data.Map as M
 import qualified Data.Map.Strict as MS
 import Data.String.Conversions (cs)
 import "dynamic-offer-driver-app" Environment (AppCfg (..))
+import Email.Types (EmailServiceConfig)
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
@@ -139,7 +140,8 @@ data HandlerEnv = HandlerEnv
     dashboardClickhouseCfg :: ClickhouseCfg,
     dashboardClickhouseEnv :: ClickhouseEnv,
     kafkaClickhouseEnv :: ClickhouseEnv,
-    ttenTokenCacheExpiry :: Seconds
+    ttenTokenCacheExpiry :: Seconds,
+    emailServiceConfig :: EmailServiceConfig
   }
   deriving (Generic)
 

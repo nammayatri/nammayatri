@@ -24,7 +24,6 @@ data TDSDistributionRecord = TDSDistributionRecord
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     quarter :: Kernel.Prelude.Text,
     retryCount :: Kernel.Prelude.Int,
-    s3FilePath :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Domain.Types.TDSDistributionRecord.TDSDistributionStatus,
     updatedAt :: Kernel.Prelude.UTCTime
   }

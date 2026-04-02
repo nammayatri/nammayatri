@@ -1199,6 +1199,7 @@ TransporterConfig:
     enableDirectWalletIncentives: Maybe Bool
     driverSearchBlacklistDurationSeconds: Maybe Seconds
     driverRiderBlacklistDurationSeconds: Maybe Seconds
+    tdsFromEmail: Maybe Text
 
   beamType:
     currency: Maybe Currency

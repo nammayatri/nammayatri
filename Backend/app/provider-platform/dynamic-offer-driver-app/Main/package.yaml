@@ -143,6 +143,8 @@ dependencies:
   - text-format
   - scientific
   - hex-text
+  - directory
+  - temporary
 
 ghc-options:
   - -fwrite-ide-info
