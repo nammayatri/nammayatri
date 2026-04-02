@@ -316,7 +316,10 @@ createFullyDiscountedRidePaymentLedger ctx rideFare gstAmount platformFee offerD
                     isExternalCharge = False
                   }
               ],
-          gstBreakdown = Nothing
+          gstBreakdown = Nothing,
+          isVat = False,
+          issuedToTaxNo = Nothing,
+          issuedByTaxNo = Nothing
         }
   case result of
     Left err -> do
