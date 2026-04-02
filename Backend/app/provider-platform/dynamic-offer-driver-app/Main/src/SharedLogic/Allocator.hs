@@ -35,6 +35,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.ScheduledPayout as DSPayout
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Prelude
@@ -473,8 +474,9 @@ instance JobInfoProcessor 'SendFeedbackPN
 
 type instance JobContent 'SendFeedbackPN = SendFeedbackPNJobData
 
-newtype SpecialZonePayoutJobData = SpecialZonePayoutJobData
-  { payoutRequestId :: Id DPR.PayoutRequest
+data SpecialZonePayoutJobData = SpecialZonePayoutJobData
+  { payoutRequestId :: Maybe (Id DPR.PayoutRequest),
+    scheduledPayoutId :: Maybe (Id DSPayout.ScheduledPayout)
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
