@@ -29,6 +29,7 @@ import Data.Maybe
 import Domain.Action.UI.Ride.CancelRide.Internal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.CancellationReason as DTCR
 import qualified Domain.Types.Common as DTC
 -- import Domain.Types.DriverLocation
@@ -81,6 +82,7 @@ import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Person as QPers
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
@@ -190,6 +192,22 @@ cancel req merchant booking mbActiveSearchTry = do
                       QRD.updateCancellationDues (fromMaybe 0 charges' + riderDetails.cancellationDues) riderId
                       when (fromMaybe 0 charges' > 0) $ do
                         QRD.updateCancellationDueRidesCount riderId.getId
+                        cancellationDuesDetailsId <- generateGUID
+                        now <- getCurrentTime
+                        let cancellationDuesDetails =
+                              DCDD.CancellationDuesDetails
+                                { id = cancellationDuesDetailsId,
+                                  rideId = ride.id,
+                                  riderId = riderId,
+                                  cancellationAmount = fromMaybe 0 charges',
+                                  currency = booking.currency,
+                                  paymentStatus = DCDD.PENDING,
+                                  createdAt = now,
+                                  updatedAt = now,
+                                  merchantId = ride.merchantId,
+                                  merchantOperatingCityId = Just ride.merchantOperatingCityId
+                                }
+                        QCDD.create cancellationDuesDetails
                       return charges'
                     else return Nothing
                 Nothing -> return Nothing
