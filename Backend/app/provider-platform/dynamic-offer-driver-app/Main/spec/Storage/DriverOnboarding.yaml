@@ -485,6 +485,10 @@ Image:
       kvFunction: updateWithKV
       params: [merchantId, merchantOperatingCityId]
       where: personId
+    deleteByIdAndPerson:
+      kvFunction: deleteWithKV
+      where:
+        and: [id, personId]
   extraOperations:
     - EXTRA_QUERY_FILE
   domainInstance:

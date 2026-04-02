@@ -19,8 +19,11 @@ import Kernel.Types.Logging
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Error.Throwing (throwError)
 import qualified Storage.Queries.BookingExtra as QBookingE
+import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.RideExtra as QRideE
 import Tools.Constants
+import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Image as Image
 
 isDropInsideThreshold :: DB.Booking -> DTConf.TransporterConfig -> LatLong -> Bool
 isDropInsideThreshold booking thresholdConfig currLoation = do
@@ -63,3 +66,6 @@ extractLocationFromMaps mbRideId rideMap bookingMap = case mbRideId of
           Nothing -> throwError $ BookingDoesNotExist bookingId.getId
       Nothing -> throwError $ RideDoesNotExist rideId.getId
   _ -> pure (Nothing, Nothing)
+
+cleanupUploadedImages :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Image.Image] -> Id Person.Person -> m ()
+cleanupUploadedImages imageIds personId = mapM_ (\imageId -> QImage.deleteByIdAndPerson imageId personId) imageIds
