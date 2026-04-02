@@ -28,6 +28,8 @@ import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
+import qualified Data.HashMap.Strict as HM
+import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -50,7 +52,9 @@ callBasedEndRide ::
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
-    ClickhouseFlow m r
+    ClickhouseFlow m r,
+    HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   EndRide.ServiceHandle m ->
   Id Merchant ->
