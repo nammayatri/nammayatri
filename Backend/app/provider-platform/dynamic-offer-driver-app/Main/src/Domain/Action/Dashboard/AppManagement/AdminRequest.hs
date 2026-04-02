@@ -122,7 +122,7 @@ postAdminRequestCreate merchantShortId opCity requestorId requestorName req = do
                       throwError (InvalidRequest $ "Could not debit more than ride base fare: " <> show baseFare)
 
                 when (reqReferenceType `elem` [SFW.walletReferenceDriverCancellationCharges, SFW.walletReferenceCustomerCancellationCharges]) $
-                  validateCancellationAdjustment reqReferenceType reqAdjustmentType reqAmount.amount req.personId booking
+                  validateCancellationAdjustment transporterConfig reqReferenceType reqAdjustmentType reqAmount.amount req.personId booking
               _ -> throwError (InvalidRequest "Invalid reference table for this action type and reference type")
           _ -> throwError (InvalidRequest $ "Supported reference types for this action type: " <> T.intercalate ", " [SFW.walletReferenceBaseRide, SFW.walletReferenceDriverCancellationCharges, SFW.walletReferenceCustomerCancellationCharges, SFW.walletReferenceWalletIncentive])
         pure (reqAmount.amount, reqAmount.currency)
@@ -192,13 +192,14 @@ buildAdminRequest merchantOpertingCity requestorId adminMakerName amount currenc
       }
 
 validateCancellationAdjustment ::
+  DTC.TransporterConfig ->
   Text ->
   DAdminRequest.AdjustmentType ->
   HighPrecMoney ->
   Id DP.Person ->
   DBooking.Booking ->
   Environment.Flow ()
-validateCancellationAdjustment referenceType adjustmentType amount personId booking = do
+validateCancellationAdjustment transporterConfig referenceType adjustmentType amount personId booking = do
   unless (booking.status == DBooking.CANCELLED) $
     throwError (BookingInvalidStatus "Booking should be CANCELLED")
   ride <- QRide.findOneByBookingId booking.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
@@ -207,9 +208,15 @@ validateCancellationAdjustment referenceType adjustmentType amount personId book
   case referenceType of
     _
       | referenceType == SFW.walletReferenceCustomerCancellationCharges -> do
-        maxAmount <- ride.cancellationChargesOnCancel & fromMaybeM (InternalError "User cancellation amount is not present.")
-        when (adjustmentType == DAdminRequest.Debit && amount > maxAmount) $
-          throwError (InvalidRequest "Could not debit more than cancellation charges")
+        maxAmountWithGst <- ride.cancellationChargesOnCancel & fromMaybeM (InternalError "User cancellation amount is not present.")
+        let mbGstRate = SFC.computeTotalGstRate transporterConfig.taxConfig.rideGst
+            gstPct :: Double = fromMaybe 0.0 mbGstRate
+        let maxAmountExcludingGst =
+              if gstPct > 0
+                then HighPrecMoney $ maxAmountWithGst.getHighPrecMoney / (1 + toRational gstPct)
+                else maxAmountWithGst
+        when (adjustmentType == DAdminRequest.Debit && amount > maxAmountExcludingGst) $ do
+          throwError (InvalidRequest $ "Could not debit more than cancellation charges, exluding gst: " <> show maxAmountExcludingGst)
     _
       | referenceType == SFW.walletReferenceDriverCancellationCharges -> do
         maxAmount <- ride.driverCancellationPenaltyAmount & fromMaybeM (InternalError "Driver cancellation penalty amount is not present.")
@@ -435,21 +442,20 @@ calculateAdjustmentTdsAmount transporterConfig mbPanCard driverInfo ride adjustm
 
 userCancellationRelatedAdjustmnent :: FinanceFlow m r => LedgerAdjustmentParams -> m [(Text, Maybe HighPrecMoney)]
 userCancellationRelatedAdjustmnent LedgerAdjustmentParams {..} = do
-  let adjustmentBaseAmount = adminRequest.amount
-  (baseCancellation, mbGstOnCancellation, mbTdsAmount) <- case adjustmentSource of
+  let baseCancellation = adminRequest.amount
+  (mbGstOnCancellation, mbTdsAmount) <- case adjustmentSource of
     DAdminRequest.BuyerApp -> do
       let mbGstRate = SFC.computeTotalGstRate transporterConfig.taxConfig.rideGst
       let gstPct :: Double = fromMaybe 0.0 mbGstRate
-          mbGstOnCancellation' = if gstPct > 0 then Just $ HighPrecMoney $ adjustmentBaseAmount.getHighPrecMoney * toRational gstPct / (1 + toRational gstPct) else Nothing
-          baseCancellation' = adjustmentBaseAmount - fromMaybe 0 mbGstOnCancellation'
+          mbGstOnCancellation' = if gstPct > 0 then Just $ HighPrecMoney $ baseCancellation.getHighPrecMoney * toRational gstPct else Nothing
           -- TDS on cancellation charges (same rate as ride)
           mbTdsRate = transporterConfig.taxConfig.defaultTdsRate
           mbTdsAmount' = do
             rate <- mbTdsRate
-            let amount = baseCancellation' * realToFrac rate
+            let amount = baseCancellation * realToFrac rate
             if amount > 0 then Just amount else Nothing
-      pure (baseCancellation', mbGstOnCancellation', mbTdsAmount')
-    DAdminRequest.Internal -> pure (adjustmentBaseAmount, Nothing, Nothing)
+      pure (mbGstOnCancellation', mbTdsAmount')
+    DAdminRequest.Internal -> pure (Nothing, Nothing)
 
   let cancellationComponents =
         [(baseCancellation, SFW.walletReferenceCustomerCancellationCharges, Finance.OwnerLiability)]
