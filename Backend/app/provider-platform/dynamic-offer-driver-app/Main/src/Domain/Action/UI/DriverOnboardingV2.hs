@@ -1260,8 +1260,6 @@ getDriverFleetRcs (mbDriverId, _, merchantOpCityId) limit offset = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   driverLinkedRcs <- DAQuery.findAllLinkedByDriverId driverId
-  let driverRcIds = map (.rcId) driverLinkedRcs
-  driverRcs <- RCQuery.findAllById driverRcIds
   fleetRcs <-
     if transporterConfig.allowDriverToUseFleetRcs == Just True
       then do
@@ -1272,9 +1270,8 @@ getDriverFleetRcs (mbDriverId, _, merchantOpCityId) limit offset = do
             let fleetOwnerId = fleetDriverAssociation.fleetOwnerId
             RCQuery.findAllByFleetOwnerId effectiveLimit offset (Just fleetOwnerId)
       else pure []
-  let allRcs = DL.nubBy (\a b -> a.id == b.id) (driverRcs <> fleetRcs)
-      activeRcId = fmap (.rcId) . DL.find (.isRcActive) $ driverLinkedRcs
-  rcs <- mapM (getCombinedRcData activeRcId) allRcs
+  let activeRcId = fmap (.rcId) . DL.find (.isRcActive) $ driverLinkedRcs
+  rcs <- mapM (getCombinedRcData activeRcId) fleetRcs
   return $ APITypes.FleetRCListRes rcs
   where
     getCombinedRcData activeRcId rc = do
