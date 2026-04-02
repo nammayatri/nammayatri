@@ -71,9 +71,13 @@ createInvoice input entryIds = do
   invoiceNum <- generateInvoiceNumber input.merchantShortId purposeAbbr typePayment now dbFallback
 
   -- Calculate totals from line items
+  -- subtotal: excludes external charges (toll, parking) and tax line items
+  -- totalAmount: sum of all line items (what rider pays)
   let lineItemsJson = Aeson.toJSON input.lineItems
-      subtotal = sum $ map (.lineTotal) input.lineItems
-      totalAmount = subtotal
+      totalAmount = sum $ map (.lineTotal) input.lineItems
+      externalTotal = sum $ map (.lineTotal) $ filter (.isExternalCharge) input.lineItems
+      taxTotal = sum $ map (.lineTotal) $ filter (\li -> li.description == "Tax") input.lineItems
+      subtotal = totalAmount - externalTotal - taxTotal
   let invoice =
         Invoice
           { id = Id invoiceId,
@@ -91,6 +95,7 @@ createInvoice input entryIds = do
             supplierName = input.supplierName,
             supplierAddress = input.supplierAddress,
             supplierGSTIN = input.supplierGSTIN,
+            supplierTaxNo = input.supplierTaxNo,
             supplierId = input.supplierId,
             lineItems = lineItemsJson,
             subtotal = subtotal,
@@ -123,7 +128,7 @@ createInvoice input entryIds = do
             }
     QLink.create link
 
-  -- Create IndirectTaxTransaction for GST entries (toAccount is GOVERNMENT_INDIRECT)
+  -- Create IndirectTaxTransaction for GST/VAT entries (toAccount is GOVERNMENT_INDIRECT)
   -- Create DirectTaxTransaction for TDS entries (toAccount is GOVERNMENT_DIRECT)
   entries <- catMaybes <$> mapM QLedger.findById entryIds
   forM_ entries $ \entry -> do
@@ -133,21 +138,25 @@ createInvoice input entryIds = do
         | toAccount.counterpartyType == Just GOVERNMENT_INDIRECT -> do
           let extCharges = sum $ map (.lineTotal) $ filter (.isExternalCharge) input.lineItems
               txnType = invoiceTypeToTransactionType input.invoiceType
+              isVat = input.isVat
               indirectTaxInput =
                 IndirectTaxInput
                   { transactionType = txnType,
                     referenceId = entry.referenceId,
-                    taxableValue = subtotal - entry.amount - extCharges,
-                    totalGstAmount = entry.amount,
+                    taxableValue = totalAmount - entry.amount - extCharges,
+                    totalTaxAmount = entry.amount,
                     gstBreakdown = input.gstBreakdown,
-                    gstCreditType = Output,
+                    taxCreditType = Output,
                     counterpartyId = input.issuedToId,
-                    gstinOfParty = input.gstinOfParty,
-                    sacCode = Just (sacCodeForTransactionType txnType),
+                    gstinOfParty = if isVat then Nothing else input.gstinOfParty,
+                    sacCode = if isVat then Nothing else Just (sacCodeForTransactionType txnType),
                     externalCharges = Just extCharges,
                     invoiceNumber = Just invoiceNum,
                     merchantId = input.merchantId,
-                    merchantOperatingCityId = input.merchantOperatingCityId
+                    merchantOperatingCityId = input.merchantOperatingCityId,
+                    isVat = isVat,
+                    issuedToTaxNo = input.issuedToTaxNo,
+                    issuedByTaxNo = input.issuedByTaxNo
                   }
           void $ createIndirectTaxEntry indirectTaxInput
         | toAccount.counterpartyType == Just GOVERNMENT_DIRECT -> do
@@ -160,7 +169,7 @@ createInvoice input entryIds = do
                 DirectTaxInput
                   { transactionType = txnType,
                     referenceId = entry.referenceId,
-                    grossAmount = subtotal - extCharges - gstAmount,
+                    grossAmount = totalAmount - extCharges - gstAmount,
                     tdsAmount = entry.amount,
                     tdsTreatment = DirectTax.Deducted,
                     counterpartyId = input.counterpartyId,
@@ -178,7 +187,9 @@ createInvoice input entryIds = do
 
   pure $ Right invoice
 
--- | Create a standalone indirect tax (GST) transaction without an invoice.
+-- | Create a standalone indirect tax (GST/VAT) transaction without an invoice.
+--   When isVat=True, GST-specific columns are zeroed out and new generic columns are populated.
+--   When isVat=False, both old GST columns and new generic columns are populated with the same values.
 createIndirectTaxEntry ::
   (BeamFlow.BeamFlow m r) =>
   IndirectTaxInput ->
@@ -186,17 +197,22 @@ createIndirectTaxEntry ::
 createIndirectTaxEntry input = do
   now <- getCurrentTime
   taxTxnId <- generateGUID
-  let gstAmount = input.totalGstAmount
-      (cgstAmt, sgstAmt, igstAmt) = case input.gstBreakdown of
-        Just breakdown ->
-          ( fromMaybe 0 breakdown.cgstAmount,
-            fromMaybe 0 breakdown.sgstAmount,
-            fromMaybe 0 breakdown.igstAmount
-          )
-        Nothing ->
-          let cg = gstAmount / 2.0
-           in (cg, gstAmount - cg, 0)
-      gstRate = if input.taxableValue > 0 then realToFrac (gstAmount / input.taxableValue) * 100.0 else 0.0
+  let taxAmount = input.totalTaxAmount
+      -- GST-specific fields: zero for VAT, normal split for GST
+      (cgstAmt, sgstAmt, igstAmt) =
+        if input.isVat
+          then (0, 0, 0) -- no CGST/SGST/IGST for VAT
+          else case input.gstBreakdown of
+            Just breakdown ->
+              ( fromMaybe 0 breakdown.cgstAmount,
+                fromMaybe 0 breakdown.sgstAmount,
+                fromMaybe 0 breakdown.igstAmount
+              )
+            Nothing ->
+              let cg = taxAmount / 2.0
+               in (cg, taxAmount - cg, 0)
+      computedTaxRate = if input.taxableValue > 0 then realToFrac (taxAmount / input.taxableValue) * 100.0 else 0.0
+      saleType = if input.isVat then Nothing else Just (if isJust input.gstinOfParty then B2B else B2C)
       taxTxn =
         IndirectTaxTransaction
           { id = Id taxTxnId,
@@ -204,18 +220,26 @@ createIndirectTaxEntry input = do
             transactionType = input.transactionType,
             referenceId = input.referenceId,
             taxableValue = input.taxableValue,
-            gstRate = gstRate,
+            -- OLD GST columns (backward compat: zeroed for VAT)
+            gstRate = if input.isVat then 0 else computedTaxRate,
             cgstAmount = cgstAmt,
             sgstAmount = sgstAmt,
             igstAmount = igstAmt,
-            totalGstAmount = gstAmount,
-            gstCreditType = input.gstCreditType,
-            counterpartyId = input.counterpartyId,
+            totalGstAmount = if input.isVat then 0 else taxAmount,
+            gstCreditType = input.taxCreditType,
             gstinOfParty = input.gstinOfParty,
-            saleType = if isJust input.gstinOfParty then B2B else B2C,
+            saleType = saleType,
+            sacCode = input.sacCode,
+            -- NEW generic columns (filled for both GST and VAT)
+            taxRate = Just computedTaxRate,
+            taxCreditType = Just input.taxCreditType,
+            issuedToTaxNo = input.issuedToTaxNo,
+            issuedByTaxNo = input.issuedByTaxNo,
+            totalTaxAmount = Just taxAmount,
+            -- Unchanged fields
+            counterpartyId = input.counterpartyId,
             invoiceNumber = input.invoiceNumber,
             creditOrDebitNoteNumber = Nothing,
-            sacCode = input.sacCode,
             externalCharges = input.externalCharges,
             merchantId = input.merchantId,
             merchantOperatingCityId = input.merchantOperatingCityId,

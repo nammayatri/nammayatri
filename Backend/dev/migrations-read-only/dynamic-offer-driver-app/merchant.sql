@@ -75,3 +75,8 @@ ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN signing_public_key SET 
 ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN signing_private_key SET DEFAULT '';
 ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN signature_expiry SET DEFAULT 300;
 ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN signature_expiry SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN vat_number text ;

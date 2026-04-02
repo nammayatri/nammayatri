@@ -28,3 +28,14 @@ ALTER TABLE atlas_driver_offer_bpp.indirect_tax_transaction ADD PRIMARY KEY ( id
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.indirect_tax_transaction ADD COLUMN external_charges double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.indirect_tax_transaction ALTER COLUMN sale_type SET DEFAULT 'B2C';
+ALTER TABLE atlas_driver_offer_bpp.indirect_tax_transaction ALTER COLUMN sale_type DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.indirect_tax_transaction ADD COLUMN total_tax_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.indirect_tax_transaction ADD COLUMN tax_rate double precision ;
+ALTER TABLE atlas_driver_offer_bpp.indirect_tax_transaction ADD COLUMN tax_credit_type text ;
+ALTER TABLE atlas_driver_offer_bpp.indirect_tax_transaction ADD COLUMN issued_to_tax_no text ;
+ALTER TABLE atlas_driver_offer_bpp.indirect_tax_transaction ADD COLUMN issued_by_tax_no text ;

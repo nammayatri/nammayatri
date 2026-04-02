@@ -79,6 +79,8 @@ import SharedLogic.Finance.Wallet
     walletReferenceTDSDeductionCash,
     walletReferenceTDSDeductionOnline,
     walletReferenceTollCharges,
+    walletReferenceVATCash,
+    walletReferenceVATOnline,
   )
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareParameters as QFareParams
@@ -223,6 +225,8 @@ dsrVsLedgerRefTypes =
   [ walletReferenceBaseRide,
     walletReferenceGSTOnline,
     walletReferenceGSTCash,
+    walletReferenceVATOnline,
+    walletReferenceVATCash,
     walletReferenceCustomerCancellationCharges,
     walletReferenceDriverCancellationCharges,
     walletReferenceCustomerCancellationGST,
@@ -358,7 +362,7 @@ firstMismatch [] = (ReconSummary.MATCHED, Nothing)
 firstMismatch (Nothing : rest) = firstMismatch rest
 firstMismatch (Just (st, reason) : _) = (st, Just reason)
 
--- | Online completed ride: compare BaseRide, GSTOnline, TollCharges, ParkingCharges, and TDS.
+-- | Online completed ride: compare BaseRide, Tax (GST/VAT), TollCharges, ParkingCharges, and TDS.
 processOnlineCompleted ::
   Maybe HighPrecMoney ->
   Maybe LedgerEntry.LedgerEntry ->
@@ -371,30 +375,30 @@ processOnlineCompleted ::
   Maybe HighPrecMoney ->
   Maybe LedgerEntry.LedgerEntry ->
   (ReconSummary.ReconciliationStatus, Maybe Text)
-processOnlineCompleted expectedGross baseRideEntry expectedGst gstOnlineEntry expectedToll tollEntry expectedParking parkingEntry expectedTds tdsOnlineEntry =
+processOnlineCompleted expectedGross baseRideEntry expectedTax taxOnlineEntry expectedToll tollEntry expectedParking parkingEntry expectedTds tdsOnlineEntry =
   firstMismatch
     [ compareMaybe "BaseRide" expectedGross (baseRideEntry <&> (.amount)),
-      compareMaybe "GSTOnline" expectedGst (gstOnlineEntry <&> (.amount)),
+      compareMaybe "TaxOnline" expectedTax (taxOnlineEntry <&> (.amount)),
       compareMaybe "TollCharges" expectedToll (tollEntry <&> (.amount)),
       compareMaybe "ParkingCharges" expectedParking (parkingEntry <&> (.amount)),
       compareMaybe "TDSOnline" expectedTds (tdsOnlineEntry <&> (.amount))
     ]
 
--- | Cash completed ride: compare GSTCash vs expectedGst, and TDSCash vs expectedTds.
+-- | Cash completed ride: compare Tax (GST/VAT) vs expectedTax, and TDS vs expectedTds.
 processCashCompleted ::
   Maybe HighPrecMoney ->
   Maybe LedgerEntry.LedgerEntry ->
   Maybe HighPrecMoney ->
   Maybe LedgerEntry.LedgerEntry ->
   (ReconSummary.ReconciliationStatus, Maybe Text)
-processCashCompleted expectedGst gstCashEntry expectedTds tdsCashEntry =
+processCashCompleted expectedTax taxCashEntry expectedTds tdsCashEntry =
   firstMismatch
-    [ compareMaybe "GSTCash" expectedGst (gstCashEntry <&> (.amount)),
+    [ compareMaybe "TaxCash" expectedTax (taxCashEntry <&> (.amount)),
       compareMaybe "TDSCash" expectedTds (tdsCashEntry <&> (.amount))
     ]
 
 -- | Cancelled ride: compare cancellation charges.
--- Customer: ride.cancellationChargesOnCancel vs (custCancelEntry + custCancelGstEntry), expectedGst vs custCancelGstEntry
+-- Customer: ride.cancellationChargesOnCancel vs (custCancelEntry + custCancelGstEntry), expectedTax vs custCancelGstEntry
 -- Driver: ride.driverCancellationPenaltyAmount vs driverCancelEntry
 processCancelled ::
   Maybe HighPrecMoney -> -- expectedCustCancelTotal (ride.cancellationChargesOnCancel)
@@ -402,17 +406,17 @@ processCancelled ::
   Maybe LedgerEntry.LedgerEntry -> -- custCancelGstEntry
   Maybe HighPrecMoney -> -- expectedDriverCancelPenalty (ride.driverCancellationPenaltyAmount)
   Maybe LedgerEntry.LedgerEntry -> -- driverCancelEntry
-  Maybe HighPrecMoney -> -- expectedGst (for customer cancellation GST check)
+  Maybe HighPrecMoney -> -- expectedTax (for customer cancellation GST check)
   Maybe HighPrecMoney -> -- expectedTds (for TDS on cancellation)
   Maybe LedgerEntry.LedgerEntry -> -- tdsCancelEntry
   (ReconSummary.ReconciliationStatus, Maybe Text)
-processCancelled expectedCustTotal custCancelEntry custCancelGstEntry expectedDriverPenalty driverCancelEntry expectedGst expectedTds tdsCancelEntry =
+processCancelled expectedCustTotal custCancelEntry custCancelGstEntry expectedDriverPenalty driverCancelEntry expectedTax expectedTds tdsCancelEntry =
   case (custCancelEntry <&> (.amount), driverCancelEntry <&> (.amount)) of
     (Just custAmt, _) ->
       let actualTotal = custAmt + fromMaybe 0 (custCancelGstEntry <&> (.amount))
        in firstMismatch
             [ compareMaybe "CustomerCancellationTotal" expectedCustTotal (Just actualTotal),
-              compareMaybe "CustomerCancellationGST" expectedGst (custCancelGstEntry <&> (.amount)),
+              compareMaybe "CustomerCancellationGST" expectedTax (custCancelGstEntry <&> (.amount)),
               compareMaybe "TDSCancellation" expectedTds (tdsCancelEntry <&> (.amount))
             ]
     (_, Just driverAmt) ->
@@ -447,6 +451,8 @@ runDsrVsLedgerComparison booking mbRide mbRideFareParams ledgerEntries indirectT
       baseRideEntry = findLedgerEntry walletReferenceBaseRide ledgerEntries
       gstOnlineEntry = findLedgerEntry walletReferenceGSTOnline ledgerEntries
       gstCashEntry = findLedgerEntry walletReferenceGSTCash ledgerEntries
+      vatOnlineEntry = findLedgerEntry walletReferenceVATOnline ledgerEntries
+      vatCashEntry = findLedgerEntry walletReferenceVATCash ledgerEntries
       custCancelEntry = findLedgerEntry walletReferenceCustomerCancellationCharges ledgerEntries
       driverCancelEntry = findLedgerEntry walletReferenceDriverCancellationCharges ledgerEntries
       custCancelGstEntry = findLedgerEntry walletReferenceCustomerCancellationGST ledgerEntries
@@ -456,11 +462,15 @@ runDsrVsLedgerComparison booking mbRide mbRideFareParams ledgerEntries indirectT
       tdsCashEntry = findLedgerEntry walletReferenceTDSDeductionCash ledgerEntries
       tdsCancelEntry = findLedgerEntry walletReferenceTDSDeductionCancellation ledgerEntries
 
-      -- Expected values from DSR
+      -- Expected values from DSR (use totalTaxAmount if available, fallback to totalGstAmount)
       relevantType = case booking.status of
         DB.COMPLETED -> IndirectTax.RideFare
         _ -> IndirectTax.Cancellation
-      expectedGst = (.totalGstAmount) <$> find (\t -> t.transactionType == relevantType) indirectTaxTxns
+      mbTaxTxn = find (\t -> t.transactionType == relevantType) indirectTaxTxns
+      expectedTax = do
+        txn <- mbTaxTxn
+        -- Prefer totalTaxAmount (new generic col), fallback to totalGstAmount (old col)
+        txn.totalTaxAmount <|> Just txn.totalGstAmount
 
       -- Expected TDS from direct tax transaction table
       directTaxRelevantType = case booking.status of
@@ -481,13 +491,17 @@ runDsrVsLedgerComparison booking mbRide mbRideFareParams ledgerEntries indirectT
       expectedCustTotal = mbRide >>= (.cancellationChargesOnCancel)
       expectedDriverPenalty = mbRide >>= (.driverCancellationPenaltyAmount)
 
+      -- Determine which tax entry to compare: use GST entry if present, else VAT entry
+      taxOnlineEntry = gstOnlineEntry <|> vatOnlineEntry
+      taxCashEntry = gstCashEntry <|> vatCashEntry
+
       -- Run comparison
       (st, reason) = case booking.status of
         DB.COMPLETED -> case mode of
-          Just ReconEntry.ONLINE -> processOnlineCompleted expectedGross baseRideEntry expectedGst gstOnlineEntry expectedToll tollEntry expectedParking parkingEntry expectedTds tdsOnlineEntry
-          Just ReconEntry.CASH -> processCashCompleted expectedGst gstCashEntry expectedTds tdsCashEntry
+          Just ReconEntry.ONLINE -> processOnlineCompleted expectedGross baseRideEntry expectedTax taxOnlineEntry expectedToll tollEntry expectedParking parkingEntry expectedTds tdsOnlineEntry
+          Just ReconEntry.CASH -> processCashCompleted expectedTax taxCashEntry expectedTds tdsCashEntry
           Nothing -> (ReconSummary.MISSING_IN_TARGET, Just reasonUnknownRideMode)
-        DB.CANCELLED -> processCancelled expectedCustTotal custCancelEntry custCancelGstEntry expectedDriverPenalty driverCancelEntry expectedGst expectedTds tdsCancelEntry
+        DB.CANCELLED -> processCancelled expectedCustTotal custCancelEntry custCancelGstEntry expectedDriverPenalty driverCancelEntry expectedTax expectedTds tdsCancelEntry
         _ -> (ReconSummary.MISSING_IN_TARGET, Just reasonUnsupportedBookingStatus)
 
       -- Determine finance component based on booking status and cancellation type
@@ -502,7 +516,7 @@ runDsrVsLedgerComparison booking mbRide mbRideFareParams ledgerEntries indirectT
       -- Stored values for entry
       (expStored, actStored) = case (booking.status, mode) of
         (DB.COMPLETED, Just ReconEntry.CASH) ->
-          (fromMaybe 0 expectedGst, fromMaybe 0 $ gstCashEntry <&> (.amount))
+          (fromMaybe 0 expectedTax, fromMaybe 0 $ taxCashEntry <&> (.amount))
         (DB.CANCELLED, _) ->
           let custTotal = (+ fromMaybe 0 (custCancelGstEntry <&> (.amount))) <$> (custCancelEntry <&> (.amount))
            in ( fromMaybe 0 $ expectedCustTotal <|> expectedDriverPenalty,

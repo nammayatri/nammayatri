@@ -20,6 +20,7 @@ FleetOwnerInformation:
     isEligibleForSubscription: Bool
     gstNumber: Maybe (EncryptedHashedField e Text)
     gstNumberDec: Maybe Text # for backward compatibilty
+    vatNumber: Maybe Text
     panNumber: Maybe (EncryptedHashedField e Text)
     panNumberDec: Maybe Text # for backward compatibilty
     tdsRate: Maybe Double

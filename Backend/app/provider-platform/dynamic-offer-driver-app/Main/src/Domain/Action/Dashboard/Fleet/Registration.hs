@@ -216,6 +216,7 @@ createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGst
             fleetDob = Nothing,
             gstNumber = mbGstNumberEnc,
             gstNumberDec = Nothing,
+            vatNumber = Nothing,
             gstImageId = Nothing,
             createdAt = now,
             updatedAt = now,

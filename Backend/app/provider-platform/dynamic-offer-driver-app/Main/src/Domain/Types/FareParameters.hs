@@ -69,9 +69,10 @@ data FareParameters = FareParameters
     -- | Payment processing fee (blended or method-specific)
     -- TODO: Will be enhanced when payment context is available
     paymentProcessingFee :: Maybe HighPrecMoney,
-    -- | VAT charge calculated based on vat_charge_config in fare_policy
-    -- Populated by calculateFareParametersV2. Included in pureFareSum.
-    rideVat :: Maybe HighPrecMoney,
+    -- | Whether this ride uses VAT tax model (instead of GST).
+    -- Set by calculateFareParametersV2: Just True when fare_policy.vatChargeConfig is present.
+    -- Nothing or Just False = GST (default). Used downstream (EndRide, invoicing).
+    isVatTaxType :: Maybe Bool,
     -- | VAT on toll charges calculated based on toll_tax_charge_config in fare_policy
     -- Populated by calculateFareParametersV2. Included in pureFareSum.
     tollVat :: Maybe HighPrecMoney

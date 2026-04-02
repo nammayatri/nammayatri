@@ -159,3 +159,9 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN payout_reg
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN vat_number text ;

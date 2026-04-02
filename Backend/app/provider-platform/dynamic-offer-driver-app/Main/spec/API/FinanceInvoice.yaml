@@ -30,10 +30,14 @@ types:
     supplierAddress: Maybe Text
     supplierName: Maybe Text
     supplierGSTIN: Maybe Text
+    supplierTaxNo: Maybe Text
     gstinOfParty: Maybe Text
     sacCode: Maybe Text
     lineItems: Maybe Value
     totalCredit: Maybe HighPrecMoney
+    taxRate: Maybe Double
+    issuedToTaxNo: Maybe Text
+    issuedByTaxNo: Maybe Text
   FinanceInvoiceListRes:
     invoices: "[FinanceInvoiceItem]"
     totalItems: Int

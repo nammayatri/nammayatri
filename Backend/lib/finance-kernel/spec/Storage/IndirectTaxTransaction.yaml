@@ -36,11 +36,16 @@ IndirectTaxTransaction:
     gstCreditType: GstCreditType
     counterpartyId: Text
     gstinOfParty: Maybe Text
-    saleType: SaleType
+    saleType: Maybe SaleType
     invoiceNumber: Maybe Text
     creditOrDebitNoteNumber: Maybe Text
     sacCode: Maybe Text
     externalCharges: Maybe HighPrecMoney
+    taxRate: Maybe Double
+    taxCreditType: Maybe GstCreditType
+    issuedToTaxNo: Maybe Text
+    issuedByTaxNo: Maybe Text
+    totalTaxAmount: Maybe HighPrecMoney
     merchantId: Text
     merchantOperatingCityId: Text
     createdAt: UTCTime
@@ -64,6 +69,9 @@ IndirectTaxTransaction:
     findByTransactionDate:
       kvFunction: findAllWithKV
       where: transactionDate
+
+  default:
+    saleType: "'B2C'"
 
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

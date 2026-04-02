@@ -181,7 +181,10 @@ accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterC
                     gstBreakdown = Nothing,
                     lineItems =
                       [ InvoiceLineItem {description = "Driver Cancellation Penalty", quantity = 1, unitPrice = penaltyAmount, lineTotal = penaltyAmount, isExternalCharge = False}
-                      ]
+                      ],
+                    isVat = False,
+                    issuedToTaxNo = Nothing,
+                    issuedByTaxNo = Nothing
                   }
             case result of
               Left err -> fromEitherM (\e -> InternalError ("Failed to create DriverCancellationCharges: " <> show e)) (Left err)

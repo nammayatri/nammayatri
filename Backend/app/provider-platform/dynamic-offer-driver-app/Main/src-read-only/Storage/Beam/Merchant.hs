@@ -53,6 +53,7 @@ data MerchantT f = MerchantT
     toTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     uniqueKeyId :: B.C f Kernel.Prelude.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vatNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     verified :: B.C f Kernel.Prelude.Bool
   }
   deriving (Generic, B.Beamable)

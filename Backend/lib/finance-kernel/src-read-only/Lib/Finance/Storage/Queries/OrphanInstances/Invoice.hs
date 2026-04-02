@@ -42,6 +42,7 @@ instance FromTType' Beam.Invoice Lib.Finance.Domain.Types.Invoice.Invoice where
             supplierGSTIN = supplierGSTIN,
             supplierId = supplierId,
             supplierName = supplierName,
+            supplierTaxNo = supplierTaxNo,
             taxBreakdown = taxBreakdown,
             totalAmount = totalAmount,
             updatedAt = updatedAt
@@ -75,6 +76,7 @@ instance ToTType' Beam.Invoice Lib.Finance.Domain.Types.Invoice.Invoice where
         Beam.supplierGSTIN = supplierGSTIN,
         Beam.supplierId = supplierId,
         Beam.supplierName = supplierName,
+        Beam.supplierTaxNo = supplierTaxNo,
         Beam.taxBreakdown = taxBreakdown,
         Beam.totalAmount = totalAmount,
         Beam.updatedAt = updatedAt

@@ -77,6 +77,7 @@ data InvoiceListItem = InvoiceListItem
     supplierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     supplierAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     supplierGstin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    supplierTaxNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedToName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedToAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedByName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -86,7 +87,10 @@ data InvoiceListItem = InvoiceListItem
     paymentMethod :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     taxableValueOfServiceSupplied :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     lineItems :: Data.Aeson.Value,
-    generatedAt :: Kernel.Prelude.UTCTime
+    generatedAt :: Kernel.Prelude.UTCTime,
+    taxRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    issuedToTaxNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    issuedByTaxNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

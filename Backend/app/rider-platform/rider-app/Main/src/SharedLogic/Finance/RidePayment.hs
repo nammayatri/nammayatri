@@ -140,6 +140,10 @@ buildRiderFinanceCtx merchantId merchantOpCityId currency riderId referenceId me
       issuedByAddress = Nothing,
       supplierName = Nothing,
       supplierGSTIN = Nothing,
+      merchantGstin = Nothing,
+      supplierVatNumber = Nothing,
+      supplierAddress = Nothing,
+      merchantVatNumber = Nothing,
       supplierId = Nothing,
       panOfParty = Nothing,
       panType = Nothing,
@@ -226,7 +230,10 @@ createRidePaymentLedger ctx rideFare gstAmount platformFee offerDiscountAmount c
                     isExternalCharge = False
                   }
               ],
-          gstBreakdown = Nothing
+          gstBreakdown = Nothing,
+          isVat = False,
+          issuedToTaxNo = Nothing,
+          issuedByTaxNo = Nothing
         }
   case result of
     Left err -> do
@@ -432,7 +439,10 @@ createCancellationFeeLedger ctx cancellationFee cancellationGST = do
                     isExternalCharge = False
                   }
               ],
-          gstBreakdown = Nothing
+          gstBreakdown = Nothing,
+          isVat = False,
+          issuedToTaxNo = Nothing,
+          issuedByTaxNo = Nothing
         }
   case result of
     Left err -> do

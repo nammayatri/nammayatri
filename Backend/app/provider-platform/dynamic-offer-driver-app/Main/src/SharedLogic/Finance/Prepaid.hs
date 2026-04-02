@@ -570,6 +570,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                     supplierName = Nothing,
                     supplierAddress = Nothing,
                     supplierGSTIN = Nothing,
+                    supplierTaxNo = Nothing,
                     supplierId = Nothing,
                     gstinOfParty = invoiceParams.gstinOfParty,
                     panOfParty = panDecrypted,
@@ -609,7 +610,11 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                     dueAt = Nothing,
                     merchantId = merchantId,
                     merchantOperatingCityId = merchantOperatingCityId,
-                    merchantShortId = invoiceParams.merchantShortId
+                    merchantShortId = invoiceParams.merchantShortId,
+                    -- Subscription purchases are always GST (not VAT)
+                    isVat = False,
+                    issuedToTaxNo = invoiceParams.gstinOfParty,
+                    issuedByTaxNo = Nothing
                   }
           invoiceResult <- createInvoice invoiceInput entryIds
           case invoiceResult of

@@ -38,6 +38,7 @@ data InvoiceT f = InvoiceT
     supplierGSTIN :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     supplierId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     supplierName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    supplierTaxNo :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     taxBreakdown :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     totalAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime)
