@@ -120,7 +120,7 @@ getOrCreatePaymentCustomer person = do
         -- Create a customer in payment service if not there
         mbEmailDecrypted <- mapM decrypt person.email
         phoneDecrypted <- mapM decrypt person.mobileNumber
-        let req = CreateCustomerReq {email = mbEmailDecrypted, name = person.firstName, phone = phoneDecrypted, lastName = Nothing, objectReferenceId = Nothing, mobileCountryCode = Nothing, optionsGetClientAuthToken = Nothing}
+        let req = CreateCustomerReq {email = mbEmailDecrypted, name = person.firstName, phone = phoneDecrypted, lastName = Nothing, objectReferenceId = Just person.id.getId, mobileCountryCode = Nothing, optionsGetClientAuthToken = Nothing}
         customerResp <- TPayment.createCustomer person.merchantId person.merchantOperatingCityId person.paymentMode req
         paymentCustomer <- buildCreateCustomer person.id customerResp paymentMode
         QPaymentCustomer.create paymentCustomer

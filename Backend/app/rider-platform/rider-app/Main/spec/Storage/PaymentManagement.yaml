@@ -48,5 +48,6 @@ PaymentCustomer:
   constraints:
     customerId: PrimaryKey
     paymentMode: PrimaryKey
+    personId: "!SecondaryKey"
 
   excludedFields: [merchantId, merchantOperatingCityId]
