@@ -8,7 +8,7 @@ SpecialZoneQueueRequest:
 
   types:
     SpecialZoneQueueRequestStatus:
-      enum: "Active, Expired"
+      enum: "Active, Accepted, Expired"
     SpecialZoneQueueRequestResponse:
       enum: "Accept, Reject, Ignored, NoShow"
 
