@@ -85,14 +85,13 @@ data OffersRespAPIEntity = OffersRespAPIEntity
 isDomainOffersEnabled :: DOrder.PaymentServiceType -> Bool
 isDomainOffersEnabled paymentServiceType = paymentServiceType `elem` [DOrder.OnlineRideHailing, DOrder.RideHailing]
 
-invalidateOfferListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> m ()
+invalidateOfferListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> m ()
 invalidateOfferListCache person merchantOperatingCityId paymentServiceType price = do
   riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
   req <- mkOfferListReq person price
   let customerId = fromMaybe person.id.getId (req.customer <&> (.customerId))
       version = fromMaybe "N/A" riderConfig.offerListCacheVersion
-  let mbAmount = if isDomainOffersEnabled paymentServiceType then Just price.amount else Nothing
-  DPayment.invalidateOfferListCacheService customerId version paymentServiceType mbAmount
+  DPayment.invalidateOfferListCacheService customerId version paymentServiceType
 
 offerListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> m Payment.OfferListResp
 offerListCache merchantId personId merchantOperatingCityId paymentServiceType price = do
@@ -116,10 +115,10 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
                         "personStats" A..= mbPersonStats
                       ]
             DPayment.listDomainOffers merchantId.getId merchantOperatingCityId.getId price.amount price.currency domainContext
-      DPayment.offerListService customerId version paymentServiceType (Just price.amount) (6 * 3600) domainOfferCall req
+      DPayment.offerListService customerId version paymentServiceType (6 * 3600) False domainOfferCall req
     else do
       let offerListCall = TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType (Just customerId) person.clientSdkVersion
-      DPayment.offerListService customerId version paymentServiceType Nothing (31 * 86400) offerListCall req
+      DPayment.offerListService customerId version paymentServiceType (31 * 86400) True offerListCall req
 
 selectedOfferListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> Text -> m Payment.OfferListResp
 selectedOfferListCache merchantId personId merchantOperatingCityId paymentServiceType price offerId = do

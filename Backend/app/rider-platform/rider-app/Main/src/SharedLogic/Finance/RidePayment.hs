@@ -22,6 +22,7 @@ module SharedLogic.Finance.RidePayment
     ridePaymentRefCancellationFee,
     ridePaymentRefCancellationGST,
     ridePaymentRefOfferDiscount,
+    ridePaymentRefCashbackPayout,
 
     -- * Settlement reason constants
     settledReasonRidePayment,
@@ -33,6 +34,7 @@ module SharedLogic.Finance.RidePayment
 
     -- * Ledger operations
     createRidePaymentLedger,
+    createFullyDiscountedRidePaymentLedger,
     settleRidePaymentLedger,
     voidRidePaymentLedger,
     createTipLedger,
@@ -85,6 +87,9 @@ ridePaymentRefCancellationGST = "CancellationGST"
 
 ridePaymentRefOfferDiscount :: Text
 ridePaymentRefOfferDiscount = "OfferDiscount"
+
+ridePaymentRefCashbackPayout :: Text
+ridePaymentRefCashbackPayout = "CashbackPayout"
 
 -- ---------------------------------------------------------------------------
 -- Settlement reason constants
@@ -154,21 +159,117 @@ createRidePaymentLedger ::
   HighPrecMoney -> -- rideFare (without GST)
   HighPrecMoney -> -- gstAmount
   HighPrecMoney -> -- platformFee (application fee / commission)
-  HighPrecMoney -> -- offerDiscountAmount (marketplace absorbs, 0 for no offer or CASHBACK)
+  HighPrecMoney -> -- offerDiscountAmount (charge reduction, 0 for CASHBACK)
+  HighPrecMoney -> -- cashbackPayoutAmount (amount to pay back to rider, 0 for DISCOUNT)
   m (Either FinanceError RidePaymentLedgerResult)
-createRidePaymentLedger ctx rideFare gstAmount platformFee offerDiscountAmount = do
+createRidePaymentLedger ctx rideFare gstAmount platformFee offerDiscountAmount cashbackPayoutAmount = do
   result <- runFinance ctx $ do
     -- PENDING entries: Liability(RIDER) → Asset(BUYER) for full fare
     _ <- transferPending OwnerLiability BuyerAsset rideFare ridePaymentRefRideFare
     _ <- transferPending OwnerLiability BuyerAsset gstAmount ridePaymentRefGST
     _ <- transferPending OwnerLiability BuyerAsset platformFee ridePaymentRefPlatformFee
 
-    -- Offer discount: Asset(BUYER) → Liability(BUYER) — marketplace absorbs the cost
+    -- Offer discount: Asset(BUYER) → Liability(BUYER) — marketplace absorbs the charge reduction
     when (offerDiscountAmount > 0) $ do
       _ <- transferPending BuyerAsset OwnerLiability offerDiscountAmount ridePaymentRefOfferDiscount
       pure ()
 
+    -- Cashback payout: Liability(BUYER) → Asset(RIDER) — marketplace owes rider a cashback
+    when (cashbackPayoutAmount > 0) $ do
+      _ <- transferPending OwnerLiability BuyerAsset cashbackPayoutAmount ridePaymentRefCashbackPayout
+      pure ()
+
     -- Create Draft invoice with line items
+    invoice
+      InvoiceConfig
+        { invoiceType = FInvoice.Ride,
+          issuedToType = "RIDER",
+          issuedToId = ctx.counterpartyId,
+          issuedToName = Nothing,
+          issuedToAddress = Nothing,
+          lineItems =
+            filter
+              (\li -> li.lineTotal > 0)
+              [ InvoiceLineItem
+                  { description = ridePaymentRefRideFare,
+                    quantity = 1,
+                    unitPrice = rideFare,
+                    lineTotal = rideFare,
+                    isExternalCharge = False
+                  },
+                InvoiceLineItem
+                  { description = ridePaymentRefGST,
+                    quantity = 1,
+                    unitPrice = gstAmount,
+                    lineTotal = gstAmount,
+                    isExternalCharge = False
+                  },
+                InvoiceLineItem
+                  { description = ridePaymentRefPlatformFee,
+                    quantity = 1,
+                    unitPrice = platformFee,
+                    lineTotal = platformFee,
+                    isExternalCharge = False
+                  },
+                InvoiceLineItem
+                  { description = ridePaymentRefOfferDiscount,
+                    quantity = 1,
+                    unitPrice = negate offerDiscountAmount,
+                    lineTotal = negate offerDiscountAmount,
+                    isExternalCharge = False
+                  },
+                InvoiceLineItem
+                  { description = ridePaymentRefCashbackPayout,
+                    quantity = 1,
+                    unitPrice = cashbackPayoutAmount,
+                    lineTotal = cashbackPayoutAmount,
+                    isExternalCharge = False
+                  }
+              ],
+          gstBreakdown = Nothing
+        }
+  case result of
+    Left err -> do
+      logError $ "Failed to create ride payment ledger: " <> show err
+      pure $ Left err
+    Right (mbInvoiceId, entryIds) ->
+      pure $ Right RidePaymentLedgerResult {invoiceId = mbInvoiceId, entryIds}
+
+-- ---------------------------------------------------------------------------
+-- 1b. Create SETTLED ledger entries for fully discounted rides (amount = 0)
+-- ---------------------------------------------------------------------------
+
+-- | Create ledger entries for a fully discounted ride (100% offer covers fare).
+--   Core entries (RideFare, GST, PlatformFee) are created as SETTLED immediately
+--   since no payment is needed. The OfferDiscount entry stays PENDING as it
+--   represents BuyerLiability (marketplace cost) to be cleared separately.
+--   This does NOT show in getPaymentDues and does NOT block rides.
+createFullyDiscountedRidePaymentLedger ::
+  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  FinanceCtx ->
+  HighPrecMoney -> -- rideFare (original, before discount)
+  HighPrecMoney -> -- gstAmount
+  HighPrecMoney -> -- platformFee
+  HighPrecMoney -> -- offerDiscountAmount (should equal rideFare + gstAmount + platformFee)
+  m (Either FinanceError RidePaymentLedgerResult)
+createFullyDiscountedRidePaymentLedger ctx rideFare gstAmount platformFee offerDiscountAmount = do
+  result <- runFinance ctx $ do
+    -- Core entries as SETTLED: no payment needed from rider
+    _ <- transfer OwnerLiability BuyerAsset rideFare ridePaymentRefRideFare
+    _ <- transfer OwnerLiability BuyerAsset gstAmount ridePaymentRefGST
+    _ <- transfer OwnerLiability BuyerAsset platformFee ridePaymentRefPlatformFee
+
+    -- Settlement second leg: Asset(BUYER) → External(BUYER)
+    _ <- transfer BuyerAsset BuyerExternal rideFare ridePaymentRefRideFare
+    _ <- transfer BuyerAsset BuyerExternal gstAmount ridePaymentRefGST
+    _ <- transfer BuyerAsset BuyerExternal platformFee ridePaymentRefPlatformFee
+
+    -- Offer discount: PENDING — BuyerLiability, cleared separately by marketplace
+    when (offerDiscountAmount > 0) $ do
+      _ <- transferPending BuyerAsset OwnerLiability offerDiscountAmount ridePaymentRefOfferDiscount
+      pure ()
+
+    -- Invoice
     invoice
       InvoiceConfig
         { invoiceType = FInvoice.Ride,
@@ -212,9 +313,10 @@ createRidePaymentLedger ctx rideFare gstAmount platformFee offerDiscountAmount =
         }
   case result of
     Left err -> do
-      logError $ "Failed to create ride payment ledger: " <> show err
+      logError $ "Failed to create fully discounted ride payment ledger: " <> show err
       pure $ Left err
-    Right (mbInvoiceId, entryIds) ->
+    Right (mbInvoiceId, entryIds) -> do
+      logInfo $ "Created SETTLED ledger for fully discounted ride (offer covers 100%)"
       pure $ Right RidePaymentLedgerResult {invoiceId = mbInvoiceId, entryIds}
 
 -- ---------------------------------------------------------------------------
@@ -348,7 +450,8 @@ coreRidePaymentRefTypes =
   [ ridePaymentRefRideFare,
     ridePaymentRefGST,
     ridePaymentRefPlatformFee,
-    ridePaymentRefOfferDiscount
+    ridePaymentRefOfferDiscount,
+    ridePaymentRefCashbackPayout
   ]
 
 -- | All ride payment reference types.
@@ -358,6 +461,7 @@ allRidePaymentRefTypes =
     ridePaymentRefGST,
     ridePaymentRefPlatformFee,
     ridePaymentRefOfferDiscount,
+    ridePaymentRefCashbackPayout,
     ridePaymentRefTip,
     ridePaymentRefCancellationFee,
     ridePaymentRefCancellationGST

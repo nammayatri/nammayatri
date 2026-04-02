@@ -87,6 +87,7 @@ orderStatusHandler ::
     EsqDBFlow m r,
     MonadFlow m,
     EncFlow m r,
+    ServiceFlow m r,
     SchedulerFlow r,
     EsqDBReplicaFlow m r,
     HasLongDurationRetryCfg r c,
@@ -130,6 +131,7 @@ orderStatusHandlerWithRefunds ::
     EsqDBFlow m r,
     MonadFlow m,
     EncFlow m r,
+    ServiceFlow m r,
     SchedulerFlow r,
     EsqDBReplicaFlow m r,
     HasLongDurationRetryCfg r c,
@@ -566,6 +568,7 @@ data RidePaymentLedgerInfo = RidePaymentLedgerInfo
     gstAmount :: HighPrecMoney,
     platformFee :: HighPrecMoney, -- application fee / platform commission
     offerDiscountAmount :: HighPrecMoney, -- discount absorbed by marketplace (0 for CASHBACK or no offer)
+    cashbackPayoutAmount :: HighPrecMoney, -- cashback to pay rider (0 for DISCOUNT or no offer)
     financeCtx :: FinanceCtx
   }
 
@@ -589,6 +592,7 @@ type MakePaymentIntentConstraints m r c =
     EncFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
+    ServiceFlow m r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     FinanceBeamFlow.BeamFlow m r
@@ -676,7 +680,7 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
         if null coreEntries
           then do
             -- First time: create core ride ledger entries
-            result <- RidePaymentFinance.createRidePaymentLedger ledgerInfo.financeCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.platformFee ledgerInfo.offerDiscountAmount
+            result <- RidePaymentFinance.createRidePaymentLedger ledgerInfo.financeCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.platformFee ledgerInfo.offerDiscountAmount ledgerInfo.cashbackPayoutAmount
             case result of
               Right _ -> logInfo $ "Created PENDING ride payment ledger entries for order: " <> resp.orderId.getId
               Left err -> logError $ "Failed to create ride payment ledger entries: " <> show err
@@ -687,7 +691,7 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
                 let entryIds = map (.id) pendingCoreEntries
                 RidePaymentFinance.voidRidePaymentLedger entryIds
                 logInfo $ "Voided " <> show (length entryIds) <> " stale PENDING entries (old=" <> show oldTotal <> " new=" <> show newTotal <> ") for ride: " <> ledgerInfo.financeCtx.referenceId
-                result <- RidePaymentFinance.createRidePaymentLedger ledgerInfo.financeCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.platformFee ledgerInfo.offerDiscountAmount
+                result <- RidePaymentFinance.createRidePaymentLedger ledgerInfo.financeCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.platformFee ledgerInfo.offerDiscountAmount ledgerInfo.cashbackPayoutAmount
                 case result of
                   Right _ -> logInfo $ "Created updated PENDING ledger entries for recomputed fare"
                   Left err -> logError $ "Failed to create updated ledger entries: " <> show err
@@ -968,3 +972,34 @@ capturePendingPaymentIfExists person merchantOperatingCityId = do
                   QRide.markPaymentStatus Ride.Failed ride.id
                   -- chargePaymentIntent already marked entries as DUE, now block
                   throwError $ InvalidRequest "You have pending dues from a previous ride. Please clear your dues before booking a new ride."
+
+zeroEffectivePaymentDueToOffer ::
+  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r, FinanceBeamFlow.BeamFlow m r) =>
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Id Ride.Ride ->
+  Id Person.Person ->
+  Maybe Text ->
+  Currency ->
+  Maybe RidePaymentLedgerInfo ->
+  m ()
+zeroEffectivePaymentDueToOffer merchantId merchantOperatingCityId rideId personId mbOfferId currency ledgerInfo = do
+  -- Offer fully covers fare, no payment needed — create SETTLED ledger entries
+  logInfo $ "Post-offer amount <= 0, skipping charge for ride: " <> rideId.getId
+  whenJust mbOfferId $ \offerId -> do
+    whenJust ledgerInfo $ \li -> do
+      result <-
+        RidePaymentFinance.createFullyDiscountedRidePaymentLedger
+          li.financeCtx
+          li.rideFare
+          li.gstAmount
+          li.platformFee
+          li.offerDiscountAmount
+      case result of
+        Right _ -> logInfo $ "Created SETTLED ledger for fully discounted ride: " <> rideId.getId
+        Left err -> logError $ "Failed to create fully discounted ledger: " <> show err
+      let discountAmount = li.offerDiscountAmount
+      void $
+        withTryCatch "applyOfferWithoutPayment:executeJob" $
+          DPayment.applyOfferWithoutPaymentService rideId.getId offerId personId.getId (Just discountAmount) Nothing currency merchantId.getId merchantOperatingCityId.getId
+  QRide.markPaymentStatus Ride.Completed rideId

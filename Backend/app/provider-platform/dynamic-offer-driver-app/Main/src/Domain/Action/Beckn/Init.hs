@@ -87,7 +87,8 @@ data InitReq = InitReq
     insuredAmount :: Maybe Text,
     paymentMode :: Maybe DMPM.PaymentMode,
     displayBookingId :: Maybe Text,
-    riderGender :: Maybe Text
+    riderGender :: Maybe Text,
+    discountAmount :: Maybe HighPrecMoney
   }
 
 data InitReqDetails = InitReqDeliveryDetails DTDD.DeliveryDetails
@@ -275,6 +276,7 @@ handler merchantId req validatedReq = do
             pickupGateId = searchRequest.pickupGateId,
             ledgerWriteMode = Nothing,
             financeInvoiceId = Nothing,
+            discountAmount = req.discountAmount,
             ..
           }
     makeBookingDeliveryDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DSR.SearchRequest -> DTDD.DeliveryDetails -> Id DM.Merchant -> m (Maybe TripParty, Maybe DTDPD.DeliveryPersonDetails, Maybe DTDPD.DeliveryPersonDetails)

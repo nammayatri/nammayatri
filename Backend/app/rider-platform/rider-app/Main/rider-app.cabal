@@ -60,6 +60,7 @@ library
       API.Internal.FrequentLocUser
       API.Internal.FRFS
       API.Internal.GetPickupInstructions
+      API.Internal.OfferDiscount
       API.Internal.Rating
       API.Internal.RideSearchExpired
       API.Internal.Sos
@@ -219,6 +220,7 @@ library
       Domain.Action.Internal.FrequentLocUser
       Domain.Action.Internal.FRFS
       Domain.Action.Internal.GetPickupInstructions
+      Domain.Action.Internal.OfferDiscount
       Domain.Action.Internal.Payout
       Domain.Action.Internal.PickupInstructionHandler
       Domain.Action.Internal.Rating

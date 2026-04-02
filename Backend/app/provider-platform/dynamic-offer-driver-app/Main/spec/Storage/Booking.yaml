@@ -108,6 +108,7 @@ Booking:
     paymentInstrument: Maybe PaymentInstrument
     paymentMode: Maybe PaymentMode
     commission: Maybe HighPrecMoney
+    discountAmount: Maybe HighPrecMoney
     displayBookingId: Maybe Text
     searchTryId: Maybe (Id SearchTry)
     dqDurationToPickup: Maybe Seconds

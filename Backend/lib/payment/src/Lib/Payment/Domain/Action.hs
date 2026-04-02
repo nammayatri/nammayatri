@@ -309,12 +309,6 @@ chargePaymentIntentService merchantOpCityId _paymentServiceType paymentIntentId 
           let updStatus = Payment.castToTransactionStatus paymentIntentResp.status
           HQTransaction.updateStatusAndError merchantOpCityId transaction updStatus Nothing Nothing (Just "charge payment intent service")
           QOrder.updateStatus transaction.orderId paymentIntentId updStatus
-          when (updStatus == Payment.CHARGED) $ do
-            mbOrder <- QOrder.findById transaction.orderId
-            whenJust mbOrder $ \order ->
-              void $
-                withTryCatch "applyOfferService:chargePaymentIntent" $
-                  applyOfferService transaction.orderId order.personId.getId
           pure True
     else pure False
 
@@ -999,18 +993,23 @@ offerListService ::
   Text ->
   Text ->
   DOrder.PaymentServiceType ->
-  Maybe HighPrecMoney ->
   Int ->
+  Bool ->
   (PInterface.OfferListReq -> m PInterface.OfferListResp) ->
   PInterface.OfferListReq ->
   m PInterface.OfferListResp
-offerListService customerId version paymentServiceType mbAmount ttlSeconds apiCall req = do
-  let key = makeOfferListCacheKey version paymentServiceType customerId mbAmount
-  Redis.withCrossAppRedis (Redis.get key) >>= \case
-    Just cached -> return cached
-    Nothing -> do
+offerListService customerId version paymentServiceType ttlSeconds cacheOffers apiCall req = do
+  let key = makeOfferListCacheKey version paymentServiceType customerId
+  if cacheOffers
+    then do
+      Redis.withCrossAppRedis (Redis.get key) >>= \case
+        Just cached -> return cached
+        Nothing -> do
+          resp <- apiCall req
+          Redis.withCrossAppRedis $ Redis.setExp key resp ttlSeconds
+          return resp
+    else do
       resp <- apiCall req
-      Redis.withCrossAppRedis $ Redis.setExp key resp ttlSeconds
       return resp
 
 invalidateOfferListCacheService ::
@@ -1018,15 +1017,14 @@ invalidateOfferListCacheService ::
   Text ->
   Text ->
   DOrder.PaymentServiceType ->
-  Maybe HighPrecMoney ->
   m ()
-invalidateOfferListCacheService customerId version paymentServiceType mbAmount = do
-  let key = makeOfferListCacheKey version paymentServiceType customerId mbAmount
+invalidateOfferListCacheService customerId version paymentServiceType = do
+  let key = makeOfferListCacheKey version paymentServiceType customerId
   Redis.withCrossAppRedis $ Redis.del key
 
-makeOfferListCacheKey :: Text -> DOrder.PaymentServiceType -> Text -> Maybe HighPrecMoney -> Text
-makeOfferListCacheKey version serviceType customerId mbAmount =
-  "OfferList:CId" <> customerId <> ":V-" <> version <> ":ST-" <> show serviceType <> maybe "" (\amt -> ":Amt-" <> show amt) mbAmount
+makeOfferListCacheKey :: Text -> DOrder.PaymentServiceType -> Text -> Text
+makeOfferListCacheKey version serviceType customerId =
+  "OfferList:CId" <> customerId <> ":V-" <> version <> ":ST-" <> show serviceType
 
 -- domain offer functions --------------------------------------------------
 

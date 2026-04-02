@@ -541,6 +541,20 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                         then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig
                         else calculateFinalValuesForCorrectDistanceCalculations handle booking ride booking.maxEstimatedDistance pickupDropOutsideOfThreshold thresholdConfig tripEndPoint
                 pure (chargeableDistance, finalFare, mbUpdatedFareParams, ride, Just pickupDropOutsideOfThreshold, Just distanceCalculationFailed)
+    discountAmount <-
+      -- Update discount amount from BAP if fare was recomputed and offer exists
+      if (isJust booking.discountAmount && ride.fare /= Just booking.estimatedFare)
+        then do
+          appBackendBapInternal <- asks (.appBackendBapInternal)
+          case ride.fare of
+            Just newFare -> do
+              withTryCatch "getOfferDiscount:endRideTransaction" $ do
+                CallBAPInternal.getOfferDiscount appBackendBapInternal.internalKey appBackendBapInternal.url booking.id.getId newFare
+                >>= \case
+                  Just discountAmount -> pure $ Just discountAmount
+                  Nothing -> pure Nothing
+            Nothing -> pure Nothing
+        else pure Nothing
     let baseFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
     -- Airport/parking charge is already in fareParams and finalFare from estimate/quote.
     mbFarePolicy <- FarePolicy.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
@@ -561,7 +575,8 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                endOdometerReading = mbOdometer,
                driverGoHomeRequestId = ghInfo.driverGoHomeRequestId,
                hasStops = Just (not $ null ride.stops),
-               commission = finalCommission
+               commission = finalCommission,
+               discountAmount = discountAmount
               }
     let mbDriverFromReq = case req of
           DriverReq driverReq -> Just driverReq.requestor
