@@ -285,6 +285,7 @@ let RiderJobType =
       | UpdateCRISRDSBalance
       | FRFSSeatHoldReaper
       | DailyPassStatusUpdate
+      | PassExpiryReminderMaster
       >
 
 let jobInfoMapx =
@@ -329,6 +330,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.UpdateCRISRDSBalance, mapValue = True }
       , { mapKey = RiderJobType.FRFSSeatHoldReaper, mapValue = True }
       , { mapKey = RiderJobType.DailyPassStatusUpdate, mapValue = True }
+      , { mapKey = RiderJobType.PassExpiryReminderMaster, mapValue = True }
       ]
 
 let cacConfig =
