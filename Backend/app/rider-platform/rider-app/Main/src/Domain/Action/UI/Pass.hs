@@ -751,6 +751,7 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
         case mbFirstPreBookedPayment of
           Just firstPreBookedPayment -> do
             let newStatus = if firstPreBookedPayment.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
+            QPurchasedPassPayment.expireOlderActivePaymentsByPurchasedPassId purchasedPass.id today
             QPurchasedPassPayment.updateStatusByOrderId newStatus firstPreBookedPayment.orderId
             QPurchasedPass.updatePurchaseData purchasedPass.id firstPreBookedPayment.startDate firstPreBookedPayment.endDate newStatus firstPreBookedPayment.benefitDescription firstPreBookedPayment.benefitType firstPreBookedPayment.benefitValue firstPreBookedPayment.amount
           Nothing -> do
@@ -767,6 +768,7 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
           when (payment.startDate <= today && payment.endDate >= today) $
             QPurchasedPass.updateStatusById DPurchasedPass.Active purchasedPass.id
 
+
   allActivePurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
 
   -- Always show all passes regardless of device. The deviceMismatch flag in
@@ -774,8 +776,11 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
   -- Previously, passes from other devices were hidden if any pass (even Pending)
   -- existed for the current device, preventing users from switching older active passes.
   purchasedPassAPIEntities <- mapM (buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today) allActivePurchasedPasses
-  let isInactiveTouristPass p = p.passEntity.passType.passEnum == Just DPassType.TouristPass && p.status /= DPurchasedPass.Active
-  pure $ filter (not . isInactiveTouristPass) purchasedPassAPIEntities
+  let hasActivePass = any (\p -> p.status == DPurchasedPass.Active) purchasedPassAPIEntities
+      isInactiveTouristPass p = p.passEntity.passType.passEnum == Just DPassType.TouristPass && p.status /= DPurchasedPass.Active
+      isExpiredPass p = p.status == DPurchasedPass.Expired
+      shouldFilter p = isInactiveTouristPass p || (hasActivePass && isExpiredPass p)
+  pure $ filter (not . shouldFilter) purchasedPassAPIEntities
 
 postMultimodalPassVerify ::
   ( ( Maybe (Id.Id DP.Person),
