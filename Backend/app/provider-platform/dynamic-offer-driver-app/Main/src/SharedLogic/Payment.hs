@@ -151,7 +151,7 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
   mCreateOrderRes <-
     if (isJust existingInvoice && amount < 1) -- In case driver fee was cleared with coins and remaining amount is less than 1 (Juspay create order fails)
       then pure Nothing
-      else DPayment.createOrderService commonMerchantId (Just $ cast opCity) commonPersonId Nothing mbEntityName DOrder.Normal False createOrderReq createOrderCall Nothing False Nothing
+      else DPayment.createOrderService commonMerchantId (Just $ cast opCity) commonPersonId Nothing mbEntityName DOrder.Normal False createOrderReq createOrderCall False Nothing Nothing Nothing
   case mCreateOrderRes of
     Just createOrderRes -> return (createOrderRes{sdk_payload = createOrderRes.sdk_payload{payload = createOrderRes.sdk_payload.payload{clientId = pseudoClientId <|> createOrderRes.sdk_payload.payload.clientId}}}, cast invoiceId)
     Nothing -> do
@@ -409,9 +409,10 @@ createOrderV2 (personId, merchantId, merchantOperatingCityId) createOrderReq mbP
       False -- isTestTransaction
       createOrderReq
       createOrderCall
-      Nothing -- mbCreateWalletCall
       False -- isMockPayment
       Nothing -- mbGroupId
+      Nothing -- mbIsWalletTopup
+      Nothing -- mbCustomerId
   mbCreateOrderResp & fromMaybeM (InternalError "Failed to create payment order")
 
 -- | Create a payment order for driver wallet topup (no Invoice/DriverFee).
@@ -429,7 +430,7 @@ createWalletTopupOrder ::
   m (Payment.CreateOrderResp, Id DOrder.PaymentOrder)
 createWalletTopupOrder (driverId, merchantId, mocId) amount = do
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+  driverPhone <- (driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")) >>= decrypt
   merchantServiceUsageConfig <-
     CQMSUC.findByMerchantOpCityId mocId
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound mocId.getId)
@@ -475,8 +476,9 @@ createWalletTopupOrder (driverId, merchantId, mocId) amount = do
       False
       createOrderReq
       createOrderCall
-      Nothing
       False
+      Nothing
+      Nothing
       Nothing
   createOrderRes <- mbResp & fromMaybeM (InternalError "Failed to create wallet topup payment order")
   let createOrderRes' = applyPseudoClientId pseudoClientId createOrderRes

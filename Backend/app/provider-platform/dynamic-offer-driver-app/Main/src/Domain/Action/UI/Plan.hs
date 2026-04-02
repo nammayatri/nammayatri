@@ -46,6 +46,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as Payment
+import Kernel.External.Payment.Juspay.Types (MandateFrequency (..), MandateType (..))
 import Kernel.External.Types (Language (ENGLISH))
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -1055,8 +1056,9 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
       False
       createOrderReq
       createOrderCall
-      Nothing
       False
+      Nothing
+      Nothing
       Nothing
   createOrderResp <- mbCreateOrderResp & fromMaybeM (InternalError "Failed to create payment order")
   let createOrderResp' = SPayment.applyPseudoClientId pseudoClientId createOrderResp
@@ -1138,8 +1140,8 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
     mandateOrder currentDues now mandateValidity =
       SPayment.MandateOrder
         { maxAmount = max plan.maxMandateAmount currentDues,
-          _type = Payment.REQUIRED,
-          frequency = Payment.ASPRESENTED,
+          _type = REQUIRED,
+          frequency = ASPRESENTED,
           mandateStartDate = T.pack $ show $ utcTimeToPOSIXSeconds now,
           mandateEndDate = T.pack $ show $ utcTimeToPOSIXSeconds $ addUTCTime (secondsToNominalDiffTime (fromIntegral (60 * 60 * 24 * 365 * mandateValidity))) now
         }

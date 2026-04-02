@@ -84,7 +84,7 @@ import qualified Kernel.External.Payout.Interface as PT
 import qualified Kernel.External.Payout.Interface.Types as Payout
 import qualified Kernel.External.Payout.Juspay.Types as Juspay
 import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
-import Kernel.External.Wallet as Wallet
+import qualified Kernel.External.Wallet as Wallet
 -- import qualified Tools.Wallet as TWallet
 
 import qualified Kernel.External.Wallet.Interface as WalletInterface
@@ -710,11 +710,12 @@ createOrderService ::
   Bool ->
   Payment.CreateOrderReq ->
   (Payment.CreateOrderReq -> m Payment.CreateOrderResp) ->
-  Maybe (Wallet.CreateWalletReq -> m Wallet.CreateWalletResp) ->
   Bool ->
   Maybe Text ->
+  Maybe Bool ->
+  Maybe Text ->
   m (Maybe Payment.CreateOrderResp)
-createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType isTestTransaction createOrderRequest createOrderCall mbCreateWalletCall _isMockPayment mbGroupId = do
+createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType isTestTransaction createOrderRequest createOrderCall _isMockPayment mbGroupId mbIsWalletTopup mbCustomerId = do
   logInfo $ "CreateOrderService: "
   -- Apply test- prefix if isTestTransaction is True and not already prefixed (idempotent)
   let updatedOrderShortId =
@@ -722,14 +723,14 @@ createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity
           then "test-" <> createOrderRequest.orderShortId
           else createOrderRequest.orderShortId
       createOrderReq = (createOrderRequest :: Payment.CreateOrderReq) {Payment.orderShortId = updatedOrderShortId}
-  when (paymentServiceType == DOrder.Wallet) $ do
-    case mbCreateWalletCall of
-      Just createWalletCall -> do handleWalletOrder createOrderReq createWalletCall
-      Nothing -> throwError $ InternalError "Wallet creation call not found"
+  mbPaymentRules <-
+    case (paymentServiceType, mbIsWalletTopup) of
+      (DOrder.Wallet, Just True) -> handleWalletOrder createOrderReq
+      _ -> pure Nothing
   mbExistingOrder <- QOrder.findById (Id createOrderReq.orderId)
   case mbExistingOrder of
     Nothing -> do
-      createOrderResp <- createOrderCall createOrderReq -- api call
+      createOrderResp <- createOrderCall createOrderReq{paymentRules = mbPaymentRules} -- api call
       paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType createOrderReq createOrderResp _isMockPayment mbGroupId Nothing
       QOrder.create paymentOrder
       return $ Just createOrderResp
@@ -760,20 +761,20 @@ createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity
       let buffer = secondsToNominalDiffTime 150 -- 2.5 mins of buffer
       return (order.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED] && expiry < addUTCTime buffer now)
 
-    handleWalletOrder createOrderReq createWalletCall = do
+    handleWalletOrder createOrderReq = do
       now <- getCurrentTime
       mbPersonWallet <- QPersonWallet.findByPersonId personId.getId
-      personWallet <-
+      _personWallet <-
         case mbPersonWallet of
           Just personWallet -> do
             pure personWallet
           Nothing -> do
-            let createWalletReq = Wallet.CreateWalletReq {customerId = personId.getId, createCashAccount = False, createPointsAccount = True, operationId = createOrderReq.orderShortId}
-            void $ createWalletService createWalletReq createWalletCall
-            personWalletId <- generateGUID
+            juspayCustomerPaymentId <- mbCustomerId & fromMaybeM (InternalError $ "Juspay customer payment ID not found: " <> personId.getId)
+            -- let createWalletReq = PInterface.CreateWalletReq {customerId = juspayCustomerPaymentId, command = "authenticate", deviceId = Nothing}
+            -- createWalletResp <- createWalletService createWalletReq createWalletCall -- do we need this?? TODO harikrishna
             let personWallet =
                   DPersonWallet.PersonWallet
-                    { id = personWalletId,
+                    { id = Id juspayCustomerPaymentId,
                       cashAmount = HighPrecMoney {getHighPrecMoney = 0},
                       cashFromPointsRedemption = HighPrecMoney {getHighPrecMoney = 0},
                       expiredBalance = HighPrecMoney {getHighPrecMoney = 0},
@@ -788,21 +789,20 @@ createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity
                     }
             QPersonWallet.create personWallet
             return personWallet
-      let walletRewardPosting =
-            DWalletRewardPosting.WalletRewardPosting
-              { id = Id createOrderReq.orderId,
-                shortId = ShortId createOrderReq.orderShortId,
-                walletId = personWallet.id,
-                pointsAmount = createOrderReq.amount,
-                cashAmount = HighPrecMoney {getHighPrecMoney = 0},
-                postingType = WalletInterface.GRANT,
-                status = DWalletRewardPosting.NEW,
-                createdAt = now,
-                updatedAt = now,
-                merchantId = merchantId.getId,
-                merchantOperatingCityId = mbMerchantOpCityId <&> (.getId)
+      -- Note: WalletRewardPosting rows are created during orderStatus processing
+      -- based on the txn_list from Juspay response, not here
+      let paymentRules =
+            Payment.PaymentRules
+              { paymentFlows =
+                  Payment.PaymentFlows
+                    { loyaltyOsTopup =
+                        Payment.PaymentFlowStatus
+                          { status = "REQUIRED",
+                            info = Just $ Payment.PaymentFlowInfo {programId = "test-1"}
+                          }
+                    }
               }
-      QWalletRewardPosting.create walletRewardPosting
+      return (Just paymentRules)
 
 buildSDKPayload :: EncFlow m r => Payment.CreateOrderReq -> DOrder.PaymentOrder -> m (Maybe Juspay.SDKPayload)
 buildSDKPayload req order = do
@@ -1385,15 +1385,10 @@ orderStatusService ::
   Id Person ->
   Id DOrder.PaymentOrder ->
   (Payment.OrderStatusReq -> m Payment.OrderStatusResp) ->
-  Maybe (Wallet.WalletPostingReq -> m Wallet.WalletPostingResp) ->
   m PaymentStatusResp
-orderStatusService merchantOpCityId personId orderId orderStatusCall mbWalletPostingCall = do
+orderStatusService merchantOpCityId personId orderId orderStatusCall = do
   -- order <- runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
   order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
-  when (order.paymentServiceType == Just DOrder.Wallet) $ do
-    case mbWalletPostingCall of
-      Just walletPostingCall -> handleWalletOrderStatus order walletPostingCall
-      Nothing -> throwError $ InternalError "Wallet posting call not found"
 
   unless (personId == order.personId) $ throwError NotAnExecutor
   let orderStatusReq =
@@ -1450,7 +1445,7 @@ orderStatusService merchantOpCityId personId orderId orderStatusCall mbWalletPos
             mandateEndDate = fromMaybe now mandateEndDate,
             ..
           }
-    Payment.OrderStatusResp {..} -> do
+    Payment.OrderStatusResp {loyaltyInfo, txnList, ..} -> do
       let orderTxn =
             OrderTxn
               { mandateStartDate = Nothing,
@@ -1477,8 +1472,16 @@ orderStatusService merchantOpCityId personId orderId orderStatusCall mbWalletPos
                 authorizationDateTime = (.created) =<< paymentGatewayResponse,
                 captureDateTime = dateCreated,
                 vpa = payerVpa,
+                loyaltyInfo = loyaltyInfo,
+                txnList = txnList,
                 ..
               }
+      -- Log loyaltyInfo and txnList for debugging (consuming from order status response)
+      whenJust loyaltyInfo $ \info ->
+        logInfo $ "OrderStatus: loyaltyInfo received for orderId=" <> orderId.getId <> ", info=" <> show info
+      whenJust txnList $ \list ->
+        logInfo $ "OrderStatus: txnList received for orderId=" <> orderId.getId <> ", count=" <> show (length list)
+
       maybe
         (updateOrderTransaction merchantOpCityId order orderTxn Nothing)
         ( \transactionUUID' ->
@@ -1492,6 +1495,8 @@ orderStatusService merchantOpCityId personId orderId orderStatusCall mbWalletPos
       case res of
         Left e -> logError $ "buildOrderOffer failed for orderId=" <> orderId.getId <> " err=" <> show e
         Right _ -> pure ()
+      when (order.paymentServiceType == Just DOrder.Wallet) $
+        handleWalletOrderStatus order txnList loyaltyInfo
       return $
         PaymentStatus
           { orderId = orderId,
@@ -1517,24 +1522,148 @@ orderStatusService merchantOpCityId personId orderId orderStatusCall mbWalletPos
           }
     _ -> throwError $ InternalError "Unexpected Order Status Response."
   where
-    handleWalletOrderStatus paymentOrder walletPostingCall = do
-      personWallet <- QPersonWallet.findByPersonId personId.getId >>= fromMaybeM (InternalError $ "Person wallet not found for personId: " <> show personId.getId)
-      mbWalletRewardPosting <- QWalletRewardPosting.findByWalletIdAndStatus personWallet.id DWalletRewardPosting.NEW
-      case paymentOrder.status of
-        Payment.CHARGED -> do
-          case mbWalletRewardPosting of
-            Just walletRewardPosting -> do
-              let walletPostingReq = Wallet.WalletPostingReq {customerId = personId.getId, postingType = walletRewardPosting.postingType, operationId = walletRewardPosting.shortId.getShortId, pointsAmount = round walletRewardPosting.pointsAmount.getHighPrecMoney :: Int}
-              walletPostingResp <- walletPostingService walletPostingReq walletPostingCall
-              case walletPostingResp.success of
-                True -> do
-                  QWalletRewardPosting.updateByPrimaryKey walletRewardPosting {DWalletRewardPosting.status = DWalletRewardPosting.SUCCESS}
-                False -> do
-                  QWalletRewardPosting.updateByPrimaryKey walletRewardPosting {DWalletRewardPosting.status = DWalletRewardPosting.FAILED}
-            Nothing -> do
-              logError $ "Wallet reward posting with status NEW not found for walletId: " <> show personWallet.id.getId
-        _ -> do
-          logError $ "Unexpected payment order status: " <> show paymentOrder.status
+    handleWalletOrderStatus paymentOrder txnList mbOrderLevelLoyaltyInfo = do
+      personWallet <-
+        QPersonWallet.findByPersonId personId.getId
+          >>= fromMaybeM
+            (InternalError $ "Person wallet not found for personId: " <> show personId.getId)
+      now <- getCurrentTime
+      -- Process each transaction in txn_list
+      forM_ txnList $ \txns ->
+        forM_ txns $ \txn ->
+          processTxn personWallet now paymentOrder merchantOpCityId txn
+      -- Process order-level loyalty info
+      case mbOrderLevelLoyaltyInfo of
+        Just (Juspay.LoyaltyInfo burnDetails earnDetails) -> do
+          insertBurnPostings personWallet now paymentOrder merchantOpCityId Nothing (fromMaybe [] burnDetails)
+          insertEarnPostings personWallet now paymentOrder merchantOpCityId Nothing (fromMaybe [] earnDetails)
+        Nothing -> pure ()
+
+    processTxn personWallet now paymentOrder merchantOpCityId txn = do
+      let txnUUID = txn.txnUuid
+      -- Check if posting already exists for this txn
+      mbExistingPosting <- QWalletRewardPosting.findByOrderIdAndTxnUUID (Just orderId.getId) txnUUID
+      case mbExistingPosting of
+        Just existingPosting -> do
+          -- Update existing posting status based on payment order status
+          let newStatus = case paymentOrder.status of
+                Payment.CHARGED -> DWalletRewardPosting.SUCCESS
+                _ -> DWalletRewardPosting.FAILED
+          QWalletRewardPosting.updateByPrimaryKey
+            existingPosting {DWalletRewardPosting.status = newStatus}
+        Nothing -> do
+          -- Create new posting for this transaction
+          case txn.txnDetail of
+            Just txnDetail -> do
+              let mbLoyaltyInfo = txnDetail.loyaltyInfo
+              insertBurnPostings personWallet now paymentOrder merchantOpCityId txnUUID (maybe [] (fromMaybe [] . Juspay.burnDetails) mbLoyaltyInfo)
+              insertEarnPostings personWallet now paymentOrder merchantOpCityId txnUUID (maybe [] (fromMaybe [] . Juspay.earnDetails) mbLoyaltyInfo)
+            Nothing -> pure ()
+
+-- Helper functions for loyalty parsing
+parseLoyaltyPoints :: Text -> HighPrecMoney
+parseLoyaltyPoints txt = fromMaybe (HighPrecMoney 0) $ readMaybe (T.unpack txt)
+
+parseLoyaltyDiscount :: Text -> HighPrecMoney
+parseLoyaltyDiscount txt = fromMaybe (HighPrecMoney 0) $ readMaybe (T.unpack txt)
+
+-- Insert burn (REDEEM) postings for loyalty info
+insertBurnPostings ::
+  ( BeamFlow m r,
+    HasField "id" DPersonWallet.PersonWallet (Id DPersonWallet.PersonWallet),
+    HasField "shortId" DOrder.PaymentOrder (ShortId DOrder.PaymentOrder),
+    HasField "merchantId" DOrder.PaymentOrder (Id Merchant),
+    HasField "status" DOrder.PaymentOrder Payment.TransactionStatus,
+    HasField "getId" (Id DOrder.PaymentOrder) Text,
+    HasField "getId" (Id MerchantOperatingCity) Text
+  ) =>
+  DPersonWallet.PersonWallet ->
+  UTCTime ->
+  DOrder.PaymentOrder ->
+  Id MerchantOperatingCity ->
+  Maybe Text -> -- txnUUID (Nothing for order-level)
+  [Juspay.LoyaltyBurnDetail] ->
+  m ()
+insertBurnPostings personWallet now paymentOrder merchantOpCityId txnUUID burnDetails =
+  mapM_ processBurnDetail burnDetails
+  where
+    processBurnDetail (Juspay.LoyaltyBurnDetail _ burnOptionsSelected) =
+      mapM_ processBurnOption (fromMaybe [] burnOptionsSelected)
+
+    processBurnOption (Juspay.LoyaltyBurnOptionSelected _ _ _ _ mbApplicable) =
+      case mbApplicable of
+        Just (Juspay.LoyaltyBurnApplicable pts disc) -> do
+          postingId <- generateGUID
+          let points = parseLoyaltyPoints pts
+              discount = parseLoyaltyDiscount disc
+              posting =
+                DWalletRewardPosting.WalletRewardPosting
+                  { id = Id postingId,
+                    shortId = ShortId $ getShortId paymentOrder.shortId,
+                    walletId = personWallet.id,
+                    orderId = Just paymentOrder.id.getId,
+                    txnUUID = txnUUID,
+                    pointsAmount = points,
+                    cashAmount = discount,
+                    postingType = WalletInterface.REDEEM,
+                    status = case paymentOrder.status of
+                      Payment.CHARGED -> DWalletRewardPosting.SUCCESS
+                      _ -> DWalletRewardPosting.FAILED,
+                    createdAt = now,
+                    updatedAt = now,
+                    merchantId = paymentOrder.merchantId.getId,
+                    merchantOperatingCityId = Just merchantOpCityId.getId
+                  }
+          QWalletRewardPosting.create posting
+          logInfo $ "Created REDEEM posting for txnUUID=" <> show txnUUID <> ", points=" <> show points <> ", discount=" <> show discount
+        Nothing -> pure ()
+
+-- Insert earn (GRANT) postings for loyalty info
+insertEarnPostings ::
+  ( BeamFlow m r,
+    HasField "id" DPersonWallet.PersonWallet (Id DPersonWallet.PersonWallet),
+    HasField "shortId" DOrder.PaymentOrder (ShortId DOrder.PaymentOrder),
+    HasField "merchantId" DOrder.PaymentOrder (Id Merchant),
+    HasField "status" DOrder.PaymentOrder Payment.TransactionStatus,
+    HasField "getId" (Id DOrder.PaymentOrder) Text,
+    HasField "getId" (Id MerchantOperatingCity) Text
+  ) =>
+  DPersonWallet.PersonWallet ->
+  UTCTime ->
+  DOrder.PaymentOrder ->
+  Id MerchantOperatingCity ->
+  Maybe Text -> -- txnUUID (Nothing for order-level)
+  [Juspay.LoyaltyEarnDetail] ->
+  m ()
+insertEarnPostings personWallet now paymentOrder merchantOpCityId txnUUID earnDetails =
+  mapM_ processEarnDetail earnDetails
+  where
+    processEarnDetail (Juspay.LoyaltyEarnDetail _ mbApplied _) =
+      case mbApplied of
+        Just (Juspay.LoyaltyEarnApplied pts) -> do
+          postingId <- generateGUID
+          let points = parseLoyaltyPoints pts
+              posting =
+                DWalletRewardPosting.WalletRewardPosting
+                  { id = Id postingId,
+                    shortId = ShortId $ getShortId paymentOrder.shortId,
+                    walletId = personWallet.id,
+                    orderId = Just paymentOrder.id.getId,
+                    txnUUID = txnUUID,
+                    pointsAmount = points,
+                    cashAmount = HighPrecMoney 0,
+                    postingType = WalletInterface.GRANT,
+                    status = case paymentOrder.status of
+                      Payment.CHARGED -> DWalletRewardPosting.SUCCESS
+                      _ -> DWalletRewardPosting.FAILED,
+                    createdAt = now,
+                    updatedAt = now,
+                    merchantId = paymentOrder.merchantId.getId,
+                    merchantOperatingCityId = Just merchantOpCityId.getId
+                  }
+          QWalletRewardPosting.create posting
+          logInfo $ "Created GRANT posting for txnUUID=" <> show txnUUID <> ", points=" <> show points
+        Nothing -> pure ()
 
 data OrderTxn = OrderTxn
   { transactionUUID :: Maybe Text,
@@ -1575,7 +1704,9 @@ data OrderTxn = OrderTxn
     cardIssuer :: Maybe Text,
     authorizationDateTime :: Maybe UTCTime,
     captureDateTime :: Maybe UTCTime,
-    vpa :: Maybe Text
+    vpa :: Maybe Text,
+    loyaltyInfo :: Maybe Payment.LoyaltyInfo,
+    txnList :: Maybe [Payment.TxnList]
   }
 
 updateOrderTransaction ::

@@ -195,7 +195,8 @@ getStatus ::
 getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
   let commonPersonId = cast @DP.Person @DPayment.Person personId
       commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
-      orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId -- api call
+      orderStatusCall serviceName mbPersonId =
+        Payment.orderStatus merchantId merchantOperatingCityId serviceName mbPersonId  -- ai changed for compilation only check this before pushing
   order <- QOrder.findById paymentOrderId >>= fromMaybeM (PaymentOrderNotFound paymentOrderId.getId)
   now <- getCurrentTime
   invoices <- QIN.findById (cast paymentOrderId)
@@ -243,7 +244,7 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
       -- Use MembershipPaymentService for STCL orders, otherwise use the service config's payment service name
       let defaultPaymentServiceName = if isStclOrder then DMSC.MembershipPaymentService Payment.Juspay else serviceConfig.paymentServiceName
       paymentServiceName <- Payment.decidePaymentService defaultPaymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
-      paymentStatus <- DPayment.orderStatusService commonMerchantOperatingCityId commonPersonId paymentOrderId (orderStatusCall paymentServiceName (Just order.personId.getId)) Nothing
+      paymentStatus <- DPayment.orderStatusService commonMerchantOperatingCityId commonPersonId paymentOrderId (orderStatusCall paymentServiceName (Just order.personId.getId))
       case paymentStatus of
         DPayment.MandatePaymentStatus {..} -> do
           unless (status /= Payment.CHARGED) $ do

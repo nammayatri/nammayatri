@@ -397,13 +397,13 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                 metadataExpiryInMins = Nothing,
                 metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
                 splitSettlementDetails = splitSettlementDetails,
-                basket = Nothing
+                basket = Nothing,
+                paymentRules = Nothing
               }
       mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
       isMetroTestTransaction <- asks (.isMetroTestTransaction)
-      let createWalletCall = TWallet.createWallet person.merchantId person.merchantOperatingCityId
-          isMockPayment = fromMaybe False booking.isMockPayment
-      DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing (getPaymentType isMultiModalBooking booking.vehicleType) isMetroTestTransaction createOrderReq (createOrderCall merchantOperatingCityId booking (Just person.id.getId) person.clientSdkVersion isMockPayment) (Just createWalletCall) isMockPayment (Just booking.id.getId)
+      let isMockPayment = fromMaybe False booking.isMockPayment
+      DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing (getPaymentType isMultiModalBooking booking.vehicleType) isMetroTestTransaction createOrderReq (createOrderCall merchantOperatingCityId booking (Just person.id.getId) person.clientSdkVersion isMockPayment) isMockPayment (Just booking.id.getId) (Just False) Nothing
 
     createOrderCall merchantOperatingCityId booking mRoutingId sdkVersion isMockPayment = Payment.createOrder merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType) mRoutingId sdkVersion (Just isMockPayment)
 

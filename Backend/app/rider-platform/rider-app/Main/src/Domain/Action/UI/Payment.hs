@@ -34,8 +34,9 @@ where
 import qualified API.Types.UI.Payment as PaymentAPI
 import qualified Beckn.ACL.Confirm as ACL
 import Control.Applicative ((<|>))
--- import Data.Aeson (defaultOptions, withObject, (.:?))
+import Data.Aeson (object, (.=))
 import Data.Aeson.Types ()
+import Data.Coerce (coerce)
 import Data.OpenApi ()
 import qualified Data.Text
 import qualified Domain.Action.Beckn.OnInit as DOnInit
@@ -155,15 +156,29 @@ createOrder (personId, merchantId) rideId = do
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
             splitSettlementDetails = splitSettlementDetails,
-            basket = Nothing
+            basket = Nothing,
+            paymentRules = Nothing
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person personId
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let createOrderCall = Payment.createOrder merchantId person.merchantOperatingCityId Nothing Payment.Normal (Just person.id.getId) person.clientSdkVersion (Just False)
-      createWalletCall = TWallet.createWallet merchantId person.merchantOperatingCityId
-  DPayment.createOrderService commonMerchantId (Just $ cast person.merchantOperatingCityId) commonPersonId Nothing Nothing Payment.Normal isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False Nothing >>= fromMaybeM (InternalError "Order expired please try again")
+  DPayment.createOrderService -- updated by ai check this one not sure todo hari
+    commonMerchantId
+    (Just $ cast person.merchantOperatingCityId)
+    commonPersonId
+    Nothing
+    Nothing
+    Payment.Normal
+    isMetroTestTransaction
+    createOrderReq
+    createOrderCall
+    False
+    Nothing
+    Nothing
+    Nothing
+    >>= fromMaybeM (InternalError "Order expired please try again")
 
 -- | Create a RideBooking payment order (payment-before-confirm flow). Sets domainEntityId = bookingId on the order.
 createRideBookingPaymentOrder :: DRB.Booking -> Flow (Maybe Payment.CreateOrderResp)
@@ -213,14 +228,14 @@ createRideBookingPaymentOrder booking = do
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = mbPaytmTid, -- Set terminal ID from machine mapping
             splitSettlementDetails = splitSettlementDetails,
-            basket = Nothing
+            basket = Nothing,
+            paymentRules = Nothing
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant booking.merchantId
       commonPersonId = cast @DP.Person @DPayment.Person person.id
       createOrderCall = Payment.createOrder booking.merchantId merchantOperatingCityId Nothing DOrder.RideBooking (Just person.id.getId) person.clientSdkVersion Nothing
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
-  let createWalletCall = TWallet.createWallet booking.merchantId merchantOperatingCityId
-  mbOrderResp <- DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId Nothing Nothing DOrder.RideBooking isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False Nothing
+  mbOrderResp <- DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId Nothing Nothing DOrder.RideBooking isMetroTestTransaction createOrderReq createOrderCall False Nothing (Just False) Nothing
   whenJust mbOrderResp $ \resp -> do
     void $ QOrder.updatePaymentFulfillmentStatus (Id paymentOrderId) (Just DPayment.FulfillmentPending) (Just booking.id.getId) Nothing
     -- Store paytmTid in PaymentOrder for audit trail (plain text)
@@ -772,11 +787,17 @@ postWalletRecharge ::
   PaymentAPI.WalletRechargeReq ->
   Flow APISuccess
 postWalletRecharge (personId, merchantId) req = do
+  logError $ "postWalletRecharge called with personId: " <> show personId.getId <> " and merchantId: " <> show merchantId.getId
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound "personId")
+  logError $ "person found: " <> show person.id.getId
   walletRewardPostingId <- generateGUID
+  logError $ "walletRewardPostingId generated: " <> show walletRewardPostingId
   operationId <- generateShortId
+  logError $ "operationId generated: " <> show operationId.getShortId
   personEmail <- mapM decrypt person.email
+  logError $ "personEmail decrypted: " <> show personEmail
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+  logError $ "personPhone decrypted: " <> show personPhone
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = walletRewardPostingId,
@@ -796,7 +817,8 @@ postWalletRecharge (personId, merchantId) req = do
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing,
             splitSettlementDetails = Nothing,
-            basket = Nothing
+            basket = Nothing,
+            paymentRules = Nothing
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
@@ -805,8 +827,9 @@ postWalletRecharge (personId, merchantId) req = do
       createOrderCall = Payment.createOrder merchantId person.merchantOperatingCityId Nothing DOrder.Wallet (Just person.id.getId) person.clientSdkVersion Nothing
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId person.merchantOperatingCityId Nothing DOrder.Wallet
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
-  let createWalletCall = TWallet.createWallet merchantId person.merchantOperatingCityId
-  mbOrderResp <- DPayment.createOrderService commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing DOrder.Wallet isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False Nothing
+
+  getCustomerResp <- DRidePayment.getcustomer person
+  mbOrderResp <- DPayment.createOrderService commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing DOrder.Wallet isMetroTestTransaction createOrderReq createOrderCall False Nothing (Just True) (Just (coerce getCustomerResp.customerId)) -- updated by ai check this one not sure todo hari I am not sure about this coerce
   _ <- mbOrderResp & fromMaybeM (InternalError "Failed to create payment order")
   return Success
 

@@ -7,6 +7,7 @@ module Lib.Payment.Storage.Queries.WalletRewardPosting where
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -24,8 +25,16 @@ createMany = traverse_ create
 
 findAllByWalletId ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PersonWallet.PersonWallet -> m ([Lib.Payment.Domain.Types.WalletRewardPosting.WalletRewardPosting]))
+  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PersonWallet.PersonWallet -> m [Lib.Payment.Domain.Types.WalletRewardPosting.WalletRewardPosting])
 findAllByWalletId walletId = do findAllWithKV [Se.Is Beam.walletId $ Se.Eq (Kernel.Types.Id.getId walletId)]
+
+findByOrderId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Lib.Payment.Domain.Types.WalletRewardPosting.WalletRewardPosting])
+findByOrderId orderId = do findAllWithKV [Se.Is Beam.orderId $ Se.Eq orderId]
+
+findByOrderIdAndTxnUUID ::
+  (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Lib.Payment.Domain.Types.WalletRewardPosting.WalletRewardPosting))
+findByOrderIdAndTxnUUID orderId txnUUID = do findOneWithKV [Se.And [Se.Is Beam.orderId $ Se.Eq orderId, Se.Is Beam.txnUUID $ Se.Eq txnUUID]]
 
 findByWalletIdAndStatus ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
@@ -44,10 +53,12 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.WalletRewardPosting.WalletRewardPos
     [ Se.Set Beam.cashAmount cashAmount,
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
+      Se.Set Beam.orderId orderId,
       Se.Set Beam.pointsAmount pointsAmount,
       Se.Set Beam.postingType postingType,
       Se.Set Beam.shortId (Kernel.Types.Id.getShortId shortId),
       Se.Set Beam.status status,
+      Se.Set Beam.txnUUID txnUUID,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.walletId (Kernel.Types.Id.getId walletId)
     ]
@@ -63,10 +74,12 @@ instance FromTType' Beam.WalletRewardPosting Lib.Payment.Domain.Types.WalletRewa
             id = Kernel.Types.Id.Id id,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId,
+            orderId = orderId,
             pointsAmount = pointsAmount,
             postingType = postingType,
             shortId = Kernel.Types.Id.ShortId shortId,
             status = status,
+            txnUUID = txnUUID,
             updatedAt = updatedAt,
             walletId = Kernel.Types.Id.Id walletId
           }
@@ -79,10 +92,12 @@ instance ToTType' Beam.WalletRewardPosting Lib.Payment.Domain.Types.WalletReward
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = merchantId,
         Beam.merchantOperatingCityId = merchantOperatingCityId,
+        Beam.orderId = orderId,
         Beam.pointsAmount = pointsAmount,
         Beam.postingType = postingType,
         Beam.shortId = Kernel.Types.Id.getShortId shortId,
         Beam.status = status,
+        Beam.txnUUID = txnUUID,
         Beam.updatedAt = updatedAt,
         Beam.walletId = Kernel.Types.Id.getId walletId
       }

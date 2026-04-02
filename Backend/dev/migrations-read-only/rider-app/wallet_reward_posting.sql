@@ -12,3 +12,14 @@ ALTER TABLE atlas_app.wallet_reward_posting ADD COLUMN status text NOT NULL;
 ALTER TABLE atlas_app.wallet_reward_posting ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.wallet_reward_posting ADD COLUMN wallet_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.wallet_reward_posting ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.wallet_reward_posting ADD COLUMN order_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.wallet_reward_posting ADD COLUMN txn_uuid text ;

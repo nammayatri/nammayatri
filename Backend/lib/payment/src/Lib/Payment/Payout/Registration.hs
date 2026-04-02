@@ -103,9 +103,10 @@ initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall cust
       False -- isTestTransaction
       createOrderReq
       createOrderCall
-      Nothing -- mbCreateWalletCall
       False -- isMockPayment
       Nothing -- mbGroupId
+      Nothing -- mbIsWalletTopup
+      Nothing -- mbCustomerId
   createOrderResp <- case mbCreateOrderResp of
     Just resp -> pure resp
     Nothing -> throwError $ InternalError "Failed to create registration payment order"

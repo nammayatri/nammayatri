@@ -391,13 +391,27 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
             splitSettlementDetails = splitSettlementDetails,
-            basket = Nothing
+            basket = Nothing,
+            paymentRules = Nothing
           }
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
-  let createOrderCall = Payment.createOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just personId.getId) person.clientSdkVersion paymentOrder.isMockPayment
-      createWalletCall = TWallet.createWallet person.merchantId person.merchantOperatingCityId
-  DPayment.createOrderService paymentOrder.merchantId (Just $ cast merchantOperatingCityId) (cast personId) mbPaymentOrderValidTill Nothing paymentServiceType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) (fromMaybe False paymentOrder.isMockPayment) Nothing
+  let createOrderCall :: Payment.CreateOrderReq -> Environment.Flow Payment.CreateOrderResp
+      createOrderCall = Payment.createOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just personId.getId) person.clientSdkVersion paymentOrder.isMockPayment
+  DPayment.createOrderService
+    paymentOrder.merchantId
+    (Just $ cast merchantOperatingCityId)
+    (cast personId)
+    mbPaymentOrderValidTill
+    Nothing
+    paymentServiceType
+    isMetroTestTransaction
+    createOrderReq
+    createOrderCall
+    (fromMaybe False paymentOrder.isMockPayment)
+    Nothing
+    Nothing
+    Nothing
 
 -- TODO :: To be deprecated @Kavyashree
 postMultimodalPaymentUpdateOrder ::

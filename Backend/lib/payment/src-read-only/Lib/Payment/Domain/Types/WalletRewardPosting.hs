@@ -16,15 +16,17 @@ data WalletRewardPosting = WalletRewardPosting
     id :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.WalletRewardPosting.WalletRewardPosting,
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    orderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     pointsAmount :: Kernel.Types.Common.HighPrecMoney,
     postingType :: Kernel.External.Wallet.Interface.WalletPostingType,
     shortId :: Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.WalletRewardPosting.WalletRewardPosting,
     status :: Lib.Payment.Domain.Types.WalletRewardPosting.WalletPostingStatus,
+    txnUUID :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
     walletId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PersonWallet.PersonWallet
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data WalletPostingStatus = NEW | SUCCESS | FAILED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+data WalletPostingStatus = NEW | SUCCESS | FAILED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''Lib.Payment.Domain.Types.WalletRewardPosting.WalletPostingStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''Lib.Payment.Domain.Types.WalletRewardPosting.WalletPostingStatus)

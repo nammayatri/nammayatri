@@ -39,6 +39,8 @@ WalletRewardPosting:
     id: Id WalletRewardPosting
     shortId: ShortId WalletRewardPosting
     walletId: Id PersonWallet
+    orderId: Maybe Text
+    txnUUID: Maybe Text
     pointsAmount: HighPrecMoney
     cashAmount: HighPrecMoney
     postingType: WalletPostingType
@@ -56,6 +58,13 @@ WalletRewardPosting:
     findAllByWalletId:
       kvFunction: findAllWithKV
       where: walletId
+    findByOrderId:
+      kvFunction: findAllWithKV
+      where: orderId
+    findByOrderIdAndTxnUUID:
+      kvFunction: findOneWithKV
+      where:
+        and: [orderId, txnUUID]
 
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

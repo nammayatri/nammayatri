@@ -318,7 +318,8 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
                   metadataExpiryInMins = Nothing,
                   metadataGatewayReferenceId = Nothing,
                   splitSettlementDetails,
-                  basket = Nothing
+                  basket = Nothing,
+                  paymentRules = Nothing
                 }
 
         let commonMerchantId = Id.cast @DM.Merchant @DPayment.Merchant merchantId
@@ -326,8 +327,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             createOrderCall = TPayment.createOrder merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase (Just staticCustomerId) person.clientSdkVersion Nothing
         mbPaymentOrderValidity <- TPayment.getPaymentOrderValidity merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
         isMetroTestTransaction <- asks (.isMetroTestTransaction)
-        let createWalletCall = TWallet.createWallet merchantId person.merchantOperatingCityId
-        DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False (Just purchasedPassId.getId)
+        DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase isMetroTestTransaction createOrderReq createOrderCall False (Just purchasedPassId.getId) (Just False) Nothing
       else return Nothing
   QPurchasedPassPayment.create purchasedPassPayment
   return $

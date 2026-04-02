@@ -113,11 +113,15 @@ getOrCreatePaymentCustomer person = do
   case mbCustomer of
     Just customer -> return customer
     Nothing -> do
-      -- Create a customer in payment service if not there
       mbEmailDecrypted <- mapM decrypt person.email
       phoneDecrypted <- mapM decrypt person.mobileNumber
-      let req = CreateCustomerReq {email = mbEmailDecrypted, name = person.firstName, phone = phoneDecrypted, lastName = Nothing, objectReferenceId = Nothing, mobileCountryCode = Nothing, optionsGetClientAuthToken = Nothing}
-      customerResp <- TPayment.createCustomer person.merchantId person.merchantOperatingCityId person.paymentMode req
+      let req = CreateCustomerReq {email = mbEmailDecrypted, name = person.firstName, phone = phoneDecrypted, lastName = Nothing, objectReferenceId = Just person.id.getId, mobileCountryCode = person.mobileCountryCode, optionsGetClientAuthToken = Just True}
+      customerResp <-
+        try (TPayment.createCustomer person.merchantId person.merchantOperatingCityId person.paymentMode req) >>= \case
+          Right resp -> return resp
+          Left (_ :: SomeException) -> do
+            logInfo $ "createCustomer failed (customer may already exist on gateway), falling back to getCustomer for personId: " <> person.id.getId
+            TPayment.getCustomer person.merchantId person.merchantOperatingCityId person.paymentMode person.id.getId
       paymentCustomer <- buildCreateCustomer person.id customerResp paymentMode
       QPaymentCustomer.create paymentCustomer
       return paymentCustomer

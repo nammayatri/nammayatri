@@ -882,7 +882,8 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
             splitSettlementDetails = splitSettlementDetails,
-            basket = basket
+            basket = basket,
+            paymentRules = Nothing
           }
   let mocId = merchantOperatingCityId
       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
@@ -891,9 +892,8 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
       createOrderCall = Payment.createOrder merchantId mocId Nothing paymentType (Just person.id.getId) person.clientSdkVersion (Just isMockPayment)
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId merchantOperatingCityId Nothing paymentType
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
-  let createWalletCall = TWallet.createWallet merchantId merchantOperatingCityId
-      groupId = listToMaybe $ sort (bookings <&> (.id.getId))
-  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) isMockPayment groupId
+  let groupId = listToMaybe $ sort (bookings <&> (.id.getId))
+  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType isMetroTestTransaction createOrderReq createOrderCall isMockPayment groupId (Just False) Nothing
   mapM (\resp -> DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq resp isMockPayment groupId Nothing) orderResp
   where
     getPaymentIds = do
