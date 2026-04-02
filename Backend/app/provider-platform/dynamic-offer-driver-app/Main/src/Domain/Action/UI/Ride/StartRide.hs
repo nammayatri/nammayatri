@@ -294,7 +294,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
                       }
               PayoutRequest.createPayoutRequest payoutRequest
               when (payoutStatus == DPR.INITIATED) $ do
-                let jobData = SpecialZonePayoutJobData {payoutRequestId = payoutRequestId}
+                let jobData = SpecialZonePayoutJobData {payoutRequestId = Just payoutRequestId, scheduledPayoutId = Nothing}
                 QAllJ.createJobByTime @_ @'SpecialZonePayout (Just booking.providerId) (Just ride.merchantOperatingCityId) scheduledTime jobData
 
       pure APISuccess.Success
