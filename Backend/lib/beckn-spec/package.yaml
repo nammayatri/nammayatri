@@ -175,6 +175,7 @@ tests:
       - test
     dependencies:
       - beckn-spec
+      - directory
     ghc-options:
       - -threaded
       - -rtsopts

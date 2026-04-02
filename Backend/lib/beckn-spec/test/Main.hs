@@ -1,5 +1,7 @@
 module Main where
 
+import qualified BecknV2.OnDemand.DisabilityGuardSpec as DisabilityGuardSpec
+import qualified BecknV2.OnDemand.DisabilityPipelineSpec as DisabilityPipelineSpec
 import qualified BecknV2.OnDemand.EnumsSpec as EnumsSpec
 import qualified BecknV2.OnDemand.TagsSpec as TagsSpec
 import qualified BecknV2.OnDemand.TypesSpec as TypesSpec
@@ -13,3 +15,5 @@ main = hspec $ do
   EnumsSpec.spec
   TagsSpec.spec
   UtilsSpec.spec
+  DisabilityGuardSpec.spec
+  DisabilityPipelineSpec.spec
