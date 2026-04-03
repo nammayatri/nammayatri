@@ -115,7 +115,8 @@ data DConfirmRes = DConfirmRes
     isInsured :: Maybe Bool,
     insuredAmount :: Maybe Text,
     paymentMode :: Maybe DMPM.PaymentMode,
-    riderGender :: Maybe Text
+    riderGender :: Maybe Text,
+    bookingOfferEntity :: Maybe DOfferEntity.OfferEntity
   }
   deriving (Show, Generic)
 
@@ -183,6 +184,40 @@ confirm DConfirmReq {..} = do
   let isScheduled = (maybe False not searchRequest.isMultimodalSearch) && merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
   let driverPreference = extractDriverPreference person.customerNammaTags
   (booking, bookingParties) <- buildBooking merchant personId searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions person.paymentMode dashboardAgentId requiresPaymentBeforeConfirm driverPreference
+  mbBookingOfferEntity <-
+    case booking.selectedOfferId of
+      Just offerId -> do
+        let paymentServiceType =
+              if merchant.onlinePayment && paymentInstrument `notElem` [Just DMPM.Cash, Just DMPM.BoothOnline]
+                then DOrder.OnlineRideHailing
+                else DOrder.RideHailing
+        mbOfferDetails <- SOffer.getSelectedOfferDetails searchRequest.merchantId person.id merchantOperatingCityId paymentServiceType booking.estimatedTotalFare offerId
+        case mbOfferDetails of
+          Just (offerDetails, computed) -> do
+            bookingOfferId <- generateGUID
+            return $
+              Just $
+                DOfferEntity.OfferEntity
+                  { id = bookingOfferId,
+                    entityId = booking.id.getId,
+                    entityType = DOfferEntity.BOOKING,
+                    offerId = offerDetails.offerId,
+                    offerCode = offerDetails.offerCode,
+                    offerTitle = offerDetails.offerTitle,
+                    offerDescription = offerDetails.offerDescription,
+                    offerTnc = offerDetails.offerTnc,
+                    offerSponsoredBy = offerDetails.offerSponsoredBy,
+                    discountAmount = computed.amountSaved,
+                    payoutAmount = computed.payoutAmount,
+                    amountSaved = computed.amountSaved,
+                    postOfferAmount = computed.postOfferAmount,
+                    merchantId = searchRequest.merchantId,
+                    merchantOperatingCityId = merchantOperatingCityId,
+                    createdAt = now,
+                    updatedAt = now
+                  }
+          Nothing -> return Nothing
+      Nothing -> return Nothing
   -- check also for the booking parties
   checkIfActiveRidePresentForParties bookingParties
   when isScheduled $ do
@@ -201,36 +236,8 @@ confirm DConfirmReq {..} = do
   triggerBookingCreatedEvent BookingEventData {booking = booking}
   void $ QRideB.createBooking booking
   void $ QBPL.createMany bookingParties
-  -- Persist offer details in Booking OfferEntity table for fast lookup in rideList
-  whenJust booking.selectedOfferId $ \offerId -> do
-    let paymentServiceType =
-          if merchant.onlinePayment && paymentInstrument `notElem` [Just DMPM.Cash, Just DMPM.BoothOnline]
-            then DOrder.OnlineRideHailing
-            else DOrder.RideHailing
-    mbOfferDetails <- SOffer.getSelectedOfferDetails searchRequest.merchantId person.id merchantOperatingCityId paymentServiceType booking.estimatedTotalFare offerId
-    whenJust mbOfferDetails $ \(offerDetails, computed) -> do
-      bookingOfferId <- generateGUID
-      let bookingOfferEntity =
-            DOfferEntity.OfferEntity
-              { id = bookingOfferId,
-                entityId = booking.id.getId,
-                entityType = DOfferEntity.BOOKING,
-                offerId = offerDetails.offerId,
-                offerCode = offerDetails.offerCode,
-                offerTitle = offerDetails.offerTitle,
-                offerDescription = offerDetails.offerDescription,
-                offerTnc = offerDetails.offerTnc,
-                offerSponsoredBy = offerDetails.offerSponsoredBy,
-                discountAmount = computed.amountSaved,
-                payoutAmount = computed.payoutAmount,
-                amountSaved = computed.amountSaved,
-                postOfferAmount = computed.postOfferAmount,
-                merchantId = searchRequest.merchantId,
-                merchantOperatingCityId = merchantOperatingCityId,
-                createdAt = now,
-                updatedAt = now
-              }
-      QOfferEntity.create bookingOfferEntity
+  whenJust mbBookingOfferEntity $ \bookingOfferEntity -> do
+    QOfferEntity.create bookingOfferEntity
   unless isScheduled $
     void $ QPFS.updateStatus personId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just (QTB.getFareProductType booking.bookingDetails), tripCategory = booking.tripCategory}
   whenJust mbEsimateId $ QEstimate.updateStatus DEstimate.COMPLETED
@@ -272,6 +279,7 @@ confirm DConfirmReq {..} = do
         insuredAmount = booking.driverInsuredAmount,
         paymentMode = booking.paymentMode,
         riderGender = Just (show person.gender),
+        bookingOfferEntity = mbBookingOfferEntity,
         ..
       }
   where
