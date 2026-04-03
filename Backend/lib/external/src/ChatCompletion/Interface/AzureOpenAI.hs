@@ -12,9 +12,9 @@ import Kernel.Utils.Servant.Client
 
 azureOpenAIChatCompletion :: (EncFlow m r, CoreMetrics m, Log m, HasRequestId r, MonadReader r m) => CAC.AzureOpenAICfg -> CIT.GeneralChatCompletionReq -> m CIT.GeneralChatCompletionResp
 azureOpenAIChatCompletion cfg req = do
-  let chatCompletionUrl = cfg.azureOpenAIChatCompletionUrl
-      apiVersion = cfg.azureApiVersion
-  apiKey <- decrypt cfg.azureApiKey
+  let chatCompletionUrl = cfg.endpoint
+      apiVersion = cfg.apiVersion
+  apiKey <- decrypt cfg.apiKey
   let azureOAIccReqMsgs = fmap toAzureOAIccReq req.genMessages
       azureOAIccReq = CAT.ChatCompletionReq {messages = azureOAIccReqMsgs}
   azureCCresp <- CAA.chatCompletion chatCompletionUrl apiVersion apiKey azureOAIccReq

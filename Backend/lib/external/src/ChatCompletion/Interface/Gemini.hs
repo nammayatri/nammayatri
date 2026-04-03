@@ -12,8 +12,8 @@ import Kernel.Utils.Servant.Client
 
 geminiChatCompletion :: (EncFlow m r, CoreMetrics m, Log m, HasRequestId r, MonadReader r m) => CGC.GeminiCfg -> CIT.GeneralChatCompletionReq -> m CIT.GeneralChatCompletionResp
 geminiChatCompletion cfg req = do
-  let chatCompletionUrl = cfg.geminiChatCompletionUrl
-  apiKey <- decrypt cfg.geminiApiKey
+  let chatCompletionUrl = cfg.endpoint
+  apiKey <- decrypt cfg.apiKey
   let geminiccReqMsgs = fmap toGeminiccReq req.genMessages
       geminiCCReq = CGT.ContentsReq {contents = geminiccReqMsgs}
   geminiCCresp <- CGA.geminiChatCompletion chatCompletionUrl apiKey geminiCCReq

@@ -42,8 +42,8 @@ chatCompletionWithTools ::
   [CIT.ToolDefinition] ->
   m CGTT.ContentsToolResp
 chatCompletionWithTools cfg model contents tools = do
-  apiKey <- decrypt cfg.geminiApiKey
-  let url = cfg.geminiChatCompletionUrl
+  apiKey <- decrypt cfg.apiKey
+  let url = cfg.endpoint
       toolReq =
         CGTT.ContentsToolReq
           { contents = contents,

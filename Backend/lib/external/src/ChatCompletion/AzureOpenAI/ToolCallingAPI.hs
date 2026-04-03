@@ -44,9 +44,9 @@ chatCompletionWithTools ::
   [CIT.ToolDefinition] ->
   m CATT.ChatCompletionToolResponse
 chatCompletionWithTools cfg deployment messages tools = do
-  apiKey <- decrypt cfg.azureApiKey
-  let url = cfg.azureOpenAIChatCompletionUrl
-      apiVersion = cfg.azureApiVersion
+  apiKey <- decrypt cfg.apiKey
+  let url = cfg.endpoint
+      apiVersion = cfg.apiVersion
       toolReq =
         CATT.ChatCompletionToolReq
           { messages = messages,
