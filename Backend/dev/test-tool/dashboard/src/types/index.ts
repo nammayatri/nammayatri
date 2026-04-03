@@ -7,7 +7,7 @@ export interface Step {
   service: 'rider' | 'driver' | 'lts' | 'internal' | 'provider-dashboard' | 'mock-idfy';
   path: string | ((ctx: Record<string, any>) => string);
   auth?: boolean;
-  body?: (ctx: Record<string, any>) => any;
+  body?: any | ((ctx: Record<string, any>) => any);
   assert?: (data: any) => string | null;
   save?: (data: any, ctx: Record<string, any>) => void;
   note?: string;
