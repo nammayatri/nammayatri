@@ -726,6 +726,7 @@ library
       Tools.Insurance
       Tools.InvoicePDF
       Tools.JSON
+      Tools.LLMService
       Tools.Maps
       Tools.Metrics
       Tools.Metrics.BAPMetrics
