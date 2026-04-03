@@ -66,3 +66,8 @@ ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN waived_off_amount do
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN no_of_times_waive_off_used integer ;
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN no_of_times_canellation_dues_paid integer ;
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN cancellation_dues_paid double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN rider_flagged_for_driver_incentives boolean ;

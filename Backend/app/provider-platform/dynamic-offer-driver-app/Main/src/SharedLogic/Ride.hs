@@ -146,7 +146,6 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   commission <- FCV2.calculateCommission booking.fareParams mbFarePolicy
   ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId commission
   rideDetails <- buildRideDetails booking ride driver vehicle
-
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
   QRideD.create rideDetails
