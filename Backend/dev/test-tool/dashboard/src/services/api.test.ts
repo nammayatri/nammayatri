@@ -471,6 +471,110 @@ describe('API Service', () => {
         expect.any(Object)
       );
     });
+
+    it('should append query parameters from catalogApi', async () => {
+      const mockResponse = { data: { results: [] }, status: 200 };
+      mockedAxios.get.mockResolvedValueOnce(mockResponse);
+
+      const catalogApi: ApiDef = {
+        id: 'searchApi',
+        name: 'Search API',
+        description: 'Search with query params',
+        method: 'GET',
+        service: 'rider',
+        path: '/search',
+        auth: false,
+        queryParams: (ctx: any) => ({
+          lat: ctx.searchOrigin.lat.toString(),
+          lon: ctx.searchOrigin.lon.toString(),
+          radius: '5000',
+        }),
+        mockDataPresets: [],
+      };
+
+      const step: Step = {
+        id: 'query-params-step',
+        name: 'Query Params Step',
+        method: 'GET',
+        service: 'rider',
+        path: '/search',
+      };
+
+      await callStep(step, mockConfig, mockCtx, catalogApi);
+
+      expect(mockedAxios.get).toHaveBeenCalledWith(
+        'http://localhost:7082/proxy/rider/search?lat=10&lon=76&radius=5000',
+        expect.any(Object)
+      );
+    });
+
+    it('should call assert function and return error on assertion failure', async () => {
+      const mockResponse = { data: { status: 'pending' }, status: 200 };
+      mockedAxios.get.mockResolvedValueOnce(mockResponse);
+
+      const assertFn = jest.fn().mockReturnValue('Expected status to be completed');
+      const catalogApi: ApiDef = {
+        id: 'statusApi',
+        name: 'Status API',
+        description: 'Get status with assertion',
+        method: 'GET',
+        service: 'rider',
+        path: '/status',
+        auth: false,
+        assert: assertFn,
+        mockDataPresets: [],
+      };
+
+      const step: Step = {
+        id: 'assert-step',
+        name: 'Assert Step',
+        method: 'GET',
+        service: 'rider',
+        path: '/status',
+      };
+
+      const result = await callStep(step, mockConfig, mockCtx, catalogApi);
+
+      expect(assertFn).toHaveBeenCalledWith(mockResponse.data);
+      expect(result.ok).toBe(false);
+      expect(result.status).toBe(200);
+      expect(result.data).toEqual({
+        error: 'Expected status to be completed',
+        actual: { status: 'pending' },
+      });
+    });
+
+    it('should pass when assert function returns null', async () => {
+      const mockResponse = { data: { status: 'completed' }, status: 200 };
+      mockedAxios.get.mockResolvedValueOnce(mockResponse);
+
+      const assertFn = jest.fn().mockReturnValue(null);
+      const catalogApi: ApiDef = {
+        id: 'statusApi',
+        name: 'Status API',
+        description: 'Get status with assertion',
+        method: 'GET',
+        service: 'rider',
+        path: '/status',
+        auth: false,
+        assert: assertFn,
+        mockDataPresets: [],
+      };
+
+      const step: Step = {
+        id: 'assert-pass-step',
+        name: 'Assert Pass Step',
+        method: 'GET',
+        service: 'rider',
+        path: '/status',
+      };
+
+      const result = await callStep(step, mockConfig, mockCtx, catalogApi);
+
+      expect(assertFn).toHaveBeenCalledWith(mockResponse.data);
+      expect(result.ok).toBe(true);
+      expect(result.data).toEqual({ status: 'completed' });
+    });
   });
 
   describe('Location Pinger', () => {

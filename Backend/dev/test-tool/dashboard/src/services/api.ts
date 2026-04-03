@@ -109,7 +109,13 @@ export async function callStep(
     : step.service === 'mock-idfy' ? '/proxy/mock-idfy'
     : step.service === 'internal' ? ''
     : '/proxy/driver';
-  const url = `${PROXY_BASE}${proxyPrefix}${path}`;
+  let url = `${PROXY_BASE}${proxyPrefix}${path}`;
+
+  // Append query parameters if defined in catalogApi
+  if (catalogApi?.queryParams) {
+    const params = new URLSearchParams(catalogApi.queryParams(ctx));
+    url += '?' + params.toString();
+  }
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (step.auth) {
@@ -163,6 +169,14 @@ export async function callStep(
     // Run catalog extractFromResponse
     if (catalogApi?.extractFromResponse) {
       catalogApi.extractFromResponse(resp.data, ctx);
+    }
+
+    // Run catalog assert function for response validation
+    if (catalogApi?.assert) {
+      const error = catalogApi.assert(resp.data);
+      if (error) {
+        return { ok: false, status: resp.status, data: { error, actual: resp.data }, elapsed };
+      }
     }
 
     return { ok: true, status: resp.status, data: resp.data, elapsed };
