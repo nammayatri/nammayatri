@@ -434,6 +434,31 @@ getRidesForDate driverId date diffTime = do
         ]
     ]
 
+countPriorCompletedRidesWithSameCustomerOnSameDay ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Person ->
+  Maybe (Id RiderDetails) ->
+  Id Ride ->
+  Day ->
+  Seconds ->
+  m Int
+countPriorCompletedRidesWithSameCustomerOnSameDay _ Nothing _ _ _ = pure 0
+countPriorCompletedRidesWithSameCustomerOnSameDay driverId (Just riderDetailsId) excludeRideId localDay timeDiffFromUtc = do
+  rides <- getRidesForDate driverId localDay timeDiffFromUtc
+  let others = filter (\r -> r.id /= excludeRideId) rides
+  if null others
+    then pure 0
+    else do
+      bookings <- QBooking.findByIds (map (.bookingId) others)
+      let bookingById = HMS.fromList [(b.id, b) | b <- bookings]
+      pure $
+        length $
+          filter
+            ( \r ->
+                maybe False (\b -> b.riderId == Just riderDetailsId) (HMS.lookup r.bookingId bookingById)
+            )
+            others
+
 updateDeliveryFileIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> [Id DMF.MediaFile] -> UTCTime -> m ()
 updateDeliveryFileIds rideId deliveryFileIds now = do
   updateOneWithKV
