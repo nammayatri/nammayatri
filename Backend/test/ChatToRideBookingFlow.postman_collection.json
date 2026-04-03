@@ -1,0 +1,644 @@
+{
+	"info": {
+		"name": "Chat to Ride Booking Flow - Complete API Test",
+		"description": "Complete test flow from chat/messaging to ride booking. Tests all API endpoints including: Driver/Rider Auth, Messaging, Location, Search, Booking, Ride Management, and Call APIs.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"exec": [
+					"// Generate random test data for each run",
+					"if (!pm.collectionVariables.get(\"_test_run_id\")) {",
+					"    var testId = Date.now().toString();",
+					"    var driverNum = \"9\" + Math.floor(100000000 + Math.random() * 899999999);",
+					"    var riderNum = \"8\" + Math.floor(100000000 + Math.random() * 899999999);",
+					"    var regNo = \"KA\" + String(Math.floor(10 + Math.random() * 89)) + ",
+					"        String.fromCharCode(65 + Math.floor(Math.random() * 26)) + ",
+					"        String.fromCharCode(65 + Math.floor(Math.random() * 26)) + ",
+					"        String(Math.floor(1000 + Math.random() * 8999));",
+					"    ",
+					"    pm.collectionVariables.set(\"_test_run_id\", testId);",
+					"    pm.collectionVariables.set(\"_driver_number\", driverNum);",
+					"    pm.collectionVariables.set(\"_rider_number\", riderNum);",
+					"    pm.collectionVariables.set(\"_reg_no\", regNo);",
+					"    ",
+					"    console.log(\"=== Test Run ID: \" + testId + \" ===\");",
+					"    console.log(\"Driver: \" + driverNum + \", Rider: \" + riderNum + \", Reg: \" + regNo);",
+					"}"
+				],
+				"type": "text/javascript"
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "_test_run_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "_driver_number",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "_rider_number",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "_reg_no",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Authentication",
+			"item": [
+				{
+					"name": "Driver - Auth",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.environment.set(\"driver_authId\", jsonData.authId);",
+									"pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+									"pm.test(\"Response has authId\", function () { pm.expect(jsonData).to.have.property(\"authId\"); });"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"mobileNumber\": \"{{_driver_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+						},
+						"url": {"raw": "{{baseURL_namma_P}}/auth", "host": ["{{baseURL_namma_P}}"], "path": ["auth"]}
+					}
+				},
+				{
+					"name": "Driver - Verify OTP",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.environment.set(\"driver_token\", jsonData.token);",
+									"pm.environment.set(\"driver_id\", jsonData.person.id);",
+									"console.log(\"Driver ID:\", jsonData.person.id);",
+									"pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+									"pm.test(\"Response has token\", function () { pm.expect(jsonData).to.have.property(\"token\"); });"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-device-{{_test_run_id}}\"\n}"
+						},
+						"url": {"raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify", "host": ["{{baseURL_namma_P}}"], "path": ["auth", "{{driver_authId}}", "verify"]}
+					}
+				},
+				{
+					"name": "Rider - Auth",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.environment.set(\"rider_authId\", jsonData.authId);",
+									"pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+									"pm.test(\"Response has authId\", function () { pm.expect(jsonData).to.have.property(\"authId\"); });"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"mobileNumber\": \"{{_rider_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"NAMMA_YATRI\"\n}"
+						},
+						"url": {"raw": "{{baseUrl_app}}/auth", "host": ["{{baseUrl_app}}"], "path": ["auth"]}
+					}
+				},
+				{
+					"name": "Rider - Verify OTP",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.environment.set(\"rider_token\", jsonData.token);",
+									"pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+									"pm.test(\"Response has token\", function () { pm.expect(jsonData).to.have.property(\"token\"); });"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-rider-{{_test_run_id}}\"\n}"
+						},
+						"url": {"raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify", "host": ["{{baseUrl_app}}"], "path": ["auth", "{{rider_authId}}", "verify"]}
+					}
+				}
+			]
+		},
+		{
+			"name": "2. Driver Onboarding",
+			"item": [
+				{
+					"name": "Dashboard - Switch City",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "token", "value": "{{dashboard_token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{city}}\"}"
+						},
+						"url": {"raw": "{{dashboard_base_url}}/user/switchMerchantAndCity", "host": ["{{dashboard_base_url}}"], "path": ["user", "switchMerchantAndCity"]}
+					}
+				},
+				{
+					"name": "Dashboard - Add Vehicle",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": ["pm.test(\"Vehicle added\", function () { pm.response.to.have.status(200); });"],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "token", "value": "{{dashboard_token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"registrationNo\": \"{{_reg_no}}\",\n  \"vehicleClass\": \"3w\",\n  \"colour\": \"Green\",\n  \"model\": \"AUTO RICKSHAW\",\n  \"make\": \"Bajaj\",\n  \"vehicleCategory\": \"AUTO_CATEGORY\"\n}"
+						},
+						"url": {"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle", "host": ["{{baseURL_BPP_Dashboard_Internal}}"], "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "addVehicle"]}
+					}
+				},
+				{
+					"name": "Dashboard - Enable Driver",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": ["pm.test(\"Driver enabled\", function () { pm.response.to.have.status(200); });"],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "token", "value": "{{dashboard_token}}"}
+						],
+						"url": {"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable", "host": ["{{baseURL_BPP_Dashboard_Internal}}"], "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "enable"]}
+					}
+				}
+			]
+		},
+		{
+			"name": "3. Messaging & Chat APIs",
+			"item": [
+				{
+					"name": "Driver - Get Messages",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+									"pm.test(\"Response is array\", function () { pm.expect(pm.response.json()).to.be.an(\"array\"); });"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [{"key": "token", "value": "{{driver_token}}"}],
+						"url": {"raw": "{{baseURL_namma_P}}/message/list?limit=10&offset=0", "host": ["{{baseURL_namma_P}}"], "path": ["message", "list"], "query": [{"key": "limit", "value": "10"}, {"key": "offset", "value": "0"}]}
+					}
+				},
+				{
+					"name": "Driver - Get Message Detail",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "token", "value": "{{driver_token}}"}],
+						"url": {"raw": "{{baseURL_namma_P}}/message/sample-message-id", "host": ["{{baseURL_namma_P}}"], "path": ["message", "sample-message-id"]}
+					}
+				},
+				{
+					"name": "Driver - Mark Message Seen",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "token", "value": "{{driver_token}}"}],
+						"url": {"raw": "{{baseURL_namma_P}}/message/sample-message-id/seen", "host": ["{{baseURL_namma_P}}"], "path": ["message", "sample-message-id", "seen"]}
+					}
+				},
+				{
+					"name": "Driver - Like Message",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "token", "value": "{{driver_token}}"}],
+						"url": {"raw": "{{baseURL_namma_P}}/message/sample-message-id/like", "host": ["{{baseURL_namma_P}}"], "path": ["message", "sample-message-id", "like"]}
+					}
+				},
+				{
+					"name": "Driver - Reply to Message",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "token", "value": "{{driver_token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"reply\": \"Test reply message\"}"
+						},
+						"url": {"raw": "{{baseURL_namma_P}}/message/sample-message-id/response", "host": ["{{baseURL_namma_P}}"], "path": ["message", "sample-message-id", "response"]}
+					}
+				},
+				{
+					"name": "Driver - Send FCM Message",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "token", "value": "{{driver_token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"fcmToken\": \"test-token\", \"title\": \"Test\", \"body\": \"Test message\"}"
+						},
+						"url": {"raw": "{{baseURL_namma_P}}/onMessage", "host": ["{{baseURL_namma_P}}"], "path": ["onMessage"]}
+					}
+				}
+			]
+		},
+		{
+			"name": "4. Location & Activity",
+			"item": [
+				{
+					"name": "Driver - Update Location",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": ["var moment = require('moment'); pm.globals.set('current_time', moment.utc().format('YYYY-MM-DDTHH:mm:ssZ'));"],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "token", "value": "{{driver_id}}"},
+							{"key": "vt", "value": "AUTO_RICKSHAW"},
+							{"key": "dm", "value": "ONLINE"},
+							{"key": "mId", "value": "{{driver_merchant_id}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "[{\"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"ts\": \"{{current_time}}\"}]"
+						},
+						"url": {"raw": "{{baseUrl_lts}}/driver/location", "host": ["{{baseUrl_lts}}"], "path": ["driver", "location"]}
+					}
+				},
+				{
+					"name": "Driver - Set Online",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "token", "value": "{{driver_token}}"}
+						],
+						"url": {"raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "setActivity"], "query": [{"key": "active", "value": "true"}, {"key": "mode", "value": "%22ONLINE%22"}]}
+					}
+				},
+				{
+					"name": "Driver - Get Nearby Ride Requests",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "token", "value": "{{driver_token}}"}],
+						"url": {"raw": "{{baseURL_namma_P}}/driver/nearbyRideRequest", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "nearbyRideRequest"]}
+					}
+				}
+			]
+		},
+		{
+			"name": "5. Ride Search & Booking",
+			"item": [
+				{
+					"name": "Rider - Create Search",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.environment.set(\"searchId\", jsonData.searchId);",
+									"console.log(\"Search ID:\", jsonData.searchId);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "token", "value": "{{rider_token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"fareProductType\": \"ONE_WAY\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Test Origin\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"destination\": {\"address\": {\"area\": \"Test Destination\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}}}"
+						},
+						"url": {"raw": "{{baseUrl_app}}/rideSearch", "host": ["{{baseUrl_app}}"], "path": ["rideSearch"]}
+					}
+				},
+				{
+					"name": "Rider - Get Search Results",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": ["setTimeout(function(){}, 5000);"],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.estimates && jsonData.estimates.length > 0) {",
+									"    pm.environment.set(\"estimateId\", jsonData.estimates[0].id);",
+									"    console.log(\"Estimate:\", jsonData.estimates[0].id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [{"key": "token", "value": "{{rider_token}}"}],
+						"url": {"raw": "{{baseUrl_app}}/rideSearch/{{searchId}}/results", "host": ["{{baseUrl_app}}"], "path": ["rideSearch", "{{searchId}}", "results"]}
+					}
+				},
+				{
+					"name": "Rider - Select Estimate",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "token", "value": "{{rider_token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"autoAssignEnabled\": true, \"autoAssignEnabledV2\": true}"
+						},
+						"url": {"raw": "{{baseUrl_app}}/estimate/{{estimateId}}/select2", "host": ["{{baseUrl_app}}"], "path": ["estimate", "{{estimateId}}", "select2"]}
+					}
+				}
+			]
+		},
+		{
+			"name": "6. Driver Ride Management",
+			"item": [
+				{
+					"name": "Driver - Accept Ride",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "token", "value": "{{driver_token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"searchTryId\": \"{{searchTryId}}\", \"offeredFare\": null, \"response\": \"Accept\"}"
+						},
+						"url": {"raw": "{{baseURL_namma_P}}/driver/searchRequest/quote/respond", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "searchRequest", "quote", "respond"]}
+					}
+				},
+				{
+					"name": "Driver - Get Active Rides",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "token", "value": "{{driver_token}}"}],
+						"url": {"raw": "{{baseURL_namma_P}}/driver/ride/list?isActive=true&limit=5", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "ride", "list"], "query": [{"key": "isActive", "value": "true"}, {"key": "limit", "value": "5"}]}
+					}
+				},
+				{
+					"name": "Driver - Start Ride",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "token", "value": "{{driver_token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"rideOtp\": \"{{ride_otp}}\", \"point\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}"
+						},
+						"url": {"raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/start", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "ride", "{{driver_ride_id}}", "start"]}
+					}
+				},
+				{
+					"name": "Driver - End Ride",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "token", "value": "{{driver_token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"point\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}"
+						},
+						"url": {"raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/end", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "ride", "{{driver_ride_id}}", "end"]}
+					}
+				}
+			]
+		},
+		{
+			"name": "7. Rider Ride Management",
+			"item": [
+				{
+					"name": "Rider - Get Bookings",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "token", "value": "{{rider_token}}"}],
+						"url": {"raw": "{{baseUrl_app}}/rideBooking/list?limit=5", "host": ["{{baseUrl_app}}"], "path": ["rideBooking", "list"], "query": [{"key": "limit", "value": "5"}]}
+					}
+				},
+				{
+					"name": "Rider - Get Active Booking",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.list && jsonData.list.length > 0) {",
+									"    pm.environment.set(\"customer_bookingId\", jsonData.list[0].id);",
+									"    var otp = jsonData.list[0].rideOtp || (jsonData.list[0].rideList && jsonData.list[0].rideList[0] ? jsonData.list[0].rideList[0].rideOtp : '');",
+									"    pm.environment.set(\"ride_otp\", otp);",
+									"    console.log(\"Booking:\", jsonData.list[0].id, \"OTP:\", otp);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [{"key": "token", "value": "{{rider_token}}"}],
+						"url": {"raw": "{{baseUrl_app}}/rideBooking/list?onlyActive=true&limit=1", "host": ["{{baseUrl_app}}"], "path": ["rideBooking", "list"], "query": [{"key": "onlyActive", "value": "true"}, {"key": "limit", "value": "1"}]}
+					}
+				},
+				{
+					"name": "Rider - Get Ride Details",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "token", "value": "{{rider_token}}"}],
+						"url": {"raw": "{{baseUrl_app}}/rideBooking/{{customer_bookingId}}", "host": ["{{baseUrl_app}}"], "path": ["rideBooking", "{{customer_bookingId}}"]}
+					}
+				}
+			]
+		},
+		{
+			"name": "8. Call APIs",
+			"item": [
+				{
+					"name": "Rider - Call Driver",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "token", "value": "{{rider_token}}"}],
+						"url": {"raw": "{{baseUrl_app}}/ride/{{ride_id}}/call/driver", "host": ["{{baseUrl_app}}"], "path": ["ride", "{{ride_id}}", "call", "driver"]}
+					}
+				},
+				{
+					"name": "Rider - Get Call Status",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "token", "value": "{{rider_token}}"}],
+						"url": {"raw": "{{baseUrl_app}}/ride/call/status", "host": ["{{baseUrl_app}}"], "path": ["ride", "call", "status"]}
+					}
+				}
+			]
+		},
+		{
+			"name": "9. Cancellation APIs",
+			"item": [
+				{
+					"name": "Rider - Get Cancellation Reasons",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "token", "value": "{{rider_token}}"}],
+						"url": {"raw": "{{baseUrl_app}}/cancellationReason?language=en", "host": ["{{baseUrl_app}}"], "path": ["cancellationReason"], "query": [{"key": "language", "value": "en"}]}
+					}
+				},
+				{
+					"name": "Rider - Cancel Booking",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "token", "value": "{{rider_token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"cancellationReasonCode\": \"CHANGE_OF_PLANS\", \"additionalInfo\": \"Test cancellation\"}"
+						},
+						"url": {"raw": "{{baseUrl_app}}/booking/{{customer_bookingId}}/cancel", "host": ["{{baseUrl_app}}"], "path": ["booking", "{{customer_bookingId}}", "cancel"]}
+					}
+				}
+			]
+		},
+		{
+			"name": "10. Rating & Feedback",
+			"item": [
+				{
+					"name": "Rider - Get Feedback Form",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "token", "value": "{{rider_token}}"}],
+						"url": {"raw": "{{baseUrl_app}}/feedbackForm?language=en", "host": ["{{baseUrl_app}}"], "path": ["feedbackForm"], "query": [{"key": "language", "value": "en"}]}
+					}
+				},
+				{
+					"name": "Rider - Submit Rating",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "token", "value": "{{rider_token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"rating\": 5, \"feedbackDetails\": [{\"question\": \"How was the ride?\", \"answer\": \"Great!\"}]}"
+						},
+						"url": {"raw": "{{baseUrl_app}}/ride/{{ride_id}}/rating", "host": ["{{baseUrl_app}}"], "path": ["ride", "{{ride_id}}", "rating"]}
+					}
+				}
+			]
+		},
+		{
+			"name": "11. Maps & Location",
+			"item": [
+				{
+					"name": "Rider - Get Place Name",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "token", "value": "{{rider_token}}"}],
+						"url": {"raw": "{{baseUrl_app}}/maps/getPlaceName?lat={{origin_lat}}&lon={{origin_lon}}", "host": ["{{baseUrl_app}}"], "path": ["maps", "getPlaceName"], "query": [{"key": "lat", "value": "{{origin_lat}}"}, {"key": "lon", "value": "{{origin_lon}}"}]}
+					}
+				},
+				{
+					"name": "Rider - Get Place Details",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "token", "value": "{{rider_token}}"}],
+						"url": {"raw": "{{baseUrl_app}}/maps/placeDetails?placeId=sample-place-id", "host": ["{{baseUrl_app}}"], "path": ["maps", "placeDetails"], "query": [{"key": "placeId", "value": "sample-place-id"}]}
+					}
+				}
+			]
+		}
+	]
+}
