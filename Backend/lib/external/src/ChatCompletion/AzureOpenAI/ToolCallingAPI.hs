@@ -34,7 +34,9 @@ chatCompletionToolClient = client chatCompletionToolAPI
 chatCompletionWithTools ::
   ( CoreMetrics m,
     MonadFlow m,
-    EncFlow m r
+    EncFlow m r,
+    HasRequestId r,
+    MonadReader r m
   ) =>
   CAC.AzureOpenAICfg ->
   Text ->

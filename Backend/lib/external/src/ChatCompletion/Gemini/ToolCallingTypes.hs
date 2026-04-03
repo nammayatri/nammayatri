@@ -9,6 +9,7 @@ import Data.Text as T
 import Kernel.Prelude hiding (concatMap, map)
 import Kernel.Utils.JSON
 import qualified ChatCompletion.Interface.ToolCalling as CIT
+import qualified Data.List as List
 
 -- | Gemini Chat Completion Request with Tools
 data ContentsToolReq = ContentsToolReq
@@ -180,20 +181,25 @@ convertProperty CIT.ParameterProperty {..} =
 -- | Extract function calls from Gemini response
 extractFunctionCalls :: ContentsToolResp -> [CIT.ToolCall]
 extractFunctionCalls ContentsToolResp {..} =
-  concatMap extractFromCandidate candidates
+  List.concatMap extractFromCandidate candidates
   where
+    extractFromCandidate :: Candidate -> [CIT.ToolCall]
     extractFromCandidate Candidate {..} =
-      concatMap extractFromPart candidateContent.contentParts
-    extractFromPart Part {..} =
+      List.concatMap (extractFromPart candidateIndex) candidateContent.contentParts
+
+    extractFromPart :: Int -> Part -> [CIT.ToolCall]
+    extractFromPart idx Part {..} =
       case partFunctionCall of
         Just FunctionCall {..} ->
           [ CIT.ToolCall
-              { toolCallId = funcCallName <> "_" <> T.pack (show candidateIndex),
+              { toolCallId = funcCallName <> "_" <> T.pack (show idx),
                 toolCallName = funcCallName,
                 toolCallArguments = encodeToText funcCallArgs
               }
           ]
         Nothing -> []
+
+    encodeToText :: Value -> Text
     encodeToText = T.pack . show
 
 -- | Build function response content for Gemini
