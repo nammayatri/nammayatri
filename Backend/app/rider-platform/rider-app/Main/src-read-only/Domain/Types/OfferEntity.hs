@@ -32,7 +32,7 @@ data OfferEntity = OfferEntity
     postOfferAmount :: Kernel.Types.Common.HighPrecMoney,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 data EntityType = BOOKING | RIDE deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (Kernel.Prelude.ToParamSchema))
 

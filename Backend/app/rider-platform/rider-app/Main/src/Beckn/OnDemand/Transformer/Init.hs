@@ -176,7 +176,7 @@ mkOfferInfoTagGroup :: SharedLogic.Confirm.DConfirmRes -> Spec.TagGroup
 mkOfferInfoTagGroup res =
   Tags.getFullTagGroup
     Tags.OFFER_INFO
-    [ Tags.mkTag Tags.DISCOUNT_AMOUNT (show <$> res.booking.discountAmount)
+    [ Tags.mkTag Tags.DISCOUNT_AMOUNT (show . (.discountAmount) <$> res.bookingOfferEntity)
     ]
 
 mkDeliveryTagGroup :: SharedLogic.Confirm.DConfirmRes -> [Spec.TagGroup]

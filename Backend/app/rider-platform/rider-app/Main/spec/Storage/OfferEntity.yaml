@@ -5,7 +5,7 @@ imports:
 
 OfferEntity:
   tableName: offer_entity
-  derives: "Generic"
+  derives: "Generic, Show"
   fields:
     id: Id OfferEntity
     entityId: Text
