@@ -8,4 +8,4 @@ data AzureOpenAICfg = AzureOpenAICfg
     azureApiKey :: EncryptedField 'AsEncrypted Text,
     azureApiVersion :: Text
   }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, FromDhall)

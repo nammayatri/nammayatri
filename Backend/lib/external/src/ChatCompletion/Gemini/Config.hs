@@ -7,4 +7,4 @@ data GeminiCfg = GeminiCfg
   { geminiChatCompletionUrl :: BaseUrl,
     geminiApiKey :: EncryptedField 'AsEncrypted Text
   }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, FromDhall)
