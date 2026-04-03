@@ -58,16 +58,17 @@ import qualified Domain.Action.UI.DriverOnboarding.Status as DStatus
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
 import qualified Domain.Action.UI.ReferralPayout as ReferralPayout
-import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.BusinessLicense as DBL
 import qualified Domain.Types.CommonDriverOnboardingDocuments as DCommonDoc
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.DriverPanCard as DPan
+import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.VehicleCategory as DVCat
 import qualified Domain.Types.VehicleFitnessCertificate as DFC
 import qualified Domain.Types.VehicleInsurance as DVI
@@ -107,11 +108,11 @@ import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.Cac.TransporterConfig as CCT
-import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
+import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BusinessLicense as QBL
 import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDriverOnboardingDocuments
@@ -122,7 +123,6 @@ import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverPanCard as QPan
 import qualified Storage.Queries.DriverSSN as QSSN
 import qualified Storage.Queries.FleetOwnerDocumentVerificationConfig as QFODVC
-import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
 import qualified Storage.Queries.HyperVergeVerificationExtra as HVQuery
@@ -139,8 +139,8 @@ import qualified Storage.Queries.VehiclePermit as QVPermit
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error
-import qualified Tools.Payment as TPayment
 import Tools.Notifications as Notify
+import qualified Tools.Payment as TPayment
 import qualified Tools.SMS as Sms
 
 -- TDS Certificate validation (kept in sync with UI DriverOnboardingV2 flow)

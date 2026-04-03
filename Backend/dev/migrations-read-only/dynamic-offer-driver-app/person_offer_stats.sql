@@ -7,3 +7,14 @@ ALTER TABLE atlas_driver_offer_bpp.person_offer_stats ADD COLUMN offer_id charac
 ALTER TABLE atlas_driver_offer_bpp.person_offer_stats ADD COLUMN person_id text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.person_offer_stats ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.person_offer_stats ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.person_offer_stats ADD COLUMN entity_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.person_offer_stats ALTER COLUMN entity_type SET DEFAULT 'Person';

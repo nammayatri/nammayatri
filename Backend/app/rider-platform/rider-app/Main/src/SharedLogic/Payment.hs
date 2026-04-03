@@ -19,6 +19,7 @@ import qualified Domain.Types.ParkingTransaction as DPT
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.Ride as Ride
+import Kernel.External.Encryption
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Types as PInterface
@@ -37,11 +38,9 @@ import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
-import qualified Lib.Payment.Domain.Types.Offer as DOffer
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
-import qualified Lib.Payment.Storage.Queries.Offer as QOffer
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.CallBPP as CallBPP
@@ -49,7 +48,8 @@ import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.JobScheduler
 import qualified SharedLogic.JobScheduler as JobScheduler
-import SharedLogic.Offer (invalidateOfferListCache)
+import SharedLogic.Offer
+import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
@@ -572,6 +572,29 @@ data RidePaymentLedgerInfo = RidePaymentLedgerInfo
     financeCtx :: FinanceCtx
   }
 
+-- | Build offer stats input from a person. Resolves staticCustomerId from phone
+--   and passes raw identifiers to the payment library for entity resolution.
+buildOfferStatsInput ::
+  ( MonadFlow m,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    EncFlow m r
+  ) =>
+  Person.Person ->
+  m DPayment.OfferStatsInput
+buildOfferStatsInput person = do
+  personPhone <- mapM decrypt person.mobileNumber
+  staticCustomerId <- case personPhone of
+    Just phone -> SLUtils.getStaticCustomerId person phone
+    Nothing -> pure person.id.getId
+  pure
+    DPayment.OfferStatsInput
+      { personId = person.id.getId,
+        staticPersonId = if staticCustomerId /= person.id.getId then Just staticCustomerId else Nothing,
+        deviceId = person.deviceId
+      }
+
 -- | Retrieve the ride payment order for a rideId (domainEntityId = rideId).
 --   Returns only the ride PI order, NOT the tip PI order (which uses "tip:<rideId>").
 getOrderIdForRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Ride.Ride -> m (Maybe (Id DOrder.PaymentOrder))
@@ -739,15 +762,16 @@ chargePaymentIntent ::
   Maybe DMPM.PaymentMode ->
   DOrder.PaymentServiceType ->
   Payment.PaymentIntentId ->
-  Id Ride.Ride -> -- rideId for looking up pending ledger entries
-  Text -> -- settlement reason (e.g. "RidePaymentCaptured", "TipPaymentCaptured")
-  Id Person.Person -> -- personId for looking up payment customer
+  Id Ride.Ride ->
+  Text -> -- settlement reason
+  Id Person.Person ->
+  DPayment.OfferStatsInput -> -- callback to build stats input (called only on success)
   m Bool
-chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType paymentIntentId rideId settledReason personId = do
+chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType paymentIntentId rideId settledReason _personId offerStatsInput = do
   let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId paymentMode
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId paymentMode
       commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
-  charged <- DPayment.chargePaymentIntentService commonMerchantOperatingCityId paymentServiceType paymentIntentId (cast personId) capturePaymentIntentCall getPaymentIntentCall
+  charged <- DPayment.chargePaymentIntentService commonMerchantOperatingCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall offerStatsInput
   -- Find all unsettled ledger entries (PENDING or DUE) for this ride
   unsettledEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries rideId.getId
   unless (null unsettledEntries) $ do
@@ -857,12 +881,13 @@ makeCxCancellationPayment ::
   Payment.PaymentIntentId ->
   HighPrecMoney ->
   Id Person.Person ->
+  DPayment.OfferStatsInput ->
   m Bool
-makeCxCancellationPayment merchantId merchantOpCityId paymentMode paymentServiceType paymentIntentId cancellationAmount personId = do
+makeCxCancellationPayment merchantId merchantOpCityId paymentMode paymentServiceType paymentIntentId cancellationAmount _personId offerStatsInput = do
   let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId paymentMode
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId paymentMode
       commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
-  DPayment.updateForCXCancelPaymentIntentService commonMerchantOperatingCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancellationAmount (cast personId)
+  DPayment.updateForCXCancelPaymentIntentService commonMerchantOperatingCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancellationAmount offerStatsInput
 
 validatePaymentInstrument :: (MonadThrow m, Log m) => Merchant.Merchant -> Maybe DMPM.PaymentInstrument -> Maybe Payment.PaymentMethodId -> m ()
 validatePaymentInstrument merchant mbPaymentInstrument mbPaymentMethodId = do
@@ -901,18 +926,6 @@ updateDefaultPersonPaymentMethodId ::
 updateDefaultPersonPaymentMethodId person paymentMethodId = do
   let paymentMode = fromMaybe DMPM.LIVE person.paymentMode
   QPaymentCustomer.updateDefaultPaymentMethodId (Just paymentMethodId) (Just person.id) (Just paymentMode)
-
-getOfferAmount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DOffer.Offer -> HighPrecMoney -> m (Maybe DPayment.ComputedOfferAmount)
-getOfferAmount offerId amount = do
-  mbOffer <- QOffer.findById offerId
-  case mbOffer of
-    Just offer -> do
-      let computed = DPayment.computeOfferAmount offer amount
-      logInfo $ "Offer " <> offerId.getId <> " applied: amount=" <> show amount <> " postOffer=" <> show computed.postOfferAmount <> " discount=" <> show computed.discountAmount
-      pure $ Just computed
-    Nothing -> do
-      logError $ "Offer not found: " <> offerId.getId <> ", proceeding with full amount"
-      pure Nothing
 
 -------------------------------------------------------------------------------------------------------
 ------------------------------------- Pending Payment Validation --------------------------------------
@@ -964,7 +977,8 @@ capturePendingPaymentIfExists person merchantOperatingCityId = do
             whenJust mbOrder $ \order -> do
               let paymentIntentId = order.paymentServiceOrderId
               -- chargePaymentIntent will mark entries as DUE on failure, SETTLED on success
-              paymentCharged <- chargePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing paymentIntentId ride.id RidePaymentFinance.settledReasonRidePayment booking.riderId
+              offerStatsInput <- buildOfferStatsInput person
+              paymentCharged <- chargePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing paymentIntentId ride.id RidePaymentFinance.settledReasonRidePayment booking.riderId offerStatsInput
               if paymentCharged
                 then do
                   logInfo $ "Successfully captured payment for ride " <> ride.id.getId
@@ -976,16 +990,16 @@ capturePendingPaymentIfExists person merchantOperatingCityId = do
                   throwError $ InvalidRequest "You have pending dues from a previous ride. Please clear your dues before booking a new ride."
 
 zeroEffectivePaymentDueToOffer ::
-  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r, FinanceBeamFlow.BeamFlow m r) =>
+  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, FinanceBeamFlow.BeamFlow m r) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Id Ride.Ride ->
-  Id Person.Person ->
+  Person.Person ->
   Maybe Text ->
   Currency ->
   Maybe RidePaymentLedgerInfo ->
   m ()
-zeroEffectivePaymentDueToOffer merchantId merchantOperatingCityId rideId personId mbOfferId currency ledgerInfo = do
+zeroEffectivePaymentDueToOffer merchantId merchantOperatingCityId rideId person mbOfferId currency ledgerInfo = do
   -- Offer fully covers fare, no payment needed — create SETTLED ledger entries
   logInfo $ "Post-offer amount <= 0, skipping charge for ride: " <> rideId.getId
   whenJust mbOfferId $ \offerId -> do
@@ -1000,8 +1014,9 @@ zeroEffectivePaymentDueToOffer merchantId merchantOperatingCityId rideId personI
       case result of
         Right _ -> logInfo $ "Created SETTLED ledger for fully discounted ride: " <> rideId.getId
         Left err -> logError $ "Failed to create fully discounted ledger: " <> show err
+      offerStatsInput <- buildOfferStatsInput person
       let discountAmount = li.offerDiscountAmount
       void $
-        withTryCatch "applyOfferWithoutPayment:executeJob" $
-          DPayment.applyOfferWithoutPaymentService rideId.getId offerId personId.getId (Just discountAmount) Nothing currency merchantId.getId merchantOperatingCityId.getId
+        withTryCatch "applyOfferWithoutPayment:zeroEffective" $
+          DPayment.applyOfferWithoutPaymentService rideId.getId offerId offerStatsInput (Just discountAmount) Nothing currency merchantId.getId merchantOperatingCityId.getId
   QRide.markPaymentStatus Ride.Completed rideId

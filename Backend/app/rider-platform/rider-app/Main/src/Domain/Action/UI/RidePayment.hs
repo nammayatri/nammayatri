@@ -284,7 +284,8 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
           let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency person.id.getId rideId.getId Nothing Nothing
           void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
           -- Capture tip — settlement happens automatically inside chargePaymentIntent
-          tipPaymentCaptured <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing tipPaymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonTipPayment booking.riderId
+          offerStatsInput <- SPayment.buildOfferStatsInput person
+          tipPaymentCaptured <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing tipPaymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonTipPayment booking.riderId offerStatsInput
           -- Update tip amount ONLY after successful capture
           if tipPaymentCaptured
             then QRide.updateTipByRideId (Just tipAmount) rideId
@@ -330,14 +331,15 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
             let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency person.id.getId rideId.getId Nothing Nothing
             void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
             when (ride.status == Domain.Types.RideStatus.COMPLETED) $ do
-              SPayment.zeroEffectivePaymentDueToOffer person.merchantId person.merchantOperatingCityId rideId person.id booking.selectedOfferId fareWithTip.currency ledgerInfo
+              SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId rideId person booking.selectedOfferId fareWithTip.currency ledgerInfo
           Just paymentIntentResp -> do
             -- Create separate PENDING tip ledger entry via dedicated function
             let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency person.id.getId rideId.getId Nothing Nothing
             void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
             -- Capture immediately — old auth was cancelled, new PI needs fresh capture
             when (ride.status == Domain.Types.RideStatus.COMPLETED) $ do
-              paymentCaptured <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment booking.riderId
+              offerStatsInput <- SPayment.buildOfferStatsInput person
+              paymentCaptured <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment booking.riderId offerStatsInput
               if paymentCaptured
                 then QRide.markPaymentStatus Domain.Types.Ride.Completed rideId
                 else do
@@ -751,11 +753,12 @@ postPaymentClearDues (mbPersonId, merchantId) req = do
 
     -- 6. Attempt capture
     captureResult <-
-      try $
+      withTryCatch "postPaymentClearDues:chargePaymentIntent" $ do
+        offerStatsInput <- SPayment.buildOfferStatsInput person
         SPayment.chargePaymentIntent
           person.merchantId booking.merchantOperatingCityId booking.paymentMode
           DOrder.OnlineRideHailing
-          paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonDebtSettlement booking.riderId
+          paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonDebtSettlement booking.riderId offerStatsInput
 
     case captureResult of
       Right True -> do
@@ -837,6 +840,7 @@ postPaymentRideCapture ::
   )
 postPaymentRideCapture (mbPersonId, _merchantId) rideId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   Redis.withWaitOnLockRedisWithExpiry (SPayment.paymentJobExecLockKey rideId.getId) 10 20 $ do
     pendingEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries rideId.getId
     when (null pendingEntries) $
@@ -848,6 +852,7 @@ postPaymentRideCapture (mbPersonId, _merchantId) rideId = do
     orderId <- SPayment.getOrderIdForRide rideId >>= fromMaybeM (InvalidRequest "No payment order found for this ride")
     paymentOrder <- QPaymentOrder.findById orderId >>= fromMaybeM (InvalidRequest "Payment order not found")
     let paymentIntentId = paymentOrder.paymentServiceOrderId
+    offerStatsInput <- SPayment.buildOfferStatsInput person
     paymentCharged <-
       SPayment.chargePaymentIntent
         booking.merchantId
@@ -858,6 +863,7 @@ postPaymentRideCapture (mbPersonId, _merchantId) rideId = do
         ride.id
         RidePaymentFinance.settledReasonRidePayment
         booking.riderId
+        offerStatsInput
     if paymentCharged
       then do
         -- Settlement already done inside chargePaymentIntent

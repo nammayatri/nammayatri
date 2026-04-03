@@ -1,0 +1,57 @@
+imports:
+  Booking: Domain.Types.Booking
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+OfferEntity:
+  tableName: offer_entity
+  derives: "Generic"
+  fields:
+    id: Id OfferEntity
+    entityId: Text
+    entityType: EntityType
+    offerId: Text
+    offerCode: Text
+    offerTitle: Maybe Text
+    offerDescription: Maybe Text
+    offerTnc: Maybe Text
+    offerSponsoredBy: Maybe Text
+    discountAmount: HighPrecMoney
+    payoutAmount: HighPrecMoney
+    amountSaved: HighPrecMoney
+    postOfferAmount: HighPrecMoney
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    entityId: SecondaryKey
+
+  types:
+    EntityType:
+      enum: "BOOKING,RIDE"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <EntityType>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <EntityType>
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByEntityIdAndEntityType: # Can be findAllWithKV when showing more than one offer for an entity
+      kvFunction: findOneWithKV
+      where:
+        and: [entityId, entityType]
+
+  extraIndexes:
+    - columns: [entityId, entityType]
+      unique: true
+
+  excludedDefaultQueries:
+    - createMany
+    - updateByPrimaryKey
+    - findByPrimaryKey

@@ -21,6 +21,7 @@ import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface as PaymentInterface
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
@@ -46,6 +47,7 @@ executePaymentIntentJob ::
     CacheFlow m r,
     MonadFlow m,
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     SchedulerFlow r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r
@@ -116,9 +118,10 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
                       }
             mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId booking.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.OnlineRideHailing createPaymentIntentServiceReq ledgerInfo
             case mbPaymentIntentResp of
-              Nothing -> SPayment.zeroEffectivePaymentDueToOffer person.merchantId booking.merchantOperatingCityId ride.id person.id booking.selectedOfferId fareWithTip.currency ledgerInfo
+              Nothing -> SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId ride.id person booking.selectedOfferId fareWithTip.currency ledgerInfo
               Just paymentIntentResp -> do
-                paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment booking.riderId
+                offerStatsInput <- buildOfferStatsInput person
+                paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment booking.riderId offerStatsInput
                 if paymentCharged
                   then do
                     -- Apply offer stats after successful charge
@@ -139,6 +142,7 @@ cancelExecutePaymentIntentJob ::
     CacheFlow m r,
     MonadFlow m,
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     SchedulerFlow r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasShortDurationRetryCfg r c,
@@ -166,7 +170,8 @@ cancelExecutePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
   mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   when (isNothing ride.cancellationFeeIfCancelled) $ do
     QRide.updateCancellationFeeIfCancelledField (Just cancellationAmount.amount) rideId
-  paymentCharged <- SPayment.makeCxCancellationPayment booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing order.paymentServiceOrderId cancellationAmount.amount booking.riderId
+  offerStatsInput <- SPayment.buildOfferStatsInput person
+  paymentCharged <- SPayment.makeCxCancellationPayment booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing order.paymentServiceOrderId cancellationAmount.amount booking.riderId offerStatsInput
   when paymentCharged $ QRide.markPaymentStatus DRide.Completed rideId
   void $
     CallBPPInternal.customerCancellationDuesSync

@@ -30,6 +30,7 @@ import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTxn
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import Lib.Payment.Storage.Beam.BeamFlow ()
 import qualified Lib.Payment.Storage.Beam.Offer as BeamOffer
+import qualified Lib.Payment.Storage.Beam.OfferStats as BeamOfferStats
 import qualified Lib.Payment.Storage.Beam.OfflineOffer as BeamOfflineOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
 import qualified Lib.Payment.Storage.Beam.PaymentOrderOffer as BeamOffer
@@ -39,7 +40,6 @@ import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamPOO
 import qualified Lib.Payment.Storage.Beam.PayoutRequest as BeamPR
 import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamPOT
 import qualified Lib.Payment.Storage.Beam.PersonDailyOfferStats as BeamPersonDailyOfferStats
-import qualified Lib.Payment.Storage.Beam.PersonOfferStats as BeamPersonOfferStats
 import qualified Lib.Payment.Storage.Beam.PersonWallet as BeamPW
 import qualified Lib.Payment.Storage.Beam.Refunds as BeamRF
 import qualified Lib.Payment.Storage.Beam.WalletRewardPosting as BeamWRP
@@ -93,7 +93,7 @@ instance HasSchemaName BeamOffer.OfferT where
 instance HasSchemaName BeamPersonDailyOfferStats.PersonDailyOfferStatsT where
   schemaName _ = "atlas_app"
 
-instance HasSchemaName BeamPersonOfferStats.PersonOfferStatsT where
+instance HasSchemaName BeamOfferStats.OfferStatsT where
   schemaName _ = "atlas_app"
 
 instance HasSchemaName BeamOfflineOffer.OfflineOfferT where

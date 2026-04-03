@@ -45,6 +45,8 @@ import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.OfferEntity as DOfferEntity
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.PersonStats as DPS
@@ -98,6 +100,7 @@ import qualified SharedLogic.Insurance as SI
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.Offer as SOffer
 import SharedLogic.Payment as SPayment
 import qualified SharedLogic.ScheduledNotifications as SN
 import Storage.Beam.Yudhishthira ()
@@ -124,6 +127,7 @@ import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJL
+import qualified Storage.Queries.OfferEntity as QOfferEntity
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonStats as QPersonStats
 import qualified Storage.Queries.RecentLocation as SQRL
@@ -750,10 +754,37 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   mbMerchant <- CQM.findById booking.merchantId
   whenJust mbAdvRide $ do \advRide -> when (advRide.id /= ride.id) $ QRide.updateshowDriversPreviousRideDropLoc False advRide.id
   let distanceUnit = ride.distanceUnit
-  calculatedOffer <-
-    case booking.selectedOfferId of
-      Just offerId -> SPayment.getOfferAmount (Id offerId) totalFare.amount
-      Nothing -> pure Nothing
+  -- Persist offer details in Ride OfferEntity table for fast lookup in rideList
+  whenJust booking.selectedOfferId $ \offerId -> do
+    let paymentServiceType =
+          if maybe False (.onlinePayment) mbMerchant && booking.paymentInstrument `notElem` [Just DMPM.Cash, Just DMPM.BoothOnline]
+            then DOrder.OnlineRideHailing
+            else DOrder.RideHailing
+    mbOfferDetails <- SOffer.getSelectedOfferDetails booking.merchantId person.id booking.merchantOperatingCityId paymentServiceType totalFare offerId
+    whenJust mbOfferDetails $ \(offerDetails, computed) -> do
+      rideOfferId <- generateGUID
+      now <- getCurrentTime
+      let rideOfferEntity =
+            DOfferEntity.OfferEntity
+              { id = rideOfferId,
+                entityId = ride.id.getId,
+                entityType = DOfferEntity.RIDE,
+                offerId = offerDetails.offerId,
+                offerCode = offerDetails.offerCode,
+                offerTitle = offerDetails.offerTitle,
+                offerDescription = offerDetails.offerDescription,
+                offerTnc = offerDetails.offerTnc,
+                offerSponsoredBy = offerDetails.offerSponsoredBy,
+                discountAmount = computed.discountAmount,
+                payoutAmount = computed.payoutAmount,
+                amountSaved = computed.amountSaved,
+                postOfferAmount = computed.postOfferAmount,
+                merchantId = booking.merchantId,
+                merchantOperatingCityId = booking.merchantOperatingCityId,
+                createdAt = now,
+                updatedAt = now
+              }
+      QOfferEntity.create rideOfferEntity
   let rideCommission = maybe booking.commission Just commission
       updRide =
         ride{status = DRide.COMPLETED,
@@ -765,8 +796,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
              rideEndTime,
              paymentStatus = if SPayment.isOnlinePayment mbMerchant booking then DRide.NotInitiated else DRide.Completed,
              endOdometerReading,
-             discountAmount = calculatedOffer <&> (.discountAmount),
-             payoutAmount = calculatedOffer <&> (.payoutAmount),
+             discountAmount = Nothing, -- TODO :: Deprecated, added in OfferEntity table, to support multiple offers in future too.
+             payoutAmount = Nothing, -- TODO :: Deprecated, added in OfferEntity table, to support multiple offers in future too.
              commission = rideCommission
             }
   breakups <- traverse (buildFareBreakup ride.id) fareBreakups
@@ -802,9 +833,10 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   if not onlinePayment
     then do
       whenJust booking.selectedOfferId $ \offerId -> do
+        offerStatsInput <- SPayment.buildOfferStatsInput person
         void $
-          withTryCatch "applyOfferWithoutPayment:executeJob" $
-            DPayment.applyOfferWithoutPaymentService ride.id.getId offerId person.id.getId updRide.discountAmount updRide.payoutAmount totalFare.currency person.merchantId.getId person.merchantOperatingCityId.getId
+          withTryCatch "applyOfferWithoutPayment:cashRide" $
+            DPayment.applyOfferWithoutPaymentService ride.id.getId offerId offerStatsInput updRide.discountAmount updRide.payoutAmount totalFare.currency person.merchantId.getId person.merchantOperatingCityId.getId
     else do
       let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency person.id.getId ride.id.getId Nothing Nothing
           ledgerInfo =
@@ -842,7 +874,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         Left err -> do
           logError $ "makePaymentIntent failed, scheduling job so that it can mark this as Dues: " <> show err
           createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)
-        Right Nothing -> SPayment.zeroEffectivePaymentDueToOffer person.merchantId person.merchantOperatingCityId ride.id person.id booking.selectedOfferId totalFare.currency ledgerInfo
+        Right Nothing -> SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId ride.id person booking.selectedOfferId totalFare.currency ledgerInfo
         Right (Just _paymentIntentResp) -> do
           logDebug $ "Scheduling execute payment intent job for order: " <> show scheduleAfter
           createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)

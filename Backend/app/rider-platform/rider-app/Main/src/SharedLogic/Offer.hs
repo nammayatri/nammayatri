@@ -3,6 +3,7 @@
 module SharedLogic.Offer where
 
 import qualified Data.Aeson as A
+import qualified Data.Text as T
 import Data.Time (utctDay)
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -21,15 +22,17 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.Payment.Domain.Action as DPayment
+import Lib.Payment.Domain.Types.Offer as DOffer
+import qualified Lib.Payment.Domain.Types.OfferStats as DOfferStats
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PersonDailyOfferStats as DPDOS
-import qualified Lib.Payment.Domain.Types.PersonOfferStats as DPOS
+import Lib.Payment.Storage.Queries.Offer as QOffer
+import qualified Lib.Payment.Storage.Queries.OfferStats as QOfferStats
 import qualified Lib.Payment.Storage.Queries.PersonDailyOfferStats as QPersonDailyOfferStats
-import qualified Lib.Payment.Storage.Queries.PersonOfferStats as QPersonOfferStats
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
-import qualified Lib.Yudhishthira.TypesTH as YTH
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Lib.Yudhishthira.TypesTH as YTH
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
@@ -72,6 +75,7 @@ data OfferRespAPIEntity = OfferRespAPIEntity
     offerDescription :: Maybe Text,
     offerTnc :: Maybe Text,
     offerSponsoredBy :: Maybe Text,
+    offerCode :: Text,
     amountSaved :: HighPrecMoney,
     postOfferAmount :: HighPrecMoney
   }
@@ -87,7 +91,9 @@ data OffersRespAPIEntity = OffersRespAPIEntity
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data OfferEligibilityInput = OfferEligibilityInput
-  { personOfferStats :: [DPOS.PersonOfferStats],
+  { personOfferStats :: [DOfferStats.OfferStats],
+    staticPersonOfferStats :: [DOfferStats.OfferStats],
+    deviceOfferStats :: [DOfferStats.OfferStats],
     personDailyOfferStats :: Maybe DPDOS.PersonDailyOfferStats,
     personStats :: Maybe DPS.PersonStats
   }
@@ -119,7 +125,20 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
   if isDomainOffersEnabled paymentServiceType
     then do
       let domainOfferCall = \_ -> do
-            personOfferStats <- QPersonOfferStats.findAllByPersonId personId.getId
+            personOfferStats <- QOfferStats.findAllByEntityIdAndEntityType personId.getId DOfferStats.Person
+            staticPersonOfferStats <- do
+              personPhone <- mapM decrypt person.mobileNumber
+              case personPhone of
+                Just phone -> do
+                  staticId <- SLUtils.getStaticCustomerId person phone
+                  if staticId /= personId.getId
+                    then QOfferStats.findAllByEntityIdAndEntityType staticId DOfferStats.StaticPerson
+                    else pure []
+                Nothing -> pure []
+            deviceOfferStats <- case person.deviceId of
+              Just did | not (T.null did) -> QOfferStats.findAllByEntityIdAndEntityType did DOfferStats.Device
+              _ -> pure []
+            -- offerStats <- QOfferStats.findAllByEntityIdAndEntityType offerId.getId DOfferStats.Offer
             today <- utctDay <$> getCurrentTime
             mbPersonDailyOfferStats <- QPersonDailyOfferStats.findByPersonIdAndDate personId.getId today
             mbPersonStats <- QPersonStats.findByPersonId personId
@@ -128,6 +147,8 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
                     A.toJSON
                       OfferEligibilityInput
                         { personOfferStats = personOfferStats,
+                          staticPersonOfferStats = staticPersonOfferStats,
+                          deviceOfferStats = deviceOfferStats,
                           personDailyOfferStats = mbPersonDailyOfferStats,
                           personStats = mbPersonStats
                         }
@@ -153,12 +174,28 @@ selectedOfferListCache merchantId personId merchantOperatingCityId paymentServic
         bestOfferCombination = filteredCombo
       }
 
-getSelectedOffer :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> Text -> m (Maybe OfferRespAPIEntity)
-getSelectedOffer merchantId personId merchantOperatingCityId paymentServiceType price offerId = do
+getSelectedOfferDetails :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> Text -> m (Maybe (OfferRespAPIEntity, DPayment.ComputedOfferAmount))
+getSelectedOfferDetails merchantId personId merchantOperatingCityId paymentServiceType price offerId = do
   resp <- selectedOfferListCache merchantId personId merchantOperatingCityId paymentServiceType price offerId
   case listToMaybe resp.offerResp of
     Nothing -> pure Nothing
-    Just offer -> pure $ Just $ mkOfferRespAPIEntity offer
+    Just offer -> do
+      mbComputed <- getOfferAmount (Id offerId) price.amount
+      case mbComputed of
+        Nothing -> pure Nothing
+        Just computed -> pure $ Just (mkOfferRespAPIEntity offer, computed)
+
+getOfferAmount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DOffer.Offer -> HighPrecMoney -> m (Maybe DPayment.ComputedOfferAmount)
+getOfferAmount offerId amount = do
+  mbOffer <- QOffer.findById offerId
+  case mbOffer of
+    Just offer -> do
+      let computed = DPayment.computeOfferAmount offer amount
+      logInfo $ "Offer " <> offerId.getId <> " applied: amount=" <> show amount <> " postOffer=" <> show computed.postOfferAmount <> " discount=" <> show computed.discountAmount
+      pure $ Just computed
+    Nothing -> do
+      logError $ "Offer not found: " <> offerId.getId <> ", proceeding with full amount"
+      pure Nothing
 
 mkCumulativeOfferResp :: (MonadFlow m, EncFlow m r, BeamFlow m r, ClickhouseFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> [JL.LegInfo] -> m (Maybe CumulativeOfferResp)
 mkCumulativeOfferResp merchantOperatingCityId offerListRes legInfos = do
@@ -194,6 +231,7 @@ mkOfferRespAPIEntity Payment.OfferResp {..} = do
       offerDescription = offerDescription.description,
       offerTnc = offerDescription.tnc,
       offerSponsoredBy = offerDescription.sponsoredBy,
+      offerCode = offerCode,
       amountSaved = discountAmount,
       postOfferAmount = finalOrderAmount
     }

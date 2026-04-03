@@ -63,35 +63,63 @@ Offer:
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
 
-PersonOfferStats:
+OfferStats:
   tableName: person_offer_stats
-  derives: "Generic, Show, ToJSON, FromJSON"
-  excludedFields:
-    - merchantId
-    - merchantOperatingCityId
+  derives: "Generic, Show, Read, ToJSON, FromJSON"
   fields:
-    id: Id PersonOfferStats
+    id: Id OfferStats
     offerId: Id Offer
-    personId: Text
+    entityId: Text
+    entityType: OfferStatsEntityType
     offerAppliedCount: Int
     createdAt: UTCTime
     updatedAt: UTCTime
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+
+  types:
+    OfferStatsEntityType:
+      enum: "Person, StaticPerson, Device, Offer"
+
+  beamFields:
+    entityId:
+      personId: Text
+
+  beamType:
+    entityType: Maybe OfferStatsEntityType
+
+  default:
+    entityType: "'Person'"
+
+  toTType:
+    entityType: Kernel.Prelude.Just|I
+
+  fromTType:
+    entityType: Kernel.Prelude.fromMaybe Lib.Payment.Domain.Types.OfferStats.Person entityType|E
+
+  sqlType:
+    entityType: "text"
 
   constraints:
     id: PrimaryKey
 
   extraIndexes:
-    - columns: [offerId, personId]
-    - columns: [personId]
+    - columns: [offerId, personId, entityType]
+      unique: true
+    - columns: [personId, entityType]
+      unique: false
 
   queries:
-    findByOfferIdAndPersonId:
+    findByOfferIdAndEntityIdAndEntityType:
       kvFunction: findOneWithKV
       where:
-        and: [offerId, personId]
-    findAllByPersonId:
+        and: [offerId, entityId, entityType]
+    findAllByEntityIdAndEntityType:
       kvFunction: findAllWithKV
-      where: personId
+      where:
+        and: [entityId, entityType]
 
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

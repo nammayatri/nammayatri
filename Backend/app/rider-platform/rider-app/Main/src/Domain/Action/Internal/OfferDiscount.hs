@@ -8,7 +8,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import qualified Lib.Payment.Domain.Types.Offer as DOffer
-import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.Offer as SOffer
 import Storage.Beam.Payment ()
 import qualified Storage.Queries.Booking as QBooking
 
@@ -30,6 +30,6 @@ getOfferDiscount _token bppBookingId mbFareAmount = do
   booking <- B.runInReplica $ QBooking.findByBPPBookingId (Id bppBookingId) >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId)
   case (booking.selectedOfferId, mbFareAmount) of
     (Just offerId, Just fareAmount) -> do
-      mbComputed <- SPayment.getOfferAmount (Id @DOffer.Offer offerId) fareAmount
+      mbComputed <- SOffer.getOfferAmount (Id @DOffer.Offer offerId) fareAmount
       pure $ OfferDiscountResp {discountAmount = (.discountAmount) <$> mbComputed}
     _ -> pure $ OfferDiscountResp {discountAmount = booking.discountAmount}
