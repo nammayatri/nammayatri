@@ -6,6 +6,7 @@ import ChatCompletion.AzureOpenAI.Config as CAC
 import ChatCompletion.AzureOpenAI.ToolCallingTypes as CATT
 import ChatCompletion.Interface.ToolCalling as CIT
 import EulerHS.Types (EulerClient, client)
+import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common
@@ -54,7 +55,7 @@ chatCompletionWithTools cfg deployment messages tools = do
     url
     (chatCompletionToolClient deployment (Just apiVersion) (Just apiKey) toolReq)
     "chat-completion-with-tools"
-    chatCompletionWithTools
+    chatCompletionToolAPI
     >>= \case
       Left err -> throwError $ InternalError $ "Error calling Azure OpenAI with tools: " <> show err
       Right resp -> return resp

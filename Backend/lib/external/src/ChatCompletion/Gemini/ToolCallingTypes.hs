@@ -48,7 +48,7 @@ instance ToJSON FunctionDeclaration where
 -- | Tool parameters schema
 data ToolParameters = ToolParameters
   { paramsType :: Text,
-    paramsProperties :: Map Text ParameterProperty,
+    paramsProperties :: Map.Map Text ParameterProperty,
     paramsRequired :: [Text]
   }
   deriving (Show, Generic)

@@ -6,6 +6,7 @@ import ChatCompletion.Gemini.Config as CGC
 import ChatCompletion.Gemini.ToolCallingTypes as CGTT
 import ChatCompletion.Interface.ToolCalling as CIT
 import EulerHS.Types (EulerClient, client)
+import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common
@@ -50,7 +51,7 @@ chatCompletionWithTools cfg model contents tools = do
     url
     (chatCompletionToolClient model (Just apiKey) toolReq)
     "chat-completion-with-tools"
-    chatCompletionWithTools
+    chatCompletionToolAPI
     >>= \case
       Left err -> throwError $ InternalError $ "Error calling Gemini with tools: " <> show err
       Right resp -> return resp
