@@ -37,4 +37,6 @@ in  { dbUserId = "atlas_app_user"
     , googleSAPrivateKey
     , parkingApiKey = "test-parking-api-key"
     , corporatePartnerApiToken = "test-partner-api-token"
+    , azureOpenAIApiKey = "test-azure-openai-api-key"
+    , geminiApiKey = "test-gemini-api-key"
     }

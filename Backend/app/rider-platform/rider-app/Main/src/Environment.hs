@@ -86,6 +86,8 @@ import Tools.Metrics
 import Tools.Streaming.Kafka
 import TransactionLogs.Types hiding (ONDC)
 import qualified UrlShortner.Common as UrlShortner
+import qualified ChatCompletion.AzureOpenAI.Config as AzureOpenAI
+import qualified ChatCompletion.Gemini.Config as Gemini
 
 -- | SFTP configuration for partner invoice data export
 data SFTPConfig = SFTPConfig
@@ -200,9 +202,16 @@ data AppCfg = AppCfg
     corporatePartnerApiToken :: Text,
     noSignatureSubscribers :: [Text],
     blackListedJobs :: [Text],
-    sftpConfig :: SFTPConfig
+    sftpConfig :: SFTPConfig,
+    llmConfig :: LLMConfig
   }
   deriving (Generic, FromDhall)
+
+data LLMConfig = LLMConfig
+  { azureOpenAICfg :: AzureOpenAI.AzureOpenAICfg,
+    geminiCfg :: Gemini.GeminiCfg
+  }
+  deriving (Generic, FromDhall, Show)
 
 -- TODO coreVersion should be hardcoded in spec, because we can't change coreVersion without changing code
 data AppEnv = AppEnv
@@ -320,7 +329,8 @@ data AppEnv = AppEnv
     noSignatureSubscribers :: [Text],
     blackListedJobs :: [Text],
     cloudType :: Maybe CloudType,
-    sftpConfig :: SFTPConfig
+    sftpConfig :: SFTPConfig,
+    llmConfig :: LLMConfig
   }
   deriving (Generic)
 
