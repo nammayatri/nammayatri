@@ -59,6 +59,7 @@ import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.Cancel as Cancel
 import qualified API.UI.CancelSearch as CancelSearch
 import qualified API.UI.CancellationReason as CancellationReason
+import qualified API.UI.Chat as Chat
 import qualified API.UI.Confirm as Confirm
 import qualified API.UI.Disability as Disability
 import qualified API.UI.FeedbackForm as FeedbackForm
@@ -117,6 +118,7 @@ type API =
            :<|> GoogleTranslateProxy.API
            :<|> CancellationReason.API
            :<|> CancellationChargesWaiveOff.API
+           :<|> Chat.API
            :<|> SavedReqLocation.API
            :<|> Frontend.API
            :<|> Whatsapp.API
@@ -191,6 +193,7 @@ handler =
     :<|> GoogleTranslateProxy.handler
     :<|> CancellationReason.handler
     :<|> CancellationChargesWaiveOff.handler
+    :<|> Chat.handler
     :<|> SavedReqLocation.handler
     :<|> Frontend.handler
     :<|> Whatsapp.handler
