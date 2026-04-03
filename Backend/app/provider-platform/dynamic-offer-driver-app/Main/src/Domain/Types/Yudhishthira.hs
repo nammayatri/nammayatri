@@ -41,7 +41,9 @@ data TagData = TagData
 data EndRideTagData = EndRideTagData
   { ride :: DRide.Ride,
     booking :: SRB.Booking,
-    isDriverSameAsCustomer :: Bool
+    isDriverSameAsCustomer :: Bool,
+    shouldBlockCoinsForSameRiderFlow :: Bool,
+    rideDurationSeconds :: Int
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
