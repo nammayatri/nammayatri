@@ -1,47 +1,46 @@
-{-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
+{-# LANGUAGE StandaloneDeriving #-}
 module Lib.Finance.Storage.Beam.DirectTaxTransaction where
-
-import qualified Database.Beam as B
-import Kernel.External.Encryption
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
+import Kernel.External.Encryption
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction
-import Tools.Beam.UtilsTH
+import qualified Database.Beam as B
 
-data DirectTaxTransactionT f = DirectTaxTransactionT
-  { counterpartyId :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    grossAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    id :: (B.C f Kernel.Prelude.Text),
-    invoiceNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    netAmountPaid :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    panOfParty :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    panType :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    paymentDate :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    referenceId :: (B.C f Kernel.Prelude.Text),
-    tanOfDeductee :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    tdsAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    tdsRate :: (B.C f Kernel.Prelude.Double),
-    tdsRateReason :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.DirectTaxTransaction.TdsRateReason)),
-    tdsSection :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    tdsTreatment :: (B.C f Lib.Finance.Domain.Types.DirectTaxTransaction.TdsTreatment),
-    transactionDate :: (B.C f Kernel.Prelude.UTCTime),
-    transactionType :: (B.C f Lib.Finance.Domain.Types.DirectTaxTransaction.TransactionType),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
-  }
-  deriving (Generic, B.Beamable)
 
-instance B.Table DirectTaxTransactionT where
-  data PrimaryKey DirectTaxTransactionT f = DirectTaxTransactionId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = DirectTaxTransactionId . id
 
+data DirectTaxTransactionT f
+    = DirectTaxTransactionT {counterpartyId :: (B.C f Kernel.Prelude.Text),
+                             createdAt :: (B.C f Kernel.Prelude.UTCTime),
+                             grossAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
+                             id :: (B.C f Kernel.Prelude.Text),
+                             invoiceNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+                             merchantId :: (B.C f Kernel.Prelude.Text),
+                             merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+                             netAmountPaid :: (B.C f Kernel.Types.Common.HighPrecMoney),
+                             panOfParty :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+                             panType :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+                             paymentDate :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
+                             referenceId :: (B.C f Kernel.Prelude.Text),
+                             tanOfDeductee :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+                             tdsAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
+                             tdsRate :: (B.C f Kernel.Prelude.Double),
+                             tdsRateReason :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.DirectTaxTransaction.TdsRateReason)),
+                             tdsSection :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+                             tdsTreatment :: (B.C f Lib.Finance.Domain.Types.DirectTaxTransaction.TdsTreatment),
+                             transactionDate :: (B.C f Kernel.Prelude.UTCTime),
+                             transactionType :: (B.C f Lib.Finance.Domain.Types.DirectTaxTransaction.TransactionType),
+                             updatedAt :: (B.C f Kernel.Prelude.UTCTime)}
+    deriving (Generic, B.Beamable)
+instance B.Table DirectTaxTransactionT
+    where data PrimaryKey DirectTaxTransactionT f = DirectTaxTransactionId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
+          primaryKey = DirectTaxTransactionId . id
 type DirectTaxTransaction = DirectTaxTransactionT Identity
 
 $(enableKVPG (''DirectTaxTransactionT) [('id)] [[('counterpartyId)], [('invoiceNumber)], [('referenceId)]])
 
 $(mkTableInstancesGenericSchema (''DirectTaxTransactionT) "direct_tax_transaction")
+

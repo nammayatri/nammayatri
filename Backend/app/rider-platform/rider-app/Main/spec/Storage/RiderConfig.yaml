@@ -236,6 +236,8 @@ RiderConfig:
     maxLiveVehiclesPerRoute: Int
     maxAlternateRouteVehicles: Int
     includeVehiclesWithNoEta: Maybe Bool
+    chatRateLimitWindowSeconds: Maybe Int
+    chatRateLimitMaxRequests: Maybe Int
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -255,6 +257,8 @@ RiderConfig:
     maxAllowedPublicTransportLegs: Maybe Int
     maxLiveVehiclesPerRoute: Maybe Int
     maxAlternateRouteVehicles: Maybe Int
+    chatRateLimitWindowSeconds: Maybe Int
+    chatRateLimitMaxRequests: Maybe Int
     dynamicLogicUpdatePassword: Maybe Text
     feedbackAlertRatingThreshold: Maybe Int
     postRideSafetyNotificationDelay: Maybe Seconds
@@ -319,6 +323,8 @@ RiderConfig:
     maxAllowedPublicTransportLegs: fromMaybe (2) maxAllowedPublicTransportLegs|E
     maxLiveVehiclesPerRoute: fromMaybe 5 maxLiveVehiclesPerRoute|E
     maxAlternateRouteVehicles: fromMaybe 7 maxAlternateRouteVehicles|E
+    chatRateLimitWindowSeconds: fromMaybe 60 chatRateLimitWindowSeconds|E
+    chatRateLimitMaxRequests: fromMaybe 20 chatRateLimitMaxRequests|E
     dynamicLogicUpdatePassword: fromMaybe "dummy-password" dynamicLogicUpdatePassword|E
     feedbackAlertRatingThreshold: fromMaybe 3 feedbackAlertRatingThreshold|E
     postRideSafetyNotificationDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> postRideSafetyNotificationDelay)|E
@@ -374,6 +380,8 @@ RiderConfig:
     maxAllowedPublicTransportLegs: Just maxAllowedPublicTransportLegs|E
     maxLiveVehiclesPerRoute: Just maxLiveVehiclesPerRoute|E
     maxAlternateRouteVehicles: Just maxAlternateRouteVehicles|E
+    chatRateLimitWindowSeconds: Just chatRateLimitWindowSeconds|E
+    chatRateLimitMaxRequests: Just chatRateLimitMaxRequests|E
     dynamicLogicUpdatePassword: Just dynamicLogicUpdatePassword|E
     feedbackAlertRatingThreshold: Just feedbackAlertRatingThreshold|E
     postRideSafetyNotificationDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I

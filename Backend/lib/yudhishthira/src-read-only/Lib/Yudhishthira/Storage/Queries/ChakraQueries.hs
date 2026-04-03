@@ -1,74 +1,59 @@
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
+
 
 module Lib.Yudhishthira.Storage.Queries.ChakraQueries where
-
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
+import Kernel.External.Encryption
+import Kernel.Utils.Common (MonadFlow, CacheFlow, EsqDBFlow, getCurrentTime, fromMaybeM)
 import Kernel.Types.Error
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow
+import qualified Lib.Yudhishthira.Types.ChakraQueries
 import qualified Lib.Yudhishthira.Storage.Beam.ChakraQueries as Beam
 import qualified Lib.Yudhishthira.Types
-import qualified Lib.Yudhishthira.Types.ChakraQueries
+import qualified Kernel.Prelude
+import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Sequelize as Se
+
+
 
 create :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries -> m ())
 create = createWithKV
-
 createMany :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries] -> m ())
 createMany = traverse_ create
-
 deleteByPrimaryKey :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.Chakra -> Kernel.Prelude.Text -> m ())
 deleteByPrimaryKey chakra queryName = do deleteWithKV [Se.And [Se.Is Beam.chakra $ Se.Eq chakra, Se.Is Beam.queryName $ Se.Eq queryName]]
-
-findAllByChakra :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.Chakra -> m [Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries])
+findAllByChakra :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.Chakra -> m ([Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries]))
 findAllByChakra chakra = do findAllWithKV [Se.Is Beam.chakra $ Se.Eq chakra]
-
-findAllByChakraAndQueryType ::
-  (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Yudhishthira.Types.Chakra -> Kernel.Prelude.Maybe Lib.Yudhishthira.Types.QueryType -> m [Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries])
+findAllByChakraAndQueryType :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
+                               (Lib.Yudhishthira.Types.Chakra -> Kernel.Prelude.Maybe Lib.Yudhishthira.Types.QueryType -> m ([Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries]))
 findAllByChakraAndQueryType chakra queryType = do findAllWithKV [Se.And [Se.Is Beam.chakra $ Se.Eq chakra, Se.Is Beam.queryType $ Se.Eq queryType]]
-
 findByPrimaryKey :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.Chakra -> Kernel.Prelude.Text -> m (Maybe Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries))
 findByPrimaryKey chakra queryName = do findOneWithKV [Se.And [Se.Is Beam.chakra $ Se.Eq chakra, Se.Is Beam.queryName $ Se.Eq queryName]]
-
 updateByPrimaryKey :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries -> m ())
-updateByPrimaryKey (Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries {..}) = do
-  _now <- getCurrentTime
-  updateWithKV
-    [Se.Set Beam.queryResults queryResults, Se.Set Beam.queryText queryText, Se.Set Beam.queryType queryType, Se.Set Beam.updatedAt _now]
-    [ Se.And
-        [ Se.Is Beam.chakra $ Se.Eq chakra,
-          Se.Is Beam.queryName $ Se.Eq queryName
-        ]
-    ]
+updateByPrimaryKey (Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries {..}) = do {_now <- getCurrentTime;
+                                                                                   updateWithKV [Se.Set Beam.queryResults queryResults, Se.Set Beam.queryText queryText, Se.Set Beam.queryType queryType, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.chakra $ Se.Eq chakra,
+                                                                                                                                                                                                                                               Se.Is Beam.queryName $ Se.Eq queryName]]}
 
-instance FromTType' Beam.ChakraQueries Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries where
-  fromTType' (Beam.ChakraQueriesT {..}) = do
-    pure $
-      Just
-        Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries
-          { chakra = chakra,
-            queryName = queryName,
-            queryResults = queryResults,
-            queryText = queryText,
-            queryType = queryType,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-          }
 
-instance ToTType' Beam.ChakraQueries Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries where
-  toTType' (Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries {..}) = do
-    Beam.ChakraQueriesT
-      { Beam.chakra = chakra,
-        Beam.queryName = queryName,
-        Beam.queryResults = queryResults,
-        Beam.queryText = queryText,
-        Beam.queryType = queryType,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
-      }
+
+instance FromTType' Beam.ChakraQueries Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries
+    where fromTType' (Beam.ChakraQueriesT {..}) = do pure $ Just Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries{chakra = chakra,
+                                                                                                                    queryName = queryName,
+                                                                                                                    queryResults = queryResults,
+                                                                                                                    queryText = queryText,
+                                                                                                                    queryType = queryType,
+                                                                                                                    createdAt = createdAt,
+                                                                                                                    updatedAt = updatedAt}
+instance ToTType' Beam.ChakraQueries Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries
+    where toTType' (Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries {..}) = do Beam.ChakraQueriesT{Beam.chakra = chakra,
+                                                                                                      Beam.queryName = queryName,
+                                                                                                      Beam.queryResults = queryResults,
+                                                                                                      Beam.queryText = queryText,
+                                                                                                      Beam.queryType = queryType,
+                                                                                                      Beam.createdAt = createdAt,
+                                                                                                      Beam.updatedAt = updatedAt}
+
+
+

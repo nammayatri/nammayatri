@@ -636,3 +636,9 @@ ALTER TABLE atlas_app.rider_config ALTER COLUMN dashboard_media_file_url_pattern
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN bus_trip_ttl integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN chat_rate_limit_window_seconds integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN chat_rate_limit_max_requests integer ;

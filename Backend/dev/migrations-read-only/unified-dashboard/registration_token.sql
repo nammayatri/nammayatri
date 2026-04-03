@@ -25,3 +25,8 @@ ALTER TABLE atlas_dashboard.registration_token ADD PRIMARY KEY ( id);
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

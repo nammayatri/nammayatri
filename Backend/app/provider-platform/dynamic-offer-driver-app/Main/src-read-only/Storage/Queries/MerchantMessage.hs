@@ -1,117 +1,93 @@
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
+
 
 module Storage.Queries.MerchantMessage where
-
-import qualified Data.Aeson
-import qualified Data.Default.Class
+import Kernel.Beam.Functions
+import Kernel.Prelude
+import Kernel.External.Encryption
+import Kernel.Utils.Common (MonadFlow, CacheFlow, EsqDBFlow, getCurrentTime, fromMaybeM)
+import Kernel.Types.Error
 import qualified Domain.Types.MerchantMessage
+import qualified Storage.Beam.MerchantMessage as Beam
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Id
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleCategory
-import Kernel.Beam.Functions
-import Kernel.External.Encryption
-import Kernel.Prelude
-import qualified Kernel.Prelude
-import Kernel.Types.Error
-import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import qualified Sequelize as Se
-import qualified Storage.Beam.MerchantMessage as Beam
+import qualified Data.Aeson
+import qualified Data.Default.Class
 import qualified Storage.Queries.Transformers.MerchantMessage
+import qualified Sequelize as Se
+
+
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantMessage.MerchantMessage -> m ())
 create = createWithKV
-
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MerchantMessage.MerchantMessage] -> m ())
 createMany = traverse_ create
-
-findAllByMerchantOpCityId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.MerchantMessage.MerchantMessage])
+findAllByMerchantOpCityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+                             (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.MerchantMessage.MerchantMessage]))
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
-
-findByMerchantOpCityIdAndMessageKeyVehicleCategory ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.MerchantMessage.MessageKey -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage))
-findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId messageKey vehicleCategory = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.messageKey $ Se.Eq messageKey,
-          Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
-        ]
-    ]
-
-findByMerchantOpCityIdDomainAndChannel ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MessageDomain -> Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MediaChannel -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage))
-findByMerchantOpCityIdDomainAndChannel merchantOperatingCityId domain channel = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.domain $ Se.Eq domain,
-          Se.Is Beam.channel $ Se.Eq channel
-        ]
-    ]
-
+findByMerchantOpCityIdAndMessageKeyVehicleCategory :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+                                                      (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.MerchantMessage.MessageKey -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage))
+findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId messageKey vehicleCategory = do findOneWithKV [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+                                                                                                                                  Se.Is Beam.messageKey $ Se.Eq messageKey,
+                                                                                                                                  Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory]]
+findByMerchantOpCityIdDomainAndChannel :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+                                          (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MessageDomain -> Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MediaChannel -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage))
+findByMerchantOpCityIdDomainAndChannel merchantOperatingCityId domain channel = do findOneWithKV [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+                                                                                                          Se.Is Beam.domain $ Se.Eq domain,
+                                                                                                          Se.Is Beam.channel $ Se.Eq channel]]
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantMessage.MerchantMessage -> m ())
-updateByPrimaryKey (Domain.Types.MerchantMessage.MerchantMessage {..}) = do
-  _now <- getCurrentTime
-  updateWithKV
-    [ Se.Set Beam.channel channel,
-      Se.Set Beam.containsUrlButton containsUrlButton,
-      Se.Set Beam.domain domain,
-      Se.Set Beam.jsonData (Just $ Data.Aeson.toJSON jsonData),
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
-      Se.Set Beam.message message,
-      Se.Set Beam.messageType messageType,
-      Se.Set Beam.senderHeader senderHeader,
-      Se.Set Beam.templateId (Just templateId),
-      Se.Set Beam.templateName templateName,
-      Se.Set Beam.updatedAt _now,
-      Se.Set Beam.vehicleCategory vehicleCategory
-    ]
-    [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId), Se.Is Beam.messageKey $ Se.Eq messageKey]]
+updateByPrimaryKey (Domain.Types.MerchantMessage.MerchantMessage {..}) = do {_now <- getCurrentTime;
+                                                                             updateWithKV [Se.Set Beam.channel channel,
+                                                                                           Se.Set Beam.containsUrlButton containsUrlButton,
+                                                                                           Se.Set Beam.domain domain,
+                                                                                           Se.Set Beam.jsonData (Just $ Data.Aeson.toJSON jsonData),
+                                                                                           Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+                                                                                           Se.Set Beam.message message,
+                                                                                           Se.Set Beam.messageType messageType,
+                                                                                           Se.Set Beam.senderHeader senderHeader,
+                                                                                           Se.Set Beam.templateId (Just templateId),
+                                                                                           Se.Set Beam.templateName templateName,
+                                                                                           Se.Set Beam.updatedAt _now,
+                                                                                           Se.Set Beam.vehicleCategory vehicleCategory] [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId), Se.Is Beam.messageKey $ Se.Eq messageKey]]}
 
-instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMessage where
-  fromTType' (Beam.MerchantMessageT {..}) = do
-    pure $
-      Just
-        Domain.Types.MerchantMessage.MerchantMessage
-          { channel = channel,
-            containsUrlButton = containsUrlButton,
-            createdAt = createdAt,
-            domain = domain,
-            jsonData = fromMaybe Data.Default.Class.def (Storage.Queries.Transformers.MerchantMessage.valueToJsonData =<< jsonData),
-            merchantId = Kernel.Types.Id.Id merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            message = message,
-            messageKey = messageKey,
-            messageType = messageType,
-            senderHeader = senderHeader,
-            templateId = fromMaybe "" templateId,
-            templateName = templateName,
-            updatedAt = updatedAt,
-            vehicleCategory = vehicleCategory
-          }
 
-instance ToTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMessage where
-  toTType' (Domain.Types.MerchantMessage.MerchantMessage {..}) = do
-    Beam.MerchantMessageT
-      { Beam.channel = channel,
-        Beam.containsUrlButton = containsUrlButton,
-        Beam.createdAt = createdAt,
-        Beam.domain = domain,
-        Beam.jsonData = Just $ Data.Aeson.toJSON jsonData,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.message = message,
-        Beam.messageKey = messageKey,
-        Beam.messageType = messageType,
-        Beam.senderHeader = senderHeader,
-        Beam.templateId = Just templateId,
-        Beam.templateName = templateName,
-        Beam.updatedAt = updatedAt,
-        Beam.vehicleCategory = vehicleCategory
-      }
+
+instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMessage
+    where fromTType' (Beam.MerchantMessageT {..}) = do pure $ Just Domain.Types.MerchantMessage.MerchantMessage{channel = channel,
+                                                                                                                containsUrlButton = containsUrlButton,
+                                                                                                                createdAt = createdAt,
+                                                                                                                domain = domain,
+                                                                                                                jsonData = fromMaybe Data.Default.Class.def (Storage.Queries.Transformers.MerchantMessage.valueToJsonData =<< jsonData),
+                                                                                                                merchantId = Kernel.Types.Id.Id merchantId,
+                                                                                                                merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+                                                                                                                message = message,
+                                                                                                                messageKey = messageKey,
+                                                                                                                messageType = messageType,
+                                                                                                                senderHeader = senderHeader,
+                                                                                                                templateId = fromMaybe "" templateId,
+                                                                                                                templateName = templateName,
+                                                                                                                updatedAt = updatedAt,
+                                                                                                                vehicleCategory = vehicleCategory}
+instance ToTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMessage
+    where toTType' (Domain.Types.MerchantMessage.MerchantMessage {..}) = do Beam.MerchantMessageT{Beam.channel = channel,
+                                                                                                  Beam.containsUrlButton = containsUrlButton,
+                                                                                                  Beam.createdAt = createdAt,
+                                                                                                  Beam.domain = domain,
+                                                                                                  Beam.jsonData = Just $ Data.Aeson.toJSON jsonData,
+                                                                                                  Beam.merchantId = Kernel.Types.Id.getId merchantId,
+                                                                                                  Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+                                                                                                  Beam.message = message,
+                                                                                                  Beam.messageKey = messageKey,
+                                                                                                  Beam.messageType = messageType,
+                                                                                                  Beam.senderHeader = senderHeader,
+                                                                                                  Beam.templateId = Just templateId,
+                                                                                                  Beam.templateName = templateName,
+                                                                                                  Beam.updatedAt = updatedAt,
+                                                                                                  Beam.vehicleCategory = vehicleCategory}
+
+
+

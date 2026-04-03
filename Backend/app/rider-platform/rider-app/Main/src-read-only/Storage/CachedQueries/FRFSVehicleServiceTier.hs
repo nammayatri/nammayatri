@@ -1,48 +1,34 @@
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
+
 
 module Storage.CachedQueries.FRFSVehicleServiceTier where
-
-import qualified BecknV2.FRFS.Enums
-import qualified Domain.Types.FRFSVehicleServiceTier
-import qualified Domain.Types.IntegratedBPPConfig
-import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
+import Kernel.Utils.Common
+import qualified Domain.Types.FRFSVehicleServiceTier
+import qualified Storage.Queries.FRFSVehicleServiceTier as Queries
+import qualified Kernel.Types.Id
+import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.IntegratedBPPConfig
+import qualified BecknV2.FRFS.Enums
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
-import qualified Kernel.Types.Id
-import Kernel.Utils.Common
-import qualified Storage.Queries.FRFSVehicleServiceTier as Queries
 
-findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier])
-findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId merchantOperatingCityId integratedBppConfigId = do
-  (Hedis.safeGet $ "CachedQueries:FRFSVehicleServiceTier:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":IntegratedBppConfigId-" <> Kernel.Types.Id.getId integratedBppConfigId)
-    >>= ( \case
-            Just a -> pure a
-            Nothing ->
-              ( \dataToBeCached -> do
-                  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-                  Hedis.setExp ("CachedQueries:FRFSVehicleServiceTier:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":IntegratedBppConfigId-" <> Kernel.Types.Id.getId integratedBppConfigId) dataToBeCached expTime
-              )
-                /=<< Queries.findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId merchantOperatingCityId integratedBppConfigId
-        )
 
-findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (BecknV2.FRFS.Enums.ServiceTierType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Kernel.Prelude.Maybe Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier))
-findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId _type merchantOperatingCityId integratedBppConfigId = do
-  (Hedis.safeGet $ "CachedQueries:FRFSVehicleServiceTier:" <> ":_type-" <> show _type <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":IntegratedBppConfigId-" <> Kernel.Types.Id.getId integratedBppConfigId)
-    >>= ( \case
-            Just a -> pure (Just a)
-            Nothing ->
-              flip
-                whenJust
-                ( \dataToBeCached -> do
-                    expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-                    Hedis.setExp ("CachedQueries:FRFSVehicleServiceTier:" <> ":_type-" <> show _type <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":IntegratedBppConfigId-" <> Kernel.Types.Id.getId integratedBppConfigId) dataToBeCached expTime
-                )
-                /=<< Queries.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId _type merchantOperatingCityId integratedBppConfigId
-        )
+
+findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+                                                            (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ([Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier]))
+findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId merchantOperatingCityId integratedBppConfigId = do (Hedis.safeGet $ "CachedQueries:FRFSVehicleServiceTier:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":IntegratedBppConfigId-" <> Kernel.Types.Id.getId integratedBppConfigId) >>= (\case
+                                                                                                                                                                                                                                                                                                                                           Just a -> pure a
+                                                                                                                                                                                                                                                                                                                                           Nothing -> (\dataToBeCached -> do {expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime);
+                                                                                                                                                                                                                                                                                                                                                                              Hedis.setExp ("CachedQueries:FRFSVehicleServiceTier:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":IntegratedBppConfigId-" <> Kernel.Types.Id.getId integratedBppConfigId) dataToBeCached expTime}) /=<< Queries.findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId   merchantOperatingCityId   integratedBppConfigId)
+findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+                                                                       (BecknV2.FRFS.Enums.ServiceTierType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Kernel.Prelude.Maybe Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier))
+findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId _type merchantOperatingCityId integratedBppConfigId = do (Hedis.safeGet $ "CachedQueries:FRFSVehicleServiceTier:" <> ":_type-" <> show _type <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":IntegratedBppConfigId-" <> Kernel.Types.Id.getId integratedBppConfigId) >>= (\case
+                                                                                                                                                                                                                                                                                                                                                                                       Just a -> pure (Just a)
+                                                                                                                                                                                                                                                                                                                                                                                       Nothing -> flip whenJust (\dataToBeCached -> do {expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime);
+                                                                                                                                                                                                                                                                                                                                                                                                                                        Hedis.setExp ("CachedQueries:FRFSVehicleServiceTier:" <> ":_type-" <> show _type <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":IntegratedBppConfigId-" <> Kernel.Types.Id.getId integratedBppConfigId) dataToBeCached expTime}) /=<< Queries.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId   _type   merchantOperatingCityId   integratedBppConfigId)
+
+
+

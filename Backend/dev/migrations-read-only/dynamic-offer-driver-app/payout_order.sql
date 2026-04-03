@@ -59,3 +59,7 @@ ALTER TABLE atlas_driver_offer_bpp.payout_order ADD COLUMN merchant_operating_ci
 
 ALTER TABLE atlas_driver_offer_bpp.payout_order ADD COLUMN pg_gst double precision ;
 ALTER TABLE atlas_driver_offer_bpp.payout_order ADD COLUMN pg_base_fee double precision ;
+
+
+------- SQL updates -------
+

@@ -1,66 +1,64 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Types.UI.DriverWallet where
 
-import Data.OpenApi (ToSchema)
-import qualified Data.Time
+module API.Types.UI.DriverWallet where
 import EulerHS.Prelude hiding (id)
+import Servant
+import Tools.Auth
+import Data.OpenApi (ToSchema)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Lib.Payment.Domain.Types.Common
 import qualified Lib.Payment.Domain.Types.PayoutRequest
-import Servant
-import Tools.Auth
+import qualified Data.Time
 
-data PayoutHistoryItem = PayoutHistoryItem
-  { amount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    entityName :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Common.EntityName,
-    payoutFee :: Kernel.Types.Common.HighPrecMoney,
-    payoutMethod :: Kernel.Prelude.Text,
-    payoutVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    status :: Lib.Payment.Domain.Types.PayoutRequest.PayoutRequestStatus,
-    timestamp :: Data.Time.UTCTime
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PayoutHistoryResponse = PayoutHistoryResponse
-  { items :: [PayoutHistoryItem],
-    lastPayout :: Kernel.Prelude.Maybe PayoutHistoryItem,
-    totalPaidOut :: Kernel.Types.Common.HighPrecMoney,
-    totalPending :: Kernel.Types.Common.HighPrecMoney
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TopUpRequest = TopUpRequest {amount :: Kernel.Types.Common.HighPrecMoney, purpose :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+data PayoutHistoryItem
+    = PayoutHistoryItem {amount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+                         entityName :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Common.EntityName,
+                         payoutFee :: Kernel.Types.Common.HighPrecMoney,
+                         payoutMethod :: Kernel.Prelude.Text,
+                         payoutVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+                         status :: Lib.Payment.Domain.Types.PayoutRequest.PayoutRequestStatus,
+                         timestamp :: Data.Time.UTCTime}
+    deriving stock Generic
+    deriving anyclass (ToJSON, FromJSON, ToSchema)
+data PayoutHistoryResponse
+    = PayoutHistoryResponse {items :: [PayoutHistoryItem],
+                             lastPayout :: Kernel.Prelude.Maybe PayoutHistoryItem,
+                             totalPaidOut :: Kernel.Types.Common.HighPrecMoney,
+                             totalPending :: Kernel.Types.Common.HighPrecMoney}
+    deriving stock Generic
+    deriving anyclass (ToJSON, FromJSON, ToSchema)
+data TopUpRequest
+    = TopUpRequest {amount :: Kernel.Types.Common.HighPrecMoney, purpose :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+    deriving stock Generic
+    deriving anyclass (ToJSON, FromJSON, ToSchema)
+data WalletBalanceResponse
+    = WalletBalanceResponse {currentBalance :: Kernel.Types.Common.HighPrecMoney}
+    deriving stock Generic
+    deriving anyclass (ToJSON, FromJSON, ToSchema)
+data WalletItem
+    = WalletItem {itemName :: Kernel.Prelude.Text,
+                  itemReference :: Kernel.Prelude.Text,
+                  itemValue :: Kernel.Types.Common.HighPrecMoney,
+                  nonRedeemableBalance :: Kernel.Types.Common.HighPrecMoney,
+                  redeemableBalance :: Kernel.Types.Common.HighPrecMoney}
+    deriving stock Generic
+    deriving anyclass (ToJSON, FromJSON, ToSchema)
+data WalletItemGroup
+    = WalletItemGroup {items :: [WalletItem], totalAmount :: Kernel.Types.Common.HighPrecMoney}
+    deriving stock Generic
+    deriving anyclass (ToJSON, FromJSON, ToSchema)
+data WalletSummaryResponse
+    = WalletSummaryResponse {additions :: WalletItemGroup,
+                             currentBalance :: Kernel.Types.Common.HighPrecMoney,
+                             deductions :: WalletItemGroup,
+                             nonRedeemableBalance :: Kernel.Types.Common.HighPrecMoney,
+                             redeemableBalance :: Kernel.Types.Common.HighPrecMoney}
+    deriving stock Generic
+    deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data WalletBalanceResponse = WalletBalanceResponse {currentBalance :: Kernel.Types.Common.HighPrecMoney}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data WalletItem = WalletItem
-  { itemName :: Kernel.Prelude.Text,
-    itemReference :: Kernel.Prelude.Text,
-    itemValue :: Kernel.Types.Common.HighPrecMoney,
-    nonRedeemableBalance :: Kernel.Types.Common.HighPrecMoney,
-    redeemableBalance :: Kernel.Types.Common.HighPrecMoney
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data WalletItemGroup = WalletItemGroup {items :: [WalletItem], totalAmount :: Kernel.Types.Common.HighPrecMoney}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data WalletSummaryResponse = WalletSummaryResponse
-  { additions :: WalletItemGroup,
-    currentBalance :: Kernel.Types.Common.HighPrecMoney,
-    deductions :: WalletItemGroup,
-    nonRedeemableBalance :: Kernel.Types.Common.HighPrecMoney,
-    redeemableBalance :: Kernel.Types.Common.HighPrecMoney
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)

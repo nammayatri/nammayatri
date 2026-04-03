@@ -14,3 +14,8 @@ ALTER TABLE atlas_driver_offer_bpp.tds_distribution_record ADD COLUMN s3_file_pa
 ALTER TABLE atlas_driver_offer_bpp.tds_distribution_record ADD COLUMN status character varying(30) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.tds_distribution_record ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.tds_distribution_record ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+

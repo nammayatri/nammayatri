@@ -49,3 +49,8 @@ ALTER TABLE atlas_app.namma_tag ALTER COLUMN validity TYPE integer;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

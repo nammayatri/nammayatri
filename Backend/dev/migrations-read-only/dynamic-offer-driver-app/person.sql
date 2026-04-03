@@ -123,3 +123,7 @@ ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN react_bundle_version text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN cloud_type text ;
+
+
+------- SQL updates -------
+

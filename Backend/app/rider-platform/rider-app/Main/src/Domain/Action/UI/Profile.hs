@@ -173,6 +173,7 @@ data ProfileRes = ProfileRes
     isPayoutEnabled :: Maybe Bool,
     publicTransportVersion :: Maybe Text,
     isMultimodalRider :: Bool,
+    isChatEnabled :: Bool,
     customerTags :: DA.Value,
     profilePicture :: Maybe Text,
     paymentMode :: Maybe DMPM.PaymentMode,
@@ -289,6 +290,16 @@ getIsMultimodalRider enableMultiModalForAllUsers mbTags integratedBPPConfigs =
               Nothing -> False
        in any (isMultimodalRiderTag multimodalTagName) currentTags && not (null integratedBPPConfigs)
 
+getIsChatEnabled :: Maybe [LYT.TagNameValueExpiry] -> Bool
+getIsChatEnabled mbTags =
+  let chatEnabledTagName = LYT.TagName "ChatEnabled"
+      currentTags = fromMaybe [] mbTags
+      isChatEnabledTag targetTagName customerTag =
+        case YUtils.parseTagName customerTag of
+          Just tagName -> tagName == targetTagName
+          Nothing -> False
+   in any (isChatEnabledTag chatEnabledTagName) currentTags
+
 getPersonDetails ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType],
     CacheFlow m r,
@@ -397,9 +408,10 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
         Nothing -> pure ()
   fork "Check customer cancellation rate blocking" $ CCR.nudgeOrBlockCustomer riderConfig person
   logInfo "[Profile.getPersonDetails] calling makeProfileRes (includes getGtfsVersion)"
-  makeProfileRes riderConfig decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImage
+  let isChatEnabled = getIsChatEnabled decPerson.customerNammaTags
+  makeProfileRes riderConfig decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider isChatEnabled includeProfileImage
   where
-    makeProfileRes riderConfig Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImageParam = do
+    makeProfileRes riderConfig Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider isChatEnabled includeProfileImageParam = do
       logInfo $ "[Profile.makeProfileRes] calling getGtfsVersion for " <> show (length integratedBPPConfigs) <> " configs"
       gtfsVersion <-
         withTryCatch "getGtfsVersion:getPersonDetails" (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case
@@ -433,6 +445,8 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
             isPayoutEnabled = mbPayoutConfig <&> (.isPayoutEnabled),
             cancellationRate = cancellationPerc,
             publicTransportVersion = if null gtfsVersion then Nothing else Just (T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) riderConfig.domainPublicTransportDataVersion)),
+            isMultimodalRider = isMultimodalRider,
+            isChatEnabled = isChatEnabled,
             customerTags = YUtils.convertTags $ fromMaybe [] customerNammaTags,
             profilePicture = if includeProfileImageParam == Just True then profilePicture else Nothing,
             ..

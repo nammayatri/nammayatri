@@ -493,3 +493,8 @@ ALTER TABLE atlas_app.search_request ADD COLUMN cloud_type text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

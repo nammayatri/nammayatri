@@ -1,33 +1,32 @@
-{-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
+{-# LANGUAGE StandaloneDeriving #-}
 module Storage.Beam.Translations where
-
+import Kernel.Prelude
+import Tools.Beam.UtilsTH
+import Kernel.External.Encryption
+import Domain.Types.Common ()
+import qualified Kernel.Prelude
+import qualified Kernel.External.Types
 import qualified Data.Text
 import qualified Database.Beam as B
-import Domain.Types.Common ()
-import Kernel.External.Encryption
-import qualified Kernel.External.Types
-import Kernel.Prelude
-import qualified Kernel.Prelude
-import Tools.Beam.UtilsTH
 
-data TranslationsT f = TranslationsT
-  { createdAt :: B.C f Kernel.Prelude.UTCTime,
-    id :: B.C f Data.Text.Text,
-    language :: B.C f Kernel.External.Types.Language,
-    message :: B.C f Data.Text.Text,
-    messageKey :: B.C f Data.Text.Text,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
-  }
-  deriving (Generic, B.Beamable)
 
-instance B.Table TranslationsT where
-  data PrimaryKey TranslationsT f = TranslationsId (B.C f Data.Text.Text) deriving (Generic, B.Beamable)
-  primaryKey = TranslationsId . id
 
+data TranslationsT f
+    = TranslationsT {createdAt :: (B.C f Kernel.Prelude.UTCTime),
+                     id :: (B.C f Data.Text.Text),
+                     language :: (B.C f Kernel.External.Types.Language),
+                     message :: (B.C f Data.Text.Text),
+                     messageKey :: (B.C f Data.Text.Text),
+                     updatedAt :: (B.C f Kernel.Prelude.UTCTime)}
+    deriving (Generic, B.Beamable)
+instance B.Table TranslationsT
+    where data PrimaryKey TranslationsT f = TranslationsId (B.C f Data.Text.Text) deriving (Generic, B.Beamable)
+          primaryKey = TranslationsId . id
 type Translations = TranslationsT Identity
 
-$(enableKVPG ''TranslationsT ['id] [['messageKey]])
+$(enableKVPG (''TranslationsT) [('id)] [[('messageKey)]])
 
-$(mkTableInstances ''TranslationsT "translations")
+$(mkTableInstances (''TranslationsT) "translations")
+

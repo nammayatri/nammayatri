@@ -25,3 +25,7 @@ ALTER TABLE atlas_app.chakra_queries ALTER COLUMN id DROP NOT NULL;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.chakra_queries ADD COLUMN query_type text ;
+
+
+------- SQL updates -------
+

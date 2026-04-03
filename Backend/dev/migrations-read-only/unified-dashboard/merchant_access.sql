@@ -21,3 +21,8 @@ ALTER TABLE atlas_dashboard.merchant_access ADD PRIMARY KEY ( id);
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

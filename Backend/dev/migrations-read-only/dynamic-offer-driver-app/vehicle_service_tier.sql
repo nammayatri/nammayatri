@@ -403,3 +403,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN allowed_areas
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

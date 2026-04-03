@@ -1,109 +1,102 @@
-{-# LANGUAGE ApplicativeDo #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 
+{-# LANGUAGE ApplicativeDo #-}
 module Domain.Types.MerchantMessage (module Domain.Types.MerchantMessage, module ReExport) where
-
-import Data.Aeson
+import Kernel.Prelude
 import Domain.Types.Common (UsageSafety (..))
+import Data.Aeson
 import Domain.Types.Extra.MerchantMessage as ReExport
 import qualified Domain.Types.Extra.MerchantMessage
+import qualified Kernel.Types.Id
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleCategory
-import Kernel.Prelude
-import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
-data MerchantMessageD (s :: UsageSafety) = MerchantMessage
-  { channel :: Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MediaChannel,
-    containsUrlButton :: Kernel.Prelude.Bool,
-    createdAt :: Kernel.Prelude.UTCTime,
-    domain :: Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MessageDomain,
-    jsonData :: Domain.Types.Extra.MerchantMessage.MerchantMessageDefaultDataJSON,
-    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
-    message :: Kernel.Prelude.Text,
-    messageKey :: Domain.Types.MerchantMessage.MessageKey,
-    messageType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    senderHeader :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    templateId :: Kernel.Prelude.Text,
-    templateName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    updatedAt :: Kernel.Prelude.UTCTime,
-    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory
-  }
-  deriving (Generic, Show, Eq)
 
+
+data MerchantMessageD (s :: UsageSafety)
+    = MerchantMessage {channel :: Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MediaChannel,
+                       containsUrlButton :: Kernel.Prelude.Bool,
+                       createdAt :: Kernel.Prelude.UTCTime,
+                       domain :: Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MessageDomain,
+                       jsonData :: Domain.Types.Extra.MerchantMessage.MerchantMessageDefaultDataJSON,
+                       merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+                       merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+                       message :: Kernel.Prelude.Text,
+                       messageKey :: Domain.Types.MerchantMessage.MessageKey,
+                       messageType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+                       senderHeader :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+                       templateId :: Kernel.Prelude.Text,
+                       templateName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+                       updatedAt :: Kernel.Prelude.UTCTime,
+                       vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory}
+    deriving (Generic, Show, Eq)
 data MediaChannel = SMS | WHATSAPP | OVERLAY | ALERT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
 data MessageDomain = FLEET | RIDE_HAILING | GENERAL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
 data MessageKey
-  = SEND_OTP
-  | WELCOME_TO_PLATFORM
-  | ALTERNATE_NUMBER_OTP
-  | ONBOARD_SUPPORT_SMS_TEMPLATE
-  | END_RIDE_MESSAGE
-  | ONBOARDING_YATRI_MESSAGE
-  | BOOKING_MESSAGE
-  | CASH_COLLECTED_MESSAGE
-  | SEND_PAYMENT_LINK
-  | WHATSAPP_CLEAR_DUES_CALL_MISSED_MESSAGE
-  | WHATSAPP_CLEAR_DUES_MESSAGE
-  | WHATSAPP_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS
-  | WHATSAPP_SETUP_AUTOPAY_MESSAGE
-  | WHATSAPP_SWITCH_PLAN_MESSAGE
-  | WHATSAPP_HOW_IT_WORKS_MESSAGE
-  | SMS_CLEAR_DUES_CALL_MISSED_MESSAGE
-  | SMS_CLEAR_DUES_MESSAGE
-  | SMS_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS
-  | SMS_SETUP_AUTOPAY_MESSAGE
-  | SMS_SWITCH_PLAN_MESSAGE
-  | SMS_HOW_IT_WORKS_MESSAGE
-  | WHATSAPP_SETUP_MANDATE_MESSAGE
-  | WHATSAPP_VEHICLE_UNLINKED_MESSAGE
-  | WHATSAPP_VEHICLE_LINKED_MESSAGE
-  | YATRI_RENTAL_PAUSE
-  | YATRI_RENTAL_RESUME
-  | WHATSAPP_SEND_MANUAL_PAYMENT_LINK
-  | SMS_TO_GO_ONLINE_IN_SCHEDULED_RIDE
-  | FLEET_JOINING_MESSAGE
-  | FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE
-  | WHATSAPP_SEND_ONE_TIME_SECURITY_PAYMENT_LINK
-  | WHATSAPP_MANUAL_PAYMENT_LINK
-  | FLEET_CONSENT_DEEPLINK_MESSAGE
-  | SEND_FARE_RECEIPT_MESSAGE
-  | WAIVE_OFF_ENABLED_FOR_SUBSCRIPTION
-  | OPERATOR_CONSENT_DEEPLINK_MESSAGE
-  | OPERATOR_JOINING_MESSAGE
-  | OPERATOR_JOIN_AND_DOWNLOAD_APP_MESSAGE
-  | FLEET_LINK_SUCCESS_MESSAGE
-  | FLEET_UNLINK_SUCCESS_MESSAGE
-  | DOCUMENT_INVALID
-  | DRIVER_PAYOUT
-  | SEND_SOS_ALERT
-  | POST_RIDE_SOS
-  | DOCUMENT_EXPIRY_REMINDER_SMS
-  | VEHICLE_INSPECTION_SMS
-  | DRIVER_INSPECTION_SMS
-  | TRAINING_VIDEO_SMS
-  | FLEET_COMMUNICATION_SMS
-  | FLEET_COMMUNICATION_WHATSAPP
-  | SEND_TOTP
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
-type MerchantMessage = MerchantMessageD 'Safe
-
+    = SEND_OTP
+    | WELCOME_TO_PLATFORM
+    | ALTERNATE_NUMBER_OTP
+    | ONBOARD_SUPPORT_SMS_TEMPLATE
+    | END_RIDE_MESSAGE
+    | ONBOARDING_YATRI_MESSAGE
+    | BOOKING_MESSAGE
+    | CASH_COLLECTED_MESSAGE
+    | SEND_PAYMENT_LINK
+    | WHATSAPP_CLEAR_DUES_CALL_MISSED_MESSAGE
+    | WHATSAPP_CLEAR_DUES_MESSAGE
+    | WHATSAPP_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS
+    | WHATSAPP_SETUP_AUTOPAY_MESSAGE
+    | WHATSAPP_SWITCH_PLAN_MESSAGE
+    | WHATSAPP_HOW_IT_WORKS_MESSAGE
+    | SMS_CLEAR_DUES_CALL_MISSED_MESSAGE
+    | SMS_CLEAR_DUES_MESSAGE
+    | SMS_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS
+    | SMS_SETUP_AUTOPAY_MESSAGE
+    | SMS_SWITCH_PLAN_MESSAGE
+    | SMS_HOW_IT_WORKS_MESSAGE
+    | WHATSAPP_SETUP_MANDATE_MESSAGE
+    | WHATSAPP_VEHICLE_UNLINKED_MESSAGE
+    | WHATSAPP_VEHICLE_LINKED_MESSAGE
+    | YATRI_RENTAL_PAUSE
+    | YATRI_RENTAL_RESUME
+    | WHATSAPP_SEND_MANUAL_PAYMENT_LINK
+    | SMS_TO_GO_ONLINE_IN_SCHEDULED_RIDE
+    | FLEET_JOINING_MESSAGE
+    | FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE
+    | WHATSAPP_SEND_ONE_TIME_SECURITY_PAYMENT_LINK
+    | WHATSAPP_MANUAL_PAYMENT_LINK
+    | FLEET_CONSENT_DEEPLINK_MESSAGE
+    | SEND_FARE_RECEIPT_MESSAGE
+    | WAIVE_OFF_ENABLED_FOR_SUBSCRIPTION
+    | OPERATOR_CONSENT_DEEPLINK_MESSAGE
+    | OPERATOR_JOINING_MESSAGE
+    | OPERATOR_JOIN_AND_DOWNLOAD_APP_MESSAGE
+    | FLEET_LINK_SUCCESS_MESSAGE
+    | FLEET_UNLINK_SUCCESS_MESSAGE
+    | DOCUMENT_INVALID
+    | DRIVER_PAYOUT
+    | SEND_SOS_ALERT
+    | POST_RIDE_SOS
+    | DOCUMENT_EXPIRY_REMINDER_SMS
+    | VEHICLE_INSPECTION_SMS
+    | DRIVER_INSPECTION_SMS
+    | TRAINING_VIDEO_SMS
+    | FLEET_COMMUNICATION_SMS
+    | FLEET_COMMUNICATION_WHATSAPP
+    | SEND_TOTP
+    deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+type MerchantMessage = MerchantMessageD ('Safe)
 instance FromJSON (MerchantMessageD 'Unsafe)
-
 instance ToJSON (MerchantMessageD 'Unsafe)
-
 instance FromJSON (MerchantMessageD 'Safe)
-
 instance ToJSON (MerchantMessageD 'Safe)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MediaChannel)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MediaChannel))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageDomain)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MessageDomain))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageKey)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MessageKey))
+

@@ -1,37 +1,36 @@
-{-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
+{-# LANGUAGE StandaloneDeriving #-}
 module Storage.Beam.PaymentCustomer where
-
-import qualified Database.Beam as B
-import Domain.Types.Common ()
-import qualified Domain.Types.Extra.MerchantPaymentMethod
-import Kernel.External.Encryption
-import qualified Kernel.External.Payment.Interface.Types
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
+import Kernel.External.Encryption
+import Domain.Types.Common ()
+import qualified Kernel.Prelude
+import qualified Kernel.External.Payment.Interface.Types
+import qualified Domain.Types.Extra.MerchantPaymentMethod
+import qualified Database.Beam as B
 
-data PaymentCustomerT f = PaymentCustomerT
-  { clientAuthToken :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    clientAuthTokenExpiry :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    customerId :: (B.C f Kernel.External.Payment.Interface.Types.CustomerId),
-    defaultPaymentMethodId :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId)),
-    paymentMode :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode)),
-    personId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
-  }
-  deriving (Generic, B.Beamable)
 
-instance B.Table PaymentCustomerT where
-  data PrimaryKey PaymentCustomerT f
-    = PaymentCustomerId (B.C f Kernel.External.Payment.Interface.Types.CustomerId) (B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode))
+
+data PaymentCustomerT f
+    = PaymentCustomerT {clientAuthToken :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+                        clientAuthTokenExpiry :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
+                        customerId :: (B.C f Kernel.External.Payment.Interface.Types.CustomerId),
+                        defaultPaymentMethodId :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId)),
+                        paymentMode :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode)),
+                        personId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+                        createdAt :: (B.C f Kernel.Prelude.UTCTime),
+                        updatedAt :: (B.C f Kernel.Prelude.UTCTime)}
     deriving (Generic, B.Beamable)
-  primaryKey = PaymentCustomerId <$> customerId <*> paymentMode
-
+instance B.Table PaymentCustomerT
+    where data PrimaryKey PaymentCustomerT f
+              = PaymentCustomerId (B.C f Kernel.External.Payment.Interface.Types.CustomerId) (B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode))
+              deriving (Generic, B.Beamable)
+          primaryKey = PaymentCustomerId <$> customerId <*> paymentMode
 type PaymentCustomer = PaymentCustomerT Identity
 
 $(enableKVPG (''PaymentCustomerT) [('customerId), ('paymentMode)] [])
 
 $(mkTableInstances (''PaymentCustomerT) "payment_customer")
+

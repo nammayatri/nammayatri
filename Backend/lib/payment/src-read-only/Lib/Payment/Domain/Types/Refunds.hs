@@ -1,30 +1,34 @@
-{-# LANGUAGE ApplicativeDo #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
+{-# LANGUAGE ApplicativeDo #-}
 module Lib.Payment.Domain.Types.Refunds where
-
-import qualified Kernel.Beam.Lib.UtilsTH
-import qualified Kernel.External.Payment.Interface
 import Kernel.Prelude
-import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Lib.Payment.Domain.Types.PaymentOrder
+import qualified Kernel.Types.Common
+import qualified Kernel.External.Payment.Interface
+import qualified Kernel.Beam.Lib.UtilsTH
+import qualified Tools.Beam.UtilsTH
 
-data Refunds = Refunds
-  { arn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    completedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    createdAt :: Kernel.Prelude.UTCTime,
-    errorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    errorMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    id :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.Refunds.Refunds,
-    idAssignedByServiceProvider :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    initiatedBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    isApiCallSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    merchantId :: Kernel.Prelude.Text,
-    orderId :: Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,
-    refundAmount :: Kernel.Types.Common.HighPrecMoney,
-    shortId :: Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.Refunds.Refunds,
-    status :: Kernel.External.Payment.Interface.RefundStatus,
-    updatedAt :: Kernel.Prelude.UTCTime
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+
+data Refunds
+    = Refunds {arn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+               completedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+               createdAt :: Kernel.Prelude.UTCTime,
+               errorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+               errorMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+               id :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.Refunds.Refunds,
+               idAssignedByServiceProvider :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+               initiatedBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+               isApiCallSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+               merchantId :: Kernel.Prelude.Text,
+               orderId :: Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,
+               refundAmount :: Kernel.Types.Common.HighPrecMoney,
+               shortId :: Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.Refunds.Refunds,
+               status :: Kernel.External.Payment.Interface.RefundStatus,
+               updatedAt :: Kernel.Prelude.UTCTime}
+    deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+
+

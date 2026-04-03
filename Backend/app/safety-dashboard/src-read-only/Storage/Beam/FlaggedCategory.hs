@@ -1,23 +1,24 @@
-{-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
+{-# LANGUAGE StandaloneDeriving #-}
 module Storage.Beam.FlaggedCategory where
-
-import qualified Database.Beam as B
-import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
+import Kernel.External.Encryption
+import qualified Kernel.Prelude
+import qualified Database.Beam as B
 
-data FlaggedCategoryT f = FlaggedCategoryT {createdAt :: B.C f Kernel.Prelude.UTCTime, id :: B.C f Kernel.Prelude.Text, name :: B.C f Kernel.Prelude.Text, updatedAt :: B.C f Kernel.Prelude.UTCTime}
-  deriving (Generic, B.Beamable)
 
-instance B.Table FlaggedCategoryT where
-  data PrimaryKey FlaggedCategoryT f = FlaggedCategoryId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = FlaggedCategoryId . id
 
+data FlaggedCategoryT f
+    = FlaggedCategoryT {createdAt :: (B.C f Kernel.Prelude.UTCTime), id :: (B.C f Kernel.Prelude.Text), name :: (B.C f Kernel.Prelude.Text), updatedAt :: (B.C f Kernel.Prelude.UTCTime)}
+    deriving (Generic, B.Beamable)
+instance B.Table FlaggedCategoryT
+    where data PrimaryKey FlaggedCategoryT f = FlaggedCategoryId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
+          primaryKey = FlaggedCategoryId . id
 type FlaggedCategory = FlaggedCategoryT Identity
 
-$(enableKVPG ''FlaggedCategoryT ['id] [])
+$(enableKVPG (''FlaggedCategoryT) [('id)] [])
 
-$(mkTableInstances ''FlaggedCategoryT "flagged_category")
+$(mkTableInstances (''FlaggedCategoryT) "flagged_category")
+

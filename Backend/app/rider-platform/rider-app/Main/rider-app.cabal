@@ -72,6 +72,7 @@ library
       API.Types.Dashboard.AppManagement.OrphanInstances.TransitOperator
       API.Types.UI.PartnerBookingStatementExtra
       API.Types.UI.Payment
+      API.Types.UI.Chat
       API.UI
       API.UI.AadhaarVerification
       API.UI.AppInstalls

@@ -86,3 +86,8 @@ ALTER TABLE atlas_app.pass ADD COLUMN max_switch_count integer ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

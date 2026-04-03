@@ -18,3 +18,8 @@ ALTER TABLE atlas_driver_offer_bpp.operation_hub ADD PRIMARY KEY ( id);
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

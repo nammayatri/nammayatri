@@ -657,3 +657,8 @@ ALTER TABLE atlas_app.estimate ADD COLUMN selected_offer_id text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

@@ -105,3 +105,7 @@ ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN bank_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN chargeback_amount double precision ;
+
+
+------- SQL updates -------
+
