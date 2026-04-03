@@ -31,6 +31,7 @@ import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.OfferEntity as DOfferEntity
 import qualified Domain.Types.ParcelType as DParcel
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
@@ -55,9 +56,10 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DisplayBookingId as DBI
 import SharedLogic.JobScheduler
 import SharedLogic.MerchantPaymentMethod
+import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.Payment as SPayment
--- import SharedLogic.Type
 import Storage.Beam.SchedulerJob ()
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Storage.CachedQueries.InsuranceConfig as CQInsuranceConfig
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
@@ -69,6 +71,7 @@ import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.OfferEntity as QOfferEntity
 import qualified Storage.Queries.ParcelDetails as QParcel
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SearchRequest as QSReq
@@ -198,6 +201,36 @@ confirm DConfirmReq {..} = do
   triggerBookingCreatedEvent BookingEventData {booking = booking}
   void $ QRideB.createBooking booking
   void $ QBPL.createMany bookingParties
+  -- Persist offer details in Booking OfferEntity table for fast lookup in rideList
+  whenJust booking.selectedOfferId $ \offerId -> do
+    let paymentServiceType =
+          if merchant.onlinePayment && paymentInstrument `notElem` [Just DMPM.Cash, Just DMPM.BoothOnline]
+            then DOrder.OnlineRideHailing
+            else DOrder.RideHailing
+    mbOfferDetails <- SOffer.getSelectedOfferDetails searchRequest.merchantId person.id merchantOperatingCityId paymentServiceType booking.estimatedTotalFare offerId
+    whenJust mbOfferDetails $ \(offerDetails, computed) -> do
+      bookingOfferId <- generateGUID
+      let bookingOfferEntity =
+            DOfferEntity.OfferEntity
+              { id = bookingOfferId,
+                entityId = booking.id.getId,
+                entityType = DOfferEntity.BOOKING,
+                offerId = offerDetails.offerId,
+                offerCode = offerDetails.offerCode,
+                offerTitle = offerDetails.offerTitle,
+                offerDescription = offerDetails.offerDescription,
+                offerTnc = offerDetails.offerTnc,
+                offerSponsoredBy = offerDetails.offerSponsoredBy,
+                discountAmount = computed.amountSaved,
+                payoutAmount = computed.payoutAmount,
+                amountSaved = computed.amountSaved,
+                postOfferAmount = computed.postOfferAmount,
+                merchantId = searchRequest.merchantId,
+                merchantOperatingCityId = merchantOperatingCityId,
+                createdAt = now,
+                updatedAt = now
+              }
+      QOfferEntity.create bookingOfferEntity
   unless isScheduled $
     void $ QPFS.updateStatus personId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just (QTB.getFareProductType booking.bookingDetails), tripCategory = booking.tripCategory}
   whenJust mbEsimateId $ QEstimate.updateStatus DEstimate.COMPLETED
@@ -343,10 +376,6 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
   bookingParties <- buildPartiesLinks id
   deploymentVersion <- asks (.version)
   (isInsured, insuredAmount, driverInsuredAmount) <- isBookingInsured
-  calculatedOffer <-
-    case quote.selectedOfferId of
-      Just offerId -> SPayment.getOfferAmount (Id offerId) quote.estimatedTotalFare.amount
-      Nothing -> pure Nothing
   return $
     ( DRB.Booking
         { id = bookingId,
@@ -419,8 +448,8 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           -- If commission is needed on BAP, it should flow from BPP via Beckn protocol extension.
           commission = Nothing,
           selectedOfferId = quote.selectedOfferId,
-          discountAmount = calculatedOffer <&> (.discountAmount),
-          payoutAmount = calculatedOffer <&> (.payoutAmount),
+          discountAmount = Nothing, -- TODO :: Deprecated, added in OfferEntity table, to support multiple offers in future too.
+          payoutAmount = Nothing, -- TODO :: Deprecated, added in OfferEntity table, to support multiple offers in future too.
           ..
         },
       bookingParties

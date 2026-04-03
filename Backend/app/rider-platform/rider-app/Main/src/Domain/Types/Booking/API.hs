@@ -35,6 +35,7 @@ import Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Journey as DJourney
 import Domain.Types.Location (Location, LocationAPIEntity)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.OfferEntity as DOfferEntity
 import Domain.Types.ParcelType as DParcel
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
@@ -43,7 +44,7 @@ import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.Trip as Trip
 import Domain.Types.VehicleVariant (VehicleVariant (..))
-import EulerHS.Prelude hiding (elem, find, id, length, map, null)
+import EulerHS.Prelude hiding (elem, find, id, length, map, notElem, null)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface as Payment
@@ -56,7 +57,6 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
-import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
@@ -64,8 +64,6 @@ import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import SharedLogic.Booking (getfareBreakups)
 import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.Type as SLT
--- Keep for mockSosKey only
-
 import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -75,6 +73,7 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.JourneyLeg as QJL
+import qualified Storage.Queries.OfferEntity as QOfferEntity
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Ride as QRide
@@ -551,7 +550,7 @@ favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
 
 buildRideAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r) => (Id Person.Person, Booking, Bool) -> DRide.Ride -> m RideAPIEntity
-buildRideAPIEntity (requesterId, booking, isOnlinePayment) DRide.Ride {..} = do
+buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) DRide.Ride {..} = do
   stopsInfo <- if (fromMaybe False hasStops) then QSI.findAllByRideId id else return []
   let oneYearAgo = - (365 * 24 * 60 * 60)
       driverRegisteredAt' = fromMaybe (addUTCTime oneYearAgo createdAt) driverRegisteredAt
@@ -560,23 +559,54 @@ buildRideAPIEntity (requesterId, booking, isOnlinePayment) DRide.Ride {..} = do
   selectedOffers <- case booking.selectedOfferId of
     Nothing -> pure Nothing
     Just offerId -> do
-      let paymentServiceType = if isOnlinePayment then DOrder.OnlineRideHailing else DOrder.RideHailing
-          rideFare = fromMaybe booking.estimatedTotalFare totalFare
-      result <-
-        withTryCatch
-          "buildRideAPIEntity:getSelectedOffer"
-          (SOffer.getSelectedOffer booking.merchantId requesterId booking.merchantOperatingCityId paymentServiceType rideFare offerId)
-      case result of
-        Left _ -> pure Nothing
-        Right Nothing -> pure Nothing
-        Right (Just offer) ->
-          pure $
-            Just
+      -- Future this can be a findAll query too, if supporting more than one offer per booking/ride
+      mbOfferEntity <-
+        if status `notElem` [DRide.COMPLETED, DRide.CANCELLED]
+          then QOfferEntity.findByEntityIdAndEntityType booking.id.getId DOfferEntity.BOOKING
+          else QOfferEntity.findByEntityIdAndEntityType id.getId DOfferEntity.RIDE |<|>| QOfferEntity.findByEntityIdAndEntityType booking.id.getId DOfferEntity.BOOKING
+      case mbOfferEntity of
+        Just offerEntity ->
+          return $
+            Just $
               SOffer.OffersRespAPIEntity
-                { offers = [offer],
-                  totalAmountSaved = offer.amountSaved,
-                  totalPostOfferAmount = offer.postOfferAmount
+                { offers =
+                    [ SOffer.OfferRespAPIEntity
+                        { offerId = offerEntity.offerId,
+                          offerTitle = offerEntity.offerTitle,
+                          offerDescription = offerEntity.offerDescription,
+                          offerTnc = offerEntity.offerTnc,
+                          offerSponsoredBy = offerEntity.offerSponsoredBy,
+                          offerCode = offerEntity.offerCode,
+                          amountSaved = offerEntity.amountSaved,
+                          postOfferAmount = offerEntity.postOfferAmount
+                        }
+                    ],
+                  totalAmountSaved = offerEntity.amountSaved,
+                  totalPostOfferAmount = offerEntity.postOfferAmount
                 }
+        Nothing -> do
+          mbComputedOffer <- SOffer.getOfferAmount (Id offerId) (fromMaybe booking.estimatedTotalFare.amount (totalFare <&> (.amount)))
+          case mbComputedOffer of
+            Just computedOffer ->
+              return $
+                Just
+                  SOffer.OffersRespAPIEntity
+                    { offers =
+                        [ SOffer.OfferRespAPIEntity
+                            { offerId = "backward-compatibility-offer-id",
+                              offerTitle = Nothing,
+                              offerDescription = Nothing,
+                              offerTnc = Nothing,
+                              offerSponsoredBy = Nothing,
+                              offerCode = "backward-compatibility-offer-code",
+                              amountSaved = computedOffer.amountSaved,
+                              postOfferAmount = computedOffer.postOfferAmount
+                            }
+                        ],
+                      totalAmountSaved = computedOffer.amountSaved,
+                      totalPostOfferAmount = computedOffer.postOfferAmount
+                    }
+            Nothing -> return Nothing
   return $
     RideAPIEntity
       { shortRideId = shortId,

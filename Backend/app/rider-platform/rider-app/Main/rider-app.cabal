@@ -1000,6 +1000,7 @@ library
       Domain.Types.NotificationSoundsConfig
       Domain.Types.NyRegularInstanceLog
       Domain.Types.NyRegularSubscription
+      Domain.Types.OfferEntity
       Domain.Types.OnSearchEvent
       Domain.Types.ParcelDetails
       Domain.Types.ParkingTransaction
@@ -1159,6 +1160,7 @@ library
       Storage.Beam.NotificationSoundsConfig
       Storage.Beam.NyRegularInstanceLog
       Storage.Beam.NyRegularSubscription
+      Storage.Beam.OfferEntity
       Storage.Beam.OnSearchEvent
       Storage.Beam.ParcelDetails
       Storage.Beam.ParkingTransaction
@@ -1322,6 +1324,7 @@ library
       Storage.Queries.NotificationSoundsConfig
       Storage.Queries.NyRegularInstanceLog
       Storage.Queries.NyRegularSubscription
+      Storage.Queries.OfferEntity
       Storage.Queries.OnSearchEvent
       Storage.Queries.OrphanInstances.AppInstalls
       Storage.Queries.OrphanInstances.BBPS

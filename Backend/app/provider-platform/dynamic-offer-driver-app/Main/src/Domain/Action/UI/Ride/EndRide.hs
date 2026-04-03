@@ -546,18 +546,15 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                 pure (chargeableDistance, finalFare, mbUpdatedFareParams, ride, Just pickupDropOutsideOfThreshold, Just distanceCalculationFailed)
     discountAmount <-
       -- Update discount amount from BAP if fare was recomputed and offer exists
-      if (isJust booking.discountAmount && ride.fare /= Just booking.estimatedFare)
+      if (isJust booking.discountAmount && finalFare /= booking.estimatedFare)
         then do
           appBackendBapInternal <- asks (.appBackendBapInternal)
-          case ride.fare of
-            Just newFare -> do
-              result <-
-                withTryCatch "getOfferDiscount:endRideTransaction" $
-                  CallBAPInternal.getOfferDiscount appBackendBapInternal.internalKey appBackendBapInternal.url booking.id.getId newFare
-              case result of
-                Right resp -> pure resp.discountAmount
-                Left _ -> pure Nothing
-            Nothing -> pure Nothing
+          result <-
+            withTryCatch "getOfferDiscount:endRideTransaction" $
+              CallBAPInternal.getOfferDiscount appBackendBapInternal.internalKey appBackendBapInternal.url booking.id.getId finalFare
+          case result of
+            Right resp -> pure resp.discountAmount
+            Left _ -> pure Nothing
         else pure Nothing
     let baseFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
     -- Airport/parking charge is already in fareParams and finalFare from estimate/quote.
