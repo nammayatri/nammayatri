@@ -41,8 +41,8 @@ function buildRideFlowSteps(): Record<string, Step[]> {
         path: '/driver/setActivity?active=true&mode=%22ONLINE%22', auth: true },
       { id: 'driver-location', name: 'Start Location Ping', method: 'POST', service: 'lts',
         path: '/driver/location', auth: true,
-        extraHeaders: (ctx) => ({ 'vt': ctx.driverVehicleVariant || 'SUV', 'dm': 'ONLINE', ...(ctx.driverMerchantId ? { 'mid': ctx.driverMerchantId } : {}) }),
-        body: (ctx) => {
+        extraHeaders: (ctx: Record<string, any>) => ({ 'vt': ctx.driverVehicleVariant || 'SUV', 'dm': 'ONLINE', ...(ctx.driverMerchantId ? { 'mid': ctx.driverMerchantId } : {}) }),
+        body: (ctx: Record<string, any>) => {
           const origin = ctx.searchOrigin || ctx.driverLocation || { lat: 10.0739, lon: 76.2733 };
           return [{ pt: { lat: origin.lat, lon: origin.lon }, ts: new Date().toISOString() }];
         },
@@ -50,7 +50,7 @@ function buildRideFlowSteps(): Record<string, Step[]> {
     ],
     'discovery': [
       { id: 'ride-search', name: 'Search Ride', method: 'POST', service: 'rider', path: '/rideSearch', auth: true,
-        body: (ctx) => ({
+        body: (ctx: Record<string, any>) => ({
           fareProductType: 'ONE_WAY',
           contents: {
             origin: { gps: ctx.searchOrigin, address: ctx.fromAddress || { area: '', city: '', country: '', state: '' } },
@@ -83,8 +83,8 @@ function buildRideFlowSteps(): Record<string, Step[]> {
           return tiers.length ? tiers.join(', ') : 'none';
         } },
       { id: 'estimate-select', name: 'Select Estimate', method: 'POST', service: 'rider',
-        path: (ctx) => `/estimate/${ctx.selectedEstimateId}/select2`, auth: true,
-        body: (ctx) => ({
+        path: (ctx: Record<string, any>) => `/estimate/${ctx.selectedEstimateId}/select2`, auth: true,
+        body: (ctx: Record<string, any>) => ({
           autoAssignEnabled: true,
           autoAssignEnabledV2: true,
           customerExtraFee: null,
@@ -116,7 +116,7 @@ function buildRideFlowSteps(): Record<string, Step[]> {
         assert: (d) => (d.searchRequestsForDriver?.length > 0) ? null : 'No nearby requests',
         summary: (d) => `${(d.searchRequestsForDriver || []).length} request(s)` },
       { id: 'driver-respond', name: 'Accept Quote', method: 'POST', service: 'driver', path: '/driver/searchRequest/quote/respond', auth: true,
-        body: (ctx) => ({
+        body: (ctx: Record<string, any>) => ({
           searchTryId: ctx.searchTryId,
           offeredFare: null, offeredFareWithCurrency: null,
           response: 'Accept',
@@ -125,7 +125,7 @@ function buildRideFlowSteps(): Record<string, Step[]> {
     ],
     'booking': [
       { id: 'poll-booking', name: 'Poll Estimate Results', method: 'GET', service: 'rider',
-        path: (ctx) => `/estimate/${ctx.selectedEstimateId}/results`, auth: true,
+        path: (ctx: Record<string, any>) => `/estimate/${ctx.selectedEstimateId}/results`, auth: true,
         poll: { intervalMs: 2000, timeoutMs: 30000 },
         save: (d, ctx) => {
           if (d.bookingId) ctx.bookingId = d.bookingId;
@@ -134,7 +134,7 @@ function buildRideFlowSteps(): Record<string, Step[]> {
         assert: (d) => (d.bookingId || d.bookingIdV2) ? null : 'No bookingId yet',
         summary: (d) => d.bookingId || d.bookingIdV2 || '' },
       { id: 'get-booking', name: 'Get Booking Details', method: 'POST', service: 'rider',
-        path: (ctx) => `/rideBooking/${ctx.bookingId}`, auth: true,
+        path: (ctx: Record<string, any>) => `/rideBooking/${ctx.bookingId}`, auth: true,
         poll: { intervalMs: 2000, timeoutMs: 30000 },
         save: (d, ctx) => {
           ctx.bookingStatus = d.status;
@@ -193,8 +193,8 @@ function buildRideFlowSteps(): Record<string, Step[]> {
           return r ? `rideId: ${r.id?.substring(0, 8)}...` : '';
         } },
       { id: 'ride-start', name: 'Start Ride', method: 'POST', service: 'driver',
-        path: (ctx) => `/driver/ride/${ctx.driverRideId}/start`, auth: true,
-        body: (ctx) => {
+        path: (ctx: Record<string, any>) => `/driver/ride/${ctx.driverRideId}/start`, auth: true,
+        body: (ctx: Record<string, any>) => {
           const origin = ctx.searchOrigin || { lat: 10.0739, lon: 76.2733 };
           return { rideOtp: ctx.rideOtp, point: { lat: origin.lat, lon: origin.lon }, odometer: null };
         },
@@ -205,13 +205,13 @@ function buildRideFlowSteps(): Record<string, Step[]> {
       { id: 'inflate-distance', name: 'Inflate Traveled Distance (3x)', method: 'POST', service: 'internal',
         path: '/api/inflate-distance',
         auth: false,
-        skip: (ctx) => ctx.rideEndMode !== 'upward-recompute',
-        body: (ctx) => ({ rideId: ctx.driverRideId, multiplier: 3 }),
+        skip: (ctx: Record<string, any>) => ctx.rideEndMode !== 'upward-recompute',
+        body: (ctx: Record<string, any>) => ({ rideId: ctx.driverRideId, multiplier: 3 }),
         assert: (d) => d?.result === 'Success' ? null : `Failed: ${JSON.stringify(d)}`,
         summary: () => 'traveled_distance set to 3x estimated' },
       { id: 'ride-end', name: 'End Ride', method: 'POST', service: 'driver',
-        path: (ctx) => `/driver/ride/${ctx.driverRideId}/end`, auth: true,
-        body: (ctx) => {
+        path: (ctx: Record<string, any>) => `/driver/ride/${ctx.driverRideId}/end`, auth: true,
+        body: (ctx: Record<string, any>) => {
           const origin = ctx.searchOrigin || { lat: 10.0739, lon: 76.2733 };
           let dest;
           if (ctx.rideEndMode === 'downward-recompute') {
@@ -233,9 +233,9 @@ function buildRideFlowSteps(): Record<string, Step[]> {
     ],
     'add-tip': [
       { id: 'add-tip', name: 'Add Tip', method: 'POST', service: 'rider',
-        path: (ctx) => `/payment/${ctx.rideId}/addTip`, auth: true,
-        skip: (ctx) => !ctx.paymentMethodId || ctx.skipTip,
-        body: (ctx) => ({
+        path: (ctx: Record<string, any>) => `/payment/${ctx.rideId}/addTip`, auth: true,
+        skip: (ctx: Record<string, any>) => !ctx.paymentMethodId || ctx.skipTip,
+        body: (ctx: Record<string, any>) => ({
           amount: { amount: ctx.tipAmount || 50, currency: ctx.duesCurrency || 'EUR' },
         }),
         assert: (d) => (d?.result === 'Success' || d === 'Success') ? null : `Add tip failed: ${JSON.stringify(d)}`,
@@ -260,7 +260,7 @@ function buildRideFlowSteps(): Record<string, Step[]> {
           return r ? `rideId: ${r.id?.substring(0, 8)}...` : '';
         } },
       { id: 'driver-cancel-ride', name: 'Cancel Ride (Driver)', method: 'POST', service: 'driver',
-        path: (ctx) => `/driver/ride/${ctx.driverRideId}/cancel`, auth: true,
+        path: (ctx: Record<string, any>) => `/driver/ride/${ctx.driverRideId}/cancel`, auth: true,
         body: () => ({
           reasonCode: 'OTHER',
           additionalInfo: 'Cancelled via test dashboard',
@@ -270,7 +270,7 @@ function buildRideFlowSteps(): Record<string, Step[]> {
     ],
     'customer-cancel': [
       { id: 'customer-cancel-ride', name: 'Cancel Ride (Customer)', method: 'POST', service: 'rider',
-        path: (ctx) => `/rideBooking/${ctx.bookingId}/cancel`, auth: true,
+        path: (ctx: Record<string, any>) => `/rideBooking/${ctx.bookingId}/cancel`, auth: true,
         body: () => ({
           reasonCode: 'OTHER',
           reasonStage: 'OnAssign',
@@ -300,7 +300,7 @@ function buildDuesFlowSteps(): Record<string, Step[]> {
     ],
     'clear-dues': [
       { id: 'clear-dues', name: 'Clear Dues', method: 'POST', service: 'rider', path: '/payment/clearDues', auth: true,
-        body: (ctx) => ({ paymentMethodId: ctx.paymentMethodId || null }),
+        body: (ctx: Record<string, any>) => ({ paymentMethodId: ctx.paymentMethodId || null }),
         summary: (d) => {
           if (d.status === 'SUCCESS') return `Cleared ${d.currency || ''} ${d.amountCleared} (${(d.ridesCleared || []).length} rides)`;
           return d.status || d.errorMessage || 'Unknown';
@@ -308,7 +308,7 @@ function buildDuesFlowSteps(): Record<string, Step[]> {
     ],
     'capture-payment': [
       { id: 'capture-payment', name: 'Capture Payment', method: 'POST', service: 'rider',
-        path: (ctx) => {
+        path: (ctx: Record<string, any>) => {
           // captureRideId is always freshly set from initCtx before execution
           const rideId = ctx.captureRideId || (ctx.dueRides?.[0]?.rideId) || ctx.rideId;
           return `/payment/ride/${rideId}/capture`;
@@ -343,7 +343,7 @@ function buildFleetOnboardingSteps(requiresAdminApproval: boolean): Record<strin
       { id: 'admin-login', name: 'Admin Login', method: 'POST', service: 'provider-dashboard',
         path: '/user/login',
         auth: false,
-        body: (ctx) => ({
+        body: (ctx: Record<string, any>) => ({
           email: ctx.adminEmail || '',
           password: ctx.adminPassword || '',
         }),
@@ -352,9 +352,9 @@ function buildFleetOnboardingSteps(requiresAdminApproval: boolean): Record<strin
         summary: (d) => `token: ${d.authToken?.substring(0, 8)}...` },
 
       { id: 'fetch-unverified', name: 'Fetch Unverified Accounts', method: 'GET', service: 'provider-dashboard',
-        path: (ctx) => fleetPath(ctx, `account/fetchUnverifiedAccounts?mobileNumber=${encodeURIComponent(ctx.fleetMobile || '')}`),
+        path: (ctx: Record<string, any>) => fleetPath(ctx, `account/fetchUnverifiedAccounts?mobileNumber=${encodeURIComponent(ctx.fleetMobile || '')}`),
         auth: true,
-        extraHeaders: (ctx) => ({ token: ctx.adminToken || '' }),
+        extraHeaders: (ctx: Record<string, any>) => ({ token: ctx.adminToken || '' }),
         save: (d, ctx) => {
           const items = d.listItems || d;
           if (Array.isArray(items) && items.length > 0) {
@@ -371,10 +371,10 @@ function buildFleetOnboardingSteps(requiresAdminApproval: boolean): Record<strin
         } },
 
       { id: 'approve-fleet', name: 'Approve Fleet Owner', method: 'POST', service: 'provider-dashboard',
-        path: (ctx) => fleetPath(ctx, 'account/verifyAccount'),
+        path: (ctx: Record<string, any>) => fleetPath(ctx, 'account/verifyAccount'),
         auth: true,
-        extraHeaders: (ctx) => ({ token: ctx.adminToken || '' }),
-        body: (ctx) => ({
+        extraHeaders: (ctx: Record<string, any>) => ({ token: ctx.adminToken || '' }),
+        body: (ctx: Record<string, any>) => ({
           status: 'Approved',
           fleetOwnerId: ctx.unverifiedFleetPersonId || ctx.fleetOwnerId,
         }),
@@ -390,16 +390,16 @@ function buildFleetOnboardingSteps(requiresAdminApproval: boolean): Record<strin
   return {
     'fleet-auth': [
       { id: 'fleet-login-otp', name: 'Send OTP', method: 'POST', service: 'provider-dashboard',
-        path: (ctx) => fleetPath(ctx, 'fleet/v2/login/otp'),
-        body: (ctx) => ({
+        path: (ctx: Record<string, any>) => fleetPath(ctx, 'fleet/v2/login/otp'),
+        body: (ctx: Record<string, any>) => ({
           mobileNumber: ctx.fleetMobile || '9999900001',
           mobileCountryCode: '+91',
         }),
         summary: () => 'OTP sent' },
 
       { id: 'fleet-verify-otp', name: 'Verify OTP', method: 'POST', service: 'provider-dashboard',
-        path: (ctx) => fleetPath(ctx, 'fleet/v2/verify/otp'),
-        body: (ctx) => ({
+        path: (ctx: Record<string, any>) => fleetPath(ctx, 'fleet/v2/verify/otp'),
+        body: (ctx: Record<string, any>) => ({
           mobileNumber: ctx.fleetMobile || '9999900001',
           mobileCountryCode: '+91',
           otp: '7891',
@@ -422,7 +422,7 @@ function buildFleetOnboardingSteps(requiresAdminApproval: boolean): Record<strin
     ...(requiresAdminApproval ? adminApprovalSteps : {
     'fleet-doc-upload': [
       { id: 'upload-aadhaar-front', name: 'Upload Aadhaar Front', method: 'POST', service: 'provider-dashboard',
-        path: (ctx) => fleetPath(ctx, `driver/${ctx.fleetOwnerId}/document/upload`),
+        path: (ctx: Record<string, any>) => fleetPath(ctx, `driver/${ctx.fleetOwnerId}/document/upload`),
         auth: true,
         body: () => ({ imageBase64: TEST_IMAGE_BASE64, imageType: 'AadhaarCard' }),
         save: (d, ctx) => { ctx.aadhaarFrontImageId = d.imageId; },
@@ -430,7 +430,7 @@ function buildFleetOnboardingSteps(requiresAdminApproval: boolean): Record<strin
         summary: (d) => `imageId: ${d.imageId?.substring(0, 8)}...` },
 
       { id: 'upload-aadhaar-back', name: 'Upload Aadhaar Back', method: 'POST', service: 'provider-dashboard',
-        path: (ctx) => fleetPath(ctx, `driver/${ctx.fleetOwnerId}/document/upload`),
+        path: (ctx: Record<string, any>) => fleetPath(ctx, `driver/${ctx.fleetOwnerId}/document/upload`),
         auth: true,
         body: () => ({ imageBase64: TEST_IMAGE_BASE64, imageType: 'AadhaarCard' }),
         save: (d, ctx) => { ctx.aadhaarBackImageId = d.imageId; },
@@ -438,7 +438,7 @@ function buildFleetOnboardingSteps(requiresAdminApproval: boolean): Record<strin
         summary: (d) => `imageId: ${d.imageId?.substring(0, 8)}...` },
 
       { id: 'upload-pan', name: 'Upload PAN Card', method: 'POST', service: 'provider-dashboard',
-        path: (ctx) => fleetPath(ctx, `driver/${ctx.fleetOwnerId}/document/upload`),
+        path: (ctx: Record<string, any>) => fleetPath(ctx, `driver/${ctx.fleetOwnerId}/document/upload`),
         auth: true,
         body: () => ({ imageBase64: TEST_IMAGE_BASE64, imageType: 'PanCard' }),
         save: (d, ctx) => { ctx.panImageId = d.imageId; },
@@ -446,11 +446,11 @@ function buildFleetOnboardingSteps(requiresAdminApproval: boolean): Record<strin
         summary: (d) => `imageId: ${d.imageId?.substring(0, 8)}...` },
 
       { id: 'upload-gst', name: 'Upload GST Certificate', method: 'POST', service: 'provider-dashboard',
-        path: (ctx) => fleetPath(ctx, `driver/${ctx.fleetOwnerId}/document/upload`),
+        path: (ctx: Record<string, any>) => fleetPath(ctx, `driver/${ctx.fleetOwnerId}/document/upload`),
         auth: true,
         body: () => ({ imageBase64: TEST_IMAGE_BASE64, imageType: 'GSTCertificate' }),
         save: (d, ctx) => { ctx.gstImageId = d.imageId; },
-        skip: (ctx) => ctx.fleetType !== 'BUSINESS_FLEET',
+        skip: (ctx: Record<string, any>) => ctx.fleetType !== 'BUSINESS_FLEET',
         assert: (d) => d.imageId ? null : 'Missing imageId',
         summary: (d) => `imageId: ${d.imageId?.substring(0, 8)}...` },
     ],
@@ -459,7 +459,7 @@ function buildFleetOnboardingSteps(requiresAdminApproval: boolean): Record<strin
       { id: 'configure-mock-idfy', name: 'Configure Mock Idfy', method: 'POST', service: 'mock-idfy',
         path: '/configure',
         auth: false,
-        body: (ctx) => ({
+        body: (ctx: Record<string, any>) => ({
           aadhaarNumber: ctx.aadhaarNumber || '123456789012',
           panNumber: ctx.panNumber || 'ABCDE1234F',
           gstNumber: ctx.gstNumber || '22ABCDE1234F1Z5',
@@ -467,9 +467,9 @@ function buildFleetOnboardingSteps(requiresAdminApproval: boolean): Record<strin
         summary: (d) => `aadhaar: ${d.aadhaarNumber}, pan: ${d.panNumber}, gst: ${d.gstNumber}` },
 
       { id: 'verify-aadhaar', name: 'Verify Aadhaar', method: 'POST', service: 'provider-dashboard',
-        path: (ctx) => fleetPath(ctx, 'onboarding/verify/%22VERIFY_AADHAAR%22'),
+        path: (ctx: Record<string, any>) => fleetPath(ctx, 'onboarding/verify/%22VERIFY_AADHAAR%22'),
         auth: true,
-        body: (ctx) => ({
+        body: (ctx: Record<string, any>) => ({
           driverId: ctx.fleetOwnerId,
           identifierNumber: ctx.aadhaarNumber || '123456789012',
           imageId: ctx.aadhaarFrontImageId,
@@ -478,9 +478,9 @@ function buildFleetOnboardingSteps(requiresAdminApproval: boolean): Record<strin
         summary: (d) => `enableFleetOwner: ${d.enableFleetOwner}` },
 
       { id: 'verify-pan', name: 'Verify PAN', method: 'POST', service: 'provider-dashboard',
-        path: (ctx) => fleetPath(ctx, 'onboarding/verify/%22VERIFY_PAN%22'),
+        path: (ctx: Record<string, any>) => fleetPath(ctx, 'onboarding/verify/%22VERIFY_PAN%22'),
         auth: true,
-        body: (ctx) => ({
+        body: (ctx: Record<string, any>) => ({
           driverId: ctx.fleetOwnerId,
           identifierNumber: ctx.panNumber || 'ABCDE1234F',
           imageId: ctx.panImageId,
@@ -488,23 +488,23 @@ function buildFleetOnboardingSteps(requiresAdminApproval: boolean): Record<strin
         summary: (d) => `enableFleetOwner: ${d.enableFleetOwner}` },
 
       { id: 'verify-gst', name: 'Verify GST', method: 'POST', service: 'provider-dashboard',
-        path: (ctx) => fleetPath(ctx, 'onboarding/verify/%22VERIFY_GST%22'),
+        path: (ctx: Record<string, any>) => fleetPath(ctx, 'onboarding/verify/%22VERIFY_GST%22'),
         auth: true,
-        body: (ctx) => ({
+        body: (ctx: Record<string, any>) => ({
           driverId: ctx.fleetOwnerId,
           identifierNumber: ctx.gstNumber || '22ABCDE1234F1Z5',
           imageId: ctx.gstImageId,
         }),
-        skip: (ctx) => ctx.fleetType !== 'BUSINESS_FLEET',
+        skip: (ctx: Record<string, any>) => ctx.fleetType !== 'BUSINESS_FLEET',
         summary: (d) => `enableFleetOwner: ${d.enableFleetOwner}` },
     ],
     }),
 
     'fleet-register': [
       { id: 'fleet-register', name: 'Complete Registration', method: 'POST', service: 'provider-dashboard',
-        path: (ctx) => fleetPath(ctx, `fleet/v2/register?requestorId=${ctx.fleetOwnerId || ''}`),
+        path: (ctx: Record<string, any>) => fleetPath(ctx, `fleet/v2/register?requestorId=${ctx.fleetOwnerId || ''}`),
         auth: true,
-        body: (ctx) => ({
+        body: (ctx: Record<string, any>) => ({
           firstName: 'Test',
           lastName: 'Fleet',
           email: `testfleet${Date.now()}@test.com`,
