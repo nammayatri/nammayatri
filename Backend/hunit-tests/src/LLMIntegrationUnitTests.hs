@@ -32,15 +32,15 @@ testToolDefinitionCreation =
                 { CIT.toolName = "search_ride",
                   CIT.toolDescription = "Search for available rides",
                   CIT.toolParameters =
-                    Aeson.object
-                      [ "type" .= ("object" :: Text),
-                        "properties"
-                          .= Aeson.object
-                            [ "pickup_location" .= Aeson.object ["type" .= ("string" :: Text), "description" .= ("Pickup location" :: Text)],
-                              "drop_location" .= Aeson.object ["type" .= ("string" :: Text), "description" .= ("Drop location" :: Text)]
+                    CIT.ToolParameters
+                      { CIT.paramType = "object",
+                        CIT.paramProperties =
+                          Map.fromList
+                            [ ("pickup_location", CIT.ParameterProperty "string" "Pickup location" Nothing),
+                              ("drop_location", CIT.ParameterProperty "string" "Drop location" Nothing)
                             ],
-                        "required" .= (["pickup_location", "drop_location"] :: [Text])
-                      ]
+                        CIT.paramRequired = ["pickup_location", "drop_location"]
+                      }
                 }
         CIT.toolName toolDef @?= "search_ride"
         CIT.toolDescription toolDef @?= "Search for available rides"
@@ -48,9 +48,10 @@ testToolDefinitionCreation =
         not (T.null $ CIT.toolDescription toolDef) @? "Tool description should not be empty",
 
       testCase "Creates tool definitions with different names" $ do
-        let tool1 = CIT.ToolDefinition "book_ride" "Book a ride" Aeson.emptyObject
-            tool2 = CIT.ToolDefinition "cancel_ride" "Cancel a ride" Aeson.emptyObject
-            tool3 = CIT.ToolDefinition "get_ride_status" "Get ride status" Aeson.emptyObject
+        let toolParams = CIT.ToolParameters "object" Map.empty []
+            tool1 = CIT.ToolDefinition "book_ride" "Book a ride" toolParams
+            tool2 = CIT.ToolDefinition "cancel_ride" "Cancel a ride" toolParams
+            tool3 = CIT.ToolDefinition "get_ride_status" "Get ride status" toolParams
 
         CIT.toolName tool1 @?= "book_ride"
         CIT.toolName tool2 @?= "cancel_ride"
@@ -64,32 +65,36 @@ testToolParameterSchema =
     "Tool Parameter Schema"
     [ testCase "Creates valid JSON schema for ride booking parameters" $ do
         let schema =
-              Aeson.object
-                [ "type" .= ("object" :: Text),
-                  "properties"
-                    .= Aeson.object
-                      [ "pickup_lat" .= Aeson.object ["type" .= ("number" :: Text)],
-                        "pickup_lon" .= Aeson.object ["type" .= ("number" :: Text)],
-                        "drop_lat" .= Aeson.object ["type" .= ("number" :: Text)],
-                        "drop_lon" .= Aeson.object ["type" .= ("number" :: Text)],
-                        "vehicle_type" .= Aeson.object ["type" .= ("string" :: Text), "enum" .= (["sedan", "suv", "auto"] :: [Text])]
+              CIT.ToolParameters
+                { CIT.paramType = "object",
+                  CIT.paramProperties =
+                    Map.fromList
+                      [ ("pickup_lat", CIT.ParameterProperty "number" "Pickup latitude" Nothing),
+                        ("pickup_lon", CIT.ParameterProperty "number" "Pickup longitude" Nothing),
+                        ("drop_lat", CIT.ParameterProperty "number" "Drop latitude" Nothing),
+                        ("drop_lon", CIT.ParameterProperty "number" "Drop longitude" Nothing),
+                        ("vehicle_type", CIT.ParameterProperty "string" "Vehicle type" (Just ["sedan", "suv", "auto"]))
                       ],
-                  "required" .= (["pickup_lat", "pickup_lon", "drop_lat", "drop_lon"] :: [Text])
-                ]
-
-        let result = Aeson.decode (Aeson.encode schema) :: Maybe Aeson.Value
-        isJust result @? "Schema should be valid JSON"
-
-    , testCase "Validates schema structure" $ do
-        let schema =
-              Aeson.object
-                [ "type" .= ("object" :: Text),
-                  "properties" .= Aeson.object [],
-                  "required" .= ([] :: [Text])
-                ]
+                  CIT.paramRequired = ["pickup_lat", "pickup_lon", "drop_lat", "drop_lon"]
+                }
 
         let encoded = Aeson.encode schema
-        let decoded = Aeson.decode encoded :: Maybe Aeson.Value
+        let decoded = Aeson.decode encoded :: Maybe CIT.ToolParameters
+        isJust decoded @? "Schema should be valid JSON"
+        case decoded of
+          Just params -> CIT.paramType params @?= "object"
+          Nothing -> assertFailure "Deserialization failed",
+
+      testCase "Validates schema structure" $ do
+        let schema =
+              CIT.ToolParameters
+                { CIT.paramType = "object",
+                  CIT.paramProperties = Map.empty,
+                  CIT.paramRequired = []
+                }
+
+        let encoded = Aeson.encode schema
+        let decoded = Aeson.decode encoded :: Maybe CIT.ToolParameters
         isJust decoded @? "Empty schema should still be valid JSON"
     ]
 
@@ -105,26 +110,21 @@ testToolCallCreation =
         let toolCall =
               CIT.ToolCall
                 { CIT.toolCallId = "call_123",
-                  CIT.toolCallType = "function",
-                  CIT.toolCallFunction =
-                    CIT.ToolCallFunction
-                      { CIT.toolCallFunctionName = "search_ride",
-                        CIT.toolCallFunctionArguments = "{\"pickup\": \"Location A\", \"drop\": \"Location B\"}"
-                      }
+                  CIT.toolCallName = "search_ride",
+                  CIT.toolCallArguments = "{\"pickup\": \"Location A\", \"drop\": \"Location B\"}"
                 }
 
         CIT.toolCallId toolCall @?= "call_123"
-        CIT.toolCallType toolCall @?= "function"
-        CIT.toolCallFunctionName (CIT.toolCallFunction toolCall) @?= "search_ride"
+        CIT.toolCallName toolCall @?= "search_ride"
         not (T.null $ CIT.toolCallId toolCall) @? "Tool call ID should not be empty",
 
       testCase "Creates tool calls with different IDs" $ do
-        let call1 = CIT.ToolCall "call_1" "function" (CIT.ToolCallFunction "func1" "{}")
-            call2 = CIT.ToolCall "call_2" "function" (CIT.ToolCallFunction "func2" "{}")
+        let call1 = CIT.ToolCall "call_1" "func1" "{}"
+            call2 = CIT.ToolCall "call_2" "func2" "{}"
 
         CIT.toolCallId call1 /= CIT.toolCallId call2 @? "Different calls should have different IDs"
-        CIT.toolCallFunctionName (CIT.toolCallFunction call1) @?= "func1"
-        CIT.toolCallFunctionName (CIT.toolCallFunction call2) @?= "func2"
+        CIT.toolCallName call1 @?= "func1"
+        CIT.toolCallName call2 @?= "func2"
     ]
 
 testToolCallParsing :: TestTree
@@ -152,30 +152,33 @@ testAzureOpenAIConfig =
     "Azure OpenAI Config"
     [ testCase "Creates valid Azure OpenAI config" $ do
         let config =
-              AzureConfig.AzureOpenAIConfig
-                { AzureConfig.apiKey = "test-api-key",
-                  AzureConfig.endpoint = "https://test.openai.azure.com",
-                  AzureConfig.deploymentName = "gpt-4",
-                  AzureConfig.apiVersion = "2024-02-01"
+              AzureConfig.AzureOpenAICfg
+                { AzureConfig.azureApiKey = mkEncryptedField "test-api-key",
+                  AzureConfig.azureOpenAIChatCompletionUrl = parseBaseUrl "https://test.openai.azure.com",
+                  AzureConfig.azureApiVersion = "2024-02-01"
                 }
 
-        AzureConfig.endpoint config @?= "https://test.openai.azure.com"
-        AzureConfig.deploymentName config @?= "gpt-4"
-        AzureConfig.apiVersion config @?= "2024-02-01"
-        not (T.null $ AzureConfig.apiKey config) @? "API key should not be empty",
+        show (AzureConfig.azureOpenAIChatCompletionUrl config) @?= "https://test.openai.azure.com"
+        AzureConfig.azureApiVersion config @?= "2024-02-01"
+        not (T.null $ unEncryptedField $ AzureConfig.azureApiKey config) @? "API key should not be empty",
 
       testCase "Validates endpoint URL format" $ do
         let config =
-              AzureConfig.AzureOpenAIConfig
-                { AzureConfig.apiKey = "key",
-                  AzureConfig.endpoint = "https://api.openai.com",
-                  AzureConfig.deploymentName = "model",
-                  AzureConfig.apiVersion = "v1"
+              AzureConfig.AzureOpenAICfg
+                { AzureConfig.azureApiKey = mkEncryptedField "key",
+                  AzureConfig.azureOpenAIChatCompletionUrl = parseBaseUrl "https://api.openai.com",
+                  AzureConfig.azureApiVersion = "v1"
                 }
 
-        T.isPrefixOf "https://" (AzureConfig.endpoint config) @? "Endpoint should use HTTPS"
-        T.isInfixOf "." (AzureConfig.endpoint config) @? "Endpoint should contain domain"
+        let urlStr = show (AzureConfig.azureOpenAIChatCompletionUrl config)
+        T.isPrefixOf "https://" (T.pack urlStr) @? "Endpoint should use HTTPS"
     ]
+  where
+    mkEncryptedField = EncryptedField . unEncrypted
+    unEncryptedField (EncryptedField (Encrypted t)) = t
+    parseBaseUrl url = case parseBaseUrl url of
+      Right u -> u
+      Left _ -> error "Invalid URL"
 
 testGeminiConfig :: TestTree
 testGeminiConfig =
@@ -183,27 +186,31 @@ testGeminiConfig =
     "Gemini Config"
     [ testCase "Creates valid Gemini config" $ do
         let config =
-              GeminiConfig.GeminiConfig
-                { GeminiConfig.apiKey = "test-gemini-key",
-                  GeminiConfig.modelName = "gemini-pro",
-                  GeminiConfig.baseUrl = "https://generativelanguage.googleapis.com"
+              GeminiConfig.GeminiCfg
+                { GeminiConfig.geminiApiKey = mkEncryptedField "test-gemini-key",
+                  GeminiConfig.geminiChatCompletionUrl = parseBaseUrl "https://generativelanguage.googleapis.com"
                 }
 
-        GeminiConfig.baseUrl config @?= "https://generativelanguage.googleapis.com"
-        GeminiConfig.modelName config @?= "gemini-pro"
-        not (T.null $ GeminiConfig.apiKey config) @? "API key should not be empty",
+        let urlStr = show (GeminiConfig.geminiChatCompletionUrl config)
+        T.isInfixOf "googleapis.com" (T.pack urlStr) @? "Base URL should be Google API"
+        not (T.null $ unEncryptedField $ GeminiConfig.geminiApiKey config) @? "API key should not be empty",
 
       testCase "Validates Gemini base URL" $ do
         let config =
-              GeminiConfig.GeminiConfig
-                { GeminiConfig.apiKey = "key",
-                  GeminiConfig.modelName = "model",
-                  GeminiConfig.baseUrl = "https://generativelanguage.googleapis.com/v1"
+              GeminiConfig.GeminiCfg
+                { GeminiConfig.geminiApiKey = mkEncryptedField "key",
+                  GeminiConfig.geminiChatCompletionUrl = parseBaseUrl "https://generativelanguage.googleapis.com/v1"
                 }
 
-        T.isPrefixOf "https://" (GeminiConfig.baseUrl config) @? "Base URL should use HTTPS"
-        T.isInfixOf "googleapis.com" (GeminiConfig.baseUrl config) @? "Base URL should be Google API"
+        let urlStr = show (GeminiConfig.geminiChatCompletionUrl config)
+        T.isPrefixOf "https://" (T.pack urlStr) @? "Base URL should use HTTPS"
     ]
+  where
+    mkEncryptedField = EncryptedField . unEncrypted
+    unEncryptedField (EncryptedField (Encrypted t)) = t
+    parseBaseUrl url = case parseBaseUrl url of
+      Right u -> u
+      Left _ -> error "Invalid URL"
 
 testLLMServiceConfig :: TestTree
 testLLMServiceConfig =
@@ -211,29 +218,27 @@ testLLMServiceConfig =
     "LLM Service Config"
     [ testCase "Creates Azure OpenAI service config" $ do
         let azureConfig =
-              AzureConfig.AzureOpenAIConfig
-                { AzureConfig.apiKey = "key",
-                  AzureConfig.endpoint = "https://test.azure.com",
-                  AzureConfig.deploymentName = "gpt-4",
-                  AzureConfig.apiVersion = "v1"
+              AzureConfig.AzureOpenAICfg
+                { AzureConfig.azureApiKey = EncryptedField $ Encrypted "key",
+                  AzureConfig.azureOpenAIChatCompletionUrl = case parseBaseUrl "https://test.azure.com" of Right u -> u; Left _ -> error "Invalid URL",
+                  AzureConfig.azureApiVersion = "v1"
                 }
-        let serviceConfig = CITypes.AzureOpenAIService azureConfig
+        let serviceConfig = CITypes.AzureOpenAI azureConfig
 
         case serviceConfig of
-          CITypes.AzureOpenAIService cfg -> AzureConfig.endpoint cfg @?= "https://test.azure.com"
+          CITypes.AzureOpenAI cfg -> AzureConfig.azureApiVersion cfg @?= "v1"
           _ -> assertFailure "Should be Azure OpenAI service",
 
       testCase "Creates Gemini service config" $ do
         let geminiConfig =
-              GeminiConfig.GeminiConfig
-                { GeminiConfig.apiKey = "key",
-                  GeminiConfig.modelName = "gemini-pro",
-                  GeminiConfig.baseUrl = "https://api.google.com"
+              GeminiConfig.GeminiCfg
+                { GeminiConfig.geminiApiKey = EncryptedField $ Encrypted "key",
+                  GeminiConfig.geminiChatCompletionUrl = case parseBaseUrl "https://api.google.com" of Right u -> u; Left _ -> error "Invalid URL"
                 }
-        let serviceConfig = CITypes.GeminiService geminiConfig
+        let serviceConfig = CITypes.Gemini geminiConfig
 
         case serviceConfig of
-          CITypes.GeminiService cfg -> GeminiConfig.modelName cfg @?= "gemini-pro"
+          CITypes.Gemini cfg -> show (GeminiConfig.geminiChatCompletionUrl cfg) @?= "https://api.google.com"
           _ -> assertFailure "Should be Gemini service"
     ]
 
@@ -250,14 +255,15 @@ testAzureToolCallingTypes =
               AzureTypes.Tool
                 { AzureTypes.toolType = "function",
                   AzureTypes.toolFunction =
-                    AzureTypes.FunctionDefinition
+                    AzureTypes.ToolFunction
                       { AzureTypes.functionName = "search_ride",
                         AzureTypes.functionDescription = "Search for rides",
                         AzureTypes.functionParameters =
-                          Aeson.object
-                            [ "type" .= ("object" :: Text),
-                              "properties" .= Aeson.object []
-                            ]
+                          AzureTypes.ToolParameters
+                            { AzureTypes.paramsType = "object",
+                              AzureTypes.paramsProperties = Map.empty,
+                              AzureTypes.paramsRequired = []
+                            }
                       }
                 }
 
@@ -266,7 +272,7 @@ testAzureToolCallingTypes =
 
       testCase "Creates valid Azure chat message" $ do
         let message =
-              AzureTypes.ChatCompletionMessage
+              AzureTypes.Message
                 { AzureTypes.role = "user",
                   AzureTypes.content = Just "I want to book a ride",
                   AzureTypes.toolCalls = Nothing,
@@ -291,10 +297,11 @@ testGeminiToolCallingTypes =
                 { GeminiTypes.funcName = "book_ride",
                   GeminiTypes.funcDescription = "Book a ride",
                   GeminiTypes.funcParameters =
-                    Aeson.object
-                      [ "type" .= ("object" :: Text),
-                        "properties" .= Aeson.object []
-                      ]
+                    GeminiTypes.ToolParameters
+                      { GeminiTypes.paramsType = "object",
+                        GeminiTypes.paramsProperties = Map.empty,
+                        GeminiTypes.paramsRequired = []
+                      }
                 }
 
         GeminiTypes.funcName funcDecl @?= "book_ride"
@@ -305,7 +312,10 @@ testGeminiToolCallingTypes =
               GeminiTypes.Content
                 { GeminiTypes.contentRole = "user",
                   GeminiTypes.contentParts =
-                    [ GeminiTypes.PartText "Hello, I need a ride"
+                    [ GeminiTypes.Part
+                        { GeminiTypes.partText = Just "Hello, I need a ride",
+                          GeminiTypes.partFunctionCall = Nothing
+                        }
                     ]
                 }
 
@@ -322,89 +332,35 @@ testRideBookingToolSchemas =
   testGroup
     "Ride Booking Tool Schemas"
     [ testCase "Creates search ride tool schema" $ do
-        let searchRideTool =
-              CIT.ToolDefinition
-                { CIT.toolName = "search_ride",
-                  CIT.toolDescription = "Search for available rides between pickup and drop locations",
-                  CIT.toolParameters =
-                    Aeson.object
-                      [ "type" .= ("object" :: Text),
-                        "properties"
-                          .= Aeson.object
-                            [ "pickup_address" .= Aeson.object ["type" .= ("string" :: Text), "description" .= ("Pickup address" :: Text)],
-                              "drop_address" .= Aeson.object ["type" .= ("string" :: Text), "description" .= ("Drop address" :: Text)],
-                              "pickup_lat" .= Aeson.object ["type" .= ("number" :: Text), "description" .= ("Pickup latitude" :: Text)],
-                              "pickup_lon" .= Aeson.object ["type" .= ("number" :: Text), "description" .= ("Pickup longitude" :: Text)],
-                              "drop_lat" .= Aeson.object ["type" .= ("number" :: Text), "description" .= ("Drop latitude" :: Text)],
-                              "drop_lon" .= Aeson.object ["type" .= ("number" :: Text), "description" .= ("Drop longitude" :: Text)],
-                              "vehicle_type" .= Aeson.object ["type" .= ("string" :: Text), "enum" .= (["sedan", "suv", "auto", "bike"] :: [Text])]
-                            ],
-                        "required" .= (["pickup_address", "drop_address", "pickup_lat", "pickup_lon", "drop_lat", "drop_lon"] :: [Text])
-                      ]
-                }
+        let searchRideTool = CIT.searchRidesTool
 
-        CIT.toolName searchRideTool @?= "search_ride"
-        T.isInfixOf "pickup" (CIT.toolDescription searchRideTool) @? "Description should mention pickup"
-        T.isInfixOf "drop" (CIT.toolDescription searchRideTool) @? "Description should mention drop",
+        CIT.toolName searchRideTool @?= "searchRides"
+        T.isInfixOf "origin" (CIT.toolDescription searchRideTool) @? "Description should mention origin"
+        T.isInfixOf "destination" (CIT.toolDescription searchRideTool) @? "Description should mention destination",
 
       testCase "Creates book ride tool schema" $ do
-        let bookRideTool =
-              CIT.ToolDefinition
-                { CIT.toolName = "book_ride",
-                  CIT.toolDescription = "Book a ride with selected driver",
-                  CIT.toolParameters =
-                    Aeson.object
-                      [ "type" .= ("object" :: Text),
-                        "properties"
-                          .= Aeson.object
-                            [ "quote_id" .= Aeson.object ["type" .= ("string" :: Text), "description" .= ("Quote ID from search results" :: Text)],
-                              "payment_method" .= Aeson.object ["type" .= ("string" :: Text), "enum" .= (["cash", "card", "upi", "wallet"] :: [Text])]
-                            ],
-                        "required" .= (["quote_id"] :: [Text])
-                      ]
-                }
+        let bookRideTool = CIT.bookRideTool
 
-        CIT.toolName bookRideTool @?= "book_ride"
-        CIT.toolDescription bookRideTool @?= "Book a ride with selected driver",
+        CIT.toolName bookRideTool @?= "bookRide"
+        T.isInfixOf "book" (CIT.toolDescription bookRideTool) @? "Description should mention book",
 
       testCase "Creates cancel ride tool schema" $ do
-        let cancelRideTool =
-              CIT.ToolDefinition
-                { CIT.toolName = "cancel_ride",
-                  CIT.toolDescription = "Cancel an existing ride booking",
-                  CIT.toolParameters =
-                    Aeson.object
-                      [ "type" .= ("object" :: Text),
-                        "properties"
-                          .= Aeson.object
-                            [ "booking_id" .= Aeson.object ["type" .= ("string" :: Text), "description" .= ("Booking ID to cancel" :: Text)],
-                              "reason" .= Aeson.object ["type" .= ("string" :: Text), "description" .= ("Cancellation reason" :: Text)]
-                            ],
-                        "required" .= (["booking_id"] :: [Text])
-                      ]
-                }
+        let cancelRideTool = CIT.cancelRideTool
 
-        CIT.toolName cancelRideTool @?= "cancel_ride"
-        CIT.toolDescription cancelRideTool @?= "Cancel an existing ride booking",
+        CIT.toolName cancelRideTool @?= "cancelRide"
+        T.isInfixOf "cancel" (CIT.toolDescription cancelRideTool) @? "Description should mention cancel",
 
       testCase "Creates get ride status tool schema" $ do
-        let getStatusTool =
-              CIT.ToolDefinition
-                { CIT.toolName = "get_ride_status",
-                  CIT.toolDescription = "Get the current status of a ride",
-                  CIT.toolParameters =
-                    Aeson.object
-                      [ "type" .= ("object" :: Text),
-                        "properties"
-                          .= Aeson.object
-                            [ "booking_id" .= Aeson.object ["type" .= ("string" :: Text), "description" .= ("Booking ID to check status" :: Text)]
-                            ],
-                        "required" .= (["booking_id"] :: [Text])
-                      ]
-                }
+        let getStatusTool = CIT.getRideStatusTool
 
-        CIT.toolName getStatusTool @?= "get_ride_status"
-        CIT.toolDescription getStatusTool @?= "Get the current status of a ride"
+        CIT.toolName getStatusTool @?= "getRideStatus"
+        T.isInfixOf "status" (CIT.toolDescription getStatusTool) @? "Description should mention status",
+
+      testCase "Creates add tip tool schema" $ do
+        let addTipTool = CIT.addTipTool
+
+        CIT.toolName addTipTool @?= "addTip"
+        T.isInfixOf "tip" (CIT.toolDescription addTipTool) @? "Description should mention tip"
     ]
 
 -- =============================================================================
@@ -416,24 +372,39 @@ testToolExecutionHandlers =
   testGroup
     "Tool Execution Handlers"
     [ testCase "Validates tool name for execution" $ do
-        let validTools = ["search_ride", "book_ride", "cancel_ride", "get_ride_status"]
-        let toolName = "search_ride"
+        let validTools = ["searchRides", "bookRide", "cancelRide", "getRideStatus", "addTip"]
+        let toolName = "searchRides"
         toolName `elem` validTools @? "Tool name should be in valid tools list",
 
       testCase "Rejects invalid tool names" $ do
-        let validTools = ["search_ride", "book_ride", "cancel_ride", "get_ride_status"]
+        let validTools = ["searchRides", "bookRide", "cancelRide", "getRideStatus", "addTip"]
         let invalidTool = "invalid_tool"
         not (invalidTool `elem` validTools) @? "Invalid tool should not be in valid tools list",
 
-      testCase "Validates required parameters for search_ride" $ do
-        let requiredParams = ["pickup_address", "drop_address", "pickup_lat", "pickup_lon", "drop_lat", "drop_lon"]
-        let providedParams = ["pickup_address", "drop_address", "pickup_lat", "pickup_lon", "drop_lat", "drop_lon"]
+      testCase "Validates required parameters for searchRides" $ do
+        let requiredParams = ["originLat", "originLon", "destLat", "destLon"]
+        let providedParams = ["originLat", "originLon", "destLat", "destLon"]
         all (`elem` providedParams) requiredParams @? "All required params should be provided",
 
       testCase "Detects missing required parameters" $ do
-        let requiredParams = ["pickup_address", "drop_address", "pickup_lat"]
-        let providedParams = ["pickup_address", "drop_address"]
-        not (all (`elem` providedParams) requiredParams) @? "Should detect missing required params"
+        let requiredParams = ["originLat", "originLon", "destLat"]
+        let providedParams = ["originLat", "originLon"]
+        not (all (`elem` providedParams) requiredParams) @? "Should detect missing required params",
+
+      testCase "Converts RideBookingTool to text correctly" $ do
+        CIT.rideBookingToolToText CIT.SearchRidesTool @?= "searchRides"
+        CIT.rideBookingToolToText CIT.BookRideTool @?= "bookRide"
+        CIT.rideBookingToolToText CIT.GetRideStatusTool @?= "getRideStatus"
+        CIT.rideBookingToolToText CIT.CancelRideTool @?= "cancelRide"
+        CIT.rideBookingToolToText CIT.AddTipTool @?= "addTip",
+
+      testCase "Parses text to RideBookingTool correctly" $ do
+        CIT.textToRideBookingTool "searchRides" @?= Just CIT.SearchRidesTool
+        CIT.textToRideBookingTool "bookRide" @?= Just CIT.BookRideTool
+        CIT.textToRideBookingTool "getRideStatus" @?= Just CIT.GetRideStatusTool
+        CIT.textToRideBookingTool "cancelRide" @?= Just CIT.CancelRideTool
+        CIT.textToRideBookingTool "addTip" @?= Just CIT.AddTipTool
+        CIT.textToRideBookingTool "invalid" @?= Nothing
     ]
 
 -- =============================================================================
@@ -449,7 +420,12 @@ testJSONSerialization =
               CIT.ToolDefinition
                 { CIT.toolName = "test_tool",
                   CIT.toolDescription = "Test tool description",
-                  CIT.toolParameters = Aeson.object ["type" .= ("object" :: Text)]
+                  CIT.toolParameters =
+                    CIT.ToolParameters
+                      { CIT.paramType = "object",
+                        CIT.paramProperties = Map.empty,
+                        CIT.paramRequired = []
+                      }
                 }
 
         let encoded = Aeson.encode toolDef
@@ -464,8 +440,8 @@ testJSONSerialization =
         let toolCall =
               CIT.ToolCall
                 { CIT.toolCallId = "call_123",
-                  CIT.toolCallType = "function",
-                  CIT.toolCallFunction = CIT.ToolCallFunction "func_name" "{}"
+                  CIT.toolCallName = "func_name",
+                  CIT.toolCallArguments = "{}"
                 }
 
         let encoded = Aeson.encode toolCall
@@ -474,7 +450,27 @@ testJSONSerialization =
         isJust decoded @? "Should deserialize ToolCall successfully"
         case decoded of
           Just tc -> CIT.toolCallId tc @?= "call_123"
-          Nothing -> assertFailure "ToolCall deserialization failed"
+          Nothing -> assertFailure "ToolCall deserialization failed",
+
+      testCase "Serializes and deserializes ToolCallResult" $ do
+        let toolCallResult =
+              CIT.ToolCallResult
+                { CIT.toolCallResultId = "result_123",
+                  CIT.toolCallResultName = "func_name",
+                  CIT.toolCallResultOutput = "{\"status\": \"success\"}"
+                }
+
+        let encoded = Aeson.encode toolCallResult
+        let decoded = Aeson.decode encoded :: Maybe CIT.ToolCallResult
+
+        isJust decoded @? "Should deserialize ToolCallResult successfully"
+        case decoded of
+          Just tcr -> CIT.toolCallResultId tcr @?= "result_123"
+          Nothing -> assertFailure "ToolCallResult deserialization failed",
+
+      testCase "Serializes and deserializes RideBookingTool" $ do
+        let tools = [CIT.SearchRidesTool, CIT.BookRideTool, CIT.GetRideStatusTool, CIT.CancelRideTool, CIT.AddTipTool]
+        all (\tool -> isJust (Aeson.decode (Aeson.encode tool) :: Maybe CIT.RideBookingTool)) tools @? "All tools should serialize/deserialize"
     ]
 
 -- =============================================================================
@@ -486,17 +482,63 @@ testErrorHandling =
   testGroup
     "Error Handling"
     [ testCase "Handles empty tool name" $ do
-        let toolDef = CIT.ToolDefinition "" "Description" Aeson.emptyObject
+        let toolParams = CIT.ToolParameters "object" Map.empty []
+        let toolDef = CIT.ToolDefinition "" "Description" toolParams
         T.null (CIT.toolName toolDef) @? "Empty tool name should be handled",
 
       testCase "Handles empty tool description" $ do
-        let toolDef = CIT.ToolDefinition "name" "" Aeson.emptyObject
+        let toolParams = CIT.ToolParameters "object" Map.empty []
+        let toolDef = CIT.ToolDefinition "name" "" toolParams
         T.null (CIT.toolDescription toolDef) @? "Empty description should be handled",
 
       testCase "Handles invalid JSON in tool arguments" $ do
         let invalidJson = "{invalid json"
         let parsed = Aeson.decode (encodeUtf8 invalidJson) :: Maybe Aeson.Object
-        isNothing parsed @? "Invalid JSON should not parse"
+        isNothing parsed @? "Invalid JSON should not parse",
+
+      testCase "Handles empty tool call arguments" $ do
+        let toolCall = CIT.ToolCall "call_1" "func" ""
+        T.null (CIT.toolCallArguments toolCall) @? "Empty arguments should be handled"
+    ]
+
+-- =============================================================================
+-- TOOL CONVERSION TESTS
+-- =============================================================================
+
+testToolConversions :: TestTree
+testToolConversions =
+  testGroup
+    "Tool Conversions"
+    [ testCase "Converts generic ToolDefinition to Azure Tool" $ do
+        let genericTool = CIT.searchRidesTool
+        let azureTool = AzureTypes.convertToAzureTool genericTool
+
+        AzureTypes.functionName (AzureTypes.toolFunction azureTool) @?= CIT.toolName genericTool
+        AzureTypes.toolType azureTool @?= "function",
+
+      testCase "Converts generic ToolDefinition to Gemini Tool" $ do
+        let genericTool = CIT.bookRideTool
+        let geminiTool = GeminiTypes.convertToGeminiTool genericTool
+
+        let funcDecls = GeminiTypes.toolFunctionDeclarations geminiTool
+        length funcDecls @?= 1
+        GeminiTypes.funcName (head funcDecls) @?= CIT.toolName genericTool,
+
+      testCase "Converts Azure ToolCall to generic ToolCall" $ do
+        let azureToolCall =
+              AzureTypes.ToolCall
+                { AzureTypes.toolCallId = "call_123",
+                  AzureTypes.toolCallType = "function",
+                  AzureTypes.toolCallFunction =
+                    AzureTypes.ToolCallFunction
+                      { AzureTypes.functionName = "search_ride",
+                        AzureTypes.functionArguments = "{\"param\": \"value\"}"
+                      }
+                }
+        let genericToolCall = AzureTypes.convertFromAzureToolCall azureToolCall
+
+        CIT.toolCallId genericToolCall @?= AzureTypes.toolCallId azureToolCall
+        CIT.toolCallName genericToolCall @?= AzureTypes.functionName (AzureTypes.toolCallFunction azureToolCall)
     ]
 
 -- =============================================================================
@@ -519,5 +561,6 @@ allLLMIntegrationTests =
       testRideBookingToolSchemas,
       testToolExecutionHandlers,
       testJSONSerialization,
-      testErrorHandling
+      testErrorHandling,
+      testToolConversions
     ]

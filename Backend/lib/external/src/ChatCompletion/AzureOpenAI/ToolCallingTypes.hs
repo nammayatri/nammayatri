@@ -3,10 +3,12 @@
 
 module ChatCompletion.AzureOpenAI.ToolCallingTypes where
 
+import Data.Aeson
+import qualified Data.Map.Strict as Map
 import Data.Text as T
-import Kernel.Prelude
+import Kernel.Prelude hiding (map)
 import Kernel.Utils.JSON
-import ChatCompletion.Interface.ToolCalling as CIT
+import qualified ChatCompletion.Interface.ToolCalling as CIT
 
 -- | Azure OpenAI Chat Completion Request with Tools
 data ChatCompletionToolReq = ChatCompletionToolReq
@@ -34,7 +36,7 @@ data ToolFunction = ToolFunction
 -- | Tool parameters schema
 data ToolParameters = ToolParameters
   { paramsType :: Text,
-    paramsProperties :: Map Text ParameterProperty,
+    paramsProperties :: Map.Map Text ParameterProperty,
     paramsRequired :: [Text]
   }
   deriving (Show, Generic, ToJSON, FromJSON)
@@ -76,7 +78,7 @@ instance FromJSON ToolChoice where
 data Message = Message
   { role :: Text,
     content :: Maybe Text,
-    toolCalls :: Maybe [ToolCall],
+    toolCalls :: Maybe [AzureToolCall],
     toolCallId :: Maybe Text
   }
   deriving (Show, Generic)
@@ -87,18 +89,18 @@ instance FromJSON Message where
 instance ToJSON Message where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
--- | Tool call from assistant
-data ToolCall = ToolCall
-  { toolCallId :: Text,
-    toolCallType :: Text,
-    toolCallFunction :: ToolCallFunction
+-- | Tool call from assistant (Azure-specific)
+data AzureToolCall = AzureToolCall
+  { azureToolCallId :: Text,
+    azureToolCallType :: Text,
+    azureToolCallFunction :: ToolCallFunction
   }
   deriving (Show, Generic)
 
-instance FromJSON ToolCall where
+instance FromJSON AzureToolCall where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
-instance ToJSON ToolCall where
+instance ToJSON AzureToolCall where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 -- | Function call details
@@ -117,7 +119,7 @@ instance ToJSON ToolCallFunction where
 -- | Chat completion response with tool calls
 data ChatCompletionToolResponse = ChatCompletionToolResponse
   { choices :: [Choice],
-    created :: Int,
+  created :: Int,
     id :: Text,
     model :: Text,
     _object :: Text,
@@ -190,17 +192,17 @@ convertProperty CIT.ParameterProperty {..} =
     }
 
 -- | Convert Azure OpenAI tool call to generic tool call
-convertFromAzureToolCall :: ToolCall -> CIT.ToolCall
-convertFromAzureToolCall ToolCall {..} =
+convertFromAzureToolCall :: AzureToolCall -> CIT.ToolCall
+convertFromAzureToolCall AzureToolCall {..} =
   CIT.ToolCall
-    { toolCallId = toolCallId,
-      toolCallName = toolCallFunction.functionName,
-      toolCallArguments = toolCallFunction.functionArguments
+    { toolCallId = azureToolCallId,
+      toolCallName = azureToolCallFunction.functionName,
+      toolCallArguments = azureToolCallFunction.functionArguments
     }
 
 -- | Build tool response message
-buildToolResponseMessage :: Text -> Text -> Text -> Message
-buildToolResponseMessage callId toolName result =
+buildToolResponseMessage :: Text -> Text -> Message
+buildToolResponseMessage callId result =
   Message
     { role = "tool",
       content = Just result,

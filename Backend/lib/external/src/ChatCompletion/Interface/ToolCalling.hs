@@ -4,7 +4,7 @@
 module ChatCompletion.Interface.ToolCalling where
 
 import Kernel.Prelude
-import Data.Aeson.Types
+import qualified Data.Map.Strict as Map
 
 -- | Tool/Function definition for LLM function calling
 data ToolDefinition = ToolDefinition
@@ -17,7 +17,7 @@ data ToolDefinition = ToolDefinition
 -- | Tool parameters schema
 data ToolParameters = ToolParameters
   { paramType :: Text,
-    paramProperties :: Map Text ParameterProperty,
+    paramProperties :: Map.Map Text ParameterProperty,
     paramRequired :: [Text]
   }
   deriving (Show, Generic, ToJSON, FromJSON)

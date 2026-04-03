@@ -3,10 +3,12 @@
 
 module ChatCompletion.Gemini.ToolCallingTypes where
 
+import Data.Aeson
+import qualified Data.Map.Strict as Map
 import Data.Text as T
-import Kernel.Prelude
+import Kernel.Prelude hiding (concatMap, map)
 import Kernel.Utils.JSON
-import ChatCompletion.Interface.ToolCalling as CIT
+import qualified ChatCompletion.Interface.ToolCalling as CIT
 
 -- | Gemini Chat Completion Request with Tools
 data ContentsToolReq = ContentsToolReq
