@@ -773,7 +773,8 @@ instance FromJSON VehicleServiceTypeResponse where
 data VehicleMetadataResponse = VehicleMetadataResponse
   { serviceType :: BecknV2.FRFS.Enums.ServiceTierType,
     serviceSubTypes :: Maybe [BecknV2.FRFS.Enums.ServiceSubType],
-    busTagNumber :: Maybe Text
+    busTagNumber :: Maybe Text,
+    isActuallyValid :: Maybe Bool
   }
   deriving (Generic, ToJSON, ToSchema, Show)
 
@@ -783,6 +784,7 @@ instance FromJSON VehicleMetadataResponse where
     rawServiceSubTypes <- v .:? "serviceSubTypes" :: Parser (Maybe FilteredServiceSubTypes)
     let serviceSubTypes = normalizeServiceSubTypes rawServiceSubTypes
     busTagNumber <- v .:? "busTagNumber"
+    isActuallyValid <- v .:? "is_actually_valid"
     pure VehicleMetadataResponse {..}
 
 data BusScheduleTrip = BusScheduleTrip

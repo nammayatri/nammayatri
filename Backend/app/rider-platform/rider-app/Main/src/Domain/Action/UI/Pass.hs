@@ -815,9 +815,12 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
                         ( \b ->
                             case b.vehicle_number of
                               Just v -> do
-                                mbVehicleMetadata <- JLU.getVehicleMetadataFromInMem integratedBPPConfigs v
-                                let mbServiceTier = mbVehicleMetadata <&> (\(_, metadata) -> metadata.serviceType)
-                                return $ maybe False (`elem` applicableTiers) mbServiceTier
+                                mbVehicleMetadata <- OTPRest.getVehicleMetadata nearbyConfig v (Just True)
+                                return $ case mbVehicleMetadata of
+                                  Nothing -> False
+                                  Just metadata ->
+                                    fromMaybe True metadata.isActuallyValid
+                                      && metadata.serviceType `elem` applicableTiers
                               Nothing -> return False
                         )
                         busesWithVehicle
