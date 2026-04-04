@@ -140,32 +140,20 @@ postOfferValidateEligibility ::
 postOfferValidateEligibility merchantShortId opCity req = do
   _merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   _merchantOpCity <- CQMOC.findByMerchantIdAndCity _merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> _merchant.id.getId <> "-city-" <> show opCity)
-  offer <- QOffer.findById req.offerId >>= fromMaybeM (InvalidRequest $ "Offer not found: " <> req.offerId.getId)
-  case offer.offerEligibilityJsonLogic of
-    Nothing ->
+  logicResp <- LYUtils.runLogics [req.jsonLogic] req.inputData
+  case logicResp.result of
+    A.Bool result ->
       pure
         Common.ValidateOfferEligibilityResp
-          { eligible = True,
-            offerCode = offer.offerCode,
-            errors = []
+          { eligible = result,
+            errors = map toText logicResp.errors
           }
-    Just logic -> do
-      logicResp <- LYUtils.runLogics [logic] req.inputData
-      case logicResp.result of
-        A.Bool result ->
-          pure
-            Common.ValidateOfferEligibilityResp
-              { eligible = result,
-                offerCode = offer.offerCode,
-                errors = map toText logicResp.errors
-              }
-        _ ->
-          pure
-            Common.ValidateOfferEligibilityResp
-              { eligible = False,
-                offerCode = offer.offerCode,
-                errors = ["Logic did not return a boolean result"] <> map toText logicResp.errors
-              }
+    _ ->
+      pure
+        Common.ValidateOfferEligibilityResp
+          { eligible = False,
+            errors = ["Logic did not return a boolean result"] <> map toText logicResp.errors
+          }
 
 getOfferEligibilitySchema ::
   ShortId DM.Merchant ->

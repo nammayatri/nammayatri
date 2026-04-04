@@ -100,13 +100,12 @@ types:
     - updatedAt: UTCTime
 
   ValidateOfferEligibilityReq:
-    - offerId: Id Offer
+    - jsonLogic: Value
     - inputData: Value
     - derive: "'HideSecrets"
 
   ValidateOfferEligibilityResp:
     - eligible: Bool
-    - offerCode: Text
     - errors: "[Text]"
 
   OfferEligibilitySchemaResp:
