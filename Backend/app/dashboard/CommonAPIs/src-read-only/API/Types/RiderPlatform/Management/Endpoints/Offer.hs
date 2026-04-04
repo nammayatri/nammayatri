@@ -77,14 +77,14 @@ data UpdateOfferReq = UpdateOfferReq
 instance Kernel.Types.HideSecrets.HideSecrets UpdateOfferReq where
   hideSecrets = Kernel.Prelude.identity
 
-data ValidateOfferEligibilityReq = ValidateOfferEligibilityReq {offerId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer, inputData :: Data.Aeson.Value}
+data ValidateOfferEligibilityReq = ValidateOfferEligibilityReq {jsonLogic :: Data.Aeson.Value, inputData :: Data.Aeson.Value}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance Kernel.Types.HideSecrets.HideSecrets ValidateOfferEligibilityReq where
   hideSecrets = Kernel.Prelude.identity
 
-data ValidateOfferEligibilityResp = ValidateOfferEligibilityResp {eligible :: Kernel.Prelude.Bool, offerCode :: Kernel.Prelude.Text, errors :: [Kernel.Prelude.Text]}
+data ValidateOfferEligibilityResp = ValidateOfferEligibilityResp {eligible :: Kernel.Prelude.Bool, errors :: [Kernel.Prelude.Text]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
