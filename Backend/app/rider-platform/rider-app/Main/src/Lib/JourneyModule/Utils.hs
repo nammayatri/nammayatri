@@ -1547,7 +1547,7 @@ getVehicleServiceTypeFromInMem ::
 getVehicleServiceTypeFromInMem integratedBPPConfigs vehicleNumber = IM.withInMemCache ["CACHED_VEHICLE_TYPE", vehicleNumber] 43200 $ do
   mbMbResult <-
     SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
-      OTPRest.getVehicleMetadata config vehicleNumber
+      OTPRest.getVehicleMetadata config vehicleNumber Nothing
   pure $ join mbMbResult <&> (.serviceType)
 
 -- | Get service subtypes for a vehicle, cached in-memory for 1 day (86400 seconds)
@@ -1560,7 +1560,7 @@ getVehicleServiceSubTypesFromInMem integratedBPPConfigs vehicleNumber =
   IM.withInMemCache ["CACHED_VEHICLE_SERVICE_SUBTYPES", vehicleNumber] 86400 $ do
     mbMbResult <-
       SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
-        OTPRest.getVehicleMetadata config vehicleNumber
+        OTPRest.getVehicleMetadata config vehicleNumber Nothing
     pure $ join mbMbResult >>= (.serviceSubTypes)
 
 getVehicleTagNumberFromInMem ::
@@ -1572,7 +1572,7 @@ getVehicleTagNumberFromInMem integratedBPPConfigs vehicleNumber =
   IM.withInMemCache ["CACHED_VEHICLE_TAG_NUMBER", vehicleNumber] 86400 $ do
     mbMbResult <-
       SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
-        OTPRest.getVehicleMetadata config vehicleNumber
+        OTPRest.getVehicleMetadata config vehicleNumber Nothing
     pure $ join mbMbResult >>= (.busTagNumber)
 
 getVehicleMetadataFromInMem ::
@@ -1584,7 +1584,7 @@ getVehicleMetadataFromInMem integratedBPPConfigs vehicleNumber =
   IM.withInMemCache ["CACHED_VEHICLE_METADATA", vehicleNumber] 43200 $ do
     mbMbResult <-
       SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
-        (config,) <$> OTPRest.getVehicleMetadata config vehicleNumber
+        (config,) <$> OTPRest.getVehicleMetadata config vehicleNumber Nothing
     pure $
       mbMbResult
         >>= \(integratedBPPConfig, mbResult) ->

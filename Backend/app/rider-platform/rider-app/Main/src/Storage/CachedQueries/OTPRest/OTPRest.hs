@@ -404,10 +404,11 @@ getVehicleMetadata ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   IntegratedBPPConfig ->
   Text ->
+  Maybe Bool ->
   m (Maybe VehicleMetadataResponse)
-getVehicleMetadata integratedBPPConfig vehicleNumber = do
+getVehicleMetadata integratedBPPConfig vehicleNumber mbPassVerifyReq = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  Flow.getVehicleMetadata baseUrl integratedBPPConfig.feedKey vehicleNumber
+  Flow.getVehicleMetadata baseUrl integratedBPPConfig.feedKey vehicleNumber mbPassVerifyReq
 
 getVehicleInfo ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
