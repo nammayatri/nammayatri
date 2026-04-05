@@ -1041,7 +1041,9 @@ listDomainOffers ::
   Maybe Value ->
   m PInterface.OfferListResp
 listDomainOffers merchantId merchantOperatingCityId orderAmount _currency mbDomainContext = do
-  activeOffers <- QOffer.findAllActiveByMerchant merchantId merchantOperatingCityId True
+  now <- getCurrentTime
+  allActiveOffers <- QOffer.findAllActiveByMerchant merchantId merchantOperatingCityId True
+  let activeOffers = filter (\offer -> maybe True (> now) offer.validTill) allActiveOffers
   -- Filter by eligibility using offersEligibilityFlow
   eligibleResults <- forM activeOffers $ \offer -> do
     isOfferEligible <- offersEligibilityFlow offer.id.getId mbDomainContext

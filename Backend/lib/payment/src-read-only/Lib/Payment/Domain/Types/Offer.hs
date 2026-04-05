@@ -27,7 +27,8 @@ data Offer = Offer
     sponsoredBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     title :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tnc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    updatedAt :: Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.UTCTime,
+    validTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
   deriving (Generic, (Show))
 

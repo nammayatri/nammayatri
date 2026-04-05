@@ -19,3 +19,9 @@ ALTER TABLE atlas_driver_offer_bpp.offer ADD COLUMN tnc text ;
 ALTER TABLE atlas_driver_offer_bpp.offer ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.offer ADD PRIMARY KEY ( id);
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.offer ADD COLUMN valid_till timestamp with time zone ;

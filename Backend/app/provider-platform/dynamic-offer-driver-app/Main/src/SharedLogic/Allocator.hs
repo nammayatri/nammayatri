@@ -549,6 +549,7 @@ data CheckPickupZoneArrivalJobData = CheckPickupZoneArrivalJobData
 instance JobInfoProcessor 'CheckPickupZoneArrival
 
 type instance JobContent 'CheckPickupZoneArrival = CheckPickupZoneArrivalJobData
+
 data ScheduledTDSDistributionJobData = ScheduledTDSDistributionJobData
   { merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,

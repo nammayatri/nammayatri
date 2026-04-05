@@ -26,6 +26,7 @@ Offer:
     tnc: Maybe Text
     offerEligibilityJsonLogic: Maybe Value
     currency: Currency
+    validTill: Maybe UTCTime
     isActive: Bool
     merchantId: Text
     merchantOperatingCityId: Text

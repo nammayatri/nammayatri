@@ -408,8 +408,6 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         commission = booking.commission,
         cloudType = cloudType,
         sosId = Nothing,
-        discountAmount = Nothing,
-        payoutAmount = Nothing,
         ..
       }
 
@@ -488,13 +486,16 @@ rideAssignedReqHandler req = do
       let BookingDetails {..} = req'.bookingDetails
       ride <- buildRide req' mbMerchant now rideStatus
       let applicationFeeAmount = fromMaybe 0 booking.commission
+      mbBookingOfferEntity <- QOfferEntity.findByEntityIdAndEntityType booking.id.getId DOfferEntity.BOOKING
+      let bookingDiscountAmount = maybe 0 (.discountAmount) mbBookingOfferEntity
+          bookingPayoutAmount = maybe 0 (.payoutAmount) mbBookingOfferEntity
       -- Create payment intent for online payments, capture orderId for invoice creation
       _mbPaymentIntentResp <- case req'.onlinePaymentParameters of
         Just OnlinePaymentParameters {..} -> do
           let createPaymentIntentServiceReq =
                 DPayment.CreatePaymentIntentServiceReq
                   { amount = booking.estimatedFare.amount,
-                    discountAmount = fromMaybe 0 booking.discountAmount,
+                    discountAmount = bookingDiscountAmount,
                     offerId = Id <$> booking.selectedOfferId,
                     applicationFeeAmount,
                     currency = booking.estimatedFare.currency,
@@ -509,10 +510,10 @@ rideAssignedReqHandler req = do
               ledgerInfo =
                 Just $
                   SPayment.RidePaymentLedgerInfo
-                    { rideFare = booking.estimatedFare.amount - applicationFeeAmount - fromMaybe 0.0 booking.discountAmount,
+                    { rideFare = booking.estimatedFare.amount - applicationFeeAmount - bookingDiscountAmount,
                       gstAmount = 0, -- TODO: extract GST from fare breakup
-                      offerDiscountAmount = fromMaybe 0.0 booking.discountAmount,
-                      cashbackPayoutAmount = fromMaybe 0.0 booking.payoutAmount,
+                      offerDiscountAmount = bookingDiscountAmount,
+                      cashbackPayoutAmount = bookingPayoutAmount,
                       platformFee = applicationFeeAmount,
                       financeCtx = ledgerCtx
                     }
@@ -755,36 +756,45 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   whenJust mbAdvRide $ do \advRide -> when (advRide.id /= ride.id) $ QRide.updateshowDriversPreviousRideDropLoc False advRide.id
   let distanceUnit = ride.distanceUnit
   -- Persist offer details in Ride OfferEntity table for fast lookup in rideList
-  whenJust booking.selectedOfferId $ \offerId -> do
-    let paymentServiceType =
-          if maybe False (.onlinePayment) mbMerchant && booking.paymentInstrument `notElem` [Just DMPM.Cash, Just DMPM.BoothOnline]
-            then DOrder.OnlineRideHailing
-            else DOrder.RideHailing
-    mbOfferDetails <- SOffer.getSelectedOfferDetails booking.merchantId person.id booking.merchantOperatingCityId paymentServiceType totalFare offerId
-    whenJust mbOfferDetails $ \(offerDetails, computed) -> do
-      rideOfferId <- generateGUID
-      now <- getCurrentTime
-      let rideOfferEntity =
-            DOfferEntity.OfferEntity
-              { id = rideOfferId,
-                entityId = ride.id.getId,
-                entityType = DOfferEntity.RIDE,
-                offerId = offerDetails.offerId,
-                offerCode = offerDetails.offerCode,
-                offerTitle = offerDetails.offerTitle,
-                offerDescription = offerDetails.offerDescription,
-                offerTnc = offerDetails.offerTnc,
-                offerSponsoredBy = offerDetails.offerSponsoredBy,
-                discountAmount = computed.discountAmount,
-                payoutAmount = computed.payoutAmount,
-                amountSaved = computed.amountSaved,
-                postOfferAmount = computed.postOfferAmount,
-                merchantId = booking.merchantId,
-                merchantOperatingCityId = booking.merchantOperatingCityId,
-                createdAt = now,
-                updatedAt = now
-              }
-      QOfferEntity.create rideOfferEntity
+  mbRideOfferEntity <-
+    case booking.selectedOfferId of
+      Just offerId -> do
+        let paymentServiceType =
+              if maybe False (.onlinePayment) mbMerchant && booking.paymentInstrument `notElem` [Just DMPM.Cash, Just DMPM.BoothOnline]
+                then DOrder.OnlineRideHailing
+                else DOrder.RideHailing
+        mbOfferDetails <- SOffer.getSelectedOfferDetails booking.merchantId person.id booking.merchantOperatingCityId paymentServiceType totalFare offerId (Just $ show booking.vehicleServiceTierType)
+        case mbOfferDetails of
+          Just (offerDetails, computed) -> do
+            rideOfferId <- generateGUID
+            now <- getCurrentTime
+            pure $
+              Just $
+                DOfferEntity.OfferEntity
+                  { id = rideOfferId,
+                    entityId = ride.id.getId,
+                    entityType = DOfferEntity.RIDE,
+                    offerId = offerDetails.offerId,
+                    offerCode = offerDetails.offerCode,
+                    offerTitle = offerDetails.offerTitle,
+                    offerDescription = offerDetails.offerDescription,
+                    offerTnc = offerDetails.offerTnc,
+                    offerSponsoredBy = offerDetails.offerSponsoredBy,
+                    discountAmount = computed.discountAmount,
+                    payoutAmount = computed.payoutAmount,
+                    amountSaved = computed.amountSaved,
+                    postOfferAmount = computed.postOfferAmount,
+                    merchantId = booking.merchantId,
+                    merchantOperatingCityId = booking.merchantOperatingCityId,
+                    createdAt = now,
+                    updatedAt = now
+                  }
+          Nothing -> pure Nothing
+      Nothing -> pure Nothing
+  whenJust mbRideOfferEntity $ \rideOfferEntity -> do
+    QOfferEntity.create rideOfferEntity
+  let rideDiscountAmount = maybe 0 (.discountAmount) mbRideOfferEntity
+      ridePayoutAmount = maybe 0 (.payoutAmount) mbRideOfferEntity
   let rideCommission = maybe booking.commission Just commission
       updRide =
         ride{status = DRide.COMPLETED,
@@ -796,8 +806,6 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
              rideEndTime,
              paymentStatus = if SPayment.isOnlinePayment mbMerchant booking then DRide.NotInitiated else DRide.Completed,
              endOdometerReading,
-             discountAmount = Nothing, -- TODO :: Deprecated, added in OfferEntity table, to support multiple offers in future too.
-             payoutAmount = Nothing, -- TODO :: Deprecated, added in OfferEntity table, to support multiple offers in future too.
              commission = rideCommission
             }
   breakups <- traverse (buildFareBreakup ride.id) fareBreakups
@@ -828,7 +836,6 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   -- we should create job for collecting money from customer
   let onlinePayment = SPayment.isOnlinePayment mbMerchant booking
       applicationFeeAmount' = fromMaybe 0 booking.commission
-      discountAmount' = fromMaybe 0.0 updRide.discountAmount
 
   if not onlinePayment
     then do
@@ -836,17 +843,17 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         offerStatsInput <- SPayment.buildOfferStatsInput person
         void $
           withTryCatch "applyOfferWithoutPayment:cashRide" $
-            DPayment.applyOfferWithoutPaymentService ride.id.getId offerId offerStatsInput updRide.discountAmount updRide.payoutAmount totalFare.currency person.merchantId.getId person.merchantOperatingCityId.getId
+            DPayment.applyOfferWithoutPaymentService ride.id.getId offerId offerStatsInput (Just rideDiscountAmount) (Just ridePayoutAmount) totalFare.currency person.merchantId.getId person.merchantOperatingCityId.getId
     else do
       let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency person.id.getId ride.id.getId Nothing Nothing
           ledgerInfo =
             Just $
               SPayment.RidePaymentLedgerInfo
-                { rideFare = totalFare.amount - applicationFeeAmount' - discountAmount',
+                { rideFare = totalFare.amount - applicationFeeAmount' - rideDiscountAmount,
                   gstAmount = 0, -- TODO: extract GST from fare breakup
                   platformFee = applicationFeeAmount',
-                  offerDiscountAmount = discountAmount',
-                  cashbackPayoutAmount = fromMaybe 0.0 updRide.payoutAmount,
+                  offerDiscountAmount = rideDiscountAmount,
+                  cashbackPayoutAmount = ridePayoutAmount,
                   financeCtx = ledgerCtx
                 }
       let scheduleAfter = riderConfig.executePaymentDelay
@@ -858,7 +865,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
       let createPaymentIntentServiceReq =
             DPayment.CreatePaymentIntentServiceReq
               { amount = totalFare.amount + maybe 0.0 (.amount) ride.tipAmount,
-                discountAmount = discountAmount',
+                discountAmount = rideDiscountAmount,
                 offerId = Id <$> booking.selectedOfferId,
                 applicationFeeAmount = applicationFeeAmount',
                 currency = totalFare.currency,

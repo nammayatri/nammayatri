@@ -99,7 +99,6 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
               pure (result.totalFailed == 0)
 
         pure $ and results -- True if all services succeeded
-
   case mbResult of
     Left () -> do
       logWarning $ "Settlement ingestion lock contention, will retry: " <> lockKey

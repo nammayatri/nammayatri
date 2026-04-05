@@ -29,6 +29,7 @@ data CreateOfferReq = CreateOfferReq
     sponsoredBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tnc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     offerEligibilityJsonLogic :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    validTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency
   }
   deriving stock (Generic)
@@ -53,6 +54,7 @@ data OfferResp = OfferResp
     sponsoredBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tnc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     offerEligibilityJsonLogic :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    validTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     isActive :: Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
@@ -69,6 +71,7 @@ data UpdateOfferReq = UpdateOfferReq
     sponsoredBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tnc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     offerEligibilityJsonLogic :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    validTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     isActive :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)

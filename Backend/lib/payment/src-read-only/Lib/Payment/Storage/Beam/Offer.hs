@@ -13,23 +13,24 @@ import qualified Kernel.Types.Common
 import qualified Lib.Payment.Domain.Types.Offer
 
 data OfferT f = OfferT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    currency :: (B.C f Kernel.Types.Common.Currency),
-    description :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    discountType :: (B.C f Lib.Payment.Domain.Types.Offer.DiscountType),
-    discountValue :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    id :: (B.C f Kernel.Prelude.Text),
-    isActive :: (B.C f Kernel.Prelude.Bool),
-    maxDiscount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    offerCode :: (B.C f Kernel.Prelude.Text),
-    offerEligibilityJsonLogic :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    offerType :: (B.C f Lib.Payment.Domain.Types.Offer.OfferType),
-    sponsoredBy :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    title :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    tnc :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    currency :: B.C f Kernel.Types.Common.Currency,
+    description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    discountType :: B.C f Lib.Payment.Domain.Types.Offer.DiscountType,
+    discountValue :: B.C f Kernel.Types.Common.HighPrecMoney,
+    id :: B.C f Kernel.Prelude.Text,
+    isActive :: B.C f Kernel.Prelude.Bool,
+    maxDiscount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    offerCode :: B.C f Kernel.Prelude.Text,
+    offerEligibilityJsonLogic :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    offerType :: B.C f Lib.Payment.Domain.Types.Offer.OfferType,
+    sponsoredBy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    title :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    tnc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    validTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -39,6 +40,6 @@ instance B.Table OfferT where
 
 type Offer = OfferT Identity
 
-$(enableKVPG (''OfferT) [('id)] [[('offerCode)]])
+$(enableKVPG ''OfferT ['id] [['offerCode]])
 
-$(mkTableInstancesGenericSchema (''OfferT) "offer")
+$(mkTableInstancesGenericSchema ''OfferT "offer")

@@ -2079,9 +2079,10 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
       where
         enrichLeg ResolvedLeg {..} = do
           -- Resolve source stop LatLong for distance-based sorting
-          mbSourceStation <- JMU.measureLatency
-            (OTPRest.getStationByGtfsIdAndStopCode rlFromStopCode ctx.integratedBPPConfig)
-            ("enrichResolvedLegs: getStationByGtfsIdAndStopCode stop=" <> rlFromStopCode)
+          mbSourceStation <-
+            JMU.measureLatency
+              (OTPRest.getStationByGtfsIdAndStopCode rlFromStopCode ctx.integratedBPPConfig)
+              ("enrichResolvedLegs: getStationByGtfsIdAndStopCode stop=" <> rlFromStopCode)
           let mbSourceLatLong = do
                 station <- mbSourceStation
                 lat' <- station.lat
@@ -2095,20 +2096,25 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
 
           schedulesForRoutes <-
             mapConcurrently
-              (\routeCode -> JMU.measureLatency
-                (OTPRest.getRouteBusSchedule routeCode ctx.integratedBPPConfig)
-                ("enrichResolvedLegs: getRouteBusSchedule route=" <> routeCode))
+              ( \routeCode ->
+                  JMU.measureLatency
+                    (OTPRest.getRouteBusSchedule routeCode ctx.integratedBPPConfig)
+                    ("enrichResolvedLegs: getRouteBusSchedule route=" <> routeCode)
+              )
               rlRouteCodes
 
-          frfsTierMap <- JMU.measureLatency
-            (map (\t -> (t._type, t)) <$> CQFRFSVehicleServiceTier.findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId ctx.merchantOperatingCityId ctx.integratedBPPConfig.id)
-            ("enrichResolvedLegs: frfsTierMap lookup")
+          frfsTierMap <-
+            JMU.measureLatency
+              (map (\t -> (t._type, t)) <$> CQFRFSVehicleServiceTier.findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId ctx.merchantOperatingCityId ctx.integratedBPPConfig.id)
+              ("enrichResolvedLegs: frfsTierMap lookup")
           routesWithLiveVehicles <-
             catMaybes
               <$> mapConcurrently
-                (\(r, s) -> JMU.measureLatency
-                  (JMRouteServiceability.buildRouteWithLiveVehicle r s ctx.integratedBPPConfig rlFromStopCode rlToStopCode frfsTierMap mbSourceLatLong ctx.maxLiveVehiclesPerRoute)
-                  ("enrichResolvedLegs: buildRouteWithLiveVehicle route=" <> r.routeId))
+                ( \(r, s) ->
+                    JMU.measureLatency
+                      (JMRouteServiceability.buildRouteWithLiveVehicle r s ctx.integratedBPPConfig rlFromStopCode rlToStopCode frfsTierMap mbSourceLatLong ctx.maxLiveVehiclesPerRoute)
+                      ("enrichResolvedLegs: buildRouteWithLiveVehicle route=" <> r.routeId)
+                )
                 (zip busesForRoutes schedulesForRoutes)
 
           -- Separate user-requested routes (5 per route, already limited by distance)

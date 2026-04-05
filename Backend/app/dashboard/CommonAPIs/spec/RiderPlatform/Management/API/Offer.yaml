@@ -68,6 +68,7 @@ types:
     - sponsoredBy: Maybe Text
     - tnc: Maybe Text
     - offerEligibilityJsonLogic: Maybe Value
+    - validTill: Maybe UTCTime
     - currency: Currency
     - derive: "'HideSecrets"
 
@@ -79,6 +80,7 @@ types:
     - sponsoredBy: Maybe Text
     - tnc: Maybe Text
     - offerEligibilityJsonLogic: Maybe Value
+    - validTill: Maybe UTCTime
     - isActive: Maybe Bool
     - derive: "'HideSecrets"
 
@@ -94,6 +96,7 @@ types:
     - sponsoredBy: Maybe Text
     - tnc: Maybe Text
     - offerEligibilityJsonLogic: Maybe Value
+    - validTill: Maybe UTCTime
     - currency: Currency
     - isActive: Bool
     - createdAt: UTCTime

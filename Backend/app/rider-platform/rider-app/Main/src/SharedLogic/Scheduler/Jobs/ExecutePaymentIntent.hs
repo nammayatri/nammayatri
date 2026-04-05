@@ -15,6 +15,7 @@
 module SharedLogic.Scheduler.Jobs.ExecutePaymentIntent where
 
 import qualified Data.HashMap.Strict as HM
+import qualified Domain.Types.OfferEntity as DOfferEntity
 import qualified Domain.Types.Ride as DRide
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
@@ -38,6 +39,7 @@ import SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.OfferEntity as QOfferEntity
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -86,15 +88,17 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
               Nothing -> return fare
               Just tipAmount -> fare `addPrice` tipAmount
             booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+            mbRideOfferEntity <- QOfferEntity.findByEntityIdAndEntityType rideId.getId DOfferEntity.RIDE
+            let rideDiscountAmount = maybe 0 (.discountAmount) mbRideOfferEntity
+                ridePayoutAmount = maybe 0 (.payoutAmount) mbRideOfferEntity
             (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking person
             driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
             email <- mapM decrypt person.email
-            let discountAmount = fromMaybe 0.0 ride.discountAmount
-                createPaymentIntentServiceReq =
+            let createPaymentIntentServiceReq =
                   DPayment.CreatePaymentIntentServiceReq
                     { amount = fareWithTip.amount,
                       applicationFeeAmount,
-                      discountAmount,
+                      discountAmount = rideDiscountAmount,
                       offerId = Id <$> booking.selectedOfferId,
                       currency = fareWithTip.currency,
                       customer = customerPaymentId,
@@ -109,11 +113,11 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
                 ledgerInfo =
                   Just $
                     SPayment.RidePaymentLedgerInfo
-                      { rideFare = fare.amount - applicationFeeAmount - discountAmount,
+                      { rideFare = fare.amount - applicationFeeAmount - rideDiscountAmount,
                         gstAmount = 0, -- TODO: extract GST from fare breakup
                         platformFee = applicationFeeAmount,
-                        offerDiscountAmount = discountAmount,
-                        cashbackPayoutAmount = fromMaybe 0.0 booking.payoutAmount,
+                        offerDiscountAmount = rideDiscountAmount,
+                        cashbackPayoutAmount = ridePayoutAmount,
                         financeCtx = ledgerCtx
                       }
             mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId booking.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.OnlineRideHailing createPaymentIntentServiceReq ledgerInfo

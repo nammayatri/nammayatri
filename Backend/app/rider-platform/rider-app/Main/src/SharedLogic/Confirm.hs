@@ -50,6 +50,7 @@ import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
@@ -59,7 +60,6 @@ import SharedLogic.MerchantPaymentMethod
 import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.SchedulerJob ()
-import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Storage.CachedQueries.InsuranceConfig as CQInsuranceConfig
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
@@ -191,7 +191,7 @@ confirm DConfirmReq {..} = do
               if merchant.onlinePayment && paymentInstrument `notElem` [Just DMPM.Cash, Just DMPM.BoothOnline]
                 then DOrder.OnlineRideHailing
                 else DOrder.RideHailing
-        mbOfferDetails <- SOffer.getSelectedOfferDetails searchRequest.merchantId person.id merchantOperatingCityId paymentServiceType booking.estimatedTotalFare offerId
+        mbOfferDetails <- SOffer.getSelectedOfferDetails searchRequest.merchantId person.id merchantOperatingCityId paymentServiceType booking.estimatedTotalFare offerId (Just $ show quote.vehicleServiceTierType)
         case mbOfferDetails of
           Just (offerDetails, computed) -> do
             bookingOfferId <- generateGUID
@@ -456,8 +456,6 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           -- If commission is needed on BAP, it should flow from BPP via Beckn protocol extension.
           commission = Nothing,
           selectedOfferId = quote.selectedOfferId,
-          discountAmount = Nothing, -- TODO :: Deprecated, added in OfferEntity table, to support multiple offers in future too.
-          payoutAmount = Nothing, -- TODO :: Deprecated, added in OfferEntity table, to support multiple offers in future too.
           ..
         },
       bookingParties

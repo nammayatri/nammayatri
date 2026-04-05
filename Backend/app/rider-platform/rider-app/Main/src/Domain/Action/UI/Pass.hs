@@ -479,7 +479,7 @@ buildPassAPIEntity mbLanguage personId pass = do
   let description = maybe pass.description (Just . (.message)) descriptionTranslation
 
   offer <-
-    withTryCatch "getMultimodalPassAvailablePasses:offerListCache" (SOffer.offerListCache person.merchantId personId person.merchantOperatingCityId DOrder.FRFSPassPurchase (mkPrice (Just INR) pass.amount))
+    withTryCatch "getMultimodalPassAvailablePasses:offerListCache" (SOffer.offerListCache person.merchantId personId person.merchantOperatingCityId DOrder.FRFSPassPurchase (mkPrice (Just INR) pass.amount) (case pass.applicableVehicleServiceTiers of [] -> Nothing; tiers -> Just $ T.intercalate "-" $ EHS.sort $ map show tiers))
       >>= \case
         Left _ -> return Nothing
         Right offersResp -> SOffer.mkCumulativeOfferResp person.merchantOperatingCityId offersResp []

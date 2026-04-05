@@ -9,6 +9,7 @@ import qualified Domain.Types.Booking
 import qualified Domain.Types.FareBreakup
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.OfferEntity as DOfferEntity
 import qualified Domain.Types.PaymentCustomer as DPaymentCustomer
 import qualified Domain.Types.Person
 import qualified Domain.Types.RefundRequest as DRefundRequest
@@ -44,6 +45,7 @@ import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareBreakup as QFareBreakup
+import qualified Storage.Queries.OfferEntity as QOfferEntity
 import qualified Storage.Queries.PaymentCustomer as QPaymentCustomer
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RefundRequest as QRefundRequest
@@ -254,6 +256,9 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
     booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
     unless (booking.riderId == personId) $ throwError $ InvalidRequest "Person is not the owner of the ride"
     unless ride.onlinePayment $ throwError (InvalidRequest "Could not add tip for Cash ride")
+    mbRideOfferEntity <- QOfferEntity.findByEntityIdAndEntityType rideId.getId DOfferEntity.RIDE
+    let rideDiscountAmount = maybe 0 (.discountAmount) mbRideOfferEntity
+        ridePayoutAmount = maybe 0 (.payoutAmount) mbRideOfferEntity
     fareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE
     when (any (\fb -> fb.description == tipFareBreakupTitle) fareBreakups) $ throwError $ InvalidRequest "Tip already added"
     (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking person
@@ -297,11 +302,10 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         totalFare <- ride.totalFare & fromMaybeM (RideFieldNotPresent "totalFare")
         fareWithTip <- totalFare `addPrice` tipAmount
         let applicationFeeAmount = fromMaybe 0 ride.commission
-            discountAmount = fromMaybe 0.0 ride.discountAmount
         let createPaymentIntentServiceReq =
               DPayment.CreatePaymentIntentServiceReq
                 { amount = fareWithTip.amount,
-                  discountAmount,
+                  discountAmount = rideDiscountAmount,
                   offerId = Id <$> booking.selectedOfferId,
                   applicationFeeAmount,
                   currency = fareWithTip.currency,
@@ -320,11 +324,11 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
                 ledgerInfo =
                   Just $
                     SPayment.RidePaymentLedgerInfo
-                      { rideFare = totalFare.amount - applicationFeeAmount - discountAmount,
+                      { rideFare = totalFare.amount - applicationFeeAmount - rideDiscountAmount,
                         gstAmount = 0, -- TODO: extract GST from fare breakup
                         platformFee = applicationFeeAmount,
-                        offerDiscountAmount = discountAmount,
-                        cashbackPayoutAmount = fromMaybe 0.0 booking.payoutAmount,
+                        offerDiscountAmount = rideDiscountAmount,
+                        cashbackPayoutAmount = ridePayoutAmount,
                         financeCtx = ledgerCtx
                       }
             -- Create separate PENDING tip ledger entry via dedicated function
@@ -703,18 +707,19 @@ postPaymentClearDues (mbPersonId, merchantId) req = do
       Nothing -> getDefaultPaymentMethodForDues person
 
     booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+    mbRideOfferEntity' <- QOfferEntity.findByEntityIdAndEntityType rideId.getId DOfferEntity.RIDE
+    let debtDiscountAmount = maybe 0 (.discountAmount) mbRideOfferEntity'
     (customerPaymentId, _) <- SPayment.getCustomerAndPaymentMethod booking person
     driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
     email <- mapM decrypt person.email
 
     -- 4. Create NEW payment order for debt settlement
     let debtApplicationFeeAmount = fromMaybe 0 booking.commission
-        discountAmount = fromMaybe 0.0 ride.discountAmount
     let createPaymentIntentServiceReq =
           DPayment.CreatePaymentIntentServiceReq
             { amount = duesResp.totalDueAmount,
               applicationFeeAmount = debtApplicationFeeAmount,
-              discountAmount,
+              discountAmount = debtDiscountAmount,
               offerId = Nothing,
               currency = currency,
               customer = customerPaymentId,
@@ -727,10 +732,10 @@ postPaymentClearDues (mbPersonId, merchantId) req = do
         debtLedgerInfo =
           Just $
             SPayment.RidePaymentLedgerInfo
-              { rideFare = duesResp.totalDueAmount - debtApplicationFeeAmount - discountAmount,
+              { rideFare = duesResp.totalDueAmount - debtApplicationFeeAmount - debtDiscountAmount,
                 gstAmount = 0,
                 platformFee = debtApplicationFeeAmount,
-                offerDiscountAmount = discountAmount,
+                offerDiscountAmount = debtDiscountAmount,
                 cashbackPayoutAmount = 0, -- debt settlement doesn't have cashback
                 financeCtx = debtLedgerCtx
               }
