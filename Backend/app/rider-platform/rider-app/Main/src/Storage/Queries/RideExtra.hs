@@ -121,7 +121,6 @@ updateMultiple rideId ride = do
       Se.Set BeamR.traveledDistance (distanceToHighPrecMeters <$> ride.traveledDistance),
       Se.Set BeamR.traveledDistanceValue $ distanceToHighPrecDistance distanceUnit <$> ride.traveledDistance,
       Se.Set BeamR.distanceUnit $ Just distanceUnit,
-      Se.Set BeamR.discountAmount ride.discountAmount,
       Se.Set BeamR.rideStartTime ride.rideStartTime,
       Se.Set BeamR.rideEndTime ride.rideEndTime,
       Se.Set BeamR.endOtp ride.endOtp,

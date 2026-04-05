@@ -516,7 +516,7 @@ addPaymentoffersTags ::
   m ()
 addPaymentoffersTags totalPrice person = do
   logInfo $ "Add payment offer tag, personId: " <> person.id.getId <> ", totalPrice: " <> show totalPrice
-  withTryCatch "addPaymentoffersTags:offerListCache" (SOffer.offerListCache person.merchantId person.id person.merchantOperatingCityId DPaymentOrder.Normal totalPrice)
+  withTryCatch "addPaymentoffersTags:offerListCache" (SOffer.offerListCache person.merchantId person.id person.merchantOperatingCityId DPaymentOrder.Normal totalPrice Nothing)
     >>= \case
       Left err -> do
         logError $ "Error fetching offers for payment tags: " <> show err

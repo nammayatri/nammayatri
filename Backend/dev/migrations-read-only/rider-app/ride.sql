@@ -409,3 +409,13 @@ ALTER TABLE atlas_app.ride ADD COLUMN discount_amount double precision ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

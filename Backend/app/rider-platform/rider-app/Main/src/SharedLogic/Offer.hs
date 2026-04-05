@@ -95,7 +95,8 @@ data OfferEligibilityInput = OfferEligibilityInput
     staticPersonOfferStats :: [DOfferStats.OfferStats],
     deviceOfferStats :: [DOfferStats.OfferStats],
     personDailyOfferStats :: Maybe DPDOS.PersonDailyOfferStats,
-    personStats :: Maybe DPS.PersonStats
+    personStats :: Maybe DPS.PersonStats,
+    serviceTierType :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -115,8 +116,8 @@ invalidateOfferListCache person merchantOperatingCityId paymentServiceType price
       version = fromMaybe "N/A" riderConfig.offerListCacheVersion
   DPayment.invalidateOfferListCacheService customerId version paymentServiceType
 
-offerListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> m Payment.OfferListResp
-offerListCache merchantId personId merchantOperatingCityId paymentServiceType price = do
+offerListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> Maybe Text -> m Payment.OfferListResp
+offerListCache merchantId personId merchantOperatingCityId paymentServiceType price mbServiceTierType = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
   req <- mkOfferListReq person price
@@ -150,7 +151,8 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
                           staticPersonOfferStats = staticPersonOfferStats,
                           deviceOfferStats = deviceOfferStats,
                           personDailyOfferStats = mbPersonDailyOfferStats,
-                          personStats = mbPersonStats
+                          personStats = mbPersonStats,
+                          serviceTierType = mbServiceTierType
                         }
             DPayment.listDomainOffers merchantId.getId merchantOperatingCityId.getId price.amount price.currency domainContext
       DPayment.offerListService customerId version paymentServiceType (6 * 3600) False domainOfferCall req
@@ -158,9 +160,9 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
       let offerListCall = TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType (Just customerId) person.clientSdkVersion
       DPayment.offerListService customerId version paymentServiceType (31 * 86400) True offerListCall req
 
-selectedOfferListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> Text -> m Payment.OfferListResp
-selectedOfferListCache merchantId personId merchantOperatingCityId paymentServiceType price offerId = do
-  resp <- offerListCache merchantId personId merchantOperatingCityId paymentServiceType price
+selectedOfferListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> Text -> Maybe Text -> m Payment.OfferListResp
+selectedOfferListCache merchantId personId merchantOperatingCityId paymentServiceType price offerId mbServiceTierType = do
+  resp <- offerListCache merchantId personId merchantOperatingCityId paymentServiceType price mbServiceTierType
   let filteredOffers = filter (\o -> o.offerId == offerId) resp.offerResp
       filteredCombo =
         resp.bestOfferCombination <&> \combo ->
@@ -174,9 +176,9 @@ selectedOfferListCache merchantId personId merchantOperatingCityId paymentServic
         bestOfferCombination = filteredCombo
       }
 
-getSelectedOfferDetails :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> Text -> m (Maybe (OfferRespAPIEntity, DPayment.ComputedOfferAmount))
-getSelectedOfferDetails merchantId personId merchantOperatingCityId paymentServiceType price offerId = do
-  resp <- selectedOfferListCache merchantId personId merchantOperatingCityId paymentServiceType price offerId
+getSelectedOfferDetails :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> Text -> Maybe Text -> m (Maybe (OfferRespAPIEntity, DPayment.ComputedOfferAmount))
+getSelectedOfferDetails merchantId personId merchantOperatingCityId paymentServiceType price offerId mbServiceTierType = do
+  resp <- selectedOfferListCache merchantId personId merchantOperatingCityId paymentServiceType price offerId mbServiceTierType
   case listToMaybe resp.offerResp of
     Nothing -> pure Nothing
     Just offer -> do

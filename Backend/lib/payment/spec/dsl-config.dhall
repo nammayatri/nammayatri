@@ -166,7 +166,6 @@ let defaultImports =
           [ "Kernel.Prelude"
           , "Kernel.Beam.Lib.UtilsTH"
           , "Kernel.External.Encryption"
-          , "Lib.Payment.Storage.Beam.BeamFlow ()"
           ]
         , _qualifiedImports = [ "Database.Beam as B" ]
         , _packageImports = [] : List PackageImport

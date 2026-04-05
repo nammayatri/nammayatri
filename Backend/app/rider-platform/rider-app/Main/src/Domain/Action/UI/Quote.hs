@@ -302,7 +302,7 @@ getEstimates merchantId personId mocId searchRequestId isReferredRide onlinePaym
     mbOffer <-
       withTryCatch
         "getEstimates:offerListCache"
-        (SOffer.offerListCache merchantId personId mocId paymentServiceType estimate.estimatedFare)
+        (SOffer.offerListCache merchantId personId mocId paymentServiceType estimate.estimatedFare (Just $ show estimate.vehicleServiceTierType))
         >>= \case
           Left _ -> pure Nothing
           Right resp -> SOffer.mkCumulativeOfferResp mocId resp []

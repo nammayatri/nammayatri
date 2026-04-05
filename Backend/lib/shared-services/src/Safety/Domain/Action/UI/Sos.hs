@@ -20,13 +20,13 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Safety.Domain.Types.Common as Common
-import Safety.Tools.Error
 import qualified Safety.Domain.Types.SafetySettings as DSafetySettings
 import qualified Safety.Domain.Types.Sos as DSos
 import Safety.Storage.BeamFlow
 import qualified Safety.Storage.CachedQueries.Sos as CQSos
 import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
 import qualified Safety.Storage.Queries.Sos as QSos
+import Safety.Tools.Error
 
 -- | Update SOS entityType from NonRide to Ride and update rideId
 -- Validates that the SOS exists and has entityType "NonRide" before updating

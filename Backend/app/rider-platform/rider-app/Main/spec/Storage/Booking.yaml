@@ -255,8 +255,6 @@ Booking:
     dashboardAgentId: Maybe Text
     displayBookingId: Maybe Text
     selectedOfferId: Maybe Text
-    discountAmount: Maybe HighPrecMoney
-    payoutAmount: Maybe HighPrecMoney
     requiresPaymentBeforeConfirm: Bool
 
   beamFields:

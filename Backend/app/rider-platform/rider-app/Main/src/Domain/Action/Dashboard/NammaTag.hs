@@ -103,8 +103,18 @@ import qualified SharedLogic.PickupETA as PickupETA
 import qualified SharedLogic.Scheduler.Jobs.Chakras as Chakras
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
+import qualified Storage.CachedQueries.BecknConfig as SQBecknConfig
+import qualified Storage.CachedQueries.Exophone as SQExophone
+import qualified Storage.CachedQueries.FRFSConfig as SQFRFSConfig
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as SQMerchantPN
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as SQMerchantSC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as SQMerchantSUC
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as SQPayoutConfig
+import qualified Storage.CachedQueries.Merchant.RiderConfig as SQRiderConfig
+import qualified Storage.CachedQueries.MerchantConfig as SQMerchantConfig
 import qualified Storage.CachedQueries.Person as CQPerson
+import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SQRRNC
 import qualified Storage.CachedQueries.UiRiderConfig as UIRC
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
@@ -118,17 +128,7 @@ import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNoti
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Getter (invalidateConfigInMem)
 import Storage.ConfigPilot.Interface.Types (getConfig)
-import qualified Storage.CachedQueries.BecknConfig as SQBecknConfig
-import qualified Storage.CachedQueries.Exophone as SQExophone
-import qualified Storage.CachedQueries.FRFSConfig as SQFRFSConfig
-import qualified Storage.CachedQueries.MerchantConfig as SQMerchantConfig
-import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as SQMerchantPN
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as SQMerchantSC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as SQMerchantSUC
-import qualified Storage.CachedQueries.Merchant.PayoutConfig as SQPayoutConfig
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SQRRNC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as SQRiderConfig
 import qualified Storage.Queries.UiRiderConfig as SQU
 import Storage.Queries.UiRiderConfigExtra ()
 import qualified Tools.ConfigPilot as TC

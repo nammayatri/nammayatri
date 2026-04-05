@@ -32,4 +32,4 @@ getOfferDiscount _token bppBookingId mbFareAmount = do
     (Just offerId, Just fareAmount) -> do
       mbComputed <- SOffer.getOfferAmount (Id @DOffer.Offer offerId) fareAmount
       pure $ OfferDiscountResp {discountAmount = (.discountAmount) <$> mbComputed}
-    _ -> pure $ OfferDiscountResp {discountAmount = booking.discountAmount}
+    _ -> throwError $ InternalError "No offer found"
