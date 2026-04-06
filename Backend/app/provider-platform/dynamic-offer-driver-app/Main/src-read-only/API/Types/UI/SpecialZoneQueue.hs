@@ -10,18 +10,17 @@ import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
-data SpecialZoneQueueRequestListRes = SpecialZoneQueueRequestListRes {requests :: [SpecialZoneQueueRequestRes]}
+data SpecialZoneQueueRequestListRes = SpecialZoneQueueRequestListRes {currentSkipCount :: Kernel.Prelude.Int, maxSkipsBeforeQueueRemoval :: Kernel.Prelude.Maybe Kernel.Prelude.Int, requests :: [SpecialZoneQueueRequestRes]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SpecialZoneQueueRequestRes = SpecialZoneQueueRequestRes
-  { currentSkipCount :: Kernel.Prelude.Int,
-    gateId :: Kernel.Prelude.Text,
+  { gateId :: Kernel.Prelude.Text,
     gateName :: Kernel.Prelude.Text,
-    maxSkipsBeforeQueueRemoval :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     requestId :: Kernel.Types.Id.Id Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest,
     specialLocationId :: Kernel.Prelude.Text,
     specialLocationName :: Kernel.Prelude.Text,
+    status :: Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequestStatus,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: Kernel.Prelude.Text
   }

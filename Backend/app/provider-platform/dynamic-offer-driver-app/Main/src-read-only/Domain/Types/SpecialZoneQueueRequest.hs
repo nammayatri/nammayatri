@@ -29,9 +29,9 @@ data SpecialZoneQueueRequest = SpecialZoneQueueRequest
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data SpecialZoneQueueRequestResponse = Accept | Reject | Ignored | NoShow deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data SpecialZoneQueueRequestResponse = Accept | Reject | Ignored | NoShow | Cancelled deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data SpecialZoneQueueRequestStatus = Active | Expired deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data SpecialZoneQueueRequestStatus = Active | Accepted | Completed | Expired deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SpecialZoneQueueRequestResponse))
 

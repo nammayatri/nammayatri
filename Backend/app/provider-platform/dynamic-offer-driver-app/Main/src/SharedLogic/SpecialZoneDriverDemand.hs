@@ -22,10 +22,12 @@ module SharedLogic.SpecialZoneDriverDemand
     checkAndNotifyDriverDemand,
     forceNotifyDriverDemand,
     handleQueueSkipIfApplicable,
+    completePickupZoneRequestOnRideStart,
   )
 where
 
 import Data.List (sortOn)
+import qualified Data.Map as Map
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -42,6 +44,7 @@ import qualified Lib.Types.GateInfo as DGI
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
+import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Tools.Notifications as Notify
 
 -- Redis keys
@@ -129,9 +132,9 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate = do
       driversInBigZone <- LTSFlow.nearBy gate.point.lat gate.point.lon (Just False) Nothing 2000 merchantId Nothing Nothing
       let pickupZoneDriverIds = map (.driverId) driversInPickupZone
           parkingDrivers = filter (\d -> d.driverId `notElem` pickupZoneDriverIds) driversInBigZone
-      eligible <- filterM (notRecentlyNotified gateId . (.driverId)) parkingDrivers
+      eligible <- filterEligibleDrivers gate specialLocationId "" merchantId gateId (map (.driverId) parkingDrivers)
       let toNotify = take needed eligible
-      void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId "" cooldown (map (.driverId) toNotify)
+      void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId "" cooldown toNotify
   where
     isInsideGateGeometry gateInfoId driverLoc = do
       mbGate <- Esq.runInReplica $ QGI.findGateInfoIfDriverInsideGatePickupZone (LatLong driverLoc.lat driverLoc.lon)
@@ -164,7 +167,7 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed = do
   queueResp <- LTSFlow.getQueueDrivers specialLocationId vehicleType
   let sortedDrivers = sortOn (.queuePosition) queueResp.drivers
       queueDriverIds = map (.driverId) sortedDrivers
-  eligible <- filterM (notRecentlyNotified gateId) queueDriverIds
+  eligible <- filterEligibleDrivers gate specialLocationId vehicleType merchantId gateId queueDriverIds
   let toNotify = take needed eligible
   notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown toNotify
 
@@ -195,14 +198,19 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType coo
   now <- getCurrentTime
   let responseTimeoutSec = fromMaybe 15 gate.pickupRequestResponseTimeoutInSec
       validTill = addUTCTime (fromIntegral responseTimeoutSec) now
+  -- Bulk fetch vehicle variants for all drivers
+  vehicles <- QVehicle.findAllByDriverIds driverIds
+  let vehicleVariantMap = Map.fromList $ map (\v -> (v.driverId, show v.variant)) vehicles
   foldM
     ( \count driverId -> do
-        existingRequests <- QSZQR.findActiveByDriverId driverId DSZQR.Active
-        let hasActiveRequest = any (\r -> r.validTill > now) existingRequests
+        activeRequests <- QSZQR.findActiveByDriverId driverId DSZQR.Active
+        acceptedRequests <- QSZQR.findActiveByDriverId driverId DSZQR.Accepted
+        let hasActiveRequest = any (\r -> r.validTill > now) activeRequests || not (null acceptedRequests)
         if hasActiveRequest
           then pure count
           else do
             reqId <- generateGUID
+            let driverVehicleType = fromMaybe vehicleType (Map.lookup driverId vehicleVariantMap)
             let request =
                   DSZQR.SpecialZoneQueueRequest
                     { id = reqId,
@@ -216,7 +224,7 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType coo
                       validTill = validTill,
                       gateName = gate.name,
                       specialLocationName = specialLocationName,
-                      vehicleType = vehicleType,
+                      vehicleType = driverVehicleType,
                       createdAt = now,
                       updatedAt = now
                     }
@@ -229,7 +237,7 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType coo
                       specialLocationName = specialLocationName,
                       specialLocationId = specialLocationId,
                       gateId = gateId,
-                      vehicleType = vehicleType,
+                      vehicleType = driverVehicleType,
                       validTill = validTill,
                       requestType = "PICKUP_ZONE_REQUEST"
                     }
@@ -242,6 +250,49 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType coo
     (0 :: Int)
     driverIds
 
+-- Filter eligible drivers: not recently notified + increment skip count + remove if threshold exceeded
+filterEligibleDrivers ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    HasLocationService m r,
+    HasShortDurationRetryCfg r c,
+    HasRequestId r
+  ) =>
+  DGI.GateInfo ->
+  Text -> -- specialLocationId
+  Text -> -- vehicleType
+  Id DM.Merchant ->
+  Text -> -- gateId
+  [Id DP.Person] ->
+  m [Id DP.Person]
+filterEligibleDrivers gate specialLocationId vehicleType merchantId gateId driverIds = do
+  let maxSkips = gate.maxRideSkipsBeforeQueueRemoval
+  foldM
+    ( \acc driverId -> do
+        recentlyNotified <- not <$> notRecentlyNotified gateId driverId
+        if recentlyNotified
+          then pure acc
+          else do
+            -- Increment skip count for every request we're about to send
+            shouldInclude <- case maxSkips of
+              Nothing -> pure True
+              Just threshold -> do
+                newCount <- incrementQueueSkipCount specialLocationId driverId 86400
+                if newCount >= threshold
+                  then do
+                    void $ LTSFlow.manualQueueRemove specialLocationId vehicleType merchantId driverId
+                    resetQueueSkipCount specialLocationId driverId
+                    logInfo $ "Driver " <> driverId.getId <> " removed from queue after " <> show newCount <> " requests at gate " <> gateId
+                    pure False
+                  else pure True
+            pure $ if shouldInclude then acc ++ [driverId] else acc
+    )
+    []
+    driverIds
+
 notRecentlyNotified ::
   ( Redis.HedisFlow m r,
     MonadFlow m
@@ -252,6 +303,20 @@ notRecentlyNotified ::
 notRecentlyNotified gId driverId = do
   mbVal <- Redis.withCrossAppRedis $ Redis.get @Text (mkGateDriverNotifiedKey gId driverId.getId)
   pure $ isNothing mbVal
+
+-- Mark Accepted pickup zone request as Completed when driver starts a ride
+completePickupZoneRequestOnRideStart ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DP.Person ->
+  m ()
+completePickupZoneRequestOnRideStart driverId = do
+  acceptedRequests <- QSZQR.findActiveByDriverId driverId DSZQR.Accepted
+  forM_ acceptedRequests $ \req -> do
+    QSZQR.updateResponse (Just DSZQR.Accept) DSZQR.Completed req.id
+    logInfo $ "Marked pickup zone request " <> req.id.getId <> " as Completed for driver " <> driverId.getId
 
 -- Queue skip handling
 
