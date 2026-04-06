@@ -776,6 +776,7 @@ library
       Storage.Queries.RideExtra
       Storage.Queries.RiderDetailsExtra
       Storage.Queries.RouteExtra
+      Storage.Queries.ScheduledPayoutExtra
       Storage.Queries.SearchRequestExtra
       Storage.Queries.SearchRequestForDriverExtra
       Storage.Queries.SearchTryExtra
@@ -1172,6 +1173,7 @@ library
       Domain.Types.OperationHubRequests
       Domain.Types.Overlay
       Domain.Types.PayoutConfig
+      Domain.Types.PayoutStatusHistory
       Domain.Types.Person
       Domain.Types.PlaceNameCache
       Domain.Types.Plan
@@ -1194,6 +1196,7 @@ library
       Domain.Types.RideRelatedNotificationConfig
       Domain.Types.Route
       Domain.Types.RouteTripStopMapping
+      Domain.Types.ScheduledPayout
       Domain.Types.ScheduledPayoutConfig
       Domain.Types.SearchReqLocation
       Domain.Types.SearchRequest
@@ -1352,6 +1355,7 @@ library
       Storage.Beam.OperationHubRequests
       Storage.Beam.Overlay
       Storage.Beam.PayoutConfig
+      Storage.Beam.PayoutStatusHistory
       Storage.Beam.Person
       Storage.Beam.PlaceNameCache
       Storage.Beam.Plan
@@ -1374,6 +1378,7 @@ library
       Storage.Beam.RideRelatedNotificationConfig
       Storage.Beam.Route
       Storage.Beam.RouteTripStopMapping
+      Storage.Beam.ScheduledPayout
       Storage.Beam.ScheduledPayoutConfig
       Storage.Beam.SearchReqLocation
       Storage.Beam.SearchRequest
@@ -1635,6 +1640,7 @@ library
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.Overlay
       Storage.Queries.PayoutConfig
+      Storage.Queries.PayoutStatusHistory
       Storage.Queries.Person
       Storage.Queries.PlaceNameCache
       Storage.Queries.Plan
@@ -1657,6 +1663,7 @@ library
       Storage.Queries.RideRelatedNotificationConfig
       Storage.Queries.Route
       Storage.Queries.RouteTripStopMapping
+      Storage.Queries.ScheduledPayout
       Storage.Queries.ScheduledPayoutConfig
       Storage.Queries.SearchReqLocation
       Storage.Queries.SearchRequest

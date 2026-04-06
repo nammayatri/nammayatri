@@ -15,11 +15,11 @@ types:
     specialLocationName: Text
     vehicleType: Text
     validTill: UTCTime
-    currentSkipCount: Int
-    maxSkipsBeforeQueueRemoval: Maybe Int
 
   SpecialZoneQueueRequestListRes:
     requests: "[SpecialZoneQueueRequestRes]"
+    currentSkipCount: Int
+    maxSkipsBeforeQueueRemoval: Maybe Int
 
   SpecialZoneQueueRespondReq:
     response: SpecialZoneQueueRequestResponse

@@ -39,21 +39,28 @@ getSpecialZoneQueueRequest (mbPersonId, _merchantId, _merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person id")
   now <- getCurrentTime
   activeRequests <- QSZQR.findActiveByDriverId personId Domain.Types.SpecialZoneQueueRequest.Active
-  validRequests <- collectValid now personId activeRequests
-  pure $ API.Types.UI.SpecialZoneQueue.SpecialZoneQueueRequestListRes {requests = validRequests}
+  validRequests <- collectValid now activeRequests
+  -- Get skip count and max skips (independent of active requests)
+  (skipCount, maxSkips) <- case validRequests of
+    (r : _) -> do
+      mbSkipCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkQueueSkipCountKey r.specialLocationId personId.getId)
+      mbGate <- Esq.runInReplica $ QGI.findById (Kernel.Types.Id.Id r.gateId)
+      pure (fromMaybe 0 mbSkipCount, mbGate >>= (.maxRideSkipsBeforeQueueRemoval))
+    [] -> pure (0, Nothing)
+  pure $
+    API.Types.UI.SpecialZoneQueue.SpecialZoneQueueRequestListRes
+      { requests = validRequests,
+        currentSkipCount = skipCount,
+        maxSkipsBeforeQueueRemoval = maxSkips
+      }
   where
-    collectValid _ _ [] = pure []
-    collectValid now personId (req : rest) =
+    collectValid _ [] = pure []
+    collectValid now (req : rest) =
       if req.validTill < now
         then do
           QSZQR.updateResponse (Just Domain.Types.SpecialZoneQueueRequest.Ignored) Domain.Types.SpecialZoneQueueRequest.Expired req.id
-          collectValid now personId rest
+          collectValid now rest
         else do
-          -- Get skip count from Redis
-          mbSkipCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkQueueSkipCountKey req.specialLocationId personId.getId)
-          -- Get max skips from gate config
-          mbGate <- Esq.runInReplica $ QGI.findById (Kernel.Types.Id.Id req.gateId)
-          let maxSkips = mbGate >>= (.maxRideSkipsBeforeQueueRemoval)
           let res =
                 API.Types.UI.SpecialZoneQueue.SpecialZoneQueueRequestRes
                   { requestId = req.id,
@@ -62,11 +69,9 @@ getSpecialZoneQueueRequest (mbPersonId, _merchantId, _merchantOpCityId) = do
                     specialLocationId = req.specialLocationId,
                     specialLocationName = req.specialLocationName,
                     vehicleType = req.vehicleType,
-                    validTill = req.validTill,
-                    currentSkipCount = fromMaybe 0 mbSkipCount,
-                    maxSkipsBeforeQueueRemoval = maxSkips
+                    validTill = req.validTill
                   }
-          rest' <- collectValid now personId rest
+          rest' <- collectValid now rest
           pure (res : rest')
 
 postSpecialZoneQueueRequestRespond ::
@@ -88,22 +93,27 @@ postSpecialZoneQueueRequestRespond (mbPersonId, _merchantId, _merchantOpCityId) 
         if request.validTill < now
           then Domain.Types.SpecialZoneQueueRequest.Ignored
           else req.response
-  QSZQR.updateResponse (Just actualResponse) Domain.Types.SpecialZoneQueueRequest.Expired requestId
-  -- Schedule no-show check if driver accepted
-  when (actualResponse == Domain.Types.SpecialZoneQueueRequest.Accept) $ do
-    mbGate <- Esq.runInReplica $ QGI.findById (Kernel.Types.Id.Id request.gateId)
-    let timeoutSec = maybe 1200 (fromMaybe 1200 . (.pickupZoneArrivalTimeoutInSec)) mbGate
-    createJobIn @_ @'CheckPickupZoneArrival
-      (Just request.merchantId)
-      (Just request.merchantOperatingCityId)
-      (secondsToNominalDiffTime $ Seconds timeoutSec)
-      CheckPickupZoneArrivalJobData
-        { requestId = requestId.getId,
-          driverId = personId,
-          gateId = request.gateId,
-          specialLocationId = request.specialLocationId,
-          vehicleType = request.vehicleType,
-          merchantId = request.merchantId,
-          merchantOperatingCityId = request.merchantOperatingCityId
-        }
+  case actualResponse of
+    Domain.Types.SpecialZoneQueueRequest.Accept -> do
+      -- Accept: set status to Accepted (not Expired) — request stays alive until arrival check
+      QSZQR.updateResponse (Just Domain.Types.SpecialZoneQueueRequest.Accept) Domain.Types.SpecialZoneQueueRequest.Accepted requestId
+      -- Schedule no-show check
+      mbGate <- Esq.runInReplica $ QGI.findById (Kernel.Types.Id.Id request.gateId)
+      let timeoutSec = maybe 1200 (fromMaybe 1200 . (.pickupZoneArrivalTimeoutInSec)) mbGate
+      createJobIn @_ @'CheckPickupZoneArrival
+        (Just request.merchantId)
+        (Just request.merchantOperatingCityId)
+        (secondsToNominalDiffTime $ Seconds timeoutSec)
+        CheckPickupZoneArrivalJobData
+          { requestId = requestId.getId,
+            driverId = personId,
+            gateId = request.gateId,
+            specialLocationId = request.specialLocationId,
+            vehicleType = request.vehicleType,
+            merchantId = request.merchantId,
+            merchantOperatingCityId = request.merchantOperatingCityId
+          }
+    _ -> do
+      -- Reject/Ignored: set status to Expired
+      QSZQR.updateResponse (Just actualResponse) Domain.Types.SpecialZoneQueueRequest.Expired requestId
   pure Kernel.Types.APISuccess.Success

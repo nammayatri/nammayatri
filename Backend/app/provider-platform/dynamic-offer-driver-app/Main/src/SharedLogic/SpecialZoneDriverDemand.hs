@@ -197,8 +197,9 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType coo
       validTill = addUTCTime (fromIntegral responseTimeoutSec) now
   foldM
     ( \count driverId -> do
-        existingRequests <- QSZQR.findActiveByDriverId driverId DSZQR.Active
-        let hasActiveRequest = any (\r -> r.validTill > now) existingRequests
+        activeRequests <- QSZQR.findActiveByDriverId driverId DSZQR.Active
+        acceptedRequests <- QSZQR.findActiveByDriverId driverId DSZQR.Accepted
+        let hasActiveRequest = any (\r -> r.validTill > now) activeRequests || not (null acceptedRequests)
         if hasActiveRequest
           then pure count
           else do
