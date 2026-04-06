@@ -2603,13 +2603,15 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
               -- Delete old fare products. Use the in-memory usage count to decide whether the
               -- FarePolicy itself is now orphaned (no remaining FareProducts reference it),
               -- avoiding one DB query per old fare product.
+              -- NOTE: Cache clearing is deferred until AFTER the new FareProduct is created
+              -- in the DB, to minimise the window where concurrent search requests could
+              -- query an empty DB state and cache empty results.
               newFarePolicyUsageCount <-
                 foldlM
                   ( \usageCount fp -> do
                       let currentCount = Map.findWithDefault 0 fp.farePolicyId usageCount
                       when (currentCount <= 1) $ CQFP.delete fp.farePolicyId
                       CQFProduct.delete fp.id
-                      CQFProduct.clearCache fp
                       return $ Map.adjust (subtract 1) fp.farePolicyId usageCount
                   )
                   farePolicyUsageCount
@@ -2619,6 +2621,11 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
               let farePolicyId = finalFarePolicy.id
               let fareProduct = DFareProduct.FareProduct {enabled = enabled', merchantId = merchantOpCity.merchantId, merchantOperatingCityId = merchantOpCity.id, ..}
               CQFProduct.create fareProduct
+
+              -- Clear cache AFTER the new FareProduct exists in DB.  Any concurrent
+              -- request that re-populates the cache after this point will find the
+              -- new record instead of caching an empty result.
+              forM_ oldFareProducts CQFProduct.clearCache
               CQFProduct.clearCache fareProduct
 
               return (newErrors, newBoundedAlreadyDeletedMap, newFarePolicyUsageCount)
