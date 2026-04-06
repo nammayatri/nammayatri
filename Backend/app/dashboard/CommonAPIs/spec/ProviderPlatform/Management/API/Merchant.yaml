@@ -43,6 +43,7 @@ imports:
   Centesimal: Kernel.Types.Common
   SpecialLocationType: Lib.Types.SpecialLocation
   SetJsonLogicDebugReq: Lib.Yudhishthira.Tools.DebugLog
+  Area: Lib.Types.SpecialLocation
 
 module: Merchant
 
@@ -1044,6 +1045,7 @@ types:
     - stopFcmSuppressCount: Maybe Int
     - scheduleBookingListEligibilityTags: Maybe [Text]
     - isEnabled: Maybe Bool
+    - allowedAreas: Maybe [Area]
   VehicleServiceTierConfigUpdateReq:
     - name: Maybe Text
     - shortDescription: Maybe Text
@@ -1070,6 +1072,7 @@ types:
     - stopFcmSuppressCount: Maybe Int
     - scheduleBookingListEligibilityTags: Maybe [Text]
     - isEnabled: Maybe Bool
+    - allowedAreas: Maybe [Area]
     - derive: "'HideSecrets"
   VehicleServiceTierConfigCreateReq:
     - serviceTierType: ServiceTierType
@@ -1098,6 +1101,7 @@ types:
     - scheduleBookingListEligibilityTags: Maybe [Text]
     - vehicleCategory: VehicleCategory
     - isEnabled: Bool
+    - allowedAreas: Maybe [Area]
     - derive: "'HideSecrets"
   VehicleServiceTierListRes:
     - recordType: Type
