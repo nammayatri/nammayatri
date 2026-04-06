@@ -72,6 +72,7 @@ updateByPrimaryKey (Domain.Types.PayoutConfig.PayoutConfig {..}) = do
       Se.Set Beam.referralRewardAmountPerRide referralRewardAmountPerRide,
       Se.Set Beam.referralRewardAmountPerRideForD2DPayout referralRewardAmountPerRideForD2DPayout,
       Se.Set Beam.remark remark,
+      Se.Set Beam.sameRiderDriverRideCountLookbackDays (Just sameRiderDriverRideCountLookbackDays),
       Se.Set Beam.thresholdPayoutAmountPerPerson thresholdPayoutAmountPerPerson,
       Se.Set Beam.timeDiff (Kernel.Utils.Common.nominalDiffTimeToSeconds timeDiff),
       Se.Set Beam.vpaVerificationMode (Just vpaVerificationMode),

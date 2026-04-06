@@ -585,11 +585,16 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
           _ -> Nothing
     mbDriver <- maybe (QP.findById driverId) (pure . Just) mbDriverFromReq
     mbRiderDetails <- join <$> (QRiderDetails.findById `mapM` booking.riderId)
+    payoutConfig <- CPC.findByPrimaryKey booking.merchantOperatingCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) booking.merchantOperatingCityId.getId)
     let mbDriverMobileHash = (.hash) <$> (mbDriver >>= (.mobileNumber))
         mbRiderMobileHash = (.hash) . (.mobileNumber) <$> mbRiderDetails
         isDriverSameAsCustomer = isJust mbDriverMobileHash && isJust mbRiderMobileHash && mbDriverMobileHash == mbRiderMobileHash
-    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking isDriverSameAsCustomer))
+        merchantLocalDay = utctDay $ addUTCTime (secondsToNominalDiffTime thresholdConfig.timeDiffFromUtc) now
+        rideDurationSeconds = maybe 0 (\tStart -> max 0 $ roundToIntegral (diffUTCTime now tStart)) updRide'.tripStartTime
+    priorRidesSameCustomer <- QRide.countPriorCompletedRidesWithSameCustomer (cast driverId) booking.riderId updRide'.id merchantLocalDay payoutConfig.sameRiderDriverRideCountLookbackDays
+    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking isDriverSameAsCustomer priorRidesSameCustomer rideDurationSeconds))
     let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
+    QRide.incrementDriverRiderRideCountForDay (cast driverId) booking.riderId
     fork "updating time and latlong in advance ride if any" $ do
       whenJust advanceRide $ \advanceRide' -> do
         QRide.updatePreviousRideTripEndPosAndTime (Just tripEndPoint) (Just now) advanceRide'.id

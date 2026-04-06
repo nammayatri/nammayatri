@@ -31,6 +31,7 @@ data PayoutConfig = PayoutConfig
     referralRewardAmountPerRide :: Kernel.Types.Common.HighPrecMoney,
     referralRewardAmountPerRideForD2DPayout :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     remark :: Kernel.Prelude.Text,
+    sameRiderDriverRideCountLookbackDays :: Kernel.Prelude.Int,
     thresholdPayoutAmountPerPerson :: Kernel.Types.Common.HighPrecMoney,
     timeDiff :: Kernel.Prelude.NominalDiffTime,
     vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,

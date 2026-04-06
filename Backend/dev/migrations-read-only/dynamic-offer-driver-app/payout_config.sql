@@ -49,3 +49,8 @@ ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN d2d_payout_type text
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN vpa_verification_mode text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN same_rider_driver_ride_count_lookback_days integer ;
