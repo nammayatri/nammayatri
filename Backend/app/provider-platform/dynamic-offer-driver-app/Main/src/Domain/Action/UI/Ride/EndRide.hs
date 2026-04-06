@@ -608,7 +608,10 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         DC.incrementMetroRideCount driverId metroRideType expirationPeriod 1
       when (DTC.isDynamicOfferTrip booking.tripCategory && validRideTaken) $ do
         DC.incrementValidRideCount driverId expirationPeriod 1
-        DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
+        DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.DynamicOfferTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
+      when (DTC.isRideOtpTrip booking.tripCategory && validRideTaken) $ do
+        DC.incrementOTPValidRideCount driverId expirationPeriod 1
+        DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.OTPRideTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
 
     -- GPS Toll Behavior Check - evaluate if driver intentionally turned off GPS on toll route
     when thresholdConfig.enableGpsTollBehavior $ do

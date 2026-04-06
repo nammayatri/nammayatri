@@ -66,7 +66,7 @@ getLmsListAllModules (mbPersonId, _merchantId, merchantOpCityId) mbLanguage _mbL
       case question.quizCoinFunction of
         Nothing -> return 0
         Just functionName -> do
-          coinsConfig <- CDCQ.fetchConfigOnEventAndFunctionBasis DCT.LMS functionName _merchantId merchantOpCityId vehCategory Nothing
+          coinsConfig <- CDCQ.fetchConfigOnEventAndFunctionBasis DCT.LMS functionName _merchantId merchantOpCityId vehCategory DCT.DynamicOfferTrip Nothing
           return $ maybe 0 (\cc -> cc.coins) coinsConfig
 
     generateModuleInfo language personId eModule@LmsModule {..} = do
@@ -75,7 +75,7 @@ getLmsListAllModules (mbPersonId, _merchantId, merchantOpCityId) mbLanguage _mbL
       bonusCoins <- case bonusCoinEventFunction of
         Nothing -> pure $ Nothing
         Just functionName -> do
-          coinsConfig <- CDCQ.fetchConfigOnEventAndFunctionBasis DCT.LMSBonus functionName _merchantId merchantOpCityId vehCategory Nothing
+          coinsConfig <- CDCQ.fetchConfigOnEventAndFunctionBasis DCT.LMSBonus functionName _merchantId merchantOpCityId vehCategory DCT.DynamicOfferTrip Nothing
           return $ maybe Nothing (\cc -> Just cc.coins) coinsConfig
 
       -- fetching total coins for quiz
@@ -224,7 +224,7 @@ getLmsListAllQuiz (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage =
           Nothing -> return Nothing
           Just functionName -> do
             let vehCategory = DTVeh.getVehicleCategoryFromVehicleVariantDefault Nothing
-            coinsConfig <- CDCQ.fetchConfigOnEventAndFunctionBasis DCT.LMS functionName _merchantId merchantOpCityId vehCategory Nothing
+            coinsConfig <- CDCQ.fetchConfigOnEventAndFunctionBasis DCT.LMS functionName _merchantId merchantOpCityId vehCategory DCT.DynamicOfferTrip Nothing
             return $ maybe Nothing (\cc -> Just cc.coins) coinsConfig
 
       translations <- SCQL.getAllTranslationsForQuestionId question.questionId

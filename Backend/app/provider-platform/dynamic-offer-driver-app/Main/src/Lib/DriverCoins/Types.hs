@@ -20,6 +20,7 @@ module Lib.DriverCoins.Types
     DCoins.CoinStatus (..),
     DCoins.MetroRideType (..),
     DCoins.isMetroRideType,
+    DCoins.TripCategoryType (..),
     CancellationType (..),
   )
 where
@@ -38,7 +39,7 @@ data CancellationType
 
 data DriverCoinsEventType
   = Rating {ratingValue :: Int, ride :: Ride}
-  | EndRide {isDisabled :: Bool, coinsRewardedOnGoldTierRide :: Maybe Int, ride :: Ride, metroRideType :: DCoins.MetroRideType}
+  | EndRide {isDisabled :: Bool, coinsRewardedOnGoldTierRide :: Maybe Int, ride :: Ride, metroRideType :: DCoins.MetroRideType, tripCategoryType :: DCoins.TripCategoryType}
   | Cancellation {rideStartTime :: UTCTime, intialDisToPickup :: Maybe Meters, cancellationDisToPickup :: Maybe Meters, cancelledBy :: CancellationType, cancellationReason :: CancellationReasonCode}
   | DriverToCustomerReferral {ride :: Ride}
   | CustomerToDriverReferral
