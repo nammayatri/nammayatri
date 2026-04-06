@@ -196,12 +196,15 @@ newtype CreatePersonRes = CreatePersonRes
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 createPerson ::
-  (BeamFlow m r, EncFlow m r) =>
+  (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]) =>
   TokenInfo ->
   CreatePersonReq ->
   m CreatePersonRes
 createPerson _ personEntity = do
   runRequestValidation validateCreatePerson personEntity
+  enforceStrongPasswordPolicy <- asks (.enforceStrongPasswordPolicy)
+  when enforceStrongPasswordPolicy $
+    validateStrongPassword personEntity.password
   unlessM
     ( isNothing
         <$> DPT.withDashboardType personEntity.dashboardType
@@ -399,18 +402,20 @@ validateStrongPassword password = do
   unless (any (`elem` specialChars) pwd) $
     throwError $ InvalidRequest "Password must contain at least one special character."
 
-buildMerchantAccess :: MonadFlow m => Id DP.Person -> Id DMerchant.Merchant -> ShortId DMerchant.Merchant -> City.City -> m DAccess.MerchantAccess
+buildMerchantAccess :: BeamFlow m r => Id DP.Person -> Id DMerchant.Merchant -> ShortId DMerchant.Merchant -> City.City -> m DAccess.MerchantAccess
 buildMerchantAccess personId merchantId merchantShortId city = do
   uid <- generateGUID
   now <- getCurrentTime
+  existingAccesses <- QAccess.findByPersonIdAndMerchantId personId merchantId
+  let existing2fa = listToMaybe $ filter (.is2faEnabled) existingAccesses
   return $
     DAccess.MerchantAccess
       { id = Id uid,
         personId = personId,
         merchantId = merchantId,
         merchantShortId = merchantShortId,
-        secretKey = Nothing,
-        is2faEnabled = False,
+        secretKey = (.secretKey) =<< existing2fa,
+        is2faEnabled = maybe False (.is2faEnabled) existing2fa,
         createdAt = now,
         operatingCity = city
       }

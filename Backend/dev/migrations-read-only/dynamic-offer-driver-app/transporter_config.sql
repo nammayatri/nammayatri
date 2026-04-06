@@ -827,3 +827,12 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_rider_bl
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN tds_from_email text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_driver_name_mandatory_in_bulk_upload boolean  default true;
+
+
+------- SQL updates -------
+

@@ -83,7 +83,7 @@ data ChangeMerchantEnableStateReq = ChangeMerchantEnableStateReq
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 createMerchantWithAdmin ::
-  (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]) =>
+  (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]], HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]) =>
   TokenInfo ->
   CreateMerchantWithAdminReq ->
   m DP.PersonAPIEntity
@@ -93,6 +93,9 @@ createMerchantWithAdmin tokenInfo req = do
   whenJust mbExistingMerchant $ \_ -> throwError (MerchantAlreadyExist req.shortId)
   unlessM (isNothing <$> QP.findByEmail req.adminEmail) $ throwError (InvalidRequest "Email already registered")
   unlessM (isNothing <$> QP.findByMobileNumber req.adminMobileNumber req.adminMobileCountryCode) $ throwError (InvalidRequest "Phone already registered")
+  enforceStrongPasswordPolicy <- asks (.enforceStrongPasswordPolicy)
+  when enforceStrongPasswordPolicy $
+    DPerson.validateStrongPassword req.adminPassword
   role <- QRole.findByName "MERCHANT_ADMIN" >>= fromMaybeM (RoleDoesNotExist "MERCHANT_ADMIN")
   person <- buildPersonCreateReq req role
   decPerson <- decrypt person
@@ -193,7 +196,7 @@ listMerchants _ mbLimit mbOffset mbShortId = do
   pure ListMerchantResp {list = list, summary = Summary {totalCount = 10000, count = length list}}
 
 createUserForMerchant ::
-  (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]], HasFlowEnv m r '["merchantUserAccountNumber" ::: Int]) =>
+  (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]], HasFlowEnv m r '["merchantUserAccountNumber" ::: Int], HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]) =>
   TokenInfo ->
   DPerson.CreatePersonReq ->
   m DPerson.CreatePersonRes

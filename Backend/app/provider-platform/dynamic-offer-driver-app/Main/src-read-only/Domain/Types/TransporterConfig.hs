@@ -178,6 +178,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     isAAEnabledForRecurring :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isAvoidToll :: Kernel.Prelude.Bool,
     isDeviceIdChecksRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isDriverNameMandatoryInBulkUpload :: Kernel.Prelude.Bool,
     isDynamicPricingQARCalEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isMLBasedDynamicPricingEnabled :: Kernel.Prelude.Bool,
     isPlanMandatory :: Kernel.Prelude.Bool,

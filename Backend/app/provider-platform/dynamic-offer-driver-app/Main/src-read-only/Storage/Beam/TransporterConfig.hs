@@ -174,6 +174,7 @@ data TransporterConfigT f = TransporterConfigT
     isAAEnabledForRecurring :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isAvoidToll :: B.C f Kernel.Prelude.Bool,
     isDeviceIdChecksRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isDriverNameMandatoryInBulkUpload :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isDynamicPricingQARCalEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isMLBasedDynamicPricingEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPlanMandatory :: B.C f Kernel.Prelude.Bool,

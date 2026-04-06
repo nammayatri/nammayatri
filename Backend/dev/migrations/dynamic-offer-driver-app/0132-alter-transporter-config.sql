@@ -6,6 +6,7 @@ UPDATE atlas_driver_offer_bpp.transporter_config
 SET
     allowed_referral_entities = '{OPERATOR, FLEET_OWNER}',
     generate_referral_code_for_operator = true,
+    is_driver_name_mandatory_in_bulk_upload = false,
     generate_referral_code_for_fleet = true,
     enable_existing_vehicle_in_bulk_upload = true,
     require_route_mapping_in_vehicle = false,

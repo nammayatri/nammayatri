@@ -2993,7 +2993,7 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
 
 ---------------------------------------------------------------------
 data CreateDriversCSVRow = CreateDriversCSVRow
-  { driverName :: Text,
+  { driverName :: Maybe Text,
     driverPhoneNumber :: Text,
     driverOnboardingVehicleCategory :: Maybe Text,
     fleetPhoneNo :: Maybe Text,
@@ -3003,7 +3003,7 @@ data CreateDriversCSVRow = CreateDriversCSVRow
   }
 
 data DriverDetails = DriverDetails
-  { driverName :: Text,
+  { driverName :: Maybe Text,
     driverPhoneNumber :: Text,
     driverOnboardingVehicleCategory :: Maybe DVC.VehicleCategory,
     fleetPhoneNo :: Maybe Text,
@@ -3015,7 +3015,7 @@ data DriverDetails = DriverDetails
 instance FromNamedRecord CreateDriversCSVRow where
   parseNamedRecord r =
     CreateDriversCSVRow
-      <$> r .: "driver_name"
+      <$> optional (r .: "driver_name")
       <*> r .: "driver_phone_number"
       <*> optional (r .: "driver_onboarding_vehicle_category")
       <*> optional (r .: "fleet_phone_no")
@@ -3077,7 +3077,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
   where
     processDriverByFleetOwner :: DM.Merchant -> DMOC.MerchantOperatingCity -> DTCConfig.TransporterConfig -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
     processDriverByFleetOwner merchant moc transporterConfig fleetOwner req_ = do
-      validateDriverName req_.driverName
+      validateDriverName req_.driverName transporterConfig.isDriverNameMandatoryInBulkUpload
       let mobileCountryCode = P.getCountryMobileCode moc.country
       MobileValidation.validateMobileNumber transporterConfig req_.driverPhoneNumber mobileCountryCode moc.country
       whenJust req_.fleetPhoneNo $ \fleetPhoneNo -> MobileValidation.validateMobileNumber transporterConfig fleetPhoneNo mobileCountryCode moc.country
@@ -3093,7 +3093,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
 
     processDriverByOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DTCConfig.TransporterConfig -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
     processDriverByOperator merchant moc transporterConfig operator req_ = do
-      validateDriverName req_.driverName
+      validateDriverName req_.driverName transporterConfig.isDriverNameMandatoryInBulkUpload
       let mobileCountryCode = P.getCountryMobileCode moc.country
       MobileValidation.validateMobileNumber transporterConfig req_.driverPhoneNumber mobileCountryCode moc.country
       whenJust req_.fleetPhoneNo $ \fleetPhoneNo -> MobileValidation.validateMobileNumber transporterConfig fleetPhoneNo mobileCountryCode moc.country
@@ -3168,16 +3168,19 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
         let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType) >>= Sms.checkSmsResult
 
-validateDriverName :: Text -> Flow ()
-validateDriverName driverName = do
-  result <- try (void $ runRequestValidation Common.validateUpdateDriverNameReq (Common.UpdateDriverNameReq {firstName = driverName, middleName = Nothing, lastName = Nothing}))
-  case result of
-    Left (_ :: SomeException) -> throwError $ InvalidRequest "Driver name should not contain numbers and should have at least 1 letter and at most 50 letters"
-    Right _ -> pure ()
+validateDriverName :: Maybe Text -> Bool -> Flow ()
+validateDriverName mbDriverName isMandatory = do
+  case mbDriverName of
+    Nothing -> when isMandatory $ throwError $ InvalidRequest "Driver name is required"
+    Just driverName -> do
+      result <- try (void $ runRequestValidation Common.validateUpdateDriverNameReq (Common.UpdateDriverNameReq {firstName = driverName, middleName = Nothing, lastName = Nothing}))
+      case result of
+        Left (_ :: SomeException) -> throwError $ InvalidRequest "Driver name should not contain numbers and should have at least 1 letter and at most 50 letters"
+        Right _ -> pure ()
 
 parseDriverInfo :: Int -> CreateDriversCSVRow -> Flow DriverDetails
 parseDriverInfo idx row = do
-  driverName <- Csv.cleanCSVField idx row.driverName "Driver name"
+  let driverName :: Maybe Text = row.driverName >>= \name -> Csv.cleanMaybeCSVField idx name "Driver name"
   driverPhoneNumber <- Csv.cleanCSVField idx row.driverPhoneNumber "Mobile number"
   let driverOnboardingVehicleCategory :: Maybe DVC.VehicleCategory = Csv.readMaybeCSVField idx (fromMaybe "" row.driverOnboardingVehicleCategory) "Onboarding Vehicle Category"
       fleetPhoneNo :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.fleetPhoneNo) "Fleet number"
@@ -3196,7 +3199,7 @@ fetchOrCreatePerson moc req_ = do
             merchantId = moc.merchantId.getId,
             merchantOperatingCity = Just moc.city,
             email = Nothing,
-            name = Just req_.driverName,
+            name = req_.driverName,
             identifierType = Just DP.MOBILENUMBER,
             registrationLat = Nothing,
             registrationLon = Nothing,
@@ -3210,8 +3213,7 @@ fetchOrCreatePerson moc req_ = do
         person <- DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing Nothing cloudType moc.merchantId moc.id True
         let isNew = True in pure (person, isNew)
       Just person -> do
-        QPerson.updateName req_.driverName person.id
-        let isNew = False in pure (person {DP.firstName = req_.driverName}, isNew)
+        let isNew = False in pure (person, isNew)
 
 ---------------------------------------------------------------------
 postDriverDashboardFleetTrackDriver :: ShortId DM.Merchant -> Context.City -> Text -> Common.TrackDriverLocationsReq -> Flow Common.TrackDriverLocationsRes
@@ -3558,7 +3560,7 @@ postDriverFleetLocationList _ _ memberPersonId req = do
 createOrUpdateFleetBadge :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> DP.Person -> DFBT.FleetBadgeType -> Flow ()
 createOrUpdateFleetBadge merchant merchantOpCity person driverDetails fleetOwner badgeType = do
   now <- getCurrentTime
-  let badgeName = fromMaybe driverDetails.driverName driverDetails.badgeName
+  let badgeName = fromMaybe "" (driverDetails.badgeName <|> driverDetails.driverName)
   mbBadgeAssociation <- CFBA.findOneFleetBadgeAssociationByFleetOwnerIdAndDriverIdAndBadgeTypeAndIsActive fleetOwner.id.getId person.id badgeType True
   case mbBadgeAssociation of
     Just badgeAssociation -> do
@@ -3571,7 +3573,7 @@ createOrUpdateFleetBadge merchant merchantOpCity person driverDetails fleetOwner
   where
     buildNewBadge badgeId now =
       DFB.FleetBadge
-        { badgeName = fromMaybe driverDetails.driverName driverDetails.badgeName,
+        { badgeName = fromMaybe "" (driverDetails.badgeName <|> driverDetails.driverName),
           badgeType = badgeType,
           createdAt = now,
           personId = Just person.id,
