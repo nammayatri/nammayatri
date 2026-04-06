@@ -20,7 +20,6 @@ import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.Payment.Domain.Action as DPayment
 import Lib.Payment.Domain.Types.Offer as DOffer
@@ -120,12 +119,12 @@ invalidateOfferListCache person merchantOperatingCityId paymentServiceType price
 offerListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> Maybe Text -> m Payment.OfferListResp
 offerListCache merchantId personId merchantOperatingCityId paymentServiceType price mbServiceTierType = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  riderConfig <- JMU.measureLatency (getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)) "getEstimates:offerCache:getConfig"
-  req <-  JMU.measureLatency (mkOfferListReq person price) "getEstimates:offerCache:mkOfferListReq"
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  req <- mkOfferListReq person price
   let customerId = fromMaybe person.id.getId (req.customer <&> (.customerId))
       version = fromMaybe "N/A" riderConfig.offerListCacheVersion
   if isDomainOffersEnabled paymentServiceType
-    then flip JMU.measureLatency "getEstimates:offerCache:inlineCallOffers" $ do
+    then do
       let domainOfferCall = \_ -> do
             personOfferStats <- QOfferStats.findAllByEntityIdAndEntityType personId.getId DOfferStats.Person
             staticPersonOfferStats <- do
