@@ -65,8 +65,7 @@ instance ConfigDimensions MerchantServiceConfigDimensions where
         maybe True (\sn -> fst (TRMSC.getServiceNameConfigJson c.serviceConfig) == sn) dims.serviceName
           && c.merchantOperatingCityId == Id dims.merchantOperatingCityId
   getConfig dims = do
-    allCfgs <- measureLatency (getConfigList dims) ("MerchantServiceConfig.getConfigList merchantId=" <> dims.merchantId <> " mocId=" <> dims.merchantOperatingCityId)
-    foundCfg <- getConfigList dims
+    foundCfg <- measureLatency (getConfigList dims) ("MerchantServiceConfig.getConfigList merchantId=" <> dims.merchantId <> " mocId=" <> dims.merchantOperatingCityId)
     if null foundCfg
       then do
         logError $ "MerchantServiceConfig not found for merchantId: " <> dims.merchantId <> " mocId: " <> dims.merchantOperatingCityId <> " serviceName: " <> show dims.serviceName <> ". Falling back to default city."
