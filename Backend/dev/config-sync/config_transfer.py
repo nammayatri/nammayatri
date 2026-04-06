@@ -724,42 +724,6 @@ def cmd_export(args):
     if any(r["status"] != "ok" for r in results.values()):
         sys.exit(1)
 
-
-def _ensure_passetto():
-    """Ensure passetto is running on :8079. Returns cleanup function.
-
-    If not running, starts it via run-passetto.sh (standalone DB + service).
-    """
-    import subprocess, requests as _req
-
-    try:
-        r = _req.get("http://localhost:8079/status", timeout=2)
-        if r.status_code == 200:
-            print(f"  Passetto already running (keys={r.json().get('keys_number')})")
-            return lambda: None
-    except Exception:
-        pass
-
-    # Start passetto standalone
-    run_script = SCRIPT_DIR / "run-passetto.sh"
-    if not run_script.exists():
-        sys.exit("Passetto not running. Start dev stack or run: ./run-passetto.sh")
-
-    print("  Starting passetto (standalone)...")
-    result = subprocess.run(["bash", str(run_script)], capture_output=True, text=True)
-    if result.returncode != 0:
-        print(result.stdout)
-        print(result.stderr, file=sys.stderr)
-        sys.exit("Failed to start passetto")
-
-    print(result.stdout.strip())
-
-    def _stop():
-        subprocess.run(["bash", str(run_script), "stop"], capture_output=True)
-
-    return _stop
-
-
 def cmd_patch(args):
     """Patch: read raw export, apply all overrides, write patched dump.
 
@@ -773,8 +737,6 @@ def cmd_patch(args):
     direction = f"{from_env}_to_{to_env}"
 
     print(f"Patching: {from_env} -> {to_env}\n")
-
-    cleanup_passetto = _ensure_passetto()
 
     config_tables = load_config_tables()
     patch_config = load_patches().get(direction, {})
@@ -876,8 +838,6 @@ def cmd_patch(args):
             print(f"    [ok] {table}: {total_rows} rows, {patch_count} patches")
 
         print()
-
-    cleanup_passetto()
 
     # ── Post-patch audit: scan output for remaining sensitive patterns ──
     audit_warnings = _audit_patched_output(dst_base, src_base, config_tables, schemas)

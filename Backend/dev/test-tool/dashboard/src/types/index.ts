@@ -28,6 +28,10 @@ export interface StepResult {
   error?: string;
   statusCode?: number;
   summary?: string;
+  /** Per-service log deltas captured during this step's execution */
+  serviceLogs?: Record<string, string>;
+  /** Assertion results from Postman test script */
+  assertions?: Array<{ name: string; passed: boolean; error?: string }>;
 }
 
 export interface Scenario {
@@ -56,4 +60,6 @@ export interface LogEntry {
   message: string;
   request?: { method: string; url: string; body?: any };
   response?: { status: number; body?: any };
+  /** Per-service log deltas for this request */
+  serviceLogs?: Record<string, string>;
 }

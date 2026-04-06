@@ -3,7 +3,9 @@
 Test Context API + CORS Proxy
 
 1. Serves test context from local DB (merchants, riders, drivers, tokens)
-2. Proxies API calls to rider-app/driver-app with CORS headers
+2. Scans integration-test collections and environments
+3. Captures per-API service log deltas
+4. Proxies API calls to rider-app/driver-app with CORS headers
 
 Endpoints:
   GET  /api/context              → All test context data
@@ -11,9 +13,13 @@ Endpoints:
   GET  /api/drivers              → Available drivers
   GET  /api/merchants            → Available merchants
   GET  /api/variants             → Vehicle variants
+  GET  /api/collections          → Scan integration-test collection dirs
+  GET  /api/collection/<dir>/<f> → Serve raw Postman collection JSON
+  POST /api/logs/start           → Start tail -f on all service logs, returns token
+  POST /api/logs/stop            → Stop tails, return captured log text
   ANY  /proxy/rider/*            → Proxy to rider-app (localhost:8013)
   ANY  /proxy/driver/*           → Proxy to driver-app (localhost:8016)
-  ANY  /proxy/provider-dashboard/*            → Proxy to provider-dashboard (localhost:8018)
+  ANY  /proxy/provider-dashboard/*  → Proxy to provider-dashboard (localhost:8018)
 
 Port: 7082
 """
@@ -21,12 +27,35 @@ Port: 7082
 import json
 import sys
 import os
+import glob
+import subprocess
+import threading
+from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 import urllib.request
 import urllib.error
 
 PORT = 7082
+
+# ── Paths ──
+SCRIPT_DIR = Path(__file__).resolve().parent
+COLLECTIONS_DIR = SCRIPT_DIR.parent.parent / "integration-tests" / "collections"
+PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent  # nammayatri/
+
+# ── Service log files for per-API capture ──
+# Haskell service logs (/tmp) — EulerHS logger writes here
+SERVICE_LOGS = {
+    "rider-app": Path("/tmp/rider-app.log"),
+    "rider-app-eul": Path("/tmp/rider-app-eul.log"),
+    "driver-app": Path("/tmp/dynamic-offer-driver-app.log"),
+    "driver-app-eul": Path("/tmp/dynamic-offer-driver-app-eul.log"),
+    "beckn-gateway": Path("/tmp/beckn-gateway.log"),
+    "search-result-aggregator": Path("/tmp/search-result-aggregator.log"),
+    "producer": Path("/tmp/producer.log"),
+    "rider-producer": Path("/tmp/rider-producer.log"),
+}
+MAX_LOG_DELTA_BYTES = 64 * 1024  # 64KB per service
 
 RIDER_URL = os.environ.get("RIDER_URL", "http://localhost:8013")
 DRIVER_URL = os.environ.get("DRIVER_URL", "http://localhost:8016")
@@ -134,6 +163,151 @@ def get_admin_credentials():
     }
 
 
+# ── Collection Scanner ──
+
+def scan_collections():
+    """Walk integration-tests/collections/ and return metadata for each collection group."""
+    result = []
+    if not COLLECTIONS_DIR.is_dir():
+        return result
+    for subdir in sorted(COLLECTIONS_DIR.iterdir()):
+        if not subdir.is_dir():
+            continue
+        group = {"directory": subdir.name, "environments": [], "suites": []}
+        for f in sorted(subdir.iterdir()):
+            if not f.suffix == ".json":
+                continue
+            if f.name.startswith("Local_") and f.name.endswith(".postman_environment.json"):
+                try:
+                    env_data = json.loads(f.read_text())
+                    vals = {v["key"]: v["value"] for v in env_data.get("values", []) if v.get("enabled", True)}
+                    env_name = f.name.replace("Local_", "").replace(".postman_environment.json", "")
+                    group["environments"].append({
+                        "filename": f.name,
+                        "envName": env_name,
+                        "name": env_data.get("name", env_name),
+                        "city": vals.get("city", ""),
+                        "state": vals.get("state", ""),
+                        "merchant": vals.get("dashboard_merchant_id", ""),
+                        "bapShortId": vals.get("bap_short_id", ""),
+                        "origin": {"lat": float(vals.get("origin_lat", 0)), "lon": float(vals.get("origin_lon", 0))},
+                        "destination": {"lat": float(vals.get("dest_lat", 0)), "lon": float(vals.get("dest_lon", 0))},
+                        "variables": vals,
+                    })
+                except Exception:
+                    pass
+            elif not f.name.startswith("Local_"):
+                try:
+                    col_data = json.loads(f.read_text())
+                    info = col_data.get("info", {})
+                    group["suites"].append({
+                        "filename": f.name,
+                        "name": info.get("name", f.stem),
+                        "description": info.get("description", ""),
+                        "itemCount": len(col_data.get("item", [])),
+                    })
+                except Exception:
+                    pass
+        if group["environments"] or group["suites"]:
+            result.append(group)
+    return result
+
+
+def get_collection_file(directory, filename):
+    """Return raw Postman collection JSON."""
+    path = COLLECTIONS_DIR / directory / filename
+    if path.is_file() and path.suffix == ".json":
+        return json.loads(path.read_text())
+    return None
+
+
+# ── Service Log Capture (tail -f based) ──
+
+# Global state: active tail processes keyed by a session token
+_tail_sessions = {}  # token -> { svc: { proc, lines } }
+_tail_lock = threading.Lock()
+
+
+def _reader_thread(lines_list, proc):
+    """Background thread to read lines from tail -f stdout."""
+    try:
+        for line in proc.stdout:
+            lines_list.append(line)
+    except (ValueError, OSError):
+        pass  # proc closed
+
+
+def start_log_tails():
+    """Start tail -f for each service log. Returns a session token."""
+    import uuid
+    token = str(uuid.uuid4())[:8]
+    session = {}
+    for svc, path in SERVICE_LOGS.items():
+        if not path.exists():
+            continue
+        try:
+            proc = subprocess.Popen(
+                ["tail", "-n", "0", "-f", str(path)],
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                text=True, bufsize=1
+            )
+            lines = []
+            t = threading.Thread(target=_reader_thread, args=(lines, proc), daemon=True)
+            t.start()
+            session[svc] = {"proc": proc, "lines": lines}
+        except OSError:
+            pass
+    with _tail_lock:
+        _tail_sessions[token] = session
+    return token
+
+
+def stop_log_tails(token, settle_ms=300, max_wait_ms=1000):
+    """Wait for logs to settle (no new lines for settle_ms), then stop tails and return captured logs.
+    Max total wait is max_wait_ms."""
+    with _tail_lock:
+        session = _tail_sessions.get(token, {})
+    if not session:
+        with _tail_lock:
+            _tail_sessions.pop(token, None)
+        return {}
+
+    # Wait for logs to settle: poll until no new lines appear for settle_ms
+    import time
+    deadline = time.monotonic() + max_wait_ms / 1000.0
+    settle_deadline = time.monotonic() + settle_ms / 1000.0
+    prev_total = sum(len(e["lines"]) for e in session.values())
+
+    while time.monotonic() < deadline:
+        time.sleep(0.2)
+        curr_total = sum(len(e["lines"]) for e in session.values())
+        if curr_total != prev_total:
+            # New lines appeared — reset settle timer
+            prev_total = curr_total
+            settle_deadline = time.monotonic() + settle_ms / 1000.0
+        elif time.monotonic() >= settle_deadline:
+            # No new lines for settle_ms — logs have settled
+            break
+
+    # Now stop and collect
+    with _tail_lock:
+        _tail_sessions.pop(token, None)
+    logs = {}
+    for svc, entry in session.items():
+        proc = entry["proc"]
+        proc.terminate()
+        try:
+            proc.wait(timeout=1)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+        text = "".join(entry["lines"]).strip()
+        if text:
+            if len(text) > MAX_LOG_DELTA_BYTES:
+                text = text[-MAX_LOG_DELTA_BYTES:]
+            logs[svc] = text
+    return logs
+
+
 def get_full_context():
     return {
         "merchants": get_merchants(),
@@ -148,17 +322,26 @@ class ContextHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         print(f"  \033[93m[Context API]\033[0m {args[0]}")
 
+    def handle_one_request(self):
+        try:
+            super().handle_one_request()
+        except BrokenPipeError:
+            pass  # Client disconnected
+
     def _cors_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "*")
 
     def _send_json(self, data, status=200):
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self._cors_headers()
-        self.end_headers()
-        self.wfile.write(json.dumps(data, default=str).encode())
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self._cors_headers()
+            self.end_headers()
+            self.wfile.write(json.dumps(data, default=str).encode())
+        except BrokenPipeError:
+            pass  # Client disconnected before response was fully written
 
     def do_OPTIONS(self):
         self.send_response(200)
@@ -173,18 +356,35 @@ class ContextHandler(BaseHTTPRequestHandler):
         LTS_URL = os.environ.get("LTS_URL", "http://localhost:8081")
         PROVIDER_DASHBOARD_URL = os.environ.get("PROVIDER_DASHBOARD_URL", "http://localhost:8018")
         MOCK_IDFY_URL = os.environ.get("MOCK_IDFY_URL", "http://localhost:6235")
-        if path.startswith("/proxy/mock-idfy/"):
+        MOCK_SERVER_URL = os.environ.get("MOCK_SERVER_URL", "http://localhost:8080")
+        RIDER_DASHBOARD_URL = os.environ.get("RIDER_DASHBOARD_URL", "http://localhost:8017")
+        if path.startswith("/proxy/rider-dashboard/"):
+            target_base = RIDER_DASHBOARD_URL
+            target_path = path[len("/proxy/rider-dashboard"):]
+        elif path.startswith("/proxy/mock-server/"):
+            target_base = MOCK_SERVER_URL
+            target_path = path[len("/proxy/mock-server"):]
+        elif path.startswith("/proxy/mock-idfy/"):
             target_base = MOCK_IDFY_URL
             target_path = path[len("/proxy/mock-idfy"):]
+        elif path.startswith("/proxy/rider-raw/"):
+            target_base = RIDER_URL
+            target_path = path[len("/proxy/rider-raw"):]
         elif path.startswith("/proxy/rider/"):
             target_base = RIDER_URL
             target_path = "/v2" + path[len("/proxy/rider"):]
+        elif path.startswith("/proxy/lts-raw/"):
+            target_base = LTS_URL
+            target_path = path[len("/proxy/lts-raw"):]
         elif path.startswith("/proxy/lts/"):
             target_base = LTS_URL
             target_path = "/ui" + path[len("/proxy/lts"):]
         elif path.startswith("/proxy/provider-dashboard/"):
             target_base = PROVIDER_DASHBOARD_URL
             target_path = path[len("/proxy/provider-dashboard"):]
+        elif path.startswith("/proxy/driver-raw/"):
+            target_base = DRIVER_URL
+            target_path = path[len("/proxy/driver-raw"):]
         elif path.startswith("/proxy/driver/"):
             target_base = DRIVER_URL
             target_path = "/ui" + path[len("/proxy/driver"):]
@@ -241,6 +441,18 @@ class ContextHandler(BaseHTTPRequestHandler):
             return self._proxy(method)
 
         # POST API endpoints
+        if method == "POST" and path == "/api/logs/start":
+            token = start_log_tails()
+            self._send_json({"token": token})
+            return True
+
+        if method == "POST" and path == "/api/logs/stop":
+            body = self._read_json_body()
+            token = body.get("token", "")
+            logs = stop_log_tails(token)
+            self._send_json({"logs": logs})
+            return True
+
         if method == "POST" and path == "/api/inflate-distance":
             body = self._read_json_body()
             ride_id = body.get("rideId")
@@ -286,6 +498,20 @@ class ContextHandler(BaseHTTPRequestHandler):
             parts = path.split("/")
             city_id = parts[3] if len(parts) > 3 else None
             self._send_json(get_variants(city_id))
+        elif path == "/api/collections":
+            self._send_json(scan_collections())
+        elif path.startswith("/api/collection/"):
+            parts = path.split("/")
+            if len(parts) >= 5:
+                directory = parts[3]
+                filename = "/".join(parts[4:])
+                data = get_collection_file(directory, filename)
+                if data:
+                    self._send_json(data)
+                else:
+                    self._send_json({"error": "collection not found"}, 404)
+            else:
+                self._send_json({"error": "usage: /api/collection/<dir>/<file>"}, 400)
         elif path == "/api/health":
             self._send_json({"status": "ok"})
         else:

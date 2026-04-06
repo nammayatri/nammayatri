@@ -678,7 +678,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\"autoAssignEnabled\": true, \"autoAssignEnabledV2\": true, \"selectedOfferId\": \"{{selected_offer_id}}\", \"paymentInstrument\": \"Cash\"}"
+					"raw": "{\"autoAssignEnabled\": true, \"autoAssignEnabledV2\": true, \"selectedOfferId\": \"{{selected_offer_id}}\", \"paymentInstrument\": {\"tag\": \"Cash\"}}"
 				},
 				"url": {
 					"raw": "{{baseUrl_app}}/estimate/{{estimateId}}/select2",

@@ -71,7 +71,7 @@ in  { esqDBCfg
     , hedisClusterCfg = rccfg
     , loggerConfig =
             common.loggerConfig
-        //  { logFilePath = "/tmp/dynamic-offer-driver-app.log"
+        //  { logFilePath = "/tmp/driver-drainer.log"
             , logRawSql = True
             }
     , kafkaProducerCfg

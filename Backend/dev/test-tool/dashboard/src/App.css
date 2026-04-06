@@ -19,6 +19,26 @@ body {
   min-width: 0;
 }
 
+.mode-tabs {
+  display: flex;
+  gap: 0;
+  background: #0d1117;
+  border-bottom: 1px solid #30363d;
+  padding: 0 16px;
+}
+.mode-tab {
+  padding: 8px 16px;
+  font-size: 12px;
+  font-family: inherit;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #8b949e;
+  cursor: pointer;
+}
+.mode-tab:hover { color: #c9d1d9; }
+.mode-tab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+
 .content-wrapper {
   flex: 1;
   display: flex;

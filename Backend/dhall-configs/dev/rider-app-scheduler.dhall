@@ -10,7 +10,7 @@ let schedulerConfig =
       { loggerConfig =
               common.loggerConfig
           //  { logRawSql = True
-              , logFilePath = "/tmp/driver-offer-scheduler.log"
+              , logFilePath = "/tmp/rider-app-scheduler-internal.log"
               , logToConsole = False
               , logToFile = False
               , prettyPrinting = True
@@ -52,7 +52,9 @@ in  { appCfg =
             appCfg
         //  { loggerConfig =
                     appCfg.loggerConfig
-                //  { logFilePath = "/tmp/driver-offer-allocator.log" }
+                //  { logFilePath = "/tmp/rider-app-scheduler.log"
+                    , logToFile = False
+                    }
             }
     , schedulerConfig
     }

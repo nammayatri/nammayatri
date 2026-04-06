@@ -13,7 +13,7 @@
 					"    // Finnish mobile: 04X XXXXXXX (10 digits starting with 04)",
 					"    var dNum = '04' + Math.floor(10000000 + Math.random() * 89999999);",
 					"    var rNum = '04' + Math.floor(10000000 + Math.random() * 89999999);",
-					"    // Finnish plate: ABC123 (no hyphen — API requires ^[0-9A-Z]*$)",
+					"    // Finnish plate: ABC123 (no hyphen \u2014 API requires ^[0-9A-Z]*$)",
 					"    var regNo = String.fromCharCode(65+Math.floor(Math.random()*26)) + String.fromCharCode(65+Math.floor(Math.random()*26)) + String.fromCharCode(65+Math.floor(Math.random()*26)) + String(Math.floor(100+Math.random()*899));",
 					"    pm.collectionVariables.set('_test_driver_number', dNum);",
 					"    pm.collectionVariables.set('_test_rider_number', rNum);",
@@ -66,136 +66,6 @@
 						"user",
 						"switchMerchantAndCity"
 					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Switch City for BAP (Rider Dashboard)",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"var d = pm.response.json();",
-							"pm.environment.set('bap_dashboard_token', d.authToken);",
-							"pm.test('BAP switch OK', function () { pm.response.to.have.status(200); });"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "POST",
-				"header": [
-					{"key": "Content-Type", "value": "application/json"},
-					{"key": "token", "value": "{{bap_dashboard_token}}"}
-				],
-				"body": {"mode": "raw", "raw": "{\"merchantId\": \"{{bap_short_id}}\", \"city\": \"{{city}}\"}"},
-				"url": {"raw": "{{bap_dashboard_url}}/user/switchMerchantAndCity", "host": ["{{bap_dashboard_url}}"], "path": ["user", "switchMerchantAndCity"]}
-			},
-			"response": []
-		},
-		{
-			"name": "Create Cumulative Offer Logic (BAP)",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"var d = pm.response.json();",
-							"console.log('Logic version:', d.version, 'updated:', d.isRuleUpdated);",
-							"if (d.version) { pm.environment.set('offer_logic_version', d.version); }",
-							"pm.test('Logic created', function () { pm.response.to.have.status(200); });"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					},
-					{
-						"key": "token",
-						"value": "{{bap_dashboard_token}}"
-					}
-				],
-				"url": {
-					"raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/nammaTag/appDynamicLogic/verify",
-					"host": [
-						"{{bap_dashboard_url}}"
-					],
-					"path": [
-						"bap",
-						"{{bap_short_id}}",
-						"{{city}}",
-						"nammaTag",
-						"appDynamicLogic",
-						"verify"
-					]
-				},
-				"body": {
-					"mode": "raw",
-					"raw": "{\"domain\":{\"tag\":\"CUMULATIVE_OFFER_POLICY\"},\"shouldUpdateRule\":true,\"updatePassword\":\"dummy-password\",\"description\":\"First Ride Free - Helsinki\",\"inputData\":[{\"offerListResp\":{\"bestOfferCombination\":null,\"offerResp\":[]},\"extraParams\":[]}],\"rules\":[{\"cat\":[{\"var\":\"\"},{\"offerTitle\":\"First Ride Free\"},{\"offerDescription\":\"Your first ride is on us! 100% off up to \\u20ac10.\"},{\"offerSponsoredBy\":[\"BRIDGE_FINLAND\"]},{\"offerIds\":[\"offer-hel-disc-10pct-first-ride\"]}]}]}"
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Rollout Offer Logic (BAP)",
-			"event": [
-				{
-					"listen": "prerequest",
-					"script": {
-						"exec": [
-							"const start = Date.now(); while (Date.now() - start < 5000) {}"
-						],
-						"type": "text/javascript"
-					}
-				},
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"pm.test('Rollout success', function () { pm.response.to.have.status(200); });"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					},
-					{
-						"key": "token",
-						"value": "{{bap_dashboard_token}}"
-					}
-				],
-				"url": {
-					"raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/nammaTag/appDynamicLogic/upsertLogicRollout",
-					"host": [
-						"{{bap_dashboard_url}}"
-					],
-					"path": [
-						"bap",
-						"{{bap_short_id}}",
-						"{{city}}",
-						"nammaTag",
-						"appDynamicLogic",
-						"upsertLogicRollout"
-					]
-				},
-				"body": {
-					"mode": "raw",
-					"raw": "[{\"domain\":{\"tag\":\"CUMULATIVE_OFFER_POLICY\"},\"timeBounds\":\"Unbounded\",\"rollout\":[{\"rolloutPercentage\":100,\"version\":{{offer_logic_version}},\"versionDescription\":\"First Ride Offer\"}]}]"
 				}
 			},
 			"response": []

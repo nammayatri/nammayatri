@@ -67,7 +67,7 @@
 							"",
 							"// Check if 'authId' exists in the response and store it in an environment variable",
 							"if (response.token) {",
-							"    postman.setEnvironmentVariable(\"token\", response.token);",
+							"    postman.setEnvironmentVariable(\"customer_token\", response.token);",
 							"    console.log(\"token saved:\", response.token);",
 							"} else {",
 							"    console.log(\"token not found in the response\");",
@@ -209,7 +209,13 @@
 					]
 				},
 				"method": "GET",
-				"header": [],
+				"header": [
+					{
+						"key": "token",
+						"value": "{{customer_token}}",
+						"type": "text"
+					}
+				],
 				"url": {
 					"raw": "{{baseUrl_app}}/frfs/config?vehicleType=\"{{vehicle_type}}\"&city={{city}}",
 					"host": [
@@ -281,7 +287,13 @@
 					]
 				},
 				"method": "GET",
-				"header": [],
+				"header": [
+					{
+						"key": "token",
+						"value": "{{customer_token}}",
+						"type": "text"
+					}
+				],
 				"url": {
 					"raw": "{{baseUrl_app}}/frfs/autocomplete?vehicleType=\"{{vehicle_type}}\"&city={{city}}&location={{origin_lat}},{{origin_lon}}&input=A&limit=10&offset=0&platformType=\"{{platform_type}}\"",
 					"host": [
@@ -358,7 +370,13 @@
 					]
 				},
 				"method": "GET",
-				"header": [],
+				"header": [
+					{
+						"key": "token",
+						"value": "{{customer_token}}",
+						"type": "text"
+					}
+				],
 				"url": {
 					"raw": "{{baseUrl_app}}/frfs/stations?city={{city}}&routeCode={{route_code}}&minimalData=true&vehicleType=\"{{vehicle_type}}\"&integrated_bpp_config_id={{integrated_bpp_config_id}}&platformType=\"{{platform_type}}\"",
 					"host": [
@@ -416,6 +434,7 @@
 					"listen": "test",
 					"script": {
 						"exec": [
+							"const start = Date.now(); while (Date.now() - start < 3000) {} // wait for on_search callback",
 							"var jsonData = JSON.parse(responseBody);",
 							"postman.setEnvironmentVariable(\"frfs_searchId\", jsonData.searchId);",
 							"if (jsonData.quotes?.length > 0) {",
@@ -458,7 +477,13 @@
 					]
 				},
 				"method": "POST",
-				"header": [],
+				"header": [
+					{
+						"key": "token",
+						"value": "{{customer_token}}",
+						"type": "text"
+					}
+				],
 				"body": {
 					"mode": "raw",
 					"raw": "{\n    \"fromStationCode\": \"{{start_stop_code}}\",\n    \"toStationCode\": \"{{end_stop_code}}\",  \n    \"routeCode\": \"{{route_code}}\",\n    \"quantity\": 1,\n    \"minimalData\": true\n}",
@@ -543,7 +568,13 @@
 					]
 				},
 				"method": "GET",
-				"header": [],
+				"header": [
+					{
+						"key": "token",
+						"value": "{{customer_token}}",
+						"type": "text"
+					}
+				],
 				"url": {
 					"raw": "{{baseUrl_app}}/frfs/search/:searchId/quote",
 					"host": [
@@ -603,7 +634,13 @@
 					]
 				},
 				"method": "POST",
-				"header": [],
+				"header": [
+					{
+						"key": "token",
+						"value": "{{customer_token}}",
+						"type": "text"
+					}
+				],
 				"body": {
 					"mode": "raw",
 					"raw": "{\n    \"offered\": [\n        {\n            \"quoteCategoryId\": \"{{frfs_quote_category_id}}\",\n            \"quantity\": 1\n        }\n    ]\n}",
@@ -693,7 +730,13 @@
 					]
 				},
 				"method": "GET",
-				"header": [],
+				"header": [
+					{
+						"key": "token",
+						"value": "{{customer_token}}",
+						"type": "text"
+					}
+				],
 				"url": {
 					"raw": "{{baseUrl_app}}/frfs/booking/:bookingId/status",
 					"host": [
@@ -795,6 +838,11 @@
 					{
 						"key": "Content-Type",
 						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{customer_token}}",
+						"type": "text"
 					}
 				],
 				"body": {
@@ -862,7 +910,13 @@
 					]
 				},
 				"method": "GET",
-				"header": [],
+				"header": [
+					{
+						"key": "token",
+						"value": "{{customer_token}}",
+						"type": "text"
+					}
+				],
 				"url": {
 					"raw": "{{baseUrl_app}}/frfs/booking/:bookingId/status",
 					"host": [
@@ -915,6 +969,11 @@
 					{
 						"key": "Content-Type",
 						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{customer_token}}",
+						"type": "text"
 					}
 				],
 				"url": {
@@ -1049,7 +1108,13 @@
 					]
 				},
 				"method": "GET",
-				"header": [],
+				"header": [
+					{
+						"key": "token",
+						"value": "{{customer_token}}",
+						"type": "text"
+					}
+				],
 				"url": {
 					"raw": "{{baseUrl_app}}/frfs/booking/:bookingId/status",
 					"host": [

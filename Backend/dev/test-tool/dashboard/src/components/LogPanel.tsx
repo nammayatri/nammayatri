@@ -48,7 +48,49 @@ function LogEntryRow({ entry, highlight }: { entry: LogEntry; highlight?: string
               )}
             </div>
           )}
+          {entry.serviceLogs && Object.keys(entry.serviceLogs).length > 0 && (
+            <ServiceLogsSection logs={entry.serviceLogs} />
+          )}
         </div>
+      )}
+    </div>
+  );
+}
+
+function ServiceLogsSection({ logs }: { logs: Record<string, string> }) {
+  const [activeTab, setActiveTab] = useState<string>(Object.keys(logs)[0] || '');
+  const [svcSearch, setSvcSearch] = useState('');
+  const services = Object.keys(logs);
+
+  const filteredLog = useMemo(() => {
+    if (!activeTab || !logs[activeTab]) return '';
+    if (!svcSearch) return logs[activeTab];
+    return logs[activeTab].split('\n').filter(line => line.toLowerCase().includes(svcSearch.toLowerCase())).join('\n');
+  }, [activeTab, logs, svcSearch]);
+
+  return (
+    <div className="log-detail-section">
+      <span className="log-detail-label">Service Logs ({services.length})</span>
+      <div className="service-log-tabs">
+        {services.map(svc => (
+          <button
+            key={svc}
+            className={`service-log-tab ${svc === activeTab ? 'active' : ''}`}
+            onClick={() => setActiveTab(svc)}
+          >
+            {svc.replace('-exe', '')}
+          </button>
+        ))}
+        <input
+          className="svc-log-search"
+          type="text"
+          placeholder="Filter logs..."
+          value={svcSearch}
+          onChange={e => setSvcSearch(e.target.value)}
+        />
+      </div>
+      {activeTab && filteredLog && (
+        <pre className="log-detail-body service-log-body">{filteredLog}</pre>
       )}
     </div>
   );
@@ -69,7 +111,8 @@ export const LogPanel: React.FC<Props> = ({ logs, onClear }) => {
       e.message.toLowerCase().includes(q) ||
       e.request?.url?.toLowerCase().includes(q) ||
       e.request?.method?.toLowerCase().includes(q) ||
-      JSON.stringify(e.response?.body || '').toLowerCase().includes(q)
+      JSON.stringify(e.response?.body || '').toLowerCase().includes(q) ||
+      (e.serviceLogs && Object.values(e.serviceLogs).some(l => l.toLowerCase().includes(q)))
     );
   }, [logs, search]);
 

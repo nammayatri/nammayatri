@@ -170,6 +170,9 @@
     "stop_information": {
       "dim": []
     },
+    "stations_extra_information": {
+      "dim": []
+    },
     "popular_location": {
       "dim": []
     },
@@ -198,6 +201,9 @@
       "dim": []
     },
     "route_trip_stop_mapping": {
+      "dim": []
+    },
+    "offer": {
       "dim": []
     }
   },
@@ -461,6 +467,9 @@
       "dim": []
     },
     "fare_policy_ambulance_details_slab": {
+      "dim": []
+    },
+    "offer": {
       "dim": []
     }
   },

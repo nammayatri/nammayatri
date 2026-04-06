@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { ConfigBar } from './components/ConfigBar';
 import { RideFlowTree } from './components/RideFlowTree';
+import { CollectionRunner } from './components/CollectionRunner';
 import { LogPanel } from './components/LogPanel';
 import axios from 'axios';
 import { callStep, startLocationPinger, stopLocationPinger, setGlobalLog } from './services/api';
@@ -538,6 +539,7 @@ function App() {
   const [config, setConfig] = useState<Config>(loadConfig);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [appMode, setAppMode] = useState<'collections' | 'custom'>('collections');
   const [activeFlowId, setActiveFlowId] = useState('ride-flow');
   const [selectedOutcome, setSelectedOutcome] = useState('fulfillment');
   const [runningNodeId, setRunningNodeId] = useState<string | null>(null);
@@ -955,12 +957,24 @@ function App() {
   return (
     <div className="app">
       <div className="main">
-        <ConfigBar config={config} onChange={setConfig} onRun={runAll} onStop={stop} isRunning={isRunning}
-          onCityChange={setSelectedCity} onDriverChange={(token, variant, merchantId, personId) => { setSelectedDriverToken(token); setSelectedDriverVariant(variant || ''); setSelectedDriverMerchantId(merchantId || ''); setSelectedDriverPersonId(personId || ''); }}
-          onMerchantShortIdChange={setMerchantShortId}
-          onAdminCredentialsChange={(email, password) => { setAdminEmail(email); setAdminPassword(password); }} />
+        <div className="mode-tabs">
+          <button className={`mode-tab ${appMode === 'collections' ? 'active' : ''}`} onClick={() => setAppMode('collections')}>
+            Collections (Integration Tests)
+          </button>
+          <button className={`mode-tab ${appMode === 'custom' ? 'active' : ''}`} onClick={() => setAppMode('custom')}>
+            Custom Flows
+          </button>
+        </div>
         <div className="content-wrapper">
           <div className="content">
+            {appMode === 'collections' ? (
+              <CollectionRunner onLog={log} />
+            ) : (
+            <>
+            <ConfigBar config={config} onChange={setConfig} onRun={runAll} onStop={stop} isRunning={isRunning}
+              onCityChange={setSelectedCity} onDriverChange={(token, variant, merchantId, personId) => { setSelectedDriverToken(token); setSelectedDriverVariant(variant || ''); setSelectedDriverMerchantId(merchantId || ''); setSelectedDriverPersonId(personId || ''); }}
+              onMerchantShortIdChange={setMerchantShortId}
+              onAdminCredentialsChange={(email, password) => { setAdminEmail(email); setAdminPassword(password); }} />
             <RideFlowTree
               flows={FLOWS.map(f => ({ id: f.id, name: f.name, description: f.description }))}
               activeFlowId={activeFlowId}
@@ -1015,6 +1029,8 @@ function App() {
               adminPassword={adminPassword}
               onAdminPasswordChange={setAdminPassword}
             />
+            </>
+            )}
           </div>
           <div className="log-resize-handle" onMouseDown={onResizeStart} />
           <div className="content-logs" style={{ width: logWidth }}>

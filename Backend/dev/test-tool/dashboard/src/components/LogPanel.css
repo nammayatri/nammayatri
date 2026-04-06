@@ -179,3 +179,36 @@
   left: 1px;
   background: #1f6feb;
 }
+
+/* Service log tabs */
+.service-log-tabs {
+  display: flex;
+  gap: 2px;
+  margin: 4px 0;
+  flex-wrap: wrap;
+}
+.service-log-tab {
+  padding: 2px 8px;
+  font-size: 10px;
+  font-family: inherit;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 3px;
+  color: #8b949e;
+  cursor: pointer;
+}
+.service-log-tab:hover { background: #30363d; color: #c9d1d9; }
+.service-log-tab.active { background: #1f6feb; color: #fff; border-color: #1f6feb; }
+.svc-log-search {
+  margin-left: auto;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-family: inherit;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 3px;
+  color: #c9d1d9;
+  width: 120px;
+}
+.svc-log-search:focus { border-color: #1f6feb; outline: none; }
+.service-log-body { max-height: 300px; overflow-y: auto; }

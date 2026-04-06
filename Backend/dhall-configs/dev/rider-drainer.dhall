@@ -71,7 +71,7 @@ in  { esqDBCfg
     , hedisClusterCfg = rccfg
     , loggerConfig =
             common.loggerConfig
-        //  { logFilePath = "/tmp/rider-app.log", logRawSql = True }
+        //  { logFilePath = "/tmp/rider-app-drainer.log", logRawSql = True }
     , kafkaProducerCfg
     , secondaryKafkaProducerCfg
     , kvConfigUpdateFrequency

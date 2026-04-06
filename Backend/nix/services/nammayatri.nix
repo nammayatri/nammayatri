@@ -98,6 +98,34 @@ in
         imports = [ haskellProcesses ];
 
         processes = {
+          # Sync config from master to local DB after infra is ready
+          config-sync = {
+            imports = [ common ];
+            depends_on = {
+              "db-primary".condition = "process_healthy";
+              "redis".condition = "process_healthy";
+              "kafka".condition = "process_healthy";
+              "passetto-service".condition = "process_started";
+            };
+            command = pkgs.writeShellApplication {
+              name = "config-sync";
+              runtimeInputs = [
+                (pkgs.python3.withPackages (ps: with ps; [
+                  psycopg2
+                  requests
+                  python-dotenv
+                  rich
+                  websockets
+                ]))
+              ];
+              text = ''
+                set -x
+                cd dev/config-sync
+                DEV=true python3 config_transfer.py import --from master --to local
+              '';
+            };
+          };
+
           # Things to do before local Haskell processes are started
           nammayatri-init = {
             imports = [ common ];
@@ -110,6 +138,7 @@ in
               "nginx".condition = "process_healthy";
               "osrm-server".condition = "process_started";
               "passetto-service".condition = "process_started";
+              "config-sync".condition = "process_completed_successfully";
             } // lib.optionalAttrs cfg.useCabal {
               # Compile Haskell code
               "cabal-build".condition = "process_completed_successfully";
@@ -163,6 +192,9 @@ in
           location-tracking-service = {
             imports = [ common ];
             command = ny.inputs.location-tracking-service.packages.${pkgs.system}.default;
+            environment = {
+              DEV = "true";
+            };
             availability = {
               restart = "on_failure";
               backoff_seconds = 2;
@@ -184,7 +216,7 @@ in
           # Unified mock server for Juspay, Stripe, PayTM, Acko, SOS, WhatsApp, CMRL, CRIS, etc.
           mock-server = {
             imports = [ common ];
-            command = "${pkgs.python3}/bin/python3 dev/mock-servers/server.py --port 8080";
+            command = "${pkgs.python3.withPackages (ps: [ ps.pynacl ps.psycopg2 ])}/bin/python3 dev/mock-servers/server.py --port 8080";
             namespace = lib.mkForce "test";
             depends_on."nammayatri-init".condition = "process_completed_successfully";
             availability = {
@@ -211,12 +243,9 @@ in
               runtimeInputs = [ pkgs.nodejs ];
               text = ''
                 cd dev/test-tool/dashboard
-                if [ -d build ]; then
-                  npx serve -s build -l 7070 --no-clipboard
-                else
-                  echo "Dashboard not built. Run: cd dev/test-tool/dashboard && npm run build"
-                  sleep infinity
-                fi
+                npm install
+                npm run build
+                npx serve -s build -l 7070 --no-clipboard
               '';
             };
             namespace = lib.mkForce "test";

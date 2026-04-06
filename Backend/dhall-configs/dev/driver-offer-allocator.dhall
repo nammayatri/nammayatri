@@ -12,7 +12,7 @@ let schedulerConfig =
       { loggerConfig =
               common.loggerConfig
           //  { logRawSql = True
-              , logFilePath = "/tmp/driver-offer-scheduler.log"
+              , logFilePath = "/tmp/driver-offer-allocator-scheduler.log"
               , logToConsole = False
               , logToFile = False
               , prettyPrinting = True
@@ -54,7 +54,9 @@ in  { appCfg =
             appCfg
         //  { loggerConfig =
                     appCfg.loggerConfig
-                //  { logFilePath = "/tmp/driver-offer-allocator.log" }
+                //  { logFilePath = "/tmp/driver-offer-allocator-app.log"
+                    , logToFile = False
+                    }
             }
     , schedulerConfig
     }

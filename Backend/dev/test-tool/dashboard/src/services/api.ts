@@ -1,6 +1,9 @@
 import axios, { AxiosResponse } from 'axios';
 import { Config, Step } from '../types';
 import { ApiDef } from '../api-catalog/types';
+import { ParsedStep } from './postman-parser';
+import { resolveVariables, executeTestScript, executePrereqScript, VariableStores, PostmanRuntimeResult } from './postman-runtime';
+import { startLogCapture, stopLogCapture } from './context';
 
 const PROXY_BASE = 'http://localhost:7082';
 
@@ -173,4 +176,124 @@ export async function callStep(
     }
     return { ok: false, status: 0, data: { error: err.message }, elapsed };
   }
+}
+
+// ── Postman Collection Step Execution ──
+
+/** Proxy map for legacy custom flows (adds /v2, /ui prefixes) */
+export const LEGACY_SERVICE_PROXY_MAP: Record<string, string> = {
+  rider: '/proxy/rider',
+  driver: '/proxy/driver',
+  lts: '/proxy/lts',
+  'provider-dashboard': '/proxy/provider-dashboard',
+  'mock-idfy': '/proxy/mock-idfy',
+};
+
+/** Proxy map for Postman collection steps (path prefix already in pathTemplate from env URL) */
+const SERVICE_PROXY_MAP: Record<string, string> = {
+  rider: '/proxy/rider-raw',
+  driver: '/proxy/driver-raw',
+  lts: '/proxy/lts-raw',
+  'provider-dashboard': '/proxy/provider-dashboard',
+  'rider-dashboard': '/proxy/rider-dashboard',
+  'mock-idfy': '/proxy/mock-idfy',
+  'mock-server': '/proxy/mock-server',
+};
+
+export interface PostmanStepResult extends ApiResult {
+  assertions: PostmanRuntimeResult['assertions'];
+  consoleLogs: string[];
+  scriptError?: string;
+  serviceLogs: Record<string, string>;
+  /** Resolved URL (with all {{var}} substituted) */
+  resolvedUrl: string;
+  /** Resolved body (with all {{var}} substituted) */
+  resolvedBody?: any;
+}
+
+/**
+ * Execute a Postman collection step with variable substitution, script execution, and log capture.
+ */
+export async function callPostmanStep(
+  step: ParsedStep,
+  stores: VariableStores,
+): Promise<PostmanStepResult> {
+  // 1. Execute prerequest script (variable init only, delays handled by test script)
+  if (step.prereqScript) {
+    executePrereqScript(step.prereqScript, stores);
+  }
+
+  // 2. Start tail -f on all service logs
+  const logToken = await startLogCapture();
+
+  // 4. Resolve URL
+  const resolvedPath = resolveVariables(step.pathTemplate, stores);
+  const proxyPrefix = SERVICE_PROXY_MAP[step.service] ?? '';
+  const url = `${PROXY_BASE}${proxyPrefix}${resolvedPath}`;
+
+  // 5. Resolve headers
+  const headers: Record<string, string> = {};
+  for (const [k, v] of Object.entries(step.headers)) {
+    headers[k] = resolveVariables(v, stores);
+  }
+
+  // 6. Resolve body
+  let body: any = undefined;
+  if (step.bodyTemplate) {
+    const resolvedBody = resolveVariables(step.bodyTemplate, stores);
+    try { body = JSON.parse(resolvedBody); } catch { body = resolvedBody; }
+  }
+
+  // 7. Make HTTP call
+  const start = performance.now();
+  let ok = false;
+  let status = 0;
+  let data: any = null;
+
+  try {
+    let resp: AxiosResponse;
+    const config = { headers, timeout: 30000, validateStatus: () => true };
+    if (step.method === 'GET') {
+      resp = await axios.get(url, config);
+    } else if (step.method === 'POST') {
+      resp = await axios.post(url, body, config);
+    } else if (step.method === 'PUT') {
+      resp = await axios.put(url, body, config);
+    } else {
+      resp = await axios.delete(url, { ...config, data: body });
+    }
+    status = resp.status;
+    data = resp.data;
+    ok = status >= 200 && status < 400;
+  } catch (err: any) {
+    status = err.response?.status ?? 0;
+    data = err.response?.data ?? { error: err.message };
+  }
+
+  const elapsed = Math.round(performance.now() - start);
+
+  // 8. Execute test script FIRST (may include delays for async callbacks like FRFS on_search)
+  let assertions: PostmanRuntimeResult['assertions'] = [];
+  let consoleLogs: string[] = [];
+  let scriptError: string | undefined;
+
+  if (step.testScript) {
+    // Detect busy-wait loop delay in script: while (Date.now() - start < N) {}
+    const busyWaitMatch = step.testScript.match(/Date\.now\(\)\s*-\s*\w+\s*<\s*(\d+)/);
+    if (busyWaitMatch) {
+      // Replace busy-wait with real async delay (don't block browser)
+      const delayMs = parseInt(busyWaitMatch[1], 10);
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+
+    const result = executeTestScript(step.testScript, data, status, stores);
+    assertions = result.assertions;
+    consoleLogs = result.consoleLogs;
+    scriptError = result.error;
+  }
+
+  // 9. Stop tail -f and collect captured logs AFTER test script + delay (captures all async service activity)
+  const serviceLogs = logToken ? await stopLogCapture(logToken) : {};
+
+  return { ok, status, data, elapsed, assertions, consoleLogs, scriptError, serviceLogs, resolvedUrl: resolvedPath, resolvedBody: body };
 }

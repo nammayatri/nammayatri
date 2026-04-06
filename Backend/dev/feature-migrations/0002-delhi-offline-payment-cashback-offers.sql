@@ -7,9 +7,10 @@ DECLARE
   v_city_id TEXT;
   v_offer_id TEXT := 'offer-del-cash-10pct-first-ride';
 BEGIN
-  SELECT moc.merchant_id, moc.id INTO v_merchant_id, v_city_id
-  FROM atlas_app.merchant_operating_city moc
-  WHERE moc.merchant_short_id = 'BHARAT_TAXI' AND moc.city = 'Delhi'
+  SELECT m.id, moc.id INTO v_merchant_id, v_city_id
+  FROM atlas_app.merchant m
+  JOIN atlas_app.merchant_operating_city moc ON moc.merchant_id = m.id
+  WHERE m.short_id = 'BHARAT_TAXI' AND moc.city = 'Delhi'
   LIMIT 1;
 
   IF v_merchant_id IS NULL OR v_city_id IS NULL THEN
@@ -36,7 +37,7 @@ BEGIN
     'Get 10% cashback on your first ride! Maximum cashback of ₹50.',
     'BHARAT_TAXI',
     'Valid for first ride only. Cashback credited after ride completion. Cannot be combined with other offers.',
-    '{"<=":[{"var":"offerAppliedCount"},0]}',  -- eligible only if offerAppliedCount <= 0
+    NULL,  -- no eligibility restriction for dev testing
     'INR',
     true,
     v_merchant_id,
@@ -51,4 +52,35 @@ BEGIN
     updated_at = now();
 
   RAISE NOTICE 'Delhi offline payment 10%% cashback offer created: %', v_offer_id;
+
+  -- Create cumulative offer policy dynamic logic for Delhi
+  INSERT INTO atlas_app.app_dynamic_logic_element (
+    domain, merchant_id, version, logic, description, created_at, updated_at, "order"
+  ) VALUES (
+    'CUMULATIVE-OFFER-POLICY',
+    v_merchant_id,
+    1,
+    '{"cat":[{"var":""},{"offerTitle":"First Ride Cashback"},{"offerDescription":"Get 10% cashback on your first ride! Maximum cashback of ₹50."},{"offerSponsoredBy":["BHARAT_TAXI"]},{"offerIds":["' || v_offer_id || '"]}]}',
+    'First Ride Cashback - Delhi',
+    now(),
+    now(),
+    0
+  ) ON CONFLICT DO NOTHING;
+
+  -- Rollout the logic at 100%
+  INSERT INTO atlas_app.app_dynamic_logic_rollout (
+    domain, merchant_operating_city_id, percentage_rollout, time_bounds, version, version_description, merchant_id, created_at, updated_at
+  ) VALUES (
+    'CUMULATIVE-OFFER-POLICY',
+    v_city_id,
+    100,
+    'Unbounded',
+    1,
+    'First Ride Cashback',
+    v_merchant_id,
+    now(),
+    now()
+  ) ON CONFLICT DO NOTHING;
+
+  RAISE NOTICE 'Delhi cumulative offer policy logic and rollout created';
 END $$;
