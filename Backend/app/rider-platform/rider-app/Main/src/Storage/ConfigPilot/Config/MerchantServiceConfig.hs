@@ -33,6 +33,15 @@ deriving instance Show (DMSC.MerchantServiceConfigD 'Safe)
 
 deriving instance Show (DMSC.MerchantServiceConfigD 'Unsafe)
 
+measureLatency :: MonadFlow m => m a -> Text -> m a
+measureLatency action label = do
+  startTime <- getCurrentTime
+  result <- withLogTag label action
+  endTime <- getCurrentTime
+  let latency = diffUTCTime endTime startTime
+  logDebug $ label <> " Latency: " <> show latency <> " seconds"
+  return result
+
 instance ConfigTypeInfo 'MerchantServiceConfig where
   type DimensionsFor 'MerchantServiceConfig = MerchantServiceConfigDimensions
   configTypeValue = MerchantServiceConfig
@@ -54,7 +63,7 @@ instance ConfigDimensions MerchantServiceConfigDimensions where
         maybe True (\sn -> fst (TRMSC.getServiceNameConfigJson c.serviceConfig) == sn) dims.serviceName
           && c.merchantOperatingCityId == Id dims.merchantOperatingCityId
   getConfig dims = do
-    allCfgs <- getConfigList dims
+    allCfgs <- measureLatency (getConfigList dims) ("MerchantServiceConfig.getConfigList merchantId=" <> dims.merchantId <> " mocId=" <> dims.merchantOperatingCityId)
     let foundCfg = filterByDimensions dims allCfgs
     if null foundCfg
       then do
