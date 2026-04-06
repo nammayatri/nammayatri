@@ -31,7 +31,7 @@ data PgPayoutSettlementReport = PgPayoutSettlementReport
     merchantOperatingCityId :: Kernel.Prelude.Text,
     orderId :: Kernel.Prelude.Text,
     paymentGateway :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    payoutCustomerId :: Kernel.Prelude.Text,
+    payoutCustomerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payoutRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rawData :: Kernel.Prelude.Maybe Data.Aeson.Value,
     reconMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

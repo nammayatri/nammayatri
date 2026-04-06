@@ -38,3 +38,10 @@ ALTER TABLE atlas_driver_offer_bpp.pg_payout_settlement_report ADD COLUMN txn_st
 ALTER TABLE atlas_driver_offer_bpp.pg_payout_settlement_report ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.pg_payout_settlement_report ADD COLUMN utr text ;
 ALTER TABLE atlas_driver_offer_bpp.pg_payout_settlement_report ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.pg_payout_settlement_report ALTER COLUMN payout_customer_id SET DEFAULT null;
+ALTER TABLE atlas_driver_offer_bpp.pg_payout_settlement_report ALTER COLUMN payout_customer_id DROP NOT NULL;

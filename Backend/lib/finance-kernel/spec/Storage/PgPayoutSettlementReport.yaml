@@ -62,7 +62,7 @@ PgPayoutSettlementReport:
     currency: Currency
 
     # --- Payout recipient ---
-    payoutCustomerId: Text                         # Driver / fleet owner / vendor internal ID
+    payoutCustomerId: Maybe Text                         # Driver / fleet owner / vendor internal ID
     paymentGateway: Maybe Text                     # e.g. JUSPAY, RAZORPAY
 
     # --- Beneficiary / Bank details ---
@@ -109,6 +109,7 @@ PgPayoutSettlementReport:
   # ---------------------------------------------------------------------------
   default:
     reconStatus: "'PENDING'"
+    payoutCustomerId: "null"
 
   # ---------------------------------------------------------------------------
   # Constraints / indexes

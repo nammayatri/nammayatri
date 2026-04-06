@@ -33,7 +33,7 @@ data PgPayoutSettlementReportT f = PgPayoutSettlementReportT
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     orderId :: (B.C f Kernel.Prelude.Text),
     paymentGateway :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    payoutCustomerId :: (B.C f Kernel.Prelude.Text),
+    payoutCustomerId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     payoutRequestId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     rawData :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     reconMessage :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
