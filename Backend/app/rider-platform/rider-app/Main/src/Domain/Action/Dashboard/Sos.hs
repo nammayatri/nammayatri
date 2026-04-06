@@ -64,11 +64,13 @@ getSosDetails merchantShortId opCity sosId = do
   sosTrackingRateLimitOptions <- asks (.sosTrackingRateLimitOptions)
   checkSlidingWindowLimitWithOptions (sosDashboardHitsCountKey sosId) sosTrackingRateLimitOptions
   let sosId' = Kernel.Types.Id.cast @Dashboard.Common.Sos @SafetyDSos.Sos sosId
-  mbMerchantOpCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
-  mbRideConfig <- maybe (pure Nothing) (\moc -> QRC.findByMerchantOperatingCityId moc.id Nothing) mbMerchantOpCity
+  sos <- B.runInReplica $ SafetyQSos.findById sosId' >>= fromMaybeM (InvalidRequest $ "SOS not found: " <> sosId'.getId)
+  mbMerchantOpCity <- case sos.merchantOperatingCityId of
+    Just cityId -> CQMOC.findById (Kernel.Types.Id.cast cityId)
+    Nothing -> CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+  mbRideConfig <- maybe (pure Nothing) (\moc -> getConfig (RiderDimensions {merchantOperatingCityId = moc.id.getId})) mbMerchantOpCity
   let externalSOSConfig = mbRideConfig >>= \rc -> rc.externalSOSConfig
   let triggerSource = convertTriggerSource <$> (externalSOSConfig <&> (.triggerSource))
-  sos <- B.runInReplica $ SafetyQSos.findById sosId' >>= fromMaybeM (InvalidRequest $ "SOS not found: " <> sosId'.getId)
   person <- B.runInReplica $ QP.findById (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId) >>= fromMaybeM (PersonNotFound sos.personId.getId)
   let riderDetails =
         API.Types.RiderPlatform.Management.Sos.RiderDetailsRes
