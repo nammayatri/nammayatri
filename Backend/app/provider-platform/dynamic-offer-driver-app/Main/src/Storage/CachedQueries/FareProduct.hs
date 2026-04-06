@@ -145,13 +145,20 @@ clearCache :: CacheFlow m r => FareProduct -> m ()
 clearCache FareProduct {..} = Hedis.runInMultiCloudRedisWrite $
   Hedis.withCrossAppRedis $ do
     let allPossibleSearchSoruces = [[ALL], [ALL, MOBILE_APP], [ALL, DASHBOARD]]
+        -- Clear cache for the city-stripped fallback tripCategory as well,
+        -- because DB queries for InterCity/CrossCity with a city fall back to
+        -- the city-agnostic variant when no city-specific results exist.
+        -- Without this, stale (often empty) cached results for the fallback
+        -- key survive an upload and block estimates.
+        tripCategoriesToClear = nub $ [tripCategory] <> [Queries.removeCityFromTripCategory tripCategory | Queries.isInterCityWithCity tripCategory]
     allPossibleSearchSoruces `forM_` \searchSources -> do
-      Hedis.del (makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey merchantOperatingCityId searchSources tripCategory area)
+      forM_ tripCategoriesToClear $ \tc -> do
+        Hedis.del (makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey merchantOperatingCityId searchSources tc area)
+        Hedis.del (makeUnboundedFareProductByMerchantVariantAreaKey merchantOperatingCityId searchSources tc vehicleServiceTier area)
+        Hedis.del (makeBoundedFareProductByMerchantVariantAreaKey merchantOperatingCityId searchSources tc vehicleServiceTier area)
       Hedis.del (makeUnboundedFareProductByMerchantIdAndAreaKey merchantOperatingCityId searchSources area)
       Hedis.del (makeFareProductByMerchantOpCityIdKey merchantOperatingCityId)
       Hedis.del (makeSupportedServiceTiersKey merchantOperatingCityId)
-      Hedis.del (makeUnboundedFareProductByMerchantVariantAreaKey merchantOperatingCityId searchSources tripCategory vehicleServiceTier area)
-      Hedis.del (makeBoundedFareProductByMerchantVariantAreaKey merchantOperatingCityId searchSources tripCategory vehicleServiceTier area)
 
 clearCacheById :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCacheById merchantOperatingCityId = Hedis.runInMultiCloudRedisWrite $ do
