@@ -45,6 +45,7 @@ data NewCoinsConfigReq = NewCoinsConfigReq
     expirationAt :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     active :: Kernel.Prelude.Bool,
     vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,
+    tripCategoryType :: Kernel.Prelude.Maybe Dashboard.Common.DriverCoins.TripCategoryType,
     eventMessages :: [EventMessage]
   }
   deriving stock (Generic)

@@ -16,6 +16,7 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error (GenericError (InvalidRequest))
 import qualified Kernel.Types.Id as ID
 import qualified Kernel.Utils.Common as UC
+import qualified Lib.DriverCoins.Types as DCT
 import qualified Storage.CachedQueries.CoinsConfig as CQConfig
 import qualified Storage.Queries.Coins.CoinsConfig as QConfig
 import Storage.Queries.Translations (create)
@@ -57,7 +58,7 @@ postCoinsConfigCreate _merchantShortId _opCity req = do
 clearCache :: DTCC.CoinsConfig -> Environment.Flow ()
 clearCache coinsConfig = do
   let clearCacheWithoutVehicleCategory = CQConfig.clearCache coinsConfig.eventName coinsConfig.eventFunction (ID.Id coinsConfig.merchantOptCityId)
-  whenJust coinsConfig.vehicleCategory clearCacheWithoutVehicleCategory
+  whenJust coinsConfig.vehicleCategory (\vc -> clearCacheWithoutVehicleCategory vc (fromMaybe DCT.DynamicOfferTrip coinsConfig.tripCategoryType))
 
 processingTranslations :: DTCC.CoinsConfig -> [Common.EventMessage] -> Environment.Flow ()
 processingTranslations coinsConfig eventMessageLs = do
