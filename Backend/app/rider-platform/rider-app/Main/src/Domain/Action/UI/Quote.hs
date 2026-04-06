@@ -93,6 +93,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
+import qualified Lib.JourneyModule.Utils as JMU
 import TransactionLogs.Types
 
 data GetQuotesRes = GetQuotesRes
@@ -196,8 +197,11 @@ getQuotes searchRequestId mbAllowMultiple = do
   let lockKey = estimateBuildLockKey searchRequestId.getId
   Redis.withLockRedisAndReturnValue lockKey 5 $ do
     offers <- getOffers searchRequest
+    logDebug $ "getEstimates:Got offers"
     merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
+    logDebug $ "getEstimates:Got Merchant"
     estimates' <- getEstimates searchRequest.merchantId person.id searchRequest.merchantOperatingCityId searchRequestId (isJust searchRequest.driverIdentifier) merchant.onlinePayment
+    logDebug $ "getEstimates:Got Estimates"
     riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
 
     let vehicleServiceTierOrderConfig = maybe [] (.userServiceTierOrderConfig) riderConfig
@@ -301,8 +305,8 @@ getEstimates merchantId personId mocId searchRequestId isReferredRide onlinePaym
   estimates <- forM (sortByEstimatedFare estimateList) $ \estimate -> do
     mbOffer <-
       withTryCatch
-        "getEstimates:offerListCache"
-        (SOffer.offerListCache merchantId personId mocId paymentServiceType estimate.estimatedFare (Just $ show estimate.vehicleServiceTierType))
+        "getEstimates:offerCache:offerListCache"
+        (JMU.measureLatency (SOffer.offerListCache merchantId personId mocId paymentServiceType estimate.estimatedFare (Just $ show estimate.vehicleServiceTierType)) "getEstimates:offerListCache")
         >>= \case
           Left _ -> pure Nothing
           Right resp -> SOffer.mkCumulativeOfferResp mocId resp []
