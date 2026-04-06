@@ -63,15 +63,17 @@ getSosTracking _merchantShortId _opCity sosId = do
   pure $ convertToApiRes res
 
 getSosDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Sos -> Environment.Flow API.Types.RiderPlatform.Management.Sos.SosDetailsMaybeRes)
-getSosDetails merchantShortId opCity sosId = do
+getSosDetails _ _ sosId = do
   sosTrackingRateLimitOptions <- asks (.sosTrackingRateLimitOptions)
   checkSlidingWindowLimitWithOptions (sosDashboardHitsCountKey sosId) sosTrackingRateLimitOptions
   let sosId' = Kernel.Types.Id.cast @Dashboard.Common.Sos @SafetyDSos.Sos sosId
-  mbMerchantOpCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+  sos <- B.runInReplica $ SafetyQSos.findById sosId' >>= fromMaybeM (InvalidRequest $ "SOS not found: " <> sosId'.getId)
+  mbMerchantOpCity <- case sos.merchantOperatingCityId of
+    Nothing -> pure Nothing
+    Just cityId -> CQMOC.findById (Kernel.Types.Id.cast cityId)
   mbRideConfig <- maybe (pure Nothing) (\moc -> getConfig (RiderDimensions {merchantOperatingCityId = moc.id.getId})) mbMerchantOpCity
   let externalSOSConfig = mbRideConfig >>= \rc -> rc.externalSOSConfig
   let triggerSource = convertTriggerSource <$> (externalSOSConfig <&> (.triggerSource))
-  sos <- B.runInReplica $ SafetyQSos.findById sosId' >>= fromMaybeM (InvalidRequest $ "SOS not found: " <> sosId'.getId)
   person <- B.runInReplica $ QP.findById (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId) >>= fromMaybeM (PersonNotFound sos.personId.getId)
   let riderDetails =
         API.Types.RiderPlatform.Management.Sos.RiderDetailsRes
