@@ -20,11 +20,13 @@ module Lib.DriverCoins.Coins
     getCoinsByDriverId,
     getExpirationSeconds,
     incrementValidRideCount,
+    incrementOTPValidRideCount,
     updateDriverCoins,
     sendCoinsNotification,
     sendCoinsNotificationV2,
     safeIncrBy,
     getValidRideCountByDriverIdKey,
+    getOTPValidRideCountByDriverIdKey,
     incrementMetroRideCount,
     EventFlow,
     runCancellationLogic,
@@ -115,6 +117,9 @@ updateDriverCoins driverId finalCoinsValue timeDiffFromUtc = do
 driverCoinsEvent :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> Maybe Text -> Maybe DTVeh.VehicleVariant -> Maybe [LYT.ConfigVersionMap] -> m ()
 driverCoinsEvent driverId merchantId merchantOpCityId eventType entityId mbVehVarient mbConfigVersionMap = do
   let vehCategory = DTVeh.getVehicleCategoryFromVehicleVariantDefault mbVehVarient
+      tripCatType = case eventType of
+        DCT.EndRide {tripCategoryType} -> tripCategoryType
+        _ -> DCT.DynamicOfferTrip
   logDebug $ "Driver Coins Event Triggered for merchantOpCityId - " <> merchantOpCityId.getId <> " and driverId - " <> driverId.getId <> "and vehicle category - " <> show vehCategory
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   coinConfiguration <- CDCQ.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehCategory mbConfigVersionMap
@@ -144,15 +149,27 @@ driverCoinsEvent driverId merchantId merchantOpCityId eventType entityId mbVehVa
       logInfo "All coin events blacklisted; skipping award"
       pure ()
     else do
-      finalCoinsValue <- sum <$> forM filteredConfigAll (\cc -> calculateCoins eventType driverId merchantId merchantOpCityId cc.eventFunction cc.expirationAt cc.coins transporterConfig entityId vehCategory)
-      logInfo $ "Awarding coins: " <> show finalCoinsValue
-      updateDriverCoins driverId finalCoinsValue transporterConfig.timeDiffFromUtc
+      coinConfiguration <- CDCQ.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehCategory tripCatType mbConfigVersionMap
+
+      let filteredConfigAll = filter (\cc -> cc.eventFunction `notElem` combinedBlacklist) coinConfiguration
+      logDebug $ "Coin config count: total=" <> show (length coinConfiguration) <> ", filtered=" <> show (length filteredConfigAll)
+
+      logInfo $ "Coin events for driver " <> driverId.getId <> " - DriverBlacklist: " <> show blacklistedEventsByDriver <> ", FleetBlacklist: " <> show blacklistedEventsByFleet <> ", Total: " <> show (map (.eventFunction) coinConfiguration) <> ", Filtered: " <> show (map (.eventFunction) filteredConfigAll)
+
+      if null filteredConfigAll
+        then do
+          logInfo "All coin events blacklisted; skipping award"
+          pure ()
+        else do
+          finalCoinsValue <- sum <$> forM filteredConfigAll (\cc -> calculateCoins eventType driverId merchantId merchantOpCityId cc.eventFunction cc.expirationAt cc.coins transporterConfig entityId vehCategory)
+          logInfo $ "Awarding coins: " <> show finalCoinsValue
+          updateDriverCoins driverId finalCoinsValue transporterConfig.timeDiffFromUtc
 
 calculateCoins :: EventFlow m r => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> m Int
 calculateCoins eventType driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory = do
   case eventType of
     DCT.Rating {..} -> hRating driverId merchantId merchantOpCityId ratingValue ride eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory
-    DCT.EndRide {..} -> hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTierRide ride metroRideType eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory
+    DCT.EndRide {..} -> hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTierRide ride metroRideType tripCategoryType eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory
     DCT.DriverToCustomerReferral {..} -> hDriverReferral driverId merchantId merchantOpCityId ride eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory
     DCT.Cancellation {..} -> hCancellation driverId merchantId merchantOpCityId rideStartTime intialDisToPickup cancellationDisToPickup cancelledBy eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory
     DCT.LMS -> hLms driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory
@@ -193,12 +210,14 @@ hRating driverId merchantId merchantOpCityId ratingValue ride eventFunction mbex
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory
     _ -> pure 0
 
-hEndRide :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Maybe Int -> DR.Ride -> MetroRideType -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> m Int
-hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTierRide _ride metroRideType eventFunction mbexpirationTime numCoins _ entityId vehCategory = do
+hEndRide :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Maybe Int -> DR.Ride -> MetroRideType -> DCT.TripCategoryType -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> m Int
+hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTierRide _ride metroRideType tripCategoryType eventFunction mbexpirationTime numCoins _ entityId vehCategory = do
   logDebug $ "Driver Coins Handle EndRide Event Triggered - " <> show eventFunction
   case eventFunction of
     DCT.RidesCompleted a -> do
-      validRideCount <- fromMaybe 0 <$> getValidRideCountByDriverIdKey driverId
+      validRideCount <- case tripCategoryType of
+        DCT.OTPRideTrip -> fromMaybe 0 <$> getOTPValidRideCountByDriverIdKey driverId
+        DCT.DynamicOfferTrip -> fromMaybe 0 <$> getValidRideCountByDriverIdKey driverId
       runActionWhenValidConditions
         [ pure (validRideCount == a)
         ]
@@ -473,6 +492,24 @@ setValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
 setValidRideCountByDriverIdKey driverId expirationPeriod count = do
   void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkValidRideCountByDriverIdKey driverId) (fromIntegral count)
   Hedis.withCrossAppRedis $ Hedis.expire (mkValidRideCountByDriverIdKey driverId) expirationPeriod
+
+mkOTPValidRideCountByDriverIdKey :: Id DP.Person -> Text
+mkOTPValidRideCountByDriverIdKey driverId = "DriverOTPValidRideCount:DriverId:" <> driverId.getId
+
+getOTPValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe Int)
+getOTPValidRideCountByDriverIdKey driverId = Hedis.withCrossAppRedis $ Hedis.get (mkOTPValidRideCountByDriverIdKey driverId)
+
+setOTPValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Int -> m ()
+setOTPValidRideCountByDriverIdKey driverId expirationPeriod count = do
+  void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkOTPValidRideCountByDriverIdKey driverId) (fromIntegral count)
+  Hedis.withCrossAppRedis $ Hedis.expire (mkOTPValidRideCountByDriverIdKey driverId) expirationPeriod
+
+incrementOTPValidRideCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Int -> m ()
+incrementOTPValidRideCount driverId expirationPeriod incrementValue = do
+  otpValidRideCountKeyExists <- getOTPValidRideCountByDriverIdKey driverId
+  case otpValidRideCountKeyExists of
+    Just _ -> void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkOTPValidRideCountByDriverIdKey driverId) (fromIntegral incrementValue)
+    Nothing -> setOTPValidRideCountByDriverIdKey driverId expirationPeriod incrementValue
 
 safeIncrBy :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Integer -> Id DP.Person -> Seconds -> m ()
 safeIncrBy key value driverId timeDiffFromUtc = do

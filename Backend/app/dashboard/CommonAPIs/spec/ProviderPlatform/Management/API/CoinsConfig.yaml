@@ -1,5 +1,6 @@
 imports:
   DriverCoinsFunctionType: Dashboard.Common.DriverCoins
+  TripCategoryType: Dashboard.Common.DriverCoins
   CoinsConfig: Dashboard.Common
   Language: Kernel.External.Types
   VehicleCategory: Domain.Types.VehicleCategory
@@ -41,6 +42,7 @@ types:
     - expirationAt: Maybe Int
     - active: Bool
     - vehicleCategory: VehicleCategory
+    - tripCategoryType: Maybe TripCategoryType
     - eventMessages: [EventMessage]
   DuplicateCoinsConfigsReq:
     - entriesId: Id CoinsConfig

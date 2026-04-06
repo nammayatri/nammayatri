@@ -28,6 +28,7 @@ data CoinsConfig = CoinsConfig
     coins :: Int,
     expirationAt :: Maybe Int,
     active :: Bool,
-    vehicleCategory :: Maybe DTV.VehicleCategory
+    vehicleCategory :: Maybe DTV.VehicleCategory,
+    tripCategoryType :: Maybe DCT.TripCategoryType
   }
   deriving (Generic, Show, FromJSON, ToJSON)

@@ -31,7 +31,8 @@ data CoinsConfigT f = CoinsConfigT
     coins :: B.C f Int,
     expirationAt :: B.C f (Maybe Int),
     active :: B.C f Bool,
-    vehicleCategory :: B.C f (Maybe DTV.VehicleCategory)
+    vehicleCategory :: B.C f (Maybe DTV.VehicleCategory),
+    tripCategoryType :: B.C f (Maybe DCT.TripCategoryType)
   }
   deriving (Generic, B.Beamable)
 

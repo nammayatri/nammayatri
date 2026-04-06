@@ -257,4 +257,11 @@ isMetroRideType FromMetro = True
 isMetroRideType FromOrToMetro = True
 isMetroRideType _ = False
 
+data TripCategoryType
+  = DynamicOfferTrip
+  | OTPRideTrip
+  deriving stock (Eq, Show, Generic, Read, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 $(mkBeamInstancesForEnumAndList ''DriverCoinsFunctionType)
+$(mkBeamInstancesForEnumAndList ''TripCategoryType)
