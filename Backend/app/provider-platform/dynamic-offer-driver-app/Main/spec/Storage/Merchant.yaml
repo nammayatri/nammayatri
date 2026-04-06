@@ -1143,6 +1143,7 @@ TransporterConfig:
     rcExpiryChecks : Maybe Bool
     requireRouteMappingInVehicle: Bool
     enableExistingVehicleInBulkUpload: Bool
+    isDriverNameMandatoryInBulkUpload: Bool
     onboardingDocsCountLimit: Maybe Int
     localPoliceNumbers: Maybe [Text]
     localAmbulanceNumbers: Maybe [Text]
@@ -1260,6 +1261,7 @@ TransporterConfig:
     bulkWaiveOffLimit : Maybe Int
     requireRouteMappingInVehicle: Maybe Bool
     enableExistingVehicleInBulkUpload: Maybe Bool
+    isDriverNameMandatoryInBulkUpload: Maybe Bool
     aaEnabledClientSdkVersion: Maybe Text
     isMLBasedDynamicPricingEnabled: Maybe Bool
     cancellationRateSlabConfig: Maybe Value
@@ -1343,6 +1345,7 @@ TransporterConfig:
     bulkWaiveOffLimit : Just bulkWaiveOffLimit|E
     requireRouteMappingInVehicle: Just requireRouteMappingInVehicle|E
     enableExistingVehicleInBulkUpload: Just enableExistingVehicleInBulkUpload|E
+    isDriverNameMandatoryInBulkUpload: Just isDriverNameMandatoryInBulkUpload|E
     aaEnabledClientSdkVersion: Just aaEnabledClientSdkVersion| E
     cancellationRateSlabConfig: Data.Aeson.toJSON <$> cancellationRateSlabConfig|E
     isMLBasedDynamicPricingEnabled: Just isMLBasedDynamicPricingEnabled|E
@@ -1429,6 +1432,7 @@ TransporterConfig:
     bulkWaiveOffLimit : fromMaybe 200 bulkWaiveOffLimit|E
     requireRouteMappingInVehicle: fromMaybe False requireRouteMappingInVehicle|E
     enableExistingVehicleInBulkUpload: fromMaybe False enableExistingVehicleInBulkUpload|E
+    isDriverNameMandatoryInBulkUpload: fromMaybe True isDriverNameMandatoryInBulkUpload|E
     cancellationRateSlabConfig: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< cancellationRateSlabConfig|E
     isMLBasedDynamicPricingEnabled: fromMaybe False isMLBasedDynamicPricingEnabled|E
     analyticsConfig: Storage.Queries.Transformers.TransporterConfig.parseAnalyticsConfig merchantOperatingCityId|IM
@@ -1647,6 +1651,7 @@ TransporterConfig:
     generateReferralCodeForOperator: "false"
     requireRouteMappingInVehicle: "true"
     enableExistingVehicleInBulkUpload: "false"
+    isDriverNameMandatoryInBulkUpload: "true"
     onboardingDocsCountLimit: "50"
     liveEKD: "false"
     deactivateRCOnUnlink: "true"

@@ -222,7 +222,9 @@ switchMerchantAndCity authToken SwitchMerchantAndCityReq {..} = do
   merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
   merchantServerAccessCheck merchant
   person <- QP.findById authToken.personId >>= fromMaybeM (PersonDoesNotExist authToken.personId.getId)
-  generateLoginRes person merchant otp city
+  if authToken.merchantId /= merchant.id
+    then generateLoginRes person merchant otp city
+    else generateLoginResWithoutOtp person merchant city
 
 generateLoginRes ::
   ( BeamFlow m r,
@@ -244,6 +246,21 @@ generateLoginRes person merchant otp city = do
       else pure ""
   pure $ LoginRes token merchant.is2faMandatory _merchantAccess.is2faEnabled msg city merchant.shortId
 
+generateLoginResWithoutOtp ::
+  ( BeamFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
+    EncFlow m r
+  ) =>
+  DP.Person ->
+  DMerchant.Merchant ->
+  City.City ->
+  m LoginRes
+generateLoginResWithoutOtp person merchant city = do
+  _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city >>= fromMaybeM AccessDenied
+  token <- generateToken person.id merchant city
+  pure $ LoginRes token merchant.is2faMandatory _merchantAccess.is2faEnabled "Logged in successfully" city merchant.shortId
+
 check2FA :: (EncFlow m r) => DMerchantAccess.MerchantAccess -> DMerchant.Merchant -> Maybe Text -> m (Bool, Text)
 check2FA merchantAccess merchant otp =
   case (DMerchant.is2faMandatory merchant, DMerchantAccess.is2faEnabled merchantAccess) of
@@ -262,8 +279,8 @@ handle2FA secretKey otp = case (secretKey, otp) of
     generatedOtp <- L.runIO (Utils.genTOTP key)
     if show generatedOtp == T.unpack userOtp
       then pure (True, "Logged in successfully")
-      else pure (False, "Google Authenticator OTP does not match")
-  (_, Nothing) -> pure (False, "Google Authenticator OTP is required")
+      else pure (False, "Authenticator OTP does not match")
+  (_, Nothing) -> pure (False, "Authenticator OTP is required")
   (Nothing, _) -> pure (False, "Secret key not found for 2FA")
 
 -- Redis keys for 2FA setup flow
