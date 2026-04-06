@@ -3,6 +3,7 @@ imports:
   APISuccess: Kernel.Types.APISuccess
   SpecialZoneQueueRequest: Domain.Types.SpecialZoneQueueRequest
   SpecialZoneQueueRequestResponse: Domain.Types.SpecialZoneQueueRequest
+  SpecialZoneQueueRequestStatus: Domain.Types.SpecialZoneQueueRequest
 
 module: SpecialZoneQueue
 
@@ -15,11 +16,12 @@ types:
     specialLocationName: Text
     vehicleType: Text
     validTill: UTCTime
-    currentSkipCount: Int
-    maxSkipsBeforeQueueRemoval: Maybe Int
+    status: SpecialZoneQueueRequestStatus
 
   SpecialZoneQueueRequestListRes:
     requests: "[SpecialZoneQueueRequestRes]"
+    currentSkipCount: Int
+    maxSkipsBeforeQueueRemoval: Maybe Int
 
   SpecialZoneQueueRespondReq:
     response: SpecialZoneQueueRequestResponse
@@ -38,5 +40,13 @@ apis:
         requestId: Id SpecialZoneQueueRequest
       request:
         type: SpecialZoneQueueRespondReq
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /specialZoneQueue/request/{requestId}/cancel
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        requestId: Id SpecialZoneQueueRequest
       response:
         type: APISuccess
