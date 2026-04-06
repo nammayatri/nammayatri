@@ -128,7 +128,7 @@ types:
     - referenceType: Maybe Text
     - referenceId: Text
     - referenceTable: ReferenceTable
-    - amount: PriceAPIEntity
+    - amount: Maybe PriceAPIEntity
     - source: Maybe AdjustmentSource
     - description: Maybe Text
     - adminMakerId: Id Person

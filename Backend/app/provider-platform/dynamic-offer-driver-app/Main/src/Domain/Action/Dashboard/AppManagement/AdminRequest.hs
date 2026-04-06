@@ -14,6 +14,8 @@ import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Management.Payout as DMPayout
 import qualified Domain.Types.AdminRequest as DAdminRequest
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.CommonDriverOnboardingDocuments as DCommonDoc
+import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPanCard
 import qualified Domain.Types.Merchant as DM
@@ -27,6 +29,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance as Finance
@@ -43,6 +46,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.AdminRequest as QAdminRequest
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDriverOnboardingDocuments
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.FareParameters as QFareParams
@@ -72,11 +76,12 @@ postAdminRequestCreate merchantShortId opCity requestorId requestorName req = do
     whenJust req.amount $ \reqAmount ->
       when (reqAmount.amount <= 0) $ do
         throwError (InvalidRequest "Amount should be positive. Use Credit adjustment type for increase wallet balance, Debit for reduce")
-
+    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+    unless (req.actionType `elem` fromMaybe [] transporterConfig.enableAdminMakerChecker) $ do
+      throwError (InvalidRequest $ "Admin Maker & Checker is not enabled for this action type: " <> show req.actionType)
     -- admin request data validation
-    (amount', currency') <- case req.actionType of
+    (mbAmount, mbCurrency) <- case req.actionType of
       DAdminRequest.LedgerAdjustment -> do
-        transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
         let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
         unless (isPrepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableDriverWallet) $
           throwError (InvalidRequest "Wallet is not enabled for this merchant")
@@ -125,7 +130,7 @@ postAdminRequestCreate merchantShortId opCity requestorId requestorName req = do
                   validateCancellationAdjustment transporterConfig reqReferenceType reqAdjustmentType reqAmount.amount req.personId booking
               _ -> throwError (InvalidRequest "Invalid reference table for this action type and reference type")
           _ -> throwError (InvalidRequest $ "Supported reference types for this action type: " <> T.intercalate ", " [SFW.walletReferenceBaseRide, SFW.walletReferenceDriverCancellationCharges, SFW.walletReferenceCustomerCancellationCharges, SFW.walletReferenceWalletIncentive])
-        pure (reqAmount.amount, reqAmount.currency)
+        pure (Just reqAmount.amount, Just reqAmount.currency)
       DAdminRequest.FailedPayoutReTrigger -> do
         whenJust req.referenceType $ \_ -> throwError (InvalidRequest "Reference type not required for this action type")
         whenJust req.adjustmentType $ \_ -> throwError (InvalidRequest "Adjustment type not required for this action type")
@@ -137,30 +142,32 @@ postAdminRequestCreate merchantShortId opCity requestorId requestorName req = do
               throwError $ InvalidRequest "Payout is not eligible for retry"
             unless (payoutRequest.beneficiaryId == req.personId.getId) $
               throwError (InvalidRequest "Invalid personId")
-            payoutAmount <- payoutRequest.amount & fromMaybeM (InternalError "Payout request amount not found")
-            case req.amount of
-              Nothing -> pure (payoutAmount, merchantOpCity.currency)
-              Just reqAmount -> do
-                unless (reqAmount.amount == payoutAmount) $
-                  throwError (InvalidRequest "Amount should match payout request amount")
-                unless (reqAmount.currency == merchantOpCity.currency) $
-                  throwError (InvalidRequest "Currency should match merchant operating city currency")
-                pure (reqAmount.amount, reqAmount.currency)
+            whenJust req.amount $ \_ -> throwError (InvalidRequest "Amount not required for this action type")
+            pure (Nothing, Nothing)
           _ -> throwError (InvalidRequest "Invalid reference table for this action type")
       DAdminRequest.TDSReimbursement -> do
-        whenJust req.referenceType $ \_ -> throwError (InvalidRequest "Reference type not required for this action type")
-        whenJust req.adjustmentType $ \_ -> throwError (InvalidRequest "Adjustment type not required for this action type")
-        whenJust req.source $ \_ -> throwError (InvalidRequest "Adjustment source not required for this action type")
-        -- TODO referenceId, amount and currency validation
-        let amount = maybe 0.0 (.amount) req.amount
-            currency = maybe INR (.currency) req.amount
-        pure (amount, currency)
+        case req.referenceTable of
+          DAdminRequest.COMMON_DRIVER_ONBOARDING_DOCUMENTS -> do
+            whenJust req.referenceType $ \_ -> throwError (InvalidRequest "Reference type not required for this action type")
+            whenJust req.adjustmentType $ \_ -> throwError (InvalidRequest "Adjustment type not required for this action type")
+            whenJust req.source $ \_ -> throwError (InvalidRequest "Adjustment source not required for this action type")
+            whenJust req.amount $ \_ -> throwError (InvalidRequest "Amount not required for this action type")
+            mbDocument <- QCommonDriverOnboardingDocuments.findById (Id @DCommonDoc.CommonDriverOnboardingDocuments req.referenceId)
+            document <- mbDocument & fromMaybeM (DocumentNotFound req.referenceId)
+            unless (document.driverId == Just req.personId) $
+              throwError (InvalidRequest "Invalid personId")
+            unless (document.documentType == DVC.TDSCertificate) $
+              throwError (InvalidRequest $ show DVC.TDSCertificate <> " document type supported for this action type")
+            unless (document.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $
+              throwError (InvalidRequest $ show Documents.MANUAL_VERIFICATION_REQUIRED <> " verification status supported for this action type")
+            pure (Nothing, Nothing)
+          _ -> throwError (InvalidRequest "Invalid reference table for this action type")
 
     mbAdminMaker <- QP.findById (Id @DP.Person requestorId)
     let adminMakerName = case mbAdminMaker of
           Nothing -> requestorName
           Just adminMaker -> adminMaker.firstName <> maybe "" (" " <>) adminMaker.middleName <> maybe "" (" " <>) adminMaker.lastName
-    adminRequest <- buildAdminRequest merchantOpCity requestorId adminMakerName amount' currency' req
+    adminRequest <- buildAdminRequest merchantOpCity requestorId adminMakerName mbAmount mbCurrency req
     QAdminRequest.create adminRequest
   pure Success
 
@@ -169,8 +176,8 @@ buildAdminRequest ::
   DMOC.MerchantOperatingCity ->
   Text ->
   Text ->
-  HighPrecMoney ->
-  Currency ->
+  Maybe HighPrecMoney ->
+  Maybe Currency ->
   Common.CreateAdminRequestReq ->
   m DAdminRequest.AdminRequest
 buildAdminRequest merchantOpertingCity requestorId adminMakerName amount currency Common.CreateAdminRequestReq {amount = _amount, ..} = do
@@ -268,7 +275,7 @@ mkAdminRequestItem ::
 mkAdminRequestItem DAdminRequest.AdminRequest {..} =
   Common.AdminRequestItem
     { adminRequestId = id,
-      amount = PriceAPIEntity amount currency,
+      amount = PriceAPIEntity <$> amount <*> currency,
       ..
     }
 
@@ -287,6 +294,9 @@ postAdminRequestRespond merchantShortId opCity adminRequestId requestorId reques
   Redis.whenWithLockRedis (adminRequestProcessingLockKey referenceId) 60 $ do
     -- Fetch admin request again to avoid race condition
     adminRequest <- QAdminRequest.findByPrimaryKey adminRequestId >>= fromMaybeM (AdminRequestDoesNotExist adminRequestId.getId)
+    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+    unless (adminRequest.actionType `elem` fromMaybe [] transporterConfig.enableAdminMakerChecker) $ do
+      throwError (InvalidRequest $ "Admin Maker & Checker is not enabled for this action type: " <> show adminRequest.actionType)
     when (adminRequest.adminMakerId == Id @DP.Person requestorId) $
       throwError (InvalidRequest "Admin Maker and Admin Checker cannot be same")
     unless (adminRequest.merchantOperatingCityId == merchantOpCity.id) $ throwError (AdminRequestDoesNotExist adminRequestId.getId)
@@ -300,7 +310,7 @@ postAdminRequestRespond merchantShortId opCity adminRequestId requestorId reques
       then do
         let updAdminRequest = adminRequest{status = DAdminRequest.APPROVED, adminCheckerId = Just $ Id @DP.Person requestorId}
         res <- case updAdminRequest.actionType of
-          DAdminRequest.LedgerAdjustment -> withTryCatch "ledgerAdjustmentAction" $ ledgerAdjustmentAction updAdminRequest
+          DAdminRequest.LedgerAdjustment -> withTryCatch "ledgerAdjustmentAction" $ ledgerAdjustmentAction transporterConfig updAdminRequest
           DAdminRequest.FailedPayoutReTrigger -> withTryCatch "failedPayoutReTriggerAction" $ failedPayoutReTriggerAction merchantShortId opCity updAdminRequest
           DAdminRequest.TDSReimbursement -> withTryCatch "tdsReimbursementAction" $ tdsReimbursementAction updAdminRequest
         case res of
@@ -316,8 +326,8 @@ postAdminRequestRespond merchantShortId opCity adminRequestId requestorId reques
 adminRequestProcessingLockKey :: Text -> Text
 adminRequestProcessingLockKey referenceId = "adminRequest:processing:" <> referenceId
 
-ledgerAdjustmentAction :: DAdminRequest.AdminRequest -> Environment.Flow ()
-ledgerAdjustmentAction adminRequest = do
+ledgerAdjustmentAction :: DTC.TransporterConfig -> DAdminRequest.AdminRequest -> Environment.Flow ()
+ledgerAdjustmentAction transporterConfig adminRequest = do
   logInfo $ "Ledger adjustment action triggered: " <> adminRequest.id.getId <> maybe "" (\adminCheckerId -> "; admin checker: " <> adminCheckerId.getId) adminRequest.adminCheckerId
   referenceType <- adminRequest.referenceType & fromMaybeM (InvalidRequest "Reference type required for this action type")
   adjustmentType <- adminRequest.adjustmentType & fromMaybeM (InvalidRequest "Adjustment type required for this action type")
@@ -326,9 +336,9 @@ ledgerAdjustmentAction adminRequest = do
   ride <- QRide.findOneByBookingId booking.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
   driver <- QP.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   driverInfo <- QDI.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   let driverOrFleetPersonId = fromMaybe ride.driverId ride.fleetOwnerId
   mbPanCard <- QPanCard.findByDriverId driverOrFleetPersonId
+  adminRequestAmount <- adminRequest.amount & fromMaybeM (InternalError $ "Amount required for this action type: " <> show adminRequest.actionType)
   let ledgerAdjustmentParams = LedgerAdjustmentParams {..}
   Redis.withWaitOnLockRedisWithExpiry (SFW.makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
     additionalAdjustments <- case referenceType of
@@ -357,6 +367,7 @@ data LedgerAdjustmentParams = LedgerAdjustmentParams
     referenceType :: Text,
     adjustmentType :: DAdminRequest.AdjustmentType,
     adjustmentSource :: DAdminRequest.AdjustmentSource,
+    adminRequestAmount :: HighPrecMoney,
     booking :: DBooking.Booking,
     ride :: DRide.Ride,
     driver :: DP.Person,
@@ -369,7 +380,7 @@ type FinanceFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r)
 
 rideRelatedAdjustmnent :: FinanceFlow m r => LedgerAdjustmentParams -> m [(Text, Maybe HighPrecMoney)]
 rideRelatedAdjustmnent LedgerAdjustmentParams {..} = do
-  let adjustmentBaseAmount = adminRequest.amount
+  let adjustmentBaseAmount = adminRequestAmount
   (mbGstAmount, mbTdsAmount) <- case adjustmentSource of
     DAdminRequest.BuyerApp -> do
       let mbGstRate = SFC.computeTotalGstRate transporterConfig.taxConfig.rideGst
@@ -442,7 +453,7 @@ calculateAdjustmentTdsAmount transporterConfig mbPanCard driverInfo ride adjustm
 
 userCancellationRelatedAdjustmnent :: FinanceFlow m r => LedgerAdjustmentParams -> m [(Text, Maybe HighPrecMoney)]
 userCancellationRelatedAdjustmnent LedgerAdjustmentParams {..} = do
-  let baseCancellation = adminRequest.amount
+  let baseCancellation = adminRequestAmount
   (mbGstOnCancellation, mbTdsAmount) <- case adjustmentSource of
     DAdminRequest.BuyerApp -> do
       let mbGstRate = SFC.computeTotalGstRate transporterConfig.taxConfig.rideGst
@@ -489,7 +500,7 @@ userCancellationRelatedAdjustmnent LedgerAdjustmentParams {..} = do
 
 driverCancellationRelatedAdjustmnent :: FinanceFlow m r => LedgerAdjustmentParams -> m [(Text, Maybe HighPrecMoney)]
 driverCancellationRelatedAdjustmnent LedgerAdjustmentParams {..} = do
-  let penaltyAdjusment = adminRequest.amount
+  let penaltyAdjusment = adminRequestAmount
   ctx <- SFW.buildFinanceCtx booking ride (Just driver) mbPanCard (Just driverInfo) transporterConfig
   result <- Finance.runFinance ctx $ do
     -- Note: Here Credit means increase driver balance, and hence reduce driver penalty (vice versa for Debit)
@@ -500,7 +511,7 @@ driverCancellationRelatedAdjustmnent LedgerAdjustmentParams {..} = do
 
 incentiveRelatedAdjustmnent :: FinanceFlow m r => LedgerAdjustmentParams -> m [(Text, Maybe HighPrecMoney)]
 incentiveRelatedAdjustmnent LedgerAdjustmentParams {..} = do
-  let adjustmentBaseAmount = adminRequest.amount
+  let adjustmentBaseAmount = adminRequestAmount
       adjustmentDelta = case adjustmentType of
         DAdminRequest.Credit -> adjustmentBaseAmount
         DAdminRequest.Debit -> negate adjustmentBaseAmount
@@ -555,4 +566,6 @@ failedPayoutReTriggerAction merchantShortId opCity adminRequest = do
 tdsReimbursementAction :: DAdminRequest.AdminRequest -> Environment.Flow ()
 tdsReimbursementAction adminRequest = do
   logInfo $ "TDS reimbursement action triggered: " <> adminRequest.id.getId <> maybe "" (\adminCheckerId -> "; admin checker: " <> adminCheckerId.getId) adminRequest.adminCheckerId
-  throwError $ InvalidRequest "TDS reimbursement action is not implemented"
+  mbDocument <- QCommonDriverOnboardingDocuments.findById (Id @DCommonDoc.CommonDriverOnboardingDocuments adminRequest.referenceId)
+  document <- mbDocument & fromMaybeM (DocumentNotFound adminRequest.referenceId)
+  QCommonDriverOnboardingDocuments.updateVerificationStatus Documents.VALID document.id

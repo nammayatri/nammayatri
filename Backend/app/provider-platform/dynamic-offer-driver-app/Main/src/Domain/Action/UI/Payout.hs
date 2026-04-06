@@ -58,8 +58,8 @@ import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.Finance.Wallet
-import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Merchant
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Finance ()
 import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig as SCTC

@@ -6,8 +6,8 @@ ALTER TABLE atlas_driver_offer_bpp.admin_request ADD COLUMN admin_checker_id cha
 ALTER TABLE atlas_driver_offer_bpp.admin_request ADD COLUMN admin_checker_name text ;
 ALTER TABLE atlas_driver_offer_bpp.admin_request ADD COLUMN admin_maker_id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.admin_request ADD COLUMN admin_maker_name text NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.admin_request ADD COLUMN amount double precision NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.admin_request ADD COLUMN currency character varying(255) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.admin_request ADD COLUMN amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.admin_request ADD COLUMN currency character varying(255) ;
 ALTER TABLE atlas_driver_offer_bpp.admin_request ADD COLUMN description text ;
 ALTER TABLE atlas_driver_offer_bpp.admin_request ADD COLUMN error_message text ;
 ALTER TABLE atlas_driver_offer_bpp.admin_request ADD COLUMN id character varying(36) NOT NULL;

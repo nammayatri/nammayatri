@@ -16,7 +16,7 @@ module Domain.Action.ProviderPlatform.IssueManagement.Issue
     postIssueMessageUpsert,
     getIssueChatMessages,
     postIssueChatRead,
-    postIssueChatMessage
+    postIssueChatMessage,
   )
 where
 
@@ -30,11 +30,11 @@ import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
 import qualified IssueManagement.Common
 import qualified IssueManagement.Common.Dashboard.Issue
+import qualified IssueManagement.Common.UI.Issue
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage
 import qualified IssueManagement.Domain.Types.Issue.IssueOption
 import qualified IssueManagement.Domain.Types.Issue.IssueReport
-import qualified IssueManagement.Common.UI.Issue
 import Kernel.Beam.Functions
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess

@@ -72,10 +72,10 @@ getFleetOwnersInfoMerchantBased mbFleetOwnerId mbRequestorId hasFleetMemberHiera
       requestor <- QP.findById (Id requestorId)
       case requestor of
         Nothing -> do
-           fleetOwnerId <- mbFleetOwnerId & fromMaybeM (InvalidRequest "fleetOwnerId required")
-           fleetOwner <- QP.findById (Id fleetOwnerId) >>= fromMaybeM (PersonNotFound fleetOwnerId)
-           let fleetOwnerName = fleetOwner.firstName <> maybe "" (" " <>) fleetOwner.lastName
-           return [FleetOwnerInfo {fleetOwnerId, fleetOwnerName, requestorId = fleetOwnerId}] -- requesterId is not being used in parent functions add fleetOwnerId for backward compatibility
+          fleetOwnerId <- mbFleetOwnerId & fromMaybeM (InvalidRequest "fleetOwnerId required")
+          fleetOwner <- QP.findById (Id fleetOwnerId) >>= fromMaybeM (PersonNotFound fleetOwnerId)
+          let fleetOwnerName = fleetOwner.firstName <> maybe "" (" " <>) fleetOwner.lastName
+          return [FleetOwnerInfo {fleetOwnerId, fleetOwnerName, requestorId = fleetOwnerId}] -- requesterId is not being used in parent functions add fleetOwnerId for backward compatibility
         Just requestorVal -> do
           if fromMaybe False mbIsRequestorFleerOwner
             then do
@@ -90,7 +90,6 @@ getFleetOwnersInfoMerchantBased mbFleetOwnerId mbRequestorId hasFleetMemberHiera
               fleetOwner <- QP.findById (Id fleetOwnerId) >>= fromMaybeM (PersonNotFound fleetOwnerId)
               let fleetOwnerName = fleetOwner.firstName <> maybe "" (" " <>) fleetOwner.lastName
               return [FleetOwnerInfo {fleetOwnerId, fleetOwnerName, requestorId}]
-
     _ -> do
       -- Existing flow: consider requestor the same as fleet owner, fleet member operates on befalf of fleet owner
       fleetOwnerIds <- getFleetOwnerIds requestorId mbFleetOwnerId

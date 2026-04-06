@@ -5,6 +5,7 @@
 module Domain.Types.TransporterConfig (module Domain.Types.TransporterConfig, module ReExport) where
 
 import Data.Aeson
+import qualified Domain.Types.AdminRequest
 import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.Extra.MerchantPaymentMethod
 import Domain.Types.Extra.TransporterConfig as ReExport
@@ -146,6 +147,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     editLocDriverPermissionNeeded :: Kernel.Prelude.Bool,
     editLocTimeThreshold :: Kernel.Types.Common.Seconds,
     emailOtpConfig :: Kernel.Prelude.Maybe Email.Types.EmailOTPConfig,
+    enableAdminMakerChecker :: Kernel.Prelude.Maybe [Domain.Types.AdminRequest.ActionType],
     enableCoinsToDirectPayout :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableDashboardSms :: Kernel.Prelude.Bool,
     enableDirectWalletIncentives :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

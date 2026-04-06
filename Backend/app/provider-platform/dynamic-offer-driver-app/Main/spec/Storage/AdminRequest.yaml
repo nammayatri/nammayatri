@@ -13,8 +13,8 @@ AdminRequest:
     referenceType: Maybe Text # relevant only for LedgerAdjustment
     referenceId: Text
     referenceTable: ReferenceTable
-    amount: HighPrecMoney
-    currency: Currency
+    amount: Maybe HighPrecMoney
+    currency: Maybe Currency
     source: Maybe AdjustmentSource # relevant only for LedgerAdjustment
     description: Maybe Text
     adminMakerId: Id Person
@@ -40,7 +40,7 @@ AdminRequest:
       enum: "PENDING, APPROVED, REJECTED, FAILED"
       derive: "HttpInstance"
     ReferenceTable:
-      enum: "BOOKING, RIDE, PAYOUT_REQUEST"
+      enum: "BOOKING, RIDE, PAYOUT_REQUEST, COMMON_DRIVER_ONBOARDING_DOCUMENTS"
       derive: "HttpInstance"
 
   constraints:

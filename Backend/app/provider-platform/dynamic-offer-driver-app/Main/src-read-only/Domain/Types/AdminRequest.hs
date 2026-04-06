@@ -20,8 +20,8 @@ data AdminRequest = AdminRequest
     adminCheckerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     adminMakerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     adminMakerName :: Kernel.Prelude.Text,
-    amount :: Kernel.Types.Common.HighPrecMoney,
-    currency :: Kernel.Types.Common.Currency,
+    amount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    currency :: Kernel.Prelude.Maybe Kernel.Types.Common.Currency,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     errorMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.AdminRequest.AdminRequest,
@@ -46,7 +46,7 @@ data AdjustmentType = Debit | Credit deriving (Eq, Ord, Show, Read, Generic, ToJ
 
 data AdminRequestStatus = PENDING | APPROVED | REJECTED | FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data ReferenceTable = BOOKING | RIDE | PAYOUT_REQUEST deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data ReferenceTable = BOOKING | RIDE | PAYOUT_REQUEST | COMMON_DRIVER_ONBOARDING_DOCUMENTS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ActionType)
 

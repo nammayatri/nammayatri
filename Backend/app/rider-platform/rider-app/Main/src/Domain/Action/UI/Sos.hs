@@ -1286,4 +1286,4 @@ buildSosTrackUrl :: DRC.RiderConfig -> Maybe Text -> Id SafetyDSos.Sos -> Text
 buildSosTrackUrl riderConfig mbRideId sosId =
   case riderConfig.sosTrackingLink of
     Just sosLink -> T.replace "{#vp#}" "sosTracking" sosLink <> sosId.getId
-    Nothing -> T.replace "{#vp#}" "shareRide" riderConfig.trackingShortUrlPattern <>fromMaybe "" mbRideId
+    Nothing -> T.replace "{#vp#}" "shareRide" riderConfig.trackingShortUrlPattern <> fromMaybe "" mbRideId

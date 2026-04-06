@@ -27,7 +27,7 @@ data AdminRequestItem = AdminRequestItem
     referenceType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referenceId :: Kernel.Prelude.Text,
     referenceTable :: Domain.Types.AdminRequest.ReferenceTable,
-    amount :: Kernel.Types.Common.PriceAPIEntity,
+    amount :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     source :: Kernel.Prelude.Maybe Domain.Types.AdminRequest.AdjustmentSource,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     adminMakerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
