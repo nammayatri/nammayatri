@@ -36,9 +36,11 @@ instance ConfigDimensions BecknConfigDimensions where
   getConfigList a = do
     let mocId = a.merchantOperatingCityId
     let mId = a.merchantId
-    cfgs <- IM.withInMemCache (configPilotInMemKey BecknConfig mId) 3600 $ SQBC.findByMerchantId (Just (Id mId))
-    let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) cfgs
-    mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG BecknConfig) (Id mocId)) configWrappers
+    IM.withInMemCache (configPilotInMemKey a) 3600 $ do
+      cfgs <- SQBC.findByMerchantId (Just (Id mId))
+      let filtered = filterByDimensions a cfgs
+      let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) filtered
+      mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG BecknConfig) (Id mocId)) configWrappers
   filterByDimensions dims cfgs =
     let foundCfg = filter matchesDimsMocId cfgs
      in if null foundCfg

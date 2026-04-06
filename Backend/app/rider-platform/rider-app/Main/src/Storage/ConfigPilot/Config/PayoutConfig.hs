@@ -35,9 +35,11 @@ instance ConfigDimensions PayoutDimensions where
   getConfigType _ = PayoutConfig
   getConfigList a = do
     let mocId = a.merchantOperatingCityId
-    cfgs <- IM.withInMemCache (configPilotInMemKey PayoutConfig mocId) 3600 $ CPC.findAllByMerchantOpCityId (Id mocId) (Just [])
-    let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) cfgs
-    mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG PayoutConfig) (Id mocId)) configWrappers
+    IM.withInMemCache (configPilotInMemKey a) 3600 $ do
+      cfgs <- CPC.findAllByMerchantOpCityId (Id mocId) (Just [])
+      let filtered = filterByDimensions a cfgs
+      let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) filtered
+      mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG PayoutConfig) (Id mocId)) configWrappers
   filterByDimensions dims cfgs = filter matchesDims cfgs
     where
       matchesDims c =

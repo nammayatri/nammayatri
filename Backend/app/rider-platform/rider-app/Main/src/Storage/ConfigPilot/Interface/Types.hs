@@ -1,10 +1,14 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | ConfigPilot interface: type-safe link between ConfigType and dimension records.
@@ -28,9 +32,15 @@ module Storage.ConfigPilot.Interface.Types
     -- * Singleton GADT
     SConfigType (..),
     sConfigTypeToConfigType,
+
+    -- * Cache key generics (needed for default dimensionsCacheKey)
+    GNonMaybeFields (..),
+    CacheKeyVal (..),
   )
 where
 
+import qualified Data.Text as T
+import GHC.Generics (C, D, Generic (from), K1 (..), M1 (..), Rep, S, (:*:) (..))
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, throwError)
@@ -97,10 +107,17 @@ sConfigTypeToConfigType _ = configTypeValue @cfg
 -- ConfigDimensions: dimension record @a@ with ConfigType, config value type, and getConfig
 -- -----------------------------------------------------------------------------
 
-class ConfigTypeInfo (ConfigTypeOf a) => ConfigDimensions a where
+class (Show a, ConfigTypeInfo (ConfigTypeOf a)) => ConfigDimensions a where
   type ConfigTypeOf a :: ConfigType
   type ConfigValueTypeOf a :: Type
   getConfigType :: a -> ConfigType
+
+  -- | Generate cache key from non-Maybe dimension fields. Adding a new non-Maybe
+  -- field to the dimensions record automatically includes it in the key via Generics.
+  -- Maybe fields are excluded since they are used for filtering, not cache partitioning.
+  dimensionsCacheKey :: a -> Text
+  default dimensionsCacheKey :: (Generic a, GNonMaybeFields (Rep a)) => a -> Text
+  dimensionsCacheKey = T.intercalate ":" . gNonMaybeFields . from
 
   -- | Fetch all configs (no dimension filtering). Instances implement this.
   getConfigList :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> m (ConfigValueTypeOf a)
@@ -140,3 +157,46 @@ getOneConfig ::
   a ->
   m (Maybe (ElemOf (ConfigValueTypeOf a)))
 getOneConfig dims = getConfig dims >>= toMaybeOne (show dims)
+
+-- -----------------------------------------------------------------------------
+-- Generic machinery: extract non-Maybe field values as cache key parts
+-- -----------------------------------------------------------------------------
+
+-- | Convert a value to a cache key part. Text is used as-is; other types use 'show'.
+class CacheKeyVal a where
+  cacheKeyVal :: a -> Text
+
+instance CacheKeyVal Text where
+  {-# INLINE cacheKeyVal #-}
+  cacheKeyVal = id
+
+instance {-# OVERLAPPABLE #-} Show a => CacheKeyVal a where
+  {-# INLINE cacheKeyVal #-}
+  cacheKeyVal = show
+
+-- | Generic traversal that collects non-Maybe field values.
+class GNonMaybeFields f where
+  gNonMaybeFields :: f p -> [Text]
+
+instance GNonMaybeFields f => GNonMaybeFields (M1 D c f) where
+  {-# INLINE gNonMaybeFields #-}
+  gNonMaybeFields (M1 x) = gNonMaybeFields x
+
+instance GNonMaybeFields f => GNonMaybeFields (M1 C c f) where
+  {-# INLINE gNonMaybeFields #-}
+  gNonMaybeFields (M1 x) = gNonMaybeFields x
+
+instance (GNonMaybeFields f, GNonMaybeFields g) => GNonMaybeFields (f :*: g) where
+  {-# INLINE gNonMaybeFields #-}
+  gNonMaybeFields (f :*: g) = gNonMaybeFields f <> gNonMaybeFields g
+
+-- | Maybe fields: include unwrapped value when Just, skip when Nothing.
+instance {-# OVERLAPPING #-} CacheKeyVal a => GNonMaybeFields (M1 S c (K1 i (Maybe a))) where
+  {-# INLINE gNonMaybeFields #-}
+  gNonMaybeFields (M1 (K1 Nothing)) = []
+  gNonMaybeFields (M1 (K1 (Just x))) = [cacheKeyVal x]
+
+-- | Include non-Maybe fields in the cache key.
+instance {-# OVERLAPPABLE #-} CacheKeyVal a => GNonMaybeFields (M1 S c (K1 i a)) where
+  {-# INLINE gNonMaybeFields #-}
+  gNonMaybeFields (M1 (K1 x)) = [cacheKeyVal x]

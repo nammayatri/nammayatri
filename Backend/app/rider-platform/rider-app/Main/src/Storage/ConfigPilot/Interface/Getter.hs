@@ -95,9 +95,10 @@ getConfigImpl _dimensions wrappedConfig logicDomain merchantOpCityId = do
           (0, [])
           rollouts
 
--- | Build the in-mem cache key for a config type + merchantOpCityId.
-configPilotInMemKey :: ConfigType -> Text -> [Text]
-configPilotInMemKey cfgType mocId = ["ConfigPilot", show cfgType, mocId]
+-- | Build the in-mem cache key from dimensions. Uses 'dimensionsCacheKey' so
+-- that every field in the dimensions record is automatically included.
+configPilotInMemKey :: ConfigDimensions a => a -> [Text]
+configPilotInMemKey dims = ["ConfigPilot", show (getConfigType dims), dimensionsCacheKey dims]
 
 -- | Invalidate the in-mem cache for a config type across all pods.
 -- Sets a Redis key that the background cleanup thread reads to clear matching in-mem entries.

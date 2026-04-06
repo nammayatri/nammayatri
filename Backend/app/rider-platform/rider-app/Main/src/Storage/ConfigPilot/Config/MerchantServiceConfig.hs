@@ -54,9 +54,11 @@ instance ConfigDimensions MerchantServiceConfigDimensions where
   getConfigList a = do
     let mocId = a.merchantOperatingCityId
     let mId = a.merchantId
-    cfgs <- IM.withInMemCache (configPilotInMemKey MerchantServiceConfig mId) 3600 $ SQMSC.findAllByMerchantId (Id mId)
-    let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) cfgs
-    mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG MerchantServiceConfig) (Id mocId)) configWrappers
+    IM.withInMemCache (configPilotInMemKey a) 3600 $ do
+      cfgs <- SQMSC.findAllByMerchantId (Id mId)
+      let filtered = filterByDimensions a cfgs
+      let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) filtered
+      mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG MerchantServiceConfig) (Id mocId)) configWrappers
   filterByDimensions dims cfgs = filter matchesDimsMocId cfgs
     where
       matchesDimsMocId c =
@@ -64,12 +66,12 @@ instance ConfigDimensions MerchantServiceConfigDimensions where
           && c.merchantOperatingCityId == Id dims.merchantOperatingCityId
   getConfig dims = do
     allCfgs <- measureLatency (getConfigList dims) ("MerchantServiceConfig.getConfigList merchantId=" <> dims.merchantId <> " mocId=" <> dims.merchantOperatingCityId)
-    let foundCfg = filterByDimensions dims allCfgs
+    foundCfg <- getConfigList dims
     if null foundCfg
       then do
         logError $ "MerchantServiceConfig not found for merchantId: " <> dims.merchantId <> " mocId: " <> dims.merchantOperatingCityId <> " serviceName: " <> show dims.serviceName <> ". Falling back to default city."
         merchant <- CQM.findById (Id dims.merchantId) >>= fromMaybeM (MerchantNotFound dims.merchantId)
         defaultMoc <- CQMOC.findByMerchantShortIdAndCity merchant.shortId merchant.defaultCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show merchant.defaultCity)
         let defaultDims = dims {merchantOperatingCityId = defaultMoc.id.getId}
-        pure $ filterByDimensions defaultDims allCfgs
+        getConfigList defaultDims
       else pure foundCfg

@@ -31,6 +31,7 @@ instance ConfigDimensions MerchantServiceUsageConfigDimensions where
   getConfigType _ = MerchantServiceUsageConfig
   getConfigList a = do
     let mocId = a.merchantOperatingCityId
-    cfg <- IM.withInMemCache (configPilotInMemKey MerchantServiceUsageConfig mocId) 3600 $ CQMSUC.findByMerchantOperatingCityId (Id mocId)
-    let configWrapper = LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}
-    getConfigImpl a configWrapper (LYT.RIDER_CONFIG MerchantServiceUsageConfig) (Id mocId)
+    IM.withInMemCache (configPilotInMemKey a) 3600 $ do
+      cfg <- CQMSUC.findByMerchantOperatingCityId (Id mocId)
+      let configWrapper = LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}
+      getConfigImpl a configWrapper (LYT.RIDER_CONFIG MerchantServiceUsageConfig) (Id mocId)

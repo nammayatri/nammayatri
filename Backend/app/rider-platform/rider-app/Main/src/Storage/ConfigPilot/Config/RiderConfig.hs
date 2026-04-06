@@ -31,9 +31,10 @@ instance ConfigDimensions RiderDimensions where
   getConfigType _ = RiderConfig
   getConfigList a = do
     let mocId = a.merchantOperatingCityId
-    cfg <- IM.withInMemCache (configPilotInMemKey RiderConfig mocId) 3600 $ QRC.findByMerchantOperatingCityId (Id mocId)
-    case cfg of
-      Nothing -> pure Nothing
-      Just c -> do
-        let configWrapper = LYT.Config {config = c, extraDimensions = Nothing, identifier = 0}
-        Just <$> getConfigImpl a configWrapper (LYT.RIDER_CONFIG RiderConfig) (Id mocId)
+    IM.withInMemCache (configPilotInMemKey a) 3600 $ do
+      cfg <- QRC.findByMerchantOperatingCityId (Id mocId)
+      case cfg of
+        Nothing -> pure Nothing
+        Just c -> do
+          let configWrapper = LYT.Config {config = c, extraDimensions = Nothing, identifier = 0}
+          Just <$> getConfigImpl a configWrapper (LYT.RIDER_CONFIG RiderConfig) (Id mocId)
