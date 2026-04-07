@@ -26,6 +26,7 @@ data FleetOwnerListItem = FleetOwnerListItem
     isEligibleForSubscription :: Kernel.Prelude.Bool,
     address :: Kernel.Prelude.Maybe Kernel.External.Payment.Stripe.Types.Address,
     fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)

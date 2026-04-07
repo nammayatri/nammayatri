@@ -63,7 +63,8 @@ getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbBlocked mbFleetType mbLimi
                   isEligibleForSubscription = fleetOwnerInfo.isEligibleForSubscription,
                   address = fleetOwnerInfo.stripeAddress,
                   fleetName = fleetOwnerInfo.fleetName,
-                  mobileNumber = mobileNumber
+                  mobileNumber = mobileNumber,
+                  email = person.email
                 }
 
     personName person@Person.Person {..} =

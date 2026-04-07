@@ -15,6 +15,7 @@
 module Domain.Action.ProviderPlatform.Fleet.Driver
   ( getDriverFleetGetAllBadge,
     getDriverFleetAccessList,
+    getDriverFleetOwnerList,
     postDriverFleetAccessSelect,
     postDriverFleetV2AccessSelect,
     postDriverFleetAddVehicle,
@@ -85,6 +86,7 @@ where
 
 import qualified API.Client.ProviderPlatform.Fleet as Client
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
+import qualified API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2 as RegV2
 import qualified "dashboard-helper-api" Dashboard.Common as DCommon
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Registration
 import qualified Data.ByteString.Lazy as LBS
@@ -690,3 +692,10 @@ postDriverFleetScheduledBookingReassign merchantShortId opCity apiTokenInfo req 
   T.withTransactionStoring transaction $ do
     let fleetOwnerId = apiTokenInfo.personId.getId
     Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetScheduledBookingReassign) fleetOwnerId req
+
+getDriverFleetOwnerList :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe RegV2.FleetType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.Flow [Common.FleetOwnerListItem])
+getDriverFleetOwnerList merchantShortId opCity apiTokenInfo blocked fleetType limit offset onlyEnabled = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  unless (DP.isAdmin apiTokenInfo.person) $ throwError AccessDenied
+  let requestorId = apiTokenInfo.personId.getId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetOwnerList) requestorId blocked fleetType limit offset onlyEnabled

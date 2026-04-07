@@ -14,6 +14,7 @@
 
 module Domain.Action.Dashboard.Fleet.Driver
   ( getDriverFleetAccessList,
+    getDriverFleetOwnerList,
     postDriverFleetAccessSelect,
     postDriverFleetV2AccessSelect,
     postDriverFleetAddVehicle,
@@ -84,12 +85,15 @@ module Domain.Action.Dashboard.Fleet.Driver
 where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
+import qualified API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2 as RegV2
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Endpoints.Driver as Common
 import "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride (CancellationReasonCode (..))
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
+import qualified API.Types.UI.FleetOwnerList as FleetOwnerListAPI
 import qualified Beckn.Types.Core.Taxi.Common.PaymentInstrument as BecknPI
 import Control.Applicative (liftA2, optional)
+import qualified "dashboard-helper-api" Dashboard.Common as DC
 import qualified "dashboard-helper-api" Dashboard.Common as DCommonRole (Role (..))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
 import Data.Char (isDigit)
@@ -114,6 +118,7 @@ import qualified Domain.Action.UI.Driver as UIDriver
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.FleetDriverAssociation as FDA
+import qualified Domain.Action.UI.FleetOwnerList as FleetOwnerList
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
 import qualified Domain.Action.UI.Ride.CancelRide.Internal as RideCancelInternal
@@ -3297,6 +3302,44 @@ getDriverFleetAccessList _ _ mbFleetMemberId = do
       )
       fleetOwners
   return $ Common.FleetOwnerListRes {..}
+
+getDriverFleetOwnerList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Maybe Bool ->
+  Maybe RegV2.FleetType ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Bool ->
+  Flow [Common.FleetOwnerListItem]
+getDriverFleetOwnerList merchantShortId opCity requestorId mbBlocked mbFleetTypeReg mbLimit mbOffset mbOnlyEnabled = do
+  merchant <- findMerchantByShortId merchantShortId
+  requestor <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
+  unless (requestor.role == DP.ADMIN) $ throwError AccessDenied
+  unless (requestor.merchantId == merchant.id) $ throwError AccessDenied
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let mbFleetType = DRegV2.castFleetType <$> mbFleetTypeReg
+  uiItems <- FleetOwnerList.getFleetOwnerList (Nothing, merchant.id, merchantOpCity.id) mbBlocked mbFleetType mbLimit mbOffset mbOnlyEnabled
+  pure $ map fleetOwnerListItemToCommon uiItems
+  where
+    fleetOwnerListItemToCommon :: FleetOwnerListAPI.FleetOwnerListItem -> Common.FleetOwnerListItem
+    fleetOwnerListItemToCommon FleetOwnerListAPI.FleetOwnerListItem {..} =
+      Common.FleetOwnerListItem
+        { fleetOwnerId = cast @DP.Person @DC.Person fleetOwnerId,
+          fleetOwnerName = fleetOwnerName,
+          merchantId = cast @DM.Merchant @DC.Merchant merchantId,
+          merchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DC.MerchantOperatingCity merchantOperatingCityId,
+          fleetType = DRegV2.castFleetTypeToDomain fleetType,
+          enabled = enabled,
+          verified = verified,
+          blocked = blocked,
+          isEligibleForSubscription = isEligibleForSubscription,
+          address = address,
+          fleetName = fleetName,
+          email = email,
+          mobileNumber = mobileNumber
+        }
 
 postDriverFleetAccessSelect :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Bool -> Bool -> Flow APISuccess
 postDriverFleetAccessSelect _ _ fleetOwnerId mbFleetMemberId mbOnlySingle enable = do

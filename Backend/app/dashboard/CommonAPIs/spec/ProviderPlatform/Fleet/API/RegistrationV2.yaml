@@ -137,6 +137,7 @@ types:
     - setIsEnabled: Maybe Bool
   FleetType:
     - enum: "RENTAL_FLEET,NORMAL_FLEET,BUSINESS_FLEET"
+    - derive: "HttpInstance"
   FleetOwnerRegisterResV2:
     - enabled: Bool
     - recordType: NewType
