@@ -221,7 +221,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
       let trackingExpiresAt = addUTCTime (fromIntegral eightHoursInSeconds) now
 
       -- Create non-ride SOS using shared-services function
-      sosDetails <- SafetySos.createNonRideSos (cast personId) (Just (cast person.merchantId)) (Just (cast person.merchantOperatingCityId)) (Just trackingExpiresAt) mbExternalReferenceId req.flow
+      sosDetails <- SafetySos.createNonRideSos (cast personId) (Just (cast person.merchantId)) (Just (cast person.merchantOperatingCityId)) (Just trackingExpiresAt) mbExternalReferenceId req.flow SafetyDSos.SosActive
 
       whenJust req.customerLocation $ \location -> do
         SOSLocation.updateSosRiderLocation sosDetails.id location Nothing (Just trackingExpiresAt)
@@ -232,24 +232,8 @@ postSosCreate (mbPersonId, _merchantId) req = do
                  Just triggers -> List.null triggers || List.elem KAPTURE triggers
              )
           && isNothing mbTrigTicketId
-          then do
-            phoneNumber <- mapM decrypt person.mobileNumber
-            (merchantShortId, cityCode) <- fetchDashboardLinkContext person.merchantId person.merchantOperatingCityId
-            let dashboardSosUrl =
-                  buildDashboardMediaUrls
-                    riderConfig.dashboardMediaFileUrlPattern
-                    Nothing
-                    (Just sosDetails.id.getId)
-                    merchantShortId
-                    cityCode
-                kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
-            ticketResponse <-
-              withTryCatch "createTicket:sosTrigger:nonRide" $
-                createTicket
-                  person.merchantId
-                  person.merchantOperatingCityId
-                  (SIVR.mkTicket person phoneNumber dashboardSosUrl Nothing req.flow riderConfig.kaptureConfig.disposition kaptureQueue)
-            pure $ either (const Nothing) (Just . (.ticketId)) ticketResponse
+          && isNothing sosDetails.ticketId
+          then createNonRideKaptureTicket "createTicket:sosTrigger:nonRide" req.flow person (cast sosDetails.id) riderConfig
           else pure Nothing
       let finalTicketId = mbTrigTicketId <|> mbNonRideTicketId <|> sosDetails.ticketId
       whenJust finalTicketId $ \tId -> void $ SafetySos.updateSosTicketId sosDetails (Just tId)
@@ -397,6 +381,24 @@ createTicketForNewSos person ride riderConfig merchantId merchantOperatingCityId
       result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) (cast merchantOperatingCityId) (cast merchantId) req.flow Nothing ticketId mbExternalReferenceId
       QRide.updateSosId (Just $ cast result.sosId) ride.id
       return (cast result.sosId, ticketId)
+
+createNonRideKaptureTicket :: Text -> SafetyDSos.SosType -> Person.Person -> Id SafetyDSos.Sos -> DRC.RiderConfig -> Flow (Maybe Text)
+createNonRideKaptureTicket logTag flow person sosId' riderConfig = do
+  phoneNumber <- mapM decrypt person.mobileNumber
+  (merchantShortId, cityCode) <- fetchDashboardLinkContext person.merchantId person.merchantOperatingCityId
+  let dashboardSosUrl =
+        buildDashboardMediaUrls
+          riderConfig.dashboardMediaFileUrlPattern
+          Nothing
+          (Just sosId'.getId)
+          merchantShortId
+          cityCode
+      kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
+  ticketResponse <-
+    withTryCatch logTag $
+      Ticket.createTicket person.merchantId person.merchantOperatingCityId $
+        SIVR.mkTicket person phoneNumber dashboardSosUrl Nothing flow riderConfig.kaptureConfig.disposition kaptureQueue
+  pure $ either (const Nothing) (Just . (.ticketId)) ticketResponse
 
 postSosStatus :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Id SafetyDSos.Sos -> SosUpdateReq -> Flow APISuccess.APISuccess
 postSosStatus (mbPersonId, _) sosId req = do
@@ -960,7 +962,14 @@ postSosUpdateState (mbPersonId, _) sosId UpdateStateReq {..} = do
       -- Call shared-services function (handles validation, state transition, and expiry calculation)
       updatedSos <- case (sosDetails.sosState, sosState) of
         (Just SafetyDSos.LiveTracking, SafetyDSos.SosActive) -> do
-          result <- SafetySos.updateSosStateWithAutoExpiry safetyPersonId sosDetails sosState
+          -- Create Kapture ticket if not already present and support for safety is enabled
+          mbNewTicketId <-
+            if riderConfig.enableSupportForSafety && isNothing sosDetails.ticketId
+              then createNonRideKaptureTicket "createTicket:sosUpdateState" sosDetails.flow person sosId riderConfig
+              else pure Nothing
+
+          -- Single DB write: state + ticketId + expiry together
+          result <- SafetySos.updateSosStateWithAutoExpiry safetyPersonId sosDetails sosState mbNewTicketId
 
           -- Get the calculated expiry time from the updated SOS
           let newExpiryTime = result.trackingExpiresAt
@@ -983,15 +992,17 @@ postSosUpdateState (mbPersonId, _) sosId UpdateStateReq {..} = do
             SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" Notification.SOS_TRIGGERED [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers (Just sosId)
           return result
         (Just SafetyDSos.SosActive, SafetyDSos.LiveTracking) -> do
-          result <- SafetySos.updateSosStateWithAutoExpiry safetyPersonId sosDetails sosState
-          SPDEN.notifyEmergencyContactsWithKey person "LIVE_TRACKING_STOPPED" Notification.SOS_RESOLVED [("userName", SLP.getName person)] Nothing False emergencyContacts.defaultEmergencyNumbers (Just sosId)
+          result <- SafetySos.updateSosStateWithAutoExpiry safetyPersonId sosDetails sosState Nothing
+          SPDEN.notifyEmergencyContactsWithKey person "SOS_RESOLVED" Notification.SOS_RESOLVED [("userName", SLP.getName person)] Nothing False emergencyContacts.defaultEmergencyNumbers (Just sosId)
           return result
         _ -> do
-          result <- SafetySos.updateSosStateWithAutoExpiry safetyPersonId sosDetails sosState
+          result <- SafetySos.updateSosStateWithAutoExpiry safetyPersonId sosDetails sosState Nothing
           return result
 
-      -- Use the updated SOS from updateSosStateWithAutoExpiry instead of querying again
-      whenJust updatedSos.ticketId $ \_ticketId -> do
+      -- Only update ticket if it already existed before this request.
+      -- If the ticket was just created in this request (LiveTracking → SosActive),
+      -- skip the update to avoid a redundant comment on a brand-new ticket.
+      whenJust sosDetails.ticketId $ \_ticketId -> do
         void $ callUpdateTicket person updatedSos $ Just "SOS State Updated"
 
       pure APISuccess.Success
