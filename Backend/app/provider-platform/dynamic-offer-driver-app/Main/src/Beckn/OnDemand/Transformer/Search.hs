@@ -22,6 +22,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 -- import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Common
 import qualified BecknV2.Utils as Utils
+import qualified Control.Monad.Catch as C
 import qualified Data.HashMap.Strict as H
 import qualified Data.Text
 import qualified Data.Text as T
@@ -38,7 +39,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common (decodeFromText, fromMaybeM, type (:::))
-import Kernel.Utils.Logging (logDebug)
+import Kernel.Utils.Logging (logDebug, logError)
 import qualified Kernel.Utils.Version
 import Servant.Client.Core (BaseUrl)
 import Tools.Error
@@ -194,7 +195,10 @@ getPhoneNumberFromTag :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.
 getPhoneNumberFromTag customerPhoneNum_ = do
   case customerPhoneNum_ of
     Just phoneNumber ->
-      mapM decrypt $ textToEncryptedHashed phoneNumber
+      mapM decrypt (textToEncryptedHashed phoneNumber) `C.catchAll` \e ->
+        C.mask_ $ do
+          logError $ "Error decrypting phone number: " <> show e
+          return Nothing
     Nothing -> do
       return Nothing
 
