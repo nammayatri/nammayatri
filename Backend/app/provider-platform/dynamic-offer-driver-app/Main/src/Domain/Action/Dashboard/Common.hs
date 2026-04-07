@@ -142,7 +142,7 @@ notifyYatriRentalEventsToDriver vehicleId messageKey personId transporterConfig 
       _ -> pure ()
 
 appendPlusInMobileCountryCode :: Maybe Text -> Maybe Text
-appendPlusInMobileCountryCode = fmap (\code -> if "+" `T.isPrefixOf` code then code else "+" <> code)
+appendPlusInMobileCountryCode = fmap (\code -> let stripped = T.strip code in if "+" `T.isPrefixOf` stripped then stripped else "+" <> stripped)
 
 castStatus :: DriverFeeStatus -> Common.DriverFeeStatus
 castStatus status = case status of -- only PENDING and OVERDUE possible
