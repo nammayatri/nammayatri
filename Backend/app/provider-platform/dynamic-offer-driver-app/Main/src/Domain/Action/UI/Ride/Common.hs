@@ -20,7 +20,7 @@ import Data.Functor ((<&>))
 import Data.List (find)
 import Data.Maybe (fromMaybe, listToMaybe)
 import Data.OpenApi (ToSchema)
-import Data.Text (Text)
+import Data.Text (Text, pack)
 import Data.Time (UTCTime, diffUTCTime)
 import qualified Domain.Action.UI.Location as DLocUI
 import qualified Domain.Types as DTC
@@ -48,6 +48,8 @@ import Kernel.Types.Confidence (Confidence)
 import Kernel.Types.Id
 import SharedLogic.FareCalculator (fareSum)
 import SharedLogic.Type (BillingCategory)
+import qualified Lib.Queries.GateInfo as QGI
+import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.LocationMapping as QLM
@@ -166,7 +168,13 @@ data DriverRideRes = DriverRideRes
     paymentInstrument :: Maybe DMPM.PaymentInstrument,
     paymentMode :: Maybe DMPM.PaymentMode,
     commissionCharges :: Maybe HighPrecMoney,
-    discountAmount :: Maybe HighPrecMoney
+    discountAmount :: Maybe HighPrecMoney,
+    pickupZoneGateId :: Maybe Text,
+    pickupZoneGateName :: Maybe Text,
+    pickupZoneGateType :: Maybe Text,
+    pickupZoneEntryFeeAmount :: Maybe Double,
+    specialLocationName :: Maybe Text,
+    specialLocationCategory :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -195,6 +203,16 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
     _ -> return (Nothing, Nothing)
   cancellationReason <- if ride.status == DRide.CANCELLED then runInReplica (QBCR.findByRideId (Just ride.id)) else pure Nothing
+
+  -- Lookup pickup zone gate info for entry fee
+  (mbGateInfo, mbSpecialLoc) <- case booking.pickupGateId of
+    Just gateId -> do
+      mbGate <- QGI.findById (Id gateId)
+      mbSL <- case mbGate of
+        Just gate -> QSL.findById gate.specialLocationId
+        Nothing -> pure Nothing
+      pure (mbGate, mbSL)
+    Nothing -> pure (Nothing, Nothing)
 
   return $
     DriverRideRes
@@ -289,7 +307,13 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         paymentInstrument = booking.paymentInstrument,
         paymentMode = booking.paymentMode,
         commissionCharges = ride.commission,
-        discountAmount = ride.discountAmount
+        discountAmount = ride.discountAmount,
+        pickupZoneGateId = booking.pickupGateId,
+        pickupZoneGateName = mbGateInfo <&> (.name),
+        pickupZoneGateType = mbGateInfo <&> (pack . show . (.gateType)),
+        pickupZoneEntryFeeAmount = mbGateInfo >>= (.entryFeeAmount),
+        specialLocationName = mbSpecialLoc <&> (.locationName),
+        specialLocationCategory = mbSpecialLoc <&> (.category)
       }
 
 -- calculateLocations moved from UI.Ride
