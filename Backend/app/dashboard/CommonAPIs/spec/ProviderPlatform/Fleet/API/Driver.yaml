@@ -27,6 +27,9 @@ imports:
   ServiceTierType: Dashboard.Common
   CancellationReasonCode: Dashboard.Common.Booking
   PaymentInstrument: Beckn.Types.Core.Taxi.Common.PaymentInstrument
+  Person: Dashboard.Common
+  Merchant: Dashboard.Common
+  MerchantOperatingCity: Dashboard.Common
 module: Driver
 
 apis:
@@ -39,6 +42,32 @@ apis:
         type: FleetOwnerListRes
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_OWNER_LIST
+
+  - GET:
+      endpoint: /fleetOwner/list
+      auth: ApiAuthV2
+      query:
+        blocked: Bool
+        fleetType: FleetType
+        onlyEnabled: Bool
+        limit: Int
+        offset: Int
+      response:
+        type: "[FleetOwnerListItem]"
+      helperApi:
+        - GET:
+            endpoint: /{requestorId}/fleetOwner/list
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            query:
+              blocked: Bool
+              fleetType: FleetType
+              onlyEnabled: Bool
+              limit: Int
+              offset: Int
+            response:
+              type: "[FleetOwnerListItem]"
 
   - POST:
       endpoint: /fleet/access/{fleetOwnerId}/select
@@ -1577,6 +1606,20 @@ types:
   FleetOwnerListRes:
     - recordType: NewType
     - ownersList: [FleetOwnerListAPIEntity]
+  FleetOwnerListItem:
+    - fleetOwnerId: Id Person
+    - fleetOwnerName: Text
+    - merchantId: Id Merchant
+    - merchantOperatingCityId: Id MerchantOperatingCity
+    - fleetType: FleetType
+    - enabled: Bool
+    - verified: Bool
+    - blocked: Bool
+    - isEligibleForSubscription: Bool
+    - address: Maybe StripeAddress
+    - fleetName: Maybe Text
+    - email: Maybe Text
+    - mobileNumber: Maybe Text
   FleetGroup:
     - level: Int
     - parentGroupCode: Maybe Text # At Initial Level, this will be Nothing

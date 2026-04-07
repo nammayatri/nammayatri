@@ -4,6 +4,7 @@
 module API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2 where
 
 import qualified Dashboard.Common
+import Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified Domain.Types.PaymentMode
@@ -14,6 +15,7 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
+import Kernel.Utils.TH
 import Servant
 import Servant.Client
 
@@ -86,7 +88,7 @@ data FleetType
   | NORMAL_FLEET
   | BUSINESS_FLEET
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
 type API = ("fleet" :> (PostRegistrationV2V2LoginOtpHelper :<|> PostRegistrationV2V2VerifyOtpHelper :<|> PostRegistrationV2V2RegisterHelper :<|> PostRegistrationV2RegisterBankAccountLinkHelper :<|> GetRegistrationV2RegisterBankAccountStatusHelper))
 
@@ -160,5 +162,7 @@ data RegistrationV2UserActionType
   | GET_REGISTRATION_V2_REGISTER_BANK_ACCOUNT_STATUS
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(mkHttpInstancesForEnum ''FleetType)
 
 $(Data.Singletons.TH.genSingletons [''RegistrationV2UserActionType])

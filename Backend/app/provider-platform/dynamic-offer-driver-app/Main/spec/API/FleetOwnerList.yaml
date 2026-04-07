@@ -4,7 +4,6 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   FleetType: Domain.Types.FleetOwnerInformation
   Address: Kernel.External.Payment.Stripe.Types
-
 module: FleetOwnerList
 
 types:
@@ -20,6 +19,7 @@ types:
     - isEligibleForSubscription: Bool
     - address: Maybe Address
     - fleetName: Maybe Text
+    - email: Maybe Text
     - mobileNumber: Maybe Text
 
 apis:
