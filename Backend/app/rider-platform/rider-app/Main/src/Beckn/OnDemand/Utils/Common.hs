@@ -152,7 +152,7 @@ castVehicleVariant = \case
   VehVar.VIP_OFFICER -> (show Enums.CAB, "VIP_OFFICER")
   VehVar.AC_PRIORITY -> (show Enums.CAB, "AC_PRIORITY")
   VehVar.BIKE_PLUS -> (show Enums.TWO_WHEELER, "BIKE_PLUS")
-  VehVar.E_RICKSHAW -> (show Enums.AUTO_RICKSHAW, "E_RICKSHAW")
+  VehVar.E_RICKSHAW -> (show Enums.TOTO, "E_RICKSHAW")
   VehVar.AUTO_LITE -> (show Enums.AUTO_RICKSHAW, "AUTO_LITE")
   VehVar.PINK_AUTO -> (show Enums.AUTO_RICKSHAW, "PINK_AUTO")
 
@@ -193,6 +193,7 @@ parseVehicleVariant mbCategory mbVariant =
     (Just "TWO_WHEELER", Just "BIKE_PLUS") -> Just VehVar.BIKE_PLUS
     (Just "MOTORCYCLE", Just "BIKE_PLUS") -> Just VehVar.BIKE_PLUS
     (Just "AUTO_RICKSHAW", Just "E_RICKSHAW") -> Just VehVar.E_RICKSHAW
+    (Just "TOTO", Just "E_RICKSHAW") -> Just VehVar.E_RICKSHAW
     (Just "AUTO_RICKSHAW", Just "AUTO_LITE") -> Just VehVar.AUTO_LITE
     (Just "AUTO_RICKSHAW", Just "PINK_AUTO") -> Just VehVar.PINK_AUTO
     _ -> Nothing

@@ -95,6 +95,7 @@ import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.TollsDetector
 import qualified SharedLogic.Type as SLT
+import qualified SharedLogic.VehicleServiceTierAreaRestriction as VSTAR
 import Storage.Beam.Yudhishthira ()
 import Storage.Cac.DriverPoolConfig as CDP
 import qualified Storage.Cac.FarePolicy as QFPolicy
@@ -301,6 +302,9 @@ handler ValidatedDSearchReq {..} sReq = do
   configVersionMap <- getConfigVersionMapForStickiness (cast merchantOpCityId)
   (_, mbVersion) <- getAppDynamicLogic (cast merchantOpCityId) LYT.DYNAMIC_PRICING_UNIFIED localTime Nothing Nothing
   allFarePoliciesProduct <- combineFarePoliciesProducts <$> (mapM (\tripCategory -> getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation sReq.fromSpecialLocationId sReq.toSpecialLocationId (Just (TransactionId (Id sReq.transactionId))) fromLocGeohashh toLocGeohash mbDistance mbDuration mbVersion tripCategory configVersionMap) possibleTripOption.tripCategories)
+  let mbAreaForVST =
+        allFarePoliciesProduct.mbPickupDropArea
+          <|> Just allFarePoliciesProduct.area
   mbVehicleServiceTier <- getVehicleServiceTierForMeterRideSearch isMeterRideSearch driverIdForSearch configVersionMap
   let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed mbVehicleServiceTier allFarePoliciesProduct.farePolicies
   now <- getCurrentTime
@@ -349,7 +353,7 @@ handler ValidatedDSearchReq {..} sReq = do
   -- (driverPool, selectedFarePolicies) <- maybe (pure (driverPool', selectedFarePolicies')) (filterFPsForDriverId (driverPool', selectedFarePolicies')) searchReq.driverIdForSearch
   let buildEstimateHelper = buildEstimate merchantId' merchantOpCityId cityCurrency cityDistanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance spcllocationTag specialLocName mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute (length stops) searchReq.estimatedDuration transporterConfig
   let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId' possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration spcllocationTag mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute transporterConfig
-  (estimates', quotes) <- foldrM (\fp acc -> processPolicy buildEstimateHelper buildQuoteHelper fp configVersionMap acc) ([], []) selectedFarePolicies
+  (estimates', quotes) <- foldrM (\fp acc -> processPolicy buildEstimateHelper buildQuoteHelper fp configVersionMap acc mbAreaForVST) ([], []) selectedFarePolicies
 
   let mbAutoMaxFare = find (\est -> est.vehicleServiceTier == AUTO_RICKSHAW) estimates' <&> (.maxFare)
   estimates <-
@@ -383,7 +387,8 @@ handler ValidatedDSearchReq {..} sReq = do
         { farePolicies = concatMap farePolicies products,
           area = maybe SL.Default (.area) $ listToMaybe products,
           specialLocationTag = listToMaybe products >>= (.specialLocationTag),
-          specialLocationName = listToMaybe products >>= (.specialLocationName)
+          specialLocationName = listToMaybe products >>= (.specialLocationName),
+          mbPickupDropArea = listToMaybe products >>= (.mbPickupDropArea)
         }
 
     processPolicy ::
@@ -392,18 +397,24 @@ handler ValidatedDSearchReq {..} sReq = do
       DFP.FullFarePolicy ->
       [LYT.ConfigVersionMap] ->
       ([DEst.Estimate], [DQuote.Quote]) ->
+      Maybe SL.Area ->
       Flow ([DEst.Estimate], [DQuote.Quote])
-    processPolicy buildEstimateHelper buildQuoteHelper fp configVersionMap (estimates, quotes) = do
+    processPolicy buildEstimateHelper buildQuoteHelper fp configVersionMap (estimates, quotes) mbAreaForVST = do
       mbVehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow fp.vehicleServiceTier merchantOpCityId configVersionMap
       -- Resolve domain discount using the correct email domain per billing category
       mbBusinessDiscount <- CQDDC.resolveDomainDiscountPercentage merchantOpCityId sReq.businessEmailDomain SLT.BUSINESS fp.vehicleServiceTier
       mbPersonalDiscount <- CQDDC.resolveDomainDiscountPercentage merchantOpCityId sReq.emailDomain SLT.PERSONAL fp.vehicleServiceTier
       let fp' = fp{DFP.businessDiscountPercentage = mbBusinessDiscount <|> fp.businessDiscountPercentage, DFP.personalDiscountPercentage = mbPersonalDiscount <|> fp.personalDiscountPercentage} :: DFP.FullFarePolicy
       case mbVehicleServiceTierItem of
-        Just vehicleServiceTierItem ->
-          case tripCategoryToPricingPolicy fp'.tripCategory of
-            EstimateBased {..} -> buildEstimateHelper nightShiftOverlapChecking vehicleServiceTierItem fp' >>= \est -> pure (est : estimates, quotes)
-            QuoteBased {..} -> buildQuoteHelper nightShiftOverlapChecking vehicleServiceTierItem fp' >>= \quote -> pure (estimates, quote : quotes)
+        Just vehicleServiceTierItem -> do
+          isAllowed <- VSTAR.isAreaAllowedForVSTMaybe vehicleServiceTierItem mbAreaForVST
+          unless isAllowed $
+            logInfo $ "VST " <> show fp.vehicleServiceTier <> " skipped due to area restrictions for area: " <> show mbAreaForVST
+          if isAllowed
+            then case tripCategoryToPricingPolicy fp'.tripCategory of
+                   EstimateBased {..} -> buildEstimateHelper nightShiftOverlapChecking vehicleServiceTierItem fp' >>= \est -> pure (est : estimates, quotes)
+                   QuoteBased {..} -> buildQuoteHelper nightShiftOverlapChecking vehicleServiceTierItem fp' >>= \quote -> pure (estimates, quote : quotes)
+            else pure (estimates, quotes)
         Nothing -> do
           logError $ "Vehicle service tier not found for " <> show fp'.vehicleServiceTier
           pure (estimates, quotes)
