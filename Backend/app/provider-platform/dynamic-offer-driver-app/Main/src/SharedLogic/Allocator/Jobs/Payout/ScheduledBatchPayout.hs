@@ -67,7 +67,8 @@ sendScheduledBatchPayout ::
     BeamFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasField "fleetCommunicationDispatchTopic" r Text
   ) =>
   Job 'ScheduledBatchPayout ->
   m ExecutionResult
@@ -103,7 +104,8 @@ processCategory ::
     BeamFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasField "fleetCommunicationDispatchTopic" r Text
   ) =>
   DSPC.ScheduledPayoutConfig ->
   ScheduledBatchPayoutJobData ->
@@ -135,7 +137,8 @@ processWalletPayouts ::
     BeamFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasField "fleetCommunicationDispatchTopic" r Text
   ) =>
   DSPC.ScheduledPayoutConfig ->
   ScheduledBatchPayoutJobData ->
@@ -205,7 +208,8 @@ processOneWalletPayout ::
     EsqDBReplicaFlow m r,
     BeamFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text
   ) =>
   DSPC.ScheduledPayoutConfig ->
   DTConf.TransporterConfig ->

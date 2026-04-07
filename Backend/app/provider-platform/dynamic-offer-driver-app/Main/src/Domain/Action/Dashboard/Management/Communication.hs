@@ -14,6 +14,7 @@ module Domain.Action.Dashboard.Management.Communication
     getCommunicationDeliveryStatus,
     getCommunicationRecipients,
     getCommunicationTemplate,
+    postCommunicationMarkRead,
     CommunicationDeliveryDispatchPayload (..),
     processFleetCommunicationDeliveryPayload,
   )
@@ -185,7 +186,8 @@ getCommunicationList merchantShortId _opCity mbListType _mbChannel mbDomain _mbS
       let items = map mkSentListItem comms
       return $ CommAPI.CommunicationListResponse {communications = items, summary = Dashboard.Common.Summary {totalCount = length items, count = length items}}
     CommAPI.LIST_RECEIVED -> do
-      deliveries <- QDelivery.findByRecipientIdAndWebChannel recipientId mbLimit mbOffset
+      let domainFilter = toDomainDomain <$> mbDomain
+      deliveries <- QDelivery.findByRecipientIdAndWebChannelWithDomain recipientId domainFilter mbLimit mbOffset
       items <- mapM mkReceivedListItem deliveries
       return $ CommAPI.CommunicationListResponse {communications = items, summary = Dashboard.Common.Summary {totalCount = length items, count = length items}}
 
@@ -830,11 +832,13 @@ toDomainDomain :: CommAPI.CommunicationDomainType -> DComm.CommunicationDomain
 toDomainDomain CommAPI.COMM_FLEET = DComm.CD_FLEET
 toDomainDomain CommAPI.COMM_RIDE_HAILING = DComm.CD_RIDE_HAILING
 toDomainDomain CommAPI.COMM_GENERAL = DComm.CD_GENERAL
+toDomainDomain CommAPI.COMM_FINANCIAL = DComm.CD_FINANCIAL
 
 fromDomainDomain :: DComm.CommunicationDomain -> CommAPI.CommunicationDomainType
 fromDomainDomain DComm.CD_FLEET = CommAPI.COMM_FLEET
 fromDomainDomain DComm.CD_RIDE_HAILING = CommAPI.COMM_RIDE_HAILING
 fromDomainDomain DComm.CD_GENERAL = CommAPI.COMM_GENERAL
+fromDomainDomain DComm.CD_FINANCIAL = CommAPI.COMM_FINANCIAL
 
 toDomainSenderRole :: CommAPI.CommunicationRoleType -> DComm.CommunicationSenderRole
 toDomainSenderRole CommAPI.ROLE_ADMIN = DComm.SR_ADMIN
@@ -923,6 +927,7 @@ getCommunicationTemplate merchantShortId opCity apiDomain apiChannel = do
           CommAPI.COMM_FLEET -> DMM.FLEET
           CommAPI.COMM_RIDE_HAILING -> DMM.RIDE_HAILING
           CommAPI.COMM_GENERAL -> DMM.GENERAL
+          CommAPI.COMM_FINANCIAL -> DMM.GENERAL
       mmChannel :: DMM.MediaChannel
       mmChannel =
         case apiChannel of
@@ -937,3 +942,24 @@ getCommunicationTemplate merchantShortId opCity apiDomain apiChannel = do
         messageBody = template.message,
         templateName = template.templateName
       }
+
+postCommunicationMarkRead ::
+  Kernel.Types.Id.ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id Dashboard.Common.Communication ->
+  Kernel.Types.Id.Id Dashboard.Common.Person ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postCommunicationMarkRead merchantShortId opCity communicationId personId = do
+  merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let commId = Kernel.Types.Id.cast communicationId
+      recipientId = Kernel.Types.Id.cast @Dashboard.Common.Person @DP.Person personId
+  communication <- QComm.findById commId >>= fromMaybeM (InvalidRequest "Communication not found")
+  when (communication.merchantId /= merchant.id || communication.merchantOperatingCityId /= merchantOpCityId) $
+    throwError (InvalidRequest "Communication does not belong to this merchant/city")
+  mbDelivery <- QDelivery.findByRecipientIdCommunicationIdAndChannel recipientId commId DComm.CH_WEB
+  when (isNothing mbDelivery) $
+    throwError (InvalidRequest "WEB delivery not found for recipient")
+  now <- getCurrentTime
+  QDelivery.updateStatusAndReadAt DDelivery.DS_READ (Just now) recipientId commId DComm.CH_WEB
+  pure Kernel.Types.APISuccess.Success

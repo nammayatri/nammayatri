@@ -59,6 +59,7 @@ import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.Finance.Wallet
+import SharedLogic.FinancialCommunication (FinancialEventType (..), resolveFleetOwner, sendFinancialNotification)
 import SharedLogic.Merchant
 import Storage.Beam.Finance ()
 import Storage.Beam.Payment ()
@@ -248,7 +249,40 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                         if isSuccessStatus payoutStatus
                           then ("Payout Complete", "Your payout of Rs." <> show amount <> " has been successfully settled to your bank account.", FCM.PAYOUT_COMPLETED)
                           else ("Payout Failed", "Your payout of Rs." <> show amount <> " has failed. Please retry or contact support.", FCM.PAYOUT_FAILED)
-                  Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing notificationType notificationTitle notificationMessage person person.deviceToken
+                  mbFleetOwnerId <- resolveFleetOwner driverId
+                  case mbFleetOwnerId of
+                    Nothing ->
+                      Notify.sendNotificationToDriver
+                        person.merchantOperatingCityId
+                        FCM.SHOW
+                        Nothing
+                        notificationType
+                        notificationTitle
+                        notificationMessage
+                        person
+                        person.deviceToken
+                    Just _ ->
+                      if isSuccessStatus payoutStatus
+                        then
+                          sendFinancialNotification
+                            merchantId
+                            merchantOperatingCityId
+                            person
+                            mbFleetOwnerId
+                            FE_PAYOUT_SUCCESS
+                            "Payout Complete"
+                            ("Your payout of Rs." <> show amount <> " has been successfully settled to your bank account.")
+                            Nothing
+                        else
+                          sendFinancialNotification
+                            merchantId
+                            merchantOperatingCityId
+                            person
+                            mbFleetOwnerId
+                            FE_PAYOUT_FAILED
+                            "Payout Failed"
+                            ("Your payout of Rs." <> show amount <> " has failed. Please retry or contact support.")
+                            (Just "Please check your bank details and retry.")
               _ -> pure ()
       pure ()
     IPayout.BadStatusResp -> pure ()

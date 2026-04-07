@@ -10,6 +10,7 @@ module Domain.Action.ProviderPlatform.Management.Communication
     getCommunicationDeliveryStatus,
     getCommunicationRecipients,
     getCommunicationTemplate,
+    postCommunicationMarkRead,
   )
 where
 
@@ -78,3 +79,17 @@ getCommunicationTemplate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merch
 getCommunicationTemplate merchantShortId opCity apiTokenInfo domain channel = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.communicationDSL.getCommunicationTemplate) domain channel
+
+postCommunicationMarkRead :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Communication -> Kernel.Types.Id.Id Dashboard.Common.Person -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postCommunicationMarkRead merchantShortId opCity apiTokenInfo communicationId personId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <-
+    SharedLogic.Transaction.buildTransaction
+      (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+      (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+      (Kernel.Prelude.Just apiTokenInfo)
+      Kernel.Prelude.Nothing
+      Kernel.Prelude.Nothing
+      SharedLogic.Transaction.emptyRequest
+  SharedLogic.Transaction.withTransactionStoring transaction $
+    API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.communicationDSL.postCommunicationMarkRead) communicationId personId

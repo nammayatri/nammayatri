@@ -827,3 +827,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_rider_bl
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN tds_from_email text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN tax_config TYPE json;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_financial_notifications boolean ;

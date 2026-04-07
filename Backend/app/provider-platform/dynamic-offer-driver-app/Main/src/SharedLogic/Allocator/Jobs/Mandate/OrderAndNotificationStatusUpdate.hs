@@ -9,6 +9,7 @@ import qualified Kernel.External.Payment.Interface.Types as PaymentInterface
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id (cast)
 import Kernel.Utils.Common
@@ -33,6 +34,10 @@ notificationAndOrderStatusUpdate ::
     EventStreamFlow m r,
     HasShortDurationRetryCfg r c,
     SchedulerFlow r,
+    JobCreatorEnv r,
+    HasField "schedulerType" r SchedulerType,
+    HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasField "blackListedJobs" r [Text]
   ) =>

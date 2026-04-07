@@ -10,7 +10,7 @@ Communication:
 
   types:
     CommunicationDomain:
-      enum: "CD_FLEET,CD_RIDE_HAILING,CD_GENERAL"
+      enum: "CD_FLEET,CD_RIDE_HAILING,CD_GENERAL,CD_FINANCIAL"
       derive: "HttpInstance"
 
     CommunicationSenderRole:
