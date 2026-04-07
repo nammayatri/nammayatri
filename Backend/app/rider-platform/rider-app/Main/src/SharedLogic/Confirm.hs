@@ -54,6 +54,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified BecknV2.OnDemand.Utils.Common as BecknUtils
 import qualified SharedLogic.DisplayBookingId as DBI
 import SharedLogic.JobScheduler
 import SharedLogic.MerchantPaymentMethod
@@ -448,7 +449,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           recentLocationId = searchRequest.recentLocationId,
           isMultimodalSearch = searchRequest.isMultimodalSearch,
           multimodalSearchRequestId = searchRequest.multimodalSearchRequestId,
-          vehicleCategory = searchRequest.vehicleCategory,
+          vehicleCategory = Just $ fromMaybe (BecknUtils.mapServiceTierToCategory quote.vehicleServiceTierType) searchRequest.vehicleCategory,
           dashboardAgentId,
           requiresPaymentBeforeConfirm,
           -- Commission is calculated on BPP side (requires fare policy config).

@@ -37,6 +37,7 @@ import Domain.Types.LocationAddress (LocationAddress (..))
 -- import qualified Domain.Types.Ride as DRide
 -- import qualified Domain.Types.ServiceTierType as DSTT
 
+import qualified BecknV2.OnDemand.Utils.Common as BecknUtils
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.PartnerInvoiceDataLog as DPIL
 import qualified Domain.Types.Person as DP
@@ -176,7 +177,7 @@ buildInvoiceData person booking bookingAPIEntity mbEmail mbMobile = do
             PBSAPI.InvoiceItem
               { itemId = ride.shortRideId.getShortId,
                 itemName = "Ride",
-                bookingType = bookingAPIEntity.vehicleCategory,
+                bookingType = bookingAPIEntity.vehicleCategory <|> Just (BecknUtils.mapServiceTierToCategory bookingAPIEntity.vehicleServiceTierType),
                 bookingClass = bookingAPIEntity.vehicleServiceTierType,
                 provider = provider,
                 providerCode = ride.vehicleNumber,
@@ -386,7 +387,7 @@ buildBookingItem _person bookingAPIEntity = do
           PBSAPI.BookingStatementItem
             { bookingId = bookingAPIEntity.id,
               bookingDatetime = bookingDatetime,
-              bookingType = bookingAPIEntity.vehicleCategory,
+              bookingType = bookingAPIEntity.vehicleCategory <|> Just (BecknUtils.mapServiceTierToCategory bookingAPIEntity.vehicleServiceTierType),
               provider = provider,
               providerCode = providerCode,
               paymentAmount = paymentAmount,
