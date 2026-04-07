@@ -352,8 +352,8 @@ getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mbMobileNumber mbMobil
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   mbPersonIdFromWallet <- forM mbWalletId $ \walletId -> do
     account <- QFinanceAccount.findById (Id walletId) >>= fromMaybeM (InvalidRequest $ "Wallet account not found: " <> walletId)
-    unless (account.counterpartyType == Just FinanceAccount.DRIVER) $
-      throwError (InvalidRequest $ "WalletId does not belong to a DRIVER account: " <> walletId)
+    unless (account.counterpartyType == Just FinanceAccount.DRIVER && account.accountType == FinanceAccount.Liability) $
+      throwError (InvalidRequest $ "WalletId does not belong to a DRIVER Liability account: " <> walletId)
     counterpartyId <- fromMaybeM (InvalidRequest $ "Wallet account missing counterpartyId: " <> walletId) account.counterpartyId
     pure (Id counterpartyId)
 

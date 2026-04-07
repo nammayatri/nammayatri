@@ -557,13 +557,12 @@ getDriverFleetOperatorInfo merchantShortId opCity apiTokenInfo mbMobileCountryCo
     throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"personId\", \"walletId\" is required"
   when (isJust mbMobileCountryCode && isNothing mbMobileNumber) $
     throwError $ InvalidRequest "\"mobileCountryCode\" can be used only with \"mobileNumber\""
-  mbPerson <- case (mbPersonId, mbMobileNumber) of
-    (Just pid, _) -> Just <$> (QP.findById (Id pid) >>= fromMaybeM (PersonNotFound pid))
-    (_, Just mobileNumber) -> do
-      let mobileCountryCode = fromMaybe "+91" mbMobileCountryCode
-      Just <$> (QP.findByMobileNumber mobileNumber mobileCountryCode >>= fromMaybeM (PersonNotFound mobileNumber))
-    _ -> pure Nothing
-  res <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetOperatorInfo) mbMobileCountryCode mbMobileNumber mbPersonId mbWalletId
+  let normalizedMobileCountryCode =
+        mbMobileCountryCode <&> \countryCode ->
+          let stripped = strip countryCode
+           in if Data.Text.isPrefixOf "+" stripped then stripped else "+" <> stripped
+  res <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetOperatorInfo) normalizedMobileCountryCode mbMobileNumber mbPersonId mbWalletId
+  mbPerson <- QP.findById (Id res.id)
 
   pure
     res {Common.approvedBy = (mbPerson >>= (.approvedBy) <&> getId) <|> res.approvedBy}

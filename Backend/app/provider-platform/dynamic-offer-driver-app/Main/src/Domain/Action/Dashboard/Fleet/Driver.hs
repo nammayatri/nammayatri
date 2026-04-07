@@ -174,6 +174,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
+import qualified Lib.Finance.Domain.Types.Account as FinanceAccount
 import qualified Lib.Finance.Storage.Queries.Account as QFinanceAccount
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Booking as SBooking
@@ -2067,7 +2068,7 @@ getDriverFleetOperatorInfo merchantShortId opCity mbMobileCountryCode mbMobileNu
       mobileNumberHash <- getDbHash mobileNumber
       person <-
         QPerson.findByMobileNumberAndMerchantAndRoles
-          (fromMaybe "+91" mbMobileCountryCode)
+          (fromMaybe "+91" $ DCommon.appendPlusInMobileCountryCode mbMobileCountryCode)
           mobileNumberHash
           merchant.id
           [DP.FLEET_OWNER, DP.OPERATOR]
@@ -2075,8 +2076,8 @@ getDriverFleetOperatorInfo merchantShortId opCity mbMobileCountryCode mbMobileNu
       pure person.id.getId
     (Nothing, Nothing, Just walletId) -> do
       account <- QFinanceAccount.findById (Id walletId) >>= fromMaybeM (InvalidRequest $ "Wallet account not found: " <> walletId)
-      unless (account.counterpartyType == Just FLEET_OWNER) $
-        throwError (InvalidRequest $ "WalletId does not belong to a FLEET_OWNER account: " <> walletId)
+      unless (account.counterpartyType == Just FLEET_OWNER && account.accountType == FinanceAccount.Liability) $
+        throwError (InvalidRequest $ "WalletId does not belong to a FLEET_OWNER Liability account: " <> walletId)
       counterpartyId <- fromMaybeM (InvalidRequest $ "Wallet account missing counterpartyId: " <> walletId) account.counterpartyId
       pure counterpartyId
     _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"personId\", \"walletId\" is required"
