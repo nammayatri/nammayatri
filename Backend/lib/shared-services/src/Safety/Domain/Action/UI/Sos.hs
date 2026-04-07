@@ -386,12 +386,20 @@ createNonRideSos ::
   Maybe UTCTime -> -- trackingExpiresAt
   Maybe Text -> -- externalReferenceId
   DSos.SosType ->
+  DSos.SosState ->
   m DSos.Sos
-createNonRideSos personId mbMerchantId mbMerchantOperatingCityId mbTrackingExpiresAt mbExternalReferenceId flow = do
+createNonRideSos personId mbMerchantId mbMerchantOperatingCityId mbTrackingExpiresAt mbExternalReferenceId flow state = do
   -- Only one active SOS per person: reuse existing active if any
   mbActive <- findActiveSosByPersonId personId
   case mbActive of
-    Just active -> return active
+    Just active ->
+      if active.sosState /= Just state
+        then do
+          now <- getCurrentTime
+          let updated = active { DSos.sosState = Just state, DSos.updatedAt = now }
+          void $ QSos.updateByPrimaryKey updated
+          return updated
+        else return active
     Nothing -> do
       now <- getCurrentTime
       pid <- generateGUID
@@ -408,7 +416,7 @@ createNonRideSos personId mbMerchantId mbMerchantOperatingCityId mbTrackingExpir
                 merchantOperatingCityId = mbMerchantOperatingCityId,
                 trackingExpiresAt = mbTrackingExpiresAt,
                 entityType = Just DSos.NonRide,
-                sosState = Just DSos.LiveTracking,
+                sosState = Just state,
                 createdAt = now,
                 updatedAt = now,
                 externalReferenceId = mbExternalReferenceId,
@@ -473,7 +481,7 @@ startSosTracking mbSosId personId mbMerchantId mbMerchantOperatingCityId trackin
       return sosId
     Nothing -> do
       -- Create new SOS for tracking
-      newSos <- createNonRideSos personId mbMerchantId mbMerchantOperatingCityId (Just trackingExpiresAt) mbExternalReferenceId flow
+      newSos <- createNonRideSos personId mbMerchantId mbMerchantOperatingCityId (Just trackingExpiresAt) mbExternalReferenceId flow DSos.LiveTracking
       return newSos.id
 
 -- | Update SOS state and tracking expiration
@@ -487,8 +495,9 @@ updateSosStateWithTracking ::
   Id Common.Person ->
   DSos.SosState ->
   Maybe UTCTime -> -- mbTrackingExpiresAt
+  Maybe Text -> -- mbTicketId
   m DSos.Sos
-updateSosStateWithTracking sos personId newState mbTrackingExpiresAt = do
+updateSosStateWithTracking sos personId newState mbTrackingExpiresAt mbTicketId = do
   -- Validate personId, entityType, and status
 
   unless (sos.personId == personId) $
@@ -504,6 +513,7 @@ updateSosStateWithTracking sos personId newState mbTrackingExpiresAt = do
   let updatedSos =
         sos{DSos.sosState = Just newState,
             DSos.trackingExpiresAt = mbTrackingExpiresAt <|> sos.trackingExpiresAt,
+            DSos.ticketId = mbTicketId <|> sos.ticketId,
             DSos.updatedAt = now
            }
   void $ QSos.updateByPrimaryKey updatedSos
@@ -521,8 +531,9 @@ updateSosStateWithAutoExpiry ::
   Id Common.Person ->
   DSos.Sos ->
   DSos.SosState ->
+  Maybe Text -> -- mbTicketId
   m DSos.Sos
-updateSosStateWithAutoExpiry personId sosData newState = do
+updateSosStateWithAutoExpiry personId sosData newState mbTicketId = do
   -- Calculate expiry time based on state transition
   let oldState = sosData.sosState
   mbExpiryTime <- case (oldState, newState) of
@@ -535,5 +546,5 @@ updateSosStateWithAutoExpiry personId sosData newState = do
       -- For other transitions, don't set expiry (use existing or None)
       pure Nothing
 
-  -- Call the base function with calculated expiry
-  updateSosStateWithTracking sosData personId newState mbExpiryTime
+  -- Call the base function with calculated expiry and ticketId
+  updateSosStateWithTracking sosData personId newState mbExpiryTime mbTicketId
