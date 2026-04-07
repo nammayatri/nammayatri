@@ -71,13 +71,14 @@ createInvoice input entryIds = do
   invoiceNum <- generateInvoiceNumber input.merchantShortId purposeAbbr typePayment now dbFallback
 
   -- Calculate totals from line items
-  -- subtotal: excludes external charges (toll, parking) and tax line items
+  -- subtotal: excludes external charges (toll, parking), tax, and tips — represents taxable value
   -- totalAmount: sum of all line items (what rider pays)
   let lineItemsJson = Aeson.toJSON input.lineItems
       totalAmount = sum $ map (.lineTotal) input.lineItems
       externalTotal = sum $ map (.lineTotal) $ filter (.isExternalCharge) input.lineItems
       taxTotal = sum $ map (.lineTotal) $ filter (\li -> li.description == "Tax") input.lineItems
-      subtotal = totalAmount - externalTotal - taxTotal
+      tipsTotal = sum $ map (.lineTotal) $ filter (\li -> li.description == "Tips") input.lineItems
+      subtotal = totalAmount - externalTotal - taxTotal - tipsTotal
   let invoice =
         Invoice
           { id = Id invoiceId,
@@ -143,7 +144,7 @@ createInvoice input entryIds = do
                 IndirectTaxInput
                   { transactionType = txnType,
                     referenceId = entry.referenceId,
-                    taxableValue = totalAmount - entry.amount - extCharges,
+                    taxableValue = totalAmount - entry.amount - extCharges - tipsTotal,
                     totalTaxAmount = entry.amount,
                     gstBreakdown = input.gstBreakdown,
                     taxCreditType = Output,

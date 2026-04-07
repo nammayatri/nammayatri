@@ -88,11 +88,12 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
       let mbTaxTxn = listToMaybe indirectTaxTxns
 
       -- Point query: PaymentTransaction by payment_order_id (if present)
-      mbPaymentMethod <- case invoice.paymentOrderId of
+      (mbPaymentMethod, mbCardLastFourDigits) <- case invoice.paymentOrderId of
         Just orderId -> do
           txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
-          pure $ listToMaybe txns >>= (.paymentMethod)
-        Nothing -> pure Nothing
+          let mbTxn = listToMaybe txns
+          pure (mbTxn >>= (.paymentMethod), mbTxn >>= (.cardLastFourDigits))
+        Nothing -> pure (Nothing, Nothing)
 
       -- For SubscriptionPurchase invoices, look up totalCredit from SubscriptionPurchase
       mbTotalCredit <- case invoice.invoiceType of
@@ -136,7 +137,8 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
             -- VAT integration: new generic tax fields from indirect_tax_transaction
             taxRate = mbTaxTxn >>= (.taxRate),
             issuedToTaxNo = mbTaxTxn >>= (.issuedToTaxNo),
-            issuedByTaxNo = mbTaxTxn >>= (.issuedByTaxNo)
+            issuedByTaxNo = mbTaxTxn >>= (.issuedByTaxNo),
+            cardLastFourDigits = mbCardLastFourDigits
           }
 
     mkComponentRate getAmount txn = do

@@ -13,7 +13,8 @@ import Servant
 import Tools.Auth
 
 data FinanceInvoiceItem = FinanceInvoiceItem
-  { cgstAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+  { cardLastFourDigits :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cgstAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cgstRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     gstRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     gstinOfParty :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

@@ -90,7 +90,8 @@ data InvoiceListItem = InvoiceListItem
     generatedAt :: Kernel.Prelude.UTCTime,
     taxRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     issuedToTaxNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    issuedByTaxNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    issuedByTaxNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cardLastFourDigits :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

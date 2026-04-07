@@ -438,12 +438,13 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
       -- Extract ride_id and subscription_id from ledger entries
       let (rideIds, subscriptionIds) = foldr extractIds ([], []) (catMaybes ledgerEntries)
 
-      -- Get payment method from payment_transaction via invoice.paymentOrderId
-      mbPaymentMethod <- case invoice.paymentOrderId of
+      -- Get payment method and card details from payment_transaction via invoice.paymentOrderId
+      (mbPaymentMethod, mbCardLastFourDigits) <- case invoice.paymentOrderId of
         Just orderId -> do
           txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
-          pure $ listToMaybe txns >>= (.paymentMethod)
-        Nothing -> pure Nothing
+          let mbTxn = listToMaybe txns
+          pure (mbTxn >>= (.paymentMethod), mbTxn >>= (.cardLastFourDigits))
+        Nothing -> pure (Nothing, Nothing)
 
       pure $
         API.InvoiceListItem
@@ -481,7 +482,8 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
             generatedAt = invoice.createdAt,
             taxRate = mbTaxRate,
             issuedToTaxNo = mbIssuedToTaxNo,
-            issuedByTaxNo = mbIssuedByTaxNo
+            issuedByTaxNo = mbIssuedByTaxNo,
+            cardLastFourDigits = mbCardLastFourDigits
           }
 
     extractIds :: LedgerEntry.LedgerEntry -> ([Text], [Text]) -> ([Text], [Text])

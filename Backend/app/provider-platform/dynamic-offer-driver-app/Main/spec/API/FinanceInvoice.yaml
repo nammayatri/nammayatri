@@ -38,6 +38,7 @@ types:
     taxRate: Maybe Double
     issuedToTaxNo: Maybe Text
     issuedByTaxNo: Maybe Text
+    cardLastFourDigits: Maybe Text
   FinanceInvoiceListRes:
     invoices: "[FinanceInvoiceItem]"
     totalItems: Int
