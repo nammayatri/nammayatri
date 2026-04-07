@@ -1,0 +1,490 @@
+Reconciliation Testing Implementation Context
+
+Purpose
+- This file is the build context for implementing reconciliation testing in the local test dashboard.
+- It consolidates the final agreed direction, actual table shapes observed from sample data, dependency resolution, and the implementation sequence.
+
+Core Decisions
+- Reuse the existing reconciliation scheduler trigger API.
+- Do not create a second reconciliation trigger mechanism inside the test tool.
+- Use the context API for local DB-backed helper endpoints:
+  - readiness checks
+  - finance verification
+  - reconciliation result reads
+  - job status polling
+  - local settlement seeding
+- Build one generic reconciliation flow in the dashboard, parameterized by reconciliation type.
+- Keep ride/subscription-based reconciliation product-native.
+- Replace SFTP/settlement-ingestion dependency with local seed data for PG-based reconciliation.
+
+Provider Dashboard Trigger Config
+- provider-dashboard runs locally on:
+  - http://localhost:8018
+- dashboard scheduler trigger path:
+  - /bpp/driver-offer/{merchantShortId}/{city}/merchant/scheduler/trigger
+- scheduler trigger payload:
+  - scheduledAt
+  - jobName = ReconciliationTrigger
+  - jobData = JSON string containing merchantId, merchantOperatingCityId, startTime, endTime, reconciliationType
+- dashboard auth header:
+  - token
+- the token for dashboard trigger mode must be:
+  - JUSPAY_ADMIN role token
+- it must not use:
+  - driver registration token
+  - driverOfferBpp service token
+- context-api env vars:
+  - RECON_TRIGGER_API_BASE_URL=http://localhost:8018
+  - RECON_TRIGGER_API_TOKEN=<optional override; otherwise resolved from atlas_bpp_dashboard.registration_token>
+- optional override:
+  - RECON_TRIGGER_API_URL can be set to a fully qualified trigger URL if route resolution should be bypassed
+
+Supported Reconciliation Types
+- DSR_VS_LEDGER
+- DSR_VS_SUBSCRIPTION
+- DSSR_VS_SUBSCRIPTION
+- PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION
+- PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST
+
+What We Learned From Real Sample Data
+
+1. Scheduler jobs
+- scheduler_job.job_type = Reconciliation
+- scheduler_job.job_data is JSON text with:
+  - reconciliationType
+  - merchantId
+  - merchantOperatingCityId
+  - startTime
+  - endTime
+- job status values seen:
+  - Pending
+  - Completed
+- sample merchant_id:
+  - 840327a8-f17c-4d7c-8199-a583cfaadc5f
+- sample merchant_operating_city_id:
+  - db1c62db-01ba-4cbf-9cce-ede8d2e1361e
+
+2. Reconciliation summary/results
+- finance_reconciliation_summary is the aggregate output.
+- finance_reconciliation_entry is the row-level output.
+- statuses observed in entries:
+  - MATCHED
+  - HIGHER_IN_TARGET
+  - MISSING_IN_TARGET
+- mismatch_reason is useful enough to show directly in the UI.
+
+3. PG payment settlement reconciliation
+- actual table name:
+  - atlas_driver_offer_bpp.pg_payment_settlement_report
+- valid matching shape observed:
+  - settlement row id: psr-006
+  - reference_id = subscription_purchase.id
+  - reference_type = SUBSCRIPTION_PURCHASE
+  - txn_status = SUCCESS
+  - txn_type = ORDER
+- sample matched join:
+  - pg_payment_settlement_report.reference_id = 8e517d77-824a-47e9-a585-f4405be06c6c
+  - subscription_purchase.id = 8e517d77-824a-47e9-a585-f4405be06c6c
+
+4. Subscription purchase shape used by PG payment recon
+- actual table name:
+  - atlas_driver_offer_bpp.subscription_purchase
+- relevant columns observed:
+  - id
+  - owner_id
+  - owner_type
+  - plan_id
+  - payment_order_id
+  - plan_fee
+  - plan_ride_credit
+  - purchase_timestamp
+  - status
+  - service_name
+  - finance_invoice_id
+  - reconciliation_status
+  - merchant_id
+  - merchant_operating_city_id
+
+5. PG payout settlement reconciliation
+- actual settlement table name:
+  - atlas_driver_offer_bpp.pg_payout_settlement_report
+- actual source table name:
+  - payout_request
+- current sample dataset has no rows for payout settlement.
+- schema is known, but production-shaped fixture design still needs at least one real sample row.
+
+UI Product Direction
+
+Build a single generic Reconciliation flow with:
+- reconciliation type selector
+- date range selector
+- prerequisites panel
+- readiness status
+- trigger button
+- poll status step
+- verify results step
+
+Readiness Status Values
+- READY
+- PARTIALLY_READY
+- BLOCKED
+
+Prerequisite Logic Per Reconciliation Type
+
+DSR_VS_LEDGER
+- ledger writes enabled
+- completed rides exist in date window
+- cancelled rides exist in date window
+- booking/ledger rows present
+
+DSSR_VS_SUBSCRIPTION
+- active subscription purchases exist
+- subscription credit ledger rows exist
+- payment for subscription has been charged
+
+DSR_VS_SUBSCRIPTION
+- active subscription purchases exist
+- completed rides linked to subscription usage exist
+- subscription debit ledger rows exist
+
+PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION
+- local mode:
+  - settlement rows exist in pg_payment_settlement_report
+  - rows reference real local subscription_purchase ids
+- live mode:
+  - would depend on settlement ingestion
+- for local dashboard work, default to local seeded mode
+
+PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST
+- local mode:
+  - payout settlement rows exist
+  - rows reference real payout_request ids
+- live mode:
+  - would depend on settlement ingestion
+- implementation should be blocked on one real payout sample row before finalizing canonical fixture
+
+Context API Scope
+
+Add read endpoints for:
+- GET /api/finance/recon-summaries
+- GET /api/finance/recon-entries
+- GET /api/finance/job-status
+- GET /api/finance/readiness
+- GET /api/finance/subscription-purchases
+- GET /api/finance/ledger-entries
+- GET /api/finance/invoices
+
+Add seed endpoints for:
+- POST /api/finance/seed-payment-settlement
+- POST /api/finance/seed-payout-settlement
+
+Do not add:
+- a second direct scheduler insertion endpoint if the existing reconciliation trigger API is available and usable
+
+Dashboard Flow Model
+
+Flow: reconciliation-flow
+Node order:
+- prereq-check
+- trigger-recon
+- poll-job
+- verify-results
+
+Node Behavior
+
+prereq-check
+- call readiness endpoint with:
+  - reconciliationType
+  - merchantId
+  - merchantOperatingCityId
+  - startTime
+  - endTime
+- render:
+  - status
+  - checklist
+  - counts
+  - blocking reasons
+
+trigger-recon
+- call the existing reconciliation scheduler trigger API
+- save:
+  - reconJobId if returned directly, otherwise rely on latest job-status lookup by date/type
+  - reconType
+  - date range
+
+poll-job
+- call /api/finance/job-status
+- poll until:
+  - Completed
+  - or timeout
+
+verify-results
+- query finance_reconciliation_summary by date range and type
+- query finance_reconciliation_entry by summary id
+- display:
+  - summary status
+  - total discrepancies
+  - matched records
+  - match rate
+  - source total
+  - target total
+  - variance amount
+  - top row-level mismatches
+
+Verification UX
+
+Summary panel fields:
+- reconciliation_type
+- status
+- total_discrepancies
+- matched_records
+- match_rate
+- source_total
+- target_total
+- variance_amount
+- created_at
+
+Entry table fields:
+- booking_id
+- dco_id
+- finance_component
+- expected_dsr_value
+- actual_ledger_value
+- variance
+- recon_status
+- mismatch_reason
+- status
+- mode
+- source_id
+- target_id
+- settlement_id
+- rrn
+- settlement_mode
+
+Actual Table Names To Use
+- atlas_driver_offer_bpp.subscription_purchase
+- atlas_driver_offer_bpp.pg_payment_settlement_report
+- atlas_driver_offer_bpp.pg_payout_settlement_report
+- atlas_driver_offer_bpp.scheduler_job
+- atlas_driver_offer_bpp.finance_reconciliation_summary
+- atlas_driver_offer_bpp.finance_reconciliation_entry
+- atlas_driver_offer_bpp.finance_ledger_entry
+- atlas_driver_offer_bpp.finance_invoice
+- payout_request
+
+Important Observed Sample Rows
+
+PG payment settlement sample row
+- id: psr-006
+- order_id: fGMUSKxYxc
+- txn_id: nammayatri-fGMUSKxYxc-1
+- rrn: RRN623456789
+- utr: UTR787654321
+- bank_id: ICIC0001234
+- txn_type: ORDER
+- txn_status: SUCCESS
+- txn_date: 2026-03-13T03:45:00Z
+- txn_amount: 1.0
+- pg_base_fee: 0.5
+- pg_tax: 0.2
+- settlement_amount: 0.3
+- currency: INR
+- payment_gateway: BILLDESK
+- pg_approval_code: APR006
+- payment_method: UPI
+- payment_method_sub_type: UPI
+- settlement_type: CREDIT
+- settlement_mode: NET
+- settlement_id: SETTLE-2026-03-13-001
+- settlement_date: 2026-03-14T00:30:00Z
+- reference_id: 8e517d77-824a-47e9-a585-f4405be06c6c
+- reference_type: SUBSCRIPTION_PURCHASE
+- recon_status: PENDING
+- merchant_id: 840327a8-f17c-4d7c-8199-a583cfaadc5f
+- merchant_operating_city_id: db1c62db-01ba-4cbf-9cce-ede8d2e1361e
+
+Matching subscription_purchase sample row
+- id: 8e517d77-824a-47e9-a585-f4405be06c6c
+- owner_id: 7147cb5c-c008-4743-84e8-8f6cc24a7a0f
+- owner_type: FLEET_OWNER
+- plan_id: 6a823cd6-089d-4170-bde3-7b55617a1546
+- payment_order_id: 702657de-8292-4eed-8efb-3c470b6f14b3
+- plan_fee: 1.0
+- plan_ride_credit: 500.0
+- purchase_timestamp: 2026-03-13T14:26:31.990353Z
+- status: ACTIVE
+- service_name: PREPAID_SUBSCRIPTION
+- finance_invoice_id: b9b9bbf3-6454-47c1-bc09-9c8c2ade0a59
+- reconciliation_status: {"DSSRvsSubscription":"MATCHED","PgPaymentVsSubscription":"MATCHED"}
+- merchant_id: 840327a8-f17c-4d7c-8199-a583cfaadc5f
+- merchant_operating_city_id: db1c62db-01ba-4cbf-9cce-ede8d2e1361e
+
+Seed Strategy
+
+PG payment settlement
+- implement now
+- canonical local fixture should follow the real sample shape above
+- seed payload should accept:
+  - subscriptionPurchaseId
+  - optional settlementId
+  - optional txnDate
+  - optional rrn
+  - optional paymentGateway
+  - optional paymentMethod
+- default values should create a valid SUCCESS + ORDER row that will be picked by reconciliation
+
+Required seed behavior:
+- lookup subscription_purchase by id
+- copy merchant_id and merchant_operating_city_id from subscription
+- set reference_id = subscription_purchase.id
+- set reference_type = SUBSCRIPTION_PURCHASE
+- set txn_amount = subscription.plan_fee
+- set txn_status = SUCCESS
+- set txn_type = ORDER
+- set txn_date on same UTC day as subscription.purchase_timestamp
+- set recon_status = PENDING
+
+PG payout settlement
+- do not finalize canonical fixture yet
+- add endpoint shell only if needed
+- wait for one real sample row before declaring the local seed payload stable
+
+Implementation Sequence
+
+Phase 1: Context API
+- add finance read endpoints
+- add readiness endpoint
+- add job status endpoint
+- add payment settlement seed endpoint
+- optionally stub payout settlement seed endpoint behind a TODO
+
+Phase 2: Dashboard reconciliation flow
+- add a generic reconciliation flow entry
+- add reconciliation type selector
+- add date range controls
+- add readiness display
+- wire trigger/poll/verify steps
+
+Phase 3: Subscription flow support
+- add subscription purchase flow if not already present
+- plan list
+- subscribe
+- payment charged polling
+- verify ACTIVE purchase
+- verify ledger/invoice generation
+
+Phase 4: PG payment local mode
+- seed pg_payment_settlement_report row
+- trigger PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION
+- verify summary and row-level result
+
+Phase 5: End-to-end composite flow
+- subscribe
+- complete ride and cancel some rides
+- trigger DSR_VS_LEDGER
+- trigger DSSR_VS_SUBSCRIPTION
+- trigger DSR_VS_SUBSCRIPTION
+- optionally run PG payment settlement recon after seeding
+
+Phase 6: PG payout local mode
+- blocked on real payout settlement sample data
+
+Expected Risks
+
+DSR_VS_LEDGER
+- may produce HIGHER_IN_TARGET on floating-point equality edge cases
+- cancellation cases may produce MISSING_IN_TARGET depending on ledger path completeness
+
+DSR_VS_SUBSCRIPTION
+- actual entries may still show HIGHER_IN_TARGET on near-zero variance due to rounding
+
+PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION
+- join requires reference_id to match subscription_purchase.id exactly
+- status/date constraints matter:
+  - settlement txn_status must be SUCCESS
+  - subscription status must be ACTIVE, EXPIRED, or EXHAUSTED
+  - reconciliation code checks txnDate and purchaseTimestamp on the same UTC day
+
+PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST
+- join requires payout_request_id to match payout_request.id exactly
+- payout_request.status must be CREDITED
+- reconciliation code checks txnDate and payout_request.createdAt on the same UTC day
+
+Current Blockers
+- No real pg_payout_settlement_report sample row yet.
+- No payout_request row linked to payout settlement yet.
+
+Files To Modify
+- Backend/dev/test-tool/dashboard/src/App.tsx
+- Backend/dev/test-tool/dashboard/src/components/RideFlowTree.tsx
+- Backend/dev/test-tool/dashboard/src/types/index.ts
+- Backend/dev/test-tool/dashboard/src/services/api.ts
+- Backend/dev/test-tool/context-api/server.py
+- optionally:
+  - Backend/dev/mock-servers/services/... only if subscription payment mocking needs extension
+
+Definition Of Done
+- User can pick a reconciliation type in the local dashboard.
+- Dashboard explains the prerequisites for the selected type.
+- Dashboard can check readiness before trigger.
+- Dashboard can trigger the real reconciliation job through the existing API.
+- Dashboard can poll job completion.
+- Dashboard can show summary and row-level reconciliation output.
+- PG payment settlement recon can run in local seeded mode using real local subscription data.
+- PG payout settlement recon is either fully implemented from real sample data or clearly marked pending fixture support.
+
+
+================================================================================
+RECONCILIATION PLAN — Local finance harness, ledger-first flows, dev tooling
+================================================================================
+
+Why this section
+- Finance and reconciliation work should not re-invent small world-setup steps for every feature or bugfix.
+- Local dev already has nix + dhall-backed processes (Postgres, Redis, Kafka, mock services, driver-offer-allocator, producer-exe, provider-dashboard, dynamic-offer-driver-app, etc.); the test-tool should lean on those same configs and URLs.
+- Goal: one place to simulate base flows, call APIs as JUSPAY_ADMIN, and run read-only DB checks.
+
+Generic principle
+- New finance features should add scenario steps or assertions on top of a shared harness, not one-off scripts each time.
+- Smaller flows (rides, subscriptions, cancellations, external payments) are reusable presets that can be run in one go before testing the actual change.
+
+Ledger-first build order (prerequisites + simulation)
+0. Prerequisites
+   - Enable ledger (and related transporter/city flags) for the merchant operating city selected in the test dashboard.
+1. Take rides and check ledgers — validate finance_ledger_entry (and links) for completed ride path.
+2. Purchase subscription and check ledgers — subscription_purchase + subscription credit ledger entries; foundation for DSSR_VS_SUBSCRIPTION without SQL seeding when the real trigger path is used.
+3. Cancel rides and check ledgers — cancellation adjustments vs completed-ride ledger behavior.
+4. External payments and check ledgers — use mock-payment-server (or in-house mock) so payment/order flows update finance as in dev-shaped tests.
+
+Reconciliation tie-in (later)
+- DSSR_VS_SUBSCRIPTION: after (2) + scheduler trigger API (not raw scheduler_job INSERT only), allocator + producer running.
+- DSR_VS_LEDGER: needs (1) and often (3) with data in the job date window.
+- PG settlement recons: closer to (4) and settlement tables; larger scope.
+
+Planned test-tool enhancements (single enhancement PR, slice as needed)
+1. Flow simulation layer
+   - Preset scenarios chained or one-shot; assertions on ledger rows / job status / recon summary where relevant.
+   - Reuse context-api and dashboard flows; avoid duplicate SQL seeding where APIs exist.
+
+2. API test section (mini Postman)
+   - Method, URL, headers, JSON body against local base URLs (from dhall / same ports as nix stack).
+   - Default auth: JUSPAY_ADMIN token (e.g. from atlas_bpp_dashboard.registration_token or documented env), with clear error bodies (4xx/5xx).
+   - Optional: copy as curl; bind merchant/city from current dashboard context.
+
+3. DB query runner
+   - Read-only by default against local Postgres; schemas atlas_driver_offer_bpp (and rider as needed).
+   - Saved snippets for common checks (finance_ledger_entry, subscription_purchase, scheduler_job, finance_reconciliation_summary).
+   - Writes only behind an explicit toggle if ever added.
+
+4. Integration
+   - After a scenario run, suggest queries or pre-fill API panel from last context (merchant, city, time window).
+
+Environment / ops note
+- Processes and ports: see nix services (e.g. Backend/nix/services/nammayatri.nix) and dhall-configs/dev/*.dhall; reconciliation jobs need driver-offer-allocator + producer for Redis-based scheduler, and finance trigger via management API rather than DB-only inserts where possible.
+- RECON_TRIGGER_API_BASE_URL / token env vars for context-api should align with provider-dashboard so trigger-recon uses the real createJobIn path.
+
+Suggested PR slices
+- A: API console (minimal).
+- B: DB runner read-only.
+- C: JUSPAY_ADMIN resolution documented and wired like context-api.
+- D: One demo path: subscription + ledger query + one manual API call.
+- E: Extend this file or a short LOCAL_FINANCE_HARNESS note if the dashboard README needs a pointer.

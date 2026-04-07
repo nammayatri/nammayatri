@@ -265,6 +265,15 @@
 .tree-config-input::placeholder {
   color: #484f58;
 }
+.tree-config-help {
+  padding: 8px 10px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #8b949e;
+  font-size: 12px;
+  line-height: 1.4;
+}
 .tree-checkbox-label {
   display: flex;
   align-items: center;

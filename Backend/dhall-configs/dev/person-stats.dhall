@@ -51,13 +51,13 @@ let hedisClusterCfg =
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let kafkaProducerCfg =
-      { brokers = [ "localhost:29092" ]
+      { brokers = [ "127.0.0.1:29092" ] -- ONLY LOCAL DO NOT RUN IN MASTER PROD
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
 let consumerProperties =
       { groupId = "person-stats-compute"
-      , brockers = [ "localhost:29092" ]
+      , brockers = [ "127.0.0.1:29092" ] -- ONLY LOCAL DO NOT RUN IN MASTER PROD
       , autoCommit = None Integer
       , kafkaCompression = common.kafkaCompression.LZ4
       }

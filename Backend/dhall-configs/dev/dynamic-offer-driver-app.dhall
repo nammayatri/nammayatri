@@ -222,7 +222,7 @@ let cacheConfig = { configsExpTime = +86400 }
 let cacheTranslationConfig = { expTranslationTime = +3600 }
 
 let kafkaProducerCfg =
-      { brokers = [ "localhost:29092" ]
+      { brokers = [ "127.0.0.1:29092" ] -- ONLY LOCAL DO NOT RUN IN MASTER PROD
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
@@ -500,7 +500,7 @@ in  { esqDBCfg
     , kvConfigUpdateFrequency
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
     , schedulerSetName = "Scheduled_Jobs"
-    , schedulerType = common.schedulerType.RedisBased
+    , schedulerType = common.schedulerType.DbBased -- ONLY LOCAL DO NOT RUN IN MASTER PROD
     , ltsCfg = LocationTrackingeServiceConfig
     , modelNamesMap
     , incomingAPIResponseTimeout = +15

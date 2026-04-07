@@ -70,7 +70,7 @@ let cacConfig =
 let kvConfigUpdateFrequency = +10
 
 let kafkaProducerCfg =
-      { brokers = [ "localhost:29092" ]
+      { brokers = [ "127.0.0.1:29092" ] -- ONLY LOCAL DO NOT RUN IN MASTER PROD
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
@@ -103,8 +103,8 @@ in  { hedisCfg
     , schedulerSetName = "Scheduled_Chakras"
     , entryId = "*"
     , reviverInterval = +2
-    , reviveThreshold = +2
-    , schedulerType = common.schedulerType.RedisBased
+    , reviveThreshold = +600     -- ONLY LOCAL DO NOT RUN IN MASTER PROD
+    , schedulerType = common.schedulerType.DbBased     -- ONLY LOCAL DO NOT RUN IN MASTER PROD
     , maxShards = +5
     , producersPerPod = +5
     , metricsPort = +9990
@@ -115,5 +115,5 @@ in  { hedisCfg
     , cacConfig
     , inMemConfig
     , hedisSecondaryClusterCfg
-    , blackListedJobs = [] : List Text
+    , blackListedJobs = [ "Reconciliation" ] : List Text  -- ONLY LOCAL DO NOT RUN IN MASTER PROD
     }

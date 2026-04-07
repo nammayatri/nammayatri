@@ -169,15 +169,26 @@ runSchedulerM schedulerConfig env action = do
           >> L.setOption KafkaConn env.kafkaProducerTools
       )
     flowRt' <- runFlowR flowRt env $ do
+      loadInitialKvConfigs
       fork
         "Fetching Kv configs"
         ( forever $ do
-            handleExceptions $ do
-              kvConfigs <- QSC.findById "kv_configs" >>= pure . decodeFromText' @Tables
-              L.setOption KBT.Tables (fromMaybe KUC.defaultTableData kvConfigs)
+            refreshKvConfigs `catch` refreshExceptionHandler
             threadDelay (env.kvConfigUpdateFrequency * 1000000)
         )
       pure flowRt
     runFlowR flowRt' env action
   where
-    handleExceptions = handle (\(e :: SomeException) -> L.logError ("KV_FETCH_FAILED_ALLOCATOR" :: Text) $ "Error fetching kv configs: " <> show e)
+    refreshKvConfigs = do
+      kvConfigs <- QSC.findById "kv_configs" >>= pure . decodeFromText' @Tables
+      L.setOption KBT.Tables (fromMaybe KUC.defaultTableData kvConfigs)
+
+    loadInitialKvConfigs =
+      refreshKvConfigs `catch` initialLoadExceptionHandler
+
+    initialLoadExceptionHandler (e :: SomeException) = do
+      L.logError ("KV_FETCH_FAILED_ALLOCATOR" :: Text) $ "Error fetching initial kv configs: " <> show e
+      L.setOption KBT.Tables KUC.defaultTableData
+
+    refreshExceptionHandler (e :: SomeException) =
+      L.logError ("KV_FETCH_FAILED_ALLOCATOR" :: Text) $ "Error fetching kv configs: " <> show e

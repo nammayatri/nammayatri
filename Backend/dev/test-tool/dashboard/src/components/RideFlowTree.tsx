@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { StepResult, StepStatus, Step } from '../types';
 import { LocationPreset } from '../api-catalog/types';
+import {
+  getReconciliationTypeOption,
+  isReconciliationType,
+  RECONCILIATION_TYPE_OPTIONS,
+  type ReconciliationType,
+} from '../backendTypes';
 import { getLocationsForCity } from '../mock-data/locations';
 import './RideFlowTree.css';
 
@@ -51,6 +57,12 @@ interface Props {
   onSkipTipChange: (skip: boolean) => void;
   rideEndMode: string;
   onRideEndModeChange: (mode: string) => void;
+  reconType: ReconciliationType;
+  onReconTypeChange: (type: ReconciliationType) => void;
+  reconDate: string;
+  onReconDateChange: (date: string) => void;
+  subscriptionPurchaseId: string;
+  onSubscriptionPurchaseIdChange: (id: string) => void;
   // Actions
   onMakeDriverAvailable: () => void;
   onRunNode: (nodeId: string) => void;
@@ -78,6 +90,8 @@ interface Props {
   onAdminEmailChange?: (email: string) => void;
   adminPassword?: string;
   onAdminPasswordChange?: (password: string) => void;
+  /** Reconciliation flow: which merchant/city API calls use (from context-api recon_harness). */
+  reconHarnessHint?: string;
 }
 
 function statusIcon(status: StepStatus | undefined): string {
@@ -129,6 +143,7 @@ export const RideFlowTree: React.FC<Props> = ({
   captureRideId, onCaptureRideIdChange,
   tipAmount, onTipAmountChange, skipTip, onSkipTipChange,
   rideEndMode, onRideEndModeChange,
+  reconType, onReconTypeChange, reconDate, onReconDateChange, subscriptionPurchaseId, onSubscriptionPurchaseIdChange,
   onMakeDriverAvailable, onRunNode, onRunAll, onStop,
   driverAvailable,
   selectedOutcome: selectedOutcomeProp, onOutcomeChange,
@@ -137,6 +152,7 @@ export const RideFlowTree: React.FC<Props> = ({
   aadhaarNumber, onAadhaarNumberChange, panNumber, onPanNumberChange, gstNumber, onGstNumberChange,
   requiresAdminApproval, onRequiresAdminApprovalChange,
   adminEmail, onAdminEmailChange, adminPassword, onAdminPasswordChange,
+  reconHarnessHint,
 }) => {
   const locations = getLocationsForCity(city);
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({ discovery: true });
@@ -199,6 +215,27 @@ export const RideFlowTree: React.FC<Props> = ({
     ] },
   ];
 
+  const reconNodes: TreeNode[] = [
+    { id: 'prereq-check', title: 'Check Readiness', tag: 'system', steps: [
+        { id: 'recon-readiness', name: 'Check Readiness', method: 'GET', service: 'internal' as const, path: '/placeholder', auth: false },
+    ] },
+    { id: 'seed-payment-settlement', title: 'Seed Payment Settlement', tag: 'system', steps: [
+        { id: 'seed-payment-settlement', name: 'Seed Payment Settlement', method: 'POST', service: 'internal' as const, path: '/placeholder', auth: false },
+    ] },
+    { id: 'trigger-recon', title: 'Trigger Reconciliation', tag: 'system', steps: [
+        { id: 'trigger-recon', name: 'Trigger Reconciliation', method: 'POST', service: 'internal' as const, path: '/placeholder', auth: false },
+    ] },
+    { id: 'poll-job', title: 'Poll Job', tag: 'system', steps: [
+        { id: 'poll-recon-job', name: 'Poll Reconciliation Job', method: 'GET', service: 'internal' as const, path: '/placeholder', auth: false },
+    ] },
+    { id: 'verify-summary', title: 'Verify Summary', tag: 'system', steps: [
+        { id: 'verify-recon-summary', name: 'Verify Reconciliation Summary', method: 'GET', service: 'internal' as const, path: '/placeholder', auth: false },
+    ] },
+    { id: 'verify-entries', title: 'Verify Entries', tag: 'system', steps: [
+        { id: 'verify-recon-entries', name: 'Verify Reconciliation Entries', method: 'GET', service: 'internal' as const, path: '/placeholder', auth: false },
+    ] },
+  ];
+
   const adminApprovalNode: TreeNode = { id: 'fleet-admin-approve', title: 'Admin Approval', tag: 'system', steps: [
       { id: 'admin-login', name: 'Admin Login', method: 'POST', service: 'provider-dashboard', path: '/placeholder', auth: false },
       { id: 'fetch-unverified', name: 'Fetch Unverified Accounts', method: 'GET', service: 'provider-dashboard', path: '/placeholder', auth: true },
@@ -235,7 +272,14 @@ export const RideFlowTree: React.FC<Props> = ({
          ] }]),
   ];
 
-  const nodes = activeFlowId === 'fleet-onboarding' ? fleetNodes : activeFlowId === 'dues-flow' ? duesNodes : rideNodes;
+  const nodes =
+    activeFlowId === 'fleet-onboarding'
+      ? fleetNodes
+      : activeFlowId === 'dues-flow'
+        ? duesNodes
+        : activeFlowId === 'reconciliation-flow'
+          ? reconNodes
+          : rideNodes;
   const showDriverSetup = activeFlowId === 'ride-flow';
 
   const renderLocationSelect = (label: string, value: number, onChange: (idx: number) => void, locs: LocationPreset[]) => (
@@ -412,6 +456,72 @@ export const RideFlowTree: React.FC<Props> = ({
                     placeholder="Enter rideId or auto-detected from Get Dues"
                     value={captureRideId}
                     onChange={e => onCaptureRideIdChange(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {node.id === 'prereq-check' && (
+              <div className="tree-config">
+                <div className="tree-config-field">
+                  <label>Reconciliation Type</label>
+                  <select
+                    value={reconType}
+                    onChange={e => {
+                      const v = e.target.value;
+                      if (isReconciliationType(v)) onReconTypeChange(v);
+                    }}
+                  >
+                    {RECONCILIATION_TYPE_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                  {(() => {
+                    const opt = getReconciliationTypeOption(reconType);
+                    if (!opt?.prerequisites.length) return null;
+                    return (
+                      <ul className="tree-config-prereq" style={{ margin: '8px 0 0', paddingLeft: '1.2rem', fontSize: '0.85rem', opacity: 0.9 }}>
+                        {opt.prerequisites.map((line, i) => (
+                          <li key={i}>{line}</li>
+                        ))}
+                      </ul>
+                    );
+                  })()}
+                </div>
+                <div className="tree-config-field">
+                  <label>Recon Date</label>
+                  <input
+                    className="tree-config-input"
+                    type="date"
+                    value={reconDate}
+                    onChange={e => onReconDateChange(e.target.value)}
+                  />
+                </div>
+                <div className="tree-config-field" style={{ minWidth: 320 }}>
+                  <label>Trigger</label>
+                  <div className="tree-config-help">
+                    {`POST provider-dashboard /bpp/driver-offer/{merchantShortId}/{city}/merchant/scheduler/trigger with jobName=ReconciliationTrigger (production scheduler path).`}
+                  </div>
+                  {reconHarnessHint && (
+                    <div className="tree-config-help" style={{ marginTop: 8 }}>{reconHarnessHint}</div>
+                  )}
+                  <div className="tree-config-help" style={{ marginTop: 8 }}>
+                    Run Check Readiness applies transporter_config (reconciliation enabled + scheduler time), scheduler_job GRANT, Redis TransporterConfig cache flush for that city, then runs readiness queries.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {node.id === 'seed-payment-settlement' && (
+              <div className="tree-config">
+                <div className="tree-config-field">
+                  <label>Subscription Purchase ID</label>
+                  <input
+                    className="tree-config-input"
+                    type="text"
+                    placeholder="Required for PG payment settlement seeding"
+                    value={subscriptionPurchaseId}
+                    onChange={e => onSubscriptionPurchaseIdChange(e.target.value)}
                   />
                 </div>
               </div>

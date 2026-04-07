@@ -50,7 +50,7 @@ let hedisClusterCfg =
 
 let consumerProperties =
       { groupId = "broadcast-messages-compute"
-      , brockers = [ "localhost:29092" ]
+      , brockers = [ "127.0.0.1:29092" ] -- ONLY LOCAL DO NOT RUN IN MASTER PROD
       , autoCommit = None Integer
       , kafkaCompression = common.kafkaCompression.LZ4
       }
