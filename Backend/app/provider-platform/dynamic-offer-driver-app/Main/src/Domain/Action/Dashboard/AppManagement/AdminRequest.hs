@@ -50,7 +50,6 @@ import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDrive
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.FareParameters as QFareParams
-import qualified Storage.Queries.FleetDriverAssociationExtra as QFDAE
 import Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
@@ -89,47 +88,45 @@ postAdminRequestCreate merchantShortId opCity requestorId requestorName req = do
         reqAdjustmentType <- req.adjustmentType & fromMaybeM (InvalidRequest "Adjustment type required for this action type")
         _reqAdjustmentSource <- req.source & fromMaybeM (InvalidRequest "Adjustment source required for this action type")
         reqAmount <- req.amount & fromMaybeM (InvalidRequest "Amount required for this action type")
-        case reqReferenceType of
-          _ | reqReferenceType == SFW.walletReferenceWalletIncentive -> do
-            case req.referenceTable of
-              DAdminRequest.RIDE -> do
-                ride <- QRide.findById (Id @DRide.Ride req.referenceId) >>= fromMaybeM (RideDoesNotExist req.referenceId)
-                unless (reqAmount.currency == ride.currency) $ throwError (InvalidRequest "Invalid currency")
+        adjustmentReferenceType <-
+          castAdjustmentReferenceType reqReferenceType
+            & fromMaybeM (InvalidRequest $ "Supported reference types for this action type: " <> T.intercalate ", " adjustmentReferenceTypes)
+        case adjustmentReferenceType of
+          RideReference WalletIncentive -> do
+            unless (req.referenceTable == DAdminRequest.RIDE) $ throwError (InvalidRequest "Invalid reference table for this action type and reference type")
+            ride <- QRide.findById (Id @DRide.Ride req.referenceId) >>= fromMaybeM (RideDoesNotExist req.referenceId)
+            unless (reqAmount.currency == ride.currency) $ throwError (InvalidRequest "Invalid currency")
+            unless (fromMaybe ride.driverId ride.fleetOwnerId == req.personId) $ throwError (InvalidRequest "Invalid personId")
+            unless (ride.status == DRide.COMPLETED) $ do
+              throwError (RideInvalidStatus "Ride should be COMPLETED")
+            mbLedgerEntry <- listToMaybe . sortOn (Data.Ord.Down . (.createdAt)) <$> QLedgerEntry.findByReference SFW.walletReferenceWalletIncentive req.referenceId
+            ledgerEntry <- mbLedgerEntry & fromMaybeM (InvalidRequest "Ledger entry does not exist")
+            when (reqAdjustmentType == DAdminRequest.Debit && reqAmount.amount > ledgerEntry.amount) $ do
+              throwError (InvalidRequest $ "Could not debit more than incentives amount: " <> show ledgerEntry.amount)
+          BookingReference bookingReferenceType -> do
+            unless (req.referenceTable == DAdminRequest.BOOKING) $ throwError (InvalidRequest "Invalid reference table for this action type and reference type")
+            booking <- QBooking.findById (Id @DBooking.Booking req.referenceId) >>= fromMaybeM (BookingDoesNotExist req.referenceId)
+            unless (reqAmount.currency == booking.currency) $ throwError (InvalidRequest "Invalid currency")
+            case bookingReferenceType of
+              BaseRide -> do
+                unless (booking.status == DBooking.COMPLETED) $ do
+                  throwError (BookingInvalidStatus "Booking should be COMPLETED")
+                ride <- QRide.findOneByBookingId booking.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
                 unless (fromMaybe ride.driverId ride.fleetOwnerId == req.personId) $ throwError (InvalidRequest "Invalid personId")
-                unless (ride.status == DRide.COMPLETED) $ do
-                  throwError (RideInvalidStatus "Ride should be COMPLETED")
-                mbLedgerEntry <- listToMaybe . sortOn (Data.Ord.Down . (.createdAt)) <$> QLedgerEntry.findByReference SFW.walletReferenceWalletIncentive req.referenceId
-                ledgerEntry <- mbLedgerEntry & fromMaybeM (InvalidRequest "Ledger entry does not exist")
-                when (reqAdjustmentType == DAdminRequest.Debit && reqAmount.amount > ledgerEntry.amount) $ do
-                  throwError (InvalidRequest $ "Could not debit more than incentives amount: " <> show ledgerEntry.amount)
-              _ -> throwError (InvalidRequest "Invalid reference table for this action type")
-          _ | reqReferenceType `elem` [SFW.walletReferenceBaseRide, SFW.walletReferenceDriverCancellationCharges, SFW.walletReferenceCustomerCancellationCharges] -> do
-            case req.referenceTable of
-              DAdminRequest.BOOKING -> do
-                booking <- QBooking.findById (Id @DBooking.Booking req.referenceId) >>= fromMaybeM (BookingDoesNotExist req.referenceId)
-                unless (reqAmount.currency == booking.currency) $ throwError (InvalidRequest "Invalid currency")
-                when (reqReferenceType == SFW.walletReferenceBaseRide) do
-                  unless (booking.status == DBooking.COMPLETED) $ do
-                    throwError (BookingInvalidStatus "Booking should be COMPLETED")
-                  ride <- QRide.findOneByBookingId booking.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
-                  unless (fromMaybe ride.driverId ride.fleetOwnerId == req.personId) $ throwError (InvalidRequest "Invalid personId")
-                  when (reqAdjustmentType == DAdminRequest.Debit) $ do
-                    totalFare <- ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
-                    fareParams <- case ride.fareParametersId of
-                      Just fareParametersId | fareParametersId /= booking.fareParams.id -> do
-                        runInReplica $ QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
-                      _ -> pure booking.fareParams
-                    let gstAmount = fromMaybe 0 fareParams.govtCharges
-                        tollAmount = fromMaybe 0 fareParams.tollCharges
-                        parkingAmount = fromMaybe 0 fareParams.parkingCharge
-                        baseFare = totalFare - gstAmount - tollAmount - parkingAmount
-                    when (reqAmount.amount > baseFare) $ do
-                      throwError (InvalidRequest $ "Could not debit more than ride base fare: " <> show baseFare)
-
-                when (reqReferenceType `elem` [SFW.walletReferenceDriverCancellationCharges, SFW.walletReferenceCustomerCancellationCharges]) $
-                  validateCancellationAdjustment transporterConfig reqReferenceType reqAdjustmentType reqAmount.amount req.personId booking
-              _ -> throwError (InvalidRequest "Invalid reference table for this action type and reference type")
-          _ -> throwError (InvalidRequest $ "Supported reference types for this action type: " <> T.intercalate ", " [SFW.walletReferenceBaseRide, SFW.walletReferenceDriverCancellationCharges, SFW.walletReferenceCustomerCancellationCharges, SFW.walletReferenceWalletIncentive])
+                when (reqAdjustmentType == DAdminRequest.Debit) $ do
+                  totalFare <- ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
+                  fareParams <- case ride.fareParametersId of
+                    Just fareParametersId | fareParametersId /= booking.fareParams.id -> do
+                      runInReplica $ QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
+                    _ -> pure booking.fareParams
+                  let gstAmount = fromMaybe 0 fareParams.govtCharges
+                      tollAmount = fromMaybe 0 fareParams.tollCharges
+                      parkingAmount = fromMaybe 0 fareParams.parkingCharge
+                      baseFare = totalFare - gstAmount - tollAmount - parkingAmount
+                  when (reqAmount.amount > baseFare) $ do
+                    throwError (InvalidRequest $ "Could not debit more than ride base fare: " <> show baseFare)
+              DriverCancellationCharges -> validateCancellationAdjustment True transporterConfig reqAdjustmentType reqAmount.amount req.personId booking
+              CustomerCancellationCharges -> validateCancellationAdjustment False transporterConfig reqAdjustmentType reqAmount.amount req.personId booking
         pure (Just reqAmount.amount, Just reqAmount.currency)
       DAdminRequest.FailedPayoutReTrigger -> do
         whenJust req.referenceType $ \_ -> throwError (InvalidRequest "Reference type not required for this action type")
@@ -171,6 +168,24 @@ postAdminRequestCreate merchantShortId opCity requestorId requestorName req = do
     QAdminRequest.create adminRequest
   pure Success
 
+-- helper types only for clear adjustment logic, not used in api and db table
+data AdjustmentReferenceType = BookingReference BookingReferenceType | RideReference RideReferenceType
+
+data BookingReferenceType = BaseRide | DriverCancellationCharges | CustomerCancellationCharges
+
+data RideReferenceType = WalletIncentive
+
+castAdjustmentReferenceType :: Text -> Maybe AdjustmentReferenceType
+castAdjustmentReferenceType referenceType = case referenceType of
+  _ | referenceType == SFW.walletReferenceBaseRide -> Just $ BookingReference BaseRide
+  _ | referenceType == SFW.walletReferenceCustomerCancellationCharges -> Just $ BookingReference CustomerCancellationCharges
+  _ | referenceType == SFW.walletReferenceDriverCancellationCharges -> Just $ BookingReference DriverCancellationCharges
+  _ | referenceType == SFW.walletReferenceWalletIncentive -> Just $ RideReference WalletIncentive
+  _ -> Nothing
+
+adjustmentReferenceTypes :: [Text]
+adjustmentReferenceTypes = [SFW.walletReferenceBaseRide, SFW.walletReferenceDriverCancellationCharges, SFW.walletReferenceCustomerCancellationCharges, SFW.walletReferenceWalletIncentive]
+
 buildAdminRequest ::
   MonadFlow m =>
   DMOC.MerchantOperatingCity ->
@@ -199,39 +214,35 @@ buildAdminRequest merchantOpertingCity requestorId adminMakerName amount currenc
       }
 
 validateCancellationAdjustment ::
+  Bool ->
   DTC.TransporterConfig ->
-  Text ->
   DAdminRequest.AdjustmentType ->
   HighPrecMoney ->
   Id DP.Person ->
   DBooking.Booking ->
   Environment.Flow ()
-validateCancellationAdjustment transporterConfig referenceType adjustmentType amount personId booking = do
+validateCancellationAdjustment isDriverCancellation transporterConfig adjustmentType amount personId booking = do
   unless (booking.status == DBooking.CANCELLED) $
     throwError (BookingInvalidStatus "Booking should be CANCELLED")
   ride <- QRide.findOneByBookingId booking.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
   unless (fromMaybe ride.driverId ride.fleetOwnerId == personId) $
     throwError (InvalidRequest "Invalid personId")
-  case referenceType of
-    _
-      | referenceType == SFW.walletReferenceCustomerCancellationCharges -> do
-        maxAmountWithGst <- ride.cancellationChargesOnCancel & fromMaybeM (InternalError "User cancellation amount is not present.")
-        let mbGstRate = SFC.computeTotalGstRate transporterConfig.taxConfig.rideGst
-            gstPct :: Double = fromMaybe 0.0 mbGstRate
-        let maxAmountExcludingGst =
-              if gstPct > 0
-                then HighPrecMoney $ maxAmountWithGst.getHighPrecMoney / (1 + toRational gstPct)
-                else maxAmountWithGst
-        when (adjustmentType == DAdminRequest.Debit && amount > maxAmountExcludingGst) $ do
-          throwError (InvalidRequest $ "Could not debit more than cancellation charges, exluding gst: " <> show maxAmountExcludingGst)
-    _
-      | referenceType == SFW.walletReferenceDriverCancellationCharges -> do
-        maxAmount <- ride.driverCancellationPenaltyAmount & fromMaybeM (InternalError "Driver cancellation penalty amount is not present.")
-        -- Note: Here Credit means increase driver balance, and hence reduce driver penalty (vice versa for Debit)
-        when (adjustmentType == DAdminRequest.Credit && amount > maxAmount) $
-          throwError (InvalidRequest "Could not credit more than cancellation penalty amount")
-    _ ->
-      throwError (InvalidRequest "Invalid transaction type for cancellation adjustment validation")
+  if isDriverCancellation
+    then do
+      maxAmount <- ride.driverCancellationPenaltyAmount & fromMaybeM (InternalError "Driver cancellation penalty amount is not present.")
+      -- Note: Here Credit means increase driver balance, and hence reduce driver penalty (vice versa for Debit)
+      when (adjustmentType == DAdminRequest.Credit && amount > maxAmount) $
+        throwError (InvalidRequest "Could not credit more than cancellation penalty amount")
+    else do
+      maxAmountWithGst <- ride.cancellationChargesOnCancel & fromMaybeM (InternalError "User cancellation amount is not present.")
+      let mbGstRate = SFC.computeTotalGstRate transporterConfig.taxConfig.rideGst
+          gstPct :: Double = fromMaybe 0.0 mbGstRate
+      let maxAmountExcludingGst =
+            if gstPct > 0
+              then HighPrecMoney $ maxAmountWithGst.getHighPrecMoney / (1 + toRational gstPct)
+              else maxAmountWithGst
+      when (adjustmentType == DAdminRequest.Debit && amount > maxAmountExcludingGst) $ do
+        throwError (InvalidRequest $ "Could not debit more than cancellation charges, exluding gst: " <> show maxAmountExcludingGst)
 
 getAdminRequestList ::
   ShortId DM.Merchant ->
@@ -328,26 +339,31 @@ adminRequestProcessingLockKey referenceId = "adminRequest:processing:" <> refere
 
 ledgerAdjustmentAction :: DTC.TransporterConfig -> DAdminRequest.AdminRequest -> Environment.Flow ()
 ledgerAdjustmentAction transporterConfig adminRequest = do
-  logInfo $ "Ledger adjustment action triggered: " <> adminRequest.id.getId <> maybe "" (\adminCheckerId -> "; admin checker: " <> adminCheckerId.getId) adminRequest.adminCheckerId
-  referenceType <- adminRequest.referenceType & fromMaybeM (InvalidRequest "Reference type required for this action type")
-  adjustmentType <- adminRequest.adjustmentType & fromMaybeM (InvalidRequest "Adjustment type required for this action type")
-  adjustmentSource <- adminRequest.source & fromMaybeM (InvalidRequest "Adjustment source required for this action type")
-  booking <- QBooking.findById (Id @DBooking.Booking adminRequest.referenceId) >>= fromMaybeM (BookingDoesNotExist adminRequest.referenceId)
-  ride <- QRide.findOneByBookingId booking.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
-  driver <- QP.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  driverInfo <- QDI.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  let driverOrFleetPersonId = fromMaybe ride.driverId ride.fleetOwnerId
-  mbPanCard <- QPanCard.findByDriverId driverOrFleetPersonId
-  adminRequestAmount <- adminRequest.amount & fromMaybeM (InternalError $ "Amount required for this action type: " <> show adminRequest.actionType)
-  let ledgerAdjustmentParams = LedgerAdjustmentParams {..}
-  Redis.withWaitOnLockRedisWithExpiry (SFW.makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
-    additionalAdjustments <- case referenceType of
-      _ | referenceType == SFW.walletReferenceBaseRide -> rideRelatedAdjustmnent ledgerAdjustmentParams
-      _ | referenceType == SFW.walletReferenceCustomerCancellationCharges -> userCancellationRelatedAdjustmnent ledgerAdjustmentParams
-      _ | referenceType == SFW.walletReferenceDriverCancellationCharges -> driverCancellationRelatedAdjustmnent ledgerAdjustmentParams
-      _ | referenceType == SFW.walletReferenceWalletIncentive -> incentiveRelatedAdjustmnent ledgerAdjustmentParams
-      _ -> throwError (InvalidRequest $ "Supported reference types for this action type: " <> T.intercalate ", " [SFW.walletReferenceBaseRide, SFW.walletReferenceDriverCancellationCharges, SFW.walletReferenceCustomerCancellationCharges, SFW.walletReferenceWalletIncentive])
+  -- FIXME check other places should be: makeWalletRunningBalanceLockKey (fromMaybe ride.driverId.getId ride.fleetOwnerId.getId)
+  Redis.withWaitOnLockRedisWithExpiry (SFW.makeWalletRunningBalanceLockKey adminRequest.personId.getId) 10 10 $ do
+    logInfo $ "Ledger adjustment action triggered: " <> adminRequest.id.getId <> maybe "" (\adminCheckerId -> "; admin checker: " <> adminCheckerId.getId) adminRequest.adminCheckerId
+    referenceType <- adminRequest.referenceType & fromMaybeM (InvalidRequest "Reference type required for this action type")
+    adjustmentReferenceType <-
+      castAdjustmentReferenceType referenceType
+        & fromMaybeM (InvalidRequest $ "Supported reference types for this action type: " <> T.intercalate ", " adjustmentReferenceTypes)
+    adjustmentType <- adminRequest.adjustmentType & fromMaybeM (InvalidRequest "Adjustment type required for this action type")
+    adjustmentSource <- adminRequest.source & fromMaybeM (InvalidRequest "Adjustment source required for this action type")
+    additionalAdjustments <- case adjustmentReferenceType of
+      BookingReference bookingReferenceType -> do
+        booking <- QBooking.findById (Id @DBooking.Booking adminRequest.referenceId) >>= fromMaybeM (BookingDoesNotExist adminRequest.referenceId)
+        ride <- QRide.findOneByBookingId booking.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
+        driver <- QP.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+        driverInfo <- QDI.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+        let driverOrFleetPersonId = fromMaybe ride.driverId ride.fleetOwnerId
+        mbPanCard <- QPanCard.findByDriverId driverOrFleetPersonId
+        adminRequestAmount <- adminRequest.amount & fromMaybeM (InternalError $ "Amount required for this action type: " <> show adminRequest.actionType)
+        let ledgerAdjustmentParams = LedgerAdjustmentParams {..}
 
+        case bookingReferenceType of
+          BaseRide -> rideRelatedAdjustmnent ledgerAdjustmentParams
+          CustomerCancellationCharges -> userCancellationRelatedAdjustmnent ledgerAdjustmentParams
+          DriverCancellationCharges -> driverCancellationRelatedAdjustmnent ledgerAdjustmentParams
+      RideReference WalletIncentive -> incentiveRelatedAdjustment transporterConfig adminRequest
     logInfo $
       "Ledger adjustment entries created successfully: "
         <> referenceType
@@ -357,14 +373,12 @@ ledgerAdjustmentAction transporterConfig adminRequest = do
         <> show adjustmentSource
         <> ", referenceId: "
         <> adminRequest.referenceId
-        <> "; adjustment base amount: "
-        <> show adminRequest.amount
+        <> maybe "" (("; adjustment base amount: " <>) . show) adminRequest.amount
         <> "; additional adjustments: "
         <> T.intercalate ", " (mapMaybe (\(adjDesc, mbAdjAmount) -> mbAdjAmount <&> (\adjAmount -> adjDesc <> ": " <> show adjAmount)) additionalAdjustments)
 
 data LedgerAdjustmentParams = LedgerAdjustmentParams
   { adminRequest :: DAdminRequest.AdminRequest,
-    referenceType :: Text,
     adjustmentType :: DAdminRequest.AdjustmentType,
     adjustmentSource :: DAdminRequest.AdjustmentSource,
     adminRequestAmount :: HighPrecMoney,
@@ -509,22 +523,27 @@ driverCancellationRelatedAdjustmnent LedgerAdjustmentParams {..} = do
     Left err -> fromEitherM (\e -> InternalError ("Failed to create driver cancellation ledger adjustments: " <> show e)) (Left err)
     Right _ -> pure []
 
-incentiveRelatedAdjustmnent :: FinanceFlow m r => LedgerAdjustmentParams -> m [(Text, Maybe HighPrecMoney)]
-incentiveRelatedAdjustmnent LedgerAdjustmentParams {..} = do
+incentiveRelatedAdjustment ::
+  FinanceFlow m r =>
+  DTC.TransporterConfig ->
+  DAdminRequest.AdminRequest ->
+  m [(Text, Maybe HighPrecMoney)]
+incentiveRelatedAdjustment transporterConfig adminRequest = do
+  adminRequestAmount <- adminRequest.amount & fromMaybeM (InternalError $ "Amount required for this action type: " <> show adminRequest.actionType)
+  adjustmentType <- adminRequest.adjustmentType & fromMaybeM (InvalidRequest "Adjustment type required for this action type")
   let adjustmentBaseAmount = adminRequestAmount
       adjustmentDelta = case adjustmentType of
         DAdminRequest.Credit -> adjustmentBaseAmount
         DAdminRequest.Debit -> negate adjustmentBaseAmount
-  let referenceId = ride.id.getId
-  mbFleetDriverAssociation <- QFDAE.findByDriverId driver.id True
-  let mbFleetOwnerId = (\fda -> Id fda.fleetOwnerId) <$> mbFleetDriverAssociation
-  let (counterparty, ownerId) = case mbFleetOwnerId of
-        Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
-        Nothing -> (counterpartyDriver, driver.id.getId)
+  let referenceId = adminRequest.referenceId
+  ride <- QRide.findById (Id @DRide.Ride adminRequest.referenceId) >>= fromMaybeM (RideDoesNotExist adminRequest.referenceId)
+  let counterparty = case ride.fleetOwnerId of
+        Just _fleetOwnerId -> counterpartyFleetOwner
+        Nothing -> counterpartyDriver
   res <-
     SFW.createAdjustmentWalletEntryDelta
       counterparty
-      ownerId
+      adminRequest.personId.getId
       adjustmentDelta
       transporterConfig.currency
       transporterConfig.merchantId.getId

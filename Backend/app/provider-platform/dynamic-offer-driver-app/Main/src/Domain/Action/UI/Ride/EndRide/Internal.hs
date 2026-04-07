@@ -479,7 +479,8 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       commissionAmount = fromMaybe 0 (ride.commission <|> booking.commission)
       baseFare = totalFare - taxAmount - tollAmount - tollVatAmount - parkingAmount
 
-  Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
+  let personId = fromMaybe ride.driverId ride.fleetOwnerId
+  Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey personId.getId) 10 10 $ do
     isOnline <- do
       let forceOnline = fromMaybe False transporterConfig.driverWalletConfig.forceOnlineLedger
       -- Persist the computed ledger write mode on the booking for reconciliation
