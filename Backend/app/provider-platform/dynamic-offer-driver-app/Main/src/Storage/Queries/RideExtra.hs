@@ -40,7 +40,9 @@ import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude hiding (foldl', map)
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Types.SlidingWindowCounters (PeriodType (Days), SlidingWindowOptions (SlidingWindowOptions))
+import Kernel.Utils.Common hiding (Days)
+import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
@@ -431,30 +433,48 @@ getRidesForDate driverId date diffTime = do
         ]
     ]
 
-countPriorCompletedRidesWithSameCustomerOnSameDay ::
+countPriorCompletedRidesWithSameCustomer ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id Person ->
   Maybe (Id RiderDetails) ->
   Id Ride ->
   Day ->
-  Seconds ->
+  Int ->
   m Int
-countPriorCompletedRidesWithSameCustomerOnSameDay _ Nothing _ _ _ = pure 0
-countPriorCompletedRidesWithSameCustomerOnSameDay driverId (Just riderDetailsId) excludeRideId localDay timeDiffFromUtc = do
-  rides <- getRidesForDate driverId localDay timeDiffFromUtc
-  let others = filter (\r -> r.id /= excludeRideId) rides
-  if null others
-    then pure 0
-    else do
-      bookings <- QBooking.findByIds (map (.bookingId) others)
-      let bookingById = HMS.fromList [(b.id, b) | b <- bookings]
-      pure $
-        length $
-          filter
-            ( \r ->
-                maybe False (\b -> b.riderId == Just riderDetailsId) (HMS.lookup r.bookingId bookingById)
-            )
-            others
+countPriorCompletedRidesWithSameCustomer _ Nothing _ _ _ = pure 0
+countPriorCompletedRidesWithSameCustomer driverId (Just riderDetailsId) _ localDay daysToFetch =
+  getDriverRiderRideCountForDays driverId riderDetailsId localDay daysToFetch
+
+incrementDriverRiderRideCountForDay ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Person ->
+  Maybe (Id RiderDetails) ->
+  m ()
+incrementDriverRiderRideCountForDay _ Nothing = pure ()
+incrementDriverRiderRideCountForDay driverId (Just riderDetailsId) =
+  SWC.incrementByValue 1 (mkDriverRiderRideCountKey driverId riderDetailsId) slidingWindow7Days
+
+getDriverRiderRideCountForDays ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Person ->
+  Id RiderDetails ->
+  Day ->
+  Int ->
+  m Int
+getDriverRiderRideCountForDays driverId riderDetailsId _ daysToFetch = do
+  let safeDays = max 1 daysToFetch
+  values <- SWC.getCurrentWindowValuesUptoLast (toInteger safeDays) (mkDriverRiderRideCountKey driverId riderDetailsId) slidingWindow7Days
+  pure $ sum $ fromMaybe 0 <$> values
+
+mkDriverRiderRideCountKey :: Id Person -> Id RiderDetails -> Text
+mkDriverRiderRideCountKey driverId riderDetailsId =
+  "driverRiderRideCount:dId:"
+    <> driverId.getId
+    <> ":rId:"
+    <> riderDetailsId.getId
+
+slidingWindow7Days :: SlidingWindowOptions
+slidingWindow7Days = SlidingWindowOptions 7 Days
 
 updateDeliveryFileIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> [Id DMF.MediaFile] -> UTCTime -> m ()
 updateDeliveryFileIds rideId deliveryFileIds now = do

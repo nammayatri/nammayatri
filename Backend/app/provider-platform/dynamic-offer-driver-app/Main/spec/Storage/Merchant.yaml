@@ -1133,6 +1133,7 @@ TransporterConfig:
     linkFleetToUnVerifiedExistingRC: Maybe Bool
     enableCoinsToDirectPayout: Maybe Bool
     maxNumberOfLuggages: Maybe Int
+    sameRiderDriverRideCountLookbackDays: Int
 
   beamType:
     currency: Maybe Currency
@@ -1196,6 +1197,7 @@ TransporterConfig:
     cancellationRateSlabConfig: Maybe Value
     feedbackNotificationConfig: Maybe Value
     vehicleCategoryExcludedFromVerification: "Maybe [Text]"
+    sameRiderDriverRideCountLookbackDays: Maybe Int
 
   beamFields:
     fcmConfig:
@@ -1277,7 +1279,7 @@ TransporterConfig:
     subscriptionConfig: Just . Data.Aeson.toJSON|I
     feedbackNotificationConfig: Data.Aeson.toJSON <$> feedbackNotificationConfig|E
     vehicleCategoryExcludedFromVerification: (Data.Text.pack . Kernel.Prelude.show <$>) <$> vehicleCategoryExcludedFromVerification|E
-
+    sameRiderDriverRideCountLookbackDays: Just sameRiderDriverRideCountLookbackDays|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1358,7 +1360,7 @@ TransporterConfig:
     driverWalletConfig: Storage.Queries.Transformers.TransporterConfig.parseDriverWalletConfig merchantOperatingCityId|IM
     subscriptionConfig: Storage.Queries.Transformers.TransporterConfig.parseSubscriptionConfig merchantOperatingCityId|IM
     vehicleCategoryExcludedFromVerification: (mapMaybe (readMaybe . Data.Text.unpack)) <$> vehicleCategoryExcludedFromVerification|E
-
+    sameRiderDriverRideCountLookbackDays: fromMaybe 7 sameRiderDriverRideCountLookbackDays|E
   constraints:
     merchantOperatingCityId: PrimaryKey
 

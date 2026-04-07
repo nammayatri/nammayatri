@@ -233,6 +233,7 @@ data TransporterConfigT f = TransporterConfigT
     rideTimeEstimatedThreshold :: B.C f Kernel.Types.Common.Seconds,
     routeDeviationThreshold :: B.C f Kernel.Types.Common.Meters,
     safetyTeamNumbers :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    sameRiderDriverRideCountLookbackDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     schedulePayoutForDay :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Integer),
     scheduleRideBufferTime :: B.C f Kernel.Types.Common.Seconds,
     scheduledRideFilterExclusionThresholdHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

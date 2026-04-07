@@ -637,3 +637,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_coins_to
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_number_of_luggages integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN same_rider_driver_ride_count_lookback_days integer ;
