@@ -35,6 +35,7 @@ imports:
   GetPatchedElementReq: Lib.Yudhishthira.Types
   GetPatchedElementResp: Lib.Yudhishthira.Types
   UiConfigGetVersionResponse: Lib.Yudhishthira.Types
+  NammaTagDetailsResp: Lib.Yudhishthira.Types
   Value: Data.Aeson
   NammaTagEventsOrNammaTagNamesResp: Lib.Yudhishthira.Types
 
@@ -80,6 +81,18 @@ apis:
         type: APISuccess
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG
+  - GET:
+      endpoint: /tag/all
+      auth: ApiAuthV2
+      response:
+        type: "[NammaTagDetailsResp]"
+  - GET:
+      endpoint: /tag/details
+      auth: ApiAuthV2
+      mandatoryQuery:
+        tagName: Text
+      response:
+        type: NammaTagDetailsResp
   - POST:
       endpoint: /query/create
       auth: ApiAuthV2
@@ -104,6 +117,14 @@ apis:
         type: ChakraQueryDeleteReq
       response:
         type: APISuccess
+  - GET:
+      endpoint: /query/details
+      auth: ApiAuthV2
+      mandatoryQuery:
+        chakra: Chakra
+        queryName: Text
+      response:
+        type: ChakraQueriesAPIEntity
   - POST:
       endpoint: /appDynamicLogic/verify
       auth: ApiAuthV2

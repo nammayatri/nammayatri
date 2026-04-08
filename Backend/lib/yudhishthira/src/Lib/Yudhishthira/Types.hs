@@ -73,11 +73,13 @@ module Lib.Yudhishthira.Types
     GetPatchedElementReq (..),
     GetPatchedElementResp (..),
     NammaTagEventsOrNammaTagNamesResp (..),
+    NammaTagDetailsResp (..),
   )
 where
 
 import Control.Lens.Operators hiding ((.=))
 import Data.Aeson
+import Data.Map.Strict (Map)
 import Data.OpenApi as OpenApi hiding (TagName, description, name, schema, tags, version)
 import qualified Data.Text as T
 import Kernel.Beam.Lib.UtilsTH
@@ -110,6 +112,22 @@ data NammaTagEventsOrNammaTagNamesResp
   = NammaTagEvents [ApplicationEvent]
   | NammaTagNames [Text]
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data NammaTagDetailsResp = NammaTagDetailsResp
+  { actionEngine :: Maybe Value,
+    category :: Text,
+    description :: Maybe Text,
+    tagInfo :: Text,
+    name :: Text,
+    possibleValues :: TagValues,
+    rule :: TagRule,
+    validity :: Maybe Hours,
+    tagStages :: [ApplicationEvent],
+    defaultInputDataPerEvent :: Map Text (Maybe Value),
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data Source
   = Application ApplicationEvent

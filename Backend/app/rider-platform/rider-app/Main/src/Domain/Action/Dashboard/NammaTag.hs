@@ -4,6 +4,9 @@ module Domain.Action.Dashboard.NammaTag
   ( postNammaTagTagCreate,
     postNammaTagTagUpdate,
     deleteNammaTagTagDelete,
+    getNammaTagTagAll,
+    getNammaTagTagDetails,
+    getNammaTagQueryDetails,
     postNammaTagQueryCreate,
     postNammaTagQueryUpdate,
     deleteNammaTagQueryDelete,
@@ -41,9 +44,16 @@ import qualified ConfigPilotFrontend.Flow as CPF
 import qualified ConfigPilotFrontend.Types as CPT
 import qualified Dashboard.Common as Common
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Types as AT
+import qualified Data.ByteString.Lazy as BSL
 import Data.Default.Class
+import qualified Data.Map.Strict as Map
+import Data.OpenApi (ToSchema)
 import Data.Singletons
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as TE
+import qualified Domain.Types.BecknConfig as DTBC
+import qualified Domain.Types.Exophone as DTE
 import qualified Domain.Types.FRFSConfig as DFRFS
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantConfig as DTM
@@ -120,6 +130,20 @@ postNammaTagTagUpdate _merchantShortId _opCity req = YudhishthiraFlow.postTagUpd
 
 deleteNammaTagTagDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 deleteNammaTagTagDelete _merchantShortId _opCity tagName = YudhishthiraFlow.deleteTag tagName
+
+getNammaTagTagDetails :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Environment.Flow LYTU.NammaTagDetailsResp
+getNammaTagTagDetails merchantShortId opCity tagName = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let mocId = cast merchantOperatingCity.id
+  tag <- QNammaTagV2.findByPrimaryKey mocId tagName >>= fromMaybeM (InvalidRequest $ "NammaTag not found: " <> tagName)
+  triggers <- QNammaTagTriggerV2.findAllByMerchantOperatingCityIdAndTagName mocId tagName
+  let events = map (.event) triggers
+      inputDataMap = Map.fromList $ map (\e -> (show e, C.getLogicInputDef e)) events
+  return $ mkNammaTagDetailsResp tag events inputDataMap
+
+-- ChakraQueries are global (not merchant-scoped), so merchant/city params are intentionally unused
+getNammaTagQueryDetails :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.Chakra -> Text -> Environment.Flow LYTU.ChakraQueriesAPIEntity
+getNammaTagQueryDetails _merchantShortId _opCity chakra queryName = YudhishthiraFlow.getChakraQueryDetails chakra queryName
 
 postNammaTagQueryCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ChakraQueriesAPIEntity -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postNammaTagQueryCreate _merchantShortId _opCity req = YudhishthiraFlow.postQueryCreate req
@@ -305,10 +329,12 @@ getNammaTagAppDynamicLogicDomainsAndEvents ::
   Kernel.Types.Beckn.Context.City ->
   Maybe Bool ->
   Environment.Flow LYTU.NammaTagEventsOrNammaTagNamesResp
-getNammaTagAppDynamicLogicDomainsAndEvents _merchantShortId _opCity mbFetchNammaTagNames =
+getNammaTagAppDynamicLogicDomainsAndEvents merchantShortId opCity mbFetchNammaTagNames =
   case mbFetchNammaTagNames of
     Just True -> do
-      tags <- QNammaTag.findAll
+      merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+      let mocId = cast merchantOperatingCity.id
+      tags <- QNammaTagV2.findAllByMerchantOperatingCityId mocId
       return $ LYTU.NammaTagNames (map (.name) tags)
     _ -> return $ LYTU.NammaTagEvents LYTU.allValues
 
