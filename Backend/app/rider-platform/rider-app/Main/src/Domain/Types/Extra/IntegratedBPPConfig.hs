@@ -16,6 +16,17 @@ data CRISRouteSortingCriteria = FARE | DISTANCE
 data MergeQuoteCriteria = FULFILLMENT | QUOTE_TYPE
   deriving (Generic, Show, Read, FromJSON, ToJSON, Eq)
 
+data CorridorExtensionType = WalkBased | RouteBased
+  deriving (Generic, Show, Read, FromJSON, ToJSON, Eq)
+
+data CorridorExtensionGroup = CorridorExtensionGroup
+  { triggerStations :: [Text],
+    intermediateStations :: [Text],
+    extensionType :: CorridorExtensionType
+  }
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
+
 data EBIXConfig = EBIXConfig
   { agentId :: Text,
     username :: Text,
@@ -107,7 +118,8 @@ data CRISConfig = CRISConfig
     enableBookType :: Maybe Bool,
     balanceCheckTimeOfDay :: Maybe Int, -- Time in seconds from midnight (e.g., 86340 for 11:59 PM)
     corridorStations :: Maybe [Text],
-    enableCorridorDeprioritization :: Maybe Bool
+    enableCorridorDeprioritization :: Maybe Bool,
+    corridorExtensionGroups :: Maybe [CorridorExtensionGroup]
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
