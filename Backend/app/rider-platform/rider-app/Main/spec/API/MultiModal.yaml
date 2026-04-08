@@ -341,6 +341,7 @@ types:
     eta: "Maybe [BusStopETA]"
     position: LatLong
     serviceSubTypes: "Maybe [ServiceSubType]"
+    currentTripId: Maybe Text
 
   AlternateRouteDetails:
     routeCode: Text

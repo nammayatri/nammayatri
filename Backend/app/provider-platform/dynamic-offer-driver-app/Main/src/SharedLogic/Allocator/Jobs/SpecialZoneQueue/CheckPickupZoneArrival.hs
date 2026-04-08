@@ -43,14 +43,14 @@ checkPickupZoneArrival Job {id = jobId, jobInfo} = withLogTag ("JobId-" <> jobId
       return Complete
     Just request
       | request.status == DSZQR.Expired -> do
-          logInfo $ "Request " <> jobData.requestId <> " already expired, skipping"
-          return Complete
+        logInfo $ "Request " <> jobData.requestId <> " already expired, skipping"
+        return Complete
       | request.status == DSZQR.Completed -> do
-          logInfo $ "Request " <> jobData.requestId <> " already completed (ride started), skipping"
-          return Complete
+        logInfo $ "Request " <> jobData.requestId <> " already completed (ride started), skipping"
+        return Complete
       | request.response == Just DSZQR.NoShow -> do
-          logInfo $ "Request " <> jobData.requestId <> " already marked NoShow, skipping"
-          return Complete
+        logInfo $ "Request " <> jobData.requestId <> " already marked NoShow, skipping"
+        return Complete
       | otherwise -> do
         mbGate <- Esq.runInReplica $ QGI.findById (Id gateId)
         case mbGate of

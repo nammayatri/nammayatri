@@ -46,9 +46,10 @@ getTransitServiceReq = getMultiModalConfig
 
 getOTPRestServiceReq :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m BaseUrl
 getOTPRestServiceReq merchantId merchantOperatingCityId = do
-  transitServiceReq <- measureLatency
-    (getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MultiModalStaticDataService MultiModal.OTPTransit)}) >>= fromMaybeM (InternalError "No OTP Transit Service Config Found"))
-    ("getOTPRestServiceReq: getOneConfig merchantId=" <> merchantId.getId <> " merchantOperatingCityId=" <> merchantOperatingCityId.getId)
+  transitServiceReq <-
+    measureLatency
+      (getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MultiModalStaticDataService MultiModal.OTPTransit)}) >>= fromMaybeM (InternalError "No OTP Transit Service Config Found"))
+      ("getOTPRestServiceReq: getOneConfig merchantId=" <> merchantId.getId <> " merchantOperatingCityId=" <> merchantOperatingCityId.getId)
   transitServiceReq' <- case transitServiceReq.serviceConfig of
     DMSC.MultiModalStaticDataServiceConfig multiModalServiceConfig -> return multiModalServiceConfig
     cfg -> throwError $ InternalError $ "Unknown Service Config in otprestservicereq" <> show cfg

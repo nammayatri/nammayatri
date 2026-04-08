@@ -2,7 +2,9 @@ module Tools.Utils where
 
 import qualified Data.Map as M
 import qualified Domain.Types.Booking as DB
+import qualified Domain.Types.Image as Image
 import Domain.Types.Location
+import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.SearchRequest as SR
 import qualified Domain.Types.TransporterConfig as DTConf
@@ -22,8 +24,6 @@ import qualified Storage.Queries.BookingExtra as QBookingE
 import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.RideExtra as QRideE
 import Tools.Constants
-import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Image as Image
 
 isDropInsideThreshold :: DB.Booking -> DTConf.TransporterConfig -> LatLong -> Bool
 isDropInsideThreshold booking thresholdConfig currLoation = do
