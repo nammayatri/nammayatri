@@ -23,6 +23,7 @@ import Domain.Types.Booking as DBooking
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverInformation
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity as DMOC
@@ -469,7 +470,9 @@ data RideItem = RideItem
     estimatedFare :: Maybe Price,
     paymentInstrument :: Maybe DMPM.PaymentInstrument,
     bookingStatus :: Common.BookingStatus,
-    tripCategory :: DTC.TripCategory
+    tripCategory :: DTC.TripCategory,
+    customerPickupLocation :: Maybe DLoc.Location,
+    customerDropLocation :: Maybe DLoc.Location
   }
 
 data RideItemV2 = RideItemV2
@@ -711,6 +714,8 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
         { customerName = booking.riderName,
           tripCategory = booking.tripCategory,
           displayBookingId = booking.displayBookingId,
+          customerPickupLocation = Just booking.fromLocation,
+          customerDropLocation = booking.toLocation,
           ..
         }
 

@@ -312,6 +312,8 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
           bookingStatus = mkBookingStatus bppTxn,
           tripCategory = bppTxn.bookingTripCategory,
           displayBookingId = bppTxn.bookingDisplayBookingId,
+          customerPickupLocation = Nothing,
+          customerDropLocation = Nothing,
           ..
         }
 

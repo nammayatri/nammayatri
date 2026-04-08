@@ -387,7 +387,9 @@ data RideListItem = RideListItem
     estimatedFareWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     paymentInstrument :: Kernel.Prelude.Maybe Beckn.Types.Core.Taxi.Common.PaymentInstrument.PaymentInstrument,
     bookingStatus :: BookingStatus,
-    rideCreatedAt :: Kernel.Prelude.UTCTime
+    rideCreatedAt :: Kernel.Prelude.UTCTime,
+    customerPickupLocation :: Kernel.Prelude.Maybe LocationAPIEntity,
+    customerDropLocation :: Kernel.Prelude.Maybe LocationAPIEntity
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

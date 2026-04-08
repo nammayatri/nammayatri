@@ -230,6 +230,8 @@ types:
     - paymentInstrument: Maybe PaymentInstrument
     - bookingStatus: BookingStatus
     - rideCreatedAt: UTCTime
+    - customerPickupLocation: Maybe LocationAPIEntity
+    - customerDropLocation: Maybe LocationAPIEntity
   RideListItemV2:
     - rideId: Id Ride
     - rideShortId: ShortId Ride
