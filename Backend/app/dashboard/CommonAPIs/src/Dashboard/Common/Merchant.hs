@@ -46,8 +46,12 @@ import qualified Kernel.Types.Id as Id
 import Kernel.Types.Predicate
 import qualified Kernel.Types.Registry.Subscriber as BecknSub
 import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.ComputeIntersection (LineSegment)
 import Kernel.Utils.Validation
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
+
+-- Phantom type for Id Toll (used in dashboard API — the real domain type lives in dynamic-offer-driver-app)
+data Toll
 
 ---------------------------------------------------------
 -- merchant update --------------------------------------
@@ -981,4 +985,22 @@ data WhiteListOperatingCityRes = WhiteListOperatingCityRes
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets WhiteListOperatingCityReq where
+  hideSecrets = identity
+
+------------------------ Toll Configuration ------------------------
+
+data UpsertTollReq = UpsertTollReq
+  { tollId :: Maybe (Id.Id Toll), -- Nothing = create, Just = update
+    name :: Text,
+    tollStartGates :: [LineSegment],
+    tollEndGates :: [LineSegment],
+    price :: HighPrecMoney,
+    currency :: Currency,
+    isAutoRickshawAllowed :: Bool,
+    isTwoWheelerAllowed :: Maybe Bool
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpsertTollReq where
   hideSecrets = identity

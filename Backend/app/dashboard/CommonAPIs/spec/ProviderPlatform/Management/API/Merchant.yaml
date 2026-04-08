@@ -44,6 +44,11 @@ imports:
   SpecialLocationType: Lib.Types.SpecialLocation
   SetJsonLogicDebugReq: Lib.Yudhishthira.Tools.DebugLog
   Area: Lib.Types.SpecialLocation
+  Toll: Dashboard.Common.Merchant
+  UpsertTollReq: Dashboard.Common.Merchant
+  LineSegment: Kernel.Utils.ComputeIntersection
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
 
 module: Merchant
 
@@ -404,6 +409,31 @@ apis:
         - locationType: SpecialLocationType
       response:
         type: SpecialLocationResp
+  - GET: # GetMerchantConfigTollList
+      endpoint: /config/toll/list
+      auth: ApiAuthV2
+      response:
+        type: TollListResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT GET_MERCHANT_CONFIG_TOLL_LIST
+  - POST: # UpsertTollAPI
+      endpoint: /config/toll/upsert
+      auth: ApiAuthV2
+      request:
+        type: UpsertTollReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_TOLL
+  - DELETE: # DeleteTollAPI
+      endpoint: /config/toll/{tollId}/delete
+      params:
+        tollId: Id Toll
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DELETE_TOLL
   - GET: # GetMerchantConfigGeometryList
       endpoint: /config/geometry/list
       auth: ApiAuthV2
@@ -1119,6 +1149,19 @@ types:
     - state: IndianState
     - city: City
     - geom: Maybe Text
+  TollListResp:
+    - recordType: Type
+    - type: [Toll]
+  UpsertTollReq:
+    - tollId: Maybe (Id Toll)
+    - name: Text
+    - tollStartGates: "[LineSegment]"
+    - tollEndGates: "[LineSegment]"
+    - price: HighPrecMoney
+    - currency: Currency
+    - isAutoRickshawAllowed: Bool
+    - isTwoWheelerAllowed: Maybe Bool
+    - derive: "'HideSecrets"
 extraOperations:
   - EXTRA_API_TYPES_FILE
   - EXTRA_API_COMMON_TYPES_FILE
