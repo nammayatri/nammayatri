@@ -83,6 +83,16 @@ AppDynamicLogicRollout:
     version: PrimaryKey
 
   queries:
+    findRunningByMerchantOpCityAndDomain:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - merchantOperatingCityId
+          - domain
+          - or:
+              - experimentStatus: "(Just Lib.Yudhishthira.Types.RUNNING)|CIM"
+              - experimentStatus: "Nothing|CIM"
+              - isBaseVersion: "Just True|CIM"
     findByMerchantOpCityAndDomain:
       kvFunction: findAllWithKV
       where:

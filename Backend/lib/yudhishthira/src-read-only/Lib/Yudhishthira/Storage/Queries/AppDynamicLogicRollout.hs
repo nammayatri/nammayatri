@@ -41,6 +41,18 @@ findByMerchantOpCityAndDomain merchantOperatingCityId domain = do
         ]
     ]
 
+findRunningByMerchantOpCityAndDomain ::
+  (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout])
+findRunningByMerchantOpCityAndDomain merchantOperatingCityId domain = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.domain $ Se.Eq domain,
+          Se.Or [Se.Is Beam.experimentStatus $ Se.Eq (Just Lib.Yudhishthira.Types.RUNNING), Se.Is Beam.experimentStatus $ Se.Eq Nothing, Se.Is Beam.isBaseVersion $ Se.Eq (Just True)]
+        ]
+    ]
+
 findByPrimaryKey ::
   (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Lib.Yudhishthira.Types.LogicDomain -> Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Data.Text.Text -> Kernel.Prelude.Int -> m (Maybe Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout))

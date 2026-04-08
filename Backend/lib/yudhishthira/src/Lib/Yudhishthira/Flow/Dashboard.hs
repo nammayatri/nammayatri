@@ -310,7 +310,7 @@ verifyTag merchantOpCityId (Lib.Yudhishthira.Types.TagNameValue fullTag) = do
   case T.splitOn "#" fullTag of
     [name, tagValueText] -> do
       tag <- QNTV2.findByPrimaryKey merchantOpCityId name >>= fromMaybeM (InvalidRequest "Tag not found in the system, please create the tag")
-      if ("&" `T.isInfixOf` tagValueText) -- don't check for condition if value type is array
+      if "&" `T.isInfixOf` tagValueText -- don't check for condition if value type is array
         then pure ()
         else do
           -- Normalize boolean values before processing - force them to be strings
@@ -406,23 +406,28 @@ verifyAndUpdateDynamicLogic ::
   forall m r a b.
   (BeamFlow m r, ToJSON a, FromJSON b, Show a) =>
   Maybe (Id Lib.Yudhishthira.Types.Merchant) ->
+  Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
   Proxy b ->
   Text ->
   Lib.Yudhishthira.Types.AppDynamicLogicReq ->
   a ->
   m Lib.Yudhishthira.Types.AppDynamicLogicResp
-verifyAndUpdateDynamicLogic mbMerchantId _ referralLinkPassword req logicData = do
+verifyAndUpdateDynamicLogic mbMerchantId merchantOpCityId _ referralLinkPassword req logicData = do
   resp <- runLogics req.rules logicData
   let shouldUpdateRule = fromMaybe False req.shouldUpdateRule
   let shouldVerifyOutput = fromMaybe False req.verifyOutput
-  let errors = resp.errors <> (bool [] (verifyOutput resp.result) (shouldUpdateRule || shouldVerifyOutput))
+  let errors = resp.errors <> bool [] (verifyOutput resp.result) (shouldUpdateRule || shouldVerifyOutput)
   (isRuleUpdated, version) <-
     if shouldUpdateRule
       then do
         if null errors
           then do
             verifyPassword req.updatePassword -- Using referralLinkPassword as updatePassword, could be changed to a new field in future
-            updateDynamicLogic req.rules req.domain
+            (updated, mbVersion) <- updateDynamicLogic req.rules req.domain
+            when (updated && isDriverOrRiderConfig req.domain) $
+              whenJust mbVersion $ \ver ->
+                createRolloutForConfig req.domain ver
+            return (updated, mbVersion)
           else throwError $ InvalidRequest $ "Errors found in the rules" <> show errors
       else return (False, Nothing)
   return $ Lib.Yudhishthira.Types.AppDynamicLogicResp resp.result isRuleUpdated req.domain version errors
@@ -454,6 +459,60 @@ verifyAndUpdateDynamicLogic mbMerchantId _ referralLinkPassword req logicData = 
               patchedElement = Nothing,
               ..
             }
+    createRolloutForConfig :: BeamFlow m r => Lib.Yudhishthira.Types.LogicDomain -> Int -> m ()
+    createRolloutForConfig domain version = do
+      now <- getCurrentTime
+      mbBaseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomain merchantOpCityId domain
+      when (isNothing mbBaseRollout) $ do
+        baseVersion <- do
+          latestElement <- QADLE.findLatestVersion (Just 1) Nothing domain
+          return (maybe 1 ((+ 1) . (.version)) (listToMaybe latestElement))
+        CADLE.create $
+          DTADLE.AppDynamicLogicElement
+            { createdAt = now,
+              updatedAt = now,
+              merchantId = mbMerchantId,
+              domain = domain,
+              description = Nothing,
+              patchedElement = Nothing,
+              version = baseVersion,
+              logic = baseElementPatch,
+              order = 0
+            }
+        CADLE.clearCache domain
+        CADLR.create $
+          AppDynamicLogicRollout
+            { domain = domain,
+              experimentStatus = Just Lib.Yudhishthira.Types.CONCLUDED,
+              isBaseVersion = Just True,
+              merchantId = mbMerchantId,
+              merchantOperatingCityId = merchantOpCityId,
+              modifiedBy = Nothing,
+              percentageRollout = 100,
+              timeBounds = "Unbounded",
+              version = baseVersion,
+              versionDescription = Just "System generated base rollout",
+              createdAt = now,
+              updatedAt = now
+            }
+        CADLR.clearCache (cast merchantOpCityId) domain
+      CADLR.create $
+        AppDynamicLogicRollout
+          { domain = domain,
+            experimentStatus = Just Lib.Yudhishthira.Types.RUNNING,
+            isBaseVersion = Nothing,
+            merchantId = mbMerchantId,
+            merchantOperatingCityId = merchantOpCityId,
+            modifiedBy = Nothing,
+            percentageRollout = 0,
+            timeBounds = "Unbounded",
+            version = version,
+            versionDescription = req.description,
+            createdAt = now,
+            updatedAt = now
+          }
+      CADLR.clearCache (cast merchantOpCityId) domain
+
     verifyOutput :: Value -> [String]
     verifyOutput respResult = do
       case (A.fromJSON respResult :: A.Result b) of
@@ -464,13 +523,14 @@ verifyAndUpdateUIDynamicLogic ::
   forall m r a b.
   (BeamFlow m r, ToJSON a, FromJSON b, Show a) =>
   Maybe (Id Lib.Yudhishthira.Types.Merchant) ->
+  Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
   Proxy b ->
   Text ->
   Lib.Yudhishthira.Types.AppDynamicLogicReq ->
   a ->
   BaseUrl ->
   m Lib.Yudhishthira.Types.AppDynamicLogicResp
-verifyAndUpdateUIDynamicLogic mbMerchantId proxy referralLinkPassword req logicData url = do
+verifyAndUpdateUIDynamicLogic mbMerchantId merchantOpCityId proxy referralLinkPassword req logicData url = do
   resp <- runLogics req.rules logicData
   validateInputData <-
     case (fromJSON resp.result :: Result (LYT.Config Value)) of
@@ -482,7 +542,7 @@ verifyAndUpdateUIDynamicLogic mbMerchantId proxy referralLinkPassword req logicD
     CPT.VALID_CONFIG -> pure ()
     CPT.INVALID_CONFIG -> throwError $ InvalidRequest "Invalid config"
     CPT.INVALID_REQUEST -> throwError $ InvalidRequest "Invalid request"
-  verifyAndUpdateDynamicLogic mbMerchantId proxy referralLinkPassword req logicData
+  verifyAndUpdateDynamicLogic mbMerchantId merchantOpCityId proxy referralLinkPassword req logicData
 
 getAppDynamicLogicForDomain :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.GetLogicsResp]
 getAppDynamicLogicForDomain merchantOpCityId mbVersion domain = do
@@ -492,7 +552,7 @@ getAppDynamicLogicForDomain merchantOpCityId mbVersion domain = do
     Just version -> do
       logicsObject <- CADLE.findByDomainAndVersion domain version
       let logics = map (.logic) logicsObject
-      let description = (listToMaybe logicsObject) >>= (.description)
+      let description = listToMaybe logicsObject >>= (.description)
       let experimentStatus = join $ lookup version rolloutStatusMap
       return [Lib.Yudhishthira.Types.GetLogicsResp domain version description logics experimentStatus]
     Nothing -> do
@@ -857,8 +917,8 @@ getNammaTagConfigPilotAllUiConfigs merchantOpCityId mbUnderExp configChoice = do
 
 getNammaTagConfigPilotConfigDetails :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.ConfigDetailsResp]
 getNammaTagConfigPilotConfigDetails merchantOpCityId domain' = do
-  allConfigRollouts <- CADLR.findByMerchantOpCityAndDomain merchantOpCityId domain'
-  let runningConfigRollouts = filter (\rollout -> rollout.isBaseVersion == Just True || rollout.percentageRollout /= 0) allConfigRollouts
+  allConfigRollouts <- LYSQADLR.findRunningByMerchantOpCityAndDomain merchantOpCityId domain'
+  let runningConfigRollouts = filter (\rollout -> rollout.isBaseVersion == Just True || rollout.percentageRollout /= 0 || rollout.experimentStatus == Just LYT.RUNNING) allConfigRollouts
       -- canRevert is true only for the current base version that was promoted via conclude
       -- (i.e. there exists a previous demoted base with isBaseVersion=Nothing and experimentStatus=CONCLUDED)
       hasDemotedBase = any (\r -> r.isBaseVersion /= Just True && r.experimentStatus == Just LYT.CONCLUDED) allConfigRollouts
