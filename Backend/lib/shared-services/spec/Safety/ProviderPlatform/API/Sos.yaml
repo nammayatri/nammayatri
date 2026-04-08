@@ -1,0 +1,76 @@
+imports:
+  Text: Data.Text
+  Person: Safety.Domain.Types.Common
+  Ride: Safety.Domain.Types.Common
+  Merchant: Safety.Domain.Types.Common
+  MerchantOperatingCity: Safety.Domain.Types.Common
+  SosType: Safety.Domain.Types.Sos
+  Sos: Safety.Domain.Types.Sos
+  LatLong: Kernel.External.Maps.Types
+  VehicleVariant: Domain.Types.VehicleVariant
+
+module: Sos
+types:
+  SosRes:
+    sosId: Id Sos
+
+  SosDetailsRes:
+    sos: Maybe Sos
+
+  SosReq:
+    flow: SosType
+    rideId: Maybe (Id Ride)
+    isRideEnded: Maybe Bool
+    sendPNOnPostRideSOS: Maybe Bool
+    notifyAllContacts: Maybe Bool
+    customerLocation: Maybe LatLong
+
+  MarkAsSafeReq:
+    isRideEnded: Maybe Bool
+    isEndLiveTracking: Maybe Bool
+    contacts: Maybe [Text]
+
+  RideDetailsForDriverRes:
+    trackingUrl: Text
+    driverName: Text
+    tripStartPos: Maybe LatLong
+    tripEndPos: Maybe LatLong
+    vehicleNumber: Text
+    vehicleVariant: Maybe VehicleVariant
+
+apis:
+  # Shared endpoints
+  - GET:
+      endpoint: /sos/getDetails/{rideId}
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        rideId: Id Ride
+      response:
+        type: API.Types.ProviderPlatform.Safety.Sos.SosDetailsRes
+
+  - POST:
+      endpoint: /sos/create
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.ProviderPlatform.Safety.Sos.SosReq
+      response:
+        type: API.Types.ProviderPlatform.Safety.Sos.SosRes
+
+  - POST:
+      endpoint: /sos/markRideAsSafe/{sosId}
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        sosId: Id Sos
+      request:
+        type: API.Types.ProviderPlatform.Safety.Sos.MarkAsSafeReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # Driver-only endpoints
+  - GET:
+      endpoint: /sos/rideDetails/{rideShortId}
+      auth: NoAuth
+      params:
+        rideShortId: ShortId Ride
+      response:
+        type: API.Types.ProviderPlatform.Safety.Sos.RideDetailsForDriverRes

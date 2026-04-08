@@ -94,8 +94,12 @@ library
       Registry.Beckn.Interface.Types
       Registry.Beckn.Nammayatri.Flow
       Registry.Beckn.Nammayatri.Types
+      Safety.Common.Builder
+      Safety.Common.Handle
+      Safety.Common.Types
       Safety.Domain.Action.UI.PersonDefaultEmergencyNumber
       Safety.Domain.Action.UI.Sos
+      Safety.Domain.Handler.Sos
       Safety.Domain.Types.Common
       Safety.Storage.BeamFlow
       Safety.Storage.CachedQueries.Sos

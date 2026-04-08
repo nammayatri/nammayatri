@@ -1,0 +1,207 @@
+imports:
+  Text: Data.Text
+  Person: Safety.Domain.Types.Common
+  Ride: Safety.Domain.Types.Common
+  Merchant: Safety.Domain.Types.Common
+  MerchantOperatingCity: Safety.Domain.Types.Common
+  SosType: Safety.Domain.Types.Sos
+  SosStatus: Safety.Domain.Types.Sos
+  SosState: Safety.Domain.Types.Sos
+  Sos: Safety.Domain.Types.Sos
+  LatLong: Kernel.External.Maps.Types
+
+module: Sos
+types:
+  TriggerApi:
+    enum: "POLICE,KAPTURE"
+    derive: "HttpInstance"
+
+  SosRes:
+    sosId: Id Sos
+    externalSOSSuccess: Maybe Bool
+    kaptureTicketId: Maybe Text
+
+  SosDetailsRes:
+    sos: Maybe Sos
+
+  SosReq:
+    flow: SosType
+    rideId: Maybe (Id Ride)
+    isRideEnded: Maybe Bool
+    sendPNOnPostRideSOS: Maybe Bool
+    notifyAllContacts: Maybe Bool
+    customerLocation: Maybe LatLong
+    triggerApiList: Maybe [TriggerApi]
+
+  SosUpdateReq:
+    status: SosStatus
+    comment: Maybe Text
+
+  MockSosReq:
+    onRide: Maybe Bool
+    startDrill: Maybe Bool
+
+  MarkAsSafeReq:
+    isMock: Maybe Bool
+    isRideEnded: Maybe Bool
+    isEndLiveTracking: Maybe Bool
+    contacts: Maybe [Text]
+
+  CallPoliceAPI:
+    rideId: Id Ride
+
+  SosLocationUpdateReq:
+    lat: Double
+    lon: Double
+    accuracy: Maybe Double
+
+  SosLocationRes:
+    lat: Double
+    lon: Double
+    accuracy: Maybe Double
+
+  SosTrackingRes:
+    currentLocation: Maybe SosLocationRes
+    sosState: Maybe SosState
+    status: SosStatus
+
+  StartTrackingReq:
+    contacts: "[Text]"
+    durationInMinutes: Int
+    customerLocation: Maybe LatLong
+    sosId: Maybe (Id Sos)
+    externalReferenceId: Maybe Text
+
+  StartTrackingRes:
+    sosId: Id Sos
+    trackingUrl: Text
+
+  UpdateStateReq:
+    sosState: SosState
+
+  UpdateToRideReq:
+    rideId: Id Ride
+
+  SosTrackingDetailsRes:
+    personName: Text
+    mobileNumber: Text
+
+apis:
+  # Shared endpoints
+  - GET:
+      endpoint: /sos/getDetails/{rideId}
+      auth: TokenAuth
+      params:
+        rideId: Id Ride
+      response:
+        type: API.Types.RiderPlatform.Safety.Sos.SosDetailsRes
+
+  - POST:
+      endpoint: /sos/create
+      auth: TokenAuth
+      request:
+        type: API.Types.RiderPlatform.Safety.Sos.SosReq
+      response:
+        type: API.Types.RiderPlatform.Safety.Sos.SosRes
+
+  - POST:
+      endpoint: /sos/{sosId}/status
+      auth: TokenAuth
+      params:
+        sosId: Id Sos
+      request:
+        type: API.Types.RiderPlatform.Safety.Sos.SosUpdateReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: /sos/markRideAsSafe/{sosId}
+      auth: TokenAuth
+      params:
+        sosId: Id Sos
+      request:
+        type: API.Types.RiderPlatform.Safety.Sos.MarkAsSafeReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: /sos/{sosId}/updateLocation
+      auth: TokenAuth
+      params:
+        sosId: Id Sos
+      request:
+        type: API.Types.RiderPlatform.Safety.Sos.SosLocationUpdateReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - GET:
+      endpoint: /sos/{sosId}/tracking
+      auth: NoAuth
+      params:
+        sosId: Id Sos
+      response:
+        type: API.Types.RiderPlatform.Safety.Sos.SosTrackingRes
+
+  - POST:
+      endpoint: /sos/startTracking
+      auth: TokenAuth
+      request:
+        type: API.Types.RiderPlatform.Safety.Sos.StartTrackingReq
+      response:
+        type: API.Types.RiderPlatform.Safety.Sos.StartTrackingRes
+
+  - POST:
+      endpoint: /sos/updateState/{sosId}
+      auth: TokenAuth
+      params:
+        sosId: Id Sos
+      request:
+        type: API.Types.RiderPlatform.Safety.Sos.UpdateStateReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - GET:
+      endpoint: /sos/trackingDetails/{sosId}
+      auth: TokenAuth
+      params:
+        sosId: Id Sos
+      response:
+        type: API.Types.RiderPlatform.Safety.Sos.SosTrackingDetailsRes
+
+  # Rider-only endpoints
+  - GET:
+      endpoint: /sos/IvrOutcome
+      auth: NoAuth
+      query:
+        CallSid: Text
+        CallFrom: Text
+        digits: Text
+        CallStatus: Text
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: /sos/createMockSos
+      auth: TokenAuth
+      request:
+        type: API.Types.RiderPlatform.Safety.Sos.MockSosReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: /sos/callPolice
+      auth: TokenAuth
+      request:
+        type: API.Types.RiderPlatform.Safety.Sos.CallPoliceAPI
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: /sos/{sosId}/updateToRide
+      auth: TokenAuth
+      params:
+        sosId: Id Sos
+      request:
+        type: API.Types.RiderPlatform.Safety.Sos.UpdateToRideReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
