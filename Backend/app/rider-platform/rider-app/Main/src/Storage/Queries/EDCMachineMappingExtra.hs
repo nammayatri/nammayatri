@@ -87,6 +87,27 @@ deactivateExistingMapping personId merchantId merchantOperatingCityId = do
         ]
     ]
 
+-- | Deactivate existing mapping for a terminal ID (machine already assigned to someone else)
+deactivateByTerminalId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  m ()
+deactivateByTerminalId terminalId merchantId merchantOperatingCityId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamT.isActive False,
+      Se.Set BeamT.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamT.terminalId $ Se.Eq terminalId,
+          Se.Is BeamT.merchantId $ Se.Eq merchantId.getId,
+          Se.Is BeamT.merchantOperatingCityId $ Se.Eq merchantOperatingCityId.getId,
+          Se.Is BeamT.isActive $ Se.Eq True
+        ]
+    ]
+
 -- | Find EDC machine mappings with optional filters (for dashboard list API).
 -- Always scoped to merchant and merchantOperatingCityId from path.
 findAllByMerchantAndCityWithFilters ::

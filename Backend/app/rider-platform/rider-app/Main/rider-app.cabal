@@ -252,6 +252,7 @@ library
       Domain.Action.UI.Disability
       Domain.Action.UI.Dispatcher
       Domain.Action.UI.DriverOffer
+      Domain.Action.UI.EDCMachine
       Domain.Action.UI.EditLocation
       Domain.Action.UI.Estimate
       Domain.Action.UI.EstimateBP
@@ -794,6 +795,7 @@ library
       API.Action.UI.CustomerReferral
       API.Action.UI.DeletedPerson
       API.Action.UI.Dispatcher
+      API.Action.UI.EDCMachine
       API.Action.UI.EditLocation
       API.Action.UI.EstimateBP
       API.Action.UI.FavouriteDriver
@@ -882,6 +884,7 @@ library
       API.Types.UI.CustomerReferral
       API.Types.UI.DeletedPerson
       API.Types.UI.Dispatcher
+      API.Types.UI.EDCMachine
       API.Types.UI.EditLocation
       API.Types.UI.EstimateBP
       API.Types.UI.FavouriteDriver
