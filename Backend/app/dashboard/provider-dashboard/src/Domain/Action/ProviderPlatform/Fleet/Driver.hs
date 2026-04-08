@@ -693,9 +693,9 @@ postDriverFleetScheduledBookingReassign merchantShortId opCity apiTokenInfo req 
     let fleetOwnerId = apiTokenInfo.personId.getId
     Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetScheduledBookingReassign) fleetOwnerId req
 
-getDriverFleetOwnerList :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe RegV2.FleetType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.Flow [Common.FleetOwnerListItem])
-getDriverFleetOwnerList merchantShortId opCity apiTokenInfo blocked fleetType limit offset onlyEnabled = do
+getDriverFleetOwnerList :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe RegV2.FleetType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.Flow [Common.FleetOwnerListItem])
+getDriverFleetOwnerList merchantShortId opCity apiTokenInfo blocked fleetType fromDate limit mbSearchString offset onlyEnabled toDate = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   unless (DP.isAdmin apiTokenInfo.person) $ throwError AccessDenied
   let requestorId = apiTokenInfo.personId.getId
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetOwnerList) requestorId blocked fleetType limit offset onlyEnabled
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetOwnerList) requestorId blocked fleetType fromDate limit mbSearchString offset onlyEnabled toDate

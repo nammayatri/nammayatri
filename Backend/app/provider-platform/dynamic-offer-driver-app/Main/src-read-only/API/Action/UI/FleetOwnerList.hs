@@ -26,12 +26,21 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "fleetOwner" :> "list" :> QueryParam "blocked" Kernel.Prelude.Bool :> QueryParam "fleetType" Domain.Types.FleetOwnerInformation.FleetType
       :> QueryParam
-           "limit"
+           "fromDate"
+           Kernel.Prelude.UTCTime
+      :> QueryParam "limit" Kernel.Prelude.Int
+      :> QueryParam
+           "mbSearchString"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "offset"
            Kernel.Prelude.Int
-      :> QueryParam "offset" Kernel.Prelude.Int
       :> QueryParam
            "onlyEnabled"
            Kernel.Prelude.Bool
+      :> QueryParam
+           "toDate"
+           Kernel.Prelude.UTCTime
       :> Get
            '[JSON]
            [API.Types.UI.FleetOwnerList.FleetOwnerListItem]
@@ -47,9 +56,12 @@ getFleetOwnerList ::
     ) ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe Domain.Types.FleetOwnerInformation.FleetType ->
+    Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
     Environment.FlowHandler [API.Types.UI.FleetOwnerList.FleetOwnerListItem]
   )
-getFleetOwnerList a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FleetOwnerList.getFleetOwnerList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
+getFleetOwnerList a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FleetOwnerList.getFleetOwnerList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a9) a8 a7 a6 a5 a4 a3 a2 a1

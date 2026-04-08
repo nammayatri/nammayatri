@@ -451,7 +451,7 @@ personRoleToRecipientRole _ = DDelivery.RR_DRIVER
 -- | Resolve recipient (id, role) when selectAll is True. Scope: admin merchant+opCity, or fleet/operator.
 -- | selectAllRoles: Nothing or [] = all allowed roles for context; Just [r1,r2] = only those roles.
 resolveRecipientIdsForSelectAll ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) =>
   DM.Merchant ->
   DMOC.MerchantOperatingCity ->
   Maybe [CommAPI.CommunicationRoleType] ->
@@ -515,7 +515,7 @@ resolveRecipientIdsForSelectAll merchant merchantOpCity mbSelectAllRoles mbFleet
                 else pure [],
               if CommAPI.ROLE_FLEET_OWNER `elem` rolesToFetch
                 then do
-                  fleetOwners <- QFOI.findFleetOwners merchantOpCity.id Nothing Nothing Nothing (Just selectAllMaxLimit) (Just 0)
+                  fleetOwners <- QFOI.findFleetOwners merchantOpCity.id Nothing Nothing Nothing Nothing Nothing Nothing (Just selectAllMaxLimit) (Just 0)
                   pure $ map (\fo -> (fo.fleetOwnerPersonId.getId, DDelivery.RR_FLEET_OWNER)) fleetOwners
                 else pure [],
               if CommAPI.ROLE_OPERATOR `elem` rolesToFetch
@@ -599,7 +599,7 @@ validateRecipientsInScope recipientIds merchant merchantOpCity mbFleetOwnerId mb
 
 -- | Resolve recipients: validate manual list or query when selectAll True.
 resolveRecipientIds ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) =>
   DM.Merchant ->
   DMOC.MerchantOperatingCity ->
   Maybe [Text] ->

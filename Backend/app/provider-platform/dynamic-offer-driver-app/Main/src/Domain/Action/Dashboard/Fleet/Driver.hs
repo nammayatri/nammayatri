@@ -3309,18 +3309,21 @@ getDriverFleetOwnerList ::
   Text ->
   Maybe Bool ->
   Maybe RegV2.FleetType ->
+  Maybe UTCTime ->
   Maybe Int ->
+  Maybe Text ->
   Maybe Int ->
   Maybe Bool ->
+  Maybe UTCTime ->
   Flow [Common.FleetOwnerListItem]
-getDriverFleetOwnerList merchantShortId opCity requestorId mbBlocked mbFleetTypeReg mbLimit mbOffset mbOnlyEnabled = do
+getDriverFleetOwnerList merchantShortId opCity requestorId mbBlocked mbFleetTypeReg mbFromDate mbLimit mbSearchString mbOffset mbOnlyEnabled mbToDate = do
   merchant <- findMerchantByShortId merchantShortId
   requestor <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
   unless (requestor.role == DP.ADMIN) $ throwError AccessDenied
   unless (requestor.merchantId == merchant.id) $ throwError AccessDenied
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let mbFleetType = DRegV2.castFleetType <$> mbFleetTypeReg
-  uiItems <- FleetOwnerList.getFleetOwnerList (Nothing, merchant.id, merchantOpCity.id) mbBlocked mbFleetType mbLimit mbOffset mbOnlyEnabled
+  uiItems <- FleetOwnerList.getFleetOwnerList (Nothing, merchant.id, merchantOpCity.id) mbBlocked mbFleetType mbFromDate mbLimit mbSearchString mbOffset mbOnlyEnabled mbToDate
   pure $ map fleetOwnerListItemToCommon uiItems
   where
     fleetOwnerListItemToCommon :: FleetOwnerListAPI.FleetOwnerListItem -> Common.FleetOwnerListItem

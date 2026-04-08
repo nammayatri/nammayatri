@@ -27,16 +27,19 @@ getFleetOwnerList ::
     ) ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe FOI.FleetType ->
+    Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
     Environment.Flow [API.FleetOwnerListItem]
   )
-getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbBlocked mbFleetType mbLimit mbOffset mbOnlyEnabled = do
+getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbBlocked mbFleetType mbFromDate mbLimit mbSearchString mbOffset mbOnlyEnabled mbToDate = do
   let normalizedLimit = Just $ clampLimit $ fromMaybe 10 mbLimit
       normalizedOffset = Just $ max 0 $ fromMaybe 0 mbOffset
       targetOpCity = defaultOpCityId
-  fleetOwners <- QFleetOwnerInfo.findFleetOwners targetOpCity mbFleetType mbOnlyEnabled mbBlocked normalizedLimit normalizedOffset
+  fleetOwners <- QFleetOwnerInfo.findFleetOwners targetOpCity mbFleetType mbFromDate mbSearchString mbOnlyEnabled mbBlocked mbToDate normalizedLimit normalizedOffset
   persons <- QPerson.findAllByPersonIds (Id.getId . (.fleetOwnerPersonId) <$> fleetOwners)
   let personMap = HM.fromList $ (\p -> (p.id, p)) <$> persons
   mapMaybeM (toApiItem personMap targetOpCity) fleetOwners
