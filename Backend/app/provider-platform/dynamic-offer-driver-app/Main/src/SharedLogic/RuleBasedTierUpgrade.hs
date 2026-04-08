@@ -13,6 +13,7 @@ import Kernel.Beam.Functions (runInReplica)
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Types.Id as Id
+import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
@@ -69,7 +70,7 @@ computeEligibleUpgradeTiers ride transporterConfig =
                 favRiderCount = driverStats.favRiderCount,
                 vehicleVariant = vehicle.variant
               }
-      nammaTags <- withTryCatch "computeNammaTags:UpgradeTier" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (Id.cast ride.merchantOperatingCityId) Yudhishthira.UpgradeTier upgradeTierTagData)
+      nammaTags <- withTryCatch "computeNammaTags:UpgradeTier" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (Id.cast ride.merchantOperatingCityId) (Id.cast ride.merchantOperatingCityId) Yudhishthira.UpgradeTier upgradeTierTagData)
       let newEligibleTiers = eligibleTiersFromTags $ fromMaybe [] $ eitherToMaybe nammaTags
           newUpgrades = computeMergedUpgrades now (fromMaybe 0 transporterConfig.upgradeTierDropRetentionTime) (fromMaybe [] driverInfo.ruleBasedUpgradeTiers) newEligibleTiers
           vehicleNewUpgrades = computeMergedUpgrades now (fromMaybe 0 transporterConfig.upgradeTierDropRetentionTime) (fromMaybe [] vehicle.ruleBasedUpgradeTiers) newEligibleTiers

@@ -30,3 +30,8 @@ ALTER TABLE atlas_app.namma_tag ALTER COLUMN rule DROP NOT NULL;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.namma_tag ADD COLUMN action_engine json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.namma_tag ALTER COLUMN validity TYPE integer;

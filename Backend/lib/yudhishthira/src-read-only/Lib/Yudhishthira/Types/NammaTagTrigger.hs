@@ -8,5 +8,5 @@ import Kernel.Prelude
 import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
 
-data NammaTagTrigger = NammaTagTrigger {event :: Lib.Yudhishthira.Types.ApplicationEvent, tagName :: Kernel.Prelude.Text, createdAt :: Kernel.Prelude.UTCTime, updatedAt :: Kernel.Prelude.UTCTime}
+data NammaTagTrigger = NammaTagTrigger {createdAt :: Kernel.Prelude.UTCTime, event :: Lib.Yudhishthira.Types.ApplicationEvent, tagName :: Kernel.Prelude.Text, updatedAt :: Kernel.Prelude.UTCTime}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
