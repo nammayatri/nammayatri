@@ -24,12 +24,14 @@ import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Types as PInterface
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
+import qualified Kernel.External.Wallet.Interface.Types as WalletTypes
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.CacheFlow
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -65,6 +67,7 @@ import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.TicketBooking as QTB
 import Tools.Error
+import qualified Tools.LoyaltyWallet as LoyaltyWallet
 import Tools.Metrics.BAPMetrics
 import qualified Tools.Notifications as TNotifications
 import qualified Tools.Payment as TPayment
@@ -75,6 +78,20 @@ import qualified UrlShortner.Common as UrlShortner
 -------------------------------------------------------------------------------------------------------
 ----------------------------------- Payment Order Status Handler --------------------------------------
 -------------------------------------------------------------------------------------------------------
+
+getLoyaltyInfo ::
+  ( MonadFlow m,
+    EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    CoreMetrics m
+  ) =>
+  Text ->
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  m WalletTypes.LoyaltyInfoResponse
+getLoyaltyInfo customerId merchantId merchantOperatingCityId =
+  LoyaltyWallet.loyaltyInfo customerId merchantId merchantOperatingCityId -- need to write the storing logic
 
 -- | Type alias for fulfillment status handler function
 -- This allows callers to pass the appropriate handler for their payment service type

@@ -273,6 +273,7 @@ library
       Domain.Action.UI.Invoice
       Domain.Action.UI.InvoiceGeneration
       Domain.Action.UI.Location
+      Domain.Action.UI.Loyalty
       Domain.Action.UI.Maps
       Domain.Action.UI.MerchantPaymentMethod
       Domain.Action.UI.MeterRideInternal
@@ -727,6 +728,7 @@ library
       Tools.Insurance
       Tools.InvoicePDF
       Tools.JSON
+      Tools.LoyaltyWallet
       Tools.Maps
       Tools.Metrics
       Tools.Metrics.BAPMetrics
@@ -804,6 +806,7 @@ library
       API.Action.UI.Insurance
       API.Action.UI.InsuranceInternal
       API.Action.UI.Invoice
+      API.Action.UI.Loyalty
       API.Action.UI.MeterRideInternal
       API.Action.UI.Metrics
       API.Action.UI.Miscellaneous

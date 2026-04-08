@@ -35,6 +35,7 @@ import qualified API.Action.UI.FavouriteDriver as FavouriteDriver
 import qualified API.Action.UI.FollowRide as FollowRide
 import qualified API.Action.UI.Insurance as Insurance
 import qualified API.Action.UI.Invoice as Invoice
+import qualified API.Action.UI.Loyalty as Loyalty
 import qualified API.Action.UI.Metrics as Metrics
 import qualified API.Action.UI.Miscellaneous as Miscellaneous
 import qualified API.Action.UI.MultimodalConfirm as MultimodalConfirm
@@ -101,6 +102,7 @@ type API =
            :<|> RidePayment.API
            :<|> Payment.API
            :<|> Payment.S2SAPI
+           :<|> Loyalty.API
            :<|> Search.API
            :<|> Select.API
            :<|> Quote.API
@@ -177,6 +179,7 @@ handler =
     :<|> RidePayment.handler
     :<|> Payment.handler
     :<|> Payment.handlerS2S
+    :<|> Loyalty.handler
     :<|> Search.handler
     :<|> Select.handler
     :<|> Quote.handler
