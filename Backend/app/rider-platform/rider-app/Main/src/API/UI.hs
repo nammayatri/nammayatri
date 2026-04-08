@@ -27,6 +27,7 @@ import qualified API.Action.UI.CancellationChargesWaiveOff as CancellationCharge
 import qualified API.Action.UI.CustomerReferral as CustomerReferral
 import qualified API.Action.UI.DeletedPerson as DeletedPerson
 import qualified API.Action.UI.Dispatcher as Dispatcher
+import qualified API.Action.UI.EDCMachine as EDCMachine
 import qualified API.Action.UI.EditLocation as EditLocation
 import qualified API.Action.UI.EstimateBP as EstimateBP
 import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
@@ -164,6 +165,7 @@ type API =
            :<|> Pass.API
            :<|> ParkingBooking.API
            :<|> Dispatcher.API
+           :<|> EDCMachine.API
            :<|> PartnerBookingStatement.API
        )
 
@@ -239,4 +241,5 @@ handler =
     :<|> Pass.handler
     :<|> ParkingBooking.handler
     :<|> Dispatcher.handler
+    :<|> EDCMachine.handler
     :<|> PartnerBookingStatement.handler

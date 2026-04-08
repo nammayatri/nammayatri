@@ -1,0 +1,71 @@
+imports:
+  Person: Domain.Types.Person
+  EDCMachineMapping: Domain.Types.EDCMachineMapping
+  APISuccess: Kernel.Types.APISuccess
+
+module: EDCMachine
+types:
+  AssignEDCMachineReq:
+    personId: Id Person
+    machineName: Maybe Text
+    paytmMid: Text
+    channelId: Text
+    clientId: Text
+    merchantKey: Text
+    paytmTid: Text
+  AssignEDCMachineResp:
+    id: Id EDCMachineMapping
+    personId: Id Person
+    machineName: Maybe Text
+    paytmTid: Text
+    isActive: Bool
+  EDCMachineMappingListItem:
+    id: Id EDCMachineMapping
+    personId: Id Person
+    machineName: Maybe Text
+    terminalId: Text
+    isActive: Bool
+    createdAt: UTCTime
+  EDCMachineMappingListResp:
+    mappings: "[EDCMachineMappingListItem]"
+  UpdateEDCMachineReq:
+    machineName: Maybe Text
+    paytmMid: Maybe Text
+    channelId: Maybe Text
+    clientId: Maybe Text
+    merchantKey: Maybe Text
+    paytmTid: Maybe Text
+    isActive: Maybe Bool
+
+apis:
+  - POST:
+      endpoint: /edcMachine/assign
+      auth: TokenAuth
+      request:
+        type: AssignEDCMachineReq
+      response:
+        type: AssignEDCMachineResp
+  - GET:
+      endpoint: /edcMachine/list
+      auth: TokenAuth
+      query:
+        - personId: Id Person
+        - isActive: Bool
+      response:
+        type: EDCMachineMappingListResp
+  - PUT:
+      endpoint: /edcMachine/{mappingId}/update
+      auth: TokenAuth
+      params:
+        mappingId: Id EDCMachineMapping
+      request:
+        type: UpdateEDCMachineReq
+      response:
+        type: APISuccess
+  - DELETE:
+      endpoint: /edcMachine/{mappingId}/delete
+      auth: TokenAuth
+      params:
+        mappingId: Id EDCMachineMapping
+      response:
+        type: APISuccess
