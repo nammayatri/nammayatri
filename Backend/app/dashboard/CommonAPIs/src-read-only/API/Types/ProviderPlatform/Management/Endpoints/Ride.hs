@@ -355,7 +355,9 @@ data RideListItem = RideListItem
     fareDiff :: Kernel.Prelude.Maybe Kernel.Types.Common.Money,
     fareDiffWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     bookingStatus :: BookingStatus,
-    rideCreatedAt :: Kernel.Prelude.UTCTime
+    rideCreatedAt :: Kernel.Prelude.UTCTime,
+    customerPickupLocation :: Kernel.Prelude.Maybe LocationAPIEntity,
+    customerDropLocation :: Kernel.Prelude.Maybe LocationAPIEntity
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
