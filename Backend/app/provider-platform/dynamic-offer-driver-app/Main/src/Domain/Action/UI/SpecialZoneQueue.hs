@@ -13,6 +13,8 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.SpecialZoneQueueRequest
 import qualified Environment
+import Data.List (nub)
+import qualified Data.Map.Strict as Map
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -42,16 +44,21 @@ getSpecialZoneQueueRequest (mbPersonId, _merchantId, _merchantOpCityId) = do
   -- Fetch both Active and Accepted requests
   activeRequests <- QSZQR.findActiveByDriverId personId Domain.Types.SpecialZoneQueueRequest.Active
   acceptedRequests <- QSZQR.findActiveByDriverId personId Domain.Types.SpecialZoneQueueRequest.Accepted
+  -- Pre-fetch all unique gate infos in one pass
+  let allRawRequests = activeRequests ++ acceptedRequests
+      uniqueGateIds = nub $ map (.gateId) allRawRequests
+  gateInfos <- catMaybes <$> mapM (\gid -> Esq.runInReplica $ QGI.findById (Kernel.Types.Id.Id gid)) uniqueGateIds
+  let gateInfoMap = Map.fromList $ map (\g -> (g.id.getId, g)) gateInfos
   -- Lazy-expire Active requests past validTill
   validActiveRequests <- collectValidActive now activeRequests
   -- Lazy no-show check for Accepted requests past arrival timeout (fallback if scheduler job is delayed)
-  validAcceptedRequests <- collectValidAccepted now acceptedRequests
+  validAcceptedRequests <- collectValidAccepted now gateInfoMap acceptedRequests
   let allRequests = validActiveRequests ++ validAcceptedRequests
-  -- Get skip count
-  (skipCount, maxSkips) <- case allRequests of
+  -- Get skip count from first available request's gate
+  (skipCount, maxSkips) <- case allRawRequests of
     (r : _) -> do
       mbSkipCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkQueueSkipCountKey r.specialLocationId personId.getId)
-      mbGate <- Esq.runInReplica $ QGI.findById (Kernel.Types.Id.Id r.gateId)
+      let mbGate = Map.lookup r.gateId gateInfoMap
       pure (fromMaybe 0 mbSkipCount, mbGate >>= (.maxRideSkipsBeforeQueueRemoval))
     [] -> pure (0, Nothing)
   pure $
@@ -71,10 +78,10 @@ getSpecialZoneQueueRequest (mbPersonId, _merchantId, _merchantOpCityId) = do
           rest' <- collectValidActive now rest
           pure (mkRes req : rest')
 
-    collectValidAccepted _ [] = pure []
-    collectValidAccepted now (req : rest) = do
-      mbGate <- Esq.runInReplica $ QGI.findById (Kernel.Types.Id.Id req.gateId)
-      let arrivalTimeoutSec = maybe 1200 (fromMaybe 1200 . (.pickupZoneArrivalTimeoutInSec)) mbGate
+    collectValidAccepted _ _ [] = pure []
+    collectValidAccepted now gateMap (req : rest) = do
+      let mbGate = Map.lookup req.gateId gateMap
+          arrivalTimeoutSec = maybe 1200 (fromMaybe 1200 . (.pickupZoneArrivalTimeoutInSec)) mbGate
           acceptedAt = req.updatedAt
           deadline = addUTCTime (fromIntegral arrivalTimeoutSec) acceptedAt
       if now > deadline
@@ -82,9 +89,9 @@ getSpecialZoneQueueRequest (mbPersonId, _merchantId, _merchantOpCityId) = do
           fork "lazy-noshow-check" $ do
             QSZQR.updateResponse (Just Domain.Types.SpecialZoneQueueRequest.NoShow) Domain.Types.SpecialZoneQueueRequest.Expired req.id
             logInfo $ "Lazy no-show: marked request " <> req.id.getId <> " as NoShow for driver " <> req.driverId.getId
-          collectValidAccepted now rest
+          collectValidAccepted now gateMap rest
         else do
-          rest' <- collectValidAccepted now rest
+          rest' <- collectValidAccepted now gateMap rest
           pure (mkRes req : rest')
 
     mkRes req =
