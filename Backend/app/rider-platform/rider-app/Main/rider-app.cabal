@@ -60,6 +60,7 @@ library
       API.Internal.FrequentLocUser
       API.Internal.FRFS
       API.Internal.GetPickupInstructions
+      API.Internal.LLMToolCalling
       API.Internal.OfferDiscount
       API.Internal.Rating
       API.Internal.RideSearchExpired
@@ -229,6 +230,7 @@ library
       Domain.Action.Internal.StopEvents
       Domain.Action.Internal.UpdateCancellationFeeStatus
       Domain.Action.Internal.ViolationDetection
+      Domain.Action.LLM.RideBookingTools
       Domain.Action.UI.AadhaarVerification
       Domain.Action.UI.AlertWebhook
       Domain.Action.UI.AppInstalls
@@ -727,6 +729,7 @@ library
       Tools.Insurance
       Tools.InvoicePDF
       Tools.JSON
+      Tools.LLMService
       Tools.Maps
       Tools.Metrics
       Tools.Metrics.BAPMetrics

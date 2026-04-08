@@ -169,6 +169,39 @@ ghc-options:
 library:
   source-dirs:
     - src
+  exposed-modules:
+    - ChatCompletion.AzureOpenAI.API
+    - ChatCompletion.AzureOpenAI.Config
+    - ChatCompletion.AzureOpenAI.ToolCallingAPI
+    - ChatCompletion.AzureOpenAI.ToolCallingTypes
+    - ChatCompletion.AzureOpenAI.Types
+    - ChatCompletion.Gemini.API
+    - ChatCompletion.Gemini.Config
+    - ChatCompletion.Gemini.ToolCallingAPI
+    - ChatCompletion.Gemini.ToolCallingTypes
+    - ChatCompletion.Gemini.Types
+    - ChatCompletion.Interface
+    - ChatCompletion.Interface.AzureOpenAI
+    - ChatCompletion.Interface.Gemini
+    - ChatCompletion.Interface.ToolCalling
+    - ChatCompletion.Interface.Types
+    - ChatCompletion.Types
+    - Email.AWS.Flow
+    - Email.Flow
+    - Email.GCP.Flow
+    - Email.Types
+    - KafkaLogs.TransactionLogs
+    - Slack.AWS.Flow
+    - Slack.Flow
+    - Slack.GCP.Flow
+    - Slack.Types
+    - TransactionLogs.Interface
+    - TransactionLogs.Interface.ONDC
+    - TransactionLogs.Interface.Types
+    - TransactionLogs.ONDC.Flow
+    - TransactionLogs.ONDC.Types
+    - TransactionLogs.PushLogs
+    - TransactionLogs.Types
   when:
     - condition: flag(Local)
       then:

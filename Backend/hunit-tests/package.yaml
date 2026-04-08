@@ -45,6 +45,7 @@ dependencies:
 - transformers
 - yudhishthira
 - beckn-spec
+- external
 
 default-extensions:
 - ConstraintKinds
@@ -87,6 +88,7 @@ library:
   - AddVehicleUnitTests
   - DriverOperationHubUnitTests
   - CreateRequestUnitTests
+  - LLMIntegrationUnitTests
 
 executables:
   hunit-tests:

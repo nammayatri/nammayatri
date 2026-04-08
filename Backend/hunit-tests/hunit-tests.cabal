@@ -29,6 +29,7 @@ library
       AddVehicleUnitTests
       DriverOperationHubUnitTests
       CreateRequestUnitTests
+      LLMIntegrationUnitTests
   hs-source-dirs:
       src
   default-extensions:
@@ -72,6 +73,7 @@ library
     , directory
     , dynamic-offer-driver-app
     , euler-hs
+    , external
     , hspec
     , hspec-core
     , http-conduit
@@ -146,6 +148,7 @@ executable hunit-tests
     , directory
     , dynamic-offer-driver-app
     , euler-hs
+    , external
     , hspec
     , hspec-core
     , http-conduit

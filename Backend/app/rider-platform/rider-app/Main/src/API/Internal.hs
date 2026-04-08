@@ -14,6 +14,7 @@ import qualified API.Internal.EKDLiveCallFeedback as EKDLiveCallFeedback
 import qualified API.Internal.FRFS as FRFS
 import qualified API.Internal.FrequentLocUser as FrequentLocUser
 import qualified API.Internal.GetPickupInstructions as GetPickupInstructions
+import qualified API.Internal.LLMToolCalling as LLMToolCalling
 import qualified API.Internal.OfferDiscount as OfferDiscount
 import qualified API.Internal.Rating as Rating
 import qualified API.Internal.RideSearchExpired as RideSearchExpired
@@ -44,6 +45,7 @@ type API =
            :<|> Sos.API
            :<|> UpdateCancellationFeeStatus.API
            :<|> OfferDiscount.API
+           :<|> LLMToolCalling.API
        )
 
 handler :: FlowServer API
@@ -65,3 +67,4 @@ handler =
     :<|> Sos.handler
     :<|> UpdateCancellationFeeStatus.handler
     :<|> OfferDiscount.handler
+    :<|> LLMToolCalling.handler

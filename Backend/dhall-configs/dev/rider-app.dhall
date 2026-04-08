@@ -397,6 +397,18 @@ let emailServiceConfig =
       , isForcedAWS = True
       }
 
+let llmConfig =
+      { azureOpenAICfg =
+          { azureOpenAIChatCompletionUrl = "https://api.openai.azure.com/openai/deployments"
+          , azureApiKey = sec.azureOpenAIApiKey
+          , azureApiVersion = "2024-02-01"
+          }
+      , geminiCfg =
+          { geminiChatCompletionUrl = "https://generativelanguage.googleapis.com/v1beta/models"
+          , geminiApiKey = sec.geminiApiKey
+          }
+      }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = hcfg
@@ -513,4 +525,5 @@ in  { esqDBCfg
       }
     , blackListedJobs = [] : List Text
     , emailServiceConfig
+    , llmConfig
     }
