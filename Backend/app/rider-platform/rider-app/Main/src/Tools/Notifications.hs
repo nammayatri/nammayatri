@@ -133,15 +133,6 @@ buildTemplate paramVars template =
 buildTrackingUrl :: Id SRide.Ride -> [(Text, Text)] -> Text -> Text
 buildTrackingUrl rideId extraQueryParams trackingUrlPattern = (buildTemplate extraQueryParams trackingUrlPattern) <> rideId.getId
 
-buildSosTrackingUrl :: Id SSos.Sos -> Text -> Text
-buildSosTrackingUrl sosId trackingUrlPattern =
-  let patternWithSosId = T.replace "rideId=" "sosId=" trackingUrlPattern
-      urlWithVpReplaced =
-        if T.isInfixOf (templateText "vp") patternWithSosId
-          then buildTemplate [("vp", "sosTracking")] patternWithSosId
-          else T.replace "vp=shareRide" "vp=sosTracking" patternWithSosId
-   in urlWithVpReplaced <> sosId.getId
-
 notifyPerson ::
   ( ServiceFlow m r,
     ToJSON a,

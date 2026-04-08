@@ -231,6 +231,9 @@ RiderConfig:
     invoiceLogoUrl: Maybe Text
     externalSOSConfig: Maybe ExternalSOSConfig
     maxNumberOfLuggages: Maybe Int
+    sosTrackingLink: Maybe Text
+    maxLiveVehiclesPerRoute: Int
+    maxAlternateRouteVehicles: Int
     includeVehiclesWithNoEta: Maybe Bool
 
   beamType:

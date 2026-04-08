@@ -33,6 +33,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import qualified Safety.Domain.Action.UI.Sos as SafetySos
 import qualified Safety.Domain.Types.Common as SafetyDCommon
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
@@ -49,7 +50,6 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import Tools.Auth
 import Tools.Error
-import qualified Tools.Notifications as Notify
 
 getSosTracking :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Sos -> Environment.Flow API.Types.RiderPlatform.Management.Sos.SosTrackingRes)
 getSosTracking _merchantShortId _opCity sosId = do
@@ -80,7 +80,10 @@ getSosDetails merchantShortId opCity sosId = do
           }
   let mbSosTrackingUrl = do
         rideConfig <- mbRideConfig
-        pure $ Notify.buildSosTrackingUrl sos.id rideConfig.trackingShortUrlPattern
+        let rideId = fromMaybe "" sos.rideId
+        pure $ case rideConfig.sosTrackingLink of
+          Just sosLink -> T.replace "{#vp#}" "sosTracking" sosLink <> sos.id.getId
+          Nothing -> T.replace "{#vp#}" "shareRide" rideConfig.trackingShortUrlPattern <> rideId.getId
   pure $
     API.Types.RiderPlatform.Management.Sos.SosDetailsMaybeRes
       { API.Types.RiderPlatform.Management.Sos.details = Just $ convertToSosDetailsRes sos,
@@ -181,7 +184,7 @@ callExternalSOS sosId mbComments = do
           customerLocation <- getCustomerLocation rideIdForLoc mbRide
           emergencyContacts <- DP.getDefaultEmergencyNumbers (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId, merchantId)
           merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-          externalSOSDetails <- Sos.buildExternalSOSDetails (mkSosReq sos customerLocation) person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig mbComments
+          externalSOSDetails <- Sos.buildExternalSOSDetails (mkSosReq sos customerLocation) person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig mbComments (Just sos.id)
           initialRes <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
           unless initialRes.success $
             throwError $ InternalError (fromMaybe "External SOS call failed" initialRes.errorMessage)
