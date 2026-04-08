@@ -34,11 +34,13 @@ buildRouteWithLiveVehicle ::
   Int ->
   Flow (Maybe API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle)
 buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromStopCode toStopCode frfsTierMap mbSourceStopLatLong maxLiveVehicles = do
-  route <- JMU.measureLatency
-    (OTPRest.getRouteByRouteId integratedBPPConfig routeInfo.routeId
-      >>= fromMaybeM
-        (InvalidRequest $ "Route not found with id: " <> routeInfo.routeId))
-    ("buildRouteWithLiveVehicle: getRouteByRouteId routeId=" <> routeInfo.routeId)
+  route <-
+    JMU.measureLatency
+      ( OTPRest.getRouteByRouteId integratedBPPConfig routeInfo.routeId
+          >>= fromMaybeM
+            (InvalidRequest $ "Route not found with id: " <> routeInfo.routeId)
+      )
+      ("buildRouteWithLiveVehicle: getRouteByRouteId routeId=" <> routeInfo.routeId)
   schedulesFork <-
     awaitableFork "getBusScheduleInfo" $
       getBusScheduleInfo busScheduleDetails integratedBPPConfig routeInfo.routeId fromStopCode toStopCode frfsTierMap
@@ -78,22 +80,25 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
     getBusScheduleInfo busScheduleDetails' integratedBPPConfig' routeId' fromStopCode' toStopCode' frfsTierMap' = do
       -- Batch-fetch all live info in one Redis HMGET instead of N individual calls
       let vehicleNos = map (.vehicle_no) busScheduleDetails'
-      liveInfoResults <- JMU.measureLatency
-        (JLCF.getVehicleMetadata vehicleNos integratedBPPConfig')
-        ("getBusScheduleInfo: getVehicleMetadata routeId=" <> routeId' <> " vehicles=" <> show (length vehicleNos))
+      liveInfoResults <-
+        JMU.measureLatency
+          (JLCF.getVehicleMetadata vehicleNos integratedBPPConfig')
+          ("getBusScheduleInfo: getVehicleMetadata routeId=" <> routeId' <> " vehicles=" <> show (length vehicleNos))
       let busLiveInfoMap = zip vehicleNos liveInfoResults
       -- Hoist stop index lookup once (same cache key for all vehicles)
-      mStopIndices <- JMU.measureLatency
-        (JMU.getRouteStopIndices routeId' fromStopCode' toStopCode' integratedBPPConfig')
-        ("getBusScheduleInfo: getRouteStopIndices routeId=" <> routeId')
+      mStopIndices <-
+        JMU.measureLatency
+          (JMU.getRouteStopIndices routeId' fromStopCode' toStopCode' integratedBPPConfig')
+          ("getBusScheduleInfo: getRouteStopIndices routeId=" <> routeId')
       catMaybes
         <$> mapM
           ( \detail -> do
               let busLiveInfo = join $ lookup detail.vehicle_no busLiveInfoMap
               logDebug $ "getBusScheduleInfo: getBusLiveInfo vehicle=" <> detail.vehicle_no <> ", found=" <> show (isJust busLiveInfo) <> ", details=" <> show (fmap (\v -> (v.vehicle_number, v.latitude, v.longitude, v.timestamp, v.routes_info, v.bearing)) busLiveInfo)
-              mbVehicleMetadata <- JMU.measureLatency
-                (JMU.getVehicleMetadataFromInMem [integratedBPPConfig'] detail.vehicle_no)
-                ("getBusScheduleInfo: getVehicleMetadataFromInMem vehicle=" <> detail.vehicle_no)
+              mbVehicleMetadata <-
+                JMU.measureLatency
+                  (JMU.getVehicleMetadataFromInMem [integratedBPPConfig'] detail.vehicle_no)
+                  ("getBusScheduleInfo: getVehicleMetadataFromInMem vehicle=" <> detail.vehicle_no)
               let mbServiceTier = mbVehicleMetadata <&> (\(_, metadata) -> metadata.serviceType)
               case mbServiceTier of
                 Just serviceTier -> do
@@ -105,10 +110,12 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                         waybill <- detail.waybill_no
                         tNum <- detail.trip_number
                         return $ waybill <> "-" <> show tNum
-                  mbSeatLayoutId <- JMU.measureLatency
-                    (CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached detail.vehicle_no integratedBPPConfig.feedKey
-                      <&> fmap (.seatLayoutId))
-                    ("getBusScheduleInfo: findByVehicleNoAndGtfsIdCached vehicle=" <> detail.vehicle_no)
+                  mbSeatLayoutId <-
+                    JMU.measureLatency
+                      ( CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached detail.vehicle_no integratedBPPConfig.feedKey
+                          <&> fmap (.seatLayoutId)
+                      )
+                      ("getBusScheduleInfo: findByVehicleNoAndGtfsIdCached vehicle=" <> detail.vehicle_no)
                   (isAvailable, availableSeatsCount) <- case mbSeatLayoutId of
                     Just layoutId -> case combinedTripId of
                       Nothing -> return (False, Nothing)
@@ -149,9 +156,10 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
         catMaybes
           <$> mapM
             ( \bus -> do
-                mbVehicleMetadata <- JMU.measureLatency
-                  (JMU.getVehicleMetadataFromInMem [integratedBPPConfig'] bus.vehicleNumber)
-                  ("getLiveVehicles: getVehicleMetadataFromInMem vehicle=" <> bus.vehicleNumber)
+                mbVehicleMetadata <-
+                  JMU.measureLatency
+                    (JMU.getVehicleMetadataFromInMem [integratedBPPConfig'] bus.vehicleNumber)
+                    ("getLiveVehicles: getVehicleMetadataFromInMem vehicle=" <> bus.vehicleNumber)
                 let mbServiceTier = mbVehicleMetadata <&> (\(_, metadata) -> metadata.serviceType)
                 case mbServiceTier of
                   Just serviceTier -> do
@@ -162,9 +170,11 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                     logDebug $ "getLiveVehicles: vehicle=" <> bus.vehicleNumber <> ", routeId=" <> bus.busData.route_id <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", position=(" <> show bus.busData.latitude <> "," <> show bus.busData.longitude <> ")" <> ", timestamp=" <> show bus.busData.timestamp <> ", eta=" <> show bus.busData.eta_data <> ", routeState=" <> show bus.busData.route_state <> ", routeNumber=" <> show bus.busData.route_number
                     enrichedEta <-
                       mapM
-                        (\etaBus -> JMU.measureLatency
-                          (enrichBusStopETA integratedBPPConfig' etaBus)
-                          ("getLiveVehicles: enrichBusStopETA stopCode=" <> etaBus.stopCode))
+                        ( \etaBus ->
+                            JMU.measureLatency
+                              (enrichBusStopETA integratedBPPConfig' etaBus)
+                              ("getLiveVehicles: enrichBusStopETA stopCode=" <> etaBus.stopCode)
+                        )
                         (fromMaybe [] bus.busData.eta_data)
                     return . Just $
                       API.Types.UI.MultimodalConfirm.LiveVehicleInfo

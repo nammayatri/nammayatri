@@ -66,6 +66,7 @@ getFleetVehicleAssociation apiKey placeId mbLimit mbOffset mbSearchString = do
       let firstOwnerId = head fleetOwnerIds
       firstOwnerPerson <- QP.findById (Id firstOwnerId) >>= fromMaybeM (PersonNotFound firstOwnerId)
       let merchantId = firstOwnerPerson.merchantId
+          merchantOperatingCityId = firstOwnerPerson.merchantOperatingCityId.getId
 
       merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
       unless (Just merchant.internalApiKey == apiKey) $
@@ -83,7 +84,7 @@ getFleetVehicleAssociation apiKey placeId mbLimit mbOffset mbSearchString = do
       let limit = fromIntegral $ fromMaybe 1000 mbLimit
           offset = fromIntegral $ fromMaybe 0 mbOffset
 
-      rcs <- VRCExtra.findAllValidRcByFleetOwnerIdsAndSearchStringWithoutVerificationStatusMF limit offset merchantId fleetOwnerIds mbSearchString mbRegNumberStringHash
+      rcs <- VRCExtra.findAllValidRcByFleetOwnerIdsAndSearchStringWithoutVerificationStatusMF limit offset merchantId merchantOperatingCityId fleetOwnerIds mbSearchString mbRegNumberStringHash
       items <- mapM (buildItem fleetOwnerNameMap) rcs
       pure $ BoatFleetVehicleListRes items
 
@@ -99,6 +100,7 @@ getFleetVehicleAssociationV2 apiKey placeId mbLimit mbOffset mbSearchString = do
       let firstOwnerId = head fleetOwnerIds
       firstOwnerPerson <- QP.findById (Id firstOwnerId) >>= fromMaybeM (PersonNotFound firstOwnerId)
       let merchantId = firstOwnerPerson.merchantId
+          merchantOperatingCityId = firstOwnerPerson.merchantOperatingCityId.getId
 
       merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
       unless (Just merchant.internalApiKey == apiKey) $
@@ -115,7 +117,7 @@ getFleetVehicleAssociationV2 apiKey placeId mbLimit mbOffset mbSearchString = do
       mbRegNumberStringHash <- mapM getDbHash mbSearchString
 
       -- Fetch all RCs without pagination first
-      rcs <- VRCExtra.findAllValidRcByFleetOwnerIdsAndSearchStringWithoutVerificationStatusMF 10000 0 merchantId fleetOwnerIds mbSearchString mbRegNumberStringHash
+      rcs <- VRCExtra.findAllValidRcByFleetOwnerIdsAndSearchStringWithoutVerificationStatusMF 10000 0 merchantId merchantOperatingCityId fleetOwnerIds mbSearchString mbRegNumberStringHash
 
       -- Decrypt vehicle numbers and get all assignments
       rcsWithVehicleNos <- mapM (\r -> (r,) <$> decrypt r.certificateNumber) rcs

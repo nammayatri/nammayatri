@@ -30,9 +30,12 @@ findByMerchantOpCityIdMessageKeyLanguage ::
 findByMerchantOpCityIdMessageKeyLanguage merchantOperatingCityId messageKey language = do
   let makeKey mbCityId =
         "CachedQueries:Translations:"
-          <> ":MessageKey-" <> show messageKey
-          <> ":Language-" <> show language
-          <> ":City-" <> fromMaybe "" mbCityId
+          <> ":MessageKey-"
+          <> show messageKey
+          <> ":Language-"
+          <> show language
+          <> ":City-"
+          <> fromMaybe "" mbCityId
       citySpecificKey = makeKey (Just $ Kernel.Types.Id.getId merchantOperatingCityId)
       globalKey = makeKey Nothing
   Hedis.safeGet citySpecificKey >>= \case

@@ -572,12 +572,13 @@ getDriverFleetGetAllVehicle ::
   Maybe Text ->
   Maybe Bool ->
   Flow Common.ListVehicleResT
-getDriverFleetGetAllVehicle merchantShortId _ mbLimit mbOffset mbRegNumberString mbFleetOwnerId mbIsActive mbMemberPersonId mbSendDriverMobileNumber = do
+getDriverFleetGetAllVehicle merchantShortId opCity mbLimit mbOffset mbRegNumberString mbFleetOwnerId mbIsActive mbMemberPersonId mbSendDriverMobileNumber = do
   memberPersonId <- mbMemberPersonId & fromMaybeM (InvalidRequest "Member person id is required")
   let sendDriverMobileNumber = fromMaybe False mbSendDriverMobileNumber
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   fleetOwnerInfo <- getFleetOwnerIds memberPersonId mbFleetOwnerId
   let fleetNameMap = Map.fromList fleetOwnerInfo
       fleetOwnerIds = map fst fleetOwnerInfo
@@ -594,7 +595,7 @@ getDriverFleetGetAllVehicle merchantShortId _ mbLimit mbOffset mbRegNumberString
       vehicles <- traverse (convertToVehicleAPIEntityTFromAssociation sendDriverMobileNumber fleetNameMap) inactiveVehicleList
       return $ Common.ListVehicleResT (catMaybes vehicles)
     Nothing -> do
-      vehicleList <- RCQuery.findAllValidRcByFleetOwnerIdsAndSearchString (toInteger limit) (toInteger offset) merchant.id fleetOwnerIds mbRegNumberString mbRegNumberStringHash
+      vehicleList <- RCQuery.findAllValidRcByFleetOwnerIdsAndSearchString (toInteger limit) (toInteger offset) merchant.id merchantOpCity.id.getId fleetOwnerIds mbRegNumberString mbRegNumberStringHash
       vehicles <- traverse (convertToVehicleAPIEntityT sendDriverMobileNumber fleetNameMap) vehicleList
       return $ Common.ListVehicleResT (catMaybes vehicles)
 
@@ -1443,18 +1444,30 @@ castDashboardDriverStatus = \case
   Common.OFFLINE -> DrInfo.OFFLINE
   Common.SILENT -> DrInfo.SILENT
 
+buildFleetOwnerNameMap :: Map.Map Text Text -> [Text] -> Flow (Map.Map Text Text)
+buildFleetOwnerNameMap currentMap ownerIds = do
+  let missingOwnerIds = filter (`Map.notMember` currentMap) ownerIds
+  missingOwners <- QPersonExtra.findAllByPersonIds missingOwnerIds
+  let missingOwnerMap = Map.fromList $ map (\fleetOwner -> (fleetOwner.id.getId, fleetOwner.firstName <> maybe "" (" " <>) fleetOwner.lastName)) missingOwners
+  pure $ currentMap <> missingOwnerMap
+
 ---------------------------------------------------------------------
 
 getDriverFleetDriverAssociation :: ShortId DM.Merchant -> Context.City -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Flow Common.DrivertoVehicleAssociationResT
-getDriverFleetDriverAssociation merchantShortId _opCity mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode mbName mbSearchString mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner mbHasRequestReason mbServiceTier = do
+getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode mbName mbSearchString mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner mbHasRequestReason mbServiceTier = do
   requestorId <- mbRequestorId & fromMaybeM (InvalidRequest "Requestor ID is required")
-  fleetOwnersInfo <- getFleetOwnersInfoMerchantBased mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner
-  when (hasFleetMemberHierarchy == Just False) $ mapM_ (FleetAccess.checkRequestorAccessToFleet False mbRequestorId . (.fleetOwnerId)) fleetOwnersInfo
   merchant <- findMerchantByShortId merchantShortId
-  when (fromMaybe False merchant.fleetOwnerEnabledCheck) $ mapM_ (\info -> DCommon.checkFleetOwnerVerification info.fleetOwnerId merchant.fleetOwnerEnabledCheck) fleetOwnersInfo
-  let fleetOwnerIds = map (.fleetOwnerId) fleetOwnersInfo
-      fleetOwnerNameMap = Map.fromList $ map (\info -> (info.fleetOwnerId, info.fleetOwnerName)) fleetOwnersInfo
-  listOfAllDrivers <- getListOfDriversMultiFleet mbCountryCode mbDriverPhNo fleetOwnerIds merchant.id mbIsActive mbLimit mbOffset mbMode mbName mbSearchString mbHasRequestReason
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let effectiveFleetOwnerId =
+        if isRequestorFleerOwner == Just True
+          then Just requestorId
+          else mbFleetOwnerId
+      fleetOwnerIds = maybeToList effectiveFleetOwnerId
+  fleetOwnersInfo <- if null fleetOwnerIds then pure [] else getFleetOwnersInfoMerchantBased effectiveFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner
+  when (hasFleetMemberHierarchy == Just False && not (null fleetOwnerIds)) $ mapM_ (FleetAccess.checkRequestorAccessToFleet False mbRequestorId . (.fleetOwnerId)) fleetOwnersInfo
+  when (fromMaybe False merchant.fleetOwnerEnabledCheck && not (null fleetOwnerIds)) $ mapM_ (\info -> DCommon.checkFleetOwnerVerification info.fleetOwnerId merchant.fleetOwnerEnabledCheck) fleetOwnersInfo
+  let fleetOwnerNameMapFromRequest = Map.fromList $ map (\info -> (info.fleetOwnerId, info.fleetOwnerName)) fleetOwnersInfo
+  listOfAllDrivers <- getListOfDriversMultiFleet mbCountryCode mbDriverPhNo fleetOwnerIds merchant.id merchantOpCity.id mbIsActive mbLimit mbOffset mbMode mbName mbSearchString mbHasRequestReason mbFrom mbTo
   filteredDrivers <- case mbServiceTier of
     Nothing -> pure listOfAllDrivers
     Just tierText -> do
@@ -1464,6 +1477,9 @@ getDriverFleetDriverAssociation merchantShortId _opCity mbIsActive mbLimit mbOff
       let keepFunc (_fda, person, _info) = maybe False (\v -> any (\st -> show st == tierText) v.selectedServiceTiers) (Map.lookup person.id vehicleMap)
       let filteredTriples = filter keepFunc (zip3 fdaList personList driverInfoList)
       pure $ unzip3 filteredTriples
+  let (filteredFdaList, _, _) = filteredDrivers
+      fleetOwnerIdsFromResponse = nub $ map (.fleetOwnerId) filteredFdaList
+  fleetOwnerNameMap <- buildFleetOwnerNameMap fleetOwnerNameMapFromRequest fleetOwnerIdsFromResponse
   listItems <- createFleetDriverAssociationListItem fleetOwnerNameMap filteredDrivers
   let summary = Common.Summary {totalCount = 10000, count = length listItems}
   pure $
@@ -1590,15 +1606,22 @@ getDriverFleetDriverAssociation merchantShortId _opCity mbIsActive mbLimit mbOff
 
 ---------------------------------------------------------------------
 getDriverFleetVehicleAssociation :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.FleetVehicleStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Flow Common.DrivertoVehicleAssociationResT
-getDriverFleetVehicleAssociation merchantShortId _opCity mbLimit mbOffset mbVehicleNumber mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner = do
+getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehicleNumber mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner = do
   requestorId <- mbRequestorId & fromMaybeM (InvalidRequest "Requestor ID is required")
-  fleetOwnersInfo <- getFleetOwnersInfoMerchantBased mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner
-  when (hasFleetMemberHierarchy == Just False) $ mapM_ (FleetAccess.checkRequestorAccessToFleet False mbRequestorId . (.fleetOwnerId)) fleetOwnersInfo
+  let effectiveFleetOwnerId =
+        if isRequestorFleerOwner == Just True
+          then Just requestorId
+          else mbFleetOwnerId
+      fleetOwnerIds = maybeToList effectiveFleetOwnerId
+  fleetOwnersInfo <- if null fleetOwnerIds then pure [] else getFleetOwnersInfoMerchantBased effectiveFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner
+  when (hasFleetMemberHierarchy == Just False && not (null fleetOwnerIds)) $ mapM_ (FleetAccess.checkRequestorAccessToFleet False mbRequestorId . (.fleetOwnerId)) fleetOwnersInfo
   merchant <- findMerchantByShortId merchantShortId
-  when (fromMaybe False merchant.fleetOwnerEnabledCheck) $ mapM_ (\info -> DCommon.checkFleetOwnerVerification info.fleetOwnerId merchant.fleetOwnerEnabledCheck) fleetOwnersInfo
-  let fleetOwnerIds = map (.fleetOwnerId) fleetOwnersInfo
-      fleetOwnerNameMap = Map.fromList $ map (\info -> (info.fleetOwnerId, info.fleetOwnerName)) fleetOwnersInfo
-  listOfAllVehicle <- getListOfVehiclesMultiFleet mbVehicleNumber fleetOwnerIds mbLimit mbOffset mbStatus merchant.id mbSearchString mbStatusAwareVehicleNo
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  when (fromMaybe False merchant.fleetOwnerEnabledCheck && not (null fleetOwnerIds)) $ mapM_ (\info -> DCommon.checkFleetOwnerVerification info.fleetOwnerId merchant.fleetOwnerEnabledCheck) fleetOwnersInfo
+  let fleetOwnerNameMapFromRequest = Map.fromList $ map (\info -> (info.fleetOwnerId, info.fleetOwnerName)) fleetOwnersInfo
+  listOfAllVehicle <- getListOfVehiclesMultiFleet mbVehicleNumber fleetOwnerIds mbLimit mbOffset mbStatus merchant.id merchantOpCity.id mbSearchString mbStatusAwareVehicleNo
+  let fleetOwnerIdsFromResponse = nub $ mapMaybe (.fleetOwnerId) listOfAllVehicle
+  fleetOwnerNameMap <- buildFleetOwnerNameMap fleetOwnerNameMapFromRequest fleetOwnerIdsFromResponse
   let listOfAllVehicleWithFleetInfo = catMaybes $ map (\vrc -> vrc.fleetOwnerId >>= \fleetOwnerId -> Just (vrc, fleetOwnerId, fromMaybe "" (Map.lookup fleetOwnerId fleetOwnerNameMap))) listOfAllVehicle
   listItems <- createFleetVehicleAssociationListItem listOfAllVehicleWithFleetInfo
   let summary = Common.Summary {totalCount = 10000, count = length listItems}
@@ -3427,30 +3450,30 @@ getDriverDashboardInternalHelperGetFleetOwnerIds _ _ mbFleetOwnerId memberPerson
 
 -------------------------------------- multiple fleet queries ------------------------------------------------------
 
-getListOfVehiclesMultiFleet :: Maybe Text -> [Text] -> Maybe Int -> Maybe Int -> Maybe Common.FleetVehicleStatus -> Id DM.Merchant -> Maybe Text -> Maybe Text -> Flow [DVRC.VehicleRegistrationCertificate]
-getListOfVehiclesMultiFleet mbVehicleNo fleetOwnerIds mbLimit mbOffset mbStatus merchantId mbSearchString statusAwareVehicleNo = do
+getListOfVehiclesMultiFleet :: Maybe Text -> [Text] -> Maybe Int -> Maybe Int -> Maybe Common.FleetVehicleStatus -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Flow [DVRC.VehicleRegistrationCertificate]
+getListOfVehiclesMultiFleet mbVehicleNo fleetOwnerIds mbLimit mbOffset mbStatus merchantId merchantOperatingCityId mbSearchString statusAwareVehicleNo = do
   let limit = fromIntegral $ min 10 $ fromMaybe 5 mbLimit
       offset = fromIntegral $ fromMaybe 0 mbOffset
   case mbVehicleNo of
-    Just vehicleNo -> RCQuery.partialFindLastVehicleRCFleetMF vehicleNo fleetOwnerIds limit offset
+    Just vehicleNo -> RCQuery.partialFindLastVehicleRCFleetMF vehicleNo merchantId merchantOperatingCityId.getId fleetOwnerIds limit offset
     Nothing -> do
       case mbStatus of
         -- This Status is Associated with Driver and
-        Just Common.Active -> RCQuery.findAllActiveRCForFleetByLimitOffsetMF fleetOwnerIds merchantId limit offset mbSearchString statusAwareVehicleNo
-        Just Common.InActive -> RCQuery.findAllInactiveRCForFleetMF fleetOwnerIds limit offset merchantId statusAwareVehicleNo
+        Just Common.Active -> RCQuery.findAllActiveRCForFleetByLimitOffsetMF fleetOwnerIds merchantId merchantOperatingCityId.getId limit offset mbSearchString statusAwareVehicleNo
+        Just Common.InActive -> RCQuery.findAllInactiveRCForFleetMF fleetOwnerIds limit offset merchantId merchantOperatingCityId.getId statusAwareVehicleNo
         -- This Status is only Associated purely with RCs and Not Associated with any Driver
 
         -- make changes here for onride and tripassigned
-        Just Common.OnRide -> RCQuery.findAllVehicleByStatusForFleetByLimitOffsetMF fleetOwnerIds merchantId limit offset mbSearchString statusAwareVehicleNo DTT.IN_PROGRESS
-        Just Common.TripAssigned -> RCQuery.findAllVehicleByStatusForFleetByLimitOffsetMF fleetOwnerIds merchantId limit offset mbSearchString statusAwareVehicleNo DTT.TRIP_ASSIGNED
-        Just Common.Valid -> RCQuery.findAllRCByStatusForFleetMF fleetOwnerIds (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId statusAwareVehicleNo
-        Just Common.Invalid -> RCQuery.findAllRCByStatusForFleetMF fleetOwnerIds (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId statusAwareVehicleNo
-        Just Common.Pending -> RCQuery.findAllRCByStatusForFleetMF fleetOwnerIds (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId statusAwareVehicleNo
-        Nothing -> RCQuery.findAllRCByStatusForFleetMF fleetOwnerIds Nothing limit offset merchantId statusAwareVehicleNo
+        Just Common.OnRide -> RCQuery.findAllVehicleByStatusForFleetByLimitOffsetMF fleetOwnerIds merchantId merchantOperatingCityId.getId limit offset mbSearchString statusAwareVehicleNo DTT.IN_PROGRESS
+        Just Common.TripAssigned -> RCQuery.findAllVehicleByStatusForFleetByLimitOffsetMF fleetOwnerIds merchantId merchantOperatingCityId.getId limit offset mbSearchString statusAwareVehicleNo DTT.TRIP_ASSIGNED
+        Just Common.Valid -> RCQuery.findAllRCByStatusForFleetMF fleetOwnerIds (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId merchantOperatingCityId.getId statusAwareVehicleNo
+        Just Common.Invalid -> RCQuery.findAllRCByStatusForFleetMF fleetOwnerIds (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId merchantOperatingCityId.getId statusAwareVehicleNo
+        Just Common.Pending -> RCQuery.findAllRCByStatusForFleetMF fleetOwnerIds (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId merchantOperatingCityId.getId statusAwareVehicleNo
+        Nothing -> RCQuery.findAllRCByStatusForFleetMF fleetOwnerIds Nothing limit offset merchantId merchantOperatingCityId.getId statusAwareVehicleNo
 
-getListOfDriversMultiFleet :: Maybe Text -> Maybe Text -> [Text] -> Id DM.Merchant -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Maybe Bool -> Flow ([FleetDriverAssociation], [DP.Person], [DI.DriverInformation])
-getListOfDriversMultiFleet _ mbDriverPhNo fleetOwnerIds _ mbIsActive mbLimit mbOffset mbMode mbName mbSearchString mbHasRequestReason = do
-  let limit = min 10 $ fromMaybe 5 mbLimit
+getListOfDriversMultiFleet :: Maybe Text -> Maybe Text -> [Text] -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Flow ([FleetDriverAssociation], [DP.Person], [DI.DriverInformation])
+getListOfDriversMultiFleet _ mbDriverPhNo fleetOwnerIds merchantId merchantOperatingCityId mbIsActive mbLimit mbOffset mbMode mbName mbSearchString mbHasRequestReason mbFrom mbTo = do
+  let limit = min 10 $ fromMaybe 5 mbLimit -- can we increase this limit later?
       offset = fromMaybe 0 mbOffset
 
   mobileNumberHash <- case mbSearchString of
@@ -3460,7 +3483,7 @@ getListOfDriversMultiFleet _ mbDriverPhNo fleetOwnerIds _ mbIsActive mbLimit mbO
       Nothing -> pure Nothing
 
   let mode = castDashboardDriverStatus <$> mbMode
-  driverAssociationAndInfo <- FDV.findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds limit offset mobileNumberHash mbName mbSearchString mbIsActive mode mbHasRequestReason
+  driverAssociationAndInfo <- FDV.findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds merchantId.getId merchantOperatingCityId.getId limit offset mobileNumberHash mbName mbSearchString mbIsActive mode mbHasRequestReason mbFrom mbTo
   let (fleetDriverAssociation, person, driverInformation) = unzip3 driverAssociationAndInfo
   return (fleetDriverAssociation, person, driverInformation)
 
@@ -4162,9 +4185,10 @@ convertToFleetVehicleStatsItem transporterConfig agg vehicleMap =
             }
 
 getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Flow Common.OnboardedDriversAndUnlinkedVehiclesRes
-getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles merchantShortId _ fleetOwnerId mbLimit mbOffset = do
+getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles merchantShortId opCity fleetOwnerId mbLimit mbOffset = do
   merchant <- findMerchantByShortId merchantShortId
-  listOfAllVehicle <- RCQuery.findAllRCByStatusForFleetMF [fleetOwnerId] Nothing (fromIntegral $ fromMaybe 100000 mbLimit) (fromIntegral $ fromMaybe 0 mbOffset) merchant.id Nothing
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  listOfAllVehicle <- RCQuery.findAllRCByStatusForFleetMF [fleetOwnerId] Nothing (fromIntegral $ fromMaybe 100000 mbLimit) (fromIntegral $ fromMaybe 0 mbOffset) merchant.id merchantOpCity.id.getId Nothing
   activeDriverIds <- QFDAExtra.getActiveDriverIdsByFleetOwnerId fleetOwnerId
   (unLinkedVehicles, linkedDriverIds) <- getDriverVehicleCombination listOfAllVehicle
   let unlinkedDriverIds = filter (\driverId -> driverId `notElem` linkedDriverIds) activeDriverIds

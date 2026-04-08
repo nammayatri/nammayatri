@@ -52,15 +52,15 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as AT
 import qualified Data.ByteString.Lazy as BSL
 import Data.Default.Class
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as Map
 import Data.OpenApi (ToSchema)
 import Data.Singletons
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as TE
+import qualified Domain.Action.UI.CancelLogic as CancelLogic
 import qualified Domain.Types.BecknConfig as DTBC
 import qualified Domain.Types.Exophone as DTE
-import qualified Data.HashMap.Strict as HM
-import qualified Domain.Action.UI.CancelLogic as CancelLogic
 import qualified Domain.Types.FRFSConfig as DFRFS
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantConfig as DTM
