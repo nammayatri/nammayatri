@@ -22,6 +22,7 @@ module Lib.DriverCoins.Coins
     incrementValidRideCount,
     incrementOTPValidRideCount,
     updateDriverCoins,
+    resetTodayCoinsAndAdjustLifetime,
     sendCoinsNotification,
     sendCoinsNotificationV2,
     safeIncrBy,
@@ -113,6 +114,41 @@ updateDriverCoins driverId finalCoinsValue timeDiffFromUtc = do
   let runQuery = if Just cloudType /= driver.cloudType then Hedis.runInMultiCloudRedisWrite else \x -> x
   void $ Person.updateTotalEarnedCoins (finalCoinsValue + driver.totalEarnedCoins) driverId
   void $ runQuery $ updateCoinsByDriverId driverId finalCoinsValue timeDiffFromUtc
+
+resetTodayCoinsAndAdjustLifetime :: EventFlow m r => Id DP.Person -> Seconds -> m ()
+resetTodayCoinsAndAdjustLifetime driverId timeDiffFromUtc = do
+  now <- getCurrentTime
+  let istTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
+      currentDate = show $ utctDay istTime
+  todayCoinHistory <- B.runInReplica $ CHistory.getCoinEventSummary driverId istTime (secondsToNominalDiffTime timeDiffFromUtc)
+  let reversalAlreadyApplied = any (\historyItem -> historyItem.eventFunction == DCT.FraudCoinsReversal) todayCoinHistory
+      todayAddedCoins = sum $ map (.coins) $ filter (\historyItem -> historyItem.coins > 0) todayCoinHistory
+  when (todayAddedCoins > 0 && not reversalAlreadyApplied) $ do
+    forM_ (listToMaybe todayCoinHistory) $ \historyItem -> do
+      reversalTxnId <- generateGUIDText
+      resetEntityId <- generateGUIDText
+      CHistory.updateCoinEvent $
+        DTCC.CoinHistory
+          { id = Id reversalTxnId,
+            driverId = driverId.getId,
+            merchantId = historyItem.merchantId,
+            merchantOptCityId = historyItem.merchantOptCityId,
+            eventFunction = DCT.FraudCoinsReversal,
+            coins = negate todayAddedCoins,
+            status = Used,
+            createdAt = now,
+            updatedAt = now,
+            expirationAt = Nothing,
+            coinsUsed = 0,
+            bulkUploadTitle = Nothing,
+            entityId = Just resetEntityId,
+            vehicleCategory = historyItem.vehicleCategory
+          }
+    driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+    void $ Person.updateTotalEarnedCoins (driver.totalEarnedCoins - todayAddedCoins) driverId
+    expirationPeriod <- getExpirationSeconds timeDiffFromUtc
+    safeIncrBy (mkCoinAccumulationByDriverIdKey driverId currentDate) (negate $ fromIntegral todayAddedCoins) driverId timeDiffFromUtc
+    Hedis.withCrossAppRedis $ Hedis.expire (mkCoinAccumulationByDriverIdKey driverId currentDate) expirationPeriod
 
 driverCoinsEvent :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> Maybe Text -> Maybe DTVeh.VehicleVariant -> Maybe [LYT.ConfigVersionMap] -> m ()
 driverCoinsEvent driverId merchantId merchantOpCityId eventType entityId mbVehVarient mbConfigVersionMap = do

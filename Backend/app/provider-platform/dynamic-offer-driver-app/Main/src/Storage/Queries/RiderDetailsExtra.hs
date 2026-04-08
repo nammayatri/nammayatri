@@ -147,3 +147,31 @@ updateCompletedRidesCount riderId = do
       Se.Set BeamRD.updatedAt now
     ]
     [Se.Is BeamRD.id (Se.Eq riderId)]
+
+updateRiderFlaggedForDriverIncentives :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Bool -> Id RiderDetails -> m ()
+updateRiderFlaggedForDriverIncentives riderFlaggedForDriverIncentives riderId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamRD.riderFlaggedForDriverIncentives (Just riderFlaggedForDriverIncentives),
+      Se.Set BeamRD.updatedAt now
+    ]
+    [Se.Is BeamRD.id (Se.Eq riderId.getId)]
+
+isRiderFlaggedForCoinZero ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Maybe (Id RiderDetails) ->
+  m Bool
+isRiderFlaggedForCoinZero Nothing = pure False
+isRiderFlaggedForCoinZero (Just riderDetailsId) = do
+  riderDetails <- findOneWithKV [Se.Is BeamRD.id (Se.Eq riderDetailsId.getId)]
+  pure $ maybe False (.riderFlaggedForDriverIncentives) riderDetails
+
+flagRiderForCoinZero ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Maybe (Id RiderDetails) ->
+  m ()
+flagRiderForCoinZero Nothing = pure ()
+flagRiderForCoinZero (Just riderDetailsId) = do
+  mbRiderDetails <- findOneWithKV [Se.Is BeamRD.id (Se.Eq riderDetailsId.getId)]
+  when (maybe True (not . (.riderFlaggedForDriverIncentives)) mbRiderDetails) $
+    updateRiderFlaggedForDriverIncentives True riderDetailsId

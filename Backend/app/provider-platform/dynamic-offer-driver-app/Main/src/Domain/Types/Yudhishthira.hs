@@ -42,7 +42,7 @@ data EndRideTagData = EndRideTagData
   { ride :: DRide.Ride,
     booking :: SRB.Booking,
     isDriverSameAsCustomer :: Bool,
-    priorCompletedRidesWithSameCustomer :: Int,
+    shouldBlockCoinsForSameRiderFlow :: Bool,
     rideDurationSeconds :: Int
   }
   deriving (Generic, Show, FromJSON, ToJSON)

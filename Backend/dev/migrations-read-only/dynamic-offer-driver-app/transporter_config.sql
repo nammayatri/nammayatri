@@ -642,3 +642,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_number_of_l
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN same_rider_driver_ride_count_lookback_days integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN same_rider_driver_ride_count_threshold integer ;
