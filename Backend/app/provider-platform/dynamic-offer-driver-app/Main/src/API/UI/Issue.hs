@@ -72,6 +72,7 @@ driverIssueHandle =
       createTicket = castCreateTicket,
       updateTicket = castUpdateTicket,
       kaptureGetTicket = Nothing,
+      getTicketStatus = Nothing,
       findMerchantConfig = buildMerchantConfig,
       mbReportACIssue = Nothing,
       mbReportIssue = Nothing,
