@@ -86,10 +86,10 @@ findByIdWithGeom specialLocationId =
 
 filterGates :: Maybe SpecialLocationFull -> Bool -> Maybe SpecialLocationFull
 filterGates (Just specialLocBody) isOrigin =
-  let gateTypeRequired = if isOrigin then GD.Pickup else GD.Drop
+  let gateTypeRequired = if isOrigin then [GD.Pickup, GD.Parking] else [GD.Drop]
       filteredGates = filter matchGateType (gatesInfo specialLocBody)
       matchGateType gate = case gate of
-        GD.GateInfoFull {GD.gateType = gt} -> gt == gateTypeRequired
+        GD.GateInfoFull {GD.gateType = gt} -> gt `elem` gateTypeRequired
    in if null filteredGates
         then Just specialLocBody
         else Just specialLocBody {gatesInfo = filteredGates}
