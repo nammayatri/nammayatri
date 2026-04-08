@@ -103,6 +103,7 @@ customerIssueHandle =
       createTicket = castCreateTicket,
       updateTicket = castUpdateTicket,
       kaptureGetTicket = Just castKaptureGetTicket,
+      getTicketStatus = Just castGetTicketStatus,
       findMerchantConfig = buildMerchantConfig,
       mbReportACIssue = Just reportACIssue,
       mbReportIssue = Just reportIssue,
@@ -375,6 +376,9 @@ castUpdateTicket merchantId merchantOperatingCityId = TT.updateTicket (cast merc
 
 castKaptureGetTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.GetTicketReq -> Flow [TIT.GetTicketResp]
 castKaptureGetTicket merchantId merchantOperatingCityId = TT.kaptureGetTicket (cast merchantId) (cast merchantOperatingCityId)
+
+castGetTicketStatus :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.SearchTicketByIdReq -> Flow [TIT.GetTicketStatusResp]
+castGetTicketStatus merchantId merchantOperatingCityId = TT.getTicketStatus (cast merchantId) (cast merchantOperatingCityId)
 
 reportACIssue :: BaseUrl -> Text -> Text -> Flow APISuccess
 reportACIssue driverOfferBaseUrl driverOfferApiKey bppRideId = do
