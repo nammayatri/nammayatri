@@ -21,6 +21,7 @@ module Lib.DriverCoins.Coins
     getExpirationSeconds,
     incrementValidRideCount,
     updateDriverCoins,
+    resetTodayCoinsAndAdjustLifetime,
     sendCoinsNotification,
     sendCoinsNotificationV2,
     safeIncrBy,
@@ -111,6 +112,18 @@ updateDriverCoins driverId finalCoinsValue timeDiffFromUtc = do
   let runQuery = if Just cloudType /= driver.cloudType then Hedis.runInMultiCloudRedisWrite else \x -> x
   void $ Person.updateTotalEarnedCoins (finalCoinsValue + driver.totalEarnedCoins) driverId
   void $ runQuery $ updateCoinsByDriverId driverId finalCoinsValue timeDiffFromUtc
+
+resetTodayCoinsAndAdjustLifetime :: EventFlow m r => Id DP.Person -> Seconds -> m ()
+resetTodayCoinsAndAdjustLifetime driverId timeDiffFromUtc = do
+  now <- getCurrentTime
+  let istTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
+      currentDate = show $ utctDay istTime
+  todayCoins <- fromMaybe 0 <$> getCoinAccumulationByDriverIdKey driverId currentDate
+  when (todayCoins > 0) $ do
+    driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+    void $ Person.updateTotalEarnedCoins (driver.totalEarnedCoins - todayCoins) driverId
+  expirationPeriod <- getExpirationSeconds timeDiffFromUtc
+  void $ Hedis.withCrossAppRedis $ Hedis.setExp (mkCoinAccumulationByDriverIdKey driverId currentDate) (0 :: Int) expirationPeriod
 
 driverCoinsEvent :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> Maybe Text -> Maybe DTVeh.VehicleVariant -> Maybe [LYT.ConfigVersionMap] -> m ()
 driverCoinsEvent driverId merchantId merchantOpCityId eventType entityId mbVehVarient mbConfigVersionMap = do

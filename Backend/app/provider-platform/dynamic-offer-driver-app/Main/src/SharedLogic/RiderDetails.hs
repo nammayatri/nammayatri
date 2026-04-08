@@ -72,5 +72,6 @@ getRiderDetails currency merchantId mbMerchantOperatingCityId customerMobileCoun
             validCancellations = 0,
             cancellationDueRides = 0,
             merchantOperatingCityId = mbMerchantOperatingCityId,
-            bapId = Just bapId
+            bapId = Just bapId,
+            riderFlaggedForDriverIncentives = False
           }
