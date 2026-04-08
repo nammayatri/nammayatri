@@ -22,6 +22,7 @@ import Domain.Types.Booking as Booking
 import Domain.Types.Booking as DBooking
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverInformation
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity as DMOC
@@ -508,7 +509,9 @@ data RideItem = RideItem
     customerName :: Maybe Text,
     fareDiff :: Maybe Price,
     bookingStatus :: Common.BookingStatus,
-    tripCategory :: DTC.TripCategory
+    tripCategory :: DTC.TripCategory,
+    customerPickupLocation :: Maybe DLoc.Location,
+    customerDropLocation :: Maybe DLoc.Location
   }
 
 data RideItemV2 = RideItemV2
@@ -723,7 +726,7 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
 
     mkRideItem :: (ShortId Ride, UTCTime, RideDetails.RideDetails, RiderDetails.RiderDetails, Booking.Booking, Maybe Price, Common.BookingStatus) -> RideItem
     mkRideItem (rideShortId, rideCreatedAt, rideDetails, riderDetails, booking, fareDiff, bookingStatus) =
-      RideItem {customerName = booking.riderName, tripCategory = booking.tripCategory, ..}
+      RideItem {customerName = booking.riderName, tripCategory = booking.tripCategory, customerPickupLocation = Just booking.fromLocation, customerDropLocation = booking.toLocation, ..}
 
     mkBookingStatusFilter :: [Ride.Ride] -> [Ride.Ride]
     mkBookingStatusFilter rides = case mbBookingStatus of

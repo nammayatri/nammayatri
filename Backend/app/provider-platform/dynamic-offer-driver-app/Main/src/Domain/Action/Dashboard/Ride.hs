@@ -226,7 +226,9 @@ buildRideListItem QRide.RideItem {..} = do
         fareDiff = fareDiff <&> (.amountInt),
         fareDiffWithCurrency = mkPriceAPIEntity <$> fareDiff,
         bookingStatus,
-        rideCreatedAt = rideCreatedAt
+        rideCreatedAt = rideCreatedAt,
+        customerPickupLocation = mkLocationAPIEntity <$> customerPickupLocation,
+        customerDropLocation = mkLocationAPIEntity <$> customerDropLocation
       }
 
 buildRideListItemV2 :: EncFlow m r => QRide.RideItemV2 -> m Common.RideListItemV2
