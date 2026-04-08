@@ -286,7 +286,8 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
                 RiderDetails.totalBookings = bppTxn.riderDetailsTotalBookings,
                 RiderDetails.completedRides = bppTxn.riderDetailsCompletedRides,
                 RiderDetails.validCancellations = bppTxn.riderDetailsValidCancellations,
-                RiderDetails.cancellationDueRides = bppTxn.riderDetailsCancellationDueRides
+                RiderDetails.cancellationDueRides = bppTxn.riderDetailsCancellationDueRides,
+                RiderDetails.riderFlaggedForDriverIncentives = False
               },
           customerName = bppTxn.bookingCustomerName,
           fareDiff = mkPrice bppTxn.rideCurrency <$> (bppTxn.rideFare - bppTxn.bookingEstimatedFare),

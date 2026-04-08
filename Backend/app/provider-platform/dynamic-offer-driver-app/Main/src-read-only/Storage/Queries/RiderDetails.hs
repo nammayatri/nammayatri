@@ -126,6 +126,7 @@ updateByPrimaryKey (Domain.Types.RiderDetails.RiderDetails {..}) = do
       Se.Set Beam.referralCode (Kernel.Types.Id.getId <$> referralCode),
       Se.Set Beam.referredAt referredAt,
       Se.Set Beam.referredByDriver (Kernel.Types.Id.getId <$> referredByDriver),
+      Se.Set Beam.riderFlaggedForDriverIncentives (Kernel.Prelude.Just riderFlaggedForDriverIncentives),
       Se.Set Beam.totalBookings (Kernel.Prelude.Just totalBookings),
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.validCancellations (Kernel.Prelude.Just validCancellations),
