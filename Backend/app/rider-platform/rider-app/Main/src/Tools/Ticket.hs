@@ -19,6 +19,7 @@ module Tools.Ticket
     kaptureEncryption,
     kapturePullTicket,
     kaptureGetTicket,
+    getTicketStatus,
   )
 where
 
@@ -52,6 +53,9 @@ kapturePullTicket = runWithServiceConfig TI.kapturePullTicket
 
 kaptureGetTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.GetTicketReq -> m [Ticket.GetTicketResp]
 kaptureGetTicket = runWithServiceConfig TI.kaptureGetTicket
+
+getTicketStatus :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.SearchTicketByIdReq -> m [Ticket.GetTicketStatusResp]
+getTicketStatus = runWithServiceConfig TI.getTicketStatus
 
 runWithServiceConfig ::
   (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
