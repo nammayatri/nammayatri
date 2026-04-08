@@ -46,21 +46,10 @@ getTransitServiceReq = getMultiModalConfig
 
 getOTPRestServiceReq :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m BaseUrl
 getOTPRestServiceReq merchantId merchantOperatingCityId = do
-  transitServiceReq <- measureLatency
-    (getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MultiModalStaticDataService MultiModal.OTPTransit)}) >>= fromMaybeM (InternalError "No OTP Transit Service Config Found"))
-    ("getOTPRestServiceReq: getOneConfig merchantId=" <> merchantId.getId <> " merchantOperatingCityId=" <> merchantOperatingCityId.getId)
+  transitServiceReq <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MultiModalStaticDataService MultiModal.OTPTransit)}) >>= fromMaybeM (InternalError "No OTP Transit Service Config Found")
   transitServiceReq' <- case transitServiceReq.serviceConfig of
     DMSC.MultiModalStaticDataServiceConfig multiModalServiceConfig -> return multiModalServiceConfig
     cfg -> throwError $ InternalError $ "Unknown Service Config in otprestservicereq" <> show cfg
   case transitServiceReq' of
     OTPTransitConfig otpTransitConfig -> return otpTransitConfig.baseUrl
     config -> throwError $ InternalError $ "Unknown Service Config" <> show config
-
-measureLatency :: MonadFlow m => m a -> Text -> m a
-measureLatency action label = do
-  startTime <- getCurrentTime
-  result <- withLogTag label action
-  endTime <- getCurrentTime
-  let latency = diffUTCTime endTime startTime
-  logDebug $ label <> " Latency: " <> show latency <> " seconds"
-  return result
