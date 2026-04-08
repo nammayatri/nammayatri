@@ -42,6 +42,7 @@ data RiderDetailsT f = RiderDetailsT
     referralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     referredByDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    riderFlaggedForDriverIncentives :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     totalBookings :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     validCancellations :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

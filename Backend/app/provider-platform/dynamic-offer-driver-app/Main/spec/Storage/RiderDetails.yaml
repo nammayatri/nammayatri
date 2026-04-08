@@ -47,6 +47,7 @@ RiderDetails:
     isDeviceIdExists: Maybe Bool
     isFlagConfirmed: Maybe Bool
     bapId: Maybe Text
+    riderFlaggedForDriverIncentives: Bool
 
   fromTType:
     currency: fromMaybe Kernel.Types.Common.INR currency|E
@@ -59,6 +60,7 @@ RiderDetails:
     noOfTimesCanellationDuesPaid: fromMaybe 0 noOfTimesCanellationDuesPaid|E
     noOfTimesWaiveOffUsed: fromMaybe 0 noOfTimesWaiveOffUsed|E
     waivedOffAmount: fromMaybe 0 waivedOffAmount|E
+    riderFlaggedForDriverIncentives: fromMaybe False riderFlaggedForDriverIncentives|E
 
   toTType:
     currency: Kernel.Prelude.Just|I
@@ -71,6 +73,7 @@ RiderDetails:
     noOfTimesCanellationDuesPaid: Kernel.Prelude.Just|I
     noOfTimesWaiveOffUsed: Kernel.Prelude.Just|I
     waivedOffAmount: Kernel.Prelude.Just|I
+    riderFlaggedForDriverIncentives: Kernel.Prelude.Just|I
 
   beamType:
     currency: Maybe Currency
@@ -83,6 +86,7 @@ RiderDetails:
     noOfTimesCanellationDuesPaid : Maybe Int
     noOfTimesWaiveOffUsed : Maybe Int
     waivedOffAmount : Maybe HighPrecMoney
+    riderFlaggedForDriverIncentives : Maybe Bool
   constraints:
     id: PrimaryKey
     mobileNumberHash: "!SecondaryKey" # forcing to be a secondary key
