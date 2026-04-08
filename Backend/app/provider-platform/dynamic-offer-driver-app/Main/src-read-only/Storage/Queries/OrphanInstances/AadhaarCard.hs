@@ -11,6 +11,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.AadhaarCard as Beam
+import qualified Storage.Queries.Transformers.FleetOwnerInformation
 
 instance FromTType' Beam.AadhaarCard Domain.Types.AadhaarCard.AadhaarCard where
   fromTType' (Beam.AadhaarCardT {..}) = do
@@ -19,7 +20,7 @@ instance FromTType' Beam.AadhaarCard Domain.Types.AadhaarCard.AadhaarCard where
         Domain.Types.AadhaarCard.AadhaarCard
           { aadhaarBackImageId = Kernel.Types.Id.Id <$> aadhaarBackImageId,
             aadhaarFrontImageId = Kernel.Types.Id.Id <$> aadhaarFrontImageId,
-            aadhaarNumberHash = aadhaarNumberHash,
+            aadhaarNumber = Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem aadhaarNumberEncrypted aadhaarNumberHash,
             address = address,
             consent = consent,
             consentTimestamp = consentTimestamp,
@@ -42,7 +43,8 @@ instance ToTType' Beam.AadhaarCard Domain.Types.AadhaarCard.AadhaarCard where
     Beam.AadhaarCardT
       { Beam.aadhaarBackImageId = Kernel.Types.Id.getId <$> aadhaarBackImageId,
         Beam.aadhaarFrontImageId = Kernel.Types.Id.getId <$> aadhaarFrontImageId,
-        Beam.aadhaarNumberHash = aadhaarNumberHash,
+        Beam.aadhaarNumberEncrypted = Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted aadhaarNumber,
+        Beam.aadhaarNumberHash = Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash aadhaarNumber,
         Beam.address = address,
         Beam.consent = consent,
         Beam.consentTimestamp = consentTimestamp,

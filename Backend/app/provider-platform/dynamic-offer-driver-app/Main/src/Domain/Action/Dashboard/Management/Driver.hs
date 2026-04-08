@@ -145,6 +145,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
+import qualified Storage.Queries.AadhaarCardExtra as QAadhaarCardExtra
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
@@ -642,7 +643,7 @@ postDriverUpdateByPhoneNumber :: ShortId DM.Merchant -> Context.City -> Text -> 
 postDriverUpdateByPhoneNumber merchantShortId _ phoneNumber req = do
   mobileNumberHash <- getDbHash phoneNumber
   aadhaarNumberHash <- getDbHash req.driverAadhaarNumber
-  aadhaarInfo <- QAadhaarCard.findByAadhaarNumberHash (Just aadhaarNumberHash)
+  aadhaarInfo <- QAadhaarCardExtra.findByAadhaarNumberHash (Just aadhaarNumberHash)
   when (isJust aadhaarInfo) $ throwError AadhaarAlreadyLinked
   merchant <- findMerchantByShortId merchantShortId
   driver <- QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
@@ -650,7 +651,7 @@ postDriverUpdateByPhoneNumber merchantShortId _ phoneNumber req = do
   case res of
     Just _ -> QAadhaarCard.findByPhoneNumberAndUpdate (Just req.driverName) (Just req.driverGender) (Just req.driverDob) (Just aadhaarNumberHash) (bool Documents.INVALID Documents.VALID req.isVerified) driver.id
     Nothing -> do
-      aadhaarEntity <- AVD.mkAadhaar merchant.id driver.merchantOperatingCityId driver.id req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) Nothing True Nothing
+      aadhaarEntity <- AVD.mkAadhaar merchant.id driver.merchantOperatingCityId driver.id req.driverName req.driverGender req.driverDob (Just req.driverAadhaarNumber) Nothing True Nothing
       QAadhaarCard.create aadhaarEntity
   QDriverInfo.updateAadhaarVerifiedState True (cast driver.id)
   pure Success

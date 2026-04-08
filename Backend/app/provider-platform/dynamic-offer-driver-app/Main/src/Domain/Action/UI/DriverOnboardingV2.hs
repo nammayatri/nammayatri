@@ -1067,7 +1067,7 @@ createAadhaarRecord personId merchantId merchantOperatingCityId API.Types.UI.Dri
             verificationStatus = verificationStatus,
             createdAt = currTime,
             updatedAt = currTime,
-            aadhaarNumberHash = Nothing,
+            aadhaarNumber = Nothing,
             maskedAadhaarNumber = maskedAadhaarNumber',
             driverGender = Nothing,
             driverImage = Nothing,

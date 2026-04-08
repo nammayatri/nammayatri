@@ -1200,7 +1200,7 @@ AadhaarCard:
     aadhaarFrontImageId: Maybe (Id Image)
     aadhaarBackImageId: Maybe (Id Image)
     maskedAadhaarNumber: Maybe Text
-    aadhaarNumberHash: Maybe DbHash
+    aadhaarNumber: Maybe (EncryptedHashedField e Text)
     nameOnCard: Maybe Text
     driverGender: Maybe Text
     dateOfBirth: Maybe Text
@@ -1217,6 +1217,19 @@ AadhaarCard:
   derives: "Generic,Show,ToJSON,FromJSON"
   constraints:
     driverId: PrimaryKey
+
+  beamFields:
+    aadhaarNumber:
+      aadhaarNumberEncrypted: Maybe Text
+      aadhaarNumberHash: Maybe DbHash
+
+  fromTType:
+    aadhaarNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem aadhaarNumberEncrypted aadhaarNumberHash|E
+
+  toTType:
+    aadhaarNumberEncrypted: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted
+    aadhaarNumberHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
+
   queries:
     findByFrontImageId:
       kvFunction: findOneWithKV
@@ -1230,20 +1243,6 @@ AadhaarCard:
       where: driverId
     deleteByPersonId:
       kvFunction: deleteWithKV
-      where: driverId
-    findByAadhaarNumberHash:
-      kvFunction: findOneWithKV
-      where: aadhaarNumberHash
-    findByPhoneNumberAndUpdate:
-      kvFunction: updateWithKV
-      params:
-        [
-          nameOnCard,
-          driverGender,
-          dateOfBirth,
-          aadhaarNumberHash,
-          verificationStatus,
-        ]
       where: driverId
     updateDriverImagePath:
       kvFunction: updateOneWithKV

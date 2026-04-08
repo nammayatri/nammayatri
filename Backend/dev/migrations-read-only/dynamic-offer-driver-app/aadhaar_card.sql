@@ -23,3 +23,8 @@ ALTER TABLE atlas_driver_offer_bpp.aadhaar_card ADD COLUMN driver_image_path tex
 ALTER TABLE atlas_driver_offer_bpp.aadhaar_card ADD COLUMN driver_image text ;
 ALTER TABLE atlas_driver_offer_bpp.aadhaar_card ADD COLUMN driver_gender text ;
 ALTER TABLE atlas_driver_offer_bpp.aadhaar_card ADD COLUMN aadhaar_number_hash text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.aadhaar_card ADD COLUMN aadhaar_number_encrypted text ;
