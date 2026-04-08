@@ -774,7 +774,6 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
           when (payment.startDate <= today && payment.endDate >= today) $
             QPurchasedPass.updateStatusById DPurchasedPass.Active purchasedPass.id
 
-
   allActivePurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
 
   -- Always show all passes regardless of device. The deviceMismatch flag in
