@@ -85,11 +85,13 @@ PgPayoutSettlementReport:
     fulfillmentId: Maybe Text                      # Juspay fulfillment ID
     fulfillmentInstrumentType: Maybe FulfillmentInstrument   # IMPS | NEFT | RTGS | UPI
     fulfillmentMethod: Maybe Text                  # e.g. JUSPAY_VPA | ACCOUNT_IFSC
+    fulfillmentTxnId: Maybe Text                    # Juspay fulfillment transaction ID
     fulfillmentStatus: Maybe Text                  # Juspay fulfillment status text
     fulfillmentResponseCode: Maybe Text
     fulfillmentResponseMessage: Maybe Text
     fulfillmentDate: Maybe UTCTime
     fulfillmentAmount: Maybe HighPrecMoney
+    fulfillmentOrderCreatedAt: Maybe UTCTime
 
     # --- Reconciliation result ---
     reconStatus: ReconStatus                       # Set to UNMATCHED on ingest; updated by recon job
