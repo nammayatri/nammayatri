@@ -21,6 +21,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.AadhaarCard as Beam
 import Storage.Queries.AadhaarCardExtra as ReExport
+import qualified Storage.Queries.Transformers.FleetOwnerInformation
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.AadhaarCard.AadhaarCard -> m ())
 create = createWithKV
@@ -31,29 +32,11 @@ createMany = traverse_ create
 deleteByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 deleteByPersonId driverId = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-findByAadhaarNumberHash :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash -> m (Maybe Domain.Types.AadhaarCard.AadhaarCard))
-findByAadhaarNumberHash aadhaarNumberHash = do findOneWithKV [Se.Is Beam.aadhaarNumberHash $ Se.Eq aadhaarNumberHash]
-
 findByBackImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image) -> m (Maybe Domain.Types.AadhaarCard.AadhaarCard))
 findByBackImageId aadhaarBackImageId = do findOneWithKV [Se.Is Beam.aadhaarBackImageId $ Se.Eq (Kernel.Types.Id.getId <$> aadhaarBackImageId)]
 
 findByFrontImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image) -> m (Maybe Domain.Types.AadhaarCard.AadhaarCard))
 findByFrontImageId aadhaarFrontImageId = do findOneWithKV [Se.Is Beam.aadhaarFrontImageId $ Se.Eq (Kernel.Types.Id.getId <$> aadhaarFrontImageId)]
-
-findByPhoneNumberAndUpdate ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash -> Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-findByPhoneNumberAndUpdate nameOnCard driverGender dateOfBirth aadhaarNumberHash verificationStatus driverId = do
-  _now <- getCurrentTime
-  updateWithKV
-    [ Se.Set Beam.nameOnCard nameOnCard,
-      Se.Set Beam.driverGender driverGender,
-      Se.Set Beam.dateOfBirth dateOfBirth,
-      Se.Set Beam.aadhaarNumberHash aadhaarNumberHash,
-      Se.Set Beam.verificationStatus verificationStatus,
-      Se.Set Beam.updatedAt _now
-    ]
-    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateDriverImagePath :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateDriverImagePath driverImagePath driverId = do
@@ -86,7 +69,8 @@ updateByPrimaryKey (Domain.Types.AadhaarCard.AadhaarCard {..}) = do
   updateWithKV
     [ Se.Set Beam.aadhaarBackImageId (Kernel.Types.Id.getId <$> aadhaarBackImageId),
       Se.Set Beam.aadhaarFrontImageId (Kernel.Types.Id.getId <$> aadhaarFrontImageId),
-      Se.Set Beam.aadhaarNumberHash aadhaarNumberHash,
+      Se.Set Beam.aadhaarNumberEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted aadhaarNumber),
+      Se.Set Beam.aadhaarNumberHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash aadhaarNumber),
       Se.Set Beam.address address,
       Se.Set Beam.consent consent,
       Se.Set Beam.consentTimestamp consentTimestamp,

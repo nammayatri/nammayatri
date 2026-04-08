@@ -123,16 +123,16 @@ generateAadhaarOtp isDashboard mbMerchant personId merchantOpCityId req = do
   res <- AadhaarVerification.generateAadhaarOtp person.merchantId merchantOpCityId req
   aadhaarOtpEntity <- mkAadhaarOtp personId res
   _ <- QueryAR.create aadhaarOtpEntity
-  cacheAadhaarVerifyTries personId tried res.transactionId aadhaarHash isDashboard
+  cacheAadhaarVerifyTries personId tried res.transactionId aadhaarHash req.aadhaarNumber isDashboard
   pure res
 
-cacheAadhaarVerifyTries :: Id Person.Person -> Int -> Maybe Text -> DbHash -> Bool -> Flow ()
-cacheAadhaarVerifyTries _ _ Nothing _ _ = return ()
-cacheAadhaarVerifyTries personId tried transactionId aadhaarNumberHash isDashboard = do
+cacheAadhaarVerifyTries :: Id Person.Person -> Int -> Maybe Text -> DbHash -> Text -> Bool -> Flow ()
+cacheAadhaarVerifyTries _ _ Nothing _ _ _ = return ()
+cacheAadhaarVerifyTries personId tried transactionId aadhaarNumberHash aadhaarNumber isDashboard = do
   let key = makeTransactionIdAndAadhaarHashKey personId
   let tryKey = makeGenerateOtpTryKey personId
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Redis.setExp key (transactionId, aadhaarNumberHash) expTime
+  Redis.setExp key (transactionId, aadhaarNumberHash, aadhaarNumber) expTime
   unless isDashboard $ Redis.setExp tryKey (tried + 1) expTime
 
 verifyAadhaarOtp ::
@@ -150,9 +150,9 @@ verifyAadhaarOtp mbMerchant personId merchantOpCityId req = do
     -- merchant access checking
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound (getId personId))
   let key = makeTransactionIdAndAadhaarHashKey personId
-  mtIdAndAadhaarHash <- Redis.safeGet key
+  mtIdAndAadhaarHash :: Maybe (Maybe Text, DbHash, Text) <- Redis.safeGet key
   case mtIdAndAadhaarHash of
-    Just (tId, aadhaarNumberHash) -> do
+    Just (Just tId, _aadhaarNumberHash, aadhaarNumber) -> do
       let aadhaarVerifyReq =
             AadhaarVerification.AadhaarOtpVerifyReq
               { otp = req.otp,
@@ -170,18 +170,19 @@ verifyAadhaarOtp mbMerchant personId merchantOpCityId req = do
           case resultOrg of
             Left err -> throwError $ InternalError ("Aadhaar Verification failed due to S3 upload failure, Please try again : " <> show err)
             Right _ -> do
-              aadhaarEntity <- mkAadhaar person.merchantId person.merchantOperatingCityId personId res.name res.gender res.date_of_birth (Just aadhaarNumberHash) Nothing True (Just orgImageFilePath)
+              aadhaarEntity <- mkAadhaar person.merchantId person.merchantOperatingCityId personId res.name res.gender res.date_of_birth (Just aadhaarNumber) Nothing True (Just orgImageFilePath)
               QAadhaarCard.create aadhaarEntity
               DriverInfo.updateAadhaarVerifiedState True (cast personId)
               -- If PAN and Aadhaar exist, trigger PAN-Aadhaar linkage verification and create idfy_verification entry
-              driverInfoUpdated <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-              mbAadhaarNumber <- traverse decrypt driverInfoUpdated.aadhaarNumber
+              aadhaarCard <- QAadhaarCard.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
+              mbAadhaarNumber <- traverse decrypt aadhaarCard.aadhaarNumber
               PanVerification.triggerPanAadhaarLinkageWhenPanAndAadhaarExist person merchantOpCityId mbAadhaarNumber
               let onlyMandatoryDocs = Just True
               void $ Status.statusHandler (person.id, person.merchantId, merchantOpCityId) (Just True) Nothing Nothing (Just False) onlyMandatoryDocs Nothing
               uploadCompressedAadhaarImage person merchantOpCityId res.image imageType >> pure ()
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
       pure res
+    Just (Nothing, _, _) -> throwError TransactionIdNotFound
     Nothing -> throwError TransactionIdNotFound
 
 fetchAndCacheAadhaarImage :: (MonadFlow m, MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m), CacheFlow m r, EsqDBFlow m r) => Person.Person -> DriverInformation -> m (Maybe Text)
@@ -284,8 +285,8 @@ unVerifiedAadhaarData personId merchantId merchantOpCityId req = do
   QAadhaarCard.create aadhaarEntity
   -- If PAN and Aadhaar exist, trigger PAN-Aadhaar linkage verification and create idfy_verification entry
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-  mbAadhaarNumber <- traverse decrypt driverInfo.aadhaarNumber
+  aadhaarCard <- QAadhaarCard.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mbAadhaarNumber <- traverse decrypt aadhaarCard.aadhaarNumber
   PanVerification.triggerPanAadhaarLinkageWhenPanAndAadhaarExist person merchantOpCityId mbAadhaarNumber
   return Success
 
@@ -337,27 +338,28 @@ mkAadhaarVerify personId tId res = do
       }
 
 mkAadhaar ::
-  (MonadGuid m, MonadTime m) =>
+  (EncFlow m r, MonadGuid m, MonadTime m) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Id Person.Person ->
   Text ->
   Text ->
   Text ->
-  Maybe DbHash ->
+  Maybe Text ->
   Maybe Text ->
   Bool ->
   Maybe Text ->
   m VDomain.AadhaarCard
-mkAadhaar merchantId merchantOpCityId personId name gender dob aadhaarHash img aadhaarVerified imgPath = do
+mkAadhaar merchantId merchantOpCityId personId name gender dob mbAadhaarNumber img aadhaarVerified imgPath = do
   now <- getCurrentTime
+  encryptedAadhaar <- traverse encrypt mbAadhaarNumber
   return $
     VDomain.AadhaarCard
       { driverId = personId,
         aadhaarFrontImageId = Nothing,
         aadhaarBackImageId = Nothing,
         maskedAadhaarNumber = Nothing,
-        aadhaarNumberHash = aadhaarHash,
+        aadhaarNumber = encryptedAadhaar,
         nameOnCard = Just name,
         driverGender = Just gender,
         dateOfBirth = Just dob,
@@ -489,18 +491,18 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
   where
     makeAadhaarCardEntity driverId extractedAadhaar aadhaarReq = do
       currTime <- getCurrentTime
-      (aadhaarHash, maskedAadhaarNumber) <- case aadhaarReq.aadhaarNumber of
-        Just aadhaarNumber -> do
-          aadhaarHash <- getDbHash aadhaarNumber
-          let maskedAadhaarNumber = maskText aadhaarNumber
-          return (Just aadhaarHash, Just maskedAadhaarNumber)
+      (encryptedAadhaar, maskedAadhaarNumber) <- case aadhaarReq.aadhaarNumber of
+        Just aadhaarNum -> do
+          encrypted <- encrypt aadhaarNum
+          let maskedAadhaarNumber = maskText aadhaarNum
+          return (Just encrypted, Just maskedAadhaarNumber)
         Nothing -> return (Nothing, Nothing)
       return $
         DAadhaarCard.AadhaarCard
           { driverId = driverId,
             createdAt = currTime,
             updatedAt = currTime,
-            aadhaarNumberHash = aadhaarHash,
+            aadhaarNumber = encryptedAadhaar,
             dateOfBirth = extractedAadhaar.date_of_birth,
             driverGender = extractedAadhaar.gender,
             aadhaarBackImageId = Id <$> aadhaarReq.aadhaarBackImageId,

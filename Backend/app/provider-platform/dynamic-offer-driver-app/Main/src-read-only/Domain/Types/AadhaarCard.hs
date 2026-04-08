@@ -8,16 +8,16 @@ import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
-import qualified Kernel.External.Encryption
+import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Documents
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
-data AadhaarCard = AadhaarCard
+data AadhaarCardE e = AadhaarCard
   { aadhaarBackImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
     aadhaarFrontImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
-    aadhaarNumberHash :: Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash,
+    aadhaarNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     consent :: Kernel.Prelude.Bool,
     consentTimestamp :: Kernel.Prelude.UTCTime,
@@ -34,4 +34,64 @@ data AadhaarCard = AadhaarCard
     updatedAt :: Kernel.Prelude.UTCTime,
     verificationStatus :: Kernel.Types.Documents.VerificationStatus
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic)
+
+type AadhaarCard = AadhaarCardE 'AsEncrypted
+
+type DecryptedAadhaarCard = AadhaarCardE 'AsUnencrypted
+
+instance EncryptedItem AadhaarCard where
+  type Unencrypted AadhaarCard = (DecryptedAadhaarCard, HashSalt)
+  encryptItem (entity, salt) = do
+    aadhaarNumber_ <- encryptItem $ (,salt) <$> aadhaarNumber entity
+    pure
+      AadhaarCard
+        { aadhaarBackImageId = aadhaarBackImageId entity,
+          aadhaarFrontImageId = aadhaarFrontImageId entity,
+          aadhaarNumber = aadhaarNumber_,
+          address = address entity,
+          consent = consent entity,
+          consentTimestamp = consentTimestamp entity,
+          createdAt = createdAt entity,
+          dateOfBirth = dateOfBirth entity,
+          driverGender = driverGender entity,
+          driverId = driverId entity,
+          driverImage = driverImage entity,
+          driverImagePath = driverImagePath entity,
+          maskedAadhaarNumber = maskedAadhaarNumber entity,
+          merchantId = merchantId entity,
+          merchantOperatingCityId = merchantOperatingCityId entity,
+          nameOnCard = nameOnCard entity,
+          updatedAt = updatedAt entity,
+          verificationStatus = verificationStatus entity
+        }
+  decryptItem entity = do
+    aadhaarNumber_ <- fmap fst <$> decryptItem (aadhaarNumber entity)
+    pure
+      ( AadhaarCard
+          { aadhaarBackImageId = aadhaarBackImageId entity,
+            aadhaarFrontImageId = aadhaarFrontImageId entity,
+            aadhaarNumber = aadhaarNumber_,
+            address = address entity,
+            consent = consent entity,
+            consentTimestamp = consentTimestamp entity,
+            createdAt = createdAt entity,
+            dateOfBirth = dateOfBirth entity,
+            driverGender = driverGender entity,
+            driverId = driverId entity,
+            driverImage = driverImage entity,
+            driverImagePath = driverImagePath entity,
+            maskedAadhaarNumber = maskedAadhaarNumber entity,
+            merchantId = merchantId entity,
+            merchantOperatingCityId = merchantOperatingCityId entity,
+            nameOnCard = nameOnCard entity,
+            updatedAt = updatedAt entity,
+            verificationStatus = verificationStatus entity
+          },
+        ""
+      )
+
+instance EncryptedItem' AadhaarCard where
+  type UnencryptedItem AadhaarCard = DecryptedAadhaarCard
+  toUnencrypted a salt = (a, salt)
+  fromUnencrypted = fst

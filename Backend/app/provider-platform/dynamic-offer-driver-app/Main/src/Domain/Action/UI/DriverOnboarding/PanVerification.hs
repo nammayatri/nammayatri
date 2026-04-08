@@ -466,27 +466,6 @@ verifyPanAadhaarLinkageIfPanExists person merchantOpCityId aadhaarNumber = do
         IVQuery.create ivEntity
       _ -> throwError $ InternalError ("Service provider not configured for PAN-Aadhaar linkage. Provider: " <> show verifyRes.requestor)
 
--- verifyPanAadhaarLinkageIfAadhaarExists ::
---   Person.Person ->
---   Id DMOC.MerchantOperatingCity ->
---   Text ->
---   Flow ()
--- verifyPanAadhaarLinkageIfAadhaarExists person merchantOpCityId panNumber = do
---   mAadhaarCard <- QAadhaarCard.findByPrimaryKey person.id
---   // get Aadhaar number DriverInformation table
---   whenJust mAadhaarCard $ \aadhaarCard -> do
---     let aadhaarNumber = getDbHash aadhaarCard.aadhaarNumberHash
---     verifyRes <-
---       Verification.verifyPanAadhaarLinkAsync person.merchantId merchantOpCityId $
---         VI.VerifyPanAadhaarLinkAsyncReq {panNumber, aadhaarNumber, driverId = person.id.getId}
---     case verifyRes.requestor of
---       VT.Idfy -> do
---         encPan <- encrypt panCardNumber
---         now <- getCurrentTime
---         ivEntity <- mkIdfyVerificationEntityPanAadhaarLink person aadhaarCard.documentImageId1 verifyRes.requestId now encPan
---         IVQuery.create ivEntity
---       _ -> throwError $ InternalError ("Service provider not configured for PAN-Aadhaar linkage. Provider: " <> show verifyRes.requestor)
-
 verifyPanAadhaarLinkageIfAadhaarExists ::
   Person.Person ->
   Id DMOC.MerchantOperatingCity ->
