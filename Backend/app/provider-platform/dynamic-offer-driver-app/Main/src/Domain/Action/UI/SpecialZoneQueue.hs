@@ -21,8 +21,10 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common (Seconds (..))
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.External.Maps.Types (LatLong (..))
 import qualified Lib.Queries.GateInfo as QGI
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.Allocator (AllocatorJobType (..), CheckPickupZoneArrivalJobData (..))
 import SharedLogic.SpecialZoneDriverDemand (mkQueueSkipCountKey)
 import Storage.Beam.SchedulerJob ()
@@ -47,13 +49,16 @@ getSpecialZoneQueueRequest (mbPersonId, _merchantId, _merchantOpCityId) = do
   -- Accepted requests are always returned (they're waiting for arrival/ride)
   let acceptedRes = map mkRes acceptedRequests
       allRequests = validActiveRequests ++ acceptedRes
-  -- Get skip count from first available request's context
-  (skipCount, maxSkips) <- case allRequests of
-    (r : _) -> do
-      mbSkipCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkQueueSkipCountKey r.specialLocationId personId.getId)
-      mbGate <- Esq.runInReplica $ QGI.findById (Kernel.Types.Id.Id r.gateId)
-      pure (fromMaybe 0 mbSkipCount, mbGate >>= (.maxRideSkipsBeforeQueueRemoval))
-    [] -> pure (0, Nothing)
+  -- Get skip count from driver's current location (which gate they're in)
+  mbDriverLoc <- LTSFlow.driversLocation [personId]
+  mbCurrentGate <- case mbDriverLoc of
+    (loc : _) -> Esq.runInReplica $ QGI.findGateInfoByLatLongWithoutGeoJson (LatLong loc.lat loc.lon)
+    [] -> pure Nothing
+  (skipCount, maxSkips) <- case mbCurrentGate of
+    Just gate -> do
+      mbSkipCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkQueueSkipCountKey gate.specialLocationId.getId personId.getId)
+      pure (fromMaybe 0 mbSkipCount, gate.maxRideSkipsBeforeQueueRemoval)
+    Nothing -> pure (0, Nothing)
   pure $
     API.Types.UI.SpecialZoneQueue.SpecialZoneQueueRequestListRes
       { requests = allRequests,
