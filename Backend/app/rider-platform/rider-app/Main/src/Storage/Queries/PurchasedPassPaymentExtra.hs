@@ -75,3 +75,4 @@ updatePurchasedPassIdByOldPurchasedPassId newPurchasedPassId oldPurchasedPassId 
   updateWithKV
     [Se.Set Beam.purchasedPassId (getId newPurchasedPassId), Se.Set Beam.updatedAt _now]
     [Se.Is Beam.purchasedPassId $ Se.Eq (getId oldPurchasedPassId)]
+
