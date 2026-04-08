@@ -1,0 +1,15 @@
+imports:
+  LoyaltyInfoRequest: Kernel.External.Wallet.Interface.Types
+  LoyaltyInfoResponse: Kernel.External.Wallet.Interface.Types
+
+module: Loyalty
+
+types: {}
+
+apis:
+  - POST:
+      endpoint: /wallet/loyaltyInfo
+      auth: TokenAuth
+      response:
+        type: LoyaltyInfoResponse
+
