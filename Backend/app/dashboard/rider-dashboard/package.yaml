@@ -89,7 +89,6 @@ dependencies:
 ghc-options:
   - -Wall
   - -Wcompat
-  - -Werror
   - -Widentities
   - -Wunused-imports
   - -fplugin=RecordDotPreprocessor

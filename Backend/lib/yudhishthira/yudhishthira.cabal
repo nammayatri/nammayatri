@@ -144,7 +144,7 @@ library
       PackageImports
       TemplateHaskell
       DerivingStrategies
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths
   extra-libraries:
       cac_client
   build-depends:

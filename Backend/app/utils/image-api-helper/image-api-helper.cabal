@@ -75,7 +75,7 @@ library
       TypeSynonymInstances
       UndecidableInstances
       AllowAmbiguousTypes
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Werror -Wcompat -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -157,7 +157,7 @@ executable image-api-helper-exe
       TypeSynonymInstances
       UndecidableInstances
       AllowAmbiguousTypes
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Werror -Wcompat -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5

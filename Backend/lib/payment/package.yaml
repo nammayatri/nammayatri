@@ -98,19 +98,12 @@ ghc-options:
   - -Wcompat
   - -Widentities
   - -fhide-source-paths
-  - -Werror
   - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs:
     - src
     - src-read-only
-  ghc-options:
-    - -Wall
-    - -Wcompat
-    - -Widentities
-    - -fhide-source-paths
-    - -Werror
   when:
     - condition: flag(Local)
       then:

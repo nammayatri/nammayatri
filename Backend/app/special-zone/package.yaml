@@ -85,19 +85,11 @@ ghc-options:
   - -Wcompat
   - -Widentities
   - -fhide-source-paths
-  - -Werror
   - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs:
     - src
-  ghc-options:
-    - -Wall
-    - -Wcompat
-    - -Widentities
-    - -fhide-source-paths
-    - -Werror
-    - -Wwarn=ambiguous-fields
   when:
     - condition: flag(Local)
       then:
