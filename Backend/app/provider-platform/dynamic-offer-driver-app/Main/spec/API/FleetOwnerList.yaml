@@ -30,6 +30,9 @@ apis:
         blocked: Bool
         fleetType: FleetType
         onlyEnabled: Bool
+        mbSearchString: Text
+        fromDate: UTCTime
+        toDate: UTCTime
         limit: Int
         offset: Int
       response:

@@ -1224,11 +1224,20 @@ type GetDriverFleetOwnerList =
       :> QueryParam
            "fleetType"
            API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetType
+      :> QueryParam "fromDate" Kernel.Prelude.UTCTime
       :> QueryParam "limit" Kernel.Prelude.Int
-      :> QueryParam "offset" Kernel.Prelude.Int
+      :> QueryParam
+           "mbSearchString"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "offset"
+           Kernel.Prelude.Int
       :> QueryParam
            "onlyEnabled"
            Kernel.Prelude.Bool
+      :> QueryParam
+           "toDate"
+           Kernel.Prelude.UTCTime
       :> Get
            '[JSON]
            [FleetOwnerListItem]
@@ -1239,13 +1248,24 @@ type GetDriverFleetOwnerListHelper =
       :> QueryParam
            "fleetType"
            API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetType
-      :> QueryParam "limit" Kernel.Prelude.Int
+      :> QueryParam
+           "fromDate"
+           Kernel.Prelude.UTCTime
+      :> QueryParam
+           "limit"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "mbSearchString"
+           Kernel.Prelude.Text
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
       :> QueryParam
            "onlyEnabled"
            Kernel.Prelude.Bool
+      :> QueryParam
+           "toDate"
+           Kernel.Prelude.UTCTime
       :> Get
            '[JSON]
            [FleetOwnerListItem]
@@ -2468,7 +2488,7 @@ type PostDriverFleetScheduledBookingReassignHelper =
 
 data DriverAPIs = DriverAPIs
   { getDriverFleetAccessList :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetOwnerListRes,
-    getDriverFleetOwnerList :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient [FleetOwnerListItem],
+    getDriverFleetOwnerList :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient [FleetOwnerListItem],
     postDriverFleetAccessSelect :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverFleetV2AccessSelect :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverFleetV2AccessMultiOwnerIdSelect :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> MultiOwnerSelect -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
