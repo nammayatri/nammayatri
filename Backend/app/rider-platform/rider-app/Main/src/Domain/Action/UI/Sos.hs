@@ -89,7 +89,6 @@ import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.Ride as QRide
 import qualified Tools.Call as Call
 import Tools.Error
-import qualified Tools.Notifications as Notify
 import Tools.Ticket as Ticket
 
 data SOSVideoUploadReq = SOSVideoUploadReq
@@ -196,12 +195,11 @@ postSosCreate (mbPersonId, _merchantId) req = do
   let existingExternalRef = mbExistingSos >>= (.externalReferenceId)
 
   -- Prepare ride info for triggers
-  (mbRide, mbTrackLink) <- case req.rideId of
+  mbRide <- case req.rideId of
     Just rId -> do
       ride <- QRide.findById rId >>= fromMaybeM (RideDoesNotExist rId.getId)
-      let link = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
-      pure (Just ride, Just link)
-    Nothing -> pure (Nothing, Nothing)
+      pure (Just ride)
+    Nothing -> pure Nothing
   mbRideFlowConfig <- case mbRide of
     Just ride ->
       pure $ Just (ride, riderConfig)
@@ -210,13 +208,13 @@ postSosCreate (mbPersonId, _merchantId) req = do
   (mbExternalReferenceId, mbTrigTicketId, mbSosId, mbSosServiceConfig, externalApiCalledStatus) <- dispatchSosTriggers req.triggerApiList existingExternalRef person riderConfig req personId mbRideFlowConfig
   (sosId, mbFinalTicketId, trackLink, mbRideEndTime) <- case (mbRideFlowConfig, mbSosId) of
     (Just (ride, riderConfig'), Just sId) -> do
-      let trackLink' = fromMaybe (Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern) mbTrackLink
+      let trackLink' = buildSosTrackUrl riderConfig (Just ride.id.getId) sId
       let localRideEndTime = addUTCTime (secondsToNominalDiffTime riderConfig'.timeDiffFromUtc) <$> ride.rideEndTime
       return (sId, mbTrigTicketId, trackLink', localRideEndTime)
     (Just (ride, riderConfig'), Nothing) -> do
-      let trackLink' = fromMaybe (Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern) mbTrackLink
       let localRideEndTime = addUTCTime (secondsToNominalDiffTime riderConfig'.timeDiffFromUtc) <$> ride.rideEndTime
       (sosId', ticketId') <- createTicketForNewSos person ride riderConfig' person.merchantId person.merchantOperatingCityId mbExternalReferenceId req False
+      let trackLink' = buildSosTrackUrl riderConfig (Just ride.id.getId) sosId'
       return (sosId', ticketId', trackLink', localRideEndTime)
     (Nothing, _) -> do
       now <- getCurrentTime
@@ -256,7 +254,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
           else pure Nothing
       let finalTicketId = mbTrigTicketId <|> mbNonRideTicketId <|> sosDetails.ticketId
       whenJust finalTicketId $ \tId -> void $ SafetySos.updateSosTicketId sosDetails (Just tId)
-      let finalTrackLink = buildSosTrackingUrl sosDetails.id riderConfig.trackingShortUrlPattern
+      let finalTrackLink = buildSosTrackUrl riderConfig Nothing sosDetails.id
       return (sosDetails.id, finalTicketId, finalTrackLink, Nothing)
   -- Register SOS entity with LTS, optionally bundling ERSS broadcaster config.
   do
@@ -901,27 +899,6 @@ sosTrackingHitsCountKey sosId = "SosTrackingHits:" <> sosId.getId <> ":hitsCount
 erssStatusUpdateHitsCountKey :: Text
 erssStatusUpdateHitsCountKey = "ErssStatusUpdateHits:hitsCount"
 
--- | Build tracking URL for SOS rider location (non-ride scenario)
--- Uses the same pattern-based approach as ride tracking for consistency
--- Pattern format: "https://nammayatri.in/u?vp={#vp#}&rideId=" or "https://nammayatri.in/u?vp=shareRide&rideId="
--- For SOS: replaces rideId with sosId and uses vp=sosTracking
-buildSosTrackingUrl :: Id SafetyDSos.Sos -> Text -> Text
-buildSosTrackingUrl sosId trackingUrlPattern =
-  let patternWithSosId = T.replace "rideId=" "sosId=" trackingUrlPattern
-      templateText txt = "{#" <> txt <> "#}"
-      urlWithVpReplaced =
-        if T.isInfixOf (templateText "vp") patternWithSosId
-          then -- Template format: replace {#vp#} with sosTracking
-
-            Foldable.foldl'
-              ( \msg (findKey, replaceVal) ->
-                  T.replace (templateText findKey) replaceVal msg
-              )
-              patternWithSosId
-              [("vp", "sosTracking")]
-          else T.replace "vp=shareRide" "vp=sosTracking" patternWithSosId
-   in urlWithVpReplaced <> sosId.getId
-
 postSosStartTracking :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> StartTrackingReq -> Flow StartTrackingRes
 postSosStartTracking (mbPersonId, merchantId) StartTrackingReq {..} = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
@@ -943,7 +920,7 @@ postSosStartTracking (mbPersonId, merchantId) StartTrackingReq {..} = do
 
   -- Build tracking URL (rider-app specific)
   riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
-  let trackLink = buildSosTrackingUrl (cast finalSosId) riderConfig.trackingShortUrlPattern
+  let trackLink = buildSosTrackUrl riderConfig Nothing (cast finalSosId)
 
   emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, merchantId)
   let contactsToNotify =
@@ -978,7 +955,7 @@ postSosUpdateState (mbPersonId, _) sosId UpdateStateReq {..} = do
     else do
       emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
       riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
-      let trackLink = buildSosTrackingUrl sosId riderConfig.trackingShortUrlPattern
+      let trackLink = buildSosTrackUrl riderConfig (sosDetails.rideId <&> (.getId)) sosId
       let safetyPersonId = cast @Person.Person @SafetyCommon.Person personId
 
       -- Call shared-services function (handles validation, state transition, and expiry calculation)
@@ -1039,7 +1016,7 @@ postSosUpdateToRide (mbPersonId, merchantId) sosId UpdateToRideReq {..} = do
 
   -- Same steps as creating a new ride SOS: Kapture ticket, tracking link, notify emergency contacts
   riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
-  let trackLink = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
+  let trackLink = buildSosTrackUrl riderConfig (Just ride.id.getId) sosId
 
   when riderConfig.enableSupportForSafety $ do
     phoneNumber <- mapM decrypt person.mobileNumber
@@ -1101,7 +1078,7 @@ handleExternalSOS person sosConfig req personId riderConfig = do
         mbRide <- maybe (pure Nothing) (\rideId -> QRide.findById rideId) req.rideId
         emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
         merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
-        externalSOSDetails <- buildExternalSOSDetails req person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig Nothing
+        externalSOSDetails <- buildExternalSOSDetails req person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig Nothing Nothing
         initialRes <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
         if initialRes.success
           then return (initialRes.trackingId, Just specificConfig)
@@ -1122,8 +1099,9 @@ buildExternalSOSDetails ::
   DMOC.MerchantOperatingCity ->
   DRC.RiderConfig ->
   Maybe Text ->
+  Maybe (Id SafetyDSos.Sos) ->
   Flow SOSInterface.InitialSOSReq
-buildExternalSOSDetails req person sosConfig _serviceConfig mbRide emergencyContacts merchantOpCity riderConfig mbComments = do
+buildExternalSOSDetails req person sosConfig _serviceConfig mbRide emergencyContacts merchantOpCity riderConfig mbComments mbSosId = do
   now <- getCurrentTime
   mobileNo <- fmap (fromMaybe "0000000000") $ traverse decrypt person.mobileNumber
   emailText <- traverse decrypt person.email
@@ -1132,9 +1110,7 @@ buildExternalSOSDetails req person sosConfig _serviceConfig mbRide emergencyCont
   (lat, lon) <- resolveLocation req.customerLocation person mbRide
   let localNow = addUTCTime (secondsToNominalDiffTime riderConfig.timeDiffFromUtc) now
   let dateTimeStr = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" localNow
-  let trackLink = case mbRide of
-        Just ride -> Just $ Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
-        Nothing -> Nothing
+  let trackLink = mbSosId <&> \sosId -> buildSosTrackUrl riderConfig (mbRide <&> (.id.getId)) sosId
   let (ec1Name, ec1Phone, ec2Name, ec2Phone) = case emergencyContacts of
         (c1 : c2 : _) -> (Just c1.name, Just c1.mobileNumber, Just c2.name, Just c2.mobileNumber)
         (c1 : _) -> (Just c1.name, Just c1.mobileNumber, Nothing, Nothing)
@@ -1291,3 +1267,12 @@ getSosGetDetailsByPerson (mbPersonId, _) sosStatus = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   mbSos <- SafetyQSos.findByPersonIdAndStatus (cast personId) sosStatus
   return SosDetailsRes {sos = mbSos, externalSOSConfig = Nothing}
+
+-- | Build SOS tracking URL based on riderConfig.
+-- If sosTrackingLink is configured: replace {#vp#} with "sosTracking" and append sosId.
+-- If not configured: replace {#vp#} with "shareRide" in trackingShortUrlPattern, then append rideId (ride) or sosId (non-ride).
+buildSosTrackUrl :: DRC.RiderConfig -> Maybe Text -> Id SafetyDSos.Sos -> Text
+buildSosTrackUrl riderConfig mbRideId sosId =
+  case riderConfig.sosTrackingLink of
+    Just sosLink -> T.replace "{#vp#}" "sosTracking" sosLink <> sosId.getId
+    Nothing -> T.replace "{#vp#}" "shareRide" riderConfig.trackingShortUrlPattern <>fromMaybe "" mbRideId

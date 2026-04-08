@@ -65,7 +65,6 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Safety.Domain.Types.Common as SafetyCommon
-import qualified Safety.Domain.Types.Sos as SSos
 import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import SharedLogic.JobScheduler
@@ -136,15 +135,6 @@ buildTemplate paramVars template =
 
 buildTrackingUrl :: Id SRide.Ride -> [(Text, Text)] -> Text -> Text
 buildTrackingUrl rideId extraQueryParams trackingUrlPattern = (buildTemplate extraQueryParams trackingUrlPattern) <> rideId.getId
-
-buildSosTrackingUrl :: Id SSos.Sos -> Text -> Text
-buildSosTrackingUrl sosId trackingUrlPattern =
-  let patternWithSosId = T.replace "rideId=" "sosId=" trackingUrlPattern
-      urlWithVpReplaced =
-        if T.isInfixOf (templateText "vp") patternWithSosId
-          then buildTemplate [("vp", "sosTracking")] patternWithSosId
-          else T.replace "vp=shareRide" "vp=sosTracking" patternWithSosId
-   in urlWithVpReplaced <> sosId.getId
 
 notifyPerson ::
   ( ServiceFlow m r,
