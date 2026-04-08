@@ -334,7 +334,9 @@ buildRideListItem QRide.RideItem {..} = do
         estimatedFareWithCurrency = mkPriceAPIEntity <$> estimatedFare,
         paymentInstrument = BecknACL.castDPaymentInstrument <$> paymentInstrument,
         bookingStatus,
-        rideCreatedAt = rideCreatedAt
+        rideCreatedAt = rideCreatedAt,
+        customerPickupLocation = mkLocationAPIEntity <$> customerPickupLocation,
+        customerDropLocation = mkLocationAPIEntity <$> customerDropLocation
       }
 
 buildRideListItemV2 :: EncFlow m r => QRide.RideItemV2 -> m Common.RideListItemV2
