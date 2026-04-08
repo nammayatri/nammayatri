@@ -45,3 +45,9 @@ ALTER TABLE atlas_app.pg_payout_settlement_report ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.pg_payout_settlement_report ALTER COLUMN payout_customer_id SET DEFAULT null;
 ALTER TABLE atlas_app.pg_payout_settlement_report ALTER COLUMN payout_customer_id DROP NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pg_payout_settlement_report ADD COLUMN fulfillment_txn_id text ;
+ALTER TABLE atlas_app.pg_payout_settlement_report ADD COLUMN fulfillment_order_created_at timestamp with time zone ;
