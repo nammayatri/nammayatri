@@ -39,6 +39,7 @@ module SharedLogic.Finance.Wallet
     getPayoutEligibilityData,
     computeTdsRateReason,
     computeEffectiveTdsRate,
+    shouldApplyTds,
     estimateWalletDeductions,
   )
 where
@@ -64,6 +65,7 @@ import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.DailyStatsExtra as QDailyStatsExtra
 import Storage.Queries.FleetOwnerInformation as QFOI
 
 -- Reference type constants (PascalCase, abbreviations in all caps)
@@ -494,16 +496,49 @@ computeEffectiveTdsRate ::
   Maybe Double -- effective rate
 computeEffectiveTdsRate mbPanCard mbCustomRate configDefaultTdsRate invalidPanTdsRate_ =
   let hasValidPan = maybe False (\pan -> pan.verificationStatus == Documents.VALID) mbPanCard
-      panType = mbPanCard >>= (.docType)
-      panTypeEligible = case panType of
-        Just DPanCard.BUSINESS -> True
-        _ -> True
-      isPanValid = hasValidPan && panTypeEligible
-   in if isPanValid
+      panAadhaarLinked = maybe False (\pan -> pan.panAadhaarLinkage == Just DPanCard.PAN_AADHAAR_LINKED) mbPanCard
+      isPanValidForStandardRate = hasValidPan && panAadhaarLinked
+   in if isPanValidForStandardRate
         then case mbCustomRate of
           Just _ -> mbCustomRate
           Nothing -> configDefaultTdsRate
         else Just invalidPanTdsRate_
+
+assessmentYearEarningsRange :: Time.Day -> (Time.Day, Time.Day)
+assessmentYearEarningsRange day =
+  let (y, m, _) = Time.toGregorian day
+      startYear = if m >= 4 then y else y - 1
+      start = Time.fromGregorian startYear 4 1
+      end = Time.fromGregorian (startYear + 1) 3 31
+   in (start, end)
+
+shouldApplyTds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Bool ->
+  Id DP.Person -> -- driverId
+  DTC.TransporterConfig ->
+  m Bool
+shouldApplyTds isIndependentDriver driverId transporterConfig =
+  case (isIndependentDriver, transporterConfig.taxConfig.independentDriverTdsDeductionThreshold) of
+    (True, Just minEarningsThreshold) -> do
+      localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+      let (fromDay, toDay) = assessmentYearEarningsRange (Time.utctDay localTime)
+      dailyStats <- QDailyStatsExtra.findAllInRangeByDriverId_ driverId fromDay toDay
+      let assessmentYearEarnings = sum $ map (.totalEarnings) dailyStats
+      when (assessmentYearEarnings < minEarningsThreshold) $
+        logInfo $
+          "Skipping TDS deduction for independent driver "
+            <> driverId.getId
+            <> " as assessmentYearEarnings "
+            <> show assessmentYearEarnings
+            <> " is below threshold "
+            <> show minEarningsThreshold
+            <> " for range "
+            <> show fromDay
+            <> " to "
+            <> show toDay
+      pure $ assessmentYearEarnings >= minEarningsThreshold
+    _ -> pure True
 
 -- | Estimate wallet deductions (TDS only) for a given baseFare.
 --   GST (govtCharges) comes from fareParams at ride end, not recalculated here.

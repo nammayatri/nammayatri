@@ -95,6 +95,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
@@ -300,14 +301,31 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
               [ (baseCancellation, walletReferenceCustomerCancellationCharges, OwnerLiability),
                 (gstOnCancellation, walletReferenceCustomerCancellationGST, GovtIndirect)
               ]
-            -- TDS on cancellation charges (same rate as ride)
-            mbTdsRate = transporterConfig.taxConfig.defaultTdsRate
-            mbTdsAmount = do
-              rate <- mbTdsRate
-              let amount = baseCancellation * realToFrac rate
-              if amount > 0 then Just amount else Nothing
-        mbPanCard <- QPanCard.findByDriverId ride.driverId
         mbDriverInfo <- QDI.findById (cast ride.driverId)
+        mbCustomTdsRate <- case ride.fleetOwnerId of
+          Just fleetOwnerId -> do
+            mbFleetInfo <- QFOI.findByPrimaryKey (cast fleetOwnerId)
+            let currentRate = mbFleetInfo >>= (.tdsRate)
+            pure currentRate
+          Nothing -> do
+            let currentRate = mbDriverInfo >>= (.tdsRate)
+            pure currentRate
+        shouldApplyTdsToCancellation <- shouldApplyTds (isNothing ride.fleetOwnerId) (cast ride.driverId) transporterConfig
+        let driverOrFleetPersonId = fromMaybe ride.driverId ride.fleetOwnerId
+        mbPanCard <- QPanCard.findByDriverId driverOrFleetPersonId
+        let mbTdsAmount =
+              if shouldApplyTdsToCancellation
+                then do
+                  let effectiveTdsRate =
+                        computeEffectiveTdsRate
+                          mbPanCard
+                          mbCustomTdsRate
+                          transporterConfig.taxConfig.defaultTdsRate
+                          transporterConfig.taxConfig.invalidPanTdsRate
+                  rate <- effectiveTdsRate
+                  let amount = baseCancellation * realToFrac rate
+                  if amount > 0 then Just amount else Nothing
+                else Nothing
         ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig
         result <- runFinance ctx $ do
           mapM_

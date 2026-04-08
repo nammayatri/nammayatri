@@ -77,7 +77,8 @@ createNearestDriverReq nearestRadius now =
             rideGst = DTC.GstBreakup Nothing Nothing Nothing,
             securityDepositGst = Nothing,
             subscriptionTdsRate = Nothing,
-            airportEntryFeeGst = Nothing
+            airportEntryFeeGst = Nothing,
+            independentDriverTdsDeductionThreshold = Nothing
           },
       minWalletAmountForCashRides = Nothing,
       ..

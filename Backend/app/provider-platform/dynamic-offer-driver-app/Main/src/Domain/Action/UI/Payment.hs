@@ -618,13 +618,33 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                 (Just $ show merchantOperatingCity.city)
                 (cgst + sgst)
         mbPanCard <- QPanCard.findByDriverId person.id
+        shouldApplyTdsToPayment <-
+          shouldApplyTds
+            (not isFleetOwner)
+            person.id
+            transporterConfig
+        mbCustomTdsRate <- do
+          if isFleetOwner
+            then do
+              mbFleetInfo <- QFOI.findByPrimaryKey person.id
+              pure $ mbFleetInfo >>= (.tdsRate)
+            else do
+              mbDriverInfo <- QDI.findById person.id
+              pure $ mbDriverInfo >>= (.tdsRate)
+        let mbSubscriptionEffectiveTdsRate =
+              computeEffectiveTdsRate
+                mbPanCard
+                mbCustomTdsRate
+                transporterConfig.taxConfig.subscriptionTdsRate
+                transporterConfig.taxConfig.invalidPanTdsRate
+            mbTdsRateToApply = if shouldApplyTdsToPayment then mbSubscriptionEffectiveTdsRate else Nothing
         (_newBalance, mbInvoiceId) <-
           creditPrepaidBalance
             counterpartyType
             person.id.getId
             creditAmount
             paidAmount
-            transporterConfig.taxConfig.subscriptionTdsRate
+            mbTdsRateToApply
             subscriptionGstBreakdown
             currency
             merchantId.getId
