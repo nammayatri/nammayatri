@@ -44,10 +44,10 @@ getSpecialZoneQueueRequest (mbPersonId, _merchantId, _merchantOpCityId) = do
   acceptedRequests <- QSZQR.findActiveByDriverId personId Domain.Types.SpecialZoneQueueRequest.Accepted
   -- Lazy-expire Active requests past validTill
   validActiveRequests <- collectValidActive now activeRequests
-  -- Accepted requests are always returned (they're waiting for arrival/ride)
-  let acceptedRes = map mkRes acceptedRequests
-      allRequests = validActiveRequests ++ acceptedRes
-  -- Get skip count from first available request's context
+  -- Lazy no-show check for Accepted requests past arrival timeout (fallback if scheduler job is delayed)
+  validAcceptedRequests <- collectValidAccepted now acceptedRequests
+  let allRequests = validActiveRequests ++ validAcceptedRequests
+  -- Get skip count
   (skipCount, maxSkips) <- case allRequests of
     (r : _) -> do
       mbSkipCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkQueueSkipCountKey r.specialLocationId personId.getId)
@@ -69,6 +69,22 @@ getSpecialZoneQueueRequest (mbPersonId, _merchantId, _merchantOpCityId) = do
           collectValidActive now rest
         else do
           rest' <- collectValidActive now rest
+          pure (mkRes req : rest')
+
+    collectValidAccepted _ [] = pure []
+    collectValidAccepted now (req : rest) = do
+      mbGate <- Esq.runInReplica $ QGI.findById (Kernel.Types.Id.Id req.gateId)
+      let arrivalTimeoutSec = maybe 1200 (fromMaybe 1200 . (.pickupZoneArrivalTimeoutInSec)) mbGate
+          acceptedAt = req.updatedAt
+          deadline = addUTCTime (fromIntegral arrivalTimeoutSec) acceptedAt
+      if now > deadline
+        then do
+          fork "lazy-noshow-check" $ do
+            QSZQR.updateResponse (Just Domain.Types.SpecialZoneQueueRequest.NoShow) Domain.Types.SpecialZoneQueueRequest.Expired req.id
+            logInfo $ "Lazy no-show: marked request " <> req.id.getId <> " as NoShow for driver " <> req.driverId.getId
+          collectValidAccepted now rest
+        else do
+          rest' <- collectValidAccepted now rest
           pure (mkRes req : rest')
 
     mkRes req =
