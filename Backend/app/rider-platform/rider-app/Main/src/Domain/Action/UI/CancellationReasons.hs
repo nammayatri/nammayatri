@@ -22,8 +22,8 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.Beam.Functions as B
-import Kernel.Prelude
 import qualified Kernel.External.Types as Lang
+import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Translations as CQTranslations

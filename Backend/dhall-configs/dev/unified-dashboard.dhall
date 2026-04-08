@@ -139,7 +139,8 @@ in  { esqDBCfg
       ]
     , autoMigrate = True
     , loggerConfig =
-        common.loggerConfig // { logFilePath = "/tmp/unified-dashboard.log", logToFile = False }
+            common.loggerConfig
+        //  { logFilePath = "/tmp/unified-dashboard.log", logToFile = False }
     , graceTerminationPeriod = +90
     , apiRateLimitOptions
     , shareRideApiRateLimitOptions

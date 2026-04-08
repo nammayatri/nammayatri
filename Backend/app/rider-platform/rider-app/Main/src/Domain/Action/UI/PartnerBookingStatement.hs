@@ -25,19 +25,20 @@ where
 import qualified API.Types.UI.PartnerBookingStatement
 import qualified API.Types.UI.PartnerBookingStatement as PBSAPI
 import API.Types.UI.PartnerBookingStatementExtra ()
-import Data.OpenApi (ToSchema)
-import qualified Data.Text as T
-import Data.Time.Calendar (Day, addDays)
-import Data.Time.Clock (UTCTime (..), secondsToDiffTime, utctDay)
 -- import Data.Time.Format (defaultTimeLocale, formatTime)
-import Domain.Types.Booking as DBooking
-import qualified Domain.Types.Booking.API as DBAPI
-import Domain.Types.Location (Location (..), LocationAPIEntity (..))
-import Domain.Types.LocationAddress (LocationAddress (..))
+
 -- import qualified Domain.Types.Ride as DRide
 -- import qualified Domain.Types.ServiceTierType as DSTT
 
 import qualified BecknV2.OnDemand.Utils.Common as BecknUtils
+import Data.OpenApi (ToSchema)
+import qualified Data.Text as T
+import Data.Time.Calendar (Day, addDays)
+import Data.Time.Clock (UTCTime (..), secondsToDiffTime, utctDay)
+import Domain.Types.Booking as DBooking
+import qualified Domain.Types.Booking.API as DBAPI
+import Domain.Types.Location (Location (..), LocationAPIEntity (..))
+import Domain.Types.LocationAddress (LocationAddress (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.PartnerInvoiceDataLog as DPIL
 import qualified Domain.Types.Person as DP

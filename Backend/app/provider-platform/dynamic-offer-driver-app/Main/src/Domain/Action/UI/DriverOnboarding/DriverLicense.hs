@@ -185,9 +185,9 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
               if fromMaybe False documentVerificationConfig.allowLicenseTransfer
                 then pure ()
                 else -- unlinkDLFromDriver driverLicense.driverId
-                  do
-                    Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
-                    throwImageError imageId1 DLAlreadyLinked
+                do
+                  Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
+                  throwImageError imageId1 DLAlreadyLinked
             if fromMaybe False documentVerificationConfig.allowLicenseTransfer
               then pure ()
               else unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated

@@ -14,6 +14,7 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.SpecialZoneQueueRequest
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -21,11 +22,10 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common (Seconds (..))
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.External.Maps.Types (LatLong (..))
 import qualified Lib.Queries.GateInfo as QGI
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
-import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.Allocator (AllocatorJobType (..), CheckPickupZoneArrivalJobData (..))
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.SpecialZoneDriverDemand (mkQueueSkipCountKey)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR

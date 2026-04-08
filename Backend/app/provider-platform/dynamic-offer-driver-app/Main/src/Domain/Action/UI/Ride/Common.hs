@@ -46,10 +46,10 @@ import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common (BaseUrl, Distance, EncFlow, EsqDBFlow, HighPrecMeters, HighPrecMoney, Meters, Money, Months, PriceAPIEntity (..), Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
 import Kernel.Types.Confidence (Confidence)
 import Kernel.Types.Id
-import SharedLogic.FareCalculator (fareSum)
-import SharedLogic.Type (BillingCategory)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
+import SharedLogic.FareCalculator (fareSum)
+import SharedLogic.Type (BillingCategory)
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.LocationMapping as QLM
