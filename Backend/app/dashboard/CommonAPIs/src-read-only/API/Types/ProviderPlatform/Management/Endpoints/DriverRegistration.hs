@@ -23,6 +23,16 @@ import Kernel.Utils.TH
 import Servant
 import Servant.Client
 
+data AadhaarApproveDetails
+    = AadhaarApproveDetails {driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver}
+    deriving stock Generic
+    deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data GSTApproveDetails
+    = GSTApproveDetails {documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image, gstNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+    deriving stock Generic
+    deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data AadhaarCardReq = AadhaarCardReq
   { aadhaarBackImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
     aadhaarFrontImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
@@ -56,6 +66,8 @@ data ApproveDetails
   | NOC NOCApproveDetails
   | BusinessLicenseImg BusinessLicenseApproveDetails
   | CommonDocument CommonDocumentApproveDetails
+  | AadhaarApprove AadhaarApproveDetails
+  | GSTApprove GSTApproveDetails
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
