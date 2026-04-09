@@ -193,8 +193,9 @@ data YudhishthiraDecideReq = YudhishthiraDecideReq
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-newtype YudhishthiraDecideResp = YudhishthiraDecideResp
-  { tags :: [NammaTagResponse]
+data YudhishthiraDecideResp = YudhishthiraDecideResp
+  { tags :: [NammaTagResponse],
+    tagRules :: [(Text, TagRule)]
   }
   deriving stock (Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

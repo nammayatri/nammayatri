@@ -42,6 +42,7 @@ yudhishthiraDecide req = do
   logDebug $ "NammaTags for source <> " <> show req.source <> ": " <> show nammaTags
   logDebug $ "SourceData: " <> show req.sourceData
   tags <- convertToTagResponses nammaTags
+  let tagRules = nammaTags <&> (\tag -> (tag.name, tag.rule))
   return $ YudhishthiraDecideResp {..}
   where
     convertToTagResponses ::
