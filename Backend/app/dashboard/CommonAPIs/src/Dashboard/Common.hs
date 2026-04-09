@@ -105,6 +105,12 @@ data PaymentOrder
 
 data PGPaymentSettlementReport
 
+-- Phantom type for Id Toll used in dashboard APIs.
+-- The real domain type lives in dynamic-offer-driver-app; importing it here
+-- would create a circular dependency (dynamic-offer-driver-app depends on
+-- dashboard-helper-api, not the other way around).
+data Toll
+
 data Role = DRIVER | FLEET
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)

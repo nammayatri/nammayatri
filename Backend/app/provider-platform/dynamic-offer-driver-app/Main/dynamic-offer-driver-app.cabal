@@ -786,6 +786,7 @@ library
       Storage.Queries.SubscriptionPurchaseExtra
       Storage.Queries.TDSDistributionPdfFileExtra
       Storage.Queries.TDSDistributionRecordExtra
+      Storage.Queries.TollExtra
       Storage.Queries.Transformers.Booking
       Storage.Queries.Transformers.BookingLocation
       Storage.Queries.Transformers.CancellationReason

@@ -4291,11 +4291,29 @@ postMerchantConfigDebugLogUpdate merchantShortId city req = do
   DebugLog.setJsonLogicDebugFlags (cast merchantOpCityId) req
 
 ---------------------------------------------------------------------
-getMerchantConfigTollList :: ShortId DM.Merchant -> Context.City -> Flow [DToll.Toll]
+getMerchantConfigTollList :: ShortId DM.Merchant -> Context.City -> Flow Common.TollListResp
 getMerchantConfigTollList merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  QToll.findAllTollsByMerchantOperatingCity (Just merchantOpCity.id)
+  tolls <- QToll.findAllTollsByMerchantOperatingCity (Just merchantOpCity.id)
+  pure $ map toTollEntity tolls
+  where
+    toTollEntity :: DToll.Toll -> Common.TollEntity
+    toTollEntity t =
+      Common.TollEntity
+        { id = cast t.id,
+          name = t.name,
+          tollStartGates = t.tollStartGates,
+          tollEndGates = t.tollEndGates,
+          price = t.price.amount,
+          currency = t.price.currency,
+          isAutoRickshawAllowed = t.isAutoRickshawAllowed,
+          isTwoWheelerAllowed = t.isTwoWheelerAllowed,
+          merchantId = fmap (.getId) t.merchantId,
+          merchantOperatingCityId = fmap (.getId) t.merchantOperatingCityId,
+          createdAt = t.createdAt,
+          updatedAt = t.updatedAt
+        }
 
 postMerchantConfigTollUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertTollReq -> Flow APISuccess
 postMerchantConfigTollUpsert merchantShortId opCity req = do

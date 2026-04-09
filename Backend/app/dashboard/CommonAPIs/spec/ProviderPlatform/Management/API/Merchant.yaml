@@ -44,8 +44,9 @@ imports:
   SpecialLocationType: Lib.Types.SpecialLocation
   SetJsonLogicDebugReq: Lib.Yudhishthira.Tools.DebugLog
   Area: Lib.Types.SpecialLocation
-  Toll: Dashboard.Common.Merchant
+  Toll: Dashboard.Common
   UpsertTollReq: Dashboard.Common.Merchant
+  TollListResp: Dashboard.Common.Merchant
   LineSegment: Kernel.Utils.ComputeIntersection
   HighPrecMoney: Kernel.Types.Common
   Currency: Kernel.Types.Common
@@ -1149,9 +1150,6 @@ types:
     - state: IndianState
     - city: City
     - geom: Maybe Text
-  TollListResp:
-    - recordType: Type
-    - type: [Toll]
   UpsertTollReq:
     - tollId: Maybe (Id Toll)
     - name: Text
