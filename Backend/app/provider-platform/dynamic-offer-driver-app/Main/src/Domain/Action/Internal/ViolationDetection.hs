@@ -9,8 +9,8 @@ module Domain.Action.Internal.ViolationDetection
 where
 
 import Data.Aeson as Aeson hiding (Success)
-import qualified Data.Text as T
 import Data.OpenApi (ToSchema)
+import qualified Data.Text as T
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Domain.Types.Alert
 import Domain.Types.Alert.DetectionData as DTD

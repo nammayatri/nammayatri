@@ -145,4 +145,3 @@ emptyValidateDocumentImageResponse imageId =
       registrationDate = Nothing,
       ownerName = Nothing
     }
-

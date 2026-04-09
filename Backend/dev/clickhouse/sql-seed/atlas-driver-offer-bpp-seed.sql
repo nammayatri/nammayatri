@@ -173,6 +173,7 @@ CREATE TABLE app_monitor.json_logic_transactions (
     `inputData` String,
     `logic` String,
     `outputData` String,
-    `caller_app` String
+    `caller_app` String,
+    `entityTransactionId` Nullable(String)
 ) ENGINE = MergeTree()
 ORDER BY (timestamp, domain, transactionId);

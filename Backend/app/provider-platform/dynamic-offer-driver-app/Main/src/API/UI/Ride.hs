@@ -46,6 +46,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.ServantMultipart
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
@@ -55,7 +56,6 @@ import Servant hiding (throwError)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import SharedLogic.Person (findPerson)
 import Storage.Beam.SystemConfigs ()
-import qualified Kernel.Storage.Hedis as Redis
 import qualified Storage.Cac.TransporterConfig as SCT
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI

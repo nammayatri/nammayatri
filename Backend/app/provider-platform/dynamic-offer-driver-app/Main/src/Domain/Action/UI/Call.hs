@@ -702,7 +702,7 @@ addCampaignData req merchantOpCityId = do
       case (ozonetelCfg.sosCampaignName, ozonetelCfg.fromTime >>= parseCampaignTime, ozonetelCfg.toTime >>= parseCampaignTime) of
         (Just sosCampaignName, Just fromCampaignTime, Just toCampaignTime)
           | isWithinCampaignWindow currentLocalTimeOfDay fromCampaignTime toCampaignTime ->
-              sosCampaignName
+            sosCampaignName
         _ -> ozonetelCfg.campaignName
 
     isWithinCampaignWindow :: TimeOfDay -> TimeOfDay -> TimeOfDay -> Bool
