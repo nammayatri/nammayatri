@@ -25,7 +25,7 @@ getProfileDetail merchantShortId _opCity personId = do
   logInfo $ "[RiderApp.Dashboard.Profile.getProfileDetail] START | personId: " <> show personId
   m <- findMerchantByShortId merchantShortId
   logInfo "[RiderApp.Dashboard.Profile.getProfileDetail] findMerchantByShortId done, calling getPersonDetails'"
-  result <- API.UI.Profile.getPersonDetails' (personId, m.id) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+  result <- API.UI.Profile.getPersonDetails' (personId, m.id) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
   logInfo "[RiderApp.Dashboard.Profile.getProfileDetail] getPersonDetails' done"
   pure result
 
@@ -37,4 +37,4 @@ postProfileUpdate ::
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postProfileUpdate merchantShortId _opCity personId req = do
   m <- findMerchantByShortId merchantShortId
-  API.UI.Profile.updatePerson' (personId, m.id) req Nothing Nothing Nothing Nothing Nothing
+  API.UI.Profile.updatePerson' (personId, m.id) req Nothing Nothing Nothing Nothing Nothing Nothing

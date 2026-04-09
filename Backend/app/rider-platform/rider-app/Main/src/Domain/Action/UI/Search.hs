@@ -322,7 +322,7 @@ search ::
   Bool ->
   Maybe Text ->
   m SearchRes
-search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion clientId device isDashboardRequest_ justMultimodalSearch multimodalSearchRequestId = do
+search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion mbClient device isDashboardRequest_ justMultimodalSearch multimodalSearchRequestId = do
   now <- getCurrentTime
   let SearchDetails {..} = extractSearchDetails now req
   let isReservedRideSearch = case req of
@@ -379,7 +379,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   searchRequest <-
     buildSearchRequest
       searchRequestId
-      clientId
+      mbClient
       person
       fromLocation
       merchantOperatingCity

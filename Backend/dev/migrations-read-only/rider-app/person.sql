@@ -281,3 +281,8 @@ CREATE INDEX person_idx_operator_badge_token ON atlas_app.person USING btree (op
 
 ALTER TABLE atlas_app.person ALTER COLUMN business_email_hash TYPE bytea;
 ALTER TABLE atlas_app.person ALTER COLUMN business_email_encrypted TYPE character varying(255);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN client_id text ;
