@@ -90,3 +90,8 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN toto
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN udyam_verification_service text ;
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN dashboard_udyam_verification_service text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN category_based_verification_priority_list jsonb  default '{"TOTO_UDIN":["Tten"],"TOTO":["Idfy"],"CAR":["Idfy","HyperVergeRCDL"],"AUTO_CATEGORY":["Idfy","HyperVergeRCDL"],"MOTORCYCLE":["Idfy","HyperVergeRCDL"],"TRUCK":["Idfy","HyperVergeRCDL"],"BOAT":["Idfy","HyperVergeRCDL"],"AMBULANCE":["Idfy","HyperVergeRCDL"],"BUS":["Idfy","HyperVergeRCDL"],"TRAIN":["Idfy","HyperVergeRCDL"],"FLIGHT":["Idfy","HyperVergeRCDL"]}';

@@ -4,6 +4,7 @@
 module Storage.Beam.MerchantServiceUsageConfig where
 
 import qualified ChatCompletion.Types
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.UtilsTH
@@ -26,6 +27,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
   { aadhaarVerificationService :: B.C f Kernel.External.AadhaarVerification.Types.AadhaarVerificationService,
     autoComplete :: B.C f Kernel.External.Maps.Types.MapsService,
     backgroundVerification :: B.C f Kernel.External.BackgroundVerification.Types.BackgroundVerificationService,
+    categoryBasedVerificationPriorityList :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     createBankAccount :: B.C f Kernel.External.Payment.Types.PaymentService,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     dashboardGstVerificationService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService),
@@ -58,7 +60,6 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     smsProvidersPriorityList :: B.C f [Kernel.External.SMS.Types.SmsService],
     snapToRoad :: B.C f Kernel.External.Maps.Types.MapsService,
     snapToRoadProvidersList :: B.C f [Kernel.External.Maps.Types.MapsService],
-    totoVerificationPriorityList :: B.C f (Kernel.Prelude.Maybe [Kernel.External.Verification.Types.VerificationService]),
     udyamVerificationService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     verificationProvidersPriorityList :: B.C f [Kernel.External.Verification.Types.VerificationService],

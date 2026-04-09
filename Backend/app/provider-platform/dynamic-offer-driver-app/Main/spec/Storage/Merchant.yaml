@@ -51,6 +51,7 @@ imports:
   PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
   Role: Domain.Types.Person
   Base64: Kernel.Types.Base64
+  Map: Data.Map.Strict
 
 Merchant:
   derives: Generic,Show,'UsageSafety
@@ -557,6 +558,10 @@ Overlay:
 
 MerchantServiceUsageConfig:
   derives: Generic,Show,'UsageSafety
+  types:
+    ProviderLookUpKey:
+      enum: "TOTO_UDIN,TOTO,CAR,AUTO_CATEGORY,MOTORCYCLE,TRUCK,BOAT,AMBULANCE,BUS,TRAIN,FLIGHT"
+      derive': "Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema"
   fields:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -592,7 +597,7 @@ MerchantServiceUsageConfig:
     updatedAt: UTCTime
     createdAt: UTCTime
     verificationProvidersPriorityList: "[VerificationService]"
-    totoVerificationPriorityList: "Maybe [VerificationService]"
+    categoryBasedVerificationPriorityList: "Maybe (Map Text [VerificationService])"
     createBankAccount: PaymentService
     retryBankAccountLink: PaymentService
     getBankAccount: PaymentService
@@ -602,12 +607,15 @@ MerchantServiceUsageConfig:
 
   beamType:
     llmChatCompletion: Maybe LLMChatCompletionService
+    categoryBasedVerificationPriorityList: Maybe Value
 
   fromTType:
     llmChatCompletion: Kernel.Prelude.fromMaybe ChatCompletion.Types.AzureOpenAI|I
+    categoryBasedVerificationPriorityList: Kernel.Utils.JSON.valueToMaybe =<< categoryBasedVerificationPriorityList|E
 
   toTType:
     llmChatCompletion: Kernel.Prelude.Just|I
+    categoryBasedVerificationPriorityList: Data.Aeson.toJSON <$> categoryBasedVerificationPriorityList|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -646,7 +654,7 @@ MerchantServiceUsageConfig:
     snapToRoadProvidersList: "text[]"
     sendSearchRequestToDriver: "text[]"
     verificationProvidersPriorityList: "text[]"
-    totoVerificationPriorityList: "text[]"
+    categoryBasedVerificationPriorityList: jsonb
     driverBackgroundVerificationService: character varying(30)
     serviceName: VARCHAR(50)
     rectifyDistantPointsFailure: text
@@ -659,7 +667,7 @@ MerchantServiceUsageConfig:
     getExophone: "'Exotel'"
     snapToRoadProvidersList: '''{"OSRM", "Google"}'''
     verificationProvidersPriorityList: '''{"Idfy"}'''
-    totoVerificationPriorityList: '''{"Tten"}'''
+    categoryBasedVerificationPriorityList: '''{"TOTO_UDIN":["Tten"],"TOTO":["Idfy"],"CAR":["Idfy","HyperVergeRCDL"],"AUTO_CATEGORY":["Idfy","HyperVergeRCDL"],"MOTORCYCLE":["Idfy","HyperVergeRCDL"],"TRUCK":["Idfy","HyperVergeRCDL"],"BOAT":["Idfy","HyperVergeRCDL"],"AMBULANCE":["Idfy","HyperVergeRCDL"],"BUS":["Idfy","HyperVergeRCDL"],"TRAIN":["Idfy","HyperVergeRCDL"],"FLIGHT":["Idfy","HyperVergeRCDL"]}'''
     rectifyDistantPointsFailure: "'OSRM'"
     createBankAccount: "'Stripe'"
     retryBankAccountLink: "'Stripe'"
