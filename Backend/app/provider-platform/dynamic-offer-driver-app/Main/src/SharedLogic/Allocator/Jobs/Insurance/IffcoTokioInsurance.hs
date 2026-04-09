@@ -70,10 +70,11 @@ processDriverInsurance driverInfo = do
     (Just merchantId, Just merchantOpCityId) -> do
       let shouldSkip = maybe False (\tc -> isInterCityTrip tc || isRentalTrip tc) mbTripCategory
       if shouldSkip
-        then logTagInfo "IffcoTokioInsuranceJob" $
-          "Skipping driver=" <> driverId.getId
-            <> " tripCategory="
-            <> show mbTripCategory
+        then
+          logTagInfo "IffcoTokioInsuranceJob" $
+            "Skipping driver=" <> driverId.getId
+              <> " tripCategory="
+              <> show mbTripCategory
         else
           fork "IffcoTokio driver insurance" $
             IffcoInsurance.triggerIffcoTokioInsurance driverId merchantId merchantOpCityId

@@ -60,8 +60,8 @@ import qualified Data.List as DL
 import qualified Data.Text as T hiding (elem, find, length, map, zip)
 import Data.Time (Day, utctDay)
 import qualified Domain.Types.Common as DCommon
-import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DocStatus as DocStatus
+import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.HyperVergeVerification as Domain
