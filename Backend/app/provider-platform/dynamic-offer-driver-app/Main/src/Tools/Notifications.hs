@@ -1704,3 +1704,27 @@ notifyPickupZoneRequest merchantOpCityId driverId entityData = do
       ("specialLocationName", entityData.specialLocationName)
     ]
     Nothing
+
+notifyPickupNoShow ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  PickupZoneRequestEntityData ->
+  m ()
+notifyPickupNoShow merchantOpCityId driverId entityData = do
+  driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  let lang = fromMaybe ENGLISH driver.language
+  dynamicFCMNotifyPerson
+    merchantOpCityId
+    driverId
+    driver.deviceToken
+    lang
+    Nothing
+    (createFCMReq "PICKUP_ZONE_NO_SHOW" entityData.requestId FCM.Person identity)
+    (Just entityData)
+    [ ("gateName", entityData.gateName),
+      ("specialLocationName", entityData.specialLocationName)
+    ]
+    Nothing
