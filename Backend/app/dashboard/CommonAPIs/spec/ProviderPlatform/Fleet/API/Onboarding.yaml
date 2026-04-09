@@ -141,6 +141,8 @@ types:
     rcNumberPrefixList: '[Text]'
     filterForOldApks: Maybe Bool
     documentCategory: Maybe DocumentCategory
+    isReminderSupported: Maybe Bool
+    isApprovalSupported: Maybe Bool
   DocumentCategory:
     enum: "Driver,Vehicle,Permission,Training"
   DocumentFlowGrouping:

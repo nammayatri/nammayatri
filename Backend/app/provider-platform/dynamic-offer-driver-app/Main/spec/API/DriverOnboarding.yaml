@@ -67,6 +67,8 @@ types:
     applicableTo: DocumentApplicableType
     documentFields: Maybe [FieldInfo]
     verificationProvidersPriorityList: Maybe [VerificationService]
+    isReminderSupported: Maybe Bool
+    isApprovalSupported: Maybe Bool
   UpdateAirConditionUpdateRequest:
     recordType: NewType
     isAirConditioned: Bool

@@ -132,3 +132,10 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN docum
 
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN roles_allowed_to_upload_document_text text[] ;
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN is_reminder_supported boolean ;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN is_approval_supported boolean ;

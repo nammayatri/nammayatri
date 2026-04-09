@@ -27,12 +27,14 @@ data DocumentVerificationConfig = DocumentVerificationConfig
     documentFlowGrouping :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentFlowGrouping,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isApprovalSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDefaultEnabledOnManualVerification :: Kernel.Prelude.Bool,
     isDisabled :: Kernel.Prelude.Bool,
     isHidden :: Kernel.Prelude.Bool,
     isImageValidationRequired :: Kernel.Prelude.Bool,
     isMandatory :: Kernel.Prelude.Bool,
     isMandatoryForEnabling :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isReminderSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     maxRetryCount :: Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
@@ -132,18 +134,18 @@ data VehicleClassVariantMap = VehicleClassVariantMap
     vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, (Ord), (Read))
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DocumentApplicableType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentApplicableType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DocumentCategory))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentCategory)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DocumentFlowGrouping))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentFlowGrouping)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DocumentType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FieldType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FieldType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SupportedVehicleClasses))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SupportedVehicleClasses)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''VehicleClassCheckType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VehicleClassCheckType)

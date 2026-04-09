@@ -88,10 +88,12 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     documentFlowGrouping :: Domain.Types.DocumentVerificationConfig.DocumentFlowGrouping,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isApprovalSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDisabled :: Kernel.Prelude.Bool,
     isHidden :: Kernel.Prelude.Bool,
     isMandatory :: Kernel.Prelude.Bool,
     isMandatoryForEnabling :: Kernel.Prelude.Bool,
+    isReminderSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rcNumberPrefixList :: [Kernel.Prelude.Text],
     title :: Kernel.Prelude.Text,
     verificationProvidersPriorityList :: Kernel.Prelude.Maybe [Kernel.External.Verification.Types.VerificationService]

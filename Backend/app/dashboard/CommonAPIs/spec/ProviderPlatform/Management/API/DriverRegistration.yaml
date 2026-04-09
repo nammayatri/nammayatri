@@ -560,13 +560,19 @@ types:
   CommonDocumentApproveDetails:
     - documentId: Id CommonDriverOnboardingDocuments
     - updatedDocumentData: Maybe Text  # Updated JSON data if any corrections needed
+  AadhaarApproveDetails:
+    - documentImageId: Id Image
+    - aadhaarNumber: Text
+    - nameOnCard: Maybe Text
+    - dateOfBirth: Maybe Text
+    - address: Maybe Text
   PanType:
       enum: "INDIVIDUAL,BUSINESS"
   ServiceType:
     enum: "HyperVerge,Idfy"
     derive: "HttpInstance"
   ApproveDetails:
-    - enum: "RC RCApproveDetails, DL DLApproveDetails, UploadProfile (Id Image), SSNApprove Text, ProfilePhoto (Id Image), VehiclePermit VPermitApproveDetails, VehiclePUC VPUCApproveDetails, VehicleInsurance VInsuranceApproveDetails, VehicleFitnessCertificate FitnessApproveDetails, VehicleInspectionForm VInspectionApproveDetails, Pan PanApproveDetails, NOC NOCApproveDetails, BusinessLicenseImg BusinessLicenseApproveDetails, CommonDocument CommonDocumentApproveDetails"
+    - enum: "RC RCApproveDetails, DL DLApproveDetails, UploadProfile (Id Image), SSNApprove Text, ProfilePhoto (Id Image), VehiclePermit VPermitApproveDetails, VehiclePUC VPUCApproveDetails, VehicleInsurance VInsuranceApproveDetails, VehicleFitnessCertificate FitnessApproveDetails, VehicleInspectionForm VInspectionApproveDetails, Pan PanApproveDetails, NOC NOCApproveDetails, BusinessLicenseImg BusinessLicenseApproveDetails, CommonDocument CommonDocumentApproveDetails, Aadhaar AadhaarApproveDetails, VehicleFrontImg (Id Image), VehicleBackImg (Id Image), VehicleRightImg (Id Image), VehicleLeftImg (Id Image), VehicleFrontInteriorImg (Id Image), VehicleBackInteriorImg (Id Image), OdometerImg (Id Image), LocalResidenceProofImg (Id Image), PoliceVerificationCertificateImg (Id Image)"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

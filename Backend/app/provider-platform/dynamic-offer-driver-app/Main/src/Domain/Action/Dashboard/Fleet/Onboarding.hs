@@ -96,7 +96,9 @@ castDocumentVerificationConfigAPIEntity Onboarding.DocumentVerificationConfigAPI
       rcNumberPrefixList = rcNumberPrefixList,
       applicableTo = SDO.castDocumentApplicableType applicableTo,
       documentFields = fmap (map SDO.castDocumentFieldInfo) documentFields,
-      documentFlowGrouping = SDO.castDocumentFlowGrouping documentFlowGrouping
+      documentFlowGrouping = SDO.castDocumentFlowGrouping documentFlowGrouping,
+      isReminderSupported = isReminderSupported,
+      isApprovalSupported = isApprovalSupported
     }
 
 getOnboardingGetReferralDetails ::
