@@ -57,23 +57,7 @@ apis:
         offset: Int
       response:
         type: "[FleetOwnerListItem]"
-      helperApi:
-        - GET:
-            endpoint: /{requestorId}/fleetOwner/list
-            auth: ApiAuthV2
-            params:
-              requestorId: Text
-            query:
-              blocked: Bool
-              fleetType: FleetType
-              onlyEnabled: Bool
-              mbSearchString: Text
-              fromDate: UTCTime
-              toDate: UTCTime
-              limit: Int
-              offset: Int
-            response:
-              type: "[FleetOwnerListItem]"
+
 
   - POST:
       endpoint: /fleet/access/{fleetOwnerId}/select
