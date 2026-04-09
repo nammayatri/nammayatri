@@ -5,6 +5,7 @@ module Domain.Types.MerchantServiceUsageConfig where
 
 import qualified ChatCompletion.Types
 import Data.Aeson
+import qualified Data.Map.Strict
 import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -26,6 +27,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
   { aadhaarVerificationService :: Kernel.External.AadhaarVerification.Types.AadhaarVerificationService,
     autoComplete :: Kernel.External.Maps.Types.MapsService,
     backgroundVerification :: Kernel.External.BackgroundVerification.Types.BackgroundVerificationService,
+    categoryBasedVerificationPriorityList :: Kernel.Prelude.Maybe (Data.Map.Strict.Map Kernel.Prelude.Text [Kernel.External.Verification.Types.VerificationService]),
     createBankAccount :: Kernel.External.Payment.Types.PaymentService,
     createdAt :: Kernel.Prelude.UTCTime,
     dashboardGstVerificationService :: Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService,
@@ -58,7 +60,6 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     smsProvidersPriorityList :: [Kernel.External.SMS.Types.SmsService],
     snapToRoad :: Kernel.External.Maps.Types.MapsService,
     snapToRoadProvidersList :: [Kernel.External.Maps.Types.MapsService],
-    totoVerificationPriorityList :: Kernel.Prelude.Maybe [Kernel.External.Verification.Types.VerificationService],
     udyamVerificationService :: Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService,
     updatedAt :: Kernel.Prelude.UTCTime,
     verificationProvidersPriorityList :: [Kernel.External.Verification.Types.VerificationService],
@@ -66,6 +67,20 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     whatsappProvidersPriorityList :: [Kernel.External.Whatsapp.Types.WhatsappService]
   }
   deriving (Generic, Show)
+
+data ProviderLookUpKey
+  = TOTO_UDIN
+  | TOTO
+  | CAR
+  | AUTO_CATEGORY
+  | MOTORCYCLE
+  | TRUCK
+  | BOAT
+  | AMBULANCE
+  | BUS
+  | TRAIN
+  | FLIGHT
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type MerchantServiceUsageConfig = MerchantServiceUsageConfigD 'Safe
 
