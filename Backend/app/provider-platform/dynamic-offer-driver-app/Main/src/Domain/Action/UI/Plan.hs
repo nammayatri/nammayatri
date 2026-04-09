@@ -1244,7 +1244,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
       driver <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
       now <- getCurrentTime
 
-      let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = baseAmount, currency = paymentCurrency}
+      let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = baseAmount, currency = paymentCurrency, basket = Nothing}
           customerReq = Payment.OfferCustomer {customerId = driverId.getId, email = driver.email, mobile = Nothing}
       return
         Payment.OfferListReq

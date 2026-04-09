@@ -44,12 +44,14 @@ module Tools.Payment
     getIsSplitEnabled,
     getIsRefundSplitEnabled,
     getIsPercentageSplit,
+    useDomainOffers,
     roundToTwoDecimalPlaces,
     fetchGatewayReferenceId,
     fetchOfferSKUConfig,
     extractSplitSettlementDetailsAmount,
     getPaymentOrderValidity,
     offerList,
+    offerApply,
     createRefund,
     getRefund,
     createPayment,
@@ -88,6 +90,7 @@ import Kernel.External.Payment.Interface as Reexport hiding
     getRefund,
     getRefundStatus,
     isSplitEnabled,
+    offerApply,
     offerList,
     orderStatus,
     refundPayment,
@@ -127,6 +130,9 @@ orderStatus = runWithServiceConfigAndServiceName Payment.orderStatus
 
 offerList :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.OfferListReq -> m Payment.OfferListResp
 offerList merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion = runWithServiceConfigAndServiceName Payment.offerList merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion Nothing
+
+offerApply :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.OfferApplyReq -> m Payment.OfferApplyResp
+offerApply merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion = runWithServiceConfigAndServiceName Payment.offerApply merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion Nothing
 
 refundOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.AutoRefundReq -> m Payment.AutoRefundResp
 refundOrder merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion = runWithServiceConfigAndServiceName Payment.autoRefunds merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion Nothing
@@ -582,6 +588,45 @@ getIsSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServiceTyp
       RideBooking -> DMSC.PaymentService rideBookingPaymentService
       RideHailing -> DMSC.PaymentService Payment.Juspay
       OnlineRideHailing -> DMSC.PaymentService Payment.Stripe
+      STCL -> DMSC.MembershipPaymentService Payment.Juspay
+
+useDomainOffers ::
+  (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe (Id TicketPlace) ->
+  PaymentServiceType ->
+  m Bool
+useDomainOffers merchantId merchantOperatingCityId mbPlaceId paymentServiceType = do
+  placeBasedConfig <- case mbPlaceId of
+    Just id -> CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
+    Nothing -> return Nothing
+  merchantServiceConfig <-
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (getPaymentServiceByType paymentServiceType)})
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
+  return $ case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig.serviceConfig of
+    Just (DMSC.PaymentServiceConfig vsc) -> Payment.getUseDomainOffers vsc
+    Just (DMSC.MetroPaymentServiceConfig vsc) -> Payment.getUseDomainOffers vsc
+    Just (DMSC.BusPaymentServiceConfig vsc) -> Payment.getUseDomainOffers vsc
+    Just (DMSC.BbpsPaymentServiceConfig vsc) -> Payment.getUseDomainOffers vsc
+    Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.getUseDomainOffers vsc
+    Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.getUseDomainOffers vsc
+    Just (DMSC.ParkingPaymentServiceConfig vsc) -> Payment.getUseDomainOffers vsc
+    Just (DMSC.MembershipPaymentServiceConfig vsc) -> Payment.getUseDomainOffers vsc
+    _ -> False
+  where
+    getPaymentServiceByType = \case
+      Normal -> DMSC.PaymentService Payment.Juspay
+      Wallet -> DMSC.JuspayWalletService Payment.Juspay
+      BBPS -> DMSC.BbpsPaymentService Payment.Juspay
+      FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
+      FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
+      FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
+      FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
+      ParkingBooking -> DMSC.ParkingPaymentService Payment.Juspay
+      RideBooking -> DMSC.PaymentService rideBookingPaymentService
+      RideHailing -> DMSC.PaymentService Payment.Juspay
+      OnlineRideHailing -> DMSC.PaymentService Payment.Juspay
       STCL -> DMSC.MembershipPaymentService Payment.Juspay
 
 getIsPercentageSplit ::

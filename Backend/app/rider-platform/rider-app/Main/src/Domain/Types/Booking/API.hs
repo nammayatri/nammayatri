@@ -558,7 +558,7 @@ buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) DRide.Ride {..} = d
       vehicleColor' = fromMaybe "NA" vehicleColor -- TODO::remove this default value
   selectedOffers <- case booking.selectedOfferId of
     Nothing -> pure Nothing
-    Just offerId -> do
+    Just _ -> do
       -- Future this can be a findAll query too, if supporting more than one offer per booking/ride
       mbOfferEntity <-
         if status `notElem` [DRide.COMPLETED, DRide.CANCELLED]
@@ -577,36 +577,14 @@ buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) DRide.Ride {..} = d
                           offerTnc = offerEntity.offerTnc,
                           offerSponsoredBy = offerEntity.offerSponsoredBy,
                           offerCode = offerEntity.offerCode,
-                          amountSaved = offerEntity.amountSaved,
+                          amountSaved = offerEntity.amountSaved + offerEntity.payoutAmount,
                           postOfferAmount = offerEntity.postOfferAmount
                         }
                     ],
-                  totalAmountSaved = offerEntity.amountSaved,
+                  totalAmountSaved = offerEntity.amountSaved + offerEntity.payoutAmount,
                   totalPostOfferAmount = offerEntity.postOfferAmount
                 }
-        Nothing -> do
-          mbComputedOffer <- SOffer.getOfferAmount (Id offerId) (fromMaybe booking.estimatedTotalFare.amount (totalFare <&> (.amount)))
-          case mbComputedOffer of
-            Just computedOffer ->
-              return $
-                Just
-                  SOffer.OffersRespAPIEntity
-                    { offers =
-                        [ SOffer.OfferRespAPIEntity
-                            { offerId = "backward-compatibility-offer-id",
-                              offerTitle = Nothing,
-                              offerDescription = Nothing,
-                              offerTnc = Nothing,
-                              offerSponsoredBy = Nothing,
-                              offerCode = "backward-compatibility-offer-code",
-                              amountSaved = computedOffer.amountSaved,
-                              postOfferAmount = computedOffer.postOfferAmount
-                            }
-                        ],
-                      totalAmountSaved = computedOffer.amountSaved,
-                      totalPostOfferAmount = computedOffer.postOfferAmount
-                    }
-            Nothing -> return Nothing
+        Nothing -> return Nothing
   return $
     RideAPIEntity
       { shortRideId = shortId,

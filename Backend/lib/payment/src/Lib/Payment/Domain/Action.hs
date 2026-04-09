@@ -42,6 +42,8 @@ module Lib.Payment.Domain.Action
     offerListService,
     invalidateOfferListCacheService,
     listDomainOffers,
+    listDomainOffersWithBasket,
+    splitOfferRespByProduct,
     createWalletService,
     walletPostingService,
     walletBalanceService,
@@ -71,6 +73,7 @@ where
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import Data.List (sortBy)
+import qualified Data.Map.Strict as Map
 import Data.Ord (comparing)
 import qualified Data.Text as T
 import qualified Data.Time as Time
@@ -262,12 +265,14 @@ updateForCXCancelPaymentIntentService ::
   (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
   HighPrecMoney ->
   OfferStatsInput ->
+  Bool -> -- useDomainOffers
+  (PInterface.OfferApplyReq -> m PInterface.OfferApplyResp) ->
   m Bool
-updateForCXCancelPaymentIntentService merchantOpCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancelTransactionAmount offerStatsInput = do
+updateForCXCancelPaymentIntentService merchantOpCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancelTransactionAmount offerStatsInput useDomainOffers applyOfferCall = do
   transaction <- HQTransaction.findByTxnId paymentIntentId >>= fromMaybeM (InternalError $ "No transaction found while update payment intent: " <> paymentIntentId)
   let newApplicationFeeAmount = transaction.applicationFeeAmount -- not changing application fee amount
   updateOldTransaction newApplicationFeeAmount transaction
-  chargePaymentIntentService merchantOpCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall offerStatsInput
+  chargePaymentIntentService merchantOpCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall offerStatsInput useDomainOffers applyOfferCall
   where
     updateOldTransaction newApplicationFeeAmount transaction = do
       let newOrderAmount = cancelTransactionAmount -- changing whole amount with cancellation
@@ -288,8 +293,10 @@ chargePaymentIntentService ::
   (Payment.PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()) ->
   (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
   OfferStatsInput ->
+  Bool -> -- useDomainOffers
+  (PInterface.OfferApplyReq -> m PInterface.OfferApplyResp) ->
   m Bool
-chargePaymentIntentService merchantOpCityId _paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall offerStatsInput = do
+chargePaymentIntentService merchantOpCityId _paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall offerStatsInput useDomainOffers applyOfferCall = do
   transaction <- HQTransaction.findByTxnId paymentIntentId >>= fromMaybeM (InternalError $ "No transaction found while charge payment intent: " <> paymentIntentId)
   if transaction.status `notElem` [Payment.CHARGED, Payment.CANCELLED, Payment.AUTO_REFUNDED]
     then do
@@ -312,7 +319,7 @@ chargePaymentIntentService merchantOpCityId _paymentServiceType paymentIntentId 
           let updStatus = Payment.castToTransactionStatus paymentIntentResp.status
           HQTransaction.updateStatusAndError merchantOpCityId transaction updStatus Nothing Nothing (Just "charge payment intent service")
           QOrder.updateStatus transaction.orderId paymentIntentId updStatus
-          applyOfferService transaction.orderId offerStatsInput
+          applyOfferService transaction.orderId offerStatsInput useDomainOffers applyOfferCall
           pure True
     else pure False
 
@@ -1072,8 +1079,11 @@ listDomainOffers merchantId merchantOperatingCityId orderAmount _currency mbDoma
                   },
               orderAmount = amt,
               finalOrderAmount = computedOfferAmount.postOfferAmount,
-              discountAmount = computedOfferAmount.amountSaved,
-              offerCode = offer.offerCode
+              discountAmount = computedOfferAmount.discountAmount,
+              cashbackAmount = computedOfferAmount.payoutAmount,
+              benefitType = show offer.offerType,
+              offerCode = offer.offerCode,
+              productDiscounts = Nothing
             }
 
     buildBestOfferCombination amt resps offers =
@@ -1113,6 +1123,60 @@ listDomainOffers merchantId merchantOperatingCityId orderAmount _currency mbDoma
                               offerAmount = totalDiscountAmt + totalCashbackAmt
                             }
                       }
+
+-- | Basket-based domain offer listing: runs listDomainOffers per product, returns [(productId, OfferListResp)].
+--   bestOfferCombination is set to Nothing for basket case.
+listDomainOffersWithBasket ::
+  (EncFlow m r, PaymentBeamFlow.BeamFlow m r) =>
+  Text ->
+  Text ->
+  [(Text, HighPrecMoney)] -> -- [(productId, amount)]
+  Currency ->
+  Maybe Value ->
+  m [(Text, PInterface.OfferListResp)]
+listDomainOffersWithBasket merchantId merchantOperatingCityId products currency mbDomainContext = do
+  forM products $ \(productId, amount) -> do
+    resp <- listDomainOffers merchantId merchantOperatingCityId amount currency mbDomainContext
+    pure (productId, resp {PInterface.bestOfferCombination = Nothing})
+
+-- | Split a PG basket OfferListResp into per-product responses using productDiscounts.
+--   For PRODUCT-level offers (productDiscounts present): creates per-product entries with product amounts.
+--   For ORDER-level offers (productDiscounts absent): every product gets the same offer.
+--   bestOfferCombination is set to Nothing for all products.
+splitOfferRespByProduct ::
+  [(Text, HighPrecMoney)] -> -- [(productId, amount)]
+  PInterface.OfferListResp ->
+  [(Text, PInterface.OfferListResp)]
+splitOfferRespByProduct products resp =
+  let productIds = map fst products
+      productMap = Map.fromList products
+      perProductOffers = Map.fromListWith (<>) $ concatMap (offerToProductEntries productIds productMap) resp.offerResp
+   in map (\pid -> (pid, mkProductOfferListResp (Map.findWithDefault [] pid perProductOffers))) productIds
+  where
+    offerToProductEntries :: [Text] -> Map.Map Text HighPrecMoney -> PInterface.OfferResp -> [(Text, [PInterface.OfferResp])]
+    offerToProductEntries allProductIds amountMap offer = case offer.productDiscounts of
+      Just pds ->
+        map
+          ( \pd ->
+              ( pd.productId,
+                [ offer
+                    { PInterface.discountAmount = pd.discountAmount,
+                      PInterface.cashbackAmount = pd.cashbackAmount,
+                      PInterface.finalOrderAmount = fromMaybe 0 (Map.lookup pd.productId amountMap) - pd.discountAmount
+                    }
+                ]
+              )
+          )
+          pds
+      Nothing ->
+        map (\pid -> (pid, [offer])) allProductIds
+
+    mkProductOfferListResp :: [PInterface.OfferResp] -> PInterface.OfferListResp
+    mkProductOfferListResp offers =
+      PInterface.OfferListResp
+        { offerResp = offers,
+          bestOfferCombination = Nothing
+        }
 
 -- | Single offer eligibility + discount flow.
 --   Looks up offer, checks eligibility via jsonLogic, returns discounted amount.
@@ -1181,13 +1245,32 @@ applyOfferService ::
   (EncFlow m r, PaymentBeamFlow.BeamFlow m r) =>
   Id DOrder.PaymentOrder ->
   OfferStatsInput ->
+  Bool -> -- useDomainOffers
+  (PInterface.OfferApplyReq -> m PInterface.OfferApplyResp) ->
   m ()
-applyOfferService paymentOrderId offerStatsInput = do
+applyOfferService paymentOrderId offerStatsInput useDomainOffers applyOfferCall = do
   existingOffers <- QPaymentOrderOffer.findByPaymentOrder paymentOrderId
   let offerInitiatedPaymentOrderOffer = filter (\offer -> offer.status == PInterface.OFFER_INITIATED) existingOffers
   unless (null offerInitiatedPaymentOrderOffer) $ do
     now <- getCurrentTime
     order <- QOrder.findById paymentOrderId >>= fromMaybeM (PaymentOrderDoesNotExist paymentOrderId.getId)
+    unless useDomainOffers $ do
+      let offerIds = map (.offer_id) offerInitiatedPaymentOrderOffer
+      void $
+        applyOfferCall
+          PInterface.OfferApplyReq
+            { txnId = order.shortId.getShortId,
+              offers = offerIds,
+              customerId = order.personId.getId,
+              amount = order.amount,
+              currency = order.currency,
+              planId = "dummy-not-required",
+              registrationDate = now,
+              dutyDate = now,
+              paymentMode = "dummy-not-required",
+              numOfRides = 0,
+              basket = Nothing
+            }
     forM_ offerInitiatedPaymentOrderOffer $ \paymentOffer -> do
       QPaymentOrderOffer.updateByPrimaryKey paymentOffer {DPaymentOrderOffer.status = PInterface.OFFER_AVAILED, DPaymentOrderOffer.updatedAt = now}
       upsertOfferStats (Id paymentOffer.offer_id) offerStatsInput paymentOffer.discountAmount paymentOffer.payoutAmount order.currency paymentOffer.merchantId paymentOffer.merchantOperatingCityId now
@@ -1202,19 +1285,35 @@ applyOfferWithoutPaymentService ::
   OfferStatsInput ->
   Maybe HighPrecMoney -> -- discount amount
   Maybe HighPrecMoney -> -- payout amount
+  HighPrecMoney -> -- orderAmount (total fare on which discount is applied)
   Currency ->
   Text -> -- merchantId
   Text -> -- merchantOperatingCityId
+  Bool -> -- useDomainOffers
+  (PInterface.OfferApplyReq -> m PInterface.OfferApplyResp) ->
   m ()
-applyOfferWithoutPaymentService referenceId offerId offerStatsInput discountAmount payoutAmount currency merchantId merchantOperatingCityId = do
+applyOfferWithoutPaymentService referenceId offerId offerStatsInput discountAmount payoutAmount orderAmount currency merchantId merchantOperatingCityId useDomainOffers applyOfferCall = do
   existingOffers <- QOfflineOffer.findByReferenceId referenceId
-  unless (null existingOffers) $ do
-    logInfo $ "Offline offer already applied for referenceId=" <> referenceId <> ", skipping"
-    return ()
   when (null existingOffers) $ do
     mbOffer <- QOffer.findById (Id offerId)
     whenJust mbOffer $ \offer -> do
       now <- getCurrentTime
+      unless useDomainOffers $ do
+        void $
+          applyOfferCall
+            PInterface.OfferApplyReq
+              { txnId = referenceId,
+                offers = [offerId],
+                customerId = offerStatsInput.personId,
+                amount = orderAmount,
+                currency = currency,
+                planId = "dummy-not-required",
+                registrationDate = now,
+                dutyDate = now,
+                paymentMode = "dummy-not-required",
+                numOfRides = 0,
+                basket = Nothing
+              }
       offlineOfferId <- generateGUID
       let offlineOffer =
             DOfflineOffer.OfflineOffer
