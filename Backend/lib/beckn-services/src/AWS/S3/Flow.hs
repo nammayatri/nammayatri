@@ -61,7 +61,7 @@ import qualified System.Directory as Dir
 import System.FilePath.Posix as Path
 import qualified System.Posix.Files as Posix
 import qualified System.Posix.IO as Posix
-import System.Process
+import System.Process (callProcess)
 
 type S3GetAPI = Get '[S3ImageData] Text
 
@@ -164,8 +164,10 @@ get'' ::
   m Text
 get'' bucketName path = withLogTag "S3" $ do
   let tmpPath = getTmpPath path
-  let cmd = "aws s3api get-object --bucket " <> T.unpack bucketName <> " --key " <> path <> " " <> tmpPath
-  liftIO $ callCommand cmd
+  liftIO $
+    callProcess
+      "aws"
+      ["s3api", "get-object", "--bucket", T.unpack bucketName, "--key", path, tmpPath]
   result <- liftIO $ readFile tmpPath
   liftIO $ removeFile tmpPath
   return result
@@ -181,8 +183,10 @@ put'' ::
 put'' bucketName path img = withLogTag "S3" $ do
   let tmpPath = getTmpPath path
   liftIO $ writeFile_ tmpPath img
-  let cmd = "aws s3api put-object --bucket " <> T.unpack bucketName <> " --key " <> path <> " --body " <> tmpPath
-  liftIO $ callCommand cmd
+  liftIO $
+    callProcess
+      "aws"
+      ["s3api", "put-object", "--bucket", T.unpack bucketName, "--key", path, "--body", tmpPath]
   liftIO $ removeFile tmpPath
   where
     writeFile_ path_ img_ = do
@@ -202,8 +206,10 @@ putRaw'' ::
 putRaw'' bucketName path bs _contentType = withLogTag "S3" $ do
   let tmpPath = getTmpPath path
   liftIO $ BS.writeFile tmpPath bs
-  let cmd = "aws s3api put-object --bucket " <> T.unpack bucketName <> " --key " <> path <> " --body " <> tmpPath <> " --content-type " <> _contentType
-  liftIO $ callCommand cmd
+  liftIO $
+    callProcess
+      "aws"
+      ["s3api", "put-object", "--bucket", T.unpack bucketName, "--key", path, "--body", tmpPath, "--content-type", _contentType]
   liftIO $ removeFile tmpPath
 
 delete'' ::
@@ -214,8 +220,10 @@ delete'' ::
   String ->
   m ()
 delete'' bucketName path = withLogTag "S3" $ do
-  let cmd = "aws s3api delete-object --bucket " <> T.unpack bucketName <> " --key " <> path
-  liftIO $ callCommand cmd
+  liftIO $
+    callProcess
+      "aws"
+      ["s3api", "delete-object", "--bucket", T.unpack bucketName, "--key", path]
 
 getTmpPath :: String -> String
 getTmpPath = (<>) "/tmp/" . T.unpack . DL.last . T.split (== '/') . T.pack
