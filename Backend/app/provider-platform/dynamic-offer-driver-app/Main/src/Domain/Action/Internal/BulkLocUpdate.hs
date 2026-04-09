@@ -31,8 +31,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.LocationUpdates
 import qualified Lib.LocationUpdates as LocUpd
-import qualified SharedLogic.External.LocationTrackingService.Types as LTS
 import qualified SharedLogic.CallBAP as CallBAP
+import qualified SharedLogic.External.LocationTrackingService.Types as LTS
 import SharedLogic.Ride as SRide
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Queries.Booking as QBooking

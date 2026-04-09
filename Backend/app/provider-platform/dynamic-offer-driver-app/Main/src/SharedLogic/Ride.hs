@@ -351,6 +351,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         driverCancellationPenaltyFeeId = Nothing,
         driverCancellationPenaltyAmount = Nothing,
         cancellationChargesOnCancel = Nothing,
+        cancellationChargesLogicVersion = Nothing,
         driverCancellationPenaltyWaivedReason = Nothing,
         finalFarePolicyId = Nothing,
         cloudType = cloudType

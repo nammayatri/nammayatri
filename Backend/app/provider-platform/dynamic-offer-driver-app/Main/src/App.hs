@@ -37,8 +37,8 @@ import Kernel.External.AadhaarVerification.Gridline.Config
 import Kernel.External.Insurance.Interface (prepareIffcoTokioHttpManager)
 import Kernel.External.SharedLogic.HyperVerge.Functions (prepareHyperVergeHttpManager)
 import Kernel.External.Tokenize (prepareJourneyMonitoringHttpManager)
-import Kernel.External.Verification.Interface.Idfy
 import Kernel.External.Verification.Interface (prepareMorthHttpManager)
+import Kernel.External.Verification.Interface.Idfy
 import Kernel.External.Verification.InternalScripts.FaceVerification (prepareInternalScriptsHttpManager)
 import Kernel.External.Verification.SafetyPortal.Config (prepareSafetyPortalHttpManager)
 import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam

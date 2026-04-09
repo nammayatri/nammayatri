@@ -122,7 +122,6 @@ driverCoinsEvent driverId merchantId merchantOpCityId eventType entityId mbVehVa
         _ -> DCT.DynamicOfferTrip
   logDebug $ "Driver Coins Event Triggered for merchantOpCityId - " <> merchantOpCityId.getId <> " and driverId - " <> driverId.getId <> "and vehicle category - " <> show vehCategory
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  coinConfiguration <- CDCQ.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehCategory mbConfigVersionMap
   mbDriverStats <- B.runInReplica $ QDriverStats.findByPrimaryKey driverId
   logDebug $ "Driver stats present: " <> show (isJust mbDriverStats)
   -- fetch driver fleet here
@@ -139,7 +138,9 @@ driverCoinsEvent driverId merchantId merchantOpCityId eventType entityId mbVehVa
         _ -> []
       blacklistedEventsByDriver = fromMaybe [] (DDS.blacklistCoinEvents =<< mbDriverStats)
       combinedBlacklist = blacklistedEventsByDriver <> blacklistedEventsByFleet
-      filteredConfigAll = filter (\cc -> cc.eventFunction `notElem` combinedBlacklist) coinConfiguration
+  coinConfiguration <- CDCQ.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehCategory tripCatType mbConfigVersionMap
+
+  let filteredConfigAll = filter (\cc -> cc.eventFunction `notElem` combinedBlacklist) coinConfiguration
   logDebug $ "Coin config count: total=" <> show (length coinConfiguration) <> ", filtered=" <> show (length filteredConfigAll)
 
   logInfo $ "Coin events for driver " <> driverId.getId <> " - DriverBlacklist: " <> show blacklistedEventsByDriver <> ", FleetBlacklist: " <> show blacklistedEventsByFleet <> ", Total: " <> show (map (.eventFunction) coinConfiguration) <> ", Filtered: " <> show (map (.eventFunction) filteredConfigAll)
@@ -149,21 +150,9 @@ driverCoinsEvent driverId merchantId merchantOpCityId eventType entityId mbVehVa
       logInfo "All coin events blacklisted; skipping award"
       pure ()
     else do
-      coinConfiguration <- CDCQ.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehCategory tripCatType mbConfigVersionMap
-
-      let filteredConfigAll = filter (\cc -> cc.eventFunction `notElem` combinedBlacklist) coinConfiguration
-      logDebug $ "Coin config count: total=" <> show (length coinConfiguration) <> ", filtered=" <> show (length filteredConfigAll)
-
-      logInfo $ "Coin events for driver " <> driverId.getId <> " - DriverBlacklist: " <> show blacklistedEventsByDriver <> ", FleetBlacklist: " <> show blacklistedEventsByFleet <> ", Total: " <> show (map (.eventFunction) coinConfiguration) <> ", Filtered: " <> show (map (.eventFunction) filteredConfigAll)
-
-      if null filteredConfigAll
-        then do
-          logInfo "All coin events blacklisted; skipping award"
-          pure ()
-        else do
-          finalCoinsValue <- sum <$> forM filteredConfigAll (\cc -> calculateCoins eventType driverId merchantId merchantOpCityId cc.eventFunction cc.expirationAt cc.coins transporterConfig entityId vehCategory)
-          logInfo $ "Awarding coins: " <> show finalCoinsValue
-          updateDriverCoins driverId finalCoinsValue transporterConfig.timeDiffFromUtc
+      finalCoinsValue <- sum <$> forM filteredConfigAll (\cc -> calculateCoins eventType driverId merchantId merchantOpCityId cc.eventFunction cc.expirationAt cc.coins transporterConfig entityId vehCategory)
+      logInfo $ "Awarding coins: " <> show finalCoinsValue
+      updateDriverCoins driverId finalCoinsValue transporterConfig.timeDiffFromUtc
 
 calculateCoins :: EventFlow m r => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> m Int
 calculateCoins eventType driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory = do
@@ -323,7 +312,7 @@ runCancellationLogic merchantOpCityId logicInput = do
       pure 0
     else do
       logInfo $ "Running cancellation logic with " <> show (length logics) <> " rules"
-      result <- LYDL.runLogicsWithDebugLog LYDL.Driver (cast merchantOpCityId) LYT.CANCELLATION_COIN_POLICY logics logicInput
+      result <- LYDL.runLogicsWithDebugLog LYDL.Driver (cast merchantOpCityId) LYT.CANCELLATION_COIN_POLICY (Nothing :: Maybe Text) logics logicInput
       case A.fromJSON result.result :: A.Result CancellationCoins.CancellationCoinResult of
         A.Success logicResult -> do
           logInfo $ "Cancellation logic result: " <> show logicResult

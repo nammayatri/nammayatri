@@ -25,7 +25,8 @@ data JsonLogicTransactionT f = JsonLogicTransactionT
     timestamp :: C f UTCTime,
     inputData :: C f Text,
     logic :: C f Text,
-    outputData :: C f Text
+    outputData :: C f Text,
+    entityTransactionId :: C f (Maybe Text)
   }
   deriving (Generic)
 
@@ -39,7 +40,8 @@ jsonLogicTransactionTTable =
       timestamp = "timestamp",
       inputData = "inputData",
       logic = "logic",
-      outputData = "outputData"
+      outputData = "outputData",
+      entityTransactionId = "entityTransactionId"
     }
 
 type JsonLogicTransaction = JsonLogicTransactionT Identity

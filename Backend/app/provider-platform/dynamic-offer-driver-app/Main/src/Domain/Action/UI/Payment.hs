@@ -323,33 +323,33 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
         logDebug $ "Updating Payout And Process Previous Payout For Person: " <> show order.personId <> " with Vpa: " <> show mbVpa
         when (isJust mbVpa) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) mbVpa merchanOperatingCityId
       when (order.entityName == Just DPayment.DRIVER_STCL || order.paymentServiceType == Just DOrder.STCL) $ do
-            logDebug $ "STCL order detected in juspayWebhookHandler, calling stclMemberShipOrderStatusHandler for order: " <> show orderShortId
-            let stclPaymentStatusResp =
-                  DPayment.PaymentStatus
-                    { orderId = order.id,
-                      orderShortId = order.shortId,
-                      status = transactionStatus,
-                      bankErrorMessage = bankErrorMessage,
-                      bankErrorCode = bankErrorCode,
-                      isRetried = isRetriedOrder,
-                      isRetargeted = isRetargetedOrder,
-                      retargetLink = retargetPaymentLink,
-                      refunds = refunds,
-                      payerVpa = payerVpa <|> ((.payerVpa) =<< upi),
-                      card = Nothing,
-                      paymentMethodType = paymentMethodType,
-                      authIdCode = (.authIdCode) =<< paymentGatewayResponse,
-                      txnUUID = transactionUUID,
-                      txnId = txnId,
-                      effectAmount = effectiveAmount,
-                      offers = offers,
-                      paymentServiceType = order.paymentServiceType,
-                      paymentFulfillmentStatus = order.paymentFulfillmentStatus,
-                      domainEntityId = order.domainEntityId,
-                      amount = order.amount,
-                      validTill = order.validTill
-                    }
-            DStclMembership.stclMemberShipOrderStatusHandler stclPaymentStatusResp order.id
+        logDebug $ "STCL order detected in juspayWebhookHandler, calling stclMemberShipOrderStatusHandler for order: " <> show orderShortId
+        let stclPaymentStatusResp =
+              DPayment.PaymentStatus
+                { orderId = order.id,
+                  orderShortId = order.shortId,
+                  status = transactionStatus,
+                  bankErrorMessage = bankErrorMessage,
+                  bankErrorCode = bankErrorCode,
+                  isRetried = isRetriedOrder,
+                  isRetargeted = isRetargetedOrder,
+                  retargetLink = retargetPaymentLink,
+                  refunds = refunds,
+                  payerVpa = payerVpa <|> ((.payerVpa) =<< upi),
+                  card = Nothing,
+                  paymentMethodType = paymentMethodType,
+                  authIdCode = (.authIdCode) =<< paymentGatewayResponse,
+                  txnUUID = transactionUUID,
+                  txnId = txnId,
+                  effectAmount = effectiveAmount,
+                  offers = offers,
+                  paymentServiceType = order.paymentServiceType,
+                  paymentFulfillmentStatus = order.paymentFulfillmentStatus,
+                  domainEntityId = order.domainEntityId,
+                  amount = order.amount,
+                  validTill = order.validTill
+                }
+        DStclMembership.stclMemberShipOrderStatusHandler stclPaymentStatusResp order.id
       when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
         when (order.entityName == Just DPayment.DRIVER_WALLET_TOPUP && transactionStatus == Payment.CHARGED) $ do
           let driverFeeIds = (.driverFeeId) <$> invoices
