@@ -458,7 +458,7 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
       (allLogics, mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES localTime ride.cancellationChargesLogicVersion Nothing
       logDebug $ "allLogics: for cancellation charges calculation" <> show allLogics
       logDebug $ "logicInput: for cancellation charges calculation" <> show logicInput
-      response <- withTryCatch "runLogics:UserCancellationDues" $ LYDL.runLogicsWithDebugLog LYDL.Driver (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES (Nothing :: Maybe Text) allLogics logicInput
+      response <- withTryCatch "runLogics:UserCancellationDues" $ LYDL.runLogicsWithDebugLog LYDL.Driver (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES (Just booking.transactionId) allLogics logicInput
       cancellationCharge <- case response of
         Left e -> do
           logError $ "Error in running UserCancellationDuesLogics - " <> show e <> " - " <> show logicInput <> " - " <> show allLogics

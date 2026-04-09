@@ -270,9 +270,9 @@ validateCancellation rideId rideStartTime initialDisToPickup cancellationDisToPi
       let isArrivedAtPickup = case cancellationDisToPickup of
             Just disToPickup -> disToPickup < highPrecMetersToMeters transporterConfig.arrivedPickupThreshold
             Nothing -> False
-      pure (ride, callAttemptByDriver, isArrivedAtPickup, estimatedTimeToPickup)
+      pure (ride, booking, callAttemptByDriver, isArrivedAtPickup, estimatedTimeToPickup)
 
-  let (ride, callAttemptByDriver, isArrivedAtPickup, estimatedTimeToPickup) = rideInfo
+  let (ride, booking, callAttemptByDriver, isArrivedAtPickup, estimatedTimeToPickup) = rideInfo
       timeOfCancellation = round $ diffUTCTime now rideStartTime
       actualCoveredDistance = case (initialDisToPickup, cancellationDisToPickup) of
         (Just initial, Just cancellation) -> Just (initial - cancellation)
@@ -299,10 +299,10 @@ validateCancellation rideId rideStartTime initialDisToPickup cancellationDisToPi
             expectedCoveredDistance = expectedCoveredDistance
           }
 
-  runCancellationLogic ride.merchantOperatingCityId logicInput
+  runCancellationLogic ride.merchantOperatingCityId (Just booking.transactionId) logicInput
 
-runCancellationLogic :: EventFlow m r => Id DMOC.MerchantOperatingCity -> CancellationCoins.CancellationCoinData -> m Int
-runCancellationLogic merchantOpCityId logicInput = do
+runCancellationLogic :: EventFlow m r => Id DMOC.MerchantOperatingCity -> Maybe Text -> CancellationCoins.CancellationCoinData -> m Int
+runCancellationLogic merchantOpCityId mbEntityTransactionId logicInput = do
   now <- getCurrentTime
   (logics, _) <- TDL.getAppDynamicLogic (cast merchantOpCityId) LYT.CANCELLATION_COIN_POLICY now Nothing Nothing
 
@@ -312,7 +312,7 @@ runCancellationLogic merchantOpCityId logicInput = do
       pure 0
     else do
       logInfo $ "Running cancellation logic with " <> show (length logics) <> " rules"
-      result <- LYDL.runLogicsWithDebugLog LYDL.Driver (cast merchantOpCityId) LYT.CANCELLATION_COIN_POLICY (Nothing :: Maybe Text) logics logicInput
+      result <- LYDL.runLogicsWithDebugLog LYDL.Driver (cast merchantOpCityId) LYT.CANCELLATION_COIN_POLICY mbEntityTransactionId logics logicInput
       case A.fromJSON result.result :: A.Result CancellationCoins.CancellationCoinResult of
         A.Success logicResult -> do
           logInfo $ "Cancellation logic result: " <> show logicResult

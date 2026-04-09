@@ -624,7 +624,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         localTime <- getLocalCurrentTime thresholdConfig.timeDiffFromUtc
         (allLogics, _mbVersion) <- getAppDynamicLogic (cast booking.merchantOperatingCityId) LYT.GPS_TOLL_BEHAVIOR localTime Nothing Nothing
         -- Evaluate behavior using App Dynamic Logic
-        output <- GpsTollBehavior.evaluateGpsTollBehavior (cast booking.merchantOperatingCityId) LYT.GPS_TOLL_BEHAVIOR allLogics gpsTollBehaviorData
+        output <- GpsTollBehavior.evaluateGpsTollBehavior (cast booking.merchantOperatingCityId) LYT.GPS_TOLL_BEHAVIOR (Just booking.transactionId) allLogics gpsTollBehaviorData
         logInfo $ "GPS Toll Behavior evaluation result: " <> show output
         -- Increment bad behavior counter if needed
         when output.shouldIncrementBadBehaviorTollCounter $ do
