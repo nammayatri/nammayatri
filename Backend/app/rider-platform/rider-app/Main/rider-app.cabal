@@ -647,6 +647,7 @@ library
       Storage.Queries.IssueExtra
       Storage.Queries.JourneyExtra
       Storage.Queries.JourneyLegExtra
+      Storage.Queries.LocationExtra
       Storage.Queries.LocationMappingExtra
       Storage.Queries.MerchantExtra
       Storage.Queries.MerchantOperatingCityExtra

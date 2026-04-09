@@ -17,10 +17,12 @@ module Beckn.ACL.Update (buildUpdateReq) where
 import qualified Beckn.OnDemand.Utils.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import qualified BecknV2.Utils as TagUtils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
-import Data.Text (toLower)
+import Data.Text (toLower, unpack)
 import qualified Domain.Action.Beckn.Update as DUpdate
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
@@ -29,6 +31,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
+import Kernel.Types.TimeRFC339 (convertRFC3339ToUTC)
 import Kernel.Utils.Common
 import Tools.Error (GenericError (InvalidRequest))
 
@@ -70,6 +73,9 @@ parseEvent merchantId reqMsg context = do
     "EDIT_LOCATION" -> do
       rideId <- fmap Id fulfillment.fulfillmentId & fromMaybeM (InvalidRequest "Fulfillment id not found")
       parseEditLocationEvent bookingId fulfillment rideId
+    "EDIT_STOPS" -> do
+      rideId <- fmap Id fulfillment.fulfillmentId & fromMaybeM (InvalidRequest "Fulfillment id not found")
+      parseEditStopsEvent bookingId fulfillment rideId
     "ADD_STOP" -> parseAddStopEvent bookingId fulfillment
     "EDIT_STOP" -> parseEditStopEvent bookingId fulfillment
     _ -> throwError (InvalidRequest "Invalid event type")
@@ -94,16 +100,22 @@ parseEvent merchantId reqMsg context = do
               stops'
             }
 
-    parseEditLocationEvent bookingId fulfillment rideId = do
-      fulfillmentStops <- fulfillment.fulfillmentStops & fromMaybeM (InvalidRequest "Fulfillment stops not found")
-      let originStop = Utils.getStartLocation fulfillmentStops
-      origin' <- traverse (Utils.buildLocation' merchantId) originStop
-      let destinationStop = Utils.getDropLocation fulfillmentStops
-      destination' <- traverse (Utils.buildLocation' merchantId) destinationStop
+    parseCommonContextFields = do
       orderStatus <- reqMsg.updateReqMessageOrder.orderStatus & fromMaybeM (InvalidRequest "orderStatus not found")
       messageId <- Utils.getMessageId context
       status <- castOrderStatus orderStatus
       transactionId <- Utils.getTransactionId context
+      bapRequestTime <- convertRFC3339ToUTC <$> (context.contextTimestamp & fromMaybeM (InvalidRequest "context timestamp not found"))
+      pure (messageId, status, transactionId, bapRequestTime)
+
+    parseEditLocationEvent bookingId fulfillment rideId = do
+      fulfillmentStops <- fulfillment.fulfillmentStops & fromMaybeM (InvalidRequest "Fulfillment stops not found")
+      let originStop = Utils.getStartLocation fulfillmentStops
+          destinationStop = Utils.getDropLocation fulfillmentStops
+      origin' <- traverse (Utils.buildLocation' merchantId) originStop
+      destination' <- traverse (Utils.buildLocation' merchantId) destinationStop
+      -- EDIT_LOCATION: no stops in the update; stops' = Nothing means "unchanged"
+      (messageId, status, transactionId, bapRequestTime) <- parseCommonContextFields
       pure $
         DUpdate.UEditLocationReq $
           DUpdate.EditLocationReq
@@ -111,9 +123,37 @@ parseEvent merchantId reqMsg context = do
               rideId,
               origin',
               destination',
+              stops' = Nothing,
+              modifiedFromOrder = Nothing,
               status,
               bapBookingUpdateRequestId = messageId,
-              transactionId
+              transactionId,
+              bapRequestTime
+            }
+
+    -- EDIT_STOPS: stops are explicitly being updated; stops' = Just [] means "all removed"
+    parseEditStopsEvent bookingId fulfillment rideId = do
+      fulfillmentStops <- fulfillment.fulfillmentStops & fromMaybeM (InvalidRequest "Fulfillment stops not found")
+      let destinationStop = Utils.getDropLocation fulfillmentStops
+          intermediateStops = filter (\s -> s.stopType /= Just (show Enums.START) && s.stopType /= Just (show Enums.END)) fulfillmentStops
+          modifiedFromOrder' = TagUtils.getTagV2 Tags.EDIT_STOPS_INFO Tags.MODIFIED_FROM_ORDER fulfillment.fulfillmentTags >>= Kernel.Prelude.readMaybe . Data.Text.unpack
+      destination' <- traverse (Utils.buildLocation' merchantId) destinationStop
+      -- Always Just — even empty list means "all unreached stops removed"
+      stops' <- Just <$> mapM (Utils.buildLocation' merchantId) intermediateStops
+      (messageId, status, transactionId, bapRequestTime) <- parseCommonContextFields
+      pure $
+        DUpdate.UEditLocationReq $
+          DUpdate.EditLocationReq
+            { bookingId,
+              rideId,
+              origin' = Nothing,
+              destination',
+              stops',
+              modifiedFromOrder = modifiedFromOrder',
+              status,
+              bapBookingUpdateRequestId = messageId,
+              transactionId,
+              bapRequestTime
             }
 
 castOrderStatus :: (MonadFlow m) => Text -> m Enums.OrderStatus

@@ -103,6 +103,25 @@ updatePastMappingVersions entityId order = do
   let lenMappings = if isVersioned then length mappings else 0
   traverse_ (`incrementVersion` lenMappings) mappings
 
+-- | Versions all LATEST location mappings for orders [1..maxOrderInclusive] using a
+-- single SELECT instead of one SELECT per order (reduces N reads to 1 read).
+updatePastMappingVersionsBulk :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> m ()
+updatePastMappingVersionsBulk entityId maxOrderInclusive = do
+  allMappings <-
+    findAllWithKVAndConditionalDB
+      [ Se.And
+          [ Se.Is BeamLM.entityId $ Se.Eq entityId,
+            Se.Is BeamLM.order $ Se.In [1 .. maxOrderInclusive]
+          ]
+      ]
+      Nothing
+  forM_ [1 .. maxOrderInclusive] $ \ord -> do
+    let groupMappings = filter (\m -> m.order == ord) allMappings
+    unless (null groupMappings) $ do
+      let isVersioned = any (\m -> T.isPrefixOf (T.pack "v") m.version) groupMappings
+          lenMappings = if isVersioned then length groupMappings else 0
+      traverse_ (`incrementVersion` lenMappings) groupMappings
+
 countOrders :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m Int
 countOrders entityId = findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId] Nothing <&> length
 

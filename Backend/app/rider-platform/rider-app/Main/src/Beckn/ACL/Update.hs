@@ -28,6 +28,7 @@ where
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as CommonUtils
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as CommonUtils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -72,6 +73,7 @@ data EditLocationBuildReqDetails = EditLocationBuildReqDetails
     origin :: Maybe DLoc.Location,
     destination :: Maybe DLoc.Location,
     stops :: Maybe [DLoc.Location],
+    modifiedFromOrder :: Maybe Int,
     status :: UpdateStatus
   }
 
@@ -169,6 +171,11 @@ mkUpdateMessage req (UPaymentCompletedBuildReqDetails details) = do
       updateReqMessageUpdateTarget = "order.payments, order.fullfillments"
     }
 mkUpdateMessage req (UEditLocationBuildReqDetails details) = do
+  -- Use EDIT_STOPS event when stops are explicitly being updated (Just [] = all removed);
+  -- use EDIT_LOCATION for destination-only updates (stops = Nothing = unchanged).
+  let eventCode = case details.stops of
+        Just _ -> show Enums.EDIT_STOPS
+        Nothing -> show Enums.EDIT_LOCATION
   Spec.UpdateReqMessage
     { updateReqMessageOrder =
         Spec.Order
@@ -198,12 +205,12 @@ mkUpdateMessage req (UEditLocationBuildReqDetails details) = do
                                 Just $
                                   Spec.Descriptor
                                     { descriptorLongDesc = Nothing,
-                                      descriptorCode = Just $ show Enums.EDIT_LOCATION,
+                                      descriptorCode = Just eventCode,
                                       descriptorName = Nothing,
                                       descriptorShortDesc = Nothing
                                     }
                             },
-                      fulfillmentTags = Nothing,
+                      fulfillmentTags = Tags.mkSingleTagGroup Tags.MODIFIED_FROM_ORDER details.modifiedFromOrder,
                       fulfillmentType = Nothing,
                       fulfillmentVehicle = Nothing
                     }

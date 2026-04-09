@@ -14,7 +14,6 @@
 
 module Domain.Action.Beckn.Update where
 
-import qualified API.Types.UI.EditBooking as EditBooking
 import qualified Beckn.Types.Core.Taxi.Common.Location as Common
 import qualified BecknV2.OnDemand.Enums as Enums
 import Data.List (last)
@@ -25,7 +24,6 @@ import qualified Data.Text as T
 import qualified Data.Text as Text
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.Internal.ViolationDetection as VID
-import qualified Domain.Action.UI.EditBooking as EditBooking
 import qualified Domain.Action.UI.Location as DL
 import Domain.Action.UI.Ride.EndRide.Internal
 import qualified Domain.Types as DVST
@@ -42,7 +40,7 @@ import Domain.Types.OnUpdate
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRoute as RR
 import Environment
-import EulerHS.Prelude hiding (drop, id, state)
+import EulerHS.Prelude hiding (id, state)
 import Kernel.Beam.Functions as B
 import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types
@@ -74,6 +72,7 @@ import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as SQSR
+import qualified Storage.Queries.StopInformation as QSI
 import Tools.Error
 import qualified Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
@@ -97,9 +96,12 @@ data EditLocationReq = EditLocationReq
     rideId :: Id DRide.Ride,
     origin' :: Maybe DL.Location',
     destination' :: Maybe DL.Location',
+    stops' :: Maybe [DL.Location'],
+    modifiedFromOrder :: Maybe Int,
     status :: Enums.OrderStatus,
     bapBookingUpdateRequestId :: Text,
-    transactionId :: Text
+    transactionId :: Text,
+    bapRequestTime :: UTCTime
   }
 
 data AddStopReq = AddStopReq
@@ -158,7 +160,7 @@ handler (UEditStopReq EditStopReq {..}) = do
     Nothing -> throwError (InvalidRequest $ "No stop information received from rider side for booking " <> bookingId.getId)
     Just loc -> processStop booking loc True
 handler (UEditLocationReq EditLocationReq {..}) = do
-  when (isNothing origin' && isNothing destination') $
+  when (isNothing origin' && isNothing destination' && isNothing stops') $
     throwError PickupOrDropLocationNotFound
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
@@ -183,200 +185,306 @@ handler (UEditLocationReq EditLocationReq {..}) = do
     Notify.sendPickupLocationChangedOverlay person fcmOverlayReq entityData
     QRide.updateIsPickupOrDestinationEdited (Just True) ride.id
 
-  whenJust destination $ \dropLocation -> do
+  let newStopsLocations = map (mkLocation person.merchantOperatingCityId) <$> stops'
+  when (isJust destination || isJust newStopsLocations) $ do
     --------------------TO DO ----------------------- Dependency on other people changes
-    -----------1. Add a check for forward dispatch ride -----------------
-    -----------2. Add a check for last location timestamp of driver ----------------- LTS dependency
-    hasAdvancedRide <- QDI.findById (cast ride.driverId) <&> maybe False (.hasAdvanceBooking)
-    if hasAdvancedRide
-      then sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId "Trip Update Request Not Available" "Driver has an upcoming ride near your drop location. "
-      else do
-        transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-        now <- getCurrentTime
-        QL.create dropLocation
-        let dropLatLong = Maps.LatLong {lat = dropLocation.lat, lon = dropLocation.lon}
-        let srcPt = Maps.LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
-        let bookedsStops = booking.stops
-        let stopLatLongs = map (\stop -> Maps.LatLong {lat = stop.lat, lon = stop.lon}) bookedsStops
-        merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-        case status of
-          Enums.SOFT_UPDATE -> do
-            (pickedWaypoints, currentPoint, snapToRoadFailed) <-
-              if ride.status == DRide.INPROGRESS
-                then do
-                  currentLocationPointsBatch <- LTS.driverLocation rideId merchantOperatingCity.merchantId ride.driverId
-                  logTagError "DebugErrorLog: EditDestSoftUpdate" $ "driver location points count: " <> show (length currentLocationPointsBatch.loc) <> ", driverId=" <> ride.driverId.getId <> ", rideId=" <> rideId.getId
-                  editDestinationWaypoints <- getEditDestinationWaypoints ride.driverId
-                  logTagError "DebugErrorLog: EditDestSoftUpdate" $ "edit destination waypoints count: " <> show (length editDestinationWaypoints)
-                  alreadySnappedPoints <- getEditDestinationSnappedWaypoints ride.driverId
-                  let startPoint = if length alreadySnappedPoints > 0 then (fst $ last alreadySnappedPoints) else (Maps.LatLong ride.fromLocation.lat ride.fromLocation.lon)
-                  let (currentLocPoint :: Maps.LatLong) =
-                        fromMaybe startPoint $
-                          (if not $ null currentLocationPointsBatch.loc then let w = last currentLocationPointsBatch.loc in Just (Maps.LatLong w.lat w.lon) else Nothing)
-                            <|> (if not $ null editDestinationWaypoints then Just (fst $ last editDestinationWaypoints) else Nothing)
-                  logTagError "DebugErrorLog: EditDestSoftUpdate" $ "Already snapped points count: " <> show (length alreadySnappedPoints)
-                  reachedStopsMap <- Redis.hGetAll (VID.mkReachedStopsKey ride.id) :: Flow [(Text, VID.ReachedStopInfo)]
-                  processedStopIndices <- Set.fromList <$> Redis.sMembers (VID.mkProcessedStopsKey ride.id)
-                  let nowTs = floor $ utcTimeToPOSIXSeconds now
-                      reachedStops = sortOn (.timestamp) $ map snd reachedStopsMap
-                      unprocessedReachedStops = filter (\r -> Set.notMember r.stopIndex processedStopIndices) reachedStops
-                      reachedStopIndices = Set.fromList $ map (.stopIndex) reachedStops
-                      pendingStops = [latLong | (latLong, idx) <- zip stopLatLongs [1 ..], Set.notMember idx reachedStopIndices]
-                      rawGpsTriples = map (\(ll, t) -> (ll, False, t)) (editDestinationWaypoints <> map (\w -> (Maps.LatLong w.lat w.lon, fromMaybe nowTs w.ts)) currentLocationPointsBatch.loc)
-                  unless (null unprocessedReachedStops) $ do
-                    void $ Redis.sAddExp (VID.mkProcessedStopsKey ride.id) (map VID.stopIndex unprocessedReachedStops) 86400
-                  let mergedRawPath = mergeReachedStopsChronologically rawGpsTriples unprocessedReachedStops
-                      segments = splitAtStopMarkers mergedRawPath
-                  logTagError "DebugErrorLog: EditDestSoftUpdate" $ "mergedRawPath length (before snap): " <> show (length mergedRawPath)
-                  logTagError "DebugErrorLog: EditDestSoftUpdate" $ "Number of segments to snap: " <> show (length segments)
-                  -- Invariant: each segment contains at most 1 stop point,
-                  -- and if present, the stop is always the last element of the segment.
-                  results <- forM segments $ \seg -> do
-                    let stopLLs = [(ll, True) | (ll, True, _) <- seg]
-                        nonStopLLs = [ll | (ll, False, _) <- seg]
-                    (segFailed, snapped) <- getLatlongsViaSnapToRoad nonStopLLs merchantOperatingCity.merchantId merchantOperatingCity.id
-                    return (segFailed, map (,False) snapped ++ stopLLs)
+    -----------1. Add a check for forward dispatch ride (destination only) -----------------
+    -----------2. Add a check for last location timestamp of driver (destination only) ----------------- LTS dependency
+    whenJust destination $ \_ -> do
+      hasAdvancedRide <- QDI.findById (cast ride.driverId) <&> maybe False (.hasAdvanceBooking)
+      when hasAdvancedRide $
+        sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId "Trip Update Request Not Available" "Driver has an upcoming ride near your drop location. "
+    transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+    now <- getCurrentTime
+    endLocMapping <- QLM.getLatestEndByEntityId bookingId.getId >>= fromMaybeM (InternalError $ "Latest end location mapping not found for bookingId: " <> bookingId.getId)
+    currentDestLocation <- QL.findById endLocMapping.locationId >>= fromMaybeM (InternalError $ "Location not found for locationId: " <> endLocMapping.locationId.getId)
+    merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
+    let srcPt = Maps.LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
+        effectiveDestLatLong = maybe
+          (Maps.LatLong {lat = currentDestLocation.lat, lon = currentDestLocation.lon})
+          (\dl -> Maps.LatLong {lat = dl.lat, lon = dl.lon})
+          destination
+        bookedsStops = booking.stops
+        stopLatLongs = map (\stop -> Maps.LatLong {lat = stop.lat, lon = stop.lon}) bookedsStops
+        effectiveStopsLatLongs = maybe stopLatLongs (map (\s -> Maps.LatLong {lat = s.lat, lon = s.lon})) newStopsLocations
+    whenJust destination QL.create
+    case status of
+      Enums.SOFT_UPDATE -> do
+        (pickedWaypoints, currentPoint, snapToRoadFailed) <-
+          if ride.status == DRide.INPROGRESS
+            then do
+              currentLocationPointsBatch <- LTS.driverLocation rideId merchantOperatingCity.merchantId ride.driverId
+              logTagError "DebugErrorLog: EditDestSoftUpdate" $ "driver location points count: " <> show (length currentLocationPointsBatch.loc) <> ", driverId=" <> ride.driverId.getId <> ", rideId=" <> rideId.getId
+              editDestinationWaypoints <- getEditDestinationWaypoints ride.driverId
+              logTagError "DebugErrorLog: EditDestSoftUpdate" $ "edit destination waypoints count: " <> show (length editDestinationWaypoints)
+              alreadySnappedPoints <- getEditDestinationSnappedWaypoints ride.driverId
+              let startPoint = if length alreadySnappedPoints > 0 then (fst $ last alreadySnappedPoints) else (Maps.LatLong ride.fromLocation.lat ride.fromLocation.lon)
+              let (currentLocPoint :: Maps.LatLong) =
+                    fromMaybe startPoint $
+                      (if not $ null currentLocationPointsBatch.loc then let w = last currentLocationPointsBatch.loc in Just (Maps.LatLong w.lat w.lon) else Nothing)
+                        <|> (if not $ null editDestinationWaypoints then Just (fst $ last editDestinationWaypoints) else Nothing)
+              logTagError "zxc currentLocationPointsBatch.loc" $ show currentLocationPointsBatch.loc
+              logTagError "zxc raw editDestinationWaypoints" $ show editDestinationWaypoints
+              logTagError "DebugErrorLog: EditDestSoftUpdate" $ "Already snapped points count: " <> show (length alreadySnappedPoints)
+              reachedStopsMap <- Redis.hGetAll (VID.mkReachedStopsKey ride.id) :: Flow [(Text, VID.ReachedStopInfo)]
+              processedStopIndices <- Set.fromList <$> Redis.sMembers (VID.mkProcessedStopsKey ride.id)
+              let nowTs = floor $ utcTimeToPOSIXSeconds now
+                  reachedStops = sortOn (.timestamp) $ map snd reachedStopsMap
+                  unprocessedReachedStops = filter (\r -> Set.notMember r.stopIndex processedStopIndices) reachedStops
+                  reachedStopIndices = Set.fromList $ map (.stopIndex) reachedStops
+                  pendingBookingStops = [latLong | (latLong, idx) <- zip stopLatLongs [1 ..], Set.notMember idx reachedStopIndices]
+                  -- When new stops are provided, unreached stops are those after the reached count
+                  effectivePendingStops = maybe pendingBookingStops
+                    (\_ -> drop (Set.size reachedStopIndices) effectiveStopsLatLongs)
+                    newStopsLocations
+                  rawGpsTriples = map (\(ll, t) -> (ll, False, t)) (editDestinationWaypoints <> map (\w -> (Maps.LatLong w.lat w.lon, fromMaybe nowTs w.ts)) currentLocationPointsBatch.loc)
+              unless (null unprocessedReachedStops) $ do
+                void $ Redis.sAddExp (VID.mkProcessedStopsKey ride.id) (map VID.stopIndex unprocessedReachedStops) 86400
+              let mergedRawPath = mergeReachedStopsChronologically rawGpsTriples unprocessedReachedStops
+                  segments = splitAtStopMarkers mergedRawPath
 
-                  let (failures, snappedSegList) = unzip results
-                      snapToRoadFailed = or failures
-                      editDestinationPoints = concat snappedSegList
-                  logTagError "DebugErrorLog: EditDestSoftUpdate" $ "snapped edit destination points count (after snap): " <> show (length editDestinationPoints)
-                  let currentPoint = if snapToRoadFailed || null editDestinationPoints then currentLocPoint else fst (last editDestinationPoints)
-                      finalMergedPath = alreadySnappedPoints <> (editDestinationPoints <> [(currentPoint, True)])
+              logTagError "DebugErrorLog: EditDestSoftUpdate" $ "mergedRawPath VAL: " <> show mergedRawPath
+              logTagError "DebugErrorLog: EditDestSoftUpdate" $ "reachedStops count: " <> show (length reachedStops)
+              logTagError "DebugErrorLog: EditDestSoftUpdate" $ "unprocessedReachedStops count: " <> show (length unprocessedReachedStops)
+              logTagError "DebugErrorLog: EditDestSoftUpdate" $ "segments count: " <> show (length segments)
+              logTagError "DebugErrorLog: EditDestSoftUpdate" $ "mergedRawPath length (before snap): " <> show (length mergedRawPath)
+              logTagError "DebugErrorLog: EditDestSoftUpdate" $ "Number of segments to snap: " <> show (length segments)
+              -- Invariant: each segment contains at most 1 stop point,
+              -- and if present, the stop is always the last element of the segment.
+              results <- forM segments $ \seg -> do
+                let stopLLs = [(ll, True) | (ll, True, _) <- seg]
+                    nonStopLLs = [ll | (ll, False, _) <- seg]
+                (segFailed, snapped) <- getLatlongsViaSnapToRoad nonStopLLs merchantOperatingCity.merchantId merchantOperatingCity.id
+                return (segFailed, map (,False) snapped ++ stopLLs)
 
-                  whenJust (nonEmpty finalMergedPath) $ \finalMergedPath' -> do
-                    deleteAndPushEditDestinationSnappedWayPoints ride.driverId finalMergedPath' -- deletes the existing snapped points and pushes the new snapped points for future update requests
-                  deleteEditDestinationWaypoints ride.driverId
-                  case bookedsStops of
-                    [] -> return (srcPt :| (pickedWaypointsForEditDestination finalMergedPath 8 ++ pendingStops ++ [dropLatLong]), Just currentPoint, Just snapToRoadFailed)
-                    _ -> return (srcPt :| (pickedWaypointsForEditDestination finalMergedPath (8 - length pendingStops) ++ pendingStops ++ [dropLatLong]), Just currentPoint, Just snapToRoadFailed)
-                else return (srcPt :| (stopLatLongs ++ [dropLatLong]), Nothing, Nothing)
-            logTagInfo "update Ride soft update" $ "pickedWaypoints: " <> show pickedWaypoints
-            routeResponse <-
-              Maps.getRoutes merchantOperatingCity.merchantId merchantOperatingCity.id (Just ride.id.getId) $
-                Maps.GetRoutesReq
-                  { waypoints = pickedWaypoints,
-                    mode = Just Maps.CAR,
-                    calcPoints = True
-                  }
-            shortestRoute <- getRouteInfoWithShortestDuration routeResponse & fromMaybeM (InternalError "No route found for new destination")
-            let maxEstimatedDist = maybe Nothing (\route -> route.distance) (Maps.getLongestRouteDistance routeResponse)
-            estimatedDistance <- shortestRoute.distance & fromMaybeM (InternalError "No distance found for new destination")
-            (duration :: Seconds) <- shortestRoute.duration & fromMaybeM (InternalError "No duration found for new destination")
-            logTagInfo "Dynamic Pricing debugging update Ride soft update" $ "transactionId" <> booking.transactionId <> "pickedWaypoints: " <> show duration
-            let routeInfo = RR.RouteInfo {distance = Just estimatedDistance, distanceWithUnit = Just (convertMetersToDistance booking.distanceUnit estimatedDistance), duration = Just duration, points = Just shortestRoute.points}
-            let mapsRouteReqInText = T.pack $ show Maps.GetRoutesReq {waypoints = pickedWaypoints, mode = Just Maps.CAR, calcPoints = True}
-            let routeInfoInText = T.pack $ show routeInfo
-            Redis.setExp (bookingRequestKeySoftUpdate booking.id.getId) routeInfo 600
-            Redis.setExp (multipleRouteKeySoftUpdate booking.id.getId) (map RR.createMultipleRouteInfo routeResponse) 600
-            -- TODO: Currently isDashboard flagged is passed as False here, but fix it properly once we have edit destination from dashboard too
-            fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id False srcPt (Just dropLatLong) Nothing Nothing (Just (TransactionId (Id booking.transactionId))) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) booking.dynamicPricingLogicVersion booking.tripCategory booking.configInExperimentVersions
-            farePolicy <- getFarePolicy (Just srcPt) (Just dropLatLong) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) merchantOperatingCity.id False booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just booking.startTime) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
-            logTagInfo "Dynamic Pricing debugging update Ride soft update" $ "transactionId" <> booking.transactionId <> "farePolicy: " <> show farePolicy
-            mbTollInfo <- getTollInfoOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points
-            let isTollAllowed =
-                  maybe
-                    True
-                    ( \(_, _, _, isAutoRickshawAllowed, isTwoWheelerAllowed) ->
-                        (booking.vehicleServiceTier == DVST.AUTO_RICKSHAW && isAutoRickshawAllowed)
-                          || (booking.vehicleServiceTier == DVST.BIKE && fromMaybe False isTwoWheelerAllowed)
-                          || (booking.vehicleServiceTier /= DVST.AUTO_RICKSHAW && booking.vehicleServiceTier /= DVST.BIKE)
+              let (failures, snappedSegList) = unzip results
+                  snapToRoadFailed = or failures
+                  editDestinationPoints = concat snappedSegList
+              logTagError "DebugErrorLog: EditDestSoftUpdate" $ "snapped edit destination points count (after snap): " <> show (length editDestinationPoints)
+              let currentPoint = if snapToRoadFailed || null editDestinationPoints then currentLocPoint else fst (last editDestinationPoints)
+                  finalMergedPath = alreadySnappedPoints <> (editDestinationPoints <> [(currentPoint, True)])
+
+              logTagError "zxc alreadySnappedPoints" $ show alreadySnappedPoints
+              logTagError "zxc editDestinationPoints" $ show editDestinationPoints
+              logTagError "zxc currentPoint" $ show currentPoint
+              logTagError "DebugErrorLog: EditDestSoftUpdate" $ "finalMergedPath count (final): " <> show (length finalMergedPath)
+              whenJust (nonEmpty finalMergedPath) $ \finalMergedPath' -> do
+                deleteAndPushEditDestinationSnappedWayPoints ride.driverId finalMergedPath' -- deletes the existing snapped points and pushes the new snapped points for future update requests
+              deleteEditDestinationWaypoints ride.driverId
+
+              logTagError "zxc srcPt" $ "srcPt=" <> show srcPt
+              logTagError "zxc finalMergedPath" $ "finalMergedPath=" <> show finalMergedPath
+              logTagError "zxc PendingStops" $ "pendingStops=" <> show effectivePendingStops
+              logTagError "zxc dropLatLong" $ "dropLatLong=" <> show effectiveDestLatLong
+              case effectivePendingStops of
+                [] -> return (srcPt :| (pickedWaypointsForEditDestination finalMergedPath 8 ++ [effectiveDestLatLong]), Just currentPoint, Just snapToRoadFailed)
+                _ -> return (srcPt :| (pickedWaypointsForEditDestination finalMergedPath (8 - length effectivePendingStops) ++ effectivePendingStops ++ [effectiveDestLatLong]), Just currentPoint, Just snapToRoadFailed)
+            else return (srcPt :| (effectiveStopsLatLongs ++ [effectiveDestLatLong]), Nothing, Nothing)
+        logTagError "zxc FinalPickedWaypoints" $ "bookingId=" <> booking.id.getId <> ", pickedWaypoints=" <> show pickedWaypoints
+        logTagInfo "update Ride soft update" $ "pickedWaypoints: " <> show pickedWaypoints
+        routeResponse <-
+          Maps.getRoutes merchantOperatingCity.merchantId merchantOperatingCity.id (Just ride.id.getId) $
+            Maps.GetRoutesReq
+              { waypoints = pickedWaypoints,
+                mode = Just Maps.CAR,
+                calcPoints = True
+              }
+        shortestRoute <- getRouteInfoWithShortestDuration routeResponse & fromMaybeM (InternalError "No route found for new destination/stops")
+        let maxEstimatedDist = maybe Nothing (\route -> route.distance) (Maps.getLongestRouteDistance routeResponse)
+        estimatedDistance <- shortestRoute.distance & fromMaybeM (InternalError "No distance found for new destination/stops")
+        (duration :: Seconds) <- shortestRoute.duration & fromMaybeM (InternalError "No duration found for new destination/stops")
+        logTagInfo "Dynamic Pricing debugging update Ride soft update" $ "transactionId" <> booking.transactionId <> "pickedWaypoints: " <> show duration
+        let routeInfo = RR.RouteInfo {distance = Just estimatedDistance, distanceWithUnit = Just (convertMetersToDistance booking.distanceUnit estimatedDistance), duration = Just duration, points = Just shortestRoute.points}
+        let mapsRouteReqInText = T.pack $ show Maps.GetRoutesReq {waypoints = pickedWaypoints, mode = Just Maps.CAR, calcPoints = True}
+        let routeInfoInText = T.pack $ show routeInfo
+        Redis.setExp (bookingRequestKeySoftUpdate booking.id.getId) routeInfo 600
+        Redis.setExp (multipleRouteKeySoftUpdate booking.id.getId) (map RR.createMultipleRouteInfo routeResponse) 600
+        -- TODO: Currently isDashboard flagged is passed as False here, but fix it properly once we have edit destination from dashboard too
+        fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id False srcPt (Just effectiveDestLatLong) Nothing Nothing (Just (TransactionId (Id booking.transactionId))) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) booking.dynamicPricingLogicVersion booking.tripCategory booking.configInExperimentVersions
+        farePolicy <- getFarePolicy (Just srcPt) (Just effectiveDestLatLong) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) merchantOperatingCity.id False booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just booking.startTime) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
+        logTagInfo "Dynamic Pricing debugging update Ride soft update" $ "transactionId" <> booking.transactionId <> "farePolicy: " <> show farePolicy
+        mbTollInfo <- case destination of
+          Just _ -> getTollInfoOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points
+          Nothing -> pure Nothing
+        let isTollAllowed =
+              maybe
+                True
+                ( \(_, _, _, isAutoRickshawAllowed, isTwoWheelerAllowed) ->
+                    (booking.vehicleServiceTier == DVST.AUTO_RICKSHAW && isAutoRickshawAllowed)
+                      || (booking.vehicleServiceTier == DVST.BIKE && fromMaybe False isTwoWheelerAllowed)
+                      || (booking.vehicleServiceTier /= DVST.AUTO_RICKSHAW && booking.vehicleServiceTier /= DVST.BIKE)
+                )
+                mbTollInfo
+        when (not isTollAllowed) $ do
+          sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId "Trip Update Request Not Available" "Auto rickshaw not allowed for toll route."
+          throwError $ InvalidRequest "Auto rickshaw not allowed for toll route."
+        mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage booking.merchantOperatingCityId booking.emailDomain booking.billingCategory farePolicy.vehicleServiceTier
+        let farePolicy' =
+              farePolicy
+                { DFP.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,
+                  DFP.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage
+                } ::
+                DFP.FullFarePolicy
+        fareParameters <-
+          FCV2.calculateFareParametersV2
+            CalculateFareParametersParams
+              { farePolicy = farePolicy',
+                actualDistance = Just estimatedDistance,
+                rideTime = booking.startTime,
+                returnTime = booking.returnTime,
+                vehicleAge = Nothing,
+                roundTrip = fromMaybe False booking.roundTrip,
+                waitingTime = Nothing,
+                stopWaitingTimes = [],
+                noOfStops = maybe (length bookedsStops) length newStopsLocations,
+                actualRideDuration = Nothing,
+                driverSelectedFare = booking.fareParams.driverSelectedFare,
+                petCharges = booking.fareParams.petCharges,
+                customerExtraFee = booking.fareParams.customerExtraFee,
+                nightShiftCharge = booking.fareParams.nightShiftCharge,
+                customerCancellationDues = booking.fareParams.customerCancellationDues,
+                nightShiftOverlapChecking = False,
+                estimatedDistance = Just estimatedDistance,
+                estimatedRideDuration = Just duration,
+                timeDiffFromUtc = Nothing,
+                shouldApplyBusinessDiscount = booking.billingCategory == SLT.BUSINESS,
+                shouldApplyPersonalDiscount = booking.billingCategory == SLT.PERSONAL,
+                tollCharges = mbTollInfo <&> (\(tollCharges, _, _, _, _) -> tollCharges),
+                currency = booking.currency,
+                distanceUnit = booking.distanceUnit,
+                estimatedCongestionCharge = booking.estimatedCongestionCharge,
+                merchantOperatingCityId = Just booking.merchantOperatingCityId,
+                mbAdditonalChargeCategories = Just $ map (.chargeCategory) booking.fareParams.conditionalCharges,
+                numberOfLuggages = booking.numberOfLuggages,
+                govtChargesRate = Just transporterConfig.taxConfig.rideGst,
+                pickupGateId = booking.pickupGateId
+              }
+        QFP.create fareParameters
+        let validTill = addUTCTime (fromIntegral transporterConfig.editLocTimeThreshold) now
+        bookingUpdateReq <- buildbookingUpdateRequest booking merchantOperatingCity.merchantId bapBookingUpdateRequestId fareParameters farePolicy.id maxEstimatedDist currentPoint estimatedDistance validTill mapsRouteReqInText routeInfoInText snapToRoadFailed
+        -- Build BUR LocationMappings: start + reached stops + unreached stops + destination
+        startLocMapping <- QLM.getLatestStartByEntityId bookingId.getId >>= fromMaybeM (InternalError $ "Latest start location mapping not found for bookingId: " <> bookingId.getId)
+        existingStopMappings <- QLM.getLatestStopsByEntityId bookingId.getId
+        reachedStopInfosForBUR <- QSI.findAllByRideId ride.id
+        let reachedOrdersForBUR = map (.stopOrder) reachedStopInfosForBUR
+            reachedStopMappings = filter (\lm -> lm.order `elem` reachedOrdersForBUR) existingStopMappings
+            unreachedStopMappings = filter (\lm -> lm.order `notElem` reachedOrdersForBUR) existingStopMappings
+            reachedCountForBUR = length reachedStopMappings
+        let unreachedSorted = sortOn (.order) unreachedStopMappings
+            modifiedFromOrderBPP = case newStopsLocations of
+              Nothing    -> reachedCountForBUR + length unreachedStopMappings + 1
+              Just _     -> fromMaybe (reachedCountForBUR + 1) modifiedFromOrder
+        whenJust newStopsLocations $ \_ -> do
+          let arrivalsAfterBapSnapshot = filter
+                (\si -> si.createdAt >= bapRequestTime && si.stopOrder >= modifiedFromOrderBPP)
+                reachedStopInfosForBUR
+          unless (null arrivalsAfterBapSnapshot) $
+            throwError (InvalidRequest "Stop state changed since edit was initiated, please retry")
+        let burMId   = Just bookingUpdateReq.merchantId
+            burMOcId = Just bookingUpdateReq.merchantOperatingCityId
+            createBurStopMapping locId stopOrder =
+              SLM.buildLocationMapping' locId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST burMId burMOcId stopOrder >>= QLM.create
+        SLM.buildPickUpLocationMapping startLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST burMId burMOcId >>= QLM.create
+        forM_ reachedStopMappings $ \rsm -> createBurStopMapping rsm.locationId rsm.order
+        case newStopsLocations of
+          Just newStops -> do
+            let unchangedCount = modifiedFromOrderBPP - reachedCountForBUR - 1
+            forM_ (zip (take unchangedCount unreachedSorted) [reachedCountForBUR + 1 ..]) $ \(usm, stopOrder) ->
+              createBurStopMapping usm.locationId stopOrder
+            forM_ (zip (drop (modifiedFromOrderBPP - 1) newStops) [modifiedFromOrderBPP ..]) $ \(stopLoc, stopOrder) -> do
+              QL.create stopLoc
+              createBurStopMapping stopLoc.id stopOrder
+          Nothing -> forM_ unreachedStopMappings $ \usm -> createBurStopMapping usm.locationId usm.order
+        let totalUnreachedCount = maybe (length unreachedStopMappings) (subtract reachedCountForBUR . length) newStopsLocations
+            destOrder = reachedCountForBUR + totalUnreachedCount + 1
+            destLocId = maybe endLocMapping.locationId (.id) destination
+        SLM.buildLocationMapping' destLocId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST burMId burMOcId destOrder >>= QLM.create
+        QBUR.create bookingUpdateReq
+        sendUpdateEditDestToBAP booking ride bookingUpdateReq destination currentPoint SOFT_UPDATE
+      Enums.CONFIRM_UPDATE -> do
+        bookingUpdateReq <- QBUR.findByBAPBUReqId bapBookingUpdateRequestId >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with BAPBookingUpdateRequestId" <> bapBookingUpdateRequestId)
+        when (bookingUpdateReq.validTill < now) $ throwError (InvalidRequest "BookingUpdateRequest is expired")
+        when (bookingUpdateReq.status /= DBUR.SOFT) $ throwError (InvalidRequest "BookingUpdateRequest is not in SOFT state")
+        -- Fetch BUR and booking stop mappings once; used for both arrival check and retire/recreate
+        burStopMappings <- QLM.getLatestStopsByEntityId bookingUpdateReq.id.getId
+        existingBookingStops <- QLM.getLatestStopsByEntityId bookingId.getId
+        let burSorted     = sortOn (.order) burStopMappings
+            bookingSorted = sortOn (.order) existingBookingStops
+            modifiedFromOrderConfirm = fromMaybe (length burSorted + 1) $ listToMaybe
+              [ burStop.order
+              | (burStop, bookStop) <- zip burSorted bookingSorted
+              , burStop.locationId /= bookStop.locationId
+              ]
+        whenJust newStopsLocations $ \_ -> do
+          currentReachedStopInfos <- QSI.findAllByRideId rideId
+          let newArrivalsAfterBUR = filter
+                (\si -> si.createdAt > bookingUpdateReq.createdAt && si.stopOrder >= modifiedFromOrderConfirm)
+                currentReachedStopInfos
+          unless (null newArrivalsAfterBUR) $
+            throwError (InvalidRequest "Stop state changed since edit was initiated, please retry")
+        QBUR.updateStatusById DBUR.USER_CONFIRMED bookingUpdateReq.id
+        whenJust destination $ \dropLocation -> do
+          let dropLatLong = Maps.LatLong {lat = dropLocation.lat, lon = dropLocation.lon}
+          QDI.updateTripEndLocation (Just dropLatLong) person.id
+          updatePassedThroughDrop person.id
+        -- Rebuild booking stop mappings from BUR (retire all then recreate from BUR)
+        let bId  = Just bookingUpdateReq.merchantId
+            bOcId = Just bookingUpdateReq.merchantOperatingCityId
+        currentMaxOrder <- QLM.maxOrderByEntity bookingId.getId
+        QLM.updatePastMappingVersionsBulk bookingId.getId (currentMaxOrder - 1)
+        forM_ burSorted $ \slm -> do
+          newMap <- SLM.buildLocationMapping' slm.locationId bookingId.getId DLM.BOOKING bId bOcId slm.order
+          QLM.create newMap
+        burDropMapping <- QLM.getLatestEndByEntityId bookingUpdateReq.id.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for BUR: " <> bookingUpdateReq.id.getId)
+        let newDestOrder = length burStopMappings + 1
+        destLocMap <- SLM.buildLocationMapping' burDropMapping.locationId bookingId.getId DLM.BOOKING bId bOcId newDestOrder
+        QLM.create destLocMap
+        if transporterConfig.editLocDriverPermissionNeeded
+          then do
+            newEstimatedDistance <- bookingUpdateReq.estimatedDistance & fromMaybeM (InternalError $ "No estimated distance found for bookingUpdateReq with Id :" <> bookingUpdateReq.id.getId)
+            oldEstimatedDistance <- bookingUpdateReq.oldEstimatedDistance & fromMaybeM (InternalError $ "No estimated distance found for booking with Id :" <> booking.id.getId)
+            let (overlayDest, locationLat, locationLon) = case destination of
+                  Just dl ->
+                    ( Just dl,
+                      if ride.status == DRide.INPROGRESS then dl.lat else ride.fromLocation.lat,
+                      if ride.status == DRide.INPROGRESS then dl.lon else ride.fromLocation.lon
                     )
-                    mbTollInfo
-            when (not isTollAllowed) $ do
-              sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId "Trip Update Request Not Available" "Auto rickshaw not allowed for toll route."
-              throwError $ InvalidRequest "Auto rickshaw not allowed for toll route."
-            mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage booking.merchantOperatingCityId booking.emailDomain booking.billingCategory farePolicy.vehicleServiceTier
-            let farePolicy' =
-                  farePolicy
-                    { DFP.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,
-                      DFP.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage
-                    } ::
-                    DFP.FullFarePolicy
-            fareParameters <-
-              FCV2.calculateFareParametersV2
-                CalculateFareParametersParams
-                  { farePolicy = farePolicy',
-                    actualDistance = Just estimatedDistance,
-                    rideTime = booking.startTime,
-                    returnTime = booking.returnTime,
-                    vehicleAge = Nothing,
-                    roundTrip = fromMaybe False booking.roundTrip,
-                    waitingTime = Nothing,
-                    stopWaitingTimes = [],
-                    noOfStops = length booking.stops,
-                    actualRideDuration = Nothing,
-                    driverSelectedFare = booking.fareParams.driverSelectedFare,
-                    petCharges = booking.fareParams.petCharges,
-                    customerExtraFee = booking.fareParams.customerExtraFee,
-                    nightShiftCharge = booking.fareParams.nightShiftCharge,
-                    customerCancellationDues = booking.fareParams.customerCancellationDues,
-                    nightShiftOverlapChecking = False,
-                    estimatedDistance = Just estimatedDistance,
-                    estimatedRideDuration = Just duration,
-                    timeDiffFromUtc = Nothing,
-                    shouldApplyBusinessDiscount = booking.billingCategory == SLT.BUSINESS,
-                    shouldApplyPersonalDiscount = booking.billingCategory == SLT.PERSONAL,
-                    tollCharges = mbTollInfo <&> (\(tollCharges, _, _, _, _) -> tollCharges),
-                    currency = booking.currency,
-                    distanceUnit = booking.distanceUnit,
-                    estimatedCongestionCharge = booking.estimatedCongestionCharge,
-                    merchantOperatingCityId = Just booking.merchantOperatingCityId,
-                    mbAdditonalChargeCategories = Just $ map (.chargeCategory) booking.fareParams.conditionalCharges,
-                    numberOfLuggages = booking.numberOfLuggages,
-                    govtChargesRate = Just transporterConfig.taxConfig.rideGst,
-                    pickupGateId = booking.pickupGateId
-                  }
-            QFP.create fareParameters
-            let validTill = addUTCTime (fromIntegral transporterConfig.editLocTimeThreshold) now
-            bookingUpdateReq <- buildbookingUpdateRequest booking merchantOperatingCity.merchantId bapBookingUpdateRequestId fareParameters farePolicy.id maxEstimatedDist currentPoint estimatedDistance validTill mapsRouteReqInText routeInfoInText snapToRoadFailed
-            startLocMapping <- QLM.getLatestStartByEntityId bookingId.getId >>= fromMaybeM (InternalError $ "Latest start location mapping not found for bookingId: " <> bookingId.getId)
-            dropLocMapping <- QLM.getLatestEndByEntityId bookingId.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingId: " <> bookingId.getId)
-            startLocMap <- SLM.buildPickUpLocationMapping startLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
-            QLM.create startLocMap
-            dropLocMap <- SLM.buildDropLocationMapping dropLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
-            QLM.create dropLocMap
-            QBUR.create bookingUpdateReq
-            destLocMapNew <- SLM.buildDropLocationMapping dropLocation.id bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
-            QLM.create destLocMapNew
-            sendUpdateEditDestToBAP booking ride bookingUpdateReq (Just dropLocation) currentPoint SOFT_UPDATE
-          Enums.CONFIRM_UPDATE -> do
-            bookingUpdateReq <- QBUR.findByBAPBUReqId bapBookingUpdateRequestId >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with BAPBookingUpdateRequestId" <> bapBookingUpdateRequestId)
-            when (bookingUpdateReq.validTill < now) $ throwError (InvalidRequest "BookingUpdateRequest is expired")
-            when (bookingUpdateReq.status /= DBUR.SOFT) $ throwError (InvalidRequest "BookingUpdateRequest is not in SOFT state")
-            QBUR.updateStatusById DBUR.USER_CONFIRMED bookingUpdateReq.id
-            QDI.updateTripEndLocation (Just dropLatLong) person.id
-            updatePassedThroughDrop person.id
-            if transporterConfig.editLocDriverPermissionNeeded
-              then do
-                newEstimatedDistance <- bookingUpdateReq.estimatedDistance & fromMaybeM (InternalError $ "No estimated distance found for bookingUpdateReq with Id :" <> bookingUpdateReq.id.getId)
-                oldEstimatedDistance <- bookingUpdateReq.oldEstimatedDistance & fromMaybeM (InternalError $ "No estimated distance found for booking with Id :" <> booking.id.getId)
-                let entityData =
-                      Notify.UpdateLocationNotificationReq
-                        { rideId = ride.id,
-                          origin = Nothing,
-                          destination = Just dropLocation,
-                          stops = Nothing,
-                          bookingUpdateRequestId = bookingUpdateReq.id,
-                          newEstimatedDistance,
-                          newEstimatedDistanceWithUnit = convertHighPrecMetersToDistance bookingUpdateReq.distanceUnit newEstimatedDistance,
-                          newEstimatedFare = bookingUpdateReq.estimatedFare,
-                          oldEstimatedDistance,
-                          oldEstimatedDistanceWithUnit = convertHighPrecMetersToDistance bookingUpdateReq.distanceUnit oldEstimatedDistance,
-                          oldEstimatedFare = bookingUpdateReq.oldEstimatedFare,
-                          validTill = bookingUpdateReq.validTill
-                        }
-                overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory booking.merchantOperatingCityId "UPDATE_LOC_FCM" (fromMaybe ENGLISH person.language) (Just udf1) Nothing Nothing >>= fromMaybeM (InternalError "Overlay not found for UPDATE_LOC_FCM")
-                let locationLat = if ride.status == DRide.INPROGRESS then dropLocation.lat else ride.fromLocation.lat
-                    locationLon = if ride.status == DRide.INPROGRESS then dropLocation.lon else ride.fromLocation.lon
-                    actions2 = map (mkActions2 bookingUpdateReq.id.getId locationLat locationLon) overlay.actions2
-                    secondaryActions2 = fmap (map (mkSecondaryActions2 bookingUpdateReq.id.getId)) overlay.secondaryActions2
-                    overlay' = overlay{actions2, secondaryActions2}
-                Notify.sendUpdateLocOverlay merchantOperatingCity.id person (Notify.mkOverlayReq overlay') entityData
-              else void $ EditBooking.postEditResult (Just person.id, merchantOperatingCity.merchantId, merchantOperatingCity.id) bookingUpdateReq.id (EditBooking.EditBookingRespondAPIReq {action = EditBooking.ACCEPT})
-          _ -> throwError (InvalidRequest "Invalid status for edit location request")
+                  Nothing ->
+                    ( Nothing,
+                      if ride.status == DRide.INPROGRESS then currentDestLocation.lat else ride.fromLocation.lat,
+                      if ride.status == DRide.INPROGRESS then currentDestLocation.lon else ride.fromLocation.lon
+                    )
+            let entityData =
+                  Notify.UpdateLocationNotificationReq
+                    { rideId = ride.id,
+                      origin = Nothing,
+                      destination = overlayDest,
+                      stops = Nothing,
+                      bookingUpdateRequestId = bookingUpdateReq.id,
+                      newEstimatedDistance,
+                      newEstimatedDistanceWithUnit = convertHighPrecMetersToDistance bookingUpdateReq.distanceUnit newEstimatedDistance,
+                      newEstimatedFare = bookingUpdateReq.estimatedFare,
+                      oldEstimatedDistance,
+                      oldEstimatedDistanceWithUnit = convertHighPrecMetersToDistance bookingUpdateReq.distanceUnit oldEstimatedDistance,
+                      oldEstimatedFare = bookingUpdateReq.oldEstimatedFare,
+                      validTill = bookingUpdateReq.validTill
+                    }
+            overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory booking.merchantOperatingCityId "UPDATE_LOC_FCM" (fromMaybe ENGLISH person.language) (Just udf1) Nothing Nothing >>= fromMaybeM (InternalError "Overlay not found for UPDATE_LOC_FCM")
+            let actions2 = map (mkActions2 bookingUpdateReq.id.getId locationLat locationLon) overlay.actions2
+                secondaryActions2 = fmap (map (mkSecondaryActions2 bookingUpdateReq.id.getId)) overlay.secondaryActions2
+                overlay' = overlay{actions2, secondaryActions2}
+            Notify.sendUpdateLocOverlay merchantOperatingCity.id person (Notify.mkOverlayReq overlay') entityData
+          else do
+            whenJust newStopsLocations $ \_ -> do
+              let entityData = Notify.StopReq {bookingId = booking.id, stop = Nothing, isEdit = True}
+              when (ride.status `elem` [DRide.INPROGRESS, DRide.NEW]) $
+                Notify.notifyStopModification ride.status person entityData booking.tripCategory
+            sendUpdateEditDestToBAP booking ride bookingUpdateReq destination Nothing CONFIRM_UPDATE
+      _ -> throwError (InvalidRequest "Invalid status for edit location/stops request")
+
   where
     snapToRoad latlongs merchantId merchanOperatingCityId = do
+      logTagError "zxc snapToRoad latlongs = " $ "Error: " <> show latlongs
       res <- Maps.snapToRoadWithFallback Nothing merchantId merchanOperatingCityId True (Just rideId.getId) Maps.SnapToRoadReq {points = latlongs, distanceUnit = Meter, calculateDistanceFrom = Nothing}
       case res of
         (_, Left e) -> do

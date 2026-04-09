@@ -22,6 +22,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.Location as QL
+import qualified Storage.Queries.LocationExtra as QLExtra
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Ride as QR
 
@@ -51,6 +52,13 @@ postEditResultConfirm (mbPersonId, merchantId) bookingUpdateReqId = do
   bookingUpdateReq <- B.runInReplica $ QBUR.findById bookingUpdateReqId >>= fromMaybeM (InvalidRequest "Invalid booking update request id")
   dropLocMapping <- B.runInReplica $ QLM.getLatestEndByEntityId bookingUpdateReqId.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingUpdateRequestId: " <> bookingUpdateReqId.getId)
   destination' <- B.runInReplica $ QL.findById dropLocMapping.locationId >>= fromMaybeM (InternalError $ "Location not found for locationId: " <> dropLocMapping.locationId.getId)
+  stopsLocations <- B.runInReplica $ do
+    slms <- QLM.getLatestStopsByEntityId bookingUpdateReqId.getId
+    locs <- QLExtra.findAllByIds (map (.locationId) slms)
+    forM slms $ \slm ->
+      find (\loc -> loc.id == slm.locationId) locs
+        & fromMaybeM (InternalError $ "Stop location not found for locationId: " <> slm.locationId.getId)
+  let stopsForBeckn = if null stopsLocations then Nothing else Just stopsLocations
   booking <- B.runInReplica $ QB.findById bookingUpdateReq.bookingId >>= fromMaybeM (InternalError $ "Invalid booking id" <> bookingUpdateReq.bookingId.getId)
   ride <- B.runInReplica $ QR.findByRBId booking.id >>= fromMaybeM (InvalidRequest $ "No Ride present for booking" <> booking.id.getId)
   let attemptsLeft = fromMaybe merchant.numOfAllowedEditLocationAttemptsThreshold ride.allowedEditLocationAttempts
@@ -69,7 +77,8 @@ postEditResultConfirm (mbPersonId, merchantId) bookingUpdateReqId = do
                     origin = Nothing,
                     status = ACL.CONFIRM_UPDATE,
                     destination = Just destination',
-                    stops = Nothing
+                    stops = stopsForBeckn,
+                    modifiedFromOrder = Nothing
                   },
             ..
           }

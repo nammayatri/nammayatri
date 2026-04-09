@@ -427,7 +427,7 @@ getMultiModalTransitOptions userPreferences merchantId merchantOperatingCityId r
     -- Process a route to convert walk legs that exceed maximum distance to taxi
     processRoute :: Meters -> MultiModalRoute -> MultiModalRoute
     processRoute maxWalkDistance route =
-      route {legs = map (processLeg maxWalkDistance) route.legs}
+      route {legs = map (processLeg maxWalkDistance) (KP.getField @"legs" route)}
 
     -- Process a leg to check if walk mode needs to be converted to taxi
     processLeg :: Meters -> MultiModalLeg -> MultiModalLeg
@@ -1163,7 +1163,9 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation _ = do
           let editLocReq =
                 DRide.EditLocationReq
                   { origin = Nothing,
-                    destination = Just $ DRide.EditLocation {gps = LatLong {lat = endLocation.lat, lon = endLocation.lon}, address = getAddress endLocation}
+                    destination = Just $ DRide.EditLocation {gps = LatLong {lat = endLocation.lat, lon = endLocation.lon}, address = getAddress endLocation},
+                    stops = Nothing,
+                    modifiedFromOrder = Nothing
                   }
           editLocResp <- DRide.editLocation ride.id (journey.riderId, currentLeg.merchantId) editLocReq -- handle case if driver declines
           case editLocResp.bookingUpdateRequestId of

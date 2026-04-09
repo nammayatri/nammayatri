@@ -530,9 +530,18 @@ onUpdate = \case
     QBUR.updateMultipleById Nothing (Just newEstimatedDistance) (Just fare.amount) Nothing currentPointLat currentPointLon bookingUpdateRequestId
   OUValidatedEditDestConfirmUpdateReq ValidatedEditDestConfirmUpdateReq {..} -> do
     dropLocMapping <- QLM.getLatestEndByEntityId bookingUpdateRequest.id.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingUpdateRequestId: " <> bookingUpdateRequest.id.getId)
-    prevOrder <- QLM.maxOrderByEntity booking.id.getId
-    dropLocMap <- SLM.buildLocationMapping' dropLocMapping.locationId booking.id.getId DLM.BOOKING (Just bookingUpdateRequest.merchantId) (Just bookingUpdateRequest.merchantOperatingCityId) prevOrder
-    QLM.create dropLocMap
+    let mId = Just bookingUpdateRequest.merchantId
+        mOcId = Just bookingUpdateRequest.merchantOperatingCityId
+    -- Always rebuild booking location mappings from BUR (handles destination-only, stops-only, and combined)
+    burStopMappings <- QLM.getLatestStopsByEntityId bookingUpdateRequest.id.getId
+    currentMaxOrder <- QLM.maxOrderByEntity booking.id.getId
+    QLM.updatePastMappingVersionsBulk booking.id.getId (currentMaxOrder - 1)
+    forM_ burStopMappings $ \slm -> do
+      newMap <- SLM.buildLocationMapping' slm.locationId booking.id.getId DLM.BOOKING mId mOcId slm.order
+      QLM.create newMap
+    let newDestOrder = length burStopMappings + 1
+    destLocMap <- SLM.buildLocationMapping' dropLocMapping.locationId booking.id.getId DLM.BOOKING mId mOcId newDestOrder
+    QLM.create destLocMap
     fareBreakupsBUR <- QFareBreakup.findAllByEntityIdAndEntityType bookingUpdateRequest.id.getId DFareBreakup.BOOKING_UPDATE_REQUEST
     fareBreakups <-
       mapM
