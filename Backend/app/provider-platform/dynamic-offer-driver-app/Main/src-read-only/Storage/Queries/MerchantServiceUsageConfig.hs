@@ -5,6 +5,7 @@
 module Storage.Queries.MerchantServiceUsageConfig where
 
 import qualified ChatCompletion.Types
+import qualified Data.Aeson
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantServiceUsageConfig
 import Kernel.Beam.Functions
@@ -17,6 +18,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantServiceUsageConfig as Beam
 
@@ -81,6 +83,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
           { aadhaarVerificationService = aadhaarVerificationService,
             autoComplete = autoComplete,
             backgroundVerification = backgroundVerification,
+            categoryBasedVerificationPriorityList = Kernel.Utils.JSON.valueToMaybe =<< categoryBasedVerificationPriorityList,
             createBankAccount = createBankAccount,
             createdAt = createdAt,
             dashboardGstVerificationService = dashboardGstVerificationService,
@@ -127,6 +130,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
       { Beam.aadhaarVerificationService = aadhaarVerificationService,
         Beam.autoComplete = autoComplete,
         Beam.backgroundVerification = backgroundVerification,
+        Beam.categoryBasedVerificationPriorityList = Data.Aeson.toJSON <$> categoryBasedVerificationPriorityList,
         Beam.createBankAccount = createBankAccount,
         Beam.createdAt = createdAt,
         Beam.dashboardGstVerificationService = dashboardGstVerificationService,

@@ -41,11 +41,13 @@ module Tools.Verification
 where
 
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Domain.Types.MerchantServiceUsageConfig
+import qualified Domain.Types.VehicleCategory as DVC
 import qualified Kernel.External.Tokenize.Interface as TI
 import qualified Kernel.External.Tokenize.Interface.Types as TIFT
 import qualified Kernel.External.Tokenize.Types as TT
@@ -77,7 +79,6 @@ import Kernel.External.Verification as Reexport hiding
 import qualified Kernel.External.Verification as Verification
 import qualified Kernel.External.Verification.Digilocker.Types as DigiTypes
 import Kernel.External.Verification.Interface.InternalScripts
-import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
@@ -160,40 +161,28 @@ verifyRC ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe [VerificationService] ->
+  Maybe DVC.VehicleCategory ->
   VerifyRCReq ->
   m RCRespWithRemPriorityList
-verifyRC _ merchantOptCityId mbRemPriorityList req = do
-  merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOptCityId Nothing
-      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOptCityId.getId)
-
-  let configuredTotoList = fromMaybe [VT.Idfy] merchantServiceUsageConfig.totoVerificationPriorityList
-  let isTtenVerification =
-        if isJust req.udinNo
-          then do
-            case listToMaybe configuredTotoList of
-              Just VT.Tten -> True
-              _ -> False
-          else False
-
+verifyRC _ merchantOptCityId mbRemPriorityList mbVehicleCategory req = do
+  finalVerificationProviderPriorityList <-
+    case mbRemPriorityList of
+      Nothing -> do
+        let (providerKey :: ProviderLookUpKey) = fromMaybe CAR $ getProviderKeyFromVehicleCategory mbVehicleCategory req.udinNo
+        merchantServiceUsageConfig <-
+          CQMSUC.findByMerchantOpCityId merchantOptCityId Nothing
+            >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOptCityId.getId)
+        let mbList = merchantServiceUsageConfig.categoryBasedVerificationPriorityList >>= Map.lookup (show providerKey)
+        fromMaybeM (InternalError $ "Providers not configured in the priority list !!!!!" <> show merchantServiceUsageConfig.categoryBasedVerificationPriorityList) mbList
+      Just remPriorityList -> return remPriorityList
   mbToken' <-
-    if isTtenVerification
+    if isJust req.udinNo
       then do
-        when (isNothing req.udinNo) $
-          throwError $ InvalidRequest "UDIN number is required for TTEN verification"
-
         token <- getOrCreateTtenToken merchantOptCityId
         return (Just token)
       else return Nothing
   let reqWithToken = req {token = mbToken'}
-  let finalPriorityList =
-        fromMaybe
-          ( if isTtenVerification
-              then fromMaybe [VT.Tten] merchantServiceUsageConfig.totoVerificationPriorityList
-              else merchantServiceUsageConfig.verificationProvidersPriorityList
-          )
-          mbRemPriorityList
-  Verification.verifyRC (getServiceConfig merchantOptCityId) finalPriorityList reqWithToken
+  Verification.verifyRC (getServiceConfig merchantOptCityId) finalVerificationProviderPriorityList reqWithToken
   where
     getOrCreateTtenToken :: (ServiceFlow m r, CoreMetrics m, HasField "ttenTokenCacheExpiry" r Seconds) => Id DMOC.MerchantOperatingCity -> m Text
     getOrCreateTtenToken merchantOpCityId = do
@@ -235,6 +224,20 @@ verifyRC _ merchantOptCityId mbRemPriorityList req = do
 
     makeTtenTokenCacheKey :: Id DMOC.MerchantOperatingCity -> Text
     makeTtenTokenCacheKey opCityId = "TtenToken:MerchantOpCityId-" <> opCityId.getId
+
+    getProviderKeyFromVehicleCategory :: Maybe DVC.VehicleCategory -> Maybe Text -> Maybe ProviderLookUpKey
+    getProviderKeyFromVehicleCategory mbVc udinNo = case mbVc of
+      Nothing -> Nothing
+      Just DVC.TOTO -> Just $ if isJust udinNo then TOTO_UDIN else TOTO
+      Just DVC.CAR -> Just CAR
+      Just DVC.AUTO_CATEGORY -> Just AUTO_CATEGORY
+      Just DVC.MOTORCYCLE -> Just MOTORCYCLE
+      Just DVC.TRUCK -> Just TRUCK
+      Just DVC.BOAT -> Just BOAT
+      Just DVC.AMBULANCE -> Just AMBULANCE
+      Just DVC.BUS -> Just BUS
+      Just DVC.TRAIN -> Just TRAIN
+      Just DVC.FLIGHT -> Just FLIGHT
 
 getServiceConfig :: ServiceFlow m r => Id DMOC.MerchantOperatingCity -> VerificationService -> m VerificationServiceConfig
 getServiceConfig merchantOptCityId cfg = case cfg of
