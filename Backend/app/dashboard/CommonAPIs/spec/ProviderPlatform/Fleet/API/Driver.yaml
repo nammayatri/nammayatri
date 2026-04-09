@@ -660,6 +660,7 @@ apis:
         - isRequestorFleerOwner: Bool
         - hasRequestReason: Bool
         - mbServiceTier: Text
+        - enabled: Bool
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
@@ -1919,6 +1920,7 @@ types:
     - requestReason: Maybe Text
     - responseReason: Maybe Text
     - associatedOn: Maybe UTCTime
+    - enabled: Maybe Bool
     - selectedServiceTiers: [Text]
   VerificationDocsStatus:
     - vehicleRegistrationCertificate: Maybe VerificationStatus

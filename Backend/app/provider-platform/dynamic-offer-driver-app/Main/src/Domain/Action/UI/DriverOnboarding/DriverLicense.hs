@@ -30,10 +30,10 @@ import qualified Data.Text as T
 import Data.Time (nominalDay, utctDay)
 import Data.Tuple.Extra (both)
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as VC
+import qualified Domain.Types.DocStatus as DocStatus
 import Domain.Types.DocumentVerificationConfig (DocumentVerificationConfig)
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DocumentVerificationConfig as DVC
-import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DriverLicense as Domain
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.HyperVergeVerification as Domain

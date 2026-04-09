@@ -16,9 +16,9 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
+import Kernel.Types.Error
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
-import Kernel.Types.Error
 import qualified Storage.Queries.EDCMachineMapping as QEDCMachineMapping
 import qualified Storage.Queries.EDCMachineMappingExtra as QEDCMachineMappingExtra
 import qualified Storage.Queries.Person as QP
