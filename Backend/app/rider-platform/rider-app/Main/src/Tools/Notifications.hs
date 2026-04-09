@@ -1817,3 +1817,36 @@ notifyBusTripStarted person vehicleNumber routeName tripId mbJourneyId = do
     [("vehicleNumber", vehicleNumber), ("routeName", routeName)]
     Nothing
     Nothing
+
+--- | Notify passenger that the bus is approaching their stop
+notifyBusApproaching ::
+  ServiceFlow m r =>
+  Person.Person ->
+  Text ->
+  Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe (Id Domain.Types.Journey.Journey) ->
+  m ()
+notifyBusApproaching person vehicleNumber routeName mbTripId mbStopName mbJourneyId = do
+  let entityData =
+        BusNotificationEntityData
+          { tripId = mbTripId,
+            vehicleNumber = vehicleNumber,
+            routeId = routeName,
+            stopCode = Nothing,
+            stopName = mbStopName,
+            notificationType = APPROACHING,
+            journeyId = mbJourneyId <&> (.getId)
+          }
+  let entity = Notification.Entity Notification.Product person.id.getId entityData
+      dynamicParams = BusTripStartedParam vehicleNumber routeName
+  dynamicNotifyPerson
+    person
+    (createNotificationReq "BUS_TRIP_APPROACHING" identity)
+    dynamicParams
+    entity
+    Nothing
+    [("vehicleNumber", vehicleNumber), ("routeName", routeName), ("stopName", fromMaybe "" mbStopName)]
+    Nothing
+    Nothing
