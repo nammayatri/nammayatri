@@ -20,11 +20,11 @@ type API = ("account" :> PutAccountUpdateRole)
 type PutAccountUpdateRole =
   ( "updateRole" :> Capture "personId" (Kernel.Types.Id.Id Dashboard.Common.Person) :> Capture "roleId" (Kernel.Types.Id.Id Dashboard.Common.Role)
       :> Put
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
-newtype AccountAPIs = AccountAPIs {putAccountUpdateRole :: (Kernel.Types.Id.Id Dashboard.Common.Person -> Kernel.Types.Id.Id Dashboard.Common.Role -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)}
+newtype AccountAPIs = AccountAPIs {putAccountUpdateRole :: Kernel.Types.Id.Id Dashboard.Common.Person -> Kernel.Types.Id.Id Dashboard.Common.Role -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess}
 
 mkAccountAPIs :: (Client EulerHS.Types.EulerClient API -> AccountAPIs)
 mkAccountAPIs accountClient = (AccountAPIs {..})
@@ -37,10 +37,10 @@ data AccountUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON AccountUserActionType where
-  toJSON (PUT_ACCOUNT_UPDATE_ROLE) = Data.Aeson.String "PUT_ACCOUNT_UPDATE_ROLE"
+  toJSON PUT_ACCOUNT_UPDATE_ROLE = Data.Aeson.String "PUT_ACCOUNT_UPDATE_ROLE"
 
 instance FromJSON AccountUserActionType where
   parseJSON (Data.Aeson.String "PUT_ACCOUNT_UPDATE_ROLE") = pure PUT_ACCOUNT_UPDATE_ROLE
   parseJSON _ = fail "PUT_ACCOUNT_UPDATE_ROLE expected"
 
-$(Data.Singletons.TH.genSingletons [(''AccountUserActionType)])
+$(Data.Singletons.TH.genSingletons [''AccountUserActionType])

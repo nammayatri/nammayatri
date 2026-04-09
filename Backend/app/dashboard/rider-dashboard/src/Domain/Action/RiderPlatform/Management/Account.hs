@@ -1,25 +1,18 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.RiderPlatform.Management.Account (putAccountUpdateRole) where
 
-import qualified API.Client.RiderPlatform.Management
 import qualified Dashboard.Common
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Role as DRole
-import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
-import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
 import qualified "lib-dashboard" Storage.Queries.Person as QP
 import Tools.Auth.Api
-import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error
   ( AuthError (AccessDenied),
     PersonError (PersonDoesNotExist),

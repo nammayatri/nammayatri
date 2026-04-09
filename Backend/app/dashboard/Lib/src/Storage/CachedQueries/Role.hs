@@ -71,7 +71,7 @@ cacheRoleHierarchy rolesHierarchy = do
   forM_ rolesHierarchy $ \roleHierarchy ->
     -- currently we don't store ancestors
     Hedis.setExp (makeRoleDescendantsKey roleHierarchy.role.id) roleHierarchy.roleDescendants expTime
-  logInfo $ "Cache role hierarchy finished"
+  logInfo "Cache role hierarchy finished"
 
 findRoleDescendants :: BeamFlow m r => Id DRole.Role -> m [Id DRole.Role]
 findRoleDescendants roleId = do

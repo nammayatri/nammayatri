@@ -3,19 +3,19 @@
 module RolesHierarchyUnitTests where
 
 import Data.Functor ((<&>))
-import qualified SharedLogic.Roles as Roles
-import SharedLogic.Roles (RoleHierarchy (..))
-import qualified Domain.Types.Role as DRole
 import Data.List (find)
-import Data.Time (UTCTime (..), fromGregorian, getCurrentTime, diffUTCTime)
-import System.CPUTime (getCPUTime)
+import qualified Data.Map as M
+import qualified Data.Set as Set
+import qualified Data.Text as T
+import Data.Time (UTCTime (..), diffUTCTime, fromGregorian, getCurrentTime)
+import qualified Domain.Types.Role as DRole
+import "mobility-core" Kernel.Prelude
 import Kernel.Types.Id (Id (..))
+import SharedLogic.Roles (RoleHierarchy (..))
+import qualified SharedLogic.Roles as Roles
+import System.CPUTime (getCPUTime)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
-import "mobility-core" Kernel.Prelude
-import qualified Data.Text as T
-import qualified Data.Set as Set
-import qualified Data.Map as M
 
 -- Helper to create test roles
 mkRole :: Id DRole.Role -> Maybe (Id DRole.Role) -> DRole.Role
@@ -53,31 +53,27 @@ assertEqualIdSets :: [Id DRole.Role] -> [Id DRole.Role] -> IO ()
 assertEqualIdSets expected actual =
   let expectedSet = Set.fromList expected
       actualSet = Set.fromList actual
-   in if expectedSet == actualSet
-        then pure ()
-        else assertFailure $ "Expected ID set: " ++ show (Set.toList expectedSet) ++ ", but got: " ++ show (Set.toList actualSet)
+   in unless (expectedSet == actualSet) $
+        assertFailure $ "Expected ID set: " ++ show (Set.toList expectedSet) ++ ", but got: " ++ show (Set.toList actualSet)
 
 -- | Compare two RoleHierarchy values (ancestors and descendants compared as sets)
 assertEqualHierarchy :: RoleHierarchy -> RoleHierarchy -> IO ()
 assertEqualHierarchy expected actual = do
   -- Compare role
-  if expected.role.id /= actual.role.id
-    then assertFailure $ "Role ID mismatch: expected " ++ showId expected.role.id ++ ", got " ++ showId actual.role.id
-    else pure ()
+  unless (expected.role.id == actual.role.id) $
+    assertFailure $ "Role ID mismatch: expected " ++ showId expected.role.id ++ ", got " ++ showId actual.role.id
 
   -- Compare ancestors as sets
   let expectedAncestorIds = Set.fromList $ extractIds expected.roleAncestors
       actualAncestorIds = Set.fromList $ extractIds actual.roleAncestors
-  if expectedAncestorIds /= actualAncestorIds
-    then assertFailure $ "Ancestors mismatch for role " ++ showId expected.role.id ++ ": expected " ++ show (map showId $ Set.toList expectedAncestorIds) ++ ", got " ++ show (map showId $ Set.toList actualAncestorIds)
-    else pure ()
+  unless (expectedAncestorIds == actualAncestorIds) $
+    assertFailure $ "Ancestors mismatch for role " ++ showId expected.role.id ++ ": expected " ++ show (map showId $ Set.toList expectedAncestorIds) ++ ", got " ++ show (map showId $ Set.toList actualAncestorIds)
 
   -- Compare descendants as sets
   let expectedDescendantIds = Set.fromList $ extractIds expected.roleDescendants
       actualDescendantIds = Set.fromList $ extractIds actual.roleDescendants
-  if expectedDescendantIds /= actualDescendantIds
-    then assertFailure $ "Descendants mismatch for role " ++ showId expected.role.id ++ ": expected " ++ show (map showId $ Set.toList expectedDescendantIds) ++ ", got " ++ show (map showId $ Set.toList actualDescendantIds)
-    else pure ()
+  unless (expectedDescendantIds == actualDescendantIds) $
+    assertFailure $ "Descendants mismatch for role " ++ showId expected.role.id ++ ": expected " ++ show (map showId $ Set.toList expectedDescendantIds) ++ ", got " ++ show (map showId $ Set.toList actualDescendantIds)
 
 -- | Compare two lists of RoleHierarchy ignoring order
 assertEqualHierarchies :: [RoleHierarchy] -> [RoleHierarchy] -> IO ()
@@ -252,15 +248,14 @@ testCalculateRoleHierarchySelfCycle :: TestTree
 testCalculateRoleHierarchySelfCycle =
   testCase "cycle detection - self-reference" $ do
     let roleId = Id "self-cycle"
-        role = mkRole roleId (Just roleId)  -- Points to itself
+        role = mkRole roleId (Just roleId) -- Points to itself
         roles = [role]
 
     case Roles.calculateRoleHierarchy roles of
       Left (Roles.CycleDetected path) -> do
         let expectedPath = [roleId, roleId]
-        if path == expectedPath
-          then pure ()
-          else assertFailure $ "Expected cycle path " ++ show (map showId expectedPath) ++ ", but got " ++ show (map showId path)
+        unless (path == expectedPath) $
+          assertFailure $ "Expected cycle path " ++ show (map showId expectedPath) ++ ", but got " ++ show (map showId path)
       Right _ ->
         assertFailure "Expected cycle detection, but succeeded"
 
@@ -281,15 +276,13 @@ testCalculateRoleHierarchyTwoNodeCycle =
         -- Could be either A->B->A or B->A->B depending on traversal order
         -- We just check that it's a cycle of length 3 (start, middle, start)
         let pathLength = length path
-        if pathLength == 3
-          then pure ()
-          else assertFailure $ "Expected cycle path length 3, but got " ++ show pathLength ++ ". Path: " ++ show (map showId path)
+        unless (pathLength == 3) $
+          assertFailure $ "Expected cycle path length 3, but got " ++ show pathLength ++ ". Path: " ++ show (map showId path)
 
         let first = head path
             last_ = last path
-        if first == last_
-          then pure ()
-          else assertFailure $ "Expected cycle path to start and end with same node, but got start=" ++ showId first ++ ", end=" ++ showId last_ ++ ". Full path: " ++ show (map showId path)
+        unless (first == last_) $
+          assertFailure $ "Expected cycle path to start and end with same node, but got start=" ++ showId first ++ ", end=" ++ showId last_ ++ ". Full path: " ++ show (map showId path)
       Right _ ->
         assertFailure "Expected cycle detection, but succeeded"
 
@@ -310,22 +303,19 @@ testCalculateRoleHierarchyThreeNodeCycle =
     case Roles.calculateRoleHierarchy roles of
       Left (Roles.CycleDetected path) -> do
         let pathLength = length path
-        if pathLength == 4
-          then pure ()
-          else assertFailure $ "Expected cycle path length 4 (A,B,C,A), but got " ++ show pathLength ++ ". Path: " ++ show (map showId path)
+        unless (pathLength == 4) $
+          assertFailure $ "Expected cycle path length 4 (A,B,C,A), but got " ++ show pathLength ++ ". Path: " ++ show (map showId path)
 
         let first = head path
             last_ = last path
-        if first == last_
-          then pure ()
-          else assertFailure $ "Expected cycle path to start and end with same node, but got start=" ++ showId first ++ ", end=" ++ showId last_ ++ ". Full path: " ++ show (map showId path)
+        unless (first == last_) $
+          assertFailure $ "Expected cycle path to start and end with same node, but got start=" ++ showId first ++ ", end=" ++ showId last_ ++ ". Full path: " ++ show (map showId path)
 
         -- Verify all three roles are in the cycle
         let uniqueRoles = take 3 path
             expectedRoles = [aId, bId, cId]
-        if all (`elem` expectedRoles) uniqueRoles
-          then pure ()
-          else assertFailure $ "Expected all three roles [A, B, C] in cycle, but got unique roles: " ++ show (map showId uniqueRoles) ++ ". Full path: " ++ show (map showId path) ++ ". Expected roles: " ++ show (map showId expectedRoles)
+        unless (all (`elem` expectedRoles) uniqueRoles) $
+          assertFailure $ "Expected all three roles [A, B, C] in cycle, but got unique roles: " ++ show (map showId uniqueRoles) ++ ". Full path: " ++ show (map showId path) ++ ". Expected roles: " ++ show (map showId expectedRoles)
       Right _ ->
         assertFailure "Expected cycle detection, but succeeded"
 
@@ -357,15 +347,13 @@ testCalculateRoleHierarchyTreeWithCycle =
       Left (Roles.CycleDetected path) -> do
         -- Should detect the cycle (X,Y,Z)
         let pathLength = length path
-        if pathLength >= 3
-          then pure ()
-          else assertFailure $ "Expected cycle path length >= 3, but got " ++ show pathLength ++ ". Path: " ++ show (map showId path)
+        unless (pathLength >= 3) $
+          assertFailure $ "Expected cycle path length >= 3, but got " ++ show pathLength ++ ". Path: " ++ show (map showId path)
 
         let first = head path
             last_ = last path
-        if first == last_
-          then pure ()
-          else assertFailure $ "Expected cycle path to start and end with same node, but got start=" ++ showId first ++ ", end=" ++ showId last_ ++ ". Full path: " ++ show (map showId path) ++ ". Expected cycle: X->Y->Z->X"
+        unless (first == last_) $
+          assertFailure $ "Expected cycle path to start and end with same node, but got start=" ++ showId first ++ ", end=" ++ showId last_ ++ ". Full path: " ++ show (map showId path) ++ ". Expected cycle: X->Y->Z->X"
       Right _ ->
         assertFailure "Expected cycle detection, but succeeded"
 
@@ -430,7 +418,7 @@ testCalculateRoleHierarchyDeepChain =
         -- Create chain: root -> level1 -> level2 -> ... -> level50
         mkChainRole i prevId = mkRole (Id $ "level-" <> T.pack (show i)) (Just prevId)
         rootRole = mkRole rootId Nothing
-        roles = rootRole : [mkChainRole i (if i == 1 then rootId else Id $ "level-" <> T.pack (show (i-1))) | i <- [1..depth]]
+        roles = rootRole : [mkChainRole i (if i == 1 then rootId else Id $ "level-" <> T.pack (show (i -1))) | i <- [1 .. depth]]
 
     -- Measure execution time of calculateRoleHierarchy
     startTime <- getCurrentTime
@@ -442,8 +430,7 @@ testCalculateRoleHierarchyDeepChain =
     endCPUTime <- getCPUTime
 
     let realTime = diffUTCTime endTime startTime
-        cpuTime = fromIntegral (endCPUTime - startCPUTime) / 1e12 :: Double  -- Convert picoseconds to seconds
-
+        cpuTime = fromIntegral (endCPUTime - startCPUTime) / 1e12 :: Double -- Convert picoseconds to seconds
     putStrLn @String $ "  [Performance] Deep chain (50 levels):"
     putStrLn @String $ "    Real time: " ++ show realTime ++ "s"
     putStrLn @String $ "    CPU time: " ++ show cpuTime ++ "s"
@@ -470,7 +457,7 @@ testCalculateRoleHierarchyWideTree =
     let rootId = Id "root"
         childCount = 100
         rootRole = mkRole rootId Nothing
-        childRoles = [mkRole (Id $ "child-" <> T.pack (show i)) (Just rootId) | i <- [1..childCount]]
+        childRoles = [mkRole (Id $ "child-" <> T.pack (show i)) (Just rootId) | i <- [1 .. childCount]]
         roles = rootRole : childRoles
 
     -- Measure execution time of calculateRoleHierarchy
@@ -483,8 +470,7 @@ testCalculateRoleHierarchyWideTree =
     endCPUTime <- getCPUTime
 
     let realTime = diffUTCTime endTime startTime
-        cpuTime = fromIntegral (endCPUTime - startCPUTime) / 1e12 :: Double  -- Convert picoseconds to seconds
-
+        cpuTime = fromIntegral (endCPUTime - startCPUTime) / 1e12 :: Double -- Convert picoseconds to seconds
     putStrLn @String $ "  [Performance] Wide tree (100 children):"
     putStrLn @String $ "    Real time: " ++ show realTime ++ "s"
     putStrLn @String $ "    CPU time: " ++ show cpuTime ++ "s"
@@ -502,7 +488,7 @@ testCalculateRoleHierarchyWideTree =
         length rootH.roleDescendants @?= childCount
 
         -- Each child has root as ancestor and no descendants
-        forM_ [1..childCount] $ \i -> do
+        forM_ [1 .. childCount] $ \i -> do
           let childId = Id $ "child-" <> T.pack (show i)
           let Just childH = findById hierarchies childId
           assertEqualIdSets [rootId] $ extractIds childH.roleAncestors
@@ -537,28 +523,30 @@ testCalculateRoleHierarchyComplexPerformance =
         -- For each level, generate all children of all parents from previous level
         generateAllPaths :: Int -> Int -> [[Int]]
         generateAllPaths currentLevel maxLevel
-          | currentLevel == 0 = [[0]]  -- root
+          | currentLevel == 0 = [[0]] -- root
           | otherwise =
-              let parentPaths = generateAllPaths (currentLevel - 1) maxLevel
-               in [parentPath ++ [childIdx]
-                   | parentPath <- parentPaths
-                   , childIdx <- [1..branchingFactor]]
+            let parentPaths = generateAllPaths (currentLevel - 1) maxLevel
+             in [ parentPath ++ [childIdx]
+                  | parentPath <- parentPaths,
+                    childIdx <- [1 .. branchingFactor]
+                ]
 
-        allRolePaths = concatMap (\level -> generateAllPaths level maxDepth) [0..maxDepth]
+        allRolePaths = concatMap (\level -> generateAllPaths level maxDepth) [0 .. maxDepth]
 
         -- Build parent-child relationships
         buildRoles :: [[Int]] -> [DRole.Role]
         buildRoles [] = []
-        buildRoles (path:paths) =
+        buildRoles (path : paths) =
           let roleId = mkRoleId path
-              parentId = if path == rootPath
-                        then Nothing  -- root has no parent
-                        else Just $ mkRoleId (init path)  -- parent is path without last element
+              parentId =
+                if path == rootPath
+                  then Nothing -- root has no parent
+                  else Just $ mkRoleId (init path) -- parent is path without last element
            in mkRole roleId parentId : buildRoles paths
 
         roles = buildRoles allRolePaths
         totalRoles = length roles
-        expectedTotal = sum $ map (branchingFactor ^) [0..maxDepth]  -- 1 + 5 + 25 + 125 + 625
+        expectedTotal = sum $ map (branchingFactor ^) [0 .. maxDepth] -- 1 + 5 + 25 + 125 + 625
 
     -- Measure execution time of calculateRoleHierarchy
     startTime <- getCurrentTime
@@ -570,8 +558,7 @@ testCalculateRoleHierarchyComplexPerformance =
     endCPUTime <- getCPUTime
 
     let realTime = diffUTCTime endTime startTime
-        cpuTime = fromIntegral (endCPUTime - startCPUTime) / 1e12 :: Double  -- Convert picoseconds to seconds
-
+        cpuTime = fromIntegral (endCPUTime - startCPUTime) / 1e12 :: Double -- Convert picoseconds to seconds
     putStrLn @String $ "  [Performance] Complex hierarchy (branching factor 5, 4 levels):"
     putStrLn @String $ "    Total roles: " ++ show totalRoles ++ " (expected: " ++ show expectedTotal ++ ")"
     putStrLn @String $ "    Real time: " ++ show realTime ++ "s"
@@ -586,7 +573,7 @@ testCalculateRoleHierarchyComplexPerformance =
 
         -- Verify root has all descendants
         let Just rootH = findById hierarchies rootId
-        length rootH.roleDescendants @?= (totalRoles - 1)  -- All except root itself
+        length rootH.roleDescendants @?= (totalRoles - 1) -- All except root itself
 
         -- Verify root has no ancestors
         assertEqualIdSets [] $ extractIds rootH.roleAncestors
@@ -599,25 +586,25 @@ testCalculateRoleHierarchyComplexPerformance =
         let level1Id = mkId [0, 1]
         let Just level1H = findById hierarchies level1Id
         assertEqualIdSets [rootId] $ extractIds level1H.roleAncestors
-        length level1H.roleDescendants @?= branchingFactor + (branchingFactor ^ 2) + (branchingFactor ^ 3)  -- 5 + 25 + 125 = 155
+        length level1H.roleDescendants @?= branchingFactor + (branchingFactor ^ 2) + (branchingFactor ^ 3) -- 5 + 25 + 125 = 155
 
         -- Level 2: role-0-1-1 (first child of first level-1 role)
         let level2Id = mkId [0, 1, 1]
         let Just level2H = findById hierarchies level2Id
         assertEqualIdSets [level1Id, rootId] $ extractIds level2H.roleAncestors
-        length level2H.roleDescendants @?= branchingFactor + (branchingFactor ^ 2)  -- 5 + 25 = 30
+        length level2H.roleDescendants @?= branchingFactor + (branchingFactor ^ 2) -- 5 + 25 = 30
 
         -- Level 3: role-0-1-1-1
         let level3Id = mkId [0, 1, 1, 1]
         let Just level3H = findById hierarchies level3Id
         assertEqualIdSets [level2Id, level1Id, rootId] $ extractIds level3H.roleAncestors
-        length level3H.roleDescendants @?= branchingFactor  -- 5
+        length level3H.roleDescendants @?= branchingFactor -- 5
 
         -- Level 4: role-0-1-1-1-1 (leaf)
         let level4Id = mkId [0, 1, 1, 1, 1]
         let Just level4H = findById hierarchies level4Id
         assertEqualIdSets [level3Id, level2Id, level1Id, rootId] $ extractIds level4H.roleAncestors
-        assertEqualIdSets [] $ extractIds level4H.roleDescendants  -- Leaf has no descendants
+        assertEqualIdSets [] $ extractIds level4H.roleDescendants -- Leaf has no descendants
 
 -- -----------------------------------------------------------------------------
 -- Main test group
@@ -626,17 +613,17 @@ rolesHierarchyUnitTests :: TestTree
 rolesHierarchyUnitTests =
   testGroup
     "SharedLogic.Roles.calculateRoleHierarchy"
-    [ testCalculateRoleHierarchySimple
-    , testCalculateRoleHierarchyMultipleRoots
-    , testCalculateRoleHierarchyMixed
-    , testCalculateRoleHierarchySelfCycle
-    , testCalculateRoleHierarchyTwoNodeCycle
-    , testCalculateRoleHierarchyThreeNodeCycle
-    , testCalculateRoleHierarchyTreeWithCycle
-    , testCalculateRoleHierarchyEmpty
-    , testCalculateRoleHierarchySingleRoot
-    , testCalculateRoleHierarchyOrphan
-    , testCalculateRoleHierarchyDeepChain
-    , testCalculateRoleHierarchyWideTree
-    , testCalculateRoleHierarchyComplexPerformance
+    [ testCalculateRoleHierarchySimple,
+      testCalculateRoleHierarchyMultipleRoots,
+      testCalculateRoleHierarchyMixed,
+      testCalculateRoleHierarchySelfCycle,
+      testCalculateRoleHierarchyTwoNodeCycle,
+      testCalculateRoleHierarchyThreeNodeCycle,
+      testCalculateRoleHierarchyTreeWithCycle,
+      testCalculateRoleHierarchyEmpty,
+      testCalculateRoleHierarchySingleRoot,
+      testCalculateRoleHierarchyOrphan,
+      testCalculateRoleHierarchyDeepChain,
+      testCalculateRoleHierarchyWideTree,
+      testCalculateRoleHierarchyComplexPerformance
     ]

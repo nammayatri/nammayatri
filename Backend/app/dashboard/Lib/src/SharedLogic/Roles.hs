@@ -34,8 +34,6 @@ type ChildrenMap = M.Map RoleId [RoleId]
 
 type HierarchyM = Either CycleDetection
 
-
-
 -- | Cycle detection result
 newtype CycleDetection = CycleDetected [RoleId] -- The path that forms a cycle
   deriving (Show)
@@ -56,7 +54,6 @@ data RoleHierarchy = RoleHierarchy
 --   Returns:
 --     - Left CycleDetected if a cycle is found in the parent relationships
 --     - Right [RoleHierarchy] for all roles, with ancestors and descendants precomputed
-
 calculateRoleHierarchy :: [DRole.Role] -> Either CycleDetection [RoleHierarchy]
 calculateRoleHierarchy allRoles = do
   -- Build essential indexes for O(log n) lookups

@@ -29,9 +29,9 @@ handler merchantId city = putAccountUpdateRole merchantId city
 
 type PutAccountUpdateRole =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.ACCOUNT) / ('API.Types.RiderPlatform.Management.Account.PUT_ACCOUNT_UPDATE_ROLE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.ACCOUNT / 'API.Types.RiderPlatform.Management.Account.PUT_ACCOUNT_UPDATE_ROLE)
       :> API.Types.RiderPlatform.Management.Account.PutAccountUpdateRole
   )
 
