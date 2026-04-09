@@ -1863,11 +1863,11 @@ types:
     - enum: "Active, InActive, Valid, Invalid, Pending, OnRide, TripAssigned"
     - derive: "HttpInstance"
   DrivertoVehicleAssociationRes:
-    - fleetOwnerId: Text
+    - fleetOwnerId: Maybe Text
     - listItem: [DriveVehicleAssociationListItem]
     - summary: Summary
   DrivertoVehicleAssociationResT:
-    - fleetOwnerId: Text
+    - fleetOwnerId: Maybe Text
     - listItem: [DriveVehicleAssociationListItemT]
     - summary: Summary
   RCStatusReq:
@@ -1908,8 +1908,8 @@ types:
     - isRcAssociated: Bool
     - verificationDocsStatus: Maybe VerificationDocsStatus
     - upcomingRouteCode: Maybe Text
-    - fleetOwnerId: Text
-    - fleetOwnerName: Text
+    - fleetOwnerId: Maybe Text
+    - fleetOwnerName: Maybe Text
     - requestReason: Maybe Text
     - responseReason: Maybe Text
     - associatedOn: Maybe UTCTime

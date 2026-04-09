@@ -1381,7 +1381,7 @@ getDriverFleetDriverVehicleAssociation merchantShortId _opCity fleetOwnerId mbLi
   listItems <- createDriverVehicleAssociationListItem listOfAllDrivers listOfAllVehicle
   let filteredItems = filter (.isRcAssociated) listItems
   let summary = Common.Summary {totalCount = 10000, count = length filteredItems}
-  pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = filteredItems, summary = summary}
+  pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = Just fleetOwnerId, listItem = filteredItems, summary = summary}
   where
     createDriverVehicleAssociationListItem :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => [FleetDriverAssociation] -> [DVRC.VehicleRegistrationCertificate] -> m [Common.DriveVehicleAssociationListItem]
     createDriverVehicleAssociationListItem fdaList vrcaList = do
@@ -1484,7 +1484,7 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
   let summary = Common.Summary {totalCount = 10000, count = length listItems}
   pure $
     Common.DrivertoVehicleAssociationResT
-      { fleetOwnerId = requestorId, -- Kept for Backward Compatibility, Don't use this Fleet Owner Id for Multiple Fleets
+      { fleetOwnerId = Just requestorId, -- Kept for Backward Compatibility, Don't use this Fleet Owner Id for Multiple Fleets
         listItem = listItems,
         summary = summary
       }
@@ -1497,10 +1497,11 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
           from = fromMaybe defaultFrom mbFrom
           to = fromMaybe now mbTo
       forM (zip driverListWithInfo fdaList) $ \((driver, driverInfo'), fda) -> do
-        let fleetOwnerId = fda.fleetOwnerId
-        let fleetOwnerName = fromMaybe "" (Map.lookup fleetOwnerId fleetOwnerNameMap)
+        let fleetOwnerIdVal = fda.fleetOwnerId
+            fleetOwnerNameVal = fromMaybe "" (Map.lookup fleetOwnerIdVal fleetOwnerNameMap)
+            mbFleetOwnerName = if T.null fleetOwnerNameVal then Nothing else Just fleetOwnerNameVal
         driverRCAssociation <- QRCAssociation.findAllActiveAndInactiveAssociationsByDriverId driver.id
-        let rcAssociatedWithFleet = filter (\(_, rc) -> rc.fleetOwnerId == Just fleetOwnerId) driverRCAssociation
+        let rcAssociatedWithFleet = filter (\(_, rc) -> rc.fleetOwnerId == Just fleetOwnerIdVal) driverRCAssociation
         (vehicleNo, vehicleType) <- case rcAssociatedWithFleet of ---- so the logic is if it have active association with the fleet vehicle return that otherwise return the latest one
           [] -> pure (Nothing, Nothing)
           associations -> do
@@ -1543,15 +1544,15 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
         let drivingSchoolCertificateStatus = if any (\img -> img.imageType == DDoc.DrivingSchoolCertificate && img.verificationStatus == Just Documents.VALID) driverImages then Common.VALID else Common.PENDING
         (completedRides, earning) <- case mbStats of
           Just True -> do
-            rides <- CQRide.totalRidesByFleetOwnerPerDriver (Just fleetOwnerId) driver.id from to
-            earnings <- CQRide.totalEarningsByFleetOwnerPerDriver (Just fleetOwnerId) driver.id from to
+            rides <- CQRide.totalRidesByFleetOwnerPerDriver (Just fleetOwnerIdVal) driver.id from to
+            earnings <- CQRide.totalEarningsByFleetOwnerPerDriver (Just fleetOwnerIdVal) driver.id from to
             pure (rides, earnings)
           _ -> pure (0, 0)
         let driverStatus = Just $ castDriverStatus driverInfo'.mode -- if isNothing vehicleNo then Nothing else Just $ castDriverStatus driverInfo'.mode
         (isDriverOnPickup, isDriverOnRide, routeCode) <-
           if driverInfo'.onRide
             then do
-              currentTripTransaction <- WMB.findNextActiveTripTransaction fleetOwnerId driver.id
+              currentTripTransaction <- WMB.findNextActiveTripTransaction fleetOwnerIdVal driver.id
               case currentTripTransaction of
                 Just tripTransation -> return (tripTransation.status == TRIP_ASSIGNED, tripTransation.status == IN_PROGRESS, Just tripTransation.routeCode)
                 Nothing -> return (False, False, Nothing)
@@ -1563,7 +1564,18 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
             responseReason = fda.responseReason
         let ls =
               Common.DriveVehicleAssociationListItemT
-                { vehicleNo = vehicleNo,
+                { driverName = driverName,
+                  conductorName = conductorName,
+                  driverId = driverId,
+                  driverPhoneNo = driverPhoneNo,
+                  completedRides = completedRides,
+                  earning = earning,
+                  vehicleType = vehicleType,
+                  fleetOwnerId = Just fleetOwnerIdVal,
+                  fleetOwnerName = mbFleetOwnerName,
+                  requestReason = requestReason,
+                  responseReason = responseReason,
+                  vehicleNo = vehicleNo,
                   status = driverStatus,
                   isDriverActive = isDriverActive,
                   isDriverOnRide = Just isDriverOnRide,
@@ -1595,7 +1607,7 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
                           drivingSchoolCertificate = Just drivingSchoolCertificateStatus
                         },
                   selectedServiceTiers = [],
-                  ..
+                  isRcAssociated = isRcAssociated
                 }
         pure ls
     getVehicleDetails :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => DVRC.VehicleRegistrationCertificate -> m (Maybe Text, Maybe Common.VehicleVariant)
@@ -1622,41 +1634,53 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
   listOfAllVehicle <- getListOfVehiclesMultiFleet mbVehicleNumber fleetOwnerIds mbLimit mbOffset mbStatus merchant.id merchantOpCity.id mbSearchString mbStatusAwareVehicleNo
   let fleetOwnerIdsFromResponse = nub $ mapMaybe (.fleetOwnerId) listOfAllVehicle
   fleetOwnerNameMap <- buildFleetOwnerNameMap fleetOwnerNameMapFromRequest fleetOwnerIdsFromResponse
-  let listOfAllVehicleWithFleetInfo = catMaybes $ map (\vrc -> vrc.fleetOwnerId >>= \fleetOwnerId -> Just (vrc, fleetOwnerId, fromMaybe "" (Map.lookup fleetOwnerId fleetOwnerNameMap))) listOfAllVehicle
+  let listOfAllVehicleForResponse =
+        if isNothing effectiveFleetOwnerId
+          then listOfAllVehicle
+          else filter (isJust . (.fleetOwnerId)) listOfAllVehicle
+  let listOfAllVehicleWithFleetInfo =
+        map
+          ( \vrc ->
+              let mbFleetOwnerIdVal = vrc.fleetOwnerId
+                  mbFleetOwnerNameVal = mbFleetOwnerIdVal <&> \fleetOwnerIdVal -> fromMaybe "" (Map.lookup fleetOwnerIdVal fleetOwnerNameMap)
+               in (vrc, mbFleetOwnerIdVal, mbFleetOwnerNameVal)
+          )
+          listOfAllVehicleForResponse
   listItems <- createFleetVehicleAssociationListItem listOfAllVehicleWithFleetInfo
   let summary = Common.Summary {totalCount = 10000, count = length listItems}
   pure $
     Common.DrivertoVehicleAssociationResT
-      { fleetOwnerId = requestorId, -- Kept for Backward Compatibility, Don't use this Fleet Owner Id for Multiple Fleets
+      { fleetOwnerId = Just requestorId, -- Kept for Backward Compatibility, Don't use this Fleet Owner Id for Multiple Fleets
         listItem = listItems,
         summary = summary
       }
   where
-    createFleetVehicleAssociationListItem :: [(DVRC.VehicleRegistrationCertificate, Text, Text)] -> Flow [Common.DriveVehicleAssociationListItemT]
+    createFleetVehicleAssociationListItem :: [(DVRC.VehicleRegistrationCertificate, Maybe Text, Maybe Text)] -> Flow [Common.DriveVehicleAssociationListItemT]
     createFleetVehicleAssociationListItem vrcListWithFleetInfo = do
       now <- getCurrentTime
-      forM vrcListWithFleetInfo $ \(vrc, fleetOwnerId, fleetOwnerName) -> do
+      forM vrcListWithFleetInfo $ \(vrc, mbFleetOwnerIdVal, mbFleetOwnerNameVal) -> do
+        let mbFleetOwnerName = mbFleetOwnerNameVal >>= \fleetOwnerNameVal -> if T.null fleetOwnerNameVal then Nothing else Just fleetOwnerNameVal
         decryptedVehicleRC <- decrypt vrc.certificateNumber
         let defaultFrom = UTCTime (utctDay now) 0
             from = fromMaybe defaultFrom mbFrom
             to = fromMaybe now mbTo
         stats <- case mbIncludeStats of
           Just _ -> do
-            completedRides <- CQRide.totalRidesByFleetOwnerPerVehicle (Just fleetOwnerId) decryptedVehicleRC from to
-            earning <- CQRide.totalEarningsByFleetOwnerPerVehicle (Just fleetOwnerId) decryptedVehicleRC from to
+            completedRides <- CQRide.totalRidesByFleetOwnerPerVehicle mbFleetOwnerIdVal decryptedVehicleRC from to
+            earning <- CQRide.totalEarningsByFleetOwnerPerVehicle mbFleetOwnerIdVal decryptedVehicleRC from to
             return (completedRides, earning)
           Nothing -> return (0, 0) ------------ when we are not including stats then we will return 0
         rcActiveAssociation <- QRCAssociation.findActiveAssociationByRC vrc.id True
         ((driverName, conductorName, driverId, driverPhoneNo, driverStatus, isDriverOnPickup, isDriverOnRide, routeCode), mbAssociatedOn) <- case rcActiveAssociation of
           Just activeAssociation -> do
-            driverInfo <- getFleetDriverInfo fleetOwnerId activeAssociation.driverId False
+            driverInfo <- getFleetDriverInfoMaybe mbFleetOwnerIdVal activeAssociation.driverId False
             return (driverInfo, Just activeAssociation.associatedOn)
           ------- when vehicle is in active state
           Nothing -> do
             latestAssociation <- QRCAssociation.findLatestLinkedByRCId vrc.id now ------- when there is not any active association then i will find out the latest association  (vehicle is in inActive state)
             case latestAssociation of
               Just latestAssoc -> do
-                driverInfo <- getFleetDriverInfo fleetOwnerId latestAssoc.driverId False
+                driverInfo <- getFleetDriverInfoMaybe mbFleetOwnerIdVal latestAssoc.driverId False
                 return (driverInfo, Just latestAssoc.associatedOn)
               Nothing -> pure ((Nothing, Nothing, Nothing, Nothing, Nothing, Just False, Just False, Nothing), Nothing) -------- when vehicle is unAssigned
         let vehicleType = DCommon.castVehicleVariantDashboard vrc.vehicleVariant
@@ -1701,7 +1725,11 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
               _ -> pure []
         let ls =
               Common.DriveVehicleAssociationListItemT
-                { vehicleNo = Just decryptedVehicleRC,
+                { driverName = driverName,
+                  conductorName = conductorName,
+                  driverId = driverId,
+                  driverPhoneNo = driverPhoneNo,
+                  vehicleNo = Just decryptedVehicleRC,
                   status = Just $ castDriverStatus driverStatus,
                   isDriverOnRide = isDriverOnRide,
                   isDriverOnPickup = isDriverOnPickup,
@@ -1711,11 +1739,13 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
                   vehicleType = vehicleType,
                   verificationDocsStatus = Just verificationDocs,
                   upcomingRouteCode = routeCode,
+                  fleetOwnerId = mbFleetOwnerIdVal,
+                  fleetOwnerName = mbFleetOwnerName,
                   requestReason = Nothing,
                   responseReason = Nothing,
                   associatedOn = mbAssociatedOn,
                   selectedServiceTiers = selectedServiceTiers,
-                  ..
+                  isRcAssociated = isRcAssociated
                 }
         pure ls
 
@@ -1759,15 +1789,15 @@ getDriverFleetDriverListStats merchantShortId opCity requestorId mbFrom mbTo mbF
             then QDOAExtra.getActiveDriverIdsByOperatorId requestorId
             else CDOA.getDriverIdsByOperatorId requestorId
         pure (ids, requestorId)
-      (_, Just foId) -> do
-        void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) foId
+      (_, Just fleetOwnerIdVal) -> do
+        void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) fleetOwnerIdVal
         ids <-
           if useDBForAnalytics
-            then QFDAExtra.getActiveDriverIdsByFleetOwnerId foId
+            then QFDAExtra.getActiveDriverIdsByFleetOwnerId fleetOwnerIdVal
             else do
-              maybeDriverIds <- CFDA.getDriverIdsByFleetOwnerId foId
+              maybeDriverIds <- CFDA.getDriverIdsByFleetOwnerId fleetOwnerIdVal
               pure $ fromMaybe [] maybeDriverIds
-        pure (ids, foId)
+        pure (ids, fleetOwnerIdVal)
       (_, Nothing) -> do
         void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) requestorId
         ids <-
@@ -1983,6 +2013,23 @@ getFleetDriverInfo fleetOwnerId driverId isDriver = do
       mobileNumber <- mapM decrypt driver.mobileNumber
       return (Just driver.firstName, driver.lastName, Just driver.id.getId, mobileNumber, mode, Just isDriverOnPickup, Just isDriverOnRide, routeCode)
     (_, _) -> pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+
+getFleetDriverInfoMaybe :: Maybe Text -> Id DP.Person -> Bool -> Flow (Maybe Text, Maybe Text, Maybe Text, Maybe Text, Maybe DrInfo.DriverMode, Maybe Bool, Maybe Bool, Maybe Text)
+getFleetDriverInfoMaybe mbFleetOwnerId driverId isDriver =
+  case mbFleetOwnerId of
+    Just fleetOwnerId -> getFleetDriverInfo fleetOwnerId driverId isDriver
+    Nothing -> do
+      mbDriver <- QPerson.findById driverId
+      mbDriverInfo' <- QDriverInfo.findById driverId
+      case (mbDriverInfo', mbDriver) of
+        (Just driverInfo', Just driver) -> do
+          mode <-
+            if isDriver
+              then return (driverInfo'.mode)
+              else return Nothing
+          mobileNumber <- mapM decrypt driver.mobileNumber
+          pure (Just driver.firstName, driver.lastName, Just driver.id.getId, mobileNumber, mode, Just False, Just False, Nothing)
+        (_, _) -> pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
 
 ---------------------------------------------------------------------
 postDriverFleetVehicleDriverRcStatus ::

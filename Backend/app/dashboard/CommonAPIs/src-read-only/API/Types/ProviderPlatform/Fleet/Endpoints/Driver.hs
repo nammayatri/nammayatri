@@ -212,8 +212,8 @@ data DriveVehicleAssociationListItemT = DriveVehicleAssociationListItemT
     isRcAssociated :: Kernel.Prelude.Bool,
     verificationDocsStatus :: Kernel.Prelude.Maybe VerificationDocsStatus,
     upcomingRouteCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    fleetOwnerId :: Kernel.Prelude.Text,
-    fleetOwnerName :: Kernel.Prelude.Text,
+    fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fleetOwnerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     requestReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     responseReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     associatedOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -368,11 +368,11 @@ data DriverStatusRes = DriverStatusRes
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data DrivertoVehicleAssociationRes = DrivertoVehicleAssociationRes {fleetOwnerId :: Kernel.Prelude.Text, listItem :: [DriveVehicleAssociationListItem], summary :: Dashboard.Common.Summary}
+data DrivertoVehicleAssociationRes = DrivertoVehicleAssociationRes {fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text, listItem :: [DriveVehicleAssociationListItem], summary :: Dashboard.Common.Summary}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data DrivertoVehicleAssociationResT = DrivertoVehicleAssociationResT {fleetOwnerId :: Kernel.Prelude.Text, listItem :: [DriveVehicleAssociationListItemT], summary :: Dashboard.Common.Summary}
+data DrivertoVehicleAssociationResT = DrivertoVehicleAssociationResT {fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text, listItem :: [DriveVehicleAssociationListItemT], summary :: Dashboard.Common.Summary}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
