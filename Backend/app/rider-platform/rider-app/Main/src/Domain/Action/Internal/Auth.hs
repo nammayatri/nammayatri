@@ -72,15 +72,17 @@ getCustomerAuthToken ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe (Id Merchant) ->
   m CustomerAuthTokenResp
-getCustomerAuthToken apiKey mbMobileNumber mbMobileCountryCode = do
+getCustomerAuthToken apiKey mbMobileNumber mbMobileCountryCode mbMerchantId = do
   internalAPIKey <- asks (.internalAPIKey)
   unless (apiKey == Just internalAPIKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
   mobileNumber <- mbMobileNumber & fromMaybeM (InvalidRequest "mobileNumber is required")
   mobileCountryCode <- mbMobileCountryCode & fromMaybeM (InvalidRequest "mobileCountryCode is required")
+  merchantId <- mbMerchantId & fromMaybeM (InvalidRequest "merchantId is required")
   mobileNumberHash <- getDbHash mobileNumber
-  person <- B.runInReplica (QPerson.findByMobileNumberHashAndCountryCode mobileCountryCode mobileNumberHash) >>= fromMaybeM (PersonDoesNotExist "Person not found for given mobile number")
+  person <- B.runInReplica (QPerson.findByMobileNumberAndMerchantId mobileCountryCode mobileNumberHash merchantId) >>= fromMaybeM (PersonDoesNotExist "Person not found for given mobile number")
   regTokens <- B.runInReplica $ QRegToken.findAllByPersonId person.id
   let verifiedTokens = filter (.verified) regTokens
   latestToken <- listToMaybe (sortBy (comparing (Down . (.updatedAt))) verifiedTokens) & fromMaybeM (InvalidRequest "No verified auth token found for this user")
