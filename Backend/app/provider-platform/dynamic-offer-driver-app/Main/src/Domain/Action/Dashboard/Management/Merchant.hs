@@ -1178,6 +1178,8 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         documentFlowGrouping = Just $ maybe DVC.STANDARD castDocumentFlowGroupingFromReq documentFlowGrouping,
         allowLicenseTransfer = Just False,
         rolesAllowedToUploadDocument = Nothing,
+        isApprovalSupported = Nothing,
+        isReminderSupported = Nothing,
         ..
       }
   where

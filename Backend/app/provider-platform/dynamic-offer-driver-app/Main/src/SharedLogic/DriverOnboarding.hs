@@ -677,6 +677,8 @@ mkFleetOwnerDocumentVerificationConfigAPIEntity language Domain.Types.FleetOwner
         isMandatoryForEnabling = isMandatory,
         documentFields = Nothing,
         documentFlowGrouping = castDocumentFlowGrouping DVC.STANDARD,
+        isReminderSupported = Nothing,
+        isApprovalSupported = Nothing,
         ..
       }
 

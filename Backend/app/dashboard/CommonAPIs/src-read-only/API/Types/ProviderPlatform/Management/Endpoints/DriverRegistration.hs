@@ -23,6 +23,16 @@ import Kernel.Utils.TH
 import Servant
 import Servant.Client
 
+data AadhaarApproveDetails = AadhaarApproveDetails
+  { documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image,
+    aadhaarNumber :: Kernel.Prelude.Text,
+    nameOnCard :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    address :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data AadhaarCardReq = AadhaarCardReq
   { aadhaarBackImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
     aadhaarFrontImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
@@ -56,6 +66,16 @@ data ApproveDetails
   | NOC NOCApproveDetails
   | BusinessLicenseImg BusinessLicenseApproveDetails
   | CommonDocument CommonDocumentApproveDetails
+  | Aadhaar AadhaarApproveDetails
+  | VehicleFrontImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+  | VehicleBackImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+  | VehicleRightImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+  | VehicleLeftImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+  | VehicleFrontInteriorImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+  | VehicleBackInteriorImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+  | OdometerImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+  | LocalResidenceProofImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+  | PoliceVerificationCertificateImg (Kernel.Types.Id.Id Dashboard.Common.Image)
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -600,6 +600,8 @@ DocumentVerificationConfig:
     documentFields: Maybe [FieldInfo]
     allowLicenseTransfer: Maybe Bool
     rolesAllowedToUploadDocument: Maybe [Role]
+    isReminderSupported: Maybe Bool
+    isApprovalSupported: Maybe Bool
   default:
     order: "0"
     doStrictVerifcation: "true"

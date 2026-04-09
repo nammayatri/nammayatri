@@ -64,10 +64,12 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     documentFlowGrouping :: DocumentFlowGrouping,
     documentType :: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType,
     filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isApprovalSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDisabled :: Kernel.Prelude.Bool,
     isHidden :: Kernel.Prelude.Bool,
     isMandatory :: Kernel.Prelude.Bool,
     isMandatoryForEnabling :: Kernel.Prelude.Bool,
+    isReminderSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rcNumberPrefixList :: [Kernel.Prelude.Text],
     title :: Kernel.Prelude.Text
   }

@@ -58,9 +58,11 @@ import qualified Domain.Action.UI.DriverOnboarding.Status as DStatus
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
 import qualified Domain.Action.UI.ReferralPayout as ReferralPayout
+import qualified Domain.Types.AadhaarCard as DAadhaar
 import qualified Domain.Types.BusinessLicense as DBL
 import qualified Domain.Types.CommonDriverOnboardingDocuments as DCommonDoc
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.FleetOwnerInformation as DFOI
@@ -80,7 +82,7 @@ import Environment
 import EulerHS.Prelude hiding (elem, find, foldl', map, whenJust)
 import Kernel.Beam.Functions
 import Kernel.External.AadhaarVerification.Interface.Types
-import Kernel.External.Encryption (decrypt, encrypt, hash)
+import Kernel.External.Encryption (decrypt, encrypt, getDbHash, hash)
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payout.Interface.Types as PayoutTypes
@@ -119,6 +121,8 @@ import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDrive
 import qualified Storage.Queries.CommonDriverOnboardingDocumentsExtra as QCommonDriverOnboardingDocumentsExtra
 import qualified Storage.Queries.DriverGstin as QGstin
 import qualified Storage.Queries.DriverInformation as QDriverInfo
+import qualified Storage.Queries.DriverRCAssociation as QRCAssoc
+import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverPanCard as QPan
 import qualified Storage.Queries.DriverSSN as QSSN
@@ -770,27 +774,111 @@ getDriverRegistrationUnderReviewDrivers _merchantShortId _opCity _limit _offset 
 getDriverRegistrationDocumentsInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow [Common.DriverDocument]
 getDriverRegistrationDocumentsInfo _merchantShortId _opCity _driverId = throwError (InternalError "Not Implemented")
 
-approveAndUpdateRC :: Common.RCApproveDetails -> Flow ()
-approveAndUpdateRC req = do
+approveAndUpdateRC :: Common.RCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+approveAndUpdateRC req merchantId merchantOpCityId = do
   let imageId = Id req.documentImageId.getId
-  rc <- QRC.findByImageId imageId >>= fromMaybeM (InternalError "RC not found by image id")
-  certificateNumber <- mapM encrypt req.vehicleNumberPlate
-  let udpatedRC =
-        rc
-          { DRC.vehicleVariant = req.vehicleVariant <|> rc.vehicleVariant,
-            DRC.verificationStatus = VALID,
-            DRC.certificateNumber = fromMaybe rc.certificateNumber certificateNumber,
-            DRC.vehicleManufacturer = req.vehicleManufacturer <|> rc.vehicleManufacturer,
-            DRC.vehicleModel = req.vehicleModel <|> rc.vehicleModel,
-            DRC.vehicleModelYear = req.vehicleModelYear <|> rc.vehicleModelYear,
-            DRC.vehicleColor = req.vehicleColor <|> rc.vehicleColor,
-            DRC.vehicleDoors = req.vehicleDoors <|> rc.vehicleDoors,
-            DRC.vehicleSeatBelts = req.vehicleSeatBelts <|> rc.vehicleSeatBelts,
-            DRC.fitnessExpiry = if isJust req.fitnessExpiry then fromJust req.fitnessExpiry else rc.fitnessExpiry,
-            DRC.permitExpiry = req.permitExpiry <|> rc.permitExpiry
-          }
-  QRC.updateByPrimaryKey udpatedRC
-  QImage.updateVerificationStatusByIdAndType VALID imageId DVC.VehicleRegistrationCertificate
+  mbRc <- QRC.findByImageId imageId
+  case mbRc of
+    Just rc -> do
+      certificateNumber <- mapM encrypt req.vehicleNumberPlate
+      -- Check for duplicate vehicle number plate if being changed
+      whenJust certificateNumber $ \encNum -> do
+        mbExistingRC <- QRC.findByCertificateNumberHash (encNum & hash)
+        whenJust mbExistingRC $ \existingRC ->
+          when (existingRC.id /= rc.id) $
+            throwError (InvalidRequest "RC with this vehicle number plate already exists")
+      let udpatedRC =
+            rc
+              { DRC.vehicleVariant = req.vehicleVariant <|> rc.vehicleVariant,
+                DRC.verificationStatus = VALID,
+                DRC.certificateNumber = fromMaybe rc.certificateNumber certificateNumber,
+                DRC.vehicleManufacturer = req.vehicleManufacturer <|> rc.vehicleManufacturer,
+                DRC.vehicleModel = req.vehicleModel <|> rc.vehicleModel,
+                DRC.vehicleModelYear = req.vehicleModelYear <|> rc.vehicleModelYear,
+                DRC.vehicleColor = req.vehicleColor <|> rc.vehicleColor,
+                DRC.vehicleDoors = req.vehicleDoors <|> rc.vehicleDoors,
+                DRC.vehicleSeatBelts = req.vehicleSeatBelts <|> rc.vehicleSeatBelts,
+                DRC.fitnessExpiry = if isJust req.fitnessExpiry then fromJust req.fitnessExpiry else rc.fitnessExpiry,
+                DRC.permitExpiry = req.permitExpiry <|> rc.permitExpiry
+              }
+      QRC.updateByPrimaryKey udpatedRC
+      QImage.updateVerificationStatusByIdAndType VALID imageId DVC.VehicleRegistrationCertificate
+      rcImage <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
+      createReminder
+        DVC.VehicleRegistrationCertificate
+        rcImage.personId
+        merchantId
+        merchantOpCityId
+        (Just $ udpatedRC.id.getId)
+        (Just udpatedRC.fitnessExpiry)
+        Nothing
+    Nothing -> do
+      transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      case transporterConfig.createDocumentRequired of
+        Just True -> do
+          vehicleNumberPlate <- req.vehicleNumberPlate & fromMaybeM (InvalidRequest "vehicleNumberPlate is required for creating RC document")
+          fitnessExpiry <- req.fitnessExpiry & fromMaybeM (InvalidRequest "fitnessExpiry is required for creating RC document")
+          rcImage <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
+          encryptedRC <- encrypt vehicleNumberPlate
+          -- Check if RC already exists for this number plate
+          mbExistingRC <- QRC.findByCertificateNumberHash (encryptedRC & hash)
+          whenJust mbExistingRC $ \_ ->
+            throwError (InvalidRequest "RC with this vehicle number plate already exists")
+          now <- getCurrentTime
+          rcId <- generateGUID
+          let newRC =
+                DRC.VehicleRegistrationCertificate
+                  { DRC.id = rcId,
+                    DRC.documentImageId = imageId,
+                    DRC.certificateNumber = encryptedRC,
+                    DRC.fitnessExpiry = fitnessExpiry,
+                    DRC.permitExpiry = req.permitExpiry,
+                    DRC.pucExpiry = Nothing,
+                    DRC.vehicleClass = Nothing,
+                    DRC.vehicleVariant = req.vehicleVariant,
+                    DRC.vehicleManufacturer = req.vehicleManufacturer,
+                    DRC.vehicleCapacity = Nothing,
+                    DRC.vehicleModel = req.vehicleModel,
+                    DRC.vehicleColor = req.vehicleColor,
+                    DRC.vehicleDoors = req.vehicleDoors,
+                    DRC.vehicleSeatBelts = req.vehicleSeatBelts,
+                    DRC.manufacturerModel = Nothing,
+                    DRC.vehicleEnergyType = Nothing,
+                    DRC.reviewedAt = Nothing,
+                    DRC.reviewRequired = Nothing,
+                    DRC.insuranceValidity = Nothing,
+                    DRC.mYManufacturing = Nothing,
+                    DRC.verificationStatus = VALID,
+                    DRC.fleetOwnerId = Nothing,
+                    DRC.userPassedVehicleCategory = Nothing,
+                    DRC.airConditioned = Nothing,
+                    DRC.oxygen = Nothing,
+                    DRC.ventilator = Nothing,
+                    DRC.luggageCapacity = Nothing,
+                    DRC.vehicleRating = Nothing,
+                    DRC.failedRules = [],
+                    DRC.dateOfRegistration = Nothing,
+                    DRC.vehicleModelYear = req.vehicleModelYear,
+                    DRC.rejectReason = Nothing,
+                    DRC.unencryptedCertificateNumber = Just vehicleNumberPlate,
+                    DRC.approved = Just True,
+                    DRC.vehicleImageId = Nothing,
+                    DRC.merchantId = Just merchantId,
+                    DRC.merchantOperatingCityId = Just merchantOpCityId,
+                    DRC.createdAt = now,
+                    DRC.updatedAt = now
+                  }
+          QRC.create newRC
+          QImage.updateVerificationStatusByIdAndType VALID imageId DVC.VehicleRegistrationCertificate
+          createReminder
+            DVC.VehicleRegistrationCertificate
+            rcImage.personId
+            merchantId
+            merchantOpCityId
+            (Just $ rcId.getId)
+            (Just fitnessExpiry)
+            Nothing
+        _ -> throwError (InternalError "RC not found by image id")
 
 approveAndUpdateInsurance :: Common.VInsuranceApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId = do
@@ -1046,28 +1134,87 @@ approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOp
 approveAndUpdateDL :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Common.DLApproveDetails -> Flow ()
 approveAndUpdateDL merchantId merchantOpCityId req = do
   let imageId = Id req.documentImageId.getId
-  dl <- QDL.findByImageId imageId >>= fromMaybeM (InternalError "DL not found by image id")
-  licenseNumber <- mapM encrypt req.driverLicenseNumber
-  let updatedDL =
-        dl
-          { DDL.licenseNumber = fromMaybe dl.licenseNumber licenseNumber,
-            DDL.driverDob = req.driverDateOfBirth <|> dl.driverDob,
-            DDL.licenseExpiry = fromMaybe dl.licenseExpiry req.dateOfExpiry,
-            DDL.verificationStatus = VALID
-          }
-  QDL.updateByPrimaryKey updatedDL
-  void $ uncurry (liftA2 (,)) $ TE.both (maybe (return ()) (flip (QImage.updateVerificationStatusByIdAndType VALID) DVC.DriverLicense)) (Just dl.documentImageId1, dl.documentImageId2)
-  -- Create reminders for DL when it's updated
-  createReminder
-    DVC.DriverLicense
-    updatedDL.driverId
-    merchantId
-    merchantOpCityId
-    (Just $ updatedDL.id.getId)
-    (Just updatedDL.licenseExpiry)
-    Nothing
-  fork "call status Handler" $
-    void $ DStatus.statusHandler (dl.driverId, merchantId, merchantOpCityId) (Just True) Nothing Nothing (Just False) Nothing Nothing
+  mbDl <- QDL.findByImageId imageId
+  case mbDl of
+    Just dl -> do
+      licenseNumber <- mapM encrypt req.driverLicenseNumber
+      -- Check for duplicate DL number if being changed
+      whenJust req.driverLicenseNumber $ \dlNum -> do
+        mbExistingDL <- QDL.findByDLNumber dlNum
+        whenJust mbExistingDL $ \existingDL ->
+          when (existingDL.driverId /= dl.driverId) $
+            throwError DLAlreadyLinked
+      let updatedDL =
+            dl
+              { DDL.licenseNumber = fromMaybe dl.licenseNumber licenseNumber,
+                DDL.driverDob = req.driverDateOfBirth <|> dl.driverDob,
+                DDL.licenseExpiry = fromMaybe dl.licenseExpiry req.dateOfExpiry,
+                DDL.verificationStatus = VALID
+              }
+      QDL.updateByPrimaryKey updatedDL
+      void $ uncurry (liftA2 (,)) $ TE.both (maybe (return ()) (flip (QImage.updateVerificationStatusByIdAndType VALID) DVC.DriverLicense)) (Just dl.documentImageId1, dl.documentImageId2)
+      -- Create reminders for DL when it's updated
+      createReminder
+        DVC.DriverLicense
+        updatedDL.driverId
+        merchantId
+        merchantOpCityId
+        (Just $ updatedDL.id.getId)
+        (Just updatedDL.licenseExpiry)
+        Nothing
+    Nothing -> do
+      transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      case transporterConfig.createDocumentRequired of
+        Just True -> do
+          dlNumber <- req.driverLicenseNumber & fromMaybeM (InvalidRequest "driverLicenseNumber is required for creating DL document")
+          dlExpiry <- req.dateOfExpiry & fromMaybeM (InvalidRequest "dateOfExpiry is required for creating DL document")
+          dlImage <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
+          let driverId = dlImage.personId
+          -- Check if DL number is already linked to another driver
+          encryptedDLNumber <- encrypt dlNumber
+          mbExistingDL <- QDL.findByDLNumber dlNumber
+          whenJust mbExistingDL $ \existingDL ->
+            when (existingDL.driverId /= driverId) $
+              throwError DLAlreadyLinked
+          -- Check if driver already has a DL
+          mbDriverDL <- QDL.findByDriverId driverId
+          whenJust mbDriverDL $ \_ ->
+            throwError DriverAlreadyLinked
+          now <- getCurrentTime
+          dlId <- generateGUID
+          let newDL =
+                DDL.DriverLicense
+                  { DDL.id = dlId,
+                    DDL.driverId = driverId,
+                    DDL.documentImageId1 = imageId,
+                    DDL.documentImageId2 = Nothing,
+                    DDL.licenseNumber = encryptedDLNumber,
+                    DDL.licenseExpiry = dlExpiry,
+                    DDL.driverDob = req.driverDateOfBirth,
+                    DDL.driverName = Nothing,
+                    DDL.classOfVehicles = [],
+                    DDL.verificationStatus = VALID,
+                    DDL.failedRules = [],
+                    DDL.dateOfIssue = Nothing,
+                    DDL.rejectReason = Nothing,
+                    DDL.vehicleCategory = Nothing,
+                    DDL.consent = True,
+                    DDL.consentTimestamp = now,
+                    DDL.merchantId = Just merchantId,
+                    DDL.createdAt = now,
+                    DDL.updatedAt = now
+                  }
+          QDL.create newDL
+          QImage.updateVerificationStatusByIdAndType VALID imageId DVC.DriverLicense
+          createReminder
+            DVC.DriverLicense
+            driverId
+            merchantId
+            merchantOpCityId
+            (Just $ dlId.getId)
+            (Just dlExpiry)
+            Nothing
+        _ -> throwError (InternalError "DL not found by image id")
 
 approveAndUpdateNOC :: Common.NOCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateNOC req@Common.NOCApproveDetails {..} mId mOpCityId = do
@@ -1160,6 +1307,16 @@ approveAndUpdateBusinessLicense req mId mOpCityId = do
 approveAndUpdatePan :: Common.PanApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdatePan req mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
+  panImage <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
+  let driverId = panImage.personId
+  transporterConfig <- CCT.findByMerchantOpCityId mOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
+  case transporterConfig.allowDuplicatePan of
+    Just False -> do
+      panHash <- getDbHash req.panNumber
+      panInfoList <- QPan.findAllByEncryptedPanNumber panHash
+      let otherDriverIds = filter (/= driverId) (map (.driverId) panInfoList)
+      unless (Kernel.Prelude.null otherDriverIds) $ throwError PanAlreadyLinked
+    _ -> pure ()
   QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) DVC.PanCard
   mbPan <- QPan.findByImageId imageId
   now <- getCurrentTime
@@ -1176,13 +1333,12 @@ approveAndUpdatePan req mId mOpCityId = do
                }
       QPan.updateByPrimaryKey updatedPan
     Nothing -> do
-      panImage <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
-      person <- QPerson.findById panImage.personId >>= fromMaybeM (PersonNotFound panImage.personId.getId)
+      person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       let pan =
             DPan.DriverPanCard
               { panCardNumber = panNoEnc,
                 documentImageId1 = imageId,
-                driverId = panImage.personId,
+                driverId = driverId,
                 id = uuid,
                 verificationStatus = VALID,
                 merchantId = Just mId,
@@ -1201,6 +1357,60 @@ approveAndUpdatePan req mId mOpCityId = do
                 panAadhaarLinkage = Nothing
               }
       QPan.create pan
+
+approveAndUpdateAadhaar :: Common.AadhaarApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+approveAndUpdateAadhaar req mId mOpCityId = do
+  let imageId = Id req.documentImageId.getId
+  aadhaarImage <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
+  let driverId = aadhaarImage.personId
+  transporterConfig <- CCT.findByMerchantOpCityId mOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
+  aadhaarHash <- getDbHash req.aadhaarNumber
+  case transporterConfig.allowDuplicateAadhaar of
+    Just False -> do
+      aadhaarInfoList <- QAadhaarCard.findAllByEncryptedAadhaarNumber (Just aadhaarHash)
+      let otherDriverIds = filter (/= driverId) (map (.driverId) aadhaarInfoList)
+      unless (Kernel.Prelude.null otherDriverIds) $ throwError AadhaarAlreadyLinked
+    _ -> pure ()
+  QImage.updateVerificationStatusByIdAndType VALID imageId DVC.AadhaarCard
+  mbAadhaar <- QAadhaarCard.findByPrimaryKey driverId
+  now <- getCurrentTime
+  let maskedNumber = T.replicate (T.length req.aadhaarNumber - 4) "X" <> T.takeEnd 4 req.aadhaarNumber
+  case mbAadhaar of
+    Just aadhaar -> do
+      let updatedAadhaar =
+            aadhaar
+              { DAadhaar.aadhaarNumberHash = Just aadhaarHash,
+                DAadhaar.maskedAadhaarNumber = Just maskedNumber,
+                DAadhaar.nameOnCard = req.nameOnCard <|> aadhaar.nameOnCard,
+                DAadhaar.dateOfBirth = req.dateOfBirth <|> aadhaar.dateOfBirth,
+                DAadhaar.address = req.address <|> aadhaar.address,
+                DAadhaar.verificationStatus = VALID,
+                DAadhaar.updatedAt = now
+              }
+      QAadhaarCard.updateByPrimaryKey updatedAadhaar
+    Nothing -> do
+      let aadhaarCard =
+            DAadhaar.AadhaarCard
+              { DAadhaar.driverId = driverId,
+                DAadhaar.aadhaarNumberHash = Just aadhaarHash,
+                DAadhaar.maskedAadhaarNumber = Just maskedNumber,
+                DAadhaar.nameOnCard = req.nameOnCard,
+                DAadhaar.dateOfBirth = req.dateOfBirth,
+                DAadhaar.address = req.address,
+                DAadhaar.verificationStatus = VALID,
+                DAadhaar.consent = True,
+                DAadhaar.consentTimestamp = now,
+                DAadhaar.aadhaarFrontImageId = Just imageId,
+                DAadhaar.aadhaarBackImageId = Nothing,
+                DAadhaar.driverGender = Nothing,
+                DAadhaar.driverImage = Nothing,
+                DAadhaar.driverImagePath = Nothing,
+                DAadhaar.merchantId = mId,
+                DAadhaar.merchantOperatingCityId = mOpCityId,
+                DAadhaar.createdAt = now,
+                DAadhaar.updatedAt = now
+              }
+      QAadhaarCard.create aadhaarCard
 
 approveAndUpdateCommonDocument :: Common.CommonDocumentApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateCommonDocument req _mId _mOpCityId = do
@@ -1233,11 +1443,84 @@ castReqTypeToDomain = \case
   Common.INDIVIDUAL -> DPan.INDIVIDUAL
   Common.BUSINESS -> DPan.BUSINESS
 
+handleMandatoryDocRejection :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DP.Person -> DVC.DocumentType -> Id DImage.Image -> Flow ()
+handleMandatoryDocRejection _merchantId merchantOperatingCityId driverId docType imageId = do
+  docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentType merchantOperatingCityId docType Nothing
+  let isMandatory = Kernel.Prelude.any (\cfg -> fromMaybe cfg.isMandatory cfg.isMandatoryForEnabling) docConfigs
+  when isMandatory $ do
+    transporterConfig <- CCT.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+    let isVehicleDoc = docType `elem` SDO.defaultVehicleDocumentTypes
+        separateEnablement = transporterConfig.separateDriverVehicleEnablement == Just True
+    if isVehicleDoc
+      then do
+        -- Resolve the specific RC tied to the rejected document
+        mbRcId <- resolveRcIdFromDocument docType imageId
+        whenJust mbRcId $ \rcId -> do
+          mbAssoc <- QRCAssoc.findActiveAssociationByRC rcId True
+          whenJust mbAssoc $ \assoc -> when (assoc.driverId == driverId) $ do
+            QRCAssoc.deactivateRCForDriver False driverId rcId
+            QVehicle.deleteByDriverid driverId
+            -- If not separate enablement, also disable the driver
+            unless separateEnablement $
+              QDriverInfo.updateEnabledVerifiedState (cast driverId) False (Just False)
+      else
+        -- Driver doc rejected: disable the driver
+        QDriverInfo.updateEnabledVerifiedState (cast driverId) False (Just False)
+
+resolveRcIdFromDocument :: DVC.DocumentType -> Id DImage.Image -> Flow (Maybe (Id DRC.VehicleRegistrationCertificate))
+resolveRcIdFromDocument docType imageId = case docType of
+  DVC.VehicleRegistrationCertificate -> do
+    mbRc <- QRC.findByImageId imageId
+    pure $ (.id) <$> mbRc
+  DVC.VehiclePermit -> do
+    mbPermit <- QVPermit.findByImageId imageId
+    pure $ (.rcId) <$> mbPermit
+  DVC.VehicleFitnessCertificate -> do
+    mbFc <- QFC.findByImageId imageId
+    pure $ (.rcId) <$> mbFc
+  DVC.VehicleInsurance -> do
+    mbInsurance <- QVI.findByImageId imageId
+    pure $ (.rcId) <$> mbInsurance
+  DVC.VehiclePUC -> do
+    mbPuc <- QVPUC.findByImageId imageId
+    pure $ (.rcId) <$> mbPuc
+  DVC.VehicleNOC -> do
+    mbNoc <- QVNOC.findByImageId imageId
+    pure $ (.rcId) <$> mbNoc
+  _ -> pure Nothing
+
+getImageIdFromApproveDetails :: Common.ApproveDetails -> Maybe (Id Common.Image)
+getImageIdFromApproveDetails = \case
+  Common.DL req -> Just req.documentImageId
+  Common.RC req -> Just req.documentImageId
+  Common.VehicleInsurance req -> Just req.documentImageId
+  Common.VehiclePUC req -> Just req.documentImageId
+  Common.VehiclePermit req -> Just req.documentImageId
+  Common.VehicleFitnessCertificate req -> Just req.documentImageId
+  Common.VehicleInspectionForm req -> Just req.documentImageId
+  Common.Pan req -> Just req.documentImageId
+  Common.NOC req -> Just req.documentImageId
+  Common.BusinessLicenseImg req -> Just req.documentImageId
+  Common.Aadhaar req -> Just req.documentImageId
+  Common.UploadProfile imgId -> Just imgId
+  Common.ProfilePhoto imgId -> Just imgId
+  Common.VehicleFrontImg imgId -> Just imgId
+  Common.VehicleBackImg imgId -> Just imgId
+  Common.VehicleRightImg imgId -> Just imgId
+  Common.VehicleLeftImg imgId -> Just imgId
+  Common.VehicleFrontInteriorImg imgId -> Just imgId
+  Common.VehicleBackInteriorImg imgId -> Just imgId
+  Common.OdometerImg imgId -> Just imgId
+  Common.LocalResidenceProofImg imgId -> Just imgId
+  Common.PoliceVerificationCertificateImg imgId -> Just imgId
+  Common.SSNApprove _ -> Nothing
+  Common.CommonDocument _ -> Nothing
+
 handleApproveRequest :: Common.ApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 handleApproveRequest approveReq merchantId merchantOperatingCityId = do
   case approveReq of
     Common.DL dlReq -> approveAndUpdateDL merchantId merchantOperatingCityId dlReq
-    Common.RC rcApproveReq -> approveAndUpdateRC rcApproveReq
+    Common.RC rcApproveReq -> approveAndUpdateRC rcApproveReq merchantId merchantOperatingCityId
     Common.VehicleInsurance vInsuranceReq -> approveAndUpdateInsurance vInsuranceReq merchantId merchantOperatingCityId
     Common.VehiclePUC pucReq -> approveAndUpdatePUC pucReq merchantId merchantOperatingCityId
     Common.VehiclePermit permitReq -> approveAndUpdatePermit permitReq merchantId merchantOperatingCityId
@@ -1254,9 +1537,19 @@ handleApproveRequest approveReq merchantId merchantOperatingCityId = do
     Common.BusinessLicenseImg req -> approveAndUpdateBusinessLicense req merchantId merchantOperatingCityId
     Common.Pan req -> approveAndUpdatePan req merchantId merchantOperatingCityId
     Common.CommonDocument req -> approveAndUpdateCommonDocument req merchantId merchantOperatingCityId
+    Common.Aadhaar req -> approveAndUpdateAadhaar req merchantId merchantOperatingCityId
+    Common.VehicleFrontImg imageId -> QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) DVC.VehicleFront
+    Common.VehicleBackImg imageId -> QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) DVC.VehicleBack
+    Common.VehicleRightImg imageId -> QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) DVC.VehicleRight
+    Common.VehicleLeftImg imageId -> QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) DVC.VehicleLeft
+    Common.VehicleFrontInteriorImg imageId -> QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) DVC.VehicleFrontInterior
+    Common.VehicleBackInteriorImg imageId -> QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) DVC.VehicleBackInterior
+    Common.OdometerImg imageId -> QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) DVC.Odometer
+    Common.LocalResidenceProofImg imageId -> QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) DVC.LocalResidenceProof
+    Common.PoliceVerificationCertificateImg imageId -> QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) DVC.PoliceVerificationCertificate
 
 handleRejectRequest :: Common.RejectDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-handleRejectRequest rejectReq _ merchantOperatingCityId = do
+handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
   case rejectReq of
     Common.SSNReject ssnRejectReq -> rejectSSNAndSendNotification ssnRejectReq merchantOperatingCityId
     Common.ImageDocuments imageRejectReq -> do
@@ -1296,11 +1589,25 @@ handleRejectRequest rejectReq _ merchantOperatingCityId = do
         DVC.PanCard -> do
           QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
           QPan.updateVerificationStatusByImageId INVALID imageId
+        DVC.AadhaarCard -> do
+          QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+          QAadhaarCard.updateVerificationStatus INVALID image.personId
+        DVC.VehicleFront -> QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+        DVC.VehicleBack -> QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+        DVC.VehicleRight -> QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+        DVC.VehicleLeft -> QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+        DVC.VehicleFrontInterior -> QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+        DVC.VehicleBackInterior -> QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+        DVC.Odometer -> QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+        DVC.LocalResidenceProof -> QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+        DVC.PoliceVerificationCertificate -> QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
         _ -> throwError (InternalError "Unknown Config in reject update document")
       driver <- QDriver.findById image.personId >>= fromMaybeM (PersonNotFound image.personId.getId)
       let docType = show image.imageType
           reason = imageRejectReq.reason
       sendDocumentRejectionNotification merchantOperatingCityId docType reason driver
+      -- If a mandatory document was rejected, disable driver / deactivate RC
+      handleMandatoryDocRejection merchantId merchantOperatingCityId image.personId image.imageType imageId
     Common.CommonDocumentReject commonRejectReq -> do
       let documentId = Id commonRejectReq.documentId.getId
       document <- QCommonDriverOnboardingDocuments.findById documentId >>= fromMaybeM (DocumentNotFound documentId.getId)
@@ -1414,7 +1721,13 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
   case _req of
-    Common.Approve approveReq -> handleApproveRequest approveReq merchant.id merchantOpCityId
+    Common.Approve approveReq -> do
+      handleApproveRequest approveReq merchant.id merchantOpCityId
+      whenJust (getImageIdFromApproveDetails approveReq) $ \imgId -> do
+        mbImage <- QImage.findById (Id imgId.getId)
+        whenJust mbImage $ \image ->
+          fork "call status Handler after document approval" $
+            void $ DStatus.statusHandler (image.personId, merchant.id, merchantOpCityId) (Just True) Nothing Nothing (Just False) Nothing Nothing
     Common.Reject rejectReq -> handleRejectRequest rejectReq merchant.id merchantOpCityId
   pure Success
 
