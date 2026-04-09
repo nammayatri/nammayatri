@@ -88,5 +88,5 @@ checkPickupZoneArrival Job {id = jobId, jobInfo} = withLogTag ("JobId-" <> jobId
                           validTill = request.validTill,
                           requestType = "PICKUP_ZONE_NO_SHOW"
                         }
-                Notify.notifyPickupZoneRequest merchantOpCityId driverId entityData
+                Notify.notifyPickupNoShow merchantOpCityId driverId entityData
                 return Complete
