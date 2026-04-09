@@ -125,6 +125,7 @@ Person:
     comments: "Maybe [Text]"
     paymentMode: Maybe PaymentMode
     operatorBadgeToken: Maybe Text
+    clientId: Maybe Text
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
@@ -396,6 +397,11 @@ Person:
     updateLastUsedVehicleCategories:
       kvFunction: updateWithKV
       params: [lastUsedVehicleCategories]
+      where: id
+
+    updateClientId:
+      kvFunction: updateOneWithKV
+      params: [clientId]
       where: id
 
     updatePersonPassword:

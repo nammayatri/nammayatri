@@ -40,6 +40,7 @@ data PersonT f = PersonT
     clientModelName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientOsType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.DeviceType),
     clientOsVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientReactNativeVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cloudType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.CloudType),
