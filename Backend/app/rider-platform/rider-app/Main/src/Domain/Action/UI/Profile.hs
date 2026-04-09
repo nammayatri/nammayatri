@@ -312,9 +312,11 @@ getPersonDetails ::
   Maybe Version ->
   Maybe Version ->
   Maybe Text ->
+  Maybe Text ->
   m ProfileRes
-getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice = do
+getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice mbClientId = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  when (isNothing person.clientId && isJust mbClientId) $ QPerson.updateClientId mbClientId personId
   decPerson <- decrypt person
   personStats <- QPersonStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
@@ -434,8 +436,8 @@ marketingEvents req = do
   triggerMarketingParamEventPreLogin marketingParams
   pure APISuccess.Success
 
-updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, EventStreamFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]) => Id Person.Person -> Id Merchant.Merchant -> UpdateProfileReq -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m APISuccess.APISuccess
-updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
+updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, EventStreamFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]) => Id Person.Person -> Id Merchant.Merchant -> UpdateProfileReq -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> m APISuccess.APISuccess
+updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbClientId = do
   mPerson <- join <$> QPerson.findByEmailAndMerchantId merchantId `mapM` req.email
   whenJust mPerson (\person -> when (person.id /= personId) $ throwError PersonEmailExists)
   mbEncEmail <- encrypt `mapM` req.email
@@ -443,6 +445,7 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
   deploymentVersion <- asks (.version)
   cloudType <- asks (.cloudType)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  when (isNothing person.clientId && isJust mbClientId) $ QPerson.updateClientId mbClientId personId
   fork "Triggering kafka marketing params event for person" $
     case req.marketingParams of
       Just params -> do

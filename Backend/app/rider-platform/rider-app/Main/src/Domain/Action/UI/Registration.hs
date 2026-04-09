@@ -841,7 +841,8 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         businessEmail = encBusinessEmail,
         paymentMode = Nothing,
         cloudType = mbCloudType,
-        operatorBadgeToken = mbOperatorBadgeToken
+        operatorBadgeToken = mbOperatorBadgeToken,
+        clientId = Nothing
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
@@ -920,8 +921,9 @@ verify ::
   ) =>
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
+  Maybe Text ->
   m AuthVerifyRes
-verify tokenId req = do
+verify tokenId req mbClientId = do
   runRequestValidation validateAuthVerifyReq req
   regToken@SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
   checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
@@ -929,6 +931,7 @@ verify tokenId req = do
   checkForExpiry authExpiry updatedAt
   unless (authValueHash == req.otp) $ throwError InvalidAuthData
   person <- checkPersonExists entityId
+  when (isNothing person.clientId && isJust mbClientId) $ Person.updateClientId mbClientId person.id
   let merchantOperatingCityId = person.merchantOperatingCityId
   let deviceToken = Just req.deviceToken
   personWithSameDeviceToken <- listToMaybe <$> runInReplica (Person.findBlockedByDeviceToken deviceToken)

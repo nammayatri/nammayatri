@@ -33,7 +33,7 @@ postRegistrationVerify ::
   Kernel.Types.Id.Id Domain.Types.RegistrationToken.RegistrationToken ->
   Domain.Action.UI.Registration.AuthVerifyReq ->
   Environment.Flow Domain.Action.UI.Registration.AuthVerifyRes
-postRegistrationVerify _merchantShortId _opCity tokenId req = Domain.Action.UI.Registration.verify tokenId req
+postRegistrationVerify _merchantShortId _opCity tokenId req = Domain.Action.UI.Registration.verify tokenId req Nothing
 
 postRegistrationOtpResend ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
