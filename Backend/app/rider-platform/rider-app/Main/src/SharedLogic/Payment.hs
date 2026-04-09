@@ -771,7 +771,9 @@ chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType p
   let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId paymentMode
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId paymentMode
       commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
-  charged <- DPayment.chargePaymentIntentService commonMerchantOperatingCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall offerStatsInput
+      applyOfferCall = TPayment.offerApply merchantId merchantOpCityId Nothing paymentServiceType Nothing Nothing
+  useDomainOffers <- TPayment.useDomainOffers merchantId merchantOpCityId Nothing paymentServiceType
+  charged <- DPayment.chargePaymentIntentService commonMerchantOperatingCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall offerStatsInput useDomainOffers applyOfferCall
   -- Find all unsettled ledger entries (PENDING or DUE) for this ride
   unsettledEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries rideId.getId
   unless (null unsettledEntries) $ do
@@ -887,7 +889,9 @@ makeCxCancellationPayment merchantId merchantOpCityId paymentMode paymentService
   let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId paymentMode
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId paymentMode
       commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
-  DPayment.updateForCXCancelPaymentIntentService commonMerchantOperatingCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancellationAmount offerStatsInput
+      applyOfferCall = TPayment.offerApply merchantId merchantOpCityId Nothing paymentServiceType Nothing Nothing
+  useDomainOffers <- TPayment.useDomainOffers merchantId merchantOpCityId Nothing paymentServiceType
+  DPayment.updateForCXCancelPaymentIntentService commonMerchantOperatingCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancellationAmount offerStatsInput useDomainOffers applyOfferCall
 
 validatePaymentInstrument :: (MonadThrow m, Log m) => Merchant.Merchant -> Maybe DMPM.PaymentInstrument -> Maybe Payment.PaymentMethodId -> m ()
 validatePaymentInstrument merchant mbPaymentInstrument mbPaymentMethodId = do
@@ -978,7 +982,7 @@ capturePendingPaymentIfExists person merchantOperatingCityId = do
               let paymentIntentId = order.paymentServiceOrderId
               -- chargePaymentIntent will mark entries as DUE on failure, SETTLED on success
               offerStatsInput <- buildOfferStatsInput person
-              paymentCharged <- chargePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode DOrder.OnlineRideHailing paymentIntentId ride.id RidePaymentFinance.settledReasonRidePayment booking.riderId offerStatsInput
+              paymentCharged <- chargePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode DOrder.RideHailing paymentIntentId ride.id RidePaymentFinance.settledReasonRidePayment booking.riderId offerStatsInput
               if paymentCharged
                 then do
                   logInfo $ "Successfully captured payment for ride " <> ride.id.getId
@@ -990,7 +994,7 @@ capturePendingPaymentIfExists person merchantOperatingCityId = do
                   throwError $ InvalidRequest "You have pending dues from a previous ride. Please clear your dues before booking a new ride."
 
 zeroEffectivePaymentDueToOffer ::
-  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, FinanceBeamFlow.BeamFlow m r) =>
+  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, FinanceBeamFlow.BeamFlow m r, HasKafkaProducer r) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Id Ride.Ride ->
@@ -1014,9 +1018,12 @@ zeroEffectivePaymentDueToOffer merchantId merchantOperatingCityId rideId person 
       case result of
         Right _ -> logInfo $ "Created SETTLED ledger for fully discounted ride: " <> rideId.getId
         Left err -> logError $ "Failed to create fully discounted ledger: " <> show err
+      useDomainOffers <- TPayment.useDomainOffers merchantId merchantOperatingCityId Nothing DOrder.RideHailing
+      let applyOfferCall = TPayment.offerApply merchantId merchantOperatingCityId Nothing DOrder.RideHailing Nothing person.clientSdkVersion
       offerStatsInput <- buildOfferStatsInput person
       let discountAmount = li.offerDiscountAmount
       void $
-        withTryCatch "applyOfferWithoutPayment:zeroEffective" $
-          DPayment.applyOfferWithoutPaymentService rideId.getId offerId offerStatsInput (Just discountAmount) Nothing currency merchantId.getId merchantOperatingCityId.getId
+        withTryCatch "applyOfferWithoutPayment:zeroEffective" $ do
+          let fareAmount = li.rideFare + li.gstAmount + li.platformFee + li.offerDiscountAmount
+          DPayment.applyOfferWithoutPaymentService rideId.getId offerId offerStatsInput (Just discountAmount) Nothing fareAmount currency merchantId.getId merchantOperatingCityId.getId useDomainOffers applyOfferCall
   QRide.markPaymentStatus Ride.Completed rideId

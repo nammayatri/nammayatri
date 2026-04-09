@@ -45,7 +45,6 @@ import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.OfferEntity as DOfferEntity
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
@@ -139,6 +138,7 @@ import Tools.Event
 import Tools.Maps (LatLong (..))
 import Tools.Metrics (HasBAPMetrics, incrementRideCreatedRequestCount)
 import qualified Tools.Notifications as Notify
+import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as TP
 import qualified Tools.SMS as Sms
 import qualified Tools.Whatsapp as Whatsapp
@@ -521,7 +521,7 @@ rideAssignedReqHandler req = do
           mbPaymentResp <-
             handle (\e -> SPayment.paymentErrorHandler booking e >> throwError (InvalidRequest "Payment failed, booking cancelled")) $
               withShortRetry $
-                SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode booking.riderId (Just ride.id) mbExistingOrderId DOrder.OnlineRideHailing createPaymentIntentServiceReq ledgerInfo
+                SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode booking.riderId (Just ride.id) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq ledgerInfo
           -- Check if PI is in a capturable state — only STARTED (requires_capture) and CHARGED (already captured) are valid
           whenJust mbPaymentResp $ \paymentResp -> do
             mbOrder <- QPaymentOrder.findById paymentResp.orderId
@@ -759,11 +759,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   mbRideOfferEntity <-
     case booking.selectedOfferId of
       Just offerId -> do
-        let paymentServiceType =
-              if maybe False (.onlinePayment) mbMerchant && booking.paymentInstrument `notElem` [Just DMPM.Cash, Just DMPM.BoothOnline]
-                then DOrder.OnlineRideHailing
-                else DOrder.RideHailing
-        mbOfferDetails <- SOffer.getSelectedOfferDetails booking.merchantId person.id booking.merchantOperatingCityId paymentServiceType totalFare offerId (Just $ show booking.vehicleServiceTierType)
+        mbOfferDetails <- SOffer.getSelectedOfferDetailsWithBasket booking.merchantId person.id booking.merchantOperatingCityId DOrder.RideHailing (show booking.vehicleServiceTierType) totalFare offerId
         case mbOfferDetails of
           Just (offerDetails, computed) -> do
             rideOfferId <- generateGUID
@@ -840,10 +836,12 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   if not onlinePayment
     then do
       whenJust booking.selectedOfferId $ \offerId -> do
+        useDomainOffers <- TPayment.useDomainOffers booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing
+        let applyOfferCall = TPayment.offerApply booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing Nothing person.clientSdkVersion
         offerStatsInput <- SPayment.buildOfferStatsInput person
         void $
           withTryCatch "applyOfferWithoutPayment:cashRide" $
-            DPayment.applyOfferWithoutPaymentService ride.id.getId offerId offerStatsInput (Just rideDiscountAmount) (Just ridePayoutAmount) totalFare.currency person.merchantId.getId person.merchantOperatingCityId.getId
+            DPayment.applyOfferWithoutPaymentService ride.id.getId offerId offerStatsInput (Just rideDiscountAmount) (Just ridePayoutAmount) totalFare.amount totalFare.currency person.merchantId.getId person.merchantOperatingCityId.getId useDomainOffers applyOfferCall
     else do
       let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency person.id.getId ride.id.getId Nothing Nothing
           ledgerInfo =
@@ -876,7 +874,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
               }
       -- Lookup existing order for retry handling via Redis ledger entry IDs
       mbExistingOrderId <- SPayment.getOrderIdForRide ride.id
-      eitherResp <- withTryCatch "makePaymentIntent:rideCompleted" $ withShortRetry (SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just ride.id) mbExistingOrderId DOrder.OnlineRideHailing createPaymentIntentServiceReq ledgerInfo)
+      eitherResp <- withTryCatch "makePaymentIntent:rideCompleted" $ withShortRetry (SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just ride.id) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq ledgerInfo)
       case eitherResp of
         Left err -> do
           logError $ "makePaymentIntent failed, scheduling job so that it can mark this as Dues: " <> show err

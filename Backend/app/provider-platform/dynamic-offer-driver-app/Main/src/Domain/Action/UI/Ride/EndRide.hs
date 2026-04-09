@@ -554,7 +554,9 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
               CallBAPInternal.getOfferDiscount appBackendBapInternal.internalKey appBackendBapInternal.url booking.id.getId finalFare
           case result of
             Right resp -> pure resp.discountAmount
-            Left _ -> pure Nothing
+            Left err -> do
+              logError $ "Error getting offer discount, falling back to booking discount amount: " <> show err
+              pure booking.discountAmount
         else pure Nothing
     let baseFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
     -- Airport/parking charge is already in fareParams and finalFare from estimate/quote.

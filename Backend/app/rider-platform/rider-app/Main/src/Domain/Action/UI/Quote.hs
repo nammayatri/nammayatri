@@ -32,6 +32,7 @@ import qualified Beckn.ACL.Cancel as CancelACL
 import qualified BecknV2.FRFS.Enums as FRFSEnums
 import Data.Char (toLower)
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as Map
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Estimate as UEstimate
@@ -81,7 +82,6 @@ import qualified SharedLogic.Offer as SOffer
 import SharedLogic.Quote
 import qualified SharedLogic.Search as SLS
 import qualified Storage.CachedQueries.BppDetails as CQBPP
-import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
@@ -196,8 +196,7 @@ getQuotes searchRequestId mbAllowMultiple = do
   let lockKey = estimateBuildLockKey searchRequestId.getId
   Redis.withLockRedisAndReturnValue lockKey 5 $ do
     offers <- getOffers searchRequest
-    merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
-    estimates' <- getEstimates searchRequest.merchantId person.id searchRequest.merchantOperatingCityId searchRequestId (isJust searchRequest.driverIdentifier) merchant.onlinePayment
+    estimates' <- getEstimates searchRequest.merchantId person.id searchRequest.merchantOperatingCityId searchRequestId (isJust searchRequest.driverIdentifier)
     riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
 
     let vehicleServiceTierOrderConfig = maybe [] (.userServiceTierOrderConfig) riderConfig
@@ -294,18 +293,24 @@ getOffers searchRequest = do
     creationTime (PublicTransport PublicTransportQuote {createdAt}) = createdAt
     creationTime (OnMeterRide QuoteAPIEntity {createdAt}) = createdAt
 
-getEstimates :: Id DM.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> Id SSR.SearchRequest -> Bool -> Bool -> Flow [UEstimate.EstimateAPIEntity]
-getEstimates merchantId personId mocId searchRequestId isReferredRide onlinePayment = do
+getEstimates :: Id DM.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> Id SSR.SearchRequest -> Bool -> Flow [UEstimate.EstimateAPIEntity]
+getEstimates merchantId personId mocId searchRequestId isReferredRide = do
   estimateList <- runInReplica $ QEstimate.findAllBySRId searchRequestId
-  let paymentServiceType = if onlinePayment then DOrder.OnlineRideHailing else DOrder.RideHailing
-  estimates <- forM (sortByEstimatedFare estimateList) $ \estimate -> do
-    mbOffer <-
-      withTryCatch
-        "getEstimates:offerListCache"
-        (SOffer.offerListCache merchantId personId mocId paymentServiceType estimate.estimatedFare (Just $ show estimate.vehicleServiceTierType))
-        >>= \case
-          Left _ -> pure Nothing
-          Right resp -> SOffer.mkCumulativeOfferResp mocId resp []
+  let sortedEstimates = sortByEstimatedFare estimateList
+      products = map (\e -> (show e.vehicleServiceTierType, e.estimatedFare)) sortedEstimates
+  productOffers <-
+    withTryCatch
+      "getEstimates:offerListWithBasket"
+      (SOffer.offerListWithBasket merchantId personId mocId DOrder.RideHailing products)
+      >>= \case
+        Left _ -> pure []
+        Right r -> pure r
+  let offerMap = Map.fromList productOffers
+  estimates <- forM sortedEstimates $ \estimate -> do
+    let mbOfferResp = Map.lookup (show estimate.vehicleServiceTierType) offerMap
+    mbOffer <- case mbOfferResp of
+      Nothing -> pure Nothing
+      Just resp -> SOffer.mkCumulativeOfferResp mocId resp []
     UEstimate.mkEstimateAPIEntity isReferredRide mbOffer estimate
   return . sortBy (compare `on` (.createdAt)) $ estimates
 

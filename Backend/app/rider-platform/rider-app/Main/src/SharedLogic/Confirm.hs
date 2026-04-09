@@ -188,11 +188,7 @@ confirm DConfirmReq {..} = do
   mbBookingOfferEntity <-
     case booking.selectedOfferId of
       Just offerId -> do
-        let paymentServiceType =
-              if merchant.onlinePayment && paymentInstrument `notElem` [Just DMPM.Cash, Just DMPM.BoothOnline]
-                then DOrder.OnlineRideHailing
-                else DOrder.RideHailing
-        mbOfferDetails <- SOffer.getSelectedOfferDetails searchRequest.merchantId person.id merchantOperatingCityId paymentServiceType booking.estimatedTotalFare offerId (Just $ show quote.vehicleServiceTierType)
+        mbOfferDetails <- SOffer.getSelectedOfferDetailsWithBasket searchRequest.merchantId person.id merchantOperatingCityId DOrder.RideHailing (show quote.vehicleServiceTierType) booking.estimatedTotalFare offerId
         case mbOfferDetails of
           Just (offerDetails, computed) -> do
             bookingOfferId <- generateGUID
