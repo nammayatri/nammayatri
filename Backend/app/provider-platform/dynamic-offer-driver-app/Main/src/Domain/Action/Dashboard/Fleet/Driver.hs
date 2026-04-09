@@ -3329,7 +3329,6 @@ getDriverFleetAccessList _ _ mbFleetMemberId = do
 getDriverFleetOwnerList ::
   ShortId DM.Merchant ->
   Context.City ->
-  Text ->
   Maybe Bool ->
   Maybe RegV2.FleetType ->
   Maybe UTCTime ->
@@ -3339,11 +3338,8 @@ getDriverFleetOwnerList ::
   Maybe Bool ->
   Maybe UTCTime ->
   Flow [Common.FleetOwnerListItem]
-getDriverFleetOwnerList merchantShortId opCity requestorId mbBlocked mbFleetTypeReg mbFromDate mbLimit mbSearchString mbOffset mbOnlyEnabled mbToDate = do
+getDriverFleetOwnerList merchantShortId opCity mbBlocked mbFleetTypeReg mbFromDate mbLimit mbSearchString mbOffset mbOnlyEnabled mbToDate = do
   merchant <- findMerchantByShortId merchantShortId
-  requestor <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
-  unless (requestor.role == DP.ADMIN) $ throwError AccessDenied
-  unless (requestor.merchantId == merchant.id) $ throwError AccessDenied
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let mbFleetType = DRegV2.castFleetType <$> mbFleetTypeReg
   uiItems <- FleetOwnerList.getFleetOwnerList (Nothing, merchant.id, merchantOpCity.id) mbBlocked mbFleetType mbFromDate mbLimit mbSearchString mbOffset mbOnlyEnabled mbToDate
