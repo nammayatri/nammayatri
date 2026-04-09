@@ -113,6 +113,7 @@ type API =
            :<|> Capture "authId" (Id SRT.RegistrationToken)
              :> "verify"
              :> ReqBody '[JSON] DRegistration.AuthVerifyReq
+             :> Header "x-package" Text
              :> Post '[JSON] DRegistration.AuthVerifyRes
            :<|> "otp"
              :> Capture "authId" (Id SRT.RegistrationToken)
@@ -151,8 +152,8 @@ signatureAuth :: SignatureAuthResult DRegistration.AuthReq -> Maybe Version -> M
 signatureAuth (SignatureAuthResult req) mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion =
   withFlowHandlerAPI . DRegistration.signatureAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion
 
-verify :: Id SR.RegistrationToken -> DRegistration.AuthVerifyReq -> FlowHandler DRegistration.AuthVerifyRes
-verify tokenId = withFlowHandlerAPI . DRegistration.verify tokenId
+verify :: Id SR.RegistrationToken -> DRegistration.AuthVerifyReq -> Maybe Text -> FlowHandler DRegistration.AuthVerifyRes
+verify tokenId req mbClientId = withFlowHandlerAPI $ DRegistration.verify tokenId req mbClientId
 
 passwordBasedAuth :: DRegistration.PasswordAuthReq -> FlowHandler DRegistration.AuthRes
 passwordBasedAuth req = withFlowHandlerAPI $ DRegistration.passwordBasedAuth req
