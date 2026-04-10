@@ -75,7 +75,6 @@ import Kernel.Prelude hiding (head)
 import Kernel.Storage.Esqueleto as Esq hiding (Value)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
-import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -155,7 +154,8 @@ createOrder (personId, merchantId) rideId = do
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
             splitSettlementDetails = splitSettlementDetails,
-            basket = Nothing
+            basket = Nothing,
+            paymentRules = Nothing
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
@@ -213,7 +213,8 @@ createRideBookingPaymentOrder booking = do
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = mbPaytmTid, -- Set terminal ID from machine mapping
             splitSettlementDetails = splitSettlementDetails,
-            basket = Nothing
+            basket = Nothing,
+            paymentRules = Nothing
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant booking.merchantId
       commonPersonId = cast @DP.Person @DPayment.Person person.id
@@ -770,14 +771,26 @@ voidPendingLedgerEntries rideId reason = do
 postWalletRecharge ::
   (Id DP.Person, Id DM.Merchant) ->
   PaymentAPI.WalletRechargeReq ->
-  Flow APISuccess
+  Flow Payment.CreateOrderResp
 postWalletRecharge (personId, merchantId) req = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound "personId")
   walletRewardPostingId <- generateGUID
   operationId <- generateShortId
   personEmail <- mapM decrypt person.email
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
-  let createOrderReq =
+  let paymentRules =
+        Just
+          Payment.PaymentRules
+            { paymentFlows =
+                Payment.PaymentFlows
+                  { loyaltyOsTopup =
+                      Payment.PaymentFlowStatus
+                        { status = "REQUIRED",
+                          info = Just Payment.PaymentFlowInfo {programId = req.programId}
+                        }
+                  }
+            }
+      createOrderReq =
         Payment.CreateOrderReq
           { orderId = walletRewardPostingId,
             orderShortId = operationId.getShortId,
@@ -796,7 +809,8 @@ postWalletRecharge (personId, merchantId) req = do
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing,
             splitSettlementDetails = Nothing,
-            basket = Nothing
+            basket = Nothing,
+            paymentRules = paymentRules
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
@@ -807,8 +821,7 @@ postWalletRecharge (personId, merchantId) req = do
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let createWalletCall = TWallet.createWallet merchantId person.merchantOperatingCityId
   mbOrderResp <- DPayment.createOrderService commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing DOrder.Wallet isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False Nothing
-  _ <- mbOrderResp & fromMaybeM (InternalError "Failed to create payment order")
-  return Success
+  mbOrderResp & fromMaybeM (InternalError "Failed to create payment order")
 
 getWalletBalance ::
   (Id DP.Person, Id DM.Merchant) ->
