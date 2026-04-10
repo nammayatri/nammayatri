@@ -94,6 +94,7 @@ data RiderConfigT f = RiderConfigT
     isAvoidToll :: B.C f Kernel.Prelude.Bool,
     isDeviceIdCheckDisabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isFirstReferredRideEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isLLMChatInterfaceEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     ivrTriggerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     journeyOptionsSortingType :: B.C f (Kernel.Prelude.Maybe Domain.Types.MultimodalPreferences.JourneyOptionsSortingType),
     kafkaTopicName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

@@ -95,6 +95,7 @@ data RiderConfig = RiderConfig
     isAvoidToll :: Kernel.Prelude.Bool,
     isDeviceIdCheckDisabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isFirstReferredRideEnabled :: Kernel.Prelude.Bool,
+    isLLMChatInterfaceEnabled :: Kernel.Prelude.Bool,
     ivrTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     journeyOptionsSortingType :: Kernel.Prelude.Maybe Domain.Types.MultimodalPreferences.JourneyOptionsSortingType,
     kafkaTopicName :: Kernel.Prelude.Text,
