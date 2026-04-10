@@ -602,6 +602,7 @@ DocumentVerificationConfig:
     rolesAllowedToUploadDocument: Maybe [Role]
     isReminderSupported: Maybe Bool
     isApprovalSupported: Maybe Bool
+    onlyImageVerificationStatusLookupRequired: Maybe Bool
   default:
     order: "0"
     doStrictVerifcation: "true"

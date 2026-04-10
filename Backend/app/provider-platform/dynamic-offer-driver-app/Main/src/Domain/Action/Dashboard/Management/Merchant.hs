@@ -1180,6 +1180,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         rolesAllowedToUploadDocument = Nothing,
         isApprovalSupported = Nothing,
         isReminderSupported = Nothing,
+        onlyImageVerificationStatusLookupRequired = Nothing,
         ..
       }
   where

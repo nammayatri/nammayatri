@@ -456,6 +456,7 @@ fetchDriverDocuments entityImagesInfo allDocumentVerificationConfigs possibleVeh
       driverId = person.id
       transporterConfig = entityImagesInfo.transporterConfig
       isDigiLockerEnabled = fromMaybe False transporterConfig.digilockerEnabled
+      docVerificationConfigs = filter (\config -> config.vehicleCategory `elem` possibleVehicleCategories) allDocumentVerificationConfigs
 
   digilockerDocStatusMap <- if isDigiLockerEnabled then getDigilockerDocStatusMap driverId else pure DocStatus.emptyDocStatusMap
 
@@ -471,7 +472,7 @@ fetchDriverDocuments entityImagesInfo allDocumentVerificationConfigs possibleVeh
       Just s -> pure (s, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path)
       Nothing -> case mbDocVerificationStatus of
         Just docStatus -> pure (docStatus, Nothing, Nothing, Nothing, Nothing)
-        Nothing -> getInProgressDriverDocuments driverId entityImagesInfo docType
+        Nothing -> getInProgressDriverDocuments driverId entityImagesInfo docType docVerificationConfigs
 
     mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
     let finalMessage = mbReason <|> (if isDigiLockerEnabled then responseCode else Nothing) <|> mbMessage
@@ -598,6 +599,7 @@ fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationCon
     let dateOfUpload = processedVehicle.createdAt
     let verifiedVehicleCategory = DV.castVehicleVariantToVehicleCategory <$> processedVehicle.vehicleVariant
         userSelectedVehicleCategory = fromMaybe DVC.CAR $ processedVehicle.userPassedVehicleCategory <|> verifiedVehicleCategory
+        docVerificationConfigs = filter (\config -> config.vehicleCategory == userSelectedVehicleCategory) allDocumentVerificationConfigs
 
     vehicleDocumentTypes <- getVehicleDocTypes merchantOpCityId allDocumentVerificationConfigs verifiedVehicleCategory userSelectedVehicleCategory onlyMandatoryDocs
     documents <-
@@ -608,7 +610,7 @@ fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationCon
             mbMessage <- documentStatusMessage status Nothing docType mbProcessedUrl language skipMessages
             return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> mbMessage, verificationUrl = mbProcessedUrl, s3Path = mbS3Path, documentExpiry = mbExpiry}
           Nothing -> do
-            (status, mbReason, mbUrl, _, mbS3PathInProgress) <- getInProgressVehicleDocuments entityImagesInfo (Just rcImagesInfo) docType
+            (status, mbReason, mbUrl, _, mbS3PathInProgress) <- getInProgressVehicleDocuments entityImagesInfo (Just rcImagesInfo) docType docVerificationConfigs
             mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
             return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3PathInProgress, documentExpiry = Nothing}
 
@@ -722,11 +724,12 @@ fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs 
                 else do
                   let userSelectedVehicleCategory = fromMaybe DVC.CAR verificationReqRecord.vehicleCategory
                       verifiedVehicleCategory = Nothing
+                      docVerificationConfigs = filter (\config -> config.vehicleCategory == userSelectedVehicleCategory) allDocumentVerificationConfigs
 
                   vehicleDocumentTypes <- getVehicleDocTypes merchantOpCityId allDocumentVerificationConfigs verifiedVehicleCategory userSelectedVehicleCategory onlyMandatoryDocs
                   documents <-
                     vehicleDocumentTypes `forM` \docType -> do
-                      (status, mbReason, mbUrl, _, mbS3Path) <- getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType
+                      (status, mbReason, mbUrl, _, mbS3Path) <- getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType docVerificationConfigs
                       mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
                       return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3Path, documentExpiry = Nothing}
                   let mbRcImage = find (\img -> img.imageType == DVC.VehicleRegistrationCertificate) entityImagesInfo.entityImages
@@ -1054,26 +1057,28 @@ getInProgressDriverDocuments ::
   Id DP.Person ->
   IQuery.EntityImagesInfo ->
   DDVC.DocumentType ->
+  [DVC.DocumentVerificationConfig] ->
   Flow (ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text)
-getInProgressDriverDocuments driverId entityImagesInfo docType = do
+getInProgressDriverDocuments driverId entityImagesInfo docType docVerificationConfigs = do
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
       merchantId = entityImagesInfo.merchantOperatingCity.merchantId
       mbS3Path = getS3PathFromLatestImage entityImagesInfo docType
+      onlyImageLookup = maybe False (fromMaybe False . (.onlyImageVerificationStatusLookupRequired)) $ find (\c -> c.documentType == docType) docVerificationConfigs
   (status, mbReason, mbUrl) <- case docType of
     DDVC.DriverLicense -> checkIfUnderProgress entityImagesInfo DDVC.DriverLicense
     DDVC.BackgroundVerification -> checkBackgroundVerificationStatus driverId merchantId merchantOpCityId
-    DDVC.AadhaarCard -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.AadhaarCard
-    DDVC.PanCard -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.PanCard
-    DDVC.GSTCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.GSTCertificate
+    DDVC.AadhaarCard -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.AadhaarCard onlyImageLookup
+    DDVC.PanCard -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.PanCard onlyImageLookup
+    DDVC.GSTCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.GSTCertificate onlyImageLookup
     DDVC.Permissions -> return (VALID, Nothing, Nothing)
     DDVC.ProfilePhoto -> do
       let mbImages = IQuery.filterRecentLatestByEntityIdAndImageType entityImagesInfo DDVC.ProfilePhoto
       return (fromMaybe NO_DOC_AVAILABLE (mapStatus <$> (mbImages >>= (.verificationStatus))), Nothing, Nothing)
-    DDVC.UploadProfile -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.UploadProfile
-    DDVC.DrivingSchoolCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.DrivingSchoolCertificate
-    DDVC.PoliceVerificationCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.PoliceVerificationCertificate
-    DDVC.LocalResidenceProof -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.LocalResidenceProof
-    DDVC.TrainingForm -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.TrainingForm
+    DDVC.UploadProfile -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.UploadProfile onlyImageLookup
+    DDVC.DrivingSchoolCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.DrivingSchoolCertificate onlyImageLookup
+    DDVC.PoliceVerificationCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.PoliceVerificationCertificate onlyImageLookup
+    DDVC.LocalResidenceProof -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.LocalResidenceProof onlyImageLookup
+    DDVC.TrainingForm -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.TrainingForm onlyImageLookup
     DDVC.DriverInspectionHub -> do
       mbStatus <- getInspectionHubStatusForResponseStatus DOHR.DRIVER_ONBOARDING_INSPECTION (Just driverId) Nothing
       let status = fromMaybe INVALID mbStatus
@@ -1092,9 +1097,10 @@ vehicleDocsByRcIdList =
     DVC.Odometer
   ]
 
-getInProgressVehicleDocuments :: IQuery.EntityImagesInfo -> Maybe IQuery.RcImagesInfo -> DVC.DocumentType -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text)
-getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType = do
-  let mbS3Path = case mbRcImagesInfo of
+getInProgressVehicleDocuments :: IQuery.EntityImagesInfo -> Maybe IQuery.RcImagesInfo -> DVC.DocumentType -> [DVC.DocumentVerificationConfig] -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text)
+getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType docVerificationConfigs = do
+  let onlyImageLookup = maybe False (fromMaybe False . (.onlyImageVerificationStatusLookupRequired)) $ find (\c -> c.documentType == docType) docVerificationConfigs
+      mbS3Path = case mbRcImagesInfo of
         Just rcImagesInfo ->
           let images = IQuery.filterRecentByPersonRCAndImageType rcImagesInfo docType
               mbLatestImage = listToMaybe images
@@ -1103,12 +1109,12 @@ getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType = do
   (status, mbReason, mbUrl) <- case docType of
     DVC.VehicleRegistrationCertificate -> checkIfUnderProgress entityImagesInfo DVC.VehicleRegistrationCertificate
     DVC.SubscriptionPlan -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
-    DVC.VehiclePermit -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehiclePermit
-    DVC.VehicleFitnessCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehicleFitnessCertificate
-    DVC.VehicleInsurance -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehicleInsurance
-    DVC.VehiclePUC -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehiclePUC
+    DVC.VehiclePermit -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehiclePermit onlyImageLookup
+    DVC.VehicleFitnessCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehicleFitnessCertificate onlyImageLookup
+    DVC.VehicleInsurance -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehicleInsurance onlyImageLookup
+    DVC.VehiclePUC -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehiclePUC onlyImageLookup
     DVC.VehicleInspectionForm -> checkVehiclePhotosStatusByRC mbRcImagesInfo
-    DVC.VehicleNOC -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehicleNOC
+    DVC.VehicleNOC -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehicleNOC onlyImageLookup
     DVC.InspectionHub -> do
       mbRegistrationNo <- case mbRcImagesInfo of
         Just rcImagesInfo -> do
@@ -1123,32 +1129,34 @@ getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType = do
           let status = fromMaybe INVALID mbStatus
           return (status, Nothing, Nothing)
         Nothing -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
-    _ | docType `elem` vehicleDocsByRcIdList -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo docType
+    _ | docType `elem` vehicleDocsByRcIdList -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo docType onlyImageLookup
     _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
   return (status, mbReason, mbUrl, Nothing, mbS3Path)
 
-checkIfImageUploadedOrInvalidatedByRC :: Maybe IQuery.RcImagesInfo -> DDVC.DocumentType -> (ResponseStatus, Maybe Text, Maybe BaseUrl)
-checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo docType = do
+checkIfImageUploadedOrInvalidatedByRC :: Maybe IQuery.RcImagesInfo -> DDVC.DocumentType -> Bool -> (ResponseStatus, Maybe Text, Maybe BaseUrl)
+checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo docType onlyImageLookup = do
   let images = case mbRcImagesInfo of
         Just rcImagesInfo -> IQuery.filterRecentByPersonRCAndImageType rcImagesInfo docType
         _ -> []
   case images of
     [] -> (NO_DOC_AVAILABLE, Nothing, Nothing)
     latestImage : _ -> do
-      if latestImage.verificationStatus == Just Documents.INVALID
-        then (INVALID, extractImageFailReason latestImage.failureReason, Nothing)
-        else (MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
+      case latestImage.verificationStatus of
+        Just Documents.VALID | onlyImageLookup -> (VALID, Nothing, Nothing)
+        Just Documents.INVALID -> (INVALID, extractImageFailReason latestImage.failureReason, Nothing)
+        _ -> (MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
 
-checkIfImageUploadedOrInvalidated :: IQuery.EntityImagesInfo -> DDVC.DocumentType -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
-checkIfImageUploadedOrInvalidated entityImagesInfo docType = do
+checkIfImageUploadedOrInvalidated :: IQuery.EntityImagesInfo -> DDVC.DocumentType -> Bool -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
+checkIfImageUploadedOrInvalidated entityImagesInfo docType onlyImageLookup = do
   let images = IQuery.filterRecentByEntityIdAndImageType entityImagesInfo docType
   documentVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndDefaultEnabledOnManualVerification entityImagesInfo.merchantOperatingCity.id docType False Nothing
   case images of
     [] -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
     latestImage : _ -> do
-      if latestImage.verificationStatus == Just Documents.INVALID
-        then return (INVALID, extractImageFailReason latestImage.failureReason, Nothing)
-        else
+      case latestImage.verificationStatus of
+        Just Documents.VALID | onlyImageLookup -> return (VALID, Nothing, Nothing)
+        Just Documents.INVALID -> return (INVALID, extractImageFailReason latestImage.failureReason, Nothing)
+        _ ->
           if length documentVerificationConfig > 0
             then return (FAILED, Nothing, Nothing)
             else return (MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)

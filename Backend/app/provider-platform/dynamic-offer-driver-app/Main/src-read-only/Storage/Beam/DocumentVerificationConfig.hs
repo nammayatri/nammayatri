@@ -38,6 +38,7 @@ data DocumentVerificationConfigT f = DocumentVerificationConfigT
     maxRetryCount :: B.C f Kernel.Prelude.Int,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    onlyImageVerificationStatusLookupRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     order :: B.C f Kernel.Prelude.Int,
     rcNumberPrefixList :: B.C f [Kernel.Prelude.Text],
     rolesAllowedToUploadDocumentText :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
