@@ -236,12 +236,16 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                           Redis.del (makePayoutEntryIdsKey payoutReq.id.getId)
                         Nothing -> logInfo $ "No stashed entry IDs found for payoutRequest " <> payoutReq.id.getId
 
+
                   -- Update PayoutRequest status
                   whenJust mbPayoutReq $ \payoutReq -> do
                     let newStatus = castPayoutOrderStatusToPayoutRequestStatus payoutStatus
                     when (payoutReq.status /= newStatus && payoutReq.status `notElem` [DPR.CREDITED, DPR.CASH_PAID, DPR.CASH_PENDING]) $ do
                       let statusMsg = "Bank Webhook: " <> show payoutStatus
                       PayoutRequest.updateStatusWithHistoryById newStatus (Just statusMsg) payoutReq
+
+                  -- Update PayoutOrder status
+                  QPayoutOrder.updatePayoutOrderStatus payoutStatus payoutOrder.orderId
 
                   -- Notify driver/fleet owner
                   let (notificationTitle, notificationMessage, notificationType) =

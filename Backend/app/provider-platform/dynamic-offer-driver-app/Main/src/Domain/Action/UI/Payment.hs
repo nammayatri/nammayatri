@@ -335,6 +335,7 @@ juspayWebhookHandler ::
   Value ->
   Flow AckResponse
 juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
+  logDebug $ "Juspay Webhook Raw Value: " <> show value
   merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
   merchantOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant mbOpCity
