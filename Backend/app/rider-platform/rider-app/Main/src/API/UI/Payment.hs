@@ -43,7 +43,7 @@ import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 type API =
   TokenAuth
-    :> Payment.API "rideId" "rideId" DRide.Ride DRide.Ride Payment.CreateOrderResp PaymentAPI.WalletRechargeReq
+    :> Payment.API "rideId" "rideId" DRide.Ride DRide.Ride Payment.CreateOrderResp PaymentAPI.WalletRechargeReq Payment.CreateOrderResp
 
 type S2SAPI =
   "s2s"

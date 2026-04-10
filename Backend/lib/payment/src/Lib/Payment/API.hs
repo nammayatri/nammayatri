@@ -26,7 +26,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Servant
 
-type API (entityId :: Symbol) (notificationEntityId :: Symbol) entity notificationEntity notificationResp walletRechargeReq =
+type API (entityId :: Symbol) (notificationEntityId :: Symbol) entity notificationEntity notificationResp walletRechargeReq walletRechargeResp =
   "payment"
     :> ( Capture entityId (Id entity)
            :> "createOrder"
@@ -42,7 +42,7 @@ type API (entityId :: Symbol) (notificationEntityId :: Symbol) entity notificati
            :<|> "wallet"
            :> "recharge"
            :> ReqBody '[JSON] walletRechargeReq
-           :> Post '[JSON] Payment.CreateOrderResp
+           :> Post '[JSON] walletRechargeResp
            :<|> "wallet"
            :> "balance"
            :> Get '[JSON] Wallet.WalletBalanceData

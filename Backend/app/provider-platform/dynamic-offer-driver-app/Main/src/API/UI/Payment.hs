@@ -44,7 +44,7 @@ type API =
            :> "v2"
            :> Capture "orderId" Text
            :> Get '[JSON] DPayment.PaymentStatusResp
-           :<|> PaymentAPI.API "invoiceId" "notificationId" Invoice Notification Payment.NotificationStatusResp ()
+           :<|> PaymentAPI.API "invoiceId" "notificationId" Invoice Notification Payment.NotificationStatusResp () APISuccess
        )
 
 handler :: FlowServer API
