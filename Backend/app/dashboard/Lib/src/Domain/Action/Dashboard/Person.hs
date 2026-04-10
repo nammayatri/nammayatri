@@ -45,7 +45,6 @@ import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
-import qualified "dynamic-offer-driver-app" Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth
@@ -486,7 +485,6 @@ changeMobileNumberByAdmin _ personId req = do
     throwError $ InvalidRequest $ "Cannot update phone number for role: " <> role.name
   encMobileNum <- encrypt req.newMobileNumber
   QP.updatePersonMobile personId encMobileNum
-  QPerson.updatePersonMobileByFleetRole personId.getId encMobileNum
   pure Success
 
 changeEnabledStatus ::
