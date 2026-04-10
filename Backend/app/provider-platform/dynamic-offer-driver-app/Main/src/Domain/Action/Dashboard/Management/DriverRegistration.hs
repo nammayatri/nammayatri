@@ -1365,6 +1365,7 @@ approveAndUpdateAadhaar req mId mOpCityId = do
   let driverId = aadhaarImage.personId
   transporterConfig <- CCT.findByMerchantOpCityId mOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
   aadhaarHash <- getDbHash req.aadhaarNumber
+  encryptedAadhaar <- encrypt req.aadhaarNumber
   case transporterConfig.allowDuplicateAadhaar of
     Just False -> do
       aadhaarInfoList <- QAadhaarCard.findAllByEncryptedAadhaarNumber (Just aadhaarHash)
@@ -1379,7 +1380,7 @@ approveAndUpdateAadhaar req mId mOpCityId = do
     Just aadhaar -> do
       let updatedAadhaar =
             aadhaar
-              { DAadhaar.aadhaarNumberHash = Just aadhaarHash,
+              { DAadhaar.aadhaarNumber = Just encryptedAadhaar,
                 DAadhaar.maskedAadhaarNumber = Just maskedNumber,
                 DAadhaar.nameOnCard = req.nameOnCard <|> aadhaar.nameOnCard,
                 DAadhaar.dateOfBirth = req.dateOfBirth <|> aadhaar.dateOfBirth,
@@ -1392,7 +1393,7 @@ approveAndUpdateAadhaar req mId mOpCityId = do
       let aadhaarCard =
             DAadhaar.AadhaarCard
               { DAadhaar.driverId = driverId,
-                DAadhaar.aadhaarNumberHash = Just aadhaarHash,
+                DAadhaar.aadhaarNumber = Just encryptedAadhaar,
                 DAadhaar.maskedAadhaarNumber = Just maskedNumber,
                 DAadhaar.nameOnCard = req.nameOnCard,
                 DAadhaar.dateOfBirth = req.dateOfBirth,
