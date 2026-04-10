@@ -236,6 +236,7 @@ RiderConfig:
     maxLiveVehiclesPerRoute: Int
     maxAlternateRouteVehicles: Int
     includeVehiclesWithNoEta: Maybe Bool
+    isLLMChatInterfaceEnabled: Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -288,6 +289,7 @@ RiderConfig:
     refundStatusUpdateRetries: Maybe Int
     sourceOfServiceTier: Maybe ServiceTierSource
     enableRideEndOffers: Maybe Bool
+    isLLMChatInterfaceEnabled: Maybe Bool
     kafkaTopicName: Maybe Text
     staticCustomerIdThresholdDay: Maybe Day
     duesExcludedPaymentPurposes: "Maybe [Text]"
@@ -352,6 +354,7 @@ RiderConfig:
     refundStatusUpdateRetries: fromMaybe 5 refundStatusUpdateRetries|E
     sourceOfServiceTier: fromMaybe (Domain.Types.RiderConfig.NANDI) sourceOfServiceTier|E
     enableRideEndOffers: fromMaybe False enableRideEndOffers|E
+    isLLMChatInterfaceEnabled: fromMaybe False isLLMChatInterfaceEnabled|E
     kafkaTopicName: fromMaybe "gps-data" kafkaTopicName|E
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
     externalSOSConfig: externalSOSConfig >>= Kernel.Utils.JSON.valueToMaybe|E
@@ -407,6 +410,7 @@ RiderConfig:
     refundStatusUpdateRetries: Just refundStatusUpdateRetries|E
     sourceOfServiceTier: Just sourceOfServiceTier|E
     enableRideEndOffers: Just enableRideEndOffers|E
+    isLLMChatInterfaceEnabled: Just isLLMChatInterfaceEnabled|E
     kafkaTopicName: Just kafkaTopicName|E
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
     externalSOSConfig: (externalSOSConfig >>= Just . Data.Aeson.toJSON)|E
@@ -460,6 +464,7 @@ RiderConfig:
     distanceToNearestStopThreshold: "200"
     validateSetOnboardingVehicleRequest: "false"
     enableOnlinePaymentRide: "false"
+    isLLMChatInterfaceEnabled: "false"
     kafkaTopicName: "'gps-data'"
   queries:
     findByMerchantOperatingCityId:
