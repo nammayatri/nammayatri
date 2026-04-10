@@ -70,6 +70,7 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationConfig.DocumentVerification
       Se.Set Beam.isReminderSupported isReminderSupported,
       Se.Set Beam.maxRetryCount maxRetryCount,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.onlyImageVerificationStatusLookupRequired onlyImageVerificationStatusLookupRequired,
       Se.Set Beam.order order,
       Se.Set Beam.rcNumberPrefixList rcNumberPrefixList,
       Se.Set Beam.rolesAllowedToUploadDocumentText (Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show) Kernel.Prelude.<$> rolesAllowedToUploadDocument),

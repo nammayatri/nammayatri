@@ -38,6 +38,7 @@ data DocumentVerificationConfig = DocumentVerificationConfig
     maxRetryCount :: Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    onlyImageVerificationStatusLookupRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     order :: Kernel.Prelude.Int,
     rcNumberPrefixList :: [Kernel.Prelude.Text],
     rolesAllowedToUploadDocument :: Kernel.Prelude.Maybe [Domain.Types.Person.Role],

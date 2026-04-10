@@ -139,3 +139,8 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN roles
 
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN is_reminder_supported boolean ;
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN is_approval_supported boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN only_image_verification_status_lookup_required boolean ;
