@@ -121,6 +121,8 @@ import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDrive
 import qualified Storage.Queries.CommonDriverOnboardingDocumentsExtra as QCommonDriverOnboardingDocumentsExtra
 import qualified Storage.Queries.DriverGstin as QGstin
 import qualified Storage.Queries.DriverInformation as QDriverInfo
+import qualified Domain.Types.DriverRCAssociation as DRCA
+
 import qualified Storage.Queries.DriverRCAssociation as QRCAssoc
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.DriverLicense as QDL
@@ -869,6 +871,25 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                     DRC.updatedAt = now
                   }
           QRC.create newRC
+          -- Create driver RC association so the RC is linked to the driver
+          assocId <- generateGUID
+          let driverRCAssoc =
+                DRCA.DriverRCAssociation
+                  { DRCA.id = assocId,
+                    DRCA.driverId = rcImage.personId,
+                    DRCA.rcId = rcId,
+                    DRCA.associatedOn = now,
+                    DRCA.associatedTill = convertTextToUTC (Just "2099-12-12"),
+                    DRCA.errorMessage = Nothing,
+                    DRCA.consent = True,
+                    DRCA.consentTimestamp = now,
+                    DRCA.isRcActive = True,
+                    DRCA.merchantId = Just merchantId,
+                    DRCA.merchantOperatingCityId = Just merchantOpCityId,
+                    DRCA.createdAt = now,
+                    DRCA.updatedAt = now
+                  }
+          QRCAssoc.create driverRCAssoc
           QImage.updateVerificationStatusByIdAndType VALID imageId DVC.VehicleRegistrationCertificate
           createReminder
             DVC.VehicleRegistrationCertificate
