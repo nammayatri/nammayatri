@@ -13,6 +13,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.SpecialZoneQueueRequest
 import qualified Environment
+import Data.List (partition)
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.Prelude
@@ -30,6 +31,7 @@ import SharedLogic.SpecialZoneDriverDemand (mkQueueSkipCountKey)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
 import Tools.Error
+import qualified Lib.Queries.SpecialLocation as LQSL
 
 getSpecialZoneQueueRequest ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -41,27 +43,28 @@ getSpecialZoneQueueRequest ::
 getSpecialZoneQueueRequest (mbPersonId, _merchantId, _merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person id")
   now <- getCurrentTime
-  -- Fetch both Active and Accepted requests
-  activeRequests <- QSZQR.findActiveByDriverId personId Domain.Types.SpecialZoneQueueRequest.Active
-  acceptedRequests <- QSZQR.findActiveByDriverId personId Domain.Types.SpecialZoneQueueRequest.Accepted
+  -- Fetch both Active and Accepted requests in one query, then split
+  allReqs <- QSZQR.findActiveByStasusListAndDriverId personId [Domain.Types.SpecialZoneQueueRequest.Active, Domain.Types.SpecialZoneQueueRequest.Accepted]
+  let (activeRequests, acceptedRequests) = partition (\request -> request.status == Domain.Types.SpecialZoneQueueRequest.Active) allReqs
   -- Lazy-expire Active requests past validTill
   validActiveRequests <- collectValidActive now activeRequests
   -- Accepted requests are always returned (they're waiting for arrival/ride)
   let acceptedRes = map mkRes acceptedRequests
-      allRequests = validActiveRequests ++ acceptedRes
-  -- Get skip count from driver's current location (which gate they're in)
+      responseRequests = validActiveRequests ++ acceptedRes
+  -- Get skip count from driver's current location's special location
   mbDriverLoc <- LTSFlow.driversLocation [personId]
-  mbCurrentGate <- case mbDriverLoc of
-    (loc : _) -> Esq.runInReplica $ QGI.findGateInfoByLatLongWithoutGeoJson (LatLong loc.lat loc.lon)
+  mbSpecialLoc <- case mbDriverLoc of
+    (loc : _) -> Esq.runInReplica $ LQSL.findSpecialLocationByLatLongFull (LatLong loc.lat loc.lon)
     [] -> pure Nothing
-  (skipCount, maxSkips) <- case mbCurrentGate of
-    Just gate -> do
-      mbSkipCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkQueueSkipCountKey gate.specialLocationId.getId personId.getId)
-      pure (fromMaybe 0 mbSkipCount, gate.maxRideSkipsBeforeQueueRemoval)
+  (skipCount, maxSkips) <- case mbSpecialLoc of
+    Just specialLoc -> do
+      mbSkipCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkQueueSkipCountKey specialLoc.id.getId personId.getId)
+      let mbMaxSkips = Kernel.Prelude.listToMaybe specialLoc.gatesInfo >>= (.maxRideSkipsBeforeQueueRemoval)
+      pure (fromMaybe 0 mbSkipCount, mbMaxSkips)
     Nothing -> pure (0, Nothing)
   pure $
     API.Types.UI.SpecialZoneQueue.SpecialZoneQueueRequestListRes
-      { requests = allRequests,
+      { requests = responseRequests,
         currentSkipCount = skipCount,
         maxSkipsBeforeQueueRemoval = maxSkips
       }
