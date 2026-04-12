@@ -28,6 +28,7 @@ This directory contains chunked documentation for the Nammayatri backend. Each d
 | `14-testing-and-debugging.md` | Test infra, mock services, debugging patterns | Writing tests or debugging issues |
 | `15-conventions.md` | Module organization, naming, imports, extensions | Following project coding standards |
 | `16-status-definitions.md` | All status enums with state transition diagrams | Understanding booking/ride/ticket state machines |
+| `18-finance-module-guide.md` | Double-entry ledger, account types, driver wallet flow | Working on earnings, payouts, invoices, cancellation/refund accounting |
 
 ## Cross-Reference Guide
 
@@ -37,3 +38,4 @@ This directory contains chunked documentation for the Nammayatri backend. Each d
 - **Payment integration**: Read `13-external-integrations.md` → `11-libraries.md`
 - **FRFS feature**: Read `10-frfs-public-transport.md` → `05-beckn-protocol-flow.md`
 - **Multi-cloud bug**: Read `12-multi-cloud.md` → `08-database-patterns.md`
+- **Driver earnings / wallet / ledger**: Read `18-finance-module-guide.md` → `06-ride-flow.md`

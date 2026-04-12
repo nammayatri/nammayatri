@@ -35,6 +35,7 @@ STATUS_TTL = 300  # 5 minutes
 # ── Status store (existing) ──
 
 _store = {}
+_extract_store = {}  # (service) → [{extract, status, data, expires}]
 _lock = threading.Lock()
 
 
@@ -59,6 +60,73 @@ def get_status(service, identifier):
             del _store[key]
             return None
         return entry
+
+
+def set_extract_status(service, extract, status, match=None, data=None):
+    """Store a status rule that matches future requests by extracting an ID.
+
+    Args:
+        service: service name (e.g. "juspay")
+        extract: where to find the ID (e.g. "path.2")
+        status: status to return when matched
+        match: API path pattern to match (e.g. "/orders" matches any path containing /orders).
+               If None, matches all requests to the service.
+        data: extra data to deep-merge into response
+    """
+    entry = {"extract": extract, "status": status, "match": match,
+             "data": data or {}, "expires": time.time() + STATUS_TTL}
+    with _lock:
+        _extract_store.setdefault(service, []).append(entry)
+    match_desc = f" on {match}" if match else ""
+    log.info(f"Extract status set: {service}{match_desc} extract={extract} → {status}")
+
+
+def get_extract_status(service, path, body=None, query=None, headers=None):
+    """Check if any extract-based status rule matches this request.
+    Returns (status, data) or (None, {})."""
+    with _lock:
+        rules = _extract_store.get(service, [])
+    now = time.time()
+    for rule in rules:
+        if now > rule["expires"]:
+            continue
+        # Check path pattern match
+        if rule.get("match") and rule["match"] not in path:
+            continue
+        extract = rule["extract"]
+        extracted_id = _extract_value(extract, path, body, query, headers)
+        if extracted_id:
+            # Match: store as explicit ID for future lookups too
+            set_status(service, [extracted_id], rule["status"], rule["data"])
+            return rule["status"], rule["data"]
+    return None, {}
+
+
+def _extract_value(extract, path, body=None, query=None, headers=None):
+    """Extract a value from a request using the extract syntax."""
+    if extract.startswith("path."):
+        idx = int(extract.split(".", 1)[1])
+        parts = [p for p in path.strip("/").split("/") if p]
+        return parts[idx] if idx < len(parts) else None
+    elif extract.startswith("body."):
+        json_path = extract.split(".", 1)[1]
+        if body and isinstance(body, dict):
+            val = body
+            for key in json_path.split("."):
+                if isinstance(val, dict):
+                    val = val.get(key)
+                else:
+                    return None
+            return str(val) if val is not None else None
+    elif extract.startswith("query."):
+        param = extract.split(".", 1)[1]
+        if query and isinstance(query, dict):
+            return query.get(param)
+    elif extract.startswith("header."):
+        name = extract.split(".", 1)[1]
+        if headers and isinstance(headers, dict):
+            return headers.get(name)
+    return None
 
 
 def list_statuses():
