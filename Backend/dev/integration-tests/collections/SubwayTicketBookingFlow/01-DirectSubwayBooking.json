@@ -762,22 +762,6 @@
 			"name": "Update Payment Status (Mock)",
 			"event": [
 				{
-					"listen": "prerequest",
-					"script": {
-						"exec": [
-							"// Build the ids array from extracted payment order info",
-							"var ids = [];",
-							"var orderId = pm.environment.get('payment_order_id');",
-							"var shortId = pm.environment.get('payment_order_short_id');",
-							"if (orderId) ids.push(orderId);",
-							"if (shortId) ids.push(shortId);",
-							"pm.variables.set('_payment_ids_json', JSON.stringify(ids));",
-							"console.log('Updating payment status for ids:', ids);"
-						],
-						"type": "text/javascript"
-					}
-				},
-				{
 					"listen": "test",
 					"script": {
 						"exec": [
@@ -802,7 +786,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\"service\": \"juspay\", \"id\": {{_payment_ids_json}}, \"status\": \"CHARGED\", \"data\": {\"amount\": 10.0}}"
+					"raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"match\": \"/orders\", \"status\": \"CHARGED\", \"data\": {\"amount\": 10.0}}"
 				},
 				"url": {
 					"raw": "{{mockServerUrl}}/mock/status",
@@ -840,7 +824,7 @@
 							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
 							"pm.test('Payment status valid', function () {",
 							"    pm.expect(d.payment).to.not.be.undefined;",
-							"    pm.expect(d.payment.status).to.be.oneOf(['NEW','SUCCESS','CONFIRMING','CONFIRMED']);",
+							"    pm.expect(d.payment.status).to.be.oneOf(['SUCCESS','CONFIRMING','CONFIRMED']);",
 							"});"
 						],
 						"type": "text/javascript"

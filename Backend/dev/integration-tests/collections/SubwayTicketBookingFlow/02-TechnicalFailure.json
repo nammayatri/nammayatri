@@ -762,20 +762,6 @@
 			"name": "Update Payment Status \u2192 CHARGED",
 			"event": [
 				{
-					"listen": "prerequest",
-					"script": {
-						"exec": [
-							"var ids = [];",
-							"var orderId = pm.environment.get('payment_order_id');",
-							"var shortId = pm.environment.get('payment_order_short_id');",
-							"if (orderId) ids.push(orderId);",
-							"if (shortId) ids.push(shortId);",
-							"pm.variables.set('_payment_ids_json', JSON.stringify(ids));"
-						],
-						"type": "text/javascript"
-					}
-				},
-				{
 					"listen": "test",
 					"script": {
 						"exec": [
@@ -800,7 +786,7 @@
 				},
 				"body": {
 					"mode": "raw",
-					"raw": "{\"service\": \"juspay\", \"id\": {{_payment_ids_json}}, \"status\": \"CHARGED\", \"data\": {\"amount\": 10.0}}"
+					"raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"match\": \"/orders\", \"status\": \"CHARGED\", \"data\": {\"amount\": 10.0}}"
 				}
 			},
 			"response": []
@@ -997,40 +983,6 @@
 			"name": "Update Mock \u2192 REFUND_SUCCESS",
 			"event": [
 				{
-					"listen": "prerequest",
-					"script": {
-						"exec": [
-							"var ids = [];",
-							"var orderId = pm.environment.get('payment_order_id');",
-							"var shortId = pm.environment.get('payment_order_short_id');",
-							"if (orderId) ids.push(orderId);",
-							"if (shortId) ids.push(shortId);",
-							"// Override the order status with refund block showing REFUND_SUCCESS",
-							"var body = {",
-							"    service: 'juspay',",
-							"    id: ids,",
-							"    status: 'CHARGED',",
-							"    data: {",
-							"        amount: 10.0,",
-							"        amount_refunded: 10.0,",
-							"        refunds: [{",
-							"            id: 'rfnd-mock-001',",
-							"            amount: 10.0,",
-							"            status: 'REFUND_SUCCESS',",
-							"            error_message: null,",
-							"            error_code: null,",
-							"            initiated_by: 'merchant',",
-							"            unique_request_id: 'ref-mock-001',",
-							"            arn: null",
-							"        }]",
-							"    }",
-							"};",
-							"pm.variables.set('_refund_body', JSON.stringify(body));"
-						],
-						"type": "text/javascript"
-					}
-				},
-				{
 					"listen": "test",
 					"script": {
 						"exec": [
@@ -1055,7 +1007,7 @@
 				},
 				"body": {
 					"mode": "raw",
-					"raw": "{{_refund_body}}"
+					"raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"match\": \"/orders\", \"status\": \"CHARGED\", \"data\": {\"amount\": 10.0, \"amount_refunded\": 10.0, \"refunds\": [{\"id\": \"rfnd-mock-001\", \"amount\": 10.0, \"status\": \"REFUND_SUCCESS\", \"error_message\": null, \"error_code\": null, \"initiated_by\": \"merchant\", \"unique_request_id\": \"ref-mock-001\", \"arn\": null}]}}"
 				}
 			},
 			"response": []
