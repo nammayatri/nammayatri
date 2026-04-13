@@ -255,6 +255,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     rideTimeEstimatedThreshold :: Kernel.Types.Common.Seconds,
     routeDeviationThreshold :: Kernel.Types.Common.Meters,
     safetyTeamNumbers :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    sameRiderDriverRideCountLookbackDays :: Kernel.Prelude.Int,
     schedulePayoutForDay :: Kernel.Prelude.Maybe Kernel.Prelude.Integer,
     scheduleRideBufferTime :: Kernel.Prelude.NominalDiffTime,
     scheduledRideFilterExclusionThresholdHours :: Kernel.Types.Common.Hours,
