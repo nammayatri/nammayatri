@@ -100,6 +100,7 @@ runVerifyRCFlow skipFleetChecks personId merchant merchantOpCityId operatingCity
         DomainRC.DriverRCReq
           { vehicleRegistrationCertNumber = req.registrationNo,
             imageId = imageId,
+            imageId2 = cast <$> req.imageId2,
             udinNumber = req.udinNumber,
             operatingCity = show operatingCity, -- Fixed
             dateOfRegistration = Nothing,

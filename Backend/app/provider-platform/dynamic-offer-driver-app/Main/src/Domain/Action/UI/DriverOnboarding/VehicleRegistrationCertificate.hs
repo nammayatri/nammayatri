@@ -144,6 +144,7 @@ data DriverVehicleDetails = DriverVehicleDetails
 data DriverRCReq = DriverRCReq
   { vehicleRegistrationCertNumber :: Text,
     imageId :: Id Image.Image,
+    imageId2 :: Maybe (Id Image.Image), -- backside of RC document
     udinNumber :: Maybe Text, -- For TTEN certificate validation (TOTO)
     operatingCity :: Text,
     dateOfRegistration :: Maybe UTCTime, -- updatable
@@ -266,9 +267,10 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
       )
       $ do
         image <- getImage req.imageId
+        image2 <- getImage `mapM` req.imageId2
         resp <-
           Verification.extractRCImage person.merchantId merchantOpCityId $
-            Verification.ExtractImageReq {image1 = image, image2 = Nothing, driverId = person.id.getId}
+            Verification.ExtractImageReq {image1 = image, image2, driverId = person.id.getId}
         case resp.extractedRC of
           Just extractedRC -> do
             let extractRCNumber = removeSpaceAndDash <$> extractedRC.rcNumber
