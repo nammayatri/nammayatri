@@ -19,6 +19,7 @@ module Domain.Action.Beckn.Select
 where
 
 import Data.Either.Extra (eitherToMaybe)
+import qualified Data.List as DL
 import Data.Text as Text hiding (find)
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.ConditionalCharges as DAC
@@ -40,6 +41,7 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import SharedLogic.DriverPool
+import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.SearchTry
 import qualified SharedLogic.Type as SLT
@@ -137,6 +139,17 @@ handler merchant sReq searchReq estimates = do
             driverPreference = sReq.driverPreference
           }
   void $ initiateDriverSearchBatch driverSearchBatchInput
+  -- Special zone driver demand pipeline (gate lookup + counter increment + threshold
+  -- check + notifications) is fully forked here. It is independent of the booking
+  -- flow — if it fails or is slow, Select must not be affected.
+  whenJust searchReq.pickupZoneGateId $ \pickupZoneGateId -> do
+    let chosenVariants = DL.nub $ Kernel.Prelude.map (\e -> show e.vehicleServiceTier) estimates
+    fork "specialZoneDriverDemandPipeline" $
+      SpecialZoneDriverDemand.runDemandCheckForVariants
+        searchReq.merchantOperatingCityId
+        merchant.id
+        pickupZoneGateId
+        chosenVariants
   Metrics.finishGenericLatencyMetrics Metrics.SELECT_TO_SEND_REQUEST searchReq.transactionId
   where
     mbGetPayoutFlag isMultipleOrNoDeviceIdExist = maybe Nothing (\val -> if val then Just DRD.MultipleDeviceIdExists else Nothing) isMultipleOrNoDeviceIdExist

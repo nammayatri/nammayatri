@@ -61,7 +61,9 @@ findGatesWithDriverThreshold slId = Esq.findAll $ do
   where_ $
     gateInfo ^. GateInfoSpecialLocationId ==. val (toKey slId)
       &&. gateInfo ^. GateInfoCanQueueUpOnGate ==. val True
-      &&. not_ (isNothing (gateInfo ^. GateInfoMinDriverThreshold))
+      &&. ( not_ (isNothing (gateInfo ^. GateInfoMinDriverThresholdsJson))
+              ||. not_ (isNothing (gateInfo ^. GateInfoDefaultMinDriverThreshold))
+          )
   return gateInfo
 
 deleteAll :: Id SL.SpecialLocation -> SqlDB ()

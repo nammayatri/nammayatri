@@ -17,6 +17,10 @@
 
 module Lib.Tabular.GateInfoGeom where
 
+import qualified Data.Aeson as A
+import qualified Data.ByteString.Lazy as BL
+import qualified Data.Map.Strict as Map
+import qualified Data.Text.Encoding as TE
 import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -45,8 +49,12 @@ mkPersist
       gateTags [Text] Maybe
       walkDescription Text Maybe
       entryFeeAmount Double Maybe
-      minDriverThreshold Int Maybe
-      demandThreshold Int Maybe
+      minDriverThresholdsJson Text Maybe
+      maxDriverThresholdsJson Text Maybe
+      demandThresholdsJson Text Maybe
+      defaultMinDriverThreshold Int Maybe
+      defaultMaxDriverThreshold Int Maybe
+      defaultDemandThreshold Int Maybe
       notificationCooldownInSec Int Maybe
       maxRideSkipsBeforeQueueRemoval Int Maybe
       pickupZoneArrivalTimeoutInSec Int Maybe
@@ -62,5 +70,12 @@ instance ToTType GateInfoGeomT Domain.GateInfo where
         specialLocationId = toKey specialLocationId,
         merchantOperatingCityId = getId <$> merchantOperatingCityId,
         merchantId = getId <$> merchantId,
+        minDriverThresholdsJson = encodeThresholdMap minDriverThresholds,
+        maxDriverThresholdsJson = encodeThresholdMap maxDriverThresholds,
+        demandThresholdsJson = encodeThresholdMap demandThresholds,
         ..
       }
+
+-- | Encode a per-variant threshold map back to JSON text for storage.
+encodeThresholdMap :: Maybe (Map.Map Text Int) -> Maybe Text
+encodeThresholdMap = fmap (TE.decodeUtf8 . BL.toStrict . A.encode)

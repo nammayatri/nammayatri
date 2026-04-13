@@ -157,12 +157,15 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
   transporterConfig <- SCTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
-  -- Handle queue skip for timed-out special zone drivers before marking them inactive
-  when (isJust searchReq.pickupZoneGateId) $ do
-    activeSRFDs <- QSRD.findAllActiveBySTId searchTry.id Active
-    let timedOutQueueDrivers = filter (\srfd -> isNothing srfd.response && srfd.pickupZone) activeSRFDs
-    forM_ timedOutQueueDrivers $ \srfd ->
-      SpecialZoneDriverDemand.handleQueueSkipIfApplicable searchReq.pickupZoneGateId (show searchTry.vehicleServiceTier) srfd.driverId searchReq.providerId
+  -- Handle queue skip for timed-out special zone drivers before marking them inactive.
+  -- Forked because it's independent of the search-batch flow — failures must not
+  -- block driver dispatch or add latency to the allocator.
+  when (isJust searchReq.pickupZoneGateId) $
+    fork "specialZoneQueueSkipForTimedOutDrivers" $ do
+      activeSRFDs <- QSRD.findAllActiveBySTId searchTry.id Active
+      let timedOutQueueDrivers = filter (\srfd -> isNothing srfd.response && srfd.pickupZone) activeSRFDs
+      forM_ timedOutQueueDrivers $ \srfd ->
+        SpecialZoneDriverDemand.handleQueueSkipIfApplicable searchReq.pickupZoneGateId (show searchTry.vehicleServiceTier) srfd.driverId searchReq.providerId
   whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
 

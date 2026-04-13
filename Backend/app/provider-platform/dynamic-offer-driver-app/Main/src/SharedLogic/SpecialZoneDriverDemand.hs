@@ -20,6 +20,7 @@ module SharedLogic.SpecialZoneDriverDemand
     incrementQueueSkipCount,
     resetQueueSkipCount,
     checkAndNotifyDriverDemand,
+    runDemandCheckForVariants,
     forceNotifyDriverDemand,
     handleQueueSkipIfApplicable,
     completePickupZoneRequestOnRideStart,
@@ -49,8 +50,8 @@ import qualified Tools.Notifications as Notify
 
 -- Redis keys
 
-mkGateSearchDemandKey :: Text -> Text
-mkGateSearchDemandKey gateId = "DriverDemand:Gate:" <> gateId
+mkGateSearchDemandKey :: Text -> Text -> Text
+mkGateSearchDemandKey gateId variant = "DriverDemand:Gate:" <> gateId <> ":" <> variant
 
 mkGateDriverNotifiedKey :: Text -> Text -> Text
 mkGateDriverNotifiedKey gateId driverId = "DriverDemand:Notified:" <> gateId <> ":" <> driverId
@@ -64,10 +65,11 @@ incrementGateSearchDemand ::
   ( Redis.HedisFlow m r,
     MonadFlow m
   ) =>
-  Text ->
+  Text -> -- gateId
+  Text -> -- vehicleVariant
   m ()
-incrementGateSearchDemand gateId = Redis.withCrossAppRedis $ do
-  let key = mkGateSearchDemandKey gateId
+incrementGateSearchDemand gateId variant = Redis.withCrossAppRedis $ do
+  let key = mkGateSearchDemandKey gateId variant
   void $ Redis.incr key
   Redis.expire key 300 -- 5 min sliding window
 
@@ -98,6 +100,39 @@ resetQueueSkipCount specialLocationId driverId = Redis.withCrossAppRedis $ do
 
 -- Demand check and notification
 
+-- | Self-contained pickup-zone demand pipeline meant to be called inside a
+--   single 'fork' from the Select handler. Bundles:
+--     1. gate lookup by id
+--     2. per-variant demand-counter increment
+--     3. per-variant 'checkAndNotifyDriverDemand'
+--   Returns immediately if the gate is not found. Independent of the main
+--   ride-booking flow — failures here must never affect Select.
+runDemandCheckForVariants ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    HasLocationService m r,
+    HasShortDurationRetryCfg r c,
+    HasRequestId r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id DM.Merchant ->
+  Text -> -- pickupZoneGateId from SearchRequest
+  [Text] -> -- chosen vehicle variants (de-duplicated by caller)
+  m ()
+runDemandCheckForVariants merchantOpCityId merchantId pickupZoneGateId variants = do
+  mbGate <- Esq.runInReplica $ QGI.findById (Id pickupZoneGateId)
+  case mbGate of
+    Nothing -> logWarning $ "runDemandCheckForVariants: gate not found id=" <> pickupZoneGateId
+    Just gate -> forM_ variants $ \variant -> do
+      incrementGateSearchDemand pickupZoneGateId variant
+      checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant
+
+-- | Per-variant demand check. Triggered from Select once an estimate is chosen.
+--   Notifies parking-area drivers of this variant to move to the pickup zone
+--   when supply is below 'min' for the gate, capped at 'max - currentInZone'.
 checkAndNotifyDriverDemand ::
   ( Redis.HedisFlow m r,
     MonadFlow m,
@@ -111,36 +146,58 @@ checkAndNotifyDriverDemand ::
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->
   DGI.GateInfo ->
+  Text -> -- vehicleVariant (service tier)
   m ()
-checkAndNotifyDriverDemand merchantOpCityId merchantId gate = do
+checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant = do
   let gateId = gate.id.getId
       specialLocationId = gate.specialLocationId.getId
-  -- 1. Check demand
-  mbDemandCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkGateSearchDemandKey gateId)
+  mbDemandCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkGateSearchDemandKey gateId variant)
   let demandCount = fromMaybe 0 mbDemandCount
-      demandThresholdVal = fromMaybe 2 gate.demandThreshold
+      demandThresholdVal = fromMaybe 2 (DGI.demandThresholdFor gate variant)
   when (demandCount >= demandThresholdVal) $ do
-    let minThreshold = fromMaybe 0 gate.minDriverThreshold
-    -- 2. Count drivers in pickup zone via LTS nearBy
-    driversNearGate <- LTSFlow.nearBy gate.point.lat gate.point.lon (Just False) Nothing 500 merchantId Nothing Nothing
-    driversInPickupZone <- filterM (isInsideGateGeometry gate.id) driversNearGate
-    let pickupZoneCount = length driversInPickupZone
+    let minThreshold = fromMaybe 0 (DGI.minDriverThresholdFor gate variant)
+        -- If max isn't configured, fall back to min so we never overshoot the trigger threshold.
+        maxThreshold = fromMaybe minThreshold (DGI.maxDriverThresholdFor gate variant)
+    -- Single source of truth: LTS queue for this gate's special location, filtered by variant.
+    queueResp <- LTSFlow.getQueueDrivers specialLocationId variant
+    let sortedDrivers = sortOn (.queuePosition) queueResp.drivers
+        queueDriverIds = map (.driverId) sortedDrivers
+    (insidePickupZone, parkingDrivers) <- partitionInsideGate gate queueDriverIds
+    let pickupZoneCount = length insidePickupZone
     when (pickupZoneCount < minThreshold) $ do
-      let needed = minThreshold - pickupZoneCount
-          cooldown = fromMaybe 900 gate.notificationCooldownInSec
-      -- 3. Find parking drivers (nearBy since we don't have vehicleType in search context)
-      driversInBigZone <- LTSFlow.nearBy gate.point.lat gate.point.lon (Just False) Nothing 2000 merchantId Nothing Nothing
-      let pickupZoneDriverIds = map (.driverId) driversInPickupZone
-          parkingDrivers = filter (\d -> d.driverId `notElem` pickupZoneDriverIds) driversInBigZone
-      eligible <- filterEligibleDrivers gate specialLocationId "" merchantId gateId (map (.driverId) parkingDrivers)
-      let toNotify = take needed eligible
-      void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId "" cooldown toNotify
-  where
-    isInsideGateGeometry gateInfoId driverLoc = do
-      mbGate <- Esq.runInReplica $ QGI.findGateInfoIfDriverInsideGatePickupZone (LatLong driverLoc.lat driverLoc.lon)
-      pure $ case mbGate of
-        Just g -> g.id == gateInfoId
-        Nothing -> False
+      let needed = max 0 (maxThreshold - pickupZoneCount)
+      when (needed > 0) $ do
+        let cooldown = fromMaybe 900 gate.notificationCooldownInSec
+        eligible <- filterEligibleDrivers gate specialLocationId variant merchantId gateId parkingDrivers
+        void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId variant cooldown (take needed eligible)
+
+-- | Split a list of driver ids into (insidePickupZone, outside) based on driver locations.
+--   Batch-fetches locations once; falls back to "outside" for drivers with unknown location.
+partitionInsideGate ::
+  ( MonadFlow m,
+    HasLocationService m r,
+    HasShortDurationRetryCfg r c,
+    HasRequestId r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r
+  ) =>
+  DGI.GateInfo ->
+  [Id DP.Person] ->
+  m ([Id DP.Person], [Id DP.Person])
+partitionInsideGate _ [] = pure ([], [])
+partitionInsideGate gate driverIds = do
+  locations <- LTSFlow.driversLocation driverIds
+  let locById = Map.fromList $ map (\l -> (l.driverId, l)) locations
+  insideFlags <- forM driverIds $ \dId ->
+    case Map.lookup dId locById of
+      Nothing -> pure (dId, False)
+      Just loc -> do
+        mbDriverGate <- Esq.runInReplica $ QGI.findGateInfoIfDriverInsideGatePickupZone (LatLong loc.lat loc.lon)
+        pure (dId, maybe False (\g -> g.id == gate.id) mbDriverGate)
+  let inside = [d | (d, True) <- insideFlags]
+      outside = [d | (d, False) <- insideFlags]
+  pure (inside, outside)
 
 -- Force notify (dashboard trigger) — uses LTS queue order, skips demand/supply threshold checks
 forceNotifyDriverDemand ::
