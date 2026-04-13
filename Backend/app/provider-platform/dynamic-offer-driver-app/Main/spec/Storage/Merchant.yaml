@@ -902,6 +902,7 @@ TransporterConfig:
     thresholdCancellationPercentageToUnlist: Maybe Int
     qarCalRadiusInKm : Maybe Double
     isDynamicPricingQARCalEnabled : Maybe Bool
+    recomputeCongestionChargeOnEndRide : Maybe Bool
     minRidesToUnlist: Maybe Int
     mediaFileUrlPattern: Text
     mediaFileSizeUpperLimit: Int

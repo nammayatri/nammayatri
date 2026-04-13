@@ -228,6 +228,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     rcExpiryChecks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rcLimit :: Kernel.Prelude.Int,
     recentScheduledBookingsSafeLimit :: Kernel.Prelude.Int,
+    recomputeCongestionChargeOnEndRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     recomputeDistanceThresholds :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.DistanceRecomputeConfigs],
     recomputeIfPickupDropNotOutsideOfThreshold :: Kernel.Prelude.Bool,
     referralLinkPassword :: Kernel.Prelude.Text,
