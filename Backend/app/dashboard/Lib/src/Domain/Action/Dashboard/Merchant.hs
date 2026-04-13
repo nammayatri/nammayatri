@@ -147,6 +147,7 @@ buildMerchant req = do
         hasFleetMemberHierarchy = Just True,
         isStrongNameCheckRequired = Just True,
         singleActiveSessionOnly = Just False,
+        trackLoginLogoutForRoles = [],
         twoFaOtpTTLInSecs = Nothing,
         twoFaMaxOtpVerifyAttempts = Nothing
       }

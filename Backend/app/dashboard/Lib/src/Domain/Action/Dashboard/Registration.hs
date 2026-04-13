@@ -27,6 +27,7 @@ import qualified Domain.Types.Person.Type as PT
 import qualified Domain.Types.RegistrationToken as DR
 import Domain.Types.Role as DRole
 import qualified Domain.Types.ServerName as DTServer
+import qualified Domain.Types.Transaction as DTransaction
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, encrypt)
@@ -50,6 +51,8 @@ import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Role as QRole
+import qualified Storage.Queries.Transaction as QT
+import qualified SharedLogic.Transaction as STransaction
 import Tools.Auth
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Merchant
@@ -187,7 +190,10 @@ login LoginReq {..} = do
               defaultCityPresent = elem merchant.defaultOperatingCity merchantWithCityList
               city' = if defaultCityPresent then merchant.defaultOperatingCity else head merchantWithCityList
           pure (merchant, city')
-  generateLoginRes person merchant' otp city'
+  loginRes <- generateLoginRes person merchant' otp city'
+  when (not $ T.null loginRes.authToken) $ do
+    buildAndCreateAuthTransaction DTransaction.DashboardUserLogin person merchant'
+  pure loginRes
 
 makeEmailHitsCountKey :: Maybe Text -> Text
 makeEmailHitsCountKey email = "Email:" <> fromMaybe "" email <> ":hitsCount"
@@ -466,9 +472,11 @@ logout ::
 logout tokenInfo = do
   let personId = tokenInfo.personId
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantDoesNotExist tokenInfo.merchantId.getId)
   -- this function uses tokens from db, so should be called before transaction
   Auth.cleanCachedTokensByMerchantIdAndCity personId tokenInfo.merchantId tokenInfo.city
   QR.deleteAllByPersonIdAndMerchantIdAndCity person.id tokenInfo.merchantId tokenInfo.city
+  buildAndCreateAuthTransaction DTransaction.DashboardUserLogout person merchant
   pure $ LogoutRes "Logged out successfully"
 
 logoutAllMerchants ::
@@ -481,9 +489,11 @@ logoutAllMerchants ::
 logoutAllMerchants tokenInfo = do
   let personId = tokenInfo.personId
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantDoesNotExist tokenInfo.merchantId.getId)
   -- this function uses tokens from db, so should be called before transaction
   Auth.cleanCachedTokens personId
   QR.deleteAllByPersonId person.id
+  buildAndCreateAuthTransaction DTransaction.DashboardUserLogout person merchant
   pure $ LogoutRes "Logged out successfully from all servers"
 
 buildRegistrationToken :: MonadFlow m => Id DP.Person -> Id DMerchant.Merchant -> City.City -> m DR.RegistrationToken
@@ -501,6 +511,18 @@ buildRegistrationToken personId merchantId city = do
         operatingCity = city,
         enabled = True
       }
+
+buildAndCreateAuthTransaction ::
+  BeamFlow m r =>
+  DTransaction.Endpoint ->
+  DP.Person ->
+  DMerchant.Merchant ->
+  m ()
+buildAndCreateAuthTransaction endpoint person merchant = do
+  whenJust person.dashboardAccessType $ \dashboardAccessType ->
+    when (dashboardAccessType `elem` merchant.trackLoginLogoutForRoles) $ do
+      transaction <- STransaction.buildDashboardAuthTransaction endpoint person.id merchant.id
+      QT.create transaction
 
 registerFleetOwner ::
   ( BeamFlow m r,

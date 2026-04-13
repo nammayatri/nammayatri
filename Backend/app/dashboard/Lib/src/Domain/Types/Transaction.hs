@@ -89,6 +89,8 @@ data Endpoint
   | ExotelAPI Common.ExotelEndpoint
   | SpecialZoneAPI Common.SpecialZoneEndpoint
   | SafetyAPI Safety.SafetyEndpoint
+  | DashboardUserLogin
+  | DashboardUserLogout
   | RiderManagementAPI RiderManagement.ManagementUserActionType
   | RiderAppManagementAPI RiderAppManagement.AppManagementUserActionType
   | RiderIssueManagementAPI RiderIssueManagement.IssueManagementUserActionType
@@ -108,6 +110,8 @@ instance Show Endpoint where
     ExotelAPI e -> "ExotelAPI " <> show e
     SpecialZoneAPI e -> "SpecialZoneAPI " <> show e
     SafetyAPI e -> "SafetyAPI " <> show e
+    DashboardUserLogin -> "DASHBOARD_USER/LOGIN"
+    DashboardUserLogout -> "DASHBOARD_USER/LOGOUT"
     RiderManagementAPI e -> "RIDER_MANAGEMENT/" <> show e
     RiderAppManagementAPI e -> "RIDER_APP_MANAGEMENT/" <> show e
     RiderIssueManagementAPI e -> "RIDER_ISSUE_MANAGEMENT/" <> show e
@@ -155,6 +159,12 @@ instance Read Endpoint where
             ++ [ (SafetyAPI v1, r2)
                  | r1 <- stripPrefix "SafetyAPI " r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (DashboardUserLogin, r1)
+                 | r1 <- stripPrefix "DASHBOARD_USER/LOGIN" r
+               ]
+            ++ [ (DashboardUserLogout, r1)
+                 | r1 <- stripPrefix "DASHBOARD_USER/LOGOUT" r
                ]
             ++ [ (RiderManagementAPI v1, r2)
                  | r1 <- stripPrefix "RIDER_MANAGEMENT/" r,
