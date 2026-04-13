@@ -513,3 +513,9 @@ ALTER TABLE atlas_app.booking ADD COLUMN discount_amount double precision ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN special_location_support_number text ;

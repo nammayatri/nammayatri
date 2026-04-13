@@ -101,6 +101,7 @@ data BookingT f = BookingT
     serviceTierName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     serviceTierShortDesc :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     specialLocationName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    specialLocationSupportNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     specialLocationTag :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     startTime :: (B.C f Kernel.Prelude.UTCTime),
     status :: (B.C f Domain.Types.BookingStatus.BookingStatus),

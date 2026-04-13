@@ -109,3 +109,8 @@ ALTER TABLE atlas_app.quote ADD COLUMN billing_category text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.quote ADD COLUMN selected_offer_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.quote ADD COLUMN special_location_support_number text ;

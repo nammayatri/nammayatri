@@ -390,6 +390,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             priority = 0,
             merchantId = Just merchantId,
             isQueueEnabled = request.isQueueEnabled <|> (mbExistingSpLoc >>= (.isQueueEnabled)),
+            supportNumber = request.supportNumber <|> (mbExistingSpLoc >>= (.supportNumber)),
             ..
           }
 
@@ -1455,7 +1456,8 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     pickupPriority :: Text,
     dropPriority :: Text,
     specialLocationId :: Text,
-    isQueueEnabled :: Maybe Text
+    isQueueEnabled :: Maybe Text,
+    supportNumber :: Maybe Text
   }
   deriving (Show)
 
@@ -1484,6 +1486,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> r .: "drop_priority"
       <*> r .: "special_location_id"
       <*> optional (r .: "is_queue_enabled")
+      <*> optional (r .: "support_number")
 
 postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
 postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
@@ -1534,6 +1537,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           priority :: Maybe Int = readMaybeCSVField idx row.priority "Priority"
           mbSpecialLocationId :: Maybe Text = cleanField row.specialLocationId
           mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
+          supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
       enabled :: Bool <- readCSVField idx row.enabled "Enabled"
       gateInfoId <- generateGUID
       gateInfoName :: Text <- cleanCSVField idx row.gateInfoName "Gate Info (name)"
@@ -1570,7 +1574,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 priority = fromMaybe 0 priority,
                 createdAt = now,
                 updatedAt = now,
-                isQueueEnabled = mbIsQueueEnabled
+                isQueueEnabled = mbIsQueueEnabled,
+                supportNumber = supportNumber
               }
           gateInfo =
             DGI.GateInfo

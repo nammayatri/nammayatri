@@ -3030,6 +3030,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             merchantId = Just merchantId,
             priority = 0,
             isQueueEnabled = request.isQueueEnabled <|> (mbExistingSpLoc >>= (.isQueueEnabled)),
+            supportNumber = request.supportNumber <|> (mbExistingSpLoc >>= (.supportNumber)),
             ..
           }
 
