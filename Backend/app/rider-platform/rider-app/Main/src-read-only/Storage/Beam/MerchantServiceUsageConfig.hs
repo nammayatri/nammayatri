@@ -41,6 +41,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     getExophone :: B.C f Kernel.External.Call.Types.CallService,
     getFirstPickupRoute :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
     getFrfsAutocompleteDistances :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
+    getInstructionRoute :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
     getMultiModalService :: B.C f (Kernel.Prelude.Maybe Kernel.External.MultiModal.Types.MultiModalService),
     getMultimodalWalkDistance :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
     getPickupRoutes :: B.C f Kernel.External.Maps.Types.MapsService,

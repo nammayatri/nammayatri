@@ -48,9 +48,14 @@ type API =
       :> TokenAuth
       :> ReqBody '[JSON] Maps.GetRoutesReq
       :> Post '[JSON] Maps.GetRoutesResp
+    :<|> "instruction"
+      :> "route"
+      :> TokenAuth
+      :> ReqBody '[JSON] Maps.GetRoutesReq
+      :> Post '[JSON] Maps.GetRoutesResp
 
 handler :: FlowServer API
-handler = getRoute :<|> getPickupRoute :<|> getTripRoute
+handler = getRoute :<|> getPickupRoute :<|> getTripRoute :<|> getInstructionRoute
 
 getRoute :: (Id Person.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
 getRoute (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getRoutes (personId, merchantId) (Just personId.getId)
@@ -68,3 +73,6 @@ getPickupRoute (personId, merchantId) req = withFlowHandlerAPI . withPersonIdLog
 
 getTripRoute :: (Id Person.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
 getTripRoute (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getTripRoutes (personId, merchantId) (Just personId.getId)
+
+getInstructionRoute :: (Id Person.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
+getInstructionRoute (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getInstructionRoute (personId, merchantId) (Just personId.getId)
