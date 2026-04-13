@@ -16,6 +16,7 @@
 
 module Domain.Types.Merchant where
 
+import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.ServerName as DSN
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -40,7 +41,8 @@ data MerchantE e = Merchant
     verifyFleetWhileLogin :: Maybe Bool,
     hasFleetMemberHierarchy :: Maybe Bool,
     isStrongNameCheckRequired :: Maybe Bool,
-    singleActiveSessionOnly :: Maybe Bool
+    singleActiveSessionOnly :: Maybe Bool,
+    userActionTypesForDescendantsCheck :: Maybe [DMatrix.UserActionTypeWrapper]
   }
   deriving (Generic)
 
@@ -89,3 +91,10 @@ mkMerchantAPIEntity merchant adminList = do
       adminList = adminList,
       enabled = merchant.enabled
     }
+
+data MerchantCityList = MerchantCityList
+  { merchantId :: ShortId Merchant,
+    cityList :: [City.City],
+    operatingCityWithNames :: [Text] -- Sending city names also as FE needs to show the list of cities while assigning role to user
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)

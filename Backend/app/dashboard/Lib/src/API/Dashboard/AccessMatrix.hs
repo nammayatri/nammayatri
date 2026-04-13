@@ -16,6 +16,7 @@ module API.Dashboard.AccessMatrix where
 
 import qualified Domain.Action.Dashboard.AccessMatrix as DAccessMatrix
 import Domain.Types.AccessMatrix as DMatrix
+import qualified Domain.Types.Merchant as DM
 import Domain.Types.Role as DRole
 import Environment
 import Kernel.Prelude
@@ -37,7 +38,7 @@ type API =
              :> Capture "roleId" (Id DRole.Role) -- role.name?
              :> Get '[JSON] DMatrix.AccessMatrixRowAPIEntity
            :<|> "merchantWithCityList"
-             :> Get '[JSON] [DMatrix.MerchantCityList]
+             :> Get '[JSON] [DM.MerchantCityList]
        )
 
 handler :: BeamFlow' => FlowServer API
@@ -54,6 +55,6 @@ getAccessMatrixByRole :: BeamFlow' => TokenInfo -> Id DRole.Role -> FlowHandler 
 getAccessMatrixByRole tokenInfo =
   withFlowHandlerAPI' . DAccessMatrix.getAccessMatrixByRole tokenInfo
 
-getMerchantWithCityList :: BeamFlow' => FlowHandler [DMatrix.MerchantCityList]
+getMerchantWithCityList :: BeamFlow' => FlowHandler [DM.MerchantCityList]
 getMerchantWithCityList =
   withFlowHandlerAPI' DAccessMatrix.getMerchantWithCityList

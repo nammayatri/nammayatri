@@ -273,7 +273,8 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
           isStrongNameCheckRequired = baseMerchant.isStrongNameCheckRequired,
           singleActiveSessionOnly = baseMerchant.singleActiveSessionOnly,
           twoFaOtpTTLInSecs = baseMerchant.twoFaOtpTTLInSecs,
-          twoFaMaxOtpVerifyAttempts = baseMerchant.twoFaMaxOtpVerifyAttempts
+          twoFaMaxOtpVerifyAttempts = baseMerchant.twoFaMaxOtpVerifyAttempts,
+          userActionTypesForDescendantsCheck = baseMerchant.userActionTypesForDescendantsCheck
         }
 
 getMerchantConfigSpecialLocationList :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe SL.SpecialLocationType -> Environment.Flow Common.SpecialLocationResp)

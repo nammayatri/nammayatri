@@ -74,6 +74,7 @@ library
       Tools.Auth.Common
       Tools.Auth.Dashboard
       Tools.Auth.Merchant
+      Tools.Auth.RolesHierarchy
       Tools.Client
       Tools.Error
       Tools.InternalClient

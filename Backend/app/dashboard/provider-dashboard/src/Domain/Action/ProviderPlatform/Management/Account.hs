@@ -41,9 +41,9 @@ import qualified "lib-dashboard" Storage.Queries.RegistrationToken as QR
 import Tools.Auth.Api
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Merchant
+import qualified Tools.Auth.RolesHierarchy as RolesHierarchy
 import "lib-dashboard" Tools.Error
-  ( AuthError (AccessDenied),
-    PersonError (PersonDoesNotExist),
+  ( PersonError (PersonDoesNotExist),
     RoleError (RoleDoesNotExist),
   )
 
@@ -110,6 +110,8 @@ postAccountVerifyAccount ::
 postAccountVerifyAccount merchantShortId opCity apiTokenInfo req = do
   runRequestValidation validateVerifyAccountReq req
   let personId = Kernel.Types.Id.cast req.fleetOwnerId
+  person <- findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  RolesHierarchy.checkRoleIsDescenantOfRequestor apiTokenInfo person.roleId
   case req.status of
     Common.Rejected -> do
       Auth.cleanCachedTokens personId
@@ -117,7 +119,6 @@ postAccountVerifyAccount merchantShortId opCity apiTokenInfo req = do
       softDeletePerson personId req.reason
       updatePersonRejectedBy personId apiTokenInfo.personId
     Common.Approved -> do
-      person <- findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
       unless (person.verified == Just True) $ updatePersonVerifiedStatus personId True
       updatePersonApprovedBy personId apiTokenInfo.personId
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
@@ -149,24 +150,7 @@ putAccountUpdateRole merchantShortId opCity apiTokenInfo personId' roleId' = do
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   role <- CQRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
 
-  let requestorRoleId = apiTokenInfo.person.roleId
-  requestorDashboardAccessType <- case apiTokenInfo.person.dashboardAccessType of
-    Just dashboardAccessType -> pure dashboardAccessType
-    Nothing -> do
-      requestorRole <- CQRole.findById requestorRoleId >>= fromMaybeM (RoleDoesNotExist requestorRoleId.getId)
-      pure requestorRole.dashboardAccessType
-
-  unless (requestorDashboardAccessType == DRole.DASHBOARD_ADMIN) $ do
-    requestorDescendants <- CQRole.findRoleDescendants requestorRoleId
-    unless (roleId `elem` requestorDescendants) $ do
-      logError $
-        "Couldn't assign role which is not descendant of requestor: "
-          <> apiTokenInfo.person.id.getId
-          <> "; requestorRoleId: "
-          <> requestorRoleId.getId
-          <> "; roleId: "
-          <> roleId.getId
-      throwError AccessDenied
+  RolesHierarchy.checkRoleIsDescenantOfRequestor apiTokenInfo roleId
 
   QP.updatePersonRole personId role
   let mbAccessType =

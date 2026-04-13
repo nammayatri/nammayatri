@@ -83,6 +83,7 @@ import "lib-dashboard" Storage.Queries.Person as QP
 import "lib-dashboard" Storage.Queries.RegistrationToken as QRegistrationToken
 import Tools.Auth.Api
 import Tools.Auth.Merchant
+import qualified Tools.Auth.RolesHierarchy as RolesHierarchy
 
 buildTransaction ::
   ( MonadFlow m,
@@ -172,11 +173,13 @@ getDriverLocation merchantShortId opCity apiTokenInfo mbLimit mbOffset req = do
 deleteDriverPermanentlyDelete :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
 deleteDriverPermanentlyDelete merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let personId = Kernel.Types.Id.cast driverId
+  mbPerson <- QP.findById personId
+  whenJust mbPerson $ \person ->
+    RolesHierarchy.checkRoleIsDescenantOfRequestor apiTokenInfo person.roleId
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $ do
     result <- Client.callManagementAPI checkedMerchantId opCity (.driverDSL.deleteDriverPermanentlyDelete) driverId
-    let personId = Kernel.Types.Id.cast driverId
-    mbPerson <- QP.findById personId
     whenJust mbPerson $ \_ -> do
       QMerchantAccess.deleteAllByPersonId personId
       QRegistrationToken.deleteAllByPersonId personId

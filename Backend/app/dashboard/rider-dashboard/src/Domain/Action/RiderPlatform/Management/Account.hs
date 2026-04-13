@@ -2,7 +2,6 @@ module Domain.Action.RiderPlatform.Management.Account (putAccountUpdateRole) whe
 
 import qualified Dashboard.Common
 import qualified "lib-dashboard" Domain.Types.Merchant
-import qualified Domain.Types.Role as DRole
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
 import qualified Kernel.Types.APISuccess
@@ -13,9 +12,9 @@ import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
 import qualified "lib-dashboard" Storage.Queries.Person as QP
 import Tools.Auth.Api
+import qualified Tools.Auth.RolesHierarchy as RolesHierarchy
 import "lib-dashboard" Tools.Error
-  ( AuthError (AccessDenied),
-    PersonError (PersonDoesNotExist),
+  ( PersonError (PersonDoesNotExist),
     RoleError (RoleDoesNotExist),
   )
 
@@ -32,24 +31,7 @@ putAccountUpdateRole _merchantShortId _opCity apiTokenInfo personId' roleId' = d
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   role <- CQRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
 
-  let requestorRoleId = apiTokenInfo.person.roleId
-  requestorDashboardAccessType <- case apiTokenInfo.person.dashboardAccessType of
-    Just dashboardAccessType -> pure dashboardAccessType
-    Nothing -> do
-      requestorRole <- CQRole.findById requestorRoleId >>= fromMaybeM (RoleDoesNotExist requestorRoleId.getId)
-      pure requestorRole.dashboardAccessType
-
-  unless (requestorDashboardAccessType == DRole.DASHBOARD_ADMIN) $ do
-    requestorDescendants <- CQRole.findRoleDescendants requestorRoleId
-    unless (roleId `elem` requestorDescendants) $ do
-      logError $
-        "Couldn't assign role which is not descendant of requestor: "
-          <> apiTokenInfo.person.id.getId
-          <> "; requestorRoleId: "
-          <> requestorRoleId.getId
-          <> "; roleId: "
-          <> roleId.getId
-      throwError AccessDenied
+  RolesHierarchy.checkRoleIsDescenantOfRequestor apiTokenInfo roleId
 
   QP.updatePersonRole personId role
   pure Kernel.Types.APISuccess.Success

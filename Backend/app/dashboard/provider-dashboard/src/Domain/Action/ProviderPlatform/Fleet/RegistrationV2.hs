@@ -35,6 +35,7 @@ import "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import "lib-dashboard" Storage.Queries.Person as QP
 import Tools.Auth.Api
 import Tools.Auth.Merchant
+import qualified Tools.Auth.RolesHierarchy as RolesHierarchy
 import "lib-dashboard" Tools.Error
 
 postRegistrationV2LoginOtp ::
@@ -134,7 +135,9 @@ postRegistrationV2Register' clientCall merchantShortId opCity apiTokenInfo req =
   encEmail <- forM req.email encrypt
   let fleetRole = getFleetRole req.fleetType
   fleetOwnerRole <- CQRole.findByDashboardAccessType fleetRole >>= fromMaybeM (RoleDoesNotExist $ show fleetRole)
-
+  -- skip check when person update its own role
+  unless (fleetOwner.id == apiTokenInfo.person.id) $ do
+    RolesHierarchy.checkRoleIsDescenantOfRequestor apiTokenInfo fleetOwnerRole.id
   transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   res <-
     T.withTransactionStoring transaction $
@@ -144,7 +147,7 @@ postRegistrationV2Register' clientCall merchantShortId opCity apiTokenInfo req =
 
   let updFleetOwner = fleetOwner{firstName = req.firstName, lastName = req.lastName, email = encEmail <|> fleetOwner.email}
   QP.updatePerson updFleetOwner.id updFleetOwner
-  unless (Just fleetRole == updFleetOwner.dashboardAccessType) $
+  unless (Just fleetRole == updFleetOwner.dashboardAccessType) $ do
     QP.updatePersonRole updFleetOwner.id fleetOwnerRole
   pure Success
   where

@@ -16,6 +16,7 @@ module Domain.Action.Dashboard.AccessMatrix where
 
 import qualified Data.Text as T
 import qualified Domain.Types.AccessMatrix as DMatrix
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Role as DRole
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -30,12 +31,12 @@ import Tools.Error
 
 getMerchantWithCityList ::
   BeamFlow m r =>
-  m [DMatrix.MerchantCityList]
+  m [DM.MerchantCityList]
 getMerchantWithCityList = do
   logInfo "[AccessMatrix.getMerchantWithCityList] START"
   merchantList <- B.runInReplica QMerchant.findAllMerchants
   logInfo $ "[AccessMatrix.getMerchantWithCityList] findAllMerchants done, count=" <> show (length merchantList)
-  let merchantCityList = map (\merchant -> DMatrix.MerchantCityList merchant.shortId merchant.supportedOperatingCities (map (T.pack . show) merchant.supportedOperatingCities)) merchantList
+  let merchantCityList = map (\merchant -> DM.MerchantCityList merchant.shortId merchant.supportedOperatingCities (map (T.pack . show) merchant.supportedOperatingCities)) merchantList
   pure merchantCityList
 
 getAccessMatrix ::

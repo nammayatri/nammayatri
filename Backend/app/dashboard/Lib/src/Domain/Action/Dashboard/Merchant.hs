@@ -148,7 +148,8 @@ buildMerchant req = do
         isStrongNameCheckRequired = Just True,
         singleActiveSessionOnly = Just False,
         twoFaOtpTTLInSecs = Nothing,
-        twoFaMaxOtpVerifyAttempts = Nothing
+        twoFaMaxOtpVerifyAttempts = Nothing,
+        userActionTypesForDescendantsCheck = Nothing -- FIXME default value
       }
 
 changeMerchantEnableState ::
@@ -204,6 +205,7 @@ createUserForMerchant tokenInfo req = do
   merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
   merchantAssociatedAccount <- QMerchantAccess.findAllUserAccountForMerchant merchant.id
   merchantUserAccountLimit <- asks (.merchantUserAccountNumber)
+  -- FIXME should we check descendats for MERCHANT_ADMIN?
   when (length merchantAssociatedAccount >= merchantUserAccountLimit) $ throwError (MerchantAccountLimitExceeded (merchant.shortId.getShortId))
   personEntity <- DPerson.createPerson tokenInfo req
   _ <- DPerson.assignMerchantCityAccess tokenInfo personEntity.person.id DPerson.MerchantCityAccessReq {operatingCity = tokenInfo.city, merchantId = merchant.shortId}

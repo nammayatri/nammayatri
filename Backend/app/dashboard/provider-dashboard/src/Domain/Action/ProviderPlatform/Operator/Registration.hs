@@ -25,6 +25,7 @@ import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified "lib-dashboard" Storage.Queries.Person as QP
 import Tools.Auth.Api
 import Tools.Auth.Merchant
+import qualified Tools.Auth.RolesHierarchy as RolesHierarchy
 import "lib-dashboard" Tools.Error
 
 postOperatorRegister ::
@@ -41,10 +42,11 @@ postOperatorRegister merchantShortId opCity apiTokenInfo req = do
   transaction <- ST.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   res <- ST.withTransactionStoring transaction do
     Client.callOperatorAPI checkedMerchantId opCity (.registrationDSL.postOperatorRegister) req
-  registerOperator opCity req.email req.mobileNumber req.mobileCountryCode req.firstName req.lastName Nothing res.personId merchant Nothing
+  registerOperator apiTokenInfo opCity req.email req.mobileNumber req.mobileCountryCode req.firstName req.lastName Nothing res.personId merchant Nothing
   pure Success
 
 registerOperator ::
+  ApiTokenInfo ->
   Context.City ->
   Maybe Text ->
   Text ->
@@ -56,11 +58,13 @@ registerOperator ::
   DM.Merchant ->
   Maybe Text ->
   Flow ()
-registerOperator opCity email mobileNumber mobileCountryCode firstName lastName password operatorId merchant mbRoleId = do
+registerOperator apiTokenInfo opCity email mobileNumber mobileCountryCode firstName lastName password operatorId merchant mbRoleId = do
   operatorRole <-
     case mbRoleId of
       Just roleId -> CQRole.findById (Id roleId) >>= fromMaybeM (RoleNotFound roleId)
       Nothing -> CQRole.findByDashboardAccessType DRole.DASHBOARD_OPERATOR >>= fromMaybeM (RoleNotFound "OPERATOR")
+  -- FIXME before client call (everywhere)
+  RolesHierarchy.checkRoleIsDescenantOfRequestor apiTokenInfo operatorRole.id
   operator <- buildOperator email mobileNumber mobileCountryCode firstName lastName password operatorId operatorRole
   merchantAccess <- DP.buildMerchantAccess operator.id merchant.id merchant.shortId opCity
   QP.create operator
@@ -102,5 +106,5 @@ postRegistrationDashboardRegister merchantShortId opCity apiTokenInfo req = do
   unlessM (null <$> QP.findByEmailOrMobile (Just req.email) req.mobileNumber req.mobileCountryCode) $ throwError (InvalidRequest "Phone or Email already registered")
   void $ merchantServerAccessCheck merchant
   res <- Client.callOperatorAPI checkedMerchantId opCity (.registrationDSL.postRegistrationDashboardRegister) req
-  registerOperator opCity (Just req.email) req.mobileNumber req.mobileCountryCode req.firstName req.lastName (Just req.password) res.personId merchant (Just req.roleId)
+  registerOperator apiTokenInfo opCity (Just req.email) req.mobileNumber req.mobileCountryCode req.firstName req.lastName (Just req.password) res.personId merchant (Just req.roleId)
   pure Success
