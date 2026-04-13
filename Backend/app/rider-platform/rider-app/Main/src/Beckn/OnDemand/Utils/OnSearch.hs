@@ -457,6 +457,9 @@ buildSpecialLocationTag item =
 getSpecialLocationName :: Spec.Item -> Maybe Text
 getSpecialLocationName item = Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_NAME item.itemTags
 
+getspecialLocationSupportNumber :: Spec.Item -> Maybe Text
+getspecialLocationSupportNumber item = Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_SUPPORT_NUMBER item.itemTags
+
 getIsCustomerPrefferedSearchRoute :: Spec.Item -> Maybe Bool
 getIsCustomerPrefferedSearchRoute item = do
   tagValueStr <- Utils.getTagV2 Tag.INFO Tag.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE item.itemTags

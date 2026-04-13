@@ -202,6 +202,7 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
             isAirConditioned = estimate.isAirConditioned,
             vehicleServiceTierSeatingCapacity = estimate.vehicleServiceTierSeatingCapacity,
             specialLocationName = estimate.specialLocationName,
+            specialLocationSupportNumber = Nothing,
             quoteBreakupList = [], -- Not Handling as Rate Card details not required after Select stage
             tripCategory = Just tripCategory,
             vehicleIconUrl = estimate.vehicleIconUrl,

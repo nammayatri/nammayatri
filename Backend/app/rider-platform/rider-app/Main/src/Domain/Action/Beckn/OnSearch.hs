@@ -231,6 +231,7 @@ data QuoteInfo = QuoteInfo
     isAirConditioned :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     specialLocationName :: Maybe Text,
+    specialLocationSupportNumber :: Maybe Text,
     quoteBreakupList :: [QuoteBreakupInfo],
     tripCategory :: DT.TripCategory,
     -- petCharges :: Maybe Price,

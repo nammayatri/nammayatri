@@ -57,6 +57,7 @@ data QuoteT f = QuoteT
     serviceTierName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     serviceTierShortDesc :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     specialLocationName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    specialLocationSupportNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     specialLocationTag :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     tollCharges :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     tollNames :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),

@@ -55,6 +55,7 @@ data Quote = Quote
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierShortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    specialLocationSupportNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tollChargesInfo :: Kernel.Prelude.Maybe Domain.Types.Quote.TollChargesInfo,
     tripCategory :: Kernel.Prelude.Maybe Domain.Types.Common.TripCategory,

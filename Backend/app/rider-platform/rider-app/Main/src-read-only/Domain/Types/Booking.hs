@@ -95,6 +95,7 @@ data Booking = Booking
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierShortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    specialLocationSupportNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startTime :: Kernel.Prelude.UTCTime,
     status :: Domain.Types.BookingStatus.BookingStatus,

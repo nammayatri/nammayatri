@@ -100,6 +100,7 @@ data Pricing = Pricing
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
     specialLocationName :: Maybe Text,
+    specialLocationSupportNumber :: Maybe Text,
     vehicleIconUrl :: Maybe BaseUrl,
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
@@ -896,8 +897,8 @@ tfItemDescriptor booking =
         descriptorName = Just $ show booking.vehicleServiceTier
       }
 
-convertEstimateToPricing :: Maybe Text -> (DEst.Estimate, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl) -> Pricing
-convertEstimateToPricing _specialLocationName (DEst.Estimate {..}, serviceTier, mbDriverLocations, vehicleIconUrl) =
+convertEstimateToPricing :: Maybe Text -> Maybe Text -> (DEst.Estimate, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl) -> Pricing
+convertEstimateToPricing _specialLocationName specialLocationSupportNumber (DEst.Estimate {..}, serviceTier, mbDriverLocations, vehicleIconUrl) =
   Pricing
     { pricingId = id.getId,
       pricingMaxFare = maxFare,
@@ -914,8 +915,8 @@ convertEstimateToPricing _specialLocationName (DEst.Estimate {..}, serviceTier, 
       ..
     }
 
-convertQuoteToPricing :: Maybe Text -> (DQuote.Quote, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl) -> Pricing
-convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDriverLocations, vehicleIconUrl) =
+convertQuoteToPricing :: Maybe Text -> Maybe Text -> (DQuote.Quote, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl) -> Pricing
+convertQuoteToPricing specialLocationName specialLocationSupportNumber (DQuote.Quote {..}, serviceTier, mbDriverLocations, vehicleIconUrl) =
   Pricing
     { pricingId = id.getId,
       pricingMaxFare = estimatedFare,
@@ -956,6 +957,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       isCustomerPrefferedSearchRoute = Nothing,
       isBlockedRoute = Nothing,
       specialLocationName = Nothing,
+      specialLocationSupportNumber = Nothing,
       vehicleIconUrl = Nothing,
       smartTipSuggestion = Nothing,
       smartTipReason = Nothing,
@@ -972,6 +974,7 @@ mkGeneralInfoTagGroup pricing isValueAddNP =
    in Tags.buildTagGroups
         [ Tags.SPECIAL_LOCATION_TAG Tags.~=? pricing.specialLocationTag,
           Tags.SPECIAL_LOCATION_NAME Tags.~=? pricing.specialLocationName,
+          Tags.SPECIAL_LOCATION_SUPPORT_NUMBER Tags.~=? pricing.specialLocationSupportNumber,
           Tags.BUSINESS_DISCOUNT Tags.~=? (guardVNP (show <$> pricing.businessDiscount)),
           Tags.PERSONAL_DISCOUNT Tags.~=? (guardVNP (show <$> pricing.personalDiscount)),
           Tags.DISTANCE_TO_NEAREST_DRIVER_METER Tags.~=? (show . double2Int . realToFrac <$> pricing.distanceToNearestDriver),

@@ -435,6 +435,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           paymentStatus = Nothing,
           distanceUnit = searchRequest.distanceUnit,
           specialLocationName = quote.specialLocationName,
+          specialLocationSupportNumber = quote.specialLocationSupportNumber,
           isDashboardRequest = searchRequest.isDashboardRequest,
           tripCategory = quote.tripCategory,
           initiatedBy = searchRequest.initiatedBy,

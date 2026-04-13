@@ -78,6 +78,7 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     dropPriority :: Text,
     specialLocationId :: Text,
     isQueueEnabled :: Maybe Text,
+    supportNumber :: Maybe Text,
     gateInfoMinDriverThreshold :: Maybe Text,
     gateInfoDemandThreshold :: Maybe Text,
     gateInfoNotificationCooldownInSec :: Maybe Text,
@@ -113,6 +114,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> r .: "drop_priority"
       <*> r .: "special_location_id"
       <*> optional (r .: "is_queue_enabled")
+      <*> optional (r .: "support_number")
       <*> optional (r .: "gate_info_min_driver_threshold")
       <*> optional (r .: "gate_info_demand_threshold")
       <*> optional (r .: "gate_info_notification_cooldown_in_sec")
@@ -217,6 +219,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
   enabled :: Bool <- readCSVField idx row.enabled "Enabled"
   let priority :: Maybe Int = readMaybeCSVField idx row.priority "Priority"
       mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
+      supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
   pickupPriority :: Int <- readCSVField idx row.pickupPriority "Pickup Priority"
   dropPriority :: Int <- readCSVField idx row.dropPriority "Drop Priority"
   gateInfoId <- generateGUID
@@ -255,7 +258,8 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             geom = Just $ T.pack locationGeom,
             createdAt = now,
             updatedAt = now,
-            isQueueEnabled = mbIsQueueEnabled
+            isQueueEnabled = mbIsQueueEnabled,
+            supportNumber = supportNumber
           }
       gateInfo =
         DGI.GateInfo

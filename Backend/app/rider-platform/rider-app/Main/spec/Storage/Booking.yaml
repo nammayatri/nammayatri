@@ -226,6 +226,7 @@ Booking:
     merchantOperatingCityId: Id MerchantOperatingCity
     specialLocationTag: Maybe Text
     specialLocationName: Maybe Text
+    specialLocationSupportNumber: Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
     serviceTierName: Maybe Text

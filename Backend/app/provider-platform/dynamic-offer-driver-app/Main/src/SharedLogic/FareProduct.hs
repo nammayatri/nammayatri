@@ -32,6 +32,7 @@ data FareProducts = FareProducts
     area :: SL.Area,
     specialLocationName :: Maybe Text,
     specialLocationTag :: Maybe Text,
+    specialLocationSupportNumber :: Maybe Text,
     mbPickupDropArea :: Maybe SL.Area
   }
 
@@ -103,6 +104,7 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
                   area,
                   specialLocationName = Just pickupSpecialLocation.locationName,
                   specialLocationTag = Just specialLocationTag,
+                  specialLocationSupportNumber = pickupSpecialLocation.supportNumber,
                   mbPickupDropArea = Nothing
                 }
 
@@ -116,6 +118,7 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
             area = area,
             specialLocationName = Just specialLocationName,
             specialLocationTag = Just specialLocationTag,
+            specialLocationSupportNumber = pickupSpecialLocation.supportNumber,
             mbPickupDropArea = Nothing
           }
     getDropFareProductsAndSpecialLocationTag dropSpecialLocation specialLocationTag = do
@@ -128,6 +131,7 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
             area,
             specialLocationName = Just specialLocationName,
             specialLocationTag = Just specialLocationTag,
+            specialLocationSupportNumber = dropSpecialLocation.supportNumber,
             mbPickupDropArea = Nothing
           }
 
@@ -140,6 +144,7 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
             area = SL.Default,
             specialLocationName = Nothing,
             specialLocationTag = Nothing,
+            specialLocationSupportNumber = Nothing,
             mbPickupDropArea = Nothing
           }
 
