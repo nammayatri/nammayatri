@@ -320,6 +320,7 @@ testPostDriverRegistrationRegisterRcWithRealExecution =
               Common.RegisterRCReq
                 { Common.vehicleRegistrationCertNumber = "RC123456789",
                   Common.imageId = Kernel.Types.Id.Id "rc-image",
+                  Common.imageId2 = Nothing,
                   Common.operatingCity = "Delhi",
                   Common.dateOfRegistration = Just (UTCTime (fromGregorian 2022 1 1) 0),
                   Common.airConditioned = Just True,
@@ -364,8 +365,8 @@ testPostDriverRegistrationRegisterRcWithRealExecution =
                 Environment.Flow Kernel.Types.APISuccess.APISuccess
         True @? "Function should return APISuccess",
       testCase "Executes with different RC data and validates request handling" $ do
-        let req1 = Common.RegisterRCReq "RC123456789" (Kernel.Types.Id.Id "rc-image-1") "Delhi" (Just (UTCTime (fromGregorian 2020 1 1) 0)) (Just True) (Just False) (Just False) Nothing Nothing Nothing Nothing Nothing Nothing
-            req2 = Common.RegisterRCReq "RC987654321" (Kernel.Types.Id.Id "rc-image-2") "Mumbai" (Just (UTCTime (fromGregorian 2020 1 1) 0)) (Just False) (Just True) (Just True) Nothing Nothing Nothing Nothing Nothing Nothing
+        let req1 = Common.RegisterRCReq "RC123456789" (Kernel.Types.Id.Id "rc-image-1") Nothing "Delhi" (Just (UTCTime (fromGregorian 2020 1 1) 0)) (Just True) (Just False) (Just False) Nothing Nothing Nothing Nothing Nothing Nothing
+            req2 = Common.RegisterRCReq "RC987654321" (Kernel.Types.Id.Id "rc-image-2") Nothing "Mumbai" (Just (UTCTime (fromGregorian 2020 1 1) 0)) (Just False) (Just True) (Just True) Nothing Nothing Nothing Nothing Nothing Nothing
             merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
             opCity = Context.City "Delhi"
             driverId = Kernel.Types.Id.Id "driver-123" :: Kernel.Types.Id.Id DDriver.Driver

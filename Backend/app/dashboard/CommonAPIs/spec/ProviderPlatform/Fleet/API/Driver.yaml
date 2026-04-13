@@ -1671,6 +1671,7 @@ types:
     - airConditioned: Maybe Bool
     - driverName: Maybe Text
     - imageId: Maybe (Id Image)
+    - imageId2: Maybe (Id Image)
     - vehicleCategory: Maybe VehicleCategory
     - oxygen: Maybe Bool
     - ventilator: Maybe Bool
