@@ -362,24 +362,28 @@ checkRCAssociationForDriver driverId mbVehicleRC checkFleet = maybe checkAssocia
 
 checkEnitiesAssociationValidation :: Text -> Maybe Text -> DP.Person -> Maybe Bool -> Flow (DP.Person, Maybe Text)
 checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails fleetOwnerEnabledCheck = do
-  requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
-
-  case requestedPerson.role of
-    -- Fleet add vehcile him or under FleetDriver (Driver who has active association with fleet)
-    DP.FLEET_OWNER -> do
-      fleetOwnerId <- case mbFleetOwnerId of -- Have to discuss
-        Nothing -> DCommon.checkFleetOwnerVerification requestorId fleetOwnerEnabledCheck >> pure requestorId
-        Just val -> if requestorId == val then pure val else throwError AccessDenied
-      handleFleetOwnerFlow fleetOwnerId
-
-    -- Operator should add vehcile under DCO (Driver who independent from fleet), Fleet, FleetDriver (Driver who has active association with fleet)
-    DP.OPERATOR -> do
+  mbRequestedPerson <- QPerson.findById (Id requestorId)
+  case mbRequestedPerson of
+    Nothing ->
       case mbFleetOwnerId of
-        Nothing -> handleOperatorToDriverAndFleet requestedPerson entityDetails
-        Just fleetOwnerId -> do
-          validateOperatorToFleetAssoc requestedPerson.id.getId fleetOwnerId
+        Nothing -> return (entityDetails, Nothing)
+        Just fleetOwnerId -> handleFleetOwnerFlow fleetOwnerId
+    Just requestedPerson -> do
+      case requestedPerson.role of
+        -- Fleet add vehcile him or under FleetDriver (Driver who has active association with fleet)
+        DP.FLEET_OWNER -> do
+          fleetOwnerId <- case mbFleetOwnerId of -- Have to discuss
+            Nothing -> DCommon.checkFleetOwnerVerification requestorId fleetOwnerEnabledCheck >> pure requestorId
+            Just val -> if requestorId == val then pure val else throwError AccessDenied
           handleFleetOwnerFlow fleetOwnerId
-    _ -> throwError (InvalidRequesterRole $ show requestedPerson.role)
+        -- Operator should add vehcile under DCO (Driver who independent from fleet), Fleet, FleetDriver (Driver who has active association with fleet)
+        DP.OPERATOR -> do
+          case mbFleetOwnerId of
+            Nothing -> handleOperatorToDriverAndFleet requestedPerson entityDetails
+            Just fleetOwnerId -> do
+              validateOperatorToFleetAssoc requestedPerson.id.getId fleetOwnerId
+              handleFleetOwnerFlow fleetOwnerId
+        _ -> throwError (InvalidRequesterRole $ show requestedPerson.role)
   where
     handleFleetOwnerFlow :: Text -> Flow (DP.Person, Maybe Text)
     handleFleetOwnerFlow fleetOwnerId =
