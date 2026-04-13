@@ -28,7 +28,6 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Wallet as Wallet
-import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.API as PaymentAPI
@@ -71,7 +70,7 @@ getOrder tokenDetails orderId = withFlowHandlerAPI $ DPayment.getOrder tokenDeta
 getNotificationStatus :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Notification -> FlowHandler Payment.NotificationStatusResp
 getNotificationStatus notificationId = withFlowHandlerAPI . DPayment.pdnNotificationStatus notificationId
 
-postWalletRecharge :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> () -> FlowHandler APISuccess
+postWalletRecharge :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> () -> FlowHandler Payment.CreateOrderResp
 postWalletRecharge tokenDetails _ = withFlowHandlerAPI $ DPayment.postWalletRecharge tokenDetails ()
 
 getWalletBalance :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler Wallet.WalletBalanceData

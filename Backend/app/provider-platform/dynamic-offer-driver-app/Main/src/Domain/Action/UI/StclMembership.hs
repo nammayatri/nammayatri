@@ -108,7 +108,8 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             splitSettlementDetails = Nothing,
-            basket = Nothing
+            basket = Nothing,
+            paymentRules = Nothing
           }
 
   -- PaymentServiceType for createOrderService (STCL)

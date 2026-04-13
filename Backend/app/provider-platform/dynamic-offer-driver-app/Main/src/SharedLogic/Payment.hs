@@ -142,7 +142,8 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
             metadataExpiryInMins = mbDeepLinkData >>= (.expiryTimeInMinutes),
             splitSettlementDetails = splitSettlementDetails,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-            basket = Nothing
+            basket = Nothing,
+            paymentRules = Nothing
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person driver.id
@@ -459,7 +460,8 @@ createWalletTopupOrder (driverId, merchantId, mocId) amount = do
             metadataExpiryInMins = Nothing,
             splitSettlementDetails = Nothing,
             metadataGatewayReferenceId = Nothing,
-            basket = Nothing
+            basket = Nothing,
+            paymentRules = Nothing
           }
   (createOrderCall, pseudoClientId) <- TPayment.createOrder merchantId mocId paymentServiceName (Just driver.id.getId)
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId

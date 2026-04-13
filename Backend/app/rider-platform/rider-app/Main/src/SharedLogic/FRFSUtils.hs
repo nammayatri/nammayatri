@@ -882,7 +882,8 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
             splitSettlementDetails = splitSettlementDetails,
-            basket = basket
+            basket = basket,
+            paymentRules = Nothing
           }
   let mocId = merchantOperatingCityId
       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
