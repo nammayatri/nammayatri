@@ -751,8 +751,7 @@ postDriverFleetUnlink ::
   Maybe Text ->
   Flow APISuccess
 postDriverFleetUnlink merchantShortId opCity requestorId reqDriverId vehicleNo mbFleetOwnerId = do
-  requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
-  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
+  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   case entityRole of
@@ -1088,8 +1087,7 @@ postDriverFleetRemoveDriver ::
   Maybe Text ->
   Flow APISuccess
 postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetOwnerId = do
-  requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
-  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
+  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -1145,21 +1143,28 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
     _ -> throwError (InvalidRequest "Invalid Data")
   pure Success
 
-validateRequestorRoleAndGetEntityId :: DP.Person -> Maybe Text -> Flow (DP.Role, Text)
-validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId = do
-  case requestedPerson.role of
-    DP.FLEET_OWNER -> do
-      -- Fleet Owner tries to do operation
-      fleetOwnerid <- maybe (pure requestedPerson.id.getId) (\val -> if requestedPerson.id.getId == val then pure requestedPerson.id.getId else throwError AccessDenied) mbFleetOwnerId
-      pure (DP.FLEET_OWNER, fleetOwnerid)
-    DP.OPERATOR -> do
-      case mbFleetOwnerId of
-        Just fleetOwnerId -> do
-          -- Operator tries to do operation on behalf of the fleet
-          validateOperatorToFleetAssoc requestedPerson.id.getId fleetOwnerId
-          pure (DP.FLEET_OWNER, fleetOwnerId)
-        Nothing -> pure (DP.OPERATOR, requestedPerson.id.getId) -- Operator tries to do operation
-    _ -> throwError (InvalidRequest "Invalid Data")
+validateRequestorRoleAndGetEntityId :: Text -> Maybe Text -> Flow (DP.Role, Text)
+validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId = do
+  reqPerson <- QPerson.findById (Id requestorId)
+  case reqPerson of
+    Nothing -> do
+      fleetOwnerOrOperatorId <- mbFleetOwnerId & fromMaybeM (InvalidRequest "fleetOwnerId required")
+      fleetOwnerOrOperator <- QPerson.findById (Id fleetOwnerOrOperatorId) >>= fromMaybeM (PersonNotFound fleetOwnerOrOperatorId)
+      pure (fleetOwnerOrOperator.role, fleetOwnerOrOperatorId)
+    Just requestedPerson -> do
+      case requestedPerson.role of
+        DP.FLEET_OWNER -> do
+          -- Fleet Owner tries to do operation
+          fleetOwnerid <- maybe (pure requestedPerson.id.getId) (\val -> if requestedPerson.id.getId == val then pure requestedPerson.id.getId else throwError AccessDenied) mbFleetOwnerId
+          pure (DP.FLEET_OWNER, fleetOwnerid)
+        DP.OPERATOR -> do
+          case mbFleetOwnerId of
+            Just fleetOwnerId -> do
+              -- Operator tries to do operation on behalf of the fleet
+              validateOperatorToFleetAssoc requestedPerson.id.getId fleetOwnerId
+              pure (DP.FLEET_OWNER, fleetOwnerId)
+            Nothing -> pure (DP.OPERATOR, requestedPerson.id.getId) -- Operator tries to do operation
+        _ -> throwError (InternalError "Invalid Data")
 
 ---------------------------------------------------------------------
 getDriverFleetTotalEarning ::
@@ -1339,8 +1344,7 @@ getDriverFleetStatus merchantShortId opCity requestorId mbFleetOwnerId = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
   unless allowCacheDriverFlowStatus $ throwError (InvalidRequest "Cache driver flow status is not allowed in this merchant")
-  requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
-  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
+  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId
   let allKeys = DDF.allKeys entityId
   logTagInfo "DriverStatus" $ "Checking Redis for keys: " <> show allKeys <> ", entityRole: " <> show entityRole <> ", entityId: " <> entityId
   redisCounts <-
@@ -1996,8 +2000,7 @@ postDriverFleetVehicleDriverRcStatus ::
   Common.RCStatusReq ->
   Flow APISuccess
 postDriverFleetVehicleDriverRcStatus merchantShortId opCity reqDriverId requestorId mbFleetOwnerId req = do
-  requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
-  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
+  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person reqDriverId
