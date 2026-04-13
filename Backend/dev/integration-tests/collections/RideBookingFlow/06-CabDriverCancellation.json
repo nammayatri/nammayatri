@@ -136,7 +136,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"lmv\", \"colour\": \"White\", \"model\": \"MARUTI DZIRE\", \"make\": \"Maruti\", \"vehicleCategory\": \"CAR\", \"variant\": \"SEDAN\", \"category\": \"CAR\"}"
+					"raw": "{\"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"{{vehicle_class}}\", \"colour\": \"White\", \"model\": \"{{vehicle_model}}\", \"make\": \"{{vehicle_make}}\", \"vehicleCategory\": \"{{vehicle_category}}\", \"variant\": \"{{vehicle_variant}}\", \"category\": \"{{vehicle_category}}\"}"
 				},
 				"url": {
 					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle",
@@ -253,8 +253,7 @@
 					"listen": "prerequest",
 					"script": {
 						"exec": [
-							"var moment = require('moment');",
-							"pm.globals.set('current_time', moment.utc().format('YYYY-MM-DDTHH:mm:ssZ'));"
+							"pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
 						],
 						"type": "text/javascript"
 					}
@@ -468,7 +467,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\"registrationNo\": \"{{_test_reg_no2}}\", \"vehicleClass\": \"lmv\", \"colour\": \"White\", \"model\": \"MARUTI DZIRE\", \"make\": \"Maruti\", \"vehicleCategory\": \"CAR\", \"variant\": \"SEDAN\", \"category\": \"CAR\"}"
+					"raw": "{\"registrationNo\": \"{{_test_reg_no2}}\", \"vehicleClass\": \"{{vehicle_class}}\", \"colour\": \"White\", \"model\": \"{{vehicle_model}}\", \"make\": \"{{vehicle_make}}\", \"vehicleCategory\": \"{{vehicle_category}}\", \"variant\": \"{{vehicle_variant}}\", \"category\": \"{{vehicle_category}}\"}"
 				},
 				"url": {
 					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver2_id}}/addVehicle",
@@ -663,7 +662,7 @@
 					"listen": "prerequest",
 					"script": {
 						"exec": [
-							"var moment = require('moment'); pm.globals.set('current_time', moment.utc().format('YYYY-MM-DDTHH:mm:ssZ'));"
+							"pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
 						],
 						"type": "text/javascript"
 					}
@@ -737,7 +736,8 @@
 							"var d = pm.response.json();",
 							"pm.environment.set('searchId', d.searchId);",
 							"console.log('Search ID:', d.searchId);",
-							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+							"// Wait for async beckn search processing across services\nconst _delay = 5000; const _start = Date.now(); while (Date.now() - _start < _delay) {}"
 						],
 						"type": "text/javascript"
 					}
@@ -1091,8 +1091,7 @@
 					"listen": "prerequest",
 					"script": {
 						"exec": [
-							"var moment = require('moment');",
-							"pm.globals.set('current_time', moment.utc().format('YYYY-MM-DDTHH:mm:ssZ'));"
+							"pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
 						],
 						"type": "text/javascript"
 					}
@@ -1205,7 +1204,7 @@
 					"listen": "prerequest",
 					"script": {
 						"exec": [
-							"var moment = require('moment'); pm.globals.set('current_time', moment.utc().format('YYYY-MM-DDTHH:mm:ssZ'));"
+							"pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
 						],
 						"type": "text/javascript"
 					}
@@ -1627,6 +1626,74 @@
 					]
 				}
 			}
+		},
+		{
+			"name": "Get Driver Ride Invoices",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Wait for invoice generation after ride end",
+							"const start = Date.now();",
+							"while (Date.now() - start < 2000) { /* busy wait */ }"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('Driver Ride Invoices - totalItems:', d.totalItems);",
+							"if (d.invoices && d.invoices.length > 0) {",
+							"    d.invoices.forEach(function(inv, i) {",
+							"        console.log('Invoice ' + i + ': number=' + inv.invoiceNumber + ' type=' + inv.invoiceType + ' amount=' + inv.totalAmountPayable);",
+							"    });",
+							"}",
+							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+							"pm.test('Response has invoices array', function () { pm.expect(d.invoices).to.be.an('array'); });",
+							"pm.test('Response has totalItems', function () { pm.expect(d.totalItems).to.be.a('number'); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_namma_P}}/subscription/invoices?invoiceType=%22Ride%22&limit=10&offset=0",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"subscription",
+						"invoices"
+					],
+					"query": [
+						{
+							"key": "invoiceType",
+							"value": "%22Ride%22"
+						},
+						{
+							"key": "limit",
+							"value": "10"
+						},
+						{
+							"key": "offset",
+							"value": "0"
+						}
+					]
+				}
+			},
+			"response": []
 		}
 	],
 	"variable": [

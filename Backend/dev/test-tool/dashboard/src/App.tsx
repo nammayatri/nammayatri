@@ -964,6 +964,13 @@ function App() {
           <button className={`mode-tab ${appMode === 'custom' ? 'active' : ''}`} onClick={() => setAppMode('custom')}>
             Custom Flows
           </button>
+          <span className="mode-tabs-spacer" />
+          <a className="tool-link" href="http://localhost:8432" target="_blank" rel="noopener noreferrer" title="PostgreSQL Web UI — query all databases">
+            DB Explorer
+          </a>
+          <a className="tool-link" href="http://localhost:8431" target="_blank" rel="noopener noreferrer" title="RedisInsight — standalone + cluster">
+            Redis Explorer
+          </a>
         </div>
         <div className="content-wrapper">
           <div className="content">

@@ -20,7 +20,8 @@ instance FromTType' Beam.Plan Domain.Types.Plan.Plan where
     pure $
       Just
         Domain.Types.Plan.Plan
-          { allowStrikeOff = Kernel.Prelude.fromMaybe True allowStrikeOff,
+          { airportRideSubscription = airportRideSubscription,
+            allowStrikeOff = Kernel.Prelude.fromMaybe True allowStrikeOff,
             basedOnEntity = basedOnEntity,
             billingType = billingType,
             cgstPercentage = cgstPercentage,
@@ -56,7 +57,8 @@ instance FromTType' Beam.Plan Domain.Types.Plan.Plan where
 instance ToTType' Beam.Plan Domain.Types.Plan.Plan where
   toTType' (Domain.Types.Plan.Plan {..}) = do
     Beam.PlanT
-      { Beam.allowStrikeOff = Kernel.Prelude.Just allowStrikeOff,
+      { Beam.airportRideSubscription = airportRideSubscription,
+        Beam.allowStrikeOff = Kernel.Prelude.Just allowStrikeOff,
         Beam.basedOnEntity = basedOnEntity,
         Beam.billingType = billingType,
         Beam.cgstPercentage = cgstPercentage,

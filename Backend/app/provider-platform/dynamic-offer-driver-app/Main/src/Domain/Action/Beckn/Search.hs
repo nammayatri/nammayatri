@@ -78,7 +78,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType, Device, Version)
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
-import Lib.Queries.GateInfo (findGateInfoByLatLongWithoutGeoJson)
+import Lib.Queries.GateInfo (findGateInfoByLatLongWithinRadius)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import Lib.Yudhishthira.Types
@@ -207,6 +207,7 @@ data ValidatedDSearchReq = ValidatedDSearchReq
 data DSearchRes = DSearchRes
   { specialLocationTag :: Maybe Text,
     specialLocationName :: Maybe Text,
+    specialLocationSupportNumber :: Maybe Text,
     searchMetricsMVar :: Metrics.SearchMetricsMVar,
     paymentMethodsInfo :: [DMPM.PaymentMethodInfo],
     provider :: DM.Merchant,
@@ -305,16 +306,21 @@ handler ValidatedDSearchReq {..} sReq = do
   configVersionMap <- getConfigVersionMapForStickiness (cast merchantOpCityId)
   (_, mbVersion) <- getAppDynamicLogic (cast merchantOpCityId) LYT.DYNAMIC_PRICING_UNIFIED localTime Nothing Nothing
   allFarePoliciesProduct <- combineFarePoliciesProducts <$> (mapM (\tripCategory -> getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation sReq.fromSpecialLocationId sReq.toSpecialLocationId (Just (TransactionId (Id sReq.transactionId))) fromLocGeohashh toLocGeohash mbDistance mbDuration mbVersion tripCategory configVersionMap) possibleTripOption.tripCategories)
+  when (null allFarePoliciesProduct.farePolicies) $ logError $ "No fare policies resolved for transactionId: " <> sReq.transactionId <> ", merchantOpCityId: " <> merchantOpCityId.getId <> ", tripCategories: " <> show possibleTripOption.tripCategories <> ", area: " <> show allFarePoliciesProduct.area <> ", specialLocationTag: " <> show allFarePoliciesProduct.specialLocationTag
   let mbAreaForVST =
         allFarePoliciesProduct.mbPickupDropArea
           <|> Just allFarePoliciesProduct.area
   mbVehicleServiceTier <- getVehicleServiceTierForMeterRideSearch isMeterRideSearch driverIdForSearch configVersionMap
   let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed mbVehicleServiceTier allFarePoliciesProduct.farePolicies
   now <- getCurrentTime
-  (mbPickupGateId, mbSpecialZoneGateId, mbDefaultDriverExtra) <- getSpecialPickupZoneInfo allFarePoliciesProduct.specialLocationTag fromLocation
+  (mbPickupGateId, mbSpecialZoneGateId, mbDefaultDriverExtra) <-
+    getSpecialPickupZoneInfo
+      (fromMaybe allFarePoliciesProduct.area allFarePoliciesProduct.mbPickupDropArea)
+      fromLocation
   logDebug $ "Pickingup Gate info result : " <> show (mbPickupGateId, mbSpecialZoneGateId, mbDefaultDriverExtra)
   let spcllocationTag = maybe allFarePoliciesProduct.specialLocationTag (\_ -> allFarePoliciesProduct.specialLocationTag <&> (<> "_PickupZone")) mbSpecialZoneGateId
       specialLocName = allFarePoliciesProduct.specialLocationName
+      specialLocationSupportNumber = allFarePoliciesProduct.specialLocationSupportNumber
   cityCurrency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   customerCancellationDue <-
     if transporterConfig.canAddCancellationFee && sReq.isMultimodalSearch == Just False
@@ -357,6 +363,7 @@ handler ValidatedDSearchReq {..} sReq = do
   let buildEstimateHelper = buildEstimate merchantId' merchantOpCityId cityCurrency cityDistanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance spcllocationTag specialLocName mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute (length stops) searchReq.estimatedDuration transporterConfig
   let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId' possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration spcllocationTag mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute transporterConfig
   (estimates', quotes) <- foldrM (\fp acc -> processPolicy buildEstimateHelper buildQuoteHelper fp configVersionMap acc mbAreaForVST) ([], []) selectedFarePolicies
+  when (null estimates' && null quotes) $ logError $ "No estimates or quotes generated for searchRequestId: " <> searchReq.id.getId <> ", transactionId: " <> sReq.transactionId <> ", selectedFarePoliciesCount: " <> show (length selectedFarePolicies) <> ", riderPreferredOption: " <> show searchReq.riderPreferredOption <> ", tripCategory: " <> show searchReq.tripCategory <> ", hasToLocation: " <> show (isJust searchReq.toLocation)
 
   let mbAutoMaxFare = find (\est -> est.vehicleServiceTier == AUTO_RICKSHAW) estimates' <&> (.maxFare)
   estimates <-
@@ -373,13 +380,20 @@ handler ValidatedDSearchReq {..} sReq = do
   forM_ estimates $ \est -> triggerEstimateEvent EstimateEventData {estimate = est, merchantId = merchantId'}
   driverInfoQuotes <- addNearestDriverInfo merchantOpCityId driverPool quotes configVersionMap
   driverInfoEstimates <- addNearestDriverInfo merchantOpCityId driverPool estimates configVersionMap
-  buildDSearchResp sReq.pickupLocation sReq.dropLocation (stopsLatLong sReq.stops) spcllocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocName now possibleTripOption.schedule sReq.fareParametersInRateCard sReq.isMultimodalSearch
+  buildDSearchResp sReq.pickupLocation sReq.dropLocation (stopsLatLong sReq.stops) spcllocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocName specialLocationSupportNumber now possibleTripOption.schedule sReq.fareParametersInRateCard sReq.isMultimodalSearch
   where
     stopsLatLong = map (.gps)
-    getSpecialPickupZoneInfo :: Maybe Text -> DLoc.Location -> Flow (Maybe Text, Maybe Text, Maybe HighPrecMoney)
-    getSpecialPickupZoneInfo Nothing _ = pure (Nothing, Nothing, Nothing)
-    getSpecialPickupZoneInfo (Just _) fromLocation = do
-      mbPickupZone <- Esq.runInReplica $ findGateInfoByLatLongWithoutGeoJson (LatLong fromLocation.lat fromLocation.lon)
+    getSpecialPickupZoneInfo :: SL.Area -> DLoc.Location -> Flow (Maybe Text, Maybe Text, Maybe HighPrecMoney)
+    getSpecialPickupZoneInfo SL.Default _ = pure (Nothing, Nothing, Nothing)
+    getSpecialPickupZoneInfo area fromLocation = do
+      let pickupLatLong = LatLong fromLocation.lat fromLocation.lon
+          mbSlId = case area of
+            SL.Pickup slId -> Just slId
+            SL.PickupDrop slId _ -> Just slId
+            _ -> Nothing
+      mbPickupZone <- case mbSlId of
+        Just slId -> Esq.runInReplica $ findGateInfoByLatLongWithinRadius slId pickupLatLong 20.0
+        Nothing -> pure Nothing
       if ((.canQueueUpOnGate) <$> mbPickupZone) == Just True
         then -- Demand counter is now bumped at Select time (per chosen variant) rather than at Search,
         -- because at Search we don't yet know which estimate the customer will pick.
@@ -393,6 +407,7 @@ handler ValidatedDSearchReq {..} sReq = do
           area = maybe SL.Default (.area) $ listToMaybe products,
           specialLocationTag = listToMaybe products >>= (.specialLocationTag),
           specialLocationName = listToMaybe products >>= (.specialLocationName),
+          specialLocationSupportNumber = listToMaybe products >>= (.specialLocationSupportNumber),
           mbPickupDropArea = listToMaybe products >>= (.mbPickupDropArea)
         }
 
@@ -424,7 +439,7 @@ handler ValidatedDSearchReq {..} sReq = do
           logError $ "Vehicle service tier not found for " <> show fp'.vehicleServiceTier
           pure (estimates, quotes)
 
-    buildDSearchResp fromLocation toLocation stops specialLocationTag searchMetricsMVar quotes estimates specialLocationName now startTime fareParametersInRateCard isMultimodalSearch = do
+    buildDSearchResp fromLocation toLocation stops specialLocationTag searchMetricsMVar quotes estimates specialLocationName specialLocationSupportNumber now startTime fareParametersInRateCard isMultimodalSearch = do
       merchantPaymentMethods <- CQMPM.findAllByMerchantOpCityId merchantOpCityId
       let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
       return $

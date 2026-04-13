@@ -71,7 +71,6 @@ import qualified Tools.LoyaltyWallet as LoyaltyWallet
 import Tools.Metrics.BAPMetrics
 import qualified Tools.Notifications as TNotifications
 import qualified Tools.Payment as TPayment
-import qualified Tools.Wallet as TWallet
 import TransactionLogs.Types
 import qualified UrlShortner.Common as UrlShortner
 
@@ -130,11 +129,8 @@ orderStatusHandler merchantOpCityId fulfillmentHandler paymentService paymentOrd
     60
     100
     ( do
-        let walletPostingCall = case paymentOrder.merchantOperatingCityId of
-              Just merchantOperatingCityId -> Just $ TWallet.walletPosting (cast paymentOrder.merchantId) (cast merchantOperatingCityId)
-              Nothing -> Nothing
-            commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
-        orderStatusResponse <- DPayment.orderStatusService commonMerchantOperatingCityId paymentOrder.personId paymentOrder.id orderStatusCall walletPostingCall
+        let commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
+        orderStatusResponse <- DPayment.orderStatusService commonMerchantOperatingCityId paymentOrder.personId paymentOrder.id orderStatusCall
         mbUpdatedPaymentOrder <- QPaymentOrder.findById paymentOrder.id
         let updatedPaymentOrder = fromMaybe paymentOrder mbUpdatedPaymentOrder
         orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder updatedPaymentOrder orderStatusResponse
@@ -450,9 +446,8 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
   processRefund person paymentOrder paymentServiceType
   let merchantOperatingCityId = fromMaybe person.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
       orderStatusCall = TPayment.orderStatus (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
-      walletPostingCall = TWallet.walletPosting (cast paymentOrder.merchantId) merchantOperatingCityId
       commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
-  paymentStatusResp <- DPayment.orderStatusService commonMerchantOperatingCityId paymentOrder.personId paymentOrder.id orderStatusCall (Just walletPostingCall)
+  paymentStatusResp <- DPayment.orderStatusService commonMerchantOperatingCityId paymentOrder.personId paymentOrder.id orderStatusCall
   refundStatusHandler paymentOrder paymentServiceType
   return paymentStatusResp
   where
@@ -697,6 +692,7 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
                 optionsGetUpiDeepLinks = Nothing,
                 metadataExpiryInMins = Nothing,
                 basket = Nothing,
+                paymentRules = Nothing,
                 offerId = req.offerId <&> (.getId),
                 discountAmount = Just req.discountAmount,
                 payoutAmount = Nothing,

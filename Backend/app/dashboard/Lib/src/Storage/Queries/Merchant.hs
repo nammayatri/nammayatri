@@ -15,7 +15,9 @@
 
 module Storage.Queries.Merchant where
 
+import qualified Data.Text as T
 import Domain.Types.Merchant as Domain
+import qualified Domain.Types.Role as DRole
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -96,6 +98,7 @@ instance FromTType' BeamM.Merchant Domain.Merchant where
             authToken = case (authTokenEncrypted, authTokenHash) of
               (Just token, Just hash) -> Just $ EncryptedHashed (Encrypted token) hash
               _ -> Nothing,
+            trackLoginLogoutForRoles = mapMaybe parseDashboardAccessType trackLoginLogoutForRoles,
             ..
           }
 
@@ -106,5 +109,12 @@ instance ToTType' BeamM.Merchant Domain.Merchant where
         shortId = getShortId shortId,
         authTokenEncrypted = authToken <&> (unEncrypted . (.encrypted)),
         authTokenHash = authToken <&> (.hash),
+        trackLoginLogoutForRoles = showDashboardAccessType <$> trackLoginLogoutForRoles,
         ..
       }
+
+parseDashboardAccessType :: Text -> Maybe DRole.DashboardAccessType
+parseDashboardAccessType = readMaybe . T.unpack
+
+showDashboardAccessType :: DRole.DashboardAccessType -> Text
+showDashboardAccessType = T.pack . show

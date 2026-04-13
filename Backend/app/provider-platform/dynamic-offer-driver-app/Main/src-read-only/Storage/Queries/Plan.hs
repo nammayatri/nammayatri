@@ -121,7 +121,8 @@ findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Ty
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Plan.Plan -> m ())
 updateByPrimaryKey (Domain.Types.Plan.Plan {..}) = do
   updateWithKV
-    [ Se.Set Beam.allowStrikeOff (Kernel.Prelude.Just allowStrikeOff),
+    [ Se.Set Beam.airportRideSubscription airportRideSubscription,
+      Se.Set Beam.allowStrikeOff (Kernel.Prelude.Just allowStrikeOff),
       Se.Set Beam.basedOnEntity basedOnEntity,
       Se.Set Beam.billingType billingType,
       Se.Set Beam.cgstPercentage cgstPercentage,

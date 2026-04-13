@@ -62,10 +62,11 @@ import qualified Domain.Types.AadhaarCard as DAadhaar
 import qualified Domain.Types.BusinessLicense as DBL
 import qualified Domain.Types.CommonDriverOnboardingDocuments as DCommonDoc
 import qualified Domain.Types.DocumentVerificationConfig as DVC
-import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.DriverPanCard as DPan
+import qualified Domain.Types.DriverRCAssociation as DRCA
 import qualified Domain.Types.FleetOwnerInformation as DFOI
+import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -121,12 +122,9 @@ import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDrive
 import qualified Storage.Queries.CommonDriverOnboardingDocumentsExtra as QCommonDriverOnboardingDocumentsExtra
 import qualified Storage.Queries.DriverGstin as QGstin
 import qualified Storage.Queries.DriverInformation as QDriverInfo
-import qualified Domain.Types.DriverRCAssociation as DRCA
-
-import qualified Storage.Queries.DriverRCAssociation as QRCAssoc
-import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverPanCard as QPan
+import qualified Storage.Queries.DriverRCAssociation as QRCAssoc
 import qualified Storage.Queries.DriverSSN as QSSN
 import qualified Storage.Queries.FleetOwnerDocumentVerificationConfig as QFODVC
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
@@ -137,6 +135,7 @@ import Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QDriver
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Translations as QTranslations
+import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleFitnessCertificate as QFC
 import qualified Storage.Queries.VehicleInsurance as QVI
 import qualified Storage.Queries.VehicleNOC as QVNOC
@@ -710,6 +709,7 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ req@Common.Reg
     (cast driverId_, cast merchant.id, merchantOpCityId)
     ( DriverRCReq
         { imageId = cast imageId,
+          imageId2 = cast <$> imageId2,
           udinNumber = udinNumber,
           vehicleCategory = vehicleCategoryToPass,
           vehicleClass = vehicleClassToPass,
@@ -1485,8 +1485,7 @@ handleMandatoryDocRejection _merchantId merchantOperatingCityId driverId docType
             -- If not separate enablement, also disable the driver
             unless separateEnablement $
               QDriverInfo.updateEnabledVerifiedState (cast driverId) False (Just False)
-      else
-        -- Driver doc rejected: disable the driver
+      else -- Driver doc rejected: disable the driver
         QDriverInfo.updateEnabledVerifiedState (cast driverId) False (Just False)
 
 resolveRcIdFromDocument :: DVC.DocumentType -> Id DImage.Image -> Flow (Maybe (Id DRC.VehicleRegistrationCertificate))
@@ -1882,7 +1881,7 @@ getDriverRegistrationPayoutOrderStatus merchantShortId opCity driverId orderId =
           CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing DPlan.YATRI_SUBSCRIPTION
             >>= fromMaybeM (InternalError "No subscription config found")
         let orderStatusCall = TPayment.orderStatus merchant.id merchantOpCityId serviceConfig.paymentServiceName (Just $ getId driverId)
-        paymentStatus <- DPayment.orderStatusService commonMerchantOpCityId commonPersonId (Id orderId) orderStatusCall Nothing
+        paymentStatus <- DPayment.orderStatusService commonMerchantOpCityId commonPersonId (Id orderId) orderStatusCall
         case paymentStatus of
           DPayment.PaymentStatus {status, payerVpa} -> do
             when (status == Payment.CHARGED) $ do

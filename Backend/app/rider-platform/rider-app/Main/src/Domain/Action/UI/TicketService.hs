@@ -347,7 +347,8 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing,
             splitSettlementDetails = splitSettlementDetails,
-            basket = Nothing
+            basket = Nothing,
+            paymentRules = Nothing
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId_
@@ -673,9 +674,8 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
             paymentOrder <- QOrder.findById (Kernel.Types.Id.Id id.getId) >>= fromMaybeM (PaymentOrderNotFound id.getId)
             let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId
                 orderStatusCall = Payment.orderStatus merchantId' merchantOperatingCityId (Just ticketPlaceId) Payment.Normal (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
-                walletPostingCall = Wallet.walletPosting merchantId' merchantOperatingCityId
                 commonMerchantOperatingCityId = Kernel.Types.Id.cast @MerchantOperatingCity.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
-            paymentStatus <- DPayment.orderStatusService commonMerchantOperatingCityId commonPersonId (Kernel.Types.Id.Id id.getId) orderStatusCall (Just walletPostingCall)
+            paymentStatus <- DPayment.orderStatusService commonMerchantOperatingCityId commonPersonId (Kernel.Types.Id.Id id.getId) orderStatusCall
             mapM (mkRefundDetails shortId merchantId') paymentStatus.refunds
           else pure refunds
 
@@ -1229,9 +1229,8 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
       return ticketBooking'.status
     else do
       let merchantOperatingCityId = fromMaybe person.merchantOperatingCityId (Kernel.Types.Id.cast <$> order.merchantOperatingCityId)
-          walletPostingCall = Wallet.walletPosting merchantId merchantOperatingCityId
           commonMerchantOperatingCityId = Kernel.Types.Id.cast @MerchantOperatingCity.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
-      paymentStatus <- DPayment.orderStatusService commonMerchantOperatingCityId commonPersonId order.id orderStatusCall (Just walletPostingCall)
+      paymentStatus <- DPayment.orderStatusService commonMerchantOperatingCityId commonPersonId order.id orderStatusCall
       case paymentStatus of
         DPayment.PaymentStatus {..} -> do
           when (status == Payment.CHARGED) $ do

@@ -185,7 +185,8 @@ data ServiceHandle m = ServiceHandle
     getRouteAndDistanceBetweenPoints :: LatLong -> LatLong -> [LatLong] -> Meters -> m ([LatLong], Meters),
     findPaymentMethodByIdAndMerchantId :: Id DMPM.MerchantPaymentMethod -> Id DMOC.MerchantOperatingCity -> m (Maybe DMPM.MerchantPaymentMethod),
     sendDashboardSms :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Sms.DashboardMessageType -> Maybe DRide.Ride -> Id DP.Person -> Maybe SRB.Booking -> HighPrecMoney -> m (),
-    uiDistanceCalculation :: Id DRide.Ride -> Maybe Int -> Maybe Int -> m ()
+    uiDistanceCalculation :: Id DRide.Ride -> Maybe Int -> Maybe Int -> m (),
+    getCongestionChargeOnEndRide :: Seconds -> Maybe LatLong -> Maybe Text -> Maybe Text -> DVST.ServiceTierType -> Maybe Meters -> Maybe Seconds -> Maybe Double -> Maybe Text -> Maybe Int -> Id DMOC.MerchantOperatingCity -> Maybe Seconds -> Maybe Seconds -> m (Maybe FarePolicy.CongestionChargeDetailsModel)
   }
 
 buildEndRideHandle ::
@@ -216,7 +217,9 @@ buildEndRideHandle merchantId merchantOpCityId rideId = do
         getRouteAndDistanceBetweenPoints = RideEndInt.getRouteAndDistanceBetweenPoints merchantId merchantOpCityId,
         findPaymentMethodByIdAndMerchantId = CQMPM.findByIdAndMerchantOpCityId,
         sendDashboardSms = Sms.sendDashboardSms,
-        uiDistanceCalculation = QRide.updateUiDistanceCalculation
+        uiDistanceCalculation = QRide.updateUiDistanceCalculation,
+        getCongestionChargeOnEndRide = \timeDiff mbFromLoc mbFromGeohash mbToGeohash svcTier mbDist mbDur mbRadius mbSpecialLoc mbDpVersion mocId mbEstDur mbActDur ->
+          FarePolicy.getCongestionChargeMultiplierFromModel' timeDiff mbFromLoc mbFromGeohash mbToGeohash svcTier Nothing mbDist mbDur (Just True) mbRadius mbSpecialLoc mbDpVersion mocId mbEstDur mbActDur
       }
 
 -- Helper function to get driver number from Person record
@@ -770,8 +773,41 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
     else do
       stopsInfo <- if fromMaybe False ride.hasStops then QSI.findAllByRideId ride.id else return []
       mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage booking.merchantOperatingCityId booking.emailDomain booking.billingCategory farePolicy.vehicleServiceTier
+      -- Recompute congestion charge at end ride if config enabled
+      (farePolicyWithCongestion, endRideCongestionCharge) <-
+        if thresholdConfig.recomputeCongestionChargeOnEndRide == Just True
+          then do
+            logInfo "Recomputing congestion charge on end ride"
+            mbCongestionDetails <-
+              getCongestionChargeOnEndRide
+                thresholdConfig.timeDiffFromUtc
+                (Just $ getCoordinates booking.fromLocation)
+                booking.fromLocGeohash
+                booking.toLocGeohash
+                booking.vehicleServiceTier
+                (Just recalcDistance)
+                finalDuration
+                thresholdConfig.qarCalRadiusInKm
+                booking.specialLocationName
+                booking.dynamicPricingLogicVersion
+                booking.merchantOperatingCityId
+                booking.estimatedDuration
+                actualDuration
+            case mbCongestionDetails of
+              Just details -> do
+                logInfo $ "End ride congestion recompute result: " <> show details
+                let updatedFarePolicy =
+                      farePolicy
+                        { DFP.congestionChargeMultiplier = details.congestionChargeMultiplier,
+                          DFP.congestionChargePerMin = details.congestionChargePerMin
+                        }
+                return (updatedFarePolicy, Nothing) -- Pass Nothing so fare calculator recomputes from updated fare policy
+              Nothing -> do
+                logInfo "End ride congestion recompute returned Nothing, falling back to booking estimate"
+                return (farePolicy, booking.estimatedCongestionCharge)
+          else return (farePolicy, booking.estimatedCongestionCharge)
       let farePolicy' =
-            farePolicy
+            farePolicyWithCongestion
               { DFP.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,
                 DFP.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage
               } ::
@@ -793,7 +829,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               customerExtraFee = booking.fareParams.customerExtraFee,
               nightShiftCharge = booking.fareParams.nightShiftCharge,
               petCharges = booking.fareParams.petCharges,
-              estimatedCongestionCharge = booking.estimatedCongestionCharge,
+              estimatedCongestionCharge = endRideCongestionCharge,
               customerCancellationDues = booking.fareParams.customerCancellationDues,
               nightShiftOverlapChecking = DTC.isFixedNightCharge booking.tripCategory,
               timeDiffFromUtc = Just thresholdConfig.timeDiffFromUtc,

@@ -381,6 +381,7 @@ types:
   RegisterRCReq:
     - vehicleRegistrationCertNumber: Text
     - imageId: Id Image
+    - imageId2: Maybe (Id Image)
     - operatingCity: Text
     - dateOfRegistration: Maybe UTCTime
     - airConditioned: Maybe Bool

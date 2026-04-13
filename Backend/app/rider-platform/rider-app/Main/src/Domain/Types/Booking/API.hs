@@ -148,7 +148,8 @@ data BookingAPIEntity = BookingAPIEntity
     mbJourneyId :: Maybe (Id DJourney.Journey),
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     displayBookingId :: Maybe Text,
-    driverPreference :: Maybe [Text]
+    driverPreference :: Maybe [Text],
+    specialLocationSupportNumber :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -367,7 +368,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         vehicleCategory = booking.vehicleCategory,
         mbJourneyId = mbJourneyLeg <&> (.journeyId),
         displayBookingId = booking.displayBookingId,
-        driverPreference = booking.driverPreference
+        driverPreference = booking.driverPreference,
+        specialLocationSupportNumber = booking.specialLocationSupportNumber
       }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds

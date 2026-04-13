@@ -48,6 +48,7 @@ data SpecialLocation = SpecialLocation
     isOpenMarketEnabled :: Bool,
     isQueueEnabled :: Maybe Bool,
     priority :: Int,
+    supportNumber :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

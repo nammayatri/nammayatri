@@ -76,7 +76,18 @@ in
           command = "set -x; pwd; ${ny.config.haskellProjects.default.outputs.apps.${name}.program}";
         };
 
+      # Primary services that must be healthy before other services start
+      primaryExecutables = [
+        "rider-app-exe"
+        "dynamic-offer-driver-app-exe"
+      ];
+
+      secondaryExecutables = builtins.filter
+        (name: !builtins.elem name primaryExecutables)
+        cabalExecutables;
+
       haskellProcesses.processes =
+        # Primary services: only depend on nammayatri-init
         lib.listToAttrs (builtins.map
           (name: {
             inherit name;
@@ -86,10 +97,29 @@ in
                 (haskellProcessFor name)
               ];
               depends_on."nammayatri-init".condition = "process_completed_successfully";
-              shutdown.signal = 9; #cabal run doesn’t accept SIGTERM sending SIGKILL to kill all process
+              shutdown.signal = 9;
             };
           })
-          cabalExecutables);
+          primaryExecutables)
+        //
+        # Secondary services: depend on nammayatri-init + primary services healthy
+        lib.listToAttrs (builtins.map
+          (name: {
+            inherit name;
+            value = {
+              imports = [
+                common
+                (haskellProcessFor name)
+              ];
+              depends_on = {
+                "nammayatri-init".condition = "process_completed_successfully";
+                "rider-app-exe".condition = "process_healthy";
+                "dynamic-offer-driver-app-exe".condition = "process_healthy";
+              };
+              shutdown.signal = 9;
+            };
+          })
+          secondaryExecutables);
 
     in
     {
@@ -106,6 +136,8 @@ in
               "redis".condition = "process_healthy";
               "kafka".condition = "process_healthy";
               "passetto-service".condition = "process_started";
+              "rider-app-exe".condition = "process_healthy";
+              "dynamic-offer-driver-app-exe".condition = "process_healthy";
             };
             command = pkgs.writeShellApplication {
               name = "config-sync";
@@ -121,7 +153,13 @@ in
               text = ''
                 set -x
                 cd dev/config-sync
-                DEV=true python3 config_transfer.py import --from master --to local
+                if [ -d "assets/data/prod_to_local" ] && [ "$(ls -A assets/data/prod_to_local 2>/dev/null)" ]; then
+                  echo "Found prod_to_local data, importing from prod"
+                  DEV=true python3 config_transfer.py import --from prod --to local
+                else
+                  echo "Using master_to_local data"
+                  DEV=true python3 config_transfer.py import --from master --to local
+                fi
               '';
             };
           };
@@ -138,7 +176,6 @@ in
               "nginx".condition = "process_healthy";
               "osrm-server".condition = "process_started";
               "passetto-service".condition = "process_started";
-              "config-sync".condition = "process_completed_successfully";
             } // lib.optionalAttrs cfg.useCabal {
               # Compile Haskell code
               "cabal-build".condition = "process_completed_successfully";
@@ -254,6 +291,68 @@ in
               restart = "on_failure";
               backoff_seconds = 2;
               max_restarts = 3;
+            };
+          };
+
+          # ── Dev tools: DB explorer + Redis explorer ──
+          pgweb = {
+            imports = [ common ];
+            command = "${pkgs.pgweb}/bin/pgweb --bind 0.0.0.0 --listen 8432 --host localhost --port 5434 --user atlas_superuser --db atlas_dev --ssl disable --skip-open";
+            namespace = lib.mkForce "tools";
+            depends_on."db-primary".condition = "process_healthy";
+            availability = {
+              restart = "on_failure";
+              backoff_seconds = 2;
+              max_restarts = 3;
+            };
+          };
+          redis-commander = {
+            imports = [ common ];
+            command = pkgs.writeShellApplication {
+              name = "redis-commander";
+              runtimeInputs = [ pkgs.nodejs ];
+              text = ''
+                set -x  # debug output
+                RC_WORK="$HOME/.cache/redis-commander-ny"
+                RC_PKG="$RC_WORK/node_modules/redis-commander"
+
+                # Install only if not already present
+                if [ ! -d "$RC_PKG" ]; then
+                  mkdir -p "$RC_WORK"
+                  cd "$RC_WORK"
+                  npm init -y
+                  npm install redis-commander@0.9.0
+                fi
+
+                # Always rewrite default.json with our connections (idempotent).
+                # redis-commander reads TOP-LEVEL config.connections — not config.redis.connections!
+                node <<NODE_SCRIPT
+                const fs = require('fs');
+                const p = '$RC_PKG/config/default.json';
+                const c = JSON.parse(fs.readFileSync(p, 'utf8'));
+                c.connections = [
+                  { label: 'standalone', host: '127.0.0.1', port: 6379, dbIndex: 0 },
+                  { label: 'cluster',    host: '127.0.0.1', port: 30001, dbIndex: 0, isCluster: true, clusterNoTlsValidation: true }
+                ];
+                c.server.address = '0.0.0.0';
+                c.server.port = 8431;
+                fs.writeFileSync(p, JSON.stringify(c, null, 2));
+                console.log('Patched default.json top-level connections:', c.connections.length);
+                NODE_SCRIPT
+
+                cd "$RC_PKG"
+                exec node bin/redis-commander.js --noauth
+              '';
+            };
+            namespace = lib.mkForce "tools";
+            depends_on = {
+              "redis".condition = "process_healthy";
+              "cluster1-cluster-create".condition = "process_completed_successfully";
+            };
+            availability = {
+              restart = "on_failure";
+              backoff_seconds = 5;
+              max_restarts = 5;
             };
           };
 
@@ -387,6 +486,12 @@ in
             schemas = [
               ../../dev/clickhouse/sql-seed/atlas-driver-offer-bpp-seed.sql
               ../../dev/clickhouse/local-testing-data/atlas-driver-offer-bpp.sql
+            ];
+          }
+          {
+            name = "app_monitor";
+            schemas = [
+              ../../dev/clickhouse/sql-seed/app-monitor-seed.sql
             ];
           }
         ];

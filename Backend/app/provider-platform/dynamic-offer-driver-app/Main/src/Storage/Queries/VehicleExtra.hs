@@ -1,6 +1,9 @@
 module Storage.Queries.VehicleExtra where
 
+import Control.Applicative ((<|>))
 import Data.Either (fromRight)
+import qualified Data.Text as T
+import qualified Data.Time.Calendar as Days
 import qualified Database.Beam as B
 import Domain.Types.Merchant
 import Domain.Types.Person
@@ -133,3 +136,35 @@ updateMerchantIdAndCityIdByDriverId driverId merchantId mbMerchantOperatingCityI
       Se.Set BeamV.updatedAt now
     ]
     [Se.Is BeamV.driverId (Se.Eq $ getId driverId)]
+
+-- | When the driver's vehicle row still matches the old RC registration number, sync fields from optional dashboard edits.
+updateFleetVehicleFromDashboardRcEdit ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id Person ->
+  Text ->
+  Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Int ->
+  m ()
+updateFleetVehicleFromDashboardRcEdit driverId oldRegistrationNo newRegistrationNo mbMake mbModel mbColor mbYearInt = do
+  mbVehicle <- findByDriverIdAndRegistrationNo driverId oldRegistrationNo
+  whenJust mbVehicle $ \veh -> do
+    now <- getCurrentTime
+    let make' = mbMake <|> veh.make
+        model' = maybe veh.model T.strip mbModel
+        color' = maybe veh.color T.strip mbColor
+        mYManufacturing =
+          maybe veh.mYManufacturing (\y -> Just $ Days.fromGregorian (fromIntegral y) 1 1) mbYearInt
+    updateOneWithKV
+      [ Se.Set BeamV.registrationNo newRegistrationNo,
+        Se.Set BeamV.make make',
+        Se.Set BeamV.model model',
+        Se.Set BeamV.color color',
+        Se.Set BeamV.mYManufacturing mYManufacturing,
+        Se.Set BeamV.updatedAt now
+      ]
+      [ Se.Is BeamV.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
+        Se.Is BeamV.registrationNo $ Se.Eq oldRegistrationNo
+      ]

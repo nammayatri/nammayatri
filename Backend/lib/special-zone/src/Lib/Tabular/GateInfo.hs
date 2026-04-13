@@ -18,9 +18,9 @@
 module Lib.Tabular.GateInfo where
 
 import qualified Data.Aeson as A
+import qualified Data.ByteString.Lazy as BL
 import qualified Data.Map.Strict as Map
 import qualified Data.Text.Encoding as TE
-import qualified Data.ByteString.Lazy as BL
 import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto

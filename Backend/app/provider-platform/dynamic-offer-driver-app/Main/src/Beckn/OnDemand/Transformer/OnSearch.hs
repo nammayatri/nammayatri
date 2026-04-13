@@ -55,7 +55,7 @@ tfCatalogProviders res bppConfig isValueAddNP = do
       providerLocations_ = Just $ Beckn.OnDemand.Utils.OnSearch.mkProviderLocations ((map (\(_, _, c, _) -> c) res.estimates) <> (map (\(_, _, c, _) -> c) res.quotes))
       providerPayments_ = Just $ mkPayment res.provider bppConfig Nothing
       providerDescriptor_ = tfCatalogDescriptor res
-      pricings = (map (Beckn.OnDemand.Utils.Common.convertEstimateToPricing res.specialLocationName) res.estimates) <> (map (Beckn.OnDemand.Utils.Common.convertQuoteToPricing res.specialLocationName) res.quotes)
+      pricings = (map (Beckn.OnDemand.Utils.Common.convertEstimateToPricing res.specialLocationName res.specialLocationSupportNumber) res.estimates) <> (map (Beckn.OnDemand.Utils.Common.convertQuoteToPricing res.specialLocationName res.specialLocationSupportNumber) res.quotes)
       providerFulfillments_ = map (tfProviderFulfillments res) pricings & Just
       providerItems_ = Just $ map (tfProviderItems res isValueAddNP) pricings
       allTripCategories = Data.List.nubBy (\a b -> BecknV2.OnDemand.Utils.Common.tripCategoryToCategoryCode a == BecknV2.OnDemand.Utils.Common.tripCategoryToCategoryCode b) $ map (.tripCategory) pricings

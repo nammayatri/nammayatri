@@ -14,16 +14,24 @@
 
 module SharedLogic.SpecialZoneDriverDemand
   ( mkGateSearchDemandKey,
+    mkGateSearchSupplyKey,
     mkGateDriverNotifiedKey,
     mkQueueSkipCountKey,
     incrementGateSearchDemand,
+    decrementGateSearchDemand,
+    runDemandDecrementForBooking,
+    incrementGateSearchSupply,
+    decrementGateSearchSupply,
+    runSupplyIncrementForRequest,
+    runSupplyDecrementForRequest,
     incrementQueueSkipCount,
     resetQueueSkipCount,
     checkAndNotifyDriverDemand,
     runDemandCheckForVariants,
     forceNotifyDriverDemand,
     handleQueueSkipIfApplicable,
-    completePickupZoneRequestOnRideStart,
+    completePickupZoneRequestsForDriver,
+    cancelPickupZoneRequestsForDriver,
   )
 where
 
@@ -33,7 +41,6 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SpecialZoneQueueRequest as DSZQR
-import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -52,6 +59,9 @@ import qualified Tools.Notifications as Notify
 
 mkGateSearchDemandKey :: Text -> Text -> Text
 mkGateSearchDemandKey gateId variant = "DriverDemand:Gate:" <> gateId <> ":" <> variant
+
+mkGateSearchSupplyKey :: Text -> Text -> Text
+mkGateSearchSupplyKey gateId variant = "DriverSupply:Gate:" <> gateId <> ":" <> variant
 
 mkGateDriverNotifiedKey :: Text -> Text -> Text
 mkGateDriverNotifiedKey gateId driverId = "DriverDemand:Notified:" <> gateId <> ":" <> driverId
@@ -72,6 +82,93 @@ incrementGateSearchDemand gateId variant = Redis.withCrossAppRedis $ do
   let key = mkGateSearchDemandKey gateId variant
   void $ Redis.incr key
   Redis.expire key 300 -- 5 min sliding window
+
+-- | Decrement the gate demand counter (clamp at 0). Called when demand is fulfilled or retracted.
+decrementGateSearchDemand ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
+  Text -> -- gateId
+  Text -> -- vehicleVariant
+  m ()
+decrementGateSearchDemand gateId variant = Redis.withCrossAppRedis $ do
+  let key = mkGateSearchDemandKey gateId variant
+  newVal <- Redis.decr key
+  when (newVal < 0) $ void $ Redis.set key (0 :: Int)
+
+-- | Idempotent demand decrement keyed by bookingId. Prevents double-decrement on retries.
+--   No-op when pickupGateId is Nothing.
+runDemandDecrementForBooking ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
+  Text ->       -- bookingId (idempotency key)
+  Maybe Text -> -- pickupGateId
+  Text ->       -- vehicleServiceTier as Text
+  m ()
+runDemandDecrementForBooking _ Nothing _ = pure ()
+runDemandDecrementForBooking bookingId (Just gateId) variant = do
+  let idempotencyKey = "DriverDemand:Decremented:" <> bookingId
+  wasSet <- Redis.withCrossAppRedis $ Redis.setNxExpire idempotencyKey 86400 ("1" :: Text)
+  when wasSet $ decrementGateSearchDemand gateId variant
+
+-- | Increment the gate supply counter. Supply reflects drivers who have accepted a
+--   pickup-zone request at this gate/variant and are committed to the pickup.
+--   24-hour sliding TTL guards against orphaned counters if explicit decrements are missed.
+incrementGateSearchSupply ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
+  Text -> -- gateId
+  Text -> -- vehicleVariant
+  m ()
+incrementGateSearchSupply gateId variant = Redis.withCrossAppRedis $ do
+  let key = mkGateSearchSupplyKey gateId variant
+  void $ Redis.incr key
+  Redis.expire key 86400
+
+-- | Decrement the gate supply counter (clamp at 0).
+decrementGateSearchSupply ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
+  Text -> -- gateId
+  Text -> -- vehicleVariant
+  m ()
+decrementGateSearchSupply gateId variant = Redis.withCrossAppRedis $ do
+  let key = mkGateSearchSupplyKey gateId variant
+  newVal <- Redis.decr key
+  when (newVal < 0) $ void $ Redis.set key (0 :: Int)
+
+-- | Idempotent supply increment keyed by pickup-zone requestId. Called when a driver accepts.
+runSupplyIncrementForRequest ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
+  Text -> -- requestId (idempotency key)
+  Text -> -- gateId
+  Text -> -- vehicleVariant
+  m ()
+runSupplyIncrementForRequest requestId gateId variant = do
+  let idempotencyKey = "DriverSupply:Incremented:" <> requestId
+  wasSet <- Redis.withCrossAppRedis $ Redis.setNxExpire idempotencyKey 86400 ("1" :: Text)
+  when wasSet $ incrementGateSearchSupply gateId variant
+
+-- | Idempotent supply decrement keyed by pickup-zone requestId. Safe to call from any
+--   code path that terminates the commitment (cancel / no-show / booking confirm / ride start
+--   / driver ride cancel) — only the first call decrements the counter.
+runSupplyDecrementForRequest ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
+  Text -> -- requestId (idempotency key)
+  Text -> -- gateId
+  Text -> -- vehicleVariant
+  m ()
+runSupplyDecrementForRequest requestId gateId variant = do
+  let idempotencyKey = "DriverSupply:Decremented:" <> requestId
+  wasSet <- Redis.withCrossAppRedis $ Redis.setNxExpire idempotencyKey 86400 ("1" :: Text)
+  when wasSet $ decrementGateSearchSupply gateId variant
 
 incrementQueueSkipCount ::
   ( Redis.HedisFlow m r,
@@ -131,8 +228,9 @@ runDemandCheckForVariants merchantOpCityId merchantId pickupZoneGateId variants 
       checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant
 
 -- | Per-variant demand check. Triggered from Select once an estimate is chosen.
---   Notifies parking-area drivers of this variant to move to the pickup zone
---   when supply is below 'min' for the gate, capped at 'max - currentInZone'.
+--   Compares per-variant demand against the gate's demand threshold; when it's hit and
+--   committed supply (tracked via Redis) is below 'min', notifies top LTS-queue drivers
+--   up to 'max - supply'.
 checkAndNotifyDriverDemand ::
   ( Redis.HedisFlow m r,
     MonadFlow m,
@@ -158,46 +256,18 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant = do
     let minThreshold = fromMaybe 0 (DGI.minDriverThresholdFor gate variant)
         -- If max isn't configured, fall back to min so we never overshoot the trigger threshold.
         maxThreshold = fromMaybe minThreshold (DGI.maxDriverThresholdFor gate variant)
-    -- Single source of truth: LTS queue for this gate's special location, filtered by variant.
-    queueResp <- LTSFlow.getQueueDrivers specialLocationId variant
-    let sortedDrivers = sortOn (.queuePosition) queueResp.drivers
-        queueDriverIds = map (.driverId) sortedDrivers
-    (insidePickupZone, parkingDrivers) <- partitionInsideGate gate queueDriverIds
-    let pickupZoneCount = length insidePickupZone
-    when (pickupZoneCount < minThreshold) $ do
-      let needed = max 0 (maxThreshold - pickupZoneCount)
+    mbSupplyCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkGateSearchSupplyKey gateId variant)
+    let supplyCount = fromMaybe 0 mbSupplyCount
+    when (supplyCount < minThreshold) $ do
+      let needed = max 0 (maxThreshold - supplyCount)
       when (needed > 0) $ do
         let cooldown = fromMaybe 900 gate.notificationCooldownInSec
-        eligible <- filterEligibleDrivers gate specialLocationId variant merchantId gateId parkingDrivers
+        -- Pull drivers from the LTS queue for this special location, ordered by queue position.
+        queueResp <- LTSFlow.getQueueDrivers specialLocationId variant
+        let sortedDrivers = sortOn (.queuePosition) queueResp.drivers
+            queueDriverIds = map (.driverId) sortedDrivers
+        eligible <- filterEligibleDrivers gate specialLocationId variant merchantId gateId queueDriverIds
         void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId variant cooldown (take needed eligible)
-
--- | Split a list of driver ids into (insidePickupZone, outside) based on driver locations.
---   Batch-fetches locations once; falls back to "outside" for drivers with unknown location.
-partitionInsideGate ::
-  ( MonadFlow m,
-    HasLocationService m r,
-    HasShortDurationRetryCfg r c,
-    HasRequestId r,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    Esq.EsqDBReplicaFlow m r
-  ) =>
-  DGI.GateInfo ->
-  [Id DP.Person] ->
-  m ([Id DP.Person], [Id DP.Person])
-partitionInsideGate _ [] = pure ([], [])
-partitionInsideGate gate driverIds = do
-  locations <- LTSFlow.driversLocation driverIds
-  let locById = Map.fromList $ map (\l -> (l.driverId, l)) locations
-  insideFlags <- forM driverIds $ \dId ->
-    case Map.lookup dId locById of
-      Nothing -> pure (dId, False)
-      Just loc -> do
-        mbDriverGate <- Esq.runInReplica $ QGI.findGateInfoIfDriverInsideGatePickupZone (LatLong loc.lat loc.lon)
-        pure (dId, maybe False (\g -> g.id == gate.id) mbDriverGate)
-  let inside = [d | (d, True) <- insideFlags]
-      outside = [d | (d, False) <- insideFlags]
-  pure (inside, outside)
 
 -- Force notify (dashboard trigger) — uses LTS queue order, skips demand/supply threshold checks
 forceNotifyDriverDemand ::
@@ -333,19 +403,26 @@ filterEligibleDrivers gate specialLocationId vehicleType merchantId gateId drive
         if recentlyNotified
           then pure acc
           else do
-            -- Increment skip count for every request we're about to send
-            shouldInclude <- case maxSkips of
-              Nothing -> pure True
-              Just threshold -> do
-                newCount <- incrementQueueSkipCount specialLocationId driverId 86400
-                if newCount >= threshold
-                  then do
-                    void $ LTSFlow.manualQueueRemove specialLocationId vehicleType merchantId driverId
-                    resetQueueSkipCount specialLocationId driverId
-                    logInfo $ "Driver " <> driverId.getId <> " removed from queue after " <> show newCount <> " requests at gate " <> gateId
-                    pure False
-                  else pure True
-            pure $ if shouldInclude then acc ++ [driverId] else acc
+            -- Skip drivers who already committed to a pickup-zone request; re-notifying
+            -- them wouldn't change supply and would just spam the driver. At most one
+            -- Accepted request per driver by business rule.
+            hasAccepted <- not . null <$> QSZQR.findActiveByDriverId driverId DSZQR.Accepted
+            if hasAccepted
+              then pure acc
+              else do
+                -- Increment skip count for every request we're about to send
+                shouldInclude <- case maxSkips of
+                  Nothing -> pure True
+                  Just threshold -> do
+                    newCount <- incrementQueueSkipCount specialLocationId driverId 86400
+                    if newCount >= threshold
+                      then do
+                        void $ LTSFlow.manualQueueRemove specialLocationId vehicleType merchantId driverId
+                        resetQueueSkipCount specialLocationId driverId
+                        logInfo $ "Driver " <> driverId.getId <> " removed from queue after " <> show newCount <> " requests at gate " <> gateId
+                        pure False
+                      else pure True
+                pure $ if shouldInclude then acc ++ [driverId] else acc
     )
     []
     driverIds
@@ -361,19 +438,60 @@ notRecentlyNotified gId driverId = do
   mbVal <- Redis.withCrossAppRedis $ Redis.get @Text (mkGateDriverNotifiedKey gId driverId.getId)
   pure $ isNothing mbVal
 
--- Mark Accepted pickup zone request as Completed when driver starts a ride
-completePickupZoneRequestOnRideStart ::
+-- | Booking is progressing (Confirm or StartRide fired) for a driver: decrement demand
+--   for the booking's gate/variant and, if the driver had an Accepted pickup-zone request,
+--   mark it Completed and decrement supply. A driver has at most one Accepted request at
+--   a time. Idempotent:
+--     - demand: bookingId-keyed SETNX (runDemandDecrementForBooking)
+--     - supply: requestId-keyed SETNX + DB status transition Accepted → Completed
+--   Safe to call from both Confirm and StartRide: first fire wins, second is a no-op.
+completePickupZoneRequestsForDriver ::
   ( MonadFlow m,
     CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    Redis.HedisFlow m r
+  ) =>
+  Id DP.Person ->
+  Text -> -- bookingId (for demand-decrement idempotency)
+  Maybe Text -> -- booking.pickupGateId
+  Text -> -- booking.vehicleServiceTier (variant)
+  m ()
+completePickupZoneRequestsForDriver driverId bookingId mbPickupGateId variant = do
+  runDemandDecrementForBooking bookingId mbPickupGateId variant
+  -- Look up the last request the driver accepted — not just those still in
+  -- 'Accepted' status. The CheckPickupZoneArrival job moves arrived drivers
+  -- to status=Expired while keeping response=Accept; without this change those
+  -- rows would never be marked Completed and supply would leak.
+  mbReq <- QSZQR.findLastAcceptedByDriverId driverId
+  forM_ mbReq $ \req -> do
+    QSZQR.updateResponse (Just DSZQR.Accept) DSZQR.Completed req.id
+    runSupplyDecrementForRequest req.id.getId req.gateId req.vehicleType
+    logInfo $ "Completed pickup zone request " <> req.id.getId <> " for driver " <> driverId.getId
+
+-- | Driver cancelled the ride that was to fulfill the pickup-zone commitment. Supply
+--   retracts — demand is untouched (customer still wants a ride). A driver has at most
+--   one Accepted request at a time.
+cancelPickupZoneRequestsForDriver ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Redis.HedisFlow m r
   ) =>
   Id DP.Person ->
   m ()
-completePickupZoneRequestOnRideStart driverId = do
-  acceptedRequests <- QSZQR.findActiveByDriverId driverId DSZQR.Accepted
-  forM_ acceptedRequests $ \req -> do
-    QSZQR.updateResponse (Just DSZQR.Accept) DSZQR.Completed req.id
-    logInfo $ "Marked pickup zone request " <> req.id.getId <> " as Completed for driver " <> driverId.getId
+cancelPickupZoneRequestsForDriver driverId = do
+  -- Same rationale as completePickupZoneRequestsForDriver: look up last Accept
+  -- response regardless of current status so post-arrival Expired rows still
+  -- get their supply retracted.
+  mbReq <- QSZQR.findLastAcceptedByDriverId driverId
+  forM_ mbReq $ \req ->
+    -- If the request is already Completed, the pickup-zone commitment was
+    -- already fulfilled (ride confirmed); don't overwrite that history with
+    -- Cancelled/Expired just because the ride was later cancelled.
+    unless (req.status == DSZQR.Completed) $ do
+      QSZQR.updateResponse (Just DSZQR.Cancelled) DSZQR.Expired req.id
+      runSupplyDecrementForRequest req.id.getId req.gateId req.vehicleType
+      logInfo $ "Cancelled pickup zone request " <> req.id.getId <> " after ride cancel by driver " <> driverId.getId
 
 -- Queue skip handling
 

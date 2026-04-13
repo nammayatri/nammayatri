@@ -221,10 +221,13 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
       whenWithLocationUpdatesLock driverId $ do
         withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation updatedRide.id driverId point
         withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer transporterConfig driverInfo
+        when booking.isScheduled $
+          void $ QDI.updateLatestScheduledBookingAndPickup Nothing Nothing (cast driverId)
 
       fork "notify customer for ride start" $ notifyBAPRideStarted booking updatedRide (Just point)
       fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride booking
-      fork "startRide - Complete pickup zone request" $ SpecialZoneDriverDemand.completePickupZoneRequestOnRideStart driverId
+      fork "startRide - Complete pickup zone request" $
+        SpecialZoneDriverDemand.completePickupZoneRequestsForDriver driverId booking.id.getId booking.pickupGateId (show booking.vehicleServiceTier)
       if isInterCityTrip booking.tripCategory || isRentalTrip booking.tripCategory
         then logTagInfo "IffcoTokio driver insurance skipped" ("tripCategory=" <> show booking.tripCategory <> ", rideId=" <> ride.id.getId)
         else fork "IffcoTokio driver insurance" $ IffcoInsurance.triggerIffcoTokioInsurance driverId booking.providerId ride.merchantOperatingCityId
@@ -294,7 +297,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
                       }
               PayoutRequest.createPayoutRequest payoutRequest
               when (payoutStatus == DPR.INITIATED) $ do
-                let jobData = SpecialZonePayoutJobData {payoutRequestId = payoutRequestId}
+                let jobData = SpecialZonePayoutJobData {payoutRequestId = Just payoutRequestId, scheduledPayoutId = Nothing}
                 QAllJ.createJobByTime @_ @'SpecialZonePayout (Just booking.providerId) (Just ride.merchantOperatingCityId) scheduledTime jobData
 
       pure APISuccess.Success

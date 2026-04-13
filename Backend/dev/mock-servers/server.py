@@ -80,7 +80,7 @@ class MockHandler(BaseHTTPRequestHandler):
 
     def _get_override(self, service, *candidate_ids):
         """Check status store for an override matching any candidate ID.
-        Also merges any request-level override from the middleware."""
+        Also checks extract-based rules and merges request-level overrides."""
         status_val = None
         data = {}
         # Check explicit ID-based status store
@@ -91,6 +91,14 @@ class MockHandler(BaseHTTPRequestHandler):
                     status_val = entry["status"]
                     data = entry.get("data", {})
                     break
+        # If no explicit match, try extract-based rules
+        if status_val is None:
+            parsed = urlparse(self.path)
+            extract_status, extract_data = status_store.get_extract_status(
+                service, parsed.path, None, None, None)
+            if extract_status:
+                status_val = extract_status
+                data = extract_data
         # Merge request-level overrides from middleware (set by _apply_overrides)
         req_override = getattr(self, "_request_override", {})
         if req_override:
@@ -172,12 +180,22 @@ class MockHandler(BaseHTTPRequestHandler):
             service = data.get("service")
             identifiers = data.get("id")
             status = data.get("status")
+            extract = data.get("extract")  # e.g. "path.2" to extract ID from URL path index 2
 
-            if not service or not identifiers or not status:
-                return self._json({"error": "service, id (string or array), and status are required"}, status=400)
+            if not service or not status:
+                return self._json({"error": "service and status are required"}, status=400)
+            if not identifiers and not extract:
+                return self._json({"error": "either id (string or array) or extract (e.g. 'path.2') is required"}, status=400)
 
-            count = status_store.set_status(service, identifiers, status, data.get("data"))
-            return self._json({"ok": True, "service": service, "id": identifiers, "status": status, "ttl": status_store.STATUS_TTL, "updated": count})
+            if identifiers:
+                count = status_store.set_status(service, identifiers, status, data.get("data"))
+                return self._json({"ok": True, "service": service, "id": identifiers, "status": status, "ttl": status_store.STATUS_TTL, "updated": count})
+            else:
+                # Store as an extract-based rule: when a request to this service
+                # has a matching path/body/query value, return this status
+                match = data.get("match")  # e.g. "/orders" — only trigger on paths containing this
+                status_store.set_extract_status(service, extract, status, match=match, data=data.get("data"))
+                return self._json({"ok": True, "service": service, "extract": extract, "match": match, "status": status, "ttl": status_store.STATUS_TTL})
 
         return self._json({"error": "method not allowed"}, status=405)
 

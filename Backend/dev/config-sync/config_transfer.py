@@ -99,18 +99,219 @@ def get_db_config(env_config, environment, schema):
     if not env:
         sys.exit(f"Environment '{environment}' not in environments.json")
     base = dict(env.get("default", {}))
-    base.update(env.get("schemas", {}).get(schema, {}))
+    schema_cfg = env.get("schemas", {}).get(schema, {})
+    base.update(schema_cfg)
     if "db_schema" not in base:
         base["db_schema"] = schema
+    # Resolve execPod: schema-level overrides merge onto env-level
+    env_pod = env.get("execPod")
+    schema_pod = schema_cfg.get("execPod")
+    if env_pod or schema_pod:
+        pod_cfg = dict(env_pod or {})
+        if schema_pod:
+            pod_cfg.update(schema_pod)
+        base["_execPod"] = pod_cfg
     return base
 
 
 def get_connection(db_config):
+    if "_execPod" in db_config:
+        raise RuntimeError(
+            "Direct psycopg2 connection not available for kubectl-based environments. "
+            "Use kubectl_* functions instead."
+        )
     return psycopg2.connect(
         host=db_config["host"], port=db_config.get("port", 5432),
         database=db_config.get("database", "postgres"),
         user=db_config["user"], password=db_config.get("password", ""),
     )
+
+
+def is_kubectl_env(db_config):
+    """Check if this DB config requires kubectl exec access."""
+    return "_execPod" in db_config
+
+
+# ── kubectl exec helpers ──────────────────────────────────────────────────────
+
+
+def _kubectl_base_cmd(db_config):
+    """Build the kubectl exec prefix: ['kubectl', 'exec', pod, '-n', ns, '--']."""
+    pod_cfg = db_config["_execPod"]
+    cmd = ["kubectl"]
+    ctx = pod_cfg.get("context", "")
+    if ctx:
+        cmd += ["--context", ctx]
+    ns = pod_cfg.get("namespace", "")
+    if ns:
+        cmd += ["-n", ns]
+    cmd += ["exec", pod_cfg["pod"], "--"]
+    return cmd
+
+
+def _kubectl_psql_cmd(db_config, sql, flags=None):
+    """Build a full kubectl exec psql command.
+
+    Uses 'env PGPASSWORD=... psql ...' inside the pod to set the password
+    without needing bash -c or complex shell quoting.
+    """
+    cmd = _kubectl_base_cmd(db_config)
+    password = db_config.get("password", "")
+    cmd += [
+        "env", f"PGPASSWORD={password}",
+        "psql",
+        "-h", db_config["host"],
+        "-p", str(db_config.get("port", 5432)),
+        "-U", db_config["user"],
+        "-d", db_config.get("database", "postgres"),
+    ]
+    if flags:
+        cmd += flags
+    cmd += ["-c", sql]
+    return cmd
+
+
+def kubectl_table_exists(db_config, schema, table):
+    """Check if table exists using kubectl exec psql."""
+    import subprocess
+    sql = (
+        f"SELECT EXISTS (SELECT 1 FROM information_schema.tables "
+        f"WHERE table_schema = '{schema}' AND table_name = '{table}')"
+    )
+    cmd = _kubectl_psql_cmd(db_config, sql, ["-tA"])
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    if result.returncode != 0 and result.stderr:
+        print(f"    [debug] kubectl stderr: {result.stderr.strip()[:200]}", flush=True)
+    return result.stdout.strip() == "t"
+
+
+def kubectl_get_columns(db_config, schema, table):
+    """Get column names for a table using kubectl exec psql."""
+    import subprocess
+    sql = (
+        f"SELECT column_name FROM information_schema.columns "
+        f"WHERE table_schema = '{schema}' AND table_name = '{table}' "
+        f"ORDER BY ordinal_position"
+    )
+    cmd = _kubectl_psql_cmd(db_config, sql, ["-tA"])
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    if result.returncode != 0:
+        raise RuntimeError(f"kubectl psql failed: {result.stderr}")
+    return [c.strip() for c in result.stdout.strip().split("\n") if c.strip()]
+
+
+def kubectl_precheck_tables(db_config, schema, tables):
+    """Batch pre-check: get all existing tables and their columns in 2 kubectl calls.
+
+    Returns dict of {table_name: [columns]} for tables that exist.
+    Much faster than per-table kubectl calls (2 calls instead of 2*N).
+    """
+    import subprocess
+
+    # 1. Get all table names in one call
+    table_list = ",".join(f"'{t}'" for t in tables)
+    sql = (
+        f"SELECT table_name FROM information_schema.tables "
+        f"WHERE table_schema = '{schema}' AND table_name IN ({table_list}) "
+        f"ORDER BY table_name"
+    )
+    cmd = _kubectl_psql_cmd(db_config, sql, ["-tA"])
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    if result.returncode != 0:
+        print(f"    [debug] kubectl stderr: {result.stderr.strip()[:300]}", flush=True)
+        return {}
+    existing = {t.strip() for t in result.stdout.strip().split("\n") if t.strip()}
+
+    if not existing:
+        return {}
+
+    # 2. Get columns for all existing tables in one call
+    existing_list = ",".join(f"'{t}'" for t in existing)
+    sql = (
+        f"SELECT table_name, column_name FROM information_schema.columns "
+        f"WHERE table_schema = '{schema}' AND table_name IN ({existing_list}) "
+        f"ORDER BY table_name, ordinal_position"
+    )
+    cmd = _kubectl_psql_cmd(db_config, sql, ["-tA"])
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    if result.returncode != 0:
+        raise RuntimeError(f"kubectl psql columns failed: {result.stderr}")
+
+    table_columns = {}
+    for line in result.stdout.strip().split("\n"):
+        if "|" in line:
+            tbl, col = line.split("|", 1)
+            table_columns.setdefault(tbl.strip(), []).append(col.strip())
+
+    return table_columns
+
+
+def kubectl_export_table(base_dir, env_name, schema, table, meta, db_config, db_schema, columns):
+    """Export table using kubectl exec psql COPY TO STDOUT, streaming CSV to local file.
+
+    Uses \\copy (psql meta-command) which runs client-side inside the pod and
+    streams CSV to stdout. kubectl exec pipes it to local file.
+    Returns (path_or_dir, total_rows).
+    """
+    import subprocess, csv
+
+    d = table_dir_path(base_dir, env_name, schema)
+    csv_tmp = d / f"_{table}.csv"
+
+    # \\copy is a psql meta-command — passed via -c, it streams to STDOUT
+    copy_sql = f'\\copy "{db_schema}"."{table}" TO STDOUT WITH CSV HEADER'
+    cmd = _kubectl_psql_cmd(db_config, copy_sql)
+
+    with open(csv_tmp, "w") as f:
+        proc = subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, text=True,
+                              timeout=600)
+    if proc.returncode != 0:
+        csv_tmp.unlink(missing_ok=True)
+        raise RuntimeError(f"kubectl COPY failed for {db_schema}.{table}: {proc.stderr}")
+
+    # Parse CSV and write batches — same logic as export_table
+    table_d = d / table
+    table_d.mkdir(parents=True, exist_ok=True)
+
+    batch = []
+    batch_num = 0
+    total = 0
+
+    with open(csv_tmp, "r", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            batch.append(dict(row))
+            total += 1
+            if len(batch) >= BATCH_SIZE:
+                (table_d / f"batch_{batch_num:04d}.json").write_text(
+                    json.dumps(batch, default=json_serializer))
+                batch_num += 1
+                batch = []
+    if batch:
+        (table_d / f"batch_{batch_num:04d}.json").write_text(
+            json.dumps(batch, default=json_serializer))
+        batch_num += 1
+
+    csv_tmp.unlink()
+
+    if total == 0:
+        shutil.rmtree(table_d)
+        data = {**meta, "columns": columns, "rows": []}
+        path = d / f"{table}.json"
+        path.write_text(json.dumps(data, default=json_serializer, indent=2))
+        return path, 0
+
+    if batch_num == 1:
+        only_batch = json.loads((table_d / "batch_0000.json").read_text())
+        shutil.rmtree(table_d)
+        data = {**meta, "columns": columns, "rows": only_batch}
+        path = d / f"{table}.json"
+        path.write_text(json.dumps(data, default=json_serializer, indent=2))
+        return path, total
+
+    meta_data = {**meta, "columns": columns, "total_rows": total, "batched": True}
+    (table_d / "_meta.json").write_text(json.dumps(meta_data, default=json_serializer, indent=2))
+    return table_d, total
 
 
 def table_exists(cursor, schema, table):
@@ -429,13 +630,17 @@ def _encrypt_via_obj(plaintext):
 
     Passetto expects S-prefix for string values: S"actual-value"
     This matches how the seed geninis tool and the app encrypt data.
+
+    Uses keyId=1 to force the first deterministic init key (derived from
+    master password). Rotated keys (keyId 4+) are random and lost on
+    Passetto restart, so encrypted values using them become invalid.
     """
     if plaintext in _encrypt_cache:
         return _encrypt_cache[plaintext]
     import requests
     try:
         s_val = f'S"{plaintext}"'
-        resp = requests.post("http://localhost:8079/encrypt", json={"value": s_val}, timeout=5)
+        resp = requests.post("http://localhost:8079/encrypt", json={"value": s_val, "keyId": 1}, timeout=5)
         val = resp.json()["value"]
         _encrypt_cache[plaintext] = val
         return val
@@ -523,8 +728,16 @@ def generate_insert_sql(schema, table, rows, src_columns, target_cols, head_row,
     not_null_cols = not_null_cols or set()
     col_types = col_types or {}
     _text_types = {"text", "character", "character varying", "json", "jsonb"}
-    tgt_cols = target_cols if target_cols is not None else src_columns
-    insert_cols = [c for c in tgt_cols if c in src_columns or c in head_row]
+    # Only include columns that exist in the target schema.
+    # Source may have extra columns (deprecated in local, still in prod).
+    if target_cols is not None:
+        tgt_set = set(target_cols)
+        insert_cols = [c for c in target_cols if c in src_columns or c in head_row]
+        skipped = [c for c in src_columns if c not in tgt_set]
+        if skipped:
+            print(f"    [info] {schema}.{table}: dropping {len(skipped)} source-only columns: {skipped}", flush=True)
+    else:
+        insert_cols = list(src_columns)
     col_list = ", ".join(f'"{c}"' for c in insert_cols)
 
     lines = []
@@ -594,78 +807,119 @@ def cmd_export(args):
 
         source_db = get_db_config(env_config, from_env, schema)
         db_schema = source_db.get("db_schema", schema)
+        use_kubectl = is_kubectl_env(source_db)
 
-        # Pre-check: get columns and validate dims using one connection
-        try:
-            check_conn = get_connection(source_db)
-            check_cur = check_conn.cursor()
-        except Exception as e:
-            print(f"  CONNECTION FAILED: {e}", file=sys.stderr)
-            results[schema] = {"status": "failed", "error": str(e)}
-            continue
+        if use_kubectl:
+            pod_name = source_db["_execPod"]["pod"]
+            print(f"  (kubectl exec {pod_name})")
 
+        # Pre-check: get columns and validate dims
         export_tasks = []  # (table, meta, columns)
         dim_warnings = []
 
-        for table in tables:
-            if not table_exists(check_cur, db_schema, table):
-                print(f"    [skip] {db_schema}.{table} — does not exist")
+        if use_kubectl:
+            # Batch pre-check: 2 kubectl calls for ALL tables
+            print(f"  Pre-checking {len(tables)} tables...", end="", flush=True)
+            kubectl_table_cols = kubectl_precheck_tables(source_db, db_schema, tables)
+            print(f" {len(kubectl_table_cols)} found", flush=True)
+
+            for table in tables:
+                if table not in kubectl_table_cols:
+                    print(f"    [skip] {db_schema}.{table} — does not exist", flush=True)
+                    continue
+                columns = kubectl_table_cols[table]
+                dim_cols = get_dim_columns(schema_config, table)
+                missing = [c for c in dim_cols if c not in columns]
+                if missing:
+                    print(f"    [DIM WARN] {table}: dim columns {missing} not in data — skipping table", flush=True)
+                    dim_warnings.append(table)
+                    continue
+                meta = {
+                    "schema": schema, "db_schema": db_schema, "table": table,
+                    "source_env": from_env,
+                    "exported_at": datetime.now(timezone.utc).isoformat(),
+                }
+                export_tasks.append((table, meta, columns))
+        else:
+            check_conn = None
+            check_cur = None
+            try:
+                check_conn = get_connection(source_db)
+                check_cur = check_conn.cursor()
+            except Exception as e:
+                print(f"  CONNECTION FAILED: {e}", file=sys.stderr)
+                results[schema] = {"status": "failed", "error": str(e)}
                 continue
 
-            check_cur.execute(f'SELECT * FROM "{db_schema}"."{table}" LIMIT 0')
-            columns = [desc[0] for desc in check_cur.description]
+            for table in tables:
+                if not table_exists(check_cur, db_schema, table):
+                    print(f"    [skip] {db_schema}.{table} — does not exist", flush=True)
+                    continue
+                check_cur.execute(f'SELECT * FROM "{db_schema}"."{table}" LIMIT 0')
+                columns = [desc[0] for desc in check_cur.description]
+                dim_cols = get_dim_columns(schema_config, table)
+                missing = [c for c in dim_cols if c not in columns]
+                if missing:
+                    print(f"    [DIM WARN] {table}: dim columns {missing} not in data — skipping table", flush=True)
+                    dim_warnings.append(table)
+                    continue
+                meta = {
+                    "schema": schema, "db_schema": db_schema, "table": table,
+                    "source_env": from_env,
+                    "exported_at": datetime.now(timezone.utc).isoformat(),
+                }
+                export_tasks.append((table, meta, columns))
 
-            dim_cols = get_dim_columns(schema_config, table)
-            missing = [c for c in dim_cols if c not in columns]
-            if missing:
-                print(f"    [DIM WARN] {table}: dim columns {missing} not in data — skipping table")
-                dim_warnings.append(table)
-                continue
+            if check_cur:
+                check_cur.close()
+            if check_conn:
+                check_conn.close()
 
-            meta = {
-                "schema": schema, "db_schema": db_schema, "table": table,
-                "source_env": from_env,
-                "exported_at": datetime.now(timezone.utc).isoformat(),
-            }
-            export_tasks.append((table, meta, columns))
-
-        check_cur.close()
-        check_conn.close()
-
-        # Export tables in parallel — each gets its own DB connection
+        # Export tables — kubectl mode runs sequentially, direct mode in parallel
         table_count = 0
         row_count = 0
 
         def _export_one(task):
             tbl, meta, cols = task
             t0 = _time.time()
-            conn = get_connection(source_db)
-            try:
-                result_path, total = export_table(
-                    TMP_DIR, from_env, schema, tbl, meta, conn, db_schema, cols
+            if use_kubectl:
+                result_path, total = kubectl_export_table(
+                    TMP_DIR, from_env, schema, tbl, meta, source_db, db_schema, cols
                 )
-            finally:
-                conn.close()
+            else:
+                conn = get_connection(source_db)
+                try:
+                    result_path, total = export_table(
+                        TMP_DIR, from_env, schema, tbl, meta, conn, db_schema, cols
+                    )
+                finally:
+                    conn.close()
             elapsed = _time.time() - t0
             label = result_path.name if result_path.is_file() else f"{tbl}/ ({total // BATCH_SIZE + 1} batches)"
             return tbl, total, label, elapsed
 
         export_errors = []
-        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        effective_workers = 1 if use_kubectl else max_workers
+        with ThreadPoolExecutor(max_workers=effective_workers) as pool:
             futures = {pool.submit(_export_one, t): t for t in export_tasks}
             for future in as_completed(futures):
                 try:
                     tbl, total, label, elapsed = future.result()
-                    print(f"    [ok] {db_schema}.{tbl}: {total} rows -> {label} ({elapsed:.1f}s)")
+                    print(f"    [ok] {db_schema}.{tbl}: {total} rows -> {label} ({elapsed:.1f}s)", flush=True)
                     table_count += 1
                     row_count += total
                 except Exception as e:
                     tbl = futures[future][0]
-                    print(f"    [FAIL] {db_schema}.{tbl}: {e}", file=sys.stderr)
+                    print(f"    [FAIL] {db_schema}.{tbl}: {e}", file=sys.stderr, flush=True)
                     export_errors.append(tbl)
 
         # Promote tmp -> data (or push to S3)
         tmp_schema_dir = TMP_DIR / from_env / schema
+        if not tmp_schema_dir.exists() or not any(tmp_schema_dir.iterdir()):
+            print(f"  No tables exported for {schema}, skipping promote", flush=True)
+            results[schema] = {"status": "ok", "tables": 0, "rows": 0}
+            continue
+
         if IS_DEV:
             dest = DATA_DIR / from_env / schema
             if table_filter and dest.exists():
@@ -1064,8 +1318,11 @@ def cmd_import(args):
         target_db_schema = target_db.get("db_schema", schema)
 
         target_cursor = None
+        target_conn = None
         try:
             target_conn = get_connection(target_db)
+            # Autocommit: each query is its own transaction so one failure doesn't poison subsequent reads
+            target_conn.autocommit = True
             target_cursor = target_conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         except Exception as e:
             print(f"  WARNING: Cannot connect to target ({e}), using source columns")
@@ -1095,9 +1352,11 @@ def cmd_import(args):
                 try:
                     cols_result, col_types, not_null_cols = fetch_target_table_columns(target_cursor, target_db_schema, table)
                     tgt_cols = cols_result if cols_result else None
+                    if not tgt_cols:
+                        print(f"    [WARN] {table}: target table has no columns (doesn't exist in local?) — INSERT will use source columns as-is", flush=True)
                     head_row = fetch_target_table_head(target_cursor, target_db_schema, table)
                 except Exception as e:
-                    print(f"    [WARN] {table}: cannot read target schema ({e})")
+                    print(f"    [WARN] {table}: cannot read target schema ({e}) — INSERT will use source columns", flush=True)
 
             # ── First pass: collect dim values ──
             source_dims = set()

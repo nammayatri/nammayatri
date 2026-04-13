@@ -59,6 +59,7 @@ import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.Finance.Wallet
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Merchant
 import Storage.Beam.Finance ()
 import Storage.Beam.Payment ()
@@ -67,6 +68,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
@@ -76,6 +78,7 @@ import qualified Storage.Queries.Vehicle as QV
 import Tools.Error
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as Payout
+import qualified Tools.SMS as Sms
 import Utils.Common.Cac.KeyNameConstants
 
 -- webhook ----------------------------------------------------------
@@ -126,6 +129,15 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
               when (payoutRequest.status /= newStatus && payoutRequest.status `notElem` [DPR.CREDITED, DPR.CASH_PAID, DPR.CASH_PENDING]) do
                 let statusMsg = "Bank Webhook: " <> show payoutStatus
                 PayoutRequest.updateStatusWithHistoryById newStatus (Just statusMsg) payoutRequest
+                when (newStatus `elem` [DPR.CREDITED, DPR.CASH_PAID]) $ do
+                  let redisKey = mkSpecialZonePayoutSmsKey payoutRequest.id newStatus
+                  alreadySent <- Redis.get redisKey
+                  case (alreadySent :: Maybe Bool) of
+                    Just True -> pure ()
+                    _ -> do
+                      Redis.setExp redisKey True (60 * 60 * 24)
+                      fork "Send Special Zone Payout SMS to Driver" $
+                        sendSpecialZonePayoutSms merchantOperatingCityId payoutRequest
         _ -> do
           unless (isSuccessStatus payoutOrder.status) do
             mbVehicle <- QV.findById (Id payoutOrder.customerId)
@@ -235,7 +247,6 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                           settleWalletEntries (map Id entryIds) payoutReq.id.getId
                           Redis.del (makePayoutEntryIdsKey payoutReq.id.getId)
                         Nothing -> logInfo $ "No stashed entry IDs found for payoutRequest " <> payoutReq.id.getId
-
 
                   -- Update PayoutRequest status
                   whenJust mbPayoutReq $ \payoutReq -> do
@@ -373,3 +384,38 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
         _ -> pure ()
   where
     lockKey = "ProcessBacklogPayout:DriverId-" <> personId.getId
+
+mkSpecialZonePayoutSmsKey :: Id DPR.PayoutRequest -> DPR.PayoutRequestStatus -> Text
+mkSpecialZonePayoutSmsKey payoutRequestId status =
+  "SpecialZonePayoutSms:" <> payoutRequestId.getId <> ":" <> show status
+
+sendSpecialZonePayoutSms ::
+  Id DMOC.MerchantOperatingCity ->
+  DPR.PayoutRequest ->
+  Flow ()
+sendSpecialZonePayoutSms merchantOpCityId payoutRequest = do
+  case payoutRequest.amount of
+    Nothing -> logInfo $ "Skipping special zone payout SMS, amount missing for payoutRequest " <> payoutRequest.id.getId
+    Just amountVal ->
+      when (amountVal > 0.0) $ do
+        let driverId = Id payoutRequest.beneficiaryId :: Id Person.Person
+        driver <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+        mbDisplayBookingId <- case payoutRequest.entityRefId of
+          Nothing -> pure Nothing
+          Just bookingIdTxt -> do
+            mbBooking <- QRB.findById (Id bookingIdTxt)
+            pure (mbBooking >>= (.displayBookingId))
+        smsCfg <- asks (.smsCfg)
+        mobile <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+        let countryCode = fromMaybe "+91" driver.mobileCountryCode
+            phoneNumber = countryCode <> mobile
+            sender = smsCfg.sender
+        (mbSender, message, templateId, messageType) <-
+          MessageBuilder.buildDriverPayoutMessage
+            merchantOpCityId
+            MessageBuilder.BuildDriverPayoutMessageReq
+              { payoutAmount = show amountVal,
+                bookingId = mbDisplayBookingId
+              }
+        Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId messageType)
+          >>= Sms.checkSmsResult

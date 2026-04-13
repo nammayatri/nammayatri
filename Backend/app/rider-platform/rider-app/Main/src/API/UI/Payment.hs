@@ -30,7 +30,6 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Wallet as Wallet
-import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -91,7 +90,7 @@ getStatusS2S orderId personId mbApiKey = withFlowHandlerAPI $ do
 paytmEdcCallback :: DPayment.PaytmEdcCallbackReq -> FlowHandler AckResponse
 paytmEdcCallback = withFlowHandlerAPI . DPayment.paytmEdcCallbackHandler
 
-postWalletRecharge :: (Id DP.Person, Id Merchant.Merchant) -> PaymentAPI.WalletRechargeReq -> FlowHandler APISuccess
+postWalletRecharge :: (Id DP.Person, Id Merchant.Merchant) -> PaymentAPI.WalletRechargeReq -> FlowHandler Payment.CreateOrderResp
 postWalletRecharge (personId, merchantId) req = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DPayment.postWalletRecharge (personId, merchantId) req
 
 getWalletBalance :: (Id DP.Person, Id Merchant.Merchant) -> FlowHandler Wallet.WalletBalanceData
