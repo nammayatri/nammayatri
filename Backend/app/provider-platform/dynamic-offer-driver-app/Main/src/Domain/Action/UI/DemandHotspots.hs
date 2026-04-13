@@ -2,6 +2,7 @@ module Domain.Action.UI.DemandHotspots
   ( getDriverDemandHotspots,
     updateDemandHotspotsOnSearch,
     updateDemandHotspotsOnBooking,
+    getActiveSearchLocations,
   )
 where
 
@@ -9,6 +10,7 @@ import API.Types.UI.DemandHotspots
 import Data.Aeson (withArray)
 import qualified Data.Aeson as Ae
 import qualified Data.Geohash as Geohash
+import Data.List (nub)
 import Data.String.Conversions
 import qualified Data.Text as T
 import qualified Data.Time as T
@@ -29,6 +31,7 @@ import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging (logDebug)
 import Kernel.Utils.Time (utcToMilliseconds)
@@ -178,3 +181,60 @@ mkDemandHotspotSortedSetKey opCityId geohash = "DH:cityId:" <> opCityId <> "GH:"
 
 mkHotspotsCalculationLockKey :: Text -> Text
 mkHotspotsCalculationLockKey opCityId = "DH:CalcLock:cityId:" <> opCityId
+
+-- | Returns active (unserved) search locations near a given point within radiusMeters.
+-- Only reads the geohash buckets that overlap the bounding box of the circle —
+-- O(~9 buckets) regardless of total city searches.
+-- Pure read path: no writes, no side effects.
+getActiveSearchLocations ::
+  Id MerchantOperatingCity ->
+  Maps.LatLong -> -- driver center point
+  Int -> -- radiusMeters
+  Double -> -- cutoffScore: fromIntegral (utcToMilliseconds (now - stalenessMinutes)), pre-computed by caller
+  Int -> -- geohash precision (from config)
+  Flow [(Text, Double, Double)]
+getActiveSearchLocations merchantOpCityId center radiusMeters cutoffScore geohashPrecision = do
+  let candidateGeohashes = geohashCover center radiusMeters geohashPrecision
+      centerLatLong = Maps.LatLong center.lat center.lon
+  rawEntries <- concat <$> mapM processGeohash candidateGeohashes
+  -- Filter by actual distance — bucket boundaries are rectangular, circle is round
+  pure $ filter (isWithinRadius centerLatLong radiusMeters) rawEntries
+  where
+    processGeohash geohash = do
+      let sortedSetKey = mkDemandHotspotSortedSetKey merchantOpCityId.getId (T.pack geohash)
+      rawItems <- Redis.zRangeByScore sortedSetKey cutoffScore (1 / 0 :: Double)
+      pure $ mapMaybe (\r -> fmap (\(HotspotObject t) -> t) (Ae.decode $ cs r)) rawItems
+
+    isWithinRadius cl r (_, slat, slon) =
+      highPrecMetersToMeters (distanceBetweenInMeters cl (Maps.LatLong slat slon)) <= fromIntegral r
+
+-- | Returns the full set of geohash cells that cover the circle defined by
+-- center + radiusMeters. Samples a grid of points across the bounding box
+-- at intervals of half the cell width — guarantees no interior cell is missed.
+geohashCover :: Maps.LatLong -> Int -> Int -> [String]
+geohashCover center radiusMeters precision =
+  nub $ catMaybes [Geohash.encode precision (lat, lon) | lat <- latSteps, lon <- lonSteps]
+  where
+    -- approximate cell width at this precision (metres), step = half cell to ensure full cover
+    cellWidthMeters = geohashCellWidthMeters precision
+    stepMeters = cellWidthMeters / 2.0
+    latDeltaTotal = fromIntegral radiusMeters / 111320.0
+    lonDeltaTotal = fromIntegral radiusMeters / (111320.0 * cos (center.lat * pi / 180.0))
+    stepLat = stepMeters / 111320.0
+    stepLon = stepMeters / (111320.0 * cos (center.lat * pi / 180.0))
+    latSteps = [center.lat - latDeltaTotal, center.lat - latDeltaTotal + stepLat .. center.lat + latDeltaTotal]
+    lonSteps = [center.lon - lonDeltaTotal, center.lon - lonDeltaTotal + stepLon .. center.lon + lonDeltaTotal]
+
+-- | Approximate cell width in metres for a given geohash precision.
+-- Based on standard geohash cell dimensions.
+geohashCellWidthMeters :: Int -> Double
+geohashCellWidthMeters precision = case precision of
+  1 -> 5000000.0
+  2 -> 1250000.0
+  3 -> 156000.0
+  4 -> 39100.0
+  5 -> 4890.0
+  6 -> 1220.0
+  7 -> 153.0
+  8 -> 38.0
+  _ -> 1220.0 -- default to precision 6

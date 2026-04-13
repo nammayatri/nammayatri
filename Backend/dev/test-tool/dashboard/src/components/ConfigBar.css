@@ -62,6 +62,16 @@
 .btn-stop:hover { background: #f85149; }
 .btn-stop:disabled { opacity: 0.3; cursor: not-allowed; }
 
+.btn-flush-redis {
+  background: #2d1f0e; color: #e3b341; border: 1px solid #e3b341;
+  padding: 6px 12px; border-radius: 4px; cursor: pointer;
+  font-weight: 600; font-size: 12px;
+}
+.btn-flush-redis:hover { background: #e3b341; color: #0d1117; }
+.btn-flush-redis:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-flush-done { background: #1f3d2e !important; color: #56d364 !important; border-color: #56d364 !important; }
+.btn-flush-error { background: #3d1f1f !important; color: #f85149 !important; border-color: #f85149 !important; }
+
 .ctx-badge {
   font-size: 9px; background: #238636; color: white; padding: 1px 5px;
   border-radius: 3px; margin-left: 4px; vertical-align: middle;
