@@ -262,7 +262,7 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
       if elem fromLocGeohash whiteListedGeohashes || notElem fromLocGeohash blackListedGeohashes
         then do
           logInfo $ "Calling DynamicPricing 1" <> show localTimeZoneSeconds <> show fromLocGeohash <> show mbToLocGeohash <> show fareProduct.vehicleServiceTier <> show mbDistance <> show mbDuration <> show transporterConfig.isDynamicPricingQARCalEnabled <> show transporterConfig.qarCalRadiusInKm <> show mbAppDynamicLogicVersion <> show fareProduct.merchantOperatingCityId
-          getCongestionChargeMultiplierFromModel' localTimeZoneSeconds (Just fromLocation) (Just fromLocGeohash) mbToLocGeohash fareProduct.vehicleServiceTier (maybe Nothing (.vehicleCategory) mbVehicleServiceTierItem) mbDistance mbDuration transporterConfig.isDynamicPricingQARCalEnabled transporterConfig.qarCalRadiusInKm mbSpecialLocName mbAppDynamicLogicVersion fareProduct.merchantOperatingCityId
+          getCongestionChargeMultiplierFromModel' localTimeZoneSeconds (Just fromLocation) (Just fromLocGeohash) mbToLocGeohash fareProduct.vehicleServiceTier (maybe Nothing (.vehicleCategory) mbVehicleServiceTierItem) mbDistance mbDuration transporterConfig.isDynamicPricingQARCalEnabled transporterConfig.qarCalRadiusInKm mbSpecialLocName mbAppDynamicLogicVersion fareProduct.merchantOperatingCityId mbDuration Nothing
         else return Nothing
     -- calculateCongestionChargeViaML :: ( MonadFlow m,
     --     CacheFlow m r,
@@ -901,8 +901,10 @@ getCongestionChargeMultiplierFromModel' ::
   Maybe Text ->
   Maybe Int ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe Seconds ->
+  Maybe Seconds ->
   m (Maybe CongestionChargeDetailsModel)
-getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocation) (Just fromLocGeohash) toLocGeohash serviceTier vehicleCategory (Just (Meters distance)) (Just (Seconds duration)) (Just True) radius' mbSpecialLocName (Just dynamicPricingLogicVersion) merchantOperatingCityId = do
+getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocation) (Just fromLocGeohash) toLocGeohash serviceTier vehicleCategory (Just (Meters distance)) (Just (Seconds duration)) (Just True) radius' mbSpecialLocName (Just dynamicPricingLogicVersion) merchantOperatingCityId mbEstimatedDuration mbActualDuration = do
   localTime <- getLocalCurrentTime timeDiffFromUtc
   logInfo $ "Calling DynamicPricing" <> show fromLocGeohash
   now <- getCurrentTime
@@ -941,7 +943,9 @@ getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocation) (Jus
   let congestionMultiplierPast = mbCongestionFromLocGeohashDistancePast <|> mbCongestionFromLocGeohashPast <|> mbCongestionCityPast
   mbSupplyDemandRatioToLoc <- join <$> traverse (\locgeohash -> Hedis.withCrossAppRedis $ Hedis.get $ mkSupplyDemandRatioKeyWithGeohash locgeohash vehicleCategory) toLocGeohash
   (allLogics, mbVersion) <- getAppDynamicLogic (cast merchantOperatingCityId) LYT.DYNAMIC_PRICING_UNIFIED localTime (Just dynamicPricingLogicVersion) Nothing
-  let dynamicPricingData = DynamicPricingData {serviceTier, speedKmh, distanceInKm, supplyDemandRatioFromLoc = fromMaybe 0.0 mbSupplyDemandRatioFromLoc, supplyDemandRatioToLoc = fromMaybe 0.0 mbSupplyDemandRatioToLoc, toss, actualQAR = actualQAR, actualQARPast = actualQARPast, congestionMultiplier = congestionMultiplier, congestionMultiplierPast = congestionMultiplierPast, rainStatus = mbRainStatus, mbSpecialLocName = mbSpecialLocName}
+  let estimatedDurationInS = fmap (\(Seconds s) -> s) mbEstimatedDuration
+      actualDurationInS = fmap (\(Seconds s) -> s) mbActualDuration
+      dynamicPricingData = DynamicPricingData {serviceTier, speedKmh, distanceInKm, supplyDemandRatioFromLoc = fromMaybe 0.0 mbSupplyDemandRatioFromLoc, supplyDemandRatioToLoc = fromMaybe 0.0 mbSupplyDemandRatioToLoc, toss, actualQAR = actualQAR, actualQARPast = actualQARPast, congestionMultiplier = congestionMultiplier, congestionMultiplierPast = congestionMultiplierPast, rainStatus = mbRainStatus, mbSpecialLocName = mbSpecialLocName, estimatedDurationInS = estimatedDurationInS, actualDurationInS = actualDurationInS}
   if null allLogics
     then do
       logInfo $ "No DynamicPricingLogics found for merchantOperatingCityId : " <> show merchantOperatingCityId <> " and serviceTier : " <> show serviceTier <> " and localTime : " <> show localTime
@@ -1026,7 +1030,7 @@ getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocation) (Jus
                       driverExtraFeeBounds = Nothing,
                       ..
                     }
-getCongestionChargeMultiplierFromModel' _ _ _ _ _ _ _ _ _ _ _ _ _ = return Nothing
+getCongestionChargeMultiplierFromModel' _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = return Nothing
 
 data CongestionChargeDetailsModel = CongestionChargeDetailsModel
   { dpVersion :: Maybe Text,
