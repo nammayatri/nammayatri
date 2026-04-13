@@ -80,3 +80,5 @@ ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN signature_expiry SET NO
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN vat_number text ;
+
+

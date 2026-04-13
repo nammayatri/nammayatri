@@ -1142,6 +1142,8 @@ data UpdateFleetOwnerInfoReq = UpdateFleetOwnerInfoReq
     mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fleetDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    vatNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    businessLicenseNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     stripeAddress :: Kernel.Prelude.Maybe Dashboard.Common.Driver.StripeAddress,
     stripeIdNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
