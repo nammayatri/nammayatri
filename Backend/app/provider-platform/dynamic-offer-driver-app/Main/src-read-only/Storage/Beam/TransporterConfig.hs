@@ -238,6 +238,7 @@ data TransporterConfigT f = TransporterConfigT
     rcExpiryChecks :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     rcLimit :: B.C f Kernel.Prelude.Int,
     recentScheduledBookingsSafeLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    recomputeCongestionChargeOnEndRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     recomputeDistanceThresholds :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     recomputeIfPickupDropNotOutsideOfThreshold :: B.C f Kernel.Prelude.Bool,
     reconciliationJobsEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
