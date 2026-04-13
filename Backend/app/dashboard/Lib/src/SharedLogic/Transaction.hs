@@ -16,6 +16,7 @@ module SharedLogic.Transaction
   ( emptyRequest,
     emptyResponse,
     buildTransaction,
+    buildDashboardAuthTransaction,
     withTransactionStoring,
     withResponseTransactionStoring,
     buildTransactionForSafetyDashboard,
@@ -24,6 +25,8 @@ where
 
 import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified Data.Text as Text
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Transaction as DT
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -74,6 +77,30 @@ buildTransaction endpoint serverName apiTokenInfo commonDriverId commonRideId re
         responseError = Nothing,
         createdAt = now,
         ..
+      }
+
+buildDashboardAuthTransaction ::
+  MonadFlow m =>
+  DT.Endpoint ->
+  Id DP.Person ->
+  Id DM.Merchant ->
+  m DT.Transaction
+buildDashboardAuthTransaction endpoint requestorId merchantId = do
+  uid <- generateGUID
+  now <- getCurrentTime
+  pure
+    DT.Transaction
+      { id = uid,
+        requestorId = Just requestorId,
+        merchantId = Just merchantId,
+        request = Nothing,
+        response = Nothing,
+        responseError = Nothing,
+        createdAt = now,
+        commonDriverId = Nothing,
+        commonRideId = Nothing,
+        serverName = Nothing,
+        endpoint = endpoint
       }
 
 -- | Run client call and store transaction to DB.

@@ -17,6 +17,7 @@
 module Domain.Types.Merchant where
 
 import qualified Domain.Types.ServerName as DSN
+import qualified Domain.Types.Role as DRole
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.City as City
@@ -38,7 +39,8 @@ data MerchantE e = Merchant
     verifyFleetWhileLogin :: Maybe Bool,
     hasFleetMemberHierarchy :: Maybe Bool,
     isStrongNameCheckRequired :: Maybe Bool,
-    singleActiveSessionOnly :: Maybe Bool
+    singleActiveSessionOnly :: Maybe Bool,
+    trackLoginLogoutForRoles :: [DRole.DashboardAccessType]
   }
   deriving (Generic)
 
