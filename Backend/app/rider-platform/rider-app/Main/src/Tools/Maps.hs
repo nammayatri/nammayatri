@@ -29,6 +29,7 @@ module Tools.Maps
     getMerchantOperatingCityId,
     getMultimodalWalkDistance,
     getMultimodalJourneyDistances,
+    getInstructionRoute,
   )
 where
 
@@ -177,6 +178,11 @@ getTripRoutes personId merchantId mbMOCId entityId req = do
   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mOCId <- getMerchantOperatingCityId personId mbMOCId
   runWithServiceConfig (callGetRoutesWrapper merchant.isAvoidToll) (.getTripRoutes) merchantId mOCId entityId req
+
+getInstructionRoute :: ServiceFlow m r => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> Maybe Text -> GetRoutesReq -> m GetRoutesResp
+getInstructionRoute personId merchantId mbMOCId entityId req = do
+  mOCId <- getMerchantOperatingCityId personId mbMOCId
+  runWithServiceConfig (callGetRoutesWrapper False) (.getInstructionRoute) merchantId mOCId entityId req
 
 snapToRoad ::
   ( ServiceFlow m r
