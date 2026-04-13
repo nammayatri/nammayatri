@@ -14,7 +14,13 @@ import Storage.Queries.OrphanInstances.AadhaarCard ()
 
 findByPhoneNumberAndUpdate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Maybe Text -> Maybe Text -> Maybe Text -> Maybe DbHash -> Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe DbHash ->
+  Kernel.Types.Documents.VerificationStatus ->
+  Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  m ()
 findByPhoneNumberAndUpdate nameOnCard driverGender dateOfBirth aadhaarNumberHash verificationStatus driverId = do
   _now <- getCurrentTime
   updateWithKV

@@ -8,12 +8,12 @@ module Domain.Action.UI.SpecialZoneQueue
 where
 
 import qualified API.Types.UI.SpecialZoneQueue
+import Data.List (partition)
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.SpecialZoneQueueRequest
 import qualified Environment
-import Data.List (partition)
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.Prelude
@@ -24,6 +24,7 @@ import Kernel.Types.Common (Seconds (..))
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Queries.GateInfo as QGI
+import qualified Lib.Queries.SpecialLocation as LQSL
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator (AllocatorJobType (..), CheckPickupZoneArrivalJobData (..))
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
@@ -31,7 +32,6 @@ import SharedLogic.SpecialZoneDriverDemand (mkQueueSkipCountKey)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
 import Tools.Error
-import qualified Lib.Queries.SpecialLocation as LQSL
 
 getSpecialZoneQueueRequest ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
