@@ -3628,9 +3628,12 @@
       "locked": {
         "lastModified": 1776079816,
         "narHash": "sha256-tnowBWOkpzkZnNszdhOnfsfn+i7mbqtuO6m9fMC8/J4=",
+        "lastModified": 1776085973,
+        "narHash": "sha256-+geQC63Zr3h/b/qLbMNbEk5rUUgT3mW/oON0Anah6RE=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
         "rev": "80a031ac350b7f6ce146a63e3f0eadfdb298c219",
+        "rev": "d1739342aa5185270e726a38d328b2a566b03023",
         "type": "github"
       },
       "original": {
