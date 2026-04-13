@@ -834,6 +834,8 @@ TransporterConfig:
       analysisDurationMinutes: Int
       resultDurationMinutes: Int
       noOfGeohashesToReturn: Int
+      nearbyRadiusMeters: Maybe Int
+      nearbySearchStalenessMinutes: Maybe Int
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     AadhaarImageResizeConfig:
       height: Int

@@ -201,6 +201,13 @@ apis:
         rideId: Id Ride
       response:
         type: APISuccess
+  - GET: # NearbyAPI
+      endpoint: /{driverId}/nearby
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: NearbyResp
 
 types:
 
@@ -241,6 +248,9 @@ types:
     - rideCreatedAt: UTCTime
   WaiverRideCancellationPenaltyReq:
     - reason: Text
+  NearbyResp:
+    - nearbyDriverCount: Maybe Int
+    - nearbyCustomerCount: Maybe Int
   WalletTransactionItem:
     - ledgerEntryId: Text
     - referenceType: Text

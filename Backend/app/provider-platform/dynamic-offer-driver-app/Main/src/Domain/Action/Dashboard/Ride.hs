@@ -25,6 +25,7 @@ module Domain.Action.Dashboard.Ride
     mkLocationFromLocationMapping,
     ticketRideList,
     fareBreakUp,
+    getNearby,
   )
 where
 
@@ -35,6 +36,7 @@ import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
 import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
+import qualified Domain.Action.UI.DemandHotspots as DH
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import Domain.Action.UI.Ride.StartRide as SRide
@@ -61,6 +63,7 @@ import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
+import qualified Data.Time as T
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.Account
@@ -998,3 +1001,40 @@ makeFareParam (DFP.InterCityDetails DFP.FParamsInterCityDetails {..}) =
         extraDistanceFare = PriceAPIEntity extraDistanceFare currency,
         extraTimeFare = PriceAPIEntity extraTimeFare currency
       }
+
+---------------------------------------------------------------------
+getNearby ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.Driver ->
+  Flow Common.NearbyResp
+getNearby merchantShortId opCity driverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> merchant.id.getId <> " city: " <> show opCity)
+  driver <- QP.findById (cast driverId) >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+  unless (driver.merchantId == merchant.id && driver.merchantOperatingCityId == merchantOpCity.id) $
+    throwError (PersonDoesNotExist driverId.getId)
+  -- Read config values; both counts are gated on hotspot config presence and enableDemandHotspots
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCity.id Nothing
+  let mbHotspotsConfig = transporterConfig >>= (.demandHotspotsConfig)
+  case mbHotspotsConfig of
+    Just configs | configs.enableDemandHotspots -> do
+      let radiusMeters = fromMaybe 2000 configs.nearbyRadiusMeters
+          stalenessMinutes = fromMaybe 15 configs.nearbySearchStalenessMinutes
+          geohashPrecision = configs.precisionOfGeohash
+      -- Get driver's current location from LTS
+      driverLocs <- LF.driversLocation [cast driverId]
+      driverLatLong <- case driverLocs of
+        (loc : _) -> pure $ KEMT.LatLong loc.lat loc.lon
+        [] -> throwError $ InvalidRequest "Driver location not found"
+      -- Get nearby idle (not on ride) drivers from LTS, excluding the requesting driver
+      nearbyLocs <- LF.nearBy driverLatLong.lat driverLatLong.lon (Just False) Nothing radiusMeters merchant.id Nothing Nothing
+      let nearbyDriverCount = Just $ length $ filter (\loc -> loc.driverId /= cast driverId) nearbyLocs
+      -- Compute cutoff score once and pass to helper (avoids repeated getCurrentTime)
+      now <- getCurrentTime
+      let cutoffScore = utcToMilliseconds (T.addUTCTime (- fromIntegral (stalenessMinutes * 60)) now)
+      -- Get active unserved search counts from DemandHotspots Redis (bbox-scoped, read-only)
+      nearbySearchLocs <- DH.getActiveSearchLocations merchantOpCity.id driverLatLong radiusMeters cutoffScore geohashPrecision
+      let nearbyCustomerCount = Just $ length nearbySearchLocs
+      pure Common.NearbyResp {nearbyDriverCount, nearbyCustomerCount}
+    _ -> pure Common.NearbyResp {nearbyDriverCount = Nothing, nearbyCustomerCount = Nothing}

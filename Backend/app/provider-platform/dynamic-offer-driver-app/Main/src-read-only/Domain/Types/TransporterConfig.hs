@@ -375,7 +375,9 @@ data DemandHotspotsConfig = DemandHotspotsConfig
     enableDemandHotspots :: Kernel.Prelude.Bool,
     noOfGeohashesToReturn :: Kernel.Prelude.Int,
     precisionOfGeohash :: Kernel.Prelude.Int,
-    resultDurationMinutes :: Kernel.Prelude.Int
+    resultDurationMinutes :: Kernel.Prelude.Int,
+    nearbyRadiusMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    nearbySearchStalenessMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
