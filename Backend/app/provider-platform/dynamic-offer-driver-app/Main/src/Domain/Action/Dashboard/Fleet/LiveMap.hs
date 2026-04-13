@@ -19,7 +19,7 @@ import Kernel.Types.Common (Meters (..))
 import Kernel.Types.Error
   ( GenericError (InternalError),
     LocationError (LocationNotFound),
-    PersonError (PersonDoesNotExist, PersonNotFound),
+    PersonError (PersonNotFound),
     RideError (RideNotFound),
   )
 import qualified Kernel.Types.Id as ID
@@ -49,8 +49,7 @@ getLiveMapDrivers ::
 getLiveMapDrivers merchantShortId opCity radius requestorId mbReqFleetOwnerId mbDriverIdForRadius mbPoint = do
   when (radius.getMeters <= 0) . throwError $ InvalidRequest "Radius must be positive"
   latLong <- getPoint mbDriverIdForRadius mbPoint
-  requestedPerson <- QP.findById (ID.Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
-  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbReqFleetOwnerId
+  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestorId mbReqFleetOwnerId
   (mbFleetOwnerId, mbOperatorId) <- case entityRole of
     DP.FLEET_OWNER -> pure (Just entityId, Nothing)
     DP.OPERATOR -> pure (mbReqFleetOwnerId, Just entityId)
