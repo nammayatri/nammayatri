@@ -53,7 +53,7 @@ import qualified Data.List.NonEmpty as NE
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import Kernel.External.Maps as Maps
-import Kernel.Prelude (last, roundToIntegral)
+import Kernel.Prelude (last, listToMaybe, roundToIntegral)
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
@@ -323,7 +323,7 @@ recalcDistanceBatchStep RideInterpolationHandler {..} isMeterRide distanceCalcRe
   batchWaypoints <- getFirstNwaypoints driverId (maxSnapToRoadReqPoints + 1)
   -- Use existing last-two-points key: the last (most recent) of the two is the previous segment's end for SEPC stitching.
   mbPrevTwoPoints <- Redis.safeGet (lastTwoOnRidePointsRedisKey driverId)
-  let mbPrevLastSnapped = fmap last mbPrevTwoPoints
+  let mbPrevLastSnapped = mbPrevTwoPoints >>= listToMaybe . reverse
   (distance, interpolatedWps, servicesUsed, snapToRoadFailed, mbTollChargesAndNames, mbSepcInfo) <-
     interpolatePointsAndCalculateDistanceAndTollAndSEPC distanceCalcReferencePoint' mbPrevLastSnapped rectifyDistantPointsFailureUsing isTollApplicable isStateEntryPermitApplicable driverId batchWaypoints
   whenJust mbTollChargesAndNames $ \(tollCharges, tollNames, tollIds, _, _) -> do

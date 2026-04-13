@@ -229,6 +229,19 @@ arrivedAtPickup rideId req = do
   let pickupLoc = getCoordinates booking.fromLocation
   let distance = distanceBetweenInMeters req pickupLoc
   transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  logInfo $
+    "ArrivedAtPickup check for rideId="
+      <> rideId.getId
+      <> ", driverId="
+      <> ride.driverId.getId
+      <> ", distanceMeters="
+      <> show distance
+      <> ", thresholdMeters="
+      <> show transporterConfig.arrivedPickupThreshold
+      <> ", pickupLatLon="
+      <> show pickupLoc
+      <> ", reqLatLon="
+      <> show req
   unless (distance < transporterConfig.arrivedPickupThreshold) $ throwError $ DriverNotAtPickupLocation ride.driverId.getId
   unless (isJust ride.driverArrivalTime) $ do
     now <- getCurrentTime

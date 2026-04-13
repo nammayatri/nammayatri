@@ -83,7 +83,15 @@ calculateFareUtil merchantId merchanOperatingCityId mbDropLatLong pickupLatlong 
   let mbToLocGeohash = T.pack <$> ((\dropLatLong -> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (dropLatLong.lat, dropLatLong.lon)) =<< mbDropLatLong)
   fareProducts <- FP.getAllFarePoliciesProduct merchantId merchanOperatingCityId False pickupLatlong mbDropLatLong Nothing Nothing Nothing mbFromLocGeohash mbToLocGeohash mbDistance mbDuration Nothing tripCategory configsInExperimentVersions
   mbTollChargesAndNames <- TD.getTollInfoOnRoute merchanOperatingCityId Nothing (maybe [] (\x -> x.points) mbRoute)
-  mbStateEntryPermitInfo <- SEP.getStateEntryPermitInfoOnRoute merchanOperatingCityId Nothing (maybe [] (\x -> x.points) mbRoute)
+  mbStateEntryPermitInfoResult <-
+    withTryCatch
+      "SEPC:getStateEntryPermitInfoOnRoute:FareCalculator"
+      (SEP.getStateEntryPermitInfoOnRoute merchanOperatingCityId Nothing (maybe [] (\x -> x.points) mbRoute))
+  mbStateEntryPermitInfo <- case mbStateEntryPermitInfoResult of
+    Left _ -> do
+      logWarning $ "SEPC: detector failed in FareCalculator; falling back to zero charges. merchantId=" <> getId merchantId <> ", merchantOpCityId=" <> getId merchanOperatingCityId <> ", tripCategory=" <> show tripCategory
+      pure $ Just (0, [], [])
+    Right sepcInfo -> pure sepcInfo
   let mbTollCharges = (\(tollCharges, _, _, _, _) -> tollCharges) <$> mbTollChargesAndNames
   let mbTollNames = (\(_, tollNames, _, _, _) -> tollNames) <$> mbTollChargesAndNames
   let mbTollIds = (\(_, _, tollIds, _, _) -> tollIds) <$> mbTollChargesAndNames

@@ -295,7 +295,15 @@ getTravelledDistanceAndSepcInfo merchantOperatingCityId (Just ride) estimatedDis
           let distance = RI.distance $ RI.routeInfo route
               routePoints = RI.points $ RI.routeInfo route
           logDebug $ "SEPC: Checking SEPC on undeviated route with " <> show (length routePoints) <> " points for rideId: " <> getId rideId
-          sepcInfo <- join <$> mapM (StateEntryPermitDetector.getStateEntryPermitInfoOnRoute merchantOperatingCityId (Just driverId)) routePoints
+          sepcInfoResult <-
+            withTryCatch
+              "SEPC:getStateEntryPermitInfoOnRoute:undeviatedRoute"
+              (join <$> mapM (StateEntryPermitDetector.getStateEntryPermitInfoOnRoute merchantOperatingCityId (Just driverId)) routePoints)
+          sepcInfo <- case sepcInfoResult of
+            Left _ -> do
+              logWarning $ "SEPC: detector failed on undeviated route; falling back to zero charges. rideId=" <> getId rideId <> ", driverId=" <> getId driverId <> ", merchantOpCityId=" <> getId merchantOperatingCityId
+              pure $ Just (0, [], [])
+            Right sepcInfo' -> pure sepcInfo'
           case sepcInfo of
             Just (charges, names, ids) ->
               logInfo $ "SEPC: Detected on undeviated route for rideId: " <> getId rideId <> ", charges: " <> show charges <> ", names: " <> show names <> ", ids: " <> show ids
@@ -337,11 +345,30 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
           let isSafetyCheckEnabledForTripCategory = maybe True (enableSafetyCheckWrtTripCategory . (.tripCategory)) ride
           routeDeviation <- updateDeviation transportConfig (enableNightSafety && isSafetyCheckEnabledForTripCategory) ride batchWaypoints
           (tollRouteDeviation, isTollPresentOnCurrentRoute) <- updateTollRouteDeviation merchantOpCityId driverId ride batchWaypoints
-          isSepcPresentOnCurrentRoute <- isJust <$> StateEntryPermitDetector.getStateEntryPermitInfoOnRoute merchantOpCityId (Just driverId) batchWaypoints
+          isSepcPresentOnCurrentRouteResult <-
+            withTryCatch
+              "SEPC:getStateEntryPermitInfoOnRoute:routePresenceCheck"
+              (isJust <$> StateEntryPermitDetector.getStateEntryPermitInfoOnRoute merchantOpCityId (Just driverId) batchWaypoints)
+          isSepcPresentOnCurrentRoute <- case isSepcPresentOnCurrentRouteResult of
+            Left _ -> do
+              let mbRideId = (.id) <$> ride
+              logWarning $ "SEPC: detector failed while checking route presence; defaulting to not present. driverId=" <> getId driverId <> ", merchantOpCityId=" <> getId merchantOpCityId <> maybe "" (\rid -> ", rideId=" <> getId rid) mbRideId
+              pure False
+            Right isPresent -> pure isPresent
           return (routeDeviation, tollRouteDeviation, isTollPresentOnCurrentRoute, isSepcPresentOnCurrentRoute)
       )
       (TollsDetector.getTollInfoOnRoute merchantOpCityId)
-      (StateEntryPermitDetector.getStateEntryPermitInfoOnRoute merchantOpCityId)
+      ( \mbDriverId routePoints -> do
+          sepcInfoResult <-
+            withTryCatch
+              "SEPC:getStateEntryPermitInfoOnRoute:interpolationHandler"
+              (StateEntryPermitDetector.getStateEntryPermitInfoOnRoute merchantOpCityId mbDriverId routePoints)
+          case sepcInfoResult of
+            Left _ -> do
+              logWarning $ "SEPC: detector failed in interpolation handler; falling back to zero charges. merchantOpCityId=" <> getId merchantOpCityId <> maybe ", driverId=(none)" (\did -> ", driverId=" <> getId did) mbDriverId
+              pure $ Just (0, [], [])
+            Right sepcInfo -> pure sepcInfo
+      )
       ( \driverId estimatedDistance estimatedTollInfo -> do
           ride <- QRide.getActiveByDriverId driverId
           getTravelledDistanceAndTollInfo merchantOpCityId ride estimatedDistance estimatedTollInfo

@@ -844,7 +844,7 @@ instance CompleteTag BecknTag where
     -- Fulfillment route tags
     ENCODED_POLYLINE -> ROUTE_INFO
     TOLL_NAMES -> INFO
-    STATE_ENTRY_PERMIT_CHARGE_NAMES -> ROUTE_INFO
+    STATE_ENTRY_PERMIT_CHARGE_NAMES -> INFO
     IS_CUSTOMER_PREFFERED_SEARCH_ROUTE -> INFO
     IS_BLOCKED_SEARCH_ROUTE -> INFO
     -- v2.1.0 tag -> group mappings

@@ -57,14 +57,35 @@ boundingBoxToLineSegments box =
 
 -- | True if route bounding box (RBB) intersects geometry bounding box (SBB); used to skip candidates that cannot be on route.
 -- When geometry has no bbox (Nothing), we return False so candidates with null bbox are dropped (many geometry rows have bbox null).
-boundingBoxesIntersect :: BoundingBox -> Maybe BoundingBoxPoints -> Bool
-boundingBoxesIntersect _ Nothing = False
+-- Handles two cases: edge-edge intersection, and RBB entirely inside SBB (route fully within a state boundary).
+-- Returns False with a warning when the stored bbox has fewer than 4 points (malformed data).
+boundingBoxesIntersect :: (MonadFlow m) => BoundingBox -> Maybe BoundingBoxPoints -> m Bool
+boundingBoxesIntersect _ Nothing = do
+  logDebug "SEPC: boundingBoxesIntersect — geometry has no bbox (null), skipping"
+  pure False
 boundingBoxesIntersect rbb (Just sbbPoints) =
   case boundingBoxPointsToLineSegments sbbPoints of
-    Nothing -> True
-    Just sbbSides ->
+    Nothing -> do
+      logWarning $ "SEPC: Geometry has malformed bbox (fewer than 4 points): " <> show sbbPoints <> " — skipping candidate"
+      pure False
+    Just sbbSides -> do
       let rbbSides = boundingBoxToLineSegments rbb
-       in any (\rbbSide -> any (doIntersect rbbSide) sbbSides) rbbSides
+          edgesIntersect = any (\rbbSide -> any (doIntersect rbbSide) sbbSides) rbbSides
+          rbbCorners = [topLeft rbb, topRight rbb, bottomRight rbb, bottomLeft rbb]
+          BoundingBoxPoints sbbCorners = sbbPoints
+          sbb = getBoundingBox sbbCorners
+          rbbInsideSbb = not (null sbbCorners) && any (`pointWithinBoundingBox` sbb) rbbCorners
+          result = edgesIntersect || rbbInsideSbb
+      logDebug $
+        "SEPC: boundingBoxesIntersect"
+          <> " | rbbSides: " <> show rbbSides
+          <> " | sbbSides: " <> show sbbSides
+          <> " | rbbCorners: " <> show rbbCorners
+          <> " | sbbCorners: " <> show sbbCorners
+          <> " | edgesIntersect: " <> show edgesIntersect
+          <> " | rbbInsideSbb: " <> show rbbInsideSbb
+          <> " | result: " <> show result
+      pure result
 
 -- | Cache key version for in-pod SEPC+geometry cache. TTL is 12 hours; bump this when geom data changes.
 sepcGeomCacheKeyVersion :: Text
@@ -129,17 +150,25 @@ filterSEPCsByAllowedState allSEPCEntries geometryByGeomId allowedStates =
 
 -- | Keep only SEPC entries whose geometry bounding box intersects the route bounding box (drops null bbox / no intersection).
 filterSEPCsByRouteBboxIntersection ::
+  (MonadFlow m) =>
   [StateEntryPermitCharges] ->
   Map.Map (Id DGeo.Geometry) DGeo.Geometry ->
   BoundingBox ->
-  [StateEntryPermitCharges]
-filterSEPCsByRouteBboxIntersection candidateSEPCs geometryByGeomId routeBoundingBox =
-  filter intersectsRouteBbox candidateSEPCs
+  m [StateEntryPermitCharges]
+filterSEPCsByRouteBboxIntersection candidateSEPCs geometryByGeomId routeBoundingBox = do
+  logDebug $ "SEPC: filterSEPCsByRouteBboxIntersection — checking " <> show (length candidateSEPCs) <> " candidates against route bbox: " <> show routeBoundingBox
+  results <- filterM intersectsRouteBbox candidateSEPCs
+  logDebug $ "SEPC: filterSEPCsByRouteBboxIntersection — " <> show (length results) <> " candidates passed bbox filter"
+  pure results
   where
     intersectsRouteBbox sepcRow =
       case Map.lookup sepcRow.geomId geometryByGeomId of
-        Nothing -> False
-        Just geomRow -> boundingBoxesIntersect routeBoundingBox geomRow.bbox
+        Nothing -> do
+          logDebug $ "SEPC: geomId " <> getId sepcRow.geomId <> " not found in geometry map — skipping"
+          pure False
+        Just geomRow -> do
+          logDebug $ "SEPC: checking geomId " <> getId sepcRow.geomId <> " bbox: " <> show geomRow.bbox
+          boundingBoxesIntersect routeBoundingBox geomRow.bbox
 
 -- | Build a map from state to SEPC for eligible candidates (one SEPC per state).
 buildStateToSEPCMap ::
@@ -223,8 +252,8 @@ getStateEntryPermitInfoOnRoute merchantOperatingCityId mbDriverId route = do
         else do
           let routeBoundingBox = getBoundingBox route
           logDebug $ "SEPC: Route bounding box calculated"
-          let eligibleCandidates =
-                filterSEPCsByRouteBboxIntersection candidateSEPCsWithState geometryByGeomId routeBoundingBox
+          eligibleCandidates <-
+            filterSEPCsByRouteBboxIntersection candidateSEPCsWithState geometryByGeomId routeBoundingBox
 
           logInfo $ "SEPC: After bbox intersection filter: " <> show (length eligibleCandidates) <> " eligible candidates"
 

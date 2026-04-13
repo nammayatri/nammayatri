@@ -299,7 +299,15 @@ handler ValidatedDSearchReq {..} sReq = do
         logDebug $ "Route serviceability: " <> show serviceableRoute.multipleRoutes
         mbTollChargesAndNames <- getTollInfoOnRoute merchantOpCityId Nothing serviceableRoute.routePoints
         logDebug $ "SEPC: Calling detector for search request, merchantOpCityId: " <> getId merchantOpCityId
-        mbStateEntryPermitInfo <- getStateEntryPermitInfoOnRoute merchantOpCityId Nothing serviceableRoute.routePoints
+        mbStateEntryPermitInfoResult <-
+          withTryCatch
+            "SEPC:getStateEntryPermitInfoOnRoute:Search"
+            (getStateEntryPermitInfoOnRoute merchantOpCityId Nothing serviceableRoute.routePoints)
+        mbStateEntryPermitInfo <- case mbStateEntryPermitInfoResult of
+          Left _ -> do
+            logWarning $ "SEPC: detector failed in Search; falling back to zero charges. merchantOpCityId=" <> getId merchantOpCityId <> ", merchantId=" <> getId merchantId' <> ", transactionId=" <> sReq.transactionId
+            pure $ Just (0, [], [])
+          Right sepcInfo -> pure sepcInfo
         case mbStateEntryPermitInfo of
           Just (charges, names, ids) ->
             logInfo $ "SEPC: Detected during search - charges: " <> show charges <> ", names: " <> show names <> ", ids: " <> show ids

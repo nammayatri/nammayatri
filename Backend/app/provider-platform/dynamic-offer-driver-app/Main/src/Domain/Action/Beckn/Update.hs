@@ -256,7 +256,15 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             farePolicy <- getFarePolicy (Just srcPt) (Just dropLatLong) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) merchantOperatingCity.id False booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just booking.startTime) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
             logTagInfo "Dynamic Pricing debugging update Ride soft update" $ "transactionId" <> booking.transactionId <> "farePolicy: " <> show farePolicy
             mbTollInfo <- getTollInfoOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points
-            mbStateEntryPermitInfo <- getStateEntryPermitInfoOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points
+            mbStateEntryPermitInfoResult <-
+              withTryCatch
+                "SEPC:getStateEntryPermitInfoOnRoute:Update"
+                (getStateEntryPermitInfoOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points)
+            mbStateEntryPermitInfo <- case mbStateEntryPermitInfoResult of
+              Left _ -> do
+                logWarning $ "SEPC: detector failed in Update (edit destination soft); falling back to zero charges. bookingId=" <> booking.id.getId <> ", rideId=" <> rideId.getId <> ", driverId=" <> person.id.getId <> ", transactionId=" <> booking.transactionId
+                pure $ Just (0, [], [])
+              Right sepcInfo -> pure sepcInfo
             let isTollAllowed =
                   maybe
                     True
