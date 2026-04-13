@@ -18,6 +18,7 @@ module Domain.Action.UI.Route
     getRoutes,
     getPickupRoutes,
     getTripRoutes,
+    getInstructionRoute,
     GetPickupRoutesReq (..),
   )
 where
@@ -89,3 +90,7 @@ getPickupRoutes (personId, merchantId) entityId GetPickupRoutesReq {..} = do
 getTripRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant) -> Maybe Text -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getTripRoutes (personId, merchantId) entityId req = do
   Maps.getTripRoutes personId merchantId Nothing entityId req
+
+getInstructionRoute :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant) -> Maybe Text -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
+getInstructionRoute (personId, merchantId) entityId req = do
+  Maps.getInstructionRoute personId merchantId Nothing entityId req

@@ -307,6 +307,7 @@ MerchantServiceUsageConfig:
     getPickupRoutes: MapsService
     getFirstPickupRoute: Maybe MapsService
     getTripRoutes: MapsService
+    getInstructionRoute: MapsService
     getPlaceDetails: MapsService
     autoComplete: MapsService
     aadhaarVerificationService: AadhaarVerificationService
@@ -341,6 +342,7 @@ MerchantServiceUsageConfig:
     getFrfsAutocompleteDistances: Maybe MapsService
     getMultiModalService: Maybe MultiModalService
     getMultimodalWalkDistance: Maybe MapsService
+    getInstructionRoute: Maybe MapsService
     insuranceService: Maybe InsuranceService
     createRefunds: Maybe PaymentService
     getRefunds: Maybe PaymentService
@@ -349,6 +351,7 @@ MerchantServiceUsageConfig:
     getFrfsAutocompleteDistances: fromMaybe (Kernel.External.Maps.Types.OSRM)|I
     getMultiModalService: fromMaybe (Kernel.External.MultiModal.Types.OTPTransit)|I
     getMultimodalWalkDistance: fromMaybe (Kernel.External.Maps.Types.OSRM)|I
+    getInstructionRoute: fromMaybe (Kernel.External.Maps.Types.OSRM)|I
     insuranceService: fromMaybe (Kernel.External.Insurance.Types.Acko) insuranceService|E
     createRefunds: fromMaybe (Kernel.External.Payment.Types.Stripe)|I
     getRefunds: fromMaybe (Kernel.External.Payment.Types.Stripe)|I
@@ -357,6 +360,7 @@ MerchantServiceUsageConfig:
     getFrfsAutocompleteDistances: Kernel.Prelude.Just|I
     getMultiModalService: Kernel.Prelude.Just|I
     getMultimodalWalkDistance: Kernel.Prelude.Just|I
+    getInstructionRoute: Kernel.Prelude.Just|I
     insuranceService: Kernel.Prelude.Just|I
     createRefunds: Kernel.Prelude.Just|I
     getRefunds: Kernel.Prelude.Just|I
@@ -421,6 +425,7 @@ MerchantServiceUsageConfig:
     getRefunds: "'Stripe'"
     getDistancesForScheduledRides: "'OSRM'"
     getFrfsAutocompleteDistances: "'OSRM'"
+    getInstructionRoute: "'OSRM'"
     getMultiModalService: "'OTPTransit'"
     getMultimodalWalkDistance: "'OSRM'"
     insuranceService: "'Acko'"
