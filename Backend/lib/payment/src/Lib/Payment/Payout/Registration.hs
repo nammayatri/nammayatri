@@ -87,7 +87,8 @@ initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall cust
             metadataExpiryInMins = Nothing,
             splitSettlementDetails = Nothing,
             metadataGatewayReferenceId = Nothing,
-            basket = Nothing
+            basket = Nothing,
+            paymentRules = Nothing
           }
 
   logInfo $ "Initiating payout registration for person " <> personId.getId <> " | orderId: " <> orderId <> " | amount: " <> show registrationAmount

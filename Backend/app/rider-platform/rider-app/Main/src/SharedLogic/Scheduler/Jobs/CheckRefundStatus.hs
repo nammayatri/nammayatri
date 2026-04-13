@@ -49,7 +49,6 @@ import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
 import qualified Tools.Payment as Payment
-import qualified Tools.Wallet as TWallet
 import qualified UrlShortner.Common as UrlShortner
 
 checkRefundStatusJob ::
@@ -130,9 +129,8 @@ processRefundStatus refundEntry person paymentOrder = do
   if refundEntry.status `elem` nonTerminalStatuses
     then do
       let orderStatusCall = Payment.orderStatus person.merchantId person.merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
-          walletPostingCall = TWallet.walletPosting person.merchantId person.merchantOperatingCityId
           commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity person.merchantOperatingCityId
-      paymentStatusResponse <- DPayment.orderStatusService commonMerchantOperatingCityId paymentOrder.personId paymentOrder.id orderStatusCall (Just walletPostingCall)
+      paymentStatusResponse <- DPayment.orderStatusService commonMerchantOperatingCityId paymentOrder.personId paymentOrder.id orderStatusCall
       let matchingRefund = find (\refund -> refund.requestId == refundEntry.id.getId) paymentStatusResponse.refunds
       case matchingRefund of
         Just refund -> do

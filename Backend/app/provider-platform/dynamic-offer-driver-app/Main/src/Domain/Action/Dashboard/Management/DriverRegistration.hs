@@ -1881,7 +1881,7 @@ getDriverRegistrationPayoutOrderStatus merchantShortId opCity driverId orderId =
           CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing DPlan.YATRI_SUBSCRIPTION
             >>= fromMaybeM (InternalError "No subscription config found")
         let orderStatusCall = TPayment.orderStatus merchant.id merchantOpCityId serviceConfig.paymentServiceName (Just $ getId driverId)
-        paymentStatus <- DPayment.orderStatusService commonMerchantOpCityId commonPersonId (Id orderId) orderStatusCall Nothing
+        paymentStatus <- DPayment.orderStatusService commonMerchantOpCityId commonPersonId (Id orderId) orderStatusCall
         case paymentStatus of
           DPayment.PaymentStatus {status, payerVpa} -> do
             when (status == Payment.CHARGED) $ do

@@ -20,7 +20,6 @@ where
 import GHC.Base (Symbol)
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Wallet as Wallet
-import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.App (MandatoryQueryParam)
 import Kernel.Types.Id
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -43,7 +42,7 @@ type API (entityId :: Symbol) (notificationEntityId :: Symbol) entity notificati
            :<|> "wallet"
            :> "recharge"
            :> ReqBody '[JSON] walletRechargeReq
-           :> Post '[JSON] APISuccess
+           :> Post '[JSON] Payment.CreateOrderResp
            :<|> "wallet"
            :> "balance"
            :> Get '[JSON] Wallet.WalletBalanceData

@@ -318,7 +318,8 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
                   metadataExpiryInMins = Nothing,
                   metadataGatewayReferenceId = Nothing,
                   splitSettlementDetails,
-                  basket = Nothing
+                  basket = Nothing,
+                  paymentRules = Nothing
                 }
 
         let commonMerchantId = Id.cast @DM.Merchant @DPayment.Merchant merchantId

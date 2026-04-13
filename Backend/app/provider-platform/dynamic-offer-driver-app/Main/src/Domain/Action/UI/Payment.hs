@@ -68,7 +68,6 @@ import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, Transactionable)
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
-import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -241,7 +240,7 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
       -- Use MembershipPaymentService for STCL orders, otherwise use the service config's payment service name
       let defaultPaymentServiceName = if isStclOrder then DMSC.MembershipPaymentService Payment.Juspay else serviceConfig.paymentServiceName
       paymentServiceName <- Payment.decidePaymentService defaultPaymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
-      paymentStatus <- DPayment.orderStatusService commonMerchantOperatingCityId commonPersonId paymentOrderId (orderStatusCall paymentServiceName (Just order.personId.getId)) Nothing
+      paymentStatus <- DPayment.orderStatusService commonMerchantOperatingCityId commonPersonId paymentOrderId (orderStatusCall paymentServiceName (Just order.personId.getId))
       case paymentStatus of
         DPayment.MandatePaymentStatus {..} -> do
           unless (status /= Payment.CHARGED) $ do
@@ -1105,7 +1104,7 @@ getBatchId event = do
 postWalletRecharge ::
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   () ->
-  Flow APISuccess
+  Flow Payment.CreateOrderResp
 postWalletRecharge _ _ = throwError $ InternalError "Wallet recharge API not implemented for provider platform"
 
 -- wallet balance -----------------------------------------------------
