@@ -286,3 +286,7 @@ ALTER TABLE atlas_app.person ALTER COLUMN business_email_encrypted TYPE characte
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.person ADD COLUMN client_id text ;
+
+
+------- SQL updates -------
+

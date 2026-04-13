@@ -32,7 +32,7 @@ Person:
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
     Gender:
-      enum: "MALE, FEMALE, OTHER, UNKNOWN, PREFER_NOT_TO_SAY"
+      enum: "MALE, FEMALE, OTHER, UNKNOWN, PREFER_NOT_TO_SAY, NON_BINARY"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
   fields:
