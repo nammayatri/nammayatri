@@ -14,6 +14,8 @@
 
 module Lib.Types.GateInfo where
 
+import Control.Applicative ((<|>))
+import qualified Data.Map.Strict as Map
 import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -32,8 +34,12 @@ data GateInfoFull = GateInfoFull
     gateTags :: Maybe [Text],
     walkDescription :: Maybe Text,
     entryFeeAmount :: Maybe Double,
-    minDriverThreshold :: Maybe Int,
-    demandThreshold :: Maybe Int,
+    minDriverThresholds :: Maybe (Map.Map Text Int),
+    maxDriverThresholds :: Maybe (Map.Map Text Int),
+    demandThresholds :: Maybe (Map.Map Text Int),
+    defaultMinDriverThreshold :: Maybe Int,
+    defaultMaxDriverThreshold :: Maybe Int,
+    defaultDemandThreshold :: Maybe Int,
     notificationCooldownInSec :: Maybe Int,
     maxRideSkipsBeforeQueueRemoval :: Maybe Int,
     pickupZoneArrivalTimeoutInSec :: Maybe Int,
@@ -61,11 +67,31 @@ data GateInfo = GateInfo
     gateTags :: Maybe [Text],
     walkDescription :: Maybe Text,
     entryFeeAmount :: Maybe Double,
-    minDriverThreshold :: Maybe Int,
-    demandThreshold :: Maybe Int,
+    -- Per vehicle variant thresholds (stored as JSON in DB).
+    -- Key: vehicle service tier text (e.g. "AUTO_RICKSHAW", "SEDAN").
+    -- Value lookup falls back to defaultXxx field below when key is missing.
+    minDriverThresholds :: Maybe (Map.Map Text Int),
+    maxDriverThresholds :: Maybe (Map.Map Text Int),
+    demandThresholds :: Maybe (Map.Map Text Int),
+    defaultMinDriverThreshold :: Maybe Int,
+    defaultMaxDriverThreshold :: Maybe Int,
+    defaultDemandThreshold :: Maybe Int,
     notificationCooldownInSec :: Maybe Int,
     maxRideSkipsBeforeQueueRemoval :: Maybe Int,
     pickupZoneArrivalTimeoutInSec :: Maybe Int,
     pickupRequestResponseTimeoutInSec :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+
+-- | Lookup helpers: return the per-variant value if present, else the gate's default.
+minDriverThresholdFor :: GateInfo -> Text -> Maybe Int
+minDriverThresholdFor gate variant =
+  (Map.lookup variant =<< gate.minDriverThresholds) <|> gate.defaultMinDriverThreshold
+
+maxDriverThresholdFor :: GateInfo -> Text -> Maybe Int
+maxDriverThresholdFor gate variant =
+  (Map.lookup variant =<< gate.maxDriverThresholds) <|> gate.defaultMaxDriverThreshold
+
+demandThresholdFor :: GateInfo -> Text -> Maybe Int
+demandThresholdFor gate variant =
+  (Map.lookup variant =<< gate.demandThresholds) <|> gate.defaultDemandThreshold

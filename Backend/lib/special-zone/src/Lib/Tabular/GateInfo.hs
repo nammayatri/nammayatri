@@ -17,6 +17,10 @@
 
 module Lib.Tabular.GateInfo where
 
+import qualified Data.Aeson as A
+import qualified Data.Map.Strict as Map
+import qualified Data.Text.Encoding as TE
+import qualified Data.ByteString.Lazy as BL
 import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -47,8 +51,12 @@ mkPersist
       gateTags [Text] Maybe
       walkDescription Text Maybe
       entryFeeAmount Double Maybe
-      minDriverThreshold Int Maybe
-      demandThreshold Int Maybe
+      minDriverThresholdsJson Text Maybe
+      maxDriverThresholdsJson Text Maybe
+      demandThresholdsJson Text Maybe
+      defaultMinDriverThreshold Int Maybe
+      defaultMaxDriverThreshold Int Maybe
+      defaultDemandThreshold Int Maybe
       notificationCooldownInSec Int Maybe
       maxRideSkipsBeforeQueueRemoval Int Maybe
       pickupZoneArrivalTimeoutInSec Int Maybe
@@ -71,5 +79,18 @@ instance FromTType GateInfoT Domain.GateInfo where
           geom = Nothing,
           merchantId = Id <$> merchantId,
           merchantOperatingCityId = Id <$> merchantOperatingCityId,
+          minDriverThresholds = decodeThresholdMap minDriverThresholdsJson,
+          maxDriverThresholds = decodeThresholdMap maxDriverThresholdsJson,
+          demandThresholds = decodeThresholdMap demandThresholdsJson,
           ..
         }
+
+-- | Decode the JSON text column into a per-variant threshold map.
+--   Returns Nothing on missing/invalid JSON so we can fall back to defaults.
+decodeThresholdMap :: Maybe Text -> Maybe (Map.Map Text Int)
+decodeThresholdMap Nothing = Nothing
+decodeThresholdMap (Just t) = A.decode (BL.fromStrict (TE.encodeUtf8 t))
+
+-- | Encode a per-variant threshold map back to JSON text for storage.
+encodeThresholdMap :: Maybe (Map.Map Text Int) -> Maybe Text
+encodeThresholdMap = fmap (TE.decodeUtf8 . BL.toStrict . A.encode)

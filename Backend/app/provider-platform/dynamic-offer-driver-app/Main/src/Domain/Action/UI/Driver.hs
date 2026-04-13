@@ -1740,9 +1740,11 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False True False
       QSRD.updateDriverResponse (Just Reject) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
       DP.removeSearchReqIdFromMap merchantId driverId searchTry.requestId
-      -- Handle queue skip for special zone rides
-      searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
-      SpecialZoneDriverDemand.handleQueueSkipIfApplicable searchReq.pickupZoneGateId (show searchTry.vehicleServiceTier) driverId merchantId
+      -- Handle queue skip for special zone rides — forked so a slow Redis/LTS hop
+      -- can't add latency to the driver-respond hot path.
+      fork "specialZoneQueueSkipOnDriverReject" $ do
+        searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
+        SpecialZoneDriverDemand.handleQueueSkipIfApplicable searchReq.pickupZoneGateId (show searchTry.vehicleServiceTier) driverId merchantId
       unlockRedisQuoteKeys
     Pulled -> do
       when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False False True
