@@ -143,7 +143,10 @@ buildMerchant req = do
         verifyFleetWhileLogin = Just True,
         hasFleetMemberHierarchy = Just True,
         isStrongNameCheckRequired = Just True,
-        singleActiveSessionOnly = Just False
+        singleActiveSessionOnly = Just False,
+        trackLoginLogoutForRoles = [],
+        twoFaOtpTTLInSecs = Nothing,
+        twoFaMaxOtpVerifyAttempts = Nothing
       }
 
 changeMerchantEnableState ::
