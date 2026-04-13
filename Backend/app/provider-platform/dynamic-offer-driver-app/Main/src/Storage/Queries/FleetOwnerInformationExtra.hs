@@ -184,6 +184,10 @@ updateFleetOwnerInfo fleetOwnerInfo = do
       Se.Set Beam.fleetDob fleetOwnerInfo.fleetDob,
       Se.Set Beam.fleetName fleetOwnerInfo.fleetName,
       Se.Set Beam.fleetType fleetOwnerInfo.fleetType,
+      Se.Set Beam.businessLicenseNumberEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted fleetOwnerInfo.businessLicenseNumber),
+      Se.Set Beam.businessLicenseNumberHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash fleetOwnerInfo.businessLicenseNumber),
+      Se.Set Beam.businessLicenseNumber Nothing,
+      Se.Set Beam.vatNumber fleetOwnerInfo.vatNumber,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerInfo.fleetOwnerPersonId)]
@@ -225,6 +229,7 @@ updateByPrimaryKey fleetOwnerInfo = do
           Se.Set Beam.gstNumberEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted gstNumber),
           Se.Set Beam.gstNumberHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash gstNumber),
           Se.Set Beam.gstNumber Nothing,
+          Se.Set Beam.vatNumber vatNumber,
           Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
           Se.Set Beam.panImageId panImageId,
           Se.Set Beam.panNumberEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted panNumber),

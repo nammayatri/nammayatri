@@ -1942,6 +1942,8 @@ types:
     - mobileCountryCode: Maybe Text
     - email: Maybe Text
     - fleetDob: Maybe UTCTime
+    - vatNumber: Maybe Text
+    - businessLicenseNumber: Maybe Text
     - stripeAddress: Maybe StripeAddress
     - stripeIdNumber: Maybe Text
     - fleetName: Maybe Text

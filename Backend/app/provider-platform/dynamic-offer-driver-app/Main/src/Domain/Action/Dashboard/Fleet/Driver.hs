@@ -2071,13 +2071,16 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
   mbFleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId)
   whenJust mbFleetOwnerInfo $ \fleetOwnerInfo -> do
     reqStripeIdNumber <- forM req.stripeIdNumber encrypt
+    reqBusinessLicenseNumber <- forM req.businessLicenseNumber encrypt
     let updFleetOwnerInfo =
           fleetOwnerInfo
             { DFOI.stripeIdNumber = reqStripeIdNumber <|> fleetOwnerInfo.stripeIdNumber,
               DFOI.stripeAddress = req.stripeAddress <|> fleetOwnerInfo.stripeAddress,
               DFOI.fleetDob = req.fleetDob <|> fleetOwnerInfo.fleetDob,
               DFOI.fleetName = req.fleetName <|> fleetOwnerInfo.fleetName,
-              DFOI.fleetType = fromMaybe fleetOwnerInfo.fleetType (DRegV2.castFleetType <$> req.fleetType)
+              DFOI.fleetType = fromMaybe fleetOwnerInfo.fleetType (DRegV2.castFleetType <$> req.fleetType),
+              DFOI.vatNumber = req.vatNumber <|> fleetOwnerInfo.vatNumber,
+              DFOI.businessLicenseNumber = reqBusinessLicenseNumber <|> fleetOwnerInfo.businessLicenseNumber
             }
     FOI.updateFleetOwnerInfo updFleetOwnerInfo
 
