@@ -349,6 +349,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         createdAt = now,
         updatedAt = now,
         driverDeviatedToTollRoute = Just False,
+        driverCrossedStateEntryPermit = Just False,
         driverDeviatedFromRoute = Just False,
         numberOfSnapToRoadCalls = Nothing,
         numberOfOsrmSnapToRoadCalls = Nothing,

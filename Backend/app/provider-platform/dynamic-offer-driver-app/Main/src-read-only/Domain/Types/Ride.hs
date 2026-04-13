@@ -53,6 +53,7 @@ data Ride = Ride
     driverCancellationPenaltyAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     driverCancellationPenaltyFeeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverCancellationPenaltyWaivedReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverCrossedStateEntryPermit :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverDeviatedFromRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverDeviatedToTollRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverGoHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest),

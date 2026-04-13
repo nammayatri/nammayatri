@@ -250,6 +250,26 @@ updateTollRouteDeviation merchantOpCityId driverId (Just ride) batchWaypoints = 
     QRide.updateDriverDeviatedToTollRoute ride.id isTollPresentOnCurrentRoute
   return (driverDeviatedToTollRoute, isTollPresentOnCurrentRoute)
 
+updateSepcRouteDeviation :: LocationUpdateFlow m r c => Id DMOC.MerchantOperatingCity -> Id Person -> Maybe Ride -> [LatLong] -> m (Bool, Bool)
+updateSepcRouteDeviation _ _ Nothing _ = do
+  logInfo "SEPC: No ride found to check state entry permit crossing"
+  return (False, False)
+updateSepcRouteDeviation merchantOpCityId driverId (Just ride) batchWaypoints = do
+  let alreadyCrossed = fromMaybe False ride.driverCrossedStateEntryPermit
+  isSepcPresentOnCurrentRouteResult <-
+    withTryCatch
+      "SEPC:getStateEntryPermitInfoOnRoute:routePresenceCheck"
+      (isJust <$> StateEntryPermitDetector.getStateEntryPermitInfoOnRoute merchantOpCityId (Just driverId) batchWaypoints)
+  isSepcPresentOnCurrentRoute <- case isSepcPresentOnCurrentRouteResult of
+    Left _ -> do
+      logWarning $ "SEPC: detector failed while checking route presence; defaulting to not present. driverId=" <> getId driverId <> ", merchantOpCityId=" <> getId merchantOpCityId
+      pure False
+    Right isPresent -> pure isPresent
+  when (isSepcPresentOnCurrentRoute && not alreadyCrossed) $ do
+    logInfo $ "SEPC: First state crossing detected for rideId: " <> getId ride.id <> ", marking driverCrossedStateEntryPermit=True"
+    QRide.updateDriverCrossedStateEntryPermit ride.id True
+  return (alreadyCrossed, isSepcPresentOnCurrentRoute)
+
 getTravelledDistanceAndTollInfo :: LocationUpdateFlow m r c => Id DMOC.MerchantOperatingCity -> Maybe Ride -> Meters -> Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool) -> m (Meters, Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool))
 getTravelledDistanceAndTollInfo _ Nothing _ estimatedTollInfo = do
   logInfo "No ride found to get travelled distance"
@@ -337,25 +357,12 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
       (\driverId tollCharges tollNames tollIds -> void (QRide.updateTollChargesAndNamesAndIds driverId tollCharges tollNames tollIds))
       (\driverId sepcCharges sepcNames sepcIds -> void (QRide.updateStateEntryPermitChargesAndNamesAndIds driverId sepcCharges sepcNames sepcIds))
       ( \driverId batchWaypoints -> do
-          -- NOTE (@himanshu): we don't add a SEPC-specific route deviation flag analogous to tollRouteDeviation
-          -- because SEPC only needs overall route deviation; we intentionally keep snapToRoadCallCondition logic
-          -- in the library exactly as it was before.
-          -- isSepcPresentOnCurrentRoute mirrors isTollPresentOnCurrentRoute but for state entry permits.
           ride <- QRide.getActiveByDriverId driverId
           let isSafetyCheckEnabledForTripCategory = maybe True (enableSafetyCheckWrtTripCategory . (.tripCategory)) ride
           routeDeviation <- updateDeviation transportConfig (enableNightSafety && isSafetyCheckEnabledForTripCategory) ride batchWaypoints
           (tollRouteDeviation, isTollPresentOnCurrentRoute) <- updateTollRouteDeviation merchantOpCityId driverId ride batchWaypoints
-          isSepcPresentOnCurrentRouteResult <-
-            withTryCatch
-              "SEPC:getStateEntryPermitInfoOnRoute:routePresenceCheck"
-              (isJust <$> StateEntryPermitDetector.getStateEntryPermitInfoOnRoute merchantOpCityId (Just driverId) batchWaypoints)
-          isSepcPresentOnCurrentRoute <- case isSepcPresentOnCurrentRouteResult of
-            Left _ -> do
-              let mbRideId = (.id) <$> ride
-              logWarning $ "SEPC: detector failed while checking route presence; defaulting to not present. driverId=" <> getId driverId <> ", merchantOpCityId=" <> getId merchantOpCityId <> maybe "" (\rid -> ", rideId=" <> getId rid) mbRideId
-              pure False
-            Right isPresent -> pure isPresent
-          return (routeDeviation, tollRouteDeviation, isTollPresentOnCurrentRoute, isSepcPresentOnCurrentRoute)
+          (alreadyCrossedSepc, isSepcPresentOnCurrentRoute) <- updateSepcRouteDeviation merchantOpCityId driverId ride batchWaypoints
+          return (routeDeviation, tollRouteDeviation, isTollPresentOnCurrentRoute, alreadyCrossedSepc, isSepcPresentOnCurrentRoute)
       )
       (TollsDetector.getTollInfoOnRoute merchantOpCityId)
       ( \mbDriverId routePoints -> do

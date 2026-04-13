@@ -281,3 +281,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN state_entry_permit_charges do
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN estimated_state_entry_permit_names text[] ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN estimated_state_entry_permit_ids text[] ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN estimated_state_entry_permit_charges double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN driver_crossed_state_entry_permit boolean ;

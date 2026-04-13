@@ -9,3 +9,9 @@ ALTER TABLE atlas_driver_offer_bpp.state_entry_permit_charges ADD COLUMN updated
 ALTER TABLE atlas_driver_offer_bpp.state_entry_permit_charges ADD COLUMN merchant_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.state_entry_permit_charges ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.state_entry_permit_charges ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+CREATE INDEX state_entry_permit_charges_idx_geom_id ON atlas_driver_offer_bpp.state_entry_permit_charges USING btree (geom_id);

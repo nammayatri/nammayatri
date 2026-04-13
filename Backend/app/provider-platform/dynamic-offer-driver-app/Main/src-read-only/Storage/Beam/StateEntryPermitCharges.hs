@@ -29,6 +29,6 @@ instance B.Table StateEntryPermitChargesT where
 
 type StateEntryPermitCharges = StateEntryPermitChargesT Identity
 
-$(enableKVPG (''StateEntryPermitChargesT) [('id)] [])
+$(enableKVPG (''StateEntryPermitChargesT) [('id)] [[('geomId)]])
 
 $(mkTableInstances (''StateEntryPermitChargesT) "state_entry_permit_charges")

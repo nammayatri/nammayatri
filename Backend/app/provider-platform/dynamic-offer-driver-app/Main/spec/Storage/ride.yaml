@@ -88,6 +88,7 @@ Ride:
     updatedAt: UTCTime
     billingCategory: BillingCategory
     driverDeviatedToTollRoute: Maybe Bool
+    driverCrossedStateEntryPermit: Maybe Bool
     driverDeviatedFromRoute: Maybe Bool
     numberOfSnapToRoadCalls: Maybe Int
     numberOfOsrmSnapToRoadCalls: Maybe Int

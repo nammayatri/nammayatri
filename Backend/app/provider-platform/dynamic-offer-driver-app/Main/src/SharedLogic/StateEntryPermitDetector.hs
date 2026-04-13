@@ -78,13 +78,20 @@ boundingBoxesIntersect rbb (Just sbbPoints) =
           result = edgesIntersect || rbbInsideSbb
       logDebug $
         "SEPC: boundingBoxesIntersect"
-          <> " | rbbSides: " <> show rbbSides
-          <> " | sbbSides: " <> show sbbSides
-          <> " | rbbCorners: " <> show rbbCorners
-          <> " | sbbCorners: " <> show sbbCorners
-          <> " | edgesIntersect: " <> show edgesIntersect
-          <> " | rbbInsideSbb: " <> show rbbInsideSbb
-          <> " | result: " <> show result
+          <> " | rbbSides: "
+          <> show rbbSides
+          <> " | sbbSides: "
+          <> show sbbSides
+          <> " | rbbCorners: "
+          <> show rbbCorners
+          <> " | sbbCorners: "
+          <> show sbbCorners
+          <> " | edgesIntersect: "
+          <> show edgesIntersect
+          <> " | rbbInsideSbb: "
+          <> show rbbInsideSbb
+          <> " | result: "
+          <> show result
       pure result
 
 -- | Cache key version for in-pod SEPC+geometry cache. TTL is 12 hours; bump this when geom data changes.

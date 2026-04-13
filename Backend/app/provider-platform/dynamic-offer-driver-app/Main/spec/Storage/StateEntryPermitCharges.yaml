@@ -18,6 +18,7 @@ StateEntryPermitCharges:
 
   constraints:
     id: PrimaryKey
+    geomId: SecondaryKey
 
   sqlType:
     geomId: character varying(36)
@@ -28,3 +29,4 @@ StateEntryPermitCharges:
       where: geomId
   extraOperations:
     - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES

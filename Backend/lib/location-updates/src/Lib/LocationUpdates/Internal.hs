@@ -83,7 +83,7 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     updateDistance :: Id person -> HighPrecMeters -> Int -> Int -> Maybe Int -> Bool -> m (),
     updateTollChargesAndNamesAndIds :: Id person -> HighPrecMoney -> [Text] -> [Text] -> m (),
     updateStateEntryPermitChargesAndNamesAndIds :: Id person -> HighPrecMoney -> [Text] -> [Text] -> m (),
-    updateRouteDeviation :: Id person -> [LatLong] -> m (Bool, Bool, Bool, Bool),
+    updateRouteDeviation :: Id person -> [LatLong] -> m (Bool, Bool, Bool, Bool, Bool),
     getTravelledDistanceAndTollInfo :: Id person -> Meters -> Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool) -> m (Meters, Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool)),
     getTravelledDistanceAndSepcInfo :: Id person -> Meters -> Maybe (HighPrecMoney, [Text], [Text]) -> m (Meters, Maybe (HighPrecMoney, [Text], [Text])),
     getRecomputeIfPickupDropNotOutsideOfThreshold :: Bool,
@@ -217,12 +217,12 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
           _ -> waypoints
   let currentLastTwoPoints = takeLastTwo (toList waypoints)
   Redis.setExp (lastTwoOnRidePointsRedisKey driverId) currentLastTwoPoints 21600 -- 6 hours
-  (routeDeviation, tollRouteDeviation, isTollPresentOnCurrentRoute, isSepcPresentOnCurrentRoute) <- updateRouteDeviation driverId (toList modifiedWaypoints)
+  (routeDeviation, tollRouteDeviation, isTollPresentOnCurrentRoute, alreadyCrossedSepc, isSepcPresentOnCurrentRoute) <- updateRouteDeviation driverId (toList modifiedWaypoints)
   when (isTollApplicable && enableTollCrossedNotifications && isTollPresentOnCurrentRoute) $
     fork "Toll Crossed OnUpdate" $ do
       sendTollCrossedNotificationToDriver driverId
       sendTollCrossedUpdateToBAP driverId
-  when (isStateEntryPermitApplicable && enableSepcCrossedNotifications && isSepcPresentOnCurrentRoute) $
+  when (isStateEntryPermitApplicable && enableSepcCrossedNotifications && isSepcPresentOnCurrentRoute && not alreadyCrossedSepc) $
     fork "SEPC Crossed OnUpdate" $ do
       sendSepcCrossedNotificationToDriver driverId
       sendSepcCrossedUpdateToBAP driverId
@@ -391,7 +391,7 @@ mkRideInterpolationHandler ::
   (Id person -> HighPrecMeters -> Int -> Int -> Maybe Int -> Bool -> m ()) ->
   (Id person -> HighPrecMoney -> [Text] -> [Text] -> m ()) ->
   (Id person -> HighPrecMoney -> [Text] -> [Text] -> m ()) ->
-  (Id person -> [LatLong] -> m (Bool, Bool, Bool, Bool)) ->
+  (Id person -> [LatLong] -> m (Bool, Bool, Bool, Bool, Bool)) ->
   (Maybe (Id person) -> RoutePoints -> m (Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool))) ->
   (Maybe (Id person) -> RoutePoints -> m (Maybe (HighPrecMoney, [Text], [Text]))) ->
   (Id person -> Meters -> Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool) -> m (Meters, Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool))) ->

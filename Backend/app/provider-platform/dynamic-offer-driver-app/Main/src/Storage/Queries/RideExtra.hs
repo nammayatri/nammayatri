@@ -306,6 +306,15 @@ updateDriverDeviatedToTollRoute rideId deviation = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateDriverCrossedStateEntryPermit :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> Bool -> m ()
+updateDriverCrossedStateEntryPermit rideId crossed = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.driverCrossedStateEntryPermit $ Just crossed,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 updateStartTimeAndLoc :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> LatLong -> m ()
 updateStartTimeAndLoc rideId point = do
   now <- getCurrentTime
