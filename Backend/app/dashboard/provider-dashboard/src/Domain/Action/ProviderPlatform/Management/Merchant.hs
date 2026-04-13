@@ -586,6 +586,6 @@ postMerchantConfigTollUpsert merchantShortId opCity apiTokenInfo req = do
 deleteMerchantConfigTollDelete :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Types.Id.Id Common.Toll -> Flow Kernel.Types.APISuccess.APISuccess
 deleteMerchantConfigTollDelete merchantShortId opCity apiTokenInfo tollId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction apiTokenInfo Nothing
+  transaction <- buildTransaction apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.deleteMerchantConfigTollDelete) tollId
