@@ -4289,6 +4289,7 @@ postMerchantConfigDebugLogUpdate merchantShortId city req = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
   DebugLog.setJsonLogicDebugFlags (cast merchantOpCityId) req
+  pure Success
 
 ---------------------------------------------------------------------
 getMerchantConfigTollList :: ShortId DM.Merchant -> Context.City -> Flow Common.TollListResp
