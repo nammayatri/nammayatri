@@ -248,7 +248,6 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                           Redis.del (makePayoutEntryIdsKey payoutReq.id.getId)
                         Nothing -> logInfo $ "No stashed entry IDs found for payoutRequest " <> payoutReq.id.getId
 
-
                   -- Update PayoutRequest status
                   whenJust mbPayoutReq $ \payoutReq -> do
                     let newStatus = castPayoutOrderStatusToPayoutRequestStatus payoutStatus

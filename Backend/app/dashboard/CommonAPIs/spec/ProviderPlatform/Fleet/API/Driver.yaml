@@ -712,6 +712,34 @@ apis:
       #       response:
       #         type: DrivertoVehicleAssociationRes
 
+  - POST: # EditFleetVehicleAPI
+      endpoint: /fleet/vehicle/edit
+      auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
+        - driverId: Text
+        - vehicleNo: Text
+        - rcId: Text
+      request:
+        type: EditVehicleReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /fleet/{requestorId}/vehicle/edit
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            query:
+              - fleetOwnerId: Text
+              - driverId: Text
+              - vehicleNo: Text
+              - rcId: Text
+            request:
+              type: EditVehicleReq
+            response:
+              type: APISuccess
+
   - POST: # SetVehicleDriverRcStatusForFleetAPI
       endpoint: /{driverId}/fleet/vehicleDriverRCstatus
       name: PostDriverFleetVehicleDriverRcStatus
@@ -1887,6 +1915,11 @@ types:
   DriveVehicleAssociationListItemT:
     - driverId: Maybe Text
     - vehicleNo: Maybe Text
+    - rcId: Maybe Text
+    - vehicleColor: Maybe Text
+    - vehicleMake: Maybe Text
+    - vehicleModel: Maybe Text
+    - vehicleYear: Maybe Int
     - driverName: Maybe Text
     - conductorName: Maybe Text
     - status: Maybe DriverMode
@@ -1907,6 +1940,13 @@ types:
     - associatedOn: Maybe UTCTime
     - enabled: Maybe Bool
     - selectedServiceTiers: [Text]
+  EditVehicleReq:
+    - manufacturer: Maybe Text
+    - model: Maybe Text
+    - color: Maybe Text
+    - year: Maybe Int
+    - certificateNumber: Maybe Text
+    - derive: "'HideSecrets"
   VerificationDocsStatus:
     - vehicleRegistrationCertificate: Maybe VerificationStatus
     - vehiclePermit: Maybe VerificationStatus

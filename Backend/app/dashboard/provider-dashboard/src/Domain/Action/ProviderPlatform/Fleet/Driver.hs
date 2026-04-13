@@ -81,6 +81,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverFleetScheduledBookingCancel,
     postDriverFleetScheduledBookingReassign,
     postDriverAddRidePayoutAccountNumber,
+    postDriverFleetVehicleEdit,
   )
 where
 
@@ -697,3 +698,13 @@ getDriverFleetOwnerList :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> 
 getDriverFleetOwnerList merchantShortId opCity apiTokenInfo blocked fleetType fromDate limit mbSearchString offset onlyEnabled toDate = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetOwnerList) blocked fleetType fromDate limit mbSearchString offset onlyEnabled toDate
+
+postDriverFleetVehicleEdit :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Common.EditVehicleReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postDriverFleetVehicleEdit merchantShortId opCity apiTokenInfo fleetOwnerId driverId vehicleNo rcId req = do
+  unless (DP.isAdmin apiTokenInfo.person) $ checkFleetOwnerVerification apiTokenInfo.personId
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let mbDriverPersonId = Id <$> driverId
+  transaction <- buildTransaction apiTokenInfo mbDriverPersonId (Just req)
+  T.withTransactionStoring transaction $ do
+    (mbFleetOwnerId', requestorId) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo fleetOwnerId
+    Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetVehicleEdit) requestorId mbFleetOwnerId' driverId vehicleNo rcId req
