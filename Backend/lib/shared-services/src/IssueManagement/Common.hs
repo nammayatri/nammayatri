@@ -363,6 +363,19 @@ data CxAgentDetails = CxAgentDetails
   }
   deriving (Show, Generic, Read, Eq, Ord, ToJSON, FromJSON, ToSchema)
 
+-- | Payload sent to a rider (or driver) when the dashboard operator posts
+-- a live-chat message on an issue. Carried out-of-band of the main API as
+-- an FCM data-notification by rider-app `Tools.Notifications.notifyOnIssueChatMessage`.
+data ChatNotifPayload = ChatNotifPayload
+  { issueReportId :: Text,
+    messageId :: Text,
+    senderType :: Text,
+    snippet :: Text,
+    hasMedia :: Bool,
+    timestamp :: UTCTime
+  }
+  deriving (Show, Generic, Eq, ToJSON, FromJSON, ToSchema)
+
 instance HasSqlValueSyntax be Value => HasSqlValueSyntax be CxAgentDetails where
   sqlValueSyntax = sqlValueSyntax . toJSON
 

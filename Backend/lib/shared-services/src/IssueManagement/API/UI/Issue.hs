@@ -31,3 +31,20 @@ type IssueAPI =
       :> Common.IssueStatusUpdateAPI
     :<|> "igmStatus"
       :> Common.IgmStatusAPI
+    -- Live chat endpoints (scoped to an issue thread).
+    :<|> Capture "issueId" (Id Domain.IssueReport)
+      :> "chat"
+      :> "message"
+      :> Common.ChatMessageCreateAPI
+    :<|> Capture "issueId" (Id Domain.IssueReport)
+      :> "chat"
+      :> "messages"
+      :> Common.ChatMessageListAPI
+    :<|> Capture "issueId" (Id Domain.IssueReport)
+      :> "chat"
+      :> "read"
+      :> Common.ChatMarkReadAPI
+    :<|> Capture "issueId" (Id Domain.IssueReport)
+      :> "chat"
+      :> "state"
+      :> Common.ChatStateAPI

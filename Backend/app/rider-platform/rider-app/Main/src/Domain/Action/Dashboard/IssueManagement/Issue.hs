@@ -31,6 +31,10 @@ module Domain.Action.Dashboard.IssueManagement.Issue
     postIssueCategoryReorder,
     postIssueOptionReorder,
     postIssueMessageReorder,
+    -- Live chat APIs
+    postIssueChatMessage,
+    getIssueChatMessages,
+    postIssueChatRead,
   )
 where
 
@@ -43,6 +47,7 @@ import EulerHS.Prelude hiding (id)
 import qualified IssueManagement.Common
 import qualified IssueManagement.Common as Common
 import qualified IssueManagement.Common.Dashboard.Issue
+import qualified IssueManagement.Common.UI.Issue
 import qualified IssueManagement.Domain.Action.Dashboard.Issue as DIssue
 import qualified IssueManagement.Domain.Action.UI.Issue as DAI
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory
@@ -358,3 +363,50 @@ postIssueMessageReorder ::
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postIssueMessageReorder (Kernel.Types.Id.ShortId merchantShortId) city req =
   DIssue.reorderMessages (Kernel.Types.Id.ShortId merchantShortId) city req dashboardIssueHandle Common.CUSTOMER
+
+-----------------------------------------------------------
+-- Live chat APIs ------------------------------------------
+
+postIssueChatMessage ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport ->
+  IssueManagement.Common.Dashboard.Issue.SendChatMessageByUserReq ->
+  Environment.Flow IssueManagement.Common.UI.Issue.ChatMessageItem
+postIssueChatMessage (Kernel.Types.Id.ShortId merchantShortId) city issueReportId req =
+  DIssue.sendDashboardChatMessage
+    (Kernel.Types.Id.ShortId merchantShortId)
+    city
+    (Kernel.Types.Id.cast issueReportId)
+    dashboardIssueHandle
+    req
+
+getIssueChatMessages ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport ->
+  Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Environment.Flow [IssueManagement.Common.UI.Issue.ChatMessageItem]
+getIssueChatMessages (Kernel.Types.Id.ShortId merchantShortId) city issueReportId mbSince mbLimit =
+  DIssue.listDashboardChatMessages
+    (Kernel.Types.Id.ShortId merchantShortId)
+    city
+    (Kernel.Types.Id.cast issueReportId)
+    dashboardIssueHandle
+    mbSince
+    mbLimit
+
+postIssueChatRead ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport ->
+  IssueManagement.Common.Dashboard.Issue.MarkChatReadByUserReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postIssueChatRead (Kernel.Types.Id.ShortId merchantShortId) city issueReportId req =
+  DIssue.markDashboardChatRead
+    (Kernel.Types.Id.ShortId merchantShortId)
+    city
+    (Kernel.Types.Id.cast issueReportId)
+    dashboardIssueHandle
+    req

@@ -46,6 +46,7 @@ import Domain.Types.Trip (TripCategory)
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as VehicleVariant
 import EulerHS.Prelude hiding (id)
+import qualified IssueManagement.Common
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
@@ -1209,6 +1210,46 @@ notifyDriverReaching personId tripCategory otp vehicleNumber ride = do
 --   unwords
 --     [ "Your driver is arriving now! Please be at the pickup location"
 --     ]
+
+-- | Dashboard-operator -> rider live-chat push. Wired into
+-- @ServiceHandle.mbSendChatNotification@ by @customerIssueHandle@ so the
+-- shared @issueAddComment@ flow can fire it after persisting the message.
+-- Reuses the existing 'Notification.CHAT_MESSAGE' category so notification
+-- sounds / merchant PN templates configured for in-ride driver chat also
+-- apply here (operators and drivers are functionally indistinguishable
+-- from the rider-device's perspective).
+notifyOnIssueChatMessage ::
+  ( ServiceFlow m r,
+    EsqDBReplicaFlow m r
+  ) =>
+  Id Person ->
+  IssueManagement.Common.ChatNotifPayload ->
+  m ()
+notifyOnIssueChatMessage personId payload = do
+  person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.CHAT_MESSAGE merchantOperatingCityId
+  let notificationSound = notificationSoundFromConfig >>= NSC.defaultSound
+      title = T.pack "Support"
+      body =
+        if T.null payload.snippet
+          then if payload.hasMedia then "Sent you an image" else "You have a new message"
+          else payload.snippet
+      notificationData =
+        Notification.NotificationReq
+          { category = Notification.CHAT_MESSAGE,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product payload.issueReportId payload,
+            body = body,
+            title = title,
+            dynamicParams = EmptyDynamicParam,
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+            ttl = Nothing,
+            sound = notificationSound
+          }
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData Nothing
 
 notifyOnNewMessage ::
   ( ServiceFlow m r,

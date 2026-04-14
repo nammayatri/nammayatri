@@ -71,6 +71,7 @@ import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.RideExtra as QRE
 import Tools.Auth
 import Tools.Error
+import qualified Tools.Notifications as Notify
 import Tools.Ticket as TT
 
 type API =
@@ -91,6 +92,10 @@ handler = externalHandler
         :<|> deleteIssue (personId, merchantId)
         :<|> updateIssueStatus (personId, merchantId)
         :<|> igmIssueStatus (personId, merchantId)
+        :<|> postChatMessage (personId, merchantId)
+        :<|> getChatMessages (personId, merchantId)
+        :<|> postChatRead (personId, merchantId)
+        :<|> getChatState' (personId, merchantId)
 
 customerIssueHandle :: Common.ServiceHandle Flow
 customerIssueHandle =
@@ -116,7 +121,8 @@ customerIssueHandle =
       findRideByRideShortId = castRideByRideShortId,
       findByMobileNumberAndMerchantId = castPersonByMobileNumberAndMerchant,
       mbFindFRFSTicketBookingById = Just castFindFRFSTicketBookingById,
-      mbFindStationByIdWithContext = Just castFindStationByIdWithContext
+      mbFindStationByIdWithContext = Just castFindStationByIdWithContext,
+      mbSendChatNotification = Just (\pid payload -> Notify.notifyOnIssueChatMessage (cast pid) payload)
     }
 
 castFindFRFSTicketBookingById :: Id Common.FRFSTicketBooking -> Flow (Maybe Common.FRFSTicketBooking)
@@ -619,6 +625,40 @@ fromBooking b = do
       quantity = Nothing,
       bppOrderId = Nothing
     }
+
+-- Live chat handlers ----------------------------------------------------
+
+postChatMessage ::
+  (Id SP.Person, Id DM.Merchant) ->
+  Id Domain.IssueReport ->
+  Common.CreateChatMessageReq ->
+  FlowHandler Common.ChatMessageItem
+postChatMessage (personId, _) issueReportId req =
+  withFlowHandlerAPI $ Common.createChatMessage (cast personId) issueReportId CUSTOMER req
+
+getChatMessages ::
+  (Id SP.Person, Id DM.Merchant) ->
+  Id Domain.IssueReport ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  FlowHandler [Common.ChatMessageItem]
+getChatMessages (personId, _) issueReportId mbSince mbLimit =
+  withFlowHandlerAPI $ Common.listChatMessages (cast personId) issueReportId mbSince mbLimit
+
+postChatRead ::
+  (Id SP.Person, Id DM.Merchant) ->
+  Id Domain.IssueReport ->
+  Common.MarkChatReadReq ->
+  FlowHandler APISuccess
+postChatRead (personId, _) issueReportId req =
+  withFlowHandlerAPI $ Common.markChatRead (cast personId) issueReportId CUSTOMER req
+
+getChatState' ::
+  (Id SP.Person, Id DM.Merchant) ->
+  Id Domain.IssueReport ->
+  FlowHandler Common.ChatStateRes
+getChatState' (personId, _) issueReportId =
+  withFlowHandlerAPI $ Common.getChatState (cast personId) issueReportId
 
 fromFRFSTicketBooking :: (MonadFlow m) => FRFSTicketBooking -> FRFSFareParameters -> m RideBooking
 fromFRFSTicketBooking b fareParameters = do
