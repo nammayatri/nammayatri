@@ -10,7 +10,6 @@ module Storage.CachedQueries.Role
     findAllWithLimitOffset,
     findAll,
     updateById,
-    makeRoleDescendantsKey,
     cacheRoleHierarchy,
     findRoleDescendants,
   )
