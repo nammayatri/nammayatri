@@ -673,15 +673,16 @@
         "tinylog": "tinylog"
       },
       "locked": {
-        "lastModified": 1774254079,
-        "narHash": "sha256-FU9xn2nlxbJ1CF/cH/7HNjV5/JGvkInMGyOJRzQX9Ck=",
+        "lastModified": 1771323784,
+        "narHash": "sha256-E/jm4Yyqw8gp9xVDxv+LA30urkwmxT/4PfIUJkaCfZI=",
         "owner": "nammayatri",
         "repo": "euler-hs",
-        "rev": "bf99af696dca8d9c221e45b2715cf45a827b4fef",
+        "rev": "47ff7bdae0f39f3889fdfb76b42af5041ccc5dff",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "backend/multi-cloud-setup-euler",
         "repo": "euler-hs",
         "type": "github"
       }
@@ -3613,11 +3614,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1776154330,
-        "narHash": "sha256-UDMb6temY26dF+gWjcpNOiFBxtkZnQNvk8mozTzv29U=",
+        "lastModified": 1776173135,
+        "narHash": "sha256-k1VHZMbEgqSPS32skZq0GKHhfLy+LtITxgHREZ18/14=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "3ba132b80d6be4ea59e87d37e58beb439f7ce043",
+        "rev": "38ddcedc69f0f370e65587c08d4d107ee6446fd1",
         "type": "github"
       },
       "original": {
