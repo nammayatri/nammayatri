@@ -3174,14 +3174,18 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         return $ Just newDriverPoolConfigs
       _ -> return Nothing
 
-  -- fare products
+  -- fare products (skip if replicateFareProducts is explicitly False)
+  let shouldReplicateFareProducts = fromMaybe True req.replicateFareProducts
   mbFareProducts <-
-    CQFProduct.findAllFareProductByMerchantOpCityId newMerchantOperatingCityId >>= \case
-      [] -> do
-        fareProducts <- CQFProduct.findAllFareProductByMerchantOpCityId baseOperatingCityId
-        newFareProducts <- mapM (buildFareProduct newMerchantId newMerchantOperatingCityId) fareProducts
-        return $ Just newFareProducts
-      _ -> return Nothing
+    if shouldReplicateFareProducts
+      then
+        CQFProduct.findAllFareProductByMerchantOpCityId newMerchantOperatingCityId >>= \case
+          [] -> do
+            fareProducts <- CQFProduct.findAllFareProductByMerchantOpCityId baseOperatingCityId
+            newFareProducts <- mapM (buildFareProduct newMerchantId newMerchantOperatingCityId) fareProducts
+            return $ Just newFareProducts
+          _ -> return Nothing
+      else return Nothing
 
   -- vehicle service tier
   mbVehicleServiceTier <-
