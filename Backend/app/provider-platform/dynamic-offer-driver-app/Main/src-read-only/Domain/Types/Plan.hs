@@ -19,7 +19,8 @@ import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data Plan = Plan
-  { allowStrikeOff :: Kernel.Prelude.Bool,
+  { airportRideSubscription :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    allowStrikeOff :: Kernel.Prelude.Bool,
     basedOnEntity :: Domain.Types.Plan.BasedOnEntity,
     billingType :: Kernel.Prelude.Maybe Domain.Types.Plan.BillingType,
     cgstPercentage :: Kernel.Types.Common.HighPrecMoney,
