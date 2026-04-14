@@ -81,6 +81,7 @@ import SharedLogic.Finance.Wallet
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import SharedLogic.Ride (releaseLien, updateOnRideStatusWithAdvancedRideCheck)
 import SharedLogic.RuleBasedTierUpgrade
+import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified SharedLogic.UserCancellationDues as UserCancellationDues
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -193,6 +194,15 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             unless (isValidRide ride) $ throwError (InternalError "Ride is not valid for cancellation")
             cancelRideTransaction booking ride bookingCReason merchant rideEndedBy userNoShowCharges transporterConfig driver
             logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
+            -- Demand decrement: customer cancelled before ride start → demand retracted.
+            -- Only applies to pickup-gate bookings cancelled by the user (ByDriver cancels keep demand live).
+            when (bookingCReason.source == SBCR.ByUser && isJust booking.pickupGateId) $
+              fork "specialZoneDemandDecrementOnCancel" $
+                SpecialZoneDriverDemand.runDemandDecrementForBooking booking.id.getId booking.pickupGateId (show booking.vehicleServiceTier)
+            -- Supply decrement: driver cancelled pre-start ride → retract the pickup-zone commitment.
+            when (bookingCReason.source == SBCR.ByDriver) $
+              fork "specialZoneSupplyDecrementOnDriverCancel" $
+                SpecialZoneDriverDemand.cancelPickupZoneRequestsForDriver ride.driverId
 
             fork "DriverRideCancelledCoin Event : " $ do
               mbLocation <- do

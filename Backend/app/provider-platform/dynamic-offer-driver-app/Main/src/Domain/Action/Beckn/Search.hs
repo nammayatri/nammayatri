@@ -78,7 +78,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType, Device, Version)
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
-import Lib.Queries.GateInfo (findGateInfoByLatLongWithoutGeoJson)
+import Lib.Queries.GateInfo (findGateInfoByLatLongWithinRadius)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import Lib.Yudhishthira.Types
@@ -312,7 +312,10 @@ handler ValidatedDSearchReq {..} sReq = do
   mbVehicleServiceTier <- getVehicleServiceTierForMeterRideSearch isMeterRideSearch driverIdForSearch configVersionMap
   let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed mbVehicleServiceTier allFarePoliciesProduct.farePolicies
   now <- getCurrentTime
-  (mbPickupGateId, mbSpecialZoneGateId, mbDefaultDriverExtra) <- getSpecialPickupZoneInfo allFarePoliciesProduct.specialLocationTag fromLocation
+  (mbPickupGateId, mbSpecialZoneGateId, mbDefaultDriverExtra) <-
+    getSpecialPickupZoneInfo
+      (fromMaybe allFarePoliciesProduct.area allFarePoliciesProduct.mbPickupDropArea)
+      fromLocation
   logDebug $ "Pickingup Gate info result : " <> show (mbPickupGateId, mbSpecialZoneGateId, mbDefaultDriverExtra)
   let spcllocationTag = maybe allFarePoliciesProduct.specialLocationTag (\_ -> allFarePoliciesProduct.specialLocationTag <&> (<> "_PickupZone")) mbSpecialZoneGateId
       specialLocName = allFarePoliciesProduct.specialLocationName
@@ -378,10 +381,17 @@ handler ValidatedDSearchReq {..} sReq = do
   buildDSearchResp sReq.pickupLocation sReq.dropLocation (stopsLatLong sReq.stops) spcllocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocName specialLocationSupportNumber now possibleTripOption.schedule sReq.fareParametersInRateCard sReq.isMultimodalSearch
   where
     stopsLatLong = map (.gps)
-    getSpecialPickupZoneInfo :: Maybe Text -> DLoc.Location -> Flow (Maybe Text, Maybe Text, Maybe HighPrecMoney)
-    getSpecialPickupZoneInfo Nothing _ = pure (Nothing, Nothing, Nothing)
-    getSpecialPickupZoneInfo (Just _) fromLocation = do
-      mbPickupZone <- Esq.runInReplica $ findGateInfoByLatLongWithoutGeoJson (LatLong fromLocation.lat fromLocation.lon)
+    getSpecialPickupZoneInfo :: SL.Area -> DLoc.Location -> Flow (Maybe Text, Maybe Text, Maybe HighPrecMoney)
+    getSpecialPickupZoneInfo SL.Default _ = pure (Nothing, Nothing, Nothing)
+    getSpecialPickupZoneInfo area fromLocation = do
+      let pickupLatLong = LatLong fromLocation.lat fromLocation.lon
+          mbSlId = case area of
+            SL.Pickup slId -> Just slId
+            SL.PickupDrop slId _ -> Just slId
+            _ -> Nothing
+      mbPickupZone <- case mbSlId of
+        Just slId -> Esq.runInReplica $ findGateInfoByLatLongWithinRadius slId pickupLatLong 20.0
+        Nothing -> pure Nothing
       if ((.canQueueUpOnGate) <$> mbPickupZone) == Just True
         then -- Demand counter is now bumped at Select time (per chosen variant) rather than at Search,
         -- because at Search we don't yet know which estimate the customer will pick.

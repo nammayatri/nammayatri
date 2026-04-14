@@ -47,6 +47,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.MerchantPaymentMethod
 import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
+import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import SharedLogic.SearchTry
 import Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
@@ -128,6 +129,10 @@ handler merchant req validatedQuote = do
       (ride, _, vehicle) <- initializeRide merchant driver uBooking Nothing (Just req.enableFrequentLocationUpdates) driverQuote.clientId (Just req.enableOtpLessRide) (mFleetOwnerId <&> (.fleetOwnerId) <&> Id)
       void $ deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id driverQuote.searchTryId (mkPrice (Just driverQuote.currency) driverQuote.estimatedFare) Nothing
       uBooking2 <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
+      -- Booking confirmed: decrement demand at this pickup gate AND complete any
+      -- Accepted pickup-zone request for this driver (supply -1). Idempotent with StartRide.
+      fork "specialZoneCompletePickupZoneOnConfirm" $
+        SpecialZoneDriverDemand.completePickupZoneRequestsForDriver driver.id uBooking2.id.getId uBooking2.pickupGateId (show uBooking2.vehicleServiceTier)
       mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails
 
     handleRideOtpFlow isNewRider _ booking riderDetails = do
@@ -150,6 +155,8 @@ handler merchant req validatedQuote = do
       mFleetOwnerId <- QFDA.findByDriverId driver.id True
       (ride, _, vehicle) <- initializeRide merchant driver uBooking dynamicReferralCode (Just req.enableFrequentLocationUpdates) Nothing (Just req.enableOtpLessRide) (mFleetOwnerId <&> (.fleetOwnerId) <&> Id)
       uBooking2 <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
+      fork "specialZoneCompletePickupZoneOnMeterConfirm" $
+        SpecialZoneDriverDemand.completePickupZoneRequestsForDriver driver.id uBooking2.id.getId uBooking2.pickupGateId (show uBooking2.vehicleServiceTier)
       mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails
 
     generateUniqueOTPCode merchantOperatingCityId cnt = do
