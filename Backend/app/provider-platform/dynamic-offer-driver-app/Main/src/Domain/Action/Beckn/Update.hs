@@ -278,14 +278,14 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                   maybe
                     True
                     ( \(_, _, _, isAutoRickshawAllowed, isTwoWheelerAllowed) ->
-                        (booking.vehicleServiceTier == DVST.AUTO_RICKSHAW && isAutoRickshawAllowed)
+                        ((booking.vehicleServiceTier == DVST.AUTO_RICKSHAW || booking.vehicleServiceTier == DVST.AUTO_PLUS) && isAutoRickshawAllowed)
                           || (booking.vehicleServiceTier == DVST.BIKE && fromMaybe False isTwoWheelerAllowed)
-                          || (booking.vehicleServiceTier /= DVST.AUTO_RICKSHAW && booking.vehicleServiceTier /= DVST.BIKE)
+                          || (booking.vehicleServiceTier /= DVST.AUTO_RICKSHAW && booking.vehicleServiceTier /= DVST.AUTO_PLUS && booking.vehicleServiceTier /= DVST.BIKE)
                     )
                     mbTollInfo
             when (not isTollAllowed) $ do
-              sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId "Trip Update Request Not Available" "Auto rickshaw not allowed for toll route."
-              throwError $ InvalidRequest "Auto rickshaw not allowed for toll route."
+              sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId "Trip Update Request Not Available" "Vehicle not allowed for toll route."
+              throwError $ InvalidRequest "Vehicle not allowed for toll route."
             mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage booking.merchantOperatingCityId booking.emailDomain booking.billingCategory farePolicy.vehicleServiceTier
             let farePolicy' =
                   farePolicy
