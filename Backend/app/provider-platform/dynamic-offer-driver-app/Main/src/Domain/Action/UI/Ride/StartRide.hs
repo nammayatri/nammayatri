@@ -224,7 +224,8 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
 
       fork "notify customer for ride start" $ notifyBAPRideStarted booking updatedRide (Just point)
       fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride booking
-      fork "startRide - Complete pickup zone request" $ SpecialZoneDriverDemand.completePickupZoneRequestOnRideStart driverId
+      fork "startRide - Complete pickup zone request" $
+        SpecialZoneDriverDemand.completePickupZoneRequestsForDriver driverId booking.id.getId booking.pickupGateId (show booking.vehicleServiceTier)
       if isInterCityTrip booking.tripCategory || isRentalTrip booking.tripCategory
         then logTagInfo "IffcoTokio driver insurance skipped" ("tripCategory=" <> show booking.tripCategory <> ", rideId=" <> ride.id.getId)
         else fork "IffcoTokio driver insurance" $ IffcoInsurance.triggerIffcoTokioInsurance driverId booking.providerId ride.merchantOperatingCityId

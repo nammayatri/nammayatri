@@ -14,6 +14,7 @@ import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
+import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
 import qualified Tools.Notifications as Notify
 
@@ -76,6 +77,8 @@ checkPickupZoneArrival Job {id = jobId, jobInfo} = withLogTag ("JobId-" <> jobId
                 logWarning $ "Driver " <> driverId.getId <> " no-show at gate " <> gateId <> ", removing from queue"
                 void $ LTSFlow.manualQueueRemove specialLocationId vehicleType merchantId driverId
                 QSZQR.updateResponse (Just DSZQR.NoShow) DSZQR.Expired (Id jobData.requestId)
+                -- Supply decrement: no-show — driver never honored the commitment.
+                SpecialZoneDriverDemand.runSupplyDecrementForRequest jobData.requestId gateId vehicleType
                 let entityData =
                       Notify.PickupZoneRequestEntityData
                         { requestId = jobData.requestId,

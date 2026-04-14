@@ -29,6 +29,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator (AllocatorJobType (..), CheckPickupZoneArrivalJobData (..))
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.SpecialZoneDriverDemand (mkQueueSkipCountKey)
+import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
 import Tools.Error
@@ -113,6 +114,9 @@ postSpecialZoneQueueRequestRespond (mbPersonId, _merchantId, _merchantOpCityId) 
   case actualResponse of
     Domain.Types.SpecialZoneQueueRequest.Accept -> do
       QSZQR.updateResponse (Just Domain.Types.SpecialZoneQueueRequest.Accept) Domain.Types.SpecialZoneQueueRequest.Accepted requestId
+      -- Supply increment: driver has committed to this gate for this variant.
+      fork "specialZoneSupplyIncrementOnAccept" $
+        SpecialZoneDriverDemand.runSupplyIncrementForRequest requestId.getId request.gateId request.vehicleType
       mbGate <- Esq.runInReplica $ QGI.findById (Kernel.Types.Id.Id request.gateId)
       let timeoutSec = maybe 1200 (fromMaybe 1200 . (.pickupZoneArrivalTimeoutInSec)) mbGate
       createJobIn @_ @'CheckPickupZoneArrival
@@ -146,4 +150,7 @@ postSpecialZoneQueueRequestCancel (mbPersonId, _merchantId, _merchantOpCityId) r
   unless (request.driverId == personId) $ throwError (InvalidRequest "Request does not belong to this driver")
   unless (request.status == Domain.Types.SpecialZoneQueueRequest.Accepted) $ throwError (InvalidRequest "Only accepted requests can be cancelled")
   QSZQR.updateResponse (Just Domain.Types.SpecialZoneQueueRequest.Cancelled) Domain.Types.SpecialZoneQueueRequest.Expired requestId
+  -- Supply decrement: driver retracted their pickup-zone commitment.
+  fork "specialZoneSupplyDecrementOnRequestCancel" $
+    SpecialZoneDriverDemand.runSupplyDecrementForRequest requestId.getId request.gateId request.vehicleType
   pure Kernel.Types.APISuccess.Success

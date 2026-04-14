@@ -14,11 +14,14 @@
 
 module Lib.Queries.GateInfo where
 
+import Data.List (sortBy)
+import Data.Ord (comparing)
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude hiding (isNothing)
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Esqueleto.Functions as F
 import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Lib.Tabular.GateInfo
 import qualified Lib.Types.GateInfo as D
 import qualified Lib.Types.SpecialLocation as SL
@@ -51,6 +54,23 @@ findGateInfoByLatLongWithoutGeoJson point = do
     gateInfo <- from $ table @GateInfoT
     where_ $ gateInfo ^. GateInfoPoint ==. val point
     return gateInfo
+
+-- | Find the nearest gate info within a given radius (in meters) of the given point,
+-- scoped to a specific special location. Uses Haversine distance since the `point`
+-- column is a serialized LatLong, not PostGIS geometry.
+-- Returns the closest matching gate, or Nothing if none is within the radius.
+findGateInfoByLatLongWithinRadius :: Transactionable m => Id SL.SpecialLocation -> LatLong -> Double -> m (Maybe D.GateInfo)
+findGateInfoByLatLongWithinRadius slId point radiusMeters = do
+  gates <- Esq.findAll $ do
+    gateInfo <- from $ table @GateInfoT
+    where_ $ gateInfo ^. GateInfoSpecialLocationId ==. val (toKey slId)
+    return gateInfo
+  -- Precompute distance once per gate and tie-break by gate id so the
+  -- selection is deterministic when two gates sit at the same distance.
+  let gatesWithDist = map (\g -> (distanceBetweenInMeters point g.point, g)) gates
+      gatesInRadius = filter (\(d, _) -> d <= realToFrac radiusMeters) gatesWithDist
+      sorted = sortBy (comparing (\(d, g) -> (d, g.id))) gatesInRadius
+  return $ snd <$> listToMaybe sorted
 
 deleteById :: Id D.GateInfo -> SqlDB ()
 deleteById = Esq.deleteByKey @GateInfoT
