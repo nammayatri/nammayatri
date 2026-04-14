@@ -64,6 +64,7 @@ Plan:
     allowStrikeOff: Bool
     productOwnershipAmount : HighPrecMoney
     originalRegistrationAmount : Maybe HighPrecMoney
+    airportRideSubscription : Maybe HighPrecMoney
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PaymentMode>
@@ -148,6 +149,7 @@ Plan:
     maxCreditLimit: integer
     freeRideCount: integer
     merchantOpCityId: text
+    airportRideSubscription: double
 
   default:
     subscribedFlagToggleAllowed: "true"

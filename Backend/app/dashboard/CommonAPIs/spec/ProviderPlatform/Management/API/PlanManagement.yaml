@@ -66,6 +66,7 @@ types:
     - maxAmount: HighPrecMoney
     - registrationAmount: HighPrecMoney
     - originalRegistrationAmount: Maybe HighPrecMoney
+    - airportRideSubscription: Maybe HighPrecMoney
     - maxCreditLimit: HighPrecMoney
     - maxMandateAmount: HighPrecMoney
     - productOwnershipAmount: HighPrecMoney
@@ -100,6 +101,7 @@ types:
     - maxAmount: HighPrecMoney
     - registrationAmount: HighPrecMoney
     - originalRegistrationAmount: Maybe HighPrecMoney
+    - airportRideSubscription: Maybe HighPrecMoney
     - maxCreditLimit: HighPrecMoney
     - maxMandateAmount: HighPrecMoney
     - productOwnershipAmount: HighPrecMoney
