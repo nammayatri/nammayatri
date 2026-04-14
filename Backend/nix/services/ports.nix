@@ -18,6 +18,8 @@
   context-api = 7082;
   test-dashboard = 3000;
   mock-server = 8080;
+  pgweb = 8432;
+  redis-commander = 8431;
   # osrm-server port is not configurable atm
   # osrm-server = 5001;
 }

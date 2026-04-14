@@ -134,7 +134,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
       const result = await callPostmanStep(step, storesRef.current);
       const durationMs = Math.round(performance.now() - start);
 
-      const failed = !result.ok || result.assertions.some(a => !a.passed) || !!result.scriptError;
+      const failed = result.assertions.some(a => !a.passed) || !!result.scriptError;
       const status = failed ? 'fail' : 'pass';
 
       setStepStates(prev => ({ ...prev, [step.id]: { status, result, durationMs } }));

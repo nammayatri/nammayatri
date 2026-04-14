@@ -54,6 +54,10 @@ SERVICE_LOGS = {
     "search-result-aggregator": Path("/tmp/search-result-aggregator.log"),
     "producer": Path("/tmp/producer.log"),
     "rider-producer": Path("/tmp/rider-producer.log"),
+    "provider-dashboard": Path("/tmp/provider-dashboard.log"),
+    "provider-dashboard-eul": Path("/tmp/provider-dashboard-eul.log"),
+    "rider-dashboard": Path("/tmp/rider-dashboard.log"),
+    "rider-dashboard-eul": Path("/tmp/rider-dashboard-eul.log"),
 }
 MAX_LOG_DELTA_BYTES = 64 * 1024  # 64KB per service
 

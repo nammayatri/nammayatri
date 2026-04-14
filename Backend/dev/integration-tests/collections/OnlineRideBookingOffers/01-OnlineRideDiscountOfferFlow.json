@@ -13,7 +13,7 @@
 					"    // Finnish mobile: 04X XXXXXXX (10 digits starting with 04)",
 					"    var dNum = '04' + Math.floor(10000000 + Math.random() * 89999999);",
 					"    var rNum = '04' + Math.floor(10000000 + Math.random() * 89999999);",
-					"    // Finnish plate: ABC123 (no hyphen — API requires ^[0-9A-Z]*$)",
+					"    // Finnish plate: ABC123 (no hyphen \u2014 API requires ^[0-9A-Z]*$)",
 					"    var regNo = String.fromCharCode(65+Math.floor(Math.random()*26)) + String.fromCharCode(65+Math.floor(Math.random()*26)) + String.fromCharCode(65+Math.floor(Math.random()*26)) + String(Math.floor(100+Math.random()*899));",
 					"    pm.collectionVariables.set('_test_driver_number', dNum);",
 					"    pm.collectionVariables.set('_test_rider_number', rNum);",
@@ -88,11 +88,29 @@
 			"request": {
 				"method": "POST",
 				"header": [
-					{"key": "Content-Type", "value": "application/json"},
-					{"key": "token", "value": "{{bap_dashboard_token}}"}
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{bap_dashboard_token}}"
+					}
 				],
-				"body": {"mode": "raw", "raw": "{\"merchantId\": \"{{bap_short_id}}\", \"city\": \"{{city}}\"}"},
-				"url": {"raw": "{{bap_dashboard_url}}/user/switchMerchantAndCity", "host": ["{{bap_dashboard_url}}"], "path": ["user", "switchMerchantAndCity"]}
+				"body": {
+					"mode": "raw",
+					"raw": "{\"merchantId\": \"{{bap_short_id}}\", \"city\": \"{{city}}\"}"
+				},
+				"url": {
+					"raw": "{{bap_dashboard_url}}/user/switchMerchantAndCity",
+					"host": [
+						"{{bap_dashboard_url}}"
+					],
+					"path": [
+						"user",
+						"switchMerchantAndCity"
+					]
+				}
 			},
 			"response": []
 		},
@@ -366,7 +384,7 @@
 				},
 				"body": {
 					"mode": "raw",
-					"raw": "{\"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"{{vehicle_class}}\", \"colour\": \"White\", \"model\": \"MARUTI BREZZA\", \"make\": \"Maruti\", \"vehicleCategory\": \"{{vehicle_category}}\", \"variant\": \"{{vehicle_variant}}\", \"category\": \"{{vehicle_category}}\"}"
+					"raw": "{\"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"{{vehicle_class}}\", \"colour\": \"White\", \"model\": \"{{vehicle_model}}\", \"make\": \"{{vehicle_make}}\", \"vehicleCategory\": \"{{vehicle_category}}\", \"variant\": \"{{vehicle_variant}}\", \"category\": \"{{vehicle_category}}\"}"
 				}
 			},
 			"response": []
@@ -419,7 +437,7 @@
 					"listen": "prerequest",
 					"script": {
 						"exec": [
-							"var moment = require('moment'); pm.globals.set('current_time', moment.utc().format('YYYY-MM-DDTHH:mm:ssZ'));"
+							"pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
 						],
 						"type": "text/javascript"
 					}
@@ -985,7 +1003,7 @@
 					"listen": "prerequest",
 					"script": {
 						"exec": [
-							"var moment = require('moment'); pm.globals.set('current_time', moment.utc().format('YYYY-MM-DDTHH:mm:ssZ'));"
+							"pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
 						],
 						"type": "text/javascript"
 					}
@@ -1060,7 +1078,8 @@
 							"var d = pm.response.json();",
 							"pm.environment.set('searchId', d.searchId);",
 							"console.log('Search ID:', d.searchId);",
-							"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"// Wait for async beckn search processing across services\nconst _delay = 5000; const _start = Date.now(); while (Date.now() - _start < _delay) {}"
 						],
 						"type": "text/javascript"
 					}
@@ -1517,6 +1536,74 @@
 				"body": {
 					"mode": "raw",
 					"raw": "{\"point\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}"
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Driver Ride Invoices",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Wait for invoice generation after ride end",
+							"const start = Date.now();",
+							"while (Date.now() - start < 2000) { /* busy wait */ }"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('Driver Ride Invoices - totalItems:', d.totalItems);",
+							"if (d.invoices && d.invoices.length > 0) {",
+							"    d.invoices.forEach(function(inv, i) {",
+							"        console.log('Invoice ' + i + ': number=' + inv.invoiceNumber + ' type=' + inv.invoiceType + ' amount=' + inv.totalAmountPayable);",
+							"    });",
+							"}",
+							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+							"pm.test('Response has invoices array', function () { pm.expect(d.invoices).to.be.an('array'); });",
+							"pm.test('Response has totalItems', function () { pm.expect(d.totalItems).to.be.a('number'); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_namma_P}}/subscription/invoices?invoiceType=%22Ride%22&limit=10&offset=0",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"subscription",
+						"invoices"
+					],
+					"query": [
+						{
+							"key": "invoiceType",
+							"value": "%22Ride%22"
+						},
+						{
+							"key": "limit",
+							"value": "10"
+						},
+						{
+							"key": "offset",
+							"value": "0"
+						}
+					]
 				}
 			},
 			"response": []
