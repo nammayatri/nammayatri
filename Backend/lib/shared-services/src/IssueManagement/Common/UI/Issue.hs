@@ -12,6 +12,7 @@ import Data.OpenApi (ToParamSchema, ToSchema)
 import qualified Data.Text as T hiding (count, map)
 import EulerHS.Prelude hiding (id)
 import IssueManagement.Common as Reexport hiding (Audio, Image)
+import qualified IssueManagement.Domain.Types.Issue.ChatMessage as DCM
 import IssueManagement.Domain.Types.Issue.IssueCategory
 import IssueManagement.Domain.Types.Issue.IssueMessage
 import IssueManagement.Domain.Types.Issue.IssueOption
@@ -260,6 +261,62 @@ instance FromHttpApiData CustomerResponse where
 instance ToHttpApiData CustomerResponse where
   toUrlPiece ACCEPT = "accept"
   toUrlPiece ESCALATE = "escalate"
+
+-------------------------------------------------------------------------
+-- Live chat API (rider <-> dashboard operator, scoped to an IssueReport)
+
+type ChatMessageCreateAPI =
+  ReqBody '[JSON] CreateChatMessageReq
+    :> Post '[JSON] ChatMessageItem
+
+type ChatMessageListAPI =
+  QueryParam "since" UTCTime
+    :> QueryParam "limit" Int
+    :> Get '[JSON] [ChatMessageItem]
+
+type ChatMarkReadAPI =
+  ReqBody '[JSON] MarkChatReadReq
+    :> Post '[JSON] APISuccess
+
+type ChatStateAPI =
+  Get '[JSON] ChatStateRes
+
+data CreateChatMessageReq = CreateChatMessageReq
+  { text :: Text,
+    mediaFileIds :: Maybe [Id MediaFile]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MarkChatReadReq = MarkChatReadReq
+  { upTo :: UTCTime
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ChatMessageItem = ChatMessageItem
+  { messageId :: Text,
+    senderType :: DCM.ChatSenderType,
+    chatContentType :: DCM.ChatContentType,
+    text :: Text,
+    mediaFileIds :: [Id MediaFile],
+    deliveredAt :: Maybe UTCTime,
+    readAt :: Maybe UTCTime,
+    createdAt :: UTCTime
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ChatStateRes = ChatStateRes
+  { -- | Count of operator messages the rider has not read yet.
+    unread :: Int,
+    -- | Timestamp of the latest message in the thread (any sender), if any.
+    latestMessageAt :: Maybe UTCTime
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-------------------------------------------------------------------------
 
 data CustomerRating
   = THUMBS_UP

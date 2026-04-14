@@ -11,6 +11,7 @@
 module Storage.Beam.IssueManagement where
 
 import qualified Data.Text as T
+import qualified IssueManagement.Storage.Beam.Issue.ChatMessage as BeamCM
 import qualified IssueManagement.Storage.Beam.Issue.Comment as BeamC
 import qualified IssueManagement.Storage.Beam.Issue.IGMConfig as BeamIGMC
 import qualified IssueManagement.Storage.Beam.Issue.IGMIssue as BeamIGI
@@ -23,6 +24,9 @@ import qualified IssueManagement.Storage.Beam.Issue.IssueReport as BeamIR
 import qualified IssueManagement.Storage.Beam.Issue.IssueTranslation as BeamIT
 import qualified IssueManagement.Storage.Beam.MediaFile as BeamMF
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
+
+instance HasSchemaName BeamCM.ChatMessageT where
+  schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamC.CommentT where
   schemaName _ = T.pack currentSchemaName

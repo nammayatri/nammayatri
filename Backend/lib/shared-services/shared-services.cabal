@@ -47,6 +47,7 @@ library
       IssueManagement.Domain.Action.Beckn.OnIssueStatus
       IssueManagement.Domain.Action.Dashboard.Issue
       IssueManagement.Domain.Action.UI.Issue
+      IssueManagement.Domain.Types.Issue.ChatMessage
       IssueManagement.Domain.Types.Issue.Comment
       IssueManagement.Domain.Types.Issue.IGMConfig
       IssueManagement.Domain.Types.Issue.IGMIssue
@@ -59,6 +60,7 @@ library
       IssueManagement.Domain.Types.Issue.IssueTranslation
       IssueManagement.Domain.Types.MediaFile
       IssueManagement.SharedLogic.CallAPI
+      IssueManagement.Storage.Beam.Issue.ChatMessage
       IssueManagement.Storage.Beam.Issue.Comment
       IssueManagement.Storage.Beam.Issue.IGMConfig
       IssueManagement.Storage.Beam.Issue.IGMIssue
@@ -76,6 +78,7 @@ library
       IssueManagement.Storage.CachedQueries.Issue.IssueMessage
       IssueManagement.Storage.CachedQueries.Issue.IssueOption
       IssueManagement.Storage.CachedQueries.MediaFile
+      IssueManagement.Storage.Queries.Issue.ChatMessage
       IssueManagement.Storage.Queries.Issue.Comment
       IssueManagement.Storage.Queries.Issue.IGMConfig
       IssueManagement.Storage.Queries.Issue.IGMIssue

@@ -15,6 +15,7 @@ import GHC.IO.Handle (hFileSize)
 import GHC.IO.IOMode (IOMode (..))
 import IssueManagement.Common as Reexport
 import qualified IssueManagement.Common.UI.Issue as Common
+import qualified IssueManagement.Domain.Types.Issue.ChatMessage as DCM
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as D
 import qualified IssueManagement.Domain.Types.Issue.IssueConfig as D
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage as D
@@ -28,6 +29,7 @@ import qualified IssueManagement.Storage.CachedQueries.Issue.IssueConfig as CQI
 import qualified IssueManagement.Storage.CachedQueries.Issue.IssueMessage as CQIM
 import qualified IssueManagement.Storage.CachedQueries.Issue.IssueOption as CQIO
 import qualified IssueManagement.Storage.CachedQueries.MediaFile as CQMF
+import qualified IssueManagement.Storage.Queries.Issue.ChatMessage as QCM
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import IssueManagement.Tools.Error
@@ -70,7 +72,11 @@ data ServiceHandle m = ServiceHandle
     findRideByRideShortId :: Id Merchant -> ShortId Ride -> m (Maybe Ride),
     findByMobileNumberAndMerchantId :: Text -> DbHash -> Id Merchant -> m (Maybe Person),
     mbFindFRFSTicketBookingById :: Maybe (Id FRFSTicketBooking -> m (Maybe FRFSTicketBooking)),
-    mbFindStationByIdWithContext :: Maybe (Id MerchantOperatingCity -> VehicleCategory -> Text -> m (Maybe Station))
+    mbFindStationByIdWithContext :: Maybe (Id MerchantOperatingCity -> VehicleCategory -> Text -> m (Maybe Station)),
+    -- | Optional hook: when a dashboard operator posts a chat message, rider-app
+    -- wires this to its FCM notification helper. Driver-app currently passes
+    -- @Nothing@ because live chat is not yet exposed there.
+    mbSendChatNotification :: Maybe (Id Person -> ChatNotifPayload -> m ())
   }
 
 getLanguage :: EsqDBReplicaFlow m r => Id Person -> Maybe Language -> ServiceHandle m -> m Language
@@ -1122,6 +1128,118 @@ recreateIssueChats issueReport issueConfig mbRideInfoRes language identifier =
 mkIssueChat :: ChatType -> Text -> UTCTime -> Chat
 mkIssueChat chatType chatId timestamp =
   Chat {..}
+
+-------------------------------------------------------------------------
+-- Live chat (rider/driver-side) --------------------------------------
+
+-- | Rider (or driver) posts a chat message against an existing issue.
+-- Enforces that the caller owns the issue before persisting.
+createChatMessage ::
+  BeamFlow m r =>
+  Id Person ->
+  Id D.IssueReport ->
+  Identifier ->
+  Common.CreateChatMessageReq ->
+  m Common.ChatMessageItem
+createChatMessage personId issueReportId identifier req = do
+  issueReport <-
+    QIR.findById issueReportId
+      >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
+  unless (issueReport.personId == personId) $
+    throwError (InvalidRequest "This issue does not belong to the caller.")
+  now <- getCurrentTime
+  msgId <- generateGUID
+  let mediaIds = fromMaybe [] req.mediaFileIds
+      senderType = case identifier of
+        CUSTOMER -> DCM.SENDER_RIDER
+        DRIVER -> DCM.SENDER_DRIVER
+      chatMsg =
+        DCM.ChatMessage
+          { id = msgId,
+            issueReportId,
+            senderId = personId,
+            senderType,
+            chatContentType = if null mediaIds then DCM.CHAT_TEXT else DCM.CHAT_MEDIA,
+            message = req.text,
+            mediaFileIds = mediaIds,
+            readAt = Nothing,
+            createdAt = now,
+            merchantId = issueReport.merchantId
+          }
+  QCM.create chatMsg
+  pure (toChatMessageItem chatMsg)
+
+-- | Fetches chat messages on an issue ordered by createdAt ascending.
+-- Optionally filters to messages strictly newer than @since@. Used by both
+-- rider poll loops and dashboard scrollback views.
+listChatMessages ::
+  BeamFlow m r =>
+  Id Person ->
+  Id D.IssueReport ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  m [Common.ChatMessageItem]
+listChatMessages personId issueReportId mbSince mbLimit = do
+  issueReport <-
+    QIR.findById issueReportId
+      >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
+  unless (issueReport.personId == personId) $
+    throwError (InvalidRequest "This issue does not belong to the caller.")
+  messages <- QCM.findChatMessagesAfter issueReportId mbSince mbLimit
+  pure $ map toChatMessageItem messages
+
+-- | Rider marks operator messages as read up to a given timestamp.
+markChatRead ::
+  BeamFlow m r =>
+  Id Person ->
+  Id D.IssueReport ->
+  Identifier ->
+  Common.MarkChatReadReq ->
+  m APISuccess
+markChatRead personId issueReportId identifier req = do
+  issueReport <-
+    QIR.findById issueReportId
+      >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
+  unless (issueReport.personId == personId) $
+    throwError (InvalidRequest "This issue does not belong to the caller.")
+  -- When the rider reads, we mark messages sent by SENDER_OPERATOR (the other party).
+  -- Same applies for a driver reading; they read operator messages.
+  let _ = identifier -- reserved for future per-role semantics
+  QCM.markReadUpTo issueReportId DCM.SENDER_OPERATOR req.upTo
+  pure Success
+
+-- | Snapshot of the chat thread from the rider's perspective.
+getChatState ::
+  BeamFlow m r =>
+  Id Person ->
+  Id D.IssueReport ->
+  m Common.ChatStateRes
+getChatState personId issueReportId = do
+  issueReport <-
+    QIR.findById issueReportId
+      >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
+  unless (issueReport.personId == personId) $
+    throwError (InvalidRequest "This issue does not belong to the caller.")
+  unread <- QCM.countUnread issueReportId DCM.SENDER_OPERATOR
+  -- Peek at the latest message so the client can refresh its UI timestamp.
+  latest <- QCM.findChatMessagesAfter issueReportId Nothing (Just 1)
+  let latestAt = case reverse latest of
+        (c : _) -> Just c.createdAt
+        [] -> Nothing
+  pure $ Common.ChatStateRes {unread, latestMessageAt = latestAt}
+
+toChatMessageItem :: DCM.ChatMessage -> Common.ChatMessageItem
+toChatMessageItem c =
+  Common.ChatMessageItem
+    { messageId = c.id.getId,
+      senderType = c.senderType,
+      chatContentType = c.chatContentType,
+      text = c.message,
+      mediaFileIds = c.mediaFileIds,
+      deliveredAt = Nothing,
+      readAt = c.readAt,
+      createdAt = c.createdAt
+    }
 
 mkIssueOption :: (D.IssueOption, Maybe D.IssueTranslation) -> Text
 mkIssueOption (issueOption, issueOptionTranslation) =

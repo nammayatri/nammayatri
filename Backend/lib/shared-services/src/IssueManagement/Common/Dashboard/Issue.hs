@@ -72,7 +72,8 @@ data IssueReportListItem = IssueReportListItem
     categoryId :: Maybe (Id IssueCategory),
     assignee :: Maybe Text,
     status :: IssueStatus,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    unreadForOperator :: Maybe Int
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -94,7 +95,8 @@ data IssueInfoDRes = IssueInfoDRes
     description :: Text,
     status :: IssueStatus,
     assignee :: Maybe Text,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    unreadForOperator :: Maybe Int
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -654,4 +656,38 @@ newtype ReorderIssueMessageReq = ReorderIssueMessageReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets ReorderIssueMessageReq where
+  hideSecrets = identity
+
+---------------------------------------------------------
+-- Live chat (dashboard side) ---------------------------
+
+data SendChatMessageReq = SendChatMessageReq
+  { message :: Text,
+    mediaFileIds :: Maybe [Id MediaFile]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets SendChatMessageReq where
+  hideSecrets = identity
+
+data SendChatMessageByUserReq = SendChatMessageByUserReq
+  { message :: Text,
+    mediaFileIds :: Maybe [Id MediaFile],
+    userId :: Id User
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets SendChatMessageByUserReq where
+  hideSecrets = identity
+
+data MarkChatReadByUserReq = MarkChatReadByUserReq
+  { upTo :: UTCTime,
+    userId :: Id User
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets MarkChatReadByUserReq where
   hideSecrets = identity

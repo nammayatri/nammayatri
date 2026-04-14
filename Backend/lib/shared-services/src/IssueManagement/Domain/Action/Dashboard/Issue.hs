@@ -15,8 +15,10 @@ import GHC.IO.Handle (hFileSize)
 import GHC.IO.IOMode (IOMode (..))
 import IssueManagement.Common
 import qualified IssueManagement.Common.Dashboard.Issue as Common
+import qualified IssueManagement.Common.UI.Issue as CommonUI
 import IssueManagement.Domain.Action.UI.Issue (ServiceHandle)
 import qualified IssueManagement.Domain.Action.UI.Issue as UIR
+import qualified IssueManagement.Domain.Types.Issue.ChatMessage as DCM
 import qualified IssueManagement.Domain.Types.Issue.Comment as DC
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as DIC
 import qualified IssueManagement.Domain.Types.Issue.IssueChat as DICT
@@ -33,6 +35,7 @@ import qualified IssueManagement.Storage.CachedQueries.Issue.IssueConfig as CQI
 import qualified IssueManagement.Storage.CachedQueries.Issue.IssueMessage as CQIM
 import qualified IssueManagement.Storage.CachedQueries.Issue.IssueOption as CQIO
 import qualified IssueManagement.Storage.CachedQueries.MediaFile as CQMF
+import qualified IssueManagement.Storage.Queries.Issue.ChatMessage as QCM
 import qualified IssueManagement.Storage.Queries.Issue.Comment as QC
 import qualified IssueManagement.Storage.Queries.Issue.IssueCategory as QIC
 import qualified IssueManagement.Storage.Queries.Issue.IssueChat as QICT
@@ -330,6 +333,7 @@ issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbCatego
     mkIssueReport :: (Esq.EsqDBReplicaFlow m r, BeamFlow m r) => DIR.IssueReport -> m Common.IssueReportListItem
     mkIssueReport issueReport = do
       category <- CQIC.findById (fromJust issueReport.categoryId) identifier >>= fromMaybeM (IssueCategoryNotFound (fromJust issueReport.categoryId).getId)
+      unread <- B.runInReplica $ QCM.countUnread issueReport.id DCM.SENDER_RIDER
       pure $
         Common.IssueReportListItem
           { issueReportId = cast issueReport.id,
@@ -342,7 +346,8 @@ issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbCatego
             categoryId = cast <$> issueReport.categoryId,
             assignee = issueReport.assignee,
             status = issueReport.status,
-            createdAt = issueReport.createdAt
+            createdAt = issueReport.createdAt,
+            unreadForOperator = Just unread
           }
 
 issueInfo ::
@@ -384,6 +389,7 @@ issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandl
       issueChats <- case identifier of
         DRIVER -> return Nothing
         CUSTOMER -> Just <$> UIR.recreateIssueChats issueReport issueConfig Nothing ENGLISH identifier
+      unread <- B.runInReplica $ QCM.countUnread issueReport.id DCM.SENDER_RIDER
       pure $
         Common.IssueInfoDRes
           { issueReportId = cast issueReport.id,
@@ -399,7 +405,8 @@ issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandl
             description = issueReport.description,
             assignee = issueReport.assignee,
             status = issueReport.status,
-            createdAt = issueReport.createdAt
+            createdAt = issueReport.createdAt,
+            unreadForOperator = Just unread
           }
 
     mkPersonDetail :: (Esq.EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => Person -> m Common.PersonDetail
@@ -1710,3 +1717,85 @@ mkOptionDetailResWithoutChildren _language _identifier (opt, mbTranslation) = do
   where
     mkTranslation :: DIT.IssueTranslation -> Translation
     mkTranslation trans = Translation trans.language trans.translation
+
+-------------------------------------------------------------------------
+-- Live chat (dashboard operator side) ----------------------------------
+
+sendDashboardChatMessage ::
+  ( Esq.EsqDBReplicaFlow m r,
+    BeamFlow m r
+  ) =>
+  ShortId Merchant ->
+  Context.City ->
+  Id DIR.IssueReport ->
+  ServiceHandle m ->
+  Common.SendChatMessageByUserReq ->
+  m CommonUI.ChatMessageItem
+sendDashboardChatMessage merchantShortId opCity issueReportId issueHandle req = do
+  issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
+  _merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
+  now <- getCurrentTime
+  msgId <- generateGUID
+  let mediaIds = fromMaybe [] req.mediaFileIds
+      chatMsg =
+        DCM.ChatMessage
+          { id = msgId,
+            issueReportId,
+            senderId = cast req.userId,
+            senderType = DCM.SENDER_OPERATOR,
+            chatContentType = if null mediaIds then DCM.CHAT_TEXT else DCM.CHAT_MEDIA,
+            message = req.message,
+            mediaFileIds = mediaIds,
+            readAt = Nothing,
+            createdAt = now,
+            merchantId = issueReport.merchantId
+          }
+  QCM.create chatMsg
+  whenJust issueHandle.mbSendChatNotification $ \sendNotif -> do
+    let payload =
+          ChatNotifPayload
+            { issueReportId = chatMsg.issueReportId.getId,
+              messageId = chatMsg.id.getId,
+              senderType = show chatMsg.senderType,
+              snippet = T.take 120 chatMsg.message,
+              hasMedia = not (null chatMsg.mediaFileIds),
+              timestamp = chatMsg.createdAt
+            }
+    result <- withTryCatch "sendChatNotification:sendDashboardChatMessage" (sendNotif issueReport.personId payload)
+    case result of
+      Right _ -> pure ()
+      Left err -> logError $ "sendDashboardChatMessage: sendChatNotification failed " <> show err
+  pure $ UIR.toChatMessageItem chatMsg
+
+listDashboardChatMessages ::
+  ( Esq.EsqDBReplicaFlow m r,
+    BeamFlow m r
+  ) =>
+  ShortId Merchant ->
+  Context.City ->
+  Id DIR.IssueReport ->
+  ServiceHandle m ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  m [CommonUI.ChatMessageItem]
+listDashboardChatMessages merchantShortId opCity issueReportId issueHandle mbSince mbLimit = do
+  issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
+  _merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
+  messages <- B.runInReplica $ QCM.findChatMessagesAfter issueReportId mbSince mbLimit
+  pure $ map UIR.toChatMessageItem messages
+
+markDashboardChatRead ::
+  ( Esq.EsqDBReplicaFlow m r,
+    BeamFlow m r
+  ) =>
+  ShortId Merchant ->
+  Context.City ->
+  Id DIR.IssueReport ->
+  ServiceHandle m ->
+  Common.MarkChatReadByUserReq ->
+  m APISuccess
+markDashboardChatRead merchantShortId opCity issueReportId issueHandle req = do
+  issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
+  _merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
+  QCM.markReadUpTo issueReportId DCM.SENDER_RIDER req.upTo
+  pure Success

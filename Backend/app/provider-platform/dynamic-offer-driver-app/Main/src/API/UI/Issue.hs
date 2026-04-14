@@ -57,6 +57,24 @@ handler = externalHandler
         :<|> deleteIssue (personId, merchantId, merchantOpCityId)
         :<|> updateIssueStatus (personId, merchantId, merchantOpCityId)
         :<|> igmIssueStatus (personId, merchantId, merchantOpCityId)
+        :<|> driverChatMessageStub
+        :<|> driverChatMessagesStub
+        :<|> driverChatReadStub
+        :<|> driverChatStateStub
+
+-- Live chat is not wired on driver-app yet. These stubs exist to satisfy the
+-- shared `IssueAPI` type; exposing them on the driver UI is a follow-up.
+driverChatMessageStub :: Id Domain.IssueReport -> Common.CreateChatMessageReq -> FlowHandler Common.ChatMessageItem
+driverChatMessageStub _ _ = withFlowHandlerAPI $ throwError $ InvalidRequest "Live chat is not enabled on driver-app."
+
+driverChatMessagesStub :: Id Domain.IssueReport -> Maybe UTCTime -> Maybe Int -> FlowHandler [Common.ChatMessageItem]
+driverChatMessagesStub _ _ _ = withFlowHandlerAPI $ pure []
+
+driverChatReadStub :: Id Domain.IssueReport -> Common.MarkChatReadReq -> FlowHandler APISuccess
+driverChatReadStub _ _ = withFlowHandlerAPI $ pure Success
+
+driverChatStateStub :: Id Domain.IssueReport -> FlowHandler Common.ChatStateRes
+driverChatStateStub _ = withFlowHandlerAPI $ pure $ Common.ChatStateRes {unread = 0, latestMessageAt = Nothing}
 
 driverIssueHandle :: Common.ServiceHandle Flow
 driverIssueHandle =
@@ -82,7 +100,11 @@ driverIssueHandle =
       findRideByRideShortId = castRideByRideShortId,
       findByMobileNumberAndMerchantId = castPersonByMobileNumberAndMerchant,
       mbFindFRFSTicketBookingById = Nothing,
-      mbFindStationByIdWithContext = Nothing
+      mbFindStationByIdWithContext = Nothing,
+      -- Live chat is not yet exposed on driver-app. Leaving this hook as
+      -- `Nothing` means dashboard operator comments on driver-side issues
+      -- are persisted but no FCM push is sent to the driver.
+      mbSendChatNotification = Nothing
     }
 
 castPersonById :: Id Common.Person -> Flow (Maybe Common.Person)
