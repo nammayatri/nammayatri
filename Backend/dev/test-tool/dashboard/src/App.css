@@ -38,6 +38,19 @@ body {
 }
 .mode-tab:hover { color: #c9d1d9; }
 .mode-tab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+.mode-tabs-spacer { flex: 1; }
+.tool-link {
+  padding: 6px 12px;
+  font-size: 11px;
+  color: #8b949e;
+  text-decoration: none;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  margin-left: 6px;
+  transition: all 0.15s;
+  align-self: center;
+}
+.tool-link:hover { color: #58a6ff; border-color: #58a6ff; background: #161b22; }
 
 .content-wrapper {
   flex: 1;

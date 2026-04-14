@@ -292,7 +292,8 @@ export async function callPostmanStep(
     scriptError = result.error;
   }
 
-  // 9. Stop tail -f and collect captured logs AFTER test script + delay (captures all async service activity)
+  // 9. Wait for async service activity (beckn callbacks, allocator, etc.) to flush logs, then stop capture
+  await new Promise(r => setTimeout(r, 1000));
   const serviceLogs = logToken ? await stopLogCapture(logToken) : {};
 
   return { ok, status, data, elapsed, assertions, consoleLogs, scriptError, serviceLogs, resolvedUrl: resolvedPath, resolvedBody: body };

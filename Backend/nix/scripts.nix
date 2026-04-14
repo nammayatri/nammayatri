@@ -179,7 +179,8 @@ _:
           NOTE: This is slower, due to doing full nix build.
         '';
         exec = ''
-          nix run .#run-mobility-stack-nix -- "$@"
+          # -S NAME forces stable sort by process name (no re-ordering on status change)
+          nix run .#run-mobility-stack-nix -- -S NAME "$@"
         '';
       };
 
@@ -190,7 +191,8 @@ _:
         '';
         exec = ''
           export DEV=1
-          nix run .#run-mobility-stack-dev -- "$@"
+          # -S NAME forces stable sort by process name (no re-ordering on status change)
+          nix run .#run-mobility-stack-dev -- -S NAME "$@"
         '';
       };
 
