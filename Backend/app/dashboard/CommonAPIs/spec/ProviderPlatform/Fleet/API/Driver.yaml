@@ -645,6 +645,7 @@ apis:
         - hasRequestReason: Bool
         - mbServiceTier: Text
         - enabled: Bool
+        - approved: Bool
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
@@ -688,6 +689,7 @@ apis:
         - mbRequestorId: Text
         - hasFleetMemberHierarchy: Bool
         - isRequestorFleerOwner: Bool
+        - approved: Bool
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
