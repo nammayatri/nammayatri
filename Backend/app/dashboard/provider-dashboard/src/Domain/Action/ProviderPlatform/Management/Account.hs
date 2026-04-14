@@ -27,6 +27,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
+import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
 import "lib-dashboard" Storage.Queries.Person
   ( findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset,
     findById,
@@ -37,10 +38,10 @@ import "lib-dashboard" Storage.Queries.Person
   )
 import qualified "lib-dashboard" Storage.Queries.Person as QP
 import qualified "lib-dashboard" Storage.Queries.RegistrationToken as QR
-import qualified Storage.Queries.Role as QRole
 import Tools.Auth.Api
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Merchant
+import qualified Tools.Auth.RolesHierarchy as RolesHierarchy
 import "lib-dashboard" Tools.Error
   ( PersonError (PersonDoesNotExist),
     RoleError (RoleDoesNotExist),
@@ -64,7 +65,7 @@ getAccountFetchUnverifiedAccounts _merchantShortId _opCity _apiTokenInfo mbFromD
   pure $ Common.UnverifiedAccountsResp {listItems = res, summary = summary}
   where
     convertPersonToPersonAPIEntity DP.Person {..} = do
-      role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+      role <- CQRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
       mobileNumber' <- decrypt mobileNumber
       email' <- traverse decrypt email
       pure $
@@ -109,6 +110,8 @@ postAccountVerifyAccount ::
 postAccountVerifyAccount merchantShortId opCity apiTokenInfo req = do
   runRequestValidation validateVerifyAccountReq req
   let personId = Kernel.Types.Id.cast req.fleetOwnerId
+  person <- findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  RolesHierarchy.checkRoleIsDescenantOfRequestor apiTokenInfo person.roleId
   case req.status of
     Common.Rejected -> do
       Auth.cleanCachedTokens personId
@@ -116,7 +119,6 @@ postAccountVerifyAccount merchantShortId opCity apiTokenInfo req = do
       softDeletePerson personId req.reason
       updatePersonRejectedBy personId apiTokenInfo.personId
     Common.Approved -> do
-      person <- findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
       unless (person.verified == Just True) $ updatePersonVerifiedStatus personId True
       updatePersonApprovedBy personId apiTokenInfo.personId
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
@@ -146,7 +148,10 @@ putAccountUpdateRole merchantShortId opCity apiTokenInfo personId' roleId' = do
   let personId = Kernel.Types.Id.cast personId'
       roleId = Kernel.Types.Id.cast roleId'
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  role <- CQRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+
+  RolesHierarchy.checkRoleIsDescenantOfRequestor apiTokenInfo roleId
+
   QP.updatePersonRole personId role
   let mbAccessType =
         case role.dashboardAccessType of

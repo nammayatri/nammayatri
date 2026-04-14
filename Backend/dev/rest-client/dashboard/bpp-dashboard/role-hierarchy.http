@@ -1,0 +1,82 @@
+# access tokens with different roles
+@customer = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
+
+###
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name createChildRole
+
+@customerServiceRole = a708c6a1-78b5-4e5e-9df8-468cd81dc2aa
+@juspayOpsRole = d5644e83-ffa3-4e0d-ae81-c3155eedb8fd
+
+POST {{bpp-dashboard-host}}/admin/roles/create
+content-type: application/json
+token: {{juspay_admin}}
+
+{ "name" : "CUSTOMER_TEST",
+  "description" : "customer test",
+  "parentRoleId" : "{{customerServiceRole}}"
+}
+
+###
+
+# @name createChildPerson
+
+@driverRole = 508a0bac-258d-44a6-ac55-aef57ab87a76
+
+POST {{bpp-dashboard-host}}/admin/person/create
+content-type: application/json
+token: {{juspay_admin}}
+
+{
+  "firstName" : "unknown",
+  "lastName" : "known",
+  "password" : "pass1234",
+  "roleId" : "{{driverRole}}",
+  "email" : "xyz1@gmail.com",
+  "mobileNumber" : "9876543201",
+  "mobileCountryCode" : "+91",
+  "passwordHash" : "juspay1@admin"
+}
+
+###
+
+# @name assignChildRole1
+
+@childPersonId = {{createChildPerson.response.body.person.id}}
+
+@childRoleId = {{createChildRole.response.body.id}}
+
+# error: could not assign role if role is not child for requestor
+PUT {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/account/updateRole/{{childPersonId}}/{{childRoleId}}
+content-type: application/json
+token: {{juspay_ops}}
+
+###
+
+# @name assignChildRole2
+
+# success
+PUT {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/account/updateRole/{{childPersonId}}/{{childRoleId}}
+content-type: application/json
+token: {{customer_service}}
+
+###
+
+# @name updateChildRole
+
+POST {{bpp-dashboard-host}}/admin/roles/update
+content-type: application/json
+token: {{juspay_admin}}
+
+{ "roleId" : "{{childRoleId}}",
+  "parentRoleId" : "{{juspayOpsRole}}"
+}

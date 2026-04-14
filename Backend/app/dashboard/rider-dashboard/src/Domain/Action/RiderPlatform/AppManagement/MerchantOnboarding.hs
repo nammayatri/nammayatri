@@ -38,16 +38,17 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import "lib-dashboard" Storage.Beam.BeamFlow
 import Storage.Beam.CommonInstances ()
+import qualified "lib-dashboard" Storage.CachedQueries.Role as CQR
 import qualified "lib-dashboard" Storage.Queries.Person as QP
-import qualified "lib-dashboard" Storage.Queries.Role as QR
 import Tools.Auth.Api
 import Tools.Auth.Merchant
+import qualified Tools.Auth.RolesHierarchy as RolesHierarchy
 import "lib-dashboard" Tools.Error
 
 getDashboardAccessType :: (BeamFlow m r, EncFlow m r) => Kernel.Prelude.Text -> m Domain.Types.MerchantOnboarding.RequestorRole
 getDashboardAccessType personId = do
   person <- QP.findById (Kernel.Types.Id.Id personId) >>= fromMaybeM (InvalidRequest "Person not found")
-  role <- QR.findById person.roleId >>= fromMaybeM (InvalidRequest "Role is not assigned for this user")
+  role <- CQR.findById person.roleId >>= fromMaybeM (InvalidRequest "Role is not assigned for this user")
   let accessType = role.dashboardAccessType
   case accessType of
     Domain.Types.Role.TICKET_DASHBOARD_USER -> pure $ Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_USER
@@ -104,7 +105,7 @@ merchantOnboardingStepApprove merchantShortId opCity apiTokenInfo stepId _ _ req
   let requestorId = apiTokenInfo.personId.getId
   requestorRole <- getDashboardAccessType requestorId
   resp <- API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.merchantOnboardingDSL.merchantOnboardingStepApprove) stepId (Just requestorId) (Just requestorRole) req
-  whenJust resp.handler dashboardSideHandler
+  whenJust resp.handler (dashboardSideHandler apiTokenInfo)
   return $ resp {AppMO.handler = Nothing}
 
 merchantOnboardingStepUploadFile :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe MO.RequestorRole -> API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileRequest -> Environment.Flow API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileResponse)
@@ -148,13 +149,14 @@ merchantOnboardingGetFile merchantShortId opCity apiTokenInfo onboardingId fileI
   requestorRole <- getDashboardAccessType requestorId
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.merchantOnboardingDSL.merchantOnboardingGetFile) onboardingId fileId (Just requestorId) (Just requestorRole)
 
-dashboardSideHandler :: DH.DashboardSideHandler -> Environment.Flow ()
-dashboardSideHandler handler = case handler.handlerName of
+dashboardSideHandler :: ApiTokenInfo -> DH.DashboardSideHandler -> Environment.Flow ()
+dashboardSideHandler apiTokenInfo handler = case handler.handlerName of
   DH.SET_ROLE_TICKET_DASHBOARD_MERCHANT -> do
     personId <- getMetadataValue "rid" & fromMaybeM (InternalError "Dashboard Handler failed")
     person <- QP.findById (Kernel.Types.Id.Id personId) >>= fromMaybeM (InvalidRequest "Person not found")
-    role <- QR.findByDashboardAccessType Domain.Types.Role.TICKET_DASHBOARD_MERCHANT >>= fromMaybeM (RoleDoesNotExist (show Domain.Types.Role.TICKET_DASHBOARD_MERCHANT))
-    QP.updatePersonRole person.id role
+    role <- CQR.findByDashboardAccessType Domain.Types.Role.TICKET_DASHBOARD_MERCHANT >>= fromMaybeM (RoleDoesNotExist (show Domain.Types.Role.TICKET_DASHBOARD_MERCHANT))
+    RolesHierarchy.checkRoleIsDescenantOfRequestor apiTokenInfo role.id
+    QP.updatePersonRole person.id role -- FIXME before client call (everywhere)
   where
     getMetadataValue :: Text -> Maybe Text
     getMetadataValue key = snd <$> find (\(k, _) -> k == key) handler.metadata

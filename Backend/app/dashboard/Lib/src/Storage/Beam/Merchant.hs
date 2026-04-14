@@ -16,6 +16,7 @@ module Storage.Beam.Merchant where
 
 import qualified Data.Time as Time
 import qualified Database.Beam as B
+import qualified Domain.Types.AccessMatrix as DAccessMatrix
 import qualified Domain.Types.ServerName as Domain
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption (DbHash)
@@ -41,7 +42,8 @@ data MerchantT f = MerchantT
     verifyFleetWhileLogin :: B.C f (Maybe Bool),
     hasFleetMemberHierarchy :: B.C f (Maybe Bool),
     isStrongNameCheckRequired :: B.C f (Maybe Bool),
-    singleActiveSessionOnly :: B.C f (Maybe Bool)
+    singleActiveSessionOnly :: B.C f (Maybe Bool),
+    userActionTypesForDescendantsCheck :: B.C f (Maybe [DAccessMatrix.UserActionTypeWrapper])
   }
   deriving (Generic, B.Beamable)
 

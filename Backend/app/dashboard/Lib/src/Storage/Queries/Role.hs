@@ -11,9 +11,12 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-orphans #-}
-
-module Storage.Queries.Role where
+module Storage.Queries.Role
+  {-# WARNING
+    "This module contains direct calls to the table. \
+  \ But most likely you need a version from CachedQueries with caching results feature."
+    #-}
+where
 
 import qualified Database.Beam as B
 import Domain.Types.Role as Role
@@ -21,10 +24,12 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Sequelize as Se
 import Storage.Beam.BeamFlow
 import Storage.Beam.Common as SBC
 import qualified Storage.Beam.Role as BeamR
+import Storage.Queries.OrphanInstances.Role ()
 
 create :: BeamFlow m r => Role -> m ()
 create = createWithKV
@@ -42,6 +47,9 @@ findByDashboardAccessType dashboardAccessType =
 findAllInDashboardAccessType :: BeamFlow m r => [Role.DashboardAccessType] -> m [Role]
 findAllInDashboardAccessType dashboardAccessTypes =
   findAllWithKV [Se.Is BeamR.dashboardAccessType $ Se.In dashboardAccessTypes]
+
+findAll :: BeamFlow m r => m [Role]
+findAll = findAllWithKV @BeamR.RoleT []
 
 findAllByLimitOffset :: BeamFlow m r => Maybe Integer -> Maybe Integer -> m [Role]
 findAllByLimitOffset mbLimit mbOffset = do
@@ -77,18 +85,15 @@ findAllWithLimitOffset mbLimit mbOffset mbSearchString = do
       catMaybes <$> mapM fromTType' m'
     Left _ -> pure []
 
-instance FromTType' BeamR.Role Role.Role where
-  fromTType' BeamR.RoleT {..} = do
-    return $
-      Just
-        Role.Role
-          { id = Id id,
-            ..
-          }
-
-instance ToTType' BeamR.Role Role.Role where
-  toTType' Role.Role {..} =
-    BeamR.RoleT
-      { id = getId id,
-        ..
-      }
+updateById :: BeamFlow m r => Role.Role -> m ()
+updateById role = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamR.name role.name,
+      Se.Set BeamR.dashboardAccessType role.dashboardAccessType,
+      Se.Set BeamR.parentRoleId $ getId <$> role.parentRoleId,
+      Se.Set BeamR.description role.description,
+      Se.Set BeamR.updatedAt now
+    ]
+    [ Se.Is BeamR.id $ Se.Eq $ getId role.id
+    ]

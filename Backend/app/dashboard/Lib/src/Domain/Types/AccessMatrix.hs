@@ -31,12 +31,10 @@ import qualified Data.Aeson as A
 import qualified Data.List
 import Data.Singletons.TH
 import qualified Data.Text as T
-import Domain.Types.Merchant
 import Domain.Types.Role as DRole
 import Domain.Types.ServerName as DSN
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
-import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import qualified Text.Read
 import qualified Text.Show
@@ -410,7 +408,7 @@ data UserActionType
   | RIDER_RIDE_BOOKING RiderRideBooking.RideBookingUserActionType
   deriving (Show, Read, Generic, ToSchema, Eq, Ord)
 
-$(mkBeamInstancesForEnum ''UserActionTypeWrapper)
+$(mkBeamInstancesForEnumAndList ''UserActionTypeWrapper)
 
 genSingletons [''UserActionType]
 
@@ -443,13 +441,6 @@ data AccessMatrixItem = AccessMatrixItem
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-
-data MerchantCityList = MerchantCityList
-  { merchantId :: ShortId Merchant,
-    cityList :: [City.City],
-    operatingCityWithNames :: [Text] -- Sending city names also as FE needs to show the list of cities while assigning role to user
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 newtype AccessMatrixAPIEntity = AccessMatrixAPIEntity
   {accessMatrix :: [AccessMatrixRowAPIEntity]}

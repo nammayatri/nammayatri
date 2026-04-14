@@ -22,12 +22,12 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Transaction as T
+import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
 import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import qualified "lib-dashboard" Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.MerchantConfigs as SQMC
 import "lib-dashboard" Storage.Queries.Person as QP
 import qualified "lib-dashboard" Storage.Queries.RegistrationToken as QReg
-import qualified "lib-dashboard" Storage.Queries.Role as QRole
 import qualified Storage.Queries.Suspect as SQ
 import qualified Storage.Queries.SuspectExtra as SE
 import Storage.Queries.SuspectFlagRequestExtra
@@ -98,7 +98,7 @@ postAdminUploadSuspectBulk tokenInfo mbFlaggedStatus req = do
         let notificationMetadata = encodeToText $ suspectList
         adminIdList <- DS.getRecieverIdListByAcessType DASHBOARD_ADMIN
         merchantAdminIdList <- DS.getMerchantAdminReceiverIdList merchant.id
-        personRole <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
+        personRole <- CQRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
         let notificationType = selectNotificationType personRole.name (fromMaybe Domain.Types.Suspect.Flagged mbFlaggedStatus)
         DS.sendNotification tokenInfo merchant notificationMetadata (length suspectList) notificationType (adminIdList <> merchantAdminIdList)
         SAF.sendingWebhookToPartners merchant.shortId.getShortId suspectFlagRequest
@@ -122,7 +122,7 @@ postMerchantUserAssignRole tokenInfo req = do
     Nothing -> throwError $ InvalidRequest "Server access already denied."
     Just _ -> do
       when (person.id == tokenInfo.personId) $ throwError $ InvalidRequest "Can't change your own role."
-      role <- QRole.findByName req.roleName >>= fromMaybeM (RoleDoesNotExist req.roleName)
+      role <- CQRole.findByName req.roleName >>= fromMaybeM (RoleDoesNotExist req.roleName)
       QP.updatePersonRole person.id role
       return Kernel.Types.APISuccess.Success
 

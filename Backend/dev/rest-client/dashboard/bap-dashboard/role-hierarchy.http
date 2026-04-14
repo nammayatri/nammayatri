@@ -1,0 +1,82 @@
+# access tokens with different roles
+@customer = {{bap-dashboard/token/YATRI/customer}}
+@driver = {{bap-dashboard/token/YATRI/driver}}
+@juspay_ops = {{bap-dashboard/token/YATRI/juspay_ops}}
+@juspay_admin = {{bap-dashboard/token/YATRI/juspay_admin}}
+@customer_service = {{bap-dashboard/token/YATRI/customer_service}}
+
+###
+
+# @name healthcheck
+GET {{bap-dashboard-host}}
+
+###
+
+# @name createChildRole
+
+@customerServiceRole = a708c6a1-78b5-4e5e-9df8-468cd81dc2aa
+@juspayOpsRole = d5644e83-ffa3-4e0d-ae81-c3155eedb8fd
+
+POST {{bap-dashboard-host}}/admin/roles/create
+content-type: application/json
+token: {{juspay_admin}}
+
+{ "name" : "CUSTOMER_TEST",
+  "description" : "customer test",
+  "parentRoleId" : "{{customerServiceRole}}"
+}
+
+###
+
+# @name createChildPerson
+
+@driverRole = 508a0bac-258d-44a6-ac55-aef57ab87a76
+
+POST {{bap-dashboard-host}}/admin/person/create
+content-type: application/json
+token: {{juspay_admin}}
+
+{
+  "firstName" : "unknown",
+  "lastName" : "known",
+  "password" : "pass1234",
+  "roleId" : "{{driverRole}}",
+  "email" : "xyz1@gmail.com",
+  "mobileNumber" : "9876543201",
+  "mobileCountryCode" : "+91",
+  "passwordHash" : "juspay1@admin"
+}
+
+###
+
+# @name assignChildRole1
+
+@childPersonId = {{createChildPerson.response.body.person.id}}
+
+@childRoleId = {{createChildRole.response.body.id}}
+
+# error: could not assign role if role is not child for requestor
+PUT {{bap-dashboard-host}}/bap/YATRI/account/updateRole/{{childPersonId}}/{{childRoleId}}
+content-type: application/json
+token: {{juspay_ops}}
+
+###
+
+# @name assignChildRole2
+
+# success
+PUT {{bap-dashboard-host}}/bap/YATRI/account/updateRole/{{childPersonId}}/{{childRoleId}}
+content-type: application/json
+token: {{customer_service}}
+
+###
+
+# @name updateChildRole
+
+POST {{bap-dashboard-host}}/admin/roles/update
+content-type: application/json
+token: {{juspay_admin}}
+
+{ "roleId" : "{{childRoleId}}",
+  "parentRoleId" : "{{juspayOpsRole}}"
+}
