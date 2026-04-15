@@ -925,7 +925,7 @@ getDefaultTime = defaultTime
 
 updateLeaderboardZScore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => SRB.Booking -> Ride.Ride -> m ()
 updateLeaderboardZScore booking ride = do
-  fork "Updating ZScore for driver" . Hedis.withNonCriticalRedis $ mapM_ updateLeaderboardZScore' [LConfig.DAILY, LConfig.WEEKLY, LConfig.MONTHLY]
+  fork "Updating ZScore for driver" . Hedis.runInMasterCloudRedisCell . Hedis.withNonCriticalRedis $ mapM_ updateLeaderboardZScore' [LConfig.DAILY, LConfig.WEEKLY, LConfig.MONTHLY]
   where
     updateLeaderboardZScore' :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => LConfig.LeaderBoardType -> m ()
     updateLeaderboardZScore' leaderBoardType = do
