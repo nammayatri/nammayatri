@@ -93,6 +93,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     coinConversionRate :: Kernel.Types.Common.HighPrecMoney,
     coinExpireTime :: Kernel.Prelude.NominalDiffTime,
     coinFeature :: Kernel.Prelude.Bool,
+    communicationChannelCharLimits :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CommunicationChannelCharLimits,
     considerDriversForSearch :: Kernel.Prelude.Bool,
     considerSpecialZoneRideChargesInFreeTrial :: Kernel.Prelude.Bool,
     considerSpecialZoneRidesForPlanCharges :: Kernel.Prelude.Bool,
@@ -373,6 +374,14 @@ data CancellationRateSlab = CancellationRateSlab {cancellationPercentageThreshol
 
 data CancellationRateSlabConfig = CancellationRateSlabConfig {dailySlabs :: [Domain.Types.TransporterConfig.SlabType], weeklySlabs :: [Domain.Types.TransporterConfig.SlabType]}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
+data CommunicationChannelCharLimits = CommunicationChannelCharLimits
+  { pushBodyLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    pushTitleLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    smsBodyLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    whatsappBodyLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data DashboardMediaSendingLimit = DashboardMediaSendingLimit {alert :: Kernel.Prelude.Int, overlay :: Kernel.Prelude.Int, sms :: Kernel.Prelude.Int, whatsapp :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
