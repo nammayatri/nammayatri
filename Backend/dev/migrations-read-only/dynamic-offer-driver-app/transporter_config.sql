@@ -880,3 +880,5 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_aadhaar_r
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_gst_reupload boolean  default false;
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN communication_channel_char_limits json ;

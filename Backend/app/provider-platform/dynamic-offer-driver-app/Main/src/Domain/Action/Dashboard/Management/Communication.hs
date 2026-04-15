@@ -47,8 +47,11 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
+import Kernel.Types.Predicate (MaxLength (..))
 import Kernel.Utils.Common
+import Kernel.Utils.Validation (runRequestValidation, validateField)
 import Storage.Beam.IssueManagement ()
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -115,6 +118,7 @@ postCommunicationCreate merchantShortId opCity personId req = do
   merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+  validateChannelLimits merchantOpCityId (map toDomainChannel req.channels) req.title req.body
   mediaUrlsJson <- resolveMediaFileIds req.mediaFileIds
   commId <- generateGUID
   now <- getCurrentTime
@@ -169,7 +173,7 @@ getCommunicationList ::
   Maybe Int ->
   Kernel.Types.Id.Id Dashboard.Common.Person ->
   Environment.Flow CommAPI.CommunicationListResponse
-getCommunicationList merchantShortId _opCity mbListType _mbChannel mbDomain _mbSearch mbLimit mbOffset personId = do
+getCommunicationList merchantShortId _opCity mbListType _mbChannel mbDomain mbSearch mbLimit mbOffset personId = do
   _merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
   let listType = fromMaybe CommAPI.LIST_SENT mbListType
   let senderId = Kernel.Types.Id.cast @Dashboard.Common.Person @DP.Person personId
@@ -177,17 +181,18 @@ getCommunicationList merchantShortId _opCity mbListType _mbChannel mbDomain _mbS
   case listType of
     CommAPI.LIST_SENT -> do
       let domainFilter = toDomainDomain <$> mbDomain
-      comms <- QComm.findBySenderIdWithLimitOffset senderId (Just DComm.ST_SENT) domainFilter mbLimit mbOffset
+      comms <- QComm.findBySenderIdWithSearchAndLimitOffset senderId (Just DComm.ST_SENT) domainFilter mbSearch mbLimit mbOffset
       let items = map mkSentListItem comms
       return $ CommAPI.CommunicationListResponse {communications = items, summary = Dashboard.Common.Summary {totalCount = length items, count = length items}}
     CommAPI.LIST_DRAFT -> do
-      comms <- QComm.findBySenderIdWithLimitOffset senderId (Just DComm.ST_DRAFT) Nothing mbLimit mbOffset
+      comms <- QComm.findBySenderIdWithSearchAndLimitOffset senderId (Just DComm.ST_DRAFT) Nothing mbSearch mbLimit mbOffset
       let items = map mkSentListItem comms
       return $ CommAPI.CommunicationListResponse {communications = items, summary = Dashboard.Common.Summary {totalCount = length items, count = length items}}
     CommAPI.LIST_RECEIVED -> do
       deliveries <- QDelivery.findByRecipientIdAndWebChannel recipientId mbLimit mbOffset
       items <- mapM mkReceivedListItem deliveries
-      return $ CommAPI.CommunicationListResponse {communications = items, summary = Dashboard.Common.Summary {totalCount = length items, count = length items}}
+      let filtered = maybe items (\s -> filter (\item -> commMatchesSearch item.title item.body item.senderName s) items) mbSearch
+      return $ CommAPI.CommunicationListResponse {communications = filtered, summary = Dashboard.Common.Summary {totalCount = length filtered, count = length filtered}}
 
 -- | Used when viewing full details of a communication (title, body, channels, delivery summary, etc.).
 getCommunicationInfo ::
@@ -260,6 +265,10 @@ putCommunicationEdit merchantShortId _opCity communicationId req = do
   let commId = Kernel.Types.Id.cast communicationId
   comm <- QComm.findById commId >>= fromMaybeM (InvalidRequest "Communication not found")
   unless (comm.status == DComm.ST_DRAFT) $ throwError (InvalidRequest "Only draft communications can be edited")
+  let effectiveChannels = maybe comm.channels (map toDomainChannel) req.channels
+      effectiveTitle = fromMaybe comm.title req.title
+      effectiveBody = fromMaybe comm.body req.body
+  validateChannelLimits comm.merchantOperatingCityId effectiveChannels effectiveTitle effectiveBody
   mediaUrlsJson <- resolveMediaFileIds req.mediaFileIds
   QComm.updateCommunication
     commId
@@ -412,6 +421,36 @@ personMatchesSearch p s =
   let fullName = p.firstName <> " " <> maybe "" (<> " ") p.middleName <> fromMaybe "" p.lastName
    in T.toLower s `T.isInfixOf` T.toLower fullName
         || maybe False (T.isInfixOf s) p.maskedMobileDigits
+
+validateChannelLimits :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id DMOC.MerchantOperatingCity -> [DComm.ChannelType] -> Text -> Text -> m ()
+validateChannelLimits merchantOpCityId channels title body = do
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  whenJust transporterConfig.communicationChannelCharLimits $ \limits ->
+    runRequestValidation (buildChecks limits) (title, body)
+  where
+    buildChecks limits (t, b) =
+      sequenceA_ $
+        ( if DComm.CH_PUSH `elem` channels
+            then
+              maybeToList (validateField "PUSH title" t . MaxLength <$> limits.pushTitleLimit)
+                <> maybeToList (validateField "PUSH body" b . MaxLength <$> limits.pushBodyLimit)
+            else []
+        )
+          <> ( if DComm.CH_SMS `elem` channels
+                 then maybeToList (validateField "SMS body" b . MaxLength <$> limits.smsBodyLimit)
+                 else []
+             )
+          <> ( if DComm.CH_WHATSAPP `elem` channels
+                 then maybeToList (validateField "WhatsApp body" b . MaxLength <$> limits.whatsappBodyLimit)
+                 else []
+             )
+
+commMatchesSearch :: Text -> Text -> Maybe Text -> Text -> Bool
+commMatchesSearch title body mbSender s =
+  let q = T.toLower s
+   in q `T.isInfixOf` T.toLower title
+        || q `T.isInfixOf` T.toLower body
+        || maybe False (\name -> q `T.isInfixOf` T.toLower name) mbSender
 
 personRoleToCommRole :: DP.Role -> CommAPI.CommunicationRoleType
 personRoleToCommRole DP.DRIVER = CommAPI.ROLE_DRIVER
