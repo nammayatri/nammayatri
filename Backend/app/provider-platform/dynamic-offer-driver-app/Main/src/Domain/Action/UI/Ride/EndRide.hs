@@ -31,6 +31,7 @@ where
 import qualified Beckn.OnDemand.Utils.Common as BODUC
 import qualified Data.Aeson as A
 import Data.Either.Extra (eitherToMaybe)
+import Data.Time (utctDay)
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Data.HashMap.Strict as HM
 import Data.Maybe (listToMaybe)
@@ -593,7 +594,10 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     let mbDriverMobileHash = (.hash) <$> (mbDriver >>= (.mobileNumber))
         mbRiderMobileHash = (.hash) . (.mobileNumber) <$> mbRiderDetails
         isDriverSameAsCustomer = isJust mbDriverMobileHash && isJust mbRiderMobileHash && mbDriverMobileHash == mbRiderMobileHash
-    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking isDriverSameAsCustomer))
+        merchantLocalDay = utctDay $ addUTCTime (secondsToNominalDiffTime thresholdConfig.timeDiffFromUtc) now
+        rideDurationSeconds = maybe 0 (\tStart -> max 0 $ roundToIntegral (diffUTCTime now tStart)) updRide'.tripStartTime
+    priorRidesSameCustomer <- QRide.countPriorCompletedRidesWithSameCustomerOnSameDay (cast driverId) booking.riderId updRide'.id merchantLocalDay thresholdConfig.timeDiffFromUtc
+    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking isDriverSameAsCustomer priorRidesSameCustomer rideDurationSeconds))
     let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
     fork "updating time and latlong in advance ride if any" $ do
       whenJust advanceRide $ \advanceRide' -> do
