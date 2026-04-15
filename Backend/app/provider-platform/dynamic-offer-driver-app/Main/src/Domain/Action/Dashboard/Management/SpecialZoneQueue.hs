@@ -7,21 +7,28 @@ module Domain.Action.Dashboard.Management.SpecialZoneQueue
 where
 
 import qualified API.Types.ProviderPlatform.Management.SpecialZoneQueue as SZQT
+import Data.List (nub)
+import qualified Data.Map.Strict as Map
+import Data.Time (addUTCTime)
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.SpecialZoneQueueRequest as DSZQR
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
+import qualified Lib.Types.GateInfo as DGI
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.SpecialZoneQueueRequestExtra as QSZQR
 import Tools.Error
 
 postSpecialZoneQueueTriggerNotify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> SZQT.TriggerSpecialZoneQueueNotifyReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
@@ -45,8 +52,17 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
   driversNearGate <- LTSFlow.nearBy gate.point.lat gate.point.lon (Just False) Nothing 500 merchant.id Nothing Nothing
   driversInPickupZone <- filterM (isInsideGateGeometry gate.id) driversNearGate
   let pickupZoneDriverIds = map (.driverId) driversInPickupZone
-  -- Get queue stats per vehicle type
-  let vehicleTypes = ["SUV", "SEDAN", "HATCHBACK", "AUTO_RICKSHAW", "BIKE", "AMBULANCE"]
+  -- Compute the queue-request lookback cutoff once, reused across all variants.
+  now <- getCurrentTime
+  let queueRequestCutoff = addUTCTime (negate (2 * 60 * 60)) now
+  -- Base variants + every variant the operator has explicitly configured on the gate
+  -- (via per-variant threshold maps). Without this the hardcoded list silently drops
+  -- custom variants like SUV_PLUS / TAXI_PLUS so their config never reaches the dashboard.
+  let baseVariants = ["SUV", "SEDAN", "HATCHBACK", "AUTO_RICKSHAW", "BIKE", "AMBULANCE"]
+      configuredVariants =
+        concatMap Map.keys $
+          catMaybes [gate.minDriverThresholds, gate.maxDriverThresholds, gate.demandThresholds]
+      vehicleTypes = nub (baseVariants <> configuredVariants)
   vehicleStats <- forM vehicleTypes $ \vt -> do
     queueResp <- LTSFlow.getQueueDrivers specialLocationId vt
     let totalInQueue = queueResp.queueSize
@@ -54,26 +70,44 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
         -- Drivers that are both in this vehicle type's queue AND inside the pickup zone
         inPickupZone = length $ filter (`elem` pickupZoneDriverIds) queuedDriverIds
         outsidePickupZone = totalInQueue - inPickupZone
+    -- Live demand (pending customer searches) and committed supply (drivers notified/accepted)
+    mbDemandCount <- Redis.withCrossAppRedis $ Redis.get @Int (SpecialZoneDriverDemand.mkGateSearchDemandKey gateId vt)
+    mbSupplyCount <- Redis.withCrossAppRedis $ Redis.get @Int (SpecialZoneDriverDemand.mkGateSearchSupplyKey gateId vt)
+    -- Drivers who accepted the pickup notification and are en-route to the gate
+    acceptedRequests <- QSZQR.findAllByGateIdStatusAndVehicleType queueRequestCutoff gateId DSZQR.Accepted vt
     pure
       SZQT.VehicleQueueStats
         { vehicleType = vt,
           totalInQueue = totalInQueue,
           inPickupZone = inPickupZone,
-          outsidePickupZone = max 0 outsidePickupZone
+          outsidePickupZone = max 0 outsidePickupZone,
+          pendingDemand = fromMaybe 0 mbDemandCount,
+          driversCommittedToPickup = fromMaybe 0 mbSupplyCount,
+          acceptedQueueRequests = length acceptedRequests,
+          demandThreshold = DGI.demandThresholdFor gate vt,
+          minDriverThreshold = DGI.minDriverThresholdFor gate vt,
+          maxDriverThreshold = DGI.maxDriverThresholdFor gate vt
         }
-  let nonEmptyStats = filter (\s -> s.totalInQueue > 0) vehicleStats
+  let nonEmptyStats = filter (isNonEmpty gate) vehicleStats
       totalDrivers = sum $ map (.totalInQueue) nonEmptyStats
       totalInZone = sum $ map (.inPickupZone) nonEmptyStats
       totalOutside = sum $ map (.outsidePickupZone) nonEmptyStats
+      totalDemand = sum $ map (.pendingDemand) nonEmptyStats
+      totalCommitted = sum $ map (.driversCommittedToPickup) nonEmptyStats
+      totalAccepted = sum $ map (.acceptedQueueRequests) nonEmptyStats
   pure
     SZQT.SpecialZoneQueueStatsRes
       { gateId = gateId,
         gateName = gate.name,
         specialLocationName = specialLocationName,
+        canQueueUpOnGate = gate.canQueueUpOnGate,
         vehicleStats = nonEmptyStats,
         totalDriversInQueue = totalDrivers,
         totalInPickupZone = totalInZone,
-        totalOutsidePickupZone = totalOutside
+        totalOutsidePickupZone = totalOutside,
+        totalPendingDemand = totalDemand,
+        totalDriversCommittedToPickup = totalCommitted,
+        totalAcceptedQueueRequests = totalAccepted
       }
   where
     isInsideGateGeometry gateInfoId driverLoc = do
@@ -81,3 +115,15 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
       pure $ case mbGate of
         Just g -> g.id == gateInfoId
         Nothing -> False
+    -- Keep a variant if it has any live activity OR any explicit per-variant config
+    -- (so dashboards can always see what the operator has intentionally configured).
+    hasVariantConfig gate variant =
+      isJust (Map.lookup variant =<< gate.minDriverThresholds)
+        || isJust (Map.lookup variant =<< gate.maxDriverThresholds)
+        || isJust (Map.lookup variant =<< gate.demandThresholds)
+    isNonEmpty gate s =
+      s.totalInQueue > 0
+        || s.pendingDemand > 0
+        || s.driversCommittedToPickup > 0
+        || s.acceptedQueueRequests > 0
+        || hasVariantConfig gate s.vehicleType

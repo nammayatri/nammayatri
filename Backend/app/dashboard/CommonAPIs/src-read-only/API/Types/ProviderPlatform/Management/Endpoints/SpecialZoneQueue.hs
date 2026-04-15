@@ -18,10 +18,14 @@ data SpecialZoneQueueStatsRes = SpecialZoneQueueStatsRes
   { gateId :: Kernel.Prelude.Text,
     gateName :: Kernel.Prelude.Text,
     specialLocationName :: Kernel.Prelude.Text,
+    canQueueUpOnGate :: Kernel.Prelude.Bool,
     vehicleStats :: [VehicleQueueStats],
     totalDriversInQueue :: Kernel.Prelude.Int,
     totalInPickupZone :: Kernel.Prelude.Int,
-    totalOutsidePickupZone :: Kernel.Prelude.Int
+    totalOutsidePickupZone :: Kernel.Prelude.Int,
+    totalPendingDemand :: Kernel.Prelude.Int,
+    totalDriversCommittedToPickup :: Kernel.Prelude.Int,
+    totalAcceptedQueueRequests :: Kernel.Prelude.Int
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -33,7 +37,18 @@ data TriggerSpecialZoneQueueNotifyReq = TriggerSpecialZoneQueueNotifyReq {gateId
 instance Kernel.Types.HideSecrets.HideSecrets TriggerSpecialZoneQueueNotifyReq where
   hideSecrets = Kernel.Prelude.identity
 
-data VehicleQueueStats = VehicleQueueStats {vehicleType :: Kernel.Prelude.Text, totalInQueue :: Kernel.Prelude.Int, inPickupZone :: Kernel.Prelude.Int, outsidePickupZone :: Kernel.Prelude.Int}
+data VehicleQueueStats = VehicleQueueStats
+  { vehicleType :: Kernel.Prelude.Text,
+    totalInQueue :: Kernel.Prelude.Int,
+    inPickupZone :: Kernel.Prelude.Int,
+    outsidePickupZone :: Kernel.Prelude.Int,
+    pendingDemand :: Kernel.Prelude.Int,
+    driversCommittedToPickup :: Kernel.Prelude.Int,
+    acceptedQueueRequests :: Kernel.Prelude.Int,
+    demandThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    minDriverThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxDriverThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -17,7 +17,8 @@ instance FromTType' Beam.SpecialZoneQueueRequest Domain.Types.SpecialZoneQueueRe
     pure $
       Just
         Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest
-          { createdAt = createdAt,
+          { arrivalDeadlineTime = arrivalDeadlineTime,
+            createdAt = createdAt,
             driverId = Kernel.Types.Id.Id driverId,
             gateId = gateId,
             gateName = gateName,
@@ -36,7 +37,8 @@ instance FromTType' Beam.SpecialZoneQueueRequest Domain.Types.SpecialZoneQueueRe
 instance ToTType' Beam.SpecialZoneQueueRequest Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest where
   toTType' (Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest {..}) = do
     Beam.SpecialZoneQueueRequestT
-      { Beam.createdAt = createdAt,
+      { Beam.arrivalDeadlineTime = arrivalDeadlineTime,
+        Beam.createdAt = createdAt,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.gateId = gateId,
         Beam.gateName = gateName,
