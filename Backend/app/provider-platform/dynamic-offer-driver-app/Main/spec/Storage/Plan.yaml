@@ -149,7 +149,7 @@ Plan:
     maxCreditLimit: integer
     freeRideCount: integer
     merchantOpCityId: text
-    airportRideSubscription: double
+    airportRideSubscription: double precision
 
   default:
     subscribedFlagToggleAllowed: "true"
