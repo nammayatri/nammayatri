@@ -176,6 +176,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                               ("getLiveVehicles: enrichBusStopETA stopCode=" <> etaBus.stopCode)
                         )
                         (fromMaybe [] bus.busData.eta_data)
+                    currentTripId' <- JMU.getVehicleCurrentTripId integratedBPPConfig' bus.vehicleNumber
                     return . Just $
                       API.Types.UI.MultimodalConfirm.LiveVehicleInfo
                         { eta = Just enrichedEta,
@@ -185,7 +186,8 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                           serviceTierType = serviceTier,
                           serviceTierName = (.shortName) <$> frfsServiceTier,
                           serviceSubTypes = mbServiceSubTypes,
-                          vehicleTagNumber = mbVehicleTagNumber
+                          vehicleTagNumber = mbVehicleTagNumber,
+                          currentTripId = currentTripId'
                         }
                   Nothing -> do
                     logError $ "Vehicle info not found for bus: " <> bus.vehicleNumber

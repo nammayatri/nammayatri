@@ -1590,6 +1590,23 @@ getVehicleMetadataFromInMem integratedBPPConfigs vehicleNumber =
         >>= \(integratedBPPConfig, mbResult) ->
           mbResult <&> (\result -> (integratedBPPConfig, result))
 
+-- | Current trip ID as @waybill-tripNumber@ when both are present (any service tier).
+getVehicleCurrentTripId ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  DIntegratedBPPConfig.IntegratedBPPConfig ->
+  Text ->
+  m (Maybe Text)
+getVehicleCurrentTripId integratedBppConfig vehicleNumber = do
+  mbLiveRouteInfo <- getVehicleLiveRouteInfo [integratedBppConfig] vehicleNumber Nothing
+  case mbLiveRouteInfo of
+    Just (_, lri) ->
+      let mbCurrentTripId = do
+            waybill <- lri.waybillId
+            tripNum <- lri.tripNumber
+            pure $ makeTripIdFromWaybillNoAndTripNo waybill tripNum
+       in pure mbCurrentTripId
+    Nothing -> pure Nothing
+
 getVehicleLiveRouteInfoUnsafe ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   [DIntegratedBPPConfig.IntegratedBPPConfig] ->
