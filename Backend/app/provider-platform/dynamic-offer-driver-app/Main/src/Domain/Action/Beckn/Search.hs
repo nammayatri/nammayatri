@@ -457,6 +457,7 @@ handler ValidatedDSearchReq {..} sReq = do
 
         vehicleAllowedOnTollRoute farePolicy = case farePolicy.vehicleServiceTier of
           AUTO_RICKSHAW -> fromMaybe True mbIsAutoRickshawAllowed
+          AUTO_PLUS -> fromMaybe True mbIsAutoRickshawAllowed
           BIKE -> fromMaybe True mbIsTwoWheelerAllowed
           _ -> True
 
