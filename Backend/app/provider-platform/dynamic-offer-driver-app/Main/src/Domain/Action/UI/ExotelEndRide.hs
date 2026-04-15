@@ -18,6 +18,7 @@ module Domain.Action.UI.ExotelEndRide
   )
 where
 
+import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.Ride.EndRide as EndRide
 import Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
@@ -31,6 +32,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.PersonExtra as QPerson
@@ -50,7 +52,9 @@ callBasedEndRide ::
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
-    ClickhouseFlow m r
+    ClickhouseFlow m r,
+    HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   EndRide.ServiceHandle m ->
   Id Merchant ->
