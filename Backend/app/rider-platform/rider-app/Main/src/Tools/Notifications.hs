@@ -37,7 +37,6 @@ import qualified Domain.Types.RefundRequest as DRefundRequest
 import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
-import qualified Safety.Domain.Types.Sos as SSos
 import Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.RiderPreferredOption as DRPO
 import Domain.Types.SearchRequest as SearchRequest

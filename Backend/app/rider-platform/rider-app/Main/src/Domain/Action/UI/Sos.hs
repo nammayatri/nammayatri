@@ -920,7 +920,7 @@ postSosStartTracking (mbPersonId, merchantId) StartTrackingReq {..} = do
     SOSLocation.updateSosRiderLocation (cast finalSosId) location Nothing (Just expiryTimeStamp)
 
   -- Build tracking URL (rider-app specific)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let trackLink = buildSosTrackUrl riderConfig Nothing (cast finalSosId)
 
   emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, merchantId)
@@ -955,7 +955,7 @@ postSosUpdateState (mbPersonId, _) sosId UpdateStateReq {..} = do
     then pure APISuccess.Success
     else do
       emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
-      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+      riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
       let trackLink = buildSosTrackUrl riderConfig (sosDetails.rideId <&> (.getId)) sosId
       let safetyPersonId = cast @Person.Person @SafetyCommon.Person personId
 
@@ -1025,7 +1025,7 @@ postSosUpdateToRide (mbPersonId, merchantId) sosId UpdateToRideReq {..} = do
   QRide.updateSosId (Just $ cast sosId) ride.id
 
   -- Same steps as creating a new ride SOS: Kapture ticket, tracking link, notify emergency contacts
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let trackLink = buildSosTrackUrl riderConfig (Just ride.id.getId) sosId
 
   when riderConfig.enableSupportForSafety $ do
@@ -1232,6 +1232,7 @@ extractStateCode _ = Nothing
 flowToSOSService :: DRC.ExternalSOSFlow -> SOS.SOSService
 flowToSOSService DRC.ERSS = SOS.ERSS
 flowToSOSService DRC.GJ112 = SOS.GJ112
+flowToSOSService DRC.Trinity = SOS.Trinity
 
 postSosErssStatusUpdate :: API.Types.UI.Sos.ErssStatusUpdateReq -> Flow API.Types.UI.Sos.ErssStatusUpdateRes
 postSosErssStatusUpdate req = do
