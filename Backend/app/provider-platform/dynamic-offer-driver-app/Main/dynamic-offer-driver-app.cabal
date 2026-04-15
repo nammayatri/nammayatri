@@ -455,6 +455,7 @@ library
       SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
       SharedLogic.Allocator.Jobs.Webhook.Webhook
       SharedLogic.Analytics
+      SharedLogic.AnalyticsExtra
       SharedLogic.Beckn.Common
       SharedLogic.BehaviourManagement.CancellationRate
       SharedLogic.BehaviourManagement.ConsequenceDispatcher
@@ -663,6 +664,7 @@ library
       Storage.Clickhouse.Ride
       Storage.Clickhouse.RideDetails
       Storage.Clickhouse.SearchRequestForDriver
+      Storage.Clickhouse.SubscriptionPurchase
       Storage.Clickhouse.Vehicle
       Storage.Clickhouse.VehicleRegistrationCertificate
       Storage.Queries.AadhaarCardExtra

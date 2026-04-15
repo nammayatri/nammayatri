@@ -35,6 +35,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.OperationHub as DOH
 import Domain.Types.OperationHubRequests
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.RegistrationToken as SR
 import Environment
 import EulerHS.Prelude (whenNothing_, (<|>))
@@ -50,7 +51,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import SharedLogic.Analytics as Analytics
+import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
+import qualified SharedLogic.FleetOperatorStats as FleetOpStats
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -68,6 +71,7 @@ import qualified Storage.Queries.OperationHubRequests as SQOHR
 import qualified Storage.Queries.OperationHubRequestsExtra as SQOH
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QVRC
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as QVRCE
@@ -140,21 +144,32 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
   Redis.whenWithLockRedis (opsHubRequestLockKey req.operationHubRequestId) 60 $ do
     opHubReq <- SQOHR.findByPrimaryKey (Kernel.Types.Id.Id req.operationHubRequestId) >>= fromMaybeM (InvalidRequest "Invalid operation hub request id")
     when (opHubReq.requestStatus == APPROVED) $ Kernel.Utils.Common.throwError (InvalidRequest "Request already approved")
-
-    -- Handle rejection for any request type
+    personId <- opHubReq.driverId & fromMaybeM (InvalidRequest "driverId is required for driver inspection")
+    (merchantOpCity, transporterConfig) <- getMerchantInfo merchantShortId opCity
+    -- Handle rejection based on request type
     when (req.status == API.Types.ProviderPlatform.Operator.Driver.REJECTED) $ do
       void $ SQOHR.updateStatusWithDetails (castReqStatusToDomain req.status) (Just req.remarks) (Just now) (Just (Kernel.Types.Id.Id req.operatorId)) (Kernel.Types.Id.Id req.operationHubRequestId)
+      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
+        case opHubReq.requestType of
+          ONBOARDING_INSPECTION -> void $ withTryCatch "incrementRejectedVehicleRequestsDaily" $
+            FleetOpStats.incrementRejectedVehicleRequestsDaily req.operatorId personId.getId transporterConfig False
+          REGULAR_INSPECTION -> void $ withTryCatch "incrementRejectedVehicleRequestsDaily" $
+            FleetOpStats.incrementRejectedVehicleRequestsDaily req.operatorId personId.getId transporterConfig False
+          DRIVER_ONBOARDING_INSPECTION -> void $ withTryCatch "incrementRejectedDriverRequestsDaily" $
+            FleetOpStats.incrementRejectedDriverRequestsDaily req.operatorId personId.getId transporterConfig False
+          DRIVER_REGULAR_INSPECTION -> void $ withTryCatch "incrementRejectedDriverRequestsDaily" $
+            FleetOpStats.incrementRejectedDriverRequestsDaily req.operatorId personId.getId transporterConfig False
 
     -- Handle approval based on request type
     when (req.status == API.Types.ProviderPlatform.Operator.Driver.APPROVED) $ do
       case opHubReq.requestType of
-        ONBOARDING_INSPECTION -> handleVehicleInspectionApproval merchantShortId opCity req opHubReq now
-        REGULAR_INSPECTION -> handleVehicleInspectionApproval merchantShortId opCity req opHubReq now
-        DRIVER_ONBOARDING_INSPECTION -> handleDriverInspectionApproval merchantShortId opCity req opHubReq now
-        DRIVER_REGULAR_INSPECTION -> handleDriverInspectionApproval merchantShortId opCity req opHubReq now
+        ONBOARDING_INSPECTION -> handleVehicleInspectionApproval req opHubReq merchantOpCity transporterConfig now
+        REGULAR_INSPECTION -> handleVehicleInspectionApproval req opHubReq merchantOpCity transporterConfig now
+        DRIVER_ONBOARDING_INSPECTION -> handleDriverInspectionApproval merchantShortId opCity req now personId merchantOpCity transporterConfig
+        DRIVER_REGULAR_INSPECTION -> handleDriverInspectionApproval merchantShortId opCity req now personId merchantOpCity transporterConfig
   pure Success
   where
-    handleVehicleInspectionApproval mShortId city request opHubReq now = do
+    handleVehicleInspectionApproval request opHubReq merchantOpCity transporterConfig now = do
       creator <- runInReplica $ QPerson.findById opHubReq.creatorId >>= fromMaybeM (PersonNotFound opHubReq.creatorId.getId)
       registrationNo <- opHubReq.registrationNo & fromMaybeM (InvalidRequest "registrationNo is required for vehicle inspection")
 
@@ -167,7 +182,8 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
             [] -> pure Nothing
             (assoc : _) -> pure $ Just assoc.driverId
       mbPerson <- forM mbPersonId $ \personId -> runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      (merchantOpCity, transporterConfig, language) <- getMerchantAndPersonInfo mShortId city mbPerson
+      language <- getPersonInfo merchantOpCity mbPerson
+      let analyticsDriverId = maybe request.operatorId (.getId) mbPersonId
       fork "enable driver after vehicle inspection" $ do
         -- Only check vehicle docs, not driver docs (vehicle and driver enablement are segregated)
         allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerifiedForRC rc merchantOpCity transporterConfig language registrationNo
@@ -177,6 +193,9 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
           cancelRemindersForRCByDocumentType rc.id DVC.InspectionHub
           -- Record inspection completion for auto-trigger monitoring (per RC, not per driver)
           recordDocumentCompletion DVC.InspectionHub rc.id.getId DRH.RC Nothing merchantOpCity.merchantId merchantOpCity.id
+          when (req.status == API.Types.ProviderPlatform.Operator.Driver.APPROVED && transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $ do
+            void $ withTryCatch "incrementApprovedVehicleRequests" $
+              FleetOpStats.incrementApprovedVehicleRequests request.operatorId analyticsDriverId transporterConfig False
         let reqUpdatedStatus = if allVehicleDocsVerified then castReqStatusToDomain request.status else PENDING
         void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
 
@@ -185,10 +204,9 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
           when (isNothing mbVehicle && allVehicleDocsVerified) $
             void $ withTryCatch "activateRCAutomatically:postDriverOperatorRespondHubRequest" (SStatus.activateRCAutomatically personId merchantOpCity registrationNo)
 
-    handleDriverInspectionApproval mShortId city request opHubReq now = do
-      personId <- opHubReq.driverId & fromMaybeM (InvalidRequest "driverId is required for driver inspection")
+    handleDriverInspectionApproval mShortId city request now personId merchantOpCity transporterConfig = do
       person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      (merchantOpCity, transporterConfig, language) <- getMerchantAndPersonInfo mShortId city (Just person)
+      language <- getPersonInfo merchantOpCity (Just person)
       fork "enable driver after driver inspection" $ do
         -- Only check driver docs, not vehicle docs (vehicle and driver enablement are segregated)
         allDriverDocsVerified <- SStatus.checkAllDriverDocsVerifiedForDriver person merchantOpCity transporterConfig language
@@ -201,13 +219,19 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
           void $ postDriverEnable mShortId city $ cast @DP.Person @Common.Driver personId
         let reqUpdatedStatus = if allDriverDocsVerified then castReqStatusToDomain request.status else PENDING
         void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
+      when (req.status == API.Types.ProviderPlatform.Operator.Driver.APPROVED && transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $ do
+        void $ withTryCatch "incrementApprovedDriverRequestsDaily" $
+          FleetOpStats.incrementApprovedDriverRequestsDaily request.operatorId personId.getId transporterConfig False
 
-    getMerchantAndPersonInfo mShortId city mbPerson = do
+    getMerchantInfo mShortId city = do
       merchant <- findMerchantByShortId mShortId
       merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> mShortId.getShortId <> " ,city: " <> show city)
       transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+      pure (merchantOpCity, transporterConfig)
+
+    getPersonInfo merchantOpCity mbPerson = do
       let language = fromMaybe merchantOpCity.language $ mbPerson >>= (.language)
-      pure (merchantOpCity, transporterConfig, language)
+      pure (language)
 
 opsHubRequestLockKey :: Text -> Text
 opsHubRequestLockKey reqId = "opsHub:Request:Id-" <> reqId
@@ -490,8 +514,8 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
         person.id
         Nothing
         ( \driverInfo -> do
-            when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.id.getId
-            Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig operator.id.getId
+            activeSubCount <- QSubscriptionPurchaseExtra.countActiveSubscriptionsForOwner person.id.getId DSP.DRIVER
+            AnalyticsExtra.adjustOperatorDriverAssociationAnalytics transporterConfig operator.id.getId 1 activeSubCount driverInfo.enabled
         )
         ( \driverInfo -> do
             DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.OPERATOR operator.id.getId driverInfo.driverFlowStatus
@@ -519,7 +543,7 @@ getDriverOperatorDashboardAnalyticsAllTime merchantShortId opCity requestorId = 
     throwError AccessDenied
 
   -- Redis keys for fleet aggregates
-  let allTimeKeysData = Analytics.allTimeKeys operator.id.getId
+  let allTimeKeysData = AnalyticsExtra.allTimeKeys operator.id.getId
   logTagInfo "allTimeKeysData" (show allTimeKeysData)
 
   -- try redis first
@@ -527,14 +551,14 @@ getDriverOperatorDashboardAnalyticsAllTime merchantShortId opCity requestorId = 
   logTagInfo "mbAllTimeKeysRes" (show mbAllTimeKeysRes)
 
   -- fallback to ClickHouse and populate cache when missing
-  (totalRides, ratingSum, ratingCount, cancelCount, acceptationCount, totalRequestCount) <- do
+  (totalRides, ratingSum, ratingCount, cancelCount, acceptationCount, totalRequestCount, mbTotalAssociatedDriver, mbTotalActiveDrivers, mbTotalEnabledDrivers) <- do
     if all isJust mbAllTimeKeysRes
       then do
-        let res = Analytics.convertToAllTimeFallbackRes (zip Analytics.allTimeMetrics (map (fromMaybe 0) mbAllTimeKeysRes))
+        let res = AnalyticsExtra.convertToAllTimeFallbackRes (zip AnalyticsExtra.allTimeMetrics (map (fromMaybe 0) mbAllTimeKeysRes))
         logTagInfo "AllTimeFallbackRes" (show res)
         Analytics.extractOperatorAnalyticsData res
       else do
-        res <- Analytics.handleCacheMissForAnalyticsAllTimeCommon DP.OPERATOR operator.id.getId allTimeKeysData
+        res <- AnalyticsExtra.handleCacheMissForAnalyticsAllTimeCommon transporterConfig DP.OPERATOR operator.id.getId allTimeKeysData
         logTagInfo "AllTimeFallbackRes" (show res)
         Analytics.extractOperatorAnalyticsData res
 
@@ -556,7 +580,15 @@ getDriverOperatorDashboardAnalyticsAllTime merchantShortId opCity requestorId = 
         acceptationCount >>= \ac ->
           totalRequestCount >>= \trc ->
             if trc > 0 then Just (fromIntegral ac / fromIntegral trc * 100) else Nothing
-  pure $ API.Types.ProviderPlatform.Operator.Driver.AllTimeOperatorAnalyticsRes {rating, cancellationRate, acceptanceRate}
+  pure $
+    API.Types.ProviderPlatform.Operator.Driver.AllTimeOperatorAnalyticsRes
+      { rating,
+        cancellationRate,
+        acceptanceRate,
+        totalActiveDrivers = mbTotalActiveDrivers,
+        totalAssociatedDriver = mbTotalAssociatedDriver,
+        totalEnabledDriver = mbTotalEnabledDrivers
+      }
 
 ---------------------------------------------------------------------
 getDriverOperatorDashboardAnalytics ::
@@ -574,38 +606,23 @@ getDriverOperatorDashboardAnalytics merchantShortId opCity requestorId fromDay t
   operator <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
   unless (operator.role == DP.OPERATOR) $ throwError AccessDenied
 
-  now <- getCurrentTime
-  let mbPeriod = Analytics.inferPeriod (utctDay now) fromDay toDay
-  logTagInfo "mbPeriod:-" (show mbPeriod)
+  let buildRes res =
+        let totalInspectionCompleted =
+              API.Types.ProviderPlatform.Operator.Driver.TotalInspectionCompletedRes
+                { approvedVehicleInspection = res.approvedVehicleInspection,
+                  approvedDriverInspection = res.approvedDriverInspection,
+                  rejectedVehicleInspection = res.rejectedVehicleInspection,
+                  rejectedDriverInspection = res.rejectedDriverInspection
+                }
+         in API.Types.ProviderPlatform.Operator.Driver.FilteredOperatorAnalyticsRes
+              { activeDriver = res.activeDriver,
+                driverEnabled = res.driverEnabled,
+                greaterThanOneRide = res.greaterThanOneRide,
+                greaterThanTenRide = res.greaterThanTenRide,
+                greaterThanFiftyRide = res.greaterThanFiftyRide,
+                totalInspectionCompleted
+              }
 
-  case mbPeriod of
-    Nothing -> do
-      res <- Analytics.fallbackComputePeriodOperatorAnalytics operator.id.getId fromDay toDay
-      logTagInfo "PeriodFallbackRes" (show res)
-      pure $
-        API.Types.ProviderPlatform.Operator.Driver.FilteredOperatorAnalyticsRes
-          { activeDriver = res.activeDriver,
-            driverEnabled = res.driverEnabled,
-            greaterThanOneRide = res.greaterThanOneRide,
-            greaterThanTenRide = res.greaterThanTenRide,
-            greaterThanFiftyRide = res.greaterThanFiftyRide
-          }
-    Just period -> do
-      let periodKeysData = Analytics.periodKeys operator.id.getId period
-      logTagInfo "periodKeysData" (show periodKeysData)
-      -- attempt to read cached values
-      mbPeriodKeysRes <- mapM (Redis.get @Int) periodKeysData
-      logTagInfo "mbPeriodKeysRes" (show mbPeriodKeysRes)
-
-      (activeDriver, driverEnabled, greaterThanOneRide, greaterThanTenRide, greaterThanFiftyRide) <- do
-        if all isJust mbPeriodKeysRes
-          then do
-            let res = Analytics.convertToPeriodFallbackRes (zip Analytics.periodMetrics (map (fromMaybe 0) mbPeriodKeysRes))
-            logTagInfo "PeriodKeysRes" (show res)
-            pure (res.activeDriver, res.driverEnabled, res.greaterThanOneRide, res.greaterThanTenRide, res.greaterThanFiftyRide)
-          else do
-            res <- Analytics.handleCacheMissForOperatorAnalyticsPeriod transporterConfig operator.id.getId periodKeysData period fromDay toDay
-            logTagInfo "PeriodFallbackRes" (show res)
-            pure (res.activeDriver, res.driverEnabled, res.greaterThanOneRide, res.greaterThanTenRide, res.greaterThanFiftyRide)
-
-      pure $ API.Types.ProviderPlatform.Operator.Driver.FilteredOperatorAnalyticsRes {activeDriver, driverEnabled, greaterThanOneRide, greaterThanTenRide, greaterThanFiftyRide}
+  res <- Analytics.computePeriodOperatorAnalytics transporterConfig operator.id.getId fromDay toDay
+  logTagInfo "PeriodFallbackRes" (show res)
+  pure $ buildRes res

@@ -13,7 +13,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person as Person
 import Domain.Types.Plan as P
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (find, foldl, foldl', id, map)
+import EulerHS.Prelude hiding (find, foldl, foldl', id, map, null)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Types as Maps
@@ -28,7 +28,7 @@ import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Queries.DriverBlockTransactions as QDBT
 import Storage.Queries.OrphanInstances.DriverInformation ()
-import Storage.Queries.PersonExtra ()
+import Storage.Queries.OrphanInstances.Person ()
 import qualified Storage.Queries.Transformers.FleetOwnerInformation as Transformers
 import Tools.Error
 
@@ -480,6 +480,25 @@ findAllByDriverIds driverIds = do
   case res of
     Right driverInfoList -> catMaybes <$> mapM fromTType' driverInfoList
     Left _ -> pure []
+
+countEnabledByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m Int
+countEnabledByDriverIds driverIds =
+  if null driverIds
+    then pure 0
+    else do
+      dbConf <- getReplicaBeamConfig
+      res <-
+        L.runDB dbConf $
+          L.findRows $
+            B.select $
+              B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+                B.filter_'
+                  ( \driverInfo ->
+                      B.sqlBool_ (driverInfo.driverId `B.in_` (B.val_ <$> driverIds))
+                        B.&&?. driverInfo.enabled B.==?. B.val_ True
+                  )
+                  $ B.all_ (SBC.driverInformation SBC.atlasDB)
+      pure $ either (const 0) (\r -> if null r then 0 else head r) res
 
 updateLastOfflineTime :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> UTCTime -> m ()
 updateLastOfflineTime driverId offlineTime = do

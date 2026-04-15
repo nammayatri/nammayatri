@@ -47,6 +47,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (Language (ENGLISH))
+import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
@@ -329,7 +330,18 @@ buildCurrentPlanResFromPurchase driverId merchantOperatingCityId purchase = do
         else return (Nothing, Nothing)
 
 class Subscription a where
-  getSubcriptionStatusWithPlan :: (BeamFlow m r, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> Id SP.Person -> m (Maybe DI.DriverAutoPayStatus, Maybe DriverPlan)
+  getSubcriptionStatusWithPlan ::
+    ( BeamFlow m r,
+      MonadFlow m,
+      CacheFlow m r,
+      EsqDBFlow m r,
+      Redis.HedisFlow m r,
+      HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+      HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    ) =>
+    a ->
+    Id SP.Person ->
+    m (Maybe DI.DriverAutoPayStatus, Maybe DriverPlan)
   updateSubscriptionStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DI.DriverAutoPayStatus -> Maybe Text -> m ()
   createDriverPlan :: a -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Plan -> SubscriptionServiceRelatedData -> SubscriptionConfig -> Flow ()
   planSubscribe :: a -> Id Plan -> (Bool, Maybe MessageKey.MediaChannel) -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> SubscriptionServiceRelatedData -> Flow PlanSubscribeRes
@@ -409,7 +421,14 @@ getSubcriptionStatusWithPlanGeneric serviceName driverId = do
   return (autoPayStatus, driverPlan)
 
 getSubcriptionStatusWithPlanPrepaid ::
-  (BeamFlow m r, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  ( BeamFlow m r,
+    MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
   Id SP.Person ->
   m (Maybe DI.DriverAutoPayStatus, Maybe DriverPlan)
 getSubcriptionStatusWithPlanPrepaid driverId = do

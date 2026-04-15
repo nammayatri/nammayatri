@@ -840,7 +840,7 @@ deactivateRC isTaxiBoothRequest transporterConfig rc driverId = do
     throwError (InvalidRequest "Driver can't deactivate RC which is not active with them")
   removeVehicle isTaxiBoothRequest driverId
   DAQuery.deactivateRCForDriver False driverId rc.id
-  when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount rc.fleetOwnerId driverId
+  when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverId
   return ()
 
 removeVehicle :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Bool -> Id Person.Person -> m ()
@@ -919,7 +919,7 @@ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
   deactivateCurrentRC transporterConfig driverInfo.driverId
   addVehicleToDriver
   DAQuery.activateRCForDriver driverInfo.driverId rc.id now
-  when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.incrementFleetOwnerAnalyticsActiveVehicleCount rc.fleetOwnerId driverInfo.driverId
+  when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.incrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverInfo.driverId
   return ()
   where
     addVehicleToDriver = do
@@ -972,7 +972,7 @@ invalidateRCAndRemoveVehicleForReminder rcId driverId merchantOpCityId reason = 
       removeVehicle False driverId
       DAQuery.deactivateRCForDriver False driverId rc.id
       when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
-        Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount rc.fleetOwnerId driverId
+        Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverId
     _ -> return ()
   RCQuery.updateApproved (Just False) rcId
   VRCExtra.updateVerificationStatusAndRejectReason Documents.INVALID reason rc.documentImageId

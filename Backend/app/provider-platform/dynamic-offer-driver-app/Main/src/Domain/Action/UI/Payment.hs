@@ -64,6 +64,7 @@ import qualified Kernel.External.Payment.Types as Payment
 import Kernel.External.Types (SchedulerType, ServiceFlow)
 import qualified Kernel.External.Wallet as Wallet
 import Kernel.Prelude
+import qualified Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, Transactionable)
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
@@ -97,6 +98,7 @@ import qualified Lib.Webhook.Storage.Queries.Webhook as QWeb
 import qualified Lib.Webhook.Types.Webhook as DW
 import Servant (BasicAuthData)
 import SharedLogic.Allocator
+import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.EventTracking as SEVT
 import SharedLogic.Finance.Prepaid
@@ -183,8 +185,11 @@ getStatus ::
     CacheFlow m r,
     EventStreamFlow m r,
     MonadFlow m,
+    Redis.HedisFlow m r,
     JobCreatorEnv r,
     HasField "schedulerType" r SchedulerType,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -289,8 +294,11 @@ getStatusV2 ::
     CacheFlow m r,
     EventStreamFlow m r,
     MonadFlow m,
+    Redis.HedisFlow m r,
     JobCreatorEnv r,
     HasField "schedulerType" r SchedulerType,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -496,10 +504,14 @@ processWalletTopupWebhook driver order transactionStatus = do
 
 processPayment ::
   ( MonadFlow m,
+    BeamFlow m r,
     CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
   Id DM.Merchant ->
   DP.Driver ->
@@ -549,8 +561,11 @@ processSubscriptionPurchasePayment ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
+    Redis.HedisFlow m r,
     JobCreatorEnv r,
-    HasField "schedulerType" r SchedulerType
+    HasField "schedulerType" r SchedulerType,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -643,6 +658,8 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                   startDate = if isJust expiryDate then Just now else Nothing,
                   financeInvoiceId = mbInvoiceId
                 }
+        unless isFleetOwner $
+          Analytics.incrementOperatorTotalActiveDriversIfFirstDriverSubscription transporterConfig person.id.getId
         QSP.updateByPrimaryKey updatedPurchase
         -- Schedule expiry job only if expiry was set (not queued)
         whenJust expiryDate $ \expiry -> do
@@ -736,7 +753,14 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
       pure (fst newBalance, Nothing)
 
 updatePaymentStatus ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  ( MonadFlow m,
+    BeamFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
   Id DP.Person ->
   Id DMOC.MerchantOperatingCity ->
   DP.ServiceNames ->
@@ -900,7 +924,19 @@ processNotification merchantOpCityId notification notificationStatus respCode re
     QNTF.updateNotificationStatusAndResponseInfoById notificationStatus respCode respMessage notification.id
 
 processMandate ::
-  (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, EventStreamFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType, EncFlow m r) =>
+  ( MonadFlow m,
+    BeamFlow m r,
+    CacheFlow m r,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    EventStreamFlow m r,
+    Redis.HedisFlow m r,
+    JobCreatorEnv r,
+    HasField "schedulerType" r SchedulerType,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    EncFlow m r
+  ) =>
   (DP.ServiceNames, DSC.SubscriptionConfig) ->
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Payment.MandateStatus ->

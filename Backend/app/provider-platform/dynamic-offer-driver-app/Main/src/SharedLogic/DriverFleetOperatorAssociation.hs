@@ -21,6 +21,7 @@ import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -29,6 +30,8 @@ import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
+import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
+import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified Storage.Queries.Person as QP
 import qualified Tools.Notifications as TN
 
@@ -65,14 +68,8 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig drive
           transporterConfig
           existingAssociation.driverId
           Nothing
-          ( \driverInfo -> do
-              Analytics.decrementFleetOwnerAnalyticsActiveDriverCount (Just existingAssociation.fleetOwnerId) existingAssociation.driverId
-              operators <- QFOA.findAllByFleetOwnerId (Id existingAssociation.fleetOwnerId) True
-              when (null operators) $ logTagError "AnalyticsRemoveDriver" "No operators found for fleet owner"
-              forM_ operators $ \operator -> do
-                when driverInfo.enabled $ Analytics.decrementOperatorAnalyticsDriverEnabled transporterConfig operator.operatorId
-                Analytics.decrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
-          )
+          ( \_ -> do
+              Analytics.decrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just existingAssociation.fleetOwnerId) existingAssociation.driverId)
           ( \driverInfo -> do
               DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER existingAssociation.fleetOwnerId driverInfo.driverFlowStatus
           )
@@ -97,9 +94,9 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig drive
           transporterConfig
           existingAssociation.driverId
           Nothing
-          ( \driverInfo -> do
-              when driverInfo.enabled $ Analytics.decrementOperatorAnalyticsDriverEnabled transporterConfig existingAssociation.operatorId
-              Analytics.decrementOperatorAnalyticsActiveDriver transporterConfig existingAssociation.operatorId
+          (\driverInfo -> do
+            activeSubscriptions <- QSubscriptionPurchaseExtra.countActiveSubscriptionsForOwner existingAssociation.driverId.getId DSP.DRIVER
+            AnalyticsExtra.adjustOperatorDriverAssociationAnalytics transporterConfig existingAssociation.operatorId (-1) activeSubscriptions driverInfo.enabled
           )
           ( \driverInfo -> do
               DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.OPERATOR existingAssociation.operatorId driverInfo.driverFlowStatus

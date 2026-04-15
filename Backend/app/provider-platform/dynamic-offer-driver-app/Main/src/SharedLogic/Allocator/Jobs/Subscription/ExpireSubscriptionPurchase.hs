@@ -7,6 +7,8 @@ where
 
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import Kernel.Prelude
+import qualified Kernel.Storage.Clickhouse.Config as CH
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
@@ -21,8 +23,11 @@ expireSubscriptionPurchase ::
     MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
+    Redis.HedisFlow m r,
     JobCreatorEnv r,
-    HasField "schedulerType" r SchedulerType
+    HasField "schedulerType" r SchedulerType,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
   Job 'ExpireSubscriptionPurchase ->
   m ExecutionResult

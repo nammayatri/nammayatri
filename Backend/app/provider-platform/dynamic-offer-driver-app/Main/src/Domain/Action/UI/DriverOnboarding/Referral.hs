@@ -25,11 +25,14 @@ import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverReferral as DR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
 import qualified Domain.Types.Person as Person
 import Domain.Types.TransporterConfig
 import Environment
 import qualified Kernel.Beam.Functions as B
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import Kernel.Prelude
+import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Types.Predicate
@@ -133,8 +136,8 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
             personId
             (Just di)
             ( \driverInfo -> do
-                when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig dr.driverId.getId
-                Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig dr.driverId.getId
+                activeSubCount <- QSubscriptionPurchaseExtra.countActiveSubscriptionsForOwner personId.getId DSP.DRIVER
+                AnalyticsExtra.adjustOperatorDriverAssociationAnalytics transporterConfig dr.driverId.getId 1 activeSubCount driverInfo.enabled
             )
             ( \driverInfo -> do
                 DDriverMode.incrementFleetOperatorStatusKeyForDriver Person.OPERATOR dr.driverId.getId driverInfo.driverFlowStatus

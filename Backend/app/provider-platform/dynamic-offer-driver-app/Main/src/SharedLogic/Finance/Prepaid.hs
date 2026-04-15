@@ -31,13 +31,17 @@ import Domain.Types.Extra.Plan (ServiceNames (..))
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import Kernel.External.Encryption (EncFlow, decrypt)
 import Kernel.Prelude
+import qualified Kernel.Storage.Clickhouse.Config as CH
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common (Currency (..), HighPrecMoney)
 import Kernel.Types.Id
-import Kernel.Utils.Common (addUTCTime, getCurrentTime, logInfo)
+import Kernel.Utils.Common (addUTCTime, getCurrentTime, logInfo, withTryCatch)
 import Lib.Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import SharedLogic.AnalyticsExtra as AnalyticsExtra
+import qualified Storage.Cac.TransporterConfig as SCT
 import SharedLogic.Finance.Wallet (computeTdsRateReason)
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.SubscriptionPurchase as QSP
@@ -684,7 +688,11 @@ debitPrepaidBalance counterpartyType ownerId finalFare revenueAmount currency me
 -- NOTE: Does NOT activate the next queued purchase's expiry timer.
 -- The caller is responsible for calling activateNextQueuedPurchaseExpiry if needed.
 handleSubscriptionExpiry ::
-  (BeamFlow m r) =>
+  ( BeamFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
   DSP.SubscriptionPurchase ->
   m ()
 handleSubscriptionExpiry purchase = do
@@ -768,6 +776,12 @@ handleSubscriptionExpiry purchase = do
 
     QSP.updateStatusById DSP.EXPIRED purchase.id
     logInfo $ "Subscription " <> purchase.id.getId <> " expired. Expired credits: " <> show expiredCredits
+    when (purchase.ownerType == DSP.DRIVER) $
+      void $
+        withTryCatch "decrementOperatorTotalActiveDriversOnSubscriptionExpiry" $ do
+          mbTransporterConfig <- SCT.findByMerchantOpCityId purchase.merchantOperatingCityId Nothing
+          whenJust mbTransporterConfig $ \tc ->
+            AnalyticsExtra.decrementOperatorTotalActiveDriversIfDriverHasNoActiveSubscription tc purchase.ownerId
 
 -- | After a ride debit, check if the oldest ACTIVE subscription should be marked EXHAUSTED.
 -- FIFO logic: if the current balance is at or below the sum of newer subscriptions' credits,

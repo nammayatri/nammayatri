@@ -183,6 +183,7 @@ import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
 import qualified Lib.Finance.Domain.Types.Account as FinanceAccount
 import qualified Lib.Finance.Storage.Queries.Account as QFinanceAccount
 import SharedLogic.Analytics as Analytics
+import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverFlowStatus as SDF
@@ -255,6 +256,8 @@ import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteTripStopMapping as QRTSM
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.TripAlertRequest as QTAR
+import qualified Domain.Types.SubscriptionPurchase as DSP
+import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
 import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleExtra as QVehicleExtra
@@ -1121,14 +1124,8 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
           transporterConfig
           personId
           Nothing
-          ( \driverInfo -> do
-              Analytics.decrementFleetOwnerAnalyticsActiveDriverCount (Just entityId) personId
-              operators <- FOV.findAllByFleetOwnerId (Id entityId) True
-              when (null operators) $ logTagError "AnalyticsRemoveDriver" "No operators found for fleet owner"
-              forM_ operators $ \operator -> do
-                when driverInfo.enabled $ Analytics.decrementOperatorAnalyticsDriverEnabled transporterConfig operator.operatorId
-                Analytics.decrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
-          )
+          ( \_ -> do
+              Analytics.decrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just entityId) personId)
           ( \driverInfo -> do
               DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER entityId driverInfo.driverFlowStatus
           )
@@ -1143,8 +1140,8 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
           personId
           Nothing
           ( \driverInfo -> do
-              when driverInfo.enabled $ Analytics.decrementOperatorAnalyticsDriverEnabled transporterConfig entityId
-              Analytics.decrementOperatorAnalyticsActiveDriver transporterConfig entityId
+              activeSubscriptions <- QSubscriptionPurchaseExtra.countActiveSubscriptionsForOwner personId.getId DSP.DRIVER
+              AnalyticsExtra.adjustOperatorDriverAssociationAnalytics transporterConfig entityId (-1) activeSubscriptions driverInfo.enabled
           )
           ( \driverInfo -> do
               DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.OPERATOR entityId driverInfo.driverFlowStatus
@@ -2553,15 +2550,8 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
         transporterConfig
         person.id
         Nothing
-        ( \driverInfo -> do
-            Analytics.incrementFleetOwnerAnalyticsActiveDriverCount (Just fleetOwnerId) person.id
-            operators <- FOV.findAllByFleetOwnerId (Id fleetOwnerId) True
-            when (null operators) $ logTagError "AnalyticsAddDriver" "No operators found for fleet owner"
-            forM_ operators $ \operator -> do
-              -- Optimize later if needed (MSIL will have single operator per fleet)
-              when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.operatorId
-              Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
-        )
+        ( \_ -> do
+            Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just fleetOwnerId) person.id)
         ( \driverInfo -> do
             DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
         )
@@ -3903,7 +3893,7 @@ getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity fleetOwnerId mbRe
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (not transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $ throwError (InvalidRequest "Analytics is not allowed for this merchant")
   -- Redis keys for fleet aggregates
-  let allTimeKeysData = Analytics.fleetAllTimeKeys fleetOwnerId
+  let allTimeKeysData = AnalyticsExtra.fleetAllTimeKeys fleetOwnerId
   logTagInfo "fleetAllTimeKeysData" (show allTimeKeysData)
   -- try redis first
   mbAllTimeKeysRes <- mapM (Redis.get @Int) allTimeKeysData
@@ -3915,11 +3905,11 @@ getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity fleetOwnerId mbRe
   (activeDriverCount, activeVehicleCount, currentOnlineDriverCount) <- do
     if all isJust mbAllTimeKeysRes && isJust onlineDriverCount
       then do
-        let res = Analytics.convertToFleetAllTimeFallbackRes (Analytics.zipJusts Analytics.fleetAllTimeMetrics mbAllTimeKeysRes) onlineDriverCount
+        let res = AnalyticsExtra.convertToFleetAllTimeFallbackRes (AnalyticsExtra.zipJusts AnalyticsExtra.fleetAllTimeMetrics mbAllTimeKeysRes) onlineDriverCount
         logTagInfo "FleetAllTimeFallbackRes" (show res)
         Analytics.extractFleetAnalyticsData res
       else do
-        res <- Analytics.handleCacheMissForAnalyticsAllTimeCommon DP.FLEET_OWNER fleetOwnerId allTimeKeysData
+        res <- AnalyticsExtra.handleCacheMissForAnalyticsAllTimeCommon transporterConfig DP.FLEET_OWNER fleetOwnerId allTimeKeysData
         logTagInfo "FleetAllTimeFallbackRes" (show res)
         Analytics.extractFleetAnalyticsData res
   -- compute remaining metrics from DB
@@ -4148,16 +4138,8 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
         transporterConfig
         driverId
         Nothing
-        ( \driverInfo -> do
-            Analytics.incrementFleetOwnerAnalyticsActiveDriverCount (Just fleetOwnerId) driverId
-            operators <- FOV.findAllByFleetOwnerId (Id fleetOwnerId) True
-            when (null operators) $
-              logTagError "AnalyticsApproveDriver" "No operators found for fleet owner"
-            forM_ operators $ \operator -> do
-              when driverInfo.enabled $
-                Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.operatorId
-              Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
-        )
+        ( \_ -> do
+            Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just fleetOwnerId) driverId)
         ( \driverInfo ->
             DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
         )

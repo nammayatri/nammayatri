@@ -8,7 +8,9 @@ import Domain.Types.TransporterConfig
 import qualified Kernel.External.Payment.Interface.Types as PaymentInterface
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
+import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id (cast)
 import Kernel.Utils.Common
@@ -31,8 +33,13 @@ notificationAndOrderStatusUpdate ::
     Esq.Transactionable m,
     EncFlow m r,
     EventStreamFlow m r,
+    Redis.HedisFlow m r,
     HasShortDurationRetryCfg r c,
     SchedulerFlow r,
+    JobCreatorEnv r,
+    HasField "schedulerType" r SchedulerType,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasField "blackListedJobs" r [Text]
   ) =>

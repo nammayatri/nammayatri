@@ -58,6 +58,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.Allocator as Allocator
 import qualified SharedLogic.Analytics as Analytics
+import qualified SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverOnboarding.Status as DriverOnboardingStatus (ResponseStatus (..), checkLMSTrainingStatus)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Reminder.Helper as ReminderHelper
@@ -587,7 +588,7 @@ sendFleetAndOperatorNotifications driver merchantOpCityId title message entityDa
     notifyFleetWithGRPCProvider merchantOpCityId Notification.DRIVER_NOTIFY title message driver.id entityData
 
   -- Send notification to operator(s) via GRPC (direct association or through fleet)
-  operatorIdTexts <- Analytics.findOperatorIdForDriver driver.id
+  operatorIdTexts <- AnalyticsExtra.findOperatorIdForDriver driver.id
   forM_ operatorIdTexts $ \operatorIdText -> do
     let operatorId = Id operatorIdText
     logInfo $ "Operator found for driver " <> driver.id.getId <> ": " <> operatorIdText

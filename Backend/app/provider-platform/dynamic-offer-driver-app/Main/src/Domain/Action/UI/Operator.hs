@@ -17,10 +17,13 @@ import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCT
+import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
 import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperatorAssociation
+import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.Notifications as TN
@@ -52,8 +55,8 @@ postOperatorConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
     driverOperatorAssociation.driverId
     Nothing
     ( \driverInfo -> do
-        when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.id.getId
-        Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig operator.id.getId
+        activeSubCount <- QSubscriptionPurchaseExtra.countActiveSubscriptionsForOwner driverOperatorAssociation.driverId.getId DSP.DRIVER
+        AnalyticsExtra.adjustOperatorDriverAssociationAnalytics transporterConfig operator.id.getId 1 activeSubCount driverInfo.enabled
     )
     ( \driverInfo -> do
         DDriverMode.incrementFleetOperatorStatusKeyForDriver OPERATOR driverOperatorAssociation.operatorId driverInfo.driverFlowStatus
