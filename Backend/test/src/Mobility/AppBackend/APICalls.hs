@@ -103,7 +103,7 @@ appAuth :: Reg.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> May
 appSignatureAuth :: Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> ClientM Reg.AuthRes
 appPasswordAuth :: Reg.PasswordAuthReq -> ClientM Reg.AuthRes
 appGetToken :: Reg.GetTokenReq -> ClientM Reg.AuthRes
-appVerify :: Id AppSRT.RegistrationToken -> Reg.AuthVerifyReq -> ClientM Reg.AuthVerifyRes
+appVerify :: Id AppSRT.RegistrationToken -> Reg.AuthVerifyReq -> Maybe Text -> ClientM Reg.AuthVerifyRes
 appReInitiateLogin :: Id AppSRT.RegistrationToken -> Maybe Text -> ClientM Reg.ResendAuthRes
 appGenerateTempAppCode :: RegToken -> ClientM Reg.TempCodeRes
 appMakeSignature :: RegToken -> ClientM (SignedResponse.SignedResponse Reg.CustomerSignatureRes)
@@ -166,4 +166,4 @@ initiateAuth :: ClientM Reg.AuthRes
 initiateAuth = appAuth mkAuthReq (Just defaultVersion) (Just defaultVersion) Nothing Nothing Nothing Nothing Nothing
 
 verifyAuth :: Id AppSRT.RegistrationToken -> ClientM Reg.AuthVerifyRes
-verifyAuth tokenId = appVerify tokenId mkAuthVerifyReq
+verifyAuth tokenId = appVerify tokenId mkAuthVerifyReq Nothing

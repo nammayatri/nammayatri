@@ -68,7 +68,7 @@ getSosDetails merchantShortId opCity sosId = do
   mbMerchantOpCity <- case sos.merchantOperatingCityId of
     Just cityId -> CQMOC.findById (Kernel.Types.Id.cast cityId)
     Nothing -> CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
-  mbRideConfig <- maybe (pure Nothing) (\moc -> getConfig (RiderDimensions {merchantOperatingCityId = moc.id.getId})) mbMerchantOpCity
+  mbRideConfig <- maybe (pure Nothing) (\moc -> QRC.findByMerchantOperatingCityId moc.id Nothing) mbMerchantOpCity
   let externalSOSConfig = mbRideConfig >>= \rc -> rc.externalSOSConfig
   let triggerSource = convertTriggerSource <$> (externalSOSConfig <&> (.triggerSource))
   person <- B.runInReplica $ QP.findById (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId) >>= fromMaybeM (PersonNotFound sos.personId.getId)
