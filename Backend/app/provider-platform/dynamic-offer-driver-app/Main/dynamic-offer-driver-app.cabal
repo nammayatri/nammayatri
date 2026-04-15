@@ -490,6 +490,7 @@ library
       SharedLogic.Fleet
       SharedLogic.FleetOperatorStats
       SharedLogic.FleetVehicleStats
+      SharedLogic.GeoPolygon
       SharedLogic.GoogleMaps
       SharedLogic.GoogleTranslate
       SharedLogic.IffcoTokioInsurance

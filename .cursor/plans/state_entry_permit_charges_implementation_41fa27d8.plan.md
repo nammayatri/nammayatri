@@ -409,7 +409,7 @@ flowchart LR
 - **SEPC crossed update to BAP (check with Khuzema)**  
   - `Lib.LocationUpdates`:  
     - `TODO (@Himanshu): add SEPC crossed update to BAP or not check with Khuzema`  
-    - File: `Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/Lib/LocationUpdates.hs`  
+    - File: `Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/Lib/LocationUpdates.hs`
   - **Action**: confirm with Khuzema whether to add SEPC crossed update to BAP; if yes, implement in LocationUpdates.
 - **Migration for adding notification**  
   - Check if these or any other function expects migration in this PR:  
@@ -428,6 +428,161 @@ flowchart LR
 4. Phase 4 – Implement StateEntryPermitDetector (Steps 1–6 + pending + checkAndValidatePendingStateEntryPermits).
 5. Phase 5 – Wire SEPC into Search → Init → Confirm → Update → On-ride → End ride and fare/breakup/APIs.
 6. Phase 6 – Confirm API contract (two separate fields) and any rider/BAP payload updates.
-7. **Logging (at the end)** – Add info, debug and error logs across SEPC flows (detector, location-updates, Search/Init/Confirm/Update/EndRide, validation) so production behaviour and failures can be observed and debugged.
+7. **Phase 7 – Fix N+1 DB queries**: batch geom fetch via `GeometryGeom.findGeometriesByIds`, in-memory `pointInPolygon`, eliminate per-segment DB calls (see Phase 7 section below).
+8. **Logging (at the end)** – Add info, debug and error logs across SEPC flows (detector, location-updates, Search/Init/Confirm/Update/EndRide, validation) so production behaviour and failures can be observed and debugged.
 
 Where behaviour is ambiguous (e.g. “allowed states of source” exact semantics, or which state to use for pickup), mirror toll behaviour for that flow or call out for product decision.
+
+---
+
+## Phase 7: Fix N+1 DB queries in `computeChargesAlongRouteSegments` -- In-Memory Geometry Cache with `pointInPolygon`
+
+### Problem
+
+`computeChargesAlongRouteSegments` currently calls `findGeometriesContainingGps` (a DB query) for **every point** in every route segment. With N route points this produces 2N DB round-trips. Additionally, the existing in-memory cache (`loadCachedSEPCEntriesWithGeometries`) uses `findGeometryById` from `Storage.Queries.Geometry`, whose `FromTType'` instance hard-codes `geom = Nothing`:
+
+```haskell
+-- Storage/Queries/Geometry.hs
+instance FromTType' BeamG.Geometry Geometry where
+  fromTType' BeamG.GeometryT {..} =
+    pure $ Just Geometry { id = Id id, geom = Nothing, bbox = bbox, .. }
+```
+
+So even though geometries are cached in-pod, the `geom` field (the polygon data needed for point-in-polygon) is always `Nothing`, making in-memory containment checks impossible.
+
+### Solution: batch fetch with geom + parse rings once + pure pointInPolygon
+
+#### 7.1 Add `findGeometriesByIds` to `GeometryGeom.hs`
+
+`Storage.Queries.GeometryGeom` already uses `ST_AsGeoJSON` to populate `geom`. Add a single batch-fetch function there:
+
+```haskell
+-- Storage/Queries/GeometryGeom.hs
+findGeometriesByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Geometry] -> m [Geometry]
+findGeometriesByIds geomIds = do
+  let rawIds = map getId geomIds
+  dbConf <- getReplicaBeamConfig
+  result <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          fmap (\BeamG.GeometryT {..} -> (id, city, state, region, getGeomAsGeoJSON, bbox))
+            $ B.filter_' (\BeamG.GeometryT {..} -> B.sqlBool_ (id `B.in`_ (B.val_ <$> rawIds)))
+            $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
+  catMaybes <$> mapM fromTType' (fromRight [] result)
+```
+
+One DB query for all SEPC geometry IDs; returned `Geometry` values have `geom` populated via `ST_AsGeoJSON`.
+
+#### 7.2 Add `parseGeomRings` and `pointInPolygon` to `StateEntryPermitDetector.hs`
+
+The `geom` field is a GeoJSON `Text` produced by `ST_AsGeoJSON`. Parse it once at cache-load time into polygon rings (`[[LatLong]]`), then use ray-casting for all subsequent point-in-polygon checks -- zero DB calls:
+
+```haskell
+-- | Parse a GeoJSON Polygon or MultiPolygon text into a list of rings.
+-- Each ring is a list of LatLong vertices (exterior ring; holes ignored for permit detection).
+parseGeomRings :: Text -> Maybe [[LatLong]]
+parseGeomRings geomText = ...  -- decode JSON, handle "Polygon" / "MultiPolygon" coordinate arrays
+
+-- | Ray-casting (even-odd) point-in-ring test.
+pointInRing :: LatLong -> [LatLong] -> Bool
+pointInRing pt ring = ...
+
+-- | True if the point falls inside any ring of the geometry.
+pointInPolygon :: LatLong -> [[LatLong]] -> Bool
+pointInPolygon pt rings = any (pointInRing pt) rings
+```
+
+#### 7.3 Extend the in-memory cache to carry parsed polygon rings
+
+Change the cache value type to `GeomWithRings = (DGeo.Geometry, [[LatLong]])`. Parsing happens once per pod per 12-hour TTL window inside `IM.withInMemCache`:
+
+```haskell
+type GeomWithRings = (DGeo.Geometry, [[LatLong]])
+
+loadCachedSEPCEntriesWithGeometries ::
+  (MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasInMemEnv r) =>
+  m ([StateEntryPermitCharges], Map.Map (Id DGeo.Geometry) GeomWithRings)
+loadCachedSEPCEntriesWithGeometries =
+  IM.withInMemCache ["CACHED_SEPC_GEOMS", sepcGeomCacheKeyVersion] 43200 $ do
+    allSEPCEntries <- findAllStateEntryPermitCharges
+    let uniqueGeomIds = nub $ map (.geomId) allSEPCEntries
+    -- Single batch query via GeometryGeom (geom populated via ST_AsGeoJSON)
+    geoms <- findGeometriesByIds uniqueGeomIds
+    let geometryByGeomId = Map.fromList
+          [ (g.id, (g, fromMaybe [] (g.geom >>= parseGeomRings)))
+          | g <- geoms
+          ]
+    pure (allSEPCEntries, geometryByGeomId)
+```
+
+#### 7.4 Rewrite `computeChargesAlongRouteSegments` -- zero DB calls in segment loop
+
+Replace per-point `findGeometriesContainingGps` with a pure helper `containingGeomIds` that checks the cached rings:
+
+```haskell
+-- | Pure: which candidate geom IDs contain this point (checked against pre-parsed rings).
+containingGeomIds :: LatLong -> Map.Map (Id DGeo.Geometry) GeomWithRings -> Set.Set Text
+containingGeomIds pt geomMap =
+  Set.fromList [ getId gId | (gId, (_g, rings)) <- Map.toList geomMap, pointInPolygon pt rings ]
+```
+
+Inside `computeChargesAlongRouteSegments`, replace:
+
+```haskell
+  -- BEFORE (2 DB calls per segment point):
+  geoms1 <- findGeometriesContainingGps p1
+  geoms2 <- findGeometriesContainingGps p2
+```
+
+with:
+
+```haskell
+  -- AFTER (pure, zero DB calls):
+  let ids1 = containingGeomIds p1 geomWithRingsMap `Set.intersection` candidateGeomIds
+      ids2 = containingGeomIds p2 geomWithRingsMap `Set.intersection` candidateGeomIds
+      stateOf gIds = nub [ g.state | (gId, (g, _)) <- Map.toList geomWithRingsMap
+                                   , getId gId `Set.member` gIds ]
+      states1 = stateOf ids1
+      states2 = stateOf ids2
+```
+
+`computeChargesAlongRouteSegments` also gains `geomWithRingsMap` as a new parameter and drops the `EsqDBFlow` constraint (no longer needed in the segment loop).
+
+#### 7.5 Eliminate the DB call in `getSourceStateFromFirstPoint`
+
+Currently calls `findGeometriesContainingGps` (one DB query per request). With the cache available, resolve the source state in-memory:
+
+```haskell
+getSourceStateFromFirstPoint ::
+  LatLong ->
+  Context.IndianState ->
+  Map.Map (Id DGeo.Geometry) GeomWithRings ->
+  Context.IndianState
+getSourceStateFromFirstPoint firstPoint fallbackState geomMap =
+  let matchingStates = [ g.state | (_gId, (g, rings)) <- Map.toList geomMap
+                                  , pointInPolygon firstPoint rings ]
+  in fromMaybe fallbackState (listToMaybe matchingStates)
+```
+
+This makes the function pure (no `m`), removing one more DB call per request.
+
+#### 7.6 Update `getStateEntryPermitInfoOnRoute` call sites
+
+Load the cache first, then pass `geometryByGeomId :: Map (Id Geometry) GeomWithRings` to both `getSourceStateFromFirstPoint` and `computeChargesAlongRouteSegments`. The bbox-filter helpers (`filterSEPCsByAllowedState`, `filterSEPCsByRouteBboxIntersection`) use `fst` of the tuple (the `Geometry` metadata with `bbox`) unchanged.
+
+### DB call reduction summary
+
+
+| Before                                                        | After                                          |
+| ------------------------------------------------------------- | ---------------------------------------------- |
+| `findGeometryById` x N (one per unique geom ID in cache load) | `findGeometriesByIds` x 1 (single batch query) |
+| `findGeometriesContainingGps` x 2 per route segment (N+1)     | 0 -- pure in-memory `pointInPolygon`           |
+| `findGeometriesContainingGps` for source state detection      | 0 -- pure in-memory lookup                     |
+
+
+### Files to change
+
+- `[Storage/Queries/GeometryGeom.hs](Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/Storage/Queries/GeometryGeom.hs)` -- add `findGeometriesByIds`
+- `[SharedLogic/StateEntryPermitDetector.hs](Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/SharedLogic/StateEntryPermitDetector.hs)` -- add `parseGeomRings`, `pointInRing`, `pointInPolygon`, `containingGeomIds`; update `loadCachedSEPCEntriesWithGeometries`, `computeChargesAlongRouteSegments`, `getSourceStateFromFirstPoint`, `getStateEntryPermitInfoOnRoute`
+

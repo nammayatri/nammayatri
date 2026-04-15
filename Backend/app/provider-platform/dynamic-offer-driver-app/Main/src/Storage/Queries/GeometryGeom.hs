@@ -16,6 +16,7 @@
 module Storage.Queries.GeometryGeom
   ( findAllGeometries,
     findAllGeometriesForMerchant,
+    findGeometriesByIds,
     updateGeometry,
   )
 where
@@ -98,6 +99,26 @@ findAllGeometriesForMerchant _merchantId mbLimit mbOffset = do
                       (id, city, state, region, getGeomAsGeoJSON, bbox)
                   )
                   $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
+  catMaybes <$> mapM fromTType' (fromRight [] result)
+
+-- | Batch-fetch geometries by IDs with the geom column converted to GeoJSON text.
+-- Uses ST_AsGeoJSON so the geom field is populated (unlike findGeometryById which hard-codes geom = Nothing).
+-- Single DB round-trip for all IDs — used by the in-pod SEPC cache loader.
+findGeometriesByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Geometry] -> m [Geometry]
+findGeometriesByIds [] = pure []
+findGeometriesByIds geomIds = do
+  let rawIds = map getId geomIds
+  dbConf <- getReplicaBeamConfig
+  result <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          fmap
+            ( \BeamG.GeometryT {..} ->
+                (id, city, state, region, getGeomAsGeoJSON, bbox)
+            )
+            $ B.filter_' (\BeamG.GeometryT {..} -> B.sqlBool_ (id `B.in_` (B.val_ <$> rawIds)))
+            $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
   catMaybes <$> mapM fromTType' (fromRight [] result)
 
 -- | Update geometry using raw Beam update that doesn't return rows.
