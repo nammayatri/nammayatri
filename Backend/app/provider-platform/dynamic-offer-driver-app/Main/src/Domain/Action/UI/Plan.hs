@@ -115,7 +115,8 @@ data PlanEntity = PlanEntity
     dues :: [DriverDuesEntity],
     coinEntity :: Maybe CoinEntity,
     bankErrors :: [ErrorEntity],
-    cancellationPenalties :: [CancellationPenaltyInformation]
+    cancellationPenalties :: [CancellationPenaltyInformation],
+    airportRideSubscription :: Maybe HighPrecMoney
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
