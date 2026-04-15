@@ -74,6 +74,7 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
+import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
@@ -265,6 +266,10 @@ otpRideCreate driver otpCode booking clientId = do
   unless (driverInfo.enabled || fromMaybe False transporterConfig.allowDisableDriverToTakeSpecialZoneRide) $ throwError DriverAccountDisabled
   when driverInfo.blocked $ throwError (DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag))
   unless booking.isDashboardRequest $ throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo False
+  -- Verify the driver has enough liability balance to cover the airport entry
+  -- fee BEFORE creating the ride entity. Doing it here (instead of at StartRide)
+  -- ensures we don't leave an orphan ride row when the balance is insufficient.
+  unless booking.isDashboardRequest $ AirportEntryFee.checkAirportEntryFeeBalanceBeforeStartRide (fromMaybe False transporterConfig.airportEntryFeeEnabled) driver.id booking
   mFleetOwnerId <- QFDA.findByDriverId driver.id True
   (ride, rideDetails, _) <- initializeRide transporter driver booking (Just otpCode) Nothing clientId Nothing (mFleetOwnerId <&> (.fleetOwnerId) <&> Id)
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value

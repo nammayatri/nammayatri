@@ -352,6 +352,7 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType coo
                       gateName = gate.name,
                       specialLocationName = specialLocationName,
                       vehicleType = driverVehicleType,
+                      arrivalDeadlineTime = Nothing,
                       createdAt = now,
                       updatedAt = now
                     }

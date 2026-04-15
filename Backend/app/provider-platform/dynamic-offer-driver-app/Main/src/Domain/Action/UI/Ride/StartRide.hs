@@ -60,7 +60,6 @@ import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Payment.Payout.Request as PayoutRequest
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
-import SharedLogic.AirportEntryFee (checkAirportEntryFeeBalanceBeforeStartRide)
 import SharedLogic.Allocator (AllocatorJobType (..), SpecialZonePayoutJobData (..))
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -184,7 +183,6 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
     then pure APISuccess.Success
     else do
       unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus ("This ride cannot be started" <> Text.pack (show ride.status))
-      checkAirportEntryFeeBalanceBeforeStartRide (fromMaybe False transporterConfig.airportEntryFeeEnabled) driverId booking
       (point, odometer) <- case req of
         DriverReq driverReq -> do
           when (DTC.isOdometerReadingsRequired booking.tripCategory && isNothing driverReq.odometer) $ throwError $ OdometerReadingRequired (show booking.tripCategory)
