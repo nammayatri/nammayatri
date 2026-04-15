@@ -29,6 +29,7 @@ module Domain.Action.UI.Ride.EndRide
 where
 
 import qualified Beckn.OnDemand.Utils.Common as BODUC
+import qualified Data.HashMap.Strict as HM
 import Data.Either.Extra (eitherToMaybe)
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
 import Data.Maybe (listToMaybe)
@@ -89,6 +90,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified SharedLogic.BehaviourManagement.GpsTollBehavior as GpsTollBehavior
 import qualified SharedLogic.CallBAP as CallBAP
+import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
@@ -216,7 +218,7 @@ buildEndRideHandle merchantId merchantOpCityId rideId = do
         sendDashboardSms = Sms.sendDashboardSms,
         uiDistanceCalculation = QRide.updateUiDistanceCalculation,
         getCongestionChargeOnEndRide = \timeDiff mbFromLoc mbFromGeohash mbToGeohash svcTier mbDist mbDur mbRadius mbSpecialLoc mbDpVersion mocId mbEstDur mbActDur ->
-          FarePolicy.getCongestionChargeMultiplierFromModel' timeDiff mbFromLoc mbFromGeohash mbToGeohash svcTier Nothing mbDist mbDur (Just True) mbRadius mbSpecialLoc mbDpVersion mocId mbEstDur mbActDur
+          FarePolicy.getCongestionChargeMultiplierFromModel' timeDiff mbFromLoc mbFromGeohash mbToGeohash svcTier Nothing mbDist mbDur (Just True) mbRadius mbSpecialLoc mbDpVersion Nothing mocId mbEstDur mbActDur
       }
 
 -- Helper function to get driver number from Person record
@@ -244,7 +246,9 @@ type EndRideFlow m r =
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     LT.HasLocationService m r,
     HasKafkaProducer r,
-    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
+    HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   )
 
 driverEndRide ::
