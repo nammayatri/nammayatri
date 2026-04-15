@@ -22,6 +22,7 @@ SpecialZoneQueueRequest:
     status: SpecialZoneQueueRequestStatus
     response: "Maybe SpecialZoneQueueRequestResponse"
     validTill: UTCTime
+    arrivalDeadlineTime: "Maybe UTCTime"
     gateName: Text
     specialLocationName: Text
     vehicleType: Text

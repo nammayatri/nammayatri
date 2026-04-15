@@ -31,12 +31,22 @@ types:
     - totalInQueue: Int
     - inPickupZone: Int
     - outsidePickupZone: Int
+    - pendingDemand: Int
+    - driversCommittedToPickup: Int
+    - acceptedQueueRequests: Int
+    - demandThreshold: Maybe Int
+    - minDriverThreshold: Maybe Int
+    - maxDriverThreshold: Maybe Int
 
   SpecialZoneQueueStatsRes:
     - gateId: Text
     - gateName: Text
     - specialLocationName: Text
+    - canQueueUpOnGate: Bool
     - vehicleStats: "[VehicleQueueStats]"
     - totalDriversInQueue: Int
     - totalInPickupZone: Int
     - totalOutsidePickupZone: Int
+    - totalPendingDemand: Int
+    - totalDriversCommittedToPickup: Int
+    - totalAcceptedQueueRequests: Int

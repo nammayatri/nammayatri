@@ -9,6 +9,7 @@ where
 
 import qualified API.Types.UI.SpecialZoneQueue
 import Data.List (partition)
+import Data.Time (addUTCTime)
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -27,6 +28,7 @@ import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as LQSL
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator (AllocatorJobType (..), CheckPickupZoneArrivalJobData (..))
+import qualified SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival as ArrivalCheck
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.SpecialZoneDriverDemand (mkQueueSkipCountKey)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
@@ -49,8 +51,26 @@ getSpecialZoneQueueRequest (mbPersonId, _merchantId, _merchantOpCityId) = do
   let (activeRequests, acceptedRequests) = partition (\request -> request.status == Domain.Types.SpecialZoneQueueRequest.Active) allReqs
   -- Lazy-expire Active requests past validTill
   validActiveRequests <- collectValidActive now activeRequests
-  -- Accepted requests are always returned (they're waiting for arrival/ride)
-  let acceptedRes = map mkRes acceptedRequests
+  -- Accepted requests carry an arrivalDeadlineTime (stamped at Accept time).
+  -- If it's in the past, fire the (lock-guarded, idempotent) arrival check in
+  -- the background and drop the row from the response — matches what the
+  -- scheduled CheckPickupZoneArrival job would do, but eagerly so the driver
+  -- UI stays in sync without waiting for the job to fire.
+  let isStaleAccepted r = case r.arrivalDeadlineTime of
+        Just deadline -> deadline < now
+        Nothing -> False
+      (staleAccepted, freshAccepted) = partition isStaleAccepted acceptedRequests
+  forM_ staleAccepted $ \req ->
+    fork ("specialZoneArrivalCheck-" <> req.id.getId) $
+      ArrivalCheck.runArrivalCheckForRequest
+        req.id
+        req.driverId
+        req.gateId
+        req.specialLocationId
+        req.vehicleType
+        req.merchantId
+        req.merchantOperatingCityId
+  let acceptedRes = map mkRes freshAccepted
       responseRequests = validActiveRequests ++ acceptedRes
   -- Get skip count from driver's current location's special location
   mbDriverLoc <- LTSFlow.driversLocation [personId]
@@ -113,12 +133,15 @@ postSpecialZoneQueueRequestRespond (mbPersonId, _merchantId, _merchantOpCityId) 
           else req.response
   case actualResponse of
     Domain.Types.SpecialZoneQueueRequest.Accept -> do
-      QSZQR.updateResponse (Just Domain.Types.SpecialZoneQueueRequest.Accept) Domain.Types.SpecialZoneQueueRequest.Accepted requestId
+      mbGate <- Esq.runInReplica $ QGI.findById (Kernel.Types.Id.Id request.gateId)
+      let timeoutSec = maybe 1200 (fromMaybe 1200 . (.pickupZoneArrivalTimeoutInSec)) mbGate
+          arrivalDeadline = addUTCTime (fromIntegral timeoutSec) now
+      -- Persist the arrival deadline so the GET handler can lazily detect a
+      -- missed-arrival NoShow without waiting for the scheduled job.
+      QSZQR.updateToAcceptedWithArrivalDeadline requestId arrivalDeadline
       -- Supply increment: driver has committed to this gate for this variant.
       fork "specialZoneSupplyIncrementOnAccept" $
         SpecialZoneDriverDemand.runSupplyIncrementForRequest requestId.getId request.gateId request.vehicleType
-      mbGate <- Esq.runInReplica $ QGI.findById (Kernel.Types.Id.Id request.gateId)
-      let timeoutSec = maybe 1200 (fromMaybe 1200 . (.pickupZoneArrivalTimeoutInSec)) mbGate
       createJobIn @_ @'CheckPickupZoneArrival
         (Just request.merchantId)
         (Just request.merchantOperatingCityId)

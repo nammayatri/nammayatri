@@ -12,7 +12,8 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data SpecialZoneQueueRequestT f = SpecialZoneQueueRequestT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
+  { arrivalDeadlineTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
     driverId :: (B.C f Kernel.Prelude.Text),
     gateId :: (B.C f Kernel.Prelude.Text),
     gateName :: (B.C f Kernel.Prelude.Text),

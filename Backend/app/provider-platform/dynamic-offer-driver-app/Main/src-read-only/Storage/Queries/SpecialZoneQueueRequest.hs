@@ -44,7 +44,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
+    [ Se.Set Beam.arrivalDeadlineTime arrivalDeadlineTime,
+      Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.gateId gateId,
       Se.Set Beam.gateName gateName,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),

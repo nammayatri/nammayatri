@@ -15,3 +15,9 @@ ALTER TABLE atlas_driver_offer_bpp.special_zone_queue_request ADD COLUMN updated
 ALTER TABLE atlas_driver_offer_bpp.special_zone_queue_request ADD COLUMN valid_till timestamp with time zone NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.special_zone_queue_request ADD COLUMN vehicle_type text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.special_zone_queue_request ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.special_zone_queue_request ADD COLUMN arrival_deadline_time timestamp with time zone ;
