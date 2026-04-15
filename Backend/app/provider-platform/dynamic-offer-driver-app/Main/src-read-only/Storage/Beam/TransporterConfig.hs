@@ -87,6 +87,7 @@ data TransporterConfigT f = TransporterConfigT
     coinConversionRate :: B.C f Kernel.Types.Common.HighPrecMoney,
     coinExpireTime :: B.C f Kernel.Types.Common.Seconds,
     coinFeature :: B.C f Kernel.Prelude.Bool,
+    communicationChannelCharLimits :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     considerDriversForSearch :: B.C f Kernel.Prelude.Bool,
     considerSpecialZoneRideChargesInFreeTrial :: B.C f Kernel.Prelude.Bool,
     considerSpecialZoneRidesForPlanCharges :: B.C f Kernel.Prelude.Bool,

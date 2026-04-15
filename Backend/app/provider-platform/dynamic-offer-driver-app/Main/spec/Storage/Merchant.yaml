@@ -937,6 +937,12 @@ TransporterConfig:
       allowNotificationOnEmptyBadge: Bool
       feedbackNotificationDelayInSec: Int
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
+    CommunicationChannelCharLimits:
+      pushTitleLimit: Maybe Int
+      pushBodyLimit: Maybe Int
+      smsBodyLimit: Maybe Int
+      whatsappBodyLimit: Maybe Int
+      derive': Generic, Show, ToJSON, FromJSON, Read, Eq
   beamInstance:
     - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")]
     - Custom Domain.Types.UtilsTH.mkCacParseInstance
@@ -1218,6 +1224,7 @@ TransporterConfig:
     tdsFromEmail: Maybe Text
     sameRiderDriverRideCountLookbackDays: Int
     sameRiderDriverRideCountThreshold: Int
+    communicationChannelCharLimits: Maybe CommunicationChannelCharLimits
     allowPanReupload: Maybe Bool
     allowAadhaarReupload: Maybe Bool
     allowDlReupload: Maybe Bool
@@ -1289,6 +1296,7 @@ TransporterConfig:
     vehicleCategoryExcludedFromVerification: "Maybe [Text]"
     sameRiderDriverRideCountLookbackDays: Maybe Int
     sameRiderDriverRideCountThreshold: Maybe Int
+    communicationChannelCharLimits: Maybe Value
 
   beamFields:
     fcmConfig:
@@ -1380,6 +1388,8 @@ TransporterConfig:
     vehicleCategoryExcludedFromVerification: (Data.Text.pack . Kernel.Prelude.show <$>) <$> vehicleCategoryExcludedFromVerification|E
     sameRiderDriverRideCountLookbackDays: Just sameRiderDriverRideCountLookbackDays|E
     sameRiderDriverRideCountThreshold: Just sameRiderDriverRideCountThreshold|E
+    communicationChannelCharLimits: Data.Aeson.toJSON <$> communicationChannelCharLimits|E
+
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1466,6 +1476,8 @@ TransporterConfig:
     vehicleCategoryExcludedFromVerification: (mapMaybe (readMaybe . Data.Text.unpack)) <$> vehicleCategoryExcludedFromVerification|E
     sameRiderDriverRideCountLookbackDays: fromMaybe 7 sameRiderDriverRideCountLookbackDays|E
     sameRiderDriverRideCountThreshold: fromMaybe 2 sameRiderDriverRideCountThreshold|E
+    communicationChannelCharLimits: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< communicationChannelCharLimits|E
+
   constraints:
     merchantOperatingCityId: PrimaryKey
 
@@ -1536,6 +1548,7 @@ TransporterConfig:
     vehicleCategoryExcludedFromVerification: "text[]"
     minBaseFare: double precision
     allowFarePolicyUpdateBelowMinBaseFare: boolean
+    communicationChannelCharLimits: json
 
   default:
     mediaFileUrlPattern: |-
