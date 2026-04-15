@@ -25,6 +25,34 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FleetOperatorDailyStats.FleetOperatorDailyStats] -> m ())
 createMany = traverse_ create
 
+updateApprovedDriverRequestsByFleetOperatorIdAndDate ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
+updateApprovedDriverRequestsByFleetOperatorIdAndDate approvedDriverRequests fleetOperatorId fleetDriverId merchantLocalDate = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.approvedDriverRequests approvedDriverRequests, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
+          Se.Is Beam.fleetDriverId $ Se.Eq fleetDriverId,
+          Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
+        ]
+    ]
+
+updateApprovedVehicleRequestsByFleetOperatorIdAndDate ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
+updateApprovedVehicleRequestsByFleetOperatorIdAndDate approvedVehicleRequests fleetOperatorId fleetDriverId merchantLocalDate = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.approvedVehicleRequests approvedVehicleRequests, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
+          Se.Is Beam.fleetDriverId $ Se.Eq fleetDriverId,
+          Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
+        ]
+    ]
+
 updateCustomerCancellationCountByFleetOperatorIdAndDate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
@@ -76,6 +104,19 @@ updateDriverCancellationCountByFleetOperatorIdAndDate driverCancellationCount fl
           Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
         ]
     ]
+
+updateRejectedDriverRequestsByFleetOperatorIdAndDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+                                                        (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
+updateRejectedDriverRequestsByFleetOperatorIdAndDate rejectedDriverRequests fleetOperatorId fleetDriverId merchantLocalDate = do {_now <- getCurrentTime;
+                                                                                                                                  updateOneWithKV [Se.Set Beam.rejectedDriverRequests rejectedDriverRequests, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
+                                                                                                                                                                                                                                                   Se.Is Beam.fleetDriverId $ Se.Eq fleetDriverId,
+                                                                                                                                                                                                                                                   Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]}
+updateRejectedVehicleRequestsByFleetOperatorIdAndDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+                                                         (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
+updateRejectedVehicleRequestsByFleetOperatorIdAndDate rejectedVehicleRequests fleetOperatorId fleetDriverId merchantLocalDate = do {_now <- getCurrentTime;
+                                                                                                                                    updateOneWithKV [Se.Set Beam.rejectedVehicleRequests rejectedVehicleRequests, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
+                                                                                                                                                                                                                                                       Se.Is Beam.fleetDriverId $ Se.Eq fleetDriverId,
+                                                                                                                                                                                                                                                       Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]}
 
 updateDriverFirstSubscriptionByFleetOperatorIdAndDate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -172,6 +213,8 @@ updateByPrimaryKey (Domain.Types.FleetOperatorDailyStats.FleetOperatorDailyStats
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.acceptationRequestCount acceptationRequestCount,
+      Se.Set Beam.approvedDriverRequests approvedDriverRequests,
+      Se.Set Beam.approvedVehicleRequests approvedVehicleRequests,
       Se.Set Beam.cashPlatformFees cashPlatformFees,
       Se.Set Beam.cashTotalEarning cashTotalEarning,
       Se.Set Beam.currency currency,
@@ -208,6 +251,10 @@ instance FromTType' Beam.FleetOperatorDailyStats Domain.Types.FleetOperatorDaily
       Just
         Domain.Types.FleetOperatorDailyStats.FleetOperatorDailyStats
           { acceptationRequestCount = acceptationRequestCount,
+            approvedDriverRequests = approvedDriverRequests,
+            approvedVehicleRequests = approvedVehicleRequests,
+            rejectedDriverRequests = rejectedDriverRequests,
+            rejectedVehicleRequests = rejectedVehicleRequests,
             cashPlatformFees = cashPlatformFees,
             cashTotalEarning = cashTotalEarning,
             currency = currency,
@@ -240,6 +287,10 @@ instance ToTType' Beam.FleetOperatorDailyStats Domain.Types.FleetOperatorDailySt
   toTType' (Domain.Types.FleetOperatorDailyStats.FleetOperatorDailyStats {..}) = do
     Beam.FleetOperatorDailyStatsT
       { Beam.acceptationRequestCount = acceptationRequestCount,
+        Beam.approvedDriverRequests = approvedDriverRequests,
+        Beam.approvedVehicleRequests = approvedVehicleRequests,
+        Beam.rejectedDriverRequests = rejectedDriverRequests,
+        Beam.rejectedVehicleRequests = rejectedVehicleRequests,
         Beam.cashPlatformFees = cashPlatformFees,
         Beam.cashTotalEarning = cashTotalEarning,
         Beam.currency = currency,

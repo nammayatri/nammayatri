@@ -22,6 +22,10 @@ data FleetOperatorDailyStatsT f = FleetOperatorDailyStatsT
     totalRequestCount :: C f (Maybe Int),
     customerCancellationCount :: C f (Maybe Int),
     driverCancellationCount :: C f (Maybe Int),
+    approvedDriverRequests :: C f (Maybe Int),
+    approvedVehicleRequests :: C f (Maybe Int),
+    rejectedDriverRequests :: C f (Maybe Int),
+    rejectedVehicleRequests :: C f (Maybe Int),
     totalDistance :: C f (Maybe Meters),
     totalCompletedRides :: C f (Maybe Int),
     onlineTotalEarning :: C f (Maybe HighPrecMoney),
@@ -49,6 +53,10 @@ fleetOperatorDailyStatsTTable =
       totalRequestCount = "total_request_count",
       customerCancellationCount = "customer_cancellation_count",
       driverCancellationCount = "driver_cancellation_count",
+      approvedDriverRequests = "approved_driver_requests",
+      approvedVehicleRequests = "approved_vehicle_requests",
+      rejectedDriverRequests = "rejected_driver_requests",
+      rejectedVehicleRequests = "rejected_vehicle_requests",
       totalDistance = "total_distance",
       totalCompletedRides = "total_completed_rides",
       onlineTotalEarning = "online_total_earning",
@@ -116,6 +124,38 @@ sumFleetMetricsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay = do
       )
       FODSE.mkDailyFleetMetricsAggregated
       (listToMaybe res)
+
+sumApprovedDriverAndVehicleRequestsByFleetOperatorIdsAndDateRange ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Text ->
+  Day ->
+  Day ->
+  m (Int, Int, Int, Int)
+sumApprovedDriverAndVehicleRequestsByFleetOperatorIdsAndDateRange fleetOwnerId fromDay toDay = do
+  res <-
+    CH.findAll $
+      CH.select_
+        ( \fos ->
+            CH.aggregate
+              ( CH.sum_ fos.approvedDriverRequests,
+                CH.sum_ fos.approvedVehicleRequests,
+                CH.sum_ fos.rejectedDriverRequests,
+                CH.sum_ fos.rejectedVehicleRequests
+              )
+        )
+        $ CH.filter_
+          ( \fos ->
+              fos.fleetOperatorId CH.==. fleetOwnerId
+                CH.&&. fos.fleetDriverId CH.==. fleetOwnerId
+                CH.&&. fos.merchantLocalDate CH.>=. fromDay
+                CH.&&. fos.merchantLocalDate CH.<=. toDay
+          )
+          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetOperatorDailyStatsTTable)
+  pure $
+    case listToMaybe res of
+      Just (mbApprovedDriver, mbApprovedVehicle, mbRejectedDriver, mbRejectedVehicle) ->
+        (fromMaybe 0 mbApprovedDriver, fromMaybe 0 mbApprovedVehicle, fromMaybe 0 mbRejectedDriver, fromMaybe 0 mbRejectedVehicle)
+      Nothing -> (0, 0, 0, 0)
 
 sumFleetEarningsByFleetOwnerIdAndDateRange ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>

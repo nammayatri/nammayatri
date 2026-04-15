@@ -67,7 +67,6 @@ import qualified Storage.Queries.FleetBadge as QFB
 import qualified Storage.Queries.FleetBadgeAssociation as QFBA
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDV
-import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RideExtra as QRideExtra
 import qualified Storage.Queries.Route as QR
@@ -500,14 +499,8 @@ postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
     transporterConfig
     fleetDriverAssociation.driverId
     Nothing
-    ( \driverInfo -> do
-        Analytics.incrementFleetOwnerAnalyticsActiveDriverCount (Just fleetDriverAssociation.fleetOwnerId) driver.id
-        operators <- QFOA.findAllByFleetOwnerId (Id fleetDriverAssociation.fleetOwnerId) True
-        when (null operators) $ logTagError "AnalyticsAddDriver" "No operators found for fleet owner"
-        forM_ operators $ \operator -> do
-          when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.operatorId
-          Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
-    )
+    ( \_ -> do
+        Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just fleetDriverAssociation.fleetOwnerId) driver.id)
     ( \driverInfo -> do
         DDriverMode.incrementFleetOperatorStatusKeyForDriver FLEET_OWNER fleetDriverAssociation.fleetOwnerId driverInfo.driverFlowStatus
     )

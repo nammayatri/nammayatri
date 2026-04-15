@@ -826,12 +826,16 @@ data ClearManualSelectedDues = ClearManualSelectedDues
   deriving (Generic, ToJSON, ToSchema, FromJSON, Show, Ord, Eq)
 
 getInformationV2 ::
-  ( CacheFlow m r,
+  ( MonadFlow m,
+    BeamFlow m r,
+    CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    CacheFlow m r,
+    Redis.HedisFlow m r,
     HasField "s3Env" r (S3.S3Env m),
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "cloudType" r (Maybe CloudType)
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -856,12 +860,16 @@ getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant
   getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context mbServiceName (Just driverInfo) mbFleetInfo
 
 getInformation ::
-  ( CacheFlow m r,
+  ( MonadFlow m,
+    BeamFlow m r,
+    CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    CacheFlow m r,
+    Redis.HedisFlow m r,
     HasField "s3Env" r (S3.S3Env m),
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "cloudType" r (Maybe CloudType)
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -906,7 +914,19 @@ getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' c
   driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantOpCityId Nothing
   makeDriverInformationRes merchantOpCityId driverEntity driverInfo merchant driverReferralCode driverStats driverGoHomeInfo (Just currentDues) (Just manualDues) mbMd5Digest operatorReferral ((.operatorId) <$> doa) inactiveFda activeFda mbFleetInfo
 
-setActivity :: (CacheFlow m r, EsqDBFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
+setActivity ::
+  ( MonadFlow m,
+    BeamFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Bool ->
+  Maybe DriverInfo.DriverMode ->
+  m APISuccess.APISuccess
 setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
   isLocked <- withLockDriverIdForSetActivity personId
   unless isLocked $ throwError $ DriverActivityUpdateInProgress personId.getId
@@ -1109,7 +1129,21 @@ deleteHomeLocation (driverId, _, merchantOpCityId) driverHomeLocationId = do
   QDHL.deleteById driverHomeLocationId
   return APISuccess.Success
 
-buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, HasField "s3Env" r (S3.S3Env m), EsqDBFlow m r) => (SP.Person, DriverInformation, DStats.DriverStats, Id DMOC.MerchantOperatingCity) -> Plan.ServiceNames -> m DriverEntityRes
+buildDriverEntityRes ::
+  ( MonadFlow m,
+    BeamFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    HasField "s3Env" r (S3.S3Env m),
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    EsqDBFlow m r
+  ) =>
+  (SP.Person, DriverInformation, DStats.DriverStats, Id DMOC.MerchantOperatingCity) ->
+  Plan.ServiceNames ->
+  m DriverEntityRes
 buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) serviceName = do
   transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   vehicleMB <- QVehicle.findById person.id
@@ -1284,12 +1318,16 @@ deleteDriver admin driverId = do
   return Success
 
 updateDriver ::
-  ( CacheFlow m r,
+  ( MonadFlow m,
+    BeamFlow m r,
+    CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    CacheFlow m r,
+    Redis.HedisFlow m r,
     HasField "s3Env" r (S3.S3Env m),
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "version" r DeploymentVersion,
     HasField "cloudType" r (Maybe CloudType)
   ) =>
@@ -3400,7 +3438,14 @@ data DriverSpecificSubscriptionData = DriverSpecificSubscriptionData
   deriving (Generic, Show, Eq, Ord)
 
 getDriverSpecificSubscriptionDataWithSubsConfig ::
-  (EsqDBFlow m r, CacheFlow m r) =>
+  ( MonadFlow m,
+    BeamFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   TransporterConfig ->
   DriverInformation ->

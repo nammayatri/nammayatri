@@ -26,7 +26,10 @@ import Servant.Client
 data AllTimeOperatorAnalyticsRes = AllTimeOperatorAnalyticsRes
   { rating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     cancellationRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    acceptanceRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double
+    acceptanceRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    totalActiveDrivers :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    totalAssociatedDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    totalEnabledDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -70,7 +73,8 @@ data FilteredOperatorAnalyticsRes = FilteredOperatorAnalyticsRes
     driverEnabled :: Kernel.Prelude.Int,
     greaterThanOneRide :: Kernel.Prelude.Int,
     greaterThanTenRide :: Kernel.Prelude.Int,
-    greaterThanFiftyRide :: Kernel.Prelude.Int
+    greaterThanFiftyRide :: Kernel.Prelude.Int,
+    totalInspectionCompleted :: TotalInspectionCompletedRes
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -130,6 +134,15 @@ data RespondHubRequest = RespondHubRequest {operationHubRequestId :: Kernel.Prel
 
 instance Kernel.Types.HideSecrets.HideSecrets RespondHubRequest where
   hideSecrets = Kernel.Prelude.identity
+
+data TotalInspectionCompletedRes = TotalInspectionCompletedRes
+  { approvedVehicleInspection :: Kernel.Prelude.Int,
+    approvedDriverInspection :: Kernel.Prelude.Int,
+    rejectedVehicleInspection :: Kernel.Prelude.Int,
+    rejectedDriverInspection :: Kernel.Prelude.Int
+  }
+  deriving stock Generic
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data VerifyOperatorJoiningOtpReq = VerifyOperatorJoiningOtpReq
   { mobileCountryCode :: Kernel.Prelude.Text,

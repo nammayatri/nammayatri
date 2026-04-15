@@ -2,6 +2,7 @@ module Storage.Queries.SubscriptionPurchaseExtra where
 
 import Data.List (partition, sortBy)
 import Data.Ord (comparing)
+import qualified Data.Set as Set
 import Domain.Types.Extra.Plan (ServiceNames)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.SubscriptionPurchase
@@ -14,6 +15,36 @@ import qualified Lib.Finance.Domain.Types.Invoice
 import qualified Sequelize as Se
 import qualified Storage.Beam.SubscriptionPurchase as Beam
 import Storage.Queries.OrphanInstances.SubscriptionPurchase ()
+
+countActiveSubscriptionsForOwner ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  SubscriptionOwnerType ->
+  m Int
+countActiveSubscriptionsForOwner ownerId ownerType = do
+  subs <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is Beam.ownerId $ Se.Eq ownerId,
+            Se.Is Beam.ownerType $ Se.Eq ownerType,
+            Se.Is Beam.status $ Se.Eq ACTIVE
+          ]
+      ]
+  pure $ length subs
+
+findActiveDistinctOwnersByOwnerIds ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [Text] ->
+  SubscriptionOwnerType ->
+  m Int
+findActiveDistinctOwnersByOwnerIds ownerIds ownerType = do
+  if null ownerIds
+    then pure 0
+    else do
+      subs <-
+        findAllWithKV
+          [Se.And [Se.Is Beam.ownerId $ Se.In ownerIds, Se.Is Beam.ownerType $ Se.Eq ownerType, Se.Is Beam.status $ Se.Eq ACTIVE]]
+      pure $ Set.size $ Set.fromList $ map (.ownerId) subs
 
 -- | Find all ACTIVE subscriptions for an owner, sorted by purchaseTimestamp ASC (FIFO order)
 findAllActiveByOwnerAndServiceName ::

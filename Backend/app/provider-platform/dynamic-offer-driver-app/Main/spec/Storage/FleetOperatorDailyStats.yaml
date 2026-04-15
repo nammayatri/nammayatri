@@ -16,6 +16,10 @@ FleetOperatorDailyStats:
     totalRatingScore : Maybe Int
     driverFirstSubscription : Maybe Int
     inspectionCompleted : Maybe Int
+    approvedDriverRequests : Maybe Int
+    approvedVehicleRequests : Maybe Int
+    rejectedDriverRequests : Maybe Int
+    rejectedVehicleRequests : Maybe Int
     rejectedRequestCount : Maybe Int
     pulledRequestCount : Maybe Int
     acceptationRequestCount : Maybe Int
@@ -63,9 +67,33 @@ FleetOperatorDailyStats:
       where:
         and: [fleetOperatorId, fleetDriverId, merchantLocalDate]
 
+    updateApprovedDriverRequestsByFleetOperatorIdAndDate:
+      kvFunction: updateOneWithKV
+      params: [approvedDriverRequests]
+      where:
+        and: [fleetOperatorId, fleetDriverId, merchantLocalDate]
+
+    updateApprovedVehicleRequestsByFleetOperatorIdAndDate:
+      kvFunction: updateOneWithKV
+      params: [approvedVehicleRequests]
+      where:
+        and: [fleetOperatorId, fleetDriverId, merchantLocalDate]
+
     updateInspectionCompletedByFleetOperatorIdAndDate:
       kvFunction: updateOneWithKV
       params: [inspectionCompleted]
+      where:
+        and: [fleetOperatorId, fleetDriverId, merchantLocalDate]
+
+    updateRejectedDriverRequestsByFleetOperatorIdAndDate:
+      kvFunction: updateOneWithKV
+      params: [rejectedDriverRequests]
+      where:
+        and: [fleetOperatorId, fleetDriverId, merchantLocalDate]
+
+    updateRejectedVehicleRequestsByFleetOperatorIdAndDate:
+      kvFunction: updateOneWithKV
+      params: [rejectedVehicleRequests]
       where:
         and: [fleetOperatorId, fleetDriverId, merchantLocalDate]
 

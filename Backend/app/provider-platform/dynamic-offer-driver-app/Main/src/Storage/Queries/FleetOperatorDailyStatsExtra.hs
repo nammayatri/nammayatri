@@ -502,3 +502,49 @@ sumFleetEarningsByFleetOwnerIdAndDateRangeDB fleetOwnerId fromDay toDay = do
             <> show err
         )
       pure $ DailyFleetEarningsAggregated Nothing Nothing Nothing Nothing
+
+sumApprovedVehicleAndDriverRequestsByFleetOperatorIdsAndDateRangeDB ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Day ->
+  Day ->
+  m (Int, Int, Int, Int)
+sumApprovedVehicleAndDriverRequestsByFleetOperatorIdsAndDateRangeDB fleetOwnerId fromDay toDay = do
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.aggregate_
+            ( \stats ->
+                ( B.as_ @(Maybe Int) $
+                    B.sum_ (B.coalesce_ [Beam.approvedDriverRequests stats] (B.val_ 0)),
+                  B.as_ @(Maybe Int) $
+                    B.sum_ (B.coalesce_ [Beam.approvedVehicleRequests stats] (B.val_ 0)),
+                  B.as_ @(Maybe Int) $
+                    B.sum_ (B.coalesce_ [Beam.rejectedDriverRequests stats] (B.val_ 0)),
+                  B.as_ @(Maybe Int) $
+                    B.sum_ (B.coalesce_ [Beam.rejectedVehicleRequests stats] (B.val_ 0))
+                )
+            )
+            $ B.filter_'
+              ( \stats ->
+                  B.sqlBool_ (Beam.fleetOperatorId stats B.==. B.val_ fleetOwnerId)
+                    B.&&?. B.sqlBool_ (Beam.fleetDriverId stats B.==. B.val_ fleetOwnerId)
+                    B.&&?. B.sqlBool_ (Beam.merchantLocalDate stats B.>=. B.val_ fromDay)
+                    B.&&?. B.sqlBool_ (Beam.merchantLocalDate stats B.<=. B.val_ toDay)
+              )
+              $ B.all_ (BeamCommon.fleetOperatorDailyStats BeamCommon.atlasDB)
+  case res of
+    Right rows ->
+      case listToMaybe rows of
+        Just (mbApprovedDriver, mbApprovedVehicle, mbRejectedDriver, mbRejectedVehicle) ->
+          pure (fromMaybe 0 mbApprovedDriver, fromMaybe 0 mbApprovedVehicle, fromMaybe 0 mbRejectedDriver, fromMaybe 0 mbRejectedVehicle)
+        Nothing -> pure (0, 0, 0, 0)
+    Left err -> do
+      logTagError
+        "FleetOperatorDailyStats"
+        ( "DB failure in sumApprovedVehicleAndDriverRequestsByFleetOperatorIdsAndDateRangeDB. Error: "
+            <> show err
+        )
+      pure (0, 0, 0, 0)
