@@ -145,6 +145,7 @@ import Tools.Error
 import Tools.Event
 import Tools.Maps (LatLong (..))
 import Tools.Metrics (HasBAPMetrics, incrementRideCreatedRequestCount)
+import qualified Tools.EventTracking as ET
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as TP
@@ -589,6 +590,8 @@ rideAssignedReqHandler req = do
             Left err -> logError $ "Cash ride ledger create failed at assign: " <> show err
           pure Nothing
       triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
+      fork "moengage: driver_assigned" $
+        ET.trackEvent booking.merchantId booking.merchantOperatingCityId (ET.DriverAssigned (getId booking.riderId))
       let category = case booking.specialLocationTag of
             Just _ -> "specialLocation"
             Nothing -> "normal"
@@ -911,6 +914,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         QCP.create personClientInfo
         when (totalCount == 0) $ do
           Notify.notifyFirstRideEvent booking.riderId (Utils.mapServiceTierToCategory booking.vehicleServiceTierType) booking.tripCategory
+          fork "moengage: first_ride_completed" $
+            ET.trackEvent booking.merchantId booking.merchantOperatingCityId (ET.FirstRideCompleted (getId booking.riderId))
           fork ("processing referral payouts for ride: " <> ride.id.getId) $ do
             customerReferralPayout ride isValidRide riderConfig person booking.merchantId booking.merchantOperatingCityId
 
@@ -1031,6 +1036,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
 
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
+  fork "moengage: ride_completed" $
+    ET.trackEvent booking.merchantId booking.merchantOperatingCityId (ET.RideCompleted (getId booking.riderId) (fromMaybe 0 person.totalRidesCount + 1))
   when shouldUpdateRideComplete $ void $ QP.updateHasTakenValidRide booking.riderId
   otherParties <- Notify.getAllOtherRelatedPartyPersons booking
   unless (booking.status == DRB.COMPLETED) $

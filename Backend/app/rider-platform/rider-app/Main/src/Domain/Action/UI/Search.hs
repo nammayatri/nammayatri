@@ -94,6 +94,7 @@ import Tools.DynamicLogic (getConfigVersionMapForStickiness)
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
+import qualified Tools.EventTracking as ET
 import qualified Tools.Metrics as Metrics
 import Tools.Metrics.BAPMetrics.Types
 
@@ -423,6 +424,14 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
 
   Metrics.startSearchMetrics merchant.name searchRequest.id.getId
   -- triggerSearchEvent SearchEventData {searchRequest = searchRequest}
+  fork "moengage: user_searched" $
+    ET.trackEvent merchant.id merchantOperatingCityId $
+      ET.UserSearched
+        (getId person.id)
+        fromLocation.lat
+        fromLocation.lon
+        ((.lat) <$> searchRequest.toLocation)
+        ((.lon) <$> searchRequest.toLocation)
   QSearchRequest.createDSReq searchRequest
   QPFS.clearCache person.id
   fork "updating search counters" $ fraudCheck person merchantOperatingCity searchRequest
