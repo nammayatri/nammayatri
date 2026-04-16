@@ -223,7 +223,7 @@ apis:
       request:
         type: CommonDocumentCreateReq
       response:
-        type: APISuccess
+        type: CommonDocumentCreateRes
   - POST: #UnlinkDocumentAPI
       endpoint: /{personId}/unlink/document/{documentType}
       auth: ApiAuthV2
@@ -475,6 +475,9 @@ types:
     - documentData: Text
     - imageId: Maybe (Id Image)
     - derive: "'HideSecrets"
+  CommonDocumentCreateRes:
+    - result: Text
+    - documentId: Id CommonDriverOnboardingDocuments
   TriggerReminderReq:
     - documentType: DocumentType
     - dueDate: Maybe UTCTime

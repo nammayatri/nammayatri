@@ -202,7 +202,7 @@ postDriverRegistrationDocumentsCommon ::
   ApiTokenInfo ->
   Id Common.Driver ->
   Common.CommonDocumentCreateReq ->
-  Flow APISuccess
+  Flow Common.CommonDocumentCreateRes
 postDriverRegistrationDocumentsCommon merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
