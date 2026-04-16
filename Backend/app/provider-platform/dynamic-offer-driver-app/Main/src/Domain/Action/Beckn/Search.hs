@@ -394,9 +394,15 @@ handler ValidatedDSearchReq {..} sReq = do
       mbPickupZone <- case mbSlId of
         Just slId -> Esq.runInReplica $ findGateInfoByLatLongWithinRadius slId pickupLatLong 20.0
         Nothing -> pure Nothing
+      logDebug $
+        "getSpecialPickupZoneInfo area=" <> show area
+          <> " pickupLatLong=" <> show pickupLatLong
+          <> " slId=" <> show mbSlId
+          <> " gateFound=" <> show (isJust mbPickupZone)
+          <> " canQueueUp=" <> show ((.canQueueUpOnGate) <$> mbPickupZone)
       if ((.canQueueUpOnGate) <$> mbPickupZone) == Just True
-        then -- Demand counter is now bumped at Select time (per chosen variant) rather than at Search,
-        -- because at Search we don't yet know which estimate the customer will pick.
+        then -- Demand counter is bumped at Init time (per chosen variant) for both
+        -- estimate-based and quote-based (special zone OTP) flows.
           pure $ ((.id.getId) <$> mbPickupZone, (.id.getId) <$> mbPickupZone, fmap (toHighPrecMoney . Money) . (.defaultDriverExtra) =<< mbPickupZone) -- FIXME
         else pure ((.id.getId) <$> mbPickupZone, Nothing, Nothing)
 
