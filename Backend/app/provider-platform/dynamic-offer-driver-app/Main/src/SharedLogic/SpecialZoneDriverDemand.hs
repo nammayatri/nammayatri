@@ -252,22 +252,38 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant = do
   mbDemandCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkGateSearchDemandKey gateId variant)
   let demandCount = fromMaybe 0 mbDemandCount
       demandThresholdVal = fromMaybe 2 (DGI.demandThresholdFor gate variant)
-  when (demandCount >= demandThresholdVal) $ do
-    let minThreshold = fromMaybe 0 (DGI.minDriverThresholdFor gate variant)
-        -- If max isn't configured, fall back to min so we never overshoot the trigger threshold.
-        maxThreshold = fromMaybe minThreshold (DGI.maxDriverThresholdFor gate variant)
-    mbSupplyCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkGateSearchSupplyKey gateId variant)
-    let supplyCount = fromMaybe 0 mbSupplyCount
-    when (supplyCount < minThreshold) $ do
-      let needed = max 0 (maxThreshold - supplyCount)
-      when (needed > 0) $ do
-        let cooldown = fromMaybe 900 gate.notificationCooldownInSec
-        -- Pull drivers from the LTS queue for this special location, ordered by queue position.
-        queueResp <- LTSFlow.getQueueDrivers specialLocationId variant
-        let sortedDrivers = sortOn (.queuePosition) queueResp.drivers
-            queueDriverIds = map (.driverId) sortedDrivers
-        eligible <- filterEligibleDrivers gate specialLocationId variant merchantId gateId queueDriverIds
-        void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId variant cooldown (take needed eligible)
+  logDebug $
+    "checkAndNotifyDriverDemand gateId=" <> gateId <> " variant=" <> variant
+      <> " demand=" <> show demandCount <> " demandThreshold=" <> show demandThresholdVal
+  if demandCount < demandThresholdVal
+    then logDebug $ "Demand below threshold, skipping notification gateId=" <> gateId <> " variant=" <> variant
+    else do
+      let minThreshold = fromMaybe 0 (DGI.minDriverThresholdFor gate variant)
+          maxThreshold = fromMaybe minThreshold (DGI.maxDriverThresholdFor gate variant)
+      mbSupplyCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkGateSearchSupplyKey gateId variant)
+      let supplyCount = fromMaybe 0 mbSupplyCount
+      logDebug $
+        "checkAndNotifyDriverDemand gateId=" <> gateId <> " variant=" <> variant
+          <> " supply=" <> show supplyCount <> " minThreshold=" <> show minThreshold
+          <> " maxThreshold=" <> show maxThreshold
+      if supplyCount >= minThreshold
+        then logDebug $ "Supply already at/above minThreshold, skipping gateId=" <> gateId <> " variant=" <> variant
+        else do
+          let needed = max 0 (maxThreshold - supplyCount)
+          when (needed > 0) $ do
+            let cooldown = fromMaybe 900 gate.notificationCooldownInSec
+            queueResp <- LTSFlow.getQueueDrivers specialLocationId variant
+            let sortedDrivers = sortOn (.queuePosition) queueResp.drivers
+                queueDriverIds = map (.driverId) sortedDrivers
+            logInfo $
+              "Notifying drivers gateId=" <> gateId <> " variant=" <> variant
+                <> " needed=" <> show needed <> " queueSize=" <> show (length queueDriverIds)
+                <> " cooldown=" <> show cooldown
+            eligible <- filterEligibleDrivers gate specialLocationId variant merchantId gateId queueDriverIds
+            logInfo $
+              "Eligible drivers after filter gateId=" <> gateId <> " variant=" <> variant
+                <> " eligible=" <> show (length eligible) <> " toNotify=" <> show (min needed (length eligible))
+            void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId variant cooldown (take needed eligible)
 
 -- Force notify (dashboard trigger) — uses LTS queue order, skips demand/supply threshold checks
 forceNotifyDriverDemand ::

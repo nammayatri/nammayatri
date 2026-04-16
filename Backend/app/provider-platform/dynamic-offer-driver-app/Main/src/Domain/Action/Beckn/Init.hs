@@ -44,6 +44,8 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Booking
 import SharedLogic.Cancel
+import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
+import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import qualified SharedLogic.FareCalculatorV2 as FCV2
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.RiderDetails as SRD
@@ -119,8 +121,12 @@ data InitRes = InitRes
 handler ::
   ( CacheFlow m r,
     EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
     EventStreamFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasLocationService m r,
+    HasShortDurationRetryCfg r c,
+    HasRequestId r
   ) =>
   Id DM.Merchant ->
   InitReq ->
@@ -149,6 +155,25 @@ handler merchantId req validatedReq = do
         QRB.createBooking booking
         when booking.isScheduled $ void $ addScheduledBookingInRedis booking
         return (booking, Nothing, Nothing)
+  -- Special zone driver demand pipeline: fires for BOTH estimate-based (normal Select → Init)
+  -- and quote-based (special zone OTP direct Init) flows. Moved here from Select.hs because
+  -- special zone OTP rides skip Select entirely — the customer confirms a quote from on_search.
+  logDebug $
+    "Init pickupZoneGateId=" <> show searchRequest.pickupZoneGateId
+      <> " pickupGateId=" <> show searchRequest.pickupGateId
+      <> " vehicleServiceTier=" <> show booking.vehicleServiceTier
+      <> " searchRequestId=" <> searchRequest.id.getId
+  whenJust searchRequest.pickupZoneGateId $ \pickupZoneGateId -> do
+    logInfo $
+      "Firing special zone demand pipeline from Init for gateId=" <> pickupZoneGateId
+        <> " variant=" <> show booking.vehicleServiceTier
+        <> " searchRequestId=" <> searchRequest.id.getId
+    fork "specialZoneDriverDemandPipeline" $
+      SpecialZoneDriverDemand.runDemandCheckForVariants
+        searchRequest.merchantOperatingCityId
+        merchantId
+        pickupZoneGateId
+        [show booking.vehicleServiceTier]
   fork "Updating Demand Hotspots on booking" $ do
     let lat = searchRequest.fromLocation.lat
         lon = searchRequest.fromLocation.lon
