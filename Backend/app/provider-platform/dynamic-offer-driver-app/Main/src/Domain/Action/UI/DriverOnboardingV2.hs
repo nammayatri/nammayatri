@@ -1235,7 +1235,7 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
   documentEntry <- buildCommonDocument driverId
   logInfo $ "documentEntry: " <> show documentEntry
   QCommonDriverOnboardingDocuments.create documentEntry
-  return $ APITypes.CommonDocumentRes {documentId = documentEntry.id}
+  return $ APITypes.CommonDocumentRes {result = "Success", documentId = documentEntry.id}
   where
     buildCommonDocument driverId = do
       id <- generateGUID

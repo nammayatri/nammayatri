@@ -130,13 +130,14 @@ postNearbyDrivers (Just personId, merchantId) req = withLogTag $ do
             }
   where
     makeEmptyNearbyResp :: Environment.Flow ND.NearbyDriverRes
-    makeEmptyNearbyResp = return $
-      ND.NearbyDriverRes
-        { buckets = [] :: [ND.NearByDriversBucket],
-          serviceTierTypeToVehicleVariant = (A.object []) :: A.Value,
-          variantLevelDriverCount = (A.object []) :: A.Value,
-          vehicleDataBuckets = [] :: [ND.VehicleDataBucket]
-        }
+    makeEmptyNearbyResp =
+      return $
+        ND.NearbyDriverRes
+          { buckets = [] :: [ND.NearByDriversBucket],
+            serviceTierTypeToVehicleVariant = (A.object []) :: A.Value,
+            variantLevelDriverCount = (A.object []) :: A.Value,
+            vehicleDataBuckets = [] :: [ND.VehicleDataBucket]
+          }
 
     nearByDriverHitsCountKey :: Text
     nearByDriverHitsCountKey = "BAP:API:UI:NearByDriver:PersonId:" <> personId.getId <> ":hitsCount"

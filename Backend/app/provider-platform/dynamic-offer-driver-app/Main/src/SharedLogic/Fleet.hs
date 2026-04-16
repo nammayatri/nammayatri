@@ -94,7 +94,7 @@ getFleetOwnersInfoMerchantBased mbFleetOwnerId mbRequestorId hasFleetMemberHiera
               fleetOwner <- QP.findById (Id fleetOwnerId) >>= fromMaybeM (PersonNotFound fleetOwnerId)
               mbFleetOwnerInfo <- QFOI.findByPrimaryKey (Id fleetOwnerId)
               let fleetOwnerName = fleetOwner.firstName <> maybe "" (" " <>) fleetOwner.lastName
-              return [FleetOwnerInfo {fleetOwnerId, fleetOwnerName, fleetName = mbFleetOwnerInfo >>= (.fleetName), requestorId}]
+              return [FleetOwnerInfo {fleetOwnerId, fleetOwnerName, requestorId}]
     _ -> do
       -- Existing flow: consider requestor the same as fleet owner, fleet member operates on befalf of fleet owner
       fleetOwnerIds <- getFleetOwnerIds requestorId mbFleetOwnerId
