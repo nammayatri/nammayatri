@@ -394,7 +394,7 @@ postLmsQuestionConfirm (mbPersonId, _merchantId, merchantOpCityId) req = do
                   Nothing ->
                     if (isCorrect && (length allModulesCompletionInfo == 1))
                       then do
-                        _ <- DC.driverCoinsEvent personId _merchantId merchantOpCityId DCT.LMS (Just req.questionId.getId) Nothing Nothing
+                        _ <- DC.driverCoinsEvent personId Nothing _merchantId merchantOpCityId DCT.LMS (Just req.questionId.getId) Nothing Nothing
                         return (Just True)
                       else do return Nothing
                   _ -> pure Nothing
@@ -462,7 +462,7 @@ postLmsQuestionConfirm (mbPersonId, _merchantId, merchantOpCityId) req = do
                   -- adding bonus coins
                   if ((all (== 1) completedQuestionAttempts) && totalModuleCompletionEntries == 1 && moduleInfo.bonusCoinEventFunction /= Nothing)
                     then do
-                      _ <- DC.driverCoinsEvent personId _merchantId merchantOpCityId DCT.LMSBonus (Just moduleInfo.id.getId) Nothing Nothing
+                      _ <- DC.driverCoinsEvent personId Nothing _merchantId merchantOpCityId DCT.LMSBonus (Just moduleInfo.id.getId) Nothing Nothing
                       return (Just True)
                     else do return (Nothing)
                 else do return Nothing
