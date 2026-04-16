@@ -231,7 +231,7 @@ type API =
            API.Types.UI.DriverOnboardingV2.CommonDocumentReq
       :> Post
            '[JSON]
-           Kernel.Types.APISuccess.APISuccess
+           API.Types.UI.DriverOnboardingV2.CommonDocumentRes
       :<|> TokenAuth
       :> "driver"
       :> "fleet"
@@ -474,7 +474,7 @@ postDriverRegisterCommonDocument ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     API.Types.UI.DriverOnboardingV2.CommonDocumentReq ->
-    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+    Environment.FlowHandler API.Types.UI.DriverOnboardingV2.CommonDocumentRes
   )
 postDriverRegisterCommonDocument a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverRegisterCommonDocument (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 

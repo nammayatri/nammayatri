@@ -5,6 +5,7 @@ module API.Types.UI.DriverOnboardingV2 where
 import Data.OpenApi (ToSchema)
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Types.Common
+import qualified Domain.Types.CommonDriverOnboardingDocuments
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.DriverPanCard
@@ -65,6 +66,10 @@ data CommonDocumentReq = CommonDocumentReq
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     imageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image)
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CommonDocumentRes = CommonDocumentRes {documentId :: Kernel.Types.Id.Id Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
