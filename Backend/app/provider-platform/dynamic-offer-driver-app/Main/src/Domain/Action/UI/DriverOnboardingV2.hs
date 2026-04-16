@@ -916,6 +916,8 @@ buildGstCard merchantId person API.Types.UI.DriverOnboardingV2.DriverGstinReq {.
         validFrom = Nothing,
         validUpto = Nothing,
         panNumber = Nothing,
+        pincode = Nothing,
+        stateName = Nothing,
         id = id,
         gstin = encryptedGst,
         merchantId = Just merchantId,

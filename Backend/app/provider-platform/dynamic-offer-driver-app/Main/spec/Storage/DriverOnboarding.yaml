@@ -1008,6 +1008,8 @@ DriverGstin:
     validUpto: Maybe UTCTime
     verifiedBy: Maybe Domain.Types.DriverPanCard.VerifiedBy
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    pincode : Maybe Text
+    stateName : Maybe Text
   excludedFields: [merchantOperatingCityId]
   constraints:
     id: PrimaryKey
