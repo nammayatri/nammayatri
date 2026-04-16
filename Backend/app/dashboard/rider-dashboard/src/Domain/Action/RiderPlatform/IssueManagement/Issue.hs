@@ -33,7 +33,7 @@ module Domain.Action.RiderPlatform.IssueManagement.Issue
     postIssueMessageReorder,
     postIssueChatMessage,
     getIssueChatMessages,
-    postIssueChatRead
+    postIssueChatRead,
   )
 where
 

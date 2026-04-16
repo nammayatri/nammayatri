@@ -1926,6 +1926,8 @@ types:
     - conductorName: Maybe Text
     - status: Maybe DriverMode
     - driverPhoneNo: Maybe Text
+    - driverMobileCountryCode: Maybe Text
+    - driverEmail: Maybe Text
     - completedRides: Int # will remove this
     - vehicleType: Maybe VehicleVariant
     - earning: Int # this also
@@ -1937,6 +1939,7 @@ types:
     - upcomingRouteCode: Maybe Text
     - fleetOwnerId: Text
     - fleetOwnerName: Text
+    - fleetName: Maybe Text
     - requestReason: Maybe Text
     - responseReason: Maybe Text
     - associatedOn: Maybe UTCTime
