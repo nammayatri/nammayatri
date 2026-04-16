@@ -6,6 +6,7 @@ module Storage.Queries.Ride (module Storage.Queries.Ride, module ReExport) where
 
 import qualified Domain.Types.FarePolicy
 import qualified Domain.Types.Ride
+import qualified Domain.Types.RiderDetails
 import qualified Domain.Types.SubscriptionPurchase
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -105,6 +106,11 @@ updatePreviousRideTripEndPosAndTime previousRideTripEndPos previousRideTripEndTi
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateReferralFlagReason :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.RiderDetails.PayoutFlagReason -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateReferralFlagReason referralFlagReason id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.referralFlagReason referralFlagReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateRideTags :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue] -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateRideTags rideTags id = do

@@ -781,7 +781,8 @@ sendDriverToDriverReferralReward validRide ride _booking mbRiderDetails transpor
       case mbRiderDetails of
         Nothing -> pure False
         Just riderDetails -> do
-          (isValid, _) <- fraudChecksForReferralPayout validRide transporterConfig ((.hash) riderDetails.mobileNumber) riderDetails mbDailyStats
+          (isValid, mbFlagReason) <- fraudChecksForReferralPayout validRide transporterConfig ((.hash) riderDetails.mobileNumber) riderDetails mbDailyStats
+          QRide.updateReferralFlagReason mbFlagReason ride.id
           pure isValid
     when passedFraudCheck $ do
       let referralMessage = "Congratulations!"
