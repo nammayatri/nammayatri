@@ -1,0 +1,145 @@
+imports:
+  Person: Domain.Types.Person
+  Summary: Dashboard.Common
+  AdminRequest: Domain.Types.AdminRequest
+  AdminRequestStatus: Domain.Types.AdminRequest
+  ActionType: Domain.Types.AdminRequest
+  AdjustmentType: Domain.Types.AdminRequest
+  AdjustmentSource: Domain.Types.AdminRequest
+  ReferenceTable: Domain.Types.AdminRequest
+
+importPackageOverrides:
+  Domain.Types.AdminRequest: "dynamic-offer-driver-app"
+  Domain.Types.Person: "dynamic-offer-driver-app"
+
+module: AdminRequest
+
+apis:
+  - POST:
+      endpoint: /create
+      auth: ApiAuthV2
+      request:
+        type: CreateAdminRequestReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /create
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+              - requestorName: Text
+            request:
+              type: CreateAdminRequestReq
+            response:
+              type: APISuccess
+
+  - GET:
+      endpoint: /list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - adminRequestId: Id AdminRequest
+        - status: AdminRequestStatus
+        - personId: Id Person
+        - excludeCurrentAdminMaker: Bool # Admin Checker should not be the same as Admin Maker, so we hide requests created by current Admin
+        - actionType: ActionType
+        - adjustmentType: AdjustmentType
+        - referenceType: Text
+        - referenceId: Text
+        - referenceTable: ReferenceTable
+        - source: AdjustmentSource
+        - adminMakerId: Id Person
+        - adminCheckerId: Id Person
+        - from: UTCTime
+        - to: UTCTime
+      response:
+        type: AdminRequestResp
+      helperApi:
+        - GET:
+            endpoint: /list
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            query:
+              - limit: Int
+              - offset: Int
+              - adminRequestId: Id AdminRequest
+              - status: AdminRequestStatus
+              - personId: Id Person
+              - excludeCurrentAdminMaker: Bool
+              - actionType: ActionType
+              - adjustmentType: AdjustmentType
+              - referenceType: Text
+              - referenceId: Text
+              - referenceTable: ReferenceTable
+              - source: AdjustmentSource
+              - adminMakerId: Id Person
+              - adminCheckerId: Id Person
+              - from: UTCTime
+              - to: UTCTime
+            response:
+              type: AdminRequestResp
+
+  - POST:
+      endpoint: /{adminRequestId}/respond
+      auth: ApiAuthV2
+      params:
+        adminRequestId: Id AdminRequest
+      request:
+        type: RespondAdminRequestReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{adminRequestId}/respond
+            auth: ApiAuthV2
+            params:
+              adminRequestId: Id AdminRequest
+            mandatoryQuery:
+              - requestorId: Text
+              - requestorName: Text
+            request:
+              type: RespondAdminRequestReq
+            response:
+              type: APISuccess
+
+types:
+  CreateAdminRequestReq:
+    - personId: Id Person
+    - actionType: ActionType
+    - adjustmentType: Maybe AdjustmentType
+    - referenceType: Maybe Text
+    - referenceId: Text
+    - referenceTable: ReferenceTable
+    - amount: Maybe PriceAPIEntity
+    - source: Maybe AdjustmentSource
+    - description: Maybe Text
+    - derive: "'HideSecrets"
+  AdminRequestResp:
+    - summary: Summary
+    - adminRequests: [AdminRequestItem]
+  AdminRequestItem:
+    - adminRequestId: Id AdminRequest
+    - personId: Id Person
+    - actionType: ActionType
+    - adjustmentType: Maybe AdjustmentType
+    - referenceType: Maybe Text
+    - referenceId: Text
+    - referenceTable: ReferenceTable
+    - amount: Maybe PriceAPIEntity
+    - source: Maybe AdjustmentSource
+    - description: Maybe Text
+    - adminMakerId: Id Person
+    - adminCheckerId: Maybe (Id Person)
+    - status: AdminRequestStatus
+    - errorMessage: Maybe Text
+    - adminMakerName: Text
+    - adminCheckerName: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  RespondAdminRequestReq:
+    - approve: Bool
+    - recordType: NewType
+    - derive: "'HideSecrets"

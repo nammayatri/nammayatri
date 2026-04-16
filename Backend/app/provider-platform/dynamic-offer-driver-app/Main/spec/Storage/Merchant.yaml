@@ -51,6 +51,7 @@ imports:
   PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
   Role: Domain.Types.Person
   Base64: Kernel.Types.Base64
+  ActionType: Domain.Types.AdminRequest
 
 Merchant:
   derives: Generic,Show,'UsageSafety
@@ -1205,6 +1206,7 @@ TransporterConfig:
     tdsFromEmail: Maybe Text
     sameRiderDriverRideCountLookbackDays: Int
     sameRiderDriverRideCountThreshold: Int
+    enableAdminMakerChecker: Maybe [ActionType]
 
   beamType:
     currency: Maybe Currency
@@ -1519,6 +1521,7 @@ TransporterConfig:
     vehicleCategoryExcludedFromVerification: "text[]"
     minBaseFare: double precision
     allowFarePolicyUpdateBelowMinBaseFare: boolean
+    enableAdminMakerChecker: "text[]"
 
   default:
     mediaFileUrlPattern: |-

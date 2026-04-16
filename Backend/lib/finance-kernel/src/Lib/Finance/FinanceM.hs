@@ -42,6 +42,7 @@ module Lib.Finance.FinanceM
     account,
     transfer,
     transfer_,
+    adjustment_,
     transferPending,
     transferAllowZero,
     getEntryIds,
@@ -149,8 +150,9 @@ data AccountRole
   = -- Wallet flow accounts
     BuyerAsset
   | BuyerExternal
+  | SellerExpense
   | OwnerLiability
-  | OwnerExpense
+  | OwnerRevenue
   | GovtIndirect
   | GovtDirect
   | PlatformAsset
@@ -241,181 +243,173 @@ roleToInput ctx = \case
       { accountType = Asset,
         counterpartyType = Just BUYER,
         counterpartyId = Just ctx.merchantId,
-        currency = ctx.currency,
-        merchantId = ctx.merchantId,
-        merchantOperatingCityId = ctx.merchantOpCityId
+        description = Nothing,
+        ..
       }
   BuyerExternal ->
     AccountInput
       { accountType = External,
         counterpartyType = Just BUYER,
         counterpartyId = Just ctx.merchantId,
-        currency = ctx.currency,
-        merchantId = ctx.merchantId,
-        merchantOperatingCityId = ctx.merchantOpCityId
+        description = Nothing,
+        ..
+      }
+  SellerExpense ->
+    AccountInput
+      { accountType = Expense,
+        counterpartyType = Just SELLER,
+        counterpartyId = Just ctx.merchantId,
+        description = Just "Miscellaneous",
+        ..
       }
   OwnerLiability ->
     AccountInput
       { accountType = Liability,
         counterpartyType = Just ctx.counterpartyType,
         counterpartyId = Just ctx.counterpartyId,
-        currency = ctx.currency,
-        merchantId = ctx.merchantId,
-        merchantOperatingCityId = ctx.merchantOpCityId
+        description = Nothing,
+        ..
       }
-  OwnerExpense ->
+  OwnerRevenue ->
     AccountInput
-      { accountType = Expense,
+      { accountType = Revenue,
         counterpartyType = Just ctx.counterpartyType,
         counterpartyId = Just ctx.counterpartyId,
-        currency = ctx.currency,
-        merchantId = ctx.merchantId,
-        merchantOperatingCityId = ctx.merchantOpCityId
+        description = Nothing,
+        ..
       }
   GovtIndirect ->
     AccountInput
       { accountType = Liability,
         counterpartyType = Just GOVERNMENT_INDIRECT,
         counterpartyId = Just ctx.merchantId,
-        currency = ctx.currency,
-        merchantId = ctx.merchantId,
-        merchantOperatingCityId = ctx.merchantOpCityId
+        description = Nothing,
+        ..
       }
   GovtDirect ->
     AccountInput
       { accountType = Liability,
         counterpartyType = Just GOVERNMENT_DIRECT,
         counterpartyId = Just ctx.merchantId,
-        currency = ctx.currency,
-        merchantId = ctx.merchantId,
-        merchantOperatingCityId = ctx.merchantOpCityId
+        description = Nothing,
+        ..
       }
   PlatformAsset ->
     AccountInput
       { accountType = Asset,
         counterpartyType = Just SELLER,
         counterpartyId = Just ctx.merchantId,
-        currency = ctx.currency,
-        merchantId = ctx.merchantId,
-        merchantOperatingCityId = ctx.merchantOpCityId
+        description = Nothing,
+        ..
       }
   PrepaidOwner ->
     AccountInput
       { accountType = RideCredit,
         counterpartyType = Just ctx.counterpartyType,
         counterpartyId = Just ctx.counterpartyId,
-        currency = ctx.currency,
-        merchantId = ctx.merchantId,
-        merchantOperatingCityId = ctx.merchantOpCityId
+        description = Nothing,
+        ..
       }
   SellerAsset ->
     AccountInput
       { accountType = Asset,
         counterpartyType = Just SELLER,
         counterpartyId = Just ctx.merchantId,
-        currency = ctx.currency,
-        merchantId = ctx.merchantId,
-        merchantOperatingCityId = ctx.merchantOpCityId
+        description = Nothing,
+        ..
       }
   SellerLiability ->
     AccountInput
       { accountType = Liability,
         counterpartyType = Just SELLER,
         counterpartyId = Just ctx.merchantId,
-        currency = ctx.currency,
-        merchantId = ctx.merchantId,
-        merchantOperatingCityId = ctx.merchantOpCityId
+        description = Nothing,
+        ..
       }
   SellerRideCredit ->
     AccountInput
       { accountType = RideCredit,
         counterpartyType = Just SELLER,
         counterpartyId = Just ctx.merchantId,
-        currency = ctx.currency,
-        merchantId = ctx.merchantId,
-        merchantOperatingCityId = ctx.merchantOpCityId
+        description = Nothing,
+        ..
       }
   SellerRevenue ->
     AccountInput
       { accountType = Revenue,
         counterpartyType = Just SELLER,
         counterpartyId = Just ctx.merchantId,
-        currency = ctx.currency,
-        merchantId = ctx.merchantId,
-        merchantOperatingCityId = ctx.merchantOpCityId
+        description = Nothing,
+        ..
       }
   GovtDirectAsset ->
     AccountInput
       { accountType = Asset,
         counterpartyType = Just GOVERNMENT_DIRECT,
         counterpartyId = Just ctx.merchantId,
-        currency = ctx.currency,
-        merchantId = ctx.merchantId,
-        merchantOperatingCityId = ctx.merchantOpCityId
+        description = Nothing,
+        ..
       }
   GovtDirectExpense ->
     AccountInput
       { accountType = Expense,
         counterpartyType = Just GOVERNMENT_DIRECT,
         counterpartyId = Just ctx.merchantId,
-        currency = ctx.currency,
-        merchantId = ctx.merchantId,
-        merchantOperatingCityId = ctx.merchantOpCityId
+        description = Nothing,
+        ..
       }
   ParkingFeeRecipient ->
     AccountInput
       { accountType = Liability,
         counterpartyType = Just AIRPORT,
         counterpartyId = Just ctx.merchantOpCityId,
-        currency = ctx.currency,
-        merchantId = ctx.merchantId,
-        merchantOperatingCityId = ctx.merchantOpCityId
+        description = Nothing,
+        ..
       }
   PGPaymentExpense ->
     AccountInput
       { accountType = Expense,
         counterpartyType = Just PG_PAYMENT_JUSPAY,
         counterpartyId = Just ctx.merchantId,
-        currency = ctx.currency,
-        merchantId = ctx.merchantId,
-        merchantOperatingCityId = ctx.merchantOpCityId
+        description = Nothing,
+        ..
       }
   PGPaymentLiability ->
     AccountInput
       { accountType = Liability,
         counterpartyType = Just PG_PAYMENT_JUSPAY,
         counterpartyId = Just ctx.merchantId,
-        currency = ctx.currency,
-        merchantId = ctx.merchantId,
-        merchantOperatingCityId = ctx.merchantOpCityId
+        description = Nothing,
+        ..
       }
   PGPayoutExpense ->
     AccountInput
       { accountType = Expense,
         counterpartyType = Just PG_PAYOUT_JUSPAY,
         counterpartyId = Just ctx.merchantId,
-        currency = ctx.currency,
-        merchantId = ctx.merchantId,
-        merchantOperatingCityId = ctx.merchantOpCityId
+        description = Nothing,
+        ..
       }
   PGPayoutLiability ->
     AccountInput
       { accountType = Liability,
         counterpartyType = Just PG_PAYOUT_JUSPAY,
         counterpartyId = Just ctx.merchantId,
-        currency = ctx.currency,
-        merchantId = ctx.merchantId,
-        merchantOperatingCityId = ctx.merchantOpCityId
+        description = Nothing,
+        ..
       }
   PGGstAsset ->
     AccountInput
       { accountType = Asset,
         counterpartyType = Just GOVERNMENT_INDIRECT,
         counterpartyId = Just ctx.merchantId,
-        currency = ctx.currency,
-        merchantId = ctx.merchantId,
-        merchantOperatingCityId = ctx.merchantOpCityId
+        description = Nothing,
+        ..
       }
+  where
+    currency = ctx.currency
+    merchantId = ctx.merchantId
+    merchantOperatingCityId = ctx.merchantOpCityId
 
 -- | Internal helper: append an entry ID to the collected list.
 collectEntryId :: (Monad m) => Id LE.LedgerEntry -> FinanceM m ()
@@ -468,7 +462,32 @@ transfer_ ::
   HighPrecMoney ->
   Text -> -- Reference type
   FinanceM m ()
-transfer_ fromRole toRole amount refType = do
+transfer_ = transfer' LE.Expense
+
+-- | Adjustment helper, which does NOT collect the entry ID (no invoices for adjustments created for now).
+--   Positive amount: direct transfer_ fromRole -> toRole
+--   Negative amount: reversal transfer_ toRole -> fromRole
+adjustment_ ::
+  (BeamFlow.BeamFlow m r) =>
+  AccountRole ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text -> -- Reference type
+  FinanceM m ()
+adjustment_ fromRole toRole amount refType | amount > 0 = transfer' LE.Adjustment fromRole toRole amount refType
+adjustment_ fromRole toRole amount refType | amount < 0 = transfer' LE.Adjustment toRole fromRole (negate amount) refType
+adjustment_ _ _ _ _ = pure ()
+
+-- for internal use only
+transfer' ::
+  (BeamFlow.BeamFlow m r) =>
+  LE.EntryType ->
+  AccountRole ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text -> -- Reference type
+  FinanceM m ()
+transfer' entryType fromRole toRole amount refType = do
   when (amount > 0) $ do
     ctx <- ask
     fromAcc <- account fromRole
@@ -479,7 +498,7 @@ transfer_ fromRole toRole amount refType = do
               toAccountId = toAcc.id,
               amount = amount,
               currency = ctx.currency,
-              entryType = LE.Expense,
+              entryType = entryType,
               status = LE.SETTLED,
               referenceType = refType,
               referenceId = ctx.referenceId,

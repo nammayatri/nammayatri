@@ -26,7 +26,7 @@ createMany = traverse_ create
 findById :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m (Maybe Lib.Finance.Domain.Types.Invoice.Invoice))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByIssuedTo :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.Invoice.Invoice]))
+findByIssuedTo :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.Invoice.Invoice])
 findByIssuedTo issuedToType issuedToId = do findAllWithKV [Se.And [Se.Is Beam.issuedToType $ Se.Eq issuedToType, Se.Is Beam.issuedToId $ Se.Eq issuedToId]]
 
 findByNumber :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m (Maybe Lib.Finance.Domain.Types.Invoice.Invoice))

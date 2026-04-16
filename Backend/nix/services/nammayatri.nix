@@ -88,19 +88,20 @@ in
 
       haskellProcesses.processes =
         # Primary services: only depend on nammayatri-init
-        lib.listToAttrs (builtins.map
-          (name: {
-            inherit name;
-            value = {
-              imports = [
-                common
-                (haskellProcessFor name)
-              ];
-              depends_on."nammayatri-init".condition = "process_completed_successfully";
-              shutdown.signal = 9;
-            };
-          })
-          primaryExecutables)
+        lib.listToAttrs
+          (builtins.map
+            (name: {
+              inherit name;
+              value = {
+                imports = [
+                  common
+                  (haskellProcessFor name)
+                ];
+                depends_on."nammayatri-init".condition = "process_completed_successfully";
+                shutdown.signal = 9;
+              };
+            })
+            primaryExecutables)
         //
         # Secondary services: depend on nammayatri-init + primary services healthy
         lib.listToAttrs (builtins.map

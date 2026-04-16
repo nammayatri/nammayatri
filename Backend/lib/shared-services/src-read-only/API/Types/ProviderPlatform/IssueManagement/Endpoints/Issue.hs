@@ -206,9 +206,9 @@ data IssueAPIs = IssueAPIs
     postIssueOptionUpdate :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption -> IssueManagement.Common.Dashboard.Issue.UpdateIssueOptionReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postIssueMessageUpsert ::
       ( Data.ByteString.Lazy.ByteString,
-          IssueManagement.Common.Dashboard.Issue.UpsertIssueMessageReq
-        ) ->
-        EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.UpsertIssueMessageRes,
+        IssueManagement.Common.Dashboard.Issue.UpsertIssueMessageReq
+      ) ->
+      EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.UpsertIssueMessageRes,
     postIssueChatMessage :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.SendChatMessageByUserReq -> EulerHS.Types.EulerClient IssueManagement.Common.UI.Issue.ChatMessageItem,
     getIssueChatMessages :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient [IssueManagement.Common.UI.Issue.ChatMessageItem],
     postIssueChatRead :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.MarkChatReadByUserReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess

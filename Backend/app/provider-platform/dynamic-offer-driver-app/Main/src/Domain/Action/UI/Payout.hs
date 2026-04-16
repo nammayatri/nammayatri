@@ -24,7 +24,6 @@ import qualified Data.Aeson as A
 import Data.Time (utctDay)
 import qualified Domain.Action.UI.DriverCoin as DriverCoin
 import Domain.Action.UI.DriverWallet (counterpartyFromRole, makePayoutEntryIdsKey)
-import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
@@ -59,8 +58,8 @@ import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.Finance.Wallet
-import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Merchant
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Finance ()
 import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig as SCTC

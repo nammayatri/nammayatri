@@ -44,6 +44,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
+import qualified SharedLogic.Transaction as STransaction
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as MA
@@ -52,7 +53,6 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Role as QRole
 import qualified Storage.Queries.Transaction as QT
-import qualified SharedLogic.Transaction as STransaction
 import Tools.Auth
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Merchant

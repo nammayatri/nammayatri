@@ -11,13 +11,13 @@ import qualified Lib.Finance.Domain.Types.StateTransition
 import Tools.Beam.UtilsTH
 
 data CurrentStateT f = CurrentStateT
-  { currentState :: (B.C f Lib.Finance.Domain.Types.StateTransition.PaymentState),
-    entityId :: (B.C f Kernel.Prelude.Text),
-    entityType :: (B.C f Lib.Finance.Domain.Types.StateTransition.PaymentEntityType),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime)
+  { currentState :: B.C f Lib.Finance.Domain.Types.StateTransition.PaymentState,
+    entityId :: B.C f Kernel.Prelude.Text,
+    entityType :: B.C f Lib.Finance.Domain.Types.StateTransition.PaymentEntityType,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    createdAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -27,6 +27,6 @@ instance B.Table CurrentStateT where
 
 type CurrentState = CurrentStateT Identity
 
-$(enableKVPG (''CurrentStateT) [('entityId)] [])
+$(enableKVPG ''CurrentStateT ['entityId] [])
 
-$(mkTableInstancesGenericSchema (''CurrentStateT) "finance_current_state")
+$(mkTableInstancesGenericSchema ''CurrentStateT "finance_current_state")

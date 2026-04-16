@@ -38,7 +38,6 @@ module Domain.Action.UI.Ride.EndRide.Internal
     getMonth,
     pickedWaypointsForEditDestination,
     pickNWayPoints,
-    makeWalletRunningBalanceLockKey,
     makeSubscriptionRunningBalanceLockKey,
   )
 where
@@ -480,7 +479,8 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       commissionAmount = fromMaybe 0 (ride.commission <|> booking.commission)
       baseFare = totalFare - taxAmount - tollAmount - tollVatAmount - parkingAmount
 
-  Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
+  let personId = fromMaybe ride.driverId ride.fleetOwnerId
+  Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey personId.getId) 10 10 $ do
     isOnline <- do
       let forceOnline = fromMaybe False transporterConfig.driverWalletConfig.forceOnlineLedger
       -- Persist the computed ledger write mode on the booking for reconciliation
@@ -608,9 +608,6 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       Right (mbInvoiceId, _entryIds) -> do
         let mbInvoiceIdText = (.getId) <$> mbInvoiceId
         QRB.updateFinanceInvoiceId booking.id mbInvoiceIdText
-
-makeWalletRunningBalanceLockKey :: Text -> Text
-makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId
 
 sendReferralFCM ::
   ( CacheFlow m r,

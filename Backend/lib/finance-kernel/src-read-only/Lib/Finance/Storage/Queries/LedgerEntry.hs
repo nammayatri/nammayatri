@@ -23,19 +23,19 @@ create = createWithKV
 createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry] -> m ())
 createMany = traverse_ create
 
-findByFromAccount :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> m ([Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]))
+findByFromAccount :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry])
 findByFromAccount fromAccountId = do findAllWithKV [Se.Is Beam.fromAccountId $ Se.Eq (Kernel.Types.Id.getId fromAccountId)]
 
 findById :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m (Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByReference :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]))
+findByReference :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry])
 findByReference referenceType referenceId = do findAllWithKV [Se.And [Se.Is Beam.referenceType $ Se.Eq referenceType, Se.Is Beam.referenceId $ Se.Eq referenceId]]
 
-findByStatus :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> m ([Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]))
+findByStatus :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry])
 findByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
 
-findByToAccount :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> m ([Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]))
+findByToAccount :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry])
 findByToAccount toAccountId = do findAllWithKV [Se.Is Beam.toAccountId $ Se.Eq (Kernel.Types.Id.getId toAccountId)]
 
 findReversalOf ::

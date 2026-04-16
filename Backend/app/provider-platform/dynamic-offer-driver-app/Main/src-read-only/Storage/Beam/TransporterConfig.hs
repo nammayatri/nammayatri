@@ -5,6 +5,7 @@ module Storage.Beam.TransporterConfig where
 
 import qualified Data.Aeson
 import qualified Database.Beam as B
+import qualified Domain.Types.AdminRequest
 import Domain.Types.Common ()
 import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Extra.TransporterConfig
@@ -140,6 +141,7 @@ data TransporterConfigT f = TransporterConfigT
     editLocDriverPermissionNeeded :: B.C f Kernel.Prelude.Bool,
     editLocTimeThreshold :: B.C f Kernel.Types.Common.Seconds,
     emailOtpConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailOTPConfig),
+    enableAdminMakerChecker :: B.C f (Kernel.Prelude.Maybe [Domain.Types.AdminRequest.ActionType]),
     enableCoinsToDirectPayout :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableDashboardSms :: B.C f Kernel.Prelude.Bool,
     enableDirectWalletIncentives :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

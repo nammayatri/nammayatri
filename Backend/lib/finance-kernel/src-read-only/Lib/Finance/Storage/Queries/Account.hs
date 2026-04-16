@@ -25,7 +25,7 @@ createMany = traverse_ create
 
 findByCounterparty ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Account.CounterpartyType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.Account.Account]))
+  (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Account.CounterpartyType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.Account.Account])
 findByCounterparty counterpartyType counterpartyId = do findAllWithKV [Se.And [Se.Is Beam.counterpartyType $ Se.Eq counterpartyType, Se.Is Beam.counterpartyId $ Se.Eq counterpartyId]]
 
 findByCounterpartyAndType ::
