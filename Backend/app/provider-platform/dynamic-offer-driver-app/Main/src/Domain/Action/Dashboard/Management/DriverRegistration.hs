@@ -559,7 +559,7 @@ postDriverRegistrationDocumentsCommon ::
   Context.City ->
   Id Common.Driver ->
   Common.CommonDocumentCreateReq ->
-  Flow APISuccess
+  Flow Common.CommonDocumentCreateRes
 postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.CommonDocumentCreateReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -593,7 +593,7 @@ postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.Com
             updatedAt = now
           }
   QCommonDriverOnboardingDocuments.create documentEntry
-  pure Success
+  pure $ Common.CommonDocumentCreateRes {result = "Success", documentId = cast documentId}
 
 postDriverRegistrationUnlinkDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.DocumentType -> Maybe Text -> Flow Common.UnlinkDocumentResp
 postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentType mbRequestorId = do

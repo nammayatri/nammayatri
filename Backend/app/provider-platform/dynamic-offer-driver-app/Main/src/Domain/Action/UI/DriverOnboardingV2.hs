@@ -1213,7 +1213,7 @@ postDriverRegisterCommonDocument ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     API.Types.UI.DriverOnboardingV2.CommonDocumentReq ->
-    Environment.Flow API.Types.UI.DriverOnboardingV2.CommonDocumentRes
+    Environment.Flow APISuccess
   )
 postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityId) APITypes.CommonDocumentReq {..} = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
@@ -1235,7 +1235,7 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
   documentEntry <- buildCommonDocument driverId
   logInfo $ "documentEntry: " <> show documentEntry
   QCommonDriverOnboardingDocuments.create documentEntry
-  return $ APITypes.CommonDocumentRes {documentId = documentEntry.id}
+  return Success
   where
     buildCommonDocument driverId = do
       id <- generateGUID
