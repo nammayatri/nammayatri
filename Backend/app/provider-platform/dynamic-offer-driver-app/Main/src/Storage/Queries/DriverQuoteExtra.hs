@@ -19,6 +19,16 @@ import Storage.Queries.OrphanInstances.DriverQuote ()
 
 -- Extra code goes here --
 
+findActiveQuotesByEstimateId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe Domain.DriverQuote)
+findActiveQuotesByEstimateId estimateId =
+  findAllWithDb
+    [ Se.And
+        [ Se.Is BeamDQ.estimateId $ Se.Eq estimateId,
+          Se.Is BeamDQ.status $ Se.Eq Domain.Active
+        ]
+    ]
+    <&> listToMaybe
+
 findAllBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DST.SearchTry -> m [Domain.DriverQuote]
 findAllBySTId (Id searchTryId) =
   findAllWithKVAndConditionalDB

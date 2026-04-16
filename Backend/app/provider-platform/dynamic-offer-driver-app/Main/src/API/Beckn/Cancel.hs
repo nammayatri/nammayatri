@@ -44,6 +44,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import qualified Lib.DriverCoins.Types as DCT
 import Servant hiding (throwError)
+import SharedLogic.FarePolicy (clearCachedFarePolicyByEstOrQuoteId)
 import qualified SharedLogic.SearchTryLocker as STL
 import SharedLogic.SyncRide (rideSync)
 import Storage.Beam.SystemConfigs ()
@@ -101,7 +102,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
           let vehicleCategory = Utils.mapServiceTierToCategory booking.vehicleServiceTier
           bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
           ttl <- bppConfig.onCancelTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
-          context <- ContextV2.buildContextV2 Context.ON_CANCEL Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just ttl)
+          context <- ContextV2.buildContextV2_1 Context.ON_CANCEL Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just ttl)
           let cancelStatus = A.decode . A.encode =<< cancelRideReq.cancelStatus
           case cancelStatus of
             Just Enums.CONFIRM_CANCEL -> do
@@ -117,10 +118,11 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
                             cancellationFee = cancellationCharge
                           }
                   unless isReallocated $ do
-                    buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.CANCELLED) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
+                    buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.CANCELLED) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId) Nothing
                     void $
                       Callback.withCallback merchant "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
                         pure buildOnCancelMessageV2
+                    void $ clearCachedFarePolicyByEstOrQuoteId booking.quoteId
             Just Enums.SOFT_CANCEL -> do
               mbRide <- QRide.findActiveByRBId booking.id
               cancellationCharges <- maybe (return Nothing) (\ride -> DCancel.getCancellationCharges booking ride DCT.CancellationByCustomer $ DTCR.CancellationReasonCode <$> cancelRideReq.cancellationReason) mbRide
@@ -133,7 +135,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
                         cancellationSource = DBCR.ByUser,
                         cancellationFee = cancellationCharges
                       }
-              buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.SOFT_CANCEL) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
+              buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.SOFT_CANCEL) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId) Nothing
               void $
                 Callback.withCallback merchant "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
                   pure buildOnCancelMessageV2

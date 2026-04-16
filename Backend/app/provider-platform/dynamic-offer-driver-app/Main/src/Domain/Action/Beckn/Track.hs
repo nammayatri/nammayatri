@@ -67,14 +67,29 @@ track transporterId req = do
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
   unless (transporterId' == transporterId) $ throwError AccessDenied
   let isRideCompleted = (\status -> status `elem` [DRide.COMPLETED, DRide.CANCELLED]) ride.status
-  (driverLocation :: Maybe DriverLocation) <-
-    if not isValueAddNP
-      then do
-        driverLocations <- callMultiCloudDriverLocation ride
-        let resLoc = listToMaybe $ sortBy (comparing (Down . (.coordinatesCalculatedAt))) driverLocations
-        logTagDebug ("rideId:-" <> show ride.id) $ "track driverLocation:-" <> show resLoc
-        return resLoc
-      else return Nothing
+  (driverLocation :: Maybe DriverLocation) <- do
+    logDebug $ "TRACK_DEBUG: isValueAddNP=" <> show isValueAddNP <> " rideId=" <> show ride.id <> " driverId=" <> show ride.driverId <> " cloudType=" <> show ride.cloudType
+    driverLocations <- callMultiCloudDriverLocation ride
+    logDebug $ "TRACK_DEBUG: driverLocations count=" <> show (length driverLocations)
+    let resLoc = listToMaybe $ sortBy (comparing (Down . (.coordinatesCalculatedAt))) driverLocations
+    logTagDebug ("rideId:-" <> show ride.id) $ "track driverLocation:-" <> show resLoc
+    case resLoc of
+      Just _ -> return resLoc
+      Nothing -> do
+        logDebug "TRACK_DEBUG: No driver location from LTS, using booking pickup as fallback"
+        -- Fallback: use booking pickup location when LTS doesn't have driver location
+        now <- getCurrentTime
+        return . Just $ DriverLocation
+          { lat = booking.fromLocation.lat,
+            lon = booking.fromLocation.lon,
+            coordinatesCalculatedAt = now,
+            driverId = ride.driverId,
+            merchantId = booking.providerId,
+            merchantOperatingCityId = Just booking.merchantOperatingCityId,
+            rideDetails = Nothing,
+            createdAt = now,
+            updatedAt = now
+          }
   return $
     TrackRes
       { url = ride.trackingUrl,

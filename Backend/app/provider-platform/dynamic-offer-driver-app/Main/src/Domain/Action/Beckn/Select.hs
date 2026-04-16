@@ -13,6 +13,7 @@
 -}
 module Domain.Action.Beckn.Select
   ( DSelectReq (..),
+    SelectValidationResult (..),
     validateRequest,
     handler,
   )
@@ -46,6 +47,7 @@ import qualified SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Estimate as QEst
+import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
@@ -143,16 +145,28 @@ handler merchant sReq searchReq estimates = do
           nyregularCharges = if fromMaybe False searchReq.isReserveRide then find (\ac -> (ac.chargeCategory) == DAC.NYREGULAR_SUBSCRIPTION_CHARGE) conditionalCharges else Nothing
       catMaybes $ [safetyCharges, nyregularCharges]
 
-validateRequest :: Id DM.Merchant -> DSelectReq -> Flow (DM.Merchant, DSR.SearchRequest, [DEst.Estimate])
+data SelectValidationResult
+  = EstimateBasedSelect DM.Merchant DSR.SearchRequest [DEst.Estimate]
+  | QuoteBasedSelect DM.Merchant DSR.SearchRequest
+
+validateRequest :: Id DM.Merchant -> DSelectReq -> Flow SelectValidationResult
 validateRequest merchantId sReq = do
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mbEstimates <- mapM QEst.findById sReq.estimateIds
   let estimates = catMaybes mbEstimates
   case estimates of
-    [] -> throwError $ InvalidRequest "User need to select at least one estimate"
+    [] -> do
+      -- No estimates found — check if this is a quote-based (rental/special-zone) select
+      let quoteIds = Kernel.Prelude.map (\(Id eid) -> Id eid) sReq.estimateIds
+      mbQuotes <- mapM QQuote.findById quoteIds
+      case catMaybes mbQuotes of
+        (quote : _) -> do
+          searchReq <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
+          return $ QuoteBasedSelect merchant searchReq
+        [] -> throwError $ InvalidRequest "User need to select at least one estimate or quote"
     (estimate : xs) -> do
       searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
-      return (merchant, searchReq, [estimate] <> xs)
+      return $ EstimateBasedSelect merchant searchReq ([estimate] <> xs)
 
 addNammaTags :: Y.SelectTagData -> DSR.SearchRequest -> Flow ()
 addNammaTags tagData sReq = do

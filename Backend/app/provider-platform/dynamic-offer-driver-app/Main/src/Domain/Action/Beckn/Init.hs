@@ -337,18 +337,30 @@ validateRequest merchantId req = do
   now <- getCurrentTime
   case req.fulfillmentId of
     DriverQuoteId driverQuoteId -> do
-      driverQuote <- QDQuote.findById driverQuoteId >>= fromMaybeM (DriverQuoteNotFound driverQuoteId.getId)
-      searchRequest <- QSR.findById driverQuote.requestId >>= fromMaybeM (SearchRequestNotFound driverQuote.requestId.getId)
-      validatePaymentMode searchRequest
-      callWithErrorHandling searchRequest.transactionId $ do
-        -- Lock Description: This is a Lock held between Init and Cancel Search, if Cancel Search is OnGoing then the Driver Quote would be Marked Inactive post the lock release and Init will fail with `QuoteExpired`.
-        -- Lock Release: If any errors or Post Init Beckn Action Handler is executed.
-        isLockAcquired <- Redis.tryLockRedis (mkCancelSearchInitLockKey searchRequest.transactionId) 30
-        searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)
-        updatedDriverQuote <- runInMasterDbAndRedis $ QDQuote.findById driverQuoteId >>= fromMaybeM (DriverQuoteNotFound driverQuoteId.getId)
-        when (updatedDriverQuote.validTill < now || updatedDriverQuote.status == DDQ.Inactive || not isLockAcquired) $
-          throwError $ QuoteExpired updatedDriverQuote.id.getId
-        return $ ValidatedInitReq {searchRequest, quote = ValidatedEstimate updatedDriverQuote searchTry}
+      -- Try finding by ID first, then by estimateId (since fulfillmentId may be estimateId)
+      mbDriverQuote <- QDQuote.findById driverQuoteId >>= \case
+        Just dq -> pure (Just dq)
+        Nothing -> QDQuote.findActiveQuotesByEstimateId driverQuoteId.getId
+      case mbDriverQuote of
+        Just driverQuote -> do
+          searchRequest <- QSR.findById driverQuote.requestId >>= fromMaybeM (SearchRequestNotFound driverQuote.requestId.getId)
+          validatePaymentMode searchRequest
+          callWithErrorHandling searchRequest.transactionId $ do
+            isLockAcquired <- Redis.tryLockRedis (mkCancelSearchInitLockKey searchRequest.transactionId) 30
+            searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)
+            updatedDriverQuote <- runInMasterDbAndRedis $ QDQuote.findById driverQuote.id >>= fromMaybeM (DriverQuoteNotFound driverQuote.id.getId)
+            when (updatedDriverQuote.validTill < now || updatedDriverQuote.status == DDQ.Inactive || not isLockAcquired) $
+              throwError $ QuoteExpired updatedDriverQuote.id.getId
+            return $ ValidatedInitReq {searchRequest, quote = ValidatedEstimate updatedDriverQuote searchTry}
+        Nothing -> do
+          -- Fallback: try as a static Quote (rental/special-zone) if DriverQuote not found
+          let quoteId = Id driverQuoteId.getId
+          quote <- QQuote.findById quoteId >>= fromMaybeM (DriverQuoteNotFound driverQuoteId.getId)
+          when (quote.validTill < now) $
+            throwError $ QuoteExpired quote.id.getId
+          searchRequest <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
+          validatePaymentMode searchRequest
+          return $ ValidatedInitReq {searchRequest, quote = ValidatedQuote quote}
     QuoteId quoteId -> do
       quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
       when (quote.validTill < now) $

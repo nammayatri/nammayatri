@@ -72,6 +72,8 @@ import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal
 import qualified SharedLogic.CallInternalMLPricing as ML
 import SharedLogic.Cancel
+import SharedLogic.FarePolicy (clearCachedFarePolicyByEstOrQuoteId)
+import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -204,9 +206,13 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                 DS.driverScoreEventHandler ride.merchantOperatingCityId DST.OnDriverCancellation {rideTags, merchantId = merchantId, driver = driver, rideFare = Just booking.estimatedFare, currency = booking.currency, distanceUnit = booking.distanceUnit, doCancellationRateBasedBlocking}
                 DCP.accumulateCancellationPenalty (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableDriverWallet) booking ride rideTags transporterConfig driver
               Notify.notifyOnCancel ride.merchantOperatingCityId booking driver bookingCReason.source
+            -- Fetch fare policy BEFORE forking to avoid cache race condition
+            mbCancelFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
             fork "cancelRide/ReAllocate - Notify BAP" $ do
               isReallocated <- reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason isForceReallocation
-              unless isReallocated $ BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source userNoShowCharges
+              unless isReallocated $ do
+                BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source userNoShowCharges mbCancelFarePolicy
+                void $ clearCachedFarePolicyByEstOrQuoteId booking.quoteId
             computeEligibleUpgradeTiers ride transporterConfig
         )
         ( do

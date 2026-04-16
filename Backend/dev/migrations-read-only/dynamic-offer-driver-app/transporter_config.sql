@@ -792,5 +792,5 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_coins_to
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN tax_config TYPE text;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN tax_config text;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_number_of_luggages integer ;

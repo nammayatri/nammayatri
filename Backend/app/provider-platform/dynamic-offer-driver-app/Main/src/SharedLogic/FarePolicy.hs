@@ -535,7 +535,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
           plannedPerKmRateCaption = show Tags.PLANNED_PER_KM_CHARGE
           plannedPerKmRateItem = mkBreakupItem plannedPerKmRateCaption . mkValue $ show det.plannedPerKmRate
 
-          pickupChargeCaption = show Tags.DEAD_KILOMETER_FARE
+          pickupChargeCaption = show Tags.PICKUP_CHARGE
           pickupChargeBreakup = mkBreakupItem pickupChargeCaption (mkValue $ show det.deadKmFare)
 
       [minFareItem, perHourChargeItem, perExtraMinRateItem, perExtraKmRateItem, includedKmPerHrItem, plannedPerKmRateItem, pickupChargeBreakup]
@@ -571,7 +571,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
           perDayMaxAllowanceInMinutesCaption = show Tags.PER_DAY_MAX_ALLOWANCE_IN_MINS
           perDayMaxAllowanceInMinutesItem = mkBreakupItem perDayMaxAllowanceInMinutesCaption . mkValue <$> minutesToText det.perDayMaxAllowanceInMins
 
-          pickupChargeCaption = show Tags.DEAD_KILOMETER_FARE
+          pickupChargeCaption = show Tags.PICKUP_CHARGE
           pickupChargeBreakup = mkBreakupItem pickupChargeCaption (mkValue $ show det.deadKmFare)
 
       [minFareItem, pickupChargeBreakup, perHourChargeItem, perExtraMinRateItem, perExtraKmRateItem, includedKmPerHrItem, plannedPerKmRateItem, plannedPerKmRateRoundItem, perDayMaxHourAllowanceItem]
@@ -598,7 +598,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
           baseFareCaption = show Tags.BASE_FARE
           baseFareBreakup = mkBreakupItem baseFareCaption (mkValue $ show det.baseFare)
 
-          pickupChargeCaption = show Tags.DEAD_KILOMETER_FARE
+          pickupChargeCaption = show Tags.PICKUP_CHARGE
           pickupChargeBreakup = mkBreakupItem pickupChargeCaption (mkValue $ show det.deadKmFare)
 
       [baseDistanceBreakup, baseFareBreakup, pickupChargeBreakup]

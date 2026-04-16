@@ -76,6 +76,11 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
     country <- Utils.getContextCountry context
     isValueAddNP <- CQVAN.isValueAddNP bapId
     dConfirmReq <- ACL.buildConfirmReqV2 reqV2 isValueAddNP
+    -- Cache BAP_TERMS from confirm request for echoing back in on_confirm/on_status/on_update
+    let bapTermsTags = reqV2.confirmReqMessage.confirmReqMessageOrder.orderTags
+          >>= find (\tg -> (tg.tagGroupDescriptor >>= (.descriptorCode)) == Just "BAP_TERMS")
+    whenJust bapTermsTags $ \bapTerms ->
+      Redis.setExp (bapTermsCacheKey transactionId) bapTerms 86400 -- 24 hour TTL
     Redis.whenWithLockRedis (SRide.confirmLockKey dConfirmReq.bookingId) 60 $ do
       now <- getCurrentTime
       (transporter, eitherQuote) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now
@@ -86,17 +91,34 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
             void $ pushLogs "confirm" (toJSON reqV2) dConfirmRes.transporter.id.getId "MOBILITY"
           case dConfirmRes.rideInfo of
             Just rideInfo' -> do
-              fork "on_confirm with rideInfo" $ do
-                handle (errHandler dConfirmRes transporter (Just rideInfo'.driver)) $ do
-                  void $ BP.sendOnConfirmToBAP dConfirmRes.booking rideInfo'.ride rideInfo'.driver rideInfo'.vehicle transporter context
-                  when (isMeterRide dConfirmRes.booking.tripCategory) $ do
-                    let startRideReq =
-                          RAPI.StartRideReq
-                            { rideOtp = "", -- doesn't matter for meter ride, not sure why this is not made Maybe, but not changing now as its not in scope of this PR. will do seperately later.
-                              point = LatLong {lat = dConfirmRes.fromLocation.lat, lon = dConfirmRes.fromLocation.lon},
-                              odometer = Nothing
-                            }
-                    void $ RAPI.startRide' (rideInfo'.driver.id, transporter.id, dConfirmRes.booking.merchantOperatingCityId) rideInfo'.ride.id startRideReq
+              if isValueAddNP
+                then do
+                  -- On-us flow: send on_confirm with RIDE_ASSIGNED + driver details (existing behavior)
+                  fork "on_confirm with rideInfo" $ do
+                    handle (errHandler dConfirmRes transporter (Just rideInfo'.driver)) $ do
+                      void $ BP.sendOnConfirmToBAP dConfirmRes.booking rideInfo'.ride rideInfo'.driver rideInfo'.vehicle transporter context
+                      when (isMeterRide dConfirmRes.booking.tripCategory) $ do
+                        let startRideReq =
+                              RAPI.StartRideReq
+                                { rideOtp = "",
+                                  point = LatLong {lat = dConfirmRes.fromLocation.lat, lon = dConfirmRes.fromLocation.lon},
+                                  odometer = Nothing
+                                }
+                        void $ RAPI.startRide' (rideInfo'.driver.id, transporter.id, dConfirmRes.booking.merchantOperatingCityId) rideInfo'.ride.id startRideReq
+                else do
+                  -- Off-us / ONDC flow: on_confirm with RIDE_CONFIRMED, then on_update with RIDE_ASSIGNED
+                  fork "on_confirm RIDE_CONFIRMED then on_update RIDE_ASSIGNED" $ do
+                    handle (errHandler dConfirmRes transporter (Just rideInfo'.driver)) $ do
+                      callOnConfirm dConfirmRes msgId txnId bapId callbackUrl bppId bppUri city country
+                      BP.sendRideAssignedUpdateToBAP dConfirmRes.booking rideInfo'.ride rideInfo'.driver rideInfo'.vehicle False
+                      when (isMeterRide dConfirmRes.booking.tripCategory) $ do
+                        let startRideReq =
+                              RAPI.StartRideReq
+                                { rideOtp = "",
+                                  point = LatLong {lat = dConfirmRes.fromLocation.lat, lon = dConfirmRes.fromLocation.lon},
+                                  odometer = Nothing
+                                }
+                        void $ RAPI.startRide' (rideInfo'.driver.id, transporter.id, dConfirmRes.booking.merchantOperatingCityId) rideInfo'.ride.id startRideReq
             Nothing -> do
               fork "on_confirm on-us" $ do
                 handle (errHandler dConfirmRes transporter Nothing) $ do
@@ -113,7 +135,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
       | otherwise = throwM exc
 
     callOnConfirm dConfirmRes msgId txnId bapId callbackUrl bppId bppUri city country = do
-      context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just "PT2M")
+      context <- ContextV2.buildContextV2_1 Context.CONFIRM Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just "PT2M")
       let vehicleCategory = Utils.mapServiceTierToCategory dConfirmRes.booking.vehicleServiceTier
       becknConfig <- QBC.findByMerchantIdDomainAndVehicle dConfirmRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
       mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dConfirmRes.booking.quoteId
@@ -124,3 +146,6 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
 
 confirmProcessingLockKey :: Text -> Text
 confirmProcessingLockKey id = "Driver:Confirm:Processing:BookingId-" <> id
+
+bapTermsCacheKey :: Text -> Text
+bapTermsCacheKey transactionId = "Driver:BAPTerms:TransactionId-" <> transactionId

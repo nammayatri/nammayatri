@@ -26,6 +26,7 @@ module BecknV2.OnDemand.Types
     CancelReq (..),
     CancelReqMessage (..),
     Cancellation (..),
+    CancellationReason (..),
     CancellationTerm (..),
     Catalog (..),
     Category (..),
@@ -213,10 +214,14 @@ optionsAgent =
 
 -- | Describes an authorization mechanism used to start or end the fulfillment of an order. For example, in the mobility sector, the driver may require a one-time password to initiate the ride. In the healthcare sector, a patient may need to provide a password to open a video conference link during a teleconsultation.
 data Authorization = Authorization
-  { -- | Token used for authorization. This is typically generated at the BPP. The BAP can send this value to the user via any channel that it uses to authenticate the user like SMS, Email, Push notification, or in-app rendering.
+  { -- | Status of the token
+    authorizationStatus :: Maybe Text,
+    -- | Token used for authorization. This is typically generated at the BPP. The BAP can send this value to the user via any channel that it uses to authenticate the user like SMS, Email, Push notification, or in-app rendering.
     authorizationToken :: Maybe Text,
     -- | Type of authorization mechanism used. The allowed values for this field can be published as part of the network policy.
-    authorizationType :: Maybe Text
+    authorizationType :: Maybe Text,
+    -- | Timestamp in RFC3339 format until which token is valid
+    authorizationValidTo :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data, Read)
 
@@ -234,8 +239,10 @@ optionsAuthorization =
     }
   where
     table =
-      [ ("authorizationToken", "token"),
-        ("authorizationType", "type")
+      [ ("authorizationStatus", "status"),
+        ("authorizationToken", "token"),
+        ("authorizationType", "type"),
+        ("authorizationValidTo", "valid_to")
       ]
 
 -- | Describes the billing details of an entity.&lt;br&gt;This has properties like name,organization,address,email,phone,time,tax_number, created_at,updated_at
@@ -327,9 +334,10 @@ optionsCancelReqMessage =
       ]
 
 -- | Describes a cancellation event
-newtype Cancellation = Cancellation
+data Cancellation = Cancellation
   { -- |
-    cancellationCancelledBy :: Maybe Text
+    cancellationCancelledBy :: Maybe Text,
+    cancellationReason :: Maybe CancellationReason
   }
   deriving (Show, Eq, Generic, Data, Read)
 
@@ -347,7 +355,31 @@ optionsCancellation =
     }
   where
     table =
-      [ ("cancellationCancelledBy", "cancelled_by")
+      [ ("cancellationCancelledBy", "cancelled_by"),
+        ("cancellationReason", "reason")
+      ]
+
+-- | Describes the reason for cancellation
+newtype CancellationReason = CancellationReason
+  { cancellationReasonDescriptor :: Maybe Descriptor
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON CancellationReason where
+  parseJSON = genericParseJSON optionsCancellationReason
+
+instance ToJSON CancellationReason where
+  toJSON = genericToJSON optionsCancellationReason
+
+optionsCancellationReason :: Options
+optionsCancellationReason =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("cancellationReasonDescriptor", "descriptor")
       ]
 
 -- | Describes the cancellation terms of an item or an order. This can be referenced at an item or order level. Item-level cancellation terms can override the terms at the order level.
@@ -385,7 +417,9 @@ data Catalog = Catalog
   { -- |
     catalogDescriptor :: Maybe Descriptor,
     -- |
-    catalogProviders :: Maybe [Provider]
+    catalogProviders :: Maybe [Provider],
+    -- | Tags associated with this catalog (e.g. BPP_TERMS)
+    catalogTags :: Maybe [TagGroup]
   }
   deriving (Show, Eq, Generic, Data, Read)
 
@@ -404,7 +438,8 @@ optionsCatalog =
   where
     table =
       [ ("catalogDescriptor", "descriptor"),
-        ("catalogProviders", "providers")
+        ("catalogProviders", "providers"),
+        ("catalogTags", "tags")
       ]
 
 -- | Describes an item category
@@ -927,7 +962,9 @@ optionsIntent =
 
 -- | Describes a product or a service offered to the end consumer by the provider. In the mobility sector, it can represent a fare product like one way journey. In the logistics sector, it can represent the delivery service offering. In the retail domain it can represent a product like a grocery item.
 data Item = Item
-  { -- | Category IDs this item belongs to — new in 2.1.0
+  { -- | Cancellation terms for this item
+    itemCancellationTerms :: Maybe [CancellationTerm],
+    -- | Category IDs this item belongs to — new in 2.1.0
     itemCategoryIds :: Maybe [Text],
     -- |
     itemDescriptor :: Maybe Descriptor,
@@ -960,7 +997,8 @@ optionsItem =
     }
   where
     table =
-      [ ("itemCategoryIds", "category_ids"),
+      [ ("itemCancellationTerms", "cancellation_terms"),
+        ("itemCategoryIds", "category_ids"),
         ("itemDescriptor", "descriptor"),
         ("itemFulfillmentIds", "fulfillment_ids"),
         ("itemId", "id"),
@@ -1383,6 +1421,8 @@ data Order = Order
     orderQuote :: Maybe Quotation,
     -- | Status of the order. Allowed values can be defined by the network policy
     orderStatus :: Maybe Text,
+    -- | Tags associated with this order (e.g. BPP_TERMS)
+    orderTags :: Maybe [TagGroup],
     -- | The date-time of updated of this order
     orderUpdatedAt :: Maybe UTCTime
   }
@@ -1413,6 +1453,7 @@ optionsOrder =
         ("orderProvider", "provider"),
         ("orderQuote", "quote"),
         ("orderStatus", "status"),
+        ("orderTags", "tags"),
         ("orderUpdatedAt", "updated_at")
       ]
 
@@ -1581,7 +1622,9 @@ data Provider = Provider
     -- |
     providerLocations :: Maybe [Location],
     -- |
-    providerPayments :: Maybe [Payment]
+    providerPayments :: Maybe [Payment],
+    -- | Tags associated with this provider (e.g. BPP_TERMS)
+    providerTags :: Maybe [TagGroup]
   }
   deriving (Show, Eq, Generic, Data, Read)
 
@@ -1605,7 +1648,8 @@ optionsProvider =
         ("providerId", "id"),
         ("providerItems", "items"),
         ("providerLocations", "locations"),
-        ("providerPayments", "payments")
+        ("providerPayments", "payments"),
+        ("providerTags", "tags")
       ]
 
 -- | Describes a quote. It is the estimated price of products or services from the BPP.&lt;br&gt;This has properties like price, breakup, ttl

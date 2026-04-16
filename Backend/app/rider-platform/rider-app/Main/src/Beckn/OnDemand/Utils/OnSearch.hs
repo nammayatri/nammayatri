@@ -386,7 +386,7 @@ getPerDayMaxAllowanceInMins tagGroups = do
 
 getDeadKilometerFare :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 getDeadKilometerFare tagGroups currency = do
-  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.DEAD_KILOMETER_FARE tagGroups
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PICKUP_CHARGE tagGroups
   deadKmFare <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency deadKmFare
 

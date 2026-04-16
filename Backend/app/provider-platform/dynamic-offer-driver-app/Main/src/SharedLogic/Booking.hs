@@ -84,7 +84,7 @@ cancelBooking booking mbDriver transporter = do
       void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
 
     fork "cancelBooking - Notify BAP" $ do
-      BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source Nothing
+      BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source Nothing Nothing
     whenJust mbRide $ \ride ->
       case mbDriver of
         Nothing -> throwError (PersonNotFound ride.driverId.getId)

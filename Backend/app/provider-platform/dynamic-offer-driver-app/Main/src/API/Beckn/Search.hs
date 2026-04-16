@@ -23,7 +23,6 @@ import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Data.Aeson.Text as A
-import Data.List.Extra (notNull)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Domain.Action.Beckn.Search as DSearch
@@ -52,7 +51,6 @@ import TransactionLogs.PushLogs
 type API =
   Capture "merchantId" (Id DM.Merchant)
     :> SignatureAuth 'Domain.MOBILITY "Authorization"
-    :> SignatureAuth 'Domain.MOBILITY "X-Gateway-Authorization"
     :> Search.SearchAPI
 
 handler :: FlowServer API
@@ -62,21 +60,17 @@ forwardSearchToBpp ::
   BaseUrl ->
   Id DM.Merchant ->
   SignatureAuthResult ->
-  SignatureAuthResult ->
   Search.SearchReqV2 ->
   Flow AckResponse
-forwardSearchToBpp redirectBaseUrl merchantId authResult gatewayAuthResult reqV2 = do
+forwardSearchToBpp redirectBaseUrl merchantId authResult reqV2 = do
   let basePath = Kernel.baseUrlPath redirectBaseUrl
       becknPath = basePath <> "/beckn/" <> T.unpack merchantId.getId
       redirectedUrl = redirectBaseUrl {Kernel.baseUrlPath = becknPath}
   logInfo $ "Forwarding to " <> Kernel.showBaseUrl redirectedUrl <> " for merchant " <> merchantId.getId
   let baseClient = ET.client Search.searchAPI reqV2
-      gatewaySignature = decodeUtf8 $ HttpSig.encode gatewayAuthResult.signature
       clientWithHeaders =
         withHeaders
-          [ ("Authorization", decodeUtf8 $ HttpSig.encode authResult.signature),
-            ("X-Gateway-Authorization", gatewaySignature),
-            ("Proxy-Authorization", gatewaySignature)
+          [ ("Authorization", decodeUtf8 $ HttpSig.encode authResult.signature)
           ]
           baseClient
   callAPI redirectedUrl clientWithHeaders "search" Search.searchAPI
@@ -85,14 +79,13 @@ forwardSearchToBpp redirectBaseUrl merchantId authResult gatewayAuthResult reqV2
 search ::
   Id DM.Merchant ->
   SignatureAuthResult ->
-  SignatureAuthResult ->
   Search.SearchReqV2 ->
   FlowHandler AckResponse
-search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAPI $ do
+search transporterId authResult reqV2 = withFlowHandlerBecknAPI $ do
   bapUri <- Utils.getContextBapUri reqV2.searchReqContext
   redirectMap <- asks (.bapHostRedirectMap)
   case shouldRedirectBapHost redirectMap bapUri of
-    Just (Just url) -> forwardSearchToBpp url transporterId authResult gatewayAuthResult reqV2
+    Just (Just url) -> forwardSearchToBpp url transporterId authResult reqV2
     _ -> do
       -- Process locally
       transactionId <- Utils.getTransactionId reqV2.searchReqContext
@@ -117,21 +110,16 @@ search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAP
           bppUri <- Utils.mkBppUri transporterId.getId
           fork "search request processing" $
             Redis.whenWithLockRedis (searchProcessingLockKey dSearchReq.messageId transporterId.getId) 60 $ do
-              dSearchResWithQuotes <- DSearch.handler validatedSReq dSearchReq
+              dSearchRes <- DSearch.handler validatedSReq dSearchReq
               internalEndPointHashMap <- asks (.internalEndPointHashMap)
 
               isValueAddNP <- VNP.isValueAddNP dSearchReq.bapId
-              let dSearchResWihoutQuotes = dSearchResWithQuotes {DSearch.quotes = []}
-              -- in case of non value-add-np transactions, when quotes are present, setting them empty to avoid sending quotes to BAP.
-              let dSearchRes = bool dSearchResWihoutQuotes dSearchResWithQuotes isValueAddNP
-
-              when ((notNull dSearchRes.quotes && isValueAddNP) || null dSearchRes.quotes) $ do
-                onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapUri (Just bppId) (Just bppUri) city country isValueAddNP
-                let context' = onSearchReq.onSearchReqContext
-                logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
-                void $
-                  Callback.withCallback dSearchRes.provider "on_search" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ do
-                    pure onSearchReq
+              onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapUri (Just bppId) (Just bppUri) city country isValueAddNP
+              let context' = onSearchReq.onSearchReqContext
+              logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
+              void $
+                Callback.withCallback dSearchRes.provider "on_search" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ do
+                  pure onSearchReq
         pure Ack
 
 searchLockKey :: Text -> Text -> Text

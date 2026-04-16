@@ -104,6 +104,7 @@ emptyOrder =
       orderProvider = Nothing,
       orderQuote = Nothing,
       orderStatus = Nothing,
+      orderTags = Nothing,
       orderUpdatedAt = Nothing
     }
 
@@ -170,7 +171,8 @@ emptyAgent =
 emptyItem :: Item
 emptyItem =
   Item
-    { itemCategoryIds = Nothing,
+    { itemCancellationTerms = Nothing,
+      itemCategoryIds = Nothing,
       itemDescriptor = Nothing,
       itemFulfillmentIds = Nothing,
       itemId = Nothing,
@@ -190,5 +192,6 @@ emptyProvider =
       providerId = Nothing,
       providerItems = Nothing,
       providerLocations = Nothing,
-      providerPayments = Nothing
+      providerPayments = Nothing,
+      providerTags = Nothing
     }

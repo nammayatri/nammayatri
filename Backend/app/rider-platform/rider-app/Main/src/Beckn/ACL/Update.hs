@@ -128,6 +128,7 @@ mkUpdateMessage req (UPaymentCompletedBuildReqDetails details) = do
             orderUpdatedAt = Nothing,
             orderQuote = Nothing,
             orderStatus = Nothing,
+            orderTags = Nothing,
             orderPayments =
               Just
                 [ Spec.Payment
@@ -180,6 +181,7 @@ mkUpdateMessage req (UEditLocationBuildReqDetails details) = do
             orderCreatedAt = Nothing,
             orderUpdatedAt = Nothing,
             orderStatus = Just $ show details.status,
+            orderTags = Nothing,
             orderPayments = Nothing,
             orderFulfillments =
               Just
@@ -221,6 +223,7 @@ mkUpdateMessage req (UAddStopBuildReqDetails details) = do
             orderCreatedAt = Nothing,
             orderUpdatedAt = Nothing,
             orderStatus = Nothing,
+            orderTags = Nothing,
             orderPayments = Nothing,
             orderFulfillments =
               Just
@@ -260,6 +263,7 @@ mkUpdateMessage req (UEditStopBuildReqDetails details) = do
             orderProvider = Nothing,
             orderQuote = Nothing,
             orderStatus = Nothing,
+            orderTags = Nothing,
             orderPayments = Nothing,
             orderCreatedAt = Nothing,
             orderUpdatedAt = Nothing,

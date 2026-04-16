@@ -83,6 +83,17 @@ type API =
                     :> Get '[JSON] DRide.DriverRideListRes
                     :<|> TokenAuth
                     :> Capture "rideId" (Id Ride.Ride)
+                    :> "enroute"
+                    :> "pickup"
+                    :> Post '[JSON] APISuccess
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
+                    :> "enroute"
+                    :> "pickup"
+                    :> "status"
+                    :> Post '[JSON] APISuccess
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
                     :> "arrived"
                     :> "pickup"
                     :> ReqBody '[JSON] LatLong
@@ -173,6 +184,8 @@ handler :: FlowServer API
 handler =
   otpRideCreateAndStart
     :<|> ( listDriverRides
+             :<|> enroutePickup
+             :<|> enroutePickupStatus
              :<|> arrivedAtPickup
              :<|> startRide
              :<|> endRide
@@ -254,6 +267,12 @@ listDriverRides ::
   Maybe Int ->
   FlowHandler DRide.DriverRideListRes
 listDriverRides (driverId, _, mocId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDay = withFlowHandlerAPI $ DRide.listDriverRides driverId (Just mocId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay Nothing mbNumOfDay
+
+enroutePickup :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> FlowHandler APISuccess
+enroutePickup (_, _, _) rideId = withFlowHandlerAPI $ DRide.enroutePickup rideId
+
+enroutePickupStatus :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> FlowHandler APISuccess
+enroutePickupStatus (_, _, _) rideId = withFlowHandlerAPI $ DRide.sendEnroutePickupStatus rideId
 
 arrivedAtPickup :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
 arrivedAtPickup (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtPickup rideId req

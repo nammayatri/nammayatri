@@ -58,7 +58,7 @@ buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country b
   becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   ttl <- becknConfig.onUpdateTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   bapUri <- Kernel.Prelude.parseBaseUrl booking.bapUri
-  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
+  context <- CU.buildContextV2_1 action domain messageId (Just booking.transactionId) booking.bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
   message <- mkOnUpdateMessageV2 req farePolicy becknConfig
   pure $
@@ -106,7 +106,8 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderItems =
             Just . List.singleton $
               Spec.Item
-                { itemId = Just estimateId.getId,
+                { itemCancellationTerms = Nothing,
+                  itemId = Just estimateId.getId,
                   itemCategoryIds = Just [Utils.tripCategoryToCategoryCode booking.tripCategory],
                   itemDescriptor = Nothing,
                   itemFulfillmentIds = Nothing,
@@ -122,6 +123,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderProvider = Nothing,
           orderQuote = Nothing,
           orderStatus = Nothing,
+          orderTags = Nothing,
           orderCreatedAt = Just booking.createdAt,
           orderUpdatedAt = Just booking.updatedAt
         }
@@ -141,6 +143,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderProvider = Nothing,
           orderQuote = Nothing,
           orderStatus = Nothing,
+          orderTags = Nothing,
           orderCreatedAt = Just booking.createdAt,
           orderUpdatedAt = Just booking.updatedAt
         }
@@ -160,6 +163,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderProvider = Nothing,
           orderQuote = Nothing,
           orderStatus = Nothing,
+          orderTags = Nothing,
           orderCreatedAt = Just booking.createdAt,
           orderUpdatedAt = Just booking.updatedAt
         }
@@ -178,6 +182,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderProvider = Nothing,
           orderQuote = Nothing,
           orderStatus = Nothing,
+          orderTags = Nothing,
           orderCreatedAt = Just booking.createdAt,
           orderUpdatedAt = Just booking.updatedAt
         }
@@ -196,6 +201,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderProvider = Nothing,
           orderQuote = Nothing,
           orderStatus = Nothing,
+          orderTags = Nothing,
           orderCreatedAt = Just booking.createdAt,
           orderUpdatedAt = Just booking.updatedAt
         }
@@ -214,6 +220,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderProvider = Nothing,
           orderQuote = Nothing,
           orderStatus = Nothing,
+          orderTags = Nothing,
           orderCreatedAt = Just booking.createdAt,
           orderUpdatedAt = Just booking.updatedAt
         }
@@ -241,6 +248,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
             personTag = if isValueAddNP then Utils.mkLocationTagGroupV2 currentLocation else Nothing
         Utils.mkFulfillmentV2SoftUpdate (Just driver) (Just driverStats) ride booking (Just vehicle) Nothing updateDetailsTagGroup personTag False False Nothing Nothing isValueAddNP newDestination' False 0
       OU.CONFIRM_UPDATE -> Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) Nothing Nothing Nothing False False Nothing Nothing isValueAddNP Nothing False 0
+    mbCachedBapTerms <- Utils.getCachedBapTerms booking.transactionId
     pure $
       Spec.Order
         { orderId = Just $ booking.id.getId,
@@ -253,6 +261,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderPayments = Just [payment],
           orderProvider = Utils.tfProvider becknConfig,
           orderQuote = quote,
+          orderTags = Utils.mkOrderTagsWithBapTerms mbCachedBapTerms (Just booking.estimatedFare) becknConfig,
           orderCreatedAt = Just booking.createdAt,
           orderUpdatedAt = Just booking.updatedAt
         }
@@ -267,7 +276,8 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderItems =
             Just . List.singleton $
               Spec.Item
-                { itemId = Just newBookingId.getId,
+                { itemCancellationTerms = Nothing,
+                  itemId = Just newBookingId.getId,
                   itemCategoryIds = Just [Utils.tripCategoryToCategoryCode booking.tripCategory],
                   itemDescriptor = Nothing,
                   itemFulfillmentIds = Nothing,
@@ -283,6 +293,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderProvider = Nothing,
           orderQuote = Nothing,
           orderStatus = Nothing,
+          orderTags = Nothing,
           orderCreatedAt = Just booking.createdAt,
           orderUpdatedAt = Just booking.updatedAt
         }
@@ -301,6 +312,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderProvider = Nothing,
           orderQuote = Nothing,
           orderStatus = Nothing,
+          orderTags = Nothing,
           orderCreatedAt = Just booking.createdAt,
           orderUpdatedAt = Just booking.updatedAt
         }
@@ -320,6 +332,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderProvider = Nothing,
           orderQuote = Nothing,
           orderStatus = Nothing,
+          orderTags = Nothing,
           orderCreatedAt = Just booking.createdAt,
           orderUpdatedAt = Just booking.updatedAt
         }
@@ -339,6 +352,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderProvider = Nothing,
           orderQuote = Nothing,
           orderStatus = Nothing,
+          orderTags = Nothing,
           orderCreatedAt = Just booking.createdAt,
           orderUpdatedAt = Just booking.updatedAt
         }

@@ -77,7 +77,7 @@ buildOnUpdateError merchant booking mbMessageId req = do
   becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   ttl <- becknConfig.onUpdateTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   bapUri <- parseBaseUrl booking.bapUri
-  context <- CU.buildContextV2 Context.ON_UPDATE Context.MOBILITY (fromMaybe msgId mbMessageId) (Just booking.transactionId) booking.bapId bapUri (Just bppId) (Just bppUri) city country (Just ttl)
+  context <- CU.buildContextV2_1 Context.ON_UPDATE Context.MOBILITY (fromMaybe msgId mbMessageId) (Just booking.transactionId) booking.bapId bapUri (Just bppId) (Just bppUri) city country (Just ttl)
   -- farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
   pure $
     Spec.OnUpdateReq

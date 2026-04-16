@@ -246,12 +246,14 @@ getDriverIdentifier req = do
 
 getPaymentMode :: Spec.SearchReqMessage -> Maybe DMPM.PaymentMode
 getPaymentMode req = do
-  let tagGroups = req.searchReqMessageIntent >>= (.intentPayment) >>= (.paymentTags)
-  -- Try SETTLEMENT_TERMS first (v2.0.0), then BAP_TERMS (v2.1.0)
+  let paymentTagGroups = req.searchReqMessageIntent >>= (.intentPayment) >>= (.paymentTags)
+      -- In v2.1.0, BAP_TERMS are at intent.tags level instead of intent.payment.tags
+      intentTagGroups = req.searchReqMessageIntent >>= (.intentTags)
   isTestMode <-
     readMaybe . T.unpack
-      =<< ( Utils.getTagV2 Tag.SETTLEMENT_TERMS Tag.STRIPE_TEST tagGroups
-              <|> Utils.getTagV2 Tag.BAP_TERMS Tag.STRIPE_TEST tagGroups
+      =<< ( Utils.getTagV2 Tag.SETTLEMENT_TERMS Tag.STRIPE_TEST paymentTagGroups
+              <|> Utils.getTagV2 Tag.BAP_TERMS Tag.STRIPE_TEST paymentTagGroups
+              <|> Utils.getTagV2 Tag.BAP_TERMS Tag.STRIPE_TEST intentTagGroups
           )
   pure $ if isTestMode then DMPM.TEST else DMPM.LIVE
 

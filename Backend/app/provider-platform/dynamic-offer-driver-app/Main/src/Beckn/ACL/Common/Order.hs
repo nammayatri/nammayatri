@@ -242,7 +242,7 @@ mkRideCompletedPayment currency paymentMethodInfo paymentUrl = do
       uri = paymentUrl
     }
 
-tfAssignedReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DRideAssignedReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> EventEnum.FulfillmentState -> m Spec.Order
+tfAssignedReqToOrder :: (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Common.DRideAssignedReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> EventEnum.FulfillmentState -> m Spec.Order
 tfAssignedReqToOrder Common.DRideAssignedReq {..} mbFarePolicy becknConfig fulfillmentState = do
   let Common.BookingDetails {..} = bookingDetails
       arrivalTimeTagGroup = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime else Nothing
@@ -256,6 +256,7 @@ tfAssignedReqToOrder Common.DRideAssignedReq {..} mbFarePolicy becknConfig fulfi
       payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig booking
   logDebug $ "currentRideDropLocation: " <> show currentRideDropLocation
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) image tagGroups Nothing isDriverBirthDay isFreeRide driverAccountId (Just $ show fulfillmentState) isValueAddNP riderPhone isAlreadyFav favCount
+  mbCachedBapTerms <- Utils.getCachedBapTerms booking.transactionId
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
@@ -268,11 +269,12 @@ tfAssignedReqToOrder Common.DRideAssignedReq {..} mbFarePolicy becknConfig fulfi
         orderPayments = Just [payment],
         orderProvider = Utils.tfProvider becknConfig,
         orderQuote = quote,
+        orderTags = Utils.mkOrderTagsWithBapTerms mbCachedBapTerms (Just booking.estimatedFare) becknConfig,
         orderCreatedAt = Just booking.createdAt,
-        orderUpdatedAt = Just booking.updatedAt
+        orderUpdatedAt = Just ride.updatedAt
       }
 
-tfStartReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DRideStartedReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
+tfStartReqToOrder :: (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Common.DRideStartedReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
 tfStartReqToOrder Common.DRideStartedReq {..} mbFarePolicy becknConfig = do
   let Common.BookingDetails {..} = bookingDetails
       personTag = if isValueAddNP then Utils.mkLocationTagGroupV2 tripStartLocation else Nothing
@@ -284,6 +286,7 @@ tfStartReqToOrder Common.DRideStartedReq {..} mbFarePolicy becknConfig = do
       farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
       items = UtilsOU.tfItems ride booking merchant.shortId.getShortId Nothing farePolicy booking.paymentId
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) Nothing (arrivalTimeTagGroup <> odometerTag <> estimatedEndTimeRangeTagGroup) personTag False False Nothing (Just $ show EventEnum.RIDE_STARTED) isValueAddNP riderPhone False 0
+  mbCachedBapTerms <- Utils.getCachedBapTerms booking.transactionId
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
@@ -296,11 +299,12 @@ tfStartReqToOrder Common.DRideStartedReq {..} mbFarePolicy becknConfig = do
         orderPayments = Just [payment],
         orderProvider = Utils.tfProvider becknConfig,
         orderQuote = quote,
+        orderTags = Utils.mkOrderTagsWithBapTerms mbCachedBapTerms (Just booking.estimatedFare) becknConfig,
         orderCreatedAt = Just booking.createdAt,
-        orderUpdatedAt = Just booking.updatedAt
+        orderUpdatedAt = Just ride.updatedAt
       }
 
-tfCompleteReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DRideCompletedReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
+tfCompleteReqToOrder :: (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Common.DRideCompletedReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
 tfCompleteReqToOrder Common.DRideCompletedReq {..} mbFarePolicy becknConfig = do
   let Common.BookingDetails {..} = bookingDetails
   let personTag = if isValueAddNP then Utils.mkLocationTagGroupV2 tripEndLocation else Nothing
@@ -310,14 +314,15 @@ tfCompleteReqToOrder Common.DRideCompletedReq {..} mbFarePolicy becknConfig = do
       rideTagGroup = if isValueAddNP then Utils.mkRideDetailsTagGroup (Just isValidRide) else Nothing
   distanceTagGroup <- if isValueAddNP then UtilsOU.mkDistanceTagGroup ride else return Nothing
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) Nothing (arrivalTimeTagGroup <> distanceTagGroup <> tollConfidence <> rideTagGroup) personTag False False Nothing (Just $ show EventEnum.RIDE_ENDED) isValueAddNP riderPhone False 0
-  quote <- UtilsOU.mkRideCompletedQuote ride fareParams
+  quote <- UtilsOU.mkRideCompletedQuote ride fareParams booking.estimatedFare
   let farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
   let items = UtilsOU.tfItems ride booking merchant.shortId.getShortId Nothing farePolicy booking.paymentId
   let payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig booking
+  mbCachedBapTerms <- Utils.getCachedBapTerms booking.transactionId
   pure $
     Spec.Order
       { orderId = Just $ booking.id.getId,
-        orderStatus = Just $ show EventEnum.COMPLETE,
+        orderStatus = Just $ show EventEnum.ACTIVE,
         orderFulfillments = Just [fulfillment],
         orderPayments = Just [payment],
         orderQuote = Just quote,
@@ -326,11 +331,12 @@ tfCompleteReqToOrder Common.DRideCompletedReq {..} mbFarePolicy becknConfig = do
         orderCancellationTerms = Just $ Utils.tfCancellationTerms Nothing (Just EventEnum.RIDE_ENDED),
         orderItems = items,
         orderProvider = Utils.tfProvider becknConfig,
+        orderTags = Utils.mkOrderTagsWithBapTerms mbCachedBapTerms (Just booking.estimatedFare) becknConfig,
         orderCreatedAt = Just booking.createdAt,
-        orderUpdatedAt = Just booking.updatedAt
+        orderUpdatedAt = Just ride.updatedAt
       }
 
-tfCancelReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DBookingCancelledReq -> DBC.BecknConfig -> m Spec.Order
+tfCancelReqToOrder :: (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Common.DBookingCancelledReq -> DBC.BecknConfig -> m Spec.Order
 tfCancelReqToOrder Common.DBookingCancelledReq {..} becknConfig = do
   let quote = Utils.tfQuotation booking
   fulfillment <- forM bookingDetails $ \bookingDetails' -> do
@@ -339,6 +345,7 @@ tfCancelReqToOrder Common.DBookingCancelledReq {..} becknConfig = do
     let arrivalTimeTagGroup = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime else Nothing
     Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing False False Nothing (Just $ show EventEnum.RIDE_CANCELLED) isValueAddNP riderPhone False 0
   let payment = fmap (\bd -> L.singleton $ UtilsOU.mkPaymentParams Nothing Nothing bd.merchant becknConfig booking) bookingDetails
+  mbCachedBapTerms <- Utils.getCachedBapTerms booking.transactionId
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
@@ -347,7 +354,8 @@ tfCancelReqToOrder Common.DBookingCancelledReq {..} becknConfig = do
         orderCancellation =
           Just $
             Spec.Cancellation
-              { cancellationCancelledBy = Just . show $ UtilsOU.castCancellationSource cancellationSource
+              { cancellationCancelledBy = Just . show $ UtilsOU.castCancellationSource cancellationSource,
+                cancellationReason = Nothing
               },
         orderBilling = Nothing,
         orderCancellationTerms = Just $ Utils.tfCancellationTerms cancellationFee (Just EventEnum.RIDE_CANCELLED),
@@ -355,11 +363,12 @@ tfCancelReqToOrder Common.DBookingCancelledReq {..} becknConfig = do
         orderPayments = payment,
         orderProvider = Utils.tfProvider becknConfig,
         orderQuote = quote,
+        orderTags = Utils.mkOrderTagsWithBapTerms mbCachedBapTerms (Just booking.estimatedFare) becknConfig,
         orderCreatedAt = Just booking.createdAt,
-        orderUpdatedAt = Just booking.updatedAt
+        orderUpdatedAt = Just $ maybe booking.updatedAt (\bd -> bd.ride.updatedAt) bookingDetails
       }
 
-tfArrivedReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DDriverArrivedReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
+tfArrivedReqToOrder :: (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Common.DDriverArrivedReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
 tfArrivedReqToOrder Common.DDriverArrivedReq {..} mbFarePolicy becknConfig = do
   let BookingDetails {..} = bookingDetails
       quote = Utils.tfQuotation booking
@@ -368,6 +377,7 @@ tfArrivedReqToOrder Common.DDriverArrivedReq {..} mbFarePolicy becknConfig = do
       farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
       items = UtilsOU.tfItems ride booking merchant.shortId.getShortId Nothing farePolicy booking.paymentId
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) Nothing driverArrivedInfoTags Nothing False False Nothing (Just $ show EventEnum.RIDE_ARRIVED_PICKUP) isValueAddNP riderPhone False 0
+  mbCachedBapTerms <- Utils.getCachedBapTerms booking.transactionId
   pure $
     Spec.Order
       { orderId = Just $ booking.id.getId,
@@ -380,11 +390,12 @@ tfArrivedReqToOrder Common.DDriverArrivedReq {..} mbFarePolicy becknConfig = do
         orderProvider = Utils.tfProvider becknConfig,
         orderQuote = quote,
         orderStatus = Just $ show EventEnum.ACTIVE,
+        orderTags = Utils.mkOrderTagsWithBapTerms mbCachedBapTerms (Just booking.estimatedFare) becknConfig,
         orderCreatedAt = Just booking.createdAt,
-        orderUpdatedAt = Just booking.updatedAt
+        orderUpdatedAt = Just ride.updatedAt
       }
 
-tfReachedDestinationReqToOrder :: (MonadFlow m, EncFlow m r) => OU.DDriverReachedDestinationReq -> m Spec.Order
+tfReachedDestinationReqToOrder :: (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) => OU.DDriverReachedDestinationReq -> m Spec.Order
 tfReachedDestinationReqToOrder OU.DDriverReachedDestinationReq {..} = do
   let BookingDetails {..} = bookingDetails
       driverReachedDestinationTags = if isValueAddNP then Utils.mkDestinationReachedTimeTagGroupV2 destinationArrivalTime else Nothing
@@ -401,6 +412,7 @@ tfReachedDestinationReqToOrder OU.DDriverReachedDestinationReq {..} = do
         orderProvider = Nothing,
         orderQuote = Nothing,
         orderStatus = Nothing,
+        orderTags = Nothing,
         orderCreatedAt = Just booking.createdAt,
-        orderUpdatedAt = Just booking.updatedAt
+        orderUpdatedAt = Just ride.updatedAt
       }

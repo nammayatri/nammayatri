@@ -185,14 +185,20 @@ getCustomerPhoneNumber :: Maybe Spec.Fulfillment -> Maybe Text
 getCustomerPhoneNumber (Just fulfillment) = fulfillment.fulfillmentCustomer >>= (.customerContact) >>= (.contactPhone)
 getCustomerPhoneNumber Nothing = Nothing
 
--- NOTE : This is a temporary function to keep the code backward compatible
--- But this assumes that we will be sending fulfillmentId empty from next release? Change it maybe?
+-- Prefer item.itemId over fulfillment.fulfillmentId since off-us BAPs may send
+-- their own fulfillment IDs (e.g. "F1") that don't match our internal IDs
+-- Strip "I-" prefix from item_id if present (we prefix item IDs to differentiate from fulfillment IDs)
 getEstimateId :: Maybe Spec.Fulfillment -> Spec.Item -> Maybe Text
-getEstimateId (Just fulfillment) item = do
-  case fulfillment.fulfillmentId of
-    Just fulfillmentId -> Just fulfillmentId
-    Nothing -> item.itemId
-getEstimateId Nothing item = item.itemId
+getEstimateId (Just fulfillment) item =
+  case item.itemId of
+    Just iid -> Just $ stripItemPrefix iid
+    Nothing -> fulfillment.fulfillmentId
+getEstimateId Nothing item = stripItemPrefix <$> item.itemId
+
+stripItemPrefix :: Text -> Text
+stripItemPrefix t = case T.stripPrefix "I-" t of
+  Just rest -> rest
+  Nothing -> t
 
 getParcelDetails :: Maybe [Spec.TagGroup] -> (Maybe Text, Maybe Int)
 getParcelDetails tagGroups = (parcelType, parcelQuantity)

@@ -285,7 +285,6 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
         bookingCancellationReason <- buildBookingCancellationReason newBooking
         QBCR.upsert bookingCancellationReason
         QRB.updateStatus newBooking.id SRB.CANCELLED
-      void $ clearCachedFarePolicyByEstOrQuoteId booking.quoteId -- shouldn't be required for new booking
       return False
     checkIfRepeatSearch :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DST.SearchTry -> Maybe UTCTime -> Maybe Bool -> UTCTime -> Bool -> TransporterConfig -> m Bool
     checkIfRepeatSearch searchTry driverArrivalTime isReallocationEnabled now isScheduled transporterConfig = do

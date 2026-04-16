@@ -95,11 +95,12 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
             fork "init received pushing ondc logs" do
               void $ pushLogs "init" (toJSON reqV2) transporterId.getId "MOBILITY"
             ttl <- bppConfig.onInitTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
-            context <- ContextV2.buildContextV2 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country (Just ttl)
+            context <- ContextV2.buildContextV2_1 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country (Just ttl)
             void . handle (errHandler dInitRes.booking dInitRes.transporter) $
               Callback.withCallback dInitRes.transporter "on_init" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
                 mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dInitRes.booking.quoteId
-                let onInitMessage = ACL.mkOnInitMessageV2 dInitRes bppConfig mbFarePolicy
+                let mbPolyline = validatedRes.searchRequest.encodedPolyline
+                let onInitMessage = ACL.mkOnInitMessageV2 dInitRes bppConfig mbFarePolicy mbPolyline
                 pure $
                   Spec.OnInitReq
                     { onInitReqContext = context,

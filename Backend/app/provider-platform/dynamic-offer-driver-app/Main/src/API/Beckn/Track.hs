@@ -79,7 +79,7 @@ track transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBe
     fork "track received pushing ondc logs" do
       void $ pushLogs "track" (toJSON reqV2) transporterId.getId "MOBILITY"
     ttl <- bppConfig.onTrackTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
-    onTrackContext <- ContextV2.buildContextV2 Context.ON_TRACK Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just ttl)
+    onTrackContext <- ContextV2.buildContextV2_1 Context.ON_TRACK Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just ttl)
     Callback.withCallback dTrackRes.transporter "on_track" OnTrack.onTrackAPIV2 callbackUrl internalEndPointHashMap (errHandler onTrackContext) $
       pure
         Spec.OnTrackReq

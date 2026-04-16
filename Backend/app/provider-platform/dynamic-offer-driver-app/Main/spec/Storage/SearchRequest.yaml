@@ -97,6 +97,7 @@ SearchRequest:
     userSdkVersion: Maybe Version
     userBackendAppVersion: Maybe Text
     riderPreferredOption: RiderPreferredOption|NoRelation
+    encodedPolyline: Maybe Text
   beamType:
     startTime: Maybe UTCTime
     validTill: Maybe UTCTime

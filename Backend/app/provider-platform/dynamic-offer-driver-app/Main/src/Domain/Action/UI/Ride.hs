@@ -20,6 +20,8 @@ module Domain.Action.UI.Ride
     DeliveryImageUploadReq (..),
     StopAction (..),
     listDriverRides,
+    enroutePickup,
+    sendEnroutePickupStatus,
     arrivedAtPickup,
     arrivedAtDestination,
     otpRideCreate,
@@ -77,6 +79,7 @@ import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Ride
 import Storage.Beam.IssueManagement ()
 import Storage.Cac.TransporterConfig as SCTC
@@ -221,7 +224,25 @@ listDriverRides driverId mocId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay 
     Nothing -> return driverRideLis
   pure . DriverRideListRes $ sortOn (Down . (.bookingType)) filteredRides
 
-arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Id DRide.Ride -> LatLong -> m APISuccess
+-- | Send on_update RIDE_ASSIGNED (with OTP, driver details)
+enroutePickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasLongDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig], HasField "modelNamesHashMap" r (HM.HashMap Text Text), HasField "s3Env" r (S3.S3Env m), LT.HasLocationService m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => Id DRide.Ride -> m APISuccess
+enroutePickup rideId = do
+  ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  driver <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  vehicle <- runInReplica $ QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+  handle (\(_ :: SomeException) -> pure ()) $ BP.sendRideAssignedUpdateToBAP booking ride driver vehicle False
+  pure Success
+
+-- | Send on_status RIDE_ENROUTE_PICKUP
+sendEnroutePickupStatus :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasLongDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Id DRide.Ride -> m APISuccess
+sendEnroutePickupStatus rideId = do
+  ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  BP.sendRideEnRoutePickupToBAP booking ride
+  pure Success
+
+arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasLongDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Id DRide.Ride -> LatLong -> m APISuccess
 arrivedAtPickup rideId req = do
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus ("The ride has already started." <> Text.pack (show ride.status))

@@ -30,8 +30,7 @@ import Kernel.Prelude
 import Kernel.Utils.Common
 
 bookingStatusCode :: DConfirm.ValidatedQuote -> Maybe Enum.FulfillmentState
-bookingStatusCode (DConfirm.DriverQuote _ _) = Just Enum.RIDE_ASSIGNED
-bookingStatusCode _ = Just Enum.NEW
+bookingStatusCode _ = Just Enum.RIDE_CONFIRMED
 
 buildOnConfirmMessageV2 :: DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.ConfirmReqMessage
 buildOnConfirmMessageV2 res pricing becknConfig mbFarePolicy =
@@ -47,7 +46,7 @@ tfOrder res pricing bppConfig mbFarePolicy = do
   Spec.Order
     { orderBilling = Nothing,
       orderCancellation = Nothing,
-      orderCancellationTerms = Just $ tfCancellationTerms res,
+      orderCancellationTerms = Just $ Utils.tfCancellationTerms Nothing (Just RIDE_CONFIRMED),
       orderFulfillments = tfFulfillments res,
       orderId = Just res.booking.id.getId,
       orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId pricing.estimatedDistance farePolicy res.paymentId,
@@ -55,6 +54,7 @@ tfOrder res pricing bppConfig mbFarePolicy = do
       orderProvider = Utils.tfProvider bppConfig,
       orderQuote = Utils.tfQuotation res.booking,
       orderStatus = Just "ACTIVE",
+      orderTags = Utils.mkBppTermsTagsWithAmount (Just res.booking.estimatedFare) bppConfig,
       orderCreatedAt = Just res.booking.createdAt,
       orderUpdatedAt = Just res.booking.updatedAt
     }
@@ -64,9 +64,9 @@ tfFulfillments res =
   Just
     [ emptyFulfillment
         { Spec.fulfillmentCustomer = tfCustomer res,
-          Spec.fulfillmentId = Just res.booking.quoteId,
+          Spec.fulfillmentId = Just $ Utils.getBookingFulfillmentId res.booking,
           Spec.fulfillmentState = Utils.mkFulfillmentState <$> bookingStatusCode res.quoteType,
-          Spec.fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.stops res.booking.specialZoneOtpCode,
+          Spec.fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.stops Nothing, -- No OTP in RIDE_CONFIRMED
           Spec.fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType res.booking.tripCategory,
           Spec.fulfillmentVehicle = tfVehicle res
         }
@@ -99,11 +99,3 @@ tfCustomer res =
           Just $ emptyPerson {Spec.personName = Just riderName}
       }
 
-tfCancellationTerms :: DConfirm.DConfirmResp -> [Spec.CancellationTerm]
-tfCancellationTerms res =
-  L.singleton
-    Spec.CancellationTerm
-      { cancellationTermCancellationFee = Utils.tfCancellationFee res.cancellationFee,
-        cancellationTermFulfillmentState = Utils.mkFulfillmentState <$> bookingStatusCode res.quoteType,
-        cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
-      }

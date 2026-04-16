@@ -28,6 +28,7 @@ getInvoice (mbPersonId, merchantId) from to = do
           let breakupItems =
                 [ ("BASE_FARE", "Base Fare"),
                   ("CUSTOMER_SELECTED_FARE", "Customer Selected Fare"),
+                  ("PICKUP_CHARGE", "Pickup Charge"),
                   ("DEAD_KILOMETER_FARE", "Dead Kilometer Fare"),
                   ("DISTANCE_FARE", "Distance Fare"),
                   ("DRIVER_SELECTED_FARE", "Driver Selected Fare"),

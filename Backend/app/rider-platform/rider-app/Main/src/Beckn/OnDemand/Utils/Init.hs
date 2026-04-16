@@ -58,8 +58,10 @@ mkStops origin mDestination mStartOtp intermediateStops =
                       else
                         Just $
                           Spec.Authorization
-                            { authorizationType = Just $ show Enums.OTP,
-                              authorizationToken = mStartOtp
+                            { authorizationStatus = Just "valid",
+                              authorizationType = Just $ show Enums.OTP,
+                              authorizationToken = mStartOtp,
+                              authorizationValidTo = Just "2099-12-31T23:59:59Z"
                             },
                   stopTime = Nothing,
                   stopId = Just "0",

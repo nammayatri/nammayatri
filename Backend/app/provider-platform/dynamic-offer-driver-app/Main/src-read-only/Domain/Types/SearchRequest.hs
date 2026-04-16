@@ -43,6 +43,7 @@ data SearchRequest = SearchRequest
     driverDefaultExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     driverIdForSearch :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     dynamicPricingLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    encodedPolyline :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     fromLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

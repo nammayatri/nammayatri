@@ -292,6 +292,7 @@ let AllocatorJobType =
       | ProcessReminder
       | ExpireSubscriptionPurchase
       | Reconciliation
+      | ScheduledBatchPayout
       >
 
 let jobInfoMapx =
@@ -350,6 +351,7 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.Reconciliation, mapValue = True }
+      , { mapKey = AllocatorJobType.ScheduledBatchPayout, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig =
@@ -428,7 +430,7 @@ in  { esqDBCfg
     , port = +8016
     , metricsPort = +9997
     , hostName = "localhost"
-    , nwAddress = "http://localhost:8016/beckn"
+    , nwAddress = "https://1aa7-115-240-181-162.ngrok-free.app/beckn"
     , selfUIUrl = "http://localhost:8016/ui/"
     , selfBaseUrl = "http://localhost:8016/"
     , signingKey = sec.signingKey

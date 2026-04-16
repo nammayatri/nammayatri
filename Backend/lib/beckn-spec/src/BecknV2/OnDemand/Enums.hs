@@ -47,6 +47,7 @@ $(mkHttpInstancesForEnum ''VehicleCategory)
 data FulfillmentType
   = -- ..fulfillment.type
     DELIVERY
+  | SELF_PICKUP
   | -- for on-us only
     RIDE_OTP
   | RENTAL
@@ -171,7 +172,7 @@ data QuoteBreakupTitle
   | CONGESTION_CHARGE
   | -- Custom Titles not in ONDC Spec
     SERVICE_CHARGE
-  | DEAD_KILOMETER_FARE
+  | PICKUP_CHARGE
   | DRIVER_SELECTED_FARE
   | CUSTOMER_SELECTED_FARE
   | TOTAL_FARE -- removed from init/on_init

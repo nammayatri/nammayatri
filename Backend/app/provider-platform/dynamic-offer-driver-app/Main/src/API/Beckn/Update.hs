@@ -29,7 +29,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant
+import qualified SharedLogic.CallBAP as BP
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.Vehicle as QVeh
+import Tools.Error
 
 type API =
   Capture "merchantId" (Id Merchant)
@@ -52,9 +58,24 @@ update merchantId (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknA
     let bookingId = DUpdate.getBookingId dUpdateReq
     Redis.whenWithLockRedis (updateLockKey bookingId.getId) 60 $ do
       fork "update request processing" $
-        Redis.whenWithLockRedis (updateProcessingLockKey bookingId.getId) 60 $
+        Redis.whenWithLockRedis (updateProcessingLockKey bookingId.getId) 60 $ do
           DUpdate.handler dUpdateReq
+          -- Send on_update back to BAP after processing
+          sendOnUpdateAfterEdit bookingId
     pure Ack
+  where
+    sendOnUpdateAfterEdit bookingId = do
+      booking <- QBooking.findById bookingId >>= fromMaybeM (InternalError $ "Booking not found: " <> bookingId.getId)
+      mbRide <- QRide.findActiveByRBId bookingId
+      case mbRide of
+        Just ride -> do
+          driver <- QPerson.findById ride.driverId >>= fromMaybeM (InternalError $ "Driver not found")
+          vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (InternalError $ "Vehicle not found")
+          -- sendStopArrivalUpdateToBAP only sends for isValueAddNP, but for ONDC we always need it
+          -- So we call sendRideAssignedUpdateToBAP which sends on_update for all BAPs
+          BP.sendRideAssignedUpdateToBAP booking ride driver vehicle False
+        Nothing ->
+          logWarning "No active ride for booking, skipping on_update after edit stop"
 
 updateLockKey :: Text -> Text
 updateLockKey id = "Driver:Update:BookingId-" <> id

@@ -45,6 +45,7 @@ import qualified Domain.Types.Merchant as DM
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
+import qualified Kernel.Types.Price
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -189,7 +190,7 @@ buildOnStatusReqV2' ::
 buildOnStatusReqV2' action domain messageId bppSubscriberId bppUri city country booking req mbFarePolicy bppConfig = do
   ttl <- bppConfig.onStatusTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   bapUri <- parseBaseUrl booking.bapUri
-  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
+  context <- CU.buildContextV2_1 action domain messageId (Just booking.transactionId) booking.bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
   message <- mkOnStatusMessageV2 req mbFarePolicy bppConfig
   pure $
     Spec.OnStatusReq
@@ -199,7 +200,7 @@ buildOnStatusReqV2' action domain messageId bppSubscriberId bppUri city country 
       }
 
 mkOnStatusMessageV2 ::
-  (MonadFlow m, EncFlow m r) =>
+  (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   DStatus.OnStatusBuildReq ->
   Maybe FarePolicyD.FullFarePolicy ->
   DBC.BecknConfig ->
@@ -211,7 +212,7 @@ mkOnStatusMessageV2 res mbFarePolicy bppConfig = do
       { confirmReqMessageOrder = order
       }
 
-tfOrder :: (MonadFlow m, EncFlow m r) => DStatus.OnStatusBuildReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
+tfOrder :: (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) => DStatus.OnStatusBuildReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
 tfOrder (DStatus.NewBookingBuildReq DNewBookingBuildReq {bookingId}) _ becknConfig =
   pure
     Spec.Order
@@ -225,12 +226,28 @@ tfOrder (DStatus.NewBookingBuildReq DNewBookingBuildReq {bookingId}) _ becknConf
         orderPayments = Nothing,
         orderProvider = Utils.tfProvider becknConfig,
         orderQuote = Nothing,
+        orderTags = Utils.mkBppTermsTags becknConfig,
         orderCreatedAt = Nothing,
         orderUpdatedAt = Nothing --------To do keep booking created and updated time
       }
 tfOrder (DStatus.RideAssignedReq req) mbFarePolicy becknConfig = Common.tfAssignedReqToOrder req mbFarePolicy becknConfig EventEnum.RIDE_ASSIGNED
 tfOrder (DStatus.RideStartedReq req) mbFarePolicy becknConfig = Common.tfStartReqToOrder req mbFarePolicy becknConfig
-tfOrder (DStatus.RideCompletedReq req) mbFarePolicy becknConfig = Common.tfCompleteReqToOrder req mbFarePolicy becknConfig
+tfOrder (DStatus.RideCompletedReq req) mbFarePolicy becknConfig = do
+  order <- Common.tfCompleteReqToOrder req mbFarePolicy becknConfig
+  -- For on_status after ride completion: order.status = COMPLETED, payment.status = PAID
+  -- (on_update uses ACTIVE/NOT_PAID via tfCompleteReqToOrder directly)
+  let estimatedFare = Kernel.Types.Price.showPriceWithRoundingWithoutCurrency $ Kernel.Types.Price.mkPrice (Just req.bookingDetails.booking.currency) req.bookingDetails.booking.estimatedFare
+      updatedPayments = order.orderPayments <&> map (\p -> p
+        { Spec.paymentStatus = Just $ show EventEnum.PAID,
+          Spec.paymentParams = Just $ Spec.PaymentParams
+            { paymentParamsAmount = Just estimatedFare,
+              paymentParamsCurrency = Nothing,
+              paymentParamsBankAccountNumber = Nothing,
+              paymentParamsBankCode = Nothing,
+              paymentParamsVirtualPaymentAddress = Nothing
+            }
+        })
+  pure order {Spec.orderStatus = Just $ show EventEnum.COMPLETED, Spec.orderPayments = updatedPayments}
 tfOrder (DStatus.BookingCancelledReq req) _ becknConfig = Common.tfCancelReqToOrder req becknConfig
 tfOrder (DStatus.BookingReallocationBuildReq DBookingReallocationBuildReq {bookingReallocationInfo, bookingDetails}) _ becknConfig = do
   let DStatus.BookingCancelledInfo {cancellationSource} = bookingReallocationInfo
@@ -238,6 +255,7 @@ tfOrder (DStatus.BookingReallocationBuildReq DBookingReallocationBuildReq {booki
   let image = Nothing
   let arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing False False Nothing Nothing isValueAddNP Nothing False 0
+  mbCachedBapTerms <- Utils.getCachedBapTerms booking.transactionId
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
@@ -246,7 +264,8 @@ tfOrder (DStatus.BookingReallocationBuildReq DBookingReallocationBuildReq {booki
         orderCancellation =
           Just $
             Spec.Cancellation
-              { cancellationCancelledBy = Just . show $ UtilsOU.castCancellationSource cancellationSource
+              { cancellationCancelledBy = Just . show $ UtilsOU.castCancellationSource cancellationSource,
+                cancellationReason = Nothing
               },
         orderBilling = Nothing,
         orderCancellationTerms = Just $ Utils.tfCancellationTerms Nothing Nothing,
@@ -254,6 +273,7 @@ tfOrder (DStatus.BookingReallocationBuildReq DBookingReallocationBuildReq {booki
         orderPayments = Utils.tfPayments booking bookingDetails.merchant becknConfig,
         orderProvider = Utils.tfProvider becknConfig,
         orderQuote = Nothing,
+        orderTags = Utils.mkOrderTagsWithBapTerms mbCachedBapTerms (Just booking.estimatedFare) becknConfig,
         orderCreatedAt = Just booking.createdAt,
-        orderUpdatedAt = Just booking.updatedAt
+        orderUpdatedAt = Just ride.updatedAt
       }

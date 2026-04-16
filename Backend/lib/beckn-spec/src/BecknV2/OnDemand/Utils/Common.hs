@@ -174,12 +174,12 @@ tripCategoryToFulfillmentType :: TripCategory -> Text
 tripCategoryToFulfillmentType = \case
   -- Off-us Beckn-fulfillmentType Enums
   OneWay OneWayOnDemandDynamicOffer -> show Enums.DELIVERY
-  OneWay OneWayOnDemandStaticOffer -> show Enums.SCHEDULED_TRIP
+  OneWay OneWayOnDemandStaticOffer -> show Enums.DELIVERY
   d@(Delivery _) -> show d
-  OneWay OneWayRideOtp -> show Enums.RIDE_OTP
-  CrossCity OneWayRideOtp _ -> show Enums.RIDE_OTP
-  RideShare RideOtp -> show Enums.RIDE_OTP
-  Rental _ -> show Enums.RENTAL
+  OneWay OneWayRideOtp -> show Enums.SELF_PICKUP
+  CrossCity OneWayRideOtp _ -> show Enums.SELF_PICKUP
+  RideShare RideOtp -> show Enums.SELF_PICKUP
+  Rental _ -> show Enums.DELIVERY
   i@(InterCity OneWayRideOtp _) -> show i
   InterCity _ _ -> show Enums.INTER_CITY
   Ambulance _ -> show Enums.AMBULANCE_FLOW
@@ -198,6 +198,7 @@ fulfillmentTypeToTripCategory fulfillmentType =
     Nothing ->
       case readMaybe @Enums.FulfillmentType $ T.unpack fulfillmentType of
         Just Enums.DELIVERY -> OneWay OneWayOnDemandDynamicOffer
+        Just Enums.SELF_PICKUP -> OneWay OneWayRideOtp
         Just Enums.RIDE_OTP -> OneWay OneWayRideOtp
         Just Enums.RENTAL -> Rental OnDemandStaticOffer
         Just Enums.INTER_CITY -> InterCity OneWayOnDemandStaticOffer Nothing

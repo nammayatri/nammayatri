@@ -16,8 +16,10 @@ module Beckn.ACL.OnTrack (mkOnTrackMessage, mkOnTrackMessageV2) where
 
 import qualified Beckn.Types.Core.Taxi.OnTrack as OnTrack
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Track as DTrack
 import Kernel.Prelude
+import Text.Printf (printf)
 
 mkOnTrackMessage :: DTrack.DTrackRes -> OnTrack.OnTrackMessage
 mkOnTrackMessage res = do
@@ -31,12 +33,12 @@ mkOnTrackMessage res = do
 
 mkOnTrackMessageV2 :: DTrack.DTrackRes -> Spec.OnTrackReqMessage
 mkOnTrackMessageV2 res@DTrack.TrackRes {..} = do
-  let trackingUrl = if isValueAddNP then Just $ showBaseUrl res.url else Nothing
   let trackingLocation =
-        ( \loc ->
+        case driverLocation of
+          Just loc ->
             Just $
               Spec.Location
-                { locationGps = Just $ (show loc.lat) <> ", " <> show loc.lon,
+                { locationGps = Just $ T.pack (printf "%.6f" loc.lat) <> ", " <> T.pack (printf "%.6f" loc.lon),
                   locationUpdatedAt = Just loc.coordinatesCalculatedAt,
                   locationAddress = Nothing,
                   locationAreaCode = Nothing,
@@ -45,13 +47,12 @@ mkOnTrackMessageV2 res@DTrack.TrackRes {..} = do
                   locationId = Nothing,
                   locationState = Nothing
                 }
-        )
-          =<< driverLocation
+          Nothing -> Nothing
   Spec.OnTrackReqMessage
     { onTrackReqMessageTracking =
         Spec.Tracking
-          { trackingUrl,
-            trackingStatus = if res.isRideCompleted then Just "INACTIVE" else Just "ACTIVE",
+          { trackingUrl = Nothing, -- ONDC spec: send location, not URL
+            trackingStatus = if res.isRideCompleted then Just "inactive" else Just "active",
             trackingLocation
           }
     }

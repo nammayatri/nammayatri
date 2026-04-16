@@ -10,7 +10,7 @@ import qualified Domain.Types.VehicleVariant as VehVar
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error (GenericError (..))
-import Kernel.Utils.Common (decodeFromText, fromMaybeM)
+import Kernel.Utils.Common (decodeFromText)
 
 castVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.VehicleVariant
 castVehicleVariant mbVehCategory mbVehVariant = case (mbVehCategory, mbVehVariant) of
@@ -52,6 +52,42 @@ castVehicleVariant mbVehCategory mbVehVariant = case (mbVehCategory, mbVehVarian
   (Just "TOTO", Just "E_RICKSHAW") -> Just VehVar.E_RICKSHAW
   (Just "AUTO_RICKSHAW", Just "AUTO_LITE") -> Just VehVar.AUTO_LITE
   (Just "AUTO_RICKSHAW", Just "PINK_AUTO") -> Just VehVar.PINK_AUTO
+  -- Fallback: when category is missing but variant is present, infer from variant name
+  (Nothing, Just "SEDAN") -> Just VehVar.SEDAN
+  (Nothing, Just "SUV") -> Just VehVar.SUV
+  (Nothing, Just "SUV_PLUS") -> Just VehVar.SUV_PLUS
+  (Nothing, Just "HERITAGE_CAB") -> Just VehVar.HERITAGE_CAB
+  (Nothing, Just "HATCHBACK") -> Just VehVar.HATCHBACK
+  (Nothing, Just "AUTO_RICKSHAW") -> Just VehVar.AUTO_RICKSHAW
+  (Nothing, Just "EV_AUTO_RICKSHAW") -> Just VehVar.EV_AUTO_RICKSHAW
+  (Nothing, Just "AUTO_PLUS") -> Just VehVar.AUTO_PLUS
+  (Nothing, Just "TAXI") -> Just VehVar.TAXI
+  (Nothing, Just "TAXI_PLUS") -> Just VehVar.TAXI_PLUS
+  (Nothing, Just "PREMIUM_SEDAN") -> Just VehVar.PREMIUM_SEDAN
+  (Nothing, Just "BLACK") -> Just VehVar.BLACK
+  (Nothing, Just "BLACK_XL") -> Just VehVar.BLACK_XL
+  (Nothing, Just "BIKE") -> Just VehVar.BIKE
+  (Nothing, Just "DELIVERY_BIKE") -> Just VehVar.DELIVERY_BIKE
+  (Nothing, Just "AMBULANCE_TAXI") -> Just VehVar.AMBULANCE_TAXI
+  (Nothing, Just "AMBULANCE_TAXI_OXY") -> Just VehVar.AMBULANCE_TAXI_OXY
+  (Nothing, Just "AMBULANCE_AC") -> Just VehVar.AMBULANCE_AC
+  (Nothing, Just "AMBULANCE_AC_OXY") -> Just VehVar.AMBULANCE_AC_OXY
+  (Nothing, Just "AMBULANCE_VENTILATOR") -> Just VehVar.AMBULANCE_VENTILATOR
+  (Nothing, Just "DELIVERY_LIGHT_GOODS_VEHICLE") -> Just VehVar.DELIVERY_LIGHT_GOODS_VEHICLE
+  (Nothing, Just "DELIVERY_TRUCK_MINI") -> Just VehVar.DELIVERY_TRUCK_MINI
+  (Nothing, Just "DELIVERY_TRUCK_SMALL") -> Just VehVar.DELIVERY_TRUCK_SMALL
+  (Nothing, Just "DELIVERY_TRUCK_MEDIUM") -> Just VehVar.DELIVERY_TRUCK_MEDIUM
+  (Nothing, Just "DELIVERY_TRUCK_LARGE") -> Just VehVar.DELIVERY_TRUCK_LARGE
+  (Nothing, Just "DELIVERY_TRUCK_ULTRA_LARGE") -> Just VehVar.DELIVERY_TRUCK_ULTRA_LARGE
+  (Nothing, Just "BUS_NON_AC") -> Just VehVar.BUS_NON_AC
+  (Nothing, Just "BUS_AC") -> Just VehVar.BUS_AC
+  (Nothing, Just "VIP_ESCORT") -> Just VehVar.VIP_ESCORT
+  (Nothing, Just "VIP_OFFICER") -> Just VehVar.VIP_OFFICER
+  (Nothing, Just "AC_PRIORITY") -> Just VehVar.AC_PRIORITY
+  (Nothing, Just "BIKE_PLUS") -> Just VehVar.BIKE_PLUS
+  (Nothing, Just "E_RICKSHAW") -> Just VehVar.E_RICKSHAW
+  (Nothing, Just "AUTO_LITE") -> Just VehVar.AUTO_LITE
+  (Nothing, Just "PINK_AUTO") -> Just VehVar.PINK_AUTO
   _ -> Nothing
 
 castPaymentCollector :: MonadFlow m => Text -> m DMPM.PaymentCollector
@@ -90,11 +126,13 @@ mkPaymentMethodInfo Spec.Payment {..}
   where
     isStripePayment = (paymentTlMethod >>= (\method -> decodeFromText $ "\"" <> method <> "\"")) == Just Spec.StripeSdk
 mkPaymentMethodInfo Spec.Payment {..} = do
-  _params <- paymentParams & fromMaybeM (InvalidRequest "Payment Params not found")
-  collectedBy <- paymentCollectedBy & fromMaybeM (InvalidRequest "Payment Params not found") >>= castPaymentCollector
-  pType <- fmap (fromMaybe DMPM.ON_FULFILLMENT . decodeFromText) (paymentType & fromMaybeM (InvalidRequest "Payment Params not found"))
-  paymentInstrument <- castPaymentInstrument _params paymentTags
-  return $ Just $ DMPM.PaymentMethodInfo {paymentType = pType, ..}
+  case (paymentParams, paymentCollectedBy) of
+    (Just _params, Just collectedByText) -> do
+      collectedBy <- castPaymentCollector collectedByText
+      let pType = fromMaybe DMPM.ON_FULFILLMENT (paymentType >>= decodeFromText)
+      paymentInstrument <- castPaymentInstrument _params paymentTags
+      return $ Just $ DMPM.PaymentMethodInfo {paymentType = pType, ..}
+    _ -> return Nothing
 
 mkPaymentMode :: Spec.Payment -> Maybe DMPM.PaymentMode
 mkPaymentMode Spec.Payment {paymentTags} = do

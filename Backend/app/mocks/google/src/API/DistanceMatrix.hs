@@ -45,7 +45,9 @@ handler origins destinations key mode _ = withFlowHandlerAPI' $ do
 
   if allEqual $ origins <> destinations
     then pure $ mkDefaultMatrix origins destinations
-    else buildMatrix origins destinations
+    else case buildMatrixMaybe origins destinations of
+      Just resp -> pure resp
+      Nothing -> pure $ mkDefaultMatrix origins destinations
 
 allEqual :: [GoogleMaps.Place] -> Bool
 allEqual [] = True
@@ -68,16 +70,14 @@ mkDefaultMatrix origins destinations = do
       status = "OK"
     }
 
-buildMatrix ::
-  MonadFlow m =>
+-- | Try to build matrix from known places, return Nothing if any place is unknown
+buildMatrixMaybe ::
   [GoogleMaps.Place] ->
   [GoogleMaps.Place] ->
-  m GoogleMaps.DistanceMatrixResp
-buildMatrix origins destinations = do
-  mockOrigins <- forM origins $ \origin -> do
-    DPlace.lookupPlace origin Data.availablePlaces & fromMaybeM (NotImplemented $ "distanceMatrix is not implemented: origin: " <> show origin)
-  mockDestinations <- forM destinations $ \destination -> do
-    DPlace.lookupPlace destination Data.availablePlaces & fromMaybeM (NotImplemented $ "distanceMatrix is not implemented: destination: " <> show destination)
+  Maybe GoogleMaps.DistanceMatrixResp
+buildMatrixMaybe origins destinations = do
+  mockOrigins <- forM origins $ \origin -> DPlace.lookupPlace origin Data.availablePlaces
+  mockDestinations <- forM destinations $ \destination -> DPlace.lookupPlace destination Data.availablePlaces
   rows <-
     forM mockOrigins $ \mockOrigin -> do
       elementsList <- forM mockDestinations $ \mockDestination -> do
@@ -86,7 +86,7 @@ buildMatrix origins destinations = do
           Nothing ->
             if mockOrigin.placeId == mockDestination.placeId
               then pure Data.defaultElement
-              else throwError (NotImplemented $ "distanceMatrix is not implemented: origin: " <> show mockOrigin.place <> "; destination: " <> show mockDestination.place)
+              else Nothing
           Just element -> pure element
       pure $ DistanceMatrixRow {elements = elementsList}
   pure $

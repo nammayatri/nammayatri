@@ -47,10 +47,11 @@ buildSearchReq :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Te
 buildSearchReq messageId subscriber req context actualBapUri = do
   cloudType_ <- asks (.cloudType)
   bapHostRedirectMap <- asks (.bapHostRedirectMap)
-  -- If driver's cloud is in bapHostRedirectMap, use actualBapUri (from request); else use subscriber URL.
+  -- Use actualBapUri from context.bap_uri (the callback URL the BAP specified).
+  -- Only fall back to subscriber URL if context bap_uri is not available.
   let newBapUri_ = case cloudType_ of
         Just c | H.member (T.pack (show c)) bapHostRedirectMap -> actualBapUri
-        _ -> subscriber.subscriber_url
+        _ -> actualBapUri
   now <- Kernel.Types.Common.getCurrentTime
   let bapId_ = subscriber.subscriber_id
       bapUri_ = newBapUri_
@@ -147,14 +148,14 @@ buildSearchReq messageId subscriber req context actualBapUri = do
 tfAddress :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Maybe BecknV2.OnDemand.Types.Location -> m (Maybe Beckn.Types.Core.Taxi.Common.Address.Address)
 tfAddress Nothing = pure Nothing
 tfAddress (Just location) = do
-  fullAddress <- location.locationAddress & fromMaybeM (InvalidRequest $ "Location address is missing, location:-" <> show location)
-  returnData <- Beckn.OnDemand.Utils.Common.buildAddressFromText fullAddress
-  let allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
-  if allNothing
-    then do
-      pure Nothing
-    else do
-      pure $ Just returnData
+  case location.locationAddress of
+    Nothing -> pure Nothing
+    Just fullAddress -> do
+      returnData <- Beckn.OnDemand.Utils.Common.buildAddressFromText fullAddress
+      let allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
+      if allNothing
+        then pure Nothing
+        else pure $ Just returnData
 
 tfLatLong :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Data.Text.Text -> m Kernel.External.Maps.LatLong
 tfLatLong locationGps = do

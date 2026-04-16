@@ -23,7 +23,7 @@ import qualified Kernel.Types.Registry.Subscriber
 import qualified Kernel.Utils.Common
 
 buildDInitReq :: (Kernel.Types.App.MonadFlow m) => Kernel.Types.Registry.Subscriber.Subscriber -> BecknV2.OnDemand.Types.InitReq -> Bool -> m Domain.Action.Beckn.Init.InitReq
-buildDInitReq subscriber req isValueAddNP = do
+buildDInitReq subscriber req _isValueAddNP = do
   let bapId_ = subscriber.subscriber_id
   -- Use contextBapUri if present, otherwise fall back to subscriber.subscriber_url
   bapUri_ <- case req.initReqContext.contextBapUri of
@@ -34,7 +34,7 @@ buildDInitReq subscriber req isValueAddNP = do
   bapCountryText <- req.initReqContext.contextLocation >>= (.locationCountry) >>= (.countryCode) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Couldn't find Country")
   bapCountry_ <- A.decode (A.encode bapCountryText) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Couldn't parse Country")
   fulfillmentId__ <- req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentId) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "FulfillmentId not found. It should either be estimateId or quoteId")
-  tripCategory <- if isValueAddNP then req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentType) >>= (Just . BecknV2.OnDemand.Utils.Common.fulfillmentTypeToTripCategory) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "FulfillmentType not found") else pure (req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentType) >>= (Just . BecknV2.OnDemand.Utils.Common.fulfillmentTypeToTripCategory) & Data.Maybe.fromMaybe (OneWay OneWayOnDemandDynamicOffer))
+  let tripCategory = req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentType) >>= (Just . BecknV2.OnDemand.Utils.Common.fulfillmentTypeToTripCategory) & Data.Maybe.fromMaybe (OneWay OneWayOnDemandDynamicOffer)
   let fulfillmentId_ =
         case tripCategoryToPricingPolicy tripCategory of
           EstimateBased _ -> Domain.Action.Beckn.Init.DriverQuoteId (Kernel.Types.Id.Id fulfillmentId__)

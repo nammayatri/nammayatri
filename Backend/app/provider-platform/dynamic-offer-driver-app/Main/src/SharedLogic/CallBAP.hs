@@ -15,6 +15,7 @@
 
 module SharedLogic.CallBAP
   ( sendRideAssignedUpdateToBAP,
+    sendRideEnRoutePickupToBAP,
     sendRideStartedUpdateToBAP,
     sendRideCompletedUpdateToBAP,
     sendBookingCancelledUpdateToBAP,
@@ -38,6 +39,8 @@ module SharedLogic.CallBAP
     mkTxnIdKey,
     sendOnConfirmToBAP,
     notfyDeliveryImageUploadedToBAP,
+    callOnSelectV2Direct,
+    callOnUpdateV2,
   )
 where
 
@@ -80,6 +83,7 @@ import qualified Domain.Types.DriverStats as DDriverStats
 import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as Fare
+import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as Merchant
@@ -166,7 +170,7 @@ callOnSelectV2 transporter searchRequest srfd searchTry content = do
   let vehicleCategory = Utils.mapServiceTierToCategory srfd.vehicleServiceTier
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
   ttl <- bppConfig.onSelectTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
-  context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) (Just ttl)
+  context <- ContextV2.buildContextV2_1 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) (Just ttl)
   logDebug $ "on_selectV2 request bpp: " <> show content
   void $ withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap (Spec.OnSelectReq context Nothing (Just content))
   where
@@ -175,6 +179,26 @@ callOnSelectV2 transporter searchRequest srfd searchTry content = do
       Hedis.safeGet (mkTxnIdKey txnId) >>= \case
         Nothing -> pure (fromMaybe searchTry.estimateId srfd.estimateId)
         Just a -> pure a
+
+callOnSelectV2Direct ::
+  ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    CoreMetrics m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  Id Merchant.Merchant ->
+  Text ->
+  BaseUrl ->
+  HMS.HashMap BaseUrl BaseUrl ->
+  Spec.OnSelectReq ->
+  m ()
+callOnSelectV2Direct merchantId bppSubscriberId bapUri internalEndPointHashMap onSelectReq = do
+  logDebug $ "on_selectV2 quote-based request: " <> show onSelectReq
+  void $ withShortRetry $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap onSelectReq
 
 mkTxnIdKey :: Text -> Text
 mkTxnIdKey txnId = "driver-offer:CachedQueries:Select:transactionId-" <> txnId
@@ -269,7 +293,7 @@ callOnConfirmV2 transporter context content bppConfig = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   txnId <- Utils.getTransactionId context
   ttl <- bppConfig.onConfirmTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
-  context_ <- ContextV2.buildContextV2 Context.ON_CONFIRM Context.MOBILITY msgId (Just txnId) bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
+  context_ <- ContextV2.buildContextV2_1 Context.ON_CONFIRM Context.MOBILITY msgId (Just txnId) bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
   void $ withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap (Spec.OnConfirmReq {onConfirmReqContext = context_, onConfirmReqError = Nothing, onConfirmReqMessage = Just content})
 
 buildBppUrl ::
@@ -454,6 +478,7 @@ buildOnConfirmMessage booking ride driver veh = do
   rideAssignedBuildReq <- rideAssignedCommon booking ride driver veh
   becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
+  logInfo $ "OnConfirm: Fare policy lookup for quoteId " <> booking.quoteId <> " estimateId " <> show booking.estimateId <> " result: " <> show (isJust farePolicy)
   onConfirmMessage <- TFOU.mkOnUpdateMessageV2 rideAssignedBuildReq farePolicy becknConfig
   let generatedMsg = A.encode onConfirmMessage
   logDebug $ "ride assigned on_confirm request bppv2: " <> T.pack (show generatedMsg)
@@ -491,7 +516,7 @@ sendOnConfirmToBAP booking ride driver veh transporter context = do
   msgId <- Utils.getMessageId context
   city <- Utils.getContextCity context
   country <- Utils.getContextCountry context
-  context' <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just "PT2M")
+  context' <- ContextV2.buildContextV2_1 Context.CONFIRM Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just "PT2M")
   let vehicleCategory = Utils.mapServiceTierToCategory booking.vehicleServiceTier
   becknConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
   onConfirmMessage <- buildOnConfirmMessage booking ride driver veh
@@ -540,6 +565,74 @@ sendRideAssignedUpdateToBAP booking ride driver veh isScheduledRideAssignment = 
             cs (showTimeIst uBooking.startTime) <> ".",
             "Check the app for more details."
           ]
+
+-- | Send unsolicited on_status with RIDE_ENROUTE_PICKUP state
+-- Called after on_confirm/RIDE_ASSIGNED to notify BAP that driver is heading to pickup
+sendRideEnRoutePickupToBAP ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasLongDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  m ()
+sendRideEnRoutePickupToBAP booking ride = do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  merchant <-
+    CQM.findById booking.providerId
+      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
+  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
+  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
+  riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
+  riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
+  let image = Nothing
+      arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime
+  fulfillment' <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing False False Nothing (Just $ show Enums.RIDE_ENROUTE_PICKUP) isValueAddNP riderPhone False 0
+  let fulfillment = fulfillment'
+  mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
+  let farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
+  ttl <- bppConfig.onStatusTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+  msgId <- generateGUID
+  bppUri <- buildBppUrl merchant.id
+  bapUri <- parseBaseUrl booking.bapUri
+  let bppId = getShortId merchant.subscriberId
+      city = fromMaybe merchant.city booking.bapCity
+      country = fromMaybe merchant.country booking.bapCountry
+  context <- ContextV2.buildContextV2_1 Context.ON_STATUS Context.MOBILITY msgId (Just booking.transactionId) booking.bapId bapUri (Just bppId) (Just bppUri) city country (Just ttl)
+  mbCachedBapTerms <- Utils.getCachedBapTerms booking.transactionId
+  let order =
+        Spec.Order
+          { orderId = Just booking.id.getId,
+            orderStatus = Just "ACTIVE",
+            orderFulfillments = Just [fulfillment],
+            orderPayments = Utils.tfPayments booking merchant bppConfig,
+            orderQuote = Utils.tfQuotation booking,
+            orderBilling = Nothing,
+            orderCancellation = Nothing,
+            orderCancellationTerms = Just $ Utils.tfCancellationTerms Nothing (Just Enums.RIDE_ENROUTE_PICKUP),
+            orderItems = Utils.tfItems booking merchant.shortId.getShortId Nothing farePolicy booking.paymentId,
+            orderProvider = Utils.tfProvider bppConfig,
+            orderTags = Utils.mkOrderTagsWithBapTerms mbCachedBapTerms (Just booking.estimatedFare) bppConfig,
+            orderCreatedAt = Just booking.createdAt,
+            orderUpdatedAt = Just booking.updatedAt
+          }
+  let onStatusReq =
+        Spec.OnStatusReq
+          { onStatusReqContext = context,
+            onStatusReqError = Nothing,
+            onStatusReqMessage = Just $ Spec.ConfirmReqMessage {confirmReqMessageOrder = order}
+          }
+  retryConfig <- asks (.longDurationRetryCfg)
+  void $ callOnStatusV2 onStatusReq retryConfig merchant.id
 
 sendRideStartedUpdateToBAP ::
   ( CacheFlow m r,
@@ -669,11 +762,12 @@ sendBookingCancelledUpdateToBAP ::
   DM.Merchant ->
   SRBCR.CancellationSource ->
   Maybe PriceAPIEntity ->
+  Maybe FarePolicyD.FullFarePolicy ->
   m ()
-sendBookingCancelledUpdateToBAP booking transporter cancellationSource cancellationFee = do
+sendBookingCancelledUpdateToBAP booking transporter cancellationSource cancellationFee mbFarePolicy = do
   let bookingCancelledBuildReqV2 = ACL.BookingCancelledBuildReqV2 ACL.DBookingCancelledReqV2 {..}
   retryConfig <- asks (.longDurationRetryCfg)
-  bookingCancelledMsgV2 <- ACL.buildOnCancelMessageV2 transporter booking.bapCity booking.bapCountry (show Enums.CANCELLED) bookingCancelledBuildReqV2 Nothing
+  bookingCancelledMsgV2 <- ACL.buildOnCancelMessageV2 transporter booking.bapCity booking.bapCountry (show Enums.CANCELLED) bookingCancelledBuildReqV2 Nothing mbFarePolicy
   void $ callOnCancelV2 bookingCancelledMsgV2 retryConfig transporter.id
 
 sendDriverOffer ::
@@ -754,6 +848,7 @@ sendDriverArrivalUpdateToBAP ::
     EncFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
+    HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -772,19 +867,50 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
-  mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+  _mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
     CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
   riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
   riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
-  let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
-      paymentUrl = Nothing
-      bookingDetails = ACL.BookingDetails {..}
-      estimateId = booking.estimateId <&> (.getId)
-      driverArrivedBuildReq = ACL.DriverArrivedBuildReq ACL.DDriverArrivedReq {..}
+  -- Send on_status with RIDE_ARRIVED_PICKUP (RIDE_ENROUTE_PICKUP is sent separately via enroutePickup API)
   retryConfig <- asks (.shortDurationRetryCfg)
-  driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing driverArrivedBuildReq
-  void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig merchant.id
+  let arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 arrivalTime
+  fulfillment' <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) Nothing arrivalTimeTagGroup Nothing False False Nothing (Just $ show Enums.RIDE_ARRIVED_PICKUP) isValueAddNP riderPhone False 0
+  let fulfillment = fulfillment'
+  mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
+  let farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
+  ttl <- bppConfig.onStatusTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+  msgId <- generateGUID
+  bppUri <- buildBppUrl merchant.id
+  bapUri <- parseBaseUrl booking.bapUri
+  let bppId = getShortId merchant.subscriberId
+      city = fromMaybe merchant.city booking.bapCity
+      country = fromMaybe merchant.country booking.bapCountry
+  context <- ContextV2.buildContextV2_1 Context.ON_STATUS Context.MOBILITY msgId (Just booking.transactionId) booking.bapId bapUri (Just bppId) (Just bppUri) city country (Just ttl)
+  mbCachedBapTerms <- Utils.getCachedBapTerms booking.transactionId
+  let arrivedOrder =
+        Spec.Order
+          { orderId = Just booking.id.getId,
+            orderStatus = Just "ACTIVE",
+            orderFulfillments = Just [fulfillment],
+            orderPayments = Utils.tfPayments booking merchant bppConfig,
+            orderQuote = Utils.tfQuotation booking,
+            orderBilling = Nothing,
+            orderCancellation = Nothing,
+            orderCancellationTerms = Just $ Utils.tfCancellationTerms Nothing (Just Enums.RIDE_ARRIVED_PICKUP),
+            orderItems = Utils.tfItems booking merchant.shortId.getShortId Nothing farePolicy booking.paymentId,
+            orderProvider = Utils.tfProvider bppConfig,
+            orderTags = Utils.mkOrderTagsWithBapTerms mbCachedBapTerms (Just booking.estimatedFare) bppConfig,
+            orderCreatedAt = Just booking.createdAt,
+            orderUpdatedAt = Just booking.updatedAt
+          }
+  let arrivedStatusReq =
+        Spec.OnStatusReq
+          { onStatusReqContext = context,
+            onStatusReqError = Nothing,
+            onStatusReqMessage = Just $ Spec.ConfirmReqMessage {confirmReqMessageOrder = arrivedOrder}
+          }
+  void $ callOnStatusV2 arrivedStatusReq retryConfig merchant.id
 
 sendPhoneCallRequestUpdateToBAP ::
   ( CacheFlow m r,

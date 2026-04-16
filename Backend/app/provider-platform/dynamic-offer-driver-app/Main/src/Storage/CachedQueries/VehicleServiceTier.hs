@@ -34,26 +34,13 @@ findAllByMerchantOpCityIdInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC
 findAllByMerchantOpCityIdInRideFlow id configVersionMap = findAllByMerchantOpCityId id (Just configVersionMap)
 
 findByServiceTierTypeAndCityIdInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => ServiceTierType -> Id DMOC.MerchantOperatingCity -> [LYT.ConfigVersionMap] -> m (Maybe Domain.Types.VehicleServiceTier.VehicleServiceTier)
-findByServiceTierTypeAndCityIdInRideFlow serviceTier merchantOpCityId configVersionMap = findByServiceTierTypeAndCityId serviceTier merchantOpCityId (Just configVersionMap)
+findByServiceTierTypeAndCityIdInRideFlow serviceTier merchantOpCityId _configVersionMap = Queries.findByServiceTierTypeAndCityId serviceTier merchantOpCityId
 
 findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe [LYT.ConfigVersionMap] -> m [VehicleServiceTier]
-findAllByMerchantOpCityId merchantOpCityId mbConfigVersionMap =
-  DynamicLogic.findAllConfigs
-    (cast merchantOpCityId)
-    (LYT.DRIVER_CONFIG LYT.VehicleServiceTier)
-    mbConfigVersionMap
-    Nothing
-    (Queries.findAllByMerchantOpCityId merchantOpCityId)
+findAllByMerchantOpCityId merchantOpCityId _mbConfigVersionMap = Queries.findAllByMerchantOpCityId merchantOpCityId
 
 findByServiceTierTypeAndCityId :: (CacheFlow m r, EsqDBFlow m r) => ServiceTierType -> Id DMOC.MerchantOperatingCity -> Maybe [LYT.ConfigVersionMap] -> m (Maybe Domain.Types.VehicleServiceTier.VehicleServiceTier)
-findByServiceTierTypeAndCityId serviceTier merchantOpCityId mbConfigVersionMap =
-  DynamicLogic.findOneConfigWithCacheKey
-    (cast merchantOpCityId)
-    (LYT.DRIVER_CONFIG LYT.VehicleServiceTier)
-    mbConfigVersionMap
-    Nothing
-    (Queries.findByServiceTierTypeAndCityId serviceTier merchantOpCityId)
-    (makeServiceTierTypeAndCityIdKey merchantOpCityId serviceTier)
+findByServiceTierTypeAndCityId serviceTier merchantOpCityId _mbConfigVersionMap = Queries.findByServiceTierTypeAndCityId serviceTier merchantOpCityId
 
 makeServiceTierTypeAndCityIdKey :: Id DMOC.MerchantOperatingCity -> ServiceTierType -> Text
 makeServiceTierTypeAndCityIdKey merchantOpCityId serviceTier = "CachedQueries:VehicleServiceTier:MerchantOpCityId-" <> merchantOpCityId.getId <> ":ServiceTier-" <> show serviceTier
@@ -65,14 +52,7 @@ findBaseServiceTierTypeByCategoryAndCityIdInRideFlow :: (CacheFlow m r, EsqDBFlo
 findBaseServiceTierTypeByCategoryAndCityIdInRideFlow vehicleCategory merchantOpCityId configsInExperimentVersions = findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOpCityId (Just configsInExperimentVersions)
 
 findBaseServiceTierTypeByCategoryAndCityId :: (CacheFlow m r, EsqDBFlow m r) => Maybe VehicleCategory -> Id DMOC.MerchantOperatingCity -> Maybe [LYT.ConfigVersionMap] -> m (Maybe VehicleServiceTier)
-findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOpCityId mbConfigVersionMap =
-  DynamicLogic.findOneConfigWithCacheKey
-    (cast merchantOpCityId)
-    (LYT.DRIVER_CONFIG LYT.VehicleServiceTier)
-    mbConfigVersionMap
-    Nothing
-    (Queries.findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOpCityId)
-    (makeVehicleCategoryAndCityIdKey vehicleCategory merchantOpCityId)
+findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOpCityId _mbConfigVersionMap = Queries.findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOpCityId
 
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m ()
 clearCache merchantOperatingCityId =

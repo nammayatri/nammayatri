@@ -56,7 +56,7 @@ tfOrder uiConfirm isValueAddNP bapConfig riderConfig = do
   let orderBilling_ = tfOrderBilling uiConfirm.riderPhone uiConfirm.riderName & Just
   let orderFulfillments_ = Just $ Data.List.singleton $ tfOrderFulfillments uiConfirm isValueAddNP
   let orderItems_ = Just $ Data.List.singleton $ tfOrderItems uiConfirm
-  BecknV2.OnDemand.Types.Order {orderBilling = orderBilling_, orderCancellation = orderCancellation_, orderCancellationTerms = orderCancellationTerms_, orderFulfillments = orderFulfillments_, orderId = orderId_, orderItems = orderItems_, orderPayments = orderPayments_, orderProvider = orderProvider_, orderQuote = orderQuote_, orderStatus = orderStatus_, orderCreatedAt = Just uiConfirm.booking.createdAt, orderUpdatedAt = Just uiConfirm.booking.updatedAt}
+  BecknV2.OnDemand.Types.Order {orderBilling = orderBilling_, orderCancellation = orderCancellation_, orderCancellationTerms = orderCancellationTerms_, orderFulfillments = orderFulfillments_, orderId = orderId_, orderItems = orderItems_, orderPayments = orderPayments_, orderProvider = orderProvider_, orderQuote = orderQuote_, orderStatus = orderStatus_, orderTags = Nothing, orderCreatedAt = Just uiConfirm.booking.createdAt, orderUpdatedAt = Just uiConfirm.booking.updatedAt}
 
 tfOrderBilling :: Maybe Data.Text.Text -> Maybe Data.Text.Text -> BecknV2.OnDemand.Types.Billing
 tfOrderBilling mbPhoneNumber mbRiderName = do
@@ -84,7 +84,7 @@ tfOrderItems uiConfirm = do
   let itemPaymentIds_ = Nothing
   let itemPrice_ = Nothing
   let itemTags_ = Just $ mkItemTags uiConfirm
-  BecknV2.OnDemand.Types.Item {itemCategoryIds = Nothing, itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_}
+  BecknV2.OnDemand.Types.Item {itemCancellationTerms = Nothing, itemCategoryIds = Nothing, itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_}
 
 tfPrice :: SharedLogic.Confirm.DConfirmRes -> BecknV2.OnDemand.Types.Price
 tfPrice uiConfirm = do
@@ -105,6 +105,7 @@ tfProvider uiConfirm = do
       providerDescriptor = Nothing
       providerFulfillments = Nothing
       providerCategories = Nothing
+      providerTags = Nothing
 
   BecknV2.OnDemand.Types.Provider {..}
 

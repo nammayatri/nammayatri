@@ -114,7 +114,7 @@ instance CompleteTagGroup BecknTagGroup where
     _ -> False
 
   -- getDescriptor :: tags -> (description, shortDescription)
-  getTagGroupDescriptor tagGroup = uncurry (Spec.Descriptor . Just . T.pack $ show tagGroup) $ case tagGroup of
+  getTagGroupDescriptor tagGroup = uncurry (Spec.Descriptor . Just $ becknTagGroupToCode tagGroup) $ case tagGroup of
     ROUTE_INFO -> (Just "Route Information", Nothing)
     BUYER_FINDER_FEES -> (Just "Buyer Finder Fees Information", Nothing)
     SETTLEMENT_TERMS -> (Just "Settlement Terms Information", Nothing)
@@ -125,6 +125,11 @@ instance CompleteTagGroup BecknTagGroup where
     DELIVERY -> (Just "Delivery Information", Nothing)
     DRIVER_REACHED_DESTINATION_INFO -> (Just "Driver Reached Destination Information", Nothing)
     _ -> (Just $ convertToSentence tagGroup, Nothing) -- TODO: move all the tagGroups to this function and remove (_ -> case statement)
+
+-- | Map tag group enum to spec-compliant descriptor code
+becknTagGroupToCode :: BecknTagGroup -> T.Text
+becknTagGroupToCode GENERAL_INFO = "INFO"
+becknTagGroupToCode other = T.pack $ show other
 
 data EXTRA_PER_KM_STEP_FARE = EXTRA_PER_KM_STEP_FARE
   { startThreshold :: Int,
@@ -292,7 +297,7 @@ data BecknTag
     MIN_FARE
   | MIN_FARE_DISTANCE_KM
   | PER_KM_CHARGE
-  | DEAD_KILOMETER_FARE
+  | PICKUP_CHARGE
   | WAITING_CHARGE_PER_MIN
   | WAITING_CHARGE_RATE_PER_MIN
   | NIGHT_CHARGE_MULTIPLIER
@@ -721,7 +726,7 @@ instance CompleteTag BecknTag where
     MIN_FARE -> FARE_POLICY
     MIN_FARE_DISTANCE_KM -> FARE_POLICY
     PER_KM_CHARGE -> FARE_POLICY
-    DEAD_KILOMETER_FARE -> FARE_POLICY
+    PICKUP_CHARGE -> FARE_POLICY
     WAITING_CHARGE_PER_MIN -> FARE_POLICY
     WAITING_CHARGE_RATE_PER_MIN -> FARE_POLICY
     NIGHT_CHARGE_MULTIPLIER -> FARE_POLICY

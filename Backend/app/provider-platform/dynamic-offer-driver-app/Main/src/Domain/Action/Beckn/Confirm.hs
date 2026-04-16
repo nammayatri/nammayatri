@@ -270,7 +270,9 @@ validateRequest subscriber transporterId req now = do
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
   let isAllowedForNonValueAddNP = case booking.tripCategory of
         OneWay OneWayOnDemandDynamicOffer -> True
+        OneWay OneWayOnDemandStaticOffer -> True
         CrossCity OneWayOnDemandDynamicOffer _ -> True
+        Rental _ -> True
         _ -> False
   when (not isValueAddNP && not isAllowedForNonValueAddNP) $
     throwError (InvalidRequest $ "Unserviceable trip category:-" <> show booking.tripCategory)

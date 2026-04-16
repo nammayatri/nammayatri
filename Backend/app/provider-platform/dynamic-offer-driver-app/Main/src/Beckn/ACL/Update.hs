@@ -20,6 +20,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import qualified Data.List
 import Data.Text (toLower)
 import qualified Domain.Action.Beckn.Update as DUpdate
 import qualified Domain.Types.Merchant as DM
@@ -47,32 +48,44 @@ buildUpdateReq merchantId subscriber req = do
 parseEvent :: (MonadFlow m) => Id DM.Merchant -> Spec.UpdateReqMessage -> Spec.Context -> m DUpdate.DUpdateReq
 parseEvent merchantId reqMsg context = do
   bookingId <- fmap Id reqMsg.updateReqMessageOrder.orderId & fromMaybeM (InvalidRequest "orderId not found")
-  fulfillment <- reqMsg.updateReqMessageOrder.orderFulfillments >>= listToMaybe & fromMaybeM (InvalidRequest "Fulfillment not found")
-  eventType <-
-    fulfillment.fulfillmentState
-      >>= (.fulfillmentStateDescriptor)
-      >>= (.descriptorCode)
-      & fromMaybeM (InvalidRequest "Event type is not present in UpdateReq.")
-
-  case eventType of
-    "PAYMENT_COMPLETED" -> do
-      rideId <- fmap Id fulfillment.fulfillmentId & fromMaybeM (InvalidRequest "Fulfillment id not found")
-      payment <- reqMsg.updateReqMessageOrder.orderPayments >>= listToMaybe & fromMaybeM (InvalidRequest "Payment not present")
-      paymentMethodInfo <- mkPaymentMethodInfo payment
-      pure $
-        DUpdate.UPaymentCompletedReq $
-          DUpdate.PaymentCompletedReq
-            { bookingId,
-              rideId,
-              paymentStatus = castPaymentStatus payment.paymentStatus,
-              paymentMethodInfo
-            }
-    "EDIT_LOCATION" -> do
-      rideId <- fmap Id fulfillment.fulfillmentId & fromMaybeM (InvalidRequest "Fulfillment id not found")
-      parseEditLocationEvent bookingId fulfillment rideId
-    "ADD_STOP" -> parseAddStopEvent bookingId fulfillment
-    "EDIT_STOP" -> parseEditStopEvent bookingId fulfillment
-    _ -> throwError (InvalidRequest "Invalid event type")
+  -- Check if this is a tip/payment update (no fulfillments, has quote.breakup with BUYER_ADDITIONAL_AMOUNT)
+  let mbBuyerAdditionalAmount = do
+        breakups <- reqMsg.updateReqMessageOrder.orderQuote >>= (.quotationBreakup)
+        tipBreakup <- Data.List.find (\b -> b.quotationBreakupInnerTitle == Just "BUYER_ADDITIONAL_AMOUNT") breakups
+        tipBreakup.quotationBreakupInnerPrice >>= (.priceValue)
+  case mbBuyerAdditionalAmount of
+    Just _tipAmount -> do
+      -- Tip update from BAP - return AddStop with empty stops (handler will skip processing)
+      logInfo $ "Received tip update (BUYER_ADDITIONAL_AMOUNT) for booking " <> bookingId.getId
+      pure $ DUpdate.UAddStopReq $ DUpdate.AddStopReq {bookingId, stops' = []}
+    Nothing -> do
+      fulfillment <- reqMsg.updateReqMessageOrder.orderFulfillments >>= listToMaybe & fromMaybeM (InvalidRequest "Fulfillment not found")
+      -- Try fulfillment.state.descriptor.code first (on-us), then fall back to order.status (ONDC 2.1.0 spec)
+      let eventType =
+            (fulfillment.fulfillmentState >>= (.fulfillmentStateDescriptor) >>= (.descriptorCode))
+              <|> reqMsg.updateReqMessageOrder.orderStatus
+      eventType' <- eventType & fromMaybeM (InvalidRequest "Event type is not present in UpdateReq.")
+      case eventType' of
+        "PAYMENT_COMPLETED" -> do
+          rideId <- fmap Id fulfillment.fulfillmentId & fromMaybeM (InvalidRequest "Fulfillment id not found")
+          payment <- reqMsg.updateReqMessageOrder.orderPayments >>= listToMaybe & fromMaybeM (InvalidRequest "Payment not present")
+          paymentMethodInfo <- mkPaymentMethodInfo payment
+          pure $
+            DUpdate.UPaymentCompletedReq $
+              DUpdate.PaymentCompletedReq
+                { bookingId,
+                  rideId,
+                  paymentStatus = castPaymentStatus payment.paymentStatus,
+                  paymentMethodInfo
+                }
+        "EDIT_LOCATION" -> do
+          rideId <- fmap Id fulfillment.fulfillmentId & fromMaybeM (InvalidRequest "Fulfillment id not found")
+          parseEditLocationEvent bookingId fulfillment rideId
+        "ADD_STOP" -> parseAddStopEvent bookingId fulfillment
+        "EDIT_STOP" -> parseEditStopEvent bookingId fulfillment
+        "SOFT_UPDATE" -> parseEditStopEvent bookingId fulfillment
+        "CONFIRM_UPDATE" -> parseEditStopEvent bookingId fulfillment
+        _ -> throwError (InvalidRequest $ "Invalid event type: " <> eventType')
   where
     parseAddStopEvent bookingId fulfillment = do
       fulfillmentStops <- fulfillment.fulfillmentStops & fromMaybeM (InvalidRequest "Fulfillment stops not found")

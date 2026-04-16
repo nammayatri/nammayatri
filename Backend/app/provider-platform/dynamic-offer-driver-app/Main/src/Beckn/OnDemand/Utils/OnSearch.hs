@@ -15,24 +15,44 @@
 module Beckn.OnDemand.Utils.OnSearch where
 
 import qualified Beckn.OnDemand.Utils.Common as CUtils
-import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
-import qualified BecknV2.OnDemand.Utils.Payment as OUP
-import qualified Data.Aeson as A
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Data.List as List
-import qualified Data.Text as T
 import Domain.Action.Beckn.Search
 import Domain.Types
 import Domain.Types.BecknConfig as DBC
 import Domain.Types.Merchant as DM
 import EulerHS.Prelude hiding (id, view, (^?))
+import qualified Kernel.External.Maps as Maps
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common
+
+defaultLocationId :: Text
+defaultLocationId = "L1"
 
 mkProviderLocations :: [Maybe NearestDriverInfo] -> [Spec.Location]
 mkProviderLocations driverLocationsInfo =
   let duplicatesRemoved = List.nubBy ((==) `on` locationId) (catMaybes driverLocationsInfo)
    in foldl (<>) [] $ map mkProviderLocation duplicatesRemoved
+
+-- | Build provider locations with a fallback default location from pickup GPS
+mkProviderLocationsWithDefault :: Maps.LatLong -> [Maybe NearestDriverInfo] -> [Spec.Location]
+mkProviderLocationsWithDefault pickupGps driverLocationsInfo =
+  case mkProviderLocations driverLocationsInfo of
+    [] ->
+      let gps = Gps.Gps {lat = pickupGps.lat, lon = pickupGps.lon}
+       in [ Spec.Location
+              { locationAddress = Nothing,
+                locationAreaCode = Nothing,
+                locationCity = Nothing,
+                locationCountry = Nothing,
+                locationGps = Utils.gpsToText gps,
+                locationId = Just defaultLocationId,
+                locationUpdatedAt = Nothing,
+                locationState = Nothing
+              }
+          ]
+    locs -> locs
 
 mkProviderLocation :: NearestDriverInfo -> [Spec.Location]
 mkProviderLocation NearestDriverInfo {..} = do
@@ -45,7 +65,7 @@ mkProviderLocation NearestDriverInfo {..} = do
           locationAreaCode = Nothing,
           locationCity = Nothing,
           locationCountry = Nothing,
-          locationGps = A.decode $ A.encode gps,
+          locationGps = Utils.gpsToText gps,
           locationId = Just locationId,
           locationUpdatedAt = Nothing,
           locationState = Nothing
@@ -55,7 +75,7 @@ mkItemLocationIds :: [Maybe NearestDriverInfo] -> Maybe [Text]
 mkItemLocationIds driverLocationsInfo = do
   let dLocInfo' = List.nubBy ((==) `on` locationId) (catMaybes driverLocationsInfo)
   case dLocInfo' of
-    [] -> Nothing
+    [] -> Just [defaultLocationId]
     dLocInfo -> Just $ map (.locationId) dLocInfo
 
 buildFareParamsBreakupsTags :: FareParamsBreakupItem -> Spec.Tag
@@ -84,9 +104,17 @@ mkFareParamsBreakupItem :: Text -> Money -> FareParamsBreakupItem
 mkFareParamsBreakupItem = FareParamsBreakupItem
 
 mkPayment :: DM.Merchant -> DBC.BecknConfig -> Maybe Text -> [Spec.Payment]
-mkPayment merchant bppConfig mbPaymentId = do
-  let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
-  List.singleton $ OUP.mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID Nothing mbPaymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing Nothing
+mkPayment _merchant bppConfig _mbPaymentId = do
+  List.singleton $
+    Spec.Payment
+      { paymentCollectedBy = Just $ show bppConfig.collectedBy,
+        paymentId = Nothing,
+        paymentParams = Nothing,
+        paymentStatus = Nothing,
+        paymentTags = Nothing,
+        paymentTlMethod = Nothing,
+        paymentType = Nothing
+      }
 
 mkItemTags :: CUtils.Pricing -> Bool -> Maybe Bool -> Maybe [Spec.TagGroup]
 mkItemTags pricing isValueAddNP fareParametersInRateCard = do
@@ -125,5 +153,5 @@ mkCategory code =
 -- | Build deduplicated list of categories from pricings
 mkTripCategories :: [CUtils.Pricing] -> [Spec.Category]
 mkTripCategories pricings =
-  let codes = List.nub $ map (tripCategoryToCategoryCode . (.tripCategory)) pricings
+  let codes = List.nub $ map (\p -> CUtils.tripCategoryToCategoryCodeWithSchedule p.isScheduled p.tripCategory) pricings
    in map mkCategory codes

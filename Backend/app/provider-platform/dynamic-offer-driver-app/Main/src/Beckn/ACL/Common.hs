@@ -109,6 +109,7 @@ filterRequiredBreakups fParamsType breakup = do
       title
         `elem` [ "BASE_FARE",
                  "SERVICE_CHARGE",
+                 "PICKUP_CHARGE",
                  "DEAD_KILOMETER_FARE",
                  "DISTANCE_FARE",
                  "DRIVER_SELECTED_FARE",
@@ -154,6 +155,7 @@ filterRequiredBreakups fParamsType breakup = do
       title
         `elem` [ "BASE_FARE",
                  "SERVICE_CHARGE",
+                 "PICKUP_CHARGE",
                  "DEAD_KILOMETER_FARE",
                  "DIST_BASED_FARE",
                  "TIME_BASED_FARE",
@@ -176,6 +178,7 @@ filterRequiredBreakups fParamsType breakup = do
       title
         `elem` [ "BASE_FARE",
                  "SERVICE_CHARGE",
+                 "PICKUP_CHARGE",
                  "DEAD_KILOMETER_FARE",
                  "DIST_BASED_FARE",
                  "TIME_BASED_FARE",

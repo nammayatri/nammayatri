@@ -258,13 +258,12 @@ upsertRouteStopFare quotes integratedBPPConfig merchantId merchantOperatingCityI
       let routeStartEndStops =
             -- This `null quote.routeStation` check is to ensure that we only update the fare for the route stations if they are present in the quote.
             if null quote.routeStations
-              then
-                case (getStartStation quote.stations, getEndStation quote.stations) of
-                  (Just startStation, Just endStation) -> [(quote.routeCode, startStation.stationCode, endStation.stationCode)]
-                  _ -> []
+              then case (getStartStation quote.stations, getEndStation quote.stations) of
+                (Just startStation, Just endStation) -> [(quote.routeCode, startStation.stationCode, endStation.stationCode)]
+                _ -> []
               else
                 mapMaybe
-                  (\routeStation -> do
+                  ( \routeStation -> do
                       let mbStartStopCode = find (\station -> station.stationType == Station.START) routeStation.routeStations <&> (.stationCode)
                           mbEndStopCode = find (\station -> station.stationType == Station.END) routeStation.routeStations <&> (.stationCode)
                       case ((,) <$> mbStartStopCode <*> mbEndStopCode) of

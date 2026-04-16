@@ -994,7 +994,7 @@ getConfigValue language issueConfig mbRideInfoRes key = do
       finalFare = fromMaybe 0.0 $ (.computedPrice) =<< mbRideInfoRes
       fareDifference = estimatedFare - finalFare
       fareBreakup = maybe [] (.fareBreakup) mbRideInfoRes
-      driverPickupCharges = maybe 0.0 (.amount.amount) (getFareFromArray "DEAD_KILOMETER_FARE" fareBreakup)
+      driverPickupCharges = maybe 0.0 (.amount.amount) (getFareFromArray "PICKUP_CHARGE" fareBreakup <|> getFareFromArray "DEAD_KILOMETER_FARE" fareBreakup)
       tollCharges = maybe 0.0 (.amount.amount) (getFareFromArray "TOLL_CHARGES" fareBreakup)
       petCharges = maybe 0.0 (.amount.amount) (getFareFromArray "PET_CHARGES" fareBreakup)
       driverAllowance = maybe 0.0 (.amount.amount) (getFareFromArray "DRIVER_ALLOWANCE" fareBreakup)

@@ -1787,7 +1787,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
           void $ Redis.withCrossAppRedis $ Redis.expire (mkAcceptanceVehicleCategoryCity now sd.vehicleCategory searchReq.merchantOperatingCityId.getId) 3600
         else pure ()
       driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
-      let estimatedFare = fareSum fareParams $ Just sd.conditionalCharges
+      -- Use the original estimate fare (from search request for driver) to keep price consistent across APIs
+      let estimatedFare = fromMaybe (fareSum fareParams $ Just sd.conditionalCharges) sd.baseFare
       pure
         DDrQuote.DriverQuote
           { id = guid,

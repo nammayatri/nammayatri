@@ -22,10 +22,12 @@ import qualified BecknV2.OnDemand.Enums as Spec
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import Data.Aeson as A
+import qualified Data.Text as T
 import Domain.Types
 import qualified Domain.Types.PaymentMode as DPM
 import Kernel.Prelude
 import Kernel.Types.Common (Price)
+import qualified Kernel.Types.Price
 
 type TxnId = Text
 
@@ -54,26 +56,19 @@ mkPayment ::
   Maybe DPM.PaymentMode ->
   Maybe Text -> -- Payment instrument
   Spec.Payment
-mkPayment txnCity collectedBy paymentStatus mPrice mTxnId mPaymentParams mSettlementType mSettlementWindow mSettlementTermsUrl mbff isStripe mPaymentMode mPaymentInstrument = do
-  let mAmount = show . (.amount) <$> mPrice
-  let mCurrency = show . (.currency) <$> mPrice
+mkPayment _txnCity collectedBy paymentStatus _mPrice mTxnId _mPaymentParams _mSettlementType _mSettlementWindow _mSettlementTermsUrl _mbff _isStripe _mPaymentMode _mPaymentInstrument = do
   Spec.Payment
     { paymentCollectedBy = Just collectedBy,
       paymentId = mTxnId,
-      paymentParams =
-        if anyTrue [isJust mTxnId, isJust mAmount, isJust mPaymentParams]
-          then Just $ mkPaymentParams mPaymentParams mTxnId mAmount mCurrency
-          else Nothing,
+      paymentParams = Nothing,
       paymentStatus = encodeToText' paymentStatus,
-      paymentTags = Just $ mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff mPaymentMode mPaymentInstrument,
-      paymentTlMethod = mkTlMethod isStripe >>= encodeToText',
+      paymentTags = Nothing,
+      paymentTlMethod = Nothing,
       paymentType = encodeToText' Spec.ON_FULFILLMENT
     }
-  where
-    anyTrue = or
 
-mkTlMethod :: Bool -> Maybe Spec.TLMethod
-mkTlMethod isStripe = if isStripe then Just Spec.StripeSdk else Nothing
+_mkTlMethod :: Bool -> Maybe Spec.TLMethod
+_mkTlMethod isStripe = if isStripe then Just Spec.StripeSdk else Nothing
 
 mkPayment' ::
   Tag.TagList ->
@@ -84,7 +79,7 @@ mkPayment' ::
   Maybe BknPaymentParams ->
   Spec.Payment
 mkPayment' allPaymentTags collectedBy paymentStatus mPrice mTxnId mPaymentParams = do
-  let mAmount = show . (.amount) <$> mPrice
+  let mAmount = Kernel.Types.Price.showPriceWithRoundingWithoutCurrency <$> mPrice
   let mCurrency = show . (.currency) <$> mPrice
   Spec.Payment
     { paymentCollectedBy = Just collectedBy,
@@ -112,23 +107,33 @@ mkPaymentParams mPaymentParams _mTxnId mAmount mCurrency = do
       paymentParamsVirtualPaymentAddress = mPaymentParams >>= (.vpa)
     }
 
-mkPaymentTags :: City -> Maybe SettlementType -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Maybe BuyerFinderFee -> Maybe DPM.PaymentMode -> Maybe Text -> [Spec.TagGroup]
-mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff mPaymentMode mPaymentInstrument =
-  catMaybes
-    [ Just $ mkBuyerFinderFeeTagGroup mbff,
-      Just $ mkSettlementTagGroup txnCity mAmount mSettlementWindow mSettlementTermsUrl mPaymentMode mPaymentInstrument,
-      mkSettlementDetailsTagGroup mSettlementType
-    ]
+_mkPaymentTags :: City -> Maybe SettlementType -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Maybe BuyerFinderFee -> Maybe DPM.PaymentMode -> Maybe Text -> [Spec.TagGroup]
+_mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff mPaymentMode mPaymentInstrument =
+  let mSettlementAmount = _computeSettlementAmount mAmount mbff
+   in catMaybes
+        [ Just $ _mkBuyerFinderFeeTagGroup mbff,
+          Just $ _mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTermsUrl mPaymentMode mPaymentInstrument,
+          _mkSettlementDetailsTagGroup mSettlementType
+        ]
 
-mkBuyerFinderFeeTagGroup :: Maybe BuyerFinderFee -> Spec.TagGroup
-mkBuyerFinderFeeTagGroup mbff =
+-- | Compute settlement amount as: order_amount - (order_amount * buyer_finder_fee_percentage / 100)
+_computeSettlementAmount :: Maybe Text -> Maybe BuyerFinderFee -> Maybe Text
+_computeSettlementAmount mAmount mbff = do
+  amountText <- mAmount
+  (amount :: Double) <- readMaybe (T.unpack amountText)
+  let bffPercentage = fromMaybe (0 :: Double) (mbff >>= readMaybe . T.unpack)
+      settlementAmt = amount - (amount * bffPercentage / 100)
+  Just $ show (round settlementAmt :: Integer)
+
+_mkBuyerFinderFeeTagGroup :: Maybe BuyerFinderFee -> Spec.TagGroup
+_mkBuyerFinderFeeTagGroup mbff =
   Tag.getFullTagGroup
     Tag.BUYER_FINDER_FEES
     [ Tag.mkTag Tag.BUYER_FINDER_FEES_PERCENTAGE (Just $ fromMaybe "0" mbff)
     ]
 
-mkSettlementTagGroup :: City -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Maybe DPM.PaymentMode -> Maybe Text -> Spec.TagGroup
-mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTermsUrl mPaymentMode mPaymentInstrument =
+_mkSettlementTagGroup :: City -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Maybe DPM.PaymentMode -> Maybe Text -> Spec.TagGroup
+_mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTermsUrl mPaymentMode mPaymentInstrument =
   Tag.getFullTagGroup Tag.SETTLEMENT_TERMS $
     catMaybes
       [ Tag.mkOptionalTag Tag.STRIPE_TEST (if mPaymentMode == Just DPM.TEST then Just (show True) else Nothing),
@@ -136,7 +141,7 @@ mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTerm
       ]
       <> catMaybes
         [ Tag.mkOptionalTag Tag.SETTLEMENT_AMOUNT mSettlementAmount,
-          Just $ Tag.mkTag Tag.SETTLEMENT_WINDOW (Just $ fromMaybe "PT1D" mSettlementWindow),
+          Just $ Tag.mkTag Tag.SETTLEMENT_WINDOW (Just $ fromMaybe "P1D" mSettlementWindow),
           Just $ Tag.mkTag Tag.DELAY_INTEREST (Just "0"),
           Just $ Tag.mkTag Tag.SETTLEMENT_BASIS (Just "INVOICE_RECIEPT"),
           Just $ Tag.mkTag Tag.MANDATORY_ARBITRATION (Just "TRUE"),
@@ -144,13 +149,12 @@ mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTerm
           Just $ Tag.mkTag Tag.STATIC_TERMS (Just $ maybe "https://api.example-bap.com/booking/terms" showBaseUrl mSettlementTermsUrl)
         ]
 
-mkSettlementDetailsTagGroup :: Maybe SettlementType -> Maybe Spec.TagGroup
-mkSettlementDetailsTagGroup mSettlementType = do
-  st <- mSettlementType
-  return $
+_mkSettlementDetailsTagGroup :: Maybe SettlementType -> Maybe Spec.TagGroup
+_mkSettlementDetailsTagGroup mSettlementType =
+  Just $
     Tag.getFullTagGroup
       Tag.SETTLEMENT_DETAILS
-      [ Tag.mkTag Tag.SETTLEMENT_TYPE (Just st)
+      [ Tag.mkTag Tag.SETTLEMENT_TYPE (Just $ fromMaybe "neft" mSettlementType)
       ]
 
 encodeToText' :: (ToJSON a) => a -> Maybe Text

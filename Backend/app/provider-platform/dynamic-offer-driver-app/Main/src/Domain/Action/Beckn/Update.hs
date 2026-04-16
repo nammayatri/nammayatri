@@ -147,7 +147,7 @@ handler (UAddStopReq AddStopReq {..}) = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   let stops = mkLocation booking.merchantOperatingCityId <$> stops'
   case listToMaybe stops of
-    Nothing -> throwError (InvalidRequest $ "No stop information received from rider side for booking " <> bookingId.getId)
+    Nothing -> logInfo $ "No stop information (tip/no-op update) for booking " <> bookingId.getId
     Just loc -> processStop booking loc False
 handler (UEditStopReq EditStopReq {..}) = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)

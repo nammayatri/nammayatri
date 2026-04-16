@@ -187,7 +187,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       DFParams.AmbulanceDetails det -> mkFPAmbulanceDetailsBreakupList det
 
     mkFPProgressiveDetailsBreakupList det = do
-      let deadKmFareCaption = show Enums.DEAD_KILOMETER_FARE
+      let deadKmFareCaption = show Enums.PICKUP_CHARGE
           deadKmFareItem = mkBreakupItem deadKmFareCaption (mkPrice det.deadKmFare)
 
           extraDistanceFareCaption = show Enums.DISTANCE_FARE
@@ -214,7 +214,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
           mbTimeBasedFare = mkBreakupItem timeBasedFareCaption (mkPrice det.timeBasedFare)
           distBasedCaption = show Enums.DIST_BASED_FARE
           mbDistBasedFare = mkBreakupItem distBasedCaption (mkPrice det.distBasedFare)
-          deadKmFareCaption = show Enums.DEAD_KILOMETER_FARE
+          deadKmFareCaption = show Enums.PICKUP_CHARGE
           mbDeadKmFare = mkBreakupItem deadKmFareCaption . mkPrice <$> checkIfZero det.deadKmFare
       catMaybes [Just mbTimeBasedFare, Just mbDistBasedFare, mbDeadKmFare]
 
@@ -230,7 +230,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       catMaybes [mbPlatformFeeItem, mbSgstItem, mbCgstItem, Just mbDistBasedFare]
 
     mkFPInterCityDetailsBreakupList det = do
-      let deadKmFareCaption = show Enums.DEAD_KILOMETER_FARE
+      let deadKmFareCaption = show Enums.PICKUP_CHARGE
           deadKmFareItem = mkBreakupItem deadKmFareCaption (mkPrice det.pickupCharge)
 
           timeBasedFareCaption = show Enums.TIME_BASED_FARE
