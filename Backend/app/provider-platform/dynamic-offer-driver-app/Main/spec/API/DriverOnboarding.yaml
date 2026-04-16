@@ -165,6 +165,7 @@ types:
     documentData: Text  # JSON string containing all document data
     imageId: Maybe (Id Image)  # Optional image for documents that need it
   CommonDocumentRes:
+    result: Text
     documentId: Id CommonDriverOnboardingDocuments
   VehiclePhotosResp:
     left: [Text]

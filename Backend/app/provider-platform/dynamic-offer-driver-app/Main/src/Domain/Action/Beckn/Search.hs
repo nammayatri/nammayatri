@@ -396,10 +396,14 @@ handler ValidatedDSearchReq {..} sReq = do
         Nothing -> pure Nothing
       logDebug $
         "getSpecialPickupZoneInfo area=" <> show area
-          <> " pickupLatLong=" <> show pickupLatLong
-          <> " slId=" <> show mbSlId
-          <> " gateFound=" <> show (isJust mbPickupZone)
-          <> " canQueueUp=" <> show ((.canQueueUpOnGate) <$> mbPickupZone)
+          <> " pickupLatLong="
+          <> show pickupLatLong
+          <> " slId="
+          <> show mbSlId
+          <> " gateFound="
+          <> show (isJust mbPickupZone)
+          <> " canQueueUp="
+          <> show ((.canQueueUpOnGate) <$> mbPickupZone)
       if ((.canQueueUpOnGate) <$> mbPickupZone) == Just True
         then -- Demand counter is bumped at Init time (per chosen variant) for both
         -- estimate-based and quote-based (special zone OTP) flows.

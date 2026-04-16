@@ -33,10 +33,10 @@ import qualified Data.Aeson as A
 import Data.Either.Extra (eitherToMaybe)
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Data.HashMap.Strict as HM
-import Data.Time (utctDay)
 import Data.Maybe (listToMaybe)
 import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Data.Text as Text
+import Data.Time (utctDay)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.Ride.Common as DUIRideCommon

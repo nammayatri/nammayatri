@@ -69,7 +69,7 @@ data CommonDocumentReq = CommonDocumentReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data CommonDocumentRes = CommonDocumentRes {documentId :: Kernel.Types.Id.Id Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments}
+data CommonDocumentRes = CommonDocumentRes {documentId :: Kernel.Types.Id.Id Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments, result :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
