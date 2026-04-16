@@ -118,7 +118,7 @@ getDriverListFromLeaderBoard (personId, _, merchantOpCityId) fromDate toDate dat
   let leaderBoardType = leaderBoardConfig.leaderBoardType
       driverLeaderBoardKey = RideEndInt.makeDriverLeaderBoardKey leaderBoardType False merchantOpCityId fromDate toDate
       cachedDriverLeaderBoardKey = RideEndInt.makeDriverLeaderBoardKey leaderBoardType True merchantOpCityId fromDate toDate
-  driversWithScoresMap :: [(Text, Double)] <- concat <$> Redis.withNonCriticalRedis (Redis.get cachedDriverLeaderBoardKey)
+  driversWithScoresMap :: [(Text, Double)] <- concat <$> Redis.runInMasterCloudRedisCell (Redis.withNonCriticalRedis (Redis.get cachedDriverLeaderBoardKey))
   let driverIds = map (Id . fst) driversWithScoresMap
   driverDetailsMap <- HM.fromList . map (\driver -> (driver.id.getId, (fromMaybe "Driver" $ getPersonFullName driver, driver.gender))) <$> B.runInReplica (QPerson.getDriversByIdIn driverIds)
   (drivers', isCurrentDriverInTop) <-
@@ -142,16 +142,16 @@ getDriverListFromLeaderBoard (personId, _, merchantOpCityId) fromDate toDate dat
       )
       ([], False)
       (zip driversWithScoresMap [1, 2 ..])
-  totalEligibleDrivers <- Redis.withNonCriticalRedis $ Redis.zCard driverLeaderBoardKey
+  totalEligibleDrivers <- Redis.runInMasterCloudRedisCell $ Redis.withNonCriticalRedis $ Redis.zCard driverLeaderBoardKey
   if not isCurrentDriverInTop && dateDiff == 0
     then do
       person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-      mbCurrPersonRank <- Redis.withNonCriticalRedis $ Redis.zRevRank driverLeaderBoardKey personId.getId
-      mbCurrDriverZscore <- Redis.withNonCriticalRedis $ Redis.zScore driverLeaderBoardKey personId.getId
+      mbCurrPersonRank <- Redis.runInMasterCloudRedisCell $ Redis.withNonCriticalRedis $ Redis.zRevRank driverLeaderBoardKey personId.getId
+      mbCurrDriverZscore <- Redis.runInMasterCloudRedisCell $ Redis.withNonCriticalRedis $ Redis.zScore driverLeaderBoardKey personId.getId
       let currDriverZscore = fromMaybe 0 mbCurrDriverZscore
       currPersonRank <-
         case mbCurrPersonRank of
-          Nothing -> Redis.withNonCriticalRedis $ Redis.zCard driverLeaderBoardKey
+          Nothing -> Redis.runInMasterCloudRedisCell $ Redis.withNonCriticalRedis $ Redis.zCard driverLeaderBoardKey
           Just rank -> pure rank
       let (currPersonTotalRides, currPersonTotalDistance) = RideEndInt.getRidesAndDistancefromZscore currDriverZscore leaderBoardConfig.zScoreBase
       currPersonFullName <- getPersonFullName person & fromMaybeM (PersonFieldNotPresent "firstName")
