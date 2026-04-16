@@ -47,8 +47,8 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.MerchantPaymentMethod
 import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
-import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import SharedLogic.SearchTry
+import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN

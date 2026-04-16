@@ -102,9 +102,9 @@ runDemandDecrementForBooking ::
   ( Redis.HedisFlow m r,
     MonadFlow m
   ) =>
-  Text ->       -- bookingId (idempotency key)
+  Text -> -- bookingId (idempotency key)
   Maybe Text -> -- pickupGateId
-  Text ->       -- vehicleServiceTier as Text
+  Text -> -- vehicleServiceTier as Text
   m ()
 runDemandDecrementForBooking _ Nothing _ = pure ()
 runDemandDecrementForBooking bookingId (Just gateId) variant = do
