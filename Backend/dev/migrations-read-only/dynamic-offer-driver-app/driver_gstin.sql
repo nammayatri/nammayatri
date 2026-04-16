@@ -29,3 +29,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_gstin ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_gstin ADD COLUMN pan_number text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_gstin ADD COLUMN state_name text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_gstin ADD COLUMN pincode text ;

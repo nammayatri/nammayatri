@@ -174,7 +174,9 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
             typeOfRegistration = type_of_registration,
             validFrom = valid_from >>= DVRC.parseDateTime,
             validUpto = valid_upto >>= DVRC.parseDateTime,
-            verifiedBy = pure verifyBy
+            verifiedBy = pure verifyBy,
+            pincode = Nothing,
+            stateName = Nothing
           }
 
     callIdfy :: Person.Person -> Maybe DGst.DriverGstin -> DVRC.DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
