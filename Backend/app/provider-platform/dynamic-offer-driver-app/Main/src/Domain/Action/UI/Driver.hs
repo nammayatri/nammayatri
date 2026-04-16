@@ -472,7 +472,10 @@ data DriverInformationRes = DriverInformationRes
     bankAccountNumber :: Maybe Text,
     bankIfsc :: Maybe Text,
     bankVerificationStatus :: Maybe Text,
-    upiId :: Maybe Text
+    upiId :: Maybe Text,
+    driverReferralApplied :: Bool,
+    fleetReferralApplied :: Bool,
+    operatorReferralApplied :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1579,6 +1582,9 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
   let bankAccountNumber' = mbDriverBankAccountForRes <&> (.accountId)
   let bankIfsc' = mbDriverBankAccountForRes >>= (.ifscCode)
   let bankVerificationStatus' = mbDriverBankAccountForRes <&> (\ba -> if ba.detailsSubmitted then "VERIFIED" else "PENDING")
+  let driverReferralApplied = isJust driverInfo.referredByDriverId
+      fleetReferralApplied = isJust driverInfo.referredByFleetOwnerId
+      operatorReferralApplied = isJust driverInfo.referredByOperatorId
   CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast id))) >>= \cfg ->
     return $
       DriverInformationRes

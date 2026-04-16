@@ -275,3 +275,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN sos_id character varying(36) 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN discount_amount double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN referral_flag_reason text ;
