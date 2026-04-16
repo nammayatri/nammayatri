@@ -21,6 +21,7 @@ types:
     - fleetName: Maybe Text
     - email: Maybe Text
     - mobileNumber: Maybe Text
+    - mobileCountryCode: Maybe Text
 
 apis:
   - GET:
