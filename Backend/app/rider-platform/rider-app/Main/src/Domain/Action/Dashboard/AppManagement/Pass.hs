@@ -7,6 +7,7 @@ module Domain.Action.Dashboard.AppManagement.Pass
     getPassCustomerPaymentStatus,
     postPassCustomerPassResetDeviceSwitchCount,
     postPassCustomerPassUpdateProfilePicture,
+    postPassCustomerPassSwitchUserId,
   )
 where
 
@@ -72,3 +73,8 @@ postPassCustomerPassUpdateProfilePicture :: (Kernel.Types.Id.ShortId Domain.Type
 postPassCustomerPassUpdateProfilePicture merchantShortId _opCity personId purchasedPassId req = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   DPass.postMultimodalPassUpdateProfilePictureUtil personId merchant.id purchasedPassId req.profilePicture
+
+postPassCustomerPassSwitchUserId :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postPassCustomerPassSwitchUserId merchantShortId _opCity personId purchasedPassId = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  DPass.postPassCustomerPassSwitchUserId personId merchant.id purchasedPassId
