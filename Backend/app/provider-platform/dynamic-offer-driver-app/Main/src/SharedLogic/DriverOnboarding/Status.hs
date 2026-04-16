@@ -22,6 +22,7 @@ module SharedLogic.DriverOnboarding.Status
 where
 
 import Control.Applicative ((<|>))
+import Data.Either (fromRight)
 import Data.List (nub)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DDL
@@ -33,6 +34,7 @@ import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverLicense as DL
+import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as FODVC
 import qualified Domain.Types.HyperVergeVerification as HV
 import qualified Domain.Types.IdfyVerification as IV
 import qualified Domain.Types.Merchant as DM
@@ -60,6 +62,7 @@ import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as BVQuery
 import qualified Storage.Queries.DigilockerVerification as QDV
@@ -90,6 +93,8 @@ import Tools.Error (DriverOnboardingError (ImageNotValid))
 import qualified Tools.Plasma as TPlasma
 import qualified Tools.SMS as Sms
 import qualified Tools.Verification as Verification
+
+type DocVerificationConfigs = Either [FODVC.FleetOwnerDocumentVerificationConfig] [DVC.DocumentVerificationConfig]
 
 -- PENDING means "pending verification"
 -- FAILED is used when verification is failed
@@ -225,26 +230,26 @@ checkAllDriverDocsVerifiedForDriver person merchantOperatingCity transporterConf
   entityImages <- IQuery.findAllByEntityId transporterConfig entity
   now <- getCurrentTime
   let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now}
-  allDocumentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId merchantOperatingCity.id Nothing
+  allDocVerificationConfigs <-
+    if isFleetRole person.role
+      then Left <$> CQFODVC.findAllByMerchantOpCityId merchantOperatingCity.id Nothing
+      else Right <$> CQDVC.findAllByMerchantOpCityId merchantOperatingCity.id Nothing
+  let driverDocConfigs = fromRight [] allDocVerificationConfigs :: [DVC.DocumentVerificationConfig]
   let skipMessages = True -- Skip translations, only need status check for inspection
-  -- Get vehicle categories from any associated vehicles to determine required driver docs
   vehicleDocumentsUnverified <-
     if isFleetRole person.role
       then pure []
-      else fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language Nothing onlyMandatoryDocs skipMessages
+      else fetchVehicleDocuments entityImagesInfo driverDocConfigs language Nothing onlyMandatoryDocs skipMessages
   let possibleVehicleCategoriesRaw = nub $ do
         vehicleDocumentsUnverified <&> \vehicleDoc -> do
           fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory
-      -- Ensure at least one category is provided to avoid empty list bug
-      -- If no vehicle categories found, use CAR as fallback (same as vehicleCategory fallback below)
       possibleVehicleCategories = if null possibleVehicleCategoriesRaw then [DVC.CAR] else possibleVehicleCategoriesRaw
-  driverDocuments <- fetchDriverDocuments entityImagesInfo allDocumentVerificationConfigs possibleVehicleCategories person language useHVSdkForDL onlyMandatoryDocs skipMessages
+  driverDocuments <- fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleCategories person language useHVSdkForDL onlyMandatoryDocs skipMessages
   let makeSelfieAadhaarPanMandatory = Nothing
-      -- Use first vehicle doc category if available, otherwise use CAR as default (only needed for determining required driver docs)
       vehicleCategory = case vehicleDocumentsUnverified of
         (doc : _) -> fromMaybe doc.userSelectedVehicleCategory doc.verifiedVehicleCategory
         [] -> DVC.CAR
-  pure $ checkAllDriverDocsVerified allDocumentVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
+  pure $ checkAllDriverDocsVerified allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
 
 statusHandler' ::
   DP.Person ->
@@ -266,16 +271,20 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
       personId = person.id
   let language = fromMaybe merchantOperatingCity.language person.language
 
-  allDocumentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId merchantOpCityId Nothing
+  allDocVerificationConfigs <-
+    if isFleetRole person.role
+      then Left <$> CQFODVC.findAllByMerchantOpCityId merchantOpCityId Nothing
+      else Right <$> CQDVC.findAllByMerchantOpCityId merchantOpCityId Nothing
+  let driverDocConfigs = fromRight [] allDocVerificationConfigs :: [DVC.DocumentVerificationConfig]
   let mbReqRegistrationNo = Nothing
   vehicleDocumentsUnverified <-
     if isFleetRole person.role
       then pure []
-      else fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language mbReqRegistrationNo onlyMandatoryDocs skipMessages
+      else fetchVehicleDocuments entityImagesInfo driverDocConfigs language mbReqRegistrationNo onlyMandatoryDocs skipMessages
 
   let vehicleCategoryWithoutMandatoryConfigs = case onboardingVehicleCategory <|> (mDL >>= (.vehicleCategory)) of
         Just vehicleCategory -> do
-          let vehicleDocumentVerificationConfigs = filter (\config -> config.vehicleCategory == vehicleCategory) allDocumentVerificationConfigs
+          let vehicleDocumentVerificationConfigs = filter (\config -> config.vehicleCategory == vehicleCategory) driverDocConfigs
           let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> config.documentType `elem` SDO.defaultVehicleDocumentTypes && fromMaybe config.isMandatory config.isMandatoryForEnabling) vehicleDocumentVerificationConfigs
           if null mandatoryVehicleDocumentVerificationConfigs then Just vehicleCategory else Nothing
         Nothing -> Nothing
@@ -288,37 +297,41 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
       -- If no vehicle categories found, use CAR as fallback (same as fallback used later in vehicleCategory)
       possibleVehicleCategories = if null possibleVehicleCategoriesRaw then [DVC.CAR] else possibleVehicleCategoriesRaw
 
-  driverDocuments <- fetchDriverDocuments entityImagesInfo allDocumentVerificationConfigs possibleVehicleCategories person language useHVSdkForDL onlyMandatoryDocs skipMessages
+  driverDocuments <- fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleCategories person language useHVSdkForDL onlyMandatoryDocs skipMessages
 
-  -- Conditional logic based on separateDriverVehicleEnablement flag
+  -- Conditional logic based on separateDriverVehicleEnablement flag (fleet always uses separate enablement)
   vehicleDocuments <-
-    if transporterConfig.separateDriverVehicleEnablement == Just True
+    if isFleetRole person.role || transporterConfig.separateDriverVehicleEnablement == Just True
       then do
-        -- Separated enablement: Check driver and vehicle enablement separately
+        -- Fleet owner enablement (uses FleetOwnerInformation)
+        when (isFleetRole person.role) $ do
+          let vehicleCategory = DVC.CAR
+              allFleetDocsVerified = checkAllDriverDocsVerified allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
+          when allFleetDocsVerified $
+            enableDriver merchantOpCityId personId person.role Nothing transporterConfig merchantId
         -- Check driver enablement separately (only driver docs + driver inspection)
         when (person.role == DP.DRIVER) $ do
           let vehicleCategory = fromMaybe DVC.CAR $ onboardingVehicleCategory <|> listToMaybe possibleVehicleCategories
-              allDriverDocsVerified = all (\doc -> checkIfDocumentValid allDocumentVerificationConfigs doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
+              allDriverDocsVerified = checkAllDriverDocsVerified allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
           when allDriverDocsVerified $ do
-            -- Check driver inspection approval separately from vehicle inspection
             driverInfo <- runInReplica $ DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
             let driverInspectionNotRequired = transporterConfig.requiresDriverOnboardingInspection /= Just True || driverInfo.approved == Just True
             when driverInspectionNotRequired $ do
-              enableDriver merchantOpCityId personId (mDL >>= (.driverName)) transporterConfig merchantId
+              enableDriver merchantOpCityId personId person.role (mDL >>= (.driverName)) transporterConfig merchantId
               whenJust onboardingVehicleCategory $ \category -> do
                 DIIQuery.updateOnboardingVehicleCategory (Just category) personId
         -- Check vehicle enablement separately (only vehicle docs + vehicle inspection)
-        getVehicleDocuments allDocumentVerificationConfigs person.role vehicleDocumentsUnverified transporterConfig.requiresOnboardingInspection transporterConfig.vehicleCategoryExcludedFromVerification True driverDocuments merchantOpCityId
+        getVehicleDocuments driverDocConfigs person.role vehicleDocumentsUnverified transporterConfig.requiresOnboardingInspection transporterConfig.vehicleCategoryExcludedFromVerification True driverDocuments merchantOpCityId
       else do
         -- Combined enablement: Check both driver and vehicle docs together (old behavior)
         whenJust vehicleCategoryWithoutMandatoryConfigs $ \vehicleCategory -> do
-          let allDriverDocsVerified = all (\doc -> checkIfDocumentValid allDocumentVerificationConfigs doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
+          let allDriverDocsVerified = checkAllDriverDocsVerified allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
           when (allDriverDocsVerified && transporterConfig.requiresOnboardingInspection /= Just True && person.role == DP.DRIVER) $ do
-            enableDriver merchantOpCityId personId (mDL >>= (.driverName)) transporterConfig merchantId
+            enableDriver merchantOpCityId personId person.role (mDL >>= (.driverName)) transporterConfig merchantId
             whenJust onboardingVehicleCategory $ \category -> do
               DIIQuery.updateOnboardingVehicleCategory (Just category) personId
         -- Check vehicle enablement (old combined logic - checks both driver and vehicle docs)
-        getVehicleDocuments allDocumentVerificationConfigs person.role vehicleDocumentsUnverified transporterConfig.requiresOnboardingInspection transporterConfig.vehicleCategoryExcludedFromVerification False driverDocuments merchantOpCityId
+        getVehicleDocuments driverDocConfigs person.role vehicleDocumentsUnverified transporterConfig.requiresOnboardingInspection transporterConfig.vehicleCategoryExcludedFromVerification False driverDocuments merchantOpCityId
 
   (dlDetails, rcDetails) <-
     case prefillData of
@@ -331,13 +344,14 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
         return (Just allDLDetails, Just allRCDetails)
       _ -> return (Nothing, Nothing)
 
-  enabled <- case person.role of
-    DP.FLEET_OWNER -> do
-      fleetOwnerInfo <- runInReplica $ QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
-      return fleetOwnerInfo.enabled
-    _ -> do
-      driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-      return driverInfo.enabled
+  enabled <-
+    if isFleetRole person.role
+      then do
+        fleetOwnerInfo <- runInReplica $ QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
+        return fleetOwnerInfo.enabled
+      else do
+        driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+        return driverInfo.enabled
 
   digilockerResponseCode <- getDigilockerResponseCode personId
 
@@ -358,14 +372,14 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
         digilockerAuthorizationUrl = digilockerAuthorizationUrl
       }
   where
-    getVehicleDocuments allDocumentVerificationConfigs role vehicleDocumentsUnverified requiresOnboardingInspection vehicleCategoryExcludedFromVerification separateEnablement driverDocuments merchantOpCityId = do
+    getVehicleDocuments driverDocConfs role vehicleDocumentsUnverified requiresOnboardingInspection vehicleCategoryExcludedFromVerification separateEnablement driverDocuments merchantOpCityId = do
       let personId = person.id
       vehicleDocumentsUnverified `forM` \vehicleDoc@VehicleDocumentItem {..} -> do
-        let allVehicleDocsVerified = checkAllVehicleDocsVerified allDocumentVerificationConfigs vehicleDoc makeSelfieAadhaarPanMandatory
+        let allVehicleDocsVerified = checkAllVehicleDocsVerified driverDocConfs vehicleDoc makeSelfieAadhaarPanMandatory
             inspectionNotRequired = requiresOnboardingInspection /= Just True || vehicleDoc.isApproved
             isVehicleCategoryExcludedFromVerification = (fromMaybe userSelectedVehicleCategory verifiedVehicleCategory) `elem` (fromMaybe [] vehicleCategoryExcludedFromVerification)
             -- When separated: only check vehicle docs. When combined: check both driver and vehicle docs
-            allDriverDocsVerified = if separateEnablement then True else checkAllDriverDocsVerified allDocumentVerificationConfigs driverDocuments (fromMaybe userSelectedVehicleCategory verifiedVehicleCategory) makeSelfieAadhaarPanMandatory
+            allDriverDocsVerified = separateEnablement || checkAllDriverDocsVerified (Right driverDocConfs) role driverDocuments (fromMaybe userSelectedVehicleCategory verifiedVehicleCategory) makeSelfieAadhaarPanMandatory
             -- Vehicle activation logic depends on enablement mode
             checkToActivateRC =
               if separateEnablement
@@ -381,8 +395,8 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
           unless separateEnablement $ do
             when checkToActivateRC $ do
               case (isVehicleCategoryExcludedFromVerification, mDL) of
-                (True, _) -> enableDriver merchantOpCityId personId Nothing entityImagesInfo.transporterConfig entityImagesInfo.merchantOperatingCity.merchantId
-                (False, Just dl) -> enableDriver merchantOpCityId personId dl.driverName entityImagesInfo.transporterConfig entityImagesInfo.merchantOperatingCity.merchantId
+                (True, _) -> enableDriver merchantOpCityId personId role Nothing entityImagesInfo.transporterConfig entityImagesInfo.merchantOperatingCity.merchantId
+                (False, Just dl) -> enableDriver merchantOpCityId personId role dl.driverName entityImagesInfo.transporterConfig entityImagesInfo.merchantOperatingCity.merchantId
                 (_, _) -> return ()
         if allVehicleDocsVerified then return VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
 
@@ -442,7 +456,7 @@ isFleetRole _ = False
 
 fetchDriverDocuments ::
   IQuery.EntityImagesInfo ->
-  [DVC.DocumentVerificationConfig] ->
+  DocVerificationConfigs ->
   [DVC.VehicleCategory] ->
   DP.Person ->
   Language ->
@@ -450,17 +464,16 @@ fetchDriverDocuments ::
   Maybe Bool ->
   Bool ->
   Flow [DocumentStatusItem]
-fetchDriverDocuments entityImagesInfo allDocumentVerificationConfigs possibleVehicleCategories person language useHVSdkForDL onlyMandatoryDocs skipMessages = do
+fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleCategories person language useHVSdkForDL onlyMandatoryDocs skipMessages = do
   let role = person.role
       merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
       driverId = person.id
       transporterConfig = entityImagesInfo.transporterConfig
       isDigiLockerEnabled = fromMaybe False transporterConfig.digilockerEnabled
-      docVerificationConfigs = filter (\config -> config.vehicleCategory `elem` possibleVehicleCategories) allDocumentVerificationConfigs
 
   digilockerDocStatusMap <- if isDigiLockerEnabled then getDigilockerDocStatusMap driverId else pure DocStatus.emptyDocStatusMap
 
-  driverDocumentTypes <- getDriverDocTypes merchantOpCityId allDocumentVerificationConfigs possibleVehicleCategories role onlyMandatoryDocs
+  driverDocumentTypes <- getDriverDocTypes merchantOpCityId allDocVerificationConfigs possibleVehicleCategories role onlyMandatoryDocs
   driverDocumentTypes `forM` \docType -> do
     let mbDocStatus = if isDigiLockerEnabled then DocStatus.getDocStatus docType digilockerDocStatusMap else Nothing
         responseCode = mbDocStatus >>= (.responseCode)
@@ -472,7 +485,7 @@ fetchDriverDocuments entityImagesInfo allDocumentVerificationConfigs possibleVeh
       Just s -> pure (s, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path)
       Nothing -> case mbDocVerificationStatus of
         Just docStatus -> pure (docStatus, Nothing, Nothing, Nothing, Nothing)
-        Nothing -> getInProgressDriverDocuments driverId entityImagesInfo docType docVerificationConfigs
+        Nothing -> getInProgressDriverDocuments driverId entityImagesInfo docType possibleVehicleCategories allDocVerificationConfigs
 
     mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
     let finalMessage = mbReason <|> (if isDigiLockerEnabled then responseCode else Nothing) <|> mbMessage
@@ -543,16 +556,23 @@ getVehicleDocTypes merchantOpCityId allDocumentVerificationConfigs verifiedVehic
 getDriverDocTypes ::
   (Monad m, Log m) =>
   Id DMOC.MerchantOperatingCity ->
-  [DVC.DocumentVerificationConfig] ->
+  DocVerificationConfigs ->
   [DVC.VehicleCategory] ->
   DP.Role ->
   Maybe Bool ->
   m [DVC.DocumentType]
-getDriverDocTypes merchantOpCityId allDocumentVerificationConfigs possibleVehicleCategories role onlyMandatoryDocs = do
-  if isFleetRole role
-    then pure SDO.defaultFleetDocumentTypes
-    else do
-      let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> fromMaybe config.isMandatory config.isMandatoryForEnabling && config.vehicleCategory `elem` possibleVehicleCategories) allDocumentVerificationConfigs
+getDriverDocTypes merchantOpCityId allDocVerificationConfigs possibleVehicleCategories role onlyMandatoryDocs = do
+  case allDocVerificationConfigs of
+    Left fleetConfigs -> do
+      let roleConfigs = filter (\config -> config.role == role) fleetConfigs
+          mandatoryDocTypes = nub $ map (.documentType) $ filter (.isMandatory) roleConfigs
+          allRoleDocTypes = nub $ map (.documentType) roleConfigs
+      pure $
+        if onlyMandatoryDocs == Just True
+          then if null mandatoryDocTypes then SDO.defaultFleetDocumentTypes else mandatoryDocTypes
+          else if null allRoleDocTypes then SDO.defaultFleetDocumentTypes else allRoleDocTypes
+    Right driverConfigs -> do
+      let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> fromMaybe config.isMandatory config.isMandatoryForEnabling && config.vehicleCategory `elem` possibleVehicleCategories) driverConfigs
       if onlyMandatoryDocs == Just True
         then do
           let driverDocumentTypes = filter (\doc -> doc `elem` nub (mandatoryVehicleDocumentVerificationConfigs <&> (.documentType))) SDO.defaultDriverDocumentTypes
@@ -756,37 +776,47 @@ checkAllVehicleDocsVerified ::
   VehicleDocumentItem ->
   Maybe Bool ->
   Bool
-checkAllVehicleDocsVerified allDocumentVerificationConfigs vehicleDoc makeSelfieAadhaarPanMandatory = do
-  all (\doc -> checkIfDocumentValid allDocumentVerificationConfigs doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory) vehicleDoc.documents
+checkAllVehicleDocsVerified driverDocConfs vehicleDoc makeSelfieAadhaarPanMandatory = do
+  all (\doc -> checkIfDocumentValid (Right driverDocConfs) DP.DRIVER doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory) vehicleDoc.documents
 
 checkAllDriverDocsVerified ::
-  [DVC.DocumentVerificationConfig] ->
+  DocVerificationConfigs ->
+  DP.Role ->
   [DocumentStatusItem] ->
   DVC.VehicleCategory ->
   Maybe Bool ->
   Bool
-checkAllDriverDocsVerified allDocumentVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory = do
-  all (\doc -> checkIfDocumentValid allDocumentVerificationConfigs doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
+checkAllDriverDocsVerified allDocVerificationConfigs role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory = do
+  all (\doc -> checkIfDocumentValid allDocVerificationConfigs role doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
 
-enableDriver :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> Maybe Text -> DTC.TransporterConfig -> Id DM.Merchant -> Flow ()
-enableDriver merchantOpCityId personId driverName transporterConfig merchantId = do
-  driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-  unless driverInfo.enabled $ do
-    SDO.enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId True
-    whenJust driverName $ \name -> QPerson.updateName name personId
-    -- Send SMS on enablement if configured
-    when (transporterConfig.sendSmsOnEnablement == Just True) $ do
-      fork "sending sms - onboarding" $ do
-        driver <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-        smsCfg <- asks (.smsCfg)
-        mobileNumber <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-        let countryCode = fromMaybe "+91" driver.mobileCountryCode
-            phoneNumber = countryCode <> mobileNumber
-            sender = smsCfg.sender
-        (mbSender, message, templateId, messageType) <-
-          MessageBuilder.buildOnboardingMessage merchantOpCityId $
-            MessageBuilder.BuildOnboardingMessageReq {}
-        Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId messageType) >>= Sms.checkSmsResult
+enableDriver :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> DP.Role -> Maybe Text -> DTC.TransporterConfig -> Id DM.Merchant -> Flow ()
+enableDriver merchantOpCityId personId role driverName transporterConfig merchantId = do
+  if isFleetRole role
+    then do
+      fleetOwnerInfo <- QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
+      unless fleetOwnerInfo.enabled $ do
+        QFOI.updateFleetOwnerEnabledStatus True personId
+    else do
+      driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+      unless driverInfo.enabled $ do
+        SDO.enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId True
+        whenJust driverName $ \name -> QPerson.updateName name personId
+        sendEnablementSms merchantOpCityId personId transporterConfig merchantId
+
+sendEnablementSms :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> DTC.TransporterConfig -> Id DM.Merchant -> Flow ()
+sendEnablementSms merchantOpCityId personId transporterConfig merchantId =
+  when (transporterConfig.sendSmsOnEnablement == Just True) $ do
+    fork "sending sms - onboarding" $ do
+      driver <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      smsCfg <- asks (.smsCfg)
+      mobileNumber <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+      let countryCode = fromMaybe "+91" driver.mobileCountryCode
+          phoneNumber = countryCode <> mobileNumber
+          sender = smsCfg.sender
+      (mbSender, message, templateId, messageType) <-
+        MessageBuilder.buildOnboardingMessage merchantOpCityId $
+          MessageBuilder.BuildOnboardingMessageReq {}
+      Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId messageType) >>= Sms.checkSmsResult
 
 activateRCAutomatically :: Id DP.Person -> DMOC.MerchantOperatingCity -> Text -> Flow ()
 activateRCAutomatically personId merchantOpCity rcNumber = do
@@ -798,22 +828,33 @@ activateRCAutomatically personId merchantOpCity rcNumber = do
   void $ DomainRC.linkRCStatus (personId, merchantOpCity.merchantId, merchantOpCity.id) False rcStatusReq
 
 checkIfDocumentValid ::
-  [DVC.DocumentVerificationConfig] ->
+  DocVerificationConfigs ->
+  DP.Role ->
   DDVC.DocumentType ->
   DVC.VehicleCategory ->
   ResponseStatus ->
   Maybe Bool ->
   Bool
-checkIfDocumentValid _allDocumentVerificationConfigs _docType _category VALID _makeSelfieAadhaarPanMandatory = True
-checkIfDocumentValid allDocumentVerificationConfigs docType category status makeSelfieAadhaarPanMandatory = do
-  let mbVerificationConfig = find (\config -> config.documentType == docType && config.vehicleCategory == category) allDocumentVerificationConfigs
+checkIfDocumentValid _ _ _ _ VALID _ = True
+checkIfDocumentValid (Left fleetConfigs) role docType _category status _makeSelfieAadhaarPanMandatory = do
+  let mbConfig = find (\config -> config.documentType == docType && config.role == role) fleetConfigs
+  case mbConfig of
+    Just config ->
+      not config.isMandatory
+        || ( case status of
+               MANUAL_VERIFICATION_REQUIRED -> config.isDefaultEnabledOnManualVerification
+               _ -> False
+           )
+    Nothing -> True
+checkIfDocumentValid (Right driverConfigs) _role docType category status makeSelfieAadhaarPanMandatory = do
+  let mbVerificationConfig = find (\config -> config.documentType == docType && config.vehicleCategory == category) driverConfigs
   case mbVerificationConfig of
-    Just verificationConfig -> do
-      if fromMaybe verificationConfig.isMandatory verificationConfig.isMandatoryForEnabling && (not (fromMaybe False verificationConfig.filterForOldApks) || fromMaybe False makeSelfieAadhaarPanMandatory)
-        then case status of
-          MANUAL_VERIFICATION_REQUIRED -> verificationConfig.isDefaultEnabledOnManualVerification
-          _ -> False
-        else True
+    Just verificationConfig ->
+      not (fromMaybe verificationConfig.isMandatory verificationConfig.isMandatoryForEnabling && (not (fromMaybe False verificationConfig.filterForOldApks) || fromMaybe False makeSelfieAadhaarPanMandatory))
+        || ( case status of
+               MANUAL_VERIFICATION_REQUIRED -> verificationConfig.isDefaultEnabledOnManualVerification
+               _ -> False
+           )
     Nothing -> True
 
 getProcessedDriverDocuments :: Id DP.Person -> IQuery.EntityImagesInfo -> DVC.DocumentType -> Maybe Bool -> Flow (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text)
@@ -873,6 +914,21 @@ getProcessedDriverDocuments driverId entityImagesInfo docType useHVSdkForDL = do
     DVC.UDYAMCertificate -> do
       mbUdyamCertificate <- QUDYAM.findByDriverId driverId
       return (mapStatus <$> (mbUdyamCertificate <&> (.verificationStatus)), Nothing, Nothing, Nothing, mbS3Path)
+    DVC.BusinessLicense -> do
+      let (status, reason, url) = checkImageValidity entityImagesInfo DVC.BusinessLicense
+      return (status, reason, url, Nothing, mbS3Path)
+    DVC.TaxiTransportLicense -> do
+      let (status, reason, url) = checkImageValidity entityImagesInfo DVC.TaxiTransportLicense
+      return (status, reason, url, Nothing, mbS3Path)
+    DVC.BusinessRegistrationExtract -> do
+      let (status, reason, url) = checkImageValidity entityImagesInfo DVC.BusinessRegistrationExtract
+      return (status, reason, url, Nothing, mbS3Path)
+    DVC.TAXDetails -> do
+      let (status, reason, url) = checkImageValidity entityImagesInfo DVC.TAXDetails
+      return (status, reason, url, Nothing, mbS3Path)
+    DVC.FinnishIDResidencePermit -> do
+      let (status, reason, url) = checkImageValidity entityImagesInfo DVC.FinnishIDResidencePermit
+      return (status, reason, url, Nothing, mbS3Path)
     _ -> return (Nothing, Nothing, Nothing, Nothing, mbS3Path)
 
 callGetDLGetStatus :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()
@@ -1057,32 +1113,46 @@ getInProgressDriverDocuments ::
   Id DP.Person ->
   IQuery.EntityImagesInfo ->
   DDVC.DocumentType ->
-  [DVC.DocumentVerificationConfig] ->
+  [DVC.VehicleCategory] ->
+  DocVerificationConfigs ->
   Flow (ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text)
-getInProgressDriverDocuments driverId entityImagesInfo docType docVerificationConfigs = do
+getInProgressDriverDocuments driverId entityImagesInfo docType possibleVehicleCategories allDocVerificationConfigs = do
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
       merchantId = entityImagesInfo.merchantOperatingCity.merchantId
       mbS3Path = getS3PathFromLatestImage entityImagesInfo docType
-      onlyImageLookup = maybe False (fromMaybe False . (.onlyImageVerificationStatusLookupRequired)) $ find (\c -> c.documentType == docType) docVerificationConfigs
+      filteredDocVerificationConfigs =
+        case allDocVerificationConfigs of
+          Left fleetConfs -> Left fleetConfs
+          Right driverConfs -> Right $ filter (\c -> c.vehicleCategory `elem` possibleVehicleCategories) driverConfs
+      onlyImageLookup = case allDocVerificationConfigs of
+        Right driverConfs ->
+          let relevantDriverConfs = filter (\c -> c.vehicleCategory `elem` possibleVehicleCategories) driverConfs
+           in maybe False (fromMaybe False . (.onlyImageVerificationStatusLookupRequired)) $ find (\c -> c.documentType == docType) relevantDriverConfs
+        Left _fleetConfs -> True
   (status, mbReason, mbUrl) <- case docType of
     DDVC.DriverLicense -> checkIfUnderProgress entityImagesInfo DDVC.DriverLicense
     DDVC.BackgroundVerification -> checkBackgroundVerificationStatus driverId merchantId merchantOpCityId
-    DDVC.AadhaarCard -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.AadhaarCard onlyImageLookup
-    DDVC.PanCard -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.PanCard onlyImageLookup
-    DDVC.GSTCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.GSTCertificate onlyImageLookup
+    DDVC.AadhaarCard -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.AadhaarCard onlyImageLookup filteredDocVerificationConfigs
+    DDVC.PanCard -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.PanCard onlyImageLookup filteredDocVerificationConfigs
+    DDVC.GSTCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.GSTCertificate onlyImageLookup filteredDocVerificationConfigs
     DDVC.Permissions -> return (VALID, Nothing, Nothing)
     DDVC.ProfilePhoto -> do
       let mbImages = IQuery.filterRecentLatestByEntityIdAndImageType entityImagesInfo DDVC.ProfilePhoto
       return (fromMaybe NO_DOC_AVAILABLE (mapStatus <$> (mbImages >>= (.verificationStatus))), Nothing, Nothing)
-    DDVC.UploadProfile -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.UploadProfile onlyImageLookup
-    DDVC.DrivingSchoolCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.DrivingSchoolCertificate onlyImageLookup
-    DDVC.PoliceVerificationCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.PoliceVerificationCertificate onlyImageLookup
-    DDVC.LocalResidenceProof -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.LocalResidenceProof onlyImageLookup
-    DDVC.TrainingForm -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.TrainingForm onlyImageLookup
+    DDVC.UploadProfile -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.UploadProfile onlyImageLookup filteredDocVerificationConfigs
+    DDVC.DrivingSchoolCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.DrivingSchoolCertificate onlyImageLookup filteredDocVerificationConfigs
+    DDVC.PoliceVerificationCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.PoliceVerificationCertificate onlyImageLookup filteredDocVerificationConfigs
+    DDVC.LocalResidenceProof -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.LocalResidenceProof onlyImageLookup filteredDocVerificationConfigs
+    DDVC.TrainingForm -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.TrainingForm onlyImageLookup filteredDocVerificationConfigs
     DDVC.DriverInspectionHub -> do
       mbStatus <- getInspectionHubStatusForResponseStatus DOHR.DRIVER_ONBOARDING_INSPECTION (Just driverId) Nothing
       let status = fromMaybe INVALID mbStatus
       return (status, Nothing, Nothing)
+    DDVC.BusinessLicense -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.BusinessLicense onlyImageLookup filteredDocVerificationConfigs
+    DDVC.TaxiTransportLicense -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.TaxiTransportLicense onlyImageLookup filteredDocVerificationConfigs
+    DDVC.BusinessRegistrationExtract -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.BusinessRegistrationExtract onlyImageLookup filteredDocVerificationConfigs
+    DDVC.TAXDetails -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.TAXDetails onlyImageLookup filteredDocVerificationConfigs
+    DDVC.FinnishIDResidencePermit -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.FinnishIDResidencePermit onlyImageLookup filteredDocVerificationConfigs
     _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
   return (status, mbReason, mbUrl, Nothing, mbS3Path)
 
@@ -1109,12 +1179,12 @@ getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType docVerific
   (status, mbReason, mbUrl) <- case docType of
     DVC.VehicleRegistrationCertificate -> checkIfUnderProgress entityImagesInfo DVC.VehicleRegistrationCertificate
     DVC.SubscriptionPlan -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
-    DVC.VehiclePermit -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehiclePermit onlyImageLookup
-    DVC.VehicleFitnessCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehicleFitnessCertificate onlyImageLookup
-    DVC.VehicleInsurance -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehicleInsurance onlyImageLookup
-    DVC.VehiclePUC -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehiclePUC onlyImageLookup
+    DVC.VehiclePermit -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehiclePermit onlyImageLookup (Right docVerificationConfigs)
+    DVC.VehicleFitnessCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehicleFitnessCertificate onlyImageLookup (Right docVerificationConfigs)
+    DVC.VehicleInsurance -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehicleInsurance onlyImageLookup (Right docVerificationConfigs)
+    DVC.VehiclePUC -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehiclePUC onlyImageLookup (Right docVerificationConfigs)
     DVC.VehicleInspectionForm -> checkVehiclePhotosStatusByRC mbRcImagesInfo
-    DVC.VehicleNOC -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehicleNOC onlyImageLookup
+    DVC.VehicleNOC -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehicleNOC onlyImageLookup (Right docVerificationConfigs)
     DVC.InspectionHub -> do
       mbRegistrationNo <- case mbRcImagesInfo of
         Just rcImagesInfo -> do
@@ -1146,10 +1216,22 @@ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo docType onlyImageLookup = d
         Just Documents.INVALID -> (INVALID, extractImageFailReason latestImage.failureReason, Nothing)
         _ -> (MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
 
-checkIfImageUploadedOrInvalidated :: IQuery.EntityImagesInfo -> DDVC.DocumentType -> Bool -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
-checkIfImageUploadedOrInvalidated entityImagesInfo docType onlyImageLookup = do
+checkIfImageUploadedOrInvalidated :: IQuery.EntityImagesInfo -> DDVC.DocumentType -> Bool -> DocVerificationConfigs -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
+checkIfImageUploadedOrInvalidated entityImagesInfo docType onlyImageLookup allDocVerificationConfigs = do
   let images = IQuery.filterRecentByEntityIdAndImageType entityImagesInfo docType
-  documentVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndDefaultEnabledOnManualVerification entityImagesInfo.merchantOperatingCity.id docType False Nothing
+      hasDocumentVerificationConfig =
+        case allDocVerificationConfigs of
+          Left fleetConfigs ->
+            any
+              (\config -> config.documentType == docType && not config.isDefaultEnabledOnManualVerification)
+              fleetConfigs
+          Right driverConfigs ->
+            any
+              ( \config ->
+                  config.documentType == docType
+                    && not config.isDefaultEnabledOnManualVerification
+                )
+              driverConfigs
   case images of
     [] -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
     latestImage : _ -> do
@@ -1157,7 +1239,7 @@ checkIfImageUploadedOrInvalidated entityImagesInfo docType onlyImageLookup = do
         Just Documents.VALID | onlyImageLookup -> return (VALID, Nothing, Nothing)
         Just Documents.INVALID -> return (INVALID, extractImageFailReason latestImage.failureReason, Nothing)
         _ ->
-          if length documentVerificationConfig > 0
+          if hasDocumentVerificationConfig
             then return (FAILED, Nothing, Nothing)
             else return (MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
 

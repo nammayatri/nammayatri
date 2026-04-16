@@ -67,6 +67,7 @@ getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbBlocked mbFleetType mbFrom
                   address = fleetOwnerInfo.stripeAddress,
                   fleetName = fleetOwnerInfo.fleetName,
                   mobileNumber = mobileNumber,
+                  mobileCountryCode = person.mobileCountryCode,
                   email = person.email
                 }
 

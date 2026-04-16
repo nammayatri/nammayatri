@@ -1641,6 +1641,7 @@ types:
     - fleetName: Maybe Text
     - email: Maybe Text
     - mobileNumber: Maybe Text
+    - mobileCountryCode: Maybe Text
   FleetGroup:
     - level: Int
     - parentGroupCode: Maybe Text # At Initial Level, this will be Nothing
