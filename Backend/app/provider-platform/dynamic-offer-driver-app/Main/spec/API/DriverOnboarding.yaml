@@ -23,6 +23,7 @@ imports:
   BaseUrl: Servant.Client.Core
   Minutes: Kernel.Types.Common
   Image: Domain.Types.Image
+  CommonDriverOnboardingDocuments: Domain.Types.CommonDriverOnboardingDocuments
   PanType: Domain.Types.DriverPanCard
   LinkedRC: Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
   VehicleCategory: Domain.Types.VehicleCategory
@@ -163,6 +164,8 @@ types:
     documentType: DocumentType
     documentData: Text  # JSON string containing all document data
     imageId: Maybe (Id Image)  # Optional image for documents that need it
+  CommonDocumentRes:
+    documentId: Id CommonDriverOnboardingDocuments
   VehiclePhotosResp:
     left: [Text]
     right: [Text]
@@ -362,7 +365,7 @@ apis:
       request:
         type: CommonDocumentReq
       response:
-        type: APISuccess
+        type: CommonDocumentRes
   - GET:
       endpoint: /driver/fleet/rcs
       auth: TokenAuth PROVIDER_TYPE
