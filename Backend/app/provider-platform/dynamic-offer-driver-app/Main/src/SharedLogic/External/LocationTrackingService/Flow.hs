@@ -32,7 +32,6 @@ import qualified SharedLogic.External.LocationTrackingService.API.DriverBlockTil
 import qualified SharedLogic.External.LocationTrackingService.API.DriverLocation as DriverLocationAPI
 import qualified SharedLogic.External.LocationTrackingService.API.DriversLocation as DriversLocationAPI
 import qualified SharedLogic.External.LocationTrackingService.API.EndRide as EndRideAPI
-import qualified SharedLogic.External.LocationTrackingService.API.ManualQueueAdd as ManualQueueAddAPI
 import qualified SharedLogic.External.LocationTrackingService.API.ManualQueueRemove as ManualQueueRemoveAPI
 import qualified SharedLogic.External.LocationTrackingService.API.NearBy as NearByAPI
 import qualified SharedLogic.External.LocationTrackingService.API.RideDetails as RideDetailsAPI
@@ -202,17 +201,6 @@ manualQueueRemove specialLocationId vehicleType merchantId driverId = do
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_MANUAL_QUEUE_REMOVE_API") url)
   logDebug $ "lts manual queue remove: " <> show manualQueueRemoveResp
   return manualQueueRemoveResp
-
-manualQueueAdd :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Text -> Text -> Id DM.Merchant -> Id DP.Person -> Int -> m APISuccess
-manualQueueAdd specialLocationId vehicleType merchantId driverId position = do
-  ltsCfg <- asks (.ltsCfg)
-  let url = ltsCfg.url
-  manualQueueAddResp <-
-    withShortRetry $
-      callAPI url (ManualQueueAddAPI.manualQueueAdd specialLocationId vehicleType merchantId driverId position) "manualQueueAdd" ManualQueueAddAPI.manualQueueAddAPI
-        >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_MANUAL_QUEUE_ADD_API") url)
-  logDebug $ "lts manual queue add: " <> show manualQueueAddResp
-  return manualQueueAddResp
 
 getQueueDriverPosition :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Text -> Text -> Id DP.Person -> m QueueDriverPositionResp
 getQueueDriverPosition specialLocationId vehicleType driverId = do
