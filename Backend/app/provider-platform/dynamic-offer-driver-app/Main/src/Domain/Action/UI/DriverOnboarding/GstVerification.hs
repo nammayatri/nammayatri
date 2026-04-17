@@ -141,8 +141,10 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
         void $ SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
       pure False
     role
-      | DCommon.checkFleetOwnerRole role ->
-        DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId
+      | DCommon.checkFleetOwnerRole role -> do
+        isEnabled <- DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId
+        void $ withTryCatch "refreshDocsVerificationStatuses:verifyGstin:fleetOwner" (SStatus.refreshDocsVerificationStatuses person transporterConfig)
+        pure isEnabled
     _ -> pure False
   pure res
   where

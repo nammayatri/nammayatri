@@ -29,6 +29,7 @@ import qualified Data.Time.Calendar.OrdinalDate as TO
 import qualified Domain.Types as DVST
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig
@@ -434,6 +435,7 @@ createRC ::
   UTCTime ->
   m VehicleRegistrationCertificate
 createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules certificateNumber expiry = do
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   (verificationStatus, reviewRequired, variant, mbVehicleModel) <- validateRCStatus input rcconfigs now expiry
   logInfo $ "createRC: verificationStatus=" <> show verificationStatus <> ", reviewRequired=" <> show reviewRequired <> ", variant=" <> show variant <> ", mbVehicleModel=" <> show mbVehicleModel
   let airConditioned = input.airConditioned
@@ -475,6 +477,10 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         luggageCapacity = Nothing,
         vehicleRating = Nothing,
         failedRules = failedRules,
+        docsVerificationStatus =
+          if transporterConfig.enableManualDocumentStatusCheck == Just True
+            then Just DDVS.ADMIN_PENDING
+            else Nothing,
         dateOfRegistration = input.dateOfRegistration,
         vehicleModelYear = input.vehicleModelYear,
         rejectReason = Nothing,

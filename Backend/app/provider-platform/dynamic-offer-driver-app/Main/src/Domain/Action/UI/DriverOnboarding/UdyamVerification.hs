@@ -99,8 +99,10 @@ verifyUdyam (personId, merchantOpCityId) req = do
         void $ SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
       pure False
     role
-      | DCommon.checkFleetOwnerRole role ->
-        DFR.enableFleetIfPossible person.id Nothing (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId
+      | DCommon.checkFleetOwnerRole role -> do
+        isEnabled <- DFR.enableFleetIfPossible person.id Nothing (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId
+        void $ withTryCatch "refreshDocsVerificationStatuses:verifyUdyam:fleetOwner" (SStatus.refreshDocsVerificationStatuses person transporterConfig)
+        pure isEnabled
     _ -> pure False
   pure res
 
@@ -138,8 +140,9 @@ onVerifyUdyam verificationReq output serviceName = do
           DUQuery.create udyamCardDetails
       case person.role of
         role
-          | DCommon.checkFleetOwnerRole role ->
+          | DCommon.checkFleetOwnerRole role -> do
             void $ DFR.enableFleetIfPossible person.id Nothing (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId
+            void $ withTryCatch "refreshDocsVerificationStatusesForPersonId:onVerifyUdyam:fleetOwner" (SStatus.refreshDocsVerificationStatusesForPersonId person.id)
         _ -> pure ()
     _ -> throwError $ InternalError ("Unknown Service provider webhook encountered in onVerifyUdyam. Name of provider : " <> show serviceName)
   pure Ack

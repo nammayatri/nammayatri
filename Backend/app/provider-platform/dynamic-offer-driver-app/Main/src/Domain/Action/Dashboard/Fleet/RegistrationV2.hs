@@ -26,6 +26,7 @@ import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
+import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.Merchant as DMerchant
@@ -298,11 +299,15 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
     fork "initializing fleet analytics keys" $
       Analytics.updateFleetOwnerAnalyticsKeys person.id.getId (Just 0) (Just 0) (Just 0)
-  createFleetOwnerInfo person.id merchantId enabled (Just merchantOpCityId) transporterConfig.taxConfig.defaultTdsRate
+  let defaultDocsVerificationStatus =
+        if transporterConfig.enableManualDocumentStatusCheck == Just True
+          then Just DDVS.ADMIN_PENDING
+          else Nothing
+  createFleetOwnerInfo person.id merchantId enabled (Just merchantOpCityId) transporterConfig.taxConfig.defaultTdsRate defaultDocsVerificationStatus
   pure person
 
-createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Maybe (Id DMOC.MerchantOperatingCity) -> Maybe Double -> Flow ()
-createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId mbTdsRate = do
+createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Maybe (Id DMOC.MerchantOperatingCity) -> Maybe Double -> Maybe DDVS.DocsVerificationStatus -> Flow ()
+createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId mbTdsRate mbDocsVerificationStatus = do
   now <- getCurrentTime
   let fleetOwnerInfo =
         FOI.FleetOwnerInformation
@@ -351,7 +356,8 @@ createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId mbTds
             subscribed = Nothing,
             tollRouteBlockedTill = Nothing,
             weeklyCancellationRateBlockingCooldown = Nothing,
-            payoutRegistrationOrderId = Nothing
+            payoutRegistrationOrderId = Nothing,
+            docsVerificationStatus = mbDocsVerificationStatus
           }
   QFOI.create fleetOwnerInfo
 

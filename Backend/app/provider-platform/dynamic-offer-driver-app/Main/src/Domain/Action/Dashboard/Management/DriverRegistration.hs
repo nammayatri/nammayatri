@@ -63,6 +63,7 @@ import qualified Domain.Action.UI.ReferralPayout as ReferralPayout
 import qualified Domain.Types.AadhaarCard as DAadhaar
 import qualified Domain.Types.BusinessLicense as DBL
 import qualified Domain.Types.CommonDriverOnboardingDocuments as DCommonDoc
+import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.DriverPanCard as DPan
@@ -110,6 +111,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.Cac.TransporterConfig as CCT
@@ -781,6 +783,7 @@ getDriverRegistrationDocumentsInfo _merchantShortId _opCity _driverId = throwErr
 approveAndUpdateRC :: Common.RCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateRC req merchantId merchantOpCityId = do
   let imageId = Id req.documentImageId.getId
+  transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mbRc <- QRC.findByImageId imageId
   case mbRc of
     Just rc -> do
@@ -803,7 +806,11 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                 DRC.vehicleDoors = req.vehicleDoors <|> rc.vehicleDoors,
                 DRC.vehicleSeatBelts = req.vehicleSeatBelts <|> rc.vehicleSeatBelts,
                 DRC.fitnessExpiry = if isJust req.fitnessExpiry then fromJust req.fitnessExpiry else rc.fitnessExpiry,
-                DRC.permitExpiry = req.permitExpiry <|> rc.permitExpiry
+                DRC.permitExpiry = req.permitExpiry <|> rc.permitExpiry,
+                DRC.docsVerificationStatus =
+                  if transporterConfig.enableManualDocumentStatusCheck == Just True
+                    then Just DDVS.ADMIN_APPROVED
+                    else rc.docsVerificationStatus
               }
       QRC.updateByPrimaryKey udpatedRC
       QImage.updateVerificationStatusByIdAndType VALID imageId DVC.VehicleRegistrationCertificate
@@ -817,7 +824,6 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
         (Just udpatedRC.fitnessExpiry)
         Nothing
     Nothing -> do
-      transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       case transporterConfig.createDocumentRequired of
         Just True -> do
           vehicleNumberPlate <- req.vehicleNumberPlate & fromMaybeM (InvalidRequest "vehicleNumberPlate is required for creating RC document")
@@ -870,7 +876,11 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                     DRC.merchantId = Just merchantId,
                     DRC.merchantOperatingCityId = Just merchantOpCityId,
                     DRC.createdAt = now,
-                    DRC.updatedAt = now
+                    DRC.updatedAt = now,
+                    DRC.docsVerificationStatus =
+                      if transporterConfig.enableManualDocumentStatusCheck == Just True
+                        then Just DDVS.ADMIN_APPROVED
+                        else Nothing
                   }
           QRC.create newRC
           -- Create driver RC association so the RC is linked to the driver
@@ -1653,6 +1663,7 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
       sendDocumentRejectionNotification merchantOperatingCityId docType reason driver
       -- If a mandatory document was rejected, disable driver / deactivate RC
       handleMandatoryDocRejection merchantId merchantOperatingCityId image.personId image.imageType imageId
+      void $ withTryCatch "refreshDocsVerificationStatusesForPersonId:handleRejectRequest:image" (SStatus.refreshDocsVerificationStatusesForPersonId image.personId)
     Common.CommonDocumentReject commonRejectReq -> do
       let documentId = Id commonRejectReq.documentId.getId
       document <- QCommonDriverOnboardingDocuments.findById documentId >>= fromMaybeM (DocumentNotFound documentId.getId)
@@ -1663,6 +1674,8 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
             reason = commonRejectReq.reason
         sendDocumentRejectionNotification merchantOpCityId docType reason driver
       rejectAndUpdateCommonDocument commonRejectReq merchantOperatingCityId
+      Kernel.Prelude.forM_ document.driverId $ \driverId ->
+        void $ withTryCatch "refreshDocsVerificationStatusesForPersonId:handleRejectRequest:commonDocument" (SStatus.refreshDocsVerificationStatusesForPersonId driverId)
   where
     notificationType = FCM.DOCUMENT_INVALID
 
@@ -1765,6 +1778,11 @@ postDriverRegistrationDocumentsUpdate :: ShortId DM.Merchant -> Context.City -> 
 postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
+  let updateAndFetchEnabled mbPersonId = case mbPersonId of
+        Just personId -> do
+          statusRes <- DStatus.statusHandler (personId, merchant.id, merchantOpCityId) (Just True) Nothing Nothing (Just False) Nothing Nothing
+          pure statusRes.enabled
+        Nothing -> pure False
   let mkUpdateResp mbPersonId enabled =
         Common.UpdateDocumentResp
           { result = "Success",
@@ -1774,43 +1792,51 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
   case _req of
     Common.Approve approveReq -> do
       handleApproveRequest approveReq merchant.id merchantOpCityId
-      mbPersonId <- case approveReq of
-        Common.CommonDocument req -> do
-          let documentId = Id req.documentId.getId
-          mbDocument <- QCommonDriverOnboardingDocuments.findById documentId
-          pure $ mbDocument >>= (.driverId)
-        _ -> case getImageIdFromApproveDetails approveReq of
-          Just imgId -> do
-            mbImage <- QImage.findById (Id imgId.getId)
-            pure $ (.personId) <$> mbImage
-          Nothing -> pure Nothing
-      enabled <- case mbPersonId of
-        Just personId -> do
-          statusRes <- DStatus.statusHandler (personId, merchant.id, merchantOpCityId) (Just True) Nothing Nothing (Just False) Nothing Nothing
-          pure statusRes.enabled
-        Nothing -> pure False
+      mbPersonId <- case getImageIdFromApproveDetails approveReq of
+        Just imgId -> do
+          mbImage <- QImage.findById (Id imgId.getId)
+          pure $ (.personId) <$> mbImage
+        Nothing -> getApproveTargetPersonId approveReq
+      -- Non-image approves (e.g. SSN/CommonDocument) need an explicit docs-status refresh.
+      when (isNothing $ getImageIdFromApproveDetails approveReq) $
+        Kernel.Prelude.forM_ mbPersonId $ \personId ->
+          void $
+            withTryCatch
+              "postDriverRegistrationDocumentsUpdate:refreshDocsVerificationStatusesForPersonId:nonImageApprove"
+              (SStatus.refreshDocsVerificationStatusesForPersonId personId)
+      enabled <- updateAndFetchEnabled mbPersonId
       pure $ mkUpdateResp mbPersonId enabled
     Common.Reject rejectReq -> do
       handleRejectRequest rejectReq merchant.id merchantOpCityId
-      mbPersonId <- case rejectReq of
-        Common.CommonDocumentReject req -> do
-          let documentId = Id req.documentId.getId
-          mbDocument <- QCommonDriverOnboardingDocuments.findById documentId
-          pure $ mbDocument >>= (.driverId)
-        Common.ImageDocuments imgReq -> do
-          let imageId = Id imgReq.documentImageId.getId
-          mbImage <- QImage.findById imageId
-          pure $ (.personId) <$> mbImage
-        Common.SSNReject req -> do
-          ssnEnc <- encrypt req.ssn
-          mbSsnEntry <- QSSN.findBySSN (ssnEnc & hash)
-          pure $ (.driverId) <$> mbSsnEntry
-      enabled <- case mbPersonId of
-        Just personId -> do
-          statusRes <- DStatus.statusHandler (personId, merchant.id, merchantOpCityId) (Just True) Nothing Nothing (Just False) Nothing Nothing
-          pure statusRes.enabled
-        Nothing -> pure False
+      mbPersonId <- getRejectTargetPersonId rejectReq
+      enabled <- updateAndFetchEnabled mbPersonId
       pure $ mkUpdateResp mbPersonId enabled
+  where
+    getApproveTargetPersonId :: Common.ApproveDetails -> Flow (Maybe (Id DP.Person))
+    getApproveTargetPersonId = \case
+      Common.SSNApprove ssnNum -> do
+        ssnEnc <- encrypt ssnNum
+        mbSsn <- QSSN.findBySSN (ssnEnc & hash)
+        pure $ (.driverId) <$> mbSsn
+      Common.CommonDocument req -> do
+        mbDoc <- QCommonDriverOnboardingDocuments.findById (Id req.documentId.getId)
+        pure $ join ((.driverId) <$> mbDoc)
+      _ -> pure Nothing
+
+    getRejectTargetPersonId :: Common.RejectDetails -> Flow (Maybe (Id DP.Person))
+    getRejectTargetPersonId = \case
+      Common.CommonDocumentReject req -> do
+        let documentId = Id req.documentId.getId
+        mbDocument <- QCommonDriverOnboardingDocuments.findById documentId
+        pure $ mbDocument >>= (.driverId)
+      Common.ImageDocuments imgReq -> do
+        let imageId = Id imgReq.documentImageId.getId
+        mbImage <- QImage.findById imageId
+        pure $ (.personId) <$> mbImage
+      Common.SSNReject req -> do
+        ssnEnc <- encrypt req.ssn
+        mbSsnEntry <- QSSN.findBySSN (ssnEnc & hash)
+        pure $ (.driverId) <$> mbSsnEntry
 
 convertVerifyOtp :: AadhaarVerificationResp -> Common.GenerateAadhaarOtpRes
 convertVerifyOtp AadhaarVerificationResp {..} = Common.GenerateAadhaarOtpRes {..}

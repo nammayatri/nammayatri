@@ -148,6 +148,7 @@ data TransporterConfigT f = TransporterConfigT
     enableFaceVerification :: B.C f Kernel.Prelude.Bool,
     enableFareCalculatorV2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableGpsTollBehavior :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enableManualDocumentStatusCheck :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableMobileNumberValidation :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableOverchargingBlocker :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableScheduleReallocation :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

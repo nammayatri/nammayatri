@@ -16,6 +16,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Utils.Common hiding (Error)
 import Servant hiding (throwError)
 import qualified SharedLogic.DriverOnboarding as SLogicOnboarding
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
@@ -63,6 +64,10 @@ hyperVergeResultWebhookHandler payload = do
     DVC.ProfilePhoto ->
       logInfo $ "Profile Photo Validation Status Updated for Driver: " <> show imageEntity.personId <> " to: " <> show vstatus
     _ -> throwError $ InvalidImageType "HyperVerge" (show imageEntity.imageType) -- This should never happen as worlflowTransactionId is present only for above 3 doc types.
+  void $
+    withTryCatch
+      "hyperVergeResultWebhookHandler:refreshDocsVerificationStatusesForPersonId"
+      (SStatus.refreshDocsVerificationStatusesForPersonId imageEntity.personId)
   return Ack
   where
     convertHVStatusToPanValidationStatus :: (MonadFlow m) => Text -> m Documents.VerificationStatus

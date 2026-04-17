@@ -6,6 +6,7 @@ import qualified API.Types.UI.FleetOwnerList as API
 import Control.Monad.Extra (mapMaybeM)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
+import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -26,6 +27,7 @@ getFleetOwnerList ::
       Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe DDVS.DocsVerificationStatus ->
     Kernel.Prelude.Maybe FOI.FleetType ->
     Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
@@ -35,11 +37,11 @@ getFleetOwnerList ::
     Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
     Environment.Flow [API.FleetOwnerListItem]
   )
-getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbBlocked mbFleetType mbFromDate mbLimit mbSearchString mbOffset mbOnlyEnabled mbToDate = do
+getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbBlocked mbDocsVerificationStatus mbFleetType mbFromDate mbLimit mbSearchString mbOffset mbOnlyEnabled mbToDate = do
   let normalizedLimit = Just $ clampLimit $ fromMaybe 10 mbLimit
       normalizedOffset = Just $ max 0 $ fromMaybe 0 mbOffset
       targetOpCity = defaultOpCityId
-  fleetOwners <- QFleetOwnerInfo.findFleetOwners targetOpCity mbFleetType mbFromDate mbSearchString mbOnlyEnabled mbBlocked mbToDate normalizedLimit normalizedOffset
+  fleetOwners <- QFleetOwnerInfo.findFleetOwners targetOpCity mbFleetType mbDocsVerificationStatus mbFromDate mbSearchString mbOnlyEnabled mbBlocked mbToDate normalizedLimit normalizedOffset
   persons <- QPerson.findAllByPersonIds (Id.getId . (.fleetOwnerPersonId) <$> fleetOwners)
   let personMap = HM.fromList $ (\p -> (p.id, p)) <$> persons
   mapMaybeM (toApiItem personMap targetOpCity) fleetOwners
@@ -68,7 +70,8 @@ getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbBlocked mbFleetType mbFrom
                   fleetName = fleetOwnerInfo.fleetName,
                   mobileNumber = mobileNumber,
                   mobileCountryCode = person.mobileCountryCode,
-                  email = person.email
+                  email = person.email,
+                  docsVerificationStatus = fleetOwnerInfo.docsVerificationStatus
                 }
 
     personName person@Person.Person {..} =

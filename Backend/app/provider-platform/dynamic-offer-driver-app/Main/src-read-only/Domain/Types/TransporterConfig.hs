@@ -154,6 +154,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     enableFaceVerification :: Kernel.Prelude.Bool,
     enableFareCalculatorV2 :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableGpsTollBehavior :: Kernel.Prelude.Bool,
+    enableManualDocumentStatusCheck :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableMobileNumberValidation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableOverchargingBlocker :: Kernel.Prelude.Bool,
     enableScheduleReallocation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

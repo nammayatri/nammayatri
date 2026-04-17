@@ -61,6 +61,7 @@ import qualified Data.Text as T hiding (elem, find, length, map, zip)
 import Data.Time (Day, utctDay)
 import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.DocStatus as DocStatus
+import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPan
@@ -554,7 +555,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
       Just vehicleVariant ->
         maybeM
           (return Nothing)
-          ((Just <$>) . createVehicleRC person.merchantId person.merchantOperatingCityId rcInput vehicleVariant allFailures)
+          ((Just <$>) . createVehicleRC transporterConfig person.merchantId person.merchantOperatingCityId rcInput vehicleVariant allFailures)
           (encrypt `mapM` rcVerificationResponse.registrationNumber)
       Nothing -> buildRC person.merchantId person.merchantOperatingCityId rcInput allFailures
   if isNothing mbVehicleVariant && mbRemPriorityList /= Just [] && isJust mbRemPriorityList && ((mVehicleRC <&> (.verificationStatus)) == Just Documents.MANUAL_VERIFICATION_REQUIRED || join (mVehicleRC <&> (.reviewRequired)) == Just True)
@@ -610,8 +611,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
     readFromJson (Number val) = Just $ T.pack $ show (floor val :: Int)
     readFromJson _ = Nothing
 
-    createVehicleRC :: MonadFlow m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> DV.VehicleVariant -> [Text] -> EncryptedHashedField 'AsEncrypted Text -> m DVRC.VehicleRegistrationCertificate
-    createVehicleRC merchantId merchantOperatingCityId input vehicleVariant failedRules certificateNumber = do
+    createVehicleRC :: MonadFlow m => DTC.TransporterConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> DV.VehicleVariant -> [Text] -> EncryptedHashedField 'AsEncrypted Text -> m DVRC.VehicleRegistrationCertificate
+    createVehicleRC transporterConfig merchantId merchantOperatingCityId input vehicleVariant failedRules certificateNumber = do
       now <- getCurrentTime
       id <- generateGUID
       let updatedVehicleVariant = case input.vehicleCategory of
@@ -650,6 +651,10 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             luggageCapacity = Nothing,
             vehicleRating = Nothing,
             failedRules = failedRules,
+            docsVerificationStatus =
+              if transporterConfig.enableManualDocumentStatusCheck == Just True
+                then Just DDVS.ADMIN_PENDING
+                else Nothing,
             dateOfRegistration = input.dateOfRegistration,
             vehicleModelYear = input.vehicleModelYear,
             vehicleDoors = mbVehicleDoors,

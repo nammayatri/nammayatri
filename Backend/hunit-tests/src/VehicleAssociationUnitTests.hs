@@ -124,21 +124,22 @@ testGetDriverFleetVehicleAssociationWithRealExecution =
                 Maybe Bool ->
                 Maybe Bool ->
                 Maybe Bool ->
+                Maybe Common.DocsVerificationStatus ->
                 Environment.Flow Common.DrivertoVehicleAssociationResT
         True @? "Function should return DrivertoVehicleAssociationResT",
       testCase "Executes with different query parameters and validates request handling" $ do
-        let req1 = (Kernel.Types.Id.ShortId "merchant-1", Context.City "Delhi", Just 5, Just 10, Nothing, Just False, Nothing, Nothing, Nothing, Nothing, Nothing, Just "fleet-1", Just "req-1", Just True, Just False, Just True)
-            req2 = (Kernel.Types.Id.ShortId "merchant-2", Context.City "Bangalore", Just 20, Just 0, Nothing, Just True, Nothing, Nothing, Nothing, Nothing, Nothing, Just "fleet-2", Just "req-2", Just False, Just True, Just False)
-            (merchantShortId1, opCity1, mbLimit1, mbOffset1, mbVehicleNumber1, mbIncludeStats1, mbFrom1, mbTo1, mbStatus1, mbSearchString1, mbStatusAwareVehicleNo1, mbFleetOwnerId1, mbRequestorId1, hasFleetMemberHierarchy1, isRequestorFleerOwner1, mbApproved1) = req1
-            (merchantShortId2, opCity2, mbLimit2, mbOffset2, mbVehicleNumber2, mbIncludeStats2, mbFrom2, mbTo2, mbStatus2, mbSearchString2, mbStatusAwareVehicleNo2, mbFleetOwnerId2, mbRequestorId2, hasFleetMemberHierarchy2, isRequestorFleerOwner2, mbApproved2) = req2
+        let req1 = (Kernel.Types.Id.ShortId "merchant-1", Context.City "Delhi", Just 5, Just 10, Nothing, Just False, Nothing, Nothing, Nothing, Nothing, Nothing, Just "fleet-1", Just "req-1", Just True, Just False, Just True, Nothing)
+            req2 = (Kernel.Types.Id.ShortId "merchant-2", Context.City "Bangalore", Just 20, Just 0, Nothing, Just True, Nothing, Nothing, Nothing, Nothing, Nothing, Just "fleet-2", Just "req-2", Just False, Just True, Just False, Nothing)
+            (merchantShortId1, opCity1, mbLimit1, mbOffset1, mbVehicleNumber1, mbIncludeStats1, mbFrom1, mbTo1, mbStatus1, mbSearchString1, mbStatusAwareVehicleNo1, mbFleetOwnerId1, mbRequestorId1, hasFleetMemberHierarchy1, isRequestorFleerOwner1, mbApproved1, mbDocStatus1) = req1
+            (merchantShortId2, opCity2, mbLimit2, mbOffset2, mbVehicleNumber2, mbIncludeStats2, mbFrom2, mbTo2, mbStatus2, mbSearchString2, mbStatusAwareVehicleNo2, mbFleetOwnerId2, mbRequestorId2, hasFleetMemberHierarchy2, isRequestorFleerOwner2, mbApproved2, mbDocStatus2) = req2
 
         -- Actually execute the Flow actions and handle any exceptions
         executeFlowAction
           "getDriverFleetVehicleAssociation with req1"
-          (evaluate $ DDriver.getDriverFleetVehicleAssociation merchantShortId1 opCity1 mbLimit1 mbOffset1 mbVehicleNumber1 mbIncludeStats1 mbFrom1 mbTo1 mbStatus1 mbSearchString1 mbStatusAwareVehicleNo1 mbFleetOwnerId1 mbRequestorId1 hasFleetMemberHierarchy1 isRequestorFleerOwner1)
+          (evaluate $ DDriver.getDriverFleetVehicleAssociation merchantShortId1 opCity1 mbLimit1 mbOffset1 mbVehicleNumber1 mbIncludeStats1 mbFrom1 mbTo1 mbStatus1 mbSearchString1 mbStatusAwareVehicleNo1 mbFleetOwnerId1 mbRequestorId1 hasFleetMemberHierarchy1 isRequestorFleerOwner1 mbDocStatus1)
         executeFlowAction
           "getDriverFleetVehicleAssociation with req2"
-          (evaluate $ DDriver.getDriverFleetVehicleAssociation merchantShortId2 opCity2 mbLimit2 mbOffset2 mbVehicleNumber2 mbIncludeStats2 mbFrom2 mbTo2 mbStatus2 mbSearchString2 mbStatusAwareVehicleNo2 mbFleetOwnerId2 mbRequestorId2 hasFleetMemberHierarchy2 isRequestorFleerOwner2)
+          (evaluate $ DDriver.getDriverFleetVehicleAssociation merchantShortId2 opCity2 mbLimit2 mbOffset2 mbVehicleNumber2 mbIncludeStats2 mbFrom2 mbTo2 mbStatus2 mbSearchString2 mbStatusAwareVehicleNo2 mbFleetOwnerId2 mbRequestorId2 hasFleetMemberHierarchy2 isRequestorFleerOwner2 mbDocStatus2)
 
         -- Validate that different requests are handled correctly
         let limit1 = fromMaybe 0 mbLimit1

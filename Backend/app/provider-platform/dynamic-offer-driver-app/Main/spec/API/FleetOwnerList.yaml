@@ -4,6 +4,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   FleetType: Domain.Types.FleetOwnerInformation
   Address: Kernel.External.Payment.Stripe.Types
+  DocsVerificationStatus: Domain.Types.DocsVerificationStatus
 module: FleetOwnerList
 
 types:
@@ -21,6 +22,7 @@ types:
     - fleetName: Maybe Text
     - email: Maybe Text
     - mobileNumber: Maybe Text
+    - docsVerificationStatus: Maybe DocsVerificationStatus
     - mobileCountryCode: Maybe Text
 
 apis:
@@ -36,5 +38,6 @@ apis:
         toDate: UTCTime
         limit: Int
         offset: Int
+        docsVerificationStatus: DocsVerificationStatus
       response:
         type: "[FleetOwnerListItem]"

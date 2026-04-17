@@ -485,7 +485,11 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
             skipMessages = True -- Skip translations, result is ignored (void)
         void $ SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
       pure False
-    role | DCommon.checkFleetOwnerRole role -> DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId
+    role
+      | DCommon.checkFleetOwnerRole role -> do
+        isEnabled <- DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId
+        void $ withTryCatch "refreshDocsVerificationStatuses:verifyAadhaar:fleetOwner" (SStatus.refreshDocsVerificationStatuses person transporterConfig)
+        pure isEnabled
     _ -> pure False
   pure res
   where

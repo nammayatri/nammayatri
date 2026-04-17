@@ -41,6 +41,7 @@ import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import Domain.Action.UI.DriverReferral
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.Common as DriverInfo
+import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DriverFlowStatus as DriverFlowStatus
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Extra.Plan as DEP
@@ -364,6 +365,10 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             onboardingAs = Nothing,
             tollRouteBlockedTill = Nothing,
             approved = Nothing,
+            docsVerificationStatus =
+              if transporterConfig.enableManualDocumentStatusCheck == Just True
+                then Just DDVS.ADMIN_PENDING
+                else Nothing,
             address = Nothing,
             addressDocumentType = Nothing,
             nomineeName = Nothing,

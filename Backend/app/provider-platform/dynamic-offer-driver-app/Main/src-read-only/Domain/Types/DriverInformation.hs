@@ -5,6 +5,7 @@ module Domain.Types.DriverInformation where
 
 import Data.Aeson
 import qualified Domain.Types.Common
+import qualified Domain.Types.DocsVerificationStatus
 import qualified Domain.Types.DriverFlowStatus
 import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.Merchant
@@ -52,6 +53,7 @@ data DriverInformationE e = DriverInformation
     dailyCancellationRateBlockingCooldown :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     dailyExtraKms :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     dlNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
+    docsVerificationStatus :: Kernel.Prelude.Maybe Domain.Types.DocsVerificationStatus.DocsVerificationStatus,
     driverBankAccountDetails :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverBankAccountDetails,
     driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverFlowStatus :: Kernel.Prelude.Maybe Domain.Types.DriverFlowStatus.DriverFlowStatus,
@@ -166,6 +168,7 @@ instance EncryptedItem DriverInformation where
           dailyCancellationRateBlockingCooldown = dailyCancellationRateBlockingCooldown entity,
           dailyExtraKms = dailyExtraKms entity,
           dlNumber = dlNumber_,
+          docsVerificationStatus = docsVerificationStatus entity,
           driverBankAccountDetails = driverBankAccountDetails entity,
           driverDob = driverDob entity,
           driverFlowStatus = driverFlowStatus entity,
@@ -272,6 +275,7 @@ instance EncryptedItem DriverInformation where
             dailyCancellationRateBlockingCooldown = dailyCancellationRateBlockingCooldown entity,
             dailyExtraKms = dailyExtraKms entity,
             dlNumber = dlNumber_,
+            docsVerificationStatus = docsVerificationStatus entity,
             driverBankAccountDetails = driverBankAccountDetails entity,
             driverDob = driverDob entity,
             driverFlowStatus = driverFlowStatus entity,

@@ -5,6 +5,7 @@ module Domain.Types.VehicleRegistrationCertificate where
 
 import Data.Aeson
 import qualified Data.Time.Calendar
+import qualified Domain.Types.DocsVerificationStatus
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -22,6 +23,7 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     certificateNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     dateOfRegistration :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    docsVerificationStatus :: Kernel.Prelude.Maybe Domain.Types.DocsVerificationStatus.DocsVerificationStatus,
     documentImageId :: Kernel.Types.Id.Id Domain.Types.Image.Image,
     failedRules :: [Kernel.Prelude.Text],
     fitnessExpiry :: Kernel.Prelude.UTCTime,
@@ -60,9 +62,9 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
   }
   deriving (Generic)
 
-type VehicleRegistrationCertificate = VehicleRegistrationCertificateE ('AsEncrypted)
+type VehicleRegistrationCertificate = VehicleRegistrationCertificateE 'AsEncrypted
 
-type DecryptedVehicleRegistrationCertificate = VehicleRegistrationCertificateE ('AsUnencrypted)
+type DecryptedVehicleRegistrationCertificate = VehicleRegistrationCertificateE 'AsUnencrypted
 
 instance EncryptedItem VehicleRegistrationCertificate where
   type Unencrypted VehicleRegistrationCertificate = (DecryptedVehicleRegistrationCertificate, HashSalt)
@@ -74,6 +76,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
           approved = approved entity,
           certificateNumber = certificateNumber_,
           dateOfRegistration = dateOfRegistration entity,
+          docsVerificationStatus = docsVerificationStatus entity,
           documentImageId = documentImageId entity,
           failedRules = failedRules entity,
           fitnessExpiry = fitnessExpiry entity,
@@ -118,6 +121,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
             approved = approved entity,
             certificateNumber = certificateNumber_,
             dateOfRegistration = dateOfRegistration entity,
+            docsVerificationStatus = docsVerificationStatus entity,
             documentImageId = documentImageId entity,
             failedRules = failedRules entity,
             fitnessExpiry = fitnessExpiry entity,

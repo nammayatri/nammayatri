@@ -332,3 +332,17 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_blocked_for_
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN nominee_relationship text ;
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN nominee_name text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN docs_verification_status text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

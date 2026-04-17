@@ -26,6 +26,7 @@ imports:
   MediaFileDocumentType: Domain.Types.Common
   PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
   MediaFile: IssueManagement.Domain.Types.MediaFile
+  DocsVerificationStatus: Domain.Types.DocsVerificationStatus
 IdfyVerification:
   tableName: idfy_verification
   fields:
@@ -305,6 +306,7 @@ VehicleRegistrationCertificate:
     dateOfRegistration: Maybe UTCTime
     rejectReason: Maybe Text
     approved: Maybe Bool
+    docsVerificationStatus: Maybe DocsVerificationStatus
     vehicleImageId: Maybe (Id MediaFile)
   default:
     approved: "false"
@@ -1447,6 +1449,7 @@ CommonDriverOnboardingDocuments:
     updateRejectReason:
       kvFunction: updateWithKV
       params: [rejectReason, verificationStatus, updatedAt]
+      where: id
 
 MorthVerification:
   tableName: morth_verification

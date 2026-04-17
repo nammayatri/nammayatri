@@ -55,6 +55,7 @@ apis:
         toDate: UTCTime
         limit: Int
         offset: Int
+        docsVerificationStatus: DocsVerificationStatus
       response:
         type: "[FleetOwnerListItem]"
 
@@ -646,6 +647,7 @@ apis:
         - mbServiceTier: Text
         - enabled: Bool
         - approved: Bool
+        - driverDocsVerificationStatus: DocsVerificationStatus
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
@@ -690,6 +692,7 @@ apis:
         - hasFleetMemberHierarchy: Bool
         - isRequestorFleerOwner: Bool
         - approved: Bool
+        - vehicleDocsVerificationStatus: DocsVerificationStatus
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
@@ -1554,6 +1557,7 @@ types:
     - lastName: Maybe Text
     - dob: Maybe Day
     - email: Maybe Text
+    - docsVerificationStatus: Maybe DocsVerificationStatus
     - derive: "'HideSecrets"
   NearbyDriverReq:
     - point: LatLong
@@ -1641,6 +1645,7 @@ types:
     - fleetName: Maybe Text
     - email: Maybe Text
     - mobileNumber: Maybe Text
+    - docsVerificationStatus: Maybe DocsVerificationStatus
     - mobileCountryCode: Maybe Text
   FleetGroup:
     - level: Int
@@ -1893,6 +1898,9 @@ types:
     - fleetOwnerId: Text
     - listItem: [DriveVehicleAssociationListItemT]
     - summary: Summary
+  DocsVerificationStatus:
+    - enum: "ADMIN_PENDING, ADMIN_APPROVED, ADMIN_REJECTED"
+    - derive: "HttpInstance"
   RCStatusReq:
     - rcNo: Text
     - isActivate: Bool
@@ -1913,6 +1921,8 @@ types:
     - isDriverOnPickup: Maybe Bool
     - isDriverActive: Bool
     - isRcAssociated: Bool
+    - driverDocsVerificationStatus: Maybe DocsVerificationStatus
+    - vehicleDocsVerificationStatus: Maybe DocsVerificationStatus
     - verificationDocsStatus: Maybe VerificationDocsStatus
     - upcomingRouteCode: Maybe Text
   DriveVehicleAssociationListItemT:
@@ -1936,6 +1946,8 @@ types:
     - isDriverOnPickup: Maybe Bool
     - isDriverActive: Bool
     - isRcAssociated: Bool
+    - driverDocsVerificationStatus: Maybe DocsVerificationStatus
+    - vehicleDocsVerificationStatus: Maybe DocsVerificationStatus
     - verificationDocsStatus: Maybe VerificationDocsStatus
     - upcomingRouteCode: Maybe Text
     - fleetOwnerId: Text
@@ -2042,6 +2054,7 @@ types:
     - upiId: Maybe Text
     - linkedDriverIds: "[Text]"
     - fleetName: Maybe Text
+    - docsVerificationStatus: Maybe DocsVerificationStatus
     - derive: "'HideSecrets"
   FleetConfig:
     - allowAutomaticRoundTripAssignment: Bool

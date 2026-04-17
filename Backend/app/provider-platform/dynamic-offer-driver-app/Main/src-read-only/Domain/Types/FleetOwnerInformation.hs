@@ -4,6 +4,7 @@
 module Domain.Types.FleetOwnerInformation where
 
 import Data.Aeson
+import qualified Domain.Types.DocsVerificationStatus
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -28,6 +29,7 @@ data FleetOwnerInformationE e = FleetOwnerInformation
     businessLicenseNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     businessLicenseNumberDec :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dailyCancellationRateBlockingCooldown :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    docsVerificationStatus :: Kernel.Prelude.Maybe Domain.Types.DocsVerificationStatus.DocsVerificationStatus,
     enabled :: Kernel.Prelude.Bool,
     fleetDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -91,6 +93,7 @@ instance EncryptedItem FleetOwnerInformation where
           businessLicenseNumber = businessLicenseNumber_,
           businessLicenseNumberDec = businessLicenseNumberDec entity,
           dailyCancellationRateBlockingCooldown = dailyCancellationRateBlockingCooldown entity,
+          docsVerificationStatus = docsVerificationStatus entity,
           enabled = enabled entity,
           fleetDob = fleetDob entity,
           fleetName = fleetName entity,
@@ -146,6 +149,7 @@ instance EncryptedItem FleetOwnerInformation where
             businessLicenseNumber = businessLicenseNumber_,
             businessLicenseNumberDec = businessLicenseNumberDec entity,
             dailyCancellationRateBlockingCooldown = dailyCancellationRateBlockingCooldown entity,
+            docsVerificationStatus = docsVerificationStatus entity,
             enabled = enabled entity,
             fleetDob = fleetDob entity,
             fleetName = fleetName entity,

@@ -20,6 +20,7 @@ imports:
   DbHash: Kernel.External.Encryption
   Meters: Kernel.Types.Common
   UpgradedTier: Domain.Types.UpgradedTier
+  DocsVerificationStatus: Domain.Types.DocsVerificationStatus
 DriverInformation:
   tableName: driver_information
   types:
@@ -58,7 +59,6 @@ DriverInformation:
       accountNumber: Maybe Text
       ifscCode: Maybe Text
       nameAtBank: Maybe Text
-
   fields:
     driverId: Id Person
     adminId: Maybe (Id Person)
@@ -151,6 +151,7 @@ DriverInformation:
     weeklyExtraKms: Maybe HighPrecMeters
     onboardingAs: Maybe OnboardingAs
     approved: Maybe Bool
+    docsVerificationStatus: Maybe DocsVerificationStatus
     address: Maybe Text
     addressDocumentType: Maybe AddressDocumentType
     nomineeName: Maybe Text
