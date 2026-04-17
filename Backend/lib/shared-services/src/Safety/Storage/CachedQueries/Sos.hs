@@ -47,7 +47,7 @@ makeIdKey :: Id Common.Ride -> Text
 makeIdKey rideId = "CachedQueries:Sos:RideId-" <> rideId.getId
 
 clearCache :: (CacheFlow m r) => Id Common.Ride -> m ()
-clearCache rideId = Hedis.del $ makeIdKey rideId
+clearCache rideId = Hedis.runInMultiCloudRedisWrite $ Hedis.del $ makeIdKey rideId
 
 clearAllCacheKeys :: (CacheFlow m r) => DSos.Sos -> m ()
 clearAllCacheKeys sos = whenJust sos.rideId clearCache

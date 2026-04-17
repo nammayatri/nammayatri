@@ -30,4 +30,4 @@ alwaysOnCacheKey :: Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingC
 alwaysOnCacheKey cityId domain = "yudhishthira-CachedQueries:AppDynamicLogicAlwaysOn:MerchantOperatingCityId-" <> Kernel.Types.Id.getId cityId <> ":Domain-" <> show domain
 
 clearCache :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ()
-clearCache cityId domain = Hedis.del $ alwaysOnCacheKey cityId domain
+clearCache cityId domain = Hedis.runInMultiCloudRedisWrite $ Hedis.del $ alwaysOnCacheKey cityId domain

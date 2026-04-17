@@ -59,7 +59,7 @@ clearCache ::
   ServiceTierType ->
   m ()
 clearCache merchantOpCityId domain billingCategory vehicleServiceTier =
-  Hedis.del (makeDomainDiscountKey merchantOpCityId domain billingCategory vehicleServiceTier)
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeDomainDiscountKey merchantOpCityId domain billingCategory vehicleServiceTier)
 
 makeDomainDiscountKey :: Id MerchantOperatingCity -> Text -> SLT.BillingCategory -> ServiceTierType -> Text
 makeDomainDiscountKey merchantOpCityId domain billingCategory vehicleServiceTier =
