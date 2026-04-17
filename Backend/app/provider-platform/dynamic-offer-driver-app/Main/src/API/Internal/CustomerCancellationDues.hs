@@ -18,16 +18,10 @@ import Storage.Beam.SystemConfigs ()
 type API =
   Capture "merchantId" (Id Merchant)
     :> Capture "merchantCity" Context.City
-    :> "dispute"
+    :> "getCancellationDuesDetails"
     :> Header "token" Text
     :> ReqBody '[JSON] Domain.CancellationDuesReq
-    :> Post '[JSON] APISuccess
-    :<|> Capture "merchantId" (Id Merchant)
-      :> Capture "merchantCity" Context.City
-      :> "getCancellationDuesDetails"
-      :> Header "token" Text
-      :> ReqBody '[JSON] Domain.CancellationDuesReq
-      :> Get '[JSON] Domain.CancellationDuesDetailsRes
+    :> Get '[JSON] Domain.CancellationDuesDetailsRes
     :<|> Capture "merchantId" (Id Merchant)
       :> Capture "merchantCity" Context.City
       :> "customerCancellationDuesSync"
@@ -37,12 +31,8 @@ type API =
 
 handler :: FlowServer API
 handler =
-  disputeCancellationDues
-    :<|> getCancellationDuesDetails
+  getCancellationDuesDetails
     :<|> customerCancellationDuesSync
-
-disputeCancellationDues :: Id Merchant -> Context.City -> Maybe Text -> Domain.CancellationDuesReq -> FlowHandler APISuccess
-disputeCancellationDues merchantId merchantCity apiKey = withFlowHandlerAPI . Domain.disputeCancellationDues merchantId merchantCity apiKey
 
 getCancellationDuesDetails :: Id Merchant -> Context.City -> Maybe Text -> Domain.CancellationDuesReq -> FlowHandler Domain.CancellationDuesDetailsRes
 getCancellationDuesDetails merchantId merchantCity apiKey = withFlowHandlerAPI . Domain.getCancellationDuesDetails merchantId merchantCity apiKey

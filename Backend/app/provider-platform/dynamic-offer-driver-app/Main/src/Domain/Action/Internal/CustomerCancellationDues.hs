@@ -20,7 +20,7 @@ import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.DailyStats as DDS
 import Domain.Types.Merchant (Merchant)
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Encryption (getDbHash)
+import Kernel.External.Encryption (DbHash, getDbHash, unDbHash)
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.App
@@ -38,19 +38,24 @@ import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
+import qualified Text.Hex
 import Tools.Error
+import Tools.OpenAPIInstances ()
+
+showDbHashHex :: DbHash -> Text
+showDbHashHex = Text.Hex.encodeHex . unDbHash
 
 data CancellationDuesReq = CancellationDuesReq
-  { customerMobileNumber :: Text,
-    customerMobileCountryCode :: Text
+  { customerMobileNumberHash :: DbHash
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 data CancellationDuesDetailsRes = CancellationDuesDetailsRes
-  { customerCancellationDues :: HighPrecMoney,
-    customerCancellationDuesWithCurrency :: PriceAPIEntity,
-    disputeChancesUsed :: Int,
-    canBlockCustomer :: Maybe Bool
+  { cancellationDues :: PriceAPIEntity,
+    cancellationDuesPaid :: HighPrecMoney,
+    noOfTimesCancellationDuesPaid :: Int,
+    waivedOffAmount :: HighPrecMoney,
+    noOfTimesWaiveOffUsed :: Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -64,73 +69,28 @@ data CustomerCancellationDuesSyncReq = CustomerCancellationDuesSyncReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-disputeCancellationDues ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    EncFlow m r
-  ) =>
-  Id Merchant ->
-  Context.City ->
-  Maybe Text ->
-  CancellationDuesReq ->
-  m APISuccess
-disputeCancellationDues merchantId merchantCity apiKey CancellationDuesReq {..} = do
-  merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  unless (Just merchant.internalApiKey == apiKey) $
-    throwError $ AuthBlocked "Invalid BPP internal api key"
-  numberHash <- getDbHash customerMobileNumber
-  riderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchant.id >>= fromMaybeM (RiderDetailsDoNotExist "Mobile Number" customerMobileNumber)
-
-  when (riderDetails.cancellationDues == 0.0) $ do
-    throwError $ InvalidRequest $ "Cancellation Due Amount is 0 for riderId " <> riderDetails.id.getId
-  merchantOperatingCity <- CQMM.findByMerchantIdAndCity merchantId merchantCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show merchantCity)
-
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCity.id.getId)
-  when (riderDetails.disputeChancesUsed >= transporterConfig.cancellationFeeDisputeLimit) $ do
-    throwError (DisputeChancesLimitNotMet riderDetails.id.getId (show riderDetails.disputeChancesUsed) (show transporterConfig.cancellationFeeDisputeLimit))
-  let disputeChancesLeft = transporterConfig.cancellationFeeDisputeLimit - riderDetails.disputeChancesUsed
-      disputeAmount = min (transporterConfig.cancellationFee * fromIntegral disputeChancesLeft) (riderDetails.cancellationDues)
-  disputeChances <-
-    if transporterConfig.cancellationFee == 0.0
-      then do
-        logWarning "Unable to calculate dispute chances used"
-        return 0
-      else return $ round $ disputeAmount / transporterConfig.cancellationFee
-  QRD.updateDisputeChancesUsedAndCancellationDues (riderDetails.disputeChancesUsed + disputeChances) (riderDetails.cancellationDues - disputeAmount) riderDetails.id
-  pure Success
-
 getCancellationDuesDetails ::
   ( MonadFlow m,
     EsqDBFlow m r,
-    CacheFlow m r,
-    EncFlow m r
+    CacheFlow m r
   ) =>
   Id Merchant ->
   Context.City ->
   Maybe Text ->
   CancellationDuesReq ->
   m CancellationDuesDetailsRes
-getCancellationDuesDetails merchantId merchantCity apiKey CancellationDuesReq {..} = do
+getCancellationDuesDetails merchantId _merchantCity apiKey CancellationDuesReq {..} = do
   merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
-  merchantOperatingCity <- CQMM.findByMerchantIdAndCity merchant.id merchantCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchant.shortId.getShortId <> " ,city: " <> show merchantCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCity.id.getId)
-  unless transporterConfig.canAddCancellationFee $
-    throwError $ CityRestrictionOnCustomerCancellationDuesAddition (show merchantCity)
-  numberHash <- getDbHash customerMobileNumber
-  riderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchant.id >>= fromMaybeM (RiderDetailsDoNotExist "Mobile Number" customerMobileNumber)
-  let numOfChargableCancellations =
-        if transporterConfig.cancellationFee == 0.0
-          then 0
-          else round $ riderDetails.cancellationDues / transporterConfig.cancellationFee
+  riderDetails <- QRD.findByMobileNumberHashAndMerchant customerMobileNumberHash merchant.id >>= fromMaybeM (RiderDetailsDoNotExist "Mobile Number Hash" (showDbHashHex customerMobileNumberHash))
   return $
     CancellationDuesDetailsRes
-      { customerCancellationDues = riderDetails.cancellationDues,
-        customerCancellationDuesWithCurrency = PriceAPIEntity riderDetails.cancellationDues riderDetails.currency,
-        disputeChancesUsed = riderDetails.disputeChancesUsed,
-        canBlockCustomer = Just (numOfChargableCancellations == transporterConfig.numOfCancellationsAllowed)
+      { cancellationDues = PriceAPIEntity riderDetails.cancellationDues riderDetails.currency,
+        cancellationDuesPaid = riderDetails.cancellationDuesPaid,
+        noOfTimesCancellationDuesPaid = riderDetails.noOfTimesCanellationDuesPaid,
+        waivedOffAmount = riderDetails.waivedOffAmount,
+        noOfTimesWaiveOffUsed = riderDetails.noOfTimesWaiveOffUsed
       }
 
 customerCancellationDuesSync ::
