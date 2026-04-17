@@ -100,10 +100,10 @@ makeMerchantIdDomainandMerchantOperatingCityIdKey merchantId domain merchantOper
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => BecknConfig -> m ()
 clearCache cfg = do
   whenJust cfg.merchantId $ \merchantId -> do
-    Hedis.del (makeMerchantIdDomainKey merchantId cfg.domain cfg.vehicleCategory)
+    Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantIdDomainKey merchantId cfg.domain cfg.vehicleCategory)
     whenJust cfg.merchantOperatingCityId $ \mocId -> do
-      Hedis.del (makeMerchantIdDomainVehicleAndMerchantOperatingCityIdKey mocId merchantId cfg.domain cfg.vehicleCategory)
-      Hedis.del (makeMerchantIdDomainandMerchantOperatingCityIdKey merchantId cfg.domain mocId)
+      Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantIdDomainVehicleAndMerchantOperatingCityIdKey mocId merchantId cfg.domain cfg.vehicleCategory)
+      Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantIdDomainandMerchantOperatingCityIdKey merchantId cfg.domain mocId)
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => BecknConfig -> m ()
 updateByPrimaryKey cfg = do

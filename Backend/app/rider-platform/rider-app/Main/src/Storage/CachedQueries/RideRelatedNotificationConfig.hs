@@ -79,8 +79,8 @@ makeMerchantOpCityIdAndTimeDiffEventKey id timeDiffEvent = "CachedQueries:RideRe
 
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> TimeDiffEvent -> m ()
 clearCache merchantOpCityId timeDiffEvent = do
-  Hedis.del (makeMerchantOpCityIdAndTimeDiffEventKey merchantOpCityId timeDiffEvent)
-  Hedis.del (makeMerchantOpCityIdAllKey merchantOpCityId)
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantOpCityIdAndTimeDiffEventKey merchantOpCityId timeDiffEvent)
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantOpCityIdAllKey merchantOpCityId)
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => RideRelatedNotificationConfig -> m ()
 updateByPrimaryKey cfg = do
