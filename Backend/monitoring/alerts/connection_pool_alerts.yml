@@ -1,0 +1,60 @@
+# Prometheus alerting rules for connection pool health monitoring.
+# Deploy alongside your Prometheus configuration.
+#
+# DEPENDENCY: Metrics (db_pool_size, db_pool_in_use, db_pool_idle,
+# db_pool_utilization_ratio) are emitted by Utils.ConnectionPoolMetrics
+# in dynamic-offer-driver-app (PR #13977).
+
+groups:
+  - name: connection_pool_health
+    rules:
+      # PostgreSQL pool utilization > 80% for 5 minutes
+      - alert: PgPoolHighUtilization
+        expr: db_pool_utilization_ratio > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL pool utilization high ({{ $labels.service }}/{{ $labels.pool }})"
+          description: >
+            Pool utilization is {{ $value | humanizePercentage }} for
+            {{ $labels.service }}/{{ $labels.pool }}.
+            Consider increasing connectionPoolCount or investigating slow queries.
+
+      # PostgreSQL pool utilization > 95% for 2 minutes (critical)
+      - alert: PgPoolNearExhaustion
+        expr: db_pool_utilization_ratio > 0.95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL pool near exhaustion ({{ $labels.service }}/{{ $labels.pool }})"
+          description: >
+            Pool utilization is {{ $value | humanizePercentage }} for
+            {{ $labels.service }}/{{ $labels.pool }}.
+            Connection exhaustion imminent — requests will start blocking.
+
+      # No idle connections for 5 minutes
+      - alert: PgPoolNoIdleConnections
+        expr: db_pool_idle == 0 and db_pool_size > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No idle PostgreSQL connections ({{ $labels.service }}/{{ $labels.pool }})"
+          description: >
+            All {{ $labels.service }}/{{ $labels.pool }} pool connections are in use.
+            New requests may block waiting for a connection.
+
+      # Pool metrics not being reported (monitor thread may have died)
+      # Note: absent() without label selectors won't detect per-pod outages in multi-replica deployments
+      - alert: PgPoolMetricsAbsent
+        expr: absent(db_pool_size)
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL pool metrics are not being reported"
+          description: >
+            No db_pool_size metric received for 5+ minutes.
+            The pool monitoring thread may have crashed or the service may be down.
