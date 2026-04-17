@@ -96,8 +96,5 @@ ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN original_registration_amount 
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN airport_ride_subscription double ;
-
-
-------- SQL updates -------
+ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN airport_ride_subscription double precision ;
 

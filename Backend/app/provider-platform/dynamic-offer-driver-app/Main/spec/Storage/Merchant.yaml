@@ -834,6 +834,8 @@ TransporterConfig:
       analysisDurationMinutes: Int
       resultDurationMinutes: Int
       noOfGeohashesToReturn: Int
+      nearbyRadiusMeters: Maybe Int
+      nearbySearchStalenessMinutes: Maybe Int
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     AadhaarImageResizeConfig:
       height: Int
@@ -1203,6 +1205,8 @@ TransporterConfig:
     driverSearchBlacklistDurationSeconds: Maybe Seconds
     driverRiderBlacklistDurationSeconds: Maybe Seconds
     tdsFromEmail: Maybe Text
+    sameRiderDriverRideCountLookbackDays: Int
+    sameRiderDriverRideCountThreshold: Int
 
   beamType:
     currency: Maybe Currency
@@ -1268,6 +1272,8 @@ TransporterConfig:
     cancellationRateSlabConfig: Maybe Value
     feedbackNotificationConfig: Maybe Value
     vehicleCategoryExcludedFromVerification: "Maybe [Text]"
+    sameRiderDriverRideCountLookbackDays: Maybe Int
+    sameRiderDriverRideCountThreshold: Maybe Int
 
   beamFields:
     fcmConfig:
@@ -1357,7 +1363,8 @@ TransporterConfig:
     knowledgeCenterSopTypes: Just . Data.Aeson.toJSON|I
     feedbackNotificationConfig: Data.Aeson.toJSON <$> feedbackNotificationConfig|E
     vehicleCategoryExcludedFromVerification: (Data.Text.pack . Kernel.Prelude.show <$>) <$> vehicleCategoryExcludedFromVerification|E
-
+    sameRiderDriverRideCountLookbackDays: Just sameRiderDriverRideCountLookbackDays|E
+    sameRiderDriverRideCountThreshold: Just sameRiderDriverRideCountThreshold|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1442,7 +1449,8 @@ TransporterConfig:
     taxConfig: Storage.Queries.Transformers.TransporterConfig.parseTaxConfig merchantOperatingCityId|IM
     knowledgeCenterSopTypes: Storage.Queries.Transformers.TransporterConfig.parseKnowledgeCenterSopTypesConfig merchantOperatingCityId|IM
     vehicleCategoryExcludedFromVerification: (mapMaybe (readMaybe . Data.Text.unpack)) <$> vehicleCategoryExcludedFromVerification|E
-
+    sameRiderDriverRideCountLookbackDays: fromMaybe 7 sameRiderDriverRideCountLookbackDays|E
+    sameRiderDriverRideCountThreshold: fromMaybe 2 sameRiderDriverRideCountThreshold|E
   constraints:
     merchantOperatingCityId: PrimaryKey
 

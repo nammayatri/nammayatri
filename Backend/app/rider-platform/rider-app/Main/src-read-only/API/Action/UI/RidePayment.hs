@@ -138,10 +138,25 @@ type API =
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "payment"
+      :> "verifyVpa"
+      :> MandatoryQueryParam
+           "vpa"
+           Kernel.Prelude.Text
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "payment"
+      :> "vpaFromNumber"
+      :> Get
+           '[JSON]
+           API.Types.UI.RidePayment.VpaFromNumberResp
   )
 
 handler :: Environment.FlowServer API
-handler = getPaymentMethods :<|> postPaymentMethodsMakeDefault :<|> getPaymentIntentSetup :<|> getPaymentIntentPayment :<|> postPaymentMethodUpdate :<|> deletePaymentMethodsDelete :<|> postPaymentAddTip :<|> getPaymentCustomer :<|> postPaymentRefundRequestCreate :<|> getPaymentRefundRequest :<|> getPaymentGetDueAmount :<|> postPaymentClearDues :<|> postPaymentRideCapture
+handler = getPaymentMethods :<|> postPaymentMethodsMakeDefault :<|> getPaymentIntentSetup :<|> getPaymentIntentPayment :<|> postPaymentMethodUpdate :<|> deletePaymentMethodsDelete :<|> postPaymentAddTip :<|> getPaymentCustomer :<|> postPaymentRefundRequestCreate :<|> getPaymentRefundRequest :<|> getPaymentGetDueAmount :<|> postPaymentClearDues :<|> postPaymentRideCapture :<|> postPaymentVerifyVpa :<|> getPaymentVpaFromNumber
 
 getPaymentMethods :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler API.Types.UI.RidePayment.PaymentMethodsResponse)
 getPaymentMethods a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.getPaymentMethods (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
@@ -243,3 +258,15 @@ postPaymentRideCapture ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postPaymentRideCapture a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.postPaymentRideCapture (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postPaymentVerifyVpa ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Text ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postPaymentVerifyVpa a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.postPaymentVerifyVpa (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getPaymentVpaFromNumber :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler API.Types.UI.RidePayment.VpaFromNumberResp)
+getPaymentVpaFromNumber a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.getPaymentVpaFromNumber (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)

@@ -30,11 +30,25 @@ import os
 import glob
 import subprocess
 import threading
+import time
+import math
+import uuid
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 import urllib.request
 import urllib.error
+
+
+def redis_cmd(*args):
+    """Run a redis-cli command against the cluster, fallback to single-node."""
+    cluster_cmd = ["redis-cli", "--cluster", "call", "localhost:30001"] + list(args)
+    r = subprocess.run(cluster_cmd, capture_output=True, text=True, timeout=10)
+    if r.returncode == 0:
+        return True, r.stdout
+    # fallback single-node
+    r2 = subprocess.run(["redis-cli"] + list(args), capture_output=True, text=True, timeout=10)
+    return r2.returncode == 0, r2.stdout
 
 PORT = 7082
 
@@ -455,6 +469,29 @@ class ContextHandler(BaseHTTPRequestHandler):
             token = body.get("token", "")
             logs = stop_log_tails(token)
             self._send_json({"logs": logs})
+            return True
+
+        if method == "POST" and path == "/api/redis/flushall":
+            try:
+                import subprocess
+                result = subprocess.run(
+                    ["redis-cli", "--cluster", "call", "localhost:30001", "flushall"],
+                    capture_output=True, text=True, timeout=10
+                )
+                if result.returncode == 0:
+                    self._send_json({"result": "ok", "output": result.stdout.strip()})
+                else:
+                    # Fallback to single-node flush (non-cluster local setup)
+                    result2 = subprocess.run(
+                        ["redis-cli", "-p", "6379", "flushall"],
+                        capture_output=True, text=True, timeout=10
+                    )
+                    if result2.returncode == 0:
+                        self._send_json({"result": "ok", "output": result2.stdout.strip(), "mode": "single-node"})
+                    else:
+                        self._send_json({"error": result.stderr.strip() or result2.stderr.strip()}, 500)
+            except Exception as e:
+                self._send_json({"error": str(e)}, 500)
             return True
 
         if method == "POST" and path == "/api/inflate-distance":

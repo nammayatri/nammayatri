@@ -640,7 +640,7 @@ sendReferralFCM validRide ride booking mbRiderDetails transporterConfig = do
                 referralTitle = "Your referred customer has completed their first ride"
             sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
             fork "DriverToCustomerReferralCoin Event : " $ do
-              DC.driverCoinsEvent driver.id driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
+              DC.driverCoinsEvent driver.id Nothing driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
           mbVehicle <- QV.findById referredDriverId
           let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
           payoutConfig <- CPC.findByPrimaryKey driver.merchantOperatingCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) driver.merchantOperatingCityId.getId)
@@ -781,7 +781,8 @@ sendDriverToDriverReferralReward validRide ride _booking mbRiderDetails transpor
       case mbRiderDetails of
         Nothing -> pure False
         Just riderDetails -> do
-          (isValid, _) <- fraudChecksForReferralPayout validRide transporterConfig ((.hash) riderDetails.mobileNumber) riderDetails mbDailyStats
+          (isValid, mbFlagReason) <- fraudChecksForReferralPayout validRide transporterConfig ((.hash) riderDetails.mobileNumber) riderDetails mbDailyStats
+          QRide.updateReferralFlagReason mbFlagReason ride.id
           pure isValid
     when passedFraudCheck $ do
       let referralMessage = "Congratulations!"
@@ -925,7 +926,7 @@ getDefaultTime = defaultTime
 
 updateLeaderboardZScore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => SRB.Booking -> Ride.Ride -> m ()
 updateLeaderboardZScore booking ride = do
-  fork "Updating ZScore for driver" . Hedis.withNonCriticalRedis $ mapM_ updateLeaderboardZScore' [LConfig.DAILY, LConfig.WEEKLY, LConfig.MONTHLY]
+  fork "Updating ZScore for driver" . Hedis.runInMasterCloudRedisCell . Hedis.withNonCriticalRedis $ mapM_ updateLeaderboardZScore' [LConfig.DAILY, LConfig.WEEKLY, LConfig.MONTHLY]
   where
     updateLeaderboardZScore' :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => LConfig.LeaderBoardType -> m ()
     updateLeaderboardZScore' leaderBoardType = do

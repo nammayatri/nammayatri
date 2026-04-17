@@ -174,6 +174,51 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
 
   const stop = useCallback(() => { abortRef.current = true; }, []);
 
+  // Re-run a single step in isolation (uses current variable state)
+  const rerunStep = useCallback(async (stepId: string) => {
+    if (isRunning) return;
+    const step = steps.find(s => s.id === stepId);
+    if (!step) return;
+
+    setIsRunning(true);
+    setRunningStepId(stepId);
+    setStepStates(prev => ({ ...prev, [stepId]: { status: 'running' } }));
+    onLog('req', `[Re-run] ${step.method} ${step.name}`);
+
+    const start = performance.now();
+    const result = await callPostmanStep(step, storesRef.current);
+    const durationMs = Math.round(performance.now() - start);
+
+    const failed = result.assertions.some(a => !a.passed) || !!result.scriptError;
+    const status = failed ? 'fail' : 'pass';
+
+    setStepStates(prev => ({ ...prev, [stepId]: { status, result, durationMs } }));
+
+    const logLevel = failed ? 'error' : 'success';
+    const assertSummary = result.assertions.length > 0
+      ? ` [${result.assertions.filter(a => a.passed).length}/${result.assertions.length} assertions]`
+      : '';
+    onLog(logLevel, `${status === 'pass' ? 'PASS' : 'FAIL'} ${step.name} (${durationMs}ms, ${result.status})${assertSummary}`, {
+      request: { method: step.method, url: result.resolvedUrl, body: result.resolvedBody },
+      response: { status: result.status, body: result.data },
+      serviceLogs: result.serviceLogs,
+    });
+
+    for (const line of result.consoleLogs) {
+      onLog('info', `  [script] ${line}`);
+    }
+    if (failed) {
+      if (result.scriptError) onLog('error', `  Script error: ${result.scriptError}`);
+      for (const a of result.assertions.filter(a => !a.passed)) {
+        onLog('error', `  Assertion failed: ${a.name} — ${a.error}`);
+      }
+      setExpandedSteps(prev => new Set(prev).add(stepId));
+    }
+
+    setIsRunning(false);
+    setRunningStepId(null);
+  }, [isRunning, steps, onLog]);
+
   const toggleStep = (id: string) => {
     setExpandedSteps(prev => {
       const next = new Set(prev);
@@ -252,6 +297,16 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
                     {logCount > 0 && (
                       <button className="cr-logs-badge" onClick={e => { e.stopPropagation(); toggleLogs(stepId); }}>
                         logs({logCount})
+                      </button>
+                    )}
+                    {state?.status === 'fail' && (
+                      <button
+                        className="cr-rerun-btn"
+                        onClick={e => { e.stopPropagation(); rerunStep(stepId); }}
+                        disabled={isRunning}
+                        title="Re-run this step"
+                      >
+                        ↻ Re-run
                       </button>
                     )}
                   </div>

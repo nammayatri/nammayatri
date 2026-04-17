@@ -25,6 +25,7 @@ module Domain.Action.ProviderPlatform.Management.Ride
     getRideListV2,
     postRideWaiverRideCancellationPenalty,
     getRideAgentList,
+    getRideNearby,
   )
 where
 
@@ -151,3 +152,8 @@ getRideAgentList :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe C
 getRideAgentList merchantShortId opCity apiTokenInfo bookingStatus currency customerPhoneNo driverPhoneNo from limit offset rideShortId to vehicleNo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideAgentList) bookingStatus currency customerPhoneNo driverPhoneNo from limit offset rideShortId to vehicleNo
+
+getRideNearby :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow Common.NearbyResp)
+getRideNearby merchantShortId opCity apiTokenInfo driverId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideNearby) driverId

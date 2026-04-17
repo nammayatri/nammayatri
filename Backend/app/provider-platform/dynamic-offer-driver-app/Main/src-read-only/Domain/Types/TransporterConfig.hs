@@ -256,6 +256,8 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     rideTimeEstimatedThreshold :: Kernel.Types.Common.Seconds,
     routeDeviationThreshold :: Kernel.Types.Common.Meters,
     safetyTeamNumbers :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    sameRiderDriverRideCountLookbackDays :: Kernel.Prelude.Int,
+    sameRiderDriverRideCountThreshold :: Kernel.Prelude.Int,
     schedulePayoutForDay :: Kernel.Prelude.Maybe Kernel.Prelude.Integer,
     scheduleRideBufferTime :: Kernel.Prelude.NominalDiffTime,
     scheduledRideFilterExclusionThresholdHours :: Kernel.Types.Common.Hours,
@@ -373,7 +375,9 @@ data DemandHotspotsConfig = DemandHotspotsConfig
     enableDemandHotspots :: Kernel.Prelude.Bool,
     noOfGeohashesToReturn :: Kernel.Prelude.Int,
     precisionOfGeohash :: Kernel.Prelude.Int,
-    resultDurationMinutes :: Kernel.Prelude.Int
+    resultDurationMinutes :: Kernel.Prelude.Int,
+    nearbyRadiusMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    nearbySearchStalenessMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 

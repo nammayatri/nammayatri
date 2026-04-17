@@ -304,3 +304,31 @@ getFleetOwnerByTicketPlaceId mbTicketPlaceId = do
           <> [Se.Is Beam.verified $ Se.Eq True]
           <> [Se.Is Beam.ticketPlaceId $ Se.Eq mbTicketPlaceId]
     ]
+
+updateVatNumberById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe Text ->
+  Kernel.Types.Id.Id DP.Person ->
+  m ()
+updateVatNumberById vatNumber fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.vatNumber vatNumber,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
+updateBusinessLicenseNumberById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) =>
+  Maybe (EncryptedHashed Text) ->
+  Kernel.Types.Id.Id DP.Person ->
+  m ()
+updateBusinessLicenseNumberById businessLicenseNumber fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.businessLicenseNumberEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted businessLicenseNumber),
+      Se.Set Beam.businessLicenseNumberHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash businessLicenseNumber),
+      Se.Set Beam.businessLicenseNumber Nothing,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]

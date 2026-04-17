@@ -153,6 +153,19 @@
 }
 .cr-logs-badge:hover { background: #30363d; color: #c9d1d9; }
 
+.cr-rerun-btn {
+  font-size: 9px;
+  background: #3d1f1f;
+  border: 1px solid #da3633;
+  color: #f85149;
+  padding: 1px 7px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.cr-rerun-btn:hover { background: #da3633; color: #fff; }
+.cr-rerun-btn:disabled { opacity: 0.4; cursor: default; }
+
 /* Step detail */
 .cr-step-detail {
   margin: 4px 0 8px 14px;

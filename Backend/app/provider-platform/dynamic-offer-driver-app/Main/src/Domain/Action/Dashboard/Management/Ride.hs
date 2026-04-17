@@ -26,6 +26,7 @@ module Domain.Action.Dashboard.Management.Ride
     getRideKaptureList,
     getRideFareBreakUp,
     postRideWaiverRideCancellationPenalty,
+    getRideNearby,
   )
 where
 
@@ -165,6 +166,9 @@ castRideStatus s = case s of
   Common.RIDE_INPROGRESS -> DRide.INPROGRESS
   Common.RIDE_COMPLETED -> DRide.COMPLETED
   Common.RIDE_CANCELLED -> DRide.CANCELLED
+
+getRideNearby :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.NearbyResp
+getRideNearby = DRide.getNearby
 
 postRideWaiverRideCancellationPenalty :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Common.WaiverRideCancellationPenaltyReq -> Flow APISuccess
 postRideWaiverRideCancellationPenalty _merchantShortId _opCity rideId req = do

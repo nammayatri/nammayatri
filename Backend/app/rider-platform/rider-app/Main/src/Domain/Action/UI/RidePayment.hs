@@ -877,3 +877,63 @@ postPaymentRideCapture (mbPersonId, _merchantId) rideId = do
         QRide.markPaymentStatus Domain.Types.Ride.Failed ride.id
         throwError $ InvalidRequest "Payment capture failed. Please try again."
   pure Success
+
+postPaymentVerifyVpa ::
+  ( ( Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Text ->
+    Environment.Flow Kernel.Types.APISuccess.APISuccess
+  )
+postPaymentVerifyVpa (mbPersonId, merchantId) vpa = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let verifyVPAReq =
+        VerifyVPAReq
+          { orderId = Nothing,
+            customerId = Nothing,
+            vpa = vpa
+          }
+      verifyVpaCall = TPayment.verifyVpa merchantId person.merchantOperatingCityId Nothing TPayment.Normal (Just person.id.getId) person.clientSdkVersion
+  resp <- withTryCatch "verifyVPAService:vpaVerificationForOffers" $ DPayment.verifyVPAService verifyVPAReq verifyVpaCall
+  case resp of
+    Left e -> throwError $ InvalidRequest $ "VPA Verification Failed: " <> show e
+    Right response -> do
+      if response.status == "VALID"
+        then do
+          let updatedPerson = person{payoutVpa = Just vpa}
+          QPerson.updateByPrimaryKey updatedPerson
+          pure Success
+        else throwError $ InvalidRequest $ "VPA Verification Failed with status: " <> response.status
+
+getPaymentVpaFromNumber ::
+  ( ( Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Environment.Flow API.Types.UI.RidePayment.VpaFromNumberResp
+  )
+getPaymentVpaFromNumber (mbPersonId, merchantId) = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mobileNumber <- person.mobileNumber & fromMaybeM (InvalidRequest "Mobile number not found")
+  decryptedMobileNumber <- decrypt mobileNumber
+  let vpaReqString = decryptedMobileNumber <> "@mapper.npci"
+  let verifyVPAReq =
+        VerifyVPAReq
+          { orderId = Nothing,
+            customerId = Nothing,
+            vpa = vpaReqString
+          }
+      verifyVpaCall = TPayment.verifyVpa merchantId person.merchantOperatingCityId Nothing TPayment.Normal (Just person.id.getId) person.clientSdkVersion
+  resp <- withTryCatch "verifyVPAService:vpaRetrievalForOffers" $ DPayment.verifyVPAService verifyVPAReq verifyVpaCall
+  vpa <-
+    case resp of
+      Left e -> throwError $ InvalidRequest $ "VPA retrieval failed: " <> show e
+      Right response -> do
+        if response.status == "VALID"
+          then do
+            let updatedPerson = person{payoutVpa = Just response.vpa}
+            QPerson.updateByPrimaryKey updatedPerson
+            pure response.vpa
+          else throwError $ InvalidRequest $ "VPA Verification Failed with status: " <> response.status
+  pure $ API.Types.UI.RidePayment.VpaFromNumberResp {vpa = vpa}

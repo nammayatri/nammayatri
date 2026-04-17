@@ -28,6 +28,7 @@ imports:
   BillingCategory: SharedLogic.Type
   FarePolicy: Domain.Types.FarePolicy
   Sos: Safety.Domain.Types.Sos
+  PayoutFlagReason: Domain.Types.RiderDetails
 
 Ride:
   tableName: ride
@@ -141,6 +142,7 @@ Ride:
     finalFarePolicyId: Maybe (Id FarePolicy)
     subscriptionPurchaseIds: Maybe [Id SubscriptionPurchase]
     sosId: Maybe (Id Sos)
+    referralFlagReason: Maybe PayoutFlagReason
 
   sqlType:
     id: character(36)
@@ -359,6 +361,10 @@ Ride:
     findByShortId:
       kvFunction: findOneWithKV
       where: shortId
+    updateReferralFlagReason:
+      kvFunction: updateOneWithKV
+      params: [referralFlagReason]
+      where: id
 
   excludedDefaultQueries:
     - create

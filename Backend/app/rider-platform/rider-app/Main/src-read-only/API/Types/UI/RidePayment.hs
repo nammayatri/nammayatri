@@ -90,4 +90,8 @@ data SetupIntentResponse = SetupIntentResponse {customerId :: Kernel.External.Pa
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data VpaFromNumberResp = VpaFromNumberResp {vpa :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 $(mkHttpInstancesForEnum ''ClearDuesStatus)

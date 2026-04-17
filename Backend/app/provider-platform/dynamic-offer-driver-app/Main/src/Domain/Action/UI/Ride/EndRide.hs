@@ -33,6 +33,7 @@ import qualified Data.Aeson as A
 import Data.Either.Extra (eitherToMaybe)
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Data.HashMap.Strict as HM
+import Data.Time (utctDay)
 import Data.Maybe (listToMaybe)
 import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Data.Text as Text
@@ -590,11 +591,18 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
           _ -> Nothing
     mbDriver <- maybe (QP.findById driverId) (pure . Just) mbDriverFromReq
     mbRiderDetails <- join <$> (QRiderDetails.findById `mapM` booking.riderId)
+    riderBlockedForCoins <- QRiderDetails.isRiderFlaggedForCoinZero booking.riderId
     let mbDriverMobileHash = (.hash) <$> (mbDriver >>= (.mobileNumber))
         mbRiderMobileHash = (.hash) . (.mobileNumber) <$> mbRiderDetails
         isDriverSameAsCustomer = isJust mbDriverMobileHash && isJust mbRiderMobileHash && mbDriverMobileHash == mbRiderMobileHash
-    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking isDriverSameAsCustomer))
+        merchantLocalDay = utctDay $ addUTCTime (secondsToNominalDiffTime thresholdConfig.timeDiffFromUtc) now
+        rideDurationSeconds = maybe 0 (\tStart -> max 0 $ roundToIntegral (diffUTCTime now tStart)) updRide'.tripStartTime
+    priorRidesSameCustomer <- QRide.countPriorCompletedRidesWithSameCustomer (cast driverId) booking.riderId updRide'.id merchantLocalDay thresholdConfig.sameRiderDriverRideCountLookbackDays
+    let shouldBlockCoinsForSameRiderFlow = riderBlockedForCoins || priorRidesSameCustomer > thresholdConfig.sameRiderDriverRideCountThreshold
+    when shouldBlockCoinsForSameRiderFlow $ QRiderDetails.flagRiderForCoinZero booking.riderId
+    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking isDriverSameAsCustomer shouldBlockCoinsForSameRiderFlow rideDurationSeconds))
     let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
+    QRide.incrementDriverRiderRideCountForDay (cast driverId) booking.riderId
     fork "updating time and latlong in advance ride if any" $ do
       whenJust advanceRide $ \advanceRide' -> do
         QRide.updatePreviousRideTripEndPosAndTime (Just tripEndPoint) (Just now) advanceRide'.id
@@ -609,14 +617,19 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
       let validRideTaken = isValidRide updRide
           metroRideType = determineMetroRideType booking.specialLocationTag "SureMetro" "SureWarriorMetro"
       logDebug $ "MetroRideType : " <> show metroRideType
-      when (DCT.isMetroRideType metroRideType && validRideTaken) $ do
-        DC.incrementMetroRideCount driverId metroRideType expirationPeriod 1
-      when (DTC.isDynamicOfferTrip booking.tripCategory && validRideTaken) $ do
-        DC.incrementValidRideCount driverId expirationPeriod 1
-        DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.DynamicOfferTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
-      when (DTC.isRideOtpTrip booking.tripCategory && validRideTaken) $ do
-        DC.incrementOTPValidRideCount driverId expirationPeriod 1
-        DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.OTPRideTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
+      dailyCoinsAlreadyBlocked <- isDriverCoinsBlockedForDay driverId
+      let shouldBlockCoins = shouldBlockCoinsForSameRiderFlow || dailyCoinsAlreadyBlocked
+      if shouldBlockCoins
+        then blockDriverCoinsForToday driverId thresholdConfig.timeDiffFromUtc
+        else do
+          when (DCT.isMetroRideType metroRideType && validRideTaken) $ do
+            DC.incrementMetroRideCount driverId metroRideType expirationPeriod 1
+          when (DTC.isDynamicOfferTrip booking.tripCategory && validRideTaken) $ do
+            DC.incrementValidRideCount driverId expirationPeriod 1
+            DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.DynamicOfferTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
+          when (DTC.isRideOtpTrip booking.tripCategory && validRideTaken) $ do
+            DC.incrementOTPValidRideCount driverId expirationPeriod 1
+            DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.OTPRideTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
 
     -- GPS Toll Behavior Check - evaluate if driver intentionally turned off GPS on toll route
     when thresholdConfig.enableGpsTollBehavior $ do
@@ -706,6 +719,18 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         driverRideRes = driverRideRes
       }
   where
+    mkDriverCoinsBlockedForDayKey id = "driverCoins:blocked:today:dId:" <> id.getId
+
+    isDriverCoinsBlockedForDay id = do
+      mbBlocked <- Redis.withCrossAppRedis $ Redis.safeGet (mkDriverCoinsBlockedForDayKey id)
+      pure $ fromMaybe False (mbBlocked :: Maybe Bool)
+
+    blockDriverCoinsForToday id timeDiffFromUtc = do
+      expirationPeriod <- DC.getExpirationSeconds timeDiffFromUtc
+      DC.resetTodayCoinsAndAdjustLifetime id timeDiffFromUtc
+      Redis.withCrossAppRedis $ do
+        Redis.setExp (mkDriverCoinsBlockedForDayKey id) True expirationPeriod
+
     clearEditDestinationWayAndSnappedPoints driverId = LocUpdInternal.deleteEditDestinationSnappedWaypoints driverId >> LocUpdInternal.deleteEditDestinationWaypoints driverId
     clearReachedStopLocations existingRideId = do
       Redis.del (VID.mkReachedStopsKey existingRideId)

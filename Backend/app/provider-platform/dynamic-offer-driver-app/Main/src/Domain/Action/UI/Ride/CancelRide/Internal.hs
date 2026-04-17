@@ -211,7 +211,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
               disToPickup <- forM mbLocation $ \location -> do
                 driverDistanceToPickup booking (getCoordinates location) (getCoordinates booking.fromLocation)
               when (bookingCReason.source == SBCR.ByDriver) $
-                DC.driverCoinsEvent ride.driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup DCT.CancellationByDriver (fromMaybe (DTCR.CancellationReasonCode "OTHER") bookingCReason.reasonCode)) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
+                DC.driverCoinsEvent ride.driverId Nothing driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup DCT.CancellationByDriver (fromMaybe (DTCR.CancellationReasonCode "OTHER") bookingCReason.reasonCode)) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
 
             fork "cancelRide - Notify driver" $ do
               triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}

@@ -176,9 +176,9 @@ tripCategoryToFulfillmentType = \case
   OneWay OneWayOnDemandDynamicOffer -> show Enums.DELIVERY
   OneWay OneWayOnDemandStaticOffer -> show Enums.SCHEDULED_TRIP
   d@(Delivery _) -> show d
-  OneWay OneWayRideOtp -> show Enums.SELF_PICKUP -- v2.1.0: ride-OTP → SELF_PICKUP
-  CrossCity OneWayRideOtp _ -> show Enums.SELF_PICKUP -- v2.1.0: ride-OTP → SELF_PICKUP
-  RideShare RideOtp -> show Enums.SELF_PICKUP -- v2.1.0: ride-OTP → SELF_PICKUP
+  OneWay OneWayRideOtp -> show Enums.RIDE_OTP
+  CrossCity OneWayRideOtp _ -> show Enums.RIDE_OTP
+  RideShare RideOtp -> show Enums.RIDE_OTP
   Rental _ -> show Enums.RENTAL
   i@(InterCity OneWayRideOtp _) -> show i
   InterCity _ _ -> show Enums.INTER_CITY

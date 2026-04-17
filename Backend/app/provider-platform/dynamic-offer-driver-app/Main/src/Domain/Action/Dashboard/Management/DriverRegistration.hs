@@ -42,6 +42,8 @@ import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.UI.DriverOnboardingV2
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Key as DAK
+import qualified Data.Aeson.KeyMap as DAKM
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
@@ -557,7 +559,7 @@ postDriverRegistrationDocumentsCommon ::
   Context.City ->
   Id Common.Driver ->
   Common.CommonDocumentCreateReq ->
-  Flow APISuccess
+  Flow Common.CommonDocumentCreateRes
 postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.CommonDocumentCreateReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -591,7 +593,7 @@ postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.Com
             updatedAt = now
           }
   QCommonDriverOnboardingDocuments.create documentEntry
-  pure Success
+  pure $ Common.CommonDocumentCreateRes {result = "Success", documentId = cast documentId}
 
 postDriverRegistrationUnlinkDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.DocumentType -> Maybe Text -> Flow Common.UnlinkDocumentResp
 postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentType mbRequestorId = do
@@ -1447,6 +1449,28 @@ approveAndUpdateCommonDocument req _mId _mOpCityId = do
         Nothing -> document {DCommonDoc.verificationStatus = VALID}
 
   QCommonDriverOnboardingDocuments.updateByPrimaryKey updatedDocument
+
+  -- When approving BusinessLicense or TAXDetails (used for BID/VAT in international flow),
+  -- also update the fleet_owner_information table.
+  let finalDocData = updatedDocument.documentData
+      mbIdentifier = extractIdentifierFromDocData finalDocData
+  whenJust document.driverId $ \driverId -> do
+    let personId = cast driverId
+    case document.documentType of
+      DVC.BusinessLicense ->
+        whenJust mbIdentifier $ \identifierNumber -> do
+          encNumber <- encrypt identifierNumber
+          QFOIE.updateBusinessLicenseNumberById (Just encNumber) personId
+      DVC.TAXDetails ->
+        QFOIE.updateVatNumberById mbIdentifier personId
+      _ -> pure ()
+  where
+    extractIdentifierFromDocData :: Text -> Maybe Text
+    extractIdentifierFromDocData docData = do
+      let parsed = A.decode (BSL.fromStrict (TE.encodeUtf8 docData)) :: Maybe A.Object
+      parsed >>= DAKM.lookup (DAK.fromText "identifierNumber") >>= \case
+        A.String s -> if T.null s then Nothing else Just s
+        _ -> Nothing
 
 rejectAndUpdateCommonDocument :: Common.CommonDocumentRejectDetails -> Id DMOC.MerchantOperatingCity -> Flow ()
 rejectAndUpdateCommonDocument req _mOpCityId = do

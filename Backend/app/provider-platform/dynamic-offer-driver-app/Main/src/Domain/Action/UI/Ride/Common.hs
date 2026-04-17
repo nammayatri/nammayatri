@@ -53,6 +53,7 @@ import SharedLogic.Type (BillingCategory)
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.LocationMapping as QLM
+import qualified Tools.Utils as Tools
 import Prelude hiding (id)
 
 -- DeliveryPersonDetailsAPIEntity type (match Ride.hs)
@@ -174,7 +175,8 @@ data DriverRideRes = DriverRideRes
     pickupZoneGateType :: Maybe Text,
     pickupZoneEntryFeeAmount :: Maybe Double,
     specialLocationName :: Maybe Text,
-    specialLocationCategory :: Maybe Text
+    specialLocationCategory :: Maybe Text,
+    isValidRide :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -313,7 +315,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         pickupZoneGateType = mbGateInfo <&> (pack . show . (.gateType)),
         pickupZoneEntryFeeAmount = mbGateInfo >>= (.entryFeeAmount),
         specialLocationName = mbSpecialLoc <&> (.locationName),
-        specialLocationCategory = mbSpecialLoc <&> (.category)
+        specialLocationCategory = mbSpecialLoc <&> (.category),
+        isValidRide = Just $ Tools.isValidRide ride
       }
 
 -- calculateLocations moved from UI.Ride

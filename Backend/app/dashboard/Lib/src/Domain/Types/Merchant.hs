@@ -16,8 +16,8 @@
 
 module Domain.Types.Merchant where
 
-import qualified Domain.Types.ServerName as DSN
 import qualified Domain.Types.Role as DRole
+import qualified Domain.Types.ServerName as DSN
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.City as City

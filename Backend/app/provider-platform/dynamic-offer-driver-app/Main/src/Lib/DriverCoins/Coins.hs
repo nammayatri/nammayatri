@@ -22,6 +22,7 @@ module Lib.DriverCoins.Coins
     incrementValidRideCount,
     incrementOTPValidRideCount,
     updateDriverCoins,
+    resetTodayCoinsAndAdjustLifetime,
     sendCoinsNotification,
     sendCoinsNotificationV2,
     safeIncrBy,
@@ -118,8 +119,43 @@ updateDriverCoins driverId finalCoinsValue timeDiffFromUtc = do
   void $ Person.updateTotalEarnedCoins (finalCoinsValue + driver.totalEarnedCoins) driverId
   void $ runQuery $ updateCoinsByDriverId driverId finalCoinsValue timeDiffFromUtc
 
-driverCoinsEvent :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> Maybe Text -> Maybe DTVeh.VehicleVariant -> Maybe [LYT.ConfigVersionMap] -> m ()
-driverCoinsEvent driverId merchantId merchantOpCityId eventType entityId mbVehVarient mbConfigVersionMap = do
+resetTodayCoinsAndAdjustLifetime :: EventFlow m r => Id DP.Person -> Seconds -> m ()
+resetTodayCoinsAndAdjustLifetime driverId timeDiffFromUtc = do
+  now <- getCurrentTime
+  let istTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
+      currentDate = show $ utctDay istTime
+  todayCoinHistory <- B.runInReplica $ CHistory.getCoinEventSummary driverId istTime (secondsToNominalDiffTime timeDiffFromUtc)
+  let reversalAlreadyApplied = any (\historyItem -> historyItem.eventFunction == DCT.FraudCoinsReversal) todayCoinHistory
+      todayAddedCoins = sum $ map (.coins) $ filter (\historyItem -> historyItem.coins > 0) todayCoinHistory
+  when (todayAddedCoins > 0 && not reversalAlreadyApplied) $ do
+    forM_ (listToMaybe todayCoinHistory) $ \historyItem -> do
+      reversalTxnId <- generateGUIDText
+      resetEntityId <- generateGUIDText
+      CHistory.updateCoinEvent $
+        DTCC.CoinHistory
+          { id = Id reversalTxnId,
+            driverId = driverId.getId,
+            merchantId = historyItem.merchantId,
+            merchantOptCityId = historyItem.merchantOptCityId,
+            eventFunction = DCT.FraudCoinsReversal,
+            coins = negate todayAddedCoins,
+            status = Used,
+            createdAt = now,
+            updatedAt = now,
+            expirationAt = Nothing,
+            coinsUsed = 0,
+            bulkUploadTitle = Nothing,
+            entityId = Just resetEntityId,
+            vehicleCategory = historyItem.vehicleCategory
+          }
+    driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+    void $ Person.updateTotalEarnedCoins (driver.totalEarnedCoins - todayAddedCoins) driverId
+    expirationPeriod <- getExpirationSeconds timeDiffFromUtc
+    safeIncrBy (mkCoinAccumulationByDriverIdKey driverId currentDate) (negate $ fromIntegral todayAddedCoins) driverId timeDiffFromUtc
+    Hedis.withCrossAppRedis $ Hedis.expire (mkCoinAccumulationByDriverIdKey driverId currentDate) expirationPeriod
+
+driverCoinsEvent :: EventFlow m r => Id DP.Person -> Maybe DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> Maybe Text -> Maybe DTVeh.VehicleVariant -> Maybe [LYT.ConfigVersionMap] -> m ()
+driverCoinsEvent driverId mbDriver merchantId merchantOpCityId eventType entityId mbVehVarient mbConfigVersionMap = do
   let vehCategory = DTVeh.getVehicleCategoryFromVehicleVariantDefault mbVehVarient
       tripCatType = case eventType of
         DCT.EndRide {tripCategoryType} -> tripCategoryType
@@ -142,15 +178,22 @@ driverCoinsEvent driverId merchantId merchantOpCityId eventType entityId mbVehVa
         _ -> []
       blacklistedEventsByDriver = fromMaybe [] (DDS.blacklistCoinEvents =<< mbDriverStats)
       combinedBlacklist = blacklistedEventsByDriver <> blacklistedEventsByFleet
+  let incentiveCohortFunctions = maybe [] (extractDriverIncentiveCohortFunctions . (.driverTag)) mbDriver
   if fromMaybe False transporterConfig.enableDirectWalletIncentives
     then driverMonetaryRewardEvent driverId merchantId merchantOpCityId eventType entityId vehCategory mbConfigVersionMap transporterConfig combinedBlacklist mbFleetOwnerId
     else do
       coinConfiguration <- CDCQ.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehCategory tripCatType mbConfigVersionMap
+      let applicableCoinConfiguration =
+            if null incentiveCohortFunctions
+              then coinConfiguration
+              else filter (\cc -> cc.eventFunction `elem` incentiveCohortFunctions) coinConfiguration
 
-      let filteredConfigAll = filter (\cc -> cc.eventFunction `notElem` combinedBlacklist) coinConfiguration
-      logDebug $ "Coin config count: total=" <> show (length coinConfiguration) <> ", filtered=" <> show (length filteredConfigAll)
+      let filteredConfigAll =
+            if null incentiveCohortFunctions
+              then filter (\cc -> cc.eventFunction `notElem` combinedBlacklist && not (isDriverIncentiveCohortFunction cc.eventFunction)) applicableCoinConfiguration
+              else filter (\cc -> cc.eventFunction `notElem` combinedBlacklist) applicableCoinConfiguration
 
-      logInfo $ "Coin events for driver " <> driverId.getId <> " - DriverBlacklist: " <> show blacklistedEventsByDriver <> ", FleetBlacklist: " <> show blacklistedEventsByFleet <> ", Total: " <> show (map (.eventFunction) coinConfiguration) <> ", Filtered: " <> show (map (.eventFunction) filteredConfigAll)
+      logInfo $ "Coin events for driver " <> driverId.getId <> " - DriverBlacklist: " <> show blacklistedEventsByDriver <> ", FleetBlacklist: " <> show blacklistedEventsByFleet <> ", IncentiveFunctions: " <> show incentiveCohortFunctions <> ", Total: " <> show (map (.eventFunction) coinConfiguration) <> ", Applicable: " <> show (map (.eventFunction) applicableCoinConfiguration) <> ", Filtered: " <> show (map (.eventFunction) filteredConfigAll)
 
       if null filteredConfigAll
         then do
@@ -160,6 +203,22 @@ driverCoinsEvent driverId merchantId merchantOpCityId eventType entityId mbVehVa
           finalCoinsValue <- sum <$> forM filteredConfigAll (\cc -> calculateCoins eventType driverId merchantId merchantOpCityId cc.eventFunction cc.expirationAt cc.coins transporterConfig entityId vehCategory)
           logInfo $ "Awarding coins: " <> show finalCoinsValue
           updateDriverCoins driverId finalCoinsValue transporterConfig.timeDiffFromUtc
+
+extractDriverIncentiveCohortFunctions :: Maybe [LYT.TagNameValueExpiry] -> [DCT.DriverCoinsFunctionType]
+extractDriverIncentiveCohortFunctions =
+  maybe [] (concatMap parseDriverIncentiveTag)
+  where
+    parseDriverIncentiveTag (LYT.TagNameValueExpiry rawTagText) =
+      case T.splitOn "#" rawTagText of
+        ("Incentive" : tagValueText : _) ->
+          let parsedFunctions = mapMaybe (readMaybe . T.unpack . T.strip) (T.splitOn "&" tagValueText)
+           in filter isDriverIncentiveCohortFunction parsedFunctions
+        _ -> []
+
+isDriverIncentiveCohortFunction :: DCT.DriverCoinsFunctionType -> Bool
+isDriverIncentiveCohortFunction = \case
+  DCT.DriverIncentiveCohortRidesCompleted _ -> True
+  _ -> False
 
 calculateCoins :: EventFlow m r => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> m Int
 calculateCoins eventType driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory = do
@@ -211,6 +270,14 @@ hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTier
   logDebug $ "Driver Coins Handle EndRide Event Triggered - " <> show eventFunction
   case eventFunction of
     DCT.RidesCompleted a -> do
+      validRideCount <- case tripCategoryType of
+        DCT.OTPRideTrip -> fromMaybe 0 <$> getOTPValidRideCountByDriverIdKey driverId
+        DCT.DynamicOfferTrip -> fromMaybe 0 <$> getValidRideCountByDriverIdKey driverId
+      runActionWhenValidConditions
+        [ pure (validRideCount == a)
+        ]
+        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory
+    DCT.DriverIncentiveCohortRidesCompleted a -> do
       validRideCount <- case tripCategoryType of
         DCT.OTPRideTrip -> fromMaybe 0 <$> getOTPValidRideCountByDriverIdKey driverId
         DCT.DynamicOfferTrip -> fromMaybe 0 <$> getValidRideCountByDriverIdKey driverId

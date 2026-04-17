@@ -395,7 +395,7 @@ createNonRideSos personId mbMerchantId mbMerchantOperatingCityId mbTrackingExpir
       if active.sosState /= Just state
         then do
           now <- getCurrentTime
-          let updated = active { DSos.sosState = Just state, DSos.updatedAt = now }
+          let updated = active {DSos.sosState = Just state, DSos.updatedAt = now}
           void $ QSos.updateByPrimaryKey updated
           return updated
         else return active
