@@ -179,17 +179,17 @@ cancel req merchant booking mbActiveSearchTry = do
                   if validCustomerCancellation `elem` rideTags
                     then do
                       QRD.updateValidCancellationsCount riderId.getId
-                      charges' <- case ride.cancellationFeeIfCancelled of
-                        Just cancelCharges -> return (Just cancelCharges)
+                      (charges', mbLogicVersion) <- case ride.cancellationFeeIfCancelled of
+                        Just cancelCharges -> return (Just cancelCharges, ride.cancellationChargesLogicVersion)
                         Nothing -> do
-                          cancellationdues <- customerCancellationChargesCalculation booking ride riderDetails DCT.CancellationByCustomer bookingCR.reasonCode
+                          (cancellationdues, mbLV) <- customerCancellationChargesCalculation booking ride riderDetails DCT.CancellationByCustomer bookingCR.reasonCode
                           case cancellationdues of
                             Just charges -> do
                               logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellation dues: " <> show charges)
-                              QRide.updateCancellationFeeIfCancelledField (Just charges) ride.id
+                              QRide.updateCancellationFeeIfCancelledField (Just charges) mbLV ride.id
                               logTagInfo ("bookingId-" <> getId req.bookingId) ("after updation riderDetails.cancellationDues: " <> show riderDetails.cancellationDues <> " charges: " <> show charges)
-                              return (Just charges)
-                            Nothing -> return Nothing
+                              return (Just charges, mbLV)
+                            Nothing -> return (Nothing, mbLV)
                       QRD.updateCancellationDues (fromMaybe 0 charges' + riderDetails.cancellationDues) riderId
                       when (fromMaybe 0 charges' > 0) $ do
                         QRD.updateCancellationDueRidesCount riderId.getId
@@ -209,20 +209,20 @@ cancel req merchant booking mbActiveSearchTry = do
                                   merchantOperatingCityId = Just ride.merchantOperatingCityId
                                 }
                         QCDD.create cancellationDuesDetails
-                      return charges'
-                    else return Nothing
-                Nothing -> return Nothing
-            Nothing -> return Nothing
+                      return (charges', mbLogicVersion)
+                    else return (Nothing, Nothing)
+                Nothing -> return (Nothing, Nothing)
+            Nothing -> return (Nothing, Nothing)
         logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation charges: " <> show cancellationCharges)
         cancelCharges <- case cancellationCharges of
           Left e -> do
             logError $ "Error in getting cancellation charges - " <> show e
             return Nothing
-          Right (charges :: Maybe HighPrecMoney) -> do
+          Right (charges :: Maybe HighPrecMoney, mbLV :: Maybe Int) -> do
             void $ case mbRide of
               Just ride -> do
                 logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellation charges onCancel: " <> show charges)
-                QRide.updateCancellationChargesOnCancel charges ride.id
+                QRide.updateCancellationChargesOnCancel charges mbLV ride.id
               Nothing -> return ()
             return ((\chargess -> Just PriceAPIEntity {amount = chargess, currency = booking.currency}) =<< charges)
 
@@ -279,7 +279,7 @@ _customerCancellationChargesCalculation' booking mbRide currDistanceToPickup = d
         else do
           logDebug $ "Params passed to calculateCancellationCharges: cancellationAndNoShowConfigs " <> show cancellationAndNoShowConfigs <> "| initialDistanceToPickup: " <> show initialDistanceToPickup <> "| currDistanceToPickup: " <> show currDistanceToPickup <> "| timeSpentByDriver: " <> show timeSpentByDriver <> "| estimatedFare: " <> show booking.estimatedFare
           let cancellationCharges = FareCalculator.calculateCancellationCharges cancellationAndNoShowConfigs initialDistanceToPickup currDistanceToPickup timeSpentByDriver booking.estimatedFare
-          QRide.updateCancellationFeeIfCancelledField (Just cancellationCharges) ride.id
+          QRide.updateCancellationFeeIfCancelledField (Just cancellationCharges) Nothing ride.id
           return $ Just $ PriceAPIEntity {amount = cancellationCharges, currency = booking.currency}
     _ -> do
       logError $ "customerCancellationChargesCalculation: Ride or cancellation and now show configs not found for fare policy" <> show mbFarePolicy

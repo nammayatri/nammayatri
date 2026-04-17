@@ -133,17 +133,18 @@ evaluateGpsTollBehavior ::
   ) =>
   Id LYT.MerchantOperatingCity ->
   LYT.LogicDomain ->
+  Maybe Text -> -- optional entityTransactionId for debug logging
   [A.Value] -> -- Rules from App Dynamic Logic (GPS_TOLL_BEHAVIOR domain)
   GpsTollBehaviorData ->
   m GpsTollBehaviorOutput
-evaluateGpsTollBehavior mocId domain allLogics inputData = do
+evaluateGpsTollBehavior mocId domain mbEntityTransactionId allLogics inputData = do
   if null allLogics
     then do
       logInfo "No GPS toll behavior rules configured in App Dynamic Logic, using default output"
       return def
     else do
       logDebug $ "Evaluating GPS toll behavior with input: " <> show inputData
-      resp <- withTryCatch "runLogics:GpsTollBehavior" $ LYDL.runLogicsWithDebugLog LYDL.Driver mocId domain allLogics inputData
+      resp <- withTryCatch "runLogics:GpsTollBehavior" $ LYDL.runLogicsWithDebugLog LYDL.Driver mocId domain mbEntityTransactionId allLogics inputData
       case resp of
         Left err -> do
           logError $ "Error in running GPS toll behavior logics - " <> show err <> " - " <> show inputData

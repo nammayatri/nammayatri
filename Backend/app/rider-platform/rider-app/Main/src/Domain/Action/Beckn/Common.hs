@@ -993,7 +993,7 @@ addOffersNammaTags ride person = do
   now <- getCurrentTime
   let rideData = mkRideData ride
       customerData = Y.CustomerData {mobileNumber = decryptedMobileNumber, gender = person.gender}
-  tags <- LYDL.computeNammaTagsWithExpiryAndDebugLog LYDL.Rider (cast person.merchantOperatingCityId) Yudhishthira.RideEndOffers (Y.EndRideOffersTagData customerData rideData)
+  tags <- LYDL.computeNammaTagsWithExpiryAndDebugLog LYDL.Rider (cast person.merchantOperatingCityId) Yudhishthira.RideEndOffers (Nothing :: Maybe Text) (Y.EndRideOffersTagData customerData rideData)
   newTags <- modifiedNewNammaTags tags (fromMaybe [] person.customerNammaTags) now
   when (not $ null newTags) $ do
     CQPerson.updateCustomerTags (Just $ (fromMaybe [] person.customerNammaTags) <> newTags) person.id
@@ -1204,7 +1204,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
                     merchantOperatingCityId = booking.merchantOperatingCityId,
                     driverArrivalTime
                   }
-          nammaTags <- withTryCatch "computeNammaTags:RideCancel" (LYDL.computeNammaTagsWithDebugLog LYDL.Rider (cast booking.merchantOperatingCityId) Yudhishthira.RideCancel tagData)
+          nammaTags <- withTryCatch "computeNammaTags:RideCancel" (LYDL.computeNammaTagsWithDebugLog LYDL.Rider (cast booking.merchantOperatingCityId) Yudhishthira.RideCancel (Just booking.transactionId) tagData)
           logDebug $ "Tags for cancelled ride, rideId: " <> ride.id.getId <> " tagresults:" <> show (eitherToMaybe nammaTags)
           let mbNammaTags = eitherToMaybe nammaTags
           tagsWithExpiry <- forM (fromMaybe [] mbNammaTags) $ \tag -> Yudhishthira.fetchNammaTagExpiry (cast booking.merchantOperatingCityId) tag

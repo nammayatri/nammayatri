@@ -52,8 +52,9 @@ computeEligibleUpgradeTiers ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r, ClickhouseFlow m r) =>
   DRide.Ride ->
   DTTC.TransporterConfig ->
+  Maybe Text ->
   m ()
-computeEligibleUpgradeTiers ride transporterConfig =
+computeEligibleUpgradeTiers ride transporterConfig mbEntityTransactionId =
   when (isJust transporterConfig.upgradeTierDropRetentionTime) $
     fork ("computeEligibleUpgradeTiers for driver: " <> ride.driverId.getId) $ do
       now <- getCurrentTime
@@ -69,7 +70,7 @@ computeEligibleUpgradeTiers ride transporterConfig =
                 favRiderCount = driverStats.favRiderCount,
                 vehicleVariant = vehicle.variant
               }
-      nammaTags <- withTryCatch "computeNammaTags:UpgradeTier" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (Id.cast ride.merchantOperatingCityId) Yudhishthira.UpgradeTier upgradeTierTagData)
+      nammaTags <- withTryCatch "computeNammaTags:UpgradeTier" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (Id.cast ride.merchantOperatingCityId) Yudhishthira.UpgradeTier mbEntityTransactionId upgradeTierTagData)
       let newEligibleTiers = eligibleTiersFromTags $ fromMaybe [] $ eitherToMaybe nammaTags
           newUpgrades = computeMergedUpgrades now (fromMaybe 0 transporterConfig.upgradeTierDropRetentionTime) (fromMaybe [] driverInfo.ruleBasedUpgradeTiers) newEligibleTiers
           vehicleNewUpgrades = computeMergedUpgrades now (fromMaybe 0 transporterConfig.upgradeTierDropRetentionTime) (fromMaybe [] vehicle.ruleBasedUpgradeTiers) newEligibleTiers

@@ -62,7 +62,7 @@ reportIssue rideId issueType apiKey = do
       incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers ride.driverId
     ICommon.DRIVER_TOLL_RELATED_ISSUE -> handleTollRelatedIssue ride
     ICommon.SYNC_BOOKING -> pure ()
-    ICommon.EXTRA_FARE_MITIGATION -> handleExtraFareMitigation ride booking.vehicleServiceTier
+    ICommon.EXTRA_FARE_MITIGATION -> handleExtraFareMitigation ride booking.vehicleServiceTier (Just booking.transactionId)
     ICommon.DRUNK_AND_DRIVE_VIOLATION -> handleDrunkAndDriveViolation ride
   return Success
 
@@ -72,8 +72,8 @@ handleTollRelatedIssue ride = do
   let tollRelatedIssueCount = fromMaybe 0 driverInfo.tollRelatedIssueCount + 1
   void $ QDI.updateTollRelatedIssueCount (Just tollRelatedIssueCount) ride.driverId
 
-handleExtraFareMitigation :: Ride -> ServiceTierType -> Flow ()
-handleExtraFareMitigation ride serviceTierType = do
+handleExtraFareMitigation :: Ride -> ServiceTierType -> Maybe Text -> Flow ()
+handleExtraFareMitigation ride serviceTierType mbEntityTransactionId = do
   driverInfo <- QDI.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
   transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (DriverId (cast ride.driverId))) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   let ibConfig = IBM.getIssueBreachConfig EXTRA_FARE_MITIGATION transporterConfig
@@ -119,7 +119,7 @@ handleExtraFareMitigation ride serviceTierType = do
             localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
             getAppDynamicLogic (cast ride.merchantOperatingCityId) domain localTime Nothing Nothing
       snapshot <- BTSnap.buildSnapshotWithCooldowns counterConfig actionEvent entityState cooldownTags
-      output <- BEOrch.orchestrate snapshot LYDL.Driver (cast ride.merchantOperatingCityId) LYT.ISSUE_BREACH_BEHAVIOR fetchRules
+      output <- BEOrch.orchestrate snapshot LYDL.Driver (cast ride.merchantOperatingCityId) LYT.ISSUE_BREACH_BEHAVIOR mbEntityTransactionId fetchRules
       logInfo $ "Issue Breach behavior evaluation: consequences=" <> show (length output.consequences) <> ", communications=" <> show (length output.communications)
       let dispatchCtx =
             BehaviorDispatch.DispatchContext

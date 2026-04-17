@@ -162,6 +162,6 @@ validateRequest merchantId sReq = do
 
 addNammaTags :: Y.SelectTagData -> DSR.SearchRequest -> Flow ()
 addNammaTags tagData sReq = do
-  newSearchTags <- withTryCatch "computeNammaTags:Select" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast sReq.merchantOperatingCityId) Yudhishthira.Select tagData)
+  newSearchTags <- withTryCatch "computeNammaTags:Select" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast sReq.merchantOperatingCityId) Yudhishthira.Select (Just sReq.transactionId) tagData)
   let tags = sReq.searchTags <> eitherToMaybe newSearchTags
   QSR.updateSearchTags tags sReq.id
