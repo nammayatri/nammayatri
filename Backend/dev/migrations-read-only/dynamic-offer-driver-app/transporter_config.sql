@@ -852,3 +852,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN same_rider_driv
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN same_rider_driver_ride_count_threshold integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_disable_fleet_on_rejection_doc boolean ;
