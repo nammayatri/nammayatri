@@ -60,12 +60,12 @@ import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.Finance.Wallet
 import SharedLogic.Merchant
+import qualified Storage.ConfigPilot.Config.MerchantServiceConfig as MSCD
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Storage.Beam.Finance ()
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.DailyStats as QDailyStats
@@ -100,7 +100,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
       return $ fromMaybe (DEMSC.PayoutService TPayout.Juspay) subscriptionConfig.payoutServiceName
     Nothing -> return $ DEMSC.PayoutService TPayout.Juspay
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity payoutServiceName' merchantOperatingCityId
+    getOneConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, serviceName = Just payoutServiceName'})
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payout" (show TPayout.Juspay))
   psc <- case merchantServiceConfig.serviceConfig of
     DMSC.PayoutServiceConfig psc' -> pure psc'

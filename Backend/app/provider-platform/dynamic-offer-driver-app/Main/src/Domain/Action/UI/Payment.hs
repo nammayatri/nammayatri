@@ -105,11 +105,11 @@ import SharedLogic.Merchant
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.Webhook ()
+import qualified Storage.ConfigPilot.Config.MerchantServiceConfig as MSCD
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
@@ -345,7 +345,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId Nothing serviceName'
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName')
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity (subscriptionConfig.paymentServiceName) merchantOperatingCityId
+    getOneConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, serviceName = Just subscriptionConfig.paymentServiceName})
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   psc <- case merchantServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig psc' -> pure psc'

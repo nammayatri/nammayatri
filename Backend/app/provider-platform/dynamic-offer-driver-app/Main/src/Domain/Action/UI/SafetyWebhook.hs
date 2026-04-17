@@ -29,10 +29,10 @@ import Kernel.Utils.Common hiding (Error)
 import Servant hiding (throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
+import qualified Storage.ConfigPilot.Config.MerchantServiceConfig as MSCD
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Tools.Ticket as TT
 
 type SafetyWebhookAPI =
@@ -70,7 +70,7 @@ safetyWebhookHandler merchantShortId mbOpCity secret val = do
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchanOperatingCityId.getId)
   logDebug $ "runWithServiceConfig: merchantServiceUsageConfig: " <> show merchantServiceUsageConfig
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity (DMSC.DriverBackgroundVerificationService $ (.driverBackgroundVerificationService) merchantServiceUsageConfig) merchanOperatingCityId
+    getOneConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = merchanOperatingCityId.getId, serviceName = Just (DMSC.DriverBackgroundVerificationService $ (.driverBackgroundVerificationService) merchantServiceUsageConfig)})
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantOpCityId:" <> merchanOperatingCityId.getId)
   safetyWebhookAuthToken <- case merchantServiceConfig.serviceConfig of
     DMSC.DriverBackgroundVerificationServiceConfig vsc -> do

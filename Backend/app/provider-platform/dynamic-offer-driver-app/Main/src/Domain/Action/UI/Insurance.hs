@@ -13,9 +13,9 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBAPInternal
+import qualified Storage.ConfigPilot.Config.MerchantServiceConfig as MSCD
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.IffcoTokioInsurance as QIffco
 import qualified Storage.Queries.Ride as QRide
 
@@ -47,7 +47,7 @@ getDriverInsurance ::
   Environment.Flow SharedLogic.CallBAPInternal.InsuranceAPIEntity
 getDriverInsurance (personId, _merchantId, merchantOpCityId) = do
   _ <-
-    CQMSC.findByServiceAndCity (ExtraMSC.InsuranceDeclarationService ExtraMSC.IffcoTokio) merchantOpCityId
+    getOneConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, serviceName = Just (ExtraMSC.InsuranceDeclarationService ExtraMSC.IffcoTokio)})
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "InsuranceDeclaration_IffcoTokio" (show ExtraMSC.IffcoTokio))
   transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc

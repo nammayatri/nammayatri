@@ -30,9 +30,9 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.Version
 import qualified Storage.Cac.MerchantServiceUsageConfig as QOMC
+import qualified Storage.ConfigPilot.Config.MerchantServiceConfig as MSCD
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.DriverPlan as QDPlan
 
 createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> m (Payment.CreateOrderReq -> m Payment.CreateOrderResp, Maybe Text)
@@ -72,7 +72,7 @@ runWithServiceConfigAndName ::
   m (req -> m resp, Maybe Text)
 runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName mRoutingId = do
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity serviceName merchantOperatingCity
+    getOneConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.getId, serviceName = Just serviceName})
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show serviceName))
   logDebug $ "runWithServiceConfigAndName: getRoutingId " <> show getRoutingId
   logDebug $ "runWithServiceConfigAndName: serviceConfig " <> show merchantServiceConfig.serviceConfig
@@ -141,7 +141,7 @@ runWithServiceConfig func getCfg _merchantId merchantOpCityId paymentMode req = 
   orgPaymentsConfig <- QOMC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let paymentService = modifyPaymentServiceByMode (getCfg orgPaymentsConfig) (fromMaybe DMPM.LIVE paymentMode)
   orgPaymentServiceConfig <-
-    CQMSC.findByServiceAndCity (DMSC.PaymentService paymentService) merchantOpCityId
+    getOneConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, serviceName = Just (DMSC.PaymentService paymentService)})
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Payments" (show paymentService))
   case orgPaymentServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig msc -> func msc req

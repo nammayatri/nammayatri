@@ -71,6 +71,7 @@ data SConfigType (cfg :: ConfigType) where
   SRideRelatedNotificationConfig :: SConfigType 'RideRelatedNotificationConfig
   SMerchantMessage :: SConfigType 'MerchantMessage
   SMerchantPushNotification :: SConfigType 'MerchantPushNotification
+  SMerchantServiceConfig :: SConfigType 'MerchantServiceConfig
 
 deriving instance Show (SConfigType cfg)
 

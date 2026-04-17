@@ -25,7 +25,8 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Cac.MerchantServiceUsageConfig as QOMC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.ConfigPilot.Config.MerchantServiceConfig as MSCD
+import Storage.ConfigPilot.Interface.Types (getOneConfig)
 
 createCandidate ::
   ServiceFlow m r =>
@@ -69,7 +70,7 @@ runWithServiceConfig ::
 runWithServiceConfig func _merchantId merchantOpCityId req = do
   orgBackgroundVerificationsConfig <- QOMC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   orgBackgroundVerificationServiceConfig <-
-    CQMSC.findByServiceAndCity (DMSC.BackgroundVerificationService orgBackgroundVerificationsConfig.backgroundVerification) merchantOpCityId
+    getOneConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, serviceName = Just (DMSC.BackgroundVerificationService orgBackgroundVerificationsConfig.backgroundVerification)})
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "BackgroundVerifications" (show $ orgBackgroundVerificationsConfig.backgroundVerification))
   case orgBackgroundVerificationServiceConfig.serviceConfig of
     DMSC.BackgroundVerificationServiceConfig msc -> func msc req

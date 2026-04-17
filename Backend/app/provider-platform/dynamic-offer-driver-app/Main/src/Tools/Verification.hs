@@ -84,7 +84,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.GovtDataRC ()
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.ConfigPilot.Config.MerchantServiceConfig as MSCD
+import Storage.ConfigPilot.Interface.Types (getOneConfig)
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
@@ -222,9 +223,8 @@ verifyRC _ merchantOptCityId mbRemPriorityList req = do
     getTtenTokenizationServiceConfig :: (ServiceFlow m r, CoreMetrics m) => Id DMOC.MerchantOperatingCity -> m TIFT.TokenizationServiceConfig
     getTtenTokenizationServiceConfig mocid = do
       merchantServiceConfig <-
-        CQMSC.findByServiceAndCity
-          (DMSC.TokenizationService TT.Tten)
-          mocid
+        getOneConfig
+          (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = mocid.getId, serviceName = Just (DMSC.TokenizationService TT.Tten)})
           >>= fromMaybeM
             ( MerchantServiceConfigNotFound mocid.getId "tokenization" $
                 show (DMSC.TokenizationService TT.Tten)
@@ -240,7 +240,7 @@ getServiceConfig :: ServiceFlow m r => Id DMOC.MerchantOperatingCity -> Verifica
 getServiceConfig merchantOptCityId cfg = case cfg of
   GovtData -> return $ GovtDataConfig {}
   _ -> do
-    merchantServiceConfig <- CQMSC.findByServiceAndCity (DMSC.VerificationService cfg) merchantOptCityId >>= fromMaybeM (MerchantServiceConfigNotFound merchantOptCityId.getId "verification" $ show cfg)
+    merchantServiceConfig <- getOneConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOptCityId.getId, serviceName = Just (DMSC.VerificationService cfg)}) >>= fromMaybeM (MerchantServiceConfigNotFound merchantOptCityId.getId "verification" $ show cfg)
     case merchantServiceConfig.serviceConfig of
       DMSC.VerificationServiceConfig vsc -> return vsc
       _ -> throwError $ InternalError "Unknown Service Config"
@@ -326,7 +326,7 @@ getTask ::
   m GetTaskResp
 getTask merchantOpCityId config req updateResp = do
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity (DMSC.VerificationService config) merchantOpCityId
+    getOneConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, serviceName = Just (DMSC.VerificationService config)})
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId <> " Service : " <> T.pack (show config))
   case merchantServiceConfig.serviceConfig of
     DMSC.VerificationServiceConfig vsc -> Verification.getTask vsc req updateResp
@@ -349,7 +349,7 @@ runWithServiceConfig func getCfg _merchantId merchantOpCityId req = do
 callService :: ServiceFlow m r => Id DMOC.MerchantOperatingCity -> VerificationService -> (VerificationServiceConfig -> req -> m resp) -> req -> m resp
 callService merchantOpCityId vsc func req = do
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity (DMSC.VerificationService vsc) merchantOpCityId
+    getOneConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, serviceName = Just (DMSC.VerificationService vsc)})
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId <> " Service : " <> T.pack (show vsc))
   case merchantServiceConfig.serviceConfig of
     DMSC.VerificationServiceConfig vsc' -> func vsc' req

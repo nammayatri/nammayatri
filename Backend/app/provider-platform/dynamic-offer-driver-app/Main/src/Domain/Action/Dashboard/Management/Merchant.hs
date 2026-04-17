@@ -174,8 +174,9 @@ import qualified Storage.Cac.DriverPoolConfig as CQDPC
 import qualified Storage.Cac.FarePolicy as CQFP
 import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
+import qualified Storage.ConfigPilot.Config.MerchantServiceConfig as MSCD
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -1262,7 +1263,7 @@ postMerchantServiceUsageConfigMapsUpdate merchantShortId opCity req = do
   forM_ Maps.availableMapsServices $ \service -> do
     when (Common.mapsServiceUsedInReq req service) $ do
       void $
-        CQMSC.findByServiceAndCity (DMSC.MapsService service) merchantOpCityId
+        getOneConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, serviceName = Just (DMSC.MapsService service)})
           >>= fromMaybeM (InvalidRequest $ "Merchant config for maps service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
@@ -1295,7 +1296,7 @@ postMerchantServiceUsageConfigSmsUpdate merchantShortId opCity req = do
   forM_ SMS.availableSmsServices $ \service -> do
     when (Common.smsServiceUsedInReq req service) $ do
       void $
-        CQMSC.findByServiceAndCity (DMSC.SmsService service) merchantOpCityId
+        getOneConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, serviceName = Just (DMSC.SmsService service)})
           >>= fromMaybeM (InvalidRequest $ "Merchant config for sms service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
@@ -3241,9 +3242,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- merchant service config
   mbMerchantServiceConfigs <-
-    CQMSC.findAllMerchantOpCityId newMerchantOperatingCityId >>= \case
+    getConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, serviceName = Nothing}) >>= \case
       [] -> do
-        merchantServiceConfigs <- CQMSC.findAllMerchantOpCityId baseOperatingCityId
+        merchantServiceConfigs <- getConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId, serviceName = Nothing})
         let newMerchantServiceConfigs = map (buildMerchantServiceConfig newMerchantId newMerchantOperatingCityId now) merchantServiceConfigs
         return $ Just newMerchantServiceConfigs
       _ -> return Nothing

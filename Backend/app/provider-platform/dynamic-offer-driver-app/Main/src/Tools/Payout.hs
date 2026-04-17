@@ -28,9 +28,9 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.Version
+import qualified Storage.ConfigPilot.Config.MerchantServiceConfig as MSCD
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 
 -- import qualified System.Environment as SE
 
@@ -51,7 +51,7 @@ runWithServiceConfigAndName ::
   m resp
 runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName mRoutingId req = do
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity serviceName merchantOperatingCity
+    getOneConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.getId, serviceName = Just serviceName})
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payout" (show Payout.Juspay))
   case merchantServiceConfig.serviceConfig of
     DMSC.PayoutServiceConfig vsc -> func vsc getRoutingId req

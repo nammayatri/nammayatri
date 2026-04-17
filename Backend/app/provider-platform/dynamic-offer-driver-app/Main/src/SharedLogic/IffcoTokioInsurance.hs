@@ -22,9 +22,9 @@ import Kernel.Prelude ()
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant.Client.Core ()
+import qualified Storage.ConfigPilot.Config.MerchantServiceConfig as MSCD
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.IffcoTokioInsurance as QIffco
@@ -51,7 +51,7 @@ triggerIffcoTokioInsurance ::
   Id DMOC.MerchantOperatingCity ->
   m ()
 triggerIffcoTokioInsurance driverId merchantId merchantOpCityId = do
-  msc <- CQMSC.findByServiceAndCity (ExtraMSC.InsuranceDeclarationService ExtraMSC.IffcoTokio) merchantOpCityId
+  msc <- getOneConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, serviceName = Just (ExtraMSC.InsuranceDeclarationService ExtraMSC.IffcoTokio)})
   let mbIffcoExtCfg = case msc of
         Just x -> case x.serviceConfig of
           ExtraMSC.InsuranceDeclarationServiceConfig cfg -> Just cfg

@@ -27,9 +27,9 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Network.HTTP.Types.URI as URI
+import qualified Storage.ConfigPilot.Config.MerchantServiceConfig as MSCD
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.DigilockerVerification as QDV
 import Tools.Error
 
@@ -44,7 +44,7 @@ getDigiLockerConfig merchantOpCityId = do
 
   let serviceName = DMSC.VerificationService Verification.DigiLocker
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity serviceName merchantOpCityId
+    getOneConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, serviceName = Just serviceName})
       >>= fromMaybeM (InternalError "DigiLocker service config not found. Please configure DigiLocker in merchant_service_config table.")
 
   case merchantServiceConfig.serviceConfig of

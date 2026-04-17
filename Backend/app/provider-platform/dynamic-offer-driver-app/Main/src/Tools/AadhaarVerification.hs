@@ -32,7 +32,8 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.ConfigPilot.Config.MerchantServiceConfig as MSCD
+import Storage.ConfigPilot.Interface.Types (getOneConfig)
 import Tools.Error
 
 generateAadhaarOtp ::
@@ -63,7 +64,7 @@ runWithServiceConfig func _merchantId merchantOpCityId req = do
     CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity (DMSC.AadhaarVerificationService merchantServiceUsageConfig.aadhaarVerificationService) merchantOpCityId
+    getOneConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, serviceName = Just (DMSC.AadhaarVerificationService merchantServiceUsageConfig.aadhaarVerificationService)})
       >>= fromMaybeM (InternalError $ "No Aadhaar Verification service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId)
   case merchantServiceConfig.serviceConfig of
     DMSC.AadhaarVerificationServiceConfig vsc -> func vsc req

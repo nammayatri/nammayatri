@@ -34,7 +34,8 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.Payment
 import Storage.Beam.Payment ()
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.ConfigPilot.Config.MerchantServiceConfig as MSCD
+import Storage.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.StclMembership as QStclMembership
 import Tools.Auth
@@ -80,7 +81,7 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
 
   -- Fetch gatewayReferenceId from merchant service config
   mbGatewayReferenceId <- do
-    mbServiceConfig <- CQMSC.findByServiceAndCity (DMSC.MembershipPaymentService PaymentService.Juspay) merchantOperatingCityId
+    mbServiceConfig <- getOneConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, serviceName = Just (DMSC.MembershipPaymentService PaymentService.Juspay)})
     case mbServiceConfig of
       Just serviceConfig -> case serviceConfig.serviceConfig of
         DMSC.MembershipPaymentServiceConfig paymentServiceConfig ->

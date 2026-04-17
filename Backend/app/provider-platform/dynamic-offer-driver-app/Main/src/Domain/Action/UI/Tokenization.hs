@@ -18,7 +18,8 @@ import qualified Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMSOC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.ConfigPilot.Config.MerchantServiceConfig as MSCD
+import Storage.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.Queries.DriverGullakAssociation as QDGA
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.Person as SQP
@@ -34,7 +35,7 @@ getDriverSdkToken ::
     Environment.Flow API.Types.UI.Tokenization.GetTokenRes
   )
 getDriverSdkToken (mbPersonId, merchantId, merchantOperatingCityId) expirySec svc = do
-  svcfg <- (CQMSC.findByServiceAndCity (DomainMSC.TokenizationService svc) merchantOperatingCityId >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Tokenization" (show svc))) <&> (.serviceConfig)
+  svcfg <- (getOneConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, serviceName = Just (DomainMSC.TokenizationService svc)}) >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Tokenization" (show svc))) <&> (.serviceConfig)
   hvsc <- case svcfg of
     DomainMSC.TokenizationServiceConfig sc -> return sc
     _ -> throwError $ ServiceConfigError "Service Config is not Tokenization service config !!!!"

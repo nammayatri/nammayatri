@@ -37,7 +37,8 @@ import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator (AllocatorJobType (..), SettlementReportIngestionJobData (..))
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.ConfigPilot.Config.MerchantServiceConfig as MSCD
+import Storage.ConfigPilot.Interface.Types (getOneConfig)
 
 -- | Lock TTL reduced from 3600s to 600s (10 minutes) to avoid long lock holds
 lockTTLSeconds :: Int
@@ -120,7 +121,7 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
     getSettlementConfigs _mId mOpCityId = do
       let allSettlementServices = [minBound .. maxBound] :: [SettlementService]
       configs <- forM allSettlementServices $ \service -> do
-        mbConfig <- CQMSC.findByServiceAndCity (DMSC.SettlementService service) mOpCityId
+        mbConfig <- getOneConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = mOpCityId.getId, serviceName = Just (DMSC.SettlementService service)})
         pure $ case mbConfig of
           Just cfg -> case cfg.serviceConfig of
             DMSC.SettlementServiceConfig settlementCfg -> case settlementCfg of

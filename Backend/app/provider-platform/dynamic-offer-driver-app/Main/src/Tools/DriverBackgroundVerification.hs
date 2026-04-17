@@ -26,7 +26,8 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.ConfigPilot.Config.MerchantServiceConfig as MSCD
+import Storage.ConfigPilot.Interface.Types (getOneConfig)
 import Tools.Error
 
 searchAgent ::
@@ -52,7 +53,7 @@ runWithServiceConfig func getCfg merchantId merchantOpCityId req = do
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   logDebug $ "runWithServiceConfig: merchantServiceUsageConfig: " <> show merchantServiceUsageConfig
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity (DMSC.DriverBackgroundVerificationService $ getCfg merchantServiceUsageConfig) merchantOpCityId
+    getOneConfig (MSCD.MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, serviceName = Just (DMSC.DriverBackgroundVerificationService $ getCfg merchantServiceUsageConfig)})
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId)
   case merchantServiceConfig.serviceConfig of
     DMSC.DriverBackgroundVerificationServiceConfig vsc -> func vsc req
