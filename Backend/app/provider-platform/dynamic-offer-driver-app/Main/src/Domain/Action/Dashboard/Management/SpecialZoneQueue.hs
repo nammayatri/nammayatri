@@ -14,6 +14,7 @@ import qualified Data.Map.Strict as Map
 import Data.Time (addUTCTime)
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.SpecialZoneQueueRequest as DSZQR
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types (LatLong (..))
