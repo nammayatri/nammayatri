@@ -675,6 +675,7 @@ getMl = Keymap {
 , wait_timer: "വെയ്റ്റ് ടൈമർ"
 , how_long_driver_waited_for_pickup: "പിക്കപ്പിൽ ഡ്രൈവർ എത്ര നേരം കാത്തിരുന്നുവെന്ന് കാണിക്കുന്നു."
 , chat_with: "ചാറ്റ് ചെയ്യുക"
+, chat_with_us: "ഞങ്ങളുമായി ചാറ്റ് ചെയ്യുക"
 , quick: "വേഗം"
 , chats: "ചാറ്റുകൾ"
 , replies: "മറുപടികൾ"

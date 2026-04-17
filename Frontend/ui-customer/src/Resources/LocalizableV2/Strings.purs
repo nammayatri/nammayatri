@@ -792,6 +792,7 @@ getProxy str = case str of
     HOW_LONG_DRIVER_WAITED_FOR_PICKUP -> \a -> a @~ how_long_driver_waited_for_pickup
     YOU_WILL_PAY_FOR_EVERY_MINUTE arg1 arg2 -> \a -> (a @~ you_will_pay_for_every_minute) arg1 arg2
     CHAT_WITH -> \a -> a @~ chat_with
+    CHAT_WITH_US -> \a -> a @~ chat_with_us
     QUICK -> \a -> a @~ quick
     CHATS -> \a -> a @~ chats
     REPLIES -> \a -> a @~ replies

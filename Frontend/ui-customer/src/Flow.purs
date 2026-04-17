@@ -1020,7 +1020,7 @@ currentFlowStatus prioritizeRating = do
   verifyProfile dummy = do
     liftFlowBT $ markPerformance "VERIFY_PROFILE"
     response <- Remote.getProfileBT ""
-    modifyScreenState $ GlobalFlowCacheType (\globaFlowCache -> globaFlowCache{profileResp = Just response, isLLMChatEnabled = response.isLLMChatEnabled})
+modifyScreenState $ GlobalFlowCacheType (\globalFlowCache -> globalFlowCache{profileResp = Just response, isLLMChatEnabled = response.isLLMChatEnabled})
     config <- getAppConfigFlowBT appConfig
     updateVersion (response ^. _clientVersion) (response ^. _bundleVersion)
     updateFirebaseToken (response ^. _maskedDeviceToken) getUpdateToken

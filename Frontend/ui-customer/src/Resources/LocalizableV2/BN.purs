@@ -674,6 +674,7 @@ getBn = Keymap {
 , you_will_pay_for_every_minute: (\freeMinutes chargePerMin -> "প্রথম " <> freeMinutes <> " মিনিটের জন্য অপেক্ষা চার্জ শূন্য। পরবর্তীতে "<> chargePerMin <>" চার্জ প্রযোজ্য হবে।")
 , how_long_driver_waited_for_pickup: "আপনাকে দেখায় ড্রাইভার পিকআপে কতক্ষণ অপেক্ষা করেছে।"
 , chat_with: "সাথে চ্যাট করুন"
+, chat_with_us: "আমাদের সাথে চ্যাট করুন"
 , quick: "দ্রুত"
 , chats: "চ্যাট"
 , replies: "উত্তর"

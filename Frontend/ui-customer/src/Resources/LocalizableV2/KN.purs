@@ -674,6 +674,7 @@ getKn = Keymap {
 , wait_timer: "ವೇಟ್ ಟೈಮರ್"
 , how_long_driver_waited_for_pickup: "ಪಿಕಪ್‌ನಲ್ಲಿ ಡ್ರೈವರ್ ಎಷ್ಟು ಸಮಯ ಕಾಯುತ್ತಿದ್ದಾರೆಂದು ನಿಮಗೆ ತೋರಿಸುತ್ತದೆ."
 , chat_with: "ಚಾಟ್ ಮಾಡಿ"
+, chat_with_us: "ನಮ್ಮೊಂದಿಗೆ ಚಾಟ್ ಮಾಡಿ"
 , quick: "ತ್ವರಿತವಾಗಿ"
 , chats: "ಚಾಟ್‌ಗಳು"
 , replies: "ಪ್ರತ್ಯುತ್ತರಗಳು"

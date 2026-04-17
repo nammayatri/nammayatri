@@ -757,6 +757,7 @@ newtype Keymap = Keymap {
 , how_long_driver_waited_for_pickup :: String
 , you_will_pay_for_every_minute :: String -> String -> String
 , chat_with :: String
+, chat_with_us :: String
 , quick :: String
 , chats :: String
 , replies :: String
@@ -3854,6 +3855,9 @@ you_will_pay_for_every_minute = a
 
 chat_with :: Proxy "chat_with"
 chat_with = a
+
+chat_with_us :: Proxy "chat_with_us"
+chat_with_us = a
 
 quick :: Proxy "quick"
 quick = a

@@ -674,6 +674,7 @@ getHi = Keymap {
 , wait_timer: "प्रतीक्षा टाइमर"
 , how_long_driver_waited_for_pickup: "आपको दिखाता है कि ड्राइवर ने पिकअप के लिए कितनी देर तक इंतजार किया है।"
 , chat_with: "से बातचीत"
+, chat_with_us: "हमसे बातचीत करें"
 , quick: "जल्दी"
 , chats: "चैट"
 , replies: "जवाब"

@@ -673,6 +673,7 @@ getTa = Keymap {
 , wait_timer: "வெயிட் டைமர்"
 , how_long_driver_waited_for_pickup: "பிக்கப்பில் டிரைவர் எவ்வளவு நேரம் காத்திருந்தார் என்பதைக் காட்டுகிறது."
 , chat_with: ""
+, chat_with_us: "எங்களுடன் அரட்டையடிக்கவும்"
 , namma_safety: "பாதுகாப்பு"
 , quick: "விரைவு"
 , chats: "அரட்டைகள்"

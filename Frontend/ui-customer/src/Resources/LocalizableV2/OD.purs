@@ -678,6 +678,7 @@ getOd = Keymap {
 , wait_timer: "ପ୍ରତିକ୍ଷା"
 , how_long_driver_waited_for_pickup: "ପିକଅପ୍"
 , chat_with: "ଚାଟ୍"
+, chat_with_us: "ଆମ ସହିତ ଚାଟ୍ କରନ୍ତୁ"
 , namma_safety: "ସୁରକ୍ଷା"
 , quick: "ଶୀଘ୍ର"
 , chats: "ଚାଟସ୍"

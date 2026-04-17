@@ -262,6 +262,15 @@ topicsList state =
                           , allowedRideStatuses : Nothing
                           , categoryType: "Category"
                           }
+    chatCategory = { categoryAction: Just "CHAT_WITH_US"
+                   , categoryName: getString CHAT_WITH_US
+                   , categoryImageUrl: Just $ fetchImage FF_COMMON_ASSET "ny_ic_chat"
+                   , categoryId: "8"
+                   , isRideRequired: false
+                   , maxAllowedRideAge: Nothing
+                   , allowedRideStatuses : Nothing
+                   , categoryType: "Category"
+                   }
   in
     ( if state.data.config.feature.enableSelfServe then
         state.data.categories <> (if enableContactSupport then [callSupportCategory] else [])
@@ -278,6 +287,7 @@ topicsList state =
         , callSupportCategory
         ]
     )
+    <> (if state.props.isLLMChatEnabled then [chatCategory] else [])
     <> if state.data.config.showDeleteAccount then
         [ { categoryAction: Just "DELETE_ACCOUNT"
           , categoryName: getString REQUEST_TO_DELETE_ACCOUNT

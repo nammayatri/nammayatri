@@ -675,6 +675,7 @@ getTe = Keymap {
 , wait_timer: "వెయిట్ టైమర్"
 , how_long_driver_waited_for_pickup: "పికప్ వద్ద డ్రైవర్ ఎంతసేపు వేచి ఉన్నాడో మీకు చూపుతుంది."
 , chat_with: "తో చాట్ చేయండి"
+, chat_with_us: "మాతో చాట్ చేయండి"
 , namma_safety: "భద్రత"
 , quick: "శీఘ్ర"
 , chats: "చాట్‌లు"

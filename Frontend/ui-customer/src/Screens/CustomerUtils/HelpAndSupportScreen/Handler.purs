@@ -53,7 +53,9 @@ helpAndSupportScreen :: FlowBT String FlowState
 helpAndSupportScreen = do
   (GlobalState globalState) <- getState
   let helpAndSupportScreenState = globalState.helpAndSupportScreen
-  if DA.null helpAndSupportScreenState.data.categories then do 
+      isLLMChatEnabled = fromMaybe false globalState.globalFlowCache.isLLMChatEnabled
+  modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { props { isLLMChatEnabled = isLLMChatEnabled } } )
+  if DA.null helpAndSupportScreenState.data.categories then do
     let language = fetchLanguage $ getLanguageLocale languageKey 
     (GetCategoriesRes response) <- Remote.getCategoriesBT language
     filteredCategories <- pure $ DA.filter (\(Category catObj) -> catObj.categoryType == "Category") response.categories

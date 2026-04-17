@@ -71,6 +71,8 @@ initData = {
   , showDeleteAccountView : false
   , btnActive : false
   , needIssueListApiCall : true
+  , isLLMChatEnabled : false
+  , showChatView : false
   }
 
 }
@@ -119,7 +121,9 @@ type HelpAndSupportScreenData =
     categories :: Array CategoryListType,
     merchantExoPhone :: String,
     logField :: Object Foreign,
-    isFaqListEmpty :: Boolean
+    isFaqListEmpty :: Boolean,
+    chatMessages :: Array ChatMessage,
+    chatInputText :: String
   }
 
 type HelpAndSuportScreenProps =
@@ -129,4 +133,6 @@ type HelpAndSuportScreenProps =
   , showDeleteAccountView :: Boolean
   , btnActive :: Boolean
   , needIssueListApiCall :: Boolean
+  , isLLMChatEnabled :: Boolean
+  , showChatView :: Boolean
   }

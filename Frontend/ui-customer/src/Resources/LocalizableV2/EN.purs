@@ -674,6 +674,7 @@ getEn = Keymap {
 , wait_timer: "Wait Timer"
 , how_long_driver_waited_for_pickup: "Shows you how long the driver has waited at pickup."
 , chat_with: "Chat with"
+, chat_with_us: "Chat with Us"
 , namma_safety: "Safety"
 , quick: "Quick"
 , chats: "Chats"
