@@ -55,6 +55,7 @@ findFleetOwners merchantOperatingCityId mbFleetType mbFromDate mbSearchString mb
                           (B.sqlBool_ $ B.val_ True)
                           ( \searchString ->
                               B.sqlBool_ (B.lower_ (B.coalesce_ [person.email] (B.val_ "")) `B.like_` B.val_ ("%" <> toLower searchString <> "%"))
+                                B.||?. B.sqlBool_ (B.lower_ (B.coalesce_ [fleetOwnerInfo.fleetName] (B.val_ "")) `B.like_` B.val_ ("%" <> toLower searchString <> "%"))
                                 B.||?. maybe
                                   (B.sqlBool_ $ B.val_ False)
                                   (\hashedPhone -> person.mobileNumberHash B.==?. B.val_ (Just hashedPhone))

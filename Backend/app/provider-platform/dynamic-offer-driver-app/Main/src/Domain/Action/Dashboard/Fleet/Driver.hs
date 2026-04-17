@@ -1556,6 +1556,7 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
         driverPhoneNo <- mapM decrypt driver.mobileNumber
         let driverMobileCountryCode = driver.mobileCountryCode
         let driverEmail = driver.email
+        let driverDob = driverInfo'.driverDob
         driverLicenseStatus <- do
           mbDl <- B.runInReplica $ QDriverLicense.findByDriverId driver.id
           case mbDl of
@@ -1660,7 +1661,8 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
                   fleetOwnerName = fleetOwnerName,
                   fleetName = fleetName,
                   requestReason = requestReason,
-                  responseReason = responseReason
+                  responseReason = responseReason,
+                  driverDob = driverDob
                 }
         pure ls
     getVehicleDetails ::
@@ -1807,7 +1809,8 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
                   fleetOwnerName = fleetOwnerName,
                   fleetName = fleetName,
                   driverMobileCountryCode = driverMobileCountryCodeValue,
-                  driverEmail = driverEmailValue
+                  driverEmail = driverEmailValue,
+                  driverDob = Nothing
                 }
         pure ls
 
