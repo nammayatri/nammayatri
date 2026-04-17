@@ -285,7 +285,8 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant = do
                 <> " eligible=" <> show (length eligible) <> " toNotify=" <> show (min needed (length eligible))
             void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId variant cooldown (take needed eligible)
 
--- Force notify (dashboard trigger) — uses LTS queue order, skips demand/supply threshold checks
+-- Force notify (dashboard trigger) — notifies priority drivers first, then fills
+-- remaining slots from LTS queue order. Skips demand/supply threshold checks.
 forceNotifyDriverDemand ::
   ( Redis.HedisFlow m r,
     MonadFlow m,
@@ -301,18 +302,28 @@ forceNotifyDriverDemand ::
   DGI.GateInfo ->
   Text -> -- vehicleType
   Int -> -- number of drivers to notify
+  Maybe [Id DP.Person] -> -- optional priority driver IDs to notify first
   m Int -- returns count of drivers actually notified
-forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed = do
+forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPriorityDriverIds = do
   let specialLocationId = gate.specialLocationId.getId
       gateId = gate.id.getId
       cooldown = fromMaybe 900 gate.notificationCooldownInSec
-  -- Get drivers from LTS queue sorted by queue position
-  queueResp <- LTSFlow.getQueueDrivers specialLocationId vehicleType
-  let sortedDrivers = sortOn (.queuePosition) queueResp.drivers
-      queueDriverIds = map (.driverId) sortedDrivers
-  eligible <- filterEligibleDrivers gate specialLocationId vehicleType merchantId gateId queueDriverIds
-  let toNotify = take needed eligible
-  notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown toNotify
+      priorityDriverIds = fromMaybe [] mbPriorityDriverIds
+  -- Notify priority drivers first
+  priorityCount <- notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown priorityDriverIds
+  let remaining = max 0 (needed - priorityCount)
+  -- Fill remaining from LTS queue
+  queueCount <-
+    if remaining > 0
+      then do
+        queueResp <- LTSFlow.getQueueDrivers specialLocationId vehicleType
+        let sortedDrivers = sortOn (.queuePosition) queueResp.drivers
+            -- Exclude priority drivers already notified
+            queueDriverIds = filter (`notElem` priorityDriverIds) $ map (.driverId) sortedDrivers
+        eligible <- filterEligibleDrivers gate specialLocationId vehicleType merchantId gateId queueDriverIds
+        notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown (take remaining eligible)
+      else pure 0
+  pure (priorityCount + queueCount)
 
 -- Common notification logic: create SpecialZoneQueueRequest entries and send FCM
 notifyDrivers ::

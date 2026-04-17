@@ -19,11 +19,41 @@ apis:
       response:
         type: SpecialZoneQueueStatsRes
 
+  - POST:
+      endpoint: /manualQueueAdd
+      auth: ApiAuthV2
+      request:
+        type: ManualQueueAddReq
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /manualQueueRemove
+      auth: ApiAuthV2
+      request:
+        type: ManualQueueRemoveReq
+      response:
+        type: APISuccess
+
 types:
   TriggerSpecialZoneQueueNotifyReq:
     - gateId: Text
     - vehicleType: Text
     - driversToNotify: Int
+    - forceNotifyDriverIds: Maybe [Text]
+    - derive: "'HideSecrets"
+
+  ManualQueueAddReq:
+    - specialLocationId: Text
+    - vehicleType: Text
+    - driverId: Text
+    - queuePosition: Int
+    - derive: "'HideSecrets"
+
+  ManualQueueRemoveReq:
+    - specialLocationId: Text
+    - vehicleType: Text
+    - driverId: Text
     - derive: "'HideSecrets"
 
   VehicleQueueStats:
