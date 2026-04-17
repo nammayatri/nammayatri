@@ -38,6 +38,8 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -45,7 +47,8 @@ import Tools.Error
 data OnCancelReq = BookingCancelledReq
   { bppBookingId :: Id SRB.BPPBooking,
     cancellationSource :: Maybe Text,
-    cancellationFee :: Maybe PriceAPIEntity
+    cancellationFee :: Maybe PriceAPIEntity,
+    cancellationReasonCode :: Maybe Text
   }
 
 data ValidatedOnCancelReq = ValidatedBookingCancelledReq
@@ -53,7 +56,8 @@ data ValidatedOnCancelReq = ValidatedBookingCancelledReq
     cancellationSource :: Maybe Text,
     booking :: SRB.Booking,
     cancellationFee :: Maybe PriceAPIEntity,
-    mbRide :: Maybe SRide.Ride
+    mbRide :: Maybe SRide.Ride,
+    cancellationReasonCode :: Maybe Text
   }
 
 onCancel :: ValidatedOnCancelReq -> Flow ()
@@ -62,7 +66,10 @@ onCancel ValidatedBookingCancelledReq {..} = do
   logTagInfo ("BookingId-" <> getId booking.id) ""
   whenJust cancellationSource $ \source -> logTagInfo ("Cancellation source " <> source) ""
   let castedCancellationSource = castCancellatonSource cancellationSource_
-  Common.cancellationTransaction booking mbRide castedCancellationSource cancellationFee
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  let validCancellationReasonCodesForImmediateCharge = fromMaybe ["CUSTOMER_NO_SHOW"] riderConfig.validCancellationReasonCodesForImmediateCharge
+  let immediateCharge = isJust cancellationFee && maybe False (`elem` validCancellationReasonCodesForImmediateCharge) cancellationReasonCode
+  Common.cancellationTransaction booking mbRide castedCancellationSource cancellationFee immediateCharge
   SharedCancel.releaseCancellationLock booking.transactionId
   where
     castCancellatonSource = \case
@@ -96,7 +103,7 @@ validateRequest BookingCancelledReq {..} = do
       bookingAlreadyCancelled = booking.status == SRB.CANCELLED
   unless (isBookingCancellable booking || (isRideCancellable && bookingAlreadyCancelled)) $
     throwError (BookingInvalidStatus (show booking.status))
-  return $ ValidatedBookingCancelledReq {..}
+  return $ ValidatedBookingCancelledReq {cancellationReasonCode = cancellationReasonCode, ..}
   where
     isBookingCancellable booking =
       booking.status `elem` [SRB.NEW, SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.TRIP_ASSIGNED]

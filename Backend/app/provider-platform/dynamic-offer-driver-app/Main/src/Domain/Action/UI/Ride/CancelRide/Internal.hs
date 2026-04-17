@@ -113,6 +113,7 @@ import qualified Tools.Notifications as Notify
 import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
 
+-- main fn
 cancelRideImpl ::
   ( MonadFlow m,
     EncFlow m r,
@@ -191,6 +192,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                 return (Nothing, Nothing)
               Right (charges :: (Maybe PriceAPIEntity, Maybe Int)) -> return charges
             -- calculateNoShowCharges booking ride else return Nothing
+            logDebug $ "userNoShowCharges: " <> show userNoShowCharges
             let (userNoShowChargesFee, userNoShowChargesLogicVersion) = userNoShowCharges
             driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
             vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
