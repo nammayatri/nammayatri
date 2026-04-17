@@ -155,9 +155,11 @@ types:
     - paymentMadeToDriver: Bool
     - derive: "'HideSecrets"
   CancellationDuesDetailsRes:
-    - cancellationDues: Maybe PriceAPIEntity
-    - disputeChancesUsed: Maybe Int
-    - canBlockCustomer: Maybe Bool
+    - cancellationDues: PriceAPIEntity
+    - cancellationDuesPaid: HighPrecMoney
+    - noOfTimesCancellationDuesPaid: Int
+    - waivedOffAmount: HighPrecMoney
+    - noOfTimesWaiveOffUsed: Int
   UpdateSafetyCenterBlockingReq:
     - incrementCount: Maybe Bool
     - resetCount: Maybe Bool

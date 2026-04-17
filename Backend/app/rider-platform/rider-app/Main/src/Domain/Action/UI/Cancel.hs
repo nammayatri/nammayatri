@@ -73,7 +73,6 @@ import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverOffer as QDOffer
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Ride as QR
 import Tools.Error
 import qualified Tools.Maps as Maps
 
@@ -112,9 +111,11 @@ data CancelSearch = CancelSearch
   }
 
 data CancellationDuesDetailsRes = CancellationDuesDetailsRes
-  { cancellationDues :: Maybe PriceAPIEntity,
-    disputeChancesUsed :: Maybe Int,
-    canBlockCustomer :: Maybe Bool
+  { cancellationDues :: PriceAPIEntity,
+    cancellationDuesPaid :: HighPrecMoney,
+    noOfTimesCancellationDuesPaid :: Int,
+    waivedOffAmount :: HighPrecMoney,
+    noOfTimesWaiveOffUsed :: Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -309,32 +310,27 @@ driverDistanceToPickup booking merchantOperatingCityId tripStartPos tripEndPos =
         }
   return distRes.distance
 
--- disputeCancellationDues :: (Id Person.Person, Id Merchant.Merchant) -> Flow APISuccess
--- disputeCancellationDues (personId, merchantId) = do
---   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
---   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
---   case (person.mobileNumber, person.mobileCountryCode) of
---     (Just mobileNumber, Just countryCode) -> do
---       CallBPPInternal.disputeCancellationDues merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobileNumber countryCode person.currentCity
---     _ -> throwError (PersonMobileNumberIsNULL person.id.getId)
-
-getCancellationDuesDetails :: Maybe (Id SRB.Booking) -> (Id Person.Person, Id Merchant.Merchant) -> Flow CancellationDuesDetailsRes
-getCancellationDuesDetails mbBookingId (personId, merchantId) = do
-  mbBooking <- maybe (return Nothing) QRB.findById mbBookingId
-  mbRide <- maybe (return Nothing) QR.findActiveByRBId mbBookingId
-  let cancellationFees = (.cancellationFeeIfCancelled) =<< mbRide
-      currency = (.estimatedFare.currency) <$> mbBooking
-  case (cancellationFees, currency) of
-    (Just customerCancellationDues, Just bookingCurrency) -> do
-      return $ CancellationDuesDetailsRes {cancellationDues = Just PriceAPIEntity {amount = customerCancellationDues, currency = bookingCurrency}, disputeChancesUsed = Nothing, canBlockCustomer = Nothing}
-    _ -> do
-      person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
-      merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-      case (person.mobileNumber, person.mobileCountryCode) of
-        (Just mobileNumber, Just countryCode) -> do
-          res <- CallBPPInternal.getCancellationDuesDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobileNumber countryCode person.currentCity
-          return $ CancellationDuesDetailsRes {cancellationDues = res.customerCancellationDuesWithCurrency, disputeChancesUsed = Just res.disputeChancesUsed, canBlockCustomer = res.canBlockCustomer}
-        _ -> throwError (PersonMobileNumberIsNULL person.id.getId)
+getCancellationDuesDetails :: (Id Person.Person, Id Merchant.Merchant) -> Flow CancellationDuesDetailsRes
+getCancellationDuesDetails (personId, merchantId) = do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  mobileNumber <- person.mobileNumber & fromMaybeM (PersonMobileNumberIsNULL person.id.getId)
+  mobileHash <- getDbHash mobileNumber
+  res <-
+    CallBPPInternal.getCancellationDuesDetails
+      merchant.driverOfferApiKey
+      merchant.driverOfferBaseUrl
+      merchant.driverOfferMerchantId
+      mobileHash
+      person.currentCity
+  return $
+    CancellationDuesDetailsRes
+      { cancellationDues = res.cancellationDues,
+        cancellationDuesPaid = res.cancellationDuesPaid,
+        noOfTimesCancellationDuesPaid = res.noOfTimesCancellationDuesPaid,
+        waivedOffAmount = res.waivedOffAmount,
+        noOfTimesWaiveOffUsed = res.noOfTimesWaiveOffUsed
+      }
 
 makeCustomerBlockingKey :: Text -> Text
 makeCustomerBlockingKey bid = "CCRBlock:" <> bid

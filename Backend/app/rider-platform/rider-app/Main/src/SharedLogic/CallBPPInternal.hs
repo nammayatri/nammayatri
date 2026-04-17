@@ -26,6 +26,7 @@ import Domain.Types.Merchant
 import qualified Domain.Types.RefereeLink as LibTypes
 import EulerHS.Types (EulerClient, client)
 import IssueManagement.Common (IssueReportType)
+import Kernel.External.Encryption (DbHash)
 import Kernel.External.Maps.Types
 import qualified Kernel.External.Maps.Types as Maps
 import Kernel.External.Slack.Types
@@ -175,48 +176,16 @@ feedbackForm internalUrl request = do
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (feedbackFormClient request) "FeedbackForm" feedbackFormApi
 
 data CancellationDuesReq = CancellationDuesReq
-  { customerMobileNumber :: Text,
-    customerMobileCountryCode :: Text
+  { customerMobileNumberHash :: DbHash
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
-
-type DisputeCancellationDuesAPI =
-  "internal"
-    :> Capture "merchantId" Text
-    :> Capture "merchantCity" Context.City
-    :> "dispute"
-    :> Header "token" Text
-    :> ReqBody '[JSON] CancellationDuesReq
-    :> Post '[JSON] APISuccess
-
-disputeCancellationDuesClient :: Text -> Context.City -> Maybe Text -> CancellationDuesReq -> EulerClient APISuccess
-disputeCancellationDuesClient = client disputeCancellationDuesApi
-
-disputeCancellationDuesApi :: Proxy DisputeCancellationDuesAPI
-disputeCancellationDuesApi = Proxy
-
-disputeCancellationDues ::
-  ( MonadFlow m,
-    CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasRequestId r
-  ) =>
-  Text ->
-  BaseUrl ->
-  Text ->
-  Text ->
-  Text ->
-  Context.City ->
-  m APISuccess
-disputeCancellationDues apiKey internalUrl merchantId phoneNumber countryCode merchantCity = do
-  internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (disputeCancellationDuesClient merchantId merchantCity (Just apiKey) (CancellationDuesReq phoneNumber countryCode)) "DisputeCancellationDues" disputeCancellationDuesApi
+  deriving (Generic, ToJSON, FromJSON)
 
 data CancellationDuesDetailsRes = CancellationDuesDetailsRes
-  { customerCancellationDues :: HighPrecMoney,
-    customerCancellationDuesWithCurrency :: Maybe PriceAPIEntity,
-    disputeChancesUsed :: Int,
-    canBlockCustomer :: Maybe Bool
+  { cancellationDues :: PriceAPIEntity,
+    cancellationDuesPaid :: HighPrecMoney,
+    noOfTimesCancellationDuesPaid :: Int,
+    waivedOffAmount :: HighPrecMoney,
+    noOfTimesWaiveOffUsed :: Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -244,13 +213,12 @@ getCancellationDuesDetails ::
   Text ->
   BaseUrl ->
   Text ->
-  Text ->
-  Text ->
+  DbHash ->
   Context.City ->
   m CancellationDuesDetailsRes
-getCancellationDuesDetails apiKey internalUrl merchantId phoneNumber countryCode merchantCity = do
+getCancellationDuesDetails apiKey internalUrl merchantId mobileHash merchantCity = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getCancellationDuesDetailsClient merchantId merchantCity (Just apiKey) (CancellationDuesReq phoneNumber countryCode)) "GetCancellationDuesDetails" getCancellationDuesDetailsApi
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getCancellationDuesDetailsClient merchantId merchantCity (Just apiKey) (CancellationDuesReq mobileHash)) "GetCancellationDuesDetails" getCancellationDuesDetailsApi
 
 data GetFavouriteDriverInfoReq = GetFavouriteDriverInfoReq
   { customerMobileNumber :: Text,

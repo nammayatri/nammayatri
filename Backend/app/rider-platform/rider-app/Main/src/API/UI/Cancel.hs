@@ -50,7 +50,6 @@ type API =
 
 type GetCancellationDuesDetailsAPI =
   "rideBooking"
-    :> QueryParam "rideBookingId" (Id SRB.Booking) -- Optional because in case of bridge we'll get bookingId but in case of NY, if we want to get cancellation dues for customer we'll not have. Will help in settlement too.
     :> "cancellationDues"
     :> TokenAuth
     :> Get '[JSON] DCancel.CancellationDuesDetailsRes
@@ -90,12 +89,11 @@ softCancel bookingId (personId, merchantId) =
     return Success
 
 getCancellationDuesDetails ::
-  Maybe (Id SRB.Booking) ->
   (Id Person.Person, Id Merchant.Merchant) ->
   FlowHandler DCancel.CancellationDuesDetailsRes
-getCancellationDuesDetails mbBookingId (personId, merchantId) =
+getCancellationDuesDetails (personId, merchantId) =
   withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
-    DCancel.getCancellationDuesDetails mbBookingId (personId, merchantId)
+    DCancel.getCancellationDuesDetails (personId, merchantId)
 
 cancel ::
   Id SRB.Booking ->

@@ -860,6 +860,7 @@ library
       Tools.Metrics.SendSearchRequestToDriverMetrics
       Tools.Metrics.SendSearchRequestToDriverMetrics.Types
       Tools.Notifications
+      Tools.OpenAPIInstances
       Tools.Payment
       Tools.PaymentNudge
       Tools.Payout

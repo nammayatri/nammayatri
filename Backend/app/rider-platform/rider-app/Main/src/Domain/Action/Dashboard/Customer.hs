@@ -207,12 +207,14 @@ getCustomerCancellationDuesDetails ::
   Flow Common.CancellationDuesDetailsRes
 getCustomerCancellationDuesDetails merchantShortId _ personId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  res <- DCancel.getCancellationDuesDetails Nothing (cast personId, merchant.id)
+  res <- DCancel.getCancellationDuesDetails (cast personId, merchant.id)
   return $
     Common.CancellationDuesDetailsRes
       { cancellationDues = res.cancellationDues,
-        disputeChancesUsed = res.disputeChancesUsed,
-        canBlockCustomer = res.canBlockCustomer
+        cancellationDuesPaid = res.cancellationDuesPaid,
+        noOfTimesCancellationDuesPaid = res.noOfTimesCancellationDuesPaid,
+        waivedOffAmount = res.waivedOffAmount,
+        noOfTimesWaiveOffUsed = res.noOfTimesWaiveOffUsed
       }
 
 postCustomerUpdateSafetyCenterBlocking ::
