@@ -1637,6 +1637,7 @@ newtype GetProfileRes = GetProfileRes
   , referredByEarnings :: Maybe Number
   , referralAmountPaid :: Maybe Number
   , isPayoutEnabled :: Maybe Boolean
+  , isLLMChatEnabled :: Maybe Boolean
   }
 
 

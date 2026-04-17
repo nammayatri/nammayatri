@@ -231,6 +231,7 @@ defaultGlobalFlowCache = {
     savedLocations : Nothing
   , savedScheduledRides : Nothing
   , profileResp : Nothing
+  , isLLMChatEnabled : Nothing
 }
 
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK | APPLY_REFERRAL String

@@ -173,6 +173,7 @@ data ProfileRes = ProfileRes
     isPayoutEnabled :: Maybe Bool,
     publicTransportVersion :: Maybe Text,
     isMultimodalRider :: Bool,
+    isLLMChatEnabled :: Bool,
     customerTags :: DA.Value,
     profilePicture :: Maybe Text,
     paymentMode :: Maybe DMPM.PaymentMode,
@@ -289,6 +290,16 @@ getIsMultimodalRider enableMultiModalForAllUsers mbTags integratedBPPConfigs =
               Nothing -> False
        in any (isMultimodalRiderTag multimodalTagName) currentTags && not (null integratedBPPConfigs)
 
+getIsLLMChatEnabled :: Maybe [LYT.TagNameValueExpiry] -> Bool
+getIsLLMChatEnabled mbTags =
+  let llmChatTagName = LYT.TagName "LLMChatEnabled"
+      currentTags = fromMaybe [] mbTags
+      isLLMChatTag targetTagName customerTag =
+        case YUtils.parseTagName customerTag of
+          Just tagName -> tagName == targetTagName
+          Nothing -> False
+   in any (isLLMChatTag llmChatTagName) currentTags
+
 getPersonDetails ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType],
     CacheFlow m r,
@@ -387,6 +398,7 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
       vehicleTypes
   logInfo $ "[Profile.getPersonDetails] findIntegratedBPPConfigs done, count=" <> show (length integratedBPPConfigs)
   let isMultimodalRider = getIsMultimodalRider riderConfig.enableMultiModalForAllUsers decPerson.customerNammaTags integratedBPPConfigs
+  let isLLMChatEnabled = getIsLLMChatEnabled decPerson.customerNammaTags
   -- Check if customer is temporarily blocked and should be unblocked
   fork "Check and unblock customer if temporary block expired" $ do
     when person.blocked $ do
@@ -399,9 +411,9 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
         Nothing -> pure ()
   fork "Check customer cancellation rate blocking" $ CCR.nudgeOrBlockCustomer riderConfig person
   logInfo "[Profile.getPersonDetails] calling makeProfileRes (includes getGtfsVersion)"
-  makeProfileRes riderConfig decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImage
+  makeProfileRes riderConfig decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider isLLMChatEnabled includeProfileImage
   where
-    makeProfileRes riderConfig Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImageParam = do
+    makeProfileRes riderConfig Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider isLLMChatEnabled includeProfileImageParam = do
       logInfo $ "[Profile.makeProfileRes] calling getGtfsVersion for " <> show (length integratedBPPConfigs) <> " configs"
       gtfsVersion <-
         withTryCatch "getGtfsVersion:getPersonDetails" (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case
@@ -435,6 +447,7 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
             isPayoutEnabled = mbPayoutConfig <&> (.isPayoutEnabled),
             cancellationRate = cancellationPerc,
             publicTransportVersion = if null gtfsVersion then Nothing else Just (T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) riderConfig.domainPublicTransportDataVersion)),
+            isLLMChatEnabled = isLLMChatEnabled,
             customerTags = YUtils.convertTags $ fromMaybe [] customerNammaTags,
             profilePicture = if includeProfileImageParam == Just True then profilePicture else Nothing,
             ..

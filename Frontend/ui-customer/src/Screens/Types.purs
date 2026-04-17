@@ -2937,6 +2937,7 @@ type GlobalFlowCache = {
     savedLocations :: Maybe SavedLocationsListRes
   , savedScheduledRides :: Maybe RideBookingListRes
   , profileResp :: Maybe GetProfileRes
+  , isLLMChatEnabled :: Maybe Boolean
 }
 
 type LocateOnMapProps = {
