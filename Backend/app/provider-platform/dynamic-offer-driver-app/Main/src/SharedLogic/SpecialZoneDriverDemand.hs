@@ -254,7 +254,10 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant = do
       demandThresholdVal = fromMaybe 2 (DGI.demandThresholdFor gate variant)
   logDebug $
     "checkAndNotifyDriverDemand gateId=" <> gateId <> " variant=" <> variant
-      <> " demand=" <> show demandCount <> " demandThreshold=" <> show demandThresholdVal
+      <> " demand="
+      <> show demandCount
+      <> " demandThreshold="
+      <> show demandThresholdVal
   if demandCount < demandThresholdVal
     then logDebug $ "Demand below threshold, skipping notification gateId=" <> gateId <> " variant=" <> variant
     else do
@@ -264,8 +267,12 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant = do
       let supplyCount = fromMaybe 0 mbSupplyCount
       logDebug $
         "checkAndNotifyDriverDemand gateId=" <> gateId <> " variant=" <> variant
-          <> " supply=" <> show supplyCount <> " minThreshold=" <> show minThreshold
-          <> " maxThreshold=" <> show maxThreshold
+          <> " supply="
+          <> show supplyCount
+          <> " minThreshold="
+          <> show minThreshold
+          <> " maxThreshold="
+          <> show maxThreshold
       if supplyCount >= minThreshold
         then logDebug $ "Supply already at/above minThreshold, skipping gateId=" <> gateId <> " variant=" <> variant
         else do
@@ -277,12 +284,19 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant = do
                 queueDriverIds = map (.driverId) sortedDrivers
             logInfo $
               "Notifying drivers gateId=" <> gateId <> " variant=" <> variant
-                <> " needed=" <> show needed <> " queueSize=" <> show (length queueDriverIds)
-                <> " cooldown=" <> show cooldown
+                <> " needed="
+                <> show needed
+                <> " queueSize="
+                <> show (length queueDriverIds)
+                <> " cooldown="
+                <> show cooldown
             eligible <- filterEligibleDrivers gate specialLocationId variant merchantId gateId queueDriverIds
             logInfo $
               "Eligible drivers after filter gateId=" <> gateId <> " variant=" <> variant
-                <> " eligible=" <> show (length eligible) <> " toNotify=" <> show (min needed (length eligible))
+                <> " eligible="
+                <> show (length eligible)
+                <> " toNotify="
+                <> show (min needed (length eligible))
             void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId variant cooldown (take needed eligible)
 
 -- Force notify (dashboard trigger) — uses LTS queue order, skips demand/supply threshold checks

@@ -724,7 +724,8 @@ data FleetOwnerInfoRes = FleetOwnerInfoRes
     bankIfsc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bankVerificationStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     upiId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    linkedDriverIds :: [Kernel.Prelude.Text]
+    linkedDriverIds :: [Kernel.Prelude.Text],
+    fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

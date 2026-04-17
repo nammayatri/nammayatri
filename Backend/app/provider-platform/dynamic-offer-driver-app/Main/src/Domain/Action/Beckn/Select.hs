@@ -19,7 +19,6 @@ module Domain.Action.Beckn.Select
 where
 
 import Data.Either.Extra (eitherToMaybe)
-
 import Data.Text as Text hiding (find)
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.ConditionalCharges as DAC

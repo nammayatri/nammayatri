@@ -2040,6 +2040,7 @@ types:
     - bankVerificationStatus: Maybe Text
     - upiId: Maybe Text
     - linkedDriverIds: "[Text]"
+    - fleetName: Maybe Text
     - derive: "'HideSecrets"
   FleetConfig:
     - allowAutomaticRoundTripAssignment: Bool

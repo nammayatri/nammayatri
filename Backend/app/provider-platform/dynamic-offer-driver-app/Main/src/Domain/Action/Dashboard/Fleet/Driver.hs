@@ -2111,34 +2111,28 @@ postDriverFleetVehicleEdit ::
   Maybe Text ->
   Common.EditVehicleReq ->
   Flow APISuccess
-postDriverFleetVehicleEdit merchantShortId opCity requestorId mbFleetOwnerId mbDriverId mbVehicleNo mbRcId Common.EditVehicleReq {..} = do
-  fleetOwnerId <- mbFleetOwnerId & fromMaybeM (InvalidRequest "fleetOwnerId is required")
-  driverIdText <- mbDriverId & fromMaybeM (InvalidRequest "driverId is required")
+postDriverFleetVehicleEdit merchantShortId opCity requestorId _mbFleetOwnerId _mbDriverId mbVehicleNo mbRcId Common.EditVehicleReq {..} = do
   vehicleNoGuard <- mbVehicleNo & fromMaybeM (InvalidRequest "vehicleNo is required")
   rcIdText <- mbRcId & fromMaybeM (InvalidRequest "rcId is required")
-  let driverPersonId = Id driverIdText :: Id DP.Person
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   vrcConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId DDoc.VehicleRegistrationCertificate Nothing
   when (any (\cfg -> cfg.isImageValidationRequired || cfg.doStrictVerifcation) vrcConfigs) $
     throwError (InvalidRequest "Fleet vehicle edit requires isImageValidationRequired and doStrictVerifcation to be false")
   rc <- RCQuery.findById (Id rcIdText) >>= fromMaybeM (RCNotFound rcIdText)
   currentCert <- decrypt rc.certificateNumber
   unless (currentCert == vehicleNoGuard) $ throwError (InvalidRequest "vehicleNo does not match RC certificate on record")
-  now <- getCurrentTime
-  void $ DRCAE.findLinkedByRCIdAndDriverId driverPersonId rc.id now >>= fromMaybeM (InvalidRequest "Driver is not linked with this RC")
   mbRequestor <- B.runInReplica $ QPerson.findById (Id requestorId)
-  case mbRequestor of
-    Nothing -> assertFleetVehicleEditAdminAccess driverPersonId fleetOwnerId rc merchant.id merchantOpCityId
-    Just requestor -> do
-      (role, entityId) <- validateRequestorRoleAndGetEntityId requestor.id.getId (Just fleetOwnerId)
-      case role of
-        DP.FLEET_OWNER -> do
-          DCommon.checkFleetOwnerVerification entityId merchant.fleetOwnerEnabledCheck
-          validateFleetOwnerWithDriverAndRc driverPersonId entityId merchant.id merchantOpCityId rc
-        DP.OPERATOR -> validateOperatorWithDriver driverPersonId entityId
-        _ -> throwError (InvalidRequest "Invalid Data")
+  whenJust rc.fleetOwnerId $ \fleetOwnerId -> do
+    case mbRequestor of
+      Nothing -> DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
+      Just requestor -> do
+        (role, entityId) <- validateRequestorRoleAndGetEntityId requestor.id.getId (Just fleetOwnerId)
+        case role of
+          DP.FLEET_OWNER -> DCommon.checkFleetOwnerVerification entityId merchant.fleetOwnerEnabledCheck
+          DP.OPERATOR -> pure ()
+          _ -> throwError (InvalidRequest "Invalid Data")
+  now <- getCurrentTime
   let mbCert = nonEmptyStripMb certificateNumber
   (encCert, displayCert) <- case mbCert of
     Nothing -> pure (rc.certificateNumber, currentCert)
@@ -2167,8 +2161,8 @@ postDriverFleetVehicleEdit merchantShortId opCity requestorId mbFleetOwnerId mbD
             DVRC.updatedAt = now
           }
   RCQuery.updateByPrimaryKey updRc
-  QVehicleExtra.updateFleetVehicleFromDashboardRcEdit driverPersonId vehicleNoGuard displayCert mbMake mbModel mbColor year
-  logTagInfo "dashboard -> fleetVehicleEdit" (rc.id.getId <> " " <> driverIdText)
+  QVehicleExtra.updateVehicleFromRcEdit vehicleNoGuard displayCert mbMake mbModel mbColor year
+  logTagInfo "dashboard -> fleetVehicleEdit" (rc.id.getId <> " " <> vehicleNoGuard)
   pure Success
   where
     nonEmptyStripMb :: Maybe Text -> Maybe Text
@@ -2176,16 +2170,6 @@ postDriverFleetVehicleEdit merchantShortId opCity requestorId mbFleetOwnerId mbD
     nonEmptyStripMb (Just t) =
       let s = T.strip t
        in if T.null s then Nothing else Just s
-
-assertFleetVehicleEditAdminAccess :: Id DP.Person -> Text -> DVRC.VehicleRegistrationCertificate -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-assertFleetVehicleEditAdminAccess pid fleetOwnerId_ vehicleRC merchantId merchantOpCityId = do
-  driver <- B.runInReplica $ QPerson.findById pid >>= fromMaybeM (PersonDoesNotExist pid.getId)
-  unless (merchantId == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $
-    throwError (PersonDoesNotExist pid.getId)
-  unless (vehicleRC.fleetOwnerId == Just fleetOwnerId_) $
-    throwError (FleetOwnerVehicleMismatchError fleetOwnerId_)
-  isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId pid fleetOwnerId_ True
-  when (isNothing isFleetDriver) $ throwError DriverNotPartOfFleet
 
 ---------------------------------------------------------------------
 postDriverUpdateFleetOwnerInfo ::
@@ -2346,7 +2330,8 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
             bankIfsc = bankIfsc',
             bankVerificationStatus = bankVerificationStatus',
             upiId = upiId',
-            linkedDriverIds = map (\assoc -> assoc.driverId.getId) linkedDrivers
+            linkedDriverIds = map (\assoc -> assoc.driverId.getId) linkedDrivers,
+            fleetName = Nothing
           }
     Just fleetOwnerInfo -> do
       fleetConfig <- QFC.findByPrimaryKey personId
