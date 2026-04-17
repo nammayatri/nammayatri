@@ -8,6 +8,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (length, map)
 import Kernel.Types.Forkable
 import Kernel.Types.Time
+import Kernel.Prelude (last)
 
 getVehicleAge :: Maybe Day -> UTCTime -> Maybe Months
 getVehicleAge mfgDate now = fmap (\day -> Months $ monthDiff day (utctDay now)) mfgDate
@@ -32,8 +33,7 @@ utctTimeToDayOfWeek utcTime = dayOfWeek (utctDay utcTime)
 
 safeLast :: [a] -> Maybe a
 safeLast [] = Nothing
-safeLast [x] = Just x
-safeLast (_ : xs) = safeLast xs
+safeLast  xs = Just $ last xs
 
 safeHead :: [a] -> Maybe a
 safeHead [] = Nothing

@@ -22,6 +22,8 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Dr
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types as DTC
+import qualified Domain.Types.Common as DCommon
+import Domain.Utils (safeLast)
 import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -41,8 +43,12 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Type as SLT
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error
@@ -68,28 +74,53 @@ triggerDummyRideRequest ::
     EncFlow m r,
     CacheFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasShortDurationRetryCfg r c
   ) =>
   DP.Person ->
   Id DMOC.MerchantOperatingCity ->
   Bool ->
   m APISuccess
 triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
+  driverInfo <- B.runInReplica $ QDI.findById driver.id >>= fromMaybeM DriverInfoNotFound
+  when driverInfo.blocked $ do
+    logInfo $ "Rejecting dummy ride notification for blocked driver:-" <> show driver.id <> ",triggeredByDashboard:-" <> show isDashboardTrigger
+    throwError $ InvalidRequest "Driver blocked"
+  unless driverInfo.subscribed $ do
+    logInfo $ "Rejecting dummy ride notification for unsubscribed driver:-" <> show driver.id <> ",triggeredByDashboard:-" <> show isDashboardTrigger
+    throwError $ InvalidRequest "Driver not subscribed"
+  unless (driverInfo.active && driverInfo.mode == Just DCommon.ONLINE) $ do
+    logInfo $ "Rejecting dummy ride notification for offline driver:-" <> show driver.id <> ",active:-" <> show driverInfo.active <> ",mode:-" <> show driverInfo.mode <> ",triggeredByDashboard:-" <> show isDashboardTrigger
+    throwError $ InvalidRequest "Driver offline"
+  when driverInfo.onRide $ do
+    logInfo $ "Rejecting dummy ride notification for on-ride driver:-" <> show driver.id <> ",triggeredByDashboard:-" <> show isDashboardTrigger
+    throwError $ InvalidRequest "Driver on ride"
+  now <- getCurrentTime
+  driverLocationResult <- withTryCatch "driversLocation:triggerDummyRideRequest" $ LF.driversLocation [driver.id]
+  let mbDriverLocation = case driverLocationResult of
+        Left _          -> Nothing
+        Right locations -> safeLast locations
+  intelligentPoolConfig <- CDIP.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast driver.id)))
+  let locationUpdateSampleTime = maybe 3 (.locationUpdateSampleTime) intelligentPoolConfig
+      gpsFreshnessCutoff = addUTCTime (fromIntegral $ (-60) * locationUpdateSampleTime.getMinutes) now
+      hasStaleGps = maybe True (\driverLocation -> driverLocation.coordinatesCalculatedAt < gpsFreshnessCutoff) mbDriverLocation
+  when hasStaleGps $ do
+    logInfo $ "Rejecting dummy ride notification due to stale/missing GPS for driver:-" <> show driver.id <> ",latestGpsAt:-" <> show (fmap (.coordinatesCalculatedAt) mbDriverLocation) <> ",gpsFreshnessCutoff:-" <> show gpsFreshnessCutoff <> ",triggeredByDashboard:-" <> show isDashboardTrigger
+    throwError $ InvalidRequest "GPS issue"
   vehicle <- B.runInReplica $ QVehicle.findById driver.id >>= fromMaybeM (VehicleDoesNotExist driver.id.getId)
   transporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOperatingCityId.getId)
   let dummyFromLocation = transporterConfig.dummyFromLocation
       dummyToLocation = transporterConfig.dummyToLocation
       dummyShowDriverAdditions = fromMaybe True transporterConfig.dummyShowDriverAdditions
-  let isValueAddNP = True
-
-  now <- getCurrentTime
+      isValueAddNP = True
   let entityData = mkDummyNotificationEntityData (Just driver.merchantId) (Just merchantOperatingCityId) now vehicle.variant dummyFromLocation dummyToLocation dummyShowDriverAdditions isValueAddNP
   notificationData <- TN.buildSendSearchRequestNotificationData merchantOperatingCityId driver.id driver.deviceToken entityData EmptyDynamicParam Nothing
   logDebug $ "Sending dummy notification to driver:-" <> show driver.id <> ",entityData:-" <> show entityData <> ",triggeredByDashboard:-" <> show isDashboardTrigger
   let otherMerchantIds = ["840327a8-f17c-4d7c-8199-a583cfaadc5f", "7e6a2982-f8b5-4c67-b8af-bf41f1b4a2c9", "8c91f173-a0e3-4c5b-b3a1-2a58d00f29b2"] -- Array Contents are : [Dev/Master , UAT , Prod]
-  let fallBackCity = bool (TN.getNewMerchantOpCityId driver.clientSdkVersion merchantOperatingCityId) (TN.cityFallback driver.clientSdkVersion merchantOperatingCityId) (driver.merchantId `elem` otherMerchantIds) -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
+      fallBackCity = bool (TN.getNewMerchantOpCityId driver.clientSdkVersion merchantOperatingCityId) (TN.cityFallback driver.clientSdkVersion merchantOperatingCityId) (driver.merchantId `elem` otherMerchantIds) -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   void $ TN.sendSearchRequestToDriverNotification driver.merchantId fallBackCity driver.id notificationData
   pure Success
 
