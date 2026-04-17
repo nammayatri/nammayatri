@@ -401,7 +401,7 @@ apis:
       query:
         - limit: Int
         - offset: Int
-        - locationType: SpecialLocationType
+        - locationType: [SpecialLocationType]
       response:
         type: SpecialLocationResp
   - GET: # GetMerchantConfigGeometryList
