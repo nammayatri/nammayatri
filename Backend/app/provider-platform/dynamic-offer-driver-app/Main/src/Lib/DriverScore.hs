@@ -52,7 +52,8 @@ import SharedLogic.BehaviourManagement.IssueBreach (IssueBreachType (..))
 import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
 import qualified SharedLogic.DriverPool as DP
 import SharedLogic.External.LocationTrackingService.Types
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as BQ
 import qualified Storage.Queries.BookingCancellationReason as BCRQ
 import qualified Storage.Queries.DailyStats as SQDS
@@ -67,7 +68,6 @@ import Tools.DynamicLogic (getAppDynamicLogic)
 import Tools.Error
 import Tools.MarketingEvents as TM
 import Tools.Metrics (CoreMetrics)
-import Utils.Common.Cac.KeyNameConstants
 
 driverScoreEventHandler :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasLocationService m r, EncFlow m r, JobCreator r m, HasFlowEnv m r '["maxNotificationShards" ::: Int], HasShortDurationRetryCfg r c, HasKafkaProducer r, ClickhouseFlow m r) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
 driverScoreEventHandler merchantOpCityId payload = fork "DRIVER_SCORE_EVENT_HANDLER" do
@@ -100,7 +100,7 @@ eventPayloadHandler merchantOpCityId DST.OnNewSearchRequestForDrivers {..} =
   forM_ driverPool $ \dPoolRes -> DP.incrementTotalQuotesCount searchReq.providerId merchantOpCityId (cast dPoolRes.driverPoolResult.driverId) searchReq validTill batchProcessTime
 eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
   let driverId = driver.id
-  merchantConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  merchantConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (validDriverCancellation `elem` rideTags) $ do
     let windowSize = toInteger $ fromMaybe 7 merchantConfig.cancellationRateWindow
     void $ SCR.incrementCancelledCount driverId windowSize
@@ -208,7 +208,7 @@ eventPayloadHandler merchantOpCityId DST.OnRideCompletion {..} = do
     DSQ.incrementTotalEarningsAndBonusEarnedAndLateNightTrip (cast driverId) incrementTotalEarningsBy (incrementBonusEarningsBy + overallPickupCharges) incrementLateNightTripsCountBy
 
     -- for extra fare mitigation --
-    mbMerchantConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))
+    mbMerchantConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId})
     whenJust mbMerchantConfig $ \merchantConfig -> do
       let ibConfig = IBM.getIssueBreachConfig EXTRA_FARE_MITIGATION merchantConfig
       let allowedSTiers = ibConfig <&> (.ibAllowedServiceTiers)
@@ -226,7 +226,7 @@ eventPayloadHandler merchantOpCityId DST.OnRideCompletion {..} = do
 
 updateDailyStats :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> DR.Ride -> Maybe FareParameters -> m ()
 updateDailyStats driverId merchantOpCityId ride fareParameter = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let deadKmFares =
         ( \x -> case fareParametersDetails x of
             ProgressiveDetails det -> Just ((deadKmFare :: Fare.FParamsProgressiveDetails -> HighPrecMoney) det)

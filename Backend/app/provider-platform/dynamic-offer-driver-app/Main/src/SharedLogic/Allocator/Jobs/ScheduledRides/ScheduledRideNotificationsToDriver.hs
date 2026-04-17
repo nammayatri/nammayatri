@@ -39,7 +39,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
@@ -52,7 +53,6 @@ import Tools.Call
 import Tools.Error
 import Tools.Notifications
 import qualified Tools.SMS as Sms
-import Utils.Common.Cac.KeyNameConstants
 
 type ScheduleNotificationFlow m r =
   ( EncFlow m r,
@@ -81,7 +81,7 @@ sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" 
   let isNotificationRequired = not onlyIfOffline || (driverInfo.mode /= Just DInfo.ONLINE)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   when (isNotificationRequired && booking.status `notElem` [DB.CANCELLED, DB.REALLOCATED]) do
-    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     let maybeAppId = (HM.lookup RentalAppletID . exotelMap) =<< transporterConfig.exotelAppIdMapping
     sendCommunicationToDriver $ SendCommunicationToDriverReq {entityId = Just booking.id.getId, messageTransformer = formatMessageTransformer booking merchant.shortId, ..}
   return Complete

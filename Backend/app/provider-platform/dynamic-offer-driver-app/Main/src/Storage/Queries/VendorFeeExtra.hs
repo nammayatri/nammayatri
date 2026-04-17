@@ -13,7 +13,8 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import SharedLogic.Payment (roundToTwoDecimalPlaces)
 import qualified Storage.Beam.VendorFee as Beam
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import Storage.Queries.OrphanInstances.VendorFee ()
 
 -- Extra code goes here --
@@ -29,7 +30,7 @@ updateVendorFee merchantOpCityId vendorFee = do
   oldVendorFee <- findByVendorAndDriverFeeId vendorFee.vendorId vendorFee.driverFeeId
   case oldVendorFee of
     Just fee -> do
-      transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
       updateWithKV
         [ Se.Set Beam.amount (roundToTwoDecimalPlaces (HighPrecMoney $ fee.amount.getHighPrecMoney + vendorFee.amount.getHighPrecMoney)),
@@ -111,7 +112,7 @@ updateManyVendorFee merchantOpCityId = traverse_ $ updateVendorFee merchantOpCit
 
 resetVendorFee :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DMC.MerchantOperatingCity -> [VendorFee] -> m ()
 resetVendorFee merchantOpCityId vendorFees = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   forM_ vendorFees $ \vendorFee -> do
     updateWithKV
@@ -135,7 +136,7 @@ updateVendorFeeWithMaxLimit merchantOpCityId vendorFee maxLimit = do
       when shouldUpdate $ do
         let newTotal = HighPrecMoney $ oldVendorFee.amount.getHighPrecMoney + vendorFee.amount.getHighPrecMoney
             finalAmount = maybe newTotal (min newTotal) maxLimit
-        transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+        transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
         now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
         updateWithKV
           [ Se.Set Beam.amount (roundToTwoDecimalPlaces finalAmount),

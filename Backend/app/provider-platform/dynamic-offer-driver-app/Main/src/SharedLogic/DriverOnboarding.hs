@@ -62,7 +62,8 @@ import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as ACOverlay
 import SharedLogic.Analytics as Analytics
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import SharedLogic.VehicleServiceTier
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
@@ -79,7 +80,6 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import Tools.Error
 import qualified Tools.Ticket as TT
 import qualified Tools.Whatsapp as Whatsapp
-import Utils.Common.Cac.KeyNameConstants
 
 defaultDriverDocumentTypes :: [DVC.DocumentType]
 defaultDriverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto, DVC.UploadProfile, DVC.SocialSecurityNumber, DVC.BackgroundVerification, DVC.GSTCertificate, DVC.BusinessLicense, DVC.LocalResidenceProof, DVC.PoliceVerificationCertificate, DVC.DrivingSchoolCertificate, DVC.TrainingForm, DVC.DriverInspectionHub]
@@ -99,7 +99,7 @@ notifyErrorToSupport ::
   [Maybe DriverOnboardingError] ->
   Flow ()
 notifyErrorToSupport person merchantId merchantOpCityId driverPhone _ errs = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let reasons = catMaybes $ mapMaybe toMsg errs
   let description = T.intercalate ", " reasons
   _ <- TT.createTicket merchantId merchantOpCityId (mkTicket description transporterConfig)
@@ -157,7 +157,7 @@ enableAndTriggerOnboardingAlertsAndMessages :: Id DMOC.MerchantOperatingCity -> 
 enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verified = do
   driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig personId True (Just verified)
   when (not driverInfo.enabled && isNothing driverInfo.enabledAt) $ do
     merchant <- CQM.findById merchantOpCity.merchantId >>= fromMaybeM (MerchantNotFound merchantOpCity.merchantId.getId)

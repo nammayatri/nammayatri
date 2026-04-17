@@ -29,13 +29,13 @@ import Kernel.Types.Error hiding (Unauthorized)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
-import Storage.Cac.TransporterConfig
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDoc
 import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.Person as QPerson
-import Utils.Common.Cac.KeyNameConstants
 
 data StatusRes = StatusRes
   { dlVerificationStatus :: SStatus.ResponseStatus, -- deprecated
@@ -62,7 +62,7 @@ statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -
 statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory useHVSdkForDL onlyMandatoryDocs useDriverLanguage = do
   merchantOperatingCity <- SMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getCurrentTime
   let entity = IQuery.PersonEntity person
   entityImages <- IQuery.findAllByEntityId transporterConfig entity

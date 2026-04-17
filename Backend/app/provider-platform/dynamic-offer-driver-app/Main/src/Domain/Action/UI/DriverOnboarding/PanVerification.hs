@@ -64,7 +64,8 @@ import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverInformation as DIQuery
@@ -77,7 +78,6 @@ import qualified Storage.Queries.Person as Person
 import Tools.Error
 import qualified Tools.Utils as Utils
 import qualified Tools.Verification as Verification
-import Utils.Common.Cac.KeyNameConstants
 
 data DriverPanReq = DriverPanReq
   { panNumber :: Text,
@@ -118,7 +118,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
   (blocked, driverDocument) <- DVRC.getDriverDocumentInfo person
   now <- getCurrentTime
   when blocked $ throwError AccountBlocked
-  transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   case transporterConfig.allowDuplicatePan of
     Just False -> do
       panHash <- getDbHash req.panNumber
@@ -436,7 +436,7 @@ triggerPanAadhaarLinkageWhenPanAndAadhaarExist person merchantOpCityId mbAadhaar
   whenJust mbAadhaarNumber $ \aadhaarNumber -> do
     logInfo ("aadhaarNumber: " <> show aadhaarNumber)
     transporterConfig <-
-      SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast person.id)))
+      getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId})
         >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     when (fromMaybe True transporterConfig.allowPanAadhaarLinkage) $
       verifyPanAadhaarLinkageIfPanExists person merchantOpCityId aadhaarNumber

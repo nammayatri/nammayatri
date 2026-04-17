@@ -16,7 +16,8 @@ import Kernel.Utils.Common
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as SCT
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
@@ -24,7 +25,6 @@ import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperatorAss
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.Notifications as TN
-import Utils.Common.Cac.KeyNameConstants
 
 postOperatorConsent ::
   ( ( Maybe (Id Person),
@@ -40,7 +40,7 @@ postOperatorConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   let mbOnboardingVehicleCategory = driverOperatorAssociation.onboardingVehicleCategory
   operator <- QPerson.findById (Id driverOperatorAssociation.operatorId) >>= fromMaybeM (OperatorNotFound driverOperatorAssociation.operatorId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
 
   SA.endDriverAssociationsIfAllowed merchant merchantOperatingCityId transporterConfig driver
 

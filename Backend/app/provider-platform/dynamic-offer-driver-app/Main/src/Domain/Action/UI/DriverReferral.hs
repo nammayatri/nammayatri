@@ -21,12 +21,12 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.DriverReferral as CQD
 import qualified Storage.Queries.DriverReferral as QRD
 import qualified Storage.Queries.Person as QP
 import Tools.Error
-import Utils.Common.Cac.KeyNameConstants
 
 data ReferralLinkReq = ReferralLinkReq
   { referralCode :: Text,
@@ -55,7 +55,7 @@ createDriverReferral ::
 createDriverReferral (driverId, merchantId, merchantOpCityId) isDashboard role ReferralLinkReq {..} = do
   unless (TU.validateAllDigitWithMinLength 6 referralCode) $
     throwError $ InvalidRequest "Referral Code must have greater than equal to 6 digits."
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (transporterConfig.referralLinkPassword /= referralLinkPassword && not isDashboard) $
     throwError $ InvalidRequest "Invalid Password."
   mbLastReferralCodeWithDriver <- B.runInReplica $ QRD.findById driverId
@@ -150,7 +150,7 @@ generateReferralCode mbRole (driverId, merchantId, merchantOpCityId) = do
     Nothing -> do
       person <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
       pure person.role
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   case mbReferralCodeWithDriver of
     Just driverReferral -> pure $ GenerateReferralCodeRes driverReferral.referralCode.getId driverReferral.dynamicReferralCode driverReferral.dynamicReferralCodeValidTill
     Nothing -> do

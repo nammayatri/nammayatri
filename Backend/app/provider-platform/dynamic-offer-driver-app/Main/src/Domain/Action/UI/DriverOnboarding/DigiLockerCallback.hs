@@ -36,7 +36,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common hiding (Error)
 import Servant hiding (throwError)
 import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
-import qualified Storage.Cac.TransporterConfig as CQTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.Queries.AadhaarCard as QAC
 import qualified Storage.Queries.DigilockerVerification as QDV
@@ -116,7 +117,7 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
 
   transporterConfig <-
-    CQTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing
+    getConfig (TransporterDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
       >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
 
   unless (transporterConfig.digilockerEnabled == Just True) $ do

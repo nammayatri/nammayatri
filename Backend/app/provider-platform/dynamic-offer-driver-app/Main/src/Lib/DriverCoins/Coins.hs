@@ -65,7 +65,8 @@ import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.CancellationCoins as CancellationCoins
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import qualified SharedLogic.Finance.Wallet as SLFW
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.CoinsConfig as CDCQ
 import qualified Storage.CachedQueries.MonetaryRewardConfig as CWCQ
 import qualified Storage.Queries.Booking as QBooking
@@ -81,7 +82,6 @@ import qualified Storage.Queries.Translations as MTQuery
 import qualified Tools.DynamicLogic as TDL
 import qualified Tools.Notifications as Notify
 import Tools.Utils
-import Utils.Common.Cac.KeyNameConstants
 
 type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, ClickhouseFlow m r)
 
@@ -125,7 +125,7 @@ driverCoinsEvent driverId merchantId merchantOpCityId eventType entityId mbVehVa
         DCT.EndRide {tripCategoryType} -> tripCategoryType
         _ -> DCT.DynamicOfferTrip
   logDebug $ "Driver Coins Event Triggered for merchantOpCityId - " <> merchantOpCityId.getId <> " and driverId - " <> driverId.getId <> "and vehicle category - " <> show vehCategory
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mbDriverStats <- B.runInReplica $ QDriverStats.findByPrimaryKey driverId
   logDebug $ "Driver stats present: " <> show (isJust mbDriverStats)
   -- fetch driver fleet here
@@ -358,7 +358,7 @@ updateEventAndGetCoinsvalue :: EventFlow m r => Id DP.Person -> Id DM.Merchant -
 updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory = do
   now <- getCurrentTime
   uuid <- generateGUIDText
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   currentBalance <- getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
   let expiryTime =
         if currentBalance < 0

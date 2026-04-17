@@ -81,7 +81,8 @@ import qualified Lib.Payment.Payout.Request as PayoutRequest
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.Payment as SPayment
-import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
@@ -136,7 +137,7 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate = do
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   let counterparty = counterpartyFromRole person.role
-  transporterConfig <- findByMerchantOpCityId mocId Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = mocId.getId}) >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
   now <- getCurrentTime
   let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
       fromDate = fromMaybe (Data.Time.UTCTime (Data.Time.utctDay now) 0) mbFromDate
@@ -312,7 +313,7 @@ loadPayoutContext ::
   m PayoutContext
 loadPayoutContext mbPersonId merchantId mocId = do
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
-  transporterConfig <- findByMerchantOpCityId mocId Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = mocId.getId}) >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   payoutVpa <- case person.role of
     DP.FLEET_OWNER -> do

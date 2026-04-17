@@ -42,7 +42,8 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobInWithCheck)
 import SharedLogic.Allocator
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.DailyStats as QDailyStats
@@ -81,7 +82,7 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
       toScheduleNextPayout = jobData.toScheduleNextPayout
       schedulePayoutForDay = jobData.schedulePayoutForDay
   payoutConfigList <- CPC.findByMerchantOpCityIdAndIsPayoutEnabled merchantOpCityId True Nothing
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let reschuleTimeDiff = listToMaybe payoutConfigList <&> (.timeDiff)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let lastNthDay = addDays (fromMaybe (-1) schedulePayoutForDay) (utctDay localTime)

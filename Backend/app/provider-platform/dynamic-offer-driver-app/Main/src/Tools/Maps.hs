@@ -51,7 +51,8 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Cac.MerchantServiceUsageConfig as QOMC
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
 import Tools.Error
 
@@ -127,17 +128,17 @@ getDistanceForScheduledRides = runWithServiceConfig Maps.getDistance (.getDistan
 
 getRoutes :: (ServiceFlow m r) => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> GetRoutesReq -> m GetRoutesResp
 getRoutes merchantId merchantOpCityId entityId req = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
   runWithServiceConfig (callGetRoutesWrapper transporterConfig.isAvoidToll) (.getRoutes) merchantId merchantOpCityId entityId req
 
 getPickupRoutes :: (ServiceFlow m r) => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> GetRoutesReq -> m GetRoutesResp
 getPickupRoutes merchantId merchantOpCityId entityId req = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
   runWithServiceConfig (callGetRoutesWrapper transporterConfig.isAvoidToll) (.getPickupRoutes) merchantId merchantOpCityId entityId req
 
 getTripRoutes :: (ServiceFlow m r) => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> GetRoutesReq -> m GetRoutesResp
 getTripRoutes merchantId merchantOpCityId entityId req = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
   runWithServiceConfig (callGetRoutesWrapper transporterConfig.isAvoidToll) (.getTripRoutes) merchantId merchantOpCityId entityId req
 
 snapToRoad ::
@@ -178,7 +179,7 @@ snapToRoadWithFallback rectifyDistantPointsFailureUsing _merchantId merchantOper
     handler = Maps.SnapToRoadHandler {..}
 
     getConfidenceThreshold = do
-      transporterConfig <- SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (MerchantNotFound merchantOperatingCityId.getId)
+      transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantNotFound merchantOperatingCityId.getId)
       pure $ transporterConfig.snapToRoadConfidenceThreshold
 
     getProvidersList = do

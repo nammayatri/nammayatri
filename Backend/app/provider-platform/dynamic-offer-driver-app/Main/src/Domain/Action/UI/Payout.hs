@@ -60,9 +60,10 @@ import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.Finance.Wallet
 import SharedLogic.Merchant
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import Storage.Beam.Finance ()
 import Storage.Beam.Payment ()
-import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
@@ -76,7 +77,6 @@ import qualified Storage.Queries.Vehicle as QV
 import Tools.Error
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as Payout
-import Utils.Common.Cac.KeyNameConstants
 
 -- webhook ----------------------------------------------------------
 
@@ -208,7 +208,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                   let counterparty = counterpartyFromRole person.role
                   when (isSuccessStatus payoutStatus) $ do
                     -- Create wallet debit ledger entry only on confirmed success
-                    transporterConfig <- SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+                    transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
                     let metadata =
                           A.object
                             [ "driverPayable" A..= (-1 * amount),
@@ -342,7 +342,7 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
   dInfo <- QDI.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   when (payoutConfig.isPayoutEnabled && redisLockDriverId && dInfo.isBlockedForReferralPayout /= Just True) do
     dailyStats_ <- QDailyStats.findAllByPayoutStatusAndReferralEarningsAndDriver DS.PendingForVpa personId
-    transporterConfig <- SCTC.findByMerchantOpCityId merchOpCity (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchOpCity.getId)
+    transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchOpCity.getId}) >>= fromMaybeM (TransporterConfigNotFound merchOpCity.getId)
     localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
     let dailyStats = filter (\ds -> (ds.activatedValidRides <= transporterConfig.maxPayoutReferralForADay) && ds.merchantLocalDate /= (utctDay localTime)) dailyStats_ -- filter out the flagged payouts and current day payout earning
     when (length dailyStats > 0) $ do

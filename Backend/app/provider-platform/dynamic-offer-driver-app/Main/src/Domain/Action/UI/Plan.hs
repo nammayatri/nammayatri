@@ -61,7 +61,8 @@ import SharedLogic.Finance.Prepaid (handleSubscriptionExpiry)
 import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.Payment
 import qualified SharedLogic.Payment as SPayment
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Plan as QPD
 import qualified Storage.CachedQueries.PlanExtra as QPDE
 import qualified Storage.CachedQueries.PlanTranslation as CQPTD
@@ -81,7 +82,6 @@ import qualified Storage.Queries.VendorFee as QVF
 import Tools.Error
 import Tools.Notifications
 import Tools.Payment as Payment
-import Utils.Common.Cac.KeyNameConstants
 
 ---------------------------------------------------------------------------------------------------------
 --------------------------------------- Request & Response Types ----------------------------------------
@@ -518,7 +518,7 @@ planList (personId, merchantId, merchantOpCityId) serviceName _mbLimit _mbOffset
       mbPurchase <- B.runInReplica $ QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType PREPAID_SUBSCRIPTION
       pure $ mkSyntheticDriverPlanFromPurchase <$> mbPurchase
     _ -> B.runInReplica $ QDPlan.findByDriverIdWithServiceName personId serviceName
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   (_, plans) <- getSubscriptionConfigAndPlan serviceName (personId, merchantId, merchantOpCityId) mDriverPlan
   now <- getCurrentTime
   let mandateSetupDate = fromMaybe now ((.mandateSetupDate) =<< mDriverPlan)
@@ -1106,7 +1106,7 @@ createMandateInvoiceAndOrder ::
   Maybe SPayment.DeepLinkData ->
   Flow (Payment.CreateOrderResp, Id DOrder.PaymentOrder)
 createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId plan mbDeepLinkData = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
@@ -1182,7 +1182,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
       dueDriverFees' <- B.runInReplica $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceNameParam driverId [DF.RECURRING_INVOICE, DF.RECURRING_EXECUTION_INVOICE] [DF.PAYMENT_PENDING, DF.PAYMENT_OVERDUE]
       pendingRegistrationDfee' <- B.runInReplica $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceNameParam driverId [DF.MANDATE_REGISTRATION] [DF.PAYMENT_PENDING]
       pure (dueDriverFees', pendingRegistrationDfee')
-  transporterConfig_ <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig_ <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   paymentCurrency <- case currency of
     INR -> pure INR
@@ -1483,7 +1483,7 @@ isOnFreeTrial driverId subscriptionConfig freeTrialDaysLeft mbDriverPlan = do
 
 updateWaiveOffByDriver :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> [WaiveOffEntity] -> m ()
 updateWaiveOffByDriver merchantOpCityId waiveOffEntities = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   if (length waiveOffEntities) > transporterConfig.bulkWaiveOffLimit
     then throwError $ InvalidRequest "Length entities exceeds bulk update limit"
     else QDPlan.updateAllWithWaiveOffPercantageAndType waiveOffEntities

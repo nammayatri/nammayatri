@@ -29,6 +29,9 @@ import qualified Storage.CachedQueries.Merchant.PayoutConfig as SCMP
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCMTC
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCR
 import qualified Storage.CachedQueries.UiDriverConfig as SCU
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Getter (invalidateConfigInMem)
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.DriverPoolConfig as SCMD
 import qualified Storage.Queries.MerchantMessage as SQM
 import qualified Storage.Queries.MerchantPushNotification as SQMPN
@@ -45,7 +48,7 @@ returnConfigs logicDomain merchantOpCityId merchantId opCity = do
       driverPoolCfg <- SCMDPC.findAllByMerchantOpCityId (cast merchantOpCityId) (Just []) Nothing
       return LYT.TableDataResp {configs = map A.toJSON driverPoolCfg}
     LYT.DRIVER_CONFIG LYT.TransporterConfig -> do
-      transporterCfg <- SCMTC.getTransporterConfigFromDB (cast merchantOpCityId)
+      transporterCfg <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       return LYT.TableDataResp {configs = map A.toJSON (maybeToList transporterCfg)}
     LYT.DRIVER_CONFIG LYT.PayoutConfig -> do
       payoutCfg <- SCMP.findAllByMerchantOpCityId (cast merchantOpCityId) (Just [])
@@ -71,7 +74,7 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
     LYT.DRIVER_CONFIG LYT.DriverPoolConfig -> do
       handleConfigUpdateWithExtraDimensions SCMD.findAllByMerchantOpCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.DriverPoolConfig)) SCMD.updateByPrimaryKey (cast merchantOpCityId)
     LYT.DRIVER_CONFIG LYT.TransporterConfig -> do
-      handleConfigUpdate (normalizeMaybeFetch SCMT.findByMerchantOpCityId) (SCMTC.clearCache (cast merchantOpCityId)) SCMT.update (cast merchantOpCityId)
+      handleConfigUpdate (normalizeMaybeFetch SCMT.findByMerchantOpCityId) (SCMTC.clearCache (cast merchantOpCityId) >> invalidateConfigInMem LYT.TransporterConfig) SCMT.update (cast merchantOpCityId)
     LYT.DRIVER_CONFIG LYT.PayoutConfig -> do
       handleConfigUpdate SCP.findAllByMerchantOpCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.PayoutConfig)) SCP.updateByPrimaryKey (cast merchantOpCityId)
     LYT.DRIVER_CONFIG LYT.RideRelatedNotificationConfig -> do

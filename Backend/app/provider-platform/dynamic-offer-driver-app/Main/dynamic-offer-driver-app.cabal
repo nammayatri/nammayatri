@@ -662,6 +662,9 @@ library
       Storage.Clickhouse.SearchRequestForDriver
       Storage.Clickhouse.Vehicle
       Storage.Clickhouse.VehicleRegistrationCertificate
+      Storage.ConfigPilot.Config.TransporterConfig
+      Storage.ConfigPilot.Interface.Getter
+      Storage.ConfigPilot.Interface.Types
       Storage.Queries.AadhaarCardExtra
       Storage.Queries.BackgroundVerificationExtra
       Storage.Queries.Booking.Internal

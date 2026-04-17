@@ -46,7 +46,8 @@ import SharedLogic.DriverPool.Config as DPC
 import SharedLogic.DriverPool.Types as Reexport
 import qualified Storage.Beam.DriverPoolConfig as SBMDPC
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.Cac.TransporterConfig as CTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
 import Storage.Queries.DriverPoolConfig ()
 import Utils.Common.CacUtils as CCU
@@ -59,7 +60,7 @@ getSearchDriverPoolConfig ::
   DSR.SearchRequest ->
   m (Maybe DriverPoolConfig)
 getSearchDriverPoolConfig merchantOpCityId mbDist area sreq = do
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let currTimeOfDay = round (realToFrac (utcTimeToDiffTime localTime) :: Double)
       currentDay = utctDay localTime
@@ -96,7 +97,7 @@ getDriverPoolConfigFromCAC merchantOpCityId st tc dist area stickyKey currTimeOf
   bool
     (pure Nothing)
     (pure config)
-    ( (merchantOperatingCityId <$> config) == Just merchantOpCityId && (vehicleVariant <$> config) == Just st
+    ( (Domain.Types.DriverPoolConfig.merchantOperatingCityId <$> config) == Just merchantOpCityId && (vehicleVariant <$> config) == Just st
         && (Domain.Types.DriverPoolConfig.tripCategory <$> config) == Just (Text.pack tc)
         && (Domain.Types.DriverPoolConfig.area <$> config) == Just area
     )
@@ -170,7 +171,7 @@ getDriverPoolConfig ::
   DSR.SearchRequest ->
   m DriverPoolConfig
 getDriverPoolConfig merchantOpCityId serviceTier tripCategory area tripDistance searchRepeatType searchRepeatCounter srId sreq = do
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let currTimeOfDay = round (realToFrac (utcTimeToDiffTime localTime) :: Double)
       currentDay = utctDay localTime

@@ -49,7 +49,8 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import SharedLogic.DriverFee (roundToHalf)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
-import Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
@@ -242,7 +243,7 @@ mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee 
 
 offerListCache :: (MonadFlow m, ServiceFlow m r) => Id DM.Merchant -> Id DP.Person -> Id DMOC.MerchantOperatingCity -> DPlan.ServiceNames -> Payment.OfferListReq -> m Payment.OfferListResp
 offerListCache merchantId driverId merchantOpCityId serviceName req = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)

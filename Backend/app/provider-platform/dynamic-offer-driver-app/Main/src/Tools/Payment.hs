@@ -30,7 +30,8 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.Version
 import qualified Storage.Cac.MerchantServiceUsageConfig as QOMC
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.DriverPlan as QDPlan
 
@@ -161,7 +162,7 @@ runWithUnWrap func merchantId merchantOperatingCity serviceName mRoutingId req =
 
 decidePaymentService :: (ServiceFlow m r) => DMSC.ServiceName -> Maybe Version -> Id DMOC.MerchantOperatingCity -> m DMSC.ServiceName
 decidePaymentService paymentServiceName clientSdkVersion merchantOpCityId = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let paymentService = case clientSdkVersion of
         Just v
           | v >= textToVersionDefault transporterConfig.aaEnabledClientSdkVersion -> DMSC.PaymentService Payment.AAJuspay
@@ -173,7 +174,7 @@ decidePaymentService paymentServiceName clientSdkVersion merchantOpCityId = do
 
 decidePaymentServiceForRecurring :: (ServiceFlow m r) => DMSC.ServiceName -> Id DP.Person -> Id DMOC.MerchantOperatingCity -> DPlan.ServiceNames -> m DMSC.ServiceName
 decidePaymentServiceForRecurring paymentServiceName driverId merchantOpCityId serviceName = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   case transporterConfig.isAAEnabledForRecurring of
     Just True -> do
       mDriverPlan <- QDPlan.findByDriverIdWithServiceName driverId serviceName

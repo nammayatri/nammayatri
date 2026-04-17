@@ -71,8 +71,9 @@ import qualified SharedLogic.IffcoTokioInsurance as IffcoInsurance
 import SharedLogic.Ride (calculateEstimatedEndTimeRange, getPayoutVpaForRide, isKaaliPeeliBooking)
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import Storage.Beam.Payment ()
-import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
 import qualified Storage.Queries.Booking as QRB
@@ -81,7 +82,6 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Notifications as Notify
-import Utils.Common.Cac.KeyNameConstants
 
 data StartRideReq = DriverReq DriverStartRideReq | DashboardReq DashboardStartRideReq
 
@@ -158,7 +158,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
   let driverId = ride.driverId
   driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
   (openMarketAllow, includeDriverCurrentlyOnRide) <-
     maybe
       (pure (False, False))

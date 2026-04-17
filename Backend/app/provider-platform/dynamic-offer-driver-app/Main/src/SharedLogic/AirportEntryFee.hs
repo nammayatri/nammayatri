@@ -40,7 +40,8 @@ import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Types.GateInfo as DGI
 import qualified SharedLogic.FareCalculator as FareCalculator
 import qualified SharedLogic.Finance.Wallet as Wallet
-import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import Tools.Error
 
 -- | Entry fee for a single gate. Use when API sends gateId (e.g. SearchRequest/Booking.pickupGateId).
@@ -92,7 +93,7 @@ deductAirportEntryFeeAtEndRide ride booking = do
   totalFee <- requiredEntryFeeForBooking booking
   when (totalFee > 0) $ do
     transporterConfig <-
-      findByMerchantOpCityId booking.merchantOperatingCityId Nothing
+      getConfig (TransporterDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
         >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
     let gstBreakup =
           fromMaybe transporterConfig.taxConfig.rideGst transporterConfig.taxConfig.airportEntryFeeGst

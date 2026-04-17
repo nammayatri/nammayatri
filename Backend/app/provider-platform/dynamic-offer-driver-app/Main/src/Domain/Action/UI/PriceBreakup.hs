@@ -24,7 +24,8 @@ import qualified Lib.LocationUpdates.Internal as LU
 import qualified SharedLogic.External.LocationTrackingService.Types as LTS
 import qualified SharedLogic.FareCalculator as SFC
 import SharedLogic.FarePolicy
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
@@ -41,7 +42,7 @@ getPriceBreakup (_, _, merchantOpCityId) rideId = do
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   quote <- B.runInReplica $ QQuote.findById (Id booking.quoteId)
-  mbTransporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing
+  mbTransporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId})
   let govtChargesRate = mbTransporterConfig >>= (SFC.computeTotalGstRate . (.taxConfig.rideGst))
   case quote of
     Just quote' -> do

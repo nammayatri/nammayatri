@@ -128,7 +128,8 @@ import SharedLogic.Reminder.Helper (checkAndCreateRemindersForRidesThreshold)
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
 import qualified SharedLogic.ScheduledNotifications as SN
 import SharedLogic.TollsDetector
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -169,7 +170,6 @@ import qualified Tools.Metrics as Metrics
 import Tools.Notifications
 import qualified Tools.PaymentNudge as PaymentNudge
 import Tools.Utils
-import Utils.Common.Cac.KeyNameConstants
 
 endRideTransaction ::
   ( CacheFlow m r,
@@ -1165,7 +1165,7 @@ createDriverFee ::
   m ()
 createDriverFee merchantId merchantOpCityId driverId rideFare currency newFareParams driverInfo booking serviceName = do
   unless (newFareParams.platformFeeChargesBy == DFP.None) $ do
-    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     fleetDriverAssoc <- QFDAE.findByDriverId driverId True
     fleetOwnerInfo <- maybe (pure Nothing) (\fda -> QFOI.findByPrimaryKey (Id fda.fleetOwnerId)) fleetDriverAssoc
     let fleetIsSubscriptionEligble = maybe True (.isEligibleForSubscription) fleetOwnerInfo

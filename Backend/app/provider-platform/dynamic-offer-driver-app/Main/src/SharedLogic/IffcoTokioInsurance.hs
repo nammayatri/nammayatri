@@ -22,7 +22,8 @@ import Kernel.Prelude ()
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant.Client.Core ()
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLicense as QDL
@@ -57,7 +58,7 @@ triggerIffcoTokioInsurance driverId merchantId merchantOpCityId = do
           _ -> Nothing
         Nothing -> Nothing
   whenJust mbIffcoExtCfg $ \iffcoExtCfg -> do
-    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
     now <- getCurrentTime
     let todayLocal = utctDay localTime

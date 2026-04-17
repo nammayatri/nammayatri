@@ -24,7 +24,8 @@ import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.FarePolicy as FP
 import qualified SharedLogic.TollsDetector as TD
-import qualified Storage.Cac.TransporterConfig as CCT
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMM
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Merchant as QM
@@ -77,7 +78,7 @@ calculateFareUtil ::
   Environment.Flow API.Types.UI.FareCalculator.FareResponse
 calculateFareUtil merchantId merchanOperatingCityId mbDropLatLong pickupLatlong mbDistance mbDuration mbRoute tripCategory mbVehicleServiceTier configsInExperimentVersions = do
   now <- getCurrentTime
-  transporterConfig <- CCT.findByMerchantOpCityId merchanOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchanOperatingCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchanOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchanOperatingCityId.getId)
   let mbFromLocGeohash = T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (pickupLatlong.lat, pickupLatlong.lon)
   let mbToLocGeohash = T.pack <$> ((\dropLatLong -> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (dropLatLong.lat, dropLatLong.lon)) =<< mbDropLatLong)
   fareProducts <- FP.getAllFarePoliciesProduct merchantId merchanOperatingCityId False pickupLatlong mbDropLatLong Nothing Nothing Nothing mbFromLocGeohash mbToLocGeohash mbDistance mbDuration Nothing tripCategory configsInExperimentVersions

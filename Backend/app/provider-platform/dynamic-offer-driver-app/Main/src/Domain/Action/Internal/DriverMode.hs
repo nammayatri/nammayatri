@@ -30,7 +30,8 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverFlowStatus as SDF
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverOperatorAssociationExtra as QDriverOperatorAssociationExtra
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFleetDriverAssociationExtra
@@ -62,7 +63,7 @@ setDriverMode apiKey req = do
         let newFlowStatus = getDriverFlowStatus (Just mode) isActive
         driver <- QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
         transporterConfig <-
-          SCTC.findByMerchantOpCityId driver.merchantOperatingCityId Nothing
+          getConfig (TransporterDimensions {merchantOperatingCityId = driver.merchantOperatingCityId.getId})
             >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
         oldDriverInfo <- QDriverInformation.findById driverId >>= fromMaybeM (DriverNotFound driverId.getId)
         updateDriverModeAndFlowStatus driverId transporterConfig isActive (Just mode) newFlowStatus oldDriverInfo Nothing Nothing

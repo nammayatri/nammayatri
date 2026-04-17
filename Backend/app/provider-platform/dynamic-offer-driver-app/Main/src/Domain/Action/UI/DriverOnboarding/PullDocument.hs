@@ -45,7 +45,8 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverOnboarding.Digilocker as DigilockerLockerShared
-import qualified Storage.Cac.TransporterConfig as CQTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.DriverLicenseExtra as QDLE
@@ -67,7 +68,7 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
   person <- PersonQuery.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
 
   transporterConfig <-
-    CQTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing
+    getConfig (TransporterDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
       >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
 
   unless (transporterConfig.digilockerEnabled == Just True) $ do

@@ -54,7 +54,8 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.DriverOnboarding
-import Storage.Cac.TransporterConfig
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CFQDVC
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -65,7 +66,6 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import Tools.Error
 import qualified Tools.Verification as Verification
-import Utils.Common.Cac.KeyNameConstants
 
 data ImageValidateRequest = ImageValidateRequest
   { image :: Text,
@@ -162,7 +162,7 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
           throwError (InvalidRequesterRole $ show uploaderRole)
   when (isJust validationStatus && imageType == DVC.ProfilePhoto) $ checkIfGenuineReq merchantId req
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   imageSizeInBytes <- fromMaybeM (InvalidRequest "Failed to decode base64 image") $ base64Decode image
   let maxSizeInBytes = fromMaybe 100 transporterConfig.maxAllowedDocSizeInMB * 1024 * 1024 -- Should be set for all merchants, taking 100 if not set
   when (BS.length imageSizeInBytes > maxSizeInBytes) $

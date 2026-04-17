@@ -81,7 +81,8 @@ import SharedLogic.DriverPool
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -174,7 +175,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
     prepareDriverPoolBatch' previousBatchesDrivers batchNum doSpecialPooling merchantOpCityId_ txnId isValueAddNP = withLogTag ("BatchNum - " <> show batchNum) $ do
       radiusStep <- getPoolRadiusStep searchTry.id
-      transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId_ Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId_.getId)
+      transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId_.getId}) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId_.getId)
       intelligentPoolConfig <- CDIP.findByMerchantOpCityId merchantOpCityId_ (Just ((TransactionId . Id) txnId)) >>= fromMaybeM (InternalError "Intelligent Pool Config not found")
       blockListedDriversForSearch <- Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversKey searchReq.id)
       blockListedDriversForRider <- maybe (pure []) (\riderId -> Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversForRiderKey riderId)) searchReq.riderId

@@ -32,7 +32,8 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.MessageBuilder as MessageBuilder
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import Tools.Error
 import qualified Tools.SMS as Sms
 import qualified Tools.Whatsapp as Whatsapp
@@ -90,7 +91,7 @@ sendOTP otpChannel otpCode personId merchantId merchantOpCityId mbCountryCode mb
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
     EMAIL -> do
       receiverEmail <- mbEmail & fromMaybeM (InvalidRequest "Email is required for EMAIL OTP channel")
-      transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       emailOTPConfig <- transporterConfig.emailOtpConfig & fromMaybeM (TransporterConfigNotFound $ "Email OTP config not found for merchantOperatingCityId:- " <> merchantOpCityId.getId)
       emailServiceConfig <- asks (.emailServiceConfig)
       withLogTag ("personId_" <> getId personId) $ do

@@ -43,7 +43,8 @@ import Kernel.Utils.Common
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
@@ -557,7 +558,7 @@ linkVehicleToDriver driverId merchantId merchantOperatingCityId _ _ vehicleNumbe
               }
       void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) False rcStatusReq
     createRCAssociation = do
-      transporterConfig <- SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+      transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
       createDriverRCAssociationIfPossible transporterConfig driverId vehicleRC
 
 -- forceCancelAllActiveTripTransaction vehicleDriverId = do

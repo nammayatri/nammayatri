@@ -139,7 +139,8 @@ import SharedLogic.Ride
 import SharedLogic.VehicleServiceTier
 import Storage.Beam.SystemConfigs ()
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.Cac.TransporterConfig as CTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import Storage.CachedQueries.DriverBlockReason as DBR
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PlanExtra as CQP
@@ -176,7 +177,7 @@ getDriverDocumentsInfo merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   let onboardingTryLimit = transporterConfig.onboardingTryLimit
   drivers <- B.runInReplica $ QDocStatus.fetchDriverDocsInfo merchant merchantOpCity Nothing
   pure $ foldl' (func onboardingTryLimit now) Common.emptyInfo drivers
@@ -341,7 +342,7 @@ postDriverDisable :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> 
 postDriverDisable merchantShortId opCity reqDriverId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
@@ -514,7 +515,7 @@ postDriverUnlinkDL :: ShortId DM.Merchant -> Context.City -> Id Common.Driver ->
 postDriverUnlinkDL merchantShortId opCity driverId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let driverId_ = cast @Common.Driver @DP.Driver driverId
   let personId = cast @Common.Driver @DP.Person driverId
 
@@ -532,7 +533,7 @@ postDriverUnlinkAadhaar :: ShortId DM.Merchant -> Context.City -> Id Common.Driv
 postDriverUnlinkAadhaar merchantShortId opCity driverId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let driverId_ = cast @Common.Driver @DP.Driver driverId
   let personId = cast @Common.Driver @DP.Person driverId
 
@@ -769,7 +770,7 @@ postDriverPauseOrResumeServiceCharges merchantShortId opCity driverId req = do
     (Nothing, Just _) -> do
       void $ toggleDriverSubscriptionByService (driver.id, driver.merchantId, driver.merchantOperatingCityId) serviceName (Id <$> req.planId) req.serviceChargeEligibility req.vehicleId vehicleCategory
     (Just dp, Nothing) -> do
-      transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       let enableServiceUsageCharge = dp.enableServiceUsageCharge
       when (enableServiceUsageCharge /= req.serviceChargeEligibility) $ do
         QDP.updateEnableServiceUsageChargeByDriverIdAndServiceName req.serviceChargeEligibility personId serviceName
@@ -793,7 +794,7 @@ toggleDriverSubscriptionByService ::
   Flow ()
 toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanToAssign toToggle mbVehicleNo mbVehicleCategory = do
   (autoPayStatus, driverPlan) <- DTPlan.getSubcriptionStatusWithPlan serviceName driverId
-  transporterConfig <- CTC.findByMerchantOpCityId mOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = mOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
   if toToggle
     then do
       planToAssign <- getPlanId mbPlanToAssign

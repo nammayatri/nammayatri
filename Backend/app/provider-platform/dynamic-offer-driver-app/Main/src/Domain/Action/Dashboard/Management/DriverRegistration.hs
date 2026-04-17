@@ -107,7 +107,8 @@ import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Reminder.Helper (createReminder)
-import qualified Storage.Cac.TransporterConfig as CCT
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -646,7 +647,7 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
           mbVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (mapDocumentType docType) DVCat.CAR Nothing
           let isMandatory = maybe False (\config -> fromMaybe config.isMandatory config.isMandatoryForEnabling) mbVerificationConfig
           when isMandatory $ do
-            transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+            transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
             Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig person.id False Nothing
           pure False
         _ -> pure False
@@ -692,7 +693,7 @@ postDriverRegistrationRegisterRc :: ShortId DM.Merchant -> Context.City -> Id Co
 postDriverRegistrationRegisterRc merchantShortId opCity driverId_ req@Common.RegisterRCReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   isFleetOwner <- QFOI.findByPrimaryKey (cast driverId_)
   let (vehicleDetailsToPass, vehicleCategoryToPass, vehicleClassToPass) =
         if transporterConfig.allowDashboardToPassVehicleDetails == Just True
@@ -857,7 +858,7 @@ approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId
             (Just insurance.policyExpiry)
             Nothing
         _ -> do
-          transporterConfig <- CCT.findByMerchantOpCityId mOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
+          transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = mOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
           case transporterConfig.createDocumentRequired of
             Just True -> throwError (InternalError "Provide all the details for creating insurance document: policyNumber, policyExpiry, policyProvider, rcNumber")
             _ -> pure ()
@@ -1383,7 +1384,7 @@ handleRejectRequest rejectReq _ merchantOperatingCityId = do
 
     isDashboardSmsEnabled :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m Bool
     isDashboardSmsEnabled merchantOpCityId =
-      CCT.findByMerchantOpCityId merchantOpCityId Nothing
+      getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId})
         >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
         <&> (.enableDashboardSms)
 

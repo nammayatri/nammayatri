@@ -31,7 +31,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow, fromMaybeM, throwError)
 import Kernel.Utils.Time
 import SharedLogic.Merchant
-import qualified Storage.Cac.TransporterConfig as CTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.DriverFee as CHDriverFee
 import Storage.Queries.Volunteer (findAllByPlace)
@@ -41,7 +42,7 @@ getRevenueAllFeeHistory :: ShortId DM.Merchant -> Context.City -> Maybe UTCTime 
 getRevenueAllFeeHistory merchantShortId opCity mbFrom mbTo = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let defaultFrom = UTCTime (utctDay now) 0
       from = fromMaybe defaultFrom mbFrom
@@ -60,7 +61,7 @@ getRevenueCollectionHistory :: ShortId DM.Merchant -> Context.City -> Maybe UTCT
 getRevenueCollectionHistory merchantShortId opCity mbFrom place mbTo volunteerId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let defaultFrom = UTCTime (utctDay now) 0
       from_ = fromMaybe defaultFrom mbFrom

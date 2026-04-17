@@ -60,7 +60,8 @@ import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.Ride
 import SharedLogic.TollsDetector
 import qualified SharedLogic.Type as SLT
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -191,7 +192,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
     if hasAdvancedRide
       then sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId "Trip Update Request Not Available" "Driver has an upcoming ride near your drop location. "
       else do
-        transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+        transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
         now <- getCurrentTime
         QL.create dropLocation
         let dropLatLong = Maps.LatLong {lat = dropLocation.lat, lon = dropLocation.lon}

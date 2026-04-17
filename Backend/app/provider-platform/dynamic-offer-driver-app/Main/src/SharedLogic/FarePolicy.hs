@@ -57,7 +57,8 @@ import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.Pricing
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.FarePolicy as QFP
-import qualified Storage.Cac.TransporterConfig as CTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.CancellationFarePolicy as QCCFP
 import qualified Storage.CachedQueries.FareProduct as QFareProduct
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -204,7 +205,7 @@ getFareProduct fareProducts (Just vehicleServiceTier) = List.find (\fareProduct 
 
 getFullFarePolicy :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r) => Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe CacKey -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Text -> FareProduct.FareProduct -> [LYT.ConfigVersionMap] -> m FarePolicyD.FullFarePolicy
 getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mbBookingStartTime mbBaseVaraintCarPrice mbAppDynamicLogicVersion mbSpecialLocName fareProduct configsInExperimentVersions = do
-  transporterConfig <- CTC.findByMerchantOpCityId fareProduct.merchantOperatingCityId txnId >>= fromMaybeM (TransporterConfigNotFound fareProduct.merchantOperatingCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = fareProduct.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound fareProduct.merchantOperatingCityId.getId)
   mbVehicleServiceTierItem <-
     CQVST.findByServiceTierTypeAndCityIdInRideFlow fareProduct.vehicleServiceTier fareProduct.merchantOperatingCityId configsInExperimentVersions
   let whiteListedGeohashes = fromMaybe [] transporterConfig.dpWhiteListedGeohash
@@ -325,7 +326,7 @@ calculateFareParametersForFarePolicy fullFarePolicy mbDistance mbDuration mercha
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOperatingCityId
   distanceUnit <- SMerchant.getDistanceUnitByMerchantOpCity merchantOperatingCityId
   now <- getCurrentTime
-  mbTransporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCityId Nothing
+  mbTransporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
   let gstBreakup = mbTransporterConfig <&> (.taxConfig.rideGst)
   let params =
         SFC.CalculateFareParametersParams

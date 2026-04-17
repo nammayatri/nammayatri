@@ -60,7 +60,8 @@ import Mobility.ARDU.Queries as Queries
 import Mobility.AppBackend.APICalls as BapAPI
 import Mobility.AppBackend.Fixtures
 import Servant.Client hiding (parseBaseUrl)
-import qualified "dynamic-offer-driver-app" Storage.Cac.TransporterConfig as SCTC
+import "dynamic-offer-driver-app" Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import "dynamic-offer-driver-app" Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified "dynamic-offer-driver-app" Storage.CachedQueries.Merchant.MerchantServiceConfig as TCQMSC
 import qualified "dynamic-offer-driver-app" Storage.Queries.Booking as TQRB
 import qualified "rider-app" Storage.Queries.Booking as BQRB
@@ -145,7 +146,7 @@ resetDriver driver = runARDUFlow "" $ do
     TDQ.setInactiveBySTId activeQuote.searchTryId
   let newFlowStatus = DDriverMode.getDriverFlowStatus (Just TDrInfo.OFFLINE) False
   transporterConfig <-
-    SCTC.findByMerchantOpCityId Fixtures.nammaYatriPartnerMerchantOperatingCityId Nothing
+    getConfig (TransporterDimensions {merchantOperatingCityId = Fixtures.nammaYatriPartnerMerchantOperatingCityId.getId})
       >>= fromMaybeM (TransporterConfigNotFound Fixtures.nammaYatriPartnerMerchantOperatingCityId.getId)
   driverInfo <- QDI.findById (cast driver.driverId) >>= fromMaybeM DriverInfoNotFound
   DDriverMode.updateDriverModeAndFlowStatus (cast driver.driverId) transporterConfig False (Just TDrInfo.OFFLINE) newFlowStatus driverInfo Nothing Nothing

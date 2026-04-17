@@ -42,7 +42,8 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.Merchant as SMerchant
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
@@ -91,7 +92,7 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
     throwError $ InvalidRequest "Referral Code must have 6 digits"
   let merchOpCityId = Id merchantOperatingCityId
       isMultipleDeviceIdExist_ = fromMaybe False isMultipleDeviceIdExist
-  transporterConfig <- SCTC.findByMerchantOpCityId merchOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchOpCityId.getId)
   (driverReferralLinkage, checkLastActiveRideValidity) <-
     case (length referralCode.getId, refereeLocation) of
       (4, Just refereeLocation') -> do

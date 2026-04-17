@@ -110,7 +110,8 @@ import qualified SharedLogic.Beckn.Common as DST
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
 import Storage.Cac.DriverPoolConfig as Reexport
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverGoHomeRequest as QDGR
@@ -1190,7 +1191,7 @@ computeActualDistance ::
   m (NonEmpty DriverPoolWithActualDistResult)
 computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pickup driverPoolResults searchInfo = do
   let pickupLatLong = getCoordinates pickup
-  transporter <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+  transporter <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   getDistanceResults <-
     withShortRetry $
       Maps.getEstimatedPickupDistances orgId merchantOpCityId (Just $ getId searchInfo.searchTry.id) $
@@ -1241,7 +1242,7 @@ computeActualDistanceOneToOneSrcAndDestMapping ::
   DST.CurrentSearchInfo ->
   m (NonEmpty DriverPoolWithActualDistResult)
 computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCityId destinationLatLons previousDropPoints driverPoolResults searchInfo = do
-  transporter <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+  transporter <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   getDistanceResults <-
     withShortRetry $
       Maps.getEstimatedPickupDistances orgId merchantOpCityId (Just $ getId searchInfo.searchTry.id) $

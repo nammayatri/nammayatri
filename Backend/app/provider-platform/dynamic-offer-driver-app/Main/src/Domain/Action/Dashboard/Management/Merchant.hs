@@ -174,8 +174,9 @@ import qualified Storage.Cac.DriverPoolConfig as CQDPC
 import qualified Storage.Cac.FarePolicy as CQFP
 import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Cac.TransporterConfig as CQTC
-import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.FareProduct as CQFProduct
@@ -292,7 +293,7 @@ getMerchantConfigCommon :: ShortId DM.Merchant -> Context.City -> Flow Common.Me
 getMerchantConfigCommon merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  config <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   pure $ mkMerchantCommonConfigRes config
 
 mkMerchantCommonConfigRes :: DTC.TransporterConfig -> Common.MerchantCommonConfigRes
@@ -324,7 +325,7 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
   runRequestValidation Common.validateMerchantCommonConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  config <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let updConfig =
         config{pickupLocThreshold = mkDistanceField config.pickupLocThreshold req.pickupLocThresholdWithUnit req.pickupLocThreshold,
                dropLocThreshold = mkDistanceField config.dropLocThreshold req.dropLocThresholdWithUnit req.dropLocThreshold,
@@ -2549,7 +2550,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
 
           newId <- generateGUID
           finalFarePolicy <- mergeFarePolicy newId firstFarePolicy
-          mbTransporterConfig <- CTC.findByMerchantOpCityId merchantOpCity.id Nothing
+          mbTransporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCity.id.getId})
           let baseFares = getAllBaseFaresFromFarePolicy finalFarePolicy
               minBaseFare = mbTransporterConfig >>= (.minBaseFare)
               allowUpdate = fromMaybe True (mbTransporterConfig >>= (.allowFarePolicyUpdateBelowMinBaseFare))
@@ -3276,9 +3277,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- transporter config
   mbTransporterConfig <-
-    CTC.findByMerchantOpCityId newMerchantOperatingCityId Nothing >>= \case
+    getConfig (TransporterDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId}) >>= \case
       Nothing -> do
-        transporterConfig <- CTC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Transporter Config not found")
+        transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = baseOperatingCityId.getId}) >>= fromMaybeM (InvalidRequest "Transporter Config not found")
         let newTransporterConfig = buildTransporterConfig newMerchantId newMerchantOperatingCityId now transporterConfig
         return $ Just newTransporterConfig
       Just _ -> return Nothing

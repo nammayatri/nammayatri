@@ -56,8 +56,8 @@ import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import SharedLogic.WMB
 import qualified SharedLogic.WMB as WMB
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as CTC
-import qualified Storage.Cac.TransporterConfig as SCT
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.AlertRequest as QAR
@@ -78,7 +78,6 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRouteMapping as VRM
 import Tools.Error
 import qualified Tools.Notifications as TN
-import Utils.Common.Cac.KeyNameConstants
 
 getWmbFleetBadges ::
   ( ( Maybe (Id Person),
@@ -452,7 +451,7 @@ postWmbTripRequest ::
     Flow AlertReqResp
   )
 postWmbTripRequest (_, merchantId, merchantOperatingCityId) tripTransactionId req = do
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   tripTransaction <- QTT.findByPrimaryKey tripTransactionId >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
   fleetDriverAssociation <- FDV.findByDriverId tripTransaction.driverId True >>= fromMaybeM (NoActiveFleetAssociated tripTransaction.driverId.getId)
   whenJust tripTransaction.endRideApprovalRequestId $ \endRideAlertRequestId -> do
@@ -486,7 +485,7 @@ postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   onboardingVehicleCategory <- fleetDriverAssociation.onboardingVehicleCategory & fromMaybeM DriverOnboardingVehicleCategoryNotFound
   fleetOwner <- QPerson.findById (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (FleetOwnerNotFound fleetDriverAssociation.fleetOwnerId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
 
   SA.endDriverAssociationsIfAllowed merchant merchantOperatingCityId transporterConfig driver
 

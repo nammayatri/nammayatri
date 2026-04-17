@@ -77,7 +77,8 @@ import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.PersonBankAccount as SPBA
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
-import qualified Storage.Cac.TransporterConfig as CQTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -105,7 +106,6 @@ import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCE
 import qualified Tools.BackgroundVerification as BackgroundVerificationT
 import Tools.Error
 import qualified Tools.Verification as Verification
-import Utils.Common.Cac.KeyNameConstants
 
 stringToPrice :: Currency -> Text -> Maybe Price
 stringToPrice currency value = do
@@ -260,7 +260,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
   let mbDistance = reqDistance
       mbDuration = reqDuration
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast personId)))
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
   driverInfo <- runInReplica $ QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
   -- driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM DriverInfoNotFound
@@ -686,7 +686,7 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
 
   let updatedReq = req {API.Types.UI.DriverOnboardingV2.nameOnGovtDB = mbNameFromGovtDB <|> req.nameOnGovtDB}
   QDPC.upsertPanRecord =<< buildPanCard merchantId person updatedReq verificationStatus (Just merchantOpCityId)
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let allowPanAadhaarLink = fromMaybe True transporterConfig.allowPanAadhaarLinkage
   unless allowPanAadhaarLink $
     logInfo $
@@ -968,7 +968,7 @@ postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) 
       "PanAadhaarLink postDriverRegisterAadhaarCard: skipped (no maskedAadhaarNumber after upsert) driverId="
         <> personId.getId
   whenJust mbAadhaarNumber $ \aadhaarNumber -> do
-    transporterConfig <- CQTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+    transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
     let allowPanAadhaarLink = fromMaybe True transporterConfig.allowPanAadhaarLinkage
     unless allowPanAadhaarLink $
       logInfo $
@@ -1258,7 +1258,7 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
 getDriverFleetRcs :: (Maybe (Id Domain.Types.Person.Person), Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Maybe Int -> Maybe Int -> Flow APITypes.FleetRCListRes
 getDriverFleetRcs (mbDriverId, _, merchantOpCityId) limit offset = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   driverLinkedRcs <- DAQuery.findAllLinkedByDriverId driverId
   fleetRcs <-
     if transporterConfig.allowDriverToUseFleetRcs == Just True

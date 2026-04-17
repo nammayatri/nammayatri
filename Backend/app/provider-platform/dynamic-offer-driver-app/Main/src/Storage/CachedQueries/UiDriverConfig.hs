@@ -29,13 +29,14 @@ import Kernel.Utils.Time
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as YType
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.Cac.TransporterConfig as CTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.UiDriverConfig as Queries
 import qualified Tools.DynamicLogic as TDL
 
 findUIConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => YType.UiConfigRequest -> Id MerchantOperatingCity -> Bool -> m (Maybe (UiDriverConfig, Int))
 findUIConfig YType.UiConfigRequest {..} merchantOperatingCityId isBaseLogic = do
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc -- bounds, all these params, timeDiffFromUTC
   let config = LYT.UI_DRIVER os platform
       findConfig = Queries.findUIConfig YType.UiConfigRequest {..} merchantOperatingCityId

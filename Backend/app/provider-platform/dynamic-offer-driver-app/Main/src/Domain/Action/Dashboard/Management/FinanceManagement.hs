@@ -63,7 +63,8 @@ import SharedLogic.Allocator (AllocatorJobType (..), ReconciliationJobData (..))
 import qualified SharedLogic.Finance.Wallet as WalletService
 import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as QTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Plan as CQPlan
 import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
@@ -1149,7 +1150,7 @@ getFinanceManagementFinanceWalletLedgerImpl ::
 getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mbFleetOperatorId mbFrom mbLimit mbOffset mbSourceType mbTo = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
   let limit = mkPageLimit mbLimit
       offset = mkPageOffset mbOffset

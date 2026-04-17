@@ -39,7 +39,8 @@ import Kernel.Utils.Validation (runRequestValidation, validateField)
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
-import qualified Storage.Cac.TransporterConfig as CCT
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
@@ -115,7 +116,7 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
   if isJust di.referralCode || isJust di.referredByDriverId || isJust di.referredByOperatorId
     then return AlreadyReferred
     else do
-      transporterConfig <- CCT.findByMerchantOpCityId (cast merchantOpCityId) Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+      transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
       dr <- validateReferralCodeAndRole transporterConfig personId req.value req.role
       case dr.role of
         Person.DRIVER -> do
@@ -156,7 +157,7 @@ getDriverDetailsByReferralCode ::
   Flow DriverReferralDetailsRes
 getDriverDetailsByReferralCode (personId, _, merchantOpCityId) value mbRole = do
   when (T.length value < 6) $ throwError (InvalidRequest "Referral code should be at least 6 digits long")
-  transporterConfig <- CCT.findByMerchantOpCityId (cast merchantOpCityId) Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
   dr <- validateReferralCodeAndRole transporterConfig personId value mbRole
   person <- B.runInReplica (QPerson.findById dr.driverId) >>= fromMaybeM (PersonNotFound dr.driverId.getId)
   return $
@@ -176,7 +177,7 @@ makeDriverReferredByOperator ::
 makeDriverReferredByOperator merchantOpCityId driverId referredOperatorId = do
   di <- B.runInReplica (DriverInformation.findById driverId) >>= fromMaybeM DriverInfoNotFound
   unless (isJust di.referralCode || isJust di.referredByDriverId || isJust di.referredByOperatorId) $ do
-    transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     DriverInformation.updateReferredByOperatorId (Just referredOperatorId.getId) driverId
     incrementOnboardedCount DriverReferral referredOperatorId transporterConfig
 

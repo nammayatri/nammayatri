@@ -55,7 +55,8 @@ import SharedLogic.MerchantPaymentMethod
 import SharedLogic.Ride (multipleRouteKey, searchRequestKey)
 import SharedLogic.SearchTry
 import qualified SharedLogic.Type as SLT
-import qualified Storage.Cac.TransporterConfig as QTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -67,7 +68,6 @@ import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types
-import Utils.Common.Cac.KeyNameConstants
 
 reAllocateBookingIfPossible ::
   ( MonadFlow m,
@@ -129,7 +129,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
       searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)
       searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
-      transporterConfig <- QTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId $ Id booking.transactionId)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+      transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
       isRepeatSearch <- checkIfRepeatSearch searchTry ride.driverArrivalTime searchReq.isReallocationEnabled now booking.isScheduled transporterConfig
       if isRepeatSearch
         then performDynamicOfferReallocation transporterConfig driverQuote searchReq searchTry
@@ -140,7 +140,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       quote <- QQuote.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
       searchReq <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
       searchTry <- QST.findLastByRequestId quote.searchRequestId >>= fromMaybeM (SearchTryNotFound quote.searchRequestId.getId)
-      transporterConfig <- QTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId $ Id booking.transactionId)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+      transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
       isRepeatSearch <- checkIfRepeatSearch searchTry ride.driverArrivalTime searchReq.isReallocationEnabled now searchReq.isScheduled transporterConfig
       if isRepeatSearch || isForceReallocation
         then performStaticOfferReallocation quote searchReq searchTry transporterConfig now isRepeatSearch

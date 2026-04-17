@@ -60,14 +60,14 @@ import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Storage.Cac.MerchantServiceUsageConfig as QMSUC
-import Storage.Cac.TransporterConfig
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.MerchantClientConfig as QMCC
 import qualified Storage.Queries.Person as QPerson
-import Utils.Common.Cac.KeyNameConstants
 
 clearDeviceToken :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
 clearDeviceToken = QPerson.clearDeviceTokenByPersonId
@@ -153,7 +153,7 @@ findFCMConfigWithFallback merchantOpCityId personId = do
   mbClientConfig <- QMCC.findByPackageOSAndService (ClientFCMService) (driver >>= (.clientDevice) <&> (.deviceType)) (fromMaybe "" (driver >>= (.clientId)))
   case mbClientConfig of
     Just clientConfig -> let (DMCC.ClientFCMServiceConfig fcmCfg) = clientConfig.clientServiceConfig in pure fcmCfg
-    Nothing -> findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId) <&> (.fcmConfig)
+    Nothing -> getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId) <&> (.fcmConfig)
 
 -- dynamicFCMNotifyPerson
 --     merchantOpCityId
@@ -595,7 +595,7 @@ notifyDriverNewAllocation merchantOpCityId booking personId lang mbToken = do
 --   Maybe FCM.FCMRecipientToken ->
 --   m ()
 -- notifyFarePolicyChange merchantOpCityId coordinatorId mbToken = do
---   transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+--   transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 --   FCM.notifyPerson transporterConfig.fcmConfig (clearDeviceToken coordinatorId) notificationData $ FCMNotificationRecipient coordinatorId.getId mbToken
 --   where
 --     title = FCM.FCMNotificationTitle "Fare policy changed."
@@ -625,7 +625,7 @@ notifyDriverNewAllocation merchantOpCityId booking personId lang mbToken = do
 --   Maybe FCM.FCMRecipientToken ->
 --   m ()
 -- notifyDiscountChange merchantOpCityId coordinatorId mbToken = do
---   transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+--   transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 --   FCM.notifyPerson transporterConfig.fcmConfig (clearDeviceToken coordinatorId) notificationData $ FCMNotificationRecipient coordinatorId.getId mbToken
 --   where
 --     title = FCM.FCMNotificationTitle "Discount updated."

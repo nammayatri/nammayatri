@@ -35,7 +35,8 @@ import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as Behavi
 import SharedLogic.BehaviourManagement.IssueBreach (IssueBreachType (..))
 import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
 import SharedLogic.DriverOnboarding
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -47,7 +48,6 @@ import qualified Storage.Queries.Ride as QRide
 import Tools.DynamicLogic (getAppDynamicLogic)
 import Tools.Error
 import qualified Tools.Notifications as Notify
-import Utils.Common.Cac.KeyNameConstants
 
 reportIssue :: Id Ride -> ICommon.IssueReportType -> Maybe Text -> Flow APISuccess
 reportIssue rideId issueType apiKey = do
@@ -75,7 +75,7 @@ handleTollRelatedIssue ride = do
 handleExtraFareMitigation :: Ride -> ServiceTierType -> Flow ()
 handleExtraFareMitigation ride serviceTierType = do
   driverInfo <- QDI.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
-  transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (DriverId (cast ride.driverId))) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   let ibConfig = IBM.getIssueBreachConfig EXTRA_FARE_MITIGATION transporterConfig
   let allowedSTiers = ibConfig <&> (.ibAllowedServiceTiers)
   let isRideAllowedForCounting = maybe False (\allowedServiceTiers -> null allowedServiceTiers || serviceTierType `elem` allowedServiceTiers) allowedSTiers

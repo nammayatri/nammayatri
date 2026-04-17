@@ -29,7 +29,8 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Merchant as SMerchant
-import qualified Storage.Cac.TransporterConfig as CTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMM
 import qualified Storage.Queries.Booking as QBooking
@@ -86,7 +87,7 @@ disputeCancellationDues merchantId merchantCity apiKey CancellationDuesReq {..} 
     throwError $ InvalidRequest $ "Cancellation Due Amount is 0 for riderId " <> riderDetails.id.getId
   merchantOperatingCity <- CQMM.findByMerchantIdAndCity merchantId merchantCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show merchantCity)
 
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCity.id.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCity.id.getId)
   when (riderDetails.disputeChancesUsed >= transporterConfig.cancellationFeeDisputeLimit) $ do
     throwError (DisputeChancesLimitNotMet riderDetails.id.getId (show riderDetails.disputeChancesUsed) (show transporterConfig.cancellationFeeDisputeLimit))
   let disputeChancesLeft = transporterConfig.cancellationFeeDisputeLimit - riderDetails.disputeChancesUsed
@@ -116,7 +117,7 @@ getCancellationDuesDetails merchantId merchantCity apiKey CancellationDuesReq {.
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
   merchantOperatingCity <- CQMM.findByMerchantIdAndCity merchant.id merchantCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchant.shortId.getShortId <> " ,city: " <> show merchantCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCity.id.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCity.id.getId)
   unless transporterConfig.canAddCancellationFee $
     throwError $ CityRestrictionOnCustomerCancellationDuesAddition (show merchantCity)
   numberHash <- getDbHash customerMobileNumber
@@ -154,7 +155,7 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = do
     throwError DisputeChancesOrCancellationDuesHasToBeNull
   merchantOperatingCity <- CQMM.findByMerchantIdAndCity merchantId merchantCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show merchantCity)
   SMerchant.checkCurrencies merchantOperatingCity.currency [req.cancellationChargesWithCurrency]
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCity.id.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCity.id.getId)
   riderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchant.id >>= fromMaybeM (RiderDetailsDoNotExist "Mobile Number" req.customerMobileNumber)
   case (reqCancellationCharges, req.disputeChancesUsed) of
     (Just amountPaid, Nothing) -> do

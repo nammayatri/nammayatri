@@ -37,7 +37,8 @@ import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as CCT
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Ride as QRide
@@ -69,7 +70,7 @@ callOnClickTracker rideId = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   transporterConfig <-
-    CCT.findByMerchantOpCityId booking.merchantOperatingCityId Nothing
+    getConfig (TransporterDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
       >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   callStatusObj <- buildCallStatus booking.merchantOperatingCityId booking.providerId
   QCallStatus.create callStatusObj

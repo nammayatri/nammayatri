@@ -45,7 +45,8 @@ import SharedLogic.MessageBuilder
     buildFleetUnlinkSuccessMessage,
     buildOperatorJoiningMessage,
   )
-import Storage.Cac.TransporterConfig
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.FleetMemberAssociation as QFMA
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
@@ -85,7 +86,7 @@ getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbEnabled 
           >>= fromMaybeM (InvalidRequest $ "Person do not have a mobile number " <> person.id.getId)
       merchant <- findMerchantByShortId merchantShortId
       merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-      transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+      transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
       let entity = IQuery.PersonEntity person
       entityImages <- IQuery.findAllByEntityId transporterConfig entity
       let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
@@ -148,7 +149,7 @@ postFleetManagementFleetUnlink merchantShortId opCity fleetOwnerId requestorId =
   operator <- checkOperator requestorId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   fleetOperatorAssocList <- QFOA.findAllByFleetIdAndOperatorId (Id fleetOwnerId :: Id DP.Person) operator.id
   when (null fleetOperatorAssocList) $ throwError (InvalidRequest $ "Fleet id " <> fleetOwnerId <> " is not associated with operator")
 
@@ -225,7 +226,7 @@ postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req s
         void $ DRegistrationV2.enableFleetIfPossible personData.id Nothing (Just FOI.NORMAL_FLEET) merchantOpCityId
         pure personData
 
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   existingFOAssociations <- QFOA.findAllByFleetOwnerId fleetOwner.id True
   when (any (\foa -> Id foa.fleetOwnerId == fleetOwner.id && Id foa.operatorId == operator.id) existingFOAssociations)
     . throwError
@@ -277,7 +278,7 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
   operator <- checkOperator requestorId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   fleetOwner <- B.runInReplica $ QP.findById (cast req.fleetOwnerId) >>= fromMaybeM (FleetOwnerNotFound (getId req.fleetOwnerId))
   unless (fleetOwner.role == DP.FLEET_OWNER) $
     throwError (InvalidRequest "Invalid fleet owner")

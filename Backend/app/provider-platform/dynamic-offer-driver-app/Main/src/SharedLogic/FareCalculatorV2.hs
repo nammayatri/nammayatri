@@ -49,7 +49,8 @@ import Kernel.Utils.Common
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import qualified SharedLogic.FareCalculator as FC
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 
 -- | Map of fare components to their monetary values
 -- Used to compute charges on specific components (e.g., VAT on RideFare + CongestionChargeComponent)
@@ -87,7 +88,7 @@ calculateFareParametersV2 params = do
   -- Check if V2 features are enabled via TransporterConfig
   isV2Enabled <- case params.merchantOperatingCityId of
     Just merchantOpCityId -> do
-      transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing
+      transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       let v2Enabled = maybe False (fromMaybe False . (.enableFareCalculatorV2)) transporterConfig
       logDebug $ "FareCalculatorV2: TransporterConfig for merchantOpCityId " <> merchantOpCityId.getId <> " - enableFareCalculatorV2: " <> show (transporterConfig >>= (.enableFareCalculatorV2)) <> ", V2 enabled: " <> show v2Enabled
       pure v2Enabled
@@ -155,7 +156,7 @@ applyAirportEntryFee ::
 applyAirportEntryFee params fareParams = case (params.merchantOperatingCityId, params.pickupGateId) of
   (Just merchantOperatingCityId, Just gateIdText) -> do
     transporterConfig <-
-      SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing
+      getConfig (TransporterDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
         >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
     if not (fromMaybe False transporterConfig.airportEntryFeeEnabled)
       then pure fareParams

@@ -29,7 +29,8 @@ import Kernel.Utils.Common hiding (Error)
 import Servant hiding (throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Tools.Ticket as TT
@@ -63,7 +64,7 @@ safetyWebhookHandler ::
 safetyWebhookHandler merchantShortId mbOpCity secret val = do
   merchant <- findMerchantByShortId merchantShortId
   merchanOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just mbOpCity)
-  transporterConfig <- SCTC.findByMerchantOpCityId merchanOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchanOperatingCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = merchanOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchanOperatingCityId.getId)
   merchantServiceUsageConfig <-
     CQMSUC.findByMerchantOpCityId merchanOperatingCityId Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchanOperatingCityId.getId)

@@ -23,7 +23,8 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DailyStats as QDailyStats
@@ -39,7 +40,7 @@ populateTipAmount rideId tipAmount apiKey = do
     throwError $ AuthBlocked "Invalid BPP internal api key"
 
   QRide.updateTipAmountField (Just tipAmount) ride.id
-  transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
+  transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   mbDailyStats <- QDailyStats.findByDriverIdAndDate ride.driverId (utctDay localTime)
   case mbDailyStats of

@@ -18,7 +18,8 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error (GenericError (InternalError), PersonError (PersonDoesNotExist))
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, throwError)
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import Storage.Queries.Person ()
 import qualified Storage.Queries.Person as QP
@@ -67,7 +68,7 @@ putAccountUpdateRole _merchantShortId _opCity personId' accessType = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   mbFleetOwnerInfo <- QFOI.findByPrimaryKey personId
   when (accessType == Common.FLEET_OWNER && isNothing mbFleetOwnerInfo) $ do
-    transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+    transporterConfig <- getConfig (TransporterDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
     DRegistrationV2.createFleetOwnerInfo personId person.merchantId (Just False) (Just person.merchantOperatingCityId) transporterConfig.taxConfig.defaultTdsRate
   updatePersonRole personId =<< castRole accessType
   pure Kernel.Types.APISuccess.Success
