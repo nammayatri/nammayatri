@@ -452,6 +452,10 @@ data UpdateDocumentRequest
 instance Kernel.Types.HideSecrets.HideSecrets UpdateDocumentRequest where
   hideSecrets = Kernel.Prelude.identity
 
+data UpdateDocumentResp = UpdateDocumentResp {result :: Kernel.Prelude.Text, personId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver), enabled :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data UploadDocumentReq = UploadDocumentReq
   { imageBase64 :: Kernel.Prelude.Text,
     imageType :: DocumentType,
@@ -697,7 +701,7 @@ type GetDriverRegistrationDocumentsCommonList =
            CommonDocumentsListRes
   )
 
-type PostDriverRegistrationDocumentsUpdate = ("documents" :> "update" :> ReqBody ('[JSON]) UpdateDocumentRequest :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostDriverRegistrationDocumentsUpdate = ("documents" :> "update" :> ReqBody ('[JSON]) UpdateDocumentRequest :> Post ('[JSON]) UpdateDocumentResp)
 
 type PostDriverRegistrationDocumentsCommon =
   ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "documents" :> "common" :> ReqBody ('[JSON]) CommonDocumentCreateReq
@@ -756,7 +760,7 @@ data DriverRegistrationAPIs = DriverRegistrationAPIs
     getDriverRegistrationDocumentsInfo :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient [DriverDocument]),
     getDriverRegistrationVerificationStatus :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> DocumentType -> ServiceType -> EulerHS.Types.EulerClient VerificationStatusListResponse),
     getDriverRegistrationDocumentsCommonList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe ([DocumentType]) -> Kernel.Prelude.Maybe ([Dashboard.Common.VerificationStatus]) -> Kernel.Prelude.Maybe ([Kernel.Types.Id.Id Dashboard.Common.Driver]) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient CommonDocumentsListRes),
-    postDriverRegistrationDocumentsUpdate :: (UpdateDocumentRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postDriverRegistrationDocumentsUpdate :: (UpdateDocumentRequest -> EulerHS.Types.EulerClient UpdateDocumentResp),
     postDriverRegistrationDocumentsCommon :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> CommonDocumentCreateReq -> EulerHS.Types.EulerClient CommonDocumentCreateRes),
     postDriverRegistrationUnlinkDocument :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> DocumentType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient UnlinkDocumentResp),
     postDriverRegistrationTriggerReminder :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> TriggerReminderReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)

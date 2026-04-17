@@ -64,6 +64,7 @@ import qualified Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
+import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDoc
 import qualified Storage.Queries.BackgroundVerification as BVQuery
 import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.DriverGstin as QDGST
@@ -307,8 +308,17 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
         when (isFleetRole person.role) $ do
           let vehicleCategory = DVC.CAR
               allFleetDocsVerified = checkAllDriverDocsVerified allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
-          when allFleetDocsVerified $
-            enableDriver merchantOpCityId personId person.role Nothing transporterConfig merchantId
+              hasRejectedFleetDoc =
+                any
+                  ( \doc ->
+                      doc.verificationStatus == FAILED
+                  )
+                  driverDocuments
+          if allFleetDocsVerified
+            then enableDriver merchantOpCityId personId person.role Nothing transporterConfig merchantId
+            else
+              when (transporterConfig.allowDisableFleetOnRejectionDoc == Just True && hasRejectedFleetDoc) $
+                disableFleetOwnerOnRejectionDoc personId
         -- Check driver enablement separately (only driver docs + driver inspection)
         when (person.role == DP.DRIVER) $ do
           let vehicleCategory = fromMaybe DVC.CAR $ onboardingVehicleCategory <|> listToMaybe possibleVehicleCategories
@@ -347,7 +357,7 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
   enabled <-
     if isFleetRole person.role
       then do
-        fleetOwnerInfo <- runInReplica $ QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
+        fleetOwnerInfo <- QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
         return fleetOwnerInfo.enabled
       else do
         driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
@@ -803,6 +813,11 @@ enableDriver merchantOpCityId personId role driverName transporterConfig merchan
         whenJust driverName $ \name -> QPerson.updateName name personId
         sendEnablementSms merchantOpCityId personId transporterConfig merchantId
 
+disableFleetOwnerOnRejectionDoc :: Id DP.Person -> Flow ()
+disableFleetOwnerOnRejectionDoc personId = do
+  fleetOwnerInfo <- QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
+  when fleetOwnerInfo.enabled $ QFOI.updateFleetOwnerEnabledStatus False personId
+
 sendEnablementSms :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> DTC.TransporterConfig -> Id DM.Merchant -> Flow ()
 sendEnablementSms merchantOpCityId personId transporterConfig merchantId =
   when (transporterConfig.sendSmsOnEnablement == Just True) $ do
@@ -861,6 +876,12 @@ getProcessedDriverDocuments :: Id DP.Person -> IQuery.EntityImagesInfo -> DVC.Do
 getProcessedDriverDocuments driverId entityImagesInfo docType useHVSdkForDL = do
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
       mbS3Path = getS3PathFromLatestImage entityImagesInfo docType
+      commonDocStatus dt = do
+        commonDocs <- QCommonDoc.findByDriverIdAndDocumentType (Just driverId) dt
+        let (status, reason, url) = checkImageValidity entityImagesInfo dt
+        case listToMaybe commonDocs of
+          Just doc -> return (Just (mapStatus doc.verificationStatus), doc.rejectReason <|> reason, url, Nothing, mbS3Path)
+          Nothing -> return (status, reason, url, Nothing, mbS3Path)
   case docType of
     DVC.DriverLicense -> do
       mbDL <- DLQuery.findByDriverId driverId -- add failure reason in dl and rc
@@ -914,21 +935,13 @@ getProcessedDriverDocuments driverId entityImagesInfo docType useHVSdkForDL = do
     DVC.UDYAMCertificate -> do
       mbUdyamCertificate <- QUDYAM.findByDriverId driverId
       return (mapStatus <$> (mbUdyamCertificate <&> (.verificationStatus)), Nothing, Nothing, Nothing, mbS3Path)
-    DVC.BusinessLicense -> do
-      let (status, reason, url) = checkImageValidity entityImagesInfo DVC.BusinessLicense
-      return (status, reason, url, Nothing, mbS3Path)
-    DVC.TaxiTransportLicense -> do
-      let (status, reason, url) = checkImageValidity entityImagesInfo DVC.TaxiTransportLicense
-      return (status, reason, url, Nothing, mbS3Path)
+    DVC.BusinessLicense -> commonDocStatus DVC.BusinessLicense
+    DVC.TaxiTransportLicense -> commonDocStatus DVC.TaxiTransportLicense
     DVC.BusinessRegistrationExtract -> do
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.BusinessRegistrationExtract
       return (status, reason, url, Nothing, mbS3Path)
-    DVC.TAXDetails -> do
-      let (status, reason, url) = checkImageValidity entityImagesInfo DVC.TAXDetails
-      return (status, reason, url, Nothing, mbS3Path)
-    DVC.FinnishIDResidencePermit -> do
-      let (status, reason, url) = checkImageValidity entityImagesInfo DVC.FinnishIDResidencePermit
-      return (status, reason, url, Nothing, mbS3Path)
+    DVC.TAXDetails -> commonDocStatus DVC.TAXDetails
+    DVC.FinnishIDResidencePermit -> commonDocStatus DVC.FinnishIDResidencePermit
     _ -> return (Nothing, Nothing, Nothing, Nothing, mbS3Path)
 
 callGetDLGetStatus :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()

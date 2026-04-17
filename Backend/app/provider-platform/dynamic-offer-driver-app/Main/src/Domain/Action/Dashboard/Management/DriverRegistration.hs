@@ -1761,20 +1761,56 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
           reason = req.reason
       sendDocumentRejectionNotification _merchantOpCityId docType reason driver
 
-postDriverRegistrationDocumentsUpdate :: ShortId DM.Merchant -> Context.City -> Common.UpdateDocumentRequest -> Flow APISuccess
+postDriverRegistrationDocumentsUpdate :: ShortId DM.Merchant -> Context.City -> Common.UpdateDocumentRequest -> Flow Common.UpdateDocumentResp
 postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
+  let mkUpdateResp mbPersonId enabled =
+        Common.UpdateDocumentResp
+          { result = "Success",
+            personId = cast @DP.Person @Common.Driver <$> mbPersonId,
+            enabled = enabled
+          }
   case _req of
     Common.Approve approveReq -> do
       handleApproveRequest approveReq merchant.id merchantOpCityId
-      whenJust (getImageIdFromApproveDetails approveReq) $ \imgId -> do
-        mbImage <- QImage.findById (Id imgId.getId)
-        whenJust mbImage $ \image ->
-          fork "call status Handler after document approval" $
-            void $ DStatus.statusHandler (image.personId, merchant.id, merchantOpCityId) (Just True) Nothing Nothing (Just False) Nothing Nothing
-    Common.Reject rejectReq -> handleRejectRequest rejectReq merchant.id merchantOpCityId
-  pure Success
+      mbPersonId <- case approveReq of
+        Common.CommonDocument req -> do
+          let documentId = Id req.documentId.getId
+          mbDocument <- QCommonDriverOnboardingDocuments.findById documentId
+          pure $ mbDocument >>= (.driverId)
+        _ -> case getImageIdFromApproveDetails approveReq of
+          Just imgId -> do
+            mbImage <- QImage.findById (Id imgId.getId)
+            pure $ (.personId) <$> mbImage
+          Nothing -> pure Nothing
+      enabled <- case mbPersonId of
+        Just personId -> do
+          statusRes <- DStatus.statusHandler (personId, merchant.id, merchantOpCityId) (Just True) Nothing Nothing (Just False) Nothing Nothing
+          pure statusRes.enabled
+        Nothing -> pure False
+      pure $ mkUpdateResp mbPersonId enabled
+    Common.Reject rejectReq -> do
+      handleRejectRequest rejectReq merchant.id merchantOpCityId
+      mbPersonId <- case rejectReq of
+        Common.CommonDocumentReject req -> do
+          let documentId = Id req.documentId.getId
+          mbDocument <- QCommonDriverOnboardingDocuments.findById documentId
+          pure $ mbDocument >>= (.driverId)
+        Common.ImageDocuments imgReq -> do
+          let imageId = Id imgReq.documentImageId.getId
+          mbImage <- QImage.findById imageId
+          pure $ (.personId) <$> mbImage
+        Common.SSNReject req -> do
+          ssnEnc <- encrypt req.ssn
+          mbSsnEntry <- QSSN.findBySSN (ssnEnc & hash)
+          pure $ (.driverId) <$> mbSsnEntry
+      enabled <- case mbPersonId of
+        Just personId -> do
+          statusRes <- DStatus.statusHandler (personId, merchant.id, merchantOpCityId) (Just True) Nothing Nothing (Just False) Nothing Nothing
+          pure statusRes.enabled
+        Nothing -> pure False
+      pure $ mkUpdateResp mbPersonId enabled
 
 convertVerifyOtp :: AadhaarVerificationResp -> Common.GenerateAadhaarOtpRes
 convertVerifyOtp AadhaarVerificationResp {..} = Common.GenerateAadhaarOtpRes {..}

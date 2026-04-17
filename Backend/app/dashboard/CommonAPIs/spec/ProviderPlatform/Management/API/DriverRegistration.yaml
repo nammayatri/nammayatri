@@ -210,7 +210,7 @@ apis:
       request:
         type: UpdateDocumentRequest
       response:
-        type: APISuccess
+        type: UpdateDocumentResp
       migrate:
         endpoint: DriverRegistrationAPI UpdateDocumentEndpoint
         endpointV2:
@@ -272,6 +272,10 @@ types:
   UnlinkDocumentResp:
    - mandatoryDocumentRemoved : Bool
    - recordType: NewType
+  UpdateDocumentResp:
+   - result: Text
+   - personId: Maybe (Id Driver)
+   - enabled: Bool
   DLDetails:
     - driverName: Maybe Text
     - driverLicenseNumber: Text

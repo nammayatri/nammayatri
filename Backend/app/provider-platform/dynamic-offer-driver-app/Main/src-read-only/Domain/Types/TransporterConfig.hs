@@ -37,6 +37,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     allowDashboardToPassVehicleDetails :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDefaultPlanAllocation :: Kernel.Prelude.Bool,
     allowDisableDriverToTakeSpecialZoneRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    allowDisableFleetOnRejectionDoc :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDriverToUseFleetRcs :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDuplicateAadhaar :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDuplicateGst :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
