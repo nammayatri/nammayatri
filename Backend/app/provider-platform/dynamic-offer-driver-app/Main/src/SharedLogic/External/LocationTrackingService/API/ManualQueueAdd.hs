@@ -14,7 +14,6 @@
 
 module SharedLogic.External.LocationTrackingService.API.ManualQueueAdd where
 
-import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified EulerHS.Types as ET
 import Kernel.Prelude
@@ -29,7 +28,6 @@ type ManualQueueAddAPI =
     :> "queue"
     :> Capture "vehicleType" Text
     :> "drivers"
-    :> Capture "merchantId" (Id DM.Merchant)
     :> Capture "driverId" (Id DP.Person)
     :> "position"
     :> Capture "position" Int
@@ -38,5 +36,5 @@ type ManualQueueAddAPI =
 manualQueueAddAPI :: Proxy ManualQueueAddAPI
 manualQueueAddAPI = Proxy
 
-manualQueueAdd :: Text -> Text -> Id DM.Merchant -> Id DP.Person -> Int -> ET.EulerClient APISuccess
+manualQueueAdd :: Text -> Text -> Id DP.Person -> Int -> ET.EulerClient APISuccess
 manualQueueAdd = ET.client manualQueueAddAPI

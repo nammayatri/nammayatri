@@ -51,7 +51,7 @@ postSpecialZoneQueueManualQueueAdd merchantShortId opCity req = do
   let driverId = Kernel.Types.Id.Id req.driverId :: Kernel.Types.Id.Id DP.Person
   -- Remove first (if already in queue), then add at desired position
   void $ LTSFlow.manualQueueRemove req.specialLocationId req.vehicleType merchant.id driverId
-  void $ LTSFlow.manualQueueAdd req.specialLocationId req.vehicleType merchant.id driverId req.queuePosition
+  void $ LTSFlow.manualQueueAdd req.specialLocationId req.vehicleType driverId req.queuePosition
   logInfo $ "Dashboard: added driver " <> req.driverId <> " to queue at position " <> show req.queuePosition <> " for " <> req.specialLocationId <> "/" <> req.vehicleType
   pure Kernel.Types.APISuccess.Success
 
