@@ -137,6 +137,35 @@ updateMerchantIdAndCityIdByDriverId driverId merchantId mbMerchantOperatingCityI
     ]
     [Se.Is BeamV.driverId (Se.Eq $ getId driverId)]
 
+-- | Update vehicle row by registration number only (works even when RC is unassigned to a driver).
+updateVehicleFromRcEdit ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Int ->
+  m ()
+updateVehicleFromRcEdit oldRegistrationNo newRegistrationNo mbMake mbModel mbColor mbYearInt = do
+  mbVehicle <- findOneWithKV [Se.Is BeamV.registrationNo $ Se.Eq oldRegistrationNo]
+  whenJust mbVehicle $ \veh -> do
+    now <- getCurrentTime
+    let make' = mbMake <|> veh.make
+        model' = maybe veh.model T.strip mbModel
+        color' = maybe veh.color T.strip mbColor
+        mYManufacturing =
+          maybe veh.mYManufacturing (\y -> Just $ Days.fromGregorian (fromIntegral y) 1 1) mbYearInt
+    updateOneWithKV
+      [ Se.Set BeamV.registrationNo newRegistrationNo,
+        Se.Set BeamV.make make',
+        Se.Set BeamV.model model',
+        Se.Set BeamV.color color',
+        Se.Set BeamV.mYManufacturing mYManufacturing,
+        Se.Set BeamV.updatedAt now
+      ]
+      [Se.Is BeamV.registrationNo $ Se.Eq oldRegistrationNo]
+
 -- | When the driver's vehicle row still matches the old RC registration number, sync fields from optional dashboard edits.
 updateFleetVehicleFromDashboardRcEdit ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

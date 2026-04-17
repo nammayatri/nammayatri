@@ -1230,7 +1230,7 @@ checkIfImageUploadedOrInvalidated entityImagesInfo docType onlyImageLookup allDo
               ( \config ->
                   config.documentType == docType
                     && not config.isDefaultEnabledOnManualVerification
-                )
+              )
               driverConfigs
   case images of
     [] -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
