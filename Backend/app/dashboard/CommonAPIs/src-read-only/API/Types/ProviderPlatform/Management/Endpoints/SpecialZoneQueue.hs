@@ -14,20 +14,6 @@ import qualified Kernel.Types.HideSecrets
 import Servant
 import Servant.Client
 
-data ManualQueueAddReq = ManualQueueAddReq {specialLocationId :: Kernel.Prelude.Text, vehicleType :: Kernel.Prelude.Text, driverId :: Kernel.Prelude.Text, queuePosition :: Kernel.Prelude.Int}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance Kernel.Types.HideSecrets.HideSecrets ManualQueueAddReq where
-  hideSecrets = Kernel.Prelude.identity
-
-data ManualQueueRemoveReq = ManualQueueRemoveReq {specialLocationId :: Kernel.Prelude.Text, vehicleType :: Kernel.Prelude.Text, driverId :: Kernel.Prelude.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance Kernel.Types.HideSecrets.HideSecrets ManualQueueRemoveReq where
-  hideSecrets = Kernel.Prelude.identity
-
 data SpecialZoneQueueStatsRes = SpecialZoneQueueStatsRes
   { gateId :: Kernel.Prelude.Text,
     gateName :: Kernel.Prelude.Text,
@@ -44,12 +30,7 @@ data SpecialZoneQueueStatsRes = SpecialZoneQueueStatsRes
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TriggerSpecialZoneQueueNotifyReq = TriggerSpecialZoneQueueNotifyReq
-  { gateId :: Kernel.Prelude.Text,
-    vehicleType :: Kernel.Prelude.Text,
-    driversToNotify :: Kernel.Prelude.Int,
-    forceNotifyDriverIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text]
-  }
+data TriggerSpecialZoneQueueNotifyReq = TriggerSpecialZoneQueueNotifyReq {gateId :: Kernel.Prelude.Text, vehicleType :: Kernel.Prelude.Text, driversToNotify :: Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -71,33 +52,25 @@ data VehicleQueueStats = VehicleQueueStats
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("specialZoneQueue" :> (PostSpecialZoneQueueTriggerNotify :<|> GetSpecialZoneQueueQueueStats :<|> PostSpecialZoneQueueManualQueueAdd :<|> PostSpecialZoneQueueManualQueueRemove))
+type API = ("specialZoneQueue" :> (PostSpecialZoneQueueTriggerNotify :<|> GetSpecialZoneQueueQueueStats))
 
 type PostSpecialZoneQueueTriggerNotify = ("triggerNotify" :> ReqBody ('[JSON]) TriggerSpecialZoneQueueNotifyReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
 type GetSpecialZoneQueueQueueStats = ("queueStats" :> Capture "gateId" Kernel.Prelude.Text :> Get ('[JSON]) SpecialZoneQueueStatsRes)
 
-type PostSpecialZoneQueueManualQueueAdd = ("manualQueueAdd" :> ReqBody ('[JSON]) ManualQueueAddReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
-
-type PostSpecialZoneQueueManualQueueRemove = ("manualQueueRemove" :> ReqBody ('[JSON]) ManualQueueRemoveReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
-
 data SpecialZoneQueueAPIs = SpecialZoneQueueAPIs
   { postSpecialZoneQueueTriggerNotify :: (TriggerSpecialZoneQueueNotifyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getSpecialZoneQueueQueueStats :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient SpecialZoneQueueStatsRes),
-    postSpecialZoneQueueManualQueueAdd :: (ManualQueueAddReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postSpecialZoneQueueManualQueueRemove :: (ManualQueueRemoveReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
+    getSpecialZoneQueueQueueStats :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient SpecialZoneQueueStatsRes)
   }
 
 mkSpecialZoneQueueAPIs :: (Client EulerHS.Types.EulerClient API -> SpecialZoneQueueAPIs)
 mkSpecialZoneQueueAPIs specialZoneQueueClient = (SpecialZoneQueueAPIs {..})
   where
-    postSpecialZoneQueueTriggerNotify :<|> getSpecialZoneQueueQueueStats :<|> postSpecialZoneQueueManualQueueAdd :<|> postSpecialZoneQueueManualQueueRemove = specialZoneQueueClient
+    postSpecialZoneQueueTriggerNotify :<|> getSpecialZoneQueueQueueStats = specialZoneQueueClient
 
 data SpecialZoneQueueUserActionType
   = POST_SPECIAL_ZONE_QUEUE_TRIGGER_NOTIFY
   | GET_SPECIAL_ZONE_QUEUE_QUEUE_STATS
-  | POST_SPECIAL_ZONE_QUEUE_MANUAL_QUEUE_ADD
-  | POST_SPECIAL_ZONE_QUEUE_MANUAL_QUEUE_REMOVE
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
