@@ -83,7 +83,7 @@ incrementCancelledCount ::
   Id DP.Person ->
   Integer ->
   m ()
-incrementCancelledCount driverId windowSize = Redis.withCrossAppRedis $ SWC.incrementWindowCount (mkRideCancelledKey driverId.getId) (SWC.SlidingWindowOptions windowSize SWC.Days)
+incrementCancelledCount driverId windowSize = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ SWC.incrementWindowCount (mkRideCancelledKey driverId.getId) (SWC.SlidingWindowOptions windowSize SWC.Days)
 
 incrementAssignedCount ::
   ( Redis.HedisFlow m r,
@@ -93,7 +93,7 @@ incrementAssignedCount ::
   Id DP.Person ->
   Integer ->
   m ()
-incrementAssignedCount driverId windowSize = Redis.withCrossAppRedis $ SWC.incrementWindowCount (mkRideAssignedKey driverId.getId) (SWC.SlidingWindowOptions windowSize SWC.Days)
+incrementAssignedCount driverId windowSize = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ SWC.incrementWindowCount (mkRideAssignedKey driverId.getId) (SWC.SlidingWindowOptions windowSize SWC.Days)
 
 getCancellationCount ::
   ( Redis.HedisFlow m r,
@@ -103,7 +103,7 @@ getCancellationCount ::
   Integer ->
   Id DP.Person ->
   m Integer
-getCancellationCount windowSize driverId = Redis.withCrossAppRedis $ SWC.getCurrentWindowCount (mkRideCancelledKey driverId.getId) (SWC.SlidingWindowOptions windowSize SWC.Days)
+getCancellationCount windowSize driverId = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ SWC.getCurrentWindowCount (mkRideCancelledKey driverId.getId) (SWC.SlidingWindowOptions windowSize SWC.Days)
 
 getAssignedCount ::
   ( Redis.HedisFlow m r,
@@ -113,7 +113,7 @@ getAssignedCount ::
   Integer ->
   Id DP.Person ->
   m Integer
-getAssignedCount windowSize driverId = Redis.withCrossAppRedis $ SWC.getCurrentWindowCount (mkRideAssignedKey driverId.getId) (SWC.SlidingWindowOptions windowSize SWC.Days)
+getAssignedCount windowSize driverId = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ SWC.getCurrentWindowCount (mkRideAssignedKey driverId.getId) (SWC.SlidingWindowOptions windowSize SWC.Days)
 
 getCancellationRateData ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -156,8 +156,8 @@ getCancellationRateOfDaysStandalone ::
   Integer ->
   m (Integer, Integer)
 getCancellationRateOfDaysStandalone driverId period windowSize = do
-  cancelledCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideCancelledKey driverId.getId) (SWC.SlidingWindowOptions windowSize SWC.Days)
-  assignedCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideAssignedKey driverId.getId) (SWC.SlidingWindowOptions windowSize SWC.Days)
+  cancelledCount <- fmap (sum . map (fromMaybe 0)) $ Redis.runInMasterCloudRedisCellWithCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideCancelledKey driverId.getId) (SWC.SlidingWindowOptions windowSize SWC.Days)
+  assignedCount <- fmap (sum . map (fromMaybe 0)) $ Redis.runInMasterCloudRedisCellWithCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideAssignedKey driverId.getId) (SWC.SlidingWindowOptions windowSize SWC.Days)
   return (cancelledCount, assignedCount)
 
 -- Update driver cancellation percentage tags once per day
@@ -175,7 +175,7 @@ updateDriverCancellationPercentageTagsDaily mocId driverId cancellationRates = d
       redisKey = "driver-cancellation-tags-updated:" <> driverId.getId <> ":" <> show today
 
   -- Check if already updated today
-  alreadyUpdated <- Redis.withCrossAppRedis $ Redis.get @Text redisKey
+  alreadyUpdated <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get @Text redisKey
   when (isNothing alreadyUpdated) $ do
     -- Update tags using pre-calculated rates
     driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -199,7 +199,7 @@ updateDriverCancellationPercentageTagsDaily mocId driverId cancellationRates = d
       QPerson.updateDriverTag (Just updatedTags) driverId
       -- Mark as updated today (expires at end of day)
       let secondsUntilMidnight = diffUTCTime (addUTCTime (fromIntegral (24 * 60 * 60 :: Int)) (UTCTime today 0)) now
-      Redis.withCrossAppRedis $ Redis.set redisKey ("1" :: Text) >> Redis.expire redisKey (round secondsUntilMidnight)
+      Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.set redisKey ("1" :: Text) >> Redis.expire redisKey (round secondsUntilMidnight)
       logDebug $ "Updated cancellation percentage tags for driver " <> driverId.getId
 
 nudgeOrBlockDriver ::
@@ -308,8 +308,8 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
 
     getCancellationRateOfDays period windowSize = do
       let windowInt = toInteger windowSize
-      cancelledCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideCancelledKey driver.id.getId) (SWC.SlidingWindowOptions windowInt SWC.Days)
-      assignedCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideAssignedKey driver.id.getId) (SWC.SlidingWindowOptions windowInt SWC.Days)
+      cancelledCount <- fmap (sum . map (fromMaybe 0)) $ Redis.runInMasterCloudRedisCellWithCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideCancelledKey driver.id.getId) (SWC.SlidingWindowOptions windowInt SWC.Days)
+      assignedCount <- fmap (sum . map (fromMaybe 0)) $ Redis.runInMasterCloudRedisCellWithCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideAssignedKey driver.id.getId) (SWC.SlidingWindowOptions windowInt SWC.Days)
       let cancellationRate = ((cancelledCount) * 100) `div` max 1 (assignedCount)
       return (cancellationRate, assignedCount)
 
