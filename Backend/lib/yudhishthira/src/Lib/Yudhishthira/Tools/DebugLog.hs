@@ -82,15 +82,16 @@ setJsonLogicDebugFlags mocId req = do
   let identifierKey = debugLogIdentifierToText req.identifier
   now <- getCurrentTime
   let ttlSeconds = max 1 $ ceiling $ diffUTCTime req.endTime now + 3600 -- extra hour buffer
-  if req.enabled
-    then do
-      Hedis.setExp (mkDebugEnabledKey mocId identifierKey) ("1" :: Text) ttlSeconds
-      Hedis.setExp (mkDebugStartTimeKey mocId identifierKey) (T.pack $ ISO.iso8601Show req.startTime) ttlSeconds
-      Hedis.setExp (mkDebugEndTimeKey mocId identifierKey) (T.pack $ ISO.iso8601Show req.endTime) ttlSeconds
-    else do
-      Hedis.del (mkDebugEnabledKey mocId identifierKey)
-      Hedis.del (mkDebugStartTimeKey mocId identifierKey)
-      Hedis.del (mkDebugEndTimeKey mocId identifierKey)
+  Hedis.withMasterRedis $ do
+    if req.enabled
+      then do
+        Hedis.setExp (mkDebugEnabledKey mocId identifierKey) ("1" :: Text) ttlSeconds
+        Hedis.setExp (mkDebugStartTimeKey mocId identifierKey) (T.pack $ ISO.iso8601Show req.startTime) ttlSeconds
+        Hedis.setExp (mkDebugEndTimeKey mocId identifierKey) (T.pack $ ISO.iso8601Show req.endTime) ttlSeconds
+      else do
+        Hedis.del (mkDebugEnabledKey mocId identifierKey)
+        Hedis.del (mkDebugStartTimeKey mocId identifierKey)
+        Hedis.del (mkDebugEndTimeKey mocId identifierKey)
 
 -- | Check if debug logging is enabled for an identifier and current time is within window
 checkDebugLogFlags ::
@@ -100,12 +101,12 @@ checkDebugLogFlags ::
   m Bool
 checkDebugLogFlags mocId identifier' = do
   let enabledKey = mkDebugEnabledKey mocId identifier'
-  mbEnabled :: Maybe Text <- Hedis.get enabledKey
+  mbEnabled :: Maybe Text <- Hedis.withMasterRedis $ Hedis.get enabledKey
   logInfo $ "JsonLogicDebug: checkFlags key=" <> enabledKey <> " enabled=" <> show mbEnabled
   case mbEnabled of
     Just "1" -> do
-      mbStartStr :: Maybe Text <- Hedis.get (mkDebugStartTimeKey mocId identifier')
-      mbEndStr :: Maybe Text <- Hedis.get (mkDebugEndTimeKey mocId identifier')
+      mbStartStr :: Maybe Text <- Hedis.withMasterRedis $ Hedis.get (mkDebugStartTimeKey mocId identifier')
+      mbEndStr :: Maybe Text <- Hedis.withMasterRedis $ Hedis.get (mkDebugEndTimeKey mocId identifier')
       now <- getCurrentTime
       let mbInWindow = do
             startStr <- mbStartStr
