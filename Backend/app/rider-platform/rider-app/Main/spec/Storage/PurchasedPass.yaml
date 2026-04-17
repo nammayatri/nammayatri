@@ -75,6 +75,7 @@ PurchasedPass:
   constraints:
     id: PrimaryKey
     passNumber: SecondaryKey
+    personId: "!SecondaryKey"
 
   extraOperations:
     - EXTRA_QUERY_FILE
