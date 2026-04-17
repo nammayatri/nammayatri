@@ -258,6 +258,7 @@ import SharedLogic.DriverOnboarding
 import SharedLogic.DriverPool as DP
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculatorV2 as FCV2
 import SharedLogic.FarePolicy
@@ -2869,9 +2870,11 @@ getDummyRideRequest ::
     EncFlow m r,
     CacheFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasShortDurationRetryCfg r c
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   m APISuccess
