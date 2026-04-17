@@ -116,3 +116,12 @@ apis:
         type: UpdateProfilePictureReq
       response:
         type: APISuccess
+
+  - POST:
+      endpoint: /customer/{customerId}/pass/{purchasedPassId}/switchUserId
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        purchasedPassId: Id PurchasedPass
+      response:
+        type: APISuccess

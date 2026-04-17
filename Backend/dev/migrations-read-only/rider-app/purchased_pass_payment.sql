@@ -38,3 +38,8 @@ ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN is_dashboard boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN pass_enum text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN static_person_id text ;

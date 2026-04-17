@@ -56,6 +56,7 @@ PurchasedPass:
     profilePicture: Maybe Text
     preferredSource: Maybe Text
     preferredDestination: Maybe Text
+    staticPersonId: Maybe Text
 
   beamType:
     deviceSwitchCount: Maybe Int
@@ -75,6 +76,7 @@ PurchasedPass:
   constraints:
     id: PrimaryKey
     passNumber: SecondaryKey
+    staticPersonId: SecondaryKey
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -94,6 +96,23 @@ PurchasedPass:
       kvFunction: updateWithKV
       params: [preferredSource, preferredDestination]
       where: id
+
+    deleteByPersonIdAndStatus:
+      kvFunction: deleteWithKV
+      where:
+        and:
+          - personId
+          - status
+
+    findByStaticPersonId:
+      kvFunction: findAllWithKV
+      where: staticPersonId
+
+    updatePersonId:
+      kvFunction: updateWithKV
+      params: [personId]
+      where: id
+
 
 PurchasedPassPayment:
   tableName: purchased_pass_payment
@@ -117,6 +136,7 @@ PurchasedPassPayment:
     merchantOperatingCityId: Id MerchantOperatingCity
     profilePicture: Maybe Text
     passEnum: Maybe PassEnum
+    staticPersonId: Maybe Text
 
   beamType:
     benefitDescription: Maybe Text
@@ -204,6 +224,19 @@ PurchasedPassPayment:
     updateProfilePictureByPurchasedPassIdAndStatus:
       kvFunction: updateWithKV
       params: [profilePicture]
+      where:
+        and:
+          - purchasedPassId
+          - in:
+            - status
+
+    updatePersonId:
+      kvFunction: updateWithKV
+      params: [personId]
+      where: purchasedPassId
+
+    deleteByPurchasedPassIdAndStatus:
+      kvFunction: deleteWithKV
       where:
         and:
           - purchasedPassId

@@ -41,6 +41,7 @@ data PurchasedPass = PurchasedPass
     preferredSource :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     profilePicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startDate :: Data.Time.Calendar.Day,
+    staticPersonId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Domain.Types.PurchasedPass.StatusType,
     usedTripCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     verificationValidity :: Kernel.Types.Common.Seconds,

@@ -34,6 +34,7 @@ data PurchasedPassPayment = PurchasedPassPayment
     profilePicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     purchasedPassId :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass,
     startDate :: Data.Time.Calendar.Day,
+    staticPersonId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Domain.Types.PurchasedPass.StatusType,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime

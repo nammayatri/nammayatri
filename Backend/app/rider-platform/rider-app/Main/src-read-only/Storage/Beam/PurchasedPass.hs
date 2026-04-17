@@ -38,6 +38,7 @@ data PurchasedPassT f = PurchasedPassT
     preferredSource :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     profilePicture :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     startDate :: B.C f Data.Time.Calendar.Day,
+    staticPersonId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     status :: B.C f Domain.Types.PurchasedPass.StatusType,
     usedTripCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     verificationValidity :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
@@ -52,6 +53,6 @@ instance B.Table PurchasedPassT where
 
 type PurchasedPass = PurchasedPassT Identity
 
-$(enableKVPG ''PurchasedPassT ['id] [['passNumber]])
+$(enableKVPG ''PurchasedPassT ['id] [['passNumber], ['staticPersonId]])
 
 $(mkTableInstances ''PurchasedPassT "purchased_pass")
