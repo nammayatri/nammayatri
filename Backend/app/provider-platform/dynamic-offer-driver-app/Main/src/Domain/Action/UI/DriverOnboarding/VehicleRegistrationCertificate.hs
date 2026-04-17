@@ -280,6 +280,13 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
               throwImageError req.imageId $ ImageDocumentNumberMismatch (maybe "null" maskText extractRCNumber) (maybe "null" maskText rcNumber)
           Nothing -> throwImageError req.imageId ImageExtractionFailed
   whenJust mbFleetOwnerId $ \fleetOwnerId -> do
+    -- Reject cross-fleet hijacks: if the RC is already linked to a different
+    -- fleet owner, fail rather than silently re-linking it to this fleet.
+    mbExistingRC <- VRCExtra.findLastVehicleRCWrapper req.vehicleRegistrationCertNumber
+    whenJust mbExistingRC $ \existingRC ->
+      whenJust existingRC.fleetOwnerId $ \existingFleetId ->
+        when (existingFleetId /= fleetOwnerId.getId) $
+          throwError VehicleBelongsToAnotherFleet
     Redis.set (makeFleetOwnerKey req.vehicleRegistrationCertNumber) fleetOwnerId.getId
     -- Optionally update existing RC's fleetOwnerId in DB if enabled via transporterConfig
     updateExistingRCFleetOwnerIfEnabled transporterConfig req.vehicleRegistrationCertNumber fleetOwnerId
