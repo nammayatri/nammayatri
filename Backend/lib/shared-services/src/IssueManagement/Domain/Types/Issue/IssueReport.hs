@@ -33,6 +33,11 @@ data IssueReport = IssueReport
     chats :: [Chat],
     merchantId :: Maybe (Id Merchant),
     becknIssueId :: Maybe Text,
-    reopenedCount :: Int
+    reopenedCount :: Int,
+    firstResponseAt :: Maybe UTCTime,
+    resolvedAt :: Maybe UTCTime,
+    slaDeadline :: Maybe UTCTime,
+    priority :: Maybe Text,
+    escalationLevel :: Maybe Int
   }
   deriving (Show, Generic, Read, Eq, Ord, ToJSON, FromJSON, BP.ToSchema)

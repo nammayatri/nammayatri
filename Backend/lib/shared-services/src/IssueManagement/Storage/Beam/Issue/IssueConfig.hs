@@ -34,7 +34,10 @@ data IssueConfigT f = IssueConfigT
     reopenCount :: B.C f Int,
     onIssueCloseMsgs :: B.C f [Text],
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    slaFirstResponseDurationHours :: B.C f (Maybe Double),
+    slaResolutionDurationHours :: B.C f (Maybe Double),
+    enableSlaTracking :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)
 

@@ -266,6 +266,11 @@ createIssueReportV2 _merchantShortId _city Common.IssueReportReqV2 {..} issueHan
             merchantId = Just (person.merchantId),
             reopenedCount = 0,
             becknIssueId = Nothing,
+            firstResponseAt = Nothing,
+            resolvedAt = Nothing,
+            slaDeadline = Nothing,
+            priority = Nothing,
+            escalationLevel = Nothing,
             ..
           }
 

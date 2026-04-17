@@ -137,6 +137,9 @@ instance FromTType' BeamIR.IssueReport IssueReport where
             merchantId = Id <$> merchantId,
             becknIssueId = becknIssueId,
             reopenedCount = fromMaybe 0 reopenedCount,
+            firstResponseAt = T.localTimeToUTC T.utc <$> firstResponseAt,
+            resolvedAt = T.localTimeToUTC T.utc <$> resolvedAt,
+            slaDeadline = T.localTimeToUTC T.utc <$> slaDeadline,
             ..
           }
 
@@ -163,5 +166,10 @@ instance ToTType' BeamIR.IssueReport IssueReport where
         BeamIR.chats = chats,
         BeamIR.merchantId = getId <$> merchantId,
         BeamIR.becknIssueId = becknIssueId,
-        BeamIR.reopenedCount = Just reopenedCount
+        BeamIR.reopenedCount = Just reopenedCount,
+        BeamIR.firstResponseAt = T.utcToLocalTime T.utc <$> firstResponseAt,
+        BeamIR.resolvedAt = T.utcToLocalTime T.utc <$> resolvedAt,
+        BeamIR.slaDeadline = T.utcToLocalTime T.utc <$> slaDeadline,
+        BeamIR.priority = priority,
+        BeamIR.escalationLevel = escalationLevel
       }
