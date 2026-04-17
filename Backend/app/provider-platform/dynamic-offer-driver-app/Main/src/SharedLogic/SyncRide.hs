@@ -31,6 +31,7 @@ import Domain.Types.Beckn.Status
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.BookingCancellationReason as DBCReason
+import qualified Domain.Types.CancellationReason as DTCR
 import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
@@ -115,27 +116,25 @@ syncInProgressRide ride booking = do
 
 syncCancelledRide :: Maybe DBCR.CancellationSource -> Maybe DRide.Ride -> DB.Booking -> DM.Merchant -> Flow Common.RideSyncRes
 syncCancelledRide mbCancellationSource mbRide booking merchant = do
-  cancellationSource <- maybe (findCancellationSource mbRide) pure mbCancellationSource
+  cancellationSource <- maybe (fst <$> findCancellationInfo mbRide) pure mbCancellationSource
   handle (errHandler (mbRide <&> (.status)) booking.status "booking cancellation") $
     CallBAP.sendBookingCancelledUpdateToBAP booking merchant cancellationSource Nothing
   pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Success. Sent booking cancellation update to bap"
 
 fetchBookingCancelledInfo :: Maybe DRide.Ride -> Flow BookingCancelledInfo
 fetchBookingCancelledInfo mbRide = do
-  cancellationSource <- findCancellationSource mbRide
+  (cancellationSource, cancellationReasonCode) <- findCancellationInfo mbRide
   pure BookingCancelledInfo {..}
 
-findCancellationSource :: Maybe DRide.Ride -> Flow DBCR.CancellationSource
-findCancellationSource (Just ride) = do
+findCancellationInfo :: Maybe DRide.Ride -> Flow (DBCR.CancellationSource, Maybe Text)
+findCancellationInfo (Just ride) = do
   mbBookingCReason <- runInReplica $ QBCReason.findByRideId (Just ride.id)
-  -- mbBookingCReason <- QBCReason.findByRideId ride.id
   case mbBookingCReason of
-    Just bookingCReason -> pure bookingCReason.source
+    Just bookingCReason -> pure (bookingCReason.source, extractReasonCode <$> bookingCReason.reasonCode)
     Nothing -> do
       mbBookingCReason' <- runInReplica $ QBCReason.findByBookingId ride.bookingId
-      -- mbBookingCReason' <- QBCReason.findByBookingId ride.bookingId
       case mbBookingCReason' of
-        Just bookingCReason' -> pure bookingCReason'.source
+        Just bookingCReason' -> pure (bookingCReason'.source, extractReasonCode <$> bookingCReason'.reasonCode)
         Nothing -> do
           logWarning $
             "No cancellation reason found for ride "
@@ -143,8 +142,10 @@ findCancellationSource (Just ride) = do
               <> " and booking "
               <> show ride.bookingId
               <> "; Using ByMerchant as cancellation source"
-          pure DBCReason.ByMerchant
-findCancellationSource Nothing = pure DBCReason.ByMerchant
+          pure (DBCReason.ByMerchant, Nothing)
+  where
+    extractReasonCode (DTCR.CancellationReasonCode code) = code
+findCancellationInfo Nothing = pure (DBCReason.ByMerchant, Nothing)
 
 -- REALLOCATION --
 

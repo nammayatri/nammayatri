@@ -26,5 +26,6 @@ newtype OnCancelBuildReq
 data DBookingCancelledReqV2 = DBookingCancelledReqV2
   { booking :: DRB.Booking,
     cancellationSource :: SBCR.CancellationSource,
-    cancellationFee :: Maybe Common.PriceAPIEntity
+    cancellationFee :: Maybe Common.PriceAPIEntity,
+    cancellationReasonCode :: Maybe Text
   }
