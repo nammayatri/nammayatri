@@ -50,10 +50,11 @@ incrementCounter ::
   Integer -> -- windowSizeDays
   m ()
 incrementCounter entityType actionType counterType entityId windowSizeDays =
-  Redis.withCrossAppRedis $
-    SWC.incrementWindowCount
-      (mkCounterKey entityType actionType counterType entityId)
-      (SWC.SlidingWindowOptions windowSizeDays SWC.Days)
+  Redis.withMasterRedis $
+    Redis.withCrossAppRedis $
+      SWC.incrementWindowCount
+        (mkCounterKey entityType actionType counterType entityId)
+        (SWC.SlidingWindowOptions windowSizeDays SWC.Days)
 
 -- | Get the count for a specific period within the window
 -- periodDays: how many days to look back (e.g. 1 for daily, 7 for weekly)
@@ -71,13 +72,14 @@ getCountForPeriod ::
   Integer -> -- windowSizeDays: SWC storage window
   m Integer
 getCountForPeriod entityType actionType counterType entityId periodDays windowSizeDays =
-  Redis.withCrossAppRedis $ do
-    values <-
-      SWC.getCurrentWindowValuesUptoLast
-        periodDays
-        (mkCounterKey entityType actionType counterType entityId)
-        (SWC.SlidingWindowOptions windowSizeDays SWC.Days)
-    return $ sum $ map (fromMaybe 0) values
+  Redis.withMasterRedis $
+    Redis.withCrossAppRedis $ do
+      values <-
+        SWC.getCurrentWindowValuesUptoLast
+          periodDays
+          (mkCounterKey entityType actionType counterType entityId)
+          (SWC.SlidingWindowOptions windowSizeDays SWC.Days)
+      return $ sum $ map (fromMaybe 0) values
 
 -- | Build CounterValues for a given period
 -- Fetches both ACTION_COUNT and ELIGIBLE_COUNT for the period and computes the rate
