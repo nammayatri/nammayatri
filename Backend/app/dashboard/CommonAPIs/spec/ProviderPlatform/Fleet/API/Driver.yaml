@@ -1946,6 +1946,7 @@ types:
     - associatedOn: Maybe UTCTime
     - enabled: Maybe Bool
     - selectedServiceTiers: [Text]
+    - driverDob: Maybe UTCTime
   EditVehicleReq:
     - manufacturer: Maybe Text
     - model: Maybe Text
