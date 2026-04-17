@@ -203,13 +203,13 @@ manualQueueRemove specialLocationId vehicleType merchantId driverId = do
   logDebug $ "lts manual queue remove: " <> show manualQueueRemoveResp
   return manualQueueRemoveResp
 
-manualQueueAdd :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Text -> Text -> Id DM.Merchant -> Id DP.Person -> Int -> m APISuccess
-manualQueueAdd specialLocationId vehicleType merchantId driverId position = do
+manualQueueAdd :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Text -> Text -> Id DP.Person -> Int -> m APISuccess
+manualQueueAdd specialLocationId vehicleType driverId position = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
   manualQueueAddResp <-
     withShortRetry $
-      callAPI url (ManualQueueAddAPI.manualQueueAdd specialLocationId vehicleType merchantId driverId position) "manualQueueAdd" ManualQueueAddAPI.manualQueueAddAPI
+      callAPI url (ManualQueueAddAPI.manualQueueAdd specialLocationId vehicleType driverId position) "manualQueueAdd" ManualQueueAddAPI.manualQueueAddAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_MANUAL_QUEUE_ADD_API") url)
   logDebug $ "lts manual queue add: " <> show manualQueueAddResp
   return manualQueueAddResp
