@@ -275,7 +275,7 @@ clearConfigCacheWithPrefix prefix merchanOperatingCityId configDomain mbVersion 
 
 deleteConfigHashKey :: BeamFlow m r => Id MerchantOperatingCity -> LogicDomain -> m ()
 deleteConfigHashKey merchantOpCityId configDomain = do
-  Hedis.withCrossAppRedis $ Hedis.del (makeRedisHashKeyForConfig merchantOpCityId configDomain)
+  Hedis.runInMultiCloudRedisWrite $ Hedis.withCrossAppRedis $ Hedis.del (makeRedisHashKeyForConfig merchantOpCityId configDomain)
 
 findOneUiConfig :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r, HasField "config" a Value) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> m (Maybe a) -> Bool -> m (Maybe (a, Int))
 findOneUiConfig merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDimensions getConfigFromDBFunc isBaseLogic = do

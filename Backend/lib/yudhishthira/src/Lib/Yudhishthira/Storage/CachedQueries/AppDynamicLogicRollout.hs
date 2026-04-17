@@ -85,10 +85,10 @@ delete :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types.Mer
 delete = Queries.delete
 
 clearCityConfigsCache :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> m ()
-clearCityConfigsCache cityId = Hedis.del $ cityConfigsCacheKey cityId
+clearCityConfigsCache cityId = Hedis.runInMultiCloudRedisWrite $ Hedis.del $ cityConfigsCacheKey cityId
 
 clearDomainCache :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ()
-clearDomainCache cityId domain = Hedis.del $ domainCacheKey cityId domain
+clearDomainCache cityId domain = Hedis.runInMultiCloudRedisWrite $ Hedis.del $ domainCacheKey cityId domain
 
 createMany :: BeamFlow.BeamFlow m r => [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout] -> m ()
 createMany = Queries.createMany
@@ -106,7 +106,7 @@ baseRolloutCacheKey :: Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperati
 baseRolloutCacheKey cityId domain = "yudhishthira-CachedQueries:AppDynamicLogicRollout:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId cityId <> ":Domain-" <> show domain <> ":BaseRollout"
 
 clearBaseRolloutCacheKey :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ()
-clearBaseRolloutCacheKey cityId domain = Hedis.del $ baseRolloutCacheKey cityId domain
+clearBaseRolloutCacheKey cityId domain = Hedis.runInMultiCloudRedisWrite $ Hedis.del $ baseRolloutCacheKey cityId domain
 
 clearCache :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ()
 clearCache cityId domain = do
