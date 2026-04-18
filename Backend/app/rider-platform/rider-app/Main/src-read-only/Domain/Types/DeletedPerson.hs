@@ -20,6 +20,7 @@ data DeletedPerson = DeletedPerson
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     reasonToDelete :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    staticPersonId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

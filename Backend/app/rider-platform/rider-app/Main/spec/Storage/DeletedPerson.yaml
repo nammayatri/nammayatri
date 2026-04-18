@@ -16,6 +16,16 @@ DeletedPerson:
     deviceId : Maybe Text
     clientOsType: Maybe DeviceType
     reasonToDelete: Maybe Text
+    staticPersonId: Maybe Text
 
   constraints:
     personId: PrimaryKey
+    staticPersonId: "!SecondaryKey"
+
+  queries:
+    findAllByStaticPersonId:
+      kvFunction: findAllWithOptionsKV
+      where: staticPersonId
+      orderBy:
+        field: createdAt
+        order: desc

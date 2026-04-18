@@ -484,6 +484,7 @@ library
       SharedLogic.NySubscription
       SharedLogic.Offer
       SharedLogic.OTP
+      SharedLogic.PassRestore
       SharedLogic.Payment
       SharedLogic.PaymentVendorSplits
       SharedLogic.Person

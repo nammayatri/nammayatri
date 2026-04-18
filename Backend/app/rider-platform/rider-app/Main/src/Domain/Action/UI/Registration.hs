@@ -110,6 +110,7 @@ import SharedLogic.External.Nandi.Types (GimsVerifyReq (..))
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.OTP as SOTP
+import qualified SharedLogic.PassRestore as PassRestore
 import qualified SharedLogic.Person as SLP
 import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.Merchant as QMerchant
@@ -948,6 +949,16 @@ verify tokenId req mbClientId = do
     checkIfReferralCodeExists <- Person.findPersonByCustomerReferralCode (Just newCustomerReferralCode)
     when (isNothing checkIfReferralCodeExists) $
       void $ Person.updateCustomerReferralCode person.id newCustomerReferralCode
+  -- Restore purchased passes if this person previously deleted their account
+  -- and re-registered with the same mobile number. Runs in a fork so login
+  -- is never blocked even if the migration encounters an error.
+  fork "restore_purchased_passes" $ do
+    mbPhone <- mapM decrypt person.mobileNumber
+    whenJust mbPhone $ \phone ->
+      withTryCatch "restorePurchasedPassesIfNeeded" (PassRestore.restorePurchasedPassesIfNeeded person phone)
+        >>= \case
+          Left err -> logError $ "PassRestore: migration failed for personId=" <> person.id.getId <> " error=" <> show err
+          Right _ -> pure ()
   return $ AuthVerifyRes token personAPIEntity
   where
     checkForExpiry authExpiry updatedAt =
