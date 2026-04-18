@@ -73,7 +73,7 @@ customerCancellationDuesWaiveOff merchantId apiKey req = withLogTag ("customerCa
     if transporterConfig.canAddCancellationFee
       then do
         localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-        (allLogics, _mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES_WAIVE_OFF localTime Nothing Nothing
+        (allLogics, _mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES_WAIVE_OFF localTime ride.cancellationChargesLogicVersion Nothing
         response <- withTryCatch "runLogics:canWaiveOffResult" $ LYDL.runLogicsWithDebugLog LYDL.Driver (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES_WAIVE_OFF (Just booking.transactionId) allLogics logicInput
         case response of
           Left e -> do

@@ -64,8 +64,8 @@ import qualified Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
-import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDoc
 import qualified Storage.Queries.BackgroundVerification as BVQuery
+import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDoc
 import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.DriverGstin as QDGST
 import qualified Storage.Queries.DriverInformation as DIQuery
