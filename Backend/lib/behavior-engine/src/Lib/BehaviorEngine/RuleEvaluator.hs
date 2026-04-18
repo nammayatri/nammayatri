@@ -63,7 +63,7 @@ evaluateRules callerApp mocId domain fetchRules snapshotJson = do
       logInfo $ "BehaviorEngine: Evaluating " <> show (length allLogics) <> " rules for domain " <> show domain
       result <-
         try @_ @SomeException $
-          LYDL.runLogicsWithDebugLog callerApp mocId domain allLogics snapshotJson
+          LYDL.runLogicsWithDebugLog callerApp mocId domain Nothing allLogics snapshotJson
       case result of
         Left err -> do
           logError $ "BehaviorEngine: Error evaluating rules for domain " <> show domain <> ": " <> show err
