@@ -25,7 +25,7 @@ PassType:
 
   constraints:
     id: PrimaryKey
-    passCategoryId: !SecondaryKey
+    passCategoryId: "!SecondaryKey"
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <PassEnum>

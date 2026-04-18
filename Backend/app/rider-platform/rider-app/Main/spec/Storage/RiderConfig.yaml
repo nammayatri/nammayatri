@@ -296,7 +296,7 @@ RiderConfig:
 
   constraints:
     merchantOperatingCityId: PrimaryKey
-    frfsMetricsApiKey: !SecondaryKey
+    frfsMetricsApiKey: "!SecondaryKey"
 
   intermediateTransformers:
     fromTType:

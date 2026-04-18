@@ -33,5 +33,30 @@
         '';
       });
     };
+
+    yaml-constraint-tags = {
+      enable = true;
+      name = "yaml-constraint-tags";
+      description = "Reject unquoted YAML tags (e.g. !SecondaryKey) in Storage spec constraints — they are silently dropped by the NammaDSL parser";
+      types = [ "file" ];
+      pass_filenames = true;
+      files = "Backend/.*/spec/Storage/.*\\.yaml$";
+      entry = lib.getExe (pkgs.writeShellApplication {
+        name = "yaml-constraint-tags";
+        text = ''
+          fail=0
+          for f in "''$@"; do
+            if grep -nE '^[[:space:]]+[a-zA-Z_][a-zA-Z0-9_]*:[[:space:]]+![A-Za-z]+[[:space:]]*$' "''$f"; then
+              echo "ERROR: ''$f contains unquoted YAML tag(s) in constraints (shown above)."
+              echo "       Wrap the value in quotes, e.g. fieldName: \"!SecondaryKey\""
+              echo "       Unquoted !Tag values are parsed as YAML tags and silently dropped by the NammaDSL parser,"
+              echo "       producing an empty secondary-key list in the generated Beam file."
+              fail=1
+            fi
+          done
+          exit "''$fail"
+        '';
+      });
+    };
   };
 }

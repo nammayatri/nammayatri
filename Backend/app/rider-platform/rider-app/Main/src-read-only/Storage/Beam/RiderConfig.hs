@@ -199,7 +199,7 @@ instance B.Table RiderConfigT where
 
 type RiderConfig = RiderConfigT Identity
 
-$(enableKVPG ''RiderConfigT ['merchantOperatingCityId] [])
+$(enableKVPG ''RiderConfigT ['merchantOperatingCityId] [['frfsMetricsApiKey]])
 
 $(mkTableInstances ''RiderConfigT "rider_config")
 
