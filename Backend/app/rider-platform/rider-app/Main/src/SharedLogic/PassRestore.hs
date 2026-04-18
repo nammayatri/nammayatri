@@ -70,7 +70,6 @@ restorePurchasedPassesIfNeeded newPerson mobileNumber = do
   where
     migrateFromFirstMatching _ [] =
       logInfo $ "PassRestore: no qualifying passes found for newPersonId=" <> newPerson.id.getId
-
     migrateFromFirstMatching newPersonId (deletedPerson : rest) = do
       let oldPersonId = deletedPerson.personId
       passes <- QPurchasedPass.findAllByPersonId oldPersonId
