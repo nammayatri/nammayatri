@@ -60,6 +60,9 @@ module Domain.Action.Dashboard.Management.Merchant
     getMerchantConfigGeometryList,
     putMerchantConfigGeometryUpdate,
     postMerchantConfigDebugLogUpdate,
+    getMerchantConfigTollList,
+    postMerchantConfigTollUpsert,
+    deleteMerchantConfigTollDelete,
     filterUnboundedFareProducts,
     filterBoundedFareProductsFromSnapshot,
     buildFarePolicyUsageCount,
@@ -210,7 +213,11 @@ import qualified Storage.Queries.RegistryMapFallback as QRMF
 import qualified Storage.Queries.SubscriptionConfig as QSC
 import qualified Storage.Queries.ValueAddNP as SQVNP
 import qualified Storage.Queries.VehicleServiceTier as QVST
+import qualified Storage.CachedQueries.Toll as CQToll
+import qualified Storage.Queries.Toll as QToll
+import qualified Storage.Queries.TollExtra as QTollExtra
 import qualified Storage.Queries.WhiteListOrg as QWLO
+import qualified Domain.Types.Toll as DToll
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -4297,4 +4304,81 @@ postMerchantConfigDebugLogUpdate merchantShortId city req = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
   DebugLog.setJsonLogicDebugFlags (cast merchantOpCityId) req
+  pure Success
+
+---------------------------------------------------------------------
+getMerchantConfigTollList :: ShortId DM.Merchant -> Context.City -> Flow Common.TollListResp
+getMerchantConfigTollList merchantShortId opCity = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  tolls <- QToll.findAllTollsByMerchantOperatingCity (Just merchantOpCity.id)
+  pure $ map toTollEntity tolls
+  where
+    toTollEntity :: DToll.Toll -> Common.TollEntity
+    toTollEntity t =
+      Common.TollEntity
+        { id = cast t.id,
+          name = t.name,
+          tollStartGates = t.tollStartGates,
+          tollEndGates = t.tollEndGates,
+          price = t.price.amount,
+          currency = t.price.currency,
+          isAutoRickshawAllowed = t.isAutoRickshawAllowed,
+          isTwoWheelerAllowed = t.isTwoWheelerAllowed,
+          merchantId = fmap (.getId) t.merchantId,
+          merchantOperatingCityId = fmap (.getId) t.merchantOperatingCityId,
+          createdAt = t.createdAt,
+          updatedAt = t.updatedAt
+        }
+
+postMerchantConfigTollUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertTollReq -> Flow APISuccess
+postMerchantConfigTollUpsert merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  now <- getCurrentTime
+  case req.tollId of
+    Just dashTollId -> do
+      let tollId = cast dashTollId :: Kernel.Types.Id.Id DToll.Toll
+      existingToll <- QToll.findByPrimaryKey tollId >>= fromMaybeM (InvalidRequest $ "Toll not found: " <> tollId.getId)
+      unless (existingToll.merchantOperatingCityId == Just merchantOpCity.id) $
+        throwError (InvalidRequest $ "Toll " <> tollId.getId <> " does not belong to city " <> show opCity)
+      let updatedToll = existingToll
+            { DToll.name = req.name,
+              DToll.tollStartGates = req.tollStartGates,
+              DToll.tollEndGates = req.tollEndGates,
+              DToll.price = Kernel.Utils.Common.mkPrice (Just req.currency) req.price,
+              DToll.isAutoRickshawAllowed = req.isAutoRickshawAllowed,
+              DToll.isTwoWheelerAllowed = req.isTwoWheelerAllowed,
+              DToll.updatedAt = now
+            }
+      QToll.updateByPrimaryKey updatedToll
+    Nothing -> do
+      newId <- generateGUID
+      let newToll = DToll.Toll
+            { DToll.id = newId,
+              DToll.name = req.name,
+              DToll.tollStartGates = req.tollStartGates,
+              DToll.tollEndGates = req.tollEndGates,
+              DToll.price = Kernel.Utils.Common.mkPrice (Just req.currency) req.price,
+              DToll.isAutoRickshawAllowed = req.isAutoRickshawAllowed,
+              DToll.isTwoWheelerAllowed = req.isTwoWheelerAllowed,
+              DToll.merchantId = Just merchant.id,
+              DToll.merchantOperatingCityId = Just merchantOpCity.id,
+              DToll.createdAt = now,
+              DToll.updatedAt = now
+            }
+      QToll.create newToll
+  CQToll.clearCacheByMerchantOpCityId merchantOpCity.id
+  pure Success
+
+deleteMerchantConfigTollDelete :: ShortId DM.Merchant -> Context.City -> Kernel.Types.Id.Id Common.Toll -> Flow APISuccess
+deleteMerchantConfigTollDelete merchantShortId opCity dashTollId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let tollId = cast dashTollId :: Kernel.Types.Id.Id DToll.Toll
+  existingToll <- QToll.findByPrimaryKey tollId >>= fromMaybeM (InvalidRequest $ "Toll not found: " <> tollId.getId)
+  unless (existingToll.merchantOperatingCityId == Just merchantOpCity.id) $
+    throwError (InvalidRequest $ "Toll " <> tollId.getId <> " does not belong to city " <> show opCity)
+  QTollExtra.deleteById tollId
+  CQToll.clearCacheByMerchantOpCityId merchantOpCity.id
   pure Success

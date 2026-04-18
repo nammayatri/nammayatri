@@ -46,6 +46,7 @@ import qualified Kernel.Types.Id as Id
 import Kernel.Types.Predicate
 import qualified Kernel.Types.Registry.Subscriber as BecknSub
 import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.ComputeIntersection (LineSegment)
 import Kernel.Utils.Validation
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
@@ -985,3 +986,46 @@ data WhiteListOperatingCityRes = WhiteListOperatingCityRes
 
 instance HideSecrets WhiteListOperatingCityReq where
   hideSecrets = identity
+
+------------------------ Toll Configuration ------------------------
+
+data UpsertTollReq = UpsertTollReq
+  { tollId :: Maybe (Id.Id Toll), -- Nothing = create, Just = update
+    name :: Text,
+    tollStartGates :: [LineSegment],
+    tollEndGates :: [LineSegment],
+    price :: HighPrecMoney,
+    currency :: Currency,
+    isAutoRickshawAllowed :: Bool,
+    isTwoWheelerAllowed :: Maybe Bool
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpsertTollReq where
+  hideSecrets = identity
+
+-- Response entity for GET /config/toll/list — mirrors Domain.Types.Toll.Toll
+-- with a flat price/currency pair and simplified IDs (Text) so dashboard-helper-api
+-- can define it without importing dynamic-offer-driver-app.
+data TollEntity = TollEntity
+  { id :: Id.Id Toll,
+    name :: Text,
+    tollStartGates :: [LineSegment],
+    tollEndGates :: [LineSegment],
+    price :: HighPrecMoney,
+    currency :: Currency,
+    isAutoRickshawAllowed :: Bool,
+    isTwoWheelerAllowed :: Maybe Bool,
+    merchantId :: Maybe Text,
+    merchantOperatingCityId :: Maybe Text,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets TollEntity where
+  hideSecrets = identity
+
+type TollListResp = [TollEntity]

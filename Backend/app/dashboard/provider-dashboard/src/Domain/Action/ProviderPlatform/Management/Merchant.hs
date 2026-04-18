@@ -60,6 +60,9 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     postMerchantConfigVehicleServiceTierCreate,
     getMerchantConfigVehicleServiceTierList,
     postMerchantConfigDebugLogUpdate,
+    getMerchantConfigTollList,
+    postMerchantConfigTollUpsert,
+    deleteMerchantConfigTollDelete,
   )
 where
 
@@ -568,3 +571,22 @@ postMerchantConfigDebugLogUpdate merchantShortId opCity apiTokenInfo req = do
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigDebugLogUpdate) req
+
+getMerchantConfigTollList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Flow Common.TollListResp
+getMerchantConfigTollList merchantShortId opCity apiTokenInfo = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigTollList)
+
+postMerchantConfigTollUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertTollReq -> Flow Kernel.Types.APISuccess.APISuccess
+postMerchantConfigTollUpsert merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $
+    Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigTollUpsert) req
+
+deleteMerchantConfigTollDelete :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Types.Id.Id Common.Toll -> Flow Kernel.Types.APISuccess.APISuccess
+deleteMerchantConfigTollDelete merchantShortId opCity apiTokenInfo tollId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.deleteMerchantConfigTollDelete) tollId
