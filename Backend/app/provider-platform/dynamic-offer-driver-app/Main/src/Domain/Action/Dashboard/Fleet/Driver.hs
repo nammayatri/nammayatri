@@ -4191,12 +4191,14 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let restrictMobileUpdateToDashboard = fromMaybe True transporterConfig.restrictMobileUpdateToDashboard
   let personId = cast driverId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   mbRequestor <- QPerson.findById (Id requestorId)
 
-  -- Only admin (no requestor at BPP) is allowed to update mobile number/country code
-  when (isJust mbRequestor && (isJust req.mobileNo || isJust req.mobileCountryCode)) $
+  -- Only admin (no requestor at BPP) may update mobile number/country code when restrictMobileUpdateToDashboard is enabled
+  when (restrictMobileUpdateToDashboard && isJust mbRequestor && (isJust req.mobileNo || isJust req.mobileCountryCode)) $
     throwError AccessDenied
 
   -- If requestor is not found at BPP (e.g. Admin), allow; only fleet/operator exist at BPP
@@ -4229,8 +4231,8 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
     let updDriver =
           driver
             { DP.firstName = fromMaybe driver.firstName req.firstName,
-              DP.lastName = req.lastName,
-              DP.email = req.email,
+              DP.lastName = req.lastName <|> driver.lastName,
+              DP.email = req.email <|> driver.email,
               DP.mobileCountryCode = newMobileCountryCode,
               DP.mobileNumber = newMobileNumber
             }
