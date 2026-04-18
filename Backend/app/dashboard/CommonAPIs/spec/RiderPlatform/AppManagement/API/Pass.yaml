@@ -119,3 +119,11 @@ apis:
         type: UpdateProfilePictureReq
       response:
         type: APISuccess
+
+  - POST:
+      endpoint: /customer/{customerId}/pass/restore
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      response:
+        type: APISuccess
