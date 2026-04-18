@@ -123,11 +123,12 @@ insertJsonLogicTransaction ::
   (MonadFlow m, CHConfig.ClickhouseFlow m r, Log m) =>
   CallerApp -> -- caller app (rider/driver)
   Text -> -- domain/event identifier
+  Maybe Text -> -- optional entityTransactionId
   A.Value -> -- inputData
   A.Value -> -- logic
   A.Value -> -- outputData
   m ()
-insertJsonLogicTransaction callerApp domain inputData logic outputData = do
+insertJsonLogicTransaction callerApp domain mbEntityTransactionId inputData logic outputData = do
   transactionId <- generateGUID
   now <- getCurrentTime
   let escapeStr = T.replace "'" "\\'" . T.replace "\\" "\\\\"
@@ -136,8 +137,9 @@ insertJsonLogicTransaction callerApp domain inputData logic outputData = do
   let outputStr = escapeStr $ CS.cs $ A.encode outputData
   let timestampStr = T.pack $ formatDateTimeUTC now
   let callerAppStr = callerAppToText callerApp
+  let entityTxnIdVal = maybe "NULL" (\t -> "'" <> T.unpack (escapeStr t) <> "'") mbEntityTransactionId
   let query =
-        "INSERT INTO app_monitor.json_logic_transactions (transactionId, domain, timestamp, inputData, logic, outputData, caller_app) VALUES ('"
+        "INSERT INTO app_monitor.json_logic_transactions (transactionId, domain, timestamp, inputData, logic, outputData, caller_app, entityTransactionId) VALUES ('"
           <> T.unpack transactionId
           <> "', '"
           <> T.unpack domain
@@ -151,7 +153,9 @@ insertJsonLogicTransaction callerApp domain inputData logic outputData = do
           <> T.unpack outputStr
           <> "', '"
           <> T.unpack callerAppStr
-          <> "')"
+          <> "', "
+          <> entityTxnIdVal
+          <> ")"
   eResult <- CHQueries.runExecQuery' (ExprStr query) CHConfig.APP_SERVICE_CLICKHOUSE
   case eResult of
     Right _ -> logDebug $ "Debug log inserted for domain: " <> domain
@@ -170,10 +174,11 @@ runLogicsWithDebugLog ::
   CallerApp ->
   Id LYT.MerchantOperatingCity ->
   LYT.LogicDomain ->
+  Maybe Text -> -- optional entityTransactionId
   [A.Value] ->
   a ->
   m LYT.RunLogicResp
-runLogicsWithDebugLog callerApp mocId domain logics data_ = do
+runLogicsWithDebugLog callerApp mocId domain mbEntityTransactionId logics data_ = do
   resp <- runLogics logics data_
   let domainStr = T.pack $ show domain
   fork "jsonLogicDebugLog" $ do
@@ -183,7 +188,7 @@ runLogicsWithDebugLog callerApp mocId domain logics data_ = do
       let logicVal = A.toJSON logics
       let outputVal = resp.result
       handle (\(e :: SomeException) -> logWarning $ "Debug log to ClickHouse failed: " <> show e) $
-        insertJsonLogicTransaction callerApp domainStr inputVal logicVal outputVal
+        insertJsonLogicTransaction callerApp domainStr mbEntityTransactionId inputVal logicVal outputVal
   return resp
 
 -- | Wrapper around computeNammaTags with debug logging
@@ -199,9 +204,10 @@ computeNammaTagsWithDebugLog ::
   CallerApp ->
   Id LYT.MerchantOperatingCity ->
   YA.ApplicationEvent ->
+  Maybe Text -> -- optional entityTransactionId
   a ->
   m [LYT.TagNameValue]
-computeNammaTagsWithDebugLog callerApp merchantOpCityId event sourceData_ = do
+computeNammaTagsWithDebugLog callerApp merchantOpCityId event mbEntityTransactionId sourceData_ = do
   let sourceData = A.toJSON sourceData_
   let req = LYT.YudhishthiraDecideReq {merchantOperatingCityId = merchantOpCityId, source = LYT.Application event, sourceData}
   resp <- Event.yudhishthiraDecide req
@@ -215,7 +221,7 @@ computeNammaTagsWithDebugLog callerApp merchantOpCityId event sourceData_ = do
       let logicVal = A.String "NammaTag"
       let outputVal = A.toJSON (resp.tags <&> (\t -> A.object ["tagName" A..= t.tagName, "tagValue" A..= (T.pack $ show t.tagValue)]))
       handle (\(e :: SomeException) -> logWarning $ "NammaTag debug log to ClickHouse failed: " <> show e) $
-        insertJsonLogicTransaction callerApp eventStr inputVal logicVal outputVal
+        insertJsonLogicTransaction callerApp eventStr mbEntityTransactionId inputVal logicVal outputVal
   pure tags
 
 -- | Wrapper around computeNammaTagsWithExpiry with debug logging
@@ -231,9 +237,10 @@ computeNammaTagsWithExpiryAndDebugLog ::
   CallerApp ->
   Id LYT.MerchantOperatingCity ->
   YA.ApplicationEvent ->
+  Maybe Text -> -- optional entityTransactionId
   a ->
   m [LYT.TagNameValueExpiry]
-computeNammaTagsWithExpiryAndDebugLog callerApp merchantOpCityId event sourceData_ = do
+computeNammaTagsWithExpiryAndDebugLog callerApp merchantOpCityId event mbEntityTransactionId sourceData_ = do
   let sourceData = A.toJSON sourceData_
   let req = LYT.YudhishthiraDecideReq {merchantOperatingCityId = merchantOpCityId, source = LYT.Application event, sourceData}
   resp <- Event.yudhishthiraDecide req
@@ -248,5 +255,5 @@ computeNammaTagsWithExpiryAndDebugLog callerApp merchantOpCityId event sourceDat
       let logicVal = A.String "NammaTag"
       let outputVal = A.toJSON (resp.tags <&> (\t -> A.object ["tagName" A..= t.tagName, "tagValue" A..= (T.pack $ show t.tagValue)]))
       handle (\(e :: SomeException) -> logWarning $ "NammaTag debug log to ClickHouse failed: " <> show e) $
-        insertJsonLogicTransaction callerApp eventStr inputVal logicVal outputVal
+        insertJsonLogicTransaction callerApp eventStr mbEntityTransactionId inputVal logicVal outputVal
   pure tags

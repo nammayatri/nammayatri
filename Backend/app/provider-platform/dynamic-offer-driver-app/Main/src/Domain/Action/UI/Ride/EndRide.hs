@@ -600,7 +600,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     priorRidesSameCustomer <- QRide.countPriorCompletedRidesWithSameCustomer (cast driverId) booking.riderId updRide'.id merchantLocalDay thresholdConfig.sameRiderDriverRideCountLookbackDays
     let shouldBlockCoinsForSameRiderFlow = riderBlockedForCoins || priorRidesSameCustomer > thresholdConfig.sameRiderDriverRideCountThreshold
     when shouldBlockCoinsForSameRiderFlow $ QRiderDetails.flagRiderForCoinZero booking.riderId
-    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking isDriverSameAsCustomer shouldBlockCoinsForSameRiderFlow rideDurationSeconds))
+    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) Yudhishthira.RideEnd (Just booking.transactionId) (Y.EndRideTagData updRide' booking isDriverSameAsCustomer shouldBlockCoinsForSameRiderFlow rideDurationSeconds))
     let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
     QRide.incrementDriverRiderRideCountForDay (cast driverId) booking.riderId
     fork "updating time and latlong in advance ride if any" $ do

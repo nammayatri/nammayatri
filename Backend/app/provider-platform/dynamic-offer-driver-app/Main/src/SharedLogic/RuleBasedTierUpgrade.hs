@@ -17,6 +17,7 @@ import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.RideDetails as QRideDetails
@@ -69,7 +70,9 @@ computeEligibleUpgradeTiers ride transporterConfig =
                 favRiderCount = driverStats.favRiderCount,
                 vehicleVariant = vehicle.variant
               }
-      nammaTags <- withTryCatch "computeNammaTags:UpgradeTier" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (Id.cast ride.merchantOperatingCityId) Yudhishthira.UpgradeTier upgradeTierTagData)
+      mbBooking <- QBooking.findById ride.bookingId
+      let mbTransactionId = (.transactionId) <$> mbBooking
+      nammaTags <- withTryCatch "computeNammaTags:UpgradeTier" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (Id.cast ride.merchantOperatingCityId) Yudhishthira.UpgradeTier mbTransactionId upgradeTierTagData)
       let newEligibleTiers = eligibleTiersFromTags $ fromMaybe [] $ eitherToMaybe nammaTags
           newUpgrades = computeMergedUpgrades now (fromMaybe 0 transporterConfig.upgradeTierDropRetentionTime) (fromMaybe [] driverInfo.ruleBasedUpgradeTiers) newEligibleTiers
           vehicleNewUpgrades = computeMergedUpgrades now (fromMaybe 0 transporterConfig.upgradeTierDropRetentionTime) (fromMaybe [] vehicle.ruleBasedUpgradeTiers) newEligibleTiers
