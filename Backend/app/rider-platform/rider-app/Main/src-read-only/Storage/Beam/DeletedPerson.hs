@@ -19,6 +19,7 @@ data DeletedPersonT f = DeletedPersonT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     personId :: B.C f Kernel.Prelude.Text,
     reasonToDelete :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    staticPersonId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
@@ -29,6 +30,6 @@ instance B.Table DeletedPersonT where
 
 type DeletedPerson = DeletedPersonT Identity
 
-$(enableKVPG ''DeletedPersonT ['personId] [])
+$(enableKVPG ''DeletedPersonT ['personId] [['staticPersonId]])
 
 $(mkTableInstances ''DeletedPersonT "deleted_person")

@@ -240,3 +240,14 @@ updateVpa orderId vpa = do
       Se.Set BeamPO.updatedAt now
     ]
     [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
+
+-- | Update the personId on a payment_order record.
+-- Used during pass restoration when a user re-registers with the same mobile number.
+updatePersonId :: BeamFlow m r => Id DOrder.PaymentOrder -> Text -> m ()
+updatePersonId orderId newPersonId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamPO.personId newPersonId,
+      Se.Set BeamPO.updatedAt now
+    ]
+    [Se.Is BeamPO.id $ Se.Eq $ getId orderId]

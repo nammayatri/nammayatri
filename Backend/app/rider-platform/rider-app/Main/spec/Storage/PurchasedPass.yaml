@@ -87,6 +87,11 @@ PurchasedPass:
       params: [deviceSwitchCount]
       where: id
 
+    updatePersonIdById:
+      kvFunction: updateOneWithKV
+      params: [personId]
+      where: id
+
     findByPassNumber:
       kvFunction: findOneWithKV
       where: passNumber
@@ -137,6 +142,11 @@ PurchasedPassPayment:
     findOneByPaymentOrderId:
         kvFunction: findOneWithKV
         where: orderId
+
+    updatePersonIdByPurchasedPassId:
+      kvFunction: updateWithKV
+      params: [personId]
+      where: purchasedPassId
 
     findAllByPurchasedPassId:
       kvFunction: findAllWithKV
