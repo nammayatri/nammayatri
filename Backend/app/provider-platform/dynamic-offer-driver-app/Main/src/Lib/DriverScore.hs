@@ -139,7 +139,7 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
           localTime <- getLocalCurrentTime merchantConfig.timeDiffFromUtc
           getAppDynamicLogic (cast merchantOpCityId) domain localTime Nothing Nothing
     snapshot <- BTSnap.buildSnapshotWithCooldowns counterConfig actionEvent entityState cooldownTags
-    output <- BEOrch.orchestrate snapshot LYDL.Driver (cast merchantOpCityId) LYT.CANCELLATION_RATE_BEHAVIOR fetchRules
+    output <- BEOrch.orchestrate snapshot LYDL.Driver (cast merchantOpCityId) LYT.CANCELLATION_RATE_BEHAVIOR (Nothing :: Maybe Text) fetchRules
     logInfo $ "CancellationRate behavior evaluation: consequences=" <> show (length output.consequences) <> ", communications=" <> show (length output.communications)
     let dispatchCtx =
           BehaviorDispatch.DispatchContext

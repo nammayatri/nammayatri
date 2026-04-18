@@ -600,7 +600,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     priorRidesSameCustomer <- QRide.countPriorCompletedRidesWithSameCustomer (cast driverId) booking.riderId updRide'.id merchantLocalDay thresholdConfig.sameRiderDriverRideCountLookbackDays
     let shouldBlockCoinsForSameRiderFlow = riderBlockedForCoins || priorRidesSameCustomer > thresholdConfig.sameRiderDriverRideCountThreshold
     when shouldBlockCoinsForSameRiderFlow $ QRiderDetails.flagRiderForCoinZero booking.riderId
-    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking isDriverSameAsCustomer shouldBlockCoinsForSameRiderFlow rideDurationSeconds))
+    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) Yudhishthira.RideEnd (Just booking.transactionId) (Y.EndRideTagData updRide' booking isDriverSameAsCustomer shouldBlockCoinsForSameRiderFlow rideDurationSeconds))
     let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
     QRide.incrementDriverRiderRideCountForDay (cast driverId) booking.riderId
     fork "updating time and latlong in advance ride if any" $ do
@@ -670,7 +670,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                 localTime <- getLocalCurrentTime thresholdConfig.timeDiffFromUtc
                 getAppDynamicLogic (cast booking.merchantOperatingCityId) domain localTime Nothing Nothing
           snapshot <- BTSnap.buildSnapshot counterConfig actionEvent entityState
-          output <- BEOrch.orchestrate snapshot LYDL.Driver (cast booking.merchantOperatingCityId) LYT.GPS_TOLL_BEHAVIOR fetchRules
+          output <- BEOrch.orchestrate snapshot LYDL.Driver (cast booking.merchantOperatingCityId) LYT.GPS_TOLL_BEHAVIOR (Just booking.transactionId) fetchRules
           logInfo $ "GPS Toll Behavior evaluation result: consequences=" <> show (length output.consequences) <> ", communications=" <> show (length output.communications)
           let dispatchCtx =
                 BehaviorDispatch.DispatchContext
@@ -682,7 +682,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
           BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
           BehaviorDispatch.handleCommunications driverId output.communications
 
-    computeEligibleUpgradeTiers ride thresholdConfig
+    computeEligibleUpgradeTiers ride thresholdConfig (Just booking.transactionId)
     mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
       findPaymentMethodByIdAndMerchantId paymentMethodId booking.merchantOperatingCityId
         >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)

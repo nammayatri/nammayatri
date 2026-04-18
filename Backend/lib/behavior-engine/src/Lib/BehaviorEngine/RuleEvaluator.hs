@@ -50,10 +50,11 @@ evaluateRules ::
   LYDL.CallerApp ->
   Id LYT.MerchantOperatingCity ->
   LYT.LogicDomain ->
+  Maybe Text -> -- optional entityTransactionId for debug logging
   RuleFetcher m ->
   A.Value -> -- snapshot as JSON
   m OrchestratedOutput
-evaluateRules callerApp mocId domain fetchRules snapshotJson = do
+evaluateRules callerApp mocId domain mbEntityTransactionId fetchRules snapshotJson = do
   (allLogics, _mbVersion) <- fetchRules domain
   if null allLogics
     then do
@@ -63,7 +64,7 @@ evaluateRules callerApp mocId domain fetchRules snapshotJson = do
       logInfo $ "BehaviorEngine: Evaluating " <> show (length allLogics) <> " rules for domain " <> show domain
       result <-
         try @_ @SomeException $
-          LYDL.runLogicsWithDebugLog callerApp mocId domain allLogics snapshotJson
+          LYDL.runLogicsWithDebugLog callerApp mocId domain mbEntityTransactionId allLogics snapshotJson
       case result of
         Left err -> do
           logError $ "BehaviorEngine: Error evaluating rules for domain " <> show domain <> ": " <> show err

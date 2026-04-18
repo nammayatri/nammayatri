@@ -82,15 +82,16 @@ setJsonLogicDebugFlags mocId req = do
   let identifierKey = debugLogIdentifierToText req.identifier
   now <- getCurrentTime
   let ttlSeconds = max 1 $ ceiling $ diffUTCTime req.endTime now + 3600 -- extra hour buffer
-  if req.enabled
-    then do
-      Hedis.setExp (mkDebugEnabledKey mocId identifierKey) ("1" :: Text) ttlSeconds
-      Hedis.setExp (mkDebugStartTimeKey mocId identifierKey) (T.pack $ ISO.iso8601Show req.startTime) ttlSeconds
-      Hedis.setExp (mkDebugEndTimeKey mocId identifierKey) (T.pack $ ISO.iso8601Show req.endTime) ttlSeconds
-    else do
-      Hedis.del (mkDebugEnabledKey mocId identifierKey)
-      Hedis.del (mkDebugStartTimeKey mocId identifierKey)
-      Hedis.del (mkDebugEndTimeKey mocId identifierKey)
+  Hedis.withMasterRedis $ do
+    if req.enabled
+      then do
+        Hedis.setExp (mkDebugEnabledKey mocId identifierKey) ("1" :: Text) ttlSeconds
+        Hedis.setExp (mkDebugStartTimeKey mocId identifierKey) (T.pack $ ISO.iso8601Show req.startTime) ttlSeconds
+        Hedis.setExp (mkDebugEndTimeKey mocId identifierKey) (T.pack $ ISO.iso8601Show req.endTime) ttlSeconds
+      else do
+        Hedis.del (mkDebugEnabledKey mocId identifierKey)
+        Hedis.del (mkDebugStartTimeKey mocId identifierKey)
+        Hedis.del (mkDebugEndTimeKey mocId identifierKey)
 
 -- | Check if debug logging is enabled for an identifier and current time is within window
 checkDebugLogFlags ::
@@ -100,12 +101,12 @@ checkDebugLogFlags ::
   m Bool
 checkDebugLogFlags mocId identifier' = do
   let enabledKey = mkDebugEnabledKey mocId identifier'
-  mbEnabled :: Maybe Text <- Hedis.get enabledKey
+  mbEnabled :: Maybe Text <- Hedis.withMasterRedis $ Hedis.get enabledKey
   logInfo $ "JsonLogicDebug: checkFlags key=" <> enabledKey <> " enabled=" <> show mbEnabled
   case mbEnabled of
     Just "1" -> do
-      mbStartStr :: Maybe Text <- Hedis.get (mkDebugStartTimeKey mocId identifier')
-      mbEndStr :: Maybe Text <- Hedis.get (mkDebugEndTimeKey mocId identifier')
+      mbStartStr :: Maybe Text <- Hedis.withMasterRedis $ Hedis.get (mkDebugStartTimeKey mocId identifier')
+      mbEndStr :: Maybe Text <- Hedis.withMasterRedis $ Hedis.get (mkDebugEndTimeKey mocId identifier')
       now <- getCurrentTime
       let mbInWindow = do
             startStr <- mbStartStr
@@ -123,11 +124,12 @@ insertJsonLogicTransaction ::
   (MonadFlow m, CHConfig.ClickhouseFlow m r, Log m) =>
   CallerApp -> -- caller app (rider/driver)
   Text -> -- domain/event identifier
+  Maybe Text -> -- optional entityTransactionId
   A.Value -> -- inputData
   A.Value -> -- logic
   A.Value -> -- outputData
   m ()
-insertJsonLogicTransaction callerApp domain inputData logic outputData = do
+insertJsonLogicTransaction callerApp domain mbEntityTransactionId inputData logic outputData = do
   transactionId <- generateGUID
   now <- getCurrentTime
   let escapeStr = T.replace "'" "\\'" . T.replace "\\" "\\\\"
@@ -136,8 +138,9 @@ insertJsonLogicTransaction callerApp domain inputData logic outputData = do
   let outputStr = escapeStr $ CS.cs $ A.encode outputData
   let timestampStr = T.pack $ formatDateTimeUTC now
   let callerAppStr = callerAppToText callerApp
+  let entityTransactionIdVal = maybe "NULL" (\t -> "'" <> T.unpack (escapeStr t) <> "'") mbEntityTransactionId
   let query =
-        "INSERT INTO app_monitor.json_logic_transactions (transactionId, domain, timestamp, inputData, logic, outputData, caller_app) VALUES ('"
+        "INSERT INTO app_monitor.json_logic_transactions (transactionId, domain, timestamp, inputData, logic, outputData, caller_app, entityTransactionId) VALUES ('"
           <> T.unpack transactionId
           <> "', '"
           <> T.unpack domain
@@ -151,7 +154,9 @@ insertJsonLogicTransaction callerApp domain inputData logic outputData = do
           <> T.unpack outputStr
           <> "', '"
           <> T.unpack callerAppStr
-          <> "')"
+          <> "', "
+          <> entityTransactionIdVal
+          <> ")"
   eResult <- CHQueries.runExecQuery' (ExprStr query) CHConfig.APP_SERVICE_CLICKHOUSE
   case eResult of
     Right _ -> logDebug $ "Debug log inserted for domain: " <> domain
@@ -170,10 +175,11 @@ runLogicsWithDebugLog ::
   CallerApp ->
   Id LYT.MerchantOperatingCity ->
   LYT.LogicDomain ->
+  Maybe Text -> -- optional entityTransactionId
   [A.Value] ->
   a ->
   m LYT.RunLogicResp
-runLogicsWithDebugLog callerApp mocId domain logics data_ = do
+runLogicsWithDebugLog callerApp mocId domain mbEntityTransactionId logics data_ = do
   resp <- runLogics logics data_
   let domainStr = T.pack $ show domain
   fork "jsonLogicDebugLog" $ do
@@ -182,8 +188,8 @@ runLogicsWithDebugLog callerApp mocId domain logics data_ = do
       let inputVal = A.toJSON data_
       let logicVal = A.toJSON logics
       let outputVal = resp.result
-      handle (\(e :: SomeException) -> logWarning $ "Debug log to ClickHouse failed: " <> show e) $
-        insertJsonLogicTransaction callerApp domainStr inputVal logicVal outputVal
+      handle (\(e :: SomeException) -> logError $ "Debug log to ClickHouse failed: " <> show e) $
+        insertJsonLogicTransaction callerApp domainStr mbEntityTransactionId inputVal logicVal outputVal
   return resp
 
 -- | Wrapper around computeNammaTags with debug logging
@@ -199,9 +205,10 @@ computeNammaTagsWithDebugLog ::
   CallerApp ->
   Id LYT.MerchantOperatingCity ->
   YA.ApplicationEvent ->
+  Maybe Text -> -- optional entityTransactionId
   a ->
   m [LYT.TagNameValue]
-computeNammaTagsWithDebugLog callerApp merchantOpCityId event sourceData_ = do
+computeNammaTagsWithDebugLog callerApp merchantOpCityId event mbEntityTransactionId sourceData_ = do
   let sourceData = A.toJSON sourceData_
   let req = LYT.YudhishthiraDecideReq {merchantOperatingCityId = merchantOpCityId, source = LYT.Application event, sourceData}
   resp <- Event.yudhishthiraDecide req
@@ -212,10 +219,10 @@ computeNammaTagsWithDebugLog callerApp merchantOpCityId event sourceData_ = do
     shouldLog <- checkDebugLogFlags merchantOpCityId eventStr
     when shouldLog $ do
       let inputVal = sourceData
-      let logicVal = A.String "NammaTag"
+      let logicVal = A.toJSON resp.tagRules
       let outputVal = A.toJSON (resp.tags <&> (\t -> A.object ["tagName" A..= t.tagName, "tagValue" A..= (T.pack $ show t.tagValue)]))
-      handle (\(e :: SomeException) -> logWarning $ "NammaTag debug log to ClickHouse failed: " <> show e) $
-        insertJsonLogicTransaction callerApp eventStr inputVal logicVal outputVal
+      handle (\(e :: SomeException) -> logError $ "NammaTag debug log to ClickHouse failed: " <> show e) $
+        insertJsonLogicTransaction callerApp eventStr mbEntityTransactionId inputVal logicVal outputVal
   pure tags
 
 -- | Wrapper around computeNammaTagsWithExpiry with debug logging
@@ -231,9 +238,10 @@ computeNammaTagsWithExpiryAndDebugLog ::
   CallerApp ->
   Id LYT.MerchantOperatingCity ->
   YA.ApplicationEvent ->
+  Maybe Text -> -- optional entityTransactionId
   a ->
   m [LYT.TagNameValueExpiry]
-computeNammaTagsWithExpiryAndDebugLog callerApp merchantOpCityId event sourceData_ = do
+computeNammaTagsWithExpiryAndDebugLog callerApp merchantOpCityId event mbEntityTransactionId sourceData_ = do
   let sourceData = A.toJSON sourceData_
   let req = LYT.YudhishthiraDecideReq {merchantOperatingCityId = merchantOpCityId, source = LYT.Application event, sourceData}
   resp <- Event.yudhishthiraDecide req
@@ -245,8 +253,8 @@ computeNammaTagsWithExpiryAndDebugLog callerApp merchantOpCityId event sourceDat
     shouldLog <- checkDebugLogFlags merchantOpCityId eventStr
     when shouldLog $ do
       let inputVal = sourceData
-      let logicVal = A.String "NammaTag"
+      let logicVal = A.toJSON resp.tagRules
       let outputVal = A.toJSON (resp.tags <&> (\t -> A.object ["tagName" A..= t.tagName, "tagValue" A..= (T.pack $ show t.tagValue)]))
-      handle (\(e :: SomeException) -> logWarning $ "NammaTag debug log to ClickHouse failed: " <> show e) $
-        insertJsonLogicTransaction callerApp eventStr inputVal logicVal outputVal
+      handle (\(e :: SomeException) -> logError $ "NammaTag debug log to ClickHouse failed: " <> show e) $
+        insertJsonLogicTransaction callerApp eventStr mbEntityTransactionId inputVal logicVal outputVal
   pure tags

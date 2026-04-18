@@ -70,7 +70,7 @@ writeBlockKey entityType entityId blockType reasonTag durationHours blockReason 
             expiresAt = expiresAt',
             extraParams = extraParams
           }
-  Redis.withCrossAppRedis $ Redis.setExp key info ttlSeconds
+  Redis.withMasterRedis $ Redis.withCrossAppRedis $ Redis.setExp key info ttlSeconds
 
 -- | Write a cooldown key with TTL
 writeCooldownKey ::
@@ -92,7 +92,7 @@ writeCooldownKey entityType entityId reasonTag cooldownHours = do
             setAt = now,
             expiresAt = addUTCTime (fromIntegral ttlSeconds) now
           }
-  Redis.withCrossAppRedis $ Redis.setExp key info ttlSeconds
+  Redis.withMasterRedis $ Redis.withCrossAppRedis $ Redis.setExp key info ttlSeconds
 
 -- | Write both block + cooldown keys in one call
 writeBlockAndCooldownKeys ::
@@ -125,7 +125,7 @@ readBlockKey ::
   m (Maybe (BlockInfo, Integer))
 readBlockKey entityType entityId blockType reasonTag = do
   let key = mkBlockKey entityType entityId blockType reasonTag
-  Redis.withCrossAppRedis $ do
+  Redis.withMasterRedis $ Redis.withCrossAppRedis $ do
     mbVal <- Redis.get @BlockInfo key
     case mbVal of
       Nothing -> return Nothing
@@ -150,7 +150,7 @@ readCooldownKey ::
   m (Maybe (CooldownInfo, Integer))
 readCooldownKey entityType entityId reasonTag = do
   let key = mkCooldownKey entityType entityId reasonTag
-  Redis.withCrossAppRedis $ do
+  Redis.withMasterRedis $ Redis.withCrossAppRedis $ do
     mbVal <- Redis.get @CooldownInfo key
     case mbVal of
       Nothing -> return Nothing

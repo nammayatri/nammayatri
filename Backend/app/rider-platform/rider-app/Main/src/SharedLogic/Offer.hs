@@ -187,8 +187,8 @@ mkCumulativeOfferResp merchantOperatingCityId offerListRes legInfos = do
       pure Nothing
     else do
       logInfo $ "Running cumulative offer logic with " <> show (length logics) <> " rules"
-      result <- LYDL.runLogicsWithDebugLog LYDL.Rider (cast merchantOperatingCityId) LYT.CUMULATIVE_OFFER_POLICY logics (CumulativeOfferReq offerListRes legInfos)
-      case A.fromJSON result.result :: A.Result CumulativeOfferRespI of
+      result <- LYDL.runLogicsWithDebugLog LYDL.Rider (cast merchantOperatingCityId) LYT.CUMULATIVE_OFFER_POLICY (Nothing :: Maybe Text) logics (CumulativeOfferReq offerListResp legInfos)
+      case A.fromJSON result.result :: A.Result CumulativeOfferResp of
         A.Success logicResult -> do
           logInfo $ "Cumulative offer logic result: " <> show logicResult
           pure $ Just $ mkCumulativeOfferRespFromI logicResult

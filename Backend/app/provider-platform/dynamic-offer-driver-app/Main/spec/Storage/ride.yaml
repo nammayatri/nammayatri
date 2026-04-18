@@ -74,6 +74,7 @@ Ride:
     previousRideTripEndPos: Maybe LatLong
     previousRideTripEndTime: Maybe UTCTime
     cancellationChargesOnCancel : Maybe HighPrecMoney
+    cancellationChargesLogicVersion: Maybe Int
     isDriverSpecialLocWarrior: Bool
     isAdvanceBooking : Bool
     isPetRide: Bool
@@ -304,7 +305,7 @@ Ride:
   queries:
     updateCancellationFeeIfCancelledField:
       kvFunction: updateOneWithKV
-      params: [cancellationFeeIfCancelled]
+      params: [cancellationFeeIfCancelled, cancellationChargesLogicVersion]
       where: id
     updateTipAmountField:
       kvFunction: updateOneWithKV
@@ -340,7 +341,7 @@ Ride:
       where: id
     updateCancellationChargesOnCancel:
       kvFunction: updateOneWithKV
-      params: [cancellationChargesOnCancel]
+      params: [cancellationChargesOnCancel, cancellationChargesLogicVersion]
       where: id
     updateDriverGpsTurnedOff:
       kvFunction: updateOneWithKV

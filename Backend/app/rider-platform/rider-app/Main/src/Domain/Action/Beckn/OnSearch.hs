@@ -325,7 +325,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
             _ -> Nothing
 
       -- let estimateTagsData = map (getEstimateTagsData autoQar cabQar autoPrice nonACPrice userType) estimates
-      estimates <- traverse (getTaggedEstimate autoQar cabQar autoPrice nonACPrice userType localTime searchRequest.merchantOperatingCityId) estimates'
+      estimates <- traverse (getTaggedEstimate autoQar cabQar autoPrice nonACPrice userType localTime searchRequest.merchantOperatingCityId (Just searchRequest.id.getId)) estimates'
       quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo blackListedVehicles mbNySubscription)
       updateRiderPreferredOption quotes
       let mbRequiredEstimate = listToMaybe $ sortBy (comparing ((DEstimate.minFare . DEstimate.totalFareRange) <&> (.amount)) <> comparing ((DEstimate.maxFare . DEstimate.totalFareRange) <&> (.amount))) estimates
@@ -724,9 +724,10 @@ getTaggedEstimate ::
   Maybe SEST.UserType ->
   UTCTime ->
   Id DMerchantOperatingCity.MerchantOperatingCity ->
+  Maybe Text ->
   DEstimate.Estimate ->
   Flow DEstimate.Estimate
-getTaggedEstimate autoQar cabQar autoPrice nonACPrice userType localTime mocId estimate = do
+getTaggedEstimate autoQar cabQar autoPrice nonACPrice userType localTime mocId mbEntityTransactionId estimate = do
   let logicInput =
         SEST.EstimateTagsData
           { autoQAR = autoQar,
@@ -738,7 +739,7 @@ getTaggedEstimate autoQar cabQar autoPrice nonACPrice userType localTime mocId e
             vehicleServiceTierType = estimate.vehicleServiceTierType
           }
   (allLogics, _mbVersion) <- DynamicLogic.getAppDynamicLogic (cast mocId) LYT.ESTIMATE_TAGS localTime Nothing Nothing
-  response <- withTryCatch "runLogics:EstimateTags" $ LYDL.runLogicsWithDebugLog LYDL.Rider (cast mocId) LYT.ESTIMATE_TAGS allLogics logicInput
+  response <- withTryCatch "runLogics:EstimateTags" $ LYDL.runLogicsWithDebugLog LYDL.Rider (cast mocId) LYT.ESTIMATE_TAGS mbEntityTransactionId allLogics logicInput
   res <- case response of
     Left e -> do
       logError $ "Error in running EstimateTagsLogics - " <> show e <> " - " <> show logicInput <> " - " <> show allLogics

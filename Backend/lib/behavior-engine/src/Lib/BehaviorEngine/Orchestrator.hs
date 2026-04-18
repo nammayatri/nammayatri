@@ -54,11 +54,12 @@ recordAndOrchestrate ::
   LYDL.CallerApp ->
   Id LYT.MerchantOperatingCity ->
   LYT.LogicDomain ->
+  Maybe Text -> -- optional entityTransactionId for debug logging
   RuleFetcher m ->
   m OrchestratedOutput
-recordAndOrchestrate config event entityState callerApp mocId domain fetchRules = do
+recordAndOrchestrate config event entityState callerApp mocId domain mbEntityTransactionId fetchRules = do
   snapshot <- recordAndSnapshot config event entityState
-  orchestrate snapshot callerApp mocId domain fetchRules
+  orchestrate snapshot callerApp mocId domain mbEntityTransactionId fetchRules
 
 -- | Evaluate rules for an existing snapshot (no recording)
 --
@@ -76,9 +77,10 @@ orchestrate ::
   LYDL.CallerApp ->
   Id LYT.MerchantOperatingCity ->
   LYT.LogicDomain ->
+  Maybe Text -> -- optional entityTransactionId for debug logging
   RuleFetcher m ->
   m OrchestratedOutput
-orchestrate snapshot callerApp mocId domain fetchRules = do
+orchestrate snapshot callerApp mocId domain mbEntityTransactionId fetchRules = do
   let snapshotJson = A.toJSON snapshot
   logDebug $ "Orchestrating behavior evaluation for action " <> snapshot.actionType
-  evaluateRules callerApp mocId domain fetchRules snapshotJson
+  evaluateRules callerApp mocId domain mbEntityTransactionId fetchRules snapshotJson

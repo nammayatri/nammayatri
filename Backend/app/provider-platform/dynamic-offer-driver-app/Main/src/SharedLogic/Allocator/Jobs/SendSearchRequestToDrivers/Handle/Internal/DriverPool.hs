@@ -684,7 +684,7 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
             onlyNewDriversWithCustomerInfo
         )
       <> "]"
-  resp <- withTimeAPI "driverPooling" "runLogics" $ LYDL.runLogicsWithDebugLog LYDL.Driver (cast mOCityId) LYT.POOLING allLogics taggedDriverPoolInput
+  resp <- withTimeAPI "driverPooling" "runLogics" $ LYDL.runLogicsWithDebugLog LYDL.Driver (cast mOCityId) LYT.POOLING (Just searchReq.transactionId) allLogics taggedDriverPoolInput
   sortedPool' <-
     case (A.fromJSON resp.result :: Result TaggedDriverPoolInput) of
       A.Success sortedPoolData -> pure sortedPoolData.drivers

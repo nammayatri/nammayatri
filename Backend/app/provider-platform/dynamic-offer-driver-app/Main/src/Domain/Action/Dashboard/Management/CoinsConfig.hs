@@ -43,12 +43,12 @@ postCoinsConfigCreate _merchantShortId _opCity req = do
   uuid <- UC.generateGUIDText
   (newCoinsConfig, eventMessageLs) <- case req of
     Common.NewCoinsConfig (Common.NewCoinsConfigReq {..}) ->
-      let newConfig = DTCC.CoinsConfig {id = ID.Id uuid, vehicleCategory = Just vehicleCategory, ..}
+      let newConfig = DTCC.CoinsConfig {id = ID.Id uuid, vehicleCategory = Just vehicleCategory, tripCategoryType = Just (fromMaybe DCT.DynamicOfferTrip tripCategoryType), ..}
        in pure (newConfig, eventMessages)
     Common.DuplicateCoinsConfig (Common.DuplicateCoinsConfigsReq {..}) -> do
       let findCoinsConfig = QConfig.findById $ ID.cast entriesId
       coinsConfig <- findCoinsConfig >>= UC.fromMaybeM (InvalidRequest "Coins config does not exist")
-      let duplicatedConfig = coinsConfig {DTCC.id = ID.Id uuid, DTCC.eventFunction = eventFunction}
+      let duplicatedConfig = coinsConfig {DTCC.id = ID.Id uuid, DTCC.eventFunction = eventFunction, DTCC.tripCategoryType = Just (fromMaybe DCT.DynamicOfferTrip coinsConfig.tripCategoryType)}
       pure (duplicatedConfig, eventMessages)
   QConfig.createCoinEntries newCoinsConfig
   clearCache newCoinsConfig
@@ -58,7 +58,8 @@ postCoinsConfigCreate _merchantShortId _opCity req = do
 clearCache :: DTCC.CoinsConfig -> Environment.Flow ()
 clearCache coinsConfig = do
   let clearCacheWithoutVehicleCategory = CQConfig.clearCache coinsConfig.eventName coinsConfig.eventFunction (ID.Id coinsConfig.merchantOptCityId)
-  whenJust coinsConfig.vehicleCategory (\vc -> clearCacheWithoutVehicleCategory vc (fromMaybe DCT.DynamicOfferTrip coinsConfig.tripCategoryType))
+  let tripCategory = fromMaybe DCT.DynamicOfferTrip coinsConfig.tripCategoryType
+  whenJust coinsConfig.vehicleCategory (\vc -> clearCacheWithoutVehicleCategory vc tripCategory)
 
 processingTranslations :: DTCC.CoinsConfig -> [Common.EventMessage] -> Environment.Flow ()
 processingTranslations coinsConfig eventMessageLs = do

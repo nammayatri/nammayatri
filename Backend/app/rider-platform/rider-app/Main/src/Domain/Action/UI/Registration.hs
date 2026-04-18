@@ -1035,7 +1035,7 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
       Y.LoginTagData ->
       m ()
     addNammaTags person tagData = do
-      newPersonTags <- withTryCatch "computeNammaTagsWithExpiry:Login" (LYDL.computeNammaTagsWithExpiryAndDebugLog LYDL.Rider (cast person.merchantOperatingCityId) Yudhishthira.Login tagData)
+      newPersonTags <- withTryCatch "computeNammaTagsWithExpiry:Login" (LYDL.computeNammaTagsWithExpiryAndDebugLog LYDL.Rider (cast person.merchantOperatingCityId) Yudhishthira.Login (Nothing :: Maybe Text) tagData)
       let tags = nub (fromMaybe [] person.customerNammaTags <> fromMaybe [] (eitherToMaybe newPersonTags))
       CQP.updateCustomerTags (Just tags) tagData.id
 
