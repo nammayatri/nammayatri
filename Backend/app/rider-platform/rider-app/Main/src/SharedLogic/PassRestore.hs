@@ -25,6 +25,7 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.PurchasedPass as DPP
 import EulerHS.Prelude hiding (id)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.Utils as SLUtils
@@ -54,11 +55,11 @@ restorePurchasedPassesIfNeeded ::
   Text ->
   m ()
 restorePurchasedPassesIfNeeded newPerson mobileNumber = do
-  -- Guard: if newPerson already has passes, skip to prevent duplicate passes
-  -- on retries or repeated re-registrations.
+  -- Guard: if newPerson already has passes, throw error to catch unexpected state.
+  -- TODO: Handle this scenario properly - indicates duplicate migration or data inconsistency.
   existingPasses <- QPurchasedPass.findAllByPersonId newPerson.id
-  unless (null existingPasses) $ do
-    logInfo $ "PassRestore: person already has passes, skipping migration for newPersonId=" <> newPerson.id.getId
+  when (not (null existingPasses)) $ do
+    throwError $ InvalidRequest "PassRestore: person already has passes, migration aborted"
 
   -- Derive the same static customer ID that was stored at deletion time.
   staticPersonId <- SLUtils.getStaticCustomerId newPerson mobileNumber
