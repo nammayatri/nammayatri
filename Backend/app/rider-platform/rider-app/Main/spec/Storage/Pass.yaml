@@ -70,7 +70,7 @@ Pass:
 
   constraints:
     id: PrimaryKey
-    passTypeId: !SecondaryKey
+    passTypeId: "!SecondaryKey"
 
   sqlType:
     applicableVehicleServiceTiers: text[]

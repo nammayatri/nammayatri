@@ -47,6 +47,6 @@ instance B.Table PassT where
 
 type Pass = PassT Identity
 
-$(enableKVPG ''PassT ['id] [])
+$(enableKVPG ''PassT ['id] [['passTypeId]])
 
 $(mkTableInstances ''PassT "pass")

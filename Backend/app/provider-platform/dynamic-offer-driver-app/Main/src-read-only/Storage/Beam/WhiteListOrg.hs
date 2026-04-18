@@ -28,6 +28,6 @@ instance B.Table WhiteListOrgT where
 
 type WhiteListOrg = WhiteListOrgT Identity
 
-$(enableKVPG ''WhiteListOrgT ['id] [])
+$(enableKVPG ''WhiteListOrgT ['id] [['subscriberId]])
 
 $(mkTableInstancesWithTModifier ''WhiteListOrgT "white_list_org" [("subscriberId", "subscriber_id")])

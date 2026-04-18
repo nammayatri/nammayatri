@@ -11,20 +11,20 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data EDCMachineMappingT f = EDCMachineMappingT
-  { clientId :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    createdBy :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    id :: (B.C f Kernel.Prelude.Text),
-    isActive :: (B.C f Kernel.Prelude.Bool),
-    machineName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    merchantChannelId :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantKey :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    paytmMid :: (B.C f Kernel.Prelude.Text),
-    personId :: (B.C f Kernel.Prelude.Text),
-    terminalId :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { clientId :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    createdBy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    id :: B.C f Kernel.Prelude.Text,
+    isActive :: B.C f Kernel.Prelude.Bool,
+    machineName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantChannelId :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantKey :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    paytmMid :: B.C f Kernel.Prelude.Text,
+    personId :: B.C f Kernel.Prelude.Text,
+    terminalId :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -34,6 +34,6 @@ instance B.Table EDCMachineMappingT where
 
 type EDCMachineMapping = EDCMachineMappingT Identity
 
-$(enableKVPG (''EDCMachineMappingT) [('id)] [])
+$(enableKVPG ''EDCMachineMappingT ['id] [['personId]])
 
-$(mkTableInstances (''EDCMachineMappingT) "edc_machine_mapping")
+$(mkTableInstances ''EDCMachineMappingT "edc_machine_mapping")
