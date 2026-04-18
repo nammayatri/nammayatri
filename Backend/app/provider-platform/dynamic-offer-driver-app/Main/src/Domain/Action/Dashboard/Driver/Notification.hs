@@ -23,7 +23,6 @@ import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types as DTC
 import qualified Domain.Types.Common as DCommon
-import Domain.Utils (safeLast)
 import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -31,6 +30,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchReqLocation as DSSL
 import qualified Domain.Types.VehicleVariant as DVeh
+import Domain.Utils (safeLast)
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Maps.Types
@@ -42,9 +42,9 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.Type as SLT
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -101,7 +101,7 @@ triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
   now <- getCurrentTime
   driverLocationResult <- withTryCatch "driversLocation:triggerDummyRideRequest" $ LF.driversLocation [driver.id]
   let mbDriverLocation = case driverLocationResult of
-        Left _          -> Nothing
+        Left _ -> Nothing
         Right locations -> safeLast locations
   intelligentPoolConfig <- CDIP.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast driver.id)))
   let locationUpdateSampleTime = maybe 3 (.locationUpdateSampleTime) intelligentPoolConfig

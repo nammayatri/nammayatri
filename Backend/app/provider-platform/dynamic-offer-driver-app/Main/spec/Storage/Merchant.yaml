@@ -1184,6 +1184,7 @@ TransporterConfig:
     deleteDriverBankAccountWhenLinkToFleet: Maybe Bool
     digilockerEnabled: Maybe Bool
     allowDisableDriverToTakeSpecialZoneRide: Maybe Bool
+    restrictMobileUpdateToDashboard: Maybe Bool
     payoutRideMoneyToDriver: Maybe Bool
     payoutRideScheduleTimeBuffer: Maybe Seconds
     allowedPaymentInstrumentForPayout: Maybe [PaymentInstrument]

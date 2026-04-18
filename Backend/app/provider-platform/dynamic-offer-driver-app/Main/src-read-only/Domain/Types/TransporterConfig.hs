@@ -254,6 +254,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     requireRouteMappingInVehicle :: Kernel.Prelude.Bool,
     requiresDriverOnboardingInspection :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     requiresOnboardingInspection :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    restrictMobileUpdateToDashboard :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rideTimeEstimatedThreshold :: Kernel.Types.Common.Seconds,
     routeDeviationThreshold :: Kernel.Types.Common.Meters,
     safetyTeamNumbers :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
@@ -374,11 +375,11 @@ data DashboardMediaSendingLimit = DashboardMediaSendingLimit {alert :: Kernel.Pr
 data DemandHotspotsConfig = DemandHotspotsConfig
   { analysisDurationMinutes :: Kernel.Prelude.Int,
     enableDemandHotspots :: Kernel.Prelude.Bool,
+    nearbyRadiusMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    nearbySearchStalenessMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     noOfGeohashesToReturn :: Kernel.Prelude.Int,
     precisionOfGeohash :: Kernel.Prelude.Int,
-    resultDurationMinutes :: Kernel.Prelude.Int,
-    nearbyRadiusMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    nearbySearchStalenessMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+    resultDurationMinutes :: Kernel.Prelude.Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
