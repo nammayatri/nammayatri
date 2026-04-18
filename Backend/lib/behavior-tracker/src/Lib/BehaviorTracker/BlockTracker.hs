@@ -70,7 +70,7 @@ writeBlockKey entityType entityId blockType reasonTag durationHours blockReason 
             expiresAt = expiresAt',
             extraParams = extraParams
           }
-  Redis.withCrossAppRedis $ Redis.setExp key info ttlSeconds
+  Redis.runInMultiCloudRedisWrite $ Redis.withCrossAppRedis $ Redis.setExp key info ttlSeconds
 
 -- | Write a cooldown key with TTL
 writeCooldownKey ::
@@ -92,7 +92,7 @@ writeCooldownKey entityType entityId reasonTag cooldownHours = do
             setAt = now,
             expiresAt = addUTCTime (fromIntegral ttlSeconds) now
           }
-  Redis.withCrossAppRedis $ Redis.setExp key info ttlSeconds
+  Redis.runInMultiCloudRedisWrite $ Redis.withCrossAppRedis $ Redis.setExp key info ttlSeconds
 
 -- | Write both block + cooldown keys in one call
 writeBlockAndCooldownKeys ::
@@ -125,19 +125,20 @@ readBlockKey ::
   m (Maybe (BlockInfo, Integer))
 readBlockKey entityType entityId blockType reasonTag = do
   let key = mkBlockKey entityType entityId blockType reasonTag
-  Redis.withCrossAppRedis $ do
-    mbVal <- Redis.get @BlockInfo key
-    case mbVal of
-      Nothing -> return Nothing
-      Just info -> do
-        remainingTtl <- Redis.ttl key
-        -- TTL -2 = key doesn't exist, -1 = no expiry (permanent), 0 = about to expire
-        if remainingTtl == -1
-          then return $ Just (info, 0) -- permanent block, no expiry
-          else
-            if remainingTtl <= 0
-              then return Nothing -- expired or non-existent
-              else return $ Just (info, remainingTtl)
+  Redis.runInMultiCloudRedisMaybeResult $
+    Redis.withCrossAppRedis $ do
+      mbVal <- Redis.get @BlockInfo key
+      case mbVal of
+        Nothing -> return Nothing
+        Just info -> do
+          remainingTtl <- Redis.ttl key
+          -- TTL -2 = key doesn't exist, -1 = no expiry (permanent), 0 = about to expire
+          if remainingTtl == -1
+            then return $ Just (info, 0) -- permanent block, no expiry
+            else
+              if remainingTtl <= 0
+                then return Nothing -- expired or non-existent
+                else return $ Just (info, remainingTtl)
 
 -- | Read a cooldown key: returns (CooldownInfo, remainingTTL in seconds)
 readCooldownKey ::
@@ -150,16 +151,17 @@ readCooldownKey ::
   m (Maybe (CooldownInfo, Integer))
 readCooldownKey entityType entityId reasonTag = do
   let key = mkCooldownKey entityType entityId reasonTag
-  Redis.withCrossAppRedis $ do
-    mbVal <- Redis.get @CooldownInfo key
-    case mbVal of
-      Nothing -> return Nothing
-      Just info -> do
-        remainingTtl <- Redis.ttl key
-        -- Cooldowns always have TTL; treat <= 0 as expired
-        if remainingTtl <= 0
-          then return Nothing
-          else return $ Just (info, remainingTtl)
+  Redis.runInMultiCloudRedisMaybeResult $
+    Redis.withCrossAppRedis $ do
+      mbVal <- Redis.get @CooldownInfo key
+      case mbVal of
+        Nothing -> return Nothing
+        Just info -> do
+          remainingTtl <- Redis.ttl key
+          -- Cooldowns always have TTL; treat <= 0 as expired
+          if remainingTtl <= 0
+            then return Nothing
+            else return $ Just (info, remainingTtl)
 
 -- | Check if entity has an active block of given type/reason
 isEntityBlocked ::
