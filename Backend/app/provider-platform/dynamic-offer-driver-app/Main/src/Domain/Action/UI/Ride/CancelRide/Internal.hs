@@ -181,18 +181,19 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                   --   else DCT.CancellationByCustomer
                   if any (`elem` rideTags) tagsForCancellationCharges
                     then getCancellationCharges booking ride cancellationType bookingCReason.reasonCode
-                    else return Nothing
-                else return Nothing
+                    else return (Nothing, Nothing)
+                else return (Nothing, Nothing)
             userNoShowCharges <- case noShowCharges of
               Left e -> do
                 logError $ "Error in getting no show charges - " <> show e
-                return Nothing
-              Right (charges :: Maybe PriceAPIEntity) -> return charges
+                return (Nothing, Nothing)
+              Right (charges :: (Maybe PriceAPIEntity, Maybe Int)) -> return charges
             -- calculateNoShowCharges booking ride else return Nothing
+            let (userNoShowChargesFee, userNoShowChargesLogicVersion) = userNoShowCharges
             driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
             vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
             unless (isValidRide ride) $ throwError (InternalError "Ride is not valid for cancellation")
-            cancelRideTransaction booking ride bookingCReason merchant rideEndedBy userNoShowCharges transporterConfig driver
+            cancelRideTransaction booking ride bookingCReason merchant rideEndedBy userNoShowChargesFee userNoShowChargesLogicVersion transporterConfig driver
             logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
             -- Demand decrement: customer cancelled before ride start → demand retracted.
             -- Only applies to pickup-gate bookings cancelled by the user (ByDriver cancels keep demand live).
@@ -222,7 +223,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
               Notify.notifyOnCancel ride.merchantOperatingCityId booking driver bookingCReason.source
             fork "cancelRide/ReAllocate - Notify BAP" $ do
               isReallocated <- reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason isForceReallocation
-              unless isReallocated $ BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source userNoShowCharges
+              unless isReallocated $ BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source userNoShowChargesFee
             computeEligibleUpgradeTiers ride transporterConfig
         )
         ( do
@@ -260,10 +261,11 @@ cancelRideTransaction ::
   DMerc.Merchant ->
   DRide.RideEndedBy ->
   Maybe PriceAPIEntity ->
+  Maybe Int ->
   DTC.TransporterConfig ->
   SP.Person ->
   m ()
-cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellationFee transporterConfig driver = do
+cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellationFee cancellationChargesLogicVersion transporterConfig driver = do
   let driverId = cast ride.driverId
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
   when isPrepaidSubscriptionAndWalletEnabled $ releaseLien booking ride
@@ -277,7 +279,7 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
   when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
   case (cancellationFee, booking.riderId) of
     (Just fee, Just rid) -> do
-      QRide.updateCancellationChargesOnCancel (Just fee.amount) ride.id
+      QRide.updateCancellationChargesOnCancel (Just fee.amount) cancellationChargesLogicVersion ride.id
       riderDetails <- QRiderDetails.findById rid >>= fromMaybeM (RiderDetailsNotFound rid.getId)
       void $ QRiderDetails.updateCancellationDues (fee.amount + riderDetails.cancellationDues) rid
       QRiderDetails.updateValidCancellationsCount rid.getId
@@ -477,8 +479,9 @@ customerCancellationChargesCalculation ::
   RiderDetails.RiderDetails ->
   DCT.CancellationType ->
   Maybe DTCR.CancellationReasonCode ->
-  m (Maybe HighPrecMoney)
-customerCancellationChargesCalculation booking ride riderDetails cancellationType reasonCode = do
+  Maybe Int ->
+  m (Maybe HighPrecMoney, Maybe Int)
+customerCancellationChargesCalculation booking ride riderDetails cancellationType reasonCode mbExistingVersion = do
   transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   (cancellationDisToPickup, _mbLocation) <- getDistanceToPickup booking (Just ride)
   now <- getCurrentTime
@@ -530,7 +533,7 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
   if transporterConfig.canAddCancellationFee
     then do
       localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-      (allLogics, _mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES localTime Nothing Nothing
+      (allLogics, mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES localTime mbExistingVersion Nothing
       logDebug $ "allLogics: for cancellation charges calculation" <> show allLogics
       logDebug $ "logicInput: for cancellation charges calculation" <> show logicInput
       response <- withTryCatch "runLogics:UserCancellationDues" $ LYDL.runLogicsWithDebugLog LYDL.Driver (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES (Just booking.transactionId) allLogics logicInput
@@ -548,8 +551,8 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
               return (Just 0)
       when (reasonCode == Just userNoShowCancellationReason && fromMaybe 0 cancellationCharge <= 0) $
         logError $ "User no show charges was not applied: " <> show cancellationCharge <> ": rideId: " <> ride.id.getId <> ". Please check dynamic logic"
-      pure cancellationCharge
-    else return Nothing
+      pure (cancellationCharge, mbVersion)
+    else return (Nothing, Nothing)
 
 userNoShowCancellationReason :: DTCR.CancellationReasonCode
 userNoShowCancellationReason = DTCR.CancellationReasonCode "CUSTOMER_NO_SHOW"
@@ -571,21 +574,21 @@ getCancellationCharges ::
   DRide.Ride ->
   DCT.CancellationType ->
   Maybe DTCR.CancellationReasonCode ->
-  m (Maybe PriceAPIEntity)
+  m (Maybe PriceAPIEntity, Maybe Int)
 getCancellationCharges booking ride cancellationType reasonCode = do
   transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   case booking.riderId of
-    Nothing -> return Nothing
+    Nothing -> return (Nothing, Nothing)
     Just rid -> do
       riderDetails <- QRiderDetails.findById rid >>= fromMaybeM (RiderDetailsNotFound rid.getId)
       if transporterConfig.canAddCancellationFee
         then do
-          charges' <- customerCancellationChargesCalculation booking ride riderDetails cancellationType reasonCode
+          (charges', mbVersion) <- customerCancellationChargesCalculation booking ride riderDetails cancellationType reasonCode ride.cancellationChargesLogicVersion
           case charges' of
             Just charges -> do
-              return $ Just $ PriceAPIEntity {amount = charges, currency = booking.currency}
-            Nothing -> return Nothing
-        else return Nothing
+              return (Just $ PriceAPIEntity {amount = charges, currency = booking.currency}, mbVersion)
+            Nothing -> return (Nothing, mbVersion)
+        else return (Nothing, Nothing)
 
 buildPenaltyCheckContext ::
   ( MonadFlow m,

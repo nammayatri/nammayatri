@@ -28,15 +28,29 @@ import Storage.Queries.Transformers.Ride
 findByShortId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.ShortId Domain.Types.Ride.Ride -> m (Maybe Domain.Types.Ride.Ride))
 findByShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq (Kernel.Types.Id.getShortId shortId)]
 
-updateCancellationChargesOnCancel :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
-updateCancellationChargesOnCancel cancellationChargesOnCancel id = do
+updateCancellationChargesOnCancel ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateCancellationChargesOnCancel cancellationChargesOnCancel cancellationChargesLogicVersion id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.cancellationChargesOnCancel cancellationChargesOnCancel, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateOneWithKV
+    [ Se.Set Beam.cancellationChargesOnCancel cancellationChargesOnCancel,
+      Se.Set Beam.cancellationChargesLogicVersion cancellationChargesLogicVersion,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateCancellationFeeIfCancelledField :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
-updateCancellationFeeIfCancelledField cancellationFeeIfCancelled id = do
+updateCancellationFeeIfCancelledField ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateCancellationFeeIfCancelledField cancellationFeeIfCancelled cancellationChargesLogicVersion id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.cancellationFeeIfCancelled cancellationFeeIfCancelled, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateOneWithKV
+    [ Se.Set Beam.cancellationFeeIfCancelled cancellationFeeIfCancelled,
+      Se.Set Beam.cancellationChargesLogicVersion cancellationChargesLogicVersion,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateDiscountAmount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateDiscountAmount discountAmount id = do

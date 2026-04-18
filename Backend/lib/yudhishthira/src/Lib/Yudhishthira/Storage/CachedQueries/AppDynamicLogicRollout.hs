@@ -136,7 +136,7 @@ clearBaseRolloutCacheKey cityId domain = Hedis.runInMultiCloudRedisWrite $ Hedis
 
 clearCache :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ()
 clearCache cityId domain = do
-    clearCityConfigsCache cityId
-    clearDomainCache cityId domain
-    clearBaseRolloutCacheKey cityId domain
-    clearActiveDomainCache cityId domain
+  clearCityConfigsCache cityId
+  clearDomainCache cityId domain
+  clearBaseRolloutCacheKey cityId domain
+  clearActiveDomainCache cityId domain
