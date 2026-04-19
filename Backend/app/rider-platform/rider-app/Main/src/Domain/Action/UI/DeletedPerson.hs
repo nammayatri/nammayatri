@@ -38,9 +38,9 @@ postDeletedPerson (mbPersonId, merchantId) (API.Types.UI.DeletedPerson.DeletedPe
   -- UUID used by the payment system). Stored as Text so we can look up this
   -- record if the same number re-registers in future (for pass restoration).
   mbMobileNumber <- mapM decrypt person.mobileNumber
-  mbStaticPersonId <- case mbMobileNumber of
-    Just mobileNumber -> Just <$> SLUtils.getStaticCustomerId person mobileNumber
-    Nothing -> return Nothing
+  let mbStaticPersonId = case mbMobileNumber of
+        Just mobileNumber -> Just $ SLUtils.getPureStaticCustomerId person mobileNumber
+        Nothing -> Nothing
   void $ notifyAboutDeletedPerson personId
   QD.create (createDeletedPerson person now mbStaticPersonId)
   _ <- QP.deleteById personId
