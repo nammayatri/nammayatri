@@ -61,8 +61,8 @@ restorePurchasedPassesIfNeeded newPerson mobileNumber = do
   when (not (null existingPasses)) $ do
     throwError $ InvalidRequest "PassRestore: person already has passes, migration aborted"
 
-  -- Derive the same static customer ID that was stored at deletion time.
-  staticPersonId <- SLUtils.getStaticCustomerId newPerson mobileNumber
+  -- Derive the same static customer ID that was stored at deletion time (pure function).
+  let staticPersonId = SLUtils.getPureStaticCustomerId newPerson mobileNumber
   deletedPersons <- QDeletedPerson.findAllByStaticPersonId Nothing Nothing (Just staticPersonId)
 
   -- Single-migration: process only the first deleted account with qualifying passes

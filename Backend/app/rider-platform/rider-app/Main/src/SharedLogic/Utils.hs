@@ -12,7 +12,11 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module SharedLogic.Utils where
+module SharedLogic.Utils
+  ( getStaticCustomerId,
+    getPureStaticCustomerId,
+  )
+where
 
 import qualified Data.Time as Time
 import qualified Domain.Types.Person as DP
@@ -22,6 +26,13 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.UUID as UUID
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
+
+-- | Pure version of static customer ID generation.
+-- Generates the ID deterministically from phone and merchantId without any config lookups.
+getPureStaticCustomerId :: DP.Person -> Text -> Text
+getPureStaticCustomerId person phone =
+  let key = phone <> ":" <> person.merchantId.getId
+   in UUID.generateStaticUUID key
 
 getStaticCustomerId :: (MonadFlow m, EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r) => DP.Person -> Text -> m Text
 getStaticCustomerId person phone = do
