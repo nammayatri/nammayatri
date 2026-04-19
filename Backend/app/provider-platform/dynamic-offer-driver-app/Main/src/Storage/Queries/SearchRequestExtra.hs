@@ -78,7 +78,8 @@ updateMultipleByRequestId searchRequest isScheduled =
             Se.Set BeamSR.parcelType searchRequest.parcelType,
             Se.Set BeamSR.parcelQuantity searchRequest.parcelQuantity,
             Se.Set BeamSR.disabilityTag searchRequest.disabilityTag,
-            Se.Set BeamSR.preferSafetyPlus $ Just searchRequest.preferSafetyPlus
+            Se.Set BeamSR.preferSafetyPlus $ Just searchRequest.preferSafetyPlus,
+            Se.Set BeamSR.isPetRide $ Just searchRequest.isPetRide
           ]
         )
       condition = [Se.Is BeamSR.id (Se.Eq searchRequest.id.getId)]
