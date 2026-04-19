@@ -103,6 +103,7 @@ import qualified "lib-dashboard" Domain.Types.Person as DP
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import EulerHS.Prelude hiding (elem, find, length, map, null, sortOn, whenJust)
+import Kernel.External.Encryption (encrypt)
 import qualified Kernel.External.Maps
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
@@ -631,7 +632,31 @@ postDriverFleetDriverUpdate merchantShortId opCity apiTokenInfo driverId req = d
   T.withTransactionStoring transaction $ do
     let requestorId = apiTokenInfo.personId.getId
     -- Pass requestorId to BPP - role-based checks and associations are validated on BPP side
-    Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetDriverUpdate) driverId requestorId req
+    result <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetDriverUpdate) driverId requestorId req
+    when (isJust req.firstName || isJust req.lastName || isJust req.email || isJust req.mobileNo || isJust req.mobileCountryCode) $ do
+      mbPerson <- QP.findById (cast driverId)
+      whenJust mbPerson $ \person -> do
+        -- Handle encryption for mobileNumber if provided
+        newMobileNumber <- case req.mobileNo of
+          Just mobile -> encrypt mobile
+          Nothing -> pure person.mobileNumber
+
+        -- Handle encryption for email if provided
+        newEmail <- case req.email of
+          Just email -> Just <$> encrypt email
+          Nothing -> pure person.email
+
+        let updatedPerson :: DP.Person
+            updatedPerson = person
+              { DP.firstName = fromMaybe person.firstName req.firstName,
+                DP.lastName = fromMaybe person.lastName req.lastName,
+                DP.email = newEmail,
+                DP.mobileNumber = newMobileNumber,
+                DP.mobileCountryCode = fromMaybe person.mobileCountryCode req.mobileCountryCode
+              }
+        QP.updatePerson (cast driverId) updatedPerson
+
+    pure result
 
 getDriverFleetVehicleListStats :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Data.Time.Day -> Data.Time.Day -> Environment.Flow Common.FleetVehicleStatsRes)
 getDriverFleetVehicleListStats merchantShortId opCity apiTokenInfo mbFleetOwnerId vehicleNo limit offset from to = do
