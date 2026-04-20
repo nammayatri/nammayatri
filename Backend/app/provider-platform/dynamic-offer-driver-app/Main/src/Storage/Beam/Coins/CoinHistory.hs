@@ -17,6 +17,7 @@ module Storage.Beam.Coins.CoinHistory where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as DCoins
 import qualified Database.Beam as B
+import qualified Domain.Types.Common as DTC
 import Domain.Types.VehicleCategory as DTV
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
@@ -37,7 +38,8 @@ data CoinHistoryT f = CoinHistoryT
     coinsUsed :: B.C f Int,
     bulkUploadTitle :: B.C f (Maybe DCoins.Translations),
     entityId :: B.C f (Maybe Text),
-    vehicleCategory :: B.C f (Maybe DTV.VehicleCategory)
+    vehicleCategory :: B.C f (Maybe DTV.VehicleCategory),
+    serviceTierType :: B.C f (Maybe DTC.ServiceTierType)
   }
   deriving (Generic, B.Beamable)
 

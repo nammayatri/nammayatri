@@ -57,8 +57,8 @@ postCoinsConfigCreate _merchantShortId _opCity req = do
 
 clearCache :: DTCC.CoinsConfig -> Environment.Flow ()
 clearCache coinsConfig = do
-  let clearCacheWithoutVehicleCategory = CQConfig.clearCache coinsConfig.eventName coinsConfig.eventFunction (ID.Id coinsConfig.merchantOptCityId)
-  whenJust coinsConfig.vehicleCategory (\vc -> clearCacheWithoutVehicleCategory vc (fromMaybe DCT.DynamicOfferTrip coinsConfig.tripCategoryType))
+  let clearCacheForVehicleCategory = CQConfig.clearCache coinsConfig.eventName coinsConfig.eventFunction (ID.Id coinsConfig.merchantOptCityId)
+  whenJust coinsConfig.vehicleCategory (\vc -> clearCacheForVehicleCategory vc coinsConfig.serviceTierType (fromMaybe DCT.DynamicOfferTrip coinsConfig.tripCategoryType))
 
 processingTranslations :: DTCC.CoinsConfig -> [Common.EventMessage] -> Environment.Flow ()
 processingTranslations coinsConfig eventMessageLs = do

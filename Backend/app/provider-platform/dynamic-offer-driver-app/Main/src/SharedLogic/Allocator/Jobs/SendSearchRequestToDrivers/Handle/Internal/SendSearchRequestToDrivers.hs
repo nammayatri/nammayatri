@@ -150,6 +150,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
               searchReq.providerId
               searchReq.merchantOperatingCityId
               (Just vehicleCategory)
+              Nothing
           return (vehicleCategory, maybeCoinsConfig >>= (\config -> Just config.coins))
         return $ M.fromList coinConfigs
       else return M.empty

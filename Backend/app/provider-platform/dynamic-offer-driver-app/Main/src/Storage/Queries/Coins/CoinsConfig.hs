@@ -17,6 +17,7 @@ module Storage.Queries.Coins.CoinsConfig where
 
 import API.Types.ProviderPlatform.Management.Endpoints.CoinsConfig (UpdateReq (..))
 import Domain.Types.Coins.CoinsConfig
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.VehicleCategory as DTV
@@ -37,15 +38,16 @@ fetchCoins eventFunction (Id merchantId) =
         ]
     ]
 
-fetchCoinConfigByFunctionAndMerchant :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsFunctionType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DTV.VehicleCategory -> m (Maybe CoinsConfig)
-fetchCoinConfigByFunctionAndMerchant eventFunction (Id merchantId) (Id merchantOptCityId) vehicleCategory = do
+fetchCoinConfigByFunctionAndMerchant :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsFunctionType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m (Maybe CoinsConfig)
+fetchCoinConfigByFunctionAndMerchant eventFunction (Id merchantId) (Id merchantOptCityId) vehicleCategory serviceTierType = do
   findOneWithKV
     [ Se.And
         [ Se.Is BeamDC.eventFunction $ Se.Eq eventFunction,
           Se.Is BeamDC.merchantId $ Se.Eq merchantId,
           Se.Is BeamDC.merchantOptCityId $ Se.Eq merchantOptCityId,
           Se.Is BeamDC.active $ Se.Eq True,
-          Se.Is BeamDC.vehicleCategory $ Se.Eq vehicleCategory
+          Se.Is BeamDC.vehicleCategory $ Se.Eq vehicleCategory,
+          Se.Is BeamDC.serviceTierType $ Se.Eq serviceTierType
         ]
     ]
 
@@ -65,8 +67,8 @@ updateCoinEntries UpdateReq {..} =
     ]
     [Se.Is BeamDC.id $ Se.Eq $ getId entriesId]
 
-fetchFunctionsOnEventbasis :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DTV.VehicleCategory -> DCT.TripCategoryType -> m [CoinsConfig]
-fetchFunctionsOnEventbasis eventType (Id merchantId) (Id merchantOptCityId) vehicleCategory tripCategoryType = do
+fetchFunctionsOnEventbasis :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> DCT.TripCategoryType -> m [CoinsConfig]
+fetchFunctionsOnEventbasis eventType (Id merchantId) (Id merchantOptCityId) vehicleCategory serviceTierType tripCategoryType = do
   let dbEventName = show eventType
   findAllWithKV
     [ Se.And
@@ -75,12 +77,13 @@ fetchFunctionsOnEventbasis eventType (Id merchantId) (Id merchantOptCityId) vehi
           Se.Is BeamDC.merchantOptCityId $ Se.Eq merchantOptCityId,
           Se.Is BeamDC.active $ Se.Eq True,
           Se.Is BeamDC.vehicleCategory $ Se.Eq vehicleCategory,
+          Se.Is BeamDC.serviceTierType $ Se.Eq serviceTierType,
           Se.Is BeamDC.tripCategoryType $ Se.Eq (Just tripCategoryType)
         ]
     ]
 
-fetchConfigOnEventAndFunctionBasis :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> DCT.DriverCoinsFunctionType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DTV.VehicleCategory -> DCT.TripCategoryType -> m (Maybe CoinsConfig)
-fetchConfigOnEventAndFunctionBasis eventType eventFunction (Id merchantId) (Id merchantOptCityId) vehicleCategory tripCategoryType = do
+fetchConfigOnEventAndFunctionBasis :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> DCT.DriverCoinsFunctionType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> DCT.TripCategoryType -> m (Maybe CoinsConfig)
+fetchConfigOnEventAndFunctionBasis eventType eventFunction (Id merchantId) (Id merchantOptCityId) vehicleCategory serviceTierType tripCategoryType = do
   let dbEventName = show eventType
   findOneWithKV
     [ Se.And
@@ -90,6 +93,7 @@ fetchConfigOnEventAndFunctionBasis eventType eventFunction (Id merchantId) (Id m
           Se.Is BeamDC.merchantOptCityId $ Se.Eq merchantOptCityId,
           Se.Is BeamDC.active $ Se.Eq True,
           Se.Is BeamDC.vehicleCategory $ Se.Eq vehicleCategory,
+          Se.Is BeamDC.serviceTierType $ Se.Eq serviceTierType,
           Se.Is BeamDC.tripCategoryType $ Se.Eq (Just tripCategoryType)
         ]
     ]
@@ -122,7 +126,8 @@ instance FromTType' BeamDC.CoinsConfig CoinsConfig where
             expirationAt = expirationAt,
             active = active,
             vehicleCategory = vehicleCategory,
-            tripCategoryType = tripCategoryType
+            tripCategoryType = tripCategoryType,
+            serviceTierType = serviceTierType
           }
 
 instance ToTType' BeamDC.CoinsConfig CoinsConfig where
@@ -137,5 +142,6 @@ instance ToTType' BeamDC.CoinsConfig CoinsConfig where
         BeamDC.expirationAt = expirationAt,
         BeamDC.active = active,
         BeamDC.vehicleCategory = vehicleCategory,
-        BeamDC.tripCategoryType = tripCategoryType
+        BeamDC.tripCategoryType = tripCategoryType,
+        BeamDC.serviceTierType = serviceTierType
       }

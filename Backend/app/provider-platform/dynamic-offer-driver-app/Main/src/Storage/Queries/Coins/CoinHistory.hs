@@ -153,7 +153,8 @@ instance FromTType' BeamDC.CoinHistory CoinHistory where
             coinsUsed = coinsUsed,
             bulkUploadTitle = bulkUploadTitle,
             entityId = entityId,
-            vehicleCategory = vehicleCategory
+            vehicleCategory = vehicleCategory,
+            serviceTierType = serviceTierType
           }
 
 instance ToTType' BeamDC.CoinHistory CoinHistory where
@@ -172,5 +173,6 @@ instance ToTType' BeamDC.CoinHistory CoinHistory where
         BeamDC.coinsUsed = coinsUsed,
         BeamDC.bulkUploadTitle = bulkUploadTitle,
         BeamDC.entityId = entityId,
-        BeamDC.vehicleCategory = vehicleCategory
+        BeamDC.vehicleCategory = vehicleCategory,
+        BeamDC.serviceTierType = serviceTierType
       }

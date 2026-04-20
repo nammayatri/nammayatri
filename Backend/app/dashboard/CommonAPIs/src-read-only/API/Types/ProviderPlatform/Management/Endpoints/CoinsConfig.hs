@@ -7,6 +7,7 @@ import qualified Dashboard.Common
 import qualified Dashboard.Common.DriverCoins
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
+import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.VehicleCategory
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
@@ -46,6 +47,7 @@ data NewCoinsConfigReq = NewCoinsConfigReq
     active :: Kernel.Prelude.Bool,
     vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,
     tripCategoryType :: Kernel.Prelude.Maybe Dashboard.Common.DriverCoins.TripCategoryType,
+    serviceTierType :: Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType,
     eventMessages :: [EventMessage]
   }
   deriving stock (Generic)

@@ -16,6 +16,7 @@ module Domain.Types.Coins.CoinHistory where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as DCoins
 import Data.Time
+import qualified Domain.Types.Common as DTC
 import Domain.Types.VehicleCategory as DTV
 import EulerHS.Prelude hiding (id, state)
 import Kernel.Types.Id
@@ -35,6 +36,7 @@ data CoinHistory = CoinHistory
     status :: DCT.CoinStatus,
     bulkUploadTitle :: Maybe DCoins.Translations,
     entityId :: Maybe Text,
-    vehicleCategory :: Maybe DTV.VehicleCategory
+    vehicleCategory :: Maybe DTV.VehicleCategory,
+    serviceTierType :: Maybe DTC.ServiceTierType
   }
   deriving (Generic, FromJSON, ToJSON, Show)
