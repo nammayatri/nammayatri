@@ -478,7 +478,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       tollVatAmount = fromMaybe 0 fareParams.tollVat
       parkingAmount = fromMaybe 0 fareParams.parkingCharge
       commissionAmount = fromMaybe 0 (ride.commission <|> booking.commission)
+      tipAmount = fromMaybe 0 fareParams.customerExtraFee
       baseFare = totalFare - taxAmount - tollAmount - tollVatAmount - parkingAmount
+      baseFareWithNoTip = baseFare - tipAmount
 
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
     isOnline <- do
@@ -521,7 +523,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
 
     mbPanCard <- QPanCard.findByDriverId driverOrFleetPersonId
     let effectiveTdsRate = computeEffectiveTdsRate mbPanCard mbTdsRate (transporterConfig.taxConfig.defaultTdsRate) (transporterConfig.taxConfig.invalidPanTdsRate)
-        baseFareForTds = max 0 baseFare
+        baseFareForTds = max 0 baseFareWithNoTip
         mbTdsAmount = do
           rate <- effectiveTdsRate
           let amount = baseFareForTds * realToFrac rate -- tdsRate is already decimal (0.01 = 1%)
@@ -541,8 +543,8 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               issuedToAddress = booking.fromLocation.address.fullAddress,
               lineItems =
                 catMaybes
-                  [ if baseFare > 0
-                      then Just InvoiceLineItem {description = "Base Fare", quantity = 1, unitPrice = baseFare, lineTotal = baseFare, isExternalCharge = False}
+                  [ if baseFareWithNoTip > 0
+                      then Just InvoiceLineItem {description = "Base Fare", quantity = 1, unitPrice = baseFareWithNoTip, lineTotal = baseFareWithNoTip, isExternalCharge = False}
                       else Nothing,
                     if taxAmount > 0
                       then Just InvoiceLineItem {description = "Tax", quantity = 1, unitPrice = taxAmount, lineTotal = taxAmount, isExternalCharge = False}
@@ -558,6 +560,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                       else Nothing,
                     if commissionAmount > 0
                       then Just InvoiceLineItem {description = "Platform Commission", quantity = 1, unitPrice = commissionAmount, lineTotal = commissionAmount, isExternalCharge = False}
+                      else Nothing,
+                    if tipAmount > 0
+                      then Just InvoiceLineItem {description = "Tips", quantity = 1, unitPrice = tipAmount, lineTotal = tipAmount, isExternalCharge = False}
                       else Nothing
                   ],
               gstBreakdown =
