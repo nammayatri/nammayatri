@@ -277,10 +277,10 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
           twoFaMaxOtpVerifyAttempts = baseMerchant.twoFaMaxOtpVerifyAttempts
         }
 
-getMerchantConfigSpecialLocationList :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe SL.SpecialLocationType -> Environment.Flow Common.SpecialLocationResp)
-getMerchantConfigSpecialLocationList merchantShortId opCity apiTokenInfo limit offset specialLocationType = do
+getMerchantConfigSpecialLocationList :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe [SL.SpecialLocationType] -> Environment.Flow Common.SpecialLocationResp)
+getMerchantConfigSpecialLocationList merchantShortId opCity apiTokenInfo limit offset specialLocationTypes = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigSpecialLocationList) limit offset specialLocationType
+  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigSpecialLocationList) limit offset specialLocationTypes
 
 getMerchantConfigGeometryList :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.Flow Common.GeometryResp)
 getMerchantConfigGeometryList merchantShortId opCity apiTokenInfo limit offset allCities = do
