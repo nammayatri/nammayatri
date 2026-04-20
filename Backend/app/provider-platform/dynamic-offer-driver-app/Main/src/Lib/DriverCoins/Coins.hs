@@ -39,6 +39,7 @@ import qualified Data.Aeson as A
 import qualified Data.Text as T
 import Data.Time (UTCTime (UTCTime, utctDay), addDays)
 import qualified Domain.Types.Coins.CoinHistory as DTCC
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverStats as DDS
 import qualified Domain.Types.FleetConfig as DFC
 import qualified Domain.Types.Merchant as DM
@@ -146,7 +147,8 @@ resetTodayCoinsAndAdjustLifetime driverId timeDiffFromUtc = do
             coinsUsed = 0,
             bulkUploadTitle = Nothing,
             entityId = Just resetEntityId,
-            vehicleCategory = historyItem.vehicleCategory
+            vehicleCategory = historyItem.vehicleCategory,
+            serviceTierType = historyItem.serviceTierType
           }
     driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
     void $ Person.updateTotalEarnedCoins (driver.totalEarnedCoins - todayAddedCoins) driverId
@@ -154,8 +156,8 @@ resetTodayCoinsAndAdjustLifetime driverId timeDiffFromUtc = do
     safeIncrBy (mkCoinAccumulationByDriverIdKey driverId currentDate) (negate $ fromIntegral todayAddedCoins) driverId timeDiffFromUtc
     Hedis.withCrossAppRedis $ Hedis.expire (mkCoinAccumulationByDriverIdKey driverId currentDate) expirationPeriod
 
-driverCoinsEvent :: EventFlow m r => Id DP.Person -> Maybe DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> Maybe Text -> Maybe DTVeh.VehicleVariant -> Maybe [LYT.ConfigVersionMap] -> m ()
-driverCoinsEvent driverId mbDriver merchantId merchantOpCityId eventType entityId mbVehVarient mbConfigVersionMap = do
+driverCoinsEvent :: EventFlow m r => Id DP.Person -> Maybe DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> Maybe Text -> Maybe DTVeh.VehicleVariant -> Maybe DTC.ServiceTierType -> Maybe [LYT.ConfigVersionMap] -> m ()
+driverCoinsEvent driverId mbDriver merchantId merchantOpCityId eventType entityId mbVehVarient mbServiceTierType mbConfigVersionMap = do
   let vehCategory = DTVeh.getVehicleCategoryFromVehicleVariantDefault mbVehVarient
       tripCatType = case eventType of
         DCT.EndRide {tripCategoryType} -> tripCategoryType
@@ -182,7 +184,7 @@ driverCoinsEvent driverId mbDriver merchantId merchantOpCityId eventType entityI
   if fromMaybe False transporterConfig.enableDirectWalletIncentives
     then driverMonetaryRewardEvent driverId merchantId merchantOpCityId eventType entityId vehCategory mbConfigVersionMap transporterConfig combinedBlacklist mbFleetOwnerId
     else do
-      coinConfiguration <- CDCQ.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehCategory tripCatType mbConfigVersionMap
+      coinConfiguration <- CDCQ.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehCategory mbServiceTierType tripCatType mbConfigVersionMap
       let applicableCoinConfiguration =
             if null incentiveCohortFunctions
               then coinConfiguration
@@ -200,7 +202,7 @@ driverCoinsEvent driverId mbDriver merchantId merchantOpCityId eventType entityI
           logInfo "All coin events blacklisted; skipping award"
           pure ()
         else do
-          finalCoinsValue <- sum <$> forM filteredConfigAll (\cc -> calculateCoins eventType driverId merchantId merchantOpCityId cc.eventFunction cc.expirationAt cc.coins transporterConfig entityId vehCategory)
+          finalCoinsValue <- sum <$> forM filteredConfigAll (\cc -> calculateCoins eventType driverId merchantId merchantOpCityId cc.eventFunction cc.expirationAt cc.coins transporterConfig entityId vehCategory mbServiceTierType)
           logInfo $ "Awarding coins: " <> show finalCoinsValue
           updateDriverCoins driverId finalCoinsValue transporterConfig.timeDiffFromUtc
 
@@ -220,35 +222,35 @@ isDriverIncentiveCohortFunction = \case
   DCT.DriverIncentiveCohortRidesCompleted _ -> True
   _ -> False
 
-calculateCoins :: EventFlow m r => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> m Int
-calculateCoins eventType driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory = do
+calculateCoins :: EventFlow m r => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m Int
+calculateCoins eventType driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType = do
   case eventType of
-    DCT.Rating {..} -> hRating driverId merchantId merchantOpCityId ratingValue ride eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory
-    DCT.EndRide {..} -> hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTierRide ride metroRideType tripCategoryType eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory
-    DCT.DriverToCustomerReferral {..} -> hDriverReferral driverId merchantId merchantOpCityId ride eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory
-    DCT.Cancellation {..} -> hCancellation driverId merchantId merchantOpCityId rideStartTime intialDisToPickup cancellationDisToPickup cancelledBy eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory
-    DCT.LMS -> hLms driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory
-    DCT.LMSBonus -> hLms driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory
+    DCT.Rating {..} -> hRating driverId merchantId merchantOpCityId ratingValue ride eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType
+    DCT.EndRide {..} -> hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTierRide ride metroRideType tripCategoryType eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType
+    DCT.DriverToCustomerReferral {..} -> hDriverReferral driverId merchantId merchantOpCityId ride eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType
+    DCT.Cancellation {..} -> hCancellation driverId merchantId merchantOpCityId rideStartTime intialDisToPickup cancellationDisToPickup cancelledBy eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType
+    DCT.LMS -> hLms driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType
+    DCT.LMSBonus -> hLms driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType
     _ -> pure 0
 
-hLms :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> m Int
-hLms driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins _ entityId vehCategory = do
+hLms :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m Int
+hLms driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins _ entityId vehCategory mbServiceTierType = do
   logDebug $ "Driver Coins Handle LMS Event Triggered - " <> show eventFunction
   case eventFunction of
     DCT.QuizQuestionCompleted ->
       runActionWhenValidConditions
         [ pure True
         ]
-        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory
+        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     DCT.BonusQuizCoins ->
       runActionWhenValidConditions
         [ pure True
         ]
-        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory
+        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     _ -> pure 0
 
-hRating :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Int -> DR.Ride -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> m Int
-hRating driverId merchantId merchantOpCityId ratingValue ride eventFunction mbexpirationTime numCoins _ entityId vehCategory = do
+hRating :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Int -> DR.Ride -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m Int
+hRating driverId merchantId merchantOpCityId ratingValue ride eventFunction mbexpirationTime numCoins _ entityId vehCategory mbServiceTierType = do
   logDebug $ "Driver Coins Handle Rating Event Triggered - " <> show eventFunction
   case eventFunction of
     DCT.OneOrTwoStarRating ->
@@ -256,17 +258,17 @@ hRating driverId merchantId merchantOpCityId ratingValue ride eventFunction mbex
         [ pure (ratingValue == 1 || ratingValue == 2),
           pure $ isValidRide ride
         ]
-        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory
+        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     DCT.FiveStarRating ->
       runActionWhenValidConditions
         [ pure $ ratingValue == 5,
           pure $ isValidRide ride
         ]
-        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory
+        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     _ -> pure 0
 
-hEndRide :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Maybe Int -> DR.Ride -> MetroRideType -> DCT.TripCategoryType -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> m Int
-hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTierRide _ride metroRideType tripCategoryType eventFunction mbexpirationTime numCoins _ entityId vehCategory = do
+hEndRide :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Maybe Int -> DR.Ride -> MetroRideType -> DCT.TripCategoryType -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m Int
+hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTierRide _ride metroRideType tripCategoryType eventFunction mbexpirationTime numCoins _ entityId vehCategory mbServiceTierType = do
   logDebug $ "Driver Coins Handle EndRide Event Triggered - " <> show eventFunction
   case eventFunction of
     DCT.RidesCompleted a -> do
@@ -276,7 +278,7 @@ hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTier
       runActionWhenValidConditions
         [ pure (validRideCount == a)
         ]
-        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory
+        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     DCT.DriverIncentiveCohortRidesCompleted a -> do
       validRideCount <- case tripCategoryType of
         DCT.OTPRideTrip -> fromMaybe 0 <$> getOTPValidRideCountByDriverIdKey driverId
@@ -284,18 +286,18 @@ hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTier
       runActionWhenValidConditions
         [ pure (validRideCount == a)
         ]
-        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory
+        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     DCT.PurpleRideCompleted ->
       runActionWhenValidConditions
         [ pure isDisabled
         ]
-        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory
+        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     DCT.GoldTierRideCompleted -> do
       let goldTierRide = isJust coinsRewardedOnGoldTierRide
       runActionWhenValidConditions
         [ pure goldTierRide
         ]
-        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory
+        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     DCT.MetroRideCompleted mRideType maybeCount -> do
       metroRideCount <- fromMaybe 0 <$> getMetroRideCountByDriverIdKey driverId mRideType
       logDebug $ "Metro Ride Type DB - " <> show mRideType <> "and count - " <> show maybeCount <> "Metro Ride Count from Redis - " <> show metroRideCount
@@ -305,25 +307,25 @@ hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTier
         then
           runActionWhenValidConditions
             conditionsForXRide
-            $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory
+            $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
         else
           if isNothing maybeCount
             then
               runActionWhenValidConditions
                 conditionsForEveryRide
-                $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory
+                $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
             else pure 0
     _ -> pure 0
 
-hDriverReferral :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DR.Ride -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> m Int
-hDriverReferral driverId merchantId merchantOpCityId ride eventFunction mbexpirationTime numCoins _ entityId vehCategory = do
+hDriverReferral :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DR.Ride -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m Int
+hDriverReferral driverId merchantId merchantOpCityId ride eventFunction mbexpirationTime numCoins _ entityId vehCategory mbServiceTierType = do
   logDebug $ "Driver Coins Handle Referral Event Triggered - " <> show eventFunction
   case eventFunction of
     DCT.DriverReferral ->
       runActionWhenValidConditions
         [ pure $ isValidRide ride
         ]
-        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory
+        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     _ -> pure 0
 
 validateCancellation :: EventFlow m r => Maybe Text -> UTCTime -> Maybe Meters -> Maybe Meters -> TransporterConfig -> DCT.CancellationType -> m Int
@@ -395,18 +397,18 @@ runCancellationLogic merchantOpCityId mbEntityTransactionId logicInput = do
           logError $ "Failed to parse cancellation logic result: " <> show err
           pure 0
 
-hCancellation :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe Meters -> Maybe Meters -> DCT.CancellationType -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> m Int
-hCancellation driverId merchantId merchantOpCityId rideStartTime intialDisToPickup cancellationDisToPickup cancelledBy eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory = do
+hCancellation :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe Meters -> Maybe Meters -> DCT.CancellationType -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m Int
+hCancellation driverId merchantId merchantOpCityId rideStartTime intialDisToPickup cancellationDisToPickup cancelledBy eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType = do
   logDebug $ "Driver Coins Handle Cancellation Event Triggered - " <> show eventFunction
   case eventFunction of
     DCT.BookingCancellation -> do
-      runActionWhenValidConditions [pure False] $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory -- To be deprecated
+      runActionWhenValidConditions [pure False] $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType -- To be deprecated
     DCT.BookingCancellationPenalisaton -> do
       numCoinValue <- validateCancellation entityId rideStartTime intialDisToPickup cancellationDisToPickup transporterConfig cancelledBy
-      runActionWhenValidConditions [pure (numCoinValue < 0)] $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoinValue entityId vehCategory
+      runActionWhenValidConditions [pure (numCoinValue < 0)] $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoinValue entityId vehCategory mbServiceTierType
     DCT.BookingCancellationCompensation -> do
       numCoinValue <- validateCancellation entityId rideStartTime intialDisToPickup cancellationDisToPickup transporterConfig cancelledBy
-      runActionWhenValidConditions [pure (numCoinValue > 0)] $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoinValue entityId vehCategory
+      runActionWhenValidConditions [pure (numCoinValue > 0)] $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoinValue entityId vehCategory mbServiceTierType
     _ -> pure 0
 
 runActionWhenValidConditions :: EventFlow m r => [m Bool] -> m Int -> m Int
@@ -421,8 +423,8 @@ runActionWhenValidConditions conditions action = do
       isValid <- condition
       if isValid then checkAllConditions xs else pure False
 
-updateEventAndGetCoinsvalue :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> Maybe Text -> DTV.VehicleCategory -> m Int
-updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory = do
+updateEventAndGetCoinsvalue :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m Int
+updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType = do
   now <- getCurrentTime
   uuid <- generateGUIDText
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -447,7 +449,8 @@ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction m
             coinsUsed = 0,
             bulkUploadTitle = Nothing,
             entityId = entityId,
-            vehicleCategory = Just vehCategory
+            vehicleCategory = Just vehCategory,
+            serviceTierType = mbServiceTierType
           }
   CHistory.updateCoinEvent driverCoinEvent
 

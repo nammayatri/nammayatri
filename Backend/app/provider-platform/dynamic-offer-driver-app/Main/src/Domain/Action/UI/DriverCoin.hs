@@ -430,7 +430,7 @@ refundCoins driverId merchantId merchantOperatingCityId payoutOrderId = do
   mbVehicle <- QVeh.findById driverId
   let vehCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
       numCoins = round (payoutOrder.amount.amount / transporterConfig.coinConversionRate)
-  void $ Coins.updateEventAndGetCoinsvalue driverId merchantId merchantOperatingCityId CoinsRedemptionRefund Nothing numCoins (Just payoutOrder.id.getId) vehCategory
+  void $ Coins.updateEventAndGetCoinsvalue driverId merchantId merchantOperatingCityId CoinsRedemptionRefund Nothing numCoins (Just payoutOrder.id.getId) vehCategory Nothing
   Coins.updateDriverCoins driverId numCoins transporterConfig.timeDiffFromUtc
   QDS.updateCoinsFieldsForDirectPayout driverId (negate payoutOrder.amount.amount)
 

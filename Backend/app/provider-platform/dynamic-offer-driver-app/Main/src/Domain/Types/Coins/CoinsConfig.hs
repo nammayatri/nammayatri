@@ -14,6 +14,7 @@
 
 module Domain.Types.Coins.CoinsConfig where
 
+import qualified Domain.Types.Common as DTC
 import Domain.Types.VehicleCategory as DTV
 import EulerHS.Prelude hiding (id, state)
 import Kernel.Types.Id
@@ -29,6 +30,7 @@ data CoinsConfig = CoinsConfig
     expirationAt :: Maybe Int,
     active :: Bool,
     vehicleCategory :: Maybe DTV.VehicleCategory,
-    tripCategoryType :: Maybe DCT.TripCategoryType
+    tripCategoryType :: Maybe DCT.TripCategoryType,
+    serviceTierType :: Maybe DTC.ServiceTierType
   }
   deriving (Generic, Show, FromJSON, ToJSON)
