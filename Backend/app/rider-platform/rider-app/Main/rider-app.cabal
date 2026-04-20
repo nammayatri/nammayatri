@@ -1758,6 +1758,7 @@ test-suite rider-app-test
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
+      BookingConfirm
       FRFS.DirectQR
       Paths_rider_app
   hs-source-dirs:
@@ -1809,6 +1810,7 @@ test-suite rider-app-test
     , beam-core
     , beam-mysql
     , beam-postgres
+    , beckn-spec
     , bytestring
     , casing
     , cassava
