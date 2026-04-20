@@ -120,7 +120,8 @@ bulkUpdateByDriverId merchantId merchantOpCityId driverId eventFunction coinsVal
                         coinsUsed = 0,
                         bulkUploadTitle = Just bulkUploadTitle,
                         entityId = entityId,
-                        vehicleCategory = Just $ VecVarient.castVehicleVariantToVehicleCategory vehicle.variant
+                        vehicleCategory = Just $ VecVarient.castVehicleVariantToVehicleCategory vehicle.variant,
+                        serviceTierType = Nothing
                       }
               CHistory.updateCoinEvent driverCoinEvent
               Coins.sendCoinsNotification merchantOpCityId driverId coinsValue eventFunction
@@ -191,7 +192,8 @@ bulkUpdateByDriverIdV2 merchantId merchantOpCityId driverId eventFunction amount
                         coinsUsed = 0,
                         bulkUploadTitle = Just bulkUploadTitle,
                         entityId = entityId,
-                        vehicleCategory = Just $ VecVarient.castVehicleVariantToVehicleCategory vehicle.variant
+                        vehicleCategory = Just $ VecVarient.castVehicleVariantToVehicleCategory vehicle.variant,
+                        serviceTierType = Nothing
                       }
               CHistory.updateCoinEvent driverCoinEvent
               Coins.sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue eventFunction

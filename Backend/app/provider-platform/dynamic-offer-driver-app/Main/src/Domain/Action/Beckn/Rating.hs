@@ -118,7 +118,7 @@ handler merchantId req ride = do
               SQD.incFavouriteRiderCount ride.driverId
       logDebug "Driver Rating Coin Event"
       fork "DriverCoinRating Event" $ do
-        DC.driverCoinsEvent driverId Nothing merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
+        DC.driverCoinsEvent driverId Nothing merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions)
     Nothing -> do
       logError $ "Booking not found for bookingId : " <> req.bookingId.getId
       pure ()

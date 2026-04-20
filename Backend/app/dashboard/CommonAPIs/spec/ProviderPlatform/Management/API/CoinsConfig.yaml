@@ -4,6 +4,7 @@ imports:
   CoinsConfig: Dashboard.Common
   Language: Kernel.External.Types
   VehicleCategory: Domain.Types.VehicleCategory
+  ServiceTierType: Domain.Types.ServiceTierType
 
 module: CoinsConfig
 
@@ -43,6 +44,7 @@ types:
     - active: Bool
     - vehicleCategory: VehicleCategory
     - tripCategoryType: Maybe TripCategoryType
+    - serviceTierType: Maybe ServiceTierType
     - eventMessages: [EventMessage]
   DuplicateCoinsConfigsReq:
     - entriesId: Id CoinsConfig

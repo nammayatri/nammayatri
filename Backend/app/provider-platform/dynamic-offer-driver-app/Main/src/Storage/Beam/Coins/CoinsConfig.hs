@@ -16,6 +16,7 @@
 module Storage.Beam.Coins.CoinsConfig where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.Common as DTC
 import Domain.Types.VehicleCategory as DTV
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
@@ -32,7 +33,8 @@ data CoinsConfigT f = CoinsConfigT
     expirationAt :: B.C f (Maybe Int),
     active :: B.C f Bool,
     vehicleCategory :: B.C f (Maybe DTV.VehicleCategory),
-    tripCategoryType :: B.C f (Maybe DCT.TripCategoryType)
+    tripCategoryType :: B.C f (Maybe DCT.TripCategoryType),
+    serviceTierType :: B.C f (Maybe DTC.ServiceTierType)
   }
   deriving (Generic, B.Beamable)
 

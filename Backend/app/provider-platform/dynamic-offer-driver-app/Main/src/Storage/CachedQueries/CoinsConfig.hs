@@ -17,6 +17,7 @@ module Storage.CachedQueries.CoinsConfig where
 
 import Data.Text (pack)
 import Domain.Types.Coins.CoinsConfig
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.VehicleCategory as DTV
@@ -29,66 +30,90 @@ import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.Coins.CoinsConfig as Queries
 import qualified Tools.DynamicLogic as DynamicLogic
 
-fetchFunctionsOnEventbasisInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> DCT.TripCategoryType -> [LYT.ConfigVersionMap] -> m [CoinsConfig]
-fetchFunctionsOnEventbasisInRideFlow eventType merchantId merchantOpCityId vehicleCategory tripCategoryType configVersionMap = fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehicleCategory tripCategoryType (Just configVersionMap)
+fetchFunctionsOnEventbasisInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> DCT.TripCategoryType -> [LYT.ConfigVersionMap] -> m [CoinsConfig]
+fetchFunctionsOnEventbasisInRideFlow eventType merchantId merchantOpCityId vehicleCategory mbServiceTierType tripCategoryType configVersionMap = fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehicleCategory mbServiceTierType tripCategoryType (Just configVersionMap)
 
-fetchFunctionsOnEventbasis :: (CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> DCT.TripCategoryType -> Maybe [LYT.ConfigVersionMap] -> m [CoinsConfig]
-fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehicleCategory tripCategoryType mbConfigVersionMap = do
+fetchFunctionsOnEventbasis :: (CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> DCT.TripCategoryType -> Maybe [LYT.ConfigVersionMap] -> m [CoinsConfig]
+fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehicleCategory mbServiceTierType tripCategoryType mbConfigVersionMap = do
   let eventTypeText = pack (show eventType)
-  result <-
-    DynamicLogic.findAllConfigsWithCacheKey
-      (cast merchantOpCityId)
-      (LYT.DRIVER_CONFIG LYT.CoinsConfig)
-      mbConfigVersionMap
-      Nothing
-      (Queries.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId (Just vehicleCategory) tripCategoryType)
-      (makeCoinConfigKey eventTypeText merchantOpCityId vehicleCategory tripCategoryType)
+  -- Try with serviceTierType first (if provided)
+  result <- case mbServiceTierType of
+    Just stt -> do
+      res <-
+        DynamicLogic.findAllConfigsWithCacheKey
+          (cast merchantOpCityId)
+          (LYT.DRIVER_CONFIG LYT.CoinsConfig)
+          mbConfigVersionMap
+          Nothing
+          (Queries.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId (Just vehicleCategory) (Just stt) tripCategoryType)
+          (makeCoinConfigKey eventTypeText merchantOpCityId vehicleCategory (Just stt) tripCategoryType)
+      if null res
+        then pure []
+        else pure res
+    Nothing -> pure []
+  -- Fall back to vehicleCategory only (serviceTierType = Nothing)
   if null result
-    then
-      DynamicLogic.findAllConfigsWithCacheKey
-        (cast merchantOpCityId)
-        (LYT.DRIVER_CONFIG LYT.CoinsConfig)
-        mbConfigVersionMap
-        Nothing
-        (Queries.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId Nothing tripCategoryType)
-        (makeCoinConfigKey eventTypeText merchantOpCityId vehicleCategory tripCategoryType)
+    then do
+      res2 <-
+        DynamicLogic.findAllConfigsWithCacheKey
+          (cast merchantOpCityId)
+          (LYT.DRIVER_CONFIG LYT.CoinsConfig)
+          mbConfigVersionMap
+          Nothing
+          (Queries.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId (Just vehicleCategory) Nothing tripCategoryType)
+          (makeCoinConfigKey eventTypeText merchantOpCityId vehicleCategory Nothing tripCategoryType)
+      if null res2
+        then -- Fall back to both vehicleCategory and serviceTierType = Nothing
+
+          DynamicLogic.findAllConfigsWithCacheKey
+            (cast merchantOpCityId)
+            (LYT.DRIVER_CONFIG LYT.CoinsConfig)
+            mbConfigVersionMap
+            Nothing
+            (Queries.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId Nothing Nothing tripCategoryType)
+            (makeCoinConfigKey eventTypeText merchantOpCityId vehicleCategory Nothing tripCategoryType)
+        else return res2
     else return result
 
-makeCoinConfigKey :: Text -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> DCT.TripCategoryType -> Text
-makeCoinConfigKey eventType merchantOpCityId vehicleCategory tripCategoryType =
+makeCoinConfigKey :: Text -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> DCT.TripCategoryType -> Text
+makeCoinConfigKey eventType merchantOpCityId vehicleCategory mbServiceTierType tripCategoryType =
   "cachedQueries:Coins:MocId-"
     <> merchantOpCityId.getId
     <> ":EventType-"
     <> eventType
     <> ":vehicleCategory-"
     <> show vehicleCategory
+    <> ":serviceTierType-"
+    <> show mbServiceTierType
     <> ":tripType-"
     <> show tripCategoryType
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-fetchConfigOnEventAndFunctionBasisInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> DCT.DriverCoinsFunctionType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> DCT.TripCategoryType -> [LYT.ConfigVersionMap] -> m (Maybe CoinsConfig)
-fetchConfigOnEventAndFunctionBasisInRideFlow eventType eventFunction merchantId merchantOpCityId vehicleCategory tripCategoryType configVersionMap = fetchConfigOnEventAndFunctionBasis eventType eventFunction merchantId merchantOpCityId vehicleCategory tripCategoryType (Just configVersionMap)
+fetchConfigOnEventAndFunctionBasisInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> DCT.DriverCoinsFunctionType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> DCT.TripCategoryType -> [LYT.ConfigVersionMap] -> m (Maybe CoinsConfig)
+fetchConfigOnEventAndFunctionBasisInRideFlow eventType eventFunction merchantId merchantOpCityId vehicleCategory mbServiceTierType tripCategoryType configVersionMap = fetchConfigOnEventAndFunctionBasis eventType eventFunction merchantId merchantOpCityId vehicleCategory mbServiceTierType tripCategoryType (Just configVersionMap)
 
-fetchConfigOnEventAndFunctionBasis :: (CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> DCT.DriverCoinsFunctionType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> DCT.TripCategoryType -> Maybe [LYT.ConfigVersionMap] -> m (Maybe CoinsConfig)
-fetchConfigOnEventAndFunctionBasis eventType eventFunction merchantId merchantOpCityId vehicleCategory tripCategoryType mbConfigVersionMap = do
+fetchConfigOnEventAndFunctionBasis :: (CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> DCT.DriverCoinsFunctionType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> DCT.TripCategoryType -> Maybe [LYT.ConfigVersionMap] -> m (Maybe CoinsConfig)
+fetchConfigOnEventAndFunctionBasis eventType eventFunction merchantId merchantOpCityId vehicleCategory mbServiceTierType tripCategoryType mbConfigVersionMap = do
   let eventTypeText = pack (show eventType)
   DynamicLogic.findOneConfigWithCacheKey
     (cast merchantOpCityId)
     (LYT.DRIVER_CONFIG LYT.CoinsConfig)
     mbConfigVersionMap
     Nothing
-    (Queries.fetchConfigOnEventAndFunctionBasis eventType eventFunction merchantId merchantOpCityId (Just vehicleCategory) tripCategoryType)
-    (makeCoinConfigOnEventAndFunctionKey eventTypeText eventFunction merchantOpCityId vehicleCategory tripCategoryType)
+    (Queries.fetchConfigOnEventAndFunctionBasis eventType eventFunction merchantId merchantOpCityId (Just vehicleCategory) mbServiceTierType tripCategoryType)
+    (makeCoinConfigOnEventAndFunctionKey eventTypeText eventFunction merchantOpCityId vehicleCategory mbServiceTierType tripCategoryType)
 
-makeCoinConfigOnEventAndFunctionKey :: Text -> DCT.DriverCoinsFunctionType -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> DCT.TripCategoryType -> Text
-makeCoinConfigOnEventAndFunctionKey eventType eventFunction merchantOpCityId vehicleCategory tripCategoryType =
+makeCoinConfigOnEventAndFunctionKey :: Text -> DCT.DriverCoinsFunctionType -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> DCT.TripCategoryType -> Text
+makeCoinConfigOnEventAndFunctionKey eventType eventFunction merchantOpCityId vehicleCategory mbServiceTierType tripCategoryType =
   "cachedQueries:Coins:MocId-"
     <> merchantOpCityId.getId
     <> ":EventType-"
     <> eventType
     <> ":vehicleCategory-"
     <> (show vehicleCategory)
+    <> ":serviceTierType-"
+    <> show mbServiceTierType
     <> ":eventFunction-"
     <> (show eventFunction)
     <> ":tripType-"
@@ -96,15 +121,15 @@ makeCoinConfigOnEventAndFunctionKey eventType eventFunction merchantOpCityId veh
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-clearCache :: (CacheFlow m r, EsqDBFlow m r) => Text -> DCT.DriverCoinsFunctionType -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> DCT.TripCategoryType -> m ()
-clearCache eventType eventFunction merchantOpCityId vehicleCategory tripCategoryType = do
+clearCache :: (CacheFlow m r, EsqDBFlow m r) => Text -> DCT.DriverCoinsFunctionType -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> DCT.TripCategoryType -> m ()
+clearCache eventType eventFunction merchantOpCityId vehicleCategory mbServiceTierType tripCategoryType = do
   DynamicLogic.clearConfigCacheWithPrefix
-    (makeCoinConfigKey eventType merchantOpCityId vehicleCategory tripCategoryType)
+    (makeCoinConfigKey eventType merchantOpCityId vehicleCategory mbServiceTierType tripCategoryType)
     (cast merchantOpCityId)
     (LYT.DRIVER_CONFIG LYT.CoinsConfig)
     Nothing
   DynamicLogic.clearConfigCacheWithPrefix
-    (makeCoinConfigOnEventAndFunctionKey eventType eventFunction merchantOpCityId vehicleCategory tripCategoryType)
+    (makeCoinConfigOnEventAndFunctionKey eventType eventFunction merchantOpCityId vehicleCategory mbServiceTierType tripCategoryType)
     (cast merchantOpCityId)
     (LYT.DRIVER_CONFIG LYT.CoinsConfig)
     Nothing
