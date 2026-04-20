@@ -32,6 +32,7 @@ types:
   BookingInfoResponse:
     - bookingId: Id Booking
     - displayBookingId: Maybe Text
+    - specialLocationTag: Maybe Text
     - fromLocation: Location
     - toLocation: Maybe Location
     - estimatedDistance: Maybe Meters

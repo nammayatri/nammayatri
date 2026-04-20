@@ -144,6 +144,7 @@ apis:
         - limit: Int
         - offset: Int
         - locationType: SpecialLocationType
+        - locationTypes: [SpecialLocationType] # Added new query params because of backward compatibility
       response:
         type: SpecialLocationResp
   - GET: # GetMerchantConfigGeometryList
