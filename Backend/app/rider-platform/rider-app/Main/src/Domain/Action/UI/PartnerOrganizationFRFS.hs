@@ -556,6 +556,7 @@ getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTrans
             vehicleNumber = Nothing,
             isSingleMode = Just True,
             cloudType = Nothing,
+            journeyDate = Nothing,
             ..
           }
 
@@ -584,6 +585,7 @@ mkQuoteRes (quote, quoteCategories) = do
         eventDiscountAmount = quote.eventDiscountAmount,
         integratedBppConfigId = quote.integratedBppConfigId,
         observingFailures = Nothing,
+        osrtcTripDetail = quote.osrtcTripDetail >>= decodeFromText,
         ..
       }
 
@@ -675,7 +677,8 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                 DFRFSQuote.toStationAddress = toStation'.address,
                 DFRFSQuote.toStationName = Just toStation'.name,
                 DFRFSQuote.toStationPoint = Maps.LatLong <$> toStation'.lat <*> toStation'.lon,
-                DFRFSQuote.vehicleNumber = Nothing
+                DFRFSQuote.vehicleNumber = Nothing,
+                DFRFSQuote.osrtcTripDetail = Nothing
               }
       quoteCategoryId <- generateGUID
       ticketCategoryMetadataConfig' <- QFRFSTicketCategoryMetadataConfig.findByCategoryVehicleAndCity ADULT fromStation'.vehicleType fromStation.merchantOperatingCityId

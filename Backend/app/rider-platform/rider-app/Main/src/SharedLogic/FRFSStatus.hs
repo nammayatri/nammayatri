@@ -26,6 +26,7 @@ import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM
 import qualified ExternalBPP.CallAPI.Confirm as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Status as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Types as CallExternalBPP
+import qualified ExternalBPP.Flow.Common as FlowCommon
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface
@@ -143,6 +144,12 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
             QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
             QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.FAILED paymentBooking.id
             let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
+            integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
+            case integratedBppConfig.providerConfig of
+              DIBC.OSRTC osrtcConfig ->
+                fork "OSRTC:ReleaseHoldOnApprovedFailure" $
+                  FlowCommon.osrtcReleaseHold osrtcConfig booking.id booking.totalPrice.amount (Just paymentOrder) paymentStatusResp
+              _ -> pure ()
             buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
           else
             if (paymentBookingStatus == FRFSTicketService.SUCCESS) && (booking.validTill < now)
@@ -150,6 +157,12 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                 logInfo $ "booking is expired in approved: " <> show booking
                 void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
                 let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
+                integratedBppConfig' <- SIBC.findIntegratedBPPConfigFromEntity booking
+                case integratedBppConfig'.providerConfig of
+                  DIBC.OSRTC osrtcConfig ->
+                    fork "OSRTC:ReleaseHoldOnApprovedExpiry" $
+                      FlowCommon.osrtcReleaseHold osrtcConfig booking.id booking.totalPrice.amount (Just paymentOrder) paymentStatusResp
+                  _ -> pure ()
                 buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
               else do
                 txn <- HQPaymentTransaction.findNewTransactionByOrderId paymentOrder.id
@@ -177,6 +190,12 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
               QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
               QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.FAILED paymentBooking.id
               let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
+              integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
+              case integratedBppConfig.providerConfig of
+                DIBC.OSRTC osrtcConfig ->
+                  fork "OSRTC:ReleaseHoldOnPaymentFailure" $
+                    FlowCommon.osrtcReleaseHold osrtcConfig booking.id booking.totalPrice.amount (Just paymentOrder) paymentStatusResp
+                _ -> pure ()
               buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
             else
               if (paymentBookingStatus == FRFSTicketService.SUCCESS) && (booking.validTill < now)
@@ -185,6 +204,12 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                   void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
                   let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
                   void $ markJourneyPaymentSuccess updatedBooking paymentOrder paymentBooking
+                  integratedBppConfig' <- SIBC.findIntegratedBPPConfigFromEntity booking
+                  case integratedBppConfig'.providerConfig of
+                    DIBC.OSRTC osrtcConfig ->
+                      fork "OSRTC:ReleaseHoldOnExpiry" $
+                        FlowCommon.osrtcReleaseHold osrtcConfig booking.id booking.totalPrice.amount (Just paymentOrder) paymentStatusResp
+                    _ -> pure ()
                   buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
                 else do
                   (mbJourneyId, _) <- getAllJourneyFrfsBookings booking
@@ -222,7 +247,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                           -- Use payment categories if available, otherwise fall back to quote categories
                           paymentCategories <- QFRFSTicketBookingPaymentCategory.findAllByPaymentId paymentBooking.id
                           let categoriesToUse = if null paymentCategories then quoteCategories else map paymentCategoryToQuoteCategory paymentCategories
-                          confirmResp <- CallExternalBPP.confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) quoteUpdatedBooking categoriesToUse mbIsSingleMode
+                          confirmResp <- CallExternalBPP.confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) quoteUpdatedBooking categoriesToUse mbIsSingleMode (Just (paymentOrder, paymentStatusResp))
                           updatedBooking <-
                             case confirmResp of
                               Left err -> do

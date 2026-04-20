@@ -38,6 +38,7 @@ data FRFSQuote = FRFSQuote
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     multimodalSearchRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     oldCacheDump :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    osrtcTripDetail :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
     partnerOrgTransactionId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrgTransaction),
     providerDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

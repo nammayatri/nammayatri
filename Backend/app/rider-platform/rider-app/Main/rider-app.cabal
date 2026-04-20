@@ -283,6 +283,7 @@ library
       Domain.Action.UI.NearbyBuses
       Domain.Action.UI.NearbyDrivers
       Domain.Action.UI.NyRegularSubscription
+      Domain.Action.UI.OSRTCService
       Domain.Action.UI.ParkingBooking
       Domain.Action.UI.PartnerBookingStatement
       Domain.Action.UI.PartnerOrganizationFRFS
@@ -377,6 +378,11 @@ library
       ExternalBPP.ExternalAPI.Bus.EBIX.Order
       ExternalBPP.ExternalAPI.Bus.EBIX.Payment
       ExternalBPP.ExternalAPI.Bus.EBIX.Status
+      ExternalBPP.ExternalAPI.Bus.OSRTC.Auth
+      ExternalBPP.ExternalAPI.Bus.OSRTC.Cancel
+      ExternalBPP.ExternalAPI.Bus.OSRTC.Enums
+      ExternalBPP.ExternalAPI.Bus.OSRTC.Trip
+      ExternalBPP.ExternalAPI.Bus.OSRTC.Types
       ExternalBPP.ExternalAPI.CallAPI
       ExternalBPP.ExternalAPI.Direct.Order
       ExternalBPP.ExternalAPI.Direct.Status
