@@ -159,7 +159,7 @@ updateDeviation transportConfig safetyCheckEnabled (Just ride) batchWaypoints = 
           isRouteDeviated <- checkMultipleRoutesForDeviation routes batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking shouldPerformSafetyCheck
           updateRouteDeviationDetails isRouteDeviated alreadyDeviated
         Nothing -> do
-          isRouteDeviated <- checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking
+          isRouteDeviated <- checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking shouldPerformSafetyCheck
           updateRouteDeviationDetails isRouteDeviated alreadyDeviated
   where
     updateRouteDeviationDetails :: LocationUpdateFlow m r c => Bool -> Bool -> m Bool
@@ -221,8 +221,8 @@ checkMultipleRoutesForDeviation routes batchWaypoints routeDeviationThreshold ni
                           }
                     }
 
-checkForDeviationInSingleRoute :: LocationUpdateFlow m r c => [LatLong] -> Meters -> Meters -> Ride -> Booking -> m Bool
-checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking = do
+checkForDeviationInSingleRoute :: LocationUpdateFlow m r c => [LatLong] -> Meters -> Meters -> Ride -> Booking -> Bool -> m Bool
+checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking safetyCheckEnabled = do
   let rideId = ride.id
   logInfo $ "Checking for deviation in single route for rideId: " <> getId rideId
   let key = searchRequestKey booking.transactionId
@@ -235,7 +235,8 @@ checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafet
                   deviationInfo = RI.DeviationInfo {deviation = False, safetyDeviation = False}
                 }
             ]
-      checkMultipleRoutesForDeviation multipleRoutesEntity batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking False
+      -- P1 Safety: Pass safetyCheckEnabled through to enable deviation alerts for all rides
+      checkMultipleRoutesForDeviation multipleRoutesEntity batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking safetyCheckEnabled
     Nothing -> do
       logWarning $ "Ride route info not found for rideId: " <> getId rideId
       return False
@@ -356,7 +357,10 @@ performSafetyCheck ride booking = do
         & fromMaybeM (BookingFieldNotPresent "riderId")
     riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound ride.id.getId)
     void $ QRide.updateSafetyAlertTriggered ride.id
-    when riderDetails.nightSafetyChecks $ do
-      driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-      vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
-      BP.sendSafetyAlertToBAP booking ride Enums.DEVIATION driver vehicle
+    -- P1 Safety: Send route deviation alerts for ALL rides, not just night rides.
+    -- Previously gated by `riderDetails.nightSafetyChecks` which meant daytime rides
+    -- never received deviation alerts even when driver significantly deviated.
+    driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+    vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
+    logInfo $ "Sending route deviation alert to rider for rideId: " <> getId rideId <> " nightSafetyChecks: " <> show riderDetails.nightSafetyChecks
+    BP.sendSafetyAlertToBAP booking ride Enums.DEVIATION driver vehicle
