@@ -1114,10 +1114,10 @@ type SpecialLocationListAPI =
     :> "list"
     :> QueryParam "limit" Int
     :> QueryParam "offset" Int
-    :> QueryParam "locationType" SL.SpecialLocationType
+    :> QueryParam "locationType" [SL.SpecialLocationType]
     :> Get '[JSON] [SpecialLocationFull]
 
-specialLocationListClient :: Text -> Context.City -> Maybe Int -> Maybe Int -> Maybe SL.SpecialLocationType -> EulerClient [SpecialLocationFull]
+specialLocationListClient :: Text -> Context.City -> Maybe Int -> Maybe Int -> Maybe [SL.SpecialLocationType] -> EulerClient [SpecialLocationFull]
 specialLocationListClient = client specialLocationListApi
 
 specialLocationListApi :: Proxy SpecialLocationListAPI
@@ -1133,13 +1133,13 @@ getSpecialLocationList ::
   Context.City ->
   Maybe Int ->
   Maybe Int ->
-  Maybe SL.SpecialLocationType ->
+  Maybe [SL.SpecialLocationType] ->
   m (Maybe [SpecialLocationFull])
-getSpecialLocationList merchant city mbLimit mbOffset mbSpecialLocationType = do
+getSpecialLocationList merchant city mbLimit mbOffset mbSpecialLocationTypes = do
   let internalUrl = merchant.driverOfferBaseUrl
   let merchantId = merchant.driverOfferMerchantId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  result <- try @_ @SomeException $ EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (specialLocationListClient merchantId city mbLimit mbOffset mbSpecialLocationType) "SpecialLocationList" specialLocationListApi
+  result <- try @_ @SomeException $ EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (specialLocationListClient merchantId city mbLimit mbOffset mbSpecialLocationTypes) "SpecialLocationList" specialLocationListApi
   case result of
     Left _ -> pure Nothing
     Right locations -> pure (Just locations)
