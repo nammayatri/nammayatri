@@ -154,9 +154,9 @@ findAllSpecialLocationsWithGeoJSON ::
   Text ->
   Maybe Int ->
   Maybe Int ->
-  Maybe D.SpecialLocationType ->
+  Maybe [D.SpecialLocationType] ->
   m [SpecialLocationFull]
-findAllSpecialLocationsWithGeoJSON mocId mbLimit mbOffset mbLocationType = do
+findAllSpecialLocationsWithGeoJSON mocId mbLimit mbOffset mbLocationTypes = do
   mbRes <-
     Esq.findAll $ do
       specialLocation <- from $ table @SpecialLocationT
@@ -164,9 +164,31 @@ findAllSpecialLocationsWithGeoJSON mocId mbLimit mbOffset mbLocationType = do
         ( specialLocation ^. SpecialLocationMerchantOperatingCityId ==. just (val mocId)
             ||. isNothing (specialLocation ^. SpecialLocationMerchantOperatingCityId)
         )
-          &&. case mbLocationType of
-            Just locationType -> specialLocation ^. SpecialLocationLocationType ==. just (val locationType)
+          &&. case mbLocationTypes of
+            Just locationTypes -> specialLocation ^. SpecialLocationLocationType `in_` valList (map (Just) locationTypes)
             Nothing -> val True
+      orderBy [asc (specialLocation ^. SpecialLocationPriority)]
+
+      forM_ mbLimit (limit . fromIntegral)
+      forM_ mbOffset (offset . fromIntegral)
+
+      return (specialLocation, F.getGeomGeoJSON)
+  mapM makeFullSpecialLocation mbRes
+
+findAllSpecialLocationsWithGeoJSONAllCities ::
+  (Transactionable m) =>
+  Maybe Int ->
+  Maybe Int ->
+  Maybe [D.SpecialLocationType] ->
+  m [SpecialLocationFull]
+findAllSpecialLocationsWithGeoJSONAllCities mbLimit mbOffset mbLocationTypes = do
+  mbRes <-
+    Esq.findAll $ do
+      specialLocation <- from $ table @SpecialLocationT
+      where_ $
+        case mbLocationTypes of
+          Just locationTypes -> specialLocation ^. SpecialLocationLocationType `in_` valList (map (Just) locationTypes)
+          Nothing -> val True
       orderBy [asc (specialLocation ^. SpecialLocationPriority)]
 
       forM_ mbLimit (limit . fromIntegral)
