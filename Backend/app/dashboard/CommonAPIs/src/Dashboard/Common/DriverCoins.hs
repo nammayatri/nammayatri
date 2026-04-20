@@ -209,6 +209,14 @@ instance Read DriverCoinsFunctionType where
                  | r1 <- stripPrefix "BonusQuizCoins" r,
                    ((), r2) <- pure ((), r1)
                ]
+            ++ [ (CoinsRedemptionRefund, r2)
+                 | r1 <- stripPrefix "CoinsRedemptionRefund" r,
+                   ((), r2) <- pure ((), r1)
+               ]
+            ++ [ (FraudCoinsReversal, r2)
+                 | r1 <- stripPrefix "FraudCoinsReversal" r,
+                   ((), r2) <- pure ((), r1)
+               ]
       )
     where
       app_prec = 9
@@ -237,6 +245,8 @@ instance FromJSON DriverCoinsFunctionType where
       "BulkUploadFunction" -> pure BulkUploadFunction
       "QuizQuestionCompleted" -> pure QuizQuestionCompleted
       "BonusQuizCoins" -> pure BonusQuizCoins
+      "CoinsRedemptionRefund" -> pure CoinsRedemptionRefund
+      "FraudCoinsReversal" -> pure FraudCoinsReversal
       "RidesCompleted" -> RidesCompleted <$> obj .: "contents"
       "DriverIncentiveCohortRidesCompleted" -> DriverIncentiveCohortRidesCompleted <$> obj .: "contents"
       "BulkUploadFunctionV2" -> BulkUploadFunctionV2 <$> obj .: "contents"
