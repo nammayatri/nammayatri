@@ -1075,7 +1075,12 @@ type GetMerchantConfigSpecialLocationList =
       :> QueryParam
            "locationType"
            Lib.Types.SpecialLocation.SpecialLocationType
-      :> Get ('[JSON]) SpecialLocationResp
+      :> QueryParam
+           "locationTypes"
+           [Lib.Types.SpecialLocation.SpecialLocationType]
+      :> Get
+           ('[JSON])
+           SpecialLocationResp
   )
 
 type GetMerchantConfigGeometryList = ("config" :> "geometry" :> "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get ('[JSON]) GeometryResp)
