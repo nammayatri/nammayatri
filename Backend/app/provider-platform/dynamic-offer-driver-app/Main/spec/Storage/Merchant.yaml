@@ -971,6 +971,8 @@ TransporterConfig:
     onboardingTryLimit: Int
     onboardingRetryTimeInHours: Int
     checkImageExtractionForDashboard: Bool
+    # Enables RC format validation using DocumentVerificationConfig.documentFields[].regexValidation.
+    regexValidationInDocumentVerification: Maybe Bool
     searchRepeatLimit: Int
     scheduledRideSearchRepeatLimit: Int
     actualRideDistanceDiffThreshold: HighPrecMeters
@@ -1684,6 +1686,7 @@ TransporterConfig:
     subscriptionConfig:  '''{"prepaidSubscriptionThreshold": null,"fleetPrepaidSubscriptionThreshold": null}'' :: json'
     enableMobileNumberValidation: "false"
     allowRcUnlinkWhenDriverOffline: "false"
+    regexValidationInDocumentVerification: "false"
     vehicleCategoryExcludedFromVerification: "'{TOTO}'"
     videoFileSizeUpperLimit: 15000000
     enableSupportForSafety: "false"
@@ -1718,6 +1721,7 @@ TransporterConfig:
         - onboardingTryLimit
         - onboardingRetryTimeInHours
         - checkImageExtractionForDashboard
+        - regexValidationInDocumentVerification
         - searchRepeatLimit
         - scheduledRideSearchRepeatLimit
         - driverPaymentCycleStartTime

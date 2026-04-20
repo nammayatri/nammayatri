@@ -144,3 +144,13 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN is_ap
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN only_image_verification_status_lookup_required boolean ;
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

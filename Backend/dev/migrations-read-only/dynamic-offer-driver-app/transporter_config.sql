@@ -863,3 +863,13 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_disable_f
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN restrict_mobile_update_to_dashboard boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN enable_manual_document_status_check DROP DEFAULT;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN regex_validation_in_document_verification boolean  default false;
+
+
+------- SQL updates -------
+

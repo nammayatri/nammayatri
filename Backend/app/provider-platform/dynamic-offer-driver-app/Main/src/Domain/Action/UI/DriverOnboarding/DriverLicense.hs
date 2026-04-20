@@ -78,6 +78,8 @@ import qualified Tools.Ticket as TT
 import qualified Tools.Utils as Utils
 import qualified Tools.Verification as Verification
 import Utils.Common.Cac.KeyNameConstants
+import Text.Regex.Posix ((=~))
+import Control.Monad.Extra (anyM)
 
 data DriverDLReq = DriverDLReq
   { driverLicenseNumber :: Text,
@@ -109,6 +111,30 @@ validateDriverDLReq now DriverDLReq {..} =
     t60YearsAgo = yearsAgo 80
     yearsAgo i = negate (nominalDay * 365 * i) `addUTCTime` now
 
+normalizeDLNumber :: Text -> Text
+normalizeDLNumber = T.toUpper . removeSpaceAndDash
+
+getDLRegexRulesFromDocumentConfig :: DTO.DocumentVerificationConfig -> [Text]
+getDLRegexRulesFromDocumentConfig config = maybe [] (mapMaybe (.regexValidation)) config.documentFields
+
+matchesRegexSafely :: Text -> Text -> Flow Bool
+matchesRegexSafely input regexPattern = do
+  result <- try @_ @SomeException $ do
+    let matched = (T.unpack input =~ T.unpack regexPattern :: Bool)
+    matched `seq` pure matched
+  case result of
+    Right matched -> pure matched
+    Left err -> do
+      logError $ "Invalid regex in DocumentVerificationConfig for DL validation: " <> regexPattern <> ", error: " <> show err
+      pure False
+
+isDLNumberFormatValid :: DTO.DocumentVerificationConfig -> Text -> Flow Bool
+isDLNumberFormatValid documentVerificationConfig normalizedDLNumber = do
+  let regexRules = getDLRegexRulesFromDocumentConfig documentVerificationConfig
+  if null regexRules
+    then pure True
+    else anyM (matchesRegexSafely normalizedDLNumber) regexRules
+
 verifyDL ::
   DPan.VerifiedBy ->
   Maybe DM.Merchant ->
@@ -128,6 +154,11 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverInfo.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId DTO.DriverLicense (fromMaybe CAR req.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.DriverLicense))
+  when (fromMaybe False transporterConfig.regexValidationInDocumentVerification) $ do
+    let normalizedDLNumber = normalizeDLNumber driverLicenseNumber
+    checkDLFormat <- isDLNumberFormatValid documentVerificationConfig normalizedDLNumber
+    unless checkDLFormat $
+      throwError (InvalidRequest "DL number format is not valid")
   (nameOnTheCard, dateOfBirth) <-
     if isJust nameOnCardFromSdk
       then return (nameOnCardFromSdk, Nothing)

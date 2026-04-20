@@ -587,6 +587,7 @@ DocumentVerificationConfig:
     checkExpiry: Bool
     supportedVehicleClasses: SupportedVehicleClasses
     vehicleClassCheckType: VehicleClassCheckType
+    # Legacy fallback for RC format checks when regexValidation is unavailable.
     rcNumberPrefixList: "[Text]"
     maxRetryCount: Int
     isDefaultEnabledOnManualVerification: Bool
@@ -597,6 +598,7 @@ DocumentVerificationConfig:
     documentCategory: Maybe DocumentCategory
     documentFlowGrouping: Maybe DocumentFlowGrouping
     applicableTo: DocumentApplicableType
+    # For RC: read regex from FieldInfo.regexValidation; prefix list remains fallback.
     documentFields: Maybe [FieldInfo]
     allowLicenseTransfer: Maybe Bool
     rolesAllowedToUploadDocument: Maybe [Role]
@@ -1215,7 +1217,7 @@ AadhaarCard:
     merchantId: Id Merchant
     createdAt: UTCTime
     updatedAt: UTCTime
-  derives: "Generic,Show,ToJSON,FromJSON"
+  derives: "Generic"
   constraints:
     driverId: PrimaryKey
 

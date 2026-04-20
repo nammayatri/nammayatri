@@ -250,6 +250,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     reconciliationSchedulerTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     referralLinkPassword :: Kernel.Prelude.Text,
     refillVehicleModel :: Kernel.Prelude.Bool,
+    regexValidationInDocumentVerification :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     reminderSystemEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     requireRouteMappingInVehicle :: Kernel.Prelude.Bool,
     requiresDriverOnboardingInspection :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

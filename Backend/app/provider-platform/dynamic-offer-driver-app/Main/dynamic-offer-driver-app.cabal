@@ -1806,6 +1806,7 @@ library
     , random
     , record-dot-preprocessor
     , record-hasfield
+    , regex-posix
     , resource-pool
     , scheduler
     , scientific
@@ -1950,6 +1951,7 @@ executable dynamic-offer-driver-app-exe
     , random
     , record-dot-preprocessor
     , record-hasfield
+    , regex-posix
     , resource-pool
     , scheduler
     , scientific
