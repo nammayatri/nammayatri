@@ -226,6 +226,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
           { id = Id locationName,
             enabled = enabled,
             isOpenMarketEnabled = True,
+            isQueueEnabled = Nothing,
             locationName = locationName,
             category = category,
             merchantId = Just (cast merchantOpCity.merchantId),
