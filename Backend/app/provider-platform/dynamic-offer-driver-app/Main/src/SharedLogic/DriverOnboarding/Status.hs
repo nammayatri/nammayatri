@@ -288,13 +288,13 @@ refreshDocsVerificationStatuses person transporterConfig =
         if isFleetRole person.role
           then CQDVC.findAllByMerchantOpCityId merchantOperatingCity.id Nothing
           else pure $ fromRight [] allDocVerificationConfigs
-      vehicleDocuments <- fetchVehicleDocuments entityImagesInfo vehicleDocConfigs language Nothing onlyMandatoryDocs skipMessages
+      mandatoryVehicleDocuments <- fetchVehicleDocuments entityImagesInfo vehicleDocConfigs language Nothing onlyMandatoryDocs skipMessages
       let possibleVehicleCategoriesRaw = nub $ do
-            vehicleDocuments <&> \vehicleDoc ->
+            mandatoryVehicleDocuments <&> \vehicleDoc ->
               fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory
           possibleVehicleCategories = if null possibleVehicleCategoriesRaw then [DVC.CAR] else possibleVehicleCategoriesRaw
-      driverDocuments <- fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleCategories person language useHVSdkForDL onlyMandatoryDocs skipMessages
-      persistDocsVerificationStatuses person True driverDocuments vehicleDocuments
+      mandatoryDriverDocuments <- fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleCategories person language useHVSdkForDL onlyMandatoryDocs skipMessages
+      persistDocsVerificationStatuses person True mandatoryDriverDocuments mandatoryVehicleDocuments
 
 statusHandler' ::
   DP.Person ->
@@ -330,7 +330,7 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
   let vehicleCategoryWithoutMandatoryConfigs = case onboardingVehicleCategory <|> (mDL >>= (.vehicleCategory)) of
         Just vehicleCategory -> do
           let vehicleDocumentVerificationConfigs = filter (\config -> config.vehicleCategory == vehicleCategory) driverDocConfigs
-          let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> config.documentType `elem` SDO.defaultVehicleDocumentTypes && fromMaybe config.isMandatory config.isMandatoryForEnabling) vehicleDocumentVerificationConfigs
+          let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> config.documentType `elem` SDO.allPossibleVehicleDocumentTypes && fromMaybe config.isMandatory config.isMandatoryForEnabling) vehicleDocumentVerificationConfigs
           if null mandatoryVehicleDocumentVerificationConfigs then Just vehicleCategory else Nothing
         Nothing -> Nothing
 
@@ -398,8 +398,20 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
         return (Just allDLDetails, Just allRCDetails)
       _ -> return (Nothing, Nothing)
 
-  when (onlyMandatoryDocs == Just True) $
-    persistDocsVerificationStatuses person (transporterConfig.enableManualDocumentStatusCheck == Just True) driverDocuments vehicleDocuments
+  if onlyMandatoryDocs == Just True
+    then do
+      let mandatoryDriverDocuments = driverDocuments
+          mandatoryVehicleDocuments = vehicleDocuments
+      persistDocsVerificationStatuses person (transporterConfig.enableManualDocumentStatusCheck == Just True) mandatoryDriverDocuments mandatoryVehicleDocuments
+    else do
+      -- filter out mandatory docs from all docs
+      mandatoryDriverDocTypes <- getDriverDocTypes merchantOpCityId allDocVerificationConfigs possibleVehicleCategories person.role (Just True)
+      let mandatoryDriverDocuments = filter (\doc -> doc.documentType `elem` mandatoryDriverDocTypes) driverDocuments
+      mandatoryVehicleDocuments <- forM vehicleDocuments $ \vehicleDocument -> do
+        mandatoryVehicleDocTypes <- getVehicleDocTypes merchantOpCityId driverDocConfigs vehicleDocument.verifiedVehicleCategory vehicleDocument.userSelectedVehicleCategory (Just True)
+        let mandatoryVehicleDocItems = filter (\doc -> doc.documentType `elem` mandatoryVehicleDocTypes) vehicleDocument.documents
+        pure vehicleDocument{documents = mandatoryVehicleDocItems}
+      persistDocsVerificationStatuses person (transporterConfig.enableManualDocumentStatusCheck == Just True) mandatoryDriverDocuments mandatoryVehicleDocuments
 
   enabled <-
     if isFleetRole person.role
@@ -599,7 +611,7 @@ getVehicleDocTypes merchantOpCityId allDocumentVerificationConfigs verifiedVehic
   let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> fromMaybe config.isMandatory config.isMandatoryForEnabling && config.vehicleCategory == vehicleCategory) allDocumentVerificationConfigs
   if onlyMandatoryDocs == Just True
     then do
-      let vehicleDocumentTypes = filter (\doc -> doc `elem` (mandatoryVehicleDocumentVerificationConfigs <&> (.documentType))) SDO.defaultVehicleDocumentTypes
+      let vehicleDocumentTypes = filter (`elem` (mandatoryVehicleDocumentVerificationConfigs <&> (.documentType))) SDO.allPossibleVehicleDocumentTypes
       logInfo $
         "Fetch only mandatory vehicle docs types: merchantOpCityId: "
           <> merchantOpCityId.getId
@@ -608,7 +620,7 @@ getVehicleDocTypes merchantOpCityId allDocumentVerificationConfigs verifiedVehic
           <> "; vehicleDocumentTypes: "
           <> show vehicleDocumentTypes
       pure vehicleDocumentTypes
-    else pure SDO.defaultVehicleDocumentTypes
+    else pure SDO.allPossibleVehicleDocumentTypes
 
 getDriverDocTypes ::
   Id DMOC.MerchantOperatingCity ->
@@ -623,15 +635,26 @@ getDriverDocTypes merchantOpCityId allDocVerificationConfigs possibleVehicleCate
       let roleConfigs = filter (\config -> config.role == role) fleetConfigs
           mandatoryDocTypes = nub $ map (.documentType) $ filter (.isMandatory) roleConfigs
           allRoleDocTypes = nub $ map (.documentType) roleConfigs
-      pure $
-        if onlyMandatoryDocs == Just True
-          then if null mandatoryDocTypes then SDO.defaultFleetDocumentTypes else mandatoryDocTypes
-          else if null allRoleDocTypes then SDO.defaultFleetDocumentTypes else allRoleDocTypes
+      if onlyMandatoryDocs == Just True
+        then do
+          let fleetDocTypes = filter (`elem` mandatoryDocTypes) SDO.allPossibleFleetDocumentTypes
+          logDebug $
+            "Fetch only mandatory fleet docs types: merchantOpCityId: "
+              <> merchantOpCityId.getId
+              <> "; fleetDocTypes: " <> show fleetDocTypes
+          pure fleetDocTypes
+        else do
+          let fleetDocTypes = filter (`elem` allRoleDocTypes) SDO.allPossibleFleetDocumentTypes
+          logDebug $
+            "Fetch fleet role docs types: merchantOpCityId: "
+              <> merchantOpCityId.getId
+              <> "; fleetDocTypes: " <> show fleetDocTypes
+          pure fleetDocTypes
     Right driverConfigs -> do
       let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> fromMaybe config.isMandatory config.isMandatoryForEnabling && config.vehicleCategory `elem` possibleVehicleCategories) driverConfigs
       if onlyMandatoryDocs == Just True
         then do
-          let driverDocumentTypes = filter (\doc -> doc `elem` nub (mandatoryVehicleDocumentVerificationConfigs <&> (.documentType))) SDO.defaultDriverDocumentTypes
+          let driverDocumentTypes = filter (`elem` nub (mandatoryVehicleDocumentVerificationConfigs <&> (.documentType))) SDO.allPossibleDriverDocumentTypes
           logInfo $
             "Fetch only mandatory driver docs types: merchantOpCityId: "
               <> merchantOpCityId.getId
@@ -640,7 +663,7 @@ getDriverDocTypes merchantOpCityId allDocVerificationConfigs possibleVehicleCate
               <> "; driverDocumentTypes: "
               <> show driverDocumentTypes
           pure driverDocumentTypes
-        else pure SDO.defaultDriverDocumentTypes
+        else pure SDO.allPossibleDriverDocumentTypes
 
 fetchProcessedVehicleDocumentsWithRC ::
   IQuery.EntityImagesInfo ->
@@ -906,13 +929,10 @@ persistDocsVerificationStatuses ::
   [DocumentStatusItem] ->
   [VehicleDocumentItem] ->
   Flow ()
-persistDocsVerificationStatuses person isManualDocumentStatusCheckEnabled driverDocuments vehicleDocuments = do
+persistDocsVerificationStatuses person isManualDocumentStatusCheckEnabled mandatoryDriverDocuments mandatoryVehicleDocuments = do
   if not isManualDocumentStatusCheckEnabled
     then logInfo $ "Skipping persistDocsVerificationStatuses for person " <> person.id.getId <> " because enableManualDocumentStatusCheck is not enabled"
     else do
-      let mandatoryDriverDocuments = driverDocuments
-          mandatoryVehicleDocuments = vehicleDocuments
-
       if isFleetRole person.role
         then do
           fleetOwnerInfo <- runInReplica $ QFOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)

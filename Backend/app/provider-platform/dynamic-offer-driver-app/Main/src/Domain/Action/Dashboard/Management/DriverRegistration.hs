@@ -1505,7 +1505,7 @@ handleMandatoryDocRejection _merchantId merchantOperatingCityId driverId docType
   let isMandatory = Kernel.Prelude.any (\cfg -> fromMaybe cfg.isMandatory cfg.isMandatoryForEnabling) docConfigs
   when isMandatory $ do
     transporterConfig <- CCT.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
-    let isVehicleDoc = docType `elem` SDO.defaultVehicleDocumentTypes
+    let isVehicleDoc = docType `elem` SDO.allPossibleVehicleDocumentTypes
         separateEnablement = transporterConfig.separateDriverVehicleEnablement == Just True
     if isVehicleDoc
       then do
