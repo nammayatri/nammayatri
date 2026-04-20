@@ -19,8 +19,9 @@ import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.Time.Format
 import qualified Domain.Action.UI.Call as DUCall
 import qualified Domain.Action.UI.FollowRide as DFR
-import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
-import qualified Domain.Action.UI.Profile as DP
+import Domain.Action.UI.Profile () -- HasEmergencyContactHandle instance
+import qualified Safety.API.Types.UI.PersonDefaultEmergencyNumber as EmergencyAPI
+import qualified Safety.Domain.Action.UI.PersonDefaultEmergencyNumber as EmergencyLib
 import qualified Domain.Types.CallStatus as DCall
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -289,14 +290,14 @@ postSosCreate (mbPersonId, _merchantId) req = do
     case req.rideId of
       Just _ -> do
         when (triggerShareRideAndNotifyContacts safetySettings) $ do
-          emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
+          emergencyContacts <- EmergencyLib.getEmergencyContacts (personId, person.merchantId)
           when (req.isRideEnded /= Just True) $ do
             void $ QPDEN.updateShareRideForAll (cast personId) True
-            enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
+            enableFollowRideInSos personId emergencyContacts.defaultEmergencyNumbers
           let sosType = if req.isRideEnded == Just True then Notification.POST_RIDE_SOS_ALERT else Notification.SOS_TRIGGERED
           when shouldNotifyContacts $ SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" sosType [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers Nothing
       Nothing -> do
-        emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
+        emergencyContacts <- EmergencyLib.getEmergencyContacts (personId, person.merchantId)
         SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" Notification.SOS_TRIGGERED [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers (Just sosId)
   return $
     SosRes
@@ -332,15 +333,15 @@ postSosCreate (mbPersonId, _merchantId) req = do
             pure (externalReferenceId, finalKaptureTicketId <|> kaptureTicketId, finalDbSosId <|> dbSosId, sosServiceConfig, externalApiStatus)
     shouldNotifyContacts = bool True (req.sendPNOnPostRideSOS == Just True) (req.isRideEnded == Just True)
 
-enableFollowRideInSos :: [DPDEN.PersonDefaultEmergencyNumberAPIEntity] -> Flow ()
-enableFollowRideInSos emergencyContacts = do
+enableFollowRideInSos :: Id Person.Person -> [EmergencyAPI.EmergencyContact] -> Flow ()
+enableFollowRideInSos personId emergencyContacts = do
   mapM_
     ( \contact -> do
         case contact.contactPersonId of
           Nothing -> pure ()
           Just id -> do
-            contactPersonEntity <- QP.findById id >>= fromMaybeM (PersonDoesNotExist id.getId)
-            DFR.updateFollowDetails contactPersonEntity contact
+            contactPersonEntity <- QP.findById (cast id) >>= fromMaybeM (PersonDoesNotExist id.getId)
+            DFR.updateFollowDetails personId contactPersonEntity
     )
     emergencyContacts
 
@@ -416,7 +417,7 @@ postSosStatus (mbPersonId, _) sosId req = do
 postSosMarkRideAsSafe :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Id SafetyDSos.Sos -> MarkAsSafeReq -> Flow APISuccess.APISuccess
 postSosMarkRideAsSafe (mbPersonId, merchantId) sosId MarkAsSafeReq {..} = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, merchantId)
+  emergencyContacts <- EmergencyLib.getEmergencyContacts (personId, merchantId)
   let contactsToNotify =
         case contacts of
           Nothing -> emergencyContacts.defaultEmergencyNumbers
@@ -459,14 +460,14 @@ postSosCreateMockSos :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Mock
 postSosCreateMockSos (mbPersonId, _) MockSosReq {..} = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
+  emergencyContacts <- EmergencyLib.getEmergencyContacts (personId, person.merchantId)
   safetySettings <- QSafetyExtra.findSafetySettingsWithFallback (cast personId) (QSafetyExtra.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
   case startDrill of
     Just True -> do
       SPDEN.notifyEmergencyContacts person (notificationBody person True) notificationTitle Notification.SOS_MOCK_DRILL_NOTIFY Nothing False emergencyContacts.defaultEmergencyNumbers Nothing
       when (fromMaybe False onRide) $ do
         void $ QPDEN.updateShareRideForAll (cast personId) True
-        enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
+        enableFollowRideInSos personId emergencyContacts.defaultEmergencyNumbers
     _ -> do
       unless (fromMaybe False safetySettings.hasCompletedMockSafetyDrill) $ SafetySos.updateMockSafetyDrillStatus (Just True) (cast personId)
       when (fromMaybe False onRide) $ do
@@ -924,7 +925,7 @@ postSosStartTracking (mbPersonId, merchantId) StartTrackingReq {..} = do
   riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let trackLink = buildSosTrackUrl riderConfig Nothing (cast finalSosId)
 
-  emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, merchantId)
+  emergencyContacts <- EmergencyLib.getEmergencyContacts (personId, merchantId)
   let contactsToNotify =
         if List.null contacts
           then []
@@ -955,7 +956,7 @@ postSosUpdateState (mbPersonId, _) sosId UpdateStateReq {..} = do
   if sosDetails.sosState == Just sosState
     then pure APISuccess.Success
     else do
-      emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
+      emergencyContacts <- EmergencyLib.getEmergencyContacts (personId, person.merchantId)
       riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
       let trackLink = buildSosTrackUrl riderConfig (sosDetails.rideId <&> (.getId)) sosId
       let safetyPersonId = cast @Person.Person @SafetyCommon.Person personId
@@ -1069,9 +1070,9 @@ postSosUpdateToRide (mbPersonId, merchantId) sosId UpdateToRideReq {..} = do
                     rideEndTime = T.pack . formatTime defaultTimeLocale "%e-%-m-%Y %-I:%M%P" <$> ride.rideEndTime,
                     isRideEnded = False
                   }
-            emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, merchantId)
+            emergencyContacts <- EmergencyLib.getEmergencyContacts (personId, merchantId)
             void $ QPDEN.updateShareRideForAll (cast personId) True
-            enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
+            enableFollowRideInSos personId emergencyContacts.defaultEmergencyNumbers
             SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" Notification.SOS_TRIGGERED [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers Nothing
 
   pure APISuccess.Success
@@ -1087,7 +1088,7 @@ handleExternalSOS person sosConfig req personId riderConfig = do
     Just merchantSvcCfg -> case merchantSvcCfg.serviceConfig of
       DMSC.SOSServiceConfig specificConfig -> do
         mbRide <- maybe (pure Nothing) (\rideId -> QRide.findById rideId) req.rideId
-        emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
+        emergencyContacts <- EmergencyLib.getEmergencyContacts (personId, person.merchantId)
         merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
         externalSOSDetails <- buildExternalSOSDetails req person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig Nothing Nothing
         initialRes <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
@@ -1106,7 +1107,7 @@ buildExternalSOSDetails ::
   DRC.ExternalSOSConfig ->
   SOSInterface.SOSServiceConfig ->
   Maybe DRide.Ride ->
-  [DPDEN.PersonDefaultEmergencyNumberAPIEntity] ->
+  [EmergencyAPI.EmergencyContact] ->
   DMOC.MerchantOperatingCity ->
   DRC.RiderConfig ->
   Maybe Text ->

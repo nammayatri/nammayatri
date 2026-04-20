@@ -12,7 +12,8 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
-import qualified Domain.Action.UI.Profile as DP
+import Domain.Action.UI.Profile () -- HasEmergencyContactHandle instance
+import qualified Safety.Domain.Action.UI.PersonDefaultEmergencyNumber as EmergencyLib
 import qualified Domain.Action.UI.Sos as Sos
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -185,7 +186,7 @@ callExternalSOS sosId mbComments = do
           mbRide <- maybe (pure Nothing) (\rid -> QRide.findById (Kernel.Types.Id.cast @SafetyDCommon.Ride @DRide.Ride rid)) sos.rideId
           let rideIdForLoc = Kernel.Types.Id.cast @SafetyDCommon.Ride @DRide.Ride <$> sos.rideId
           customerLocation <- getCustomerLocation rideIdForLoc mbRide
-          emergencyContacts <- DP.getDefaultEmergencyNumbers (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId, merchantId)
+          emergencyContacts <- EmergencyLib.getEmergencyContacts (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId, merchantId)
           merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
           externalSOSDetails <- Sos.buildExternalSOSDetails (mkSosReq sos customerLocation) person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig mbComments (Just sos.id)
           initialRes <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails

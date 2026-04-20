@@ -82,6 +82,7 @@ library
       API.UI.CancellationReason
       API.UI.CancelSearch
       API.UI.Confirm
+      API.UI.DefaultEmergencyNumbers
       API.UI.Disability
       API.UI.FeedbackForm
       API.UI.Frontend
@@ -101,6 +102,7 @@ library
       API.UI.RentalsIntercityCache
       API.UI.Ride
       API.UI.Route
+      API.UI.SafetySettings
       API.UI.SavedReqLocation
       API.UI.Search
       API.UI.Select
