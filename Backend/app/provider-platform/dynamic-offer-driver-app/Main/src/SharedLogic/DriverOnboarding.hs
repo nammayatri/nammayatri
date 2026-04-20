@@ -82,14 +82,14 @@ import qualified Tools.Ticket as TT
 import qualified Tools.Whatsapp as Whatsapp
 import Utils.Common.Cac.KeyNameConstants
 
-defaultDriverDocumentTypes :: [DVC.DocumentType]
-defaultDriverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto, DVC.UploadProfile, DVC.SocialSecurityNumber, DVC.BackgroundVerification, DVC.GSTCertificate, DVC.BusinessLicense, DVC.LocalResidenceProof, DVC.PoliceVerificationCertificate, DVC.DrivingSchoolCertificate, DVC.TrainingForm, DVC.DriverInspectionHub]
+allPossibleDriverDocumentTypes :: [DVC.DocumentType]
+allPossibleDriverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto, DVC.UploadProfile, DVC.SocialSecurityNumber, DVC.BackgroundVerification, DVC.GSTCertificate, DVC.BusinessLicense, DVC.LocalResidenceProof, DVC.PoliceVerificationCertificate, DVC.DrivingSchoolCertificate, DVC.TrainingForm, DVC.DriverInspectionHub]
 
-defaultFleetDocumentTypes :: [DVC.DocumentType]
-defaultFleetDocumentTypes = [DVC.AadhaarCard, DVC.PanCard, DVC.GSTCertificate, DVC.BusinessLicense, DVC.UDYAMCertificate]
+allPossibleFleetDocumentTypes :: [DVC.DocumentType]
+allPossibleFleetDocumentTypes = [DVC.AadhaarCard, DVC.PanCard, DVC.GSTCertificate, DVC.BusinessLicense, DVC.UDYAMCertificate, DVC.TaxiTransportLicense, DVC.BusinessRegistrationExtract, DVC.TAXDetails, DVC.FinnishIDResidencePermit]
 
-defaultVehicleDocumentTypes :: [DVC.DocumentType]
-defaultVehicleDocumentTypes = [DVC.VehicleRegistrationCertificate, DVC.VehiclePermit, DVC.VehicleFitnessCertificate, DVC.VehicleInsurance, DVC.VehiclePUC, DVC.VehicleInspectionForm, DVC.SubscriptionPlan, DVC.VehicleLeft, DVC.VehicleRight, DVC.VehicleFrontInterior, DVC.VehicleBackInterior, DVC.VehicleFront, DVC.VehicleBack, DVC.Odometer, DVC.VehicleNOC, DVC.InspectionHub]
+allPossibleVehicleDocumentTypes :: [DVC.DocumentType]
+allPossibleVehicleDocumentTypes = [DVC.VehicleRegistrationCertificate, DVC.VehiclePermit, DVC.VehicleFitnessCertificate, DVC.VehicleInsurance, DVC.VehiclePUC, DVC.VehicleInspectionForm, DVC.SubscriptionPlan, DVC.VehicleLeft, DVC.VehicleRight, DVC.VehicleFrontInterior, DVC.VehicleBackInterior, DVC.VehicleFront, DVC.VehicleBack, DVC.Odometer, DVC.VehicleNOC, DVC.InspectionHub]
 
 notifyErrorToSupport ::
   Person ->
@@ -656,7 +656,7 @@ toMaybe xs = Kernel.Prelude.Just xs
 filterVehicleDocuments :: [Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig] -> Maybe Bool -> [Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig]
 filterVehicleDocuments docs onlyVehicle =
   if onlyVehicle == Just True
-    then filter (\Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..} -> documentType `elem` defaultVehicleDocumentTypes) docs
+    then filter (\Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..} -> documentType `elem` allPossibleVehicleDocumentTypes) docs
     else docs
 
 filterInCompatibleFlows ::
