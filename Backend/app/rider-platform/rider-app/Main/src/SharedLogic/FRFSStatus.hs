@@ -26,6 +26,7 @@ import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM
 import qualified ExternalBPP.CallAPI.Confirm as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Status as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Types as CallExternalBPP
+import qualified ExternalBPP.Flow.Common as FlowCommon
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface
@@ -108,6 +109,14 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
           void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.FAILED paymentBooking.id
           let mPrice = Common.mkPrice (Just booking'.totalPrice.currency) (HighPrecMoney $ toRational (0 :: Int))
           void $ QFRFSRecon.updateTOrderValueAndSettlementAmountById mPrice mPrice booking.id
+          integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
+          case integratedBppConfig.providerConfig of
+            DIBC.OSRTC osrtcConfig -> do
+              isLockAcquired <- Hedis.tryLockRedis (mkOSRTCReleaseHoldLockKey booking.id) 60
+              when isLockAcquired $
+                fork "OSRTC:ReleaseHoldOnFailedBranchFailure" $
+                  FlowCommon.osrtcReleaseHold osrtcConfig booking.id booking.totalPrice.amount (Just paymentOrder) paymentStatusResp
+            _ -> pure ()
         when (paymentBookingStatus == FRFSTicketService.SUCCESS) do
           void $ markJourneyPaymentSuccess booking paymentOrder paymentBooking
         when (paymentBookingStatus == FRFSTicketService.PENDING) do
@@ -143,6 +152,14 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
             QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
             QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.FAILED paymentBooking.id
             let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
+            integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
+            case integratedBppConfig.providerConfig of
+              DIBC.OSRTC osrtcConfig -> do
+                isLockAcquired <- Hedis.tryLockRedis (mkOSRTCReleaseHoldLockKey booking.id) 60
+                when isLockAcquired $
+                  fork "OSRTC:ReleaseHoldOnApprovedFailure" $
+                    FlowCommon.osrtcReleaseHold osrtcConfig booking.id booking.totalPrice.amount (Just paymentOrder) paymentStatusResp
+              _ -> pure ()
             buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
           else
             if (paymentBookingStatus == FRFSTicketService.SUCCESS) && (booking.validTill < now)
@@ -150,6 +167,14 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                 logInfo $ "booking is expired in approved: " <> show booking
                 void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
                 let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
+                integratedBppConfig' <- SIBC.findIntegratedBPPConfigFromEntity booking
+                case integratedBppConfig'.providerConfig of
+                  DIBC.OSRTC osrtcConfig -> do
+                    isLockAcquired <- Hedis.tryLockRedis (mkOSRTCReleaseHoldLockKey booking.id) 60
+                    when isLockAcquired $
+                      fork "OSRTC:ReleaseHoldOnApprovedExpiry" $
+                        FlowCommon.osrtcReleaseHold osrtcConfig booking.id booking.totalPrice.amount (Just paymentOrder) paymentStatusResp
+                  _ -> pure ()
                 buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
               else do
                 txn <- HQPaymentTransaction.findNewTransactionByOrderId paymentOrder.id
@@ -177,6 +202,14 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
               QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
               QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.FAILED paymentBooking.id
               let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
+              integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
+              case integratedBppConfig.providerConfig of
+                DIBC.OSRTC osrtcConfig -> do
+                  isLockAcquired <- Hedis.tryLockRedis (mkOSRTCReleaseHoldLockKey booking.id) 60
+                  when isLockAcquired $
+                    fork "OSRTC:ReleaseHoldOnPaymentFailure" $
+                      FlowCommon.osrtcReleaseHold osrtcConfig booking.id booking.totalPrice.amount (Just paymentOrder) paymentStatusResp
+                _ -> pure ()
               buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
             else
               if (paymentBookingStatus == FRFSTicketService.SUCCESS) && (booking.validTill < now)
@@ -185,6 +218,14 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                   void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
                   let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
                   void $ markJourneyPaymentSuccess updatedBooking paymentOrder paymentBooking
+                  integratedBppConfig' <- SIBC.findIntegratedBPPConfigFromEntity booking
+                  case integratedBppConfig'.providerConfig of
+                    DIBC.OSRTC osrtcConfig -> do
+                      isLockAcquired <- Hedis.tryLockRedis (mkOSRTCReleaseHoldLockKey booking.id) 60
+                      when isLockAcquired $
+                        fork "OSRTC:ReleaseHoldOnExpiry" $
+                          FlowCommon.osrtcReleaseHold osrtcConfig booking.id booking.totalPrice.amount (Just paymentOrder) paymentStatusResp
+                    _ -> pure ()
                   buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
                 else do
                   (mbJourneyId, _) <- getAllJourneyFrfsBookings booking
@@ -222,7 +263,10 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                           -- Use payment categories if available, otherwise fall back to quote categories
                           paymentCategories <- QFRFSTicketBookingPaymentCategory.findAllByPaymentId paymentBooking.id
                           let categoriesToUse = if null paymentCategories then quoteCategories else map paymentCategoryToQuoteCategory paymentCategories
-                          confirmResp <- CallExternalBPP.confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) quoteUpdatedBooking categoriesToUse mbIsSingleMode
+                          confirmIntegratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity quoteUpdatedBooking
+                          confirmResp <- case confirmIntegratedBppConfig.providerConfig of
+                            DIBC.OSRTC _ -> CallExternalBPP.confirmOSRTC merchant merchantOperatingCity bapConfig quoteUpdatedBooking (paymentOrder, paymentStatusResp)
+                            _ -> CallExternalBPP.confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) quoteUpdatedBooking categoriesToUse mbIsSingleMode
                           updatedBooking <-
                             case confirmResp of
                               Left err -> do
@@ -366,6 +410,9 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
 
     mkPaymentSuccessLockKey :: Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking -> Text
     mkPaymentSuccessLockKey bookingId = "frfsPaymentSuccess:" <> bookingId.getId
+
+    mkOSRTCReleaseHoldLockKey :: Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking -> Text
+    mkOSRTCReleaseHoldLockKey bookingId = "osrtcReleaseHold:" <> bookingId.getId
 
     buildCreateOrderResp paymentOrder commonPersonId merchantOperatingCityId booking = do
       personEmail <- mapM decrypt person.email

@@ -16,6 +16,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text
 import qualified Data.Time as Time
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import qualified Domain.Action.UI.OSRTCService as OSRTCService
 import Domain.Types.BecknConfig
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.FRFSConfig
@@ -142,26 +143,25 @@ getFrfsRoutes (_personId, _mId) mbEndStationCode mbStartStationCode _city _vehic
           map
             ( \routeInfo ->
                 let stops =
-                      ( mapWithIndex
-                          ( \idx stop ->
-                              FRFSStationAPI
-                                { name = Just stop.stopName,
-                                  code = stop.stopCode,
-                                  routeCodes = Nothing,
-                                  lat = Just stop.stopPoint.lat,
-                                  lon = Just stop.stopPoint.lon,
-                                  stationType = Just (if idx == 0 then START else if maybe False (\stops' -> idx < length stops') routeInfo.stops then INTERMEDIATE else END),
-                                  sequenceNum = Just stop.sequenceNum,
-                                  address = Nothing,
-                                  timeTakenToTravelUpcomingStop = Nothing,
-                                  distance = Nothing,
-                                  color = Nothing,
-                                  towards = Nothing,
-                                  integratedBppConfigId = integratedBPPConfig.id,
-                                  parentStopCode = Nothing
-                                }
-                          )
-                      )
+                      mapWithIndex
+                        ( \idx stop ->
+                            FRFSStationAPI
+                              { name = Just stop.stopName,
+                                code = stop.stopCode,
+                                routeCodes = Nothing,
+                                lat = Just stop.stopPoint.lat,
+                                lon = Just stop.stopPoint.lon,
+                                stationType = Just (if idx == 0 then START else if maybe False (\stops' -> idx < length stops' - 1) routeInfo.stops then INTERMEDIATE else END),
+                                sequenceNum = Just stop.sequenceNum,
+                                address = Nothing,
+                                timeTakenToTravelUpcomingStop = Nothing,
+                                distance = Nothing,
+                                color = Nothing,
+                                towards = Nothing,
+                                integratedBppConfigId = integratedBPPConfig.id,
+                                parentStopCode = Nothing
+                              }
+                        )
                         <$> routeInfo.stops
                  in FRFSTicketService.FRFSRouteAPI
                       { code = routeInfo.route.code,
@@ -186,6 +186,54 @@ getFrfsRoutes (_personId, _mId) mbEndStationCode mbStartStationCode _city _vehic
             routes
   where
     mapWithIndex f xs = zipWith f [0 ..] xs
+
+postFrfsOsrtcSeatAvailability ::
+  (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, HasRequestId r, MonadReader r m) =>
+  (Maybe (Id DP.Person), Id Merchant) ->
+  Id DFRFSSearch.FRFSSearch ->
+  FRFSTicketService.OSRTCSeatAvailabilityReq ->
+  m FRFSTicketService.OSRTCSeatAvailabilityRes
+postFrfsOsrtcSeatAvailability = OSRTCService.postFrfsOsrtcSeatAvailability
+
+postFrfsOsrtcFareCalculation ::
+  (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, HasRequestId r, MonadReader r m) =>
+  (Maybe (Id DP.Person), Id Merchant) ->
+  Id DFRFSSearch.FRFSSearch ->
+  FRFSTicketService.OSRTCFareCalculationReq ->
+  m FRFSTicketService.OSRTCFareCalculationRes
+postFrfsOsrtcFareCalculation = OSRTCService.postFrfsOsrtcFareCalculation
+
+postFrfsOsrtcRefundAmount ::
+  (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, HasRequestId r, MonadReader r m) =>
+  (Maybe (Id DP.Person), Id Merchant) ->
+  Id DFRFSTicketBooking.FRFSTicketBooking ->
+  FRFSTicketService.OSRTCRefundPreviewReq ->
+  m FRFSTicketService.OSRTCRefundPreviewRes
+postFrfsOsrtcRefundAmount = OSRTCService.postFrfsOsrtcRefundAmount
+
+postFrfsOsrtcCancelTicket ::
+  (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, HasRequestId r, MonadReader r m) =>
+  (Maybe (Id DP.Person), Id Merchant) ->
+  Id DFRFSTicketBooking.FRFSTicketBooking ->
+  FRFSTicketService.OSRTCCancelTicketReq ->
+  m FRFSTicketService.OSRTCCancelTicketRes
+postFrfsOsrtcCancelTicket = OSRTCService.postFrfsOsrtcCancelTicket
+
+getFrfsOsrtcTracking ::
+  (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, HasRequestId r, MonadReader r m) =>
+  (Maybe (Id DP.Person), Id Merchant) ->
+  Id DFRFSTicketBooking.FRFSTicketBooking ->
+  m FRFSTicketService.OSRTCTrackingRes
+getFrfsOsrtcTracking = OSRTCService.getFrfsOsrtcTracking
+
+getFrfsOsrtcStations ::
+  (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, HasRequestId r, HasShortDurationRetryCfg r c, MonadReader r m) =>
+  (Maybe (Id DP.Person), Id Merchant) ->
+  Maybe DIBC.PlatformType ->
+  Context.City ->
+  Spec.VehicleCategory ->
+  m [FRFSTicketService.OSRTCStationRes]
+getFrfsOsrtcStations = OSRTCService.getFrfsOsrtcStations
 
 data StationResult = StationResult
   { code :: Kernel.Prelude.Text,
@@ -578,10 +626,8 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory vehicleType_)}) >>= fromMaybeM (InternalError "Beckn Config not found")
   cloudType <- asks (.cloudType)
-  (fromStation, toStation) <- do
-    fromStationInfo <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode integratedBPPConfig >>= fromMaybeM (InvalidRequest $ "Invalid from station id: " <> fromStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-    toStationInfo <- OTPRest.getStationByGtfsIdAndStopCode toStationCode integratedBPPConfig >>= fromMaybeM (InvalidRequest $ "Invalid to station id: " <> toStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-    return (fromStationInfo, toStationInfo)
+  fromStation <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode integratedBPPConfig >>= fromMaybeM (InvalidRequest $ "Invalid from station id: " <> fromStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+  toStation <- OTPRest.getStationByGtfsIdAndStopCode toStationCode integratedBPPConfig >>= fromMaybeM (InvalidRequest $ "Invalid to station id: " <> toStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   route <-
     maybe
       (pure Nothing)
@@ -691,6 +737,7 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
               integratedBppConfigId = quote.integratedBppConfigId,
               stations = fromMaybe [] stations,
               observingFailures = Just observingFailures,
+              osrtcTripDetail = quote.osrtcTripDetail,
               ..
             }
     )

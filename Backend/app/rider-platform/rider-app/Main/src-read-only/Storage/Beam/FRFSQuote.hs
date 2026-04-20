@@ -40,6 +40,7 @@ data FRFSQuoteT f = FRFSQuoteT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     multimodalSearchRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     oldCacheDump :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    osrtcTripDetail :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     partnerOrgTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     providerDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

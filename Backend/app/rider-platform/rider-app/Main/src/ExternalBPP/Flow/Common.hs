@@ -1,9 +1,13 @@
 module ExternalBPP.Flow.Common where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Applicative ((<|>))
+import qualified Data.Aeson as A
 import Data.List (sortOn)
 import qualified Data.List.NonEmpty as NE
 import Data.Ord (Down (..))
+import qualified Data.Text as T
+import Data.Time (utctDay)
 import Domain.Action.Beckn.FRFS.Common
 import Domain.Action.Beckn.FRFS.OnInit
 import Domain.Action.Beckn.FRFS.OnSearch
@@ -21,42 +25,62 @@ import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.StationType as Station
+import qualified ExternalBPP.ExternalAPI.Bus.OSRTC.Enums as OSRTCEnums
+import qualified ExternalBPP.ExternalAPI.Bus.OSRTC.Trip as OSRTCTrip
+import qualified ExternalBPP.ExternalAPI.Bus.OSRTC.Types as OSRTCTypes
 import qualified ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import ExternalBPP.ExternalAPI.Types
 import qualified ExternalBPP.Flow.Fare as Flow
+import Kernel.External.Encryption (EncKind (..), EncryptedField, decrypt)
+import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto.Config as DB
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JMU
+import qualified Lib.Payment.Domain.Action as LibPayment
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
+import qualified SharedLogic.External.Nandi.Flow as NandiFlow
 import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.FRFSCancellationConfig as CQFRFSCancellationConfig
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
+import qualified Tools.MultiModal as MM
 
 search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m DOnSearch
 search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHostUrl mbNetworkId searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId = do
-  quotes <- buildQuotes routeDetails
-  logDebug $ "Route Details Debug: " <> show routeDetails
-  validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.searchTTLSec
-  messageId <- generateGUID
-  return $
-    DOnSearch
-      { bppSubscriberId = fromMaybe bapConfig.subscriberId mbNetworkId,
-        bppSubscriberUrl = showBaseUrl $ fromMaybe bapConfig.subscriberUrl mbNetworkHostUrl,
-        providerDescription = Nothing,
-        providerId = bapConfig.uniqueKeyId,
-        providerName = CallAPI.getProviderName integratedBPPConfig,
-        quotes = quotes,
-        validTill = validTill,
-        transactionId = searchReq.id.getId,
-        messageId = messageId,
-        bppDelayedInterest = Nothing
-      }
+  case integratedBPPConfig.providerConfig of
+    OSRTC osrtcConfig -> osrtcSearchTrips osrtcConfig
+    _ -> defaultSearch
   where
+    defaultSearch = do
+      quotes <- buildQuotes routeDetails
+      logDebug $ "Route Details Debug: " <> show routeDetails
+      mkDOnSearch quotes
+
+    mkDOnSearch quotes = do
+      validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.searchTTLSec
+      messageId <- generateGUID
+      return $
+        DOnSearch
+          { bppSubscriberId = fromMaybe bapConfig.subscriberId mbNetworkId,
+            bppSubscriberUrl = showBaseUrl $ fromMaybe bapConfig.subscriberUrl mbNetworkHostUrl,
+            providerDescription = Nothing,
+            providerId = bapConfig.uniqueKeyId,
+            providerName = CallAPI.getProviderName integratedBPPConfig,
+            quotes = quotes,
+            validTill = validTill,
+            transactionId = searchReq.id.getId,
+            messageId = messageId,
+            bppDelayedInterest = Nothing
+          }
+
     -- Build Single Transit Route Quote
     buildQuotes [routeDetail] = buildSingleTransitRouteQuote routeDetail
     -- Build Multiple Transit Routes Quotes
@@ -145,6 +169,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
                       _type = DFRFSQuote.SingleJourney,
                       routeStations = routeStations,
                       fareDetails = fareDetails,
+                      osrtcTripDetail = Nothing,
                       categories = map mkDCategory categories,
                       ..
                     }
@@ -161,33 +186,124 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
           ..
         }
 
+    osrtcSearchTrips osrtcConfig = do
+      journeyDate <- searchReq.journeyDate & fromMaybeM (InvalidRequest "journeyDate is required for OSRTC search")
+      let day = utctDay journeyDate
+      baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+      let resolveOSRTCStationIntId stationCode = do
+            case readMaybe (T.unpack stationCode) :: Maybe Int of
+              Just intId -> pure intId
+              Nothing -> do
+                rawStation <- NandiFlow.getStationsByGtfsIdAndStopCode baseUrl integratedBPPConfig.feedKey stationCode
+                readMaybe (T.unpack rawStation.providerCode)
+                  & fromMaybeM
+                    ( InvalidRequest $
+                        "Cannot resolve OSRTC intStationID for code: "
+                          <> stationCode
+                          <> ". providerCode='"
+                          <> rawStation.providerCode
+                          <> "' is not a valid integer. Ensure the GTFS feed has intStationID as providerCode."
+                    )
+      fromStationId <- resolveOSRTCStationIntId searchReq.fromStationCode
+      toStationId <- resolveOSRTCStationIntId searchReq.toStationCode
+      resp <-
+        OSRTCTrip.searchTrip osrtcConfig $
+          OSRTCTypes.OSRTCSearchTripReq
+            { intFromStationID = fromStationId,
+              intToStationID = toStationId,
+              dteJourneyDate = day,
+              intPlatformID = osrtcConfig.platformId
+            }
+      let fromStation =
+            DStation
+              { stationCode = searchReq.fromStationCode,
+                stationName = fromMaybe searchReq.fromStationCode searchReq.fromStationName,
+                stationLat = (.lat) <$> searchReq.fromStationPoint,
+                stationLon = (.lon) <$> searchReq.fromStationPoint,
+                stationType = Station.START,
+                stopSequence = Nothing,
+                towards = Nothing
+              }
+          toStation =
+            DStation
+              { stationCode = searchReq.toStationCode,
+                stationName = fromMaybe searchReq.toStationCode searchReq.toStationName,
+                stationLat = (.lat) <$> searchReq.toStationPoint,
+                stationLon = (.lon) <$> searchReq.toStationPoint,
+                stationType = Station.END,
+                stopSequence = Nothing,
+                towards = Nothing
+              }
+      let trips = fromMaybe [] resp._data -- OSRTC sends data:null when no trips found; treat as empty list
+          osrtcTrips = filter isOSRTCTrip trips
+          nonOsrtcCount = length trips - length osrtcTrips
+          tripQuotes = mapMaybe (mkOSRTCQuote fromStation toStation) osrtcTrips
+      when (nonOsrtcCount > 0) $
+        logWarning $ "OSRTC SearchTrip returned " <> show nonOsrtcCount <> " trip(s) with non-OSRTC operator — skipped"
+      when (null tripQuotes && not (null trips)) $
+        logError $ "OSRTC SearchTrip: all " <> show (length trips) <> " trip(s) dropped by operator filter — check strServiceOperatorName/strOrganizationEntityName in response"
+      mkDOnSearch tripQuotes
+
+    isOSRTCTrip trip =
+      OSRTCTypes.strServiceOperatorName trip == "OSRTC"
+        && OSRTCTypes.strOrganizationEntityName trip == "OSRTC"
+
+    mkOSRTCQuote fromStation toStation trip = do
+      let tripId = show trip.intServiceTripDepartureID
+          adultFareRows = filter (\fr -> fr.intTicketCategoryID == OSRTCEnums.Adult || fr.intTicketCategoryID == OSRTCEnums.Men) trip.fare
+          minFare = if null adultFareRows then trip.decMinFare else minimum (map (.decFareAmount) adultFareRows)
+          adultPrice = Price (Money $ round minFare.getHighPrecMoney) minFare INR
+      guard trip.bAllowBooking
+      guard (trip.vacentSeats > 0) -- skip trips with no bookable seats; OSRTC may still set bAllowBooking=true on them
+      Just $
+        DQuote
+          { bppItemId = tripId,
+            routeCode = trip.strServiceTripCode,
+            vehicleType = Spec.BUS,
+            routeStations = [],
+            stations = [fromStation, toStation],
+            categories = [DCategory ADULT adultPrice adultPrice tripId True],
+            fareDetails = Nothing,
+            osrtcTripDetail = Just $ A.toJSON trip,
+            _type = DFRFSQuote.SingleJourney
+          }
+
 init :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> m DOnInit
 init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories = do
-  validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.initTTLSec
-  paymentDetails <- mkPaymentDetails bapConfig.collectedBy
-  bankAccountNumber <- paymentDetails.bankAccNumber & fromMaybeM (InternalError "Bank Account Number Not Found")
-  bankCode <- paymentDetails.bankCode & fromMaybeM (InternalError "Bank Code Not Found")
-  bppOrderId <- CallAPI.getBppOrderId integratedBPPConfig booking
-  return $
-    DOnInit
-      { providerId = bapConfig.uniqueKeyId,
-        totalPrice = booking.totalPrice,
-        categories = map mkDCategorySelect quoteCategories,
-        fareBreakUp = [],
-        validTill = validTill,
-        transactionId = booking.searchId.getId,
-        messageId = booking.id.getId,
-        bankAccNum = bankAccountNumber,
-        bankCode = bankCode,
-        bppOrderId = bppOrderId
-      }
+  case integratedBPPConfig.providerConfig of
+    OSRTC osrtcConfig -> osrtcInit osrtcConfig
+    _ -> defaultInit
   where
+    defaultInit = buildOnInit Nothing
+
+    buildOnInit mbBppOrderId = do
+      validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.initTTLSec
+      paymentDetails <- mkPaymentDetails bapConfig.collectedBy
+      bankAccountNumber <- paymentDetails.bankAccNumber & fromMaybeM (InternalError "Bank Account Number Not Found")
+      bankCode <- paymentDetails.bankCode & fromMaybeM (InternalError "Bank Code Not Found")
+      bppOrderId <- case mbBppOrderId of
+        Just pnr -> return (Just pnr)
+        Nothing -> CallAPI.getBppOrderId integratedBPPConfig booking
+      return $
+        DOnInit
+          { providerId = bapConfig.uniqueKeyId,
+            totalPrice = booking.totalPrice,
+            categories = map mkDCategorySelect quoteCategories,
+            fareBreakUp = [],
+            validTill = validTill,
+            transactionId = booking.searchId.getId,
+            messageId = booking.id.getId,
+            bankAccNum = bankAccountNumber,
+            bankCode = bankCode,
+            bppOrderId = bppOrderId
+          }
+
     mkDCategorySelect quoteCategory =
       DCategorySelect
         { bppItemId = CallAPI.getProviderName integratedBPPConfig,
           quantity = quoteCategory.selectedQuantity,
           category = quoteCategory.category,
-          price = quoteCategory.offeredPrice
+          price = fromMaybe quoteCategory.offeredPrice quoteCategory.finalPrice -- prefer finalPrice when set so toll/surcharges (set by OSRTC fareCalc via syncOSRTCFareToQuote) match booking.totalPrice and OnInit's CATEGORIES_AND_TOTAL_PRICE_MISMATCH check passes
         }
     mkPaymentDetails = \case
       Spec.BAP -> do
@@ -195,65 +311,190 @@ init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, m
         paymentParams & fromMaybeM (InternalError "BknPaymentParams Not Found")
       Spec.BPP -> CallAPI.getPaymentDetails merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
 
-confirm :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c, Metrics.HasBAPMetrics m r) => Merchant -> MerchantOperatingCity -> FRFSConfig -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> Maybe Bool -> m DOrder
+    osrtcInit osrtcConfig = do
+      case booking.bppOrderId of
+        Just pnrFromDb -> do
+          logInfo $ "OSRTC init retry: reusing PNR from DB bppOrderId for bookingId=" <> booking.id.getId
+          buildOnInit (Just pnrFromDb)
+        Nothing -> osrtcInitFromRedisOrInsert osrtcConfig
+
+    osrtcInitFromRedisOrInsert osrtcConfig = do
+      mbExistingPnr :: Maybe Text <- Hedis.get (osrtcPnrKey booking.id)
+      case mbExistingPnr of
+        Just existingPnr -> do
+          logInfo $ "OSRTC init retry: reusing existing PNR from Redis for bookingId=" <> booking.id.getId
+          buildOnInit (Just existingPnr)
+        Nothing -> do
+          mbEncryptedJson :: Maybe Text <- Hedis.get (osrtcBookingDataKey booking.searchId)
+          encryptedJson <- fromMaybeM (InvalidRequest "OSRTC booking data not found. Complete seat selection and fare calculation first.") mbEncryptedJson
+          encryptedData :: EncryptedField 'AsEncrypted Text <-
+            decodeFromText encryptedJson & fromMaybeM (InternalError "OSRTC booking data in Redis could not be JSON-decoded into EncryptedField") -- stored via encodeToText to avoid Hedis typed-roundtrip quote mangling
+          plaintext <- decrypt encryptedData
+          bookingData :: OSRTCTypes.OSRTCInsertBookingReq <-
+            decodeFromText plaintext & fromMaybeM (InternalError "OSRTC booking data in Redis could not be JSON-decoded after decryption")
+          let insertReq =
+                bookingData
+                  { OSRTCTypes.intPlatformID = osrtcConfig.platformId,
+                    OSRTCTypes.intPaymentModeID = osrtcConfig.intPaymentModeId
+                  }
+          logInfo $ "OSRTC InsertTicketBooking JSON body: " <> encodeToText insertReq -- diagnose seat-validation rejection; compare bytes against working curl payload
+          resp <- OSRTCTrip.insertTicketBooking osrtcConfig insertReq
+          insertRes <- case resp._data of
+            Just (r : _) -> return r
+            _ -> throwError $ InternalError $ "OSRTC InsertTicketBooking failed: returnCode=" <> show resp.returnCode <> " returnMessage=" <> resp.returnMessage
+          Hedis.setExp (osrtcPnrKey booking.id) insertRes.strPNRNo osrtcHoldTtl
+          Hedis.setExp (osrtcPaymentRefKey booking.id) insertRes.strPaymentObjRefNo osrtcHoldTtl
+          Hedis.setExp (osrtcTicketBookingIdKey booking.id) insertRes.intTicketBookingID osrtcHoldTtl
+          logInfo $ "OSRTC InsertTicketBooking success: PNR=" <> insertRes.strPNRNo <> " bookingId=" <> booking.id.getId
+          buildOnInit (Just insertRes.strPNRNo)
+
+confirm :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, Metrics.HasBAPMetrics m r) => Merchant -> MerchantOperatingCity -> FRFSConfig -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> Maybe Bool -> m DOrder
 confirm _merchant _merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories mbIsSingleMode = do
-  let baseQrTtl =
-        case booking.vehicleType of
-          Spec.BUS -> Seconds $ if (fromMaybe False mbIsSingleMode) then frfsConfig.busStationTtl.getSeconds else 2 * frfsConfig.busStationTtl.getSeconds
-          Spec.METRO -> Seconds frfsConfig.metroStationTtl
-          _ -> Seconds frfsConfig.metroStationTtl
-  qrTtl <- case (booking.vehicleType, booking.tripId, booking.routeCode) of
-    (Spec.BUS, Just tripId, Just routeCode) -> do
-      let (waybillNo, tripNo) = JMU.getWaybillNoAndTripNoFromTripId tripId
-      mbSchedule <- withTryCatch "getBusTripSchedule_confirm" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBPPConfig)
-      case mbSchedule of
-        Right [] -> return baseQrTtl
-        Right (firstSchedule : _) -> do
-          case find (\eta -> eta.stopCode == booking.fromStationCode) firstSchedule.eta of
-            Just boardingStopEta -> do
-              currentTime <- getCurrentTime
-              let extraTtlSeconds =
-                    ( nominalDiffTimeToSeconds $
-                        diffUTCTime
-                          (unixToUTC boardingStopEta.arrivalTimeUnix)
-                          currentTime
-                    ).getSeconds
-              let addedTtl = max extraTtlSeconds 0
-              return $ Seconds (baseQrTtl.getSeconds + addedTtl)
-            Nothing -> return baseQrTtl
-        Left err -> do
-          logError $ "Failed to fetch bus trip schedule: " <> show err
-          return baseQrTtl
-    _ -> return baseQrTtl
-  order <- CallAPI.createOrder integratedBPPConfig qrTtl (mRiderName, mRiderNumber) booking quoteCategories
-  let tickets =
-        map
-          ( \ticket ->
-              DTicket
-                { qrData = ticket.qrData,
-                  vehicleNumber = ticket.vehicleNumber,
-                  bppFulfillmentId = Just $ CallAPI.getProviderName integratedBPPConfig,
-                  ticketNumber = ticket.ticketNumber,
-                  validTill = ticket.qrValidity,
-                  status = ticket.qrStatus,
-                  description = ticket.description,
-                  qrRefreshAt = ticket.qrRefreshAt,
-                  commencingHours = ticket.commencingHours,
-                  isReturnTicket = Nothing
-                }
-          )
-          order.tickets
+  case integratedBPPConfig.providerConfig of
+    OSRTC _ -> throwError $ InternalError "OSRTC bookings must be confirmed via Flow.confirmOSRTC; caller failed to dispatch on providerConfig"
+    _ -> defaultConfirm
+  where
+    defaultConfirm = do
+      let baseQrTtl =
+            case booking.vehicleType of
+              Spec.BUS -> Seconds $ if (fromMaybe False mbIsSingleMode) then frfsConfig.busStationTtl.getSeconds else 2 * frfsConfig.busStationTtl.getSeconds
+              Spec.METRO -> Seconds frfsConfig.metroStationTtl
+              _ -> Seconds frfsConfig.metroStationTtl
+      qrTtl <- case (booking.vehicleType, booking.tripId, booking.routeCode) of
+        (Spec.BUS, Just tripId, Just routeCode) -> do
+          let (waybillNo, tripNo) = JMU.getWaybillNoAndTripNoFromTripId tripId
+          mbSchedule <- withTryCatch "getBusTripSchedule_confirm" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBPPConfig)
+          case mbSchedule of
+            Right [] -> return baseQrTtl
+            Right (firstSchedule : _) -> do
+              case find (\eta -> eta.stopCode == booking.fromStationCode) firstSchedule.eta of
+                Just boardingStopEta -> do
+                  currentTime <- getCurrentTime
+                  let extraTtlSeconds =
+                        ( nominalDiffTimeToSeconds $
+                            diffUTCTime
+                              (unixToUTC boardingStopEta.arrivalTimeUnix)
+                              currentTime
+                        ).getSeconds
+                  let addedTtl = max extraTtlSeconds 0
+                  return $ Seconds (baseQrTtl.getSeconds + addedTtl)
+                Nothing -> return baseQrTtl
+            Left err -> do
+              logError $ "Failed to fetch bus trip schedule: " <> show err
+              return baseQrTtl
+        _ -> return baseQrTtl
+      order <- CallAPI.createOrder integratedBPPConfig qrTtl (mRiderName, mRiderNumber) booking quoteCategories
+      let tickets =
+            map
+              ( \ticket ->
+                  DTicket
+                    { qrData = ticket.qrData,
+                      vehicleNumber = ticket.vehicleNumber,
+                      bppFulfillmentId = Just $ CallAPI.getProviderName integratedBPPConfig,
+                      ticketNumber = ticket.ticketNumber,
+                      validTill = ticket.qrValidity,
+                      status = ticket.qrStatus,
+                      description = ticket.description,
+                      qrRefreshAt = ticket.qrRefreshAt,
+                      commencingHours = ticket.commencingHours,
+                      isReturnTicket = Nothing
+                    }
+              )
+              order.tickets
+      return $
+        DOrder
+          { providerId = bapConfig.uniqueKeyId,
+            totalPrice = booking.totalPrice.amount,
+            fareBreakUp = [],
+            bppOrderId = order.orderId,
+            bppItemId = CallAPI.getProviderName integratedBPPConfig,
+            transactionId = booking.searchId.getId,
+            orderStatus = Nothing,
+            messageId = booking.id.getId,
+            tickets = tickets
+          }
+
+-- | OSRTC-specific confirm. Split out of the unified `confirm` because UpdateTicketBookingResponse
+-- requires the Juspay PaymentOrder + PaymentStatusResp produced earlier in the booking flow;
+-- threading those through the unified contract would pollute every other provider's signature.
+-- The (PaymentOrder, Maybe PaymentStatusResp) is positional and required — caller cannot pass Nothing.
+confirmOSRTC ::
+  (CoreMetrics m, MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) =>
+  Merchant ->
+  MerchantOperatingCity ->
+  IntegratedBPPConfig ->
+  BecknConfig ->
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  (DPaymentOrder.PaymentOrder, Maybe LibPayment.PaymentStatusResp) ->
+  m DOrder
+confirmOSRTC _merchant _merchantOperatingCity integratedBPPConfig bapConfig booking (payOrder, mbPayStatus) = do
+  osrtcConfig <- case integratedBPPConfig.providerConfig of
+    OSRTC cfg -> pure cfg
+    _ -> throwError $ InternalError "Flow.confirmOSRTC called with non-OSRTC providerConfig"
+  let isCharged = case mbPayStatus of
+        Just LibPayment.PaymentStatus {status = paymentStatus} -> paymentStatus == Payment.CHARGED
+        _ -> False
+  unless isCharged $
+    throwError $ InternalError $ "OSRTC confirm called with non-CHARGED payment status: " <> show mbPayStatus
+  pnrNo <- Hedis.get (osrtcPnrKey booking.id) >>= fromMaybeM (InternalError "OSRTC PNR not found for booking")
+  paymentRefNo <- Hedis.get (osrtcPaymentRefKey booking.id) >>= fromMaybeM (InternalError "OSRTC payment ref not found for booking")
+  mbExistingTicketInfo :: Maybe OSRTCTicketInfo <- Hedis.get (osrtcTicketInfoKey booking.id)
+  (qrData, qrValidTill) <- case mbExistingTicketInfo of
+    Just info -> do
+      logInfo $ "OSRTC confirm retry: reusing existing ticket info for bookingId=" <> booking.id.getId
+      return (info.qrData, info.validTill)
+    Nothing -> do
+      let meta = mkOSRTCPaymentMetadata payOrder mbPayStatus
+      let updateReq =
+            OSRTCTypes.OSRTCUpdateBookingReq
+              { strPaymentObjRefNo = paymentRefNo,
+                intPGPaymentStatusID = fromEnum OSRTCEnums.SUCCESS,
+                strStatusCode = OSRTCEnums.SUCCESS,
+                strBankRefNo = meta.pmBankRefNo,
+                strPGTrackingRefNo = meta.pmPgTrackingRefNo,
+                intAmount = meta.pmAmount,
+                strPaymentMode = meta.pmPaymentMode,
+                strCardNumber = meta.pmCardNumber,
+                strBankStatus = OSRTCEnums.SUCCESS,
+                strPGType = osrtcConfig.strPGType,
+                strFullResponse = meta.pmFullResponse
+              }
+      resp <- OSRTCTrip.updateTicketBookingResponse osrtcConfig updateReq
+      updateRes <- resp._data & fromMaybeM (InternalError $ "OSRTC UpdateTicketBookingResponse failed: returnCode=" <> show resp.returnCode <> " returnMessage=" <> resp.returnMessage)
+      mbJourneyDate :: Maybe UTCTime <- Hedis.get (osrtcJourneyDateKey booking.searchId)
+      journeyDate <- case mbJourneyDate of
+        Just jd -> return jd
+        Nothing -> do
+          logWarning $ "OSRTC: journeyDate Redis key missing for searchId=" <> booking.searchId.getId <> "; falling back to DB"
+          journeySearch <- QFRFSSearch.findById booking.searchId >>= fromMaybeM (InternalError $ "OSRTC confirm: FRFSSearch not found for searchId=" <> booking.searchId.getId)
+          journeySearch.journeyDate & fromMaybeM (InternalError $ "OSRTC confirm: journeyDate not set on FRFSSearch for searchId=" <> booking.searchId.getId)
+      let validTill = addUTCTime (24 * 60 * 60) journeyDate
+      Hedis.setExp (osrtcTicketInfoKey booking.id) (OSRTCTicketInfo {qrData = updateRes.strQRCode, validTill = validTill}) (7 * 24 * 60 * 60)
+      return (updateRes.strQRCode, validTill)
   return $
     DOrder
       { providerId = bapConfig.uniqueKeyId,
         totalPrice = booking.totalPrice.amount,
         fareBreakUp = [],
-        bppOrderId = order.orderId,
+        bppOrderId = pnrNo,
         bppItemId = CallAPI.getProviderName integratedBPPConfig,
         transactionId = booking.searchId.getId,
         orderStatus = Nothing,
         messageId = booking.id.getId,
-        tickets = tickets
+        tickets =
+          [ DTicket
+              { qrData = qrData,
+                vehicleNumber = Nothing,
+                bppFulfillmentId = Just $ CallAPI.getProviderName integratedBPPConfig,
+                ticketNumber = pnrNo,
+                validTill = qrValidTill,
+                status = "UNCLAIMED", -- Beckn protocol value; castTicketStatus in Beckn/ACL/FRFS/Utils.hs maps this to Ticket.ACTIVE for on_confirm
+                description = Nothing,
+                qrRefreshAt = Nothing,
+                commencingHours = Nothing,
+                isReturnTicket = Nothing
+              }
+          ]
       }
 
 status :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Id Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
@@ -343,3 +584,161 @@ calculateCancellationCharges merchantOpCityId vehicleCategory baseFare departure
     matchesTier mins tier =
       mins >= tier.minMinutesBeforeDeparture
         && maybe True (mins <) tier.maxMinutesBeforeDeparture
+
+-- OSRTC Redis key helpers
+
+osrtcBookingDataKey :: Id DFRFSSearch.FRFSSearch -> Text
+osrtcBookingDataKey searchId = "OSRTC:BookingData:" <> searchId.getId
+
+osrtcPnrKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
+osrtcPnrKey bookingId = "OSRTC:PNR:" <> bookingId.getId
+
+osrtcPaymentRefKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
+osrtcPaymentRefKey bookingId = "OSRTC:PaymentRef:" <> bookingId.getId
+
+osrtcTicketBookingIdKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
+osrtcTicketBookingIdKey bookingId = "OSRTC:TicketBookingId:" <> bookingId.getId
+
+osrtcJourneyDateKey :: Id DFRFSSearch.FRFSSearch -> Text
+osrtcJourneyDateKey searchId = "OSRTC:JourneyDate:" <> searchId.getId
+
+osrtcTicketInfoKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
+osrtcTicketInfoKey bookingId = "OSRTC:TicketInfo:" <> bookingId.getId
+
+-- | Marker set after a successful OSRTC release-hold call so retries are short-circuited.
+osrtcReleasedKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
+osrtcReleasedKey bookingId = "OSRTC:Released:" <> bookingId.getId
+
+-- | TTL for the released marker (seconds). Long enough to outlast any plausible retry window.
+osrtcReleasedTtl :: Int
+osrtcReleasedTtl = 24 * 60 * 60
+
+-- | Short-lived in-flight claim marker. Auto-expires if the worker that set it dies
+-- before completing the OSRTC release call, so the next retry can proceed instead of
+-- being blocked forever by a stale "released" marker that was never actually earned.
+osrtcReleaseClaimKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
+osrtcReleaseClaimKey bookingId = "OSRTC:ReleaseClaim:" <> bookingId.getId
+
+-- | TTL for the in-flight claim (seconds). Must comfortably exceed the OSRTC HTTP timeout.
+osrtcReleaseClaimTtl :: Int
+osrtcReleaseClaimTtl = 300
+
+data OSRTCTicketInfo = OSRTCTicketInfo
+  { qrData :: Text,
+    validTill :: UTCTime
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+osrtcHoldTtl :: Int
+osrtcHoldTtl = 1200
+
+-- | TTL for Redis OSRTC:BookingData:{searchId} — seat/passenger payload before payment (seconds).
+osrtcBookingDataTtl :: Int
+osrtcBookingDataTtl = 1200
+
+data OSRTCPaymentMetadata = OSRTCPaymentMetadata
+  { pmBankRefNo :: Text,
+    pmPgTrackingRefNo :: Text,
+    pmPaymentMode :: Text,
+    pmCardNumber :: Text,
+    pmFullResponse :: Text,
+    pmAmount :: Double
+  }
+
+mkOSRTCPaymentMetadata :: DPaymentOrder.PaymentOrder -> Maybe LibPayment.PaymentStatusResp -> OSRTCPaymentMetadata
+mkOSRTCPaymentMetadata order mbResp =
+  case mbResp of
+    Just resp@LibPayment.PaymentStatus {txnId, authIdCode, paymentMethodType, card, amount} ->
+      OSRTCPaymentMetadata
+        { pmBankRefNo = fromMaybe order.paymentServiceOrderId (txnId <|> authIdCode),
+          pmPgTrackingRefNo = order.paymentServiceOrderId,
+          pmPaymentMode = fromMaybe "ONLINE" paymentMethodType,
+          pmCardNumber = maybe "" (\c -> fromMaybe "" c.lastFourDigits) card,
+          pmFullResponse = encodeToText resp,
+          pmAmount = fromRational $ toRational amount
+        }
+    _ ->
+      OSRTCPaymentMetadata
+        { pmBankRefNo = order.paymentServiceOrderId,
+          pmPgTrackingRefNo = order.paymentServiceOrderId,
+          pmPaymentMode = "ONLINE",
+          pmCardNumber = "",
+          pmFullResponse = maybe "" encodeToText mbResp,
+          pmAmount = fromRational $ toRational order.amount
+        }
+
+osrtcReleaseHold ::
+  (CoreMetrics m, CacheFlow m r, EncFlow m r, MonadFlow m, HasRequestId r, MonadReader r m) =>
+  OSRTCConfig ->
+  Id DFRFSTicketBooking.FRFSTicketBooking ->
+  HighPrecMoney ->
+  Maybe DPaymentOrder.PaymentOrder ->
+  Maybe LibPayment.PaymentStatusResp ->
+  m ()
+osrtcReleaseHold osrtcConfig bookingId amount mbPayOrder mbPayStatus = do
+  -- Two-marker concurrency control:
+  --   osrtcReleasedKey      — long-TTL "done" marker, set only after a successful OSRTC release.
+  --   osrtcReleaseClaimKey  — short-TTL in-flight claim, auto-expires if the worker that set
+  --                           it dies before completing the call. This prevents the failure
+  --                           mode where pod-death between "set marker" and "OSRTC success"
+  --                           leaves a permanent marker that blocks every future retry.
+  alreadyReleased :: Maybe Bool <- Hedis.get (osrtcReleasedKey bookingId)
+  case alreadyReleased of
+    Just _ -> do
+      -- Best-effort cleanup of stale keys if a previous run released the hold but failed to clean up.
+      mapM_ Hedis.del [osrtcPnrKey bookingId, osrtcPaymentRefKey bookingId, osrtcReleaseClaimKey bookingId]
+      logInfo $ "OSRTC release skipped — already released for bookingId=" <> bookingId.getId
+    Nothing -> do
+      mbInFlight :: Maybe Bool <- Hedis.get (osrtcReleaseClaimKey bookingId)
+      case mbInFlight of
+        Just _ ->
+          logInfo $ "OSRTC release already in-flight (claim held); skipping; bookingId=" <> bookingId.getId
+        Nothing -> do
+          mbPnrNo :: Maybe Text <- Hedis.get (osrtcPnrKey bookingId)
+          mbPaymentRefNo :: Maybe Text <- Hedis.get (osrtcPaymentRefKey bookingId)
+          case (mbPnrNo, mbPaymentRefNo) of
+            (Just _pnrNo, Just paymentRefNo) -> do
+              Hedis.setExp (osrtcReleaseClaimKey bookingId) True osrtcReleaseClaimTtl
+              eResult <-
+                withTryCatch "OSRTC:releaseHold:updateTicketBookingResponse" $
+                  OSRTCTrip.updateTicketBookingResponse osrtcConfig (updateReq paymentRefNo)
+              case eResult of
+                Left err -> do
+                  -- Clear claim so a subsequent retry can re-attempt. Worst case the claim
+                  -- expires on its own (osrtcReleaseClaimTtl).
+                  Hedis.del (osrtcReleaseClaimKey bookingId)
+                  logError $ "OSRTC release-hold failed; cleared claim so retry can proceed; bookingId=" <> bookingId.getId <> " err=" <> show err
+                  throwM err
+                Right _ -> do
+                  -- Order matters: set the long-TTL released marker BEFORE deleting hold keys,
+                  -- so a retry that arrives after this point sees the marker and short-circuits.
+                  Hedis.setExp (osrtcReleasedKey bookingId) True osrtcReleasedTtl
+                  mapM_ Hedis.del [osrtcReleaseClaimKey bookingId, osrtcPnrKey bookingId, osrtcPaymentRefKey bookingId]
+                  logInfo $ "OSRTC hold released for bookingId=" <> bookingId.getId
+            _ -> logWarning $ "OSRTC PNR/PaymentRef not found in Redis for bookingId=" <> bookingId.getId <> ", hold may have already expired"
+  where
+    meta = case mbPayOrder of
+      Just order -> mkOSRTCPaymentMetadata order mbPayStatus
+      Nothing ->
+        OSRTCPaymentMetadata
+          { pmBankRefNo = "",
+            pmPgTrackingRefNo = "",
+            pmPaymentMode = "ONLINE",
+            pmCardNumber = "",
+            pmFullResponse = maybe "" encodeToText mbPayStatus,
+            pmAmount = fromRational $ toRational amount
+          }
+    updateReq paymentRefNo =
+      OSRTCTypes.OSRTCUpdateBookingReq
+        { strPaymentObjRefNo = paymentRefNo,
+          intPGPaymentStatusID = fromEnum OSRTCEnums.FAILED,
+          strStatusCode = OSRTCEnums.FAILED,
+          strBankRefNo = meta.pmBankRefNo,
+          strPGTrackingRefNo = meta.pmPgTrackingRefNo,
+          intAmount = meta.pmAmount,
+          strPaymentMode = meta.pmPaymentMode,
+          strCardNumber = meta.pmCardNumber,
+          strBankStatus = OSRTCEnums.FAILED,
+          strPGType = osrtcConfig.strPGType,
+          strFullResponse = meta.pmFullResponse
+        }

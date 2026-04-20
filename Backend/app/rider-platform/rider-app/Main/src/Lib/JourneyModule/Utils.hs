@@ -1136,11 +1136,13 @@ getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid m
     corridorStations =
       case integratedBppConfig.providerConfig of
         DIntegratedBPPConfig.CRIS config -> fromMaybe [] config.corridorStations
+        DIntegratedBPPConfig.OSRTC _ -> [] -- bus provider; no corridor concept
         _ -> []
     deprioritizeEnabled :: Bool
     deprioritizeEnabled =
       case integratedBppConfig.providerConfig of
         DIntegratedBPPConfig.CRIS config -> fromMaybe False config.enableCorridorDeprioritization
+        DIntegratedBPPConfig.OSRTC _ -> False -- bus provider; no corridor deprioritization
         _ -> False
     tryCorridorAlts :: [Text] -> (Text -> Flow (Maybe a)) -> Flow (Maybe a)
     tryCorridorAlts [] _ = return Nothing
@@ -1168,6 +1170,7 @@ getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid m
               1000
               ( case integratedBppConfig.providerConfig of
                   DIntegratedBPPConfig.CRIS config -> fromIntegral <$> config.singleModeWalkThreshold
+                  DIntegratedBPPConfig.OSRTC _ -> Nothing -- bus provider; walk-threshold concept does not apply
                   _ -> Nothing
               )
       let isPairValid (mbRD, mbDist) = isJust mbRD || (isJust mbDist && mbDist < Just (HighPrecMeters singleModeWalkThreshold))
@@ -1321,6 +1324,7 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
           let viaRouteDetails = sortBy compareViaRoutes (M.elems viaRouteDetailsMap)
           logDebug $ "getAllSubwayRoutes viaRouteDetails: " <> show viaRouteDetails
           return viaRouteDetails
+        DIntegratedBPPConfig.OSRTC _ -> return [] -- bus provider; subway via-route planning does not apply
         _ -> return []
 buildTrainAllViaRoutes _ _ _ _ _ _ _ _ _ _ _ _ _ = return ([], [])
 

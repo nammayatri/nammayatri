@@ -81,6 +81,7 @@ FRFSSearch:
     vehicleNumber: Maybe Text
     isSingleMode: Maybe Bool
     cloudType : Maybe CloudType
+    journeyDate: Maybe UTCTime
 
   beamFields:
     fromStationCode:
@@ -182,6 +183,7 @@ FRFSQuote:
     multimodalSearchRequestId: Maybe Text
     busLocationData: "[BusLocation]"
     vehicleNumber: Maybe Text
+    osrtcTripDetail: Maybe Value
   beamFields:
     fromStationCode:
       fromStationId: Text
@@ -204,6 +206,7 @@ FRFSQuote:
   beamType:
     vehicleVariant: Maybe VehicleVariant
     busLocationData: Maybe Value
+    osrtcTripDetail: Maybe Value
 
   types:
     FRFSQuoteType:
@@ -222,6 +225,7 @@ FRFSQuote:
     fromStationPoint: Kernel.External.Maps.Types.LatLong <$> fromStationLat <*> fromStationLon|E
     toStationPoint: Kernel.External.Maps.Types.LatLong <$> toStationLat <*> toStationLon|E
     busLocationData: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData)|E
+    osrtcTripDetail: osrtcTripDetail|E
 
   toTType:
     currency: (Kernel.Prelude.fmap (.currency))|I
@@ -237,10 +241,12 @@ FRFSQuote:
     toStationLat: (.lat) <$> toStationPoint|E
     toStationLon: (.lon) <$> toStationPoint|E
     busLocationData: Just $ toJSON busLocationData|E
+    osrtcTripDetail: osrtcTripDetail|E
 
   sqlType:
     applicableDiscountIds: "text[]"
     busLocationData: "json"
+    osrtcTripDetail: "json"
     fromStationLat: double precision
     fromStationLon: double precision
     toStationLat: double precision
