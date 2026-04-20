@@ -1070,10 +1070,12 @@ postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) 
       unless (purchasedPass.status `elem` [DPurchasedPass.PreBooked, DPurchasedPass.Active]) $
         throwError (PassActivationNotReady purchasedPass.id.getId "Only active or pre-booked passes can be rescheduled")
   _ <- purchasedPass.maxValidDays & fromMaybeM (PassActivationNotReady purchasedPass.id.getId "Pass does not have a valid duration")
-  let (newStartDate, newStatus) = case normalizedMbStartDate of
-        Nothing -> (today, DPurchasedPass.Active)
-        Just date -> if date < today then (date, DPurchasedPass.Active) else (date, DPurchasedPass.PreBooked)
+  let newStartDate = fromMaybe today normalizedMbStartDate
       newEndDate = calculatePassEndDate newStartDate purchasedPass.maxValidDays
+      newStatus
+        | newEndDate < today = DPurchasedPass.Expired
+        | newStartDate <= today = DPurchasedPass.Active
+        | otherwise = DPurchasedPass.PreBooked
 
   mbTargetPayment <- case mbPurchasedPassPaymentId of
     Just paymentId -> do
