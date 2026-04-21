@@ -13,7 +13,8 @@
 -}
 
 module SharedLogic.SpecialZoneDriverDemand
-  ( mkGateSearchDemandKey,
+  ( mkSpecialZoneQueueRequestLockKey,
+    mkGateSearchDemandKey,
     mkGateSearchSupplyKey,
     mkGateDriverNotifiedKey,
     mkQueueSkipCountKey,
@@ -56,6 +57,9 @@ import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Tools.Notifications as Notify
 
 -- Redis keys
+
+mkSpecialZoneQueueRequestLockKey :: Text -> Text
+mkSpecialZoneQueueRequestLockKey requestId = "SpecialZoneQueueRequest:Lock:" <> requestId
 
 mkGateSearchDemandKey :: Text -> Text -> Text
 mkGateSearchDemandKey gateId variant = "DriverDemand:Gate:" <> gateId <> ":" <> variant
