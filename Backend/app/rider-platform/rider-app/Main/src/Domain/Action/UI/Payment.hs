@@ -16,6 +16,7 @@ module Domain.Action.UI.Payment
   ( DPayment.PaymentStatusResp (..),
     createOrder,
     createRideBookingPaymentOrder,
+    abortPaytmEdcIfActive,
     getRideBookingPaymentStatusByBookingId,
     getStatus,
     getStatusS2S,
@@ -318,7 +319,8 @@ pollPaytmEdcPaymentStatus merchantId _merchantOperatingCityId personId orderId =
                             reasonStage = OnInit,
                             additionalInfo = Just "Payment status polling failed repeatedly - unable to verify payment status",
                             reallocate = Nothing,
-                            blockOnCancellationRate = Nothing
+                            blockOnCancellationRate = Nothing,
+                            abortPaytmEdc = Nothing
                           }
                   eitherCancelResult <- withTryCatch "PaytmEDC:CancelBookingOnPollFailure" $ DCancel.cancel booking Nothing cancelReq SBCR.ByApplication
                   case eitherCancelResult of
@@ -340,6 +342,43 @@ pollPaytmEdcPaymentStatus merchantId _merchantOperatingCityId personId orderId =
       Payment.CANCELLED -> True
       Payment.CLIENT_AUTH_TOKEN_EXPIRED -> True
       _ -> False
+
+-- | Abort an in-flight Paytm EDC transaction for a booking, if one exists.
+-- Should be called when a dashboard cancel is initiated for a BoothOnline booking
+-- that had payment-before-confirm enabled (i.e. an EDC popup was already sent to the machine).
+-- This is fire-and-forget; failures are logged but do not block the cancel flow.
+abortPaytmEdcIfActive :: Id DRB.Booking -> Flow ()
+abortPaytmEdcIfActive bookingId = do
+  mbPaymentOrder <- QOrder.findByDomainEntityId bookingId.getId
+  case mbPaymentOrder of
+    Nothing -> logInfo $ "abortPaytmEdc: No payment order found for booking " <> bookingId.getId
+    Just paymentOrder -> do
+      let isRideBookingOrder = fromMaybe DOrder.Normal paymentOrder.paymentServiceType == DOrder.RideBooking
+          isPending = paymentOrder.paymentFulfillmentStatus == Just DPayment.FulfillmentPending
+      if not (isRideBookingOrder && isPending)
+        then logInfo $ "abortPaytmEdc: Order " <> paymentOrder.id.getId <> " is not a pending RideBooking order, skipping abort"
+        else case paymentOrder.paytmTid of
+          Nothing -> logInfo $ "abortPaytmEdc: No paytmTid on order " <> paymentOrder.id.getId <> ", skipping abort"
+          Just _paytmTid -> do
+            let merchantId = cast @DPayment.Merchant @DM.Merchant paymentOrder.merchantId
+                mbMerchantOperatingCityId = cast @DPayment.MerchantOperatingCity @DMOC.MerchantOperatingCity <$> paymentOrder.merchantOperatingCityId
+            case mbMerchantOperatingCityId of
+              Nothing -> logError $ "abortPaytmEdc: No merchantOperatingCityId on order " <> paymentOrder.id.getId <> ", cannot abort"
+              Just merchantOperatingCityId -> do
+                let abortReq =
+                      Payment.OrderStatusReq
+                        { orderShortId = paymentOrder.shortId.getShortId,
+                          orderId = paymentOrder.id.getId,
+                          transactionDateTime = Just paymentOrder.createdAt,
+                          terminalId = paymentOrder.paytmTid
+                        }
+                logInfo $ "abortPaytmEdc: Aborting Paytm EDC for order " <> paymentOrder.id.getId
+                eitherResult <-
+                  withTryCatch "PaytmEDC:Abort" $
+                    Payment.abortOrder merchantId merchantOperatingCityId Nothing DOrder.RideBooking Nothing Nothing Nothing abortReq
+                case eitherResult of
+                  Left err -> logError $ "abortPaytmEdc: Abort call failed for order " <> paymentOrder.id.getId <> ": " <> show err
+                  Right _ -> logInfo $ "abortPaytmEdc: Abort successful for order " <> paymentOrder.id.getId
 
 -- | Get payment status by booking id. With Paytm EDC callback, confirm is triggered server-side on success; this is optional (UI refresh / fallback only).
 getRideBookingPaymentStatusByBookingId ::

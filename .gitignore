@@ -47,4 +47,5 @@ stack.yaml
 
 shared-kernel/
 .claude/worktrees/gifted-fermi
+control-center/
 

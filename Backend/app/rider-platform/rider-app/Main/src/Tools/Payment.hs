@@ -19,6 +19,7 @@ module Tools.Payment
     createOrder,
     updateOrder,
     orderStatus,
+    abortOrder,
     refundOrder,
     PaymentServiceType (..),
     createCustomer,
@@ -73,6 +74,7 @@ import Domain.Types.TicketPlace
 import qualified EulerHS.Language as L
 import Kernel.External.Payment.Interface as Reexport hiding
   ( Wallet,
+    abortOrder,
     autoRefunds,
     cancelPaymentIntent,
     capturePaymentIntent,
@@ -127,6 +129,9 @@ updateOrder = runWithServiceConfigAndServiceName Payment.updateOrder
 
 orderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Maybe Bool -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
 orderStatus = runWithServiceConfigAndServiceName Payment.orderStatus
+
+abortOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Maybe Bool -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
+abortOrder = runWithServiceConfigAndServiceName Payment.abortOrder
 
 offerList :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.OfferListReq -> m Payment.OfferListResp
 offerList merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion = runWithServiceConfigAndServiceName Payment.offerList merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion Nothing
