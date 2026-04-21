@@ -55,7 +55,7 @@ makeMerchantOperatingCityIdKey :: Id Domain.Types.MerchantOperatingCity.Merchant
 makeMerchantOperatingCityIdKey id = "CachedQueries:FRFSConfig:MerchantOperatingCityId-" <> id.getId
 
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ()
-clearCache merchantOperatingCityId = Hedis.del (makeMerchantOperatingCityIdKey merchantOperatingCityId)
+clearCache merchantOperatingCityId = Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantOperatingCityIdKey merchantOperatingCityId)
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSConfig.FRFSConfig -> m ()
 updateByPrimaryKey cfg = do

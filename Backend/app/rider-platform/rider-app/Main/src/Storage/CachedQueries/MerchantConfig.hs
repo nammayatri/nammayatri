@@ -56,7 +56,7 @@ makeMerchantOperatingCityIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantOperatingCityIdKey id = "CachedQueries:MerchantConfig:MerchantOperatingCityId-" <> id.getId
 
 clearCache :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id MerchantOperatingCity -> m ()
-clearCache id = Hedis.del (makeMerchantOperatingCityIdKey id)
+clearCache id = Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantOperatingCityIdKey id)
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantConfig -> m ()
 updateByPrimaryKey cfg = do

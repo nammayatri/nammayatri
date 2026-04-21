@@ -65,7 +65,7 @@ makeMerchantOperatingCityIdKey id = "rider-app:CachedQueries:RiderConfig:Merchan
 
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCache merchantOperatingCityId = do
-  Hedis.del (makeMerchantOperatingCityIdKey merchantOperatingCityId)
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantOperatingCityIdKey merchantOperatingCityId)
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => RiderConfig -> m ()
 updateByPrimaryKey riderConfig = do

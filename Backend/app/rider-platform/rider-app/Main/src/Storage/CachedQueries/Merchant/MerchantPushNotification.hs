@@ -100,8 +100,8 @@ makeMerchantOpCityIdAndMessageKeyAndTripCategory id messageKey tripCategory = "C
 
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Maybe TripCategory -> m ()
 clearCache merchantOpCityId messageKey tripCategory = do
-  Hedis.del (makeMerchantOpCityIdAndMessageKeyAndTripCategory merchantOpCityId messageKey tripCategory)
-  Hedis.del (makeMerchantOpCityIdAllKey merchantOpCityId)
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantOpCityIdAndMessageKeyAndTripCategory merchantOpCityId messageKey tripCategory)
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantOpCityIdAllKey merchantOpCityId)
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantPushNotification -> m ()
 updateByPrimaryKey cfg = do
