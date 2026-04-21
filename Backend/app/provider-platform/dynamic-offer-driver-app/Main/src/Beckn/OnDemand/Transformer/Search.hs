@@ -148,14 +148,14 @@ buildSearchReq messageId subscriber req context actualBapUri = do
 tfAddress :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Maybe BecknV2.OnDemand.Types.Location -> m (Maybe Beckn.Types.Core.Taxi.Common.Address.Address)
 tfAddress Nothing = pure Nothing
 tfAddress (Just location) = do
-  fullAddress <- location.locationAddress & fromMaybeM (InvalidRequest $ "Location address is missing, location:-" <> show location)
-  returnData <- Beckn.OnDemand.Utils.Common.buildAddressFromText fullAddress
-  let allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
-  if allNothing
-    then do
-      pure Nothing
-    else do
-      pure $ Just returnData
+  case location.locationAddress of
+    Nothing -> pure Nothing -- GPS-only location, address will be fetched via reverse geocoding downstream
+    Just fullAddress -> do
+      returnData <- Beckn.OnDemand.Utils.Common.buildAddressFromText fullAddress
+      let allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
+      if allNothing
+        then pure Nothing
+        else pure $ Just returnData
 
 tfLatLong :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Data.Text.Text -> m Kernel.External.Maps.LatLong
 tfLatLong locationGps = do
