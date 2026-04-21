@@ -94,7 +94,13 @@ getSpecialZoneQueueRequest (mbPersonId, _merchantId, _merchantOpCityId) = do
     collectValidActive now (req : rest) =
       if req.validTill < now
         then do
-          QSZQR.updateResponse (Just Domain.Types.SpecialZoneQueueRequest.Ignored) Domain.Types.SpecialZoneQueueRequest.Expired req.id
+          let lockKey = "SpecialZoneQueueRespond:Lock:" <> req.id.getId
+          Redis.whenWithLockRedis lockKey 10 $ do
+            -- Re-read to ensure the respond handler hasn't already processed this
+            mbLatest <- QSZQR.findByPrimaryKey req.id
+            whenJust mbLatest $ \latest ->
+              when (latest.status == Domain.Types.SpecialZoneQueueRequest.Active) $
+                QSZQR.updateResponse (Just Domain.Types.SpecialZoneQueueRequest.Ignored) Domain.Types.SpecialZoneQueueRequest.Expired req.id
           collectValidActive now rest
         else do
           rest' <- collectValidActive now rest
@@ -123,40 +129,38 @@ postSpecialZoneQueueRequestRespond ::
   )
 postSpecialZoneQueueRequestRespond (mbPersonId, _merchantId, _merchantOpCityId) requestId req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person id")
-  request <- QSZQR.findByPrimaryKey requestId >>= fromMaybeM (InvalidRequest "Request not found")
-  unless (request.driverId == personId) $ throwError (InvalidRequest "Request does not belong to this driver")
-  unless (request.status == Domain.Types.SpecialZoneQueueRequest.Active) $ throwError (InvalidRequest "Request is no longer active")
-  now <- getCurrentTime
-  let actualResponse =
-        if request.validTill < now
-          then Domain.Types.SpecialZoneQueueRequest.Ignored
-          else req.response
-  case actualResponse of
-    Domain.Types.SpecialZoneQueueRequest.Accept -> do
-      mbGate <- Esq.runInReplica $ QGI.findById (Kernel.Types.Id.Id request.gateId)
-      let timeoutSec = maybe 1200 (fromMaybe 1200 . (.pickupZoneArrivalTimeoutInSec)) mbGate
-          arrivalDeadline = addUTCTime (fromIntegral timeoutSec) now
-      -- Persist the arrival deadline so the GET handler can lazily detect a
-      -- missed-arrival NoShow without waiting for the scheduled job.
-      QSZQR.updateToAcceptedWithArrivalDeadline requestId arrivalDeadline
-      -- Supply increment: driver has committed to this gate for this variant.
-      fork "specialZoneSupplyIncrementOnAccept" $
-        SpecialZoneDriverDemand.runSupplyIncrementForRequest requestId.getId request.gateId request.vehicleType
-      createJobIn @_ @'CheckPickupZoneArrival
-        (Just request.merchantId)
-        (Just request.merchantOperatingCityId)
-        (secondsToNominalDiffTime $ Seconds timeoutSec)
-        CheckPickupZoneArrivalJobData
-          { requestId = requestId.getId,
-            driverId = personId,
-            gateId = request.gateId,
-            specialLocationId = request.specialLocationId,
-            vehicleType = request.vehicleType,
-            merchantId = request.merchantId,
-            merchantOperatingCityId = request.merchantOperatingCityId
-          }
-    _ ->
-      QSZQR.updateResponse (Just actualResponse) Domain.Types.SpecialZoneQueueRequest.Expired requestId
+  -- Re-read inside a Redis lock to prevent race between the GET handler's
+  -- lazy-expire (which sets Ignored/Expired) and this respond call.
+  let lockKey = "SpecialZoneQueueRespond:Lock:" <> requestId.getId
+  Redis.whenWithLockRedis lockKey 10 $ do
+    request <- QSZQR.findByPrimaryKey requestId >>= fromMaybeM (InvalidRequest "Request not found")
+    unless (request.driverId == personId) $ throwError (InvalidRequest "Request does not belong to this driver")
+    unless (request.status == Domain.Types.SpecialZoneQueueRequest.Active) $ throwError (InvalidRequest "Request is no longer active")
+    now <- getCurrentTime
+    when (request.validTill < now) $ throwError (InvalidRequest "Request has expired")
+    case req.response of
+      Domain.Types.SpecialZoneQueueRequest.Accept -> do
+        mbGate <- Esq.runInReplica $ QGI.findById (Kernel.Types.Id.Id request.gateId)
+        let timeoutSec = maybe 1200 (fromMaybe 1200 . (.pickupZoneArrivalTimeoutInSec)) mbGate
+            arrivalDeadline = addUTCTime (fromIntegral timeoutSec) now
+        QSZQR.updateToAcceptedWithArrivalDeadline requestId arrivalDeadline
+        fork "specialZoneSupplyIncrementOnAccept" $
+          SpecialZoneDriverDemand.runSupplyIncrementForRequest requestId.getId request.gateId request.vehicleType
+        createJobIn @_ @'CheckPickupZoneArrival
+          (Just request.merchantId)
+          (Just request.merchantOperatingCityId)
+          (secondsToNominalDiffTime $ Seconds timeoutSec)
+          CheckPickupZoneArrivalJobData
+            { requestId = requestId.getId,
+              driverId = personId,
+              gateId = request.gateId,
+              specialLocationId = request.specialLocationId,
+              vehicleType = request.vehicleType,
+              merchantId = request.merchantId,
+              merchantOperatingCityId = request.merchantOperatingCityId
+            }
+      _ ->
+        QSZQR.updateResponse (Just req.response) Domain.Types.SpecialZoneQueueRequest.Expired requestId
   pure Kernel.Types.APISuccess.Success
 
 postSpecialZoneQueueRequestCancel ::
