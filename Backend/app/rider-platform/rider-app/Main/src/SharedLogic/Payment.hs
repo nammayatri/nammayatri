@@ -876,7 +876,8 @@ paymentErrorHandler booking exec = do
                 reasonStage = SCR.OnAssign,
                 additionalInfo = err >>= toMessage,
                 reallocate = Nothing,
-                blockOnCancellationRate = Nothing
+                blockOnCancellationRate = Nothing,
+                abortPaytmEdc = Nothing
               }
       dCancelRes <- DCancel.cancel booking Nothing req SBCR.ByApplication
       void $ withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes req.reallocate

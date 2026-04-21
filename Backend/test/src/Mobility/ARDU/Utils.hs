@@ -308,7 +308,8 @@ cancelRideByApp appToken driver bapBookingId = do
           reasonStage = AppCR.OnAssign,
           additionalInfo = Nothing,
           reallocate = Nothing,
-          blockOnCancellationRate = Nothing
+          blockOnCancellationRate = Nothing,
+          abortPaytmEdc = Nothing
         }
   cancellationChecks bapBookingId driver
 
