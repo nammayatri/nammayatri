@@ -26,7 +26,7 @@ where
 
 import qualified API.Types.UI.DriverOnboardingV2
 import qualified API.Types.UI.DriverOnboardingV2 as DO
-import Control.Applicative (liftA2)
+import Control.Applicative (liftA2, (<|>))
 import Control.Monad.Extra hiding (fromMaybeM, whenJust)
 import qualified Control.Monad.Extra as CME
 import Data.Aeson hiding (Success)
@@ -166,10 +166,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
     else runBody
   mdriverPanCard <- DPQuery.findByDriverId person.id
   logInfo ("mdriverPanCard isJust: " <> show (isJust mdriverPanCard))
-  when (fromMaybe True transporterConfig.allowPanAadhaarLinkage) $
-    when (isJust mdriverPanCard) $ do
-      logInfo "verifyPanAadhaarLinkageIfAadhaarExists: mdriverPanCard is present"
-      verifyPanAadhaarLinkageIfAadhaarExists person merchantOpCityId mdriverPanCard
+  verifyPanAadhaarLinkageIfAadhaarExists person merchantOpCityId mdriverPanCard
   res <- case person.role of
     Person.DRIVER -> do
       fork "enabling driver if all the mandatory document is verified" $ do
@@ -186,7 +183,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
       pure False
     role
       | DCommon.checkFleetOwnerRole role ->
-        DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId
+        DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId (Just transporterConfig)
     _ -> pure False
   pure res
   where
@@ -354,7 +351,7 @@ buildPanCard person panType panName panDob verifyBy image1 panNumber verificatio
         createdAt = now,
         updatedAt = now,
         consent = True,
-        docType = castTextToDomainType panType,
+        docType = castTextToDomainType panType <|> DVRC.inferPanTypeFromNumber panNumber,
         consentTimestamp = now,
         documentImageId2 = Nothing,
         driverDob = parsedDob,
@@ -435,11 +432,7 @@ triggerPanAadhaarLinkageWhenPanAndAadhaarExist person merchantOpCityId mbAadhaar
   logInfo ("triggerPanAadhaarLinkageWhenPanAndAadhaarExist: " <> show mbAadhaarNumber)
   whenJust mbAadhaarNumber $ \aadhaarNumber -> do
     logInfo ("aadhaarNumber: " <> show aadhaarNumber)
-    transporterConfig <-
-      SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast person.id)))
-        >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-    when (fromMaybe True transporterConfig.allowPanAadhaarLinkage) $
-      verifyPanAadhaarLinkageIfPanExists person merchantOpCityId aadhaarNumber
+    verifyPanAadhaarLinkageIfPanExists person merchantOpCityId aadhaarNumber
 
 -- | Verifies PAN-Aadhaar linkage when PAN card exists for the driver.
 -- Checks driver_pan_card table; if present, calls verifyPanAadhaarLinkAsync and
@@ -454,17 +447,36 @@ verifyPanAadhaarLinkageIfPanExists person merchantOpCityId aadhaarNumber = do
   mdriverPanCard <- DPQuery.findByDriverId person.id
   whenJust mdriverPanCard $ \driverPanCard -> do
     panNumber <- decrypt driverPanCard.panCardNumber
-    verifyRes <-
-      Verification.verifyPanAadhaarLinkAsync person.merchantId merchantOpCityId $
-        VI.VerifyPanAadhaarLinkAsyncReq {panNumber, aadhaarNumber, driverId = person.id.getId}
-    logInfo ("verifyRes: " <> show verifyRes)
-    case verifyRes.requestor of
-      VT.Idfy -> do
-        encPan <- encrypt panNumber
-        now <- getCurrentTime
-        ivEntity <- mkIdfyVerificationEntityPanAadhaarLink person driverPanCard.documentImageId1 verifyRes.requestId now encPan
-        IVQuery.create ivEntity
-      _ -> throwError $ InternalError ("Service provider not configured for PAN-Aadhaar linkage. Provider: " <> show verifyRes.requestor)
+    CME.whenM (shouldTriggerPanAadhaarLinkage person merchantOpCityId driverPanCard.docType panNumber) $ do
+      verifyRes <-
+        Verification.verifyPanAadhaarLinkAsync person.merchantId merchantOpCityId $
+          VI.VerifyPanAadhaarLinkAsyncReq {panNumber, aadhaarNumber, driverId = person.id.getId}
+      logInfo ("verifyRes: " <> show verifyRes)
+      case verifyRes.requestor of
+        VT.Idfy -> do
+          encPan <- encrypt panNumber
+          now <- getCurrentTime
+          ivEntity <- mkIdfyVerificationEntityPanAadhaarLink person driverPanCard.documentImageId1 verifyRes.requestId now encPan
+          IVQuery.create ivEntity
+        _ -> throwError $ InternalError ("Service provider not configured for PAN-Aadhaar linkage. Provider: " <> show verifyRes.requestor)
+
+-- | Centralized gate for the PAN-Aadhaar linkage API call. Skips the call when
+-- merchant has disabled the linkage or when the PAN is a business PAN (docType
+-- or number prefix). Both PAN-upload and Aadhaar-upload flows route through
+-- this so the guard can't be forgotten on either path.
+shouldTriggerPanAadhaarLinkage ::
+  Person.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe DPan.PanType ->
+  Text ->
+  Flow Bool
+shouldTriggerPanAadhaarLinkage person merchantOpCityId docType panNumber = do
+  transporterConfig <-
+    SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast person.id)))
+      >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let allowed = fromMaybe True transporterConfig.allowPanAadhaarLinkage
+      isBusiness = docType == Just DPan.BUSINESS || DVRC.isBusinessPan (Just panNumber)
+  pure (allowed && not isBusiness)
 
 verifyPanAadhaarLinkageIfAadhaarExists ::
   Person.Person ->
@@ -478,25 +490,26 @@ verifyPanAadhaarLinkageIfAadhaarExists person merchantOpCityId mdriverPanCard = 
   logInfo ("verifyPanAadhaarLinkageIfAadhaarExists: mdriverPanCard isJust=" <> show (isJust mdriverPanCard))
   whenJust mdriverPanCard $ \driverPanCard -> do
     panNumber <- decrypt driverPanCard.panCardNumber
-    mbAadhaarNumber <- case person.role of
-      role | DCommon.checkFleetOwnerRole role -> do
-        fleetOwnerInfo <- QFOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
-        traverse decrypt fleetOwnerInfo.aadhaarNumber
-      _ -> do
-        driverInfo <- DIQuery.findById person.id >>= fromMaybeM (PersonNotFound person.id.getId)
-        traverse decrypt driverInfo.aadhaarNumber
-    whenJust mbAadhaarNumber $ \aadhaarNumber -> do
-      verifyRes <-
-        Verification.verifyPanAadhaarLinkAsync person.merchantId merchantOpCityId $
-          VI.VerifyPanAadhaarLinkAsyncReq {panNumber, aadhaarNumber, driverId = person.id.getId}
-      logInfo ("verifyRes: " <> show verifyRes)
-      case verifyRes.requestor of
-        VT.Idfy -> do
-          encPan <- encrypt panNumber
-          now <- getCurrentTime
-          ivEntity <- mkIdfyVerificationEntityPanAadhaarLink person driverPanCard.documentImageId1 verifyRes.requestId now encPan
-          IVQuery.create ivEntity
-        _ -> throwError $ InternalError ("Service provider not configured for PAN-Aadhaar linkage. Provider: " <> show verifyRes.requestor)
+    CME.whenM (shouldTriggerPanAadhaarLinkage person merchantOpCityId driverPanCard.docType panNumber) $ do
+      mbAadhaarNumber <- case person.role of
+        role | DCommon.checkFleetOwnerRole role -> do
+          fleetOwnerInfo <- QFOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
+          traverse decrypt fleetOwnerInfo.aadhaarNumber
+        _ -> do
+          driverInfo <- DIQuery.findById person.id >>= fromMaybeM (PersonNotFound person.id.getId)
+          traverse decrypt driverInfo.aadhaarNumber
+      whenJust mbAadhaarNumber $ \aadhaarNumber -> do
+        verifyRes <-
+          Verification.verifyPanAadhaarLinkAsync person.merchantId merchantOpCityId $
+            VI.VerifyPanAadhaarLinkAsyncReq {panNumber, aadhaarNumber, driverId = person.id.getId}
+        logInfo ("verifyRes: " <> show verifyRes)
+        case verifyRes.requestor of
+          VT.Idfy -> do
+            encPan <- encrypt panNumber
+            now <- getCurrentTime
+            ivEntity <- mkIdfyVerificationEntityPanAadhaarLink person driverPanCard.documentImageId1 verifyRes.requestId now encPan
+            IVQuery.create ivEntity
+          _ -> throwError $ InternalError ("Service provider not configured for PAN-Aadhaar linkage. Provider: " <> show verifyRes.requestor)
 
 onVerifyPanAadhaarLink :: VerificationReqRecord -> VT.PanAadhaarLinkResponse -> VT.VerificationService -> Flow AckResponse
 onVerifyPanAadhaarLink verificationReq output serviceName = do

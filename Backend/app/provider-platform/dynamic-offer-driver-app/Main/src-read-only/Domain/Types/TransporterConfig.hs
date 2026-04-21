@@ -251,6 +251,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     referralLinkPassword :: Kernel.Prelude.Text,
     refillVehicleModel :: Kernel.Prelude.Bool,
     reminderSystemEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    requireFleetOwnerRegistrationForEnablement :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     requireRouteMappingInVehicle :: Kernel.Prelude.Bool,
     requiresDriverOnboardingInspection :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     requiresOnboardingInspection :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

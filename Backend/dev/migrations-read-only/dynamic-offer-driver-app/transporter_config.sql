@@ -856,6 +856,11 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN same_rider_driv
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN require_fleet_owner_registration_for_enablement boolean ;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_disable_fleet_on_rejection_doc boolean ;
 
 

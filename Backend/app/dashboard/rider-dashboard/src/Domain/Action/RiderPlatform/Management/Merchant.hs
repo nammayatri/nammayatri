@@ -274,7 +274,9 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
           singleActiveSessionOnly = baseMerchant.singleActiveSessionOnly,
           trackLoginLogoutForRoles = baseMerchant.trackLoginLogoutForRoles,
           twoFaOtpTTLInSecs = baseMerchant.twoFaOtpTTLInSecs,
-          twoFaMaxOtpVerifyAttempts = baseMerchant.twoFaMaxOtpVerifyAttempts
+          twoFaMaxOtpVerifyAttempts = baseMerchant.twoFaMaxOtpVerifyAttempts,
+          totpStepSize = baseMerchant.totpStepSize,
+          totpClockSkew = baseMerchant.totpClockSkew
         }
 
 getMerchantConfigSpecialLocationList :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe SL.SpecialLocationType -> Kernel.Prelude.Maybe [SL.SpecialLocationType] -> Environment.Flow Common.SpecialLocationResp)
