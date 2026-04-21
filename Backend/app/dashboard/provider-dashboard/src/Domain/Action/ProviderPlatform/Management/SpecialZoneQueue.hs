@@ -5,6 +5,7 @@ module Domain.Action.ProviderPlatform.Management.SpecialZoneQueue
     getSpecialZoneQueueQueueStats,
     postSpecialZoneQueueManualQueueAdd,
     postSpecialZoneQueueManualQueueRemove,
+    getSpecialZoneQueueDriverQueuePosition,
   )
 where
 
@@ -46,3 +47,8 @@ postSpecialZoneQueueManualQueueRemove merchantShortId opCity apiTokenInfo req = 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.specialZoneQueueDSL.postSpecialZoneQueueManualQueueRemove) req)
+
+getSpecialZoneQueueDriverQueuePosition :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Management.SpecialZoneQueue.DriverQueuePositionRes)
+getSpecialZoneQueueDriverQueuePosition merchantShortId opCity apiTokenInfo driverId specialLocationId vehicleType = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.specialZoneQueueDSL.getSpecialZoneQueueDriverQueuePosition) driverId specialLocationId vehicleType

@@ -5,6 +5,7 @@ module Domain.Action.Dashboard.Management.SpecialZoneQueue
     getSpecialZoneQueueQueueStats,
     postSpecialZoneQueueManualQueueAdd,
     postSpecialZoneQueueManualQueueRemove,
+    getSpecialZoneQueueDriverQueuePosition,
   )
 where
 
@@ -151,3 +152,18 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
         || s.driversCommittedToPickup > 0
         || s.acceptedQueueRequests > 0
         || hasVariantConfig gate s.vehicleType
+
+getSpecialZoneQueueDriverQueuePosition :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Text -> Text -> Environment.Flow SZQT.DriverQueuePositionRes)
+getSpecialZoneQueueDriverQueuePosition merchantShortId opCity driverIdText specialLocationId vehicleType = do
+  _merchant <- findMerchantByShortId merchantShortId
+  _merchantOpCity <- CQMOC.findByMerchantIdAndCity _merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let driverId = Kernel.Types.Id.Id driverIdText :: Kernel.Types.Id.Id DP.Person
+  posResp <- LTSFlow.getQueueDriverPosition specialLocationId vehicleType driverId
+  let mbPos = case posResp.queuePositionRange of
+        Just (lo, _hi) -> Just lo
+        Nothing -> Nothing
+  pure
+    SZQT.DriverQueuePositionRes
+      { queuePosition = mbPos,
+        queueSize = posResp.queueSize
+      }
