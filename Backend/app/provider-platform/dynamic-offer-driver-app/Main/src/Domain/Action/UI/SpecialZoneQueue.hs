@@ -30,7 +30,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator (AllocatorJobType (..), CheckPickupZoneArrivalJobData (..))
 import qualified SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival as ArrivalCheck
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
-import SharedLogic.SpecialZoneDriverDemand (mkQueueSkipCountKey)
+import SharedLogic.SpecialZoneDriverDemand (mkQueueSkipCountKey, mkSpecialZoneQueueRequestLockKey)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
@@ -94,8 +94,7 @@ getSpecialZoneQueueRequest (mbPersonId, _merchantId, _merchantOpCityId) = do
     collectValidActive now (req : rest) =
       if req.validTill < now
         then do
-          let lockKey = "SpecialZoneQueueRespond:Lock:" <> req.id.getId
-          Redis.whenWithLockRedis lockKey 10 $ do
+          Redis.whenWithLockRedis (mkSpecialZoneQueueRequestLockKey req.id.getId) 10 $ do
             -- Re-read to ensure the respond handler hasn't already processed this
             mbLatest <- QSZQR.findByPrimaryKey req.id
             whenJust mbLatest $ \latest ->
@@ -129,10 +128,7 @@ postSpecialZoneQueueRequestRespond ::
   )
 postSpecialZoneQueueRequestRespond (mbPersonId, _merchantId, _merchantOpCityId) requestId req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person id")
-  -- Re-read inside a Redis lock to prevent race between the GET handler's
-  -- lazy-expire (which sets Ignored/Expired) and this respond call.
-  let lockKey = "SpecialZoneQueueRespond:Lock:" <> requestId.getId
-  Redis.whenWithLockRedis lockKey 10 $ do
+  Redis.withLockRedis (mkSpecialZoneQueueRequestLockKey requestId.getId) 10 $ do
     request <- QSZQR.findByPrimaryKey requestId >>= fromMaybeM (InvalidRequest "Request not found")
     unless (request.driverId == personId) $ throwError (InvalidRequest "Request does not belong to this driver")
     unless (request.status == Domain.Types.SpecialZoneQueueRequest.Active) $ throwError (InvalidRequest "Request is no longer active")
@@ -173,11 +169,12 @@ postSpecialZoneQueueRequestCancel ::
   )
 postSpecialZoneQueueRequestCancel (mbPersonId, _merchantId, _merchantOpCityId) requestId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person id")
-  request <- QSZQR.findByPrimaryKey requestId >>= fromMaybeM (InvalidRequest "Request not found")
-  unless (request.driverId == personId) $ throwError (InvalidRequest "Request does not belong to this driver")
-  unless (request.status == Domain.Types.SpecialZoneQueueRequest.Accepted) $ throwError (InvalidRequest "Only accepted requests can be cancelled")
-  QSZQR.updateResponse (Just Domain.Types.SpecialZoneQueueRequest.Cancelled) Domain.Types.SpecialZoneQueueRequest.Expired requestId
-  -- Supply decrement: driver retracted their pickup-zone commitment.
-  fork "specialZoneSupplyDecrementOnRequestCancel" $
-    SpecialZoneDriverDemand.runSupplyDecrementForRequest requestId.getId request.gateId request.vehicleType
+  Redis.withLockRedis (mkSpecialZoneQueueRequestLockKey requestId.getId) 10 $ do
+    request <- QSZQR.findByPrimaryKey requestId >>= fromMaybeM (InvalidRequest "Request not found")
+    unless (request.driverId == personId) $ throwError (InvalidRequest "Request does not belong to this driver")
+    unless (request.status == Domain.Types.SpecialZoneQueueRequest.Accepted) $ throwError (InvalidRequest "Only accepted requests can be cancelled")
+    QSZQR.updateResponse (Just Domain.Types.SpecialZoneQueueRequest.Cancelled) Domain.Types.SpecialZoneQueueRequest.Expired requestId
+    -- Supply decrement: driver retracted their pickup-zone commitment.
+    fork "specialZoneSupplyDecrementOnRequestCancel" $
+      SpecialZoneDriverDemand.runSupplyDecrementForRequest requestId.getId request.gateId request.vehicleType
   pure Kernel.Types.APISuccess.Success

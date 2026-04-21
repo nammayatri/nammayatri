@@ -39,9 +39,9 @@ apis:
       endpoint: /driverQueuePosition
       auth: ApiAuthV2
       mandatoryQuery:
+        driverId: Text
         specialLocationId: Text
         vehicleType: Text
-        driverId: Text
       response:
         type: DriverQueuePositionRes
 
