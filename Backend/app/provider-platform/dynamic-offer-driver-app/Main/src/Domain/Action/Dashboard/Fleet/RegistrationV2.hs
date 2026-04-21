@@ -62,6 +62,7 @@ import qualified Storage.Queries.DriverGstin as QGST
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
@@ -483,7 +484,8 @@ postRegistrationV2RegisterBankAccountLink ::
   Text ->
   Flow Common.FleetBankAccountLinkResp
 postRegistrationV2RegisterBankAccountLink _merchantShortId _opCity mbFleetOwnerId paymentMode requestorId = do
-  fleetOwner <- checkRequestorAccessToFleet mbFleetOwnerId requestorId
+  let fleetOwnerId = fromMaybe requestorId mbFleetOwnerId
+  FleetAccess.FleetOwnerInfo {fleetOwner} <- FleetAccess.checkRequestorAccessToFleet False (Just requestorId) fleetOwnerId
   let fetchPersonStripeInfo = do
         fleetOwnerInfo <- runInReplica (QFOI.findByPrimaryKey fleetOwner.id) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
         stripeAddress <- fleetOwnerInfo.stripeAddress & fromMaybeM (InvalidRequest "Stripe address is required for opening a bank account")
@@ -507,7 +509,8 @@ getRegistrationV2RegisterBankAccountStatus ::
   Text ->
   Flow Common.FleetBankAccountResp
 getRegistrationV2RegisterBankAccountStatus _merchantShortId _opCity mbFleetOwnerId requestorId = do
-  fleetOwner <- checkRequestorAccessToFleet mbFleetOwnerId requestorId
+  let fleetOwnerId = fromMaybe requestorId mbFleetOwnerId
+  FleetAccess.FleetOwnerInfo {fleetOwner} <- FleetAccess.checkRequestorAccessToFleet False (Just requestorId) fleetOwnerId
   castFleetBankAccountResp <$> SPBA.getPersonRegisterBankAccountStatus fleetOwner
 
 castFleetBankAccountResp :: Onboarding.BankAccountResp -> Common.FleetBankAccountResp
