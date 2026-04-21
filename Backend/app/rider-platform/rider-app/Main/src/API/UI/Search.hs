@@ -894,7 +894,8 @@ checkSearchRateLimit personId = do
   unlessM (slidingWindowLimiter key hitsLimit limitResetTimeInSec) $ do
     msgTemplate <- asks (.searchLimitExceedNotificationTemplate)
     let message = T.replace "{#cust-id#}" (getId personId) msgTemplate
-    _ <- SF.postMessage message
+    fork "checkSearchRateLimit:postSlack" . void $
+      withTryCatch "checkSearchRateLimit:postSlack" (SF.postMessage message)
     throwError $ HitsLimitError limitResetTimeInSec
 
 searchHitsCountKey :: Id Person.Person -> Text
