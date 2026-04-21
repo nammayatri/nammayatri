@@ -30,6 +30,8 @@ data MerchantE e = Merchant
     is2faMandatory :: Bool,
     twoFaOtpTTLInSecs :: Maybe Int,
     twoFaMaxOtpVerifyAttempts :: Maybe Int,
+    totpStepSize :: Maybe Int,
+    totpClockSkew :: Maybe Int,
     defaultOperatingCity :: City.City,
     supportedOperatingCities :: [City.City],
     domain :: Maybe Text,

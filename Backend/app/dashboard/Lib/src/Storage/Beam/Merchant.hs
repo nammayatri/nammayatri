@@ -29,6 +29,8 @@ data MerchantT f = MerchantT
     is2faMandatory :: B.C f Bool,
     twoFaOtpTTLInSecs :: B.C f (Maybe Int),
     twoFaMaxOtpVerifyAttempts :: B.C f (Maybe Int),
+    totpStepSize :: B.C f (Maybe Int),
+    totpClockSkew :: B.C f (Maybe Int),
     defaultOperatingCity :: B.C f City,
     supportedOperatingCities :: B.C f [City],
     domain :: B.C f (Maybe Text),

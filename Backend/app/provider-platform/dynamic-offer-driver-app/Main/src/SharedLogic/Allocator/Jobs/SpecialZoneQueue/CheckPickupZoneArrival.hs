@@ -20,15 +20,9 @@ import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
+import SharedLogic.SpecialZoneDriverDemand (mkSpecialZoneQueueRequestLockKey)
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
 import qualified Tools.Notifications as Notify
-
--- | Idempotency lock key for the arrival check. Both the scheduled job and the
--- driver-facing GET handler may try to run this for the same request — the lock
--- ensures only one execution actually performs the side-effects (DB transition,
--- LTS queue removal, notification, supply decrement).
-mkArrivalCheckLockKey :: Text -> Text
-mkArrivalCheckLockKey requestId = "PickupZoneArrivalCheck:Lock:" <> requestId
 
 checkPickupZoneArrival ::
   ( CacheFlow m r,
@@ -54,9 +48,6 @@ checkPickupZoneArrival Job {id = jobId, jobInfo} = withLogTag ("JobId-" <> jobId
     jobData.merchantOperatingCityId
   return Complete
 
--- | Core arrival-check routine. Wrapped in a Redis lock so concurrent invocations
--- (scheduled job + lazy GET-handler trigger) are mutually exclusive — only the
--- first one to acquire the lock performs the work; the rest no-op.
 runArrivalCheckForRequest ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -76,7 +67,7 @@ runArrivalCheckForRequest ::
   Id DMOC.MerchantOperatingCity ->
   m ()
 runArrivalCheckForRequest requestId driverId gateId specialLocationId vehicleType merchantId merchantOpCityId = do
-  Redis.whenWithLockRedis (mkArrivalCheckLockKey requestId.getId) 60 $ do
+  Redis.whenWithLockRedis (mkSpecialZoneQueueRequestLockKey requestId.getId) 60 $ do
     mbRequest <- QSZQR.findByPrimaryKey requestId
     case mbRequest of
       Nothing -> logInfo $ "Request " <> requestId.getId <> " not found, skipping"

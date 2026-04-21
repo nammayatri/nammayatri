@@ -642,7 +642,7 @@ fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationCon
           Nothing -> do
             (status, mbReason, mbUrl, _, mbS3PathInProgress) <- getInProgressVehicleDocuments entityImagesInfo (Just rcImagesInfo) docType docVerificationConfigs
             mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
-            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3PathInProgress, documentExpiry = Nothing}
+            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3PathInProgress, documentExpiry = mbExpiry}
 
     let mbRcImage = find (\img -> img.id == processedVehicle.documentImageId) entityImagesInfo.entityImages
         rcS3Path = mbRcImage <&> (.s3Path)
@@ -970,29 +970,19 @@ getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo =
             | otherwise = vehicleRC.rejectReason
       return (Just status, reason, Nothing, Just vehicleRC.fitnessExpiry, mbS3Path)
     DVC.VehiclePermit -> do
-      mbDoc <- case entity of
-        IQuery.PersonEntity person -> listToMaybe <$> VPQuery.findByRcIdAndDriverId vehicleRC.id person.id
-        IQuery.VehicleRCEntity _rc -> listToMaybe <$> VPQuery.findByRcId (Just 1) Nothing vehicleRC.id
+      mbDoc <- listToMaybe <$> VPQuery.findByRcId (Just 1) Nothing vehicleRC.id
       return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.permitExpiry, mbS3Path)
     DVC.VehicleFitnessCertificate -> do
-      mbDoc <- case entity of
-        IQuery.PersonEntity person -> listToMaybe <$> VFCQuery.findByRcIdAndDriverId vehicleRC.id person.id
-        IQuery.VehicleRCEntity _rc -> listToMaybe <$> VFCQuery.findByRcId (Just 1) Nothing vehicleRC.id
+      mbDoc <- listToMaybe <$> VFCQuery.findByRcId (Just 1) Nothing vehicleRC.id
       return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, Just vehicleRC.fitnessExpiry, mbS3Path)
     DVC.VehicleInsurance -> do
-      mbDoc <- case entity of
-        IQuery.PersonEntity person -> listToMaybe <$> VIQuery.findByRcIdAndDriverId vehicleRC.id person.id
-        IQuery.VehicleRCEntity _rc -> listToMaybe <$> VIQuery.findByRcId (Just 1) Nothing vehicleRC.id
+      mbDoc <- listToMaybe <$> VIQuery.findByRcId (Just 1) Nothing vehicleRC.id
       return (mapStatus <$> (mbDoc <&> (.verificationStatus)), (mbDoc >>= (.rejectReason)), Nothing, vehicleRC.insuranceValidity, mbS3Path)
     DVC.VehiclePUC -> do
-      mbDoc <- case entity of
-        IQuery.PersonEntity person -> listToMaybe <$> VPUCQuery.findByRcIdAndDriverId vehicleRC.id person.id
-        IQuery.VehicleRCEntity _rc -> listToMaybe <$> VPUCQuery.findByRcId (Just 1) Nothing vehicleRC.id
+      mbDoc <- listToMaybe <$> VPUCQuery.findByRcId (Just 1) Nothing vehicleRC.id
       return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.pucExpiry, mbS3Path)
     DVC.VehicleNOC -> do
-      mbDoc <- case entity of
-        IQuery.PersonEntity person -> listToMaybe <$> VNOCQuery.findByRcIdAndDriverId vehicleRC.id person.id
-        IQuery.VehicleRCEntity _rc -> listToMaybe <$> VNOCQuery.findByRcId (Just 1) Nothing vehicleRC.id
+      mbDoc <- listToMaybe <$> VNOCQuery.findByRcId (Just 1) Nothing vehicleRC.id
       return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, mbDoc <&> (.nocExpiry), mbS3Path)
     DVC.VehicleInspectionForm -> do
       -- Check all vehicle photos based on RC, not driver

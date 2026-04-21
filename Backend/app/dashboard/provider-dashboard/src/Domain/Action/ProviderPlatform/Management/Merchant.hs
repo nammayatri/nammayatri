@@ -497,7 +497,9 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
           singleActiveSessionOnly = baseMerchant.singleActiveSessionOnly,
           trackLoginLogoutForRoles = baseMerchant.trackLoginLogoutForRoles,
           twoFaOtpTTLInSecs = baseMerchant.twoFaOtpTTLInSecs,
-          twoFaMaxOtpVerifyAttempts = baseMerchant.twoFaMaxOtpVerifyAttempts
+          twoFaMaxOtpVerifyAttempts = baseMerchant.twoFaMaxOtpVerifyAttempts,
+          totpStepSize = baseMerchant.totpStepSize,
+          totpClockSkew = baseMerchant.totpClockSkew
         }
 
 postMerchantConfigMerchantCreate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> Flow Common.CreateMerchantOperatingCityRes

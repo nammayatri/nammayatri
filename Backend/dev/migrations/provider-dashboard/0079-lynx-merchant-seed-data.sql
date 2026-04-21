@@ -20,8 +20,8 @@ BEGIN
   END IF;
 
   -- BPP Dashboard merchant — admin approval required for fleet onboarding
-  INSERT INTO atlas_bpp_dashboard.merchant (id, short_id, server_name, server_names, created_at, is2fa_mandatory, default_operating_city, supported_operating_cities, domain, enabled, require_admin_approval_for_fleet_onboarding, is_strong_name_check_required, verify_fleet_while_login)
-  SELECT md5('LYNX_PARTNER'), 'LYNX_PARTNER', server_name, server_names, now(), is2fa_mandatory, 'Helsinki', '{Helsinki}', domain, true, true, false, false
+  INSERT INTO atlas_bpp_dashboard.merchant (id, short_id, server_name, server_names, created_at, is2fa_mandatory, default_operating_city, supported_operating_cities, domain, enabled, require_admin_approval_for_fleet_onboarding, is_strong_name_check_required, verify_fleet_while_login, totp_step_size, totp_clock_skew)
+  SELECT md5('LYNX_PARTNER'), 'LYNX_PARTNER', server_name, server_names, now(), is2fa_mandatory, 'Helsinki', '{Helsinki}', domain, true, true, false, false, 30, 2
   FROM atlas_bpp_dashboard.merchant WHERE short_id = 'NAMMA_YATRI_PARTNER'
   ON CONFLICT DO NOTHING;
 
