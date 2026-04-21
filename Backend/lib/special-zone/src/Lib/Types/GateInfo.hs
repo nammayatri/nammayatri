@@ -43,7 +43,8 @@ data GateInfoFull = GateInfoFull
     notificationCooldownInSec :: Maybe Int,
     maxRideSkipsBeforeQueueRemoval :: Maybe Int,
     pickupZoneArrivalTimeoutInSec :: Maybe Int,
-    pickupRequestResponseTimeoutInSec :: Maybe Int
+    pickupRequestResponseTimeoutInSec :: Maybe Int,
+    demandTtlInSec :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -79,7 +80,8 @@ data GateInfo = GateInfo
     notificationCooldownInSec :: Maybe Int,
     maxRideSkipsBeforeQueueRemoval :: Maybe Int,
     pickupZoneArrivalTimeoutInSec :: Maybe Int,
-    pickupRequestResponseTimeoutInSec :: Maybe Int
+    pickupRequestResponseTimeoutInSec :: Maybe Int,
+    demandTtlInSec :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 

@@ -35,6 +35,16 @@ apis:
       response:
         type: APISuccess
 
+  - GET:
+      endpoint: /driverQueuePosition
+      auth: ApiAuthV2
+      mandatoryQuery:
+        specialLocationId: Text
+        vehicleType: Text
+        driverId: Text
+      response:
+        type: DriverQueuePositionRes
+
 types:
   TriggerSpecialZoneQueueNotifyReq:
     - gateId: Text
@@ -80,3 +90,7 @@ types:
     - totalPendingDemand: Int
     - totalDriversCommittedToPickup: Int
     - totalAcceptedQueueRequests: Int
+
+  DriverQueuePositionRes:
+    - queuePosition: Maybe Int
+    - queueSize: Int

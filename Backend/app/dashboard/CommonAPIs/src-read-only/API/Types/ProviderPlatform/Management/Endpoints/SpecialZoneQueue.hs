@@ -14,6 +14,10 @@ import qualified Kernel.Types.HideSecrets
 import Servant
 import Servant.Client
 
+data DriverQueuePositionRes = DriverQueuePositionRes {queuePosition :: Kernel.Prelude.Maybe Kernel.Prelude.Int, queueSize :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data ManualQueueAddReq = ManualQueueAddReq {specialLocationId :: Kernel.Prelude.Text, vehicleType :: Kernel.Prelude.Text, driverId :: Kernel.Prelude.Text, queuePosition :: Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -71,7 +75,7 @@ data VehicleQueueStats = VehicleQueueStats
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("specialZoneQueue" :> (PostSpecialZoneQueueTriggerNotify :<|> GetSpecialZoneQueueQueueStats :<|> PostSpecialZoneQueueManualQueueAdd :<|> PostSpecialZoneQueueManualQueueRemove))
+type API = ("specialZoneQueue" :> (PostSpecialZoneQueueTriggerNotify :<|> GetSpecialZoneQueueQueueStats :<|> PostSpecialZoneQueueManualQueueAdd :<|> PostSpecialZoneQueueManualQueueRemove :<|> GetSpecialZoneQueueDriverQueuePosition))
 
 type PostSpecialZoneQueueTriggerNotify = ("triggerNotify" :> ReqBody ('[JSON]) TriggerSpecialZoneQueueNotifyReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
@@ -81,23 +85,34 @@ type PostSpecialZoneQueueManualQueueAdd = ("manualQueueAdd" :> ReqBody ('[JSON])
 
 type PostSpecialZoneQueueManualQueueRemove = ("manualQueueRemove" :> ReqBody ('[JSON]) ManualQueueRemoveReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
+type GetSpecialZoneQueueDriverQueuePosition =
+  ( "driverQueuePosition" :> MandatoryQueryParam "driverId" Kernel.Prelude.Text
+      :> MandatoryQueryParam
+           "specialLocationId"
+           Kernel.Prelude.Text
+      :> MandatoryQueryParam "vehicleType" Kernel.Prelude.Text
+      :> Get ('[JSON]) DriverQueuePositionRes
+  )
+
 data SpecialZoneQueueAPIs = SpecialZoneQueueAPIs
   { postSpecialZoneQueueTriggerNotify :: (TriggerSpecialZoneQueueNotifyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     getSpecialZoneQueueQueueStats :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient SpecialZoneQueueStatsRes),
     postSpecialZoneQueueManualQueueAdd :: (ManualQueueAddReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postSpecialZoneQueueManualQueueRemove :: (ManualQueueRemoveReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
+    postSpecialZoneQueueManualQueueRemove :: (ManualQueueRemoveReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    getSpecialZoneQueueDriverQueuePosition :: (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverQueuePositionRes)
   }
 
 mkSpecialZoneQueueAPIs :: (Client EulerHS.Types.EulerClient API -> SpecialZoneQueueAPIs)
 mkSpecialZoneQueueAPIs specialZoneQueueClient = (SpecialZoneQueueAPIs {..})
   where
-    postSpecialZoneQueueTriggerNotify :<|> getSpecialZoneQueueQueueStats :<|> postSpecialZoneQueueManualQueueAdd :<|> postSpecialZoneQueueManualQueueRemove = specialZoneQueueClient
+    postSpecialZoneQueueTriggerNotify :<|> getSpecialZoneQueueQueueStats :<|> postSpecialZoneQueueManualQueueAdd :<|> postSpecialZoneQueueManualQueueRemove :<|> getSpecialZoneQueueDriverQueuePosition = specialZoneQueueClient
 
 data SpecialZoneQueueUserActionType
   = POST_SPECIAL_ZONE_QUEUE_TRIGGER_NOTIFY
   | GET_SPECIAL_ZONE_QUEUE_QUEUE_STATS
   | POST_SPECIAL_ZONE_QUEUE_MANUAL_QUEUE_ADD
   | POST_SPECIAL_ZONE_QUEUE_MANUAL_QUEUE_REMOVE
+  | GET_SPECIAL_ZONE_QUEUE_DRIVER_QUEUE_POSITION
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
