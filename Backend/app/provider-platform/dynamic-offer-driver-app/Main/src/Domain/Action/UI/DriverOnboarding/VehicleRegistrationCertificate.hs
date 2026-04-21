@@ -44,6 +44,8 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     compareDateOfBirth,
     makeDocumentVerificationLockKey,
     isNameCompareRequired,
+    inferPanTypeFromNumber,
+    isBusinessPan,
     getDriverDocumentInfo,
     getDocumentImage,
     isNameComparePercentageValid,
@@ -57,7 +59,7 @@ import Control.Monad.Extra hiding (fromMaybeM, whenJust)
 import Data.Aeson hiding (Success)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
-import qualified Data.Text as T hiding (elem, find, length, map, zip)
+import qualified Data.Text as T hiding (elem, find, map, zip)
 import Data.Time (Day, utctDay)
 import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.DocStatus as DocStatus
@@ -1084,22 +1086,23 @@ checkGST personId mbPanNumber = do
 validateDocument :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Maybe Text -> Maybe Text -> Maybe Text -> ODC.DocumentType -> DriverDocument -> Flow ()
 validateDocument merchantId merchantOpCityId personId mbNameValue mbDateOfBirthValue mbPanNumber verifyingDocumentType DriverDocument {..} = do
   let mbUtcDateOfBirthValue = parseDateTime =<< mbDateOfBirthValue
+  let skipPanAadhaarCrossCheck = isBusinessPan panNumber || isBusinessPan mbPanNumber
   case verifyingDocumentType of
     ODC.AadhaarCard -> do
-      panChecked <-
-        maybe
-          (pure False)
-          (\_ -> checkPan merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.AadhaarCard)
-          panNumber
+      panChecked <- case panNumber of
+        Just _
+          | not skipPanAadhaarCrossCheck ->
+            checkPan merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.AadhaarCard
+        _ -> pure False
       unless panChecked $
         whenJust dlNumber $ \_ ->
           void $ checkDL merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.AadhaarCard
     ODC.PanCard -> do
-      aadhaarChecked <-
-        maybe
-          (pure False)
-          (\_ -> checkAadhaar merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.PanCard)
-          aadhaarNumber
+      aadhaarChecked <- case aadhaarNumber of
+        Just _
+          | not skipPanAadhaarCrossCheck ->
+            checkAadhaar merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.PanCard
+        _ -> pure False
       unless aadhaarChecked $ do
         dlChecked <-
           maybe
@@ -1139,3 +1142,14 @@ validateNameAndDOB merchantId merchantOpCityId mbExtractedName mbVerifiedName mb
 isNameCompareRequired :: DTC.TransporterConfig -> DPan.VerifiedBy -> Bool
 isNameCompareRequired transporterConfig verifyBy =
   isJust transporterConfig.validNameComparePercentage && verifyBy /= DPan.DASHBOARD_ADMIN && verifyBy /= DPan.DASHBOARD_USER
+
+-- (P = Individual, C = Company, H = HUF, F = Firm, A = AOP, T = Trust, B = BOI, L/J/G = others).
+inferPanTypeFromNumber :: Text -> Maybe DPan.PanType
+inferPanTypeFromNumber panNumber =
+  let upperPan = T.toUpper panNumber
+   in if T.length upperPan >= 4
+        then Just $ if T.index upperPan 3 == 'P' then DPan.INDIVIDUAL else DPan.BUSINESS
+        else Nothing
+
+isBusinessPan :: Maybe Text -> Bool
+isBusinessPan = maybe False ((== Just DPan.BUSINESS) . inferPanTypeFromNumber)

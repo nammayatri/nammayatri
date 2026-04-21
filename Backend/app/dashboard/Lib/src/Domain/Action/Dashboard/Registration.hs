@@ -270,20 +270,21 @@ generateLoginResWithoutOtp person merchant city = do
 check2FA :: (EncFlow m r) => DMerchantAccess.MerchantAccess -> DMerchant.Merchant -> Maybe Text -> m (Bool, Text)
 check2FA merchantAccess merchant otp =
   case (DMerchant.is2faMandatory merchant, DMerchantAccess.is2faEnabled merchantAccess) of
-    (True, True) -> handle2FA merchantAccess.secretKey otp
+    (True, True) -> handle2FA merchant merchantAccess.secretKey otp
     (True, False) -> pure (False, "2 Factor authentication is not enabled, it is mandatory for this merchant")
     _ -> pure (True, "Logged in successfully")
 
 handle2FA ::
   ( EncFlow m r
   ) =>
+  DMerchant.Merchant ->
   Maybe Text ->
   Maybe Text ->
   m (Bool, Text)
-handle2FA secretKey otp = case (secretKey, otp) of
+handle2FA merchant secretKey otp = case (secretKey, otp) of
   (Just key, Just userOtp) -> do
-    generatedOtp <- L.runIO (Utils.genTOTP key)
-    if show generatedOtp == T.unpack userOtp
+    isValid <- Utils.verifyTOTP merchant.totpStepSize merchant.totpClockSkew key userOtp
+    if isValid
       then pure (True, "Logged in successfully")
       else pure (False, "Authenticator OTP does not match")
   (_, Nothing) -> pure (False, "Authenticator OTP is required")
@@ -314,7 +315,7 @@ enable2fa Enable2FAReq {..} = do
   _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city' >>= fromMaybeM AccessDenied
   key <- L.runIO Utils.generateSecretKey
   MA.updatePerson2faForMerchant person.id merchant.id key
-  let qrCodeUri = Utils.generateAuthenticatorURI key email merchant.shortId
+  let qrCodeUri = Utils.generateAuthenticatorURI merchant.totpStepSize key email merchant.shortId
   pure $ Enable2FARes qrCodeUri
 
 -- | Validate credentials and either:
@@ -353,13 +354,13 @@ initiate2FASetup Initiate2FASetupReq {..} = do
   -- If user has existing authenticator and provides valid TOTP, re-setup directly
   case (merchantAccess.secretKey, otp) of
     (Just existingKey, Just userOtp) -> do
-      generatedOtp <- L.runIO (Utils.genTOTP existingKey)
-      if show generatedOtp == T.unpack userOtp
+      isValid <- Utils.verifyTOTP merchant.totpStepSize merchant.totpClockSkew existingKey userOtp
+      if isValid
         then do
           -- TOTP valid, generate new secret directly
           newKey <- L.runIO Utils.generateSecretKey
           MA.updatePerson2faForMerchant person.id merchant.id newKey
-          let qrCodeUri = Utils.generateAuthenticatorURI newKey personEmail merchant.shortId
+          let qrCodeUri = Utils.generateAuthenticatorURI merchant.totpStepSize newKey personEmail merchant.shortId
           pure $ Initiate2FASetupRes {requestId = Nothing, qrcode = Just qrCodeUri, message = "2FA re-setup successful"}
         else throwError (InvalidRequest "Invalid authenticator code")
     _ -> do
@@ -422,7 +423,7 @@ verify2FASetup Verify2FASetupReq {..} = do
       -- Generate TOTP secret and enable 2FA
       key <- L.runIO Utils.generateSecretKey
       MA.updatePerson2faForMerchant pendingData.personId pendingData.merchantId key
-      let qrCodeUri = Utils.generateAuthenticatorURI key pendingData.email pendingData.merchantShortId
+      let qrCodeUri = Utils.generateAuthenticatorURI merchant.totpStepSize key pendingData.email pendingData.merchantShortId
       pure $ Enable2FARes qrCodeUri
     else do
       Redis.setExp attemptsKey (attempts + 1) otpTTL

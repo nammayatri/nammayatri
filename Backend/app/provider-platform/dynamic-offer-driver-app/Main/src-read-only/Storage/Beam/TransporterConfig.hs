@@ -247,6 +247,7 @@ data TransporterConfigT f = TransporterConfigT
     referralLinkPassword :: B.C f Kernel.Prelude.Text,
     refillVehicleModel :: B.C f Kernel.Prelude.Bool,
     reminderSystemEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    requireFleetOwnerRegistrationForEnablement :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     requireRouteMappingInVehicle :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     requiresDriverOnboardingInspection :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     requiresOnboardingInspection :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

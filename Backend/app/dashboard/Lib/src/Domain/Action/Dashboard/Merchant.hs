@@ -149,7 +149,9 @@ buildMerchant req = do
         singleActiveSessionOnly = Just False,
         trackLoginLogoutForRoles = [],
         twoFaOtpTTLInSecs = Nothing,
-        twoFaMaxOtpVerifyAttempts = Nothing
+        twoFaMaxOtpVerifyAttempts = Nothing,
+        totpStepSize = Nothing,
+        totpClockSkew = Nothing
       }
 
 changeMerchantEnableState ::

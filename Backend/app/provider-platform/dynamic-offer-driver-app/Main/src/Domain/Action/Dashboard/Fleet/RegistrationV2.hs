@@ -32,6 +32,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.TransporterConfig as DTC
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
@@ -181,7 +182,7 @@ fleetOwnerRegister merchantShortId opCity mbRequestorId req = do
   enabled <-
     case req.setIsEnabled of -- Required for fleets where docs are not mandatory
       Just True -> pure True
-      _ -> enableFleetIfPossible fleetOwnerId req.adminApprovalRequired (castFleetType <$> req.fleetType) person.merchantOperatingCityId
+      _ -> enableFleetIfPossible fleetOwnerId req.adminApprovalRequired (castFleetType <$> req.fleetType) person.merchantOperatingCityId (Just transporterConfig)
   return $ Common.FleetOwnerRegisterResV2 enabled
 
 sendFleetOnboardingSms :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()
@@ -202,10 +203,20 @@ sendFleetOnboardingSms fleetOwnerId merchantOperatingCityId = do
           MessageBuilder.BuildOnboardingMessageReq {}
       Sms.sendSMS merchant.id merchantOperatingCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId messageType) >>= Sms.checkSmsResult
 
-enableFleetIfPossible :: Id DP.Person -> Maybe Bool -> Maybe FOI.FleetType -> Id DMOC.MerchantOperatingCity -> Flow Bool
-enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOperatingCityId = do
-  if adminApprovalRequired /= Just True
-    then do
+enableFleetIfPossible :: Id DP.Person -> Maybe Bool -> Maybe FOI.FleetType -> Id DMOC.MerchantOperatingCity -> Maybe DTC.TransporterConfig -> Flow Bool
+enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOperatingCityId mbTransporterConfig = do
+  transporterConfig <- case mbTransporterConfig of
+    Just tc -> pure tc
+    Nothing -> SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  registrationPending <-
+    if transporterConfig.requireFleetOwnerRegistrationForEnablement == Just True
+      then do
+        mbFleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId
+        pure $ isNothing (mbFleetOwnerInfo >>= (.registeredAt))
+      else pure False
+  if registrationPending || adminApprovalRequired == Just True
+    then pure False
+    else do
       let role = case mbfleetType of
             Just FOI.NORMAL_FLEET -> DP.FLEET_OWNER
             Just FOI.BUSINESS_FLEET -> DP.FLEET_BUSINESS
@@ -258,7 +269,6 @@ enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOpe
             pure True
           | otherwise -> pure False
         _ -> pure False
-    else pure False
 
 castFleetType :: Common.FleetType -> FOI.FleetType
 castFleetType = \case
