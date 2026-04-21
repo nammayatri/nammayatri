@@ -72,15 +72,15 @@ makeMerchantOpCityIdAllKey id = "CachedQueries:MerchantPayoutConfig:MerchantOper
 -- Call it after any update
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Bool -> PayoutEntity -> m ()
 clearCache merchantOpCityId isPayoutEnabled payoutEntity =
-  Hedis.del (makeMerchantOpCityIdKey merchantOpCityId isPayoutEnabled payoutEntity)
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantOpCityIdKey merchantOpCityId isPayoutEnabled payoutEntity)
 
 clearCacheByCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> VehicleCategory -> m ()
 clearCacheByCategory merchantOpCityId vehicleCategory =
-  Hedis.del (makeMerchantOpCityIdAndCategoryKey merchantOpCityId vehicleCategory)
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantOpCityIdAndCategoryKey merchantOpCityId vehicleCategory)
 
 clearCacheAll :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m ()
 clearCacheAll merchantOpCityId =
-  Hedis.del (makeMerchantOpCityIdAllKey merchantOpCityId)
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantOpCityIdAllKey merchantOpCityId)
 
 clearConfigCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe VehicleCategory -> PayoutEntity -> m ()
 clearConfigCache merchantOperatingCityId mbVehicleCategory payoutEntity = do

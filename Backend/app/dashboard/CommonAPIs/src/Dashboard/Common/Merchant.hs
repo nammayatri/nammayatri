@@ -613,7 +613,8 @@ data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
     driverOfferMerchantOperatingCityId :: Maybe Text,
     buildFRFSSubscriber :: Maybe Bool,
     baseRequestCity :: Maybe Context.City,
-    baseRequestMerchant :: Maybe Text
+    baseRequestMerchant :: Maybe Text,
+    replicateFareProducts :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -641,6 +642,7 @@ instance FromMultipart Tmp CreateMerchantOperatingCityReq where
       <*> parseMaybeInput "buildFRFSSubscriber" form
       <*> parseMaybeInput "baseRequestCity" form
       <*> parseMaybeInput "baseRequestMerchant" form
+      <*> parseMaybeInput "replicateFareProducts" form
 
 parseInput :: Read b => Text -> MultipartData tag -> Either String b
 parseInput fieldName form = case lookupInput fieldName form of
@@ -685,7 +687,8 @@ data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
     driverOfferMerchantOperatingCityId :: Maybe Text,
     buildFRFSSubscriber :: Maybe Bool,
     baseRequestCity :: Maybe Context.City,
-    baseRequestMerchant :: Maybe Text
+    baseRequestMerchant :: Maybe Text,
+    replicateFareProducts :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -33,6 +33,6 @@ instance B.Table PassTypeT where
 
 type PassType = PassTypeT Identity
 
-$(enableKVPG ''PassTypeT ['id] [])
+$(enableKVPG ''PassTypeT ['id] [['passCategoryId]])
 
 $(mkTableInstances ''PassTypeT "pass_type")

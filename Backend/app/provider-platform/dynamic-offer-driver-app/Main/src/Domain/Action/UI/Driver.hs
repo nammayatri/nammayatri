@@ -1753,7 +1753,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       -- can't add latency to the driver-respond hot path.
       fork "specialZoneQueueSkipOnDriverReject" $ do
         searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
-        SpecialZoneDriverDemand.handleQueueSkipIfApplicable searchReq.pickupZoneGateId (show searchTry.vehicleServiceTier) driverId merchantId
+        SpecialZoneDriverDemand.handleQueueSkipIfApplicable searchReq.pickupZoneGateId (show searchTry.vehicleServiceTier) driverId merchantId (searchTry.id.getId <> ":" <> driverId.getId)
       unlockRedisQuoteKeys
     Pulled -> do
       when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False False True

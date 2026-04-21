@@ -65,7 +65,7 @@ import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as BVQuery
-import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDoc
+import qualified Storage.Queries.CommonDriverOnboardingDocumentsExtra as QCommonDocExtra
 import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.DriverGstin as QDGST
 import qualified Storage.Queries.DriverInformation as DIQuery
@@ -304,21 +304,21 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
   vehicleDocuments <-
     if isFleetRole person.role || transporterConfig.separateDriverVehicleEnablement == Just True
       then do
-        -- Fleet owner enablement (uses FleetOwnerInformation)
+        -- Fleet owner enablement/disablement (uses FleetOwnerInformation)
         when (isFleetRole person.role) $ do
           let vehicleCategory = DVC.CAR
               allFleetDocsVerified = checkAllDriverDocsVerified allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
-              hasRejectedFleetDoc =
-                any
-                  ( \doc ->
-                      doc.verificationStatus == FAILED
-                  )
-                  driverDocuments
-          if allFleetDocsVerified
-            then enableDriver merchantOpCityId personId person.role Nothing transporterConfig merchantId
-            else
-              when (transporterConfig.allowDisableFleetOnRejectionDoc == Just True && hasRejectedFleetDoc) $
-                disableFleetOwnerOnRejectionDoc personId
+              isRejectedMandatoryFleetDoc doc =
+                doc.verificationStatus `elem` [FAILED, INVALID]
+                  && not (checkIfDocumentValid allDocVerificationConfigs person.role doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory)
+
+          -- First check if fleet should be disabled (has rejected mandatory docs)
+          when (any isRejectedMandatoryFleetDoc driverDocuments && transporterConfig.allowDisableFleetOnRejectionDoc == Just True) $
+            disableFleetOwnerOnRejectionDoc personId
+
+          -- Then check if fleet should be enabled (all mandatory docs valid)
+          when allFleetDocsVerified $
+            enableDriver merchantOpCityId personId person.role Nothing transporterConfig merchantId
         -- Check driver enablement separately (only driver docs + driver inspection)
         when (person.role == DP.DRIVER) $ do
           let vehicleCategory = fromMaybe DVC.CAR $ onboardingVehicleCategory <|> listToMaybe possibleVehicleCategories
@@ -877,9 +877,11 @@ getProcessedDriverDocuments driverId entityImagesInfo docType useHVSdkForDL = do
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
       mbS3Path = getS3PathFromLatestImage entityImagesInfo docType
       commonDocStatus dt = do
-        commonDocs <- QCommonDoc.findByDriverIdAndDocumentType (Just driverId) dt
+        commonDocs <- QCommonDocExtra.findLatestByDriverIdAndDocumentType (Just driverId) dt
         let (status, reason, url) = checkImageValidity entityImagesInfo dt
-        case listToMaybe commonDocs of
+            -- Select the most recent document (first in list since sorted by updatedAt DESC)
+            bestDoc = listToMaybe commonDocs
+        case bestDoc of
           Just doc -> return (Just (mapStatus doc.verificationStatus), doc.rejectReason <|> reason, url, Nothing, mbS3Path)
           Nothing -> return (status, reason, url, Nothing, mbS3Path)
   case docType of

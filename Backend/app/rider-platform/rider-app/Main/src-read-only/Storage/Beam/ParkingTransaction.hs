@@ -13,18 +13,18 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data ParkingTransactionT f = ParkingTransactionT
-  { amount :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    endTime :: (B.C f Kernel.Prelude.UTCTime),
-    id :: (B.C f Kernel.Prelude.Text),
-    parkingLotId :: (B.C f Kernel.Prelude.Text),
-    paymentOrderId :: (B.C f Kernel.Prelude.Text),
-    startTime :: (B.C f Kernel.Prelude.UTCTime),
-    status :: (B.C f Domain.Types.ParkingTransaction.StatusType),
-    vehicleNumber :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { amount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    endTime :: B.C f Kernel.Prelude.UTCTime,
+    id :: B.C f Kernel.Prelude.Text,
+    parkingLotId :: B.C f Kernel.Prelude.Text,
+    paymentOrderId :: B.C f Kernel.Prelude.Text,
+    startTime :: B.C f Kernel.Prelude.UTCTime,
+    status :: B.C f Domain.Types.ParkingTransaction.StatusType,
+    vehicleNumber :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -34,6 +34,6 @@ instance B.Table ParkingTransactionT where
 
 type ParkingTransaction = ParkingTransactionT Identity
 
-$(enableKVPG (''ParkingTransactionT) [('id)] [])
+$(enableKVPG ''ParkingTransactionT ['id] [['paymentOrderId]])
 
-$(mkTableInstances (''ParkingTransactionT) "parking_transaction")
+$(mkTableInstances ''ParkingTransactionT "parking_transaction")

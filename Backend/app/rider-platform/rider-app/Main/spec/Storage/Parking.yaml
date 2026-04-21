@@ -28,7 +28,7 @@ ParkingTransaction:
 
   constraints:
     id: PrimaryKey
-    paymentOrderId: !SecondaryKey
+    paymentOrderId: "!SecondaryKey"
 
   queries:
     findByPaymentOrderId:

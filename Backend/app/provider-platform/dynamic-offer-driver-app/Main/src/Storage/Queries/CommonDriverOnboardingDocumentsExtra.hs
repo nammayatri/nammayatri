@@ -2,6 +2,7 @@ module Storage.Queries.CommonDriverOnboardingDocumentsExtra
   ( CommonDocumentsFilter (..),
     findAllForCommonDocuments,
     countForCommonDocuments,
+    findLatestByDriverIdAndDocumentType,
   )
 where
 
@@ -92,3 +93,19 @@ countForCommonDocuments CommonDocumentsFilter {..} = do
             do
               B.all_ (BeamCommon.commonDriverOnboardingDocuments BeamCommon.atlasDB)
   pure $ either (const 0) (\r -> if null r then 0 else head r) res
+
+findLatestByDriverIdAndDocumentType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe (Id.Id DP.Person) ->
+  DVC.DocumentType ->
+  m [DCommonDoc.CommonDriverOnboardingDocuments]
+findLatestByDriverIdAndDocumentType driverId documentType =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.driverId $ Se.Eq (Id.getId <$> driverId),
+          Se.Is Beam.documentType $ Se.Eq documentType
+        ]
+    ]
+    (Se.Desc Beam.updatedAt)
+    (Just 1)
+    (Just 0)

@@ -15,6 +15,7 @@ Detailed topic docs live in `.cursor/docs/` — read the relevant one(s) for you
 8. **Beckn tags**: Must be defined in `Backend/lib/beckn-spec/src/BecknV2/OnDemand/Tags.hs` before use
 9. **Orphan instances**: Go in `Domain/Types/Extra/*.hs` files
 10. **Logging**: Use `logInfo`, `logDebug`, `logError` from `Kernel.Utils.Logging`
+11. **YAML Storage constraints — `!SecondaryKey` must be quoted**: Write `fieldName: "!SecondaryKey"`, never unquoted `fieldName: !SecondaryKey`. Unquoted `!Tag` values are parsed as YAML tags and silently dropped by the NammaDSL parser, producing an empty `enableKVPG` secondary-key list in the generated Beam file → intermittent-empty KV reads at runtime. Use `!SecondaryKey` (forced) when the query is in a hand-written Extra file; plain `SecondaryKey` only when the field appears in a YAML-declared query. The `yaml-constraint-tags` pre-commit hook enforces the quoting. Deny list: `merchantId`, `merchantOperatingCityId`, `status` cannot be secondary keys regardless of quoting.
 
 ## Build & Development
 

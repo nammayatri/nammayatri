@@ -87,3 +87,8 @@ ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN insurance_service
 
 ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN create_refunds text  default 'Stripe';
 ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_refunds text  default 'Stripe';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_instruction_route text  default 'OSRM';

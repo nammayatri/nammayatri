@@ -77,11 +77,12 @@ incrementGateSearchDemand ::
   ) =>
   Text -> -- gateId
   Text -> -- vehicleVariant
+  Int -> -- TTL in seconds
   m ()
-incrementGateSearchDemand gateId variant = Redis.withCrossAppRedis $ do
+incrementGateSearchDemand gateId variant ttlInSec = Redis.withCrossAppRedis $ do
   let key = mkGateSearchDemandKey gateId variant
   void $ Redis.incr key
-  Redis.expire key 300 -- 5 min sliding window
+  Redis.expire key ttlInSec
 
 -- | Decrement the gate demand counter (clamp at 0). Called when demand is fulfilled or retracted.
 decrementGateSearchDemand ::
@@ -224,7 +225,8 @@ runDemandCheckForVariants merchantOpCityId merchantId pickupZoneGateId variants 
   case mbGate of
     Nothing -> logWarning $ "runDemandCheckForVariants: gate not found id=" <> pickupZoneGateId
     Just gate -> forM_ variants $ \variant -> do
-      incrementGateSearchDemand pickupZoneGateId variant
+      let demandTtl = fromMaybe 300 gate.demandTtlInSec
+      incrementGateSearchDemand pickupZoneGateId variant demandTtl
       checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant
 
 -- | Per-variant demand check. Triggered from Select once an estimate is chosen.
@@ -323,8 +325,9 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
       gateId = gate.id.getId
       cooldown = fromMaybe 900 gate.notificationCooldownInSec
       priorityDriverIds = fromMaybe [] mbPriorityDriverIds
-  -- Notify priority drivers first
-  priorityCount <- notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown priorityDriverIds
+  -- Filter priority drivers through eligibility checks (cooldown, skip count, accepted state)
+  eligiblePriority <- filterEligibleDrivers gate specialLocationId vehicleType merchantId gateId priorityDriverIds
+  priorityCount <- notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown eligiblePriority
   let remaining = max 0 (needed - priorityCount)
   -- Fill remaining from LTS queue
   queueCount <-
@@ -332,7 +335,7 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
       then do
         queueResp <- LTSFlow.getQueueDrivers specialLocationId vehicleType
         let sortedDrivers = sortOn (.queuePosition) queueResp.drivers
-            -- Exclude priority drivers already notified
+            -- Exclude priority drivers already processed
             queueDriverIds = filter (`notElem` priorityDriverIds) $ map (.driverId) sortedDrivers
         eligible <- filterEligibleDrivers gate specialLocationId vehicleType merchantId gateId queueDriverIds
         notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown (take remaining eligible)
@@ -522,18 +525,15 @@ cancelPickupZoneRequestsForDriver ::
   Id DP.Person ->
   m ()
 cancelPickupZoneRequestsForDriver driverId = do
-  -- Same rationale as completePickupZoneRequestsForDriver: look up last Accept
-  -- response regardless of current status so post-arrival Expired rows still
-  -- get their supply retracted.
   mbReq <- QSZQR.findLastAcceptedByDriverId driverId
-  forM_ mbReq $ \req ->
-    -- If the request is already Completed, the pickup-zone commitment was
-    -- already fulfilled (ride confirmed); don't overwrite that history with
-    -- Cancelled/Expired just because the ride was later cancelled.
-    unless (req.status == DSZQR.Completed) $ do
-      QSZQR.updateResponse (Just DSZQR.Cancelled) DSZQR.Expired req.id
-      runSupplyDecrementForRequest req.id.getId req.gateId req.vehicleType
-      logInfo $ "Cancelled pickup zone request " <> req.id.getId <> " after ride cancel by driver " <> driverId.getId
+  forM_ mbReq $ \req -> do
+    let idempotencyKey = "PickupZoneCancel:Done:" <> req.id.getId
+    wasSet <- Redis.withCrossAppRedis $ Redis.setNxExpire idempotencyKey 86400 ("1" :: Text)
+    when wasSet $
+      unless (req.status == DSZQR.Completed) $ do
+        QSZQR.updateResponse (Just DSZQR.Cancelled) DSZQR.Expired req.id
+        runSupplyDecrementForRequest req.id.getId req.gateId req.vehicleType
+        logInfo $ "Cancelled pickup zone request " <> req.id.getId <> " after ride cancel by driver " <> driverId.getId
 
 -- Queue skip handling
 
@@ -551,16 +551,22 @@ handleQueueSkipIfApplicable ::
   Text -> -- vehicleType for LTS queue
   Id DP.Person ->
   Id DM.Merchant ->
+  Text -> -- searchTryId for idempotency
   m ()
-handleQueueSkipIfApplicable Nothing _ _ _ = pure ()
-handleQueueSkipIfApplicable (Just gateId) vehicleType driverId merchantId = do
-  mbGateInfo <- Esq.runInReplica $ QGI.findById (Id gateId)
-  case mbGateInfo >>= (.maxRideSkipsBeforeQueueRemoval) of
-    Nothing -> pure ()
-    Just threshold -> do
-      let slId = maybe "" (.getId) ((.specialLocationId) <$> mbGateInfo)
-      newCount <- incrementQueueSkipCount slId driverId 86400 -- 24hr TTL
-      when (newCount >= threshold) $ do
-        void $ LTSFlow.manualQueueRemove slId vehicleType merchantId driverId
-        resetQueueSkipCount slId driverId
-        logInfo $ "Driver " <> driverId.getId <> " removed from queue at " <> slId <> " after " <> show newCount <> " skips"
+handleQueueSkipIfApplicable Nothing _ _ _ _ = pure ()
+handleQueueSkipIfApplicable (Just gateId) vehicleType driverId merchantId searchTryId = do
+  -- Idempotency: each searchTry should only increment skip count once, even if
+  -- both the allocator timeout and driver reject paths fire.
+  let idempotencyKey = "QueueSkip:Done:" <> searchTryId
+  wasSet <- Redis.withCrossAppRedis $ Redis.setNxExpire idempotencyKey 86400 ("1" :: Text)
+  when wasSet $ do
+    mbGateInfo <- Esq.runInReplica $ QGI.findById (Id gateId)
+    case mbGateInfo >>= (.maxRideSkipsBeforeQueueRemoval) of
+      Nothing -> pure ()
+      Just threshold -> do
+        let slId = maybe "" (.getId) ((.specialLocationId) <$> mbGateInfo)
+        newCount <- incrementQueueSkipCount slId driverId 86400 -- 24hr TTL
+        when (newCount >= threshold) $ do
+          void $ LTSFlow.manualQueueRemove slId vehicleType merchantId driverId
+          resetQueueSkipCount slId driverId
+          logInfo $ "Driver " <> driverId.getId <> " removed from queue at " <> slId <> " after " <> show newCount <> " skips"

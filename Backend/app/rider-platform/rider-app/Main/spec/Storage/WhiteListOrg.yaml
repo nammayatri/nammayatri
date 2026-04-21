@@ -33,7 +33,7 @@ WhiteListOrg:
 
   constraints:
     id: PrimaryKey
-    subscriberId: !SecondaryKey
+    subscriberId: "!SecondaryKey"
 
   queries:
     findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId:

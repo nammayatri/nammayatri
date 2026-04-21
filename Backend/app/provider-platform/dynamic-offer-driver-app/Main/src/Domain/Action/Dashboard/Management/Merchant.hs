@@ -363,12 +363,15 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
   logTagInfo "dashboard -> postMerchantConfigCommonUpdate : " (show merchant.id)
   pure Success
 
-getMerchantConfigSpecialLocationList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe SL.SpecialLocationType -> Flow [QSL.SpecialLocationFull]
-getMerchantConfigSpecialLocationList merchantShortId opCity mbLimit mbOffset mbLocationType = do
+getMerchantConfigSpecialLocationList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe SL.SpecialLocationType -> Maybe [SL.SpecialLocationType] -> Flow [QSL.SpecialLocationFull]
+getMerchantConfigSpecialLocationList merchantShortId opCity mbLimit mbOffset mbLocationType mbLocationTypes = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
 
-  QSL.findAllSpecialLocationsWithGeoJSON merchantOpCity.id.getId mbLimit mbOffset mbLocationType
+  let finalLocationTypes = case mbLocationType of
+        Just locationType -> Just [locationType]
+        Nothing -> mbLocationTypes
+  QSL.findAllSpecialLocationsWithGeoJSON merchantOpCity.id.getId mbLimit mbOffset finalLocationTypes
 
 postMerchantSchedulerTrigger :: ShortId DM.Merchant -> Context.City -> Common.SchedulerTriggerReq -> Flow APISuccess
 postMerchantSchedulerTrigger merchantShortId opCity req = do
@@ -3092,6 +3095,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             maxRideSkipsBeforeQueueRemoval = mbGate >>= (.maxRideSkipsBeforeQueueRemoval),
             pickupZoneArrivalTimeoutInSec = mbGate >>= (.pickupZoneArrivalTimeoutInSec),
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
+            demandTtlInSec = mbGate >>= (.demandTtlInSec),
             ..
           }
 
@@ -3174,14 +3178,18 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         return $ Just newDriverPoolConfigs
       _ -> return Nothing
 
-  -- fare products
+  -- fare products (skip if replicateFareProducts is explicitly False)
+  let shouldReplicateFareProducts = fromMaybe True req.replicateFareProducts
   mbFareProducts <-
-    CQFProduct.findAllFareProductByMerchantOpCityId newMerchantOperatingCityId >>= \case
-      [] -> do
-        fareProducts <- CQFProduct.findAllFareProductByMerchantOpCityId baseOperatingCityId
-        newFareProducts <- mapM (buildFareProduct newMerchantId newMerchantOperatingCityId) fareProducts
-        return $ Just newFareProducts
-      _ -> return Nothing
+    if shouldReplicateFareProducts
+      then
+        CQFProduct.findAllFareProductByMerchantOpCityId newMerchantOperatingCityId >>= \case
+          [] -> do
+            fareProducts <- CQFProduct.findAllFareProductByMerchantOpCityId baseOperatingCityId
+            newFareProducts <- mapM (buildFareProduct newMerchantId newMerchantOperatingCityId) fareProducts
+            return $ Just newFareProducts
+          _ -> return Nothing
+      else return Nothing
 
   -- vehicle service tier
   mbVehicleServiceTier <-
