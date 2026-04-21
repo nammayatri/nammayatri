@@ -167,10 +167,11 @@ handler merchantId req validatedReq = do
       <> " searchRequestId="
       <> searchRequest.id.getId
   whenJust searchRequest.pickupZoneGateId $ \pickupZoneGateId -> do
+    let vehicleVariant = Veh.castServiceTierToVariant booking.vehicleServiceTier
     logInfo $
       "Firing special zone demand pipeline from Init for gateId=" <> pickupZoneGateId
         <> " variant="
-        <> show booking.vehicleServiceTier
+        <> show vehicleVariant
         <> " searchRequestId="
         <> searchRequest.id.getId
     fork "specialZoneDriverDemandPipeline" $
@@ -178,7 +179,7 @@ handler merchantId req validatedReq = do
         searchRequest.merchantOperatingCityId
         merchantId
         pickupZoneGateId
-        [show booking.vehicleServiceTier]
+        [show vehicleVariant]
   fork "Updating Demand Hotspots on booking" $ do
     let lat = searchRequest.fromLocation.lat
         lon = searchRequest.fromLocation.lon

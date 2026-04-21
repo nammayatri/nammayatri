@@ -228,10 +228,16 @@ runDemandCheckForVariants merchantOpCityId merchantId pickupZoneGateId variants 
   mbGate <- Esq.runInReplica $ QGI.findById (Id pickupZoneGateId)
   case mbGate of
     Nothing -> logWarning $ "runDemandCheckForVariants: gate not found id=" <> pickupZoneGateId
-    Just gate -> forM_ variants $ \variant -> do
-      let demandTtl = fromMaybe 300 gate.demandTtlInSec
-      incrementGateSearchDemand pickupZoneGateId variant demandTtl
-      checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant
+    Just gate -> do
+      mbSpecialLocation <- Esq.runInReplica $ QSL.findById gate.specialLocationId
+      let isQueueEnabled = fromMaybe False (mbSpecialLocation >>= (.isQueueEnabled))
+      unless isQueueEnabled $
+        logDebug $ "runDemandCheckForVariants: queue not enabled for specialLocation=" <> gate.specialLocationId.getId <> ", skipping"
+      when isQueueEnabled $
+        forM_ variants $ \variant -> do
+          let demandTtl = fromMaybe 300 gate.demandTtlInSec
+          incrementGateSearchDemand pickupZoneGateId variant demandTtl
+          checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant
 
 -- | Per-variant demand check. Triggered from Select once an estimate is chosen.
 --   Compares per-variant demand against the gate's demand threshold; when it's hit and
