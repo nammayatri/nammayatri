@@ -100,7 +100,8 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
           reasonStage,
           additionalInfo = Nothing,
           reallocate = Nothing,
-          blockOnCancellationRate = Nothing
+          blockOnCancellationRate = Nothing,
+          abortPaytmEdc = Nothing
         }
 
 onInitLockKey :: Text -> Text

@@ -258,6 +258,7 @@ handleBookingCancellation merchantId _personId stuckRideAutoCancellationBuffer s
               { additionalInfo = Nothing,
                 reallocate = Just False,
                 blockOnCancellationRate = Nothing,
+                abortPaytmEdc = Nothing,
                 ..
               }
       mRide <- QR.findActiveByRBId booking.id
@@ -1012,6 +1013,7 @@ handleBookingCancellation' merchantId _personId stuckRideAutoCancellationBuffer 
               { additionalInfo = Nothing,
                 reallocate = Just False,
                 blockOnCancellationRate = Nothing,
+                abortPaytmEdc = Nothing,
                 ..
               }
       mRide <- QR.findActiveByRBId booking.id

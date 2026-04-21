@@ -157,7 +157,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
                         reasonStage = SCR.OnAssign,
                         additionalInfo = legData.additionalInfo,
                         reallocate = legData.reallocate,
-                        blockOnCancellationRate = legData.blockOnCancellationRate
+                        blockOnCancellationRate = legData.blockOnCancellationRate,
+                        abortPaytmEdc = Nothing
                       }
               dCancelRes <- DCancel.cancel booking mbRide cancelReq legData.cancellationSource
               void $ withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes cancelReq.reallocate

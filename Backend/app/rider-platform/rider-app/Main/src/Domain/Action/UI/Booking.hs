@@ -141,7 +141,8 @@ handleConfirmTtlExpiry booking = do
           reasonStage = OnConfirm,
           additionalInfo = Nothing,
           reallocate = Nothing,
-          blockOnCancellationRate = Nothing
+          blockOnCancellationRate = Nothing,
+          abortPaytmEdc = Nothing
         }
 
 callOnStatus :: SRB.Booking -> Flow ()

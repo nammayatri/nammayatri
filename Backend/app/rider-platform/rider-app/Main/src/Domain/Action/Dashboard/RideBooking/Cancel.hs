@@ -2,6 +2,7 @@ module Domain.Action.Dashboard.RideBooking.Cancel (postCancelBooking) where
 
 import qualified Beckn.ACL.Cancel as ACL
 import qualified "this" Domain.Action.UI.Cancel
+import qualified Domain.Action.UI.Payment as DPayment
 import qualified "this" Domain.Types.Booking
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Merchant
@@ -32,4 +33,9 @@ postCancelBooking merchantShortId _opCity bookingId personId req = withPersonIdL
   mRide <- B.runInReplica $ QR.findActiveByRBId booking.id
   dCancelRes <- Domain.Action.UI.Cancel.cancel booking mRide req SBCR.ByMerchant
   void $ withShortRetry $ CallBPP.cancelV2 m.id dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes Nothing
+  -- Abort the in-flight Paytm EDC transaction only when explicitly requested
+  -- (frontend sends abortPaytmEdc=true only from the EDC payment confirmation popup, not from the regular Cancel Ride button)
+  when (fromMaybe False req.abortPaytmEdc) $
+    fork "PaytmEDC:AbortOnCancel" $
+      DPayment.abortPaytmEdcIfActive booking.id
   return Kernel.Types.APISuccess.Success

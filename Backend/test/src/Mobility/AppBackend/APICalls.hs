@@ -60,7 +60,7 @@ cancelRide = client (Proxy :: Proxy CancelAPI.CancelAPI)
 
 mkAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
 mkAppCancelReq stage =
-  CancelAPI.CancelReq (AbeCRC.CancellationReasonCode "OTHER") stage Nothing Nothing Nothing
+  CancelAPI.CancelReq (AbeCRC.CancellationReasonCode "OTHER") stage Nothing Nothing Nothing Nothing
 
 appConfirmRide :: Text -> Id AbeQuote.Quote -> Maybe Payment.PaymentMethodId -> Maybe DMPM.PaymentInstrument -> Maybe Bool -> Maybe Text -> ClientM ConfirmAPI.ConfirmRes
 appConfirmRide = client (Proxy :: Proxy ConfirmAPI.API)

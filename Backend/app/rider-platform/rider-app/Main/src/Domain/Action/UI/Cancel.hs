@@ -81,7 +81,8 @@ data CancelReq = CancelReq
     reasonStage :: SCR.CancellationStage,
     additionalInfo :: Maybe Text,
     reallocate :: Maybe Bool,
-    blockOnCancellationRate :: Maybe Bool
+    blockOnCancellationRate :: Maybe Bool,
+    abortPaytmEdc :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

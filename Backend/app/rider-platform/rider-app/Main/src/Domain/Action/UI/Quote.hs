@@ -232,7 +232,8 @@ processActiveBooking booking mbIsDashBoardRequest cancellationStage = do
                       reasonStage = cancellationStage,
                       additionalInfo = Nothing,
                       reallocate = Nothing,
-                      blockOnCancellationRate = Nothing
+                      blockOnCancellationRate = Nothing,
+                      abortPaytmEdc = Nothing
                     }
             fork "active booking processing" $ do
               dCancelRes <- DCancel.cancel booking Nothing cancelReq SBCR.ByApplication
