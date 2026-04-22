@@ -17,6 +17,7 @@ data Invoice = Invoice
     id :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice,
     invoiceNumber :: Kernel.Prelude.Text,
     invoiceType :: Lib.Finance.Domain.Types.Invoice.InvoiceType,
+    irn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedAt :: Kernel.Prelude.UTCTime,
     issuedByAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedById :: Kernel.Prelude.Text,
