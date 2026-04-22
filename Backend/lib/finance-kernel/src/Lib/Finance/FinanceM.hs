@@ -68,6 +68,7 @@ import Control.Applicative ((<|>))
 import Control.Monad.Except (ExceptT, MonadError, runExceptT, throwError)
 import Control.Monad.State.Strict (MonadState, StateT, gets, modify', runStateT)
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (MonadFlow)
@@ -579,7 +580,13 @@ transferAllowZero fromRole toRole amount refType = do
 --         , ...
 --         }
 --   @
-invoice :: (BeamFlow.BeamFlow m r) => InvoiceConfig -> FinanceM m (Maybe (Id Invoice))
+invoice ::
+  ( BeamFlow.BeamFlow m r,
+    Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
+  InvoiceConfig ->
+  FinanceM m (Maybe (Id Invoice))
 invoice config = do
   ctx <- ask
   ids <- getEntryIds

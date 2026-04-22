@@ -35,3 +35,8 @@ ALTER TABLE atlas_app.finance_invoice ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN supplier_tax_no text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.finance_invoice ADD COLUMN irn text ;

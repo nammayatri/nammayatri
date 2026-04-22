@@ -12,6 +12,8 @@ import Kernel.External.BackgroundVerification.Types as BackgroundVerification
 import qualified Kernel.External.Call as Call
 import Kernel.External.Call.Interface.Types
 import Kernel.External.Encryption
+import qualified Kernel.External.GSTEInvoice.Interface.Types as GSTEInvoice
+import qualified Kernel.External.GSTEInvoice.Types as GSTEInvoice
 import qualified Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Interface.Types
@@ -79,6 +81,7 @@ data ServiceName
   | PlasmaService Plasma.PlasmaService
   | InsuranceDeclarationService InsuranceProvider
   | SettlementService Settlement.SettlementService
+  | GSTEInvoiceService GSTEInvoice.GSTEInvoiceService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -110,6 +113,7 @@ instance Show ServiceName where
   show (PlasmaService s) = "Plasma_" <> show s
   show (InsuranceDeclarationService s) = "InsuranceDeclaration_" <> show s
   show (SettlementService s) = "Settlement_" <> show s
+  show (GSTEInvoiceService s) = "GSTEInvoice_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -216,6 +220,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Settlement_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (GSTEInvoiceService v1, r2)
+                 | r1 <- stripPrefix "GSTEInvoice_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -247,6 +255,7 @@ data ServiceConfigD (s :: UsageSafety)
   | PlasmaServiceConfig !Plasma.PlasmaServiceConfig
   | InsuranceDeclarationServiceConfig !IffcoTokioConfig
   | SettlementServiceConfig !Settlement.SettlementServiceConfig
+  | GSTEInvoiceServiceConfig !GSTEInvoice.GSTEInvoiceConfig
   deriving (Generic, Eq, Show)
 
 type ServiceConfig = ServiceConfigD 'Safe

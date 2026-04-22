@@ -9,6 +9,8 @@ import qualified Domain.Types.MerchantServiceConfig as Domain
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.BackgroundVerification.Types as BackgroundVerification
 import qualified Kernel.External.Call as Call
+import qualified Kernel.External.GSTEInvoice.Interface.Types as GSTEInvoice
+import qualified Kernel.External.GSTEInvoice.Types as GSTEInvoice
 import Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
@@ -124,6 +126,8 @@ getConfigJSON = \case
     Settlement.HyperPGConfig srcCfg -> toJSON srcCfg
     Settlement.BillDeskConfig srcCfg -> toJSON srcCfg
     Settlement.YesBizConfig srcCfg -> toJSON srcCfg
+  Domain.GSTEInvoiceServiceConfig eInvCfg -> case eInvCfg of
+    GSTEInvoice.CharteredInfoEInvoiceConfig cfg -> toJSON cfg
 
 getServiceName :: Domain.ServiceConfig -> Domain.ServiceName
 getServiceName = \case
@@ -205,6 +209,8 @@ getServiceName = \case
     Settlement.HyperPGConfig _ -> Domain.SettlementService Settlement.HyperPG
     Settlement.BillDeskConfig _ -> Domain.SettlementService Settlement.BillDesk
     Settlement.YesBizConfig _ -> Domain.SettlementService Settlement.YesBiz
+  Domain.GSTEInvoiceServiceConfig eInvCfg -> case eInvCfg of
+    GSTEInvoice.CharteredInfoEInvoiceConfig _ -> Domain.GSTEInvoiceService GSTEInvoice.CharteredInfo
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> Payment.PaymentService
 getPaymentServiceConfigJson = \case
@@ -280,6 +286,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.SettlementService Settlement.HyperPG -> Domain.SettlementServiceConfig . Settlement.HyperPGConfig <$> eitherValue configJSON
   Domain.SettlementService Settlement.BillDesk -> Domain.SettlementServiceConfig . Settlement.BillDeskConfig <$> eitherValue configJSON
   Domain.SettlementService Settlement.YesBiz -> Domain.SettlementServiceConfig . Settlement.YesBizConfig <$> eitherValue configJSON
+  Domain.GSTEInvoiceService GSTEInvoice.CharteredInfo -> Domain.GSTEInvoiceServiceConfig . GSTEInvoice.CharteredInfoEInvoiceConfig <$> eitherValue configJSON
 
 eitherValue :: FromJSON a => A.Value -> Either Text a
 eitherValue value = case A.fromJSON value of
