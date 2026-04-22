@@ -18,6 +18,7 @@ import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Types as KT
 import qualified Kernel.External.Payment.Types as PaymentTypes
 import qualified Kernel.External.Payout.Interface.Types as Payout
@@ -37,6 +38,7 @@ import qualified Lib.Payment.Payout.Status as PayoutStatus
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.DailyStats as QDS
 import qualified Storage.Queries.DailyStatsExtra as QDSE
@@ -219,6 +221,14 @@ getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = do
   paymentServiceName <- TPayment.decidePaymentService (DEMSC.PaymentService PaymentTypes.Juspay) person.clientSdkVersion person.merchantOperatingCityId
   (createOrderCall, _pseudoClientId) <- TPayment.createOrder merchantId merchantOpCityId paymentServiceName (Just person.id.getId)
 
+  -- Get MerchantServiceConfig to check if split is enabled
+  merchantServiceConfig <-
+    CQMSC.findByServiceAndCity paymentServiceName merchantOpCityId
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Payment" (show paymentServiceName))
+  let isSplitEnabled = case merchantServiceConfig.serviceConfig of
+        DEMSC.PaymentServiceConfig vsc -> Payment.isSplitEnabled vsc
+        _ -> False
+
   -- Delegate to lib
   regResult <-
     Registration.initiateRegistration
@@ -230,6 +240,7 @@ getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = do
       driverEmail
       (Just person.firstName)
       person.lastName
+      isSplitEnabled
 
   -- Store orderId for recovery/replay if webhook fails
   if isFleetOwner

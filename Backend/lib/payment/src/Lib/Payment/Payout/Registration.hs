@@ -53,7 +53,8 @@ data RegistrationStatusResult = RegistrationStatusResult
 initiateRegistration ::
   ( EncFlow m r,
     PaymentBeamFlow.BeamFlow m r,
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    MonadFlow m
   ) =>
   Id DCommon.Merchant ->
   Maybe (Id DCommon.MerchantOperatingCity) ->
@@ -63,10 +64,25 @@ initiateRegistration ::
   Text -> -- customerEmail
   Maybe Text -> -- customerFirstName
   Maybe Text -> -- customerLastName
+  Bool -> -- Should be True if SplitEnabled in Juspay Merchant
   m RegistrationResult
-initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall customerPhone customerEmail customerFirstName customerLastName = do
+initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall customerPhone customerEmail customerFirstName customerLastName isSplitEnabled = do
   orderId <- generateGUID
   orderShortId <- generateShortId
+
+  -- Build split settlement details if enabled
+  splitSettlementDetails <-
+    if isSplitEnabled
+      then do
+        pure $
+          Just $
+            PInterface.AmountBased $
+              PInterface.SplitSettlementDetailsAmount
+                { marketplace = PInterface.Marketplace registrationAmount,
+                  mdrBorneBy = PInterface.ALL,
+                  vendor = PInterface.Vendor []
+                }
+      else pure Nothing
 
   let createOrderReq =
         PInterface.CreateOrderReq
@@ -85,7 +101,7 @@ initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall cust
             mandateStartDate = Nothing,
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
-            splitSettlementDetails = Nothing,
+            splitSettlementDetails = splitSettlementDetails,
             metadataGatewayReferenceId = Nothing,
             basket = Nothing,
             paymentRules = Nothing
