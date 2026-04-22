@@ -197,20 +197,21 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         Just (DPass.FixedSaving amount) -> (Just DPurchasedPass.FixedSaving, Just amount)
         Just (DPass.PercentageSaving percentage) -> (Just DPurchasedPass.PercentageSaving, Just percentage)
 
-  mbExistingPass <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId (Just [DPurchasedPass.Active, DPurchasedPass.PreBooked]) (Just 1) (Just 0)
+  mbSamePassDevice <- QPurchasedPass.findPassByPersonIdAndPassTypeIdAndDeviceId personId merchantId pass.passTypeId deviceId
   -- If there is no pass for the same device, try to find an existing Pending pass to reuse across devices and set it as mbSamePass
-  mbSamePass <- case listToMaybe mbExistingPass of
-    Just s -> return $ Just s
-    Nothing -> do
-      mbPending <- QPurchasedPass.findPendingPassByPersonIdAndPassTypeId personId merchantId pass.passTypeId
-      case mbPending of
-        Just pendingPass -> do
-          -- don't update device id if existing different device id pass is active or prebooked
-          when (pendingPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $ do
-            QPurchasedPass.updateDeviceIdById deviceId 0 pendingPass.id
-            logInfo $ "Reusing existing purchased pass " <> pendingPass.id.getId <> " and updated deviceId to " <> deviceId
-          return $ Just pendingPass
-        Nothing -> return Nothing
+  mbSamePass <-
+    case mbSamePassDevice of
+      Just s -> return $ Just s
+      Nothing -> do
+        mbPending <- QPurchasedPass.findPendingPassByPersonIdAndPassTypeId personId merchantId pass.passTypeId
+        case mbPending of
+          Just pendingPass -> do
+            -- don't update device id if existing different device id pass is active or prebooked
+            when (pendingPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $ do
+              QPurchasedPass.updateDeviceIdById deviceId 0 pendingPass.id
+              logInfo $ "Reusing existing purchased pass " <> pendingPass.id.getId <> " and updated deviceId to " <> deviceId
+            return $ Just pendingPass
+          Nothing -> return Nothing
 
   let initialStatus = if pass.amount == 0 then DPurchasedPass.Active else DPurchasedPass.Pending
   purchasedPassId <-
@@ -689,7 +690,13 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
           QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundPending paymentOrderId
           return (DPayment.FulfillmentRefundPending, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
         Nothing -> do
-          whenJust mbPassStatus $ \passStatus -> do
+          -- Don't re-activate this payment if it's already in a refund flow — a late CHARGED
+          -- replay would otherwise flip Refunded/RefundPending/etc. back to Active, silently
+          -- diverging from the refund outcome. Guard is on the payment row's own status only:
+          -- a pass-level refund state can come from a different payment (e.g., prior refund of
+          -- Payment A), which shouldn't block a legitimate retry via Payment B.
+          let isPaymentInRefundFlow = purchasedPassPayment.status `elem` refundStatuses
+          whenJust mbPassStatus $ \passStatus -> unless isPaymentInRefundFlow $ do
             when (purchasedPassPayment.status `notElem` activeLikeStatuses) $ do
               QPurchasedPassPayment.updateStatusByOrderId passStatus paymentOrderId
               when (passStatus `elem` activeLikeStatuses && isDashboard) $ do
@@ -757,60 +764,50 @@ updatePurchasedPass purchasedPass today now = do
   if diffUTCTime now purchasedPass.updatedAt <= 300
     then return (purchasedPass, Nothing, False)
     else do
-      latestPreBookedPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus (Just 1) (Just 0) purchasedPass.id [DPurchasedPass.PreBooked, DPurchasedPass.Active] today
-      let mbFirstPreBookedPayment = listToMaybe latestPreBookedPayments
-      -- updating the Purchased Pass to Latest Payment details, if purchased pass is expired
-      let (updatedPass, mbPayment, needsDBUpdate) =
-            if purchasedPass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired] && purchasedPass.endDate < today
-              then case mbFirstPreBookedPayment of
-                Just firstPreBookedPayment ->
-                  let newStatus
-                        | firstPreBookedPayment.endDate < today = DPurchasedPass.Expired
-                        | firstPreBookedPayment.startDate <= today = DPurchasedPass.Active
-                        | firstPreBookedPayment.startDate > today = DPurchasedPass.PreBooked
-                        | otherwise = purchasedPass.status
-                      newPass = purchasedPass
-                        { DPurchasedPass.startDate = firstPreBookedPayment.startDate,
-                          DPurchasedPass.endDate = firstPreBookedPayment.endDate,
-                          DPurchasedPass.status = newStatus,
-                          DPurchasedPass.usedTripCount = Just 0,
-                          DPurchasedPass.deviceSwitchCount = 0,
-                          DPurchasedPass.updatedAt = now
-                        }
-                   in (newPass, Just firstPreBookedPayment, True)
-                Nothing ->
-                  let newPass = purchasedPass {DPurchasedPass.status = DPurchasedPass.Expired, DPurchasedPass.updatedAt = now}
-                   in (newPass, Nothing, True)
-              else (purchasedPass, mbFirstPreBookedPayment, False)
+      latestPreBookedPayments <-
+        QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus
+          (Just 1)
+          (Just 0)
+          purchasedPass.id
+          [DPurchasedPass.PreBooked, DPurchasedPass.Active]
+          today
 
-      -- Handle PreBooked -> Active transition
-      let (passAfterPrebookedTransition, mbPaymentAfterTransition, needsUpdateAfterTransition) =
-            if updatedPass.status == DPurchasedPass.PreBooked && updatedPass.startDate <= today && updatedPass.endDate >= today
-              then
-                let updatedMbPayment = fmap (\p -> p {DPurchasedPassPayment.status = DPurchasedPass.Active, DPurchasedPassPayment.updatedAt = now}) mbPayment
-                 in ( updatedPass {DPurchasedPass.status = DPurchasedPass.Active, DPurchasedPass.deviceSwitchCount = 0, DPurchasedPass.updatedAt = now, DPurchasedPass.usedTripCount = Just 0},
-                      updatedMbPayment,
-                      True
-                    )
-              else (updatedPass, mbPayment, needsDBUpdate)
+      case listToMaybe latestPreBookedPayments of
+        Just firstPreBookedPayment ->
+          let newStatus
+                | firstPreBookedPayment.endDate < today = DPurchasedPass.Expired
+                | firstPreBookedPayment.startDate <= today = DPurchasedPass.Active
+                | otherwise = DPurchasedPass.PreBooked
 
-      -- Handle Expired -> Active transition
-      finalResult <-
-        if passAfterPrebookedTransition.status == DPurchasedPass.Expired && passAfterPrebookedTransition.endDate >= today
-          then case mbPaymentAfterTransition of
-            Just payment ->
-              if payment.startDate <= today && payment.endDate >= today
-                then
-                  return
-                    ( passAfterPrebookedTransition {DPurchasedPass.status = DPurchasedPass.Active,  DPurchasedPass.updatedAt = now},
-                      Just payment,
-                      True
-                    )
-                else return (passAfterPrebookedTransition, mbPaymentAfterTransition, needsUpdateAfterTransition)
-            Nothing -> return (passAfterPrebookedTransition, mbPaymentAfterTransition, needsUpdateAfterTransition)
-          else return (passAfterPrebookedTransition, mbPaymentAfterTransition, needsUpdateAfterTransition)
+              newPass =
+                purchasedPass
+                  { DPurchasedPass.startDate = firstPreBookedPayment.startDate,
+                    DPurchasedPass.endDate = firstPreBookedPayment.endDate,
+                    DPurchasedPass.status = newStatus,
+                    DPurchasedPass.usedTripCount = Just 0,
+                    DPurchasedPass.deviceSwitchCount = 0,
+                    DPurchasedPass.updatedAt = now
+                  }
 
-      return finalResult
+              newPassPayment =
+                firstPreBookedPayment
+                  { DPurchasedPassPayment.status = newStatus,
+                    DPurchasedPassPayment.updatedAt = now
+                  }
+
+              hasChanged =
+                purchasedPass.status /= newStatus
+                  || firstPreBookedPayment.status /= newStatus
+
+           in return (newPass, Just newPassPayment, hasChanged)
+
+        Nothing ->
+          let newPass =
+                purchasedPass
+                  { DPurchasedPass.status = DPurchasedPass.Expired,
+                    DPurchasedPass.updatedAt = now
+                  }
+           in return (newPass, Nothing, True)
 
 getMultimodalPassList ::
   ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
@@ -1086,6 +1083,10 @@ postMultimodalPassResetDeviceSwitchCount (mbCallerPersonId, merchantId) purchase
   purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
   unless (purchasedPass.personId == personId) $ throwError AccessDenied
   unless (purchasedPass.merchantId == merchantId) $ throwError AccessDenied
+  purchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId (Just [DPurchasedPass.Active]) Nothing Nothing
+  case purchasedPasses of
+    [_] -> return ()
+    _   -> throwError $ InvalidRequest "Only one active pass is allowed"
   QPurchasedPass.updateDeviceIdById purchasedPass.deviceId 0 purchasedPass.id
   return APISuccess.Success
 
