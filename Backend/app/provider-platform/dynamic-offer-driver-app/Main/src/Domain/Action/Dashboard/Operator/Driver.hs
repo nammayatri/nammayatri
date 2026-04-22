@@ -143,30 +143,37 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
   now <- getCurrentTime
   Redis.whenWithLockRedis (opsHubRequestLockKey req.operationHubRequestId) 60 $ do
     opHubReq <- SQOHR.findByPrimaryKey (Kernel.Types.Id.Id req.operationHubRequestId) >>= fromMaybeM (InvalidRequest "Invalid operation hub request id")
-    when (opHubReq.requestStatus == APPROVED) $ Kernel.Utils.Common.throwError (InvalidRequest "Request already approved")
-    personId <- opHubReq.driverId & fromMaybeM (InvalidRequest "driverId is required for driver inspection")
-    (merchantOpCity, transporterConfig) <- getMerchantInfo merchantShortId opCity
-    -- Handle rejection based on request type
-    when (req.status == API.Types.ProviderPlatform.Operator.Driver.REJECTED) $ do
-      void $ SQOHR.updateStatusWithDetails (castReqStatusToDomain req.status) (Just req.remarks) (Just now) (Just (Kernel.Types.Id.Id req.operatorId)) (Kernel.Types.Id.Id req.operationHubRequestId)
-      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
-        case opHubReq.requestType of
-          ONBOARDING_INSPECTION -> void $ withTryCatch "incrementRejectedVehicleRequestsDaily" $
-            FleetOpStats.incrementRejectedVehicleRequestsDaily req.operatorId personId.getId transporterConfig False
-          REGULAR_INSPECTION -> void $ withTryCatch "incrementRejectedVehicleRequestsDaily" $
-            FleetOpStats.incrementRejectedVehicleRequestsDaily req.operatorId personId.getId transporterConfig False
-          DRIVER_ONBOARDING_INSPECTION -> void $ withTryCatch "incrementRejectedDriverRequestsDaily" $
-            FleetOpStats.incrementRejectedDriverRequestsDaily req.operatorId personId.getId transporterConfig False
-          DRIVER_REGULAR_INSPECTION -> void $ withTryCatch "incrementRejectedDriverRequestsDaily" $
-            FleetOpStats.incrementRejectedDriverRequestsDaily req.operatorId personId.getId transporterConfig False
+    let reqDomainStatus = castReqStatusToDomain req.status
+    case (opHubReq.requestStatus, reqDomainStatus) of
+      (existing, target) | existing == target ->
+        logInfo $ "Hub request already in status " <> show existing <> "; returning idempotent success"
+      (APPROVED, _) ->
+        Kernel.Utils.Common.throwError (InvalidRequest "Request has already been approved; approval is terminal")
+      (REJECTED, _) ->
+        Kernel.Utils.Common.throwError (InvalidRequest "Request has already been rejected; rejection is terminal")
+      _ -> do
+        personId <- opHubReq.driverId & fromMaybeM (InvalidRequest "driverId is required for driver inspection")
+        (merchantOpCity, transporterConfig) <- getMerchantInfo merchantShortId opCity
+        -- Handle rejection based on request type
+        when (req.status == API.Types.ProviderPlatform.Operator.Driver.REJECTED) $ do
+          void $ SQOHR.updateStatusWithDetails reqDomainStatus (Just req.remarks) (Just now) (Just (Kernel.Types.Id.Id req.operatorId)) (Kernel.Types.Id.Id req.operationHubRequestId)
+          when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
+            case opHubReq.requestType of
+              ONBOARDING_INSPECTION -> void $ withTryCatch "incrementRejectedVehicleRequestsDaily" $
+                FleetOpStats.incrementRejectedVehicleRequestsDaily req.operatorId personId.getId transporterConfig False
+              REGULAR_INSPECTION -> void $ withTryCatch "incrementRejectedVehicleRequestsDaily" $
+                FleetOpStats.incrementRejectedVehicleRequestsDaily req.operatorId personId.getId transporterConfig False
+              DRIVER_ONBOARDING_INSPECTION -> void $ withTryCatch "incrementRejectedDriverRequestsDaily" $
+                FleetOpStats.incrementRejectedDriverRequestsDaily req.operatorId personId.getId transporterConfig False
+              DRIVER_REGULAR_INSPECTION -> void $ withTryCatch "incrementRejectedDriverRequestsDaily" $
+                FleetOpStats.incrementRejectedDriverRequestsDaily req.operatorId personId.getId transporterConfig False
 
-    -- Handle approval based on request type
-    when (req.status == API.Types.ProviderPlatform.Operator.Driver.APPROVED) $ do
-      case opHubReq.requestType of
-        ONBOARDING_INSPECTION -> handleVehicleInspectionApproval req opHubReq merchantOpCity transporterConfig now
-        REGULAR_INSPECTION -> handleVehicleInspectionApproval req opHubReq merchantOpCity transporterConfig now
-        DRIVER_ONBOARDING_INSPECTION -> handleDriverInspectionApproval merchantShortId opCity req now personId merchantOpCity transporterConfig
-        DRIVER_REGULAR_INSPECTION -> handleDriverInspectionApproval merchantShortId opCity req now personId merchantOpCity transporterConfig
+        when (req.status == API.Types.ProviderPlatform.Operator.Driver.APPROVED) $ do
+          case opHubReq.requestType of
+            ONBOARDING_INSPECTION -> handleVehicleInspectionApproval req opHubReq merchantOpCity transporterConfig now
+            REGULAR_INSPECTION -> handleVehicleInspectionApproval req opHubReq merchantOpCity transporterConfig now
+            DRIVER_ONBOARDING_INSPECTION -> handleDriverInspectionApproval merchantShortId opCity req now personId merchantOpCity transporterConfig
+            DRIVER_REGULAR_INSPECTION -> handleDriverInspectionApproval merchantShortId opCity req now personId merchantOpCity transporterConfig
   pure Success
   where
     handleVehicleInspectionApproval request opHubReq merchantOpCity transporterConfig now = do
@@ -184,44 +191,40 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       mbPerson <- forM mbPersonId $ \personId -> runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       language <- getPersonInfo merchantOpCity mbPerson
       let analyticsDriverId = maybe request.operatorId (.getId) mbPersonId
-      fork "enable driver after vehicle inspection" $ do
-        -- Only check vehicle docs, not driver docs (vehicle and driver enablement are segregated)
-        allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerifiedForRC rc merchantOpCity transporterConfig language registrationNo
-        when allVehicleDocsVerified $ do
-          QVRC.updateApproved (Just True) rc.id
-          -- Cancel pending vehicle inspection reminders for all drivers using this RC
-          cancelRemindersForRCByDocumentType rc.id DVC.InspectionHub
-          -- Record inspection completion for auto-trigger monitoring (per RC, not per driver)
-          recordDocumentCompletion DVC.InspectionHub rc.id.getId DRH.RC Nothing merchantOpCity.merchantId merchantOpCity.id
-          when (req.status == API.Types.ProviderPlatform.Operator.Driver.APPROVED && transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $ do
-            void $ withTryCatch "incrementApprovedVehicleRequests" $
-              FleetOpStats.incrementApprovedVehicleRequests request.operatorId analyticsDriverId transporterConfig False
-        let reqUpdatedStatus = if allVehicleDocsVerified then castReqStatusToDomain request.status else PENDING
-        void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
+      allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerifiedForRC rc merchantOpCity transporterConfig language registrationNo
+      when allVehicleDocsVerified $ do
+        QVRC.updateApproved (Just True) rc.id
+        -- Cancel pending vehicle inspection reminders for all drivers using this RC
+        cancelRemindersForRCByDocumentType rc.id DVC.InspectionHub
+        -- Record inspection completion for auto-trigger monitoring (per RC, not per driver)
+        recordDocumentCompletion DVC.InspectionHub rc.id.getId DRH.RC Nothing merchantOpCity.merchantId merchantOpCity.id
+        when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
+          void $ withTryCatch "incrementApprovedVehicleRequests" $
+            FleetOpStats.incrementApprovedVehicleRequests request.operatorId analyticsDriverId transporterConfig False
+      let reqUpdatedStatus = if allVehicleDocsVerified then castReqStatusToDomain request.status else PENDING
+      void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
 
-        whenJust mbPersonId $ \personId -> do
-          mbVehicle <- QVehicle.findById personId
-          when (isNothing mbVehicle && allVehicleDocsVerified) $
-            void $ withTryCatch "activateRCAutomatically:postDriverOperatorRespondHubRequest" (SStatus.activateRCAutomatically personId merchantOpCity registrationNo)
+      whenJust mbPersonId $ \personId -> do
+        mbVehicle <- QVehicle.findById personId
+        when (isNothing mbVehicle && allVehicleDocsVerified) $
+          void $ withTryCatch "activateRCAutomatically:postDriverOperatorRespondHubRequest" (SStatus.activateRCAutomatically personId merchantOpCity registrationNo)
 
     handleDriverInspectionApproval mShortId city request now personId merchantOpCity transporterConfig = do
       person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       language <- getPersonInfo merchantOpCity (Just person)
-      fork "enable driver after driver inspection" $ do
-        -- Only check driver docs, not vehicle docs (vehicle and driver enablement are segregated)
-        allDriverDocsVerified <- SStatus.checkAllDriverDocsVerifiedForDriver person merchantOpCity transporterConfig language
-        when allDriverDocsVerified $ do
-          QDIExtra.updateApproved (Just True) personId
-          -- Cancel pending driver inspection reminders
-          cancelRemindersForDriverByDocumentType personId DVC.DriverInspectionHub
-          -- Record driver inspection completion for auto-trigger monitoring
-          recordDocumentCompletion DVC.DriverInspectionHub personId.getId DRH.DRIVER (Just personId) merchantOpCity.merchantId merchantOpCity.id
-          void $ postDriverEnable mShortId city $ cast @DP.Person @Common.Driver personId
-        let reqUpdatedStatus = if allDriverDocsVerified then castReqStatusToDomain request.status else PENDING
-        void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
-      when (req.status == API.Types.ProviderPlatform.Operator.Driver.APPROVED && transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $ do
-        void $ withTryCatch "incrementApprovedDriverRequestsDaily" $
-          FleetOpStats.incrementApprovedDriverRequestsDaily request.operatorId personId.getId transporterConfig False
+      allDriverDocsVerified <- SStatus.checkAllDriverDocsVerifiedForDriver person merchantOpCity transporterConfig language
+      when allDriverDocsVerified $ do
+        QDIExtra.updateApproved (Just True) personId
+        -- Cancel pending driver inspection reminders
+        cancelRemindersForDriverByDocumentType personId DVC.DriverInspectionHub
+        -- Record driver inspection completion for auto-trigger monitoring
+        recordDocumentCompletion DVC.DriverInspectionHub personId.getId DRH.DRIVER (Just personId) merchantOpCity.merchantId merchantOpCity.id
+        void $ postDriverEnable mShortId city $ cast @DP.Person @Common.Driver personId
+        when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
+          void $ withTryCatch "incrementApprovedDriverRequestsDaily" $
+            FleetOpStats.incrementApprovedDriverRequestsDaily request.operatorId personId.getId transporterConfig False
+      let reqUpdatedStatus = if allDriverDocsVerified then castReqStatusToDomain request.status else PENDING
+      void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
 
     getMerchantInfo mShortId city = do
       merchant <- findMerchantByShortId mShortId
