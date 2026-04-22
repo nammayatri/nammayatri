@@ -120,6 +120,7 @@ getConfigJSON = \case
   Domain.PlasmaServiceConfig plasmaCfg -> case plasmaCfg of
     Plasma.LMSConfig cfg -> toJSON cfg
   Domain.InsuranceDeclarationServiceConfig iffcoTokioCfg -> toJSON iffcoTokioCfg
+  Domain.InsuranceSdkServiceConfig aarokyaCfg -> toJSON aarokyaCfg
   Domain.SettlementServiceConfig settlementCfg -> case settlementCfg of
     Settlement.HyperPGConfig srcCfg -> toJSON srcCfg
     Settlement.BillDeskConfig srcCfg -> toJSON srcCfg
@@ -201,6 +202,7 @@ getServiceName = \case
   Domain.PlasmaServiceConfig plasmaCfg -> case plasmaCfg of
     Plasma.LMSConfig _ -> Domain.PlasmaService Plasma.LMS
   Domain.InsuranceDeclarationServiceConfig _ -> Domain.InsuranceDeclarationService Domain.IffcoTokio
+  Domain.InsuranceSdkServiceConfig _ -> Domain.InsuranceSdkService Domain.Aarokya
   Domain.SettlementServiceConfig settlementCfg -> case settlementCfg of
     Settlement.HyperPGConfig _ -> Domain.SettlementService Settlement.HyperPG
     Settlement.BillDeskConfig _ -> Domain.SettlementService Settlement.BillDesk
@@ -277,6 +279,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.JuspayWalletService paymentServiceName -> Domain.JuspayWalletServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
   Domain.PlasmaService Plasma.LMS -> Domain.PlasmaServiceConfig . Plasma.LMSConfig <$> eitherValue configJSON
   Domain.InsuranceDeclarationService Domain.IffcoTokio -> Domain.InsuranceDeclarationServiceConfig <$> eitherValue configJSON
+  Domain.InsuranceSdkService Domain.Aarokya -> Domain.InsuranceSdkServiceConfig <$> eitherValue configJSON
   Domain.SettlementService Settlement.HyperPG -> Domain.SettlementServiceConfig . Settlement.HyperPGConfig <$> eitherValue configJSON
   Domain.SettlementService Settlement.BillDesk -> Domain.SettlementServiceConfig . Settlement.BillDeskConfig <$> eitherValue configJSON
   Domain.SettlementService Settlement.YesBiz -> Domain.SettlementServiceConfig . Settlement.YesBizConfig <$> eitherValue configJSON

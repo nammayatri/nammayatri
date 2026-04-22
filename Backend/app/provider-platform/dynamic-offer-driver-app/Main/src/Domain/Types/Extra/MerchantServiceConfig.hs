@@ -53,6 +53,18 @@ data InsuranceProvider = IffcoTokio
   deriving stock (Eq, Ord, Show, Read, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
+data AarokyaSdkConfig = AarokyaSdkConfig
+  { url :: BaseUrl,
+    apiKey :: EncryptedField 'AsEncrypted Text,
+    platformId :: Text
+  }
+  deriving (Eq, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
+
+data InsuranceSdkProvider = Aarokya
+  deriving stock (Eq, Ord, Show, Read, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
 data ServiceName
   = MapsService Maps.MapsService
   | SmsService Sms.SmsService
@@ -78,6 +90,7 @@ data ServiceName
   | JuspayWalletService Payment.PaymentService
   | PlasmaService Plasma.PlasmaService
   | InsuranceDeclarationService InsuranceProvider
+  | InsuranceSdkService InsuranceSdkProvider
   | SettlementService Settlement.SettlementService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
@@ -109,6 +122,7 @@ instance Show ServiceName where
   show (JuspayWalletService s) = "JuspayWalletService_" <> show s
   show (PlasmaService s) = "Plasma_" <> show s
   show (InsuranceDeclarationService s) = "InsuranceDeclaration_" <> show s
+  show (InsuranceSdkService s) = "InsuranceSdk_" <> show s
   show (SettlementService s) = "Settlement_" <> show s
 
 instance Read ServiceName where
@@ -212,6 +226,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "InsuranceDeclaration_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (InsuranceSdkService v1, r2)
+                 | r1 <- stripPrefix "InsuranceSdk_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
             ++ [ (SettlementService v1, r2)
                  | r1 <- stripPrefix "Settlement_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
@@ -246,6 +264,7 @@ data ServiceConfigD (s :: UsageSafety)
   | JuspayWalletServiceConfig !PaymentServiceConfig
   | PlasmaServiceConfig !Plasma.PlasmaServiceConfig
   | InsuranceDeclarationServiceConfig !IffcoTokioConfig
+  | InsuranceSdkServiceConfig !AarokyaSdkConfig
   | SettlementServiceConfig !Settlement.SettlementServiceConfig
   deriving (Generic, Eq, Show)
 

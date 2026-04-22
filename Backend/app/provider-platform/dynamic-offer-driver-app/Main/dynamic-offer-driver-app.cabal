@@ -43,6 +43,7 @@ library
       API.Dashboard.Exotel
       API.Dashboard.Fleet
       API.Dashboard.Fleet.Registration
+      API.External.Aarokya
       API.External.LiveEKD
       API.IGM
       API.Internal
@@ -81,6 +82,7 @@ library
       API.Internal.ViolationDetection
       API.Types.UI.TicketKapture
       API.UI
+      API.UI.Aarokya
       API.UI.Call
       API.UI.CallEvent
       API.UI.CancellationReason
@@ -216,6 +218,7 @@ library
       Domain.Action.Dashboard.RideBooking.Ride
       Domain.Action.Dashboard.RideBooking.SearchRequest
       Domain.Action.Dashboard.RideBooking.Volunteer
+      Domain.Action.External.Aarokya
       Domain.Action.External.LiveEKD
       Domain.Action.Internal.Auth
       Domain.Action.Internal.BulkLocUpdate
@@ -247,6 +250,7 @@ library
       Domain.Action.Internal.SpecialLocationUpsert
       Domain.Action.Internal.StopDetection
       Domain.Action.Internal.ViolationDetection
+      Domain.Action.UI.Aarokya
       Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent
@@ -368,6 +372,7 @@ library
       Domain.Types.DriverFlowStatus
       Domain.Types.DriverLocation
       Domain.Types.DriverWallet
+      Domain.Types.External.Aarokya
       Domain.Types.External.LiveEKD
       Domain.Types.Extra.ConditionalCharges
       Domain.Types.Extra.DriverFee
