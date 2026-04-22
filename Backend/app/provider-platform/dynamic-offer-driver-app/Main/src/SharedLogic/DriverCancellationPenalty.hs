@@ -180,7 +180,7 @@ accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterC
                     issuedToAddress = Nothing,
                     gstBreakdown = Nothing,
                     lineItems =
-                      [ InvoiceLineItem {description = "Driver Cancellation Penalty", quantity = 1, unitPrice = penaltyAmount, lineTotal = penaltyAmount, isExternalCharge = False}
+                      [ InvoiceLineItem {description = "Driver Cancellation Penalty", quantity = 1, unitPrice = penaltyAmount, lineTotal = penaltyAmount, isExternalCharge = False, invoiceLineItemType = DriverCancellationPenalty}
                       ],
                     isVat = False,
                     issuedToTaxNo = Nothing,

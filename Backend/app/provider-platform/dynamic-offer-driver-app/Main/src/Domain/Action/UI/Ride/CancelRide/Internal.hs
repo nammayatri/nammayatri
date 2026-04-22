@@ -62,7 +62,7 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), invoice, runFinance, transfer, transfer_)
+import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), InvoiceLineItemType (..), invoice, runFinance, transfer, transfer_)
 import qualified Lib.Finance.Domain.Types.Invoice as Invoice
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
@@ -350,10 +350,10 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
                 lineItems =
                   catMaybes
                     [ if baseCancellation > 0
-                        then Just InvoiceLineItem {description = "Customer Cancellation Fee", quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, isExternalCharge = False}
+                        then Just InvoiceLineItem {description = "Customer Cancellation Fee", quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, invoiceLineItemType = CustomerCancellationFee, isExternalCharge = False}
                         else Nothing,
                       if gstOnCancellation > 0
-                        then Just InvoiceLineItem {description = "GST on Cancellation Fee", quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, isExternalCharge = False}
+                        then Just InvoiceLineItem {description = "GST on Cancellation Fee", quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, invoiceLineItemType = GSTOnCancellationFee, isExternalCharge = False}
                         else Nothing
                     ],
                 isVat = False,
