@@ -58,6 +58,7 @@ data DriverCoinsFunctionType
   | BulkUploadFunctionV2 CoinMessage
   | MetroRideCompleted MetroRideType (Maybe Kernel.Prelude.Int)
   | RidesCompleted Kernel.Prelude.Int
+  | DriverIncentiveCohortRidesCompleted Kernel.Prelude.Int
   | QuizQuestionCompleted
   | BonusQuizCoins
   | CoinsRedemptionRefund
@@ -86,6 +87,7 @@ instance Show DriverCoinsFunctionType where
   show BonusQuizCoins = "BonusQuizCoins"
   show (BulkUploadFunctionV2 msg) = "BulkUploadFunctionV2 " <> show msg
   show (RidesCompleted n) = "RidesCompleted " <> show n
+  show (DriverIncentiveCohortRidesCompleted n) = "DriverIncentiveCohortRidesCompleted " <> show n
   show (CoinsRedemptionRefund) = "CoinsRedemptionRefund"
   show (FraudCoinsReversal) = "FraudCoinsReversal"
 
@@ -195,12 +197,24 @@ instance Read DriverCoinsFunctionType where
                  | r1 <- stripPrefix "RidesCompleted " r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (DriverIncentiveCohortRidesCompleted v1, r2)
+                 | r1 <- stripPrefix "DriverIncentiveCohortRidesCompleted " r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
             ++ [ (QuizQuestionCompleted, r2)
                  | r1 <- stripPrefix "QuizQuestionCompleted" r,
                    ((), r2) <- pure ((), r1)
                ]
             ++ [ (BonusQuizCoins, r2)
                  | r1 <- stripPrefix "BonusQuizCoins" r,
+                   ((), r2) <- pure ((), r1)
+               ]
+            ++ [ (CoinsRedemptionRefund, r2)
+                 | r1 <- stripPrefix "CoinsRedemptionRefund" r,
+                   ((), r2) <- pure ((), r1)
+               ]
+            ++ [ (FraudCoinsReversal, r2)
+                 | r1 <- stripPrefix "FraudCoinsReversal" r,
                    ((), r2) <- pure ((), r1)
                ]
       )
@@ -231,7 +245,10 @@ instance FromJSON DriverCoinsFunctionType where
       "BulkUploadFunction" -> pure BulkUploadFunction
       "QuizQuestionCompleted" -> pure QuizQuestionCompleted
       "BonusQuizCoins" -> pure BonusQuizCoins
+      "CoinsRedemptionRefund" -> pure CoinsRedemptionRefund
+      "FraudCoinsReversal" -> pure FraudCoinsReversal
       "RidesCompleted" -> RidesCompleted <$> obj .: "contents"
+      "DriverIncentiveCohortRidesCompleted" -> DriverIncentiveCohortRidesCompleted <$> obj .: "contents"
       "BulkUploadFunctionV2" -> BulkUploadFunctionV2 <$> obj .: "contents"
       "MetroRideCompleted" -> do
         contents <- obj .: "contents"
