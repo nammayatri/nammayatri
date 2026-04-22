@@ -41,6 +41,7 @@ import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
 import Lib.Finance.Domain.Types.DirectTaxTransaction (DirectTaxTransaction (..))
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import Lib.Finance.Domain.Types.IndirectTaxTransaction
+import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import Lib.Finance.Domain.Types.Invoice
 import Lib.Finance.Domain.Types.InvoiceLedgerLink
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntry)
@@ -350,7 +351,7 @@ findByIssuedTo = QInvoice.findByIssuedTo
 invoiceTypeToTransactionType :: InvoiceType -> TransactionType
 invoiceTypeToTransactionType invoiceType = case invoiceType of
   SubscriptionPurchase -> Subscription
-  Ride -> RideFare
+  Ride -> IndirectTax.RideFare
   RideCancellation -> Cancellation
 
 -- | Map invoiceType to DirectTax TransactionType (Direct Tax / TDS)
@@ -364,7 +365,7 @@ invoiceTypeToDirectTransactionType invoiceType = case invoiceType of
 sacCodeForTransactionType :: TransactionType -> Text
 sacCodeForTransactionType = \case
   Subscription -> "998314"
-  RideFare -> "996412"
+  IndirectTax.RideFare -> "996412"
   Incentive -> "998314"
   Cancellation -> "996412"
   BuyerCommission -> "998314"

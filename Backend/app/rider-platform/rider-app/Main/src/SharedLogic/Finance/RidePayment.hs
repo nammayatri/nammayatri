@@ -199,6 +199,7 @@ createRidePaymentLedger ctx rideFare gstAmount platformFee offerDiscountAmount c
                     quantity = 1,
                     unitPrice = rideFare,
                     lineTotal = rideFare,
+                    invoiceLineItemType = RideFareType,
                     isExternalCharge = False
                   },
                 InvoiceLineItem
@@ -206,6 +207,7 @@ createRidePaymentLedger ctx rideFare gstAmount platformFee offerDiscountAmount c
                     quantity = 1,
                     unitPrice = gstAmount,
                     lineTotal = gstAmount,
+                    invoiceLineItemType = RideGST,
                     isExternalCharge = False
                   },
                 InvoiceLineItem
@@ -213,6 +215,7 @@ createRidePaymentLedger ctx rideFare gstAmount platformFee offerDiscountAmount c
                     quantity = 1,
                     unitPrice = platformFee,
                     lineTotal = platformFee,
+                    invoiceLineItemType = PlatformFee,
                     isExternalCharge = False
                   },
                 InvoiceLineItem
@@ -220,6 +223,7 @@ createRidePaymentLedger ctx rideFare gstAmount platformFee offerDiscountAmount c
                     quantity = 1,
                     unitPrice = negate offerDiscountAmount,
                     lineTotal = negate offerDiscountAmount,
+                    invoiceLineItemType = OfferDiscount,
                     isExternalCharge = False
                   },
                 InvoiceLineItem
@@ -227,6 +231,7 @@ createRidePaymentLedger ctx rideFare gstAmount platformFee offerDiscountAmount c
                     quantity = 1,
                     unitPrice = cashbackPayoutAmount,
                     lineTotal = cashbackPayoutAmount,
+                    invoiceLineItemType = CashbackPayout,
                     isExternalCharge = False
                   }
               ],
@@ -292,6 +297,7 @@ createFullyDiscountedRidePaymentLedger ctx rideFare gstAmount platformFee offerD
                     quantity = 1,
                     unitPrice = rideFare,
                     lineTotal = rideFare,
+                    invoiceLineItemType = RideFareType,
                     isExternalCharge = False
                   },
                 InvoiceLineItem
@@ -299,6 +305,7 @@ createFullyDiscountedRidePaymentLedger ctx rideFare gstAmount platformFee offerD
                     quantity = 1,
                     unitPrice = gstAmount,
                     lineTotal = gstAmount,
+                    invoiceLineItemType = RideGST,
                     isExternalCharge = False
                   },
                 InvoiceLineItem
@@ -306,6 +313,7 @@ createFullyDiscountedRidePaymentLedger ctx rideFare gstAmount platformFee offerD
                     quantity = 1,
                     unitPrice = platformFee,
                     lineTotal = platformFee,
+                    invoiceLineItemType = PlatformFee,
                     isExternalCharge = False
                   },
                 InvoiceLineItem
@@ -313,6 +321,7 @@ createFullyDiscountedRidePaymentLedger ctx rideFare gstAmount platformFee offerD
                     quantity = 1,
                     unitPrice = negate offerDiscountAmount,
                     lineTotal = negate offerDiscountAmount,
+                    invoiceLineItemType = OfferDiscount,
                     isExternalCharge = False
                   }
               ],
@@ -432,6 +441,7 @@ createCancellationFeeLedger ctx cancellationFee cancellationGST = do
                     quantity = 1,
                     unitPrice = cancellationFee,
                     lineTotal = cancellationFee,
+                    invoiceLineItemType = CancellationFee,
                     isExternalCharge = False
                   },
                 InvoiceLineItem
@@ -439,6 +449,7 @@ createCancellationFeeLedger ctx cancellationFee cancellationGST = do
                     quantity = 1,
                     unitPrice = cancellationGST,
                     lineTotal = cancellationGST,
+                    invoiceLineItemType = CancellationGST,
                     isExternalCharge = False
                   }
               ],

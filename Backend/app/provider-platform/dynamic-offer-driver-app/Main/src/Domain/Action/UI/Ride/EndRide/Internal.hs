@@ -103,7 +103,7 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), invoice, runFinance, transfer, transfer_)
+import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), InvoiceLineItemType (..), invoice, runFinance, transfer, transfer_)
 import qualified Lib.Finance.Domain.Types.Invoice as Invoice
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler.Environment (JobCreatorEnv)
@@ -542,22 +542,22 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               lineItems =
                 catMaybes
                   [ if baseFare > 0
-                      then Just InvoiceLineItem {description = "Base Fare", quantity = 1, unitPrice = baseFare, lineTotal = baseFare, isExternalCharge = False}
+                      then Just InvoiceLineItem {description = "Base Fare", quantity = 1, unitPrice = baseFare, lineTotal = baseFare, invoiceLineItemType = BaseFare, isExternalCharge = False}
                       else Nothing,
                     if taxAmount > 0
-                      then Just InvoiceLineItem {description = "Tax", quantity = 1, unitPrice = taxAmount, lineTotal = taxAmount, isExternalCharge = False}
+                      then Just InvoiceLineItem {description = "Tax", quantity = 1, unitPrice = taxAmount, lineTotal = taxAmount, invoiceLineItemType = Tax, isExternalCharge = False}
                       else Nothing,
                     if tollAmount > 0
-                      then Just InvoiceLineItem {description = "Toll Charges", quantity = 1, unitPrice = tollAmount, lineTotal = tollAmount, isExternalCharge = True}
+                      then Just InvoiceLineItem {description = "Toll Charges", quantity = 1, unitPrice = tollAmount, lineTotal = tollAmount, invoiceLineItemType = TollCharges, isExternalCharge = True}
                       else Nothing,
                     if tollVatAmount > 0
-                      then Just InvoiceLineItem {description = "Toll Charges Tax", quantity = 1, unitPrice = tollVatAmount, lineTotal = tollVatAmount, isExternalCharge = True}
+                      then Just InvoiceLineItem {description = "Toll Charges Tax", quantity = 1, unitPrice = tollVatAmount, lineTotal = tollVatAmount, invoiceLineItemType = TollChargesTax, isExternalCharge = True}
                       else Nothing,
                     if parkingAmount > 0
-                      then Just InvoiceLineItem {description = "Parking Charges", quantity = 1, unitPrice = parkingAmount, lineTotal = parkingAmount, isExternalCharge = True}
+                      then Just InvoiceLineItem {description = "Parking Charges", quantity = 1, unitPrice = parkingAmount, lineTotal = parkingAmount, invoiceLineItemType = ParkingCharges, isExternalCharge = True}
                       else Nothing,
                     if commissionAmount > 0
-                      then Just InvoiceLineItem {description = "Platform Commission", quantity = 1, unitPrice = commissionAmount, lineTotal = commissionAmount, isExternalCharge = False}
+                      then Just InvoiceLineItem {description = "Platform Commission", quantity = 1, unitPrice = commissionAmount, lineTotal = commissionAmount, invoiceLineItemType = PlatformCommission, isExternalCharge = False}
                       else Nothing
                   ],
               gstBreakdown =

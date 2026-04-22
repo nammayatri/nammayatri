@@ -598,6 +598,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                                         quantity = 1,
                                         unitPrice = lineItemNetAmount,
                                         lineTotal = lineItemNetAmount,
+                                        invoiceLineItemType = SubscriptionPlanFee,
                                         isExternalCharge = False
                                       }
                                 else Nothing,
@@ -609,6 +610,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                                         quantity = 1,
                                         unitPrice = lineItemGstAmount,
                                         lineTotal = lineItemGstAmount,
+                                        invoiceLineItemType = GST,
                                         isExternalCharge = False
                                       }
                                 else Nothing
