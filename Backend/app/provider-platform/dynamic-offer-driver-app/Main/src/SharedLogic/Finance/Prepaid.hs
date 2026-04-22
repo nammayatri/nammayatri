@@ -33,15 +33,17 @@ import Kernel.External.Encryption (EncFlow, decrypt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common (Currency (..), HighPrecMoney)
 import Kernel.Types.Id
-import Kernel.Utils.Common (addUTCTime, getCurrentTime, logInfo, withTryCatch)
+import Kernel.Utils.Common (HasRequestId, addUTCTime, fork, getCurrentTime, logError, logInfo, withTryCatch)
 import Lib.Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified Storage.Cac.TransporterConfig as SCT
+import qualified SharedLogic.Finance.EInvoice
 import SharedLogic.Finance.Wallet (computeTdsRateReason)
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.SubscriptionPurchase as QSP
@@ -385,7 +387,12 @@ settlePrepaidHoldByReference counterpartyType ownerId referenceId finalAmount = 
         pendingEntries
 
 creditPrepaidBalance ::
-  (BeamFlow m r, EncFlow m r) =>
+  ( BeamFlow m r,
+    EncFlow m r,
+    Redis.HedisFlow m r,
+    Metrics.CoreMetrics m,
+    HasRequestId r
+  ) =>
   CounterpartyType ->
   Text -> -- Owner ID
   HighPrecMoney -> -- Ride credit amount
@@ -624,7 +631,16 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                   }
           invoiceResult <- createInvoice invoiceInput entryIds
           case invoiceResult of
-            Right inv -> pure (Just inv.id)
+            Right inv -> do
+              -- Fire-and-forget B2B e-invoice generation. Runs in a background
+              -- thread so Redis/HTTP calls never block invoice creation.
+              -- Any uncaught exception from the forked action is logged and
+              -- swallowed so the process is never crashed by a GSP failure.
+              fork "generate B2B e-invoice" $
+                SharedLogic.Finance.EInvoice.generateEInvoiceForInvoice inv
+                  `catch` (\(e :: SomeException) ->
+                             logError $ "GSTEInvoice: background fork failed: " <> show e)
+              pure (Just inv.id)
             Left _err -> pure Nothing
         _ -> pure Nothing
       mbBal <- getBalance ownerAccount.id

@@ -49,6 +49,7 @@ Invoice:
     merchantId: Text
     merchantOperatingCityId: Text
     createdAt: UTCTime
+    irn : Maybe Text
 
   sqlType:
     lineItems: jsonb
@@ -77,6 +78,11 @@ Invoice:
     updateStatus:
       kvFunction: updateWithKV
       params: [status]
+      where: id
+
+    updateIrnByInvoiceId:
+      kvFunction: updateWithKV
+      params: [irn]
       where: id
 
   extraOperations:

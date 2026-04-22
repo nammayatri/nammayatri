@@ -58,6 +58,7 @@ import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverGstin as DGQuery
+import qualified Storage.Queries.DriverGstinExtra as DGQueryExtra
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as IQuery
@@ -138,7 +139,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
             mdriverGstInformation <- DGQuery.findByDriverId person.id
             void $ callIdfy person mdriverGstInformation driverDocument transporterConfig
           _ -> do
-            gstCardDetails <- buildGstinCard person Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+            gstCardDetails <- buildGstinCard person Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
             DGQuery.create gstCardDetails
 
         case person.role of
@@ -170,8 +171,8 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
     _ -> pure False
   pure res
   where
-    buildGstinCard :: Person.Person -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow DGst.DriverGstin
-    buildGstinCard person address constitution_of_business date_of_liability is_provisional legal_name trade_name type_of_registration valid_from valid_upto pan_number = do
+    buildGstinCard :: Person.Person -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow DGst.DriverGstin
+    buildGstinCard person address constitution_of_business date_of_liability is_provisional legal_name trade_name type_of_registration valid_from valid_upto pan_number mbPincode mbStateName = do
       gstinEnc <- encrypt req.gstin
       now <- getCurrentTime
       uuid <- generateGUID
@@ -199,8 +200,8 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
             validFrom = valid_from >>= DVRC.parseDateTime,
             validUpto = valid_upto >>= DVRC.parseDateTime,
             verifiedBy = pure verifyBy,
-            pincode = Nothing,
-            stateName = Nothing
+            pincode = mbPincode,
+            stateName = mbStateName
           }
 
     callIdfy :: Person.Person -> Maybe DGst.DriverGstin -> DVRC.DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
@@ -264,7 +265,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
           extractedGst <- validateExtractedGst resp
           when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
             DVRC.validateDocument person.merchantId merchantOpCityId person.id Nothing Nothing extractedGst.pan_number ODC.GSTCertificate driverDocument
-          gstCardDetails <- buildGstinCard person extractedGst.address extractedGst.constitution_of_business extractedGst.date_of_liability extractedGst.is_provisional extractedGst.legal_name extractedGst.trade_name extractedGst.type_of_registration extractedGst.valid_from extractedGst.valid_upto extractedGst.pan_number
+          gstCardDetails <- buildGstinCard person extractedGst.address extractedGst.constitution_of_business extractedGst.date_of_liability extractedGst.is_provisional extractedGst.legal_name extractedGst.trade_name extractedGst.type_of_registration extractedGst.valid_from extractedGst.valid_upto extractedGst.pan_number Nothing Nothing
           DGQuery.create gstCardDetails
       pure Success
 
@@ -311,7 +312,9 @@ onVerifyGstHandler person imageId1 imageId2 output = do
   logDebug $ "onVerifyGstHandler: " <> show output
   mEncryptedGstinNumber <- encrypt `mapM` output.gstin
   let isValidGst = output.gstinStatus == Just "Active"
-  DGQuery.updateVerificationStatus (if isValidGst then Documents.VALID else Documents.INVALID) person.id
+      verificationStatus = if isValidGst then Documents.VALID else Documents.INVALID
+      mbPrincipalAddr = output.principalPlaceOfBusinessFields
+  DGQueryExtra.updateVerificationStatusWithPlaceDetails verificationStatus (mbPrincipalAddr >>= (.pincode)) (mbPrincipalAddr >>= (.stateName)) person.id
   when (DCommon.checkFleetOwnerRole person.role) $ do
     QFOI.updateGstImage mEncryptedGstinNumber (Just imageId1.getId) person.id
   (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
