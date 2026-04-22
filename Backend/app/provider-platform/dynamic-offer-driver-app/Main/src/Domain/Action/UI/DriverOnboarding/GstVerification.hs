@@ -96,10 +96,34 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
     Just False -> do
       gstinHash <- getDbHash req.gstin
       gstInfoList <- DGQuery.findAllByEncryptedGstNumber gstinHash
-      when (length gstInfoList > 1) $ throwError GstAlreadyLinked
+      when (length gstInfoList > 1) $ do
+        logError $
+          "GstVerification: GSTIN already linked with multiple drivers; refusing duplicate. driverId="
+            <> person.id.getId
+            <> " merchantOpCityId="
+            <> merchantOpCityId.getId
+            <> " gstin="
+            <> maskText req.gstin
+            <> " existingCount="
+            <> show (length gstInfoList)
+            <> " existingDriverIds="
+            <> show (map ((.getId) . (.driverId)) gstInfoList)
+        throwError (GstDuplicateAcrossDrivers person.id.getId)
       gstPersonDetails <- Person.getDriversByIdIn (map (.driverId) gstInfoList)
       let getRoles = map (.role) gstPersonDetails
-      when (person.role `elem` getRoles) $ throwError GstAlreadyLinked
+      when (person.role `elem` getRoles) $ do
+        logError $
+          "GstVerification: GSTIN already linked with another driver of the same role. driverId="
+            <> person.id.getId
+            <> " role="
+            <> show person.role
+            <> " merchantOpCityId="
+            <> merchantOpCityId.getId
+            <> " gstin="
+            <> maskText req.gstin
+            <> " conflictingDriverIds="
+            <> show (map ((.getId) . (.id)) gstPersonDetails)
+        throwError (GstInUseBySameRoleDriver person.id.getId)
     _ -> pure ()
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
@@ -218,8 +242,17 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
       case mdriverGstInformation of
         Just driverGstInformation -> do
           let verificationStatus = driverGstInformation.verificationStatus
-          when (verificationStatus == Documents.VALID) $
-            throwError GstAlreadyLinked
+          when (verificationStatus == Documents.VALID) $ do
+            logError $
+              "GstVerification: driver already has a VALID GST document; refusing re-verification. driverId="
+                <> person.id.getId
+                <> " merchantOpCityId="
+                <> merchantOpCityId.getId
+                <> " existingGstDocId="
+                <> driverGstInformation.id.getId
+                <> " requestedGstin="
+                <> maskText req.gstin
+            throwError (DriverGstAlreadyVerified person.id.getId)
 
           resp <- Verification.extractGSTImage person.merchantId merchantOpCityId extractReq
           extractedGst <- validateExtractedGst resp
