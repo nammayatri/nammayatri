@@ -82,6 +82,7 @@ import SharedLogic.GoogleTranslate (TranslateFlow)
 import SharedLogic.Ride (releaseLien, updateOnRideStatusWithAdvancedRideCheck)
 import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
+import qualified Domain.Types.VehicleVariant as Veh
 import qualified SharedLogic.UserCancellationDues as UserCancellationDues
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -199,7 +200,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             -- Only applies to pickup-gate bookings cancelled by the user (ByDriver cancels keep demand live).
             when (bookingCReason.source == SBCR.ByUser && isJust booking.pickupGateId) $
               fork "specialZoneDemandDecrementOnCancel" $
-                SpecialZoneDriverDemand.runDemandDecrementForBooking booking.id.getId booking.pickupGateId (show booking.vehicleServiceTier)
+                SpecialZoneDriverDemand.runDemandDecrementForBooking booking.id.getId booking.pickupGateId (show $ Veh.castServiceTierToVariant booking.vehicleServiceTier)
             -- Supply decrement: driver cancelled pre-start ride → retract the pickup-zone commitment.
             when (bookingCReason.source == SBCR.ByDriver) $
               fork "specialZoneSupplyDecrementOnDriverCancel" $
