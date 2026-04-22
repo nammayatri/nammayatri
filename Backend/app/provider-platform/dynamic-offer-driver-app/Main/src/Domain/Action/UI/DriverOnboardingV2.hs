@@ -842,6 +842,7 @@ postDriverRegisterGstin (mbPersonId, merchantId, merchantOpCityId) req = do
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let mbGstVerificationService = merchantServiceUsageConfig.gstVerificationService
 
+  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mbGstInfo <- QDGTIN.findUnInvalidByGstNumber req.gstNumber
   whenJust mbGstInfo $ \gstInfo -> do
     when (gstInfo.driverId /= personId) $ do
@@ -850,7 +851,7 @@ postDriverRegisterGstin (mbPersonId, merchantId, merchantOpCityId) req = do
     when (gstInfo.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $ do
       ImageQuery.deleteById req.imageId1
       throwError $ DocumentUnderManualReview "GSTIN"
-    when (gstInfo.verificationStatus == Documents.VALID) $ do
+    when (gstInfo.verificationStatus == Documents.VALID && not (fromMaybe False transporterConfig.allowGstReupload)) $ do
       ImageQuery.deleteById req.imageId1
       throwError $ DocumentAlreadyValidated "GSTIN"
   verificationStatus <- case mbGstVerificationService of

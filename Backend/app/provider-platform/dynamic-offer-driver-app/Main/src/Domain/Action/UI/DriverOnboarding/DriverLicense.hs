@@ -192,7 +192,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
             if fromMaybe False documentVerificationConfig.allowLicenseTransfer
               then pure ()
               else unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated
-            when (driverLicense.verificationStatus == Documents.VALID && not (fromMaybe False documentVerificationConfig.allowLicenseTransfer)) $ do
+            when (driverLicense.verificationStatus == Documents.VALID && not (fromMaybe False documentVerificationConfig.allowLicenseTransfer) && not (fromMaybe False transporterConfig.allowDlReupload)) $ do
               Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
               throwError $ DocumentAlreadyValidated "DL"
             if documentVerificationConfig.doStrictVerifcation
