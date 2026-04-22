@@ -25,6 +25,7 @@ import Data.Time.Clock (UTCTime (UTCTime), secondsToDiffTime, utctDay)
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.ScheduledPayout as ScheduledPayout
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.TransporterConfig as DTC
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
@@ -81,6 +82,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareParameters as QFareParams
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.ScheduledPayout as QScheduledPayout
 import qualified Storage.Queries.SubscriptionPurchase as QSubPurchase
 
 runReconciliationJob ::
@@ -448,8 +450,13 @@ doReconciliationPgPayoutVsPayoutRequest merchantId merchantOpCityId startTime en
       Nothing -> return Nothing
       Just prId -> do
         mPr <- QPayoutRequest.findById (Id prId)
+        mResolvedPr <- case mPr of
+          Just pr -> pure (Just pr)
+          Nothing -> do
+            mSp <- QScheduledPayout.findById (Id prId)
+            pure $ fmap scheduledPayoutToPayoutRequest mSp
         return $
-          mPr >>= \pr ->
+          mResolvedPr >>= \pr ->
             let okStatus = pr.status == PayoutRequest.CREDITED
                 okDate = case report.txnDate of
                   Just txnT -> utctDay txnT == utctDay pr.createdAt
@@ -654,3 +661,50 @@ createSummary reconType entries startTime now merchantId merchantOpCityId summar
           createdAt = now,
           updatedAt = now
         }
+
+scheduledPayoutToPayoutRequest :: ScheduledPayout.ScheduledPayout -> PayoutRequest.PayoutRequest
+scheduledPayoutToPayoutRequest sp =
+  PayoutRequest.PayoutRequest
+    { id = cast sp.id,
+      entityName = Nothing,
+      entityId = sp.rideId,
+      entityRefId = Just sp.bookingId,
+      beneficiaryId = sp.driverId,
+      amount = sp.amount,
+      status = castScheduledStatus sp.status,
+      retryCount = sp.retryCount,
+      failureReason = sp.failureReason,
+      payoutTransactionId = sp.payoutTransactionId,
+      cashMarkedById = (.getId) <$> sp.markCashPaidBy,
+      cashMarkedByName = Nothing,
+      cashMarkedAt = Nothing,
+      expectedCreditTime = sp.expectedCreditTime,
+      scheduledAt = sp.expectedCreditTime,
+      customerVpa = Nothing,
+      customerPhone = Nothing,
+      customerEmail = Nothing,
+      customerName = Nothing,
+      remark = Nothing,
+      orderType = Nothing,
+      city = Nothing,
+      merchantId = maybe "" (.getId) sp.merchantId,
+      merchantOperatingCityId = maybe "" (.getId) sp.merchantOperatingCityId,
+      payoutFee = Nothing,
+      payoutType = Nothing,
+      coverageFrom = Nothing,
+      coverageTo = Nothing,
+      createdAt = sp.createdAt,
+      updatedAt = sp.updatedAt
+    }
+
+castScheduledStatus :: ScheduledPayout.ScheduledPayoutStatus -> PayoutRequest.PayoutRequestStatus
+castScheduledStatus = \case
+  ScheduledPayout.INITIATED -> PayoutRequest.INITIATED
+  ScheduledPayout.PROCESSING -> PayoutRequest.PROCESSING
+  ScheduledPayout.CREDITED -> PayoutRequest.CREDITED
+  ScheduledPayout.AUTO_PAY_FAILED -> PayoutRequest.AUTO_PAY_FAILED
+  ScheduledPayout.RETRYING -> PayoutRequest.RETRYING
+  ScheduledPayout.FAILED -> PayoutRequest.FAILED
+  ScheduledPayout.CANCELLED -> PayoutRequest.CANCELLED
+  ScheduledPayout.CASH_PAID -> PayoutRequest.CASH_PAID
+  ScheduledPayout.CASH_PENDING -> PayoutRequest.CASH_PENDING
