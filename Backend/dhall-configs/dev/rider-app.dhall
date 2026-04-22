@@ -213,7 +213,7 @@ let slackCfg =
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let kafkaProducerCfg =
-      { brokers = [ "localhost:29092" ]
+      { brokers = [ "127.0.0.1:29092" ] -- ONLY LOCAL DO NOT RUN IN MASTER PROD
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
@@ -467,7 +467,7 @@ in  { esqDBCfg
     , jobInfoMapx
     , internalEndPointMap = common.internalEndPointMap
     , schedulerSetName = "Scheduled_Jobs_Rider"
-    , schedulerType = common.schedulerType.RedisBased
+    , schedulerType = common.schedulerType.DbBased -- ONLY LOCAL DO NOT RUN IN MASTER PROD
     , _version = "2.1.0"
     , hotSpotExpiry = +604800
     , cacConfig

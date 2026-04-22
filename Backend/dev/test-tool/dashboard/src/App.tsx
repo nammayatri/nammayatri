@@ -8,6 +8,8 @@ import { callStep, startLocationPinger, stopLocationPinger, setGlobalLog } from 
 import { buildApiCatalog } from './api-catalog';
 import { getLocationsForCity } from './mock-data/locations';
 import { Config, LogEntry, Step, StepResult } from './types';
+import { DEFAULT_RECONCILIATION_TYPE, type ReconciliationType } from './backendTypes';
+import { fetchTestContext, type ReconHarnessDefaults } from './services/context';
 import './App.css';
 
 const defaultConfig: Config = {
@@ -526,6 +528,126 @@ function buildFleetOnboardingSteps(requiresAdminApproval: boolean): Record<strin
   };
 }
 
+function buildReconciliationFlowSteps(): Record<string, Step[]> {
+  return {
+    'prereq-check': [
+      { id: 'recon-readiness', name: 'Check Readiness', method: 'GET', service: 'internal',
+        path: (ctx) => `/api/finance/readiness?reconciliationType=${encodeURIComponent(ctx.reconType)}&merchantId=${encodeURIComponent(ctx.driverMerchantId)}&merchantOperatingCityId=${encodeURIComponent(ctx.driverMerchantOperatingCityId)}&startTime=${encodeURIComponent(ctx.reconStartTime)}&endTime=${encodeURIComponent(ctx.reconEndTime)}`,
+        auth: false,
+        save: (d, ctx) => { ctx.reconReadiness = d; },
+        assert: (d) => {
+          if (!d?.dbPrerequisites?.ok) return d?.error || 'DB prerequisites failed';
+          const grant = d?.dbPrerequisites?.schedulerJobGrant;
+          if (grant && !grant.ok) return `Scheduler job GRANT failed: ${grant.error || 'unknown'}`;
+          const flush = d?.dbPrerequisites?.transporterConfigCacheFlush;
+          if (flush && !flush.ok) return `Redis cache flush failed: ${flush.error || 'unknown'}`;
+          if (d.dbPrerequisites.transporterConfigRowsUpdated === 0) {
+            return 'No transporter_config row for merchantOperatingCityId — select a driver/city in the config bar';
+          }
+          return null;
+        },
+        summary: (d) => {
+          const pre = d?.dbPrerequisites;
+          const g = pre?.schedulerJobGrant;
+          const grant = g?.ok ? 'GRANT ok' : `GRANT: ${g?.error || 'failed'}`;
+          const cf = pre?.transporterConfigCacheFlush;
+          const results = (cf?.results || []) as { deleted?: number; error?: string }[];
+          const removed = results.filter((x) => (x.deleted ?? 0) > 0).length;
+          const cache =
+            cf?.ok === false
+              ? `cache: ${cf?.error || 'flush failed'}`
+              : `cache ${removed}/${results.length} redis key(s) removed`;
+          const preBits = pre
+            ? `tc=${pre.transporterConfigRowsUpdated} | ${grant} | ${cache}`
+            : '';
+          const st = `${d?.status || 'UNKNOWN'} | ${Array.isArray(d?.checks) ? d.checks.filter((c: any) => c.ok).length : 0}/${Array.isArray(d?.checks) ? d.checks.length : 0} checks`;
+          return preBits ? `${preBits} | ${st}` : st;
+        },
+      },
+    ],
+    'seed-payment-settlement': [
+      { id: 'seed-payment-settlement', name: 'Seed Payment Settlement', method: 'POST', service: 'internal',
+        path: '/api/finance/seed-payment-settlement',
+        auth: false,
+        skip: (ctx) => ctx.reconType !== 'PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION' || !ctx.subscriptionPurchaseId,
+        body: (ctx) => ({ subscriptionPurchaseId: ctx.subscriptionPurchaseId }),
+        save: (d, ctx) => { ctx.seededPaymentSettlement = d.seededRow; },
+        assert: (d) => d?.ok ? null : 'Payment settlement seed failed',
+        summary: (d) => d?.seededRow?.id || '',
+      },
+    ],
+    'trigger-recon': [
+      { id: 'trigger-recon', name: 'Trigger Reconciliation', method: 'POST', service: 'internal',
+        path: '/api/finance/trigger-recon',
+        auth: false,
+        body: (ctx) => ({
+          reconciliationType: ctx.reconType,
+          merchantId: ctx.driverMerchantId,
+          merchantOperatingCityId: ctx.driverMerchantOperatingCityId,
+          startTime: ctx.reconStartTime,
+          endTime: ctx.reconEndTime,
+        }),
+        save: (d, ctx) => {
+          ctx.reconJobId = d.jobId || d.response?.jobId;
+          ctx.reconTriggerResponse = d;
+        },
+        assert: (d) => d?.jobId || d?.response?.jobId || d?.ok ? null : 'Reconciliation trigger failed',
+        summary: (d) => {
+          if (d?.mode === 'scheduler_api') {
+            return d?.url ? `Scheduler API (${d.url})` : 'Scheduler API';
+          }
+          return 'Triggered';
+        },
+      },
+    ],
+    'poll-job': [
+      { id: 'poll-recon-job', name: 'Poll Reconciliation Job', method: 'GET', service: 'internal',
+        path: (ctx) => {
+          if (ctx.reconJobId) {
+            return `/api/finance/job-status?jobId=${encodeURIComponent(ctx.reconJobId)}`;
+          }
+          return `/api/finance/job-status?reconciliationType=${encodeURIComponent(ctx.reconType)}&merchantId=${encodeURIComponent(ctx.driverMerchantId)}&merchantOperatingCityId=${encodeURIComponent(ctx.driverMerchantOperatingCityId)}&startTime=${encodeURIComponent(ctx.reconStartTime)}&endTime=${encodeURIComponent(ctx.reconEndTime)}`;
+        },
+        auth: false,
+        poll: { intervalMs: 3000, timeoutMs: 60000 },
+        save: (d, ctx) => {
+          ctx.reconJobStatus = d.status;
+          if (d?.id && !ctx.reconJobId) {
+            ctx.reconJobId = d.id;
+          }
+        },
+        assert: (d) => d?.status === 'Completed' ? null : `Job status: ${d?.status || 'UNKNOWN'}`,
+        summary: (d) => d?.id ? `${d.status} | ${d.id}` : (d?.status || ''),
+      },
+    ],
+    'verify-summary': [
+      { id: 'verify-recon-summary', name: 'Verify Reconciliation Summary', method: 'GET', service: 'internal',
+        path: (ctx) => `/api/finance/recon-summaries?from=${encodeURIComponent(ctx.reconStartTime)}&to=${encodeURIComponent(ctx.reconEndTime)}&reconciliationType=${encodeURIComponent(ctx.reconType)}&merchantId=${encodeURIComponent(ctx.driverMerchantId)}&merchantOperatingCityId=${encodeURIComponent(ctx.driverMerchantOperatingCityId)}`,
+        auth: false,
+        save: (d, ctx) => {
+          const list = Array.isArray(d) ? d : [];
+          ctx.reconSummary = list[0];
+          ctx.reconSummaryId = list[0]?.id;
+        },
+        assert: (d) => Array.isArray(d) && d.length > 0 ? null : 'No recon summary found',
+        summary: (d) => {
+          const first = Array.isArray(d) ? d[0] : null;
+          return first ? `Status: ${first.status} | Matched: ${first.matched_records}` : '';
+        },
+      },
+    ],
+    'verify-entries': [
+      { id: 'verify-recon-entries', name: 'Verify Reconciliation Entries', method: 'GET', service: 'internal',
+        path: (ctx) => `/api/finance/recon-entries?summaryId=${encodeURIComponent(ctx.reconSummaryId)}`,
+        auth: false,
+        assert: (d) => Array.isArray(d) && d.length > 0 ? null : 'No recon entries found',
+        summary: (d) => `${Array.isArray(d) ? d.length : 0} entries`,
+      },
+    ],
+  };
+}
+
+
 const FLOWS: FlowDef[] = [
   { id: 'ride-flow', name: 'Ride Flow', description: 'Full ride: search, book, start, end',
     nodes: {}, nodeOrder: ['discovery', 'driver-accept', 'booking', 'fulfillment'], hasDriverSetup: true },
@@ -533,6 +655,8 @@ const FLOWS: FlowDef[] = [
     nodes: {}, nodeOrder: ['check-dues', 'capture-payment', 'clear-dues', 'cancellation-dues'] },
   { id: 'fleet-onboarding', name: 'Fleet Onboarding', description: 'Register fleet owner with document verification',
     nodes: {}, nodeOrder: ['fleet-auth', 'fleet-doc-upload', 'fleet-verify-docs', 'fleet-register'], hasDriverSetup: false },
+  { id: 'reconciliation-flow', name: 'Reconciliation', description: 'Check readiness, seed local data, trigger recon, poll, verify',
+    nodes: {}, nodeOrder: ['prereq-check', 'seed-payment-settlement', 'trigger-recon', 'poll-job', 'verify-summary', 'verify-entries'] },
 ];
 
 function App() {
@@ -548,6 +672,7 @@ function App() {
   const [selectedDriverVariant, setSelectedDriverVariant] = useState('');
   const [selectedDriverMerchantId, setSelectedDriverMerchantId] = useState('');
   const [selectedDriverPersonId, setSelectedDriverPersonId] = useState('');
+  const [selectedDriverMerchantOperatingCityId, setSelectedDriverMerchantOperatingCityId] = useState('');
   const [driverAvailable, setDriverAvailable] = useState(false);
   // Fleet onboarding state
   const [fleetType, setFleetType] = useState<'NORMAL_FLEET' | 'BUSINESS_FLEET'>('NORMAL_FLEET');
@@ -578,6 +703,13 @@ function App() {
   const [rideEndMode, setRideEndMode] = useState<'actual' | 'downward-recompute' | 'upward-recompute'>('actual');
   const [skipTip, setSkipTip] = useState(false);
   const [skippedNodes, setSkippedNodes] = useState<Record<string, boolean>>({});
+  const [reconType, setReconType] = useState<ReconciliationType>(DEFAULT_RECONCILIATION_TYPE);
+  const [reconDate, setReconDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [subscriptionPurchaseId, setSubscriptionPurchaseId] = useState('');
+  /** Driver BPP merchant + MOC for reconciliation flow — NAMMA Kochi from context-api (matches local dashboard tokens). */
+  const [reconHarness, setReconHarness] = useState<ReconHarnessDefaults | null>(null);
+  /** Same as state; updated synchronously before initCtx so Run never uses stale React state (race with config-bar driver = Bharat). */
+  const reconHarnessRef = useRef<ReconHarnessDefaults | null>(null);
 
   const abortRef = useRef(false);
   const ctxRef = useRef<Record<string, any>>({});
@@ -588,6 +720,7 @@ function App() {
   const allSteps = useMemo(() => {
     if (activeFlowId === 'dues-flow') return buildDuesFlowSteps();
     if (activeFlowId === 'fleet-onboarding') return buildFleetOnboardingSteps(requiresAdminApproval);
+    if (activeFlowId === 'reconciliation-flow') return buildReconciliationFlowSteps();
     return buildRideFlowSteps();
   }, [activeFlowId, requiresAdminApproval]);
   const activeFlow = FLOWS.find(f => f.id === activeFlowId) || FLOWS[0];
@@ -598,6 +731,32 @@ function App() {
   }, []);
 
   useEffect(() => { setGlobalLog(log); }, [log]);
+
+  useEffect(() => {
+    fetchTestContext().then(ctx => {
+      if (ctx?.recon_harness) {
+        reconHarnessRef.current = ctx.recon_harness;
+        setReconHarness(ctx.recon_harness);
+      }
+    });
+  }, []);
+
+  /** Refresh harness from DB before recon steps; avoids race where initCtx ran before /api/context finished. */
+  const ensureReconHarnessForReconFlow = useCallback(async (): Promise<boolean> => {
+    if (activeFlowId !== 'reconciliation-flow') return true;
+    const ctx = await fetchTestContext();
+    const h = ctx?.recon_harness;
+    if (h?.merchant_id && h?.merchant_operating_city_id) {
+      reconHarnessRef.current = h;
+      setReconHarness(h);
+      return true;
+    }
+    log(
+      'error',
+      'recon_harness missing (NAMMA_YATRI_PARTNER / Kochi). Check context API /api/context and atlas_driver_offer_bpp merchant + moc rows.',
+    );
+    return false;
+  }, [activeFlowId, log]);
 
   // Fetch payment methods when card payment selected or dues flow active
   const needPaymentMethods = paymentPreset === 'with-card-payment' || activeFlowId === 'dues-flow';
@@ -669,12 +828,21 @@ function App() {
     const driverLoc = locs[driverLocationIdx]?.gps || fromLoc?.gps || locs[0]?.gps;
     const toLoc = locs[toLocationIdx] || locs[Math.min(1, locs.length - 1)];
 
+    let merchantId = selectedDriverMerchantId || '';
+    let mocId = selectedDriverMerchantOperatingCityId || '';
+    const harness = reconHarnessRef.current;
+    if (activeFlowId === 'reconciliation-flow' && harness?.merchant_id && harness?.merchant_operating_city_id) {
+      merchantId = harness.merchant_id;
+      mocId = harness.merchant_operating_city_id;
+    }
+
     // Merge base config into existing context — preserves values saved by previous steps
     Object.assign(ctxRef.current, {
       driverToken: selectedDriverToken || '',
       driverPersonId: selectedDriverPersonId || '',
       driverVehicleVariant: selectedDriverVariant || 'SUV',
-      driverMerchantId: selectedDriverMerchantId || '',
+      driverMerchantId: merchantId,
+      driverMerchantOperatingCityId: mocId,
       driverLocation: driverLoc,
       searchOrigin: fromLoc?.gps,
       searchDestination: toLoc?.gps,
@@ -695,8 +863,13 @@ function App() {
       gstNumber,
       adminEmail,
       adminPassword,
+      reconType,
+      reconDate,
+      reconStartTime: `${reconDate}T00:00:00Z`,
+      reconEndTime: `${reconDate}T23:59:59Z`,
+      subscriptionPurchaseId: subscriptionPurchaseId || undefined,
     });
-  }, [selectedCity, selectedDriverToken, selectedDriverVariant, selectedDriverMerchantId, selectedDriverPersonId, driverLocationIdx, fromLocationIdx, toLocationIdx, paymentPreset, selectedPaymentMethodId, captureRideId, tipAmount, skipTip, rideEndMode, fleetType, fleetMobile, merchantShortId, aadhaarNumber, panNumber, gstNumber, adminEmail, adminPassword]);
+  }, [selectedCity, selectedDriverToken, selectedDriverVariant, selectedDriverMerchantId, selectedDriverPersonId, selectedDriverMerchantOperatingCityId, driverLocationIdx, fromLocationIdx, toLocationIdx, paymentPreset, selectedPaymentMethodId, reconType, reconDate, subscriptionPurchaseId, captureRideId, tipAmount, skipTip, rideEndMode, fleetType, fleetMobile, merchantShortId, aadhaarNumber, panNumber, gstNumber, adminEmail, adminPassword, activeFlowId]);
 
   const executeStep = useCallback(async (step: Step): Promise<boolean> => {
     // Dynamic skip check
@@ -804,6 +977,11 @@ function App() {
     if (!steps) return;
     setRunningNodeId(nodeId);
     setIsRunning(true);
+    if (!(await ensureReconHarnessForReconFlow())) {
+      setIsRunning(false);
+      setRunningNodeId(null);
+      return;
+    }
     initCtx();
     // Always sync latest captureRideId from input
     ctxRef.current.captureRideId = captureRideIdRef.current || undefined;
@@ -821,7 +999,7 @@ function App() {
     }
     setIsRunning(false);
     setRunningNodeId(null);
-  }, [allSteps, executeStep, initCtx, log]);
+  }, [allSteps, executeStep, initCtx, log, ensureReconHarnessForReconFlow]);
 
   const makeDriverAvailable = useCallback(async () => {
     initCtx();
@@ -850,6 +1028,9 @@ function App() {
     abortRef.current = false;
     // Full reset for Run All — start fresh
     ctxRef.current = {};
+    if (!(await ensureReconHarnessForReconFlow())) {
+      return;
+    }
     initCtx();
 
     // Ensure driver is available first (only for flows that need it)
@@ -916,7 +1097,7 @@ function App() {
     setRunningNodeId(null);
     stopLocationPinger();
     log('info', '-- Flow complete --');
-  }, [isRunning, initCtx, driverAvailable, allSteps, executeStep, log, selectedCity, driverLocationIdx]);
+  }, [isRunning, initCtx, driverAvailable, allSteps, executeStep, log, selectedCity, driverLocationIdx, ensureReconHarnessForReconFlow, activeFlow, activeFlowId, requiresAdminApproval, skippedNodes, selectedOutcome]);
 
   const stop = useCallback(() => {
     abortRef.current = true;
@@ -979,7 +1160,7 @@ function App() {
             ) : (
             <>
             <ConfigBar config={config} onChange={setConfig} onRun={runAll} onStop={stop} isRunning={isRunning}
-              onCityChange={setSelectedCity} onDriverChange={(token, variant, merchantId, personId) => { setSelectedDriverToken(token); setSelectedDriverVariant(variant || ''); setSelectedDriverMerchantId(merchantId || ''); setSelectedDriverPersonId(personId || ''); }}
+              onCityChange={setSelectedCity} onDriverChange={(token, variant, merchantId, personId, merchantOperatingCityId) => { setSelectedDriverToken(token); setSelectedDriverVariant(variant || ''); setSelectedDriverMerchantId(merchantId || ''); setSelectedDriverPersonId(personId || ''); setSelectedDriverMerchantOperatingCityId(merchantOperatingCityId || ''); }}
               onMerchantShortIdChange={setMerchantShortId}
               onAdminCredentialsChange={(email, password) => { setAdminEmail(email); setAdminPassword(password); }} />
             <RideFlowTree
@@ -1010,6 +1191,12 @@ function App() {
               onSkipTipChange={setSkipTip}
               rideEndMode={rideEndMode}
               onRideEndModeChange={(m) => setRideEndMode(m as 'actual' | 'downward-recompute')}
+              reconType={reconType}
+              onReconTypeChange={setReconType}
+              reconDate={reconDate}
+              onReconDateChange={setReconDate}
+              subscriptionPurchaseId={subscriptionPurchaseId}
+              onSubscriptionPurchaseIdChange={setSubscriptionPurchaseId}
               onMakeDriverAvailable={makeDriverAvailable}
               onRunNode={runNodeSteps}
               onRunAll={runAll}
@@ -1035,6 +1222,13 @@ function App() {
               onAdminEmailChange={setAdminEmail}
               adminPassword={adminPassword}
               onAdminPasswordChange={setAdminPassword}
+              reconHarnessHint={
+                reconHarness?.missing
+                  ? 'Could not resolve NAMMA_YATRI_PARTNER / Kochi in driver DB — run BPP seeds.'
+                  : reconHarness?.merchant_id
+                    ? `Finance / recon API calls use ${reconHarness.merchant_short_id || 'NAMMA_YATRI_PARTNER'} / ${reconHarness.city || 'Kochi'} (driver dropdown above does not apply to this flow).`
+                    : undefined
+              }
             />
             </>
             )}

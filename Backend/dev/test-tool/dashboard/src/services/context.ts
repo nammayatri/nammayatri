@@ -16,6 +16,7 @@ export interface DriverInfo {
   first_name: string;
   merchant: string;
   merchant_id: string;
+  city_id: string;
   city: string;
   currency: string;
   token: string;
@@ -49,12 +50,23 @@ export interface AdminCredentials {
   [merchantShortId: string]: { email: string; password: string };
 }
 
+/** Resolved from DB — NAMMA_YATRI_PARTNER + Kochi by default (local registration_token seeds). */
+export interface ReconHarnessDefaults {
+  merchant_id?: string;
+  merchant_operating_city_id?: string;
+  merchant_short_id?: string;
+  city?: string;
+  missing?: boolean;
+  error?: string;
+}
+
 export interface TestContext {
   merchants: { rider_merchants: MerchantInfo[]; driver_merchants: MerchantInfo[] };
   riders: RiderInfo[];
   drivers: DriverInfo[];
   variants: VariantInfo[];
   admin_credentials: AdminCredentials;
+  recon_harness?: ReconHarnessDefaults;
 }
 
 function safeArray<T>(val: any): T[] {
@@ -74,6 +86,7 @@ export async function fetchTestContext(): Promise<TestContext | null> {
       drivers: safeArray(d?.drivers),
       variants: safeArray(d?.variants),
       admin_credentials: d?.admin_credentials || {},
+      recon_harness: d?.recon_harness,
     };
   } catch {
     return null;

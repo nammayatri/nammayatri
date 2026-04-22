@@ -59,7 +59,7 @@ let hedisSecondaryClusterCfg =
 
 let consumerProperties =
       { groupId = "groupId"
-      , brockers = [ "localhost:29092" ]
+      , brockers = [ "127.0.0.1:29092" ] -- ONLY LOCAL DO NOT RUN IN MASTER PROD
       , autoCommit = None Integer
       , kafkaCompression = common.kafkaCompression.LZ4
       }
@@ -106,7 +106,7 @@ let kafkaClickhouseCfg =
       }
 
 let kafkaProducerCfg =
-      { brokers = [ "localhost:29092" ]
+      { brokers = [ "127.0.0.1:29092" ] -- ONLY LOCAL DO NOT RUN IN MASTER PROD
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 

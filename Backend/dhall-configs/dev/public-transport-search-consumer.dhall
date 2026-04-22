@@ -6,7 +6,7 @@ let juspayGatewayUrl = "http://localhost:8015/v1"
 
 let kafkaConsumerCfgs =
       { publicTransportSearch =
-        { brokers = [ "localhost:29092" ]
+        { brokers = [ "127.0.0.1:29092" ] -- ONLY LOCAL DO NOT RUN IN MASTER PROD
         , groupId = "publicTransportSearchGroup"
         , timeoutMilliseconds = +10000
         , kafkaCompression = common.kafkaCompression.LZ4
