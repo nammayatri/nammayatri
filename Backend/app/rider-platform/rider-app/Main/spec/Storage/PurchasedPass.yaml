@@ -137,6 +137,7 @@ PurchasedPassPayment:
     id: PrimaryKey
     orderId: SecondaryKey
     purchasedPassId: SecondaryKey
+    personId: "!SecondaryKey"
 
   queries:
     findOneByPaymentOrderId:
