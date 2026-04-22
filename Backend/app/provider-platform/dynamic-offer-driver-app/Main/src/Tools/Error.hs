@@ -1288,6 +1288,9 @@ data DriverOnboardingError
   | ImageNotFoundForWorkflowId Text
   | PanAlreadyLinked
   | GstAlreadyLinked
+  | GstDuplicateAcrossDrivers Text
+  | GstInUseBySameRoleDriver Text
+  | DriverGstAlreadyVerified Text
   | UdyamAlreadyLinked
   | RCNotLinkedWithFleet
   | RCAssociationNotFound
@@ -1367,6 +1370,9 @@ instance IsBaseError DriverOnboardingError where
     ImageNotFoundForWorkflowId workflowId -> Just $ "Image not found for workflowId : " <> workflowId
     PanAlreadyLinked -> Just "PAN already linked with driver."
     GstAlreadyLinked -> Just "GST already linked with driver."
+    GstDuplicateAcrossDrivers driverId -> Just $ "GSTIN is already linked with multiple drivers (requested by driverId \"" <> driverId <> "\")."
+    GstInUseBySameRoleDriver driverId -> Just $ "GSTIN is already linked with another driver of the same role (requested by driverId \"" <> driverId <> "\")."
+    DriverGstAlreadyVerified driverId -> Just $ "Driver \"" <> driverId <> "\" already has a verified GST document."
     UdyamAlreadyLinked -> Just "Udyam already linked with driver."
     RCNotLinkedWithFleet -> Just "Vehicle Registration Certificate is not linked with Fleet."
     RCAssociationNotFound -> Just "RC association not found."
@@ -1445,6 +1451,9 @@ instance IsHTTPError DriverOnboardingError where
     ImageNotFoundForWorkflowId _ -> "IMAGE_NOT_FOUND_FOR_WORKFLOW_ID"
     PanAlreadyLinked -> "PAN_ALREADY_LINKED"
     GstAlreadyLinked -> "GST_ALREADY_LINKED"
+    GstDuplicateAcrossDrivers _ -> "GST_DUPLICATE_ACROSS_DRIVERS"
+    GstInUseBySameRoleDriver _ -> "GST_IN_USE_BY_SAME_ROLE_DRIVER"
+    DriverGstAlreadyVerified _ -> "DRIVER_GST_ALREADY_VERIFIED"
     UdyamAlreadyLinked -> "UDYAM_ALREADY_LINKED"
     RCNotLinkedWithFleet -> "RC_NOT_LINKED_WITH_FLEET"
     RCAssociationNotFound -> "RC_ASSOCIATION_NOT_FOUND"
@@ -1521,6 +1530,9 @@ instance IsHTTPError DriverOnboardingError where
     ImageNotFoundForWorkflowId _ -> E400
     PanAlreadyLinked -> E400
     GstAlreadyLinked -> E400
+    GstDuplicateAcrossDrivers _ -> E400
+    GstInUseBySameRoleDriver _ -> E400
+    DriverGstAlreadyVerified _ -> E400
     UdyamAlreadyLinked -> E400
     RCNotLinkedWithFleet -> E400
     RCAssociationNotFound -> E400
