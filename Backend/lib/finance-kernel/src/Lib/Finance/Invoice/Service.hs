@@ -59,8 +59,15 @@ import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedger
 -- | Create an invoice and link to ledger entries.
 --   If any linked entry targets a GOVERNMENT_INDIRECT account (GST),
 --   an IndirectTaxTransaction record is also created.
+--   If any linked entry targets a GOVERNMENT_DIRECT account (TDS),
+--   a DirectTaxTransaction record is also created.
+--   E-invoice (IRN) generation is NOT performed here; callers that need it
+--   (e.g. driver-app) should invoke their own e-invoice helper after this.
 createInvoice ::
-  (BeamFlow.BeamFlow m r, Redis.HedisFlow m r) =>
+  ( BeamFlow.BeamFlow m r,
+    Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
   InvoiceInput ->
   [Id LedgerEntry] -> -- Ledger entries to link
   m (Either FinanceError Invoice)
@@ -79,6 +86,7 @@ createInvoice input entryIds = do
       externalTotal = sum $ map (.lineTotal) $ filter (.isExternalCharge) input.lineItems
       taxTotal = sum $ map (.lineTotal) $ filter (\li -> li.description == "Tax") input.lineItems
       subtotal = totalAmount - externalTotal - taxTotal
+  logDebug $ "Sum of unit price of all line items: " <> show (sum $ map (.unitPrice) input.lineItems)
   let invoice =
         Invoice
           { id = Id invoiceId,
@@ -109,7 +117,8 @@ createInvoice input entryIds = do
             merchantId = input.merchantId,
             merchantOperatingCityId = input.merchantOperatingCityId,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            irn = Nothing
           }
 
   QInvoice.create invoice

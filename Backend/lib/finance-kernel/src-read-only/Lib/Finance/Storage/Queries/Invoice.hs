@@ -32,6 +32,9 @@ findByIssuedTo issuedToType issuedToId = do findAllWithKV [Se.And [Se.Is Beam.is
 findByNumber :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m (Maybe Lib.Finance.Domain.Types.Invoice.Invoice))
 findByNumber invoiceNumber = do findOneWithKV [Se.Is Beam.invoiceNumber $ Se.Eq invoiceNumber]
 
+updateIrnByInvoiceId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m ())
+updateIrnByInvoiceId irn id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.irn irn, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateStatus :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Finance.Domain.Types.Invoice.InvoiceStatus -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m ())
 updateStatus status id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -46,6 +49,7 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.Invoice.Invoice {..}) = do
       Se.Set Beam.dueAt dueAt,
       Se.Set Beam.invoiceNumber invoiceNumber,
       Se.Set Beam.invoiceType invoiceType,
+      Se.Set Beam.irn irn,
       Se.Set Beam.issuedAt issuedAt,
       Se.Set Beam.issuedByAddress issuedByAddress,
       Se.Set Beam.issuedById issuedById,

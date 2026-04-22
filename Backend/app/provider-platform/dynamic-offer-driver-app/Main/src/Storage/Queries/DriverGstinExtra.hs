@@ -43,6 +43,17 @@ findGSTInByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Pers
 findGSTInByDriverId personId = do
   findOneWithKV [Se.Is Beam.driverId $ Se.Eq personId.getId]
 
+updateVerificationStatusWithPlaceDetails :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Documents.VerificationStatus -> Maybe Text -> Maybe Text -> Id DP.Person -> m ()
+updateVerificationStatusWithPlaceDetails status mbPincode mbStateName driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.verificationStatus status,
+      Se.Set Beam.pincode mbPincode,
+      Se.Set Beam.stateName mbStateName,
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq driverId.getId]
+
 upsertGstinRecord :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => DriverGstin -> m ()
 upsertGstinRecord a@DriverGstin {..} =
   findOneWithKV [Se.Is Beam.driverId $ Se.Eq driverId.getId] >>= \case
