@@ -732,7 +732,11 @@ updatePurchasedPass purchasedPass today now = do
             if purchasedPass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired] && purchasedPass.endDate < today
               then case mbFirstPreBookedPayment of
                 Just firstPreBookedPayment ->
-                  let newStatus = if firstPreBookedPayment.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
+                  let newStatus
+                        | firstPreBookedPayment.endDate < today = DPurchasedPass.Expired
+                        | firstPreBookedPayment.startDate <= today = DPurchasedPass.Active
+                        | firstPreBookedPayment.startDate > today = DPurchasedPass.PreBooked
+                        | otherwise = purchasedPass.status
                       newPass = purchasedPass
                         { DPurchasedPass.startDate = firstPreBookedPayment.startDate,
                           DPurchasedPass.endDate = firstPreBookedPayment.endDate,
