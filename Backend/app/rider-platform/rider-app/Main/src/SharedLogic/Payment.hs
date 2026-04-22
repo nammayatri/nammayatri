@@ -842,6 +842,8 @@ cancelPaymentIntent merchantId merchantOpCityId paymentMode rideId = do
     let entryIds = map (.id) pendingEntries
     RidePaymentFinance.voidRidePaymentLedger entryIds
     logInfo $ "Voided " <> show (length entryIds) <> " pending ledger entries for cancelled ride: " <> rideId.getId
+  -- Cancel the associated Ride invoice
+  RidePaymentFinance.voidRideInvoice rideId.getId
 
 chargePaymentIntent ::
   ( MonadFlow m,
@@ -890,11 +892,14 @@ chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType p
                 Nothing
         result <- RidePaymentFinance.settleRidePaymentLedger ctx entryIds settledReason
         case result of
-          Right () -> logInfo $ "Settled " <> show (length entryIds) <> " ledger entries for ride: " <> rideId.getId <> " reason: " <> settledReason
+          Right () -> do
+            logInfo $ "Settled " <> show (length entryIds) <> " ledger entries for ride: " <> rideId.getId <> " reason: " <> settledReason
+            RidePaymentFinance.markRideInvoicePaid rideId.getId
           Left err -> logError $ "Failed to settle ledger entries for ride " <> rideId.getId <> ": " <> show err
       else do
         -- Mark entries as DUE on failed capture so getDueAmount picks them up
         RidePaymentFinance.markEntriesAsDue entryIds
+        RidePaymentFinance.markRideInvoiceIssued rideId.getId
         logWarning $ "Marked " <> show (length entryIds) <> " ledger entries as DUE for ride: " <> rideId.getId <> " (capture failed)"
   pure charged
 
