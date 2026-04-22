@@ -106,6 +106,14 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbFixedGovtRateCaption = show Enums.FIXED_GOVERNMENT_RATE
       mbFixedGovtRateItem = mkBreakupItem mbFixedGovtRateCaption . mkPrice <$> fareParams.govtCharges
 
+      -- Backward compat: emit RIDE_VAT for VAT-type rides (isVatTaxType=True)
+      -- govtCharges holds the merged VAT value (set by FareCalculatorV2)
+      mbRideVatCaption = show Enums.RIDE_VAT
+      mbRideVatItem =
+        if fromMaybe False fareParams.isVatTaxType
+          then mkBreakupItem mbRideVatCaption . mkPrice <$> fareParams.govtCharges
+          else Nothing
+
       customerCancellationDuesCaption = show Enums.CANCELLATION_CHARGES
       mbCustomerCancellationDues = mkBreakupItem customerCancellationDuesCaption . mkPrice <$> fareParams.customerCancellationDues
 
@@ -168,6 +176,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbBusinessDiscountItem,
       mbPersonalDiscountItem,
       mbFixedGovtRateItem,
+      mbRideVatItem,
       mbPetChargesItem,
       mbDriverAllowanceItem,
       mbAirportConvenienceFeeItem,
