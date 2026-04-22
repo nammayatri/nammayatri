@@ -88,6 +88,7 @@ import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
+import qualified Kernel.External.Verification.Types as VT
 
 verifyDL ::
   ServiceFlow m r =>
@@ -165,10 +166,10 @@ verifyRC ::
   VerifyRCReq ->
   m RCRespWithRemPriorityList
 verifyRC _ merchantOptCityId mbRemPriorityList mbVehicleCategory req = do
+  let (providerKey :: ProviderLookUpKey) = fromMaybe CAR $ getProviderKeyFromVehicleCategory mbVehicleCategory req.udinNo
   finalVerificationProviderPriorityList <-
     case mbRemPriorityList of
       Nothing -> do
-        let (providerKey :: ProviderLookUpKey) = fromMaybe CAR $ getProviderKeyFromVehicleCategory mbVehicleCategory req.udinNo
         merchantServiceUsageConfig <-
           CQMSUC.findByMerchantOpCityId merchantOptCityId Nothing
             >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOptCityId.getId)
@@ -176,7 +177,7 @@ verifyRC _ merchantOptCityId mbRemPriorityList mbVehicleCategory req = do
         fromMaybeM (InternalError $ "Providers not configured in the priority list !!!!!" <> show merchantServiceUsageConfig.categoryBasedVerificationPriorityList) mbList
       Just remPriorityList -> return remPriorityList
   mbToken' <-
-    if isJust req.udinNo
+    if providerKey == TOTO_UDIN && VT.Tten `elem` finalVerificationProviderPriorityList
       then do
         token <- getOrCreateTtenToken merchantOptCityId
         return (Just token)
