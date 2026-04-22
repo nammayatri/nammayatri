@@ -19,6 +19,7 @@ where
 
 import qualified API.Types.ProviderPlatform.Fleet.RegistrationV2 as Common
 import qualified API.Types.UI.DriverOnboardingV2 as Onboarding
+import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import Domain.Action.Dashboard.Fleet.Referral
 import qualified Domain.Action.Dashboard.Fleet.Registration as DRegistration
 import qualified Domain.Action.Internal.DriverMode as DriverMode
@@ -62,7 +63,6 @@ import qualified Storage.Queries.DriverGstin as QGST
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP

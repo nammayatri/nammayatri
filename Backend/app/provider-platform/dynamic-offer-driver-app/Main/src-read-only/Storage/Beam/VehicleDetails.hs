@@ -10,6 +10,7 @@ import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context
 import Tools.Beam.UtilsTH
 
 data VehicleDetailsT f = VehicleDetailsT
@@ -18,6 +19,8 @@ data VehicleDetailsT f = VehicleDetailsT
     id :: B.C f Data.Text.Text,
     make :: B.C f Data.Text.Text,
     model :: B.C f Data.Text.Text,
+    specificCountry :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.Country),
+    specificMerchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     vehicleVariant :: B.C f Domain.Types.VehicleVariant.VehicleVariant,
     year :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)
   }

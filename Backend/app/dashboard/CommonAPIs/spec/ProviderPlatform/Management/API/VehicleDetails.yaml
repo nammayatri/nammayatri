@@ -1,0 +1,13 @@
+module: VehicleDetails
+
+apis:
+  - GET: # VehicleModelsAPI
+      endpoint: /vehicleModels
+      auth: ApiAuthV2
+      response:
+        type: "[VehicleMakeModelsItem]"
+
+types:
+  VehicleMakeModelsItem:
+    - make: Text
+    - models: "[Text]"

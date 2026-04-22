@@ -22,6 +22,8 @@ instance FromTType' Beam.VehicleDetails Domain.Types.VehicleDetails.VehicleDetai
             id = Kernel.Types.Id.Id id,
             make = make,
             model = model,
+            specificCountry = specificCountry,
+            specificMerchantOperatingCityId = Kernel.Types.Id.Id <$> specificMerchantOperatingCityId,
             vehicleVariant = vehicleVariant,
             year = year
           }
@@ -34,6 +36,8 @@ instance ToTType' Beam.VehicleDetails Domain.Types.VehicleDetails.VehicleDetails
         Beam.id = Kernel.Types.Id.getId id,
         Beam.make = make,
         Beam.model = model,
+        Beam.specificCountry = specificCountry,
+        Beam.specificMerchantOperatingCityId = Kernel.Types.Id.getId <$> specificMerchantOperatingCityId,
         Beam.vehicleVariant = vehicleVariant,
         Beam.year = year
       }
