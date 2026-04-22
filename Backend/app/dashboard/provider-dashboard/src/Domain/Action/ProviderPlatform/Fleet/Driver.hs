@@ -647,13 +647,14 @@ postDriverFleetDriverUpdate merchantShortId opCity apiTokenInfo driverId req = d
           Nothing -> pure person.email
 
         let updatedPerson :: DP.Person
-            updatedPerson = person
-              { DP.firstName = fromMaybe person.firstName req.firstName,
-                DP.lastName = fromMaybe person.lastName req.lastName,
-                DP.email = newEmail,
-                DP.mobileNumber = newMobileNumber,
-                DP.mobileCountryCode = fromMaybe person.mobileCountryCode req.mobileCountryCode
-              }
+            updatedPerson =
+              person
+                { DP.firstName = fromMaybe person.firstName req.firstName,
+                  DP.lastName = fromMaybe person.lastName req.lastName,
+                  DP.email = newEmail,
+                  DP.mobileNumber = newMobileNumber,
+                  DP.mobileCountryCode = fromMaybe person.mobileCountryCode req.mobileCountryCode
+                }
         QP.updatePerson (cast driverId) updatedPerson
 
     pure result
