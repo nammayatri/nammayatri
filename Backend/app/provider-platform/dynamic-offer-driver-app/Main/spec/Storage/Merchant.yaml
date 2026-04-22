@@ -1218,6 +1218,10 @@ TransporterConfig:
     tdsFromEmail: Maybe Text
     sameRiderDriverRideCountLookbackDays: Int
     sameRiderDriverRideCountThreshold: Int
+    allowPanReupload: Maybe Bool
+    allowAadhaarReupload: Maybe Bool
+    allowDlReupload: Maybe Bool
+    allowGstReupload: Maybe Bool
 
   beamType:
     currency: Maybe Currency
@@ -1694,6 +1698,10 @@ TransporterConfig:
     allowFarePolicyUpdateBelowMinBaseFare: "true"
     driverSearchBlacklistDurationSeconds: "3600"
     driverRiderBlacklistDurationSeconds: "3600"
+    allowPanReupload: "false"
+    allowAadhaarReupload: "false"
+    allowDlReupload: "false"
+    allowGstReupload: "false"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
