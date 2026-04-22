@@ -407,9 +407,10 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
           )
           person.id
         throwError AadhaarAlreadyLinked
-      aadhaarPersonDetails <- Person.getDriversByIdIn (map (.driverId) aadhaarInfoList)
-      let getRoles = map (.role) aadhaarPersonDetails
-      when (person.role `elem` getRoles) $ throwError AadhaarAlreadyLinked
+      when (not (fromMaybe False transporterConfig.allowAadhaarReupload)) $ do
+        aadhaarPersonDetails <- Person.getDriversByIdIn (map (.driverId) aadhaarInfoList)
+        let getRoles = map (.role) aadhaarPersonDetails
+        when (person.role `elem` getRoles) $ throwError AadhaarAlreadyLinked
     _ -> pure ()
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
@@ -427,15 +428,17 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
             consent = if req.consent then "yes" else "no"
           }
   let runBody = do
-        aadhaarInfo <- QAadhaarCard.findByPrimaryKey person.id
-        whenJust aadhaarInfo $ \aadhaarInfoData -> do
-          when (aadhaarInfoData.verificationStatus == Documents.VALID) $ do
-            Utils.cleanupUploadedImages
-              ( [Id req.aadhaarFrontImageId]
-                  <> maybe [] (\backImageId -> [Id backImageId]) req.aadhaarBackImageId
-              )
-              person.id
-            throwError $ DocumentAlreadyValidated "Aadhaar"
+        let allowAadhaarReupload = fromMaybe False transporterConfig.allowAadhaarReupload
+        when (not allowAadhaarReupload) $ do
+          aadhaarInfo <- QAadhaarCard.findByPrimaryKey person.id
+          whenJust aadhaarInfo $ \aadhaarInfoData -> do
+            when (aadhaarInfoData.verificationStatus == Documents.VALID) $ do
+              Utils.cleanupUploadedImages
+                ( [Id req.aadhaarFrontImageId]
+                    <> maybe [] (\backImageId -> [Id backImageId]) req.aadhaarBackImageId
+                )
+                person.id
+              throwError $ DocumentAlreadyValidated "Aadhaar"
         resp <- Verification.extractAadhaarImage person.merchantId merchantOpCityId extractReq
         mbAadhaarNumber <- case resp.extractedAadhaar of
           Just extractedAadhaarData -> do

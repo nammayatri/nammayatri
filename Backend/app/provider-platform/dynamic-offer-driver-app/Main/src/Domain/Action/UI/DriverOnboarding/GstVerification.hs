@@ -110,21 +110,22 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
             <> " existingDriverIds="
             <> show (map ((.getId) . (.driverId)) gstInfoList)
         throwError (GstDuplicateAcrossDrivers person.id.getId)
-      gstPersonDetails <- Person.getDriversByIdIn (map (.driverId) gstInfoList)
-      let getRoles = map (.role) gstPersonDetails
-      when (person.role `elem` getRoles) $ do
-        logError $
-          "GstVerification: GSTIN already linked with another driver of the same role. driverId="
-            <> person.id.getId
-            <> " role="
-            <> show person.role
-            <> " merchantOpCityId="
-            <> merchantOpCityId.getId
-            <> " gstin="
-            <> maskText req.gstin
-            <> " conflictingDriverIds="
-            <> show (map ((.getId) . (.id)) gstPersonDetails)
-        throwError (GstInUseBySameRoleDriver person.id.getId)
+      when (not (fromMaybe False transporterConfig.allowGstReupload)) $ do
+        gstPersonDetails <- Person.getDriversByIdIn (map (.driverId) gstInfoList)
+        let getRoles = map (.role) gstPersonDetails
+        when (person.role `elem` getRoles) $ do
+          logError $
+            "GstVerification: GSTIN already linked with another driver of the same role. driverId="
+              <> person.id.getId
+              <> " role="
+              <> show person.role
+              <> " merchantOpCityId="
+              <> merchantOpCityId.getId
+              <> " gstin="
+              <> maskText req.gstin
+              <> " conflictingDriverIds="
+              <> show (map ((.getId) . (.id)) gstPersonDetails)
+          throwError (GstInUseBySameRoleDriver person.id.getId)
     _ -> pure ()
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
@@ -243,7 +244,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
       case mdriverGstInformation of
         Just driverGstInformation -> do
           let verificationStatus = driverGstInformation.verificationStatus
-          when (verificationStatus == Documents.VALID) $ do
+          when (verificationStatus == Documents.VALID && not (fromMaybe False transporterConfig.allowGstReupload)) $ do
             logError $
               "GstVerification: driver already has a VALID GST document; refusing re-verification. driverId="
                 <> person.id.getId

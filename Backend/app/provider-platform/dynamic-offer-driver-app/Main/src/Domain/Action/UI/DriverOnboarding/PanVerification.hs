@@ -127,9 +127,10 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
       unless (Kernel.Prelude.null otherDriverIds) $ do
         Utils.cleanupUploadedImages [Id req.imageId] person.id
         throwError PanAlreadyLinked
-      panPersonDetails <- Person.getDriversByIdIn (map (.driverId) panInfoList)
-      let getRoles = map (.role) panPersonDetails
-      when (person.role `elem` getRoles) $ throwError PanAlreadyLinked
+      when (not (fromMaybe False transporterConfig.allowPanReupload)) $ do
+        panPersonDetails <- Person.getDriversByIdIn (map (.driverId) panInfoList)
+        let getRoles = map (.role) panPersonDetails
+        when (person.role `elem` getRoles) $ throwError PanAlreadyLinked
     _ -> pure ()
 
   merchantServiceUsageConfig <-
@@ -234,7 +235,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
       case mdriverPanInformation of
         Just driverPanInformation -> do
           let verificationStatus = driverPanInformation.verificationStatus
-          when (verificationStatus == Documents.VALID) $ do
+          when (verificationStatus == Documents.VALID && not (fromMaybe False transporterConfig.allowPanReupload)) $ do
             Utils.cleanupUploadedImages [Id req.imageId] person.id
             throwError $ DocumentAlreadyValidated "PAN"
 

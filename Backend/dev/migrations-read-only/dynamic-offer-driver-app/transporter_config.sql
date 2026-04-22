@@ -868,3 +868,15 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_disable_f
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN restrict_mobile_update_to_dashboard boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_pan_reupload boolean  default false;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_dl_reupload boolean  default false;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_aadhaar_reupload boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_gst_reupload boolean  default false;
