@@ -202,16 +202,14 @@ endRideTransaction ::
   TransporterConfig ->
   m ()
 endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig = do
-  updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
   oldDriverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
   let newFlowStatus = DDriverMode.getDriverFlowStatus oldDriverInfo.mode oldDriverInfo.active
   DDriverMode.updateDriverModeAndFlowStatus driverId thresholdConfig oldDriverInfo.active Nothing newFlowStatus oldDriverInfo (Just False) Nothing
   let driverInfo = oldDriverInfo {DI.driverFlowStatus = Just newFlowStatus}
-  whenJust mbRiderDetailsId $ \riderDetailsId -> do
-    QRiderDetails.updateCompletedRidesCount riderDetailsId.getId
-  whenJust mbFareParams QFare.create
   QRB.updateStatus booking.id SRB.COMPLETED
   QRide.updateAll ride.id ride
+  whenJust mbFareParams QFare.create
   let safetyPlusCharges = maybe Nothing (\a -> find (\ac -> ac.chargeCategory == DAC.SAFETY_PLUS_CHARGES) a) $ (mbFareParams <&> (.conditionalCharges)) <|> (Just newFareParams.conditionalCharges)
   -- Save driver ride count from increment to reuse in reminder check
   driverRideCount <- QDriverStats.incrementTotalRidesAndTotalDistAndIdleTime (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
@@ -231,12 +229,14 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
       whenJust ride.fleetOwnerId $ \fleetOwnerId -> do
         FVS.updateFleetVehicleDailyStats fleetOwnerId.getId thresholdConfig ride
   when (isJust safetyPlusCharges) $ QDriverStats.incSafetyPlusRiderCountAndEarnings (cast ride.driverId) (fromMaybe 0.0 $ safetyPlusCharges <&> (.charge))
+  fork "updateCompletedRidesCount" $
+    whenJust mbRiderDetailsId $ \riderDetailsId -> do
+      QRiderDetails.updateCompletedRidesCount riderDetailsId.getId
   Hedis.del $ multipleRouteKey booking.transactionId
   Hedis.del $ searchRequestKey booking.transactionId
   clearCachedFarePolicyByEstOrQuoteId booking.quoteId
   clearTollStartGateBatchCache ride.driverId
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
-  let currency = booking.currency
   let customerCancellationDues = fromMaybe 0.0 newFareParams.customerCancellationDues
   logInfo $ "customerCancellationDues: newFareParams.customerCancellationDues: " <> show customerCancellationDues <> " ride.id: " <> show ride.id.getId <> " thresholdConfig.canAddCancellationFee: " <> show thresholdConfig.canAddCancellationFee
   let cancellationDues = fromMaybe 0.0 booking.fareParams.customerCancellationDues
@@ -250,6 +250,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
                 { driverId = cast driverId,
                   rideId = Just ride.id,
                   cancellationCharges = cancellationDues,
+                  currency = booking.currency,
                   ..
                 }
         -- calDisputeChances <-
@@ -279,9 +280,9 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   merchant <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
 
   fork "processEndRideFinance" $ processEndRideFinance merchant ride booking newFareParams driverId driverInfo thresholdConfig
-
-  triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
-  triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
+  fork "RideEvents" $ do
+    triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
+    triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
 
   let validRide = isValidRide ride
   sendReferralFCM validRide ride booking mbRiderDetails thresholdConfig
