@@ -59,8 +59,8 @@ import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.Finance.Wallet
-import SharedLogic.Merchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import SharedLogic.Merchant
 import Storage.Beam.Finance ()
 import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig as SCTC
@@ -75,6 +75,9 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QV
+import qualified Domain.Types.ScheduledPayout as DSP
+import qualified Storage.Queries.ScheduledPayout as QSP
+import qualified Storage.Queries.ScheduledPayoutExtra as QSPE
 import Tools.Error
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as Payout
@@ -124,20 +127,28 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
           case mbPayoutRequestId of
             Nothing -> throwError $ InternalError "PayoutRequest ID not found"
             Just payoutRequestId -> do
-              payoutRequest <- QPR.findById (Id payoutRequestId) >>= fromMaybeM (InternalError $ "PayoutRequest Not Found: " <> show payoutRequestId)
-              let newStatus = castPayoutOrderStatusToPayoutRequestStatus payoutStatus
-              when (payoutRequest.status /= newStatus && payoutRequest.status `notElem` [DPR.CREDITED, DPR.CASH_PAID, DPR.CASH_PENDING]) do
-                let statusMsg = "Bank Webhook: " <> show payoutStatus
-                PayoutRequest.updateStatusWithHistoryById newStatus (Just statusMsg) payoutRequest
-                when (newStatus `elem` [DPR.CREDITED, DPR.CASH_PAID]) $ do
-                  let redisKey = mkSpecialZonePayoutSmsKey payoutRequest.id newStatus
-                  alreadySent <- Redis.get redisKey
-                  case (alreadySent :: Maybe Bool) of
-                    Just True -> pure ()
-                    _ -> do
-                      Redis.setExp redisKey True (60 * 60 * 24)
-                      fork "Send Special Zone Payout SMS to Driver" $
-                        sendSpecialZonePayoutSms merchantOperatingCityId payoutRequest
+              mbPayoutRequest <- QPR.findById (Id payoutRequestId)
+              case mbPayoutRequest of
+                Just payoutRequest -> do
+                  let newStatus = castPayoutOrderStatusToPayoutRequestStatus payoutStatus
+                  when (payoutRequest.status /= newStatus && payoutRequest.status `notElem` [DPR.CREDITED, DPR.CASH_PAID, DPR.CASH_PENDING]) do
+                    let statusMsg = "Bank Webhook: " <> show payoutStatus
+                    PayoutRequest.updateStatusWithHistoryById newStatus (Just statusMsg) payoutRequest
+                    when (newStatus `elem` [DPR.CREDITED, DPR.CASH_PAID]) $ do
+                      let redisKey = mkSpecialZonePayoutSmsKey payoutRequest.id newStatus
+                      alreadySent <- Redis.get redisKey
+                      case (alreadySent :: Maybe Bool) of
+                        Just True -> pure ()
+                        _ -> do
+                          Redis.setExp redisKey True (60 * 60 * 24)
+                          fork "Send Special Zone Payout SMS to Driver" $
+                            sendSpecialZonePayoutSms merchantOperatingCityId payoutRequest
+                Nothing -> do
+                  scheduledPayout <- QSP.findById (Id payoutRequestId) >>= fromMaybeM (InternalError $ "PayoutRequest/ScheduledPayout Not Found: " <> show payoutRequestId)
+                  let newStatus = castPayoutOrderStatusToScheduledPayoutStatus payoutStatus
+                  when (scheduledPayout.status /= newStatus && scheduledPayout.status `notElem` [DSP.CREDITED, DSP.CASH_PAID, DSP.CASH_PENDING]) do
+                    let statusMsg = "Bank Webhook: " <> show payoutStatus
+                    QSPE.updateStatusWithHistoryById newStatus (Just statusMsg) scheduledPayout
         _ -> do
           unless (isSuccessStatus payoutOrder.status) do
             mbVehicle <- QV.findById (Id payoutOrder.customerId)
@@ -344,6 +355,19 @@ casPayoutOrderStatusToDFeeStatus payoutOrderStatus =
     Payout.FULFILLMENTS_CANCELLED -> DDF.REFUND_MANUAL_REVIEW_REQUIRED
     Payout.FULFILLMENTS_MANUAL_REVIEW -> DDF.REFUND_MANUAL_REVIEW_REQUIRED
     _ -> DDF.REFUND_PENDING
+
+castPayoutOrderStatusToScheduledPayoutStatus :: Payout.PayoutOrderStatus -> DSP.ScheduledPayoutStatus
+castPayoutOrderStatusToScheduledPayoutStatus payoutOrderStatus =
+  case payoutOrderStatus of
+    Payout.SUCCESS -> DSP.CREDITED
+    Payout.FULFILLMENTS_SUCCESSFUL -> DSP.CREDITED
+    Payout.ERROR -> DSP.AUTO_PAY_FAILED
+    Payout.FAILURE -> DSP.AUTO_PAY_FAILED
+    Payout.FULFILLMENTS_FAILURE -> DSP.AUTO_PAY_FAILED
+    Payout.CANCELLED -> DSP.CANCELLED
+    Payout.FULFILLMENTS_CANCELLED -> DSP.CANCELLED
+    Payout.FULFILLMENTS_MANUAL_REVIEW -> DSP.PROCESSING
+    _ -> DSP.PROCESSING
 
 payoutProcessingLockKey :: Text -> Text
 payoutProcessingLockKey driverId = "Payout:Processing:DriverId" <> driverId

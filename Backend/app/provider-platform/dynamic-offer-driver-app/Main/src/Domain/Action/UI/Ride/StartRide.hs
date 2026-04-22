@@ -79,6 +79,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.ScheduledPayout as QSP
 import Tools.Error
 import qualified Tools.Notifications as Notify
 import Utils.Common.Cac.KeyNameConstants
@@ -242,7 +243,8 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
           -- Checking iff duplicate is there.
           whenJust transporterConfig.payoutRideScheduleTimeBuffer $ \buffer -> do
             existingPayout <- QPR.findByEntity ride.id.getId (Just DPayment.SPECIAL_ZONE_PAYOUT)
-            when (isNothing existingPayout) $ do
+            existingScheduledPayout <- QSP.findByRideId ride.id.getId
+            when (isNothing existingPayout && isNothing existingScheduledPayout) $ do
               mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
               commission <- FCV2.calculateCommission booking.fareParams mbFarePolicy
               let payoutAmountBase = maybe booking.estimatedFare (\c -> booking.estimatedFare - c) commission
