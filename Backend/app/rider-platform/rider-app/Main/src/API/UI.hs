@@ -1,17 +1,3 @@
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
-
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
-
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
-
 module API.UI
   ( API,
     handler,
@@ -82,6 +68,7 @@ import qualified API.UI.Registration as Registration
 import qualified API.UI.RentalsIntercityCache as RentalsIntercityCache
 import qualified API.UI.Ride as Ride
 import qualified API.UI.Route as Route
+import qualified API.UI.SVP as SVP
 import qualified API.UI.SavedReqLocation as SavedReqLocation
 import qualified API.UI.Search as Search
 import qualified API.UI.Select as Select
@@ -169,6 +156,7 @@ type API =
            :<|> Dispatcher.API
            :<|> EDCMachine.API
            :<|> PartnerBookingStatement.API
+           :<|> SVP.API
        )
 
 handler :: FlowServer API
@@ -246,3 +234,4 @@ handler =
     :<|> Dispatcher.handler
     :<|> EDCMachine.handler
     :<|> PartnerBookingStatement.handler
+    :<|> SVP.handler

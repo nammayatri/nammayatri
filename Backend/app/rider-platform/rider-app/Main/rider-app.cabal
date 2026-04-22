@@ -107,6 +107,7 @@ library
       API.UI.Serviceability
       API.UI.Sos
       API.UI.Support
+      API.UI.SVP
       API.UI.Whatsapp
       API.UnifiedDashboard
       App
@@ -311,6 +312,7 @@ library
       Domain.Action.UI.Sos
       Domain.Action.UI.SpecialZoneQuote
       Domain.Action.UI.Support
+      Domain.Action.UI.SVP
       Domain.Action.UI.TicketDashboard
       Domain.Action.UI.TicketKapture
       Domain.Action.UI.TicketService
