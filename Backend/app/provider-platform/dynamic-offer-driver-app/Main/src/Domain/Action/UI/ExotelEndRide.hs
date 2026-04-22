@@ -33,6 +33,7 @@ import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
+import Lib.Scheduler.Environment (JobCreator)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.PersonExtra as QPerson
@@ -54,7 +55,8 @@ callBasedEndRide ::
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
     HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    JobCreator r m
   ) =>
   EndRide.ServiceHandle m ->
   Id Merchant ->

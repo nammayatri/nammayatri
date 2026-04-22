@@ -16,8 +16,12 @@ module Domain.Action.Internal.ReportIssue where
 
 import qualified Data.Aeson as A
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
+import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Person as DP
 import Domain.Types.Ride
 import Domain.Types.ServiceTierType
+import qualified Domain.Types.TransporterConfig as DTC
 import Environment
 import qualified IssueManagement.Common as ICommon
 import Kernel.Beam.Functions
@@ -31,8 +35,8 @@ import qualified Lib.BehaviorTracker.Snapshot as BTSnap
 import qualified Lib.BehaviorTracker.Types as BTT
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
-import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
 import SharedLogic.BehaviourManagement.IssueBreach (IssueBreachType (..))
+import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
 import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
 import SharedLogic.DriverOnboarding
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -59,7 +63,11 @@ reportIssue rideId issueType apiKey = do
   case issueType of
     ICommon.AC_RELATED_ISSUE -> do
       cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId ride.merchantOperatingCityId Nothing
+      -- Keep old AC restriction logic for backward compat
       incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers ride.driverId
+      -- Framework pipeline
+      driverInfo <- QDI.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
+      handleAcRestriction ride driverInfo
     ICommon.DRIVER_TOLL_RELATED_ISSUE -> handleTollRelatedIssue ride
     ICommon.SYNC_BOOKING -> pure ()
     ICommon.EXTRA_FARE_MITIGATION -> handleExtraFareMitigation ride booking.vehicleServiceTier
@@ -70,7 +78,23 @@ handleTollRelatedIssue :: Ride -> Flow ()
 handleTollRelatedIssue ride = do
   driverInfo <- QDI.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
   let tollRelatedIssueCount = fromMaybe 0 driverInfo.tollRelatedIssueCount + 1
+  -- Keep DB counter for backward compat
   void $ QDI.updateTollRelatedIssueCount (Just tollRelatedIssueCount) ride.driverId
+  -- Framework pipeline
+  transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (DriverId (cast ride.driverId))) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
+  let counterConfig = BTT.CounterConfig {windowSizeDays = 30, counters = [BTT.ACTION_COUNT], periods = [BTT.mkPeriodConfig "window" 30]}
+  eventTime <- getCurrentTime
+  let actionEvent =
+        BTT.ActionEvent
+          { entityType = BTT.DRIVER,
+            entityId = ride.driverId.getId,
+            actionType = "TOLL_RELATED_ISSUE",
+            merchantOperatingCityId = ride.merchantOperatingCityId.getId,
+            flowContext = A.object [],
+            eventData = A.object ["tollRelatedIssueCount" A..= tollRelatedIssueCount],
+            timestamp = eventTime
+          }
+  void $ runBehaviorPipeline transporterConfig ride.driverId ride.merchantOperatingCityId counterConfig actionEvent [] LYT.TOLL_ISSUE_BEHAVIOR
 
 handleExtraFareMitigation :: Ride -> ServiceTierType -> Flow ()
 handleExtraFareMitigation ride serviceTierType = do
@@ -84,7 +108,7 @@ handleExtraFareMitigation ride serviceTierType = do
       QDI.updateExtraFareMitigation (pure True) ride.driverId
       -- Keep old counter increment for backward compat
       IBM.incrementIssueBreachCounter EXTRA_FARE_MITIGATION ride.driverId (toInteger config.ibCountWindowSizeInDays)
-      -- Framework pipeline: build snapshot + orchestrate + dispatch consequences
+      -- Framework pipeline
       let windowSize = toInteger config.ibCountWindowSizeInDays
           counterConfig =
             BTT.CounterConfig
@@ -113,34 +137,92 @@ handleExtraFareMitigation ride serviceTierType = do
                     ],
                 timestamp = eventTime
               }
-          entityState = A.object []
-          cooldownTags = ["ExtraFareDaily", "ExtraFareWeekly"]
-          fetchRules = \domain -> do
-            localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-            getAppDynamicLogic (cast ride.merchantOperatingCityId) domain localTime Nothing Nothing
-      snapshot <- BTSnap.buildSnapshotWithCooldowns counterConfig actionEvent entityState cooldownTags
-      output <- BEOrch.orchestrate snapshot LYDL.Driver (cast ride.merchantOperatingCityId) LYT.ISSUE_BREACH_BEHAVIOR fetchRules
-      logInfo $ "Issue Breach behavior evaluation: consequences=" <> show (length output.consequences) <> ", communications=" <> show (length output.communications)
-      let dispatchCtx =
-            BehaviorDispatch.DispatchContext
-              { merchantId = transporterConfig.merchantId,
-                merchantOperatingCityId = ride.merchantOperatingCityId,
-                counterConfig = Just counterConfig,
-                actionEvent = Just actionEvent
-              }
-      BehaviorDispatch.handleConsequences dispatchCtx ride.driverId output.consequences
-      BehaviorDispatch.handleCommunications ride.driverId output.communications
+      void $ runBehaviorPipeline transporterConfig ride.driverId ride.merchantOperatingCityId counterConfig actionEvent ["ExtraFareDaily", "ExtraFareWeekly"] LYT.ISSUE_BREACH_BEHAVIOR
 
 handleDrunkAndDriveViolation :: Ride -> Flow ()
 handleDrunkAndDriveViolation ride = do
   driverInfo <- QDI.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
   let drunkAndDriveViolationCount = fromMaybe 0 driverInfo.drunkAndDriveViolationCount + 1
-  person <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  if drunkAndDriveViolationCount < 2
-    then do
-      overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory person.merchantOperatingCityId "DRUNK_AND_DRIVE_WARNING" (fromMaybe ENGLISH person.language) Nothing Nothing Nothing >>= fromMaybeM (InternalError "Overlay not found for EDIT_LOCATION")
-      let fcmOverlayReq = Notify.mkOverlayReq overlay
-      let entityData = Notify.DrunkAndDriveViolationWarningData {driverId = ride.driverId.getId, drunkAndDriveViolationCount}
-      Notify.drunkAndDriveViolationWarningOverlay person.merchantOperatingCityId person fcmOverlayReq entityData
-    else QDriverInfo.updateDynamicBlockedStateWithActivity ride.driverId (Just "DRUNK_AND_DRIVE_VIOLATION") Nothing "AUTOMATICALLY_BLOCKED_BY_APP" person.merchantId "AUTOMATICALLY_BLOCKED_BY_APP" ride.merchantOperatingCityId DTDBT.Application True Nothing Nothing DrunkAndDriveViolation
+  -- Keep DB counter for backward compat
   void $ QDI.updateDrunkAndDriveViolationCount (Just drunkAndDriveViolationCount) ride.driverId
+  -- Framework pipeline
+  transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (DriverId (cast ride.driverId))) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
+  let counterConfig = BTT.CounterConfig {windowSizeDays = 365, counters = [BTT.ACTION_COUNT], periods = []}
+  eventTime <- getCurrentTime
+  let actionEvent =
+        BTT.ActionEvent
+          { entityType = BTT.DRIVER,
+            entityId = ride.driverId.getId,
+            actionType = "DRUNK_AND_DRIVE",
+            merchantOperatingCityId = ride.merchantOperatingCityId.getId,
+            flowContext = A.object [],
+            eventData = A.object ["violationCount" A..= drunkAndDriveViolationCount],
+            timestamp = eventTime
+          }
+  handled <- runBehaviorPipeline transporterConfig ride.driverId ride.merchantOperatingCityId counterConfig actionEvent [] LYT.DRUNK_DRIVE_BEHAVIOR
+  -- Fallback: if no rules configured, use old hardcoded logic
+  unless handled $ do
+    logInfo $ "No DRUNK_DRIVE_BEHAVIOR rules configured, using fallback for driver " <> ride.driverId.getId
+    person <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+    if drunkAndDriveViolationCount < 2
+      then do
+        mbOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory person.merchantOperatingCityId "DRUNK_AND_DRIVE_WARNING" (fromMaybe ENGLISH person.language) Nothing Nothing Nothing
+        whenJust mbOverlay $ \overlay -> do
+          let fcmOverlayReq = Notify.mkOverlayReq overlay
+          let entityData = Notify.DrunkAndDriveViolationWarningData {driverId = ride.driverId.getId, drunkAndDriveViolationCount}
+          Notify.drunkAndDriveViolationWarningOverlay person.merchantOperatingCityId person fcmOverlayReq entityData
+      else QDriverInfo.updateDynamicBlockedStateWithActivity ride.driverId (Just "DRUNK_AND_DRIVE_VIOLATION") Nothing "AUTOMATICALLY_BLOCKED_BY_APP" person.merchantId "AUTOMATICALLY_BLOCKED_BY_APP" ride.merchantOperatingCityId DTDBT.Application True Nothing Nothing DrunkAndDriveViolation
+
+handleAcRestriction :: Ride -> DI.DriverInformation -> Flow ()
+handleAcRestriction ride driverInfo = do
+  transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (DriverId (cast ride.driverId))) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
+  let airConditionScore = fromMaybe 0 driverInfo.airConditionScore
+      counterConfig = BTT.CounterConfig {windowSizeDays = 365, counters = [BTT.ACTION_COUNT], periods = []}
+  eventTime <- getCurrentTime
+  let actionEvent =
+        BTT.ActionEvent
+          { entityType = BTT.DRIVER,
+            entityId = ride.driverId.getId,
+            actionType = "AC_RESTRICTION",
+            merchantOperatingCityId = ride.merchantOperatingCityId.getId,
+            flowContext = A.object [],
+            eventData =
+              A.object
+                [ "airConditionScore" A..= (airConditionScore + 1),
+                  "acUsageRestrictionType" A..= (show driverInfo.acUsageRestrictionType :: Text)
+                ],
+            timestamp = eventTime
+          }
+  void $ runBehaviorPipeline transporterConfig ride.driverId ride.merchantOperatingCityId counterConfig actionEvent [] LYT.AC_RESTRICTION_BEHAVIOR
+
+-- | Shared helper to run behavior pipeline for any domain.
+-- Returns True if consequences were dispatched, False if no rules/consequences found.
+runBehaviorPipeline ::
+  DTC.TransporterConfig ->
+  Id DP.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  BTT.CounterConfig ->
+  BTT.ActionEvent ->
+  [Text] -> -- cooldownTags
+  LYT.LogicDomain ->
+  Flow Bool
+runBehaviorPipeline transporterConfig driverId merchantOpCityId counterConfig actionEvent cooldownTags domain = do
+  snapshot <- BTSnap.buildSnapshotWithCooldowns counterConfig actionEvent (A.object []) cooldownTags
+  let fetchRules = \dom -> do
+        localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+        getAppDynamicLogic (cast merchantOpCityId) dom localTime Nothing Nothing
+  output <- BEOrch.orchestrate snapshot LYDL.Driver (cast merchantOpCityId) domain fetchRules
+  let hasConsequences = not (null output.consequences)
+      hasCommunications = not (null output.communications)
+  logInfo $ "BehaviorPipeline [" <> show domain <> "] for driver " <> driverId.getId <> ": consequences=" <> show (length output.consequences) <> ", communications=" <> show (length output.communications)
+  when (hasConsequences || hasCommunications) $ do
+    let dispatchCtx =
+          BehaviorDispatch.DispatchContext
+            { merchantId = transporterConfig.merchantId,
+              merchantOperatingCityId = merchantOpCityId,
+              counterConfig = Just counterConfig,
+              actionEvent = Just actionEvent
+            }
+    BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
+    BehaviorDispatch.handleCommunications driverId output.communications
+  return (hasConsequences || hasCommunications)

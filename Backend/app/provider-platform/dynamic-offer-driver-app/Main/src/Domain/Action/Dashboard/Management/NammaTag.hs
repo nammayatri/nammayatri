@@ -254,6 +254,15 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
     LYT.ISSUE_BREACH_BEHAVIOR -> do
       logicData :: BTT.BehaviorSnapshot <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy BET.OrchestratedOutput) transporterConfig.referralLinkPassword req logicData
+    LYT.DRUNK_DRIVE_BEHAVIOR -> do
+      logicData :: BTT.BehaviorSnapshot <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy BET.OrchestratedOutput) transporterConfig.referralLinkPassword req logicData
+    LYT.TOLL_ISSUE_BEHAVIOR -> do
+      logicData :: BTT.BehaviorSnapshot <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy BET.OrchestratedOutput) transporterConfig.referralLinkPassword req logicData
+    LYT.AC_RESTRICTION_BEHAVIOR -> do
+      logicData :: BTT.BehaviorSnapshot <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy BET.OrchestratedOutput) transporterConfig.referralLinkPassword req logicData
     LYT.USER_CANCELLATION_DUES_WAIVE_OFF -> do
       logicData :: UserCancellationDuesWaiveOffData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy UserCancellationDuesWaiveOffResult) transporterConfig.referralLinkPassword req logicData
@@ -440,6 +449,24 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
             LYT.schema = toInlinedSchemaValue (Proxy @BTT.BehaviorSnapshot)
           }
     LYT.ISSUE_BREACH_BEHAVIOR ->
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (def :: BTT.BehaviorSnapshot),
+            LYT.schema = toInlinedSchemaValue (Proxy @BTT.BehaviorSnapshot)
+          }
+    LYT.DRUNK_DRIVE_BEHAVIOR ->
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (def :: BTT.BehaviorSnapshot),
+            LYT.schema = toInlinedSchemaValue (Proxy @BTT.BehaviorSnapshot)
+          }
+    LYT.TOLL_ISSUE_BEHAVIOR ->
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (def :: BTT.BehaviorSnapshot),
+            LYT.schema = toInlinedSchemaValue (Proxy @BTT.BehaviorSnapshot)
+          }
+    LYT.AC_RESTRICTION_BEHAVIOR ->
       return $
         LYT.DomainSchemaResp
           { LYT.defaultValue = A.toJSON (def :: BTT.BehaviorSnapshot),
