@@ -5,6 +5,8 @@ imports:
   merchantId: Domain.Types.Merchant
   merchantOperatingCityId: Domain.Types.MerchantOperatingCity
   VehicleVariant: Domain.Types.VehicleVariant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Country: Kernel.Types.Beckn.Context
 
 VehicleDetails:
   tableName: vehicle_details
@@ -15,6 +17,8 @@ VehicleDetails:
     capacity: Maybe Int
     acAvailable: Maybe Bool
     year: Maybe Int
+    specificCountry: Maybe Country
+    specificMerchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     vehicleVariant: VehicleVariant|NoRelation
   constraints:
     id: PrimaryKey

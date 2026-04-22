@@ -155,6 +155,7 @@ library
       Domain.Action.Beckn.Track
       Domain.Action.Beckn.Update
       Domain.Action.Common.PayoutRequest
+      Domain.Action.Common.VehicleDetails
       Domain.Action.Dashboard.AppManagement.Driver
       Domain.Action.Dashboard.AppManagement.DriverSubscription
       Domain.Action.Dashboard.AppManagement.DriverWallet
@@ -200,6 +201,7 @@ library
       Domain.Action.Dashboard.Management.SosMedia
       Domain.Action.Dashboard.Management.SpecialZoneQueue
       Domain.Action.Dashboard.Management.System
+      Domain.Action.Dashboard.Management.VehicleDetails
       Domain.Action.Dashboard.Management.VehicleInfo
       Domain.Action.Dashboard.Management.Volunteer
       Domain.Action.Dashboard.Operator.Driver
@@ -916,6 +918,7 @@ library
       API.Action.Dashboard.Management.SosMedia
       API.Action.Dashboard.Management.SpecialZoneQueue
       API.Action.Dashboard.Management.System
+      API.Action.Dashboard.Management.VehicleDetails
       API.Action.Dashboard.Management.VehicleInfo
       API.Action.Dashboard.Management.Volunteer
       API.Action.Dashboard.Operator

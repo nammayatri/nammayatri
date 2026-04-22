@@ -19,8 +19,8 @@ import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
-import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import SharedLogic.SpecialZoneDriverDemand (mkSpecialZoneQueueRequestLockKey)
+import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
 import qualified Tools.Notifications as Notify
 

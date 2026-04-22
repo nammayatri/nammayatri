@@ -12,6 +12,10 @@ data VehicleDetailsReq = VehicleDetailsReq {make :: Data.Text.Text, model :: Dat
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data VehicleMakeModelsItem = VehicleMakeModelsItem {make :: Data.Text.Text, models :: [Data.Text.Text]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data VehicleMakesResp = VehicleMakesResp {makes :: [Data.Text.Text]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

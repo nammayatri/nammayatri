@@ -2,6 +2,7 @@ module Domain.Action.UI.VehicleDetails where
 
 import qualified API.Types.UI.VehicleDetails
 import Data.List (nub)
+import qualified Domain.Action.Common.VehicleDetails as CVehicleDetails
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -11,6 +12,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleDetails as QCVehicleDetails
 import Tools.Error
 
@@ -39,6 +41,24 @@ postVehicleModels (_, _, _) (API.Types.UI.VehicleDetails.VehicleModelsReq make) 
   vehicleDetails <- QCVehicleDetails.findByMakeAndYear make Nothing
   let models = map Domain.Types.VehicleDetails.model vehicleDetails
   pure $ API.Types.UI.VehicleDetails.VehicleModelsResp models
+
+getVehicleModelsV2 ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Environment.Flow [API.Types.UI.VehicleDetails.VehicleMakeModelsItem]
+  )
+getVehicleModelsV2 (_, _, merchantOperatingCityId) = do
+  merchantOpCity <-
+    CQMOC.findById merchantOperatingCityId
+      >>= fromMaybeM
+        (MerchantOperatingCityNotFound $ "merchantOperatingCityId: " <> merchantOperatingCityId.getId)
+  vehicleDetails <- CVehicleDetails.getFilteredVehicleDetails merchantOpCity.country merchantOpCity.id
+  pure $
+    CVehicleDetails.toMakeModelTuples vehicleDetails
+      <&> \(make, models) ->
+        API.Types.UI.VehicleDetails.VehicleMakeModelsItem {make, models}
 
 postVehicleDetails ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

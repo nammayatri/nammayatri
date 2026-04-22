@@ -17,3 +17,9 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_details ALTER COLUMN ac_available SET
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_details ADD COLUMN year integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_details ADD COLUMN specific_merchant_operating_city_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.vehicle_details ADD COLUMN specific_country text ;
