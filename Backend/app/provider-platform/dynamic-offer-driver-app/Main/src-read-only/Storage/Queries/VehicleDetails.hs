@@ -44,6 +44,8 @@ updateByPrimaryKey (Domain.Types.VehicleDetails.VehicleDetails {..}) = do
       Se.Set Beam.capacity capacity,
       Se.Set Beam.make make,
       Se.Set Beam.model model,
+      Se.Set Beam.specificCountry specificCountry,
+      Se.Set Beam.specificMerchantOperatingCityId (Kernel.Types.Id.getId <$> specificMerchantOperatingCityId),
       Se.Set Beam.vehicleVariant vehicleVariant,
       Se.Set Beam.year year
     ]

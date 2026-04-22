@@ -11,6 +11,9 @@ types:
     make: Text
   VehicleModelsResp:
     models: "[Text]"
+  VehicleMakeModelsItem:
+    make: Text
+    models: "[Text]"
   VehicleDetailsReq:
     make: Text
     model: Text
@@ -28,6 +31,11 @@ apis:
         type: VehicleModelsReq
       response:
         type: VehicleModelsResp
+  - GET:
+      endpoint: /vehicleModelsV2
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: "[VehicleMakeModelsItem]"
   - POST:
       endpoint: /vehicleDetails
       auth: TokenAuth PROVIDER_TYPE
@@ -35,4 +43,3 @@ apis:
         type: VehicleDetailsReq
       response:
         type: VehicleDetails
-

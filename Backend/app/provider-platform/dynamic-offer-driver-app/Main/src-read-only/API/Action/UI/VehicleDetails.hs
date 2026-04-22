@@ -32,6 +32,11 @@ type API =
            '[JSON]
            API.Types.UI.VehicleDetails.VehicleModelsResp
       :<|> TokenAuth
+      :> "vehicleModelsV2"
+      :> Get
+           '[JSON]
+           [API.Types.UI.VehicleDetails.VehicleMakeModelsItem]
+      :<|> TokenAuth
       :> "vehicleDetails"
       :> ReqBody
            '[JSON]
@@ -42,7 +47,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getVehicleMakes :<|> postVehicleModels :<|> postVehicleDetails
+handler = getVehicleMakes :<|> postVehicleModels :<|> getVehicleModelsV2 :<|> postVehicleDetails
 
 getVehicleMakes ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -62,6 +67,15 @@ postVehicleModels ::
     Environment.FlowHandler API.Types.UI.VehicleDetails.VehicleModelsResp
   )
 postVehicleModels a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.VehicleDetails.postVehicleModels (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getVehicleModelsV2 ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Environment.FlowHandler [API.Types.UI.VehicleDetails.VehicleMakeModelsItem]
+  )
+getVehicleModelsV2 a1 = withFlowHandlerAPI $ Domain.Action.UI.VehicleDetails.getVehicleModelsV2 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postVehicleDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

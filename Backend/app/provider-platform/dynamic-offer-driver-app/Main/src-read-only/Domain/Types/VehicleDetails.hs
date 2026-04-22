@@ -5,8 +5,10 @@ module Domain.Types.VehicleDetails where
 
 import Data.Aeson
 import qualified Data.Text
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleVariant
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
@@ -16,6 +18,8 @@ data VehicleDetails = VehicleDetails
     id :: Kernel.Types.Id.Id Domain.Types.VehicleDetails.VehicleDetails,
     make :: Data.Text.Text,
     model :: Data.Text.Text,
+    specificCountry :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.Country,
+    specificMerchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant,
     year :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }

@@ -104,6 +104,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.SosMedia
       API.Types.ProviderPlatform.Management.Endpoints.SpecialZoneQueue
       API.Types.ProviderPlatform.Management.Endpoints.System
+      API.Types.ProviderPlatform.Management.Endpoints.VehicleDetails
       API.Types.ProviderPlatform.Management.Endpoints.VehicleInfo
       API.Types.ProviderPlatform.Management.Endpoints.Volunteer
       API.Types.ProviderPlatform.Management.EntityInfo
@@ -122,6 +123,7 @@ library
       API.Types.ProviderPlatform.Management.SosMedia
       API.Types.ProviderPlatform.Management.SpecialZoneQueue
       API.Types.ProviderPlatform.Management.System
+      API.Types.ProviderPlatform.Management.VehicleDetails
       API.Types.ProviderPlatform.Management.VehicleInfo
       API.Types.ProviderPlatform.Management.Volunteer
       API.Types.ProviderPlatform.Operator
