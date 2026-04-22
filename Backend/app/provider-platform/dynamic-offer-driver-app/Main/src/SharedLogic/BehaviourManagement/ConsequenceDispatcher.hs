@@ -20,14 +20,24 @@ module SharedLogic.BehaviourManagement.ConsequenceDispatcher
 where
 
 import qualified Data.Aeson as A
+import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Scheduler.Environment
+import Lib.Scheduler.JobStorageType.SchedulerType as JC
+import SharedLogic.Allocator
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
+import SharedLogic.External.LocationTrackingService.Types
+import Storage.Beam.SchedulerJob ()
+import Tools.Metrics (CoreMetrics)
 import qualified Lib.BehaviorTracker.BlockTracker as BT
 import qualified Lib.BehaviorTracker.Recorder as BTRecorder
 import qualified Lib.BehaviorTracker.Types as BTT
@@ -35,11 +45,13 @@ import qualified Lib.CommunicationEngine.Parser as CMParser
 import qualified Lib.CommunicationEngine.Types as CMT
 import qualified Lib.ConsequenceEngine.Parser as CEParser
 import qualified Lib.ConsequenceEngine.Types as CET
+import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.Queries.DriverInformation as QDriverInformation
+import qualified Storage.Queries.Person as QPerson
 import Tools.Error (BlockReasonFlag (..))
+import qualified Tools.Notifications as Notify
 
--- | App-level context needed by some consequence handlers.
--- Callsites construct this from booking/ride context.
+-- | App-level context needed by consequence handlers.
 data DispatchContext = DispatchContext
   { merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
@@ -52,7 +64,11 @@ handleConsequences ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    Redis.HedisFlow m r
+    Redis.HedisFlow m r,
+    CoreMetrics m,
+    HasLocationService m r,
+    JobCreator r m,
+    HasShortDurationRetryCfg r c
   ) =>
   DispatchContext ->
   Id DP.Person ->
@@ -73,7 +89,11 @@ dispatchConsequence ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    Redis.HedisFlow m r
+    Redis.HedisFlow m r,
+    CoreMetrics m,
+    HasLocationService m r,
+    JobCreator r m,
+    HasShortDurationRetryCfg r c
   ) =>
   DispatchContext ->
   Id DP.Person ->
@@ -87,6 +107,9 @@ dispatchConsequence ctx driverId = \case
     let blockUntil = addUTCTime (fromIntegral params.blockDurationHours * 3600) now
     case params.featureName of
       "TOLL_ROUTES" -> QDriverInformation.updateTollRouteBlockedTill (Just blockUntil) (cast driverId)
+      "AC_USAGE" -> do
+        QDriverInformation.updateAcUsageRestrictionAndScore DI.ToggleNotAllowed (Just 0.0) (cast driverId)
+        logInfo $ "AC usage restricted for driver " <> driverId.getId
       other -> logWarning $ "Unknown feature for FeatureBlock: " <> other
     let tag = fromMaybe params.featureName params.blockReasonTag
     BT.writeBlockAndCooldownKeys BTT.DRIVER driverId.getId BTT.FEATURE_BLOCK tag params.blockDurationHours params.blockReason (A.toJSON params.featureName) params.cooldownHours
@@ -94,7 +117,14 @@ dispatchConsequence ctx driverId = \case
     logWarning $ "Soft blocking driver " <> driverId.getId <> " from tiers: " <> show params.blockedFeatures <> ", duration: " <> show params.blockDurationHours <> "h"
     now <- getCurrentTime
     let blockUntil = addUTCTime (fromIntegral params.blockDurationHours * 3600) now
-    QDriverInformation.updateSoftBlock Nothing (Just blockUntil) (Just params.blockReason) (cast driverId)
+    let blockedTiers = case params.blockedServiceTiers of
+          Just tiers | not (null tiers) -> Just (mapMaybe (readMaybe . toString) tiers)
+          _ -> Nothing
+    QDriverInformation.updateSoftBlock blockedTiers (Just blockUntil) (Just params.blockReason) (cast driverId)
+    -- Schedule auto-unblock
+    let unblockJobTs = secondsToNominalDiffTime (fromIntegral params.blockDurationHours) * 60 * 60
+    JC.createJobIn @_ @'UnblockSoftBlockedDriver (Just ctx.merchantId) (Just ctx.merchantOperatingCityId) unblockJobTs $
+      UnblockSoftBlockedDriverRequestJobData {driverId = cast driverId}
     let tag = fromMaybe "SOFT_BLOCK" params.blockReasonTag
     BT.writeBlockAndCooldownKeys BTT.DRIVER driverId.getId BTT.SOFT_BLOCK tag params.blockDurationHours params.blockReason (A.toJSON params.blockedFeatures) params.cooldownHours
   CET.HardBlock params -> do
@@ -111,8 +141,16 @@ dispatchConsequence ctx driverId = \case
       DTDBT.Application
       True
       (Just False)
-      Nothing
+      (Just DriverInfo.OFFLINE)
       reasonFlag
+    -- Block location tracking + schedule auto-unblock
+    now <- getCurrentTime
+    let expiryTime = addUTCTime (fromIntegral params.blockDurationHours * 60 * 60) now
+    void $ LTS.blockDriverLocationsTill ctx.merchantId (cast driverId) expiryTime
+    when (params.blockDurationHours > 0) $ do
+      let unblockJobTs = secondsToNominalDiffTime (fromIntegral params.blockDurationHours) * 60 * 60
+      JC.createJobIn @_ @'UnblockDriver (Just ctx.merchantId) (Just ctx.merchantOperatingCityId) unblockJobTs $
+        UnblockDriverRequestJobData {driverId = cast driverId}
     let tag = fromMaybe "HARD_BLOCK" params.blockReasonTag
     BT.writeBlockAndCooldownKeys BTT.DRIVER driverId.getId BTT.HARD_BLOCK tag params.blockDurationHours params.blockReason (A.Object mempty) params.cooldownHours
   CET.PermanentBlock params -> do
@@ -126,8 +164,8 @@ dispatchConsequence ctx driverId = \case
       DTDBT.Application
     let tag = fromMaybe "PERMANENT_BLOCK" params.blockReasonTag
     BT.writeBlockKey BTT.DRIVER driverId.getId BTT.PERMANENT_BLOCK tag 0 params.blockReason (A.Object mempty)
-  CET.Nudge _params -> pure ()
-  CET.Warn _params -> pure ()
+  CET.Nudge params -> sendOverlayByKey ctx driverId params.nudgeKey
+  CET.Warn params -> sendOverlayByKey ctx driverId params.warnKey
   CET.ChargeFee params -> do
     logInfo $ "Charge fee requested for driver " <> driverId.getId <> ": " <> show params.penaltyAmount <> " " <> params.currency
     pure ()
@@ -154,8 +192,29 @@ parseBlockReasonFlag = \case
   Just "ExtraFareDaily" -> ExtraFareDaily
   Just "ExtraFareWeekly" -> ExtraFareWeekly
   Just "DrunkAndDriveViolation" -> DrunkAndDriveViolation
+  Just "DocumentExpiry" -> DocumentExpiry
   Just "ByDashboard" -> ByDashboard
-  _ -> CancellationRate -- default fallback
+  Just other -> fromMaybe ByDashboard (readMaybe $ toString other)
+  Nothing -> ByDashboard
+
+-- | Send an overlay notification to a driver using a PNKey
+sendOverlayByKey ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  DispatchContext ->
+  Id DP.Person ->
+  Text -> -- overlayPNKey
+  m ()
+sendOverlayByKey ctx driverId overlayKey = do
+  logInfo $ "Sending overlay for driver " <> driverId.getId <> ": " <> overlayKey
+  mbDriver <- QPerson.findById driverId
+  whenJust mbDriver $ \driver -> do
+    mbOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory ctx.merchantOperatingCityId overlayKey (fromMaybe ENGLISH driver.language) Nothing Nothing Nothing
+    whenJust mbOverlay $ \overlay -> do
+      let fcmOverlayReq = Notify.mkOverlayReq overlay
+      Notify.sendOverlay ctx.merchantOperatingCityId driver fcmOverlayReq
 
 -- | Dispatch all communication directives for a driver.
 handleCommunications ::

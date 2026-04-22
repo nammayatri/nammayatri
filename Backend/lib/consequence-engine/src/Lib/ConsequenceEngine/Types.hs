@@ -71,7 +71,8 @@ data WarnParams = WarnParams
 -- | Parameters for soft block (blocked from specific service tiers/features)
 data SoftBlockParams = SoftBlockParams
   { blockDurationHours :: Int,
-    blockedFeatures :: [Text], -- service tier names
+    blockedFeatures :: [Text], -- feature names
+    blockedServiceTiers :: Maybe [Text], -- service tier names e.g. ["SEDAN", "SUV"]
     blockReason :: Text,
     blockReasonTag :: Maybe Text,
     cooldownHours :: Maybe Int
