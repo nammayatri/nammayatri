@@ -559,6 +559,8 @@ library
       Storage.CachedQueries.PartnerOrganization
       Storage.CachedQueries.PartnerOrgConfig
       Storage.CachedQueries.PartnerOrgStation
+      Storage.CachedQueries.Pass
+      Storage.CachedQueries.PassCategory
       Storage.CachedQueries.PassType
       Storage.CachedQueries.Person
       Storage.CachedQueries.Person.PersonFlowStatus
