@@ -177,6 +177,7 @@ PayoutRequest:
     payoutType: Maybe PayoutType
     coverageFrom: Maybe UTCTime
     coverageTo: Maybe UTCTime
+    ledgerEntryIds: Maybe [Text]
     createdAt: UTCTime
     updatedAt: UTCTime
   domainInstance:

@@ -1,5 +1,6 @@
 module SharedLogic.Scheduler.Jobs.ExecuteCashRideCashbackPayout where
 
+import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.Beam.Functions (runInReplica)
@@ -9,11 +10,11 @@ import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
-import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
-import qualified Lib.Payment.Domain.Action as Payment
 import qualified Lib.Payment.Domain.Types.Common as DLP
+import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
+import qualified Lib.Payment.Payout.Request as PayoutRequest
 import Lib.Scheduler
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.JobScheduler
@@ -22,7 +23,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Payout as TP
 
@@ -42,44 +42,75 @@ executeCashRideCashbackPayoutJob ::
   m ExecutionResult
 executeCashRideCashbackPayoutJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
-  if jobData.cashbackAmount <= 0
-    then do
-      logInfo $ "Skipping cashback payout job for non-positive amount ride: " <> jobData.rideId.getId
+  case NE.nonEmpty jobData.vehicleReferences of
+    Nothing -> do
+      logInfo $ "Skipping cashback payout — empty refs for person: " <> jobData.personId.getId
       pure Complete
-    else do
+    Just refsNE -> do
       person <- runInReplica $ QPerson.findById jobData.personId >>= fromMaybeM (PersonNotFound jobData.personId.getId)
-      ride <- runInReplica $ QRide.findById jobData.rideId >>= fromMaybeM (RideNotFound jobData.rideId.getId)
       case person.payoutVpa of
         Nothing -> do
-          logError $ "Skipping cashback payout due to missing payout VPA for person: " <> person.id.getId
+          logError $ "Skipping cashback payout — missing payout VPA for person: " <> person.id.getId
           pure Complete
         Just payoutVpa -> do
-          let vehicleCategory = DV.castVehicleVariantToVehicleCategory ride.vehicleVariant
-          payoutConfigs <- getConfig (PayoutDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Just True, payoutEntity = Nothing})
-          payoutConfig <- listToMaybe payoutConfigs & fromMaybeM (PayoutConfigNotFound (show vehicleCategory) person.merchantOperatingCityId.getId)
-          merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
+          merchantOperatingCity <-
+            CQMOC.findById person.merchantOperatingCityId
+              >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
           phoneNo <- mapM decrypt person.mobileNumber
           emailId <- mapM decrypt person.email
-          uid <- generateGUID
-          let createPayoutOrderReq = Payment.mkCreatePayoutOrderReq uid jobData.cashbackAmount phoneNo emailId person.id.getId payoutConfig.remark person.firstName payoutVpa payoutConfig.orderType True
-              entityName = DLP.RIDE_OFFER_CASHBACK
           payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion
-          let createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId payoutServiceName (Just person.id.getId)
-          payoutResp <- withTryCatch "createPayoutService:cashRideCashback" $ Payment.createPayoutService (cast person.merchantId) (Just $ cast person.merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
-          case payoutResp of
-            Left err -> logError $ "Failed cash ride cashback payout for ride " <> ride.id.getId <> ": " <> show err
-            Right _ -> do
-              let ledgerCtx =
-                    RidePaymentFinance.buildRiderFinanceCtx
-                      person.merchantId.getId
-                      person.merchantOperatingCityId.getId
-                      jobData.currency
-                      person.id.getId
-                      ride.id.getId
-                      Nothing
-                      Nothing
-              ledgerResult <- RidePaymentFinance.createCashbackPayoutLedger ledgerCtx jobData.cashbackAmount
-              case ledgerResult of
-                Left err -> logError $ "Cashback payout succeeded but payout ledger creation failed for ride " <> ride.id.getId <> ": " <> show err
-                Right () -> logInfo $ "Processed cashback payout and payout ledger for ride: " <> ride.id.getId
+          let groups = NE.groupAllWith (.vehicleVariant) (NE.toList refsNE)
+              payoutCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId payoutServiceName (Just person.id.getId)
+          forM_ groups $ \group -> do
+            let variant = (NE.head group).vehicleVariant
+                vehicleCategory = DV.castVehicleVariantToVehicleCategory variant
+                groupRefIds = map (.referenceId) (NE.toList group)
+                groupAmount = sum (map (.amount) (NE.toList group))
+            if groupAmount <= 0
+              then logInfo $ "Skipping variant=" <> show vehicleCategory <> " (zero amount) refs=" <> show groupRefIds
+              else do
+                payoutConfigs <- getConfig (PayoutDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Just True, payoutEntity = Nothing})
+                case listToMaybe payoutConfigs of
+                  Nothing ->
+                    logError $ "PayoutConfig not found for variant=" <> show vehicleCategory <> " city=" <> person.merchantOperatingCityId.getId <> "; skipping refs=" <> show groupRefIds
+                  Just payoutConfig -> do
+                    unsettled <- RidePaymentFinance.findUnsettledCashbackEntriesForRefs groupRefIds
+                    if null unsettled
+                      then logInfo $ "No UNSETTLED cashback entries for refs=" <> show groupRefIds <> " — skipping payout (already paid out or never created)"
+                      else do
+                        let entryIds = map (\e -> e.id.getId) unsettled
+                            submission =
+                              PayoutRequest.PayoutSubmission
+                                { beneficiaryId = person.id.getId,
+                                  entityName = DLP.RIDE_OFFER_CASHBACK,
+                                  entityId = person.id.getId,
+                                  entityRefId = Nothing,
+                                  amount = groupAmount,
+                                  payoutFee = Nothing,
+                                  merchantId = person.merchantId.getId,
+                                  merchantOpCityId = person.merchantOperatingCityId.getId,
+                                  city = show merchantOperatingCity.city,
+                                  vpa = payoutVpa,
+                                  customerName = person.firstName,
+                                  customerPhone = phoneNo,
+                                  customerEmail = emailId,
+                                  remark = payoutConfig.remark,
+                                  orderType = payoutConfig.orderType,
+                                  scheduledAt = Nothing,
+                                  payoutType = Just DPR.INSTANT,
+                                  coverageFrom = Nothing,
+                                  coverageTo = Nothing,
+                                  ledgerEntryIds = entryIds
+                                }
+                        result <- PayoutRequest.submitPayoutRequest submission payoutCall
+                        case result of
+                          PayoutRequest.PayoutInitiated pr _ ->
+                            logInfo $
+                              "Cashback payout initiated for variant=" <> show vehicleCategory
+                                <> " person=" <> person.id.getId
+                                <> " payoutRequestId=" <> pr.id.getId
+                                <> " entries=" <> show (length entryIds)
+                                <> " amount=" <> show groupAmount
+                          PayoutRequest.PayoutFailed _ err ->
+                            logError $ "Cashback payout submission failed for variant=" <> show vehicleCategory <> " refs=" <> show groupRefIds <> ": " <> err
           pure Complete

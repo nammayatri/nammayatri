@@ -179,6 +179,13 @@ _:
           NOTE: This is slower, due to doing full nix build.
         '';
         exec = ''
+          # Bump soft stack to the hard max. `nix run` spawns a fresh shell
+          # that doesn't inherit the devshell's shellHook, so set it here too.
+          # Required by process-compose / some Haskell exes that want >= 60 MB stack.
+          _hard=$(ulimit -Hs 2>/dev/null || true)
+          if [ -n "$_hard" ] && [ "$_hard" != "unlimited" ]; then
+            ulimit -s "$_hard" 2>/dev/null || true
+          fi
           # -S NAME forces stable sort by process name (no re-ordering on status change)
           nix run .#run-mobility-stack-nix -- -S NAME "$@"
         '';
@@ -191,6 +198,13 @@ _:
         '';
         exec = ''
           export DEV=1
+          # Bump soft stack to the hard max. `nix run` spawns a fresh shell
+          # that doesn't inherit the devshell's shellHook, so set it here too.
+          # Required by process-compose / some Haskell exes that want >= 60 MB stack.
+          _hard=$(ulimit -Hs 2>/dev/null || true)
+          if [ -n "$_hard" ] && [ "$_hard" != "unlimited" ]; then
+            ulimit -s "$_hard" 2>/dev/null || true
+          fi
           # -S NAME forces stable sort by process name (no re-ordering on status change)
           nix run .#run-mobility-stack-dev -- -S NAME "$@"
         '';

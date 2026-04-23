@@ -25,3 +25,8 @@ ALTER TABLE atlas_app.offer_entity ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.offer_entity ALTER COLUMN merchant_operating_city_id TYPE character varying(36);
 ALTER TABLE atlas_app.offer_entity ALTER COLUMN merchant_id TYPE character varying(36);
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.offer_entity ADD COLUMN auto_apply boolean;
+ALTER TABLE atlas_app.offer_entity ADD COLUMN is_hidden boolean;

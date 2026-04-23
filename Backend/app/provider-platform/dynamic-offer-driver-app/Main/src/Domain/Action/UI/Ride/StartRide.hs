@@ -294,7 +294,8 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
                         payoutFee = Nothing,
                         coverageFrom = Nothing,
                         coverageTo = Nothing,
-                        payoutType = Nothing
+                        payoutType = Nothing,
+                        ledgerEntryIds = Nothing
                       }
               PayoutRequest.createPayoutRequest payoutRequest
               when (payoutStatus == DPR.INITIATED) $ do

@@ -73,6 +73,7 @@ recordPGFeeLedgerEntries feeType config merchantId merchantOpCityId referenceId 
           { merchantId = merchantId,
             merchantOpCityId = merchantOpCityId,
             currency = config.pgFeeCurrency,
+            isOnline = True,
             counterpartyType = Account.SELLER,
             counterpartyId = merchantId,
             referenceId = referenceId,

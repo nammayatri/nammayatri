@@ -32,6 +32,7 @@ data PayoutRequestT f = PayoutRequestT
     expectedCreditTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     failureReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
+    ledgerEntryIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     orderType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

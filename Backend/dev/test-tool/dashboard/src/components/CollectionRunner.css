@@ -232,3 +232,104 @@
   padding: 40px;
   font-size: 13px;
 }
+
+/* Response action buttons */
+.cr-response-actions {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.cr-view-btn, .cr-copy-btn {
+  font-size: 10px;
+  padding: 2px 8px;
+  border: 1px solid #30363d;
+  border-radius: 3px;
+  background: #21262d;
+  color: #8b949e;
+  cursor: pointer;
+  font-family: inherit;
+}
+.cr-view-btn:hover, .cr-copy-btn:hover { background: #30363d; color: #c9d1d9; }
+
+/* JSON Viewer Modal */
+.jv-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.jv-modal {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  width: 80vw;
+  max-width: 900px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+.jv-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #21262d;
+  align-items: center;
+}
+.jv-search {
+  flex: 1;
+  background: #161b22;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+}
+.jv-search:focus { border-color: #1f6feb; }
+.jv-copy-btn {
+  background: #21262d;
+  border: 1px solid #30363d;
+  color: #8b949e;
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.jv-copy-btn:hover { background: #30363d; color: #c9d1d9; }
+.jv-close-btn {
+  background: none;
+  border: none;
+  color: #8b949e;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.jv-close-btn:hover { color: #f85149; }
+
+/* JSON tree */
+.jv-tree {
+  overflow: auto;
+  padding: 12px 16px;
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.jv-indent { padding-left: 20px; }
+.jv-entry { }
+.jv-key { color: #79c0ff; }
+.jv-colon { color: #8b949e; }
+.jv-str { color: #a5d6ff; }
+.jv-num { color: #56d364; }
+.jv-bool { color: #ff7b72; }
+.jv-null { color: #8b949e; font-style: italic; }
+.jv-bracket { color: #8b949e; }
+.jv-comma { color: #484f58; }
+.jv-collapsed { color: #484f58; cursor: pointer; font-size: 11px; }
+.jv-collapsed:hover { color: #8b949e; }
+.jv-highlight { background: #4c3a10; border-radius: 2px; padding: 0 2px; }

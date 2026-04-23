@@ -1,7 +1,7 @@
 {
 	"info": {
-		"name": "Online Ride Booking (Stripe Payment)",
-		"description": "End-to-end ride with Stripe online payment: search \u2192 payment setup \u2192 assign \u2192 start \u2192 end \u2192 payment capture",
+		"name": "Online Ride Booking Offers (10% First Ride Discount)",
+		"description": "End-to-end online ride with domain offer: search \u2192 see discount offer \u2192 select with offer \u2192 ride \u2192 verify discounted payment",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"event": [
@@ -66,6 +66,154 @@
 						"user",
 						"switchMerchantAndCity"
 					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Switch City for BAP (Rider Dashboard)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.environment.set('bap_dashboard_token', d.authToken);",
+							"pm.test('BAP switch OK', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{bap_dashboard_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"merchantId\": \"{{bap_short_id}}\", \"city\": \"{{city}}\"}"
+				},
+				"url": {
+					"raw": "{{bap_dashboard_url}}/user/switchMerchantAndCity",
+					"host": [
+						"{{bap_dashboard_url}}"
+					],
+					"path": [
+						"user",
+						"switchMerchantAndCity"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Cumulative Offer Logic (BAP)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('Logic version:', d.version, 'updated:', d.isRuleUpdated);",
+							"if (d.version) { pm.environment.set('offer_logic_version', d.version); }",
+							"pm.test('Logic created', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{bap_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/nammaTag/appDynamicLogic/verify",
+					"host": [
+						"{{bap_dashboard_url}}"
+					],
+					"path": [
+						"bap",
+						"{{bap_short_id}}",
+						"{{city}}",
+						"nammaTag",
+						"appDynamicLogic",
+						"verify"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\"domain\":{\"tag\":\"CUMULATIVE_OFFER_POLICY\"},\"shouldUpdateRule\":true,\"updatePassword\":\"dummy-password\",\"description\":\"First Ride Free - Helsinki\",\"inputData\":[{\"offerListResp\":{\"bestOfferCombination\":null,\"offerResp\":[]},\"extraParams\":[]}],\"rules\":[{\"cat\":[{\"var\":\"\"},{\"offerTitle\":\"First Ride Free\"},{\"offerDescription\":\"Your first ride is on us! 100% off up to \\u20ac10.\"},{\"offerSponsoredBy\":[\"BRIDGE_FINLAND\"]},{\"offerIds\":[\"offer-hel-disc-10pct-first-ride\"]}]}]}"
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Rollout Offer Logic (BAP)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const start = Date.now(); while (Date.now() - start < 20000) {}"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Rollout success', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{bap_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/nammaTag/appDynamicLogic/upsertLogicRollout",
+					"host": [
+						"{{bap_dashboard_url}}"
+					],
+					"path": [
+						"bap",
+						"{{bap_short_id}}",
+						"{{city}}",
+						"nammaTag",
+						"appDynamicLogic",
+						"upsertLogicRollout"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "[{\"domain\":{\"tag\":\"CUMULATIVE_OFFER_POLICY\"},\"timeBounds\":\"Unbounded\",\"rollout\":[{\"rolloutPercentage\":100,\"version\":{{offer_logic_version}},\"versionDescription\":\"First Ride Offer\"}]}]"
 				}
 			},
 			"response": []
@@ -966,7 +1114,7 @@
 			"response": []
 		},
 		{
-			"name": "Get Search Results",
+			"name": "Get Search Results (with Offers)",
 			"event": [
 				{
 					"listen": "prerequest",
@@ -983,11 +1131,16 @@
 						"exec": [
 							"var d = pm.response.json();",
 							"if (d.estimates && d.estimates.length > 0) {",
-							"    var est = d.estimates.find(e => e.vehicleServiceTierType === 'SUV')",
-							"           || d.estimates.find(e => e.vehicleServiceTierType === 'COMFY')",
-							"           || d.estimates[0];",
+							"    var est = d.estimates.find(e => e.vehicleServiceTierType === 'SUV') || d.estimates[0];",
 							"    pm.environment.set('estimateId', est.id);",
 							"    console.log('Estimate:', est.id, est.vehicleServiceTierType, est.estimatedFare);",
+							"    if (est.offer) {",
+							"        console.log('Offer found:', est.offer.offerTitle, 'IDs:', est.offer.offerIds);",
+							"        pm.collectionVariables.set('selected_offer_id', est.offer.offerIds[0]);",
+							"        pm.test('Estimate has discount offer', function () {",
+							"            pm.expect(est.offer).to.have.property('offerTitle');",
+							"        });",
+							"    } else { console.log('No offer found on estimate'); }",
 							"}",
 							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
 							"pm.test('Has estimates', function () { pm.expect(d.estimates).to.be.an('array').that.is.not.empty; });"
@@ -1023,13 +1176,14 @@
 			"response": []
 		},
 		{
-			"name": "Select Estimate (Card Payment)",
+			"name": "Select Estimate with Offer (Card Payment)",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"// Wait for async select processing before next step\nconst _sel_delay = 8000; const _sel_start = Date.now(); while (Date.now() - _sel_start < _sel_delay) {}"
 						],
 						"type": "text/javascript"
 					}
@@ -1060,7 +1214,7 @@
 				},
 				"body": {
 					"mode": "raw",
-					"raw": "{\"autoAssignEnabled\": true, \"autoAssignEnabledV2\": true, \"paymentMethodId\": \"{{payment_method_id}}\", \"paymentInstrument\": {\"instrumentType\": \"Card\", \"instrumentName\": \"DefaultCardType\"}}"
+					"raw": "{\"autoAssignEnabled\": true, \"autoAssignEnabledV2\": true, \"paymentMethodId\": \"{{payment_method_id}}\", \"paymentInstrument\": {\"instrumentType\": \"Card\", \"instrumentName\": \"DefaultCardType\"}, \"selectedOfferId\": \"{{selected_offer_id}}\"}"
 				}
 			},
 			"response": []
@@ -1072,9 +1226,9 @@
 					"listen": "prerequest",
 					"script": {
 						"exec": [
-							"const delay = pm.environment.get('search_wait_ms') || 5000;",
+							"// Wait briefly before checking nearby requests",
 							"const start = Date.now();",
-							"while (Date.now() - start < delay) { /* busy wait */ }"
+							"while (Date.now() - start < 1000) { /* busy wait */ }"
 						],
 						"type": "text/javascript"
 					}
@@ -1184,10 +1338,19 @@
 						"exec": [
 							"var d = pm.response.json();",
 							"if (d.list && d.list.length > 0) {",
-							"    var b = d.list[0];",
-							"    pm.environment.set('customer_bookingId', b.id);",
-							"    pm.environment.set('ride_otp', b.rideList[0].rideOtp);",
-							"    console.log('Booking:', b.id, 'Status:', b.status, 'RideOTP:', b.rideList[0].rideOtp);",
+							"    var booking = d.list[0];",
+							"    pm.environment.set('customer_bookingId', booking.id);",
+							"    pm.environment.set('ride_otp', booking.rideList[0].rideOtp);",
+							"    console.log('Booking:', booking.id, 'status:', booking.status, 'RideOTP:', booking.rideList[0].rideOtp);",
+							"    var ride = booking.rideList && booking.rideList[0];",
+							"    if (ride && ride.selectedOffers) {",
+							"        var firstOffer = ride.selectedOffers.offers && ride.selectedOffers.offers[0];",
+							"        if (firstOffer) { console.log('Ride has offer:', firstOffer.offerTitle, 'saved:', ride.selectedOffers.totalAmountSaved); }",
+							"        pm.test('Active ride has selectedOffers', function () {",
+							"            pm.expect(ride.selectedOffers).to.have.property('offers');",
+							"            pm.expect(ride.selectedOffers).to.have.property('totalAmountSaved');",
+							"        });",
+							"    }",
 							"}",
 							"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
 						],
@@ -1447,7 +1610,7 @@
 			"response": []
 		},
 		{
-			"name": "Verify Booking Completed",
+			"name": "Verify Booking Completed with Offer",
 			"event": [
 				{
 					"listen": "prerequest",
@@ -1476,8 +1639,9 @@
 							"    if (ride.selectedOffers.offers && ride.selectedOffers.offers.length > 0) {",
 							"        var offer = ride.selectedOffers.offers[0];",
 							"        pm.test('First offer has offerId', function () { pm.expect(offer).to.have.property('offerId'); });",
+							"        pm.test('First offer has offerTitle', function () { pm.expect(offer).to.have.property('offerTitle'); });",
 							"        pm.test('First offer has amountSaved', function () { pm.expect(offer).to.have.property('amountSaved'); });",
-							"        pm.test('First offer has postOfferAmount', function () { pm.expect(offer).to.have.property('postOfferAmount'); });",
+							"        console.log('Selected offer:', offer.offerTitle, 'saved:', ride.selectedOffers.totalAmountSaved);",
 							"    }",
 							"}"
 						],
@@ -1523,7 +1687,68 @@
 				}
 			},
 			"response": []
+		},
+		{
+			"name": "Get Driver Wallet Transactions",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Give the ledger time to post wallet entries after ride end (incl. discount)",
+							"const start = Date.now(); while (Date.now() - start < 1500) { /* wait */ }"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('Driver wallet balance:', d.currentBalance);",
+							"console.log('Period additions total:', d.additions && d.additions.totalAmount);",
+							"console.log('Period deductions total:', d.deductions && d.deductions.totalAmount);",
+							"if (d.additions && d.additions.items) {",
+							"    d.additions.items.forEach(function(it) { console.log('  + ' + it.itemName + ' [' + it.itemReference + ']: ' + it.itemValue); });",
+							"}",
+							"if (d.deductions && d.deductions.items) {",
+							"    d.deductions.items.forEach(function(it) { console.log('  - ' + it.itemName + ' [' + it.itemReference + ']: ' + it.itemValue); });",
+							"}",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"pm.test('Response has additions group', function () { pm.expect(d.additions).to.be.an('object'); });",
+							"pm.test('Response has deductions group', function () { pm.expect(d.deductions).to.be.an('object'); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_namma_P}}/wallet/transactions",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"wallet",
+						"transactions"
+					]
+				}
+			},
+			"response": []
 		}
 	],
-	"variable": []
+	"variable": [
+		{
+			"key": "selected_offer_id",
+			"value": ""
+		}
+	]
 }

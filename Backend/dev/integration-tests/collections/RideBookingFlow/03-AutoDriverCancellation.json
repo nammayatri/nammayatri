@@ -826,7 +826,8 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+							"// Wait for async select processing before next step\nconst _sel_delay = 8000; const _sel_start = Date.now(); while (Date.now() - _sel_start < _sel_delay) {}"
 						],
 						"type": "text/javascript"
 					}
@@ -868,10 +869,9 @@
 					"listen": "prerequest",
 					"script": {
 						"exec": [
-							"// Wait for search request to reach driver via allocator/notification",
-							"const delay = pm.environment.get('search_wait_ms') || 5000;",
+							"// Wait briefly before checking nearby requests",
 							"const start = Date.now();",
-							"while (Date.now() - start < delay) { /* busy wait */ }"
+							"while (Date.now() - start < 1000) { /* busy wait */ }"
 						],
 						"type": "text/javascript"
 					}
@@ -1316,8 +1316,9 @@
 					"listen": "prerequest",
 					"script": {
 						"exec": [
+							"// Wait briefly before checking nearby requests",
 							"const start = Date.now();",
-							"while (Date.now() - start < 5000) {}"
+							"while (Date.now() - start < 1000) { /* busy wait */ }"
 						],
 						"type": "text/javascript"
 					}

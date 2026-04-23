@@ -62,7 +62,8 @@ data PayoutSubmission = PayoutSubmission
     scheduledAt :: Maybe UTCTime,
     payoutType :: Maybe PayoutType,
     coverageFrom :: Maybe UTCTime,
-    coverageTo :: Maybe UTCTime
+    coverageTo :: Maybe UTCTime,
+    ledgerEntryIds :: [Text]
   }
   deriving (Show, Generic)
 
@@ -327,6 +328,7 @@ buildPayoutRequest submission = do
         payoutType = submission.payoutType,
         coverageFrom = submission.coverageFrom,
         coverageTo = submission.coverageTo,
+        ledgerEntryIds = if null submission.ledgerEntryIds then Nothing else Just submission.ledgerEntryIds,
         createdAt = now,
         updatedAt = now
       }

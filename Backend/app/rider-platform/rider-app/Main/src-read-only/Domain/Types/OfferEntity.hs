@@ -15,11 +15,13 @@ import qualified Tools.Beam.UtilsTH
 
 data OfferEntity = OfferEntity
   { amountSaved :: Kernel.Types.Common.HighPrecMoney,
+    autoApply :: Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     discountAmount :: Kernel.Types.Common.HighPrecMoney,
     entityId :: Kernel.Prelude.Text,
     entityType :: Domain.Types.OfferEntity.EntityType,
     id :: Kernel.Types.Id.Id Domain.Types.OfferEntity.OfferEntity,
+    isHidden :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     offerCode :: Kernel.Prelude.Text,
