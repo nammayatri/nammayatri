@@ -78,6 +78,7 @@ module Domain.Action.UI.Driver
     getCity,
     getDownloadInvoiceData,
     getDummyRideRequest,
+    DummyRideRequestRes (..),
     listScheduledBookings,
     acceptScheduledBooking,
     acceptScheduledBookingWithPreFetched,
@@ -122,7 +123,7 @@ import Data.Time.Calendar.WeekDate
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Data.Tuple.Extra as DTE
 import Domain.Action.Beckn.Search
-import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummyRideRequest)
+import Domain.Action.Dashboard.Driver.Notification as DriverNotify (DummyRideRequestRes (..), triggerDummyRideRequest)
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.Internal.ProcessingChangeOnline as DOnlineDuration
 import qualified Domain.Action.UI.DriverGoHomeRequest as DDGR
@@ -2915,7 +2916,7 @@ getDummyRideRequest ::
     HasShortDurationRetryCfg r c
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
-  m APISuccess
+  m DummyRideRequestRes
 getDummyRideRequest (personId, _, merchantOpCityId) = do
   driver <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   DriverNotify.triggerDummyRideRequest driver merchantOpCityId False
