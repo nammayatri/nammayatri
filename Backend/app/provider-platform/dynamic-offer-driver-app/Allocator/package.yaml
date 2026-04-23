@@ -97,6 +97,11 @@ ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
   - -fplugin=RecordDotPreprocessor
+  # [leak-repro] enables runtime `+RTS -hi` heap-profile-by-info-table
+  # (maps closures back to source lines) without needing a profiled build.
+  # Requires GHC >= 9.2. Small binary-size overhead, no runtime overhead
+  # unless `-hi` is actually enabled via GHCRTS.
+  - -finfo-table-map
 
 library:
   source-dirs:

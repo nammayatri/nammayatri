@@ -6,6 +6,7 @@ on:
       - "prodHotPush-Common"
       - "prodHotPush-BAP"
       - "prodHotPush-BPP"
+      - "leak-repro/**"
   workflow_dispatch:
 
 permissions:
@@ -47,6 +48,7 @@ jobs:
                 "${{ github.ref }}" == "refs/heads/prodHotPush-MMFRFS" ||
                 "${{ github.ref }}" == "refs/heads/prodHotPush-BAP" ||
                 "${{ github.ref }}" == "refs/heads/prodHotPush-BPP" ||
+                "${{ github.ref }}" == refs/heads/leak-repro/* ||
                 "${{ github.event.pull_request.merged }}" == "true" ]]; then
             echo "should_push_docker=true" >> $GITHUB_OUTPUT
           else
