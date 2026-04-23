@@ -31,6 +31,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.BehaviorEngine.Orchestrator as BEOrch
+import qualified Lib.BehaviorTracker.Recorder as BTRecorder
 import qualified Lib.BehaviorTracker.Snapshot as BTSnap
 import qualified Lib.BehaviorTracker.Types as BTT
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -83,6 +84,8 @@ handleTollRelatedIssue ride = do
   -- Framework pipeline
   transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (DriverId (cast ride.driverId))) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   let counterConfig = BTT.CounterConfig {windowSizeDays = 30, counters = [BTT.ACTION_COUNT], periods = [BTT.mkPeriodConfig "window" 30]}
+  -- Increment Redis counter for visibility
+  BTRecorder.incrementCounterOnly counterConfig BTT.DRIVER ride.driverId.getId "TOLL_RELATED_ISSUE" BTT.ACTION_COUNT
   eventTime <- getCurrentTime
   let actionEvent =
         BTT.ActionEvent
@@ -148,6 +151,8 @@ handleDrunkAndDriveViolation ride = do
   -- Framework pipeline
   transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (DriverId (cast ride.driverId))) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   let counterConfig = BTT.CounterConfig {windowSizeDays = 365, counters = [BTT.ACTION_COUNT], periods = []}
+  -- Increment Redis counter for visibility
+  BTRecorder.incrementCounterOnly counterConfig BTT.DRIVER ride.driverId.getId "DRUNK_AND_DRIVE" BTT.ACTION_COUNT
   eventTime <- getCurrentTime
   let actionEvent =
         BTT.ActionEvent
@@ -178,6 +183,8 @@ handleAcRestriction ride driverInfo = do
   transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (DriverId (cast ride.driverId))) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   let airConditionScore = fromMaybe 0 driverInfo.airConditionScore
       counterConfig = BTT.CounterConfig {windowSizeDays = 365, counters = [BTT.ACTION_COUNT], periods = []}
+  -- Increment Redis counter for visibility
+  BTRecorder.incrementCounterOnly counterConfig BTT.DRIVER ride.driverId.getId "AC_RESTRICTION" BTT.ACTION_COUNT
   eventTime <- getCurrentTime
   let actionEvent =
         BTT.ActionEvent

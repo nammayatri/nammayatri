@@ -58,6 +58,27 @@ defaultDriverDomainConfig =
                     BTT.mkPeriodConfig "weekly" 7
                   ]
               }
+          ),
+          ( "DRUNK_AND_DRIVE",
+            BTT.CounterConfig
+              { windowSizeDays = 365,
+                counters = [BTT.ACTION_COUNT],
+                periods = []
+              }
+          ),
+          ( "TOLL_RELATED_ISSUE",
+            BTT.CounterConfig
+              { windowSizeDays = 30,
+                counters = [BTT.ACTION_COUNT],
+                periods = [BTT.mkPeriodConfig "window" 30]
+              }
+          ),
+          ( "AC_RESTRICTION",
+            BTT.CounterConfig
+              { windowSizeDays = 365,
+                counters = [BTT.ACTION_COUNT],
+                periods = []
+              }
           )
         ],
       blockReasonTags =
@@ -67,6 +88,7 @@ defaultDriverDomainConfig =
           "ExtraFareDaily",
           "ExtraFareWeekly",
           "DrunkAndDriveViolation",
+          "AC_USAGE",
           "HARD_BLOCK",
           "SOFT_BLOCK",
           "PERMANENT_BLOCK"
