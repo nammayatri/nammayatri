@@ -146,6 +146,16 @@ onVerify :: Idfy.VerificationResponse -> Text -> Flow AckResponse
 onVerify (Idfy.VerificationResponse rsp) respDump = do
   verificationReq <- IVQuery.findByRequestId rsp.request_id >>= fromMaybeM (InternalError "Verification request not found")
   person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
+  logInfo $
+    "IdfyWebhook.onVerify: looked up verificationReq requestId=" <> rsp.request_id
+      <> " driverId="
+      <> verificationReq.driverId.getId
+      <> " docType="
+      <> show verificationReq.docType
+      <> " status="
+      <> verificationReq.status
+      <> "Response="
+      <> show rsp
   IVQuery.updateResponse rsp.status (Just respDump) rsp.request_id
   let resultStatus = getResultStatus rsp.result
   if resultStatus == Just "source_down"
