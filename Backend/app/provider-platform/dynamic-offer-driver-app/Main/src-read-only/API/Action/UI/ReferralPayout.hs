@@ -60,7 +60,7 @@ type API =
       :> "createOrder"
       :> ReqBody
            '[JSON]
-           Kernel.External.Payout.Interface.Types.CreatePayoutOrderReq
+           API.Types.UI.ReferralPayout.CreatePayoutOrderReq
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
@@ -123,7 +123,7 @@ postPayoutCreateOrder ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.External.Payout.Interface.Types.CreatePayoutOrderReq ->
+    API.Types.UI.ReferralPayout.CreatePayoutOrderReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postPayoutCreateOrder a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.ReferralPayout.postPayoutCreateOrder (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

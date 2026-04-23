@@ -146,11 +146,11 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
     isPayoutStatusSuccess status = status `elem` [Payout.SUCCESS, Payout.FULFILLMENTS_SUCCESSFUL]
 
     callPayoutService payoutOrder payoutConfig person = do
-      payoutServiceName <- Payout.decidePayoutService (DEMSC.PayoutService TPayout.Juspay) person.clientSdkVersion
       let personId = person.id
-          createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand}
-          createPayoutOrderStatusCall = Payout.payoutOrderStatus person.merchantId person.merchantOperatingCityId payoutServiceName (Just $ getId personId)
-      void $ DPayment.payoutStatusService (cast person.merchantId) (cast personId) createPayoutOrderStatusReq createPayoutOrderStatusCall
+          payoutStatusServiceReq = DPayment.PayoutStatusServiceReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand}
+          paymentMode = Nothing
+          createPayoutOrderStatusCall = Payout.payoutOrderStatus person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just $ getId personId) paymentMode
+      void $ DPayment.payoutStatusService (cast person.merchantId) (cast personId) payoutStatusServiceReq createPayoutOrderStatusCall
 
     notifyPersonOnAmountCredit person = do
       let pnKey = "REFERRAL_BONUS_EARNED"

@@ -45,6 +45,7 @@ import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Stripe.Config as Stripe
 import qualified Kernel.External.Payout.Interface as Payout
+import qualified Kernel.External.Payout.Stripe.Config as StripePayout
 import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
@@ -108,6 +109,14 @@ stripePaymentService wrap cfg =
     Just Stripe.Test -> Payment.StripeTest
     _ -> Payment.Stripe
 
+stripePayoutService :: (Payout.PayoutService -> ServiceName) -> StripePayout.StripeConfig -> ServiceName
+stripePayoutService wrap cfg =
+  wrap $ case cfg.serviceMode of
+    Just Stripe.Test -> Payout.StripeTest
+    _ -> Payout.Stripe
+
+-- TODO refactor in similar way as other places
+-- TODO remove duplication of this function if possible
 getServiceName :: MerchantServiceConfig -> ServiceName
 getServiceName msc = case msc.serviceConfig of
   MapsServiceConfig mapsCfg -> case mapsCfg of
@@ -183,6 +192,7 @@ getServiceName msc = case msc.serviceConfig of
     Tokenize.TtenTokenizationServiceConfig _ -> TokenizationService Tokenize.Tten
   PayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig _ -> PayoutService Payout.Juspay
+    Payout.StripeConfig stripeCfg -> stripePayoutService PayoutService stripeCfg
   MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
     MultiModal.GoogleTransitConfig _ -> MultiModalService MultiModal.GoogleTransit
     MultiModal.OTPTransitConfig _ -> MultiModalService MultiModal.OTPTransit

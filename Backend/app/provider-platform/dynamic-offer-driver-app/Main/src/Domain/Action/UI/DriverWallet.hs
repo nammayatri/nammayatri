@@ -49,7 +49,6 @@ import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification.FCM.Types as FCM
-import qualified Kernel.External.Payout.Types as TPayout
 import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -85,7 +84,6 @@ import qualified SharedLogic.Payment as SPayment
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOI
 import qualified Storage.Queries.Person as QPerson
@@ -424,10 +422,6 @@ initiateWalletPayout ::
   m ()
 initiateWalletPayout ctx vpa payoutableBalance payoutType coverageFrom coverageTo redeemableEntryIds = do
   phoneNo <- mapM decrypt ctx.person.mobileNumber
-  subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName ctx.person.merchantOperatingCityId Nothing PREPAID_SUBSCRIPTION
-      >>= fromMaybeM (NoSubscriptionConfigForService ctx.person.merchantOperatingCityId.getId "PREPAID_SUBSCRIPTION")
-  payoutServiceName <- Payout.decidePayoutService (fromMaybe (DEMSC.PayoutService TPayout.Juspay) subscriptionConfig.payoutServiceName) ctx.person.clientSdkVersion ctx.person.merchantOperatingCityId
   merchantOperatingCity <- CQMOC.findById (Kernel.Types.Id.cast ctx.person.merchantOperatingCityId) >>= fromMaybeM (MerchantOperatingCityNotFound ctx.person.merchantOperatingCityId.getId)
 
   let fee = computePayoutFee ctx.transporterConfig.driverWalletConfig.payoutFee payoutableBalance
@@ -439,6 +433,7 @@ initiateWalletPayout ctx vpa payoutableBalance payoutType coverageFrom coverageT
             entityId = ctx.driverId.getId,
             entityRefId = Nothing,
             amount = netAmount,
+            currency = ctx.transporterConfig.currency,
             payoutFee = if fee > 0 then Just fee else Nothing,
             merchantId = ctx.merchantId.getId,
             merchantOpCityId = ctx.mocId.getId,
@@ -455,7 +450,8 @@ initiateWalletPayout ctx vpa payoutableBalance payoutType coverageFrom coverageT
             coverageTo = coverageTo,
             ledgerEntryIds = [] -- driver side keeps Redis stash flow unchanged
           }
-      payoutCall = Payout.createPayoutOrder ctx.person.merchantId ctx.person.merchantOperatingCityId payoutServiceName (Just ctx.person.id.getId)
+      paymentMode = Nothing -- FIXME
+      payoutCall = Payout.createPayoutOrder (Payout.SubscriptionConfigOption PREPAID_SUBSCRIPTION) DEMSC.PayoutService ctx.person.clientSdkVersion ctx.person.merchantId ctx.person.merchantOperatingCityId ctx.person.id paymentMode
 
   when (netAmount > 0.0) $ do
     result <- PayoutRequest.submitPayoutRequest submission payoutCall
@@ -588,7 +584,7 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
               issuedToId = driverId.getId,
               issuedToName = Nothing,
               issuedToAddress = Nothing,
-              lineItems = [InvoiceLineItem {description = "Airport Cash Recharge", quantity = 1, unitPrice = amount, lineTotal = amount, isExternalCharge = False, invoiceLineItemType = AirportCashRecharge }],
+              lineItems = [InvoiceLineItem {description = "Airport Cash Recharge", quantity = 1, unitPrice = amount, lineTotal = amount, isExternalCharge = False, invoiceLineItemType = AirportCashRecharge}],
               gstBreakdown = Nothing,
               isVat = False,
               issuedToTaxNo = Nothing,

@@ -1,6 +1,11 @@
 module SharedLogic.AnalyticsExtra where
 
+import qualified Data.Map as Map
+import qualified Data.Set as Set
+import qualified Domain.Types.DriverFlowStatus as DDF
 import Domain.Types.Person as DP
+import qualified Domain.Types.SubscriptionPurchase as DSP
+import qualified Domain.Types.TransporterConfig as TC
 import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
@@ -9,22 +14,17 @@ import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Domain.Types.TransporterConfig as TC
-import qualified Data.Map as Map
-import qualified Storage.Clickhouse.FleetOperatorStats as CFO
-import qualified Storage.Queries.DriverOperatorAssociation as QDOA
+import qualified SharedLogic.DriverFlowStatus as SDFStatus
+import qualified Storage.Clickhouse.DriverInformation as CDI
 import qualified Storage.Clickhouse.DriverOperatorAssociation as CDOA
 import qualified Storage.Clickhouse.FleetDriverAssociation as CFDA
-import qualified Storage.Clickhouse.Vehicle as CVehicle
-import qualified Data.Set as Set
-import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
-import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Clickhouse.FleetOperatorStats as CFO
 import qualified Storage.Clickhouse.SubscriptionPurchase as CSubscriptionPurchase
-import qualified Storage.Clickhouse.DriverInformation as CDI
-import qualified Domain.Types.SubscriptionPurchase as DSP
-import qualified SharedLogic.DriverFlowStatus as SDFStatus
-import qualified Domain.Types.DriverFlowStatus as DDF
-import Tools.Error (GenericError(InternalError), GenericError(InvalidRequest))
+import qualified Storage.Clickhouse.Vehicle as CVehicle
+import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverOperatorAssociation as QDOA
+import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
+import Tools.Error (GenericError (InternalError, InvalidRequest))
 
 data FleetAllTimeMetric = ACTIVE_DRIVER_COUNT | ACTIVE_VEHICLE_COUNT
   deriving (Show, Eq, Ord)
@@ -345,7 +345,6 @@ findOperatorIdForDriver driverId = do
   case mbDriverOperatorAssoc of
     Just assoc -> pure [assoc.operatorId]
     Nothing -> pure []
-
 
 decrementOperatorTotalActiveDriversIfDriverHasNoActiveSubscription ::
   ( MonadFlow m,

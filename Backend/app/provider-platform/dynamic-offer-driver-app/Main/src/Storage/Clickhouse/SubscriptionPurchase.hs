@@ -1,11 +1,12 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
+
 module Storage.Clickhouse.SubscriptionPurchase where
 
+import qualified Data.Set as Set
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
-import qualified Data.Set as Set
 
 data SubscriptionPurchaseT f = SubscriptionPurchaseT
   { ownerId :: C f Text,
@@ -27,6 +28,7 @@ subscriptionPurchaseTTable =
 type SubscriptionPurchase = SubscriptionPurchaseT Identity
 
 instance CH.ClickhouseValue DSP.SubscriptionOwnerType
+
 instance CH.ClickhouseValue DSP.SubscriptionPurchaseStatus
 
 $(TH.mkClickhouseInstances ''SubscriptionPurchaseT 'SELECT_FINAL_MODIFIER)

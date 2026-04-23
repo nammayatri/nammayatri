@@ -304,7 +304,6 @@ data UpsertCoreLedgerResult = UpsertCoreLedgerResult
 --       (and their invoice, via 'voidRidePaymentLedger') and recreate at the
 --       new amounts.
 --     * Prior core entries but totals match → no-op.
---
 upsertCoreRidePaymentLedger ::
   (BeamFlow.BeamFlow m r, MonadFlow m) =>
   FinanceCtx ->
@@ -468,7 +467,7 @@ markCashbackEntriesAsPaidOut ::
   (BeamFlow.BeamFlow m r, MonadFlow m) =>
   FinanceCtx ->
   [Id LE.LedgerEntry] -> -- entry IDs (from PayoutRequest.ledgerEntryIds)
-  Text ->                -- PayoutRequest id → settlementId on the row
+  Text -> -- PayoutRequest id → settlementId on the row
   m (Either FinanceError ())
 markCashbackEntriesAsPaidOut ctx entryIds payoutRequestId = do
   mbEntries <- forM entryIds getEntry
@@ -480,9 +479,10 @@ markCashbackEntriesAsPaidOut ctx entryIds payoutRequestId = do
       logInfo $ "markCashbackEntriesAsPaidOut: nothing eligible (payoutRequestId=" <> payoutRequestId <> ")"
       pure $ Right ()
     else do
-      drainResult <- runFinance ctx $
-        when (totalAmount > 0) $
-          transfer_ OwnerLiability BuyerExternal totalAmount ridePaymentRefCashbackPayout
+      drainResult <-
+        runFinance ctx $
+          when (totalAmount > 0) $
+            transfer_ OwnerLiability BuyerExternal totalAmount ridePaymentRefCashbackPayout
       case drainResult of
         Left err -> do
           logError $ "Cashback payout drain leg failed: " <> show err
@@ -491,8 +491,11 @@ markCashbackEntriesAsPaidOut ctx entryIds payoutRequestId = do
           Lib.Finance.Ledger.Service.markEntriesAsPaidOut (map (.id) eligible) payoutRequestId
           logInfo $
             "Cashback payout settled — " <> show (length eligible)
-              <> " entries → PAID_OUT (payoutRequestId=" <> payoutRequestId
-              <> ", drainAmount=" <> show totalAmount <> ")"
+              <> " entries → PAID_OUT (payoutRequestId="
+              <> payoutRequestId
+              <> ", drainAmount="
+              <> show totalAmount
+              <> ")"
           pure $ Right ()
 
 -- ---------------------------------------------------------------------------
@@ -621,10 +624,10 @@ coreRidePaymentRefTypes =
 allRidePaymentRefTypes :: [Text]
 allRidePaymentRefTypes =
   coreRidePaymentRefTypes
-    <>  [ ridePaymentRefTip,
-          ridePaymentRefCancellationFee,
-          ridePaymentRefCancellationGST
-        ]
+    <> [ ridePaymentRefTip,
+         ridePaymentRefCancellationFee,
+         ridePaymentRefCancellationGST
+       ]
 
 -- | Find all ledger entries for a ride (all reference types).
 --   Replaces: QPaymentInvoice.findAllByRideId

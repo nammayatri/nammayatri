@@ -38,6 +38,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.TransporterConfig as DTConf
 import Domain.Types.Trip
+import qualified Domain.Types.VehicleVariant as Veh
 import Environment (Flow)
 import EulerHS.Prelude
 import Kernel.External.Encryption (decrypt)
@@ -70,7 +71,6 @@ import qualified SharedLogic.IffcoTokioInsurance as IffcoInsurance
 import SharedLogic.Ride (calculateEstimatedEndTimeRange, getPayoutVpaForRide, isKaaliPeeliBooking)
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
-import qualified Domain.Types.VehicleVariant as Veh
 import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC

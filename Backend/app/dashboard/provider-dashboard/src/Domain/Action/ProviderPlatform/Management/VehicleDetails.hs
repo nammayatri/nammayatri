@@ -1,5 +1,5 @@
 module Domain.Action.ProviderPlatform.Management.VehicleDetails
-  ( getVehicleDetailsVehicleModels
+  ( getVehicleDetailsVehicleModels,
   )
 where
 

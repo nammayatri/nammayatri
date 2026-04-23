@@ -94,6 +94,8 @@ upsertMerchantServiceConfig merchantServiceConfig = do
         ]
     else createWithKV merchantServiceConfig
 
+-- FIXME do we need StripeTest?
+-- FIXME check fo safe reuse of this function
 getServiceNameConfigJSON :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)
 getServiceNameConfigJSON = \case
   Domain.MapsServiceConfig mapsCfg -> case mapsCfg of
@@ -169,6 +171,7 @@ getServiceNameConfigJSON = \case
     Tokenize.TtenTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.Tten, toJSON cfg)
   Domain.PayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig cfg -> (Domain.PayoutService Payout.Juspay, toJSON cfg)
+    Payout.StripeConfig cfg -> (Domain.PayoutService Payout.Juspay, toJSON cfg) -- FIXME do we need StripeTest?
   Domain.MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
     MultiModal.GoogleTransitConfig cfg -> (Domain.MultiModalService MultiModal.GoogleTransit, toJSON cfg)
     MultiModal.OTPTransitConfig cfg -> (Domain.MultiModalService MultiModal.OTPTransit, toJSON cfg)

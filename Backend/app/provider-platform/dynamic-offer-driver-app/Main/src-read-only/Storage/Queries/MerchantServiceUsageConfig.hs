@@ -11,6 +11,7 @@ import qualified Domain.Types.MerchantServiceUsageConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Types
+import qualified Kernel.External.Payout.Types
 import qualified Kernel.External.SMS.Types
 import qualified Kernel.External.Whatsapp.Types
 import Kernel.Prelude
@@ -85,6 +86,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             backgroundVerification = backgroundVerification,
             categoryBasedVerificationPriorityList = Kernel.Utils.JSON.valueToMaybe =<< categoryBasedVerificationPriorityList,
             createBankAccount = createBankAccount,
+            createPayoutOrder = fromMaybe Kernel.External.Payout.Types.Juspay createPayoutOrder,
             createdAt = createdAt,
             dashboardGstVerificationService = dashboardGstVerificationService,
             dashboardPanVerificationService = dashboardPanVerificationService,
@@ -109,6 +111,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             panVerificationService = panVerificationService,
+            payoutOrderStatus = fromMaybe Kernel.External.Payout.Types.Juspay payoutOrderStatus,
             rectifyDistantPointsFailure = rectifyDistantPointsFailure,
             retryBankAccountLink = retryBankAccountLink,
             sdkVerificationService = sdkVerificationService,
@@ -131,6 +134,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
         Beam.backgroundVerification = backgroundVerification,
         Beam.categoryBasedVerificationPriorityList = Data.Aeson.toJSON <$> categoryBasedVerificationPriorityList,
         Beam.createBankAccount = createBankAccount,
+        Beam.createPayoutOrder = Kernel.Prelude.Just createPayoutOrder,
         Beam.createdAt = createdAt,
         Beam.dashboardGstVerificationService = dashboardGstVerificationService,
         Beam.dashboardPanVerificationService = dashboardPanVerificationService,
@@ -155,6 +159,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.panVerificationService = panVerificationService,
+        Beam.payoutOrderStatus = Kernel.Prelude.Just payoutOrderStatus,
         Beam.rectifyDistantPointsFailure = rectifyDistantPointsFailure,
         Beam.retryBankAccountLink = retryBankAccountLink,
         Beam.sdkVerificationService = sdkVerificationService,

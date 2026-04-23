@@ -3,7 +3,6 @@ module Domain.Action.UI.CustomerReferral where
 import API.Types.UI.CustomerReferral
 import qualified Domain.Action.Beckn.Common as Common
 import qualified Domain.Action.Internal.Payout as DPayout
-import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as MerchantOpCity
 import qualified Domain.Types.Person as Person
@@ -13,7 +12,6 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as KT
-import qualified Kernel.External.Payout.Types as PT
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
@@ -136,10 +134,10 @@ processBacklogReferralPayout personId vpa merchantOpCityId = do
           phoneNo <- mapM decrypt person.mobileNumber
           emailId <- mapM decrypt person.email
           uid <- generateGUID
-          let createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId payoutConfig.remark person.firstName vpa payoutConfig.orderType True
+          let createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount payoutConfig.currency phoneNo emailId person.id.getId payoutConfig.remark person.firstName vpa payoutConfig.orderType True
           logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
-          payoutServiceName <- TPayout.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion
-          let createPayoutOrderCall = TPayout.createPayoutOrder person.merchantId merchantOpCityId payoutServiceName (Just person.id.getId)
+          let paymentMode = Nothing
+              createPayoutOrderCall = TPayout.createPayoutOrder person.clientSdkVersion person.merchantId merchantOpCityId (Just person.id.getId) paymentMode
           merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
           mbPayoutOrderResp <- withTryCatch "createPayoutService:processBacklogReferralPayout" $ Payout.createPayoutService (cast person.merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just []) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
           case mbPayoutOrderResp of

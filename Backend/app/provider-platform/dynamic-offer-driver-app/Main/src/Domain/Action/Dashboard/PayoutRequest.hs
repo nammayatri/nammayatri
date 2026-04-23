@@ -20,7 +20,6 @@ import qualified Environment
 import EulerHS.Prelude hiding (id, readMaybe, sum)
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Types as KT
-import qualified Kernel.External.Payout.Types as PT
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context
@@ -106,8 +105,8 @@ refundRegistrationAmount merchantShortId opCity req = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let vehicleCategory = DV.AUTO_CATEGORY
   payoutConfig <- CPC.findByPrimaryKey merchantOpCity.id vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCity.id.getId)
-  payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) driver.clientSdkVersion driver.merchantOperatingCityId
-  let createPayoutOrderCall = TP.createPayoutOrder merchant.id merchantOpCity.id payoutServiceName (Just driverId.getId)
+  let paymentMode = Nothing -- FIXME
+  let createPayoutOrderCall = TP.createPayoutOrder TP.MerchantServiceUsageConfigOption DEMSC.PayoutService driver.clientSdkVersion merchant.id merchantOpCity.id driverId paymentMode
 
   -- Delegate to lib — it looks up PaymentOrder for amount + VPA, checks idempotency
   logDebug $ "Refunding registration for driverId: " <> driverId.getId <> " | orderId: " <> registrationOrderId.getId

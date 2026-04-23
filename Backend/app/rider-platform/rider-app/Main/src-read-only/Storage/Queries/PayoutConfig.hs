@@ -13,6 +13,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Price
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Common
 import qualified Sequelize as Se
@@ -60,6 +61,7 @@ updateByPrimaryKey (Domain.Types.PayoutConfig.PayoutConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.batchLimit batchLimit,
+      Se.Set Beam.currency (Just currency),
       Se.Set Beam.expand expand,
       Se.Set Beam.isPayoutEnabled isPayoutEnabled,
       Se.Set Beam.maxPayoutReferralForADay (Just maxPayoutReferralForADay),
@@ -84,6 +86,7 @@ instance FromTType' Beam.PayoutConfig Domain.Types.PayoutConfig.PayoutConfig whe
       Just
         Domain.Types.PayoutConfig.PayoutConfig
           { batchLimit = batchLimit,
+            currency = fromMaybe Kernel.Types.Price.INR currency,
             expand = expand,
             id = Kernel.Types.Id.Id id,
             isPayoutEnabled = isPayoutEnabled,
@@ -107,6 +110,7 @@ instance ToTType' Beam.PayoutConfig Domain.Types.PayoutConfig.PayoutConfig where
   toTType' (Domain.Types.PayoutConfig.PayoutConfig {..}) = do
     Beam.PayoutConfigT
       { Beam.batchLimit = batchLimit,
+        Beam.currency = Just currency,
         Beam.expand = expand,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isPayoutEnabled = isPayoutEnabled,

@@ -38,7 +38,6 @@ import qualified Domain.Types.BookingStatus as BT
 import qualified Domain.Types.BookingStatus as DRB
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.ClientPersonInfo as DPCI
-import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.HotSpot
 import qualified Domain.Types.Journey as DJourney
@@ -62,7 +61,6 @@ import Kernel.Beam.Functions as B
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface.Types as Payment
-import qualified Kernel.External.Payout.Types as PT
 import qualified Kernel.External.Ticket.Interface.Types as TIT
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
@@ -884,7 +882,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         when (totalCount == 0) $ do
           Notify.notifyFirstRideEvent booking.riderId (Utils.mapServiceTierToCategory booking.vehicleServiceTierType) booking.tripCategory
           fork ("processing referral payouts for ride: " <> ride.id.getId) $ do
-            customerReferralPayout ride isValidRide riderConfig person booking.merchantId booking.merchantOperatingCityId
+            customerReferralPayout ride totalFare.currency isValidRide riderConfig person booking.merchantId booking.merchantOperatingCityId
 
   when (riderConfig.enableRideEndOffers) $ do
     fork "computing offers namma tag" $
@@ -1542,13 +1540,14 @@ customerReferralPayout ::
     HasKafkaProducer r
   ) =>
   DRide.Ride ->
+  Currency ->
   Maybe Bool ->
   DRC.RiderConfig ->
   DPerson.Person ->
   Id DMerchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   m ()
-customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantOperatingCityId = do
+customerReferralPayout ride currency isValidRide riderConfig person_ merchantId merchantOperatingCityId = do
   let vehicleCategory = DV.castVehicleVariantToVehicleCategory ride.vehicleVariant
   logDebug $ "Ride End referral payout : vehicleCategory : " <> show vehicleCategory <> " isValidRide: " <> show isValidRide
   mbPayoutConfig <- getOneConfig (PayoutDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing})
@@ -1591,13 +1590,14 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
               False -> QPersonStats.updateReferredByEarningsPayoutStatus (Just DPS.Processing) person.id
             phoneNo <- mapM decrypt person.mobileNumber
             emailId <- mapM decrypt person.email
+            merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
             uid <- generateGUID
             let entityName = entity
-                createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId payoutConfig.remark person.firstName vpa payoutConfig.orderType True
+                createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount currency phoneNo emailId person.id.getId payoutConfig.remark person.firstName vpa payoutConfig.orderType True
             logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
-            payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion
-            let createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOperatingCityId payoutServiceName (Just person.id.getId)
-            merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
+            let paymentMode = Nothing -- FIXME
+            let createPayoutOrderCall = TP.createPayoutOrder person.clientSdkVersion merchantId merchantOperatingCityId (Just person.id.getId) paymentMode
+
             mbPayoutOrderResp <- withTryCatch "createPayoutService:handlePayout" $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
             case mbPayoutOrderResp of
               Left err -> logError $ "Error in calling create payout rideId: " <> show ride.id.getId <> " and orderId: " <> show uid <> "with error " <> show err

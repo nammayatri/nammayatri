@@ -41,8 +41,8 @@ import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
-import qualified Storage.Cac.TransporterConfig as SCT
 import SharedLogic.Finance.Wallet (computeTdsRateReason)
+import qualified Storage.Cac.TransporterConfig as SCT
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.SubscriptionPurchase as QSP
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE

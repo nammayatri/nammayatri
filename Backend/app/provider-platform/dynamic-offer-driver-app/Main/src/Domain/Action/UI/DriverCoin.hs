@@ -33,7 +33,6 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
 import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
-import qualified Kernel.External.Payout.Types as PT
 import Kernel.External.Types (Language (..), ServiceFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -406,11 +405,11 @@ redeemCoins driverId merchantId merchantOpCityId transporterConfig vehCategory d
   phoneNo <- mapM decrypt driver.mobileNumber
   driverInformation <- QDriverInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
   vpa <- driverInformation.payoutVpa & fromMaybeM (InvalidRequest "Driver has no payout VPA")
-  payoutServiceName <- Payout.decidePayoutService (DEMSC.PayoutService PT.Juspay) driver.clientSdkVersion driver.merchantOperatingCityId
   merchantOperatingCity <- CQMOC.findById (cast merchantOpCityId) >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  let createPayoutOrderReq = DPayment.mkCreatePayoutOrderReq uid calculatedAmount phoneNo driver.email driverId.getId "converted from coins" (Just driver.firstName) vpa payoutConfig.orderType False
+  let createPayoutOrderReq = DPayment.mkCreatePayoutServiceReq uid calculatedAmount transporterConfig.currency phoneNo driver.email driverId.getId "converted from coins" (Just driver.firstName) vpa payoutConfig.orderType False
       entityName = DPayment.COINS_REDEMPTION
-      createPayoutOrderCall = Payout.createPayoutOrder driver.merchantId merchantOpCityId payoutServiceName (Just driver.id.getId)
+      paymentMode = Nothing -- FIXME
+      createPayoutOrderCall = Payout.createPayoutOrder Payout.MerchantServiceUsageConfigOption DEMSC.PayoutService driver.clientSdkVersion driver.merchantId merchantOpCityId driver.id paymentMode
   void $ DPayment.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast driverId) (Just [driverId.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
   void $ QDS.updateCoinsFieldsForDirectPayout driverId calculatedAmount
   pure $ Just $ Id uid

@@ -150,7 +150,7 @@ processRegistrationPayment ::
   Payment.TransactionStatus ->
   Maybe Text -> -- payerVpa from Juspay response
   Bool -> -- autoRefund
-  (IPayout.CreatePayoutOrderReq -> m IPayout.CreatePayoutOrderResp) -> -- payout call
+  (DPayment.CreatePayoutServiceReq -> m IPayout.CreatePayoutOrderResp) -> -- payout call
   Text -> -- remark for payout
   Text -> -- orderType for payout
   Text -> -- city
@@ -206,7 +206,7 @@ refundRegistrationAmount ::
     FinanceBeamFlow.BeamFlow m r
   ) =>
   Id DOrder.PaymentOrder ->
-  (IPayout.CreatePayoutOrderReq -> m IPayout.CreatePayoutOrderResp) -> -- payout call
+  (DPayment.CreatePayoutServiceReq -> m IPayout.CreatePayoutOrderResp) -> -- payout call
   Text -> -- remark
   Text -> -- orderType
   Text -> -- city
@@ -242,6 +242,7 @@ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city = d
                 entityId = orderId.getId,
                 entityRefId = Nothing,
                 amount = order.amount,
+                currency = order.currency,
                 payoutFee = Nothing,
                 merchantId = order.merchantId.getId,
                 merchantOpCityId = maybe "" (.getId) order.merchantOperatingCityId,

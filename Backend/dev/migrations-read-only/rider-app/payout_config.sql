@@ -25,3 +25,8 @@ ALTER TABLE atlas_app.payout_config ADD PRIMARY KEY ( id);
 ALTER TABLE atlas_app.payout_config ADD COLUMN max_payout_referral_for_a_day integer ;
 ALTER TABLE atlas_app.payout_config ADD COLUMN expand text ;
 ALTER TABLE atlas_app.payout_config ALTER COLUMN payout_entity SET DEFAULT 'PAYOUT_AWARD';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payout_config ADD COLUMN currency text  default 'INR';

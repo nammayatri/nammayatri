@@ -1,11 +1,9 @@
 module SharedLogic.Scheduler.Jobs.ExecuteCashRideCashbackPayout where
 
 import qualified Data.List.NonEmpty as NE
-import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (decrypt)
-import qualified Kernel.External.Payout.Types as PT
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -58,9 +56,9 @@ executeCashRideCashbackPayoutJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.
               >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
           phoneNo <- mapM decrypt person.mobileNumber
           emailId <- mapM decrypt person.email
-          payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion
           let groups = NE.groupAllWith (.vehicleVariant) (NE.toList refsNE)
-              payoutCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId payoutServiceName (Just person.id.getId)
+              paymentMode = Nothing -- FIXME
+              payoutCall = TP.createPayoutOrder person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just person.id.getId) paymentMode
           forM_ groups $ \group -> do
             let variant = (NE.head group).vehicleVariant
                 vehicleCategory = DV.castVehicleVariantToVehicleCategory variant
@@ -86,6 +84,7 @@ executeCashRideCashbackPayoutJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.
                                   entityId = person.id.getId,
                                   entityRefId = Nothing,
                                   amount = groupAmount,
+                                  currency = jobInfo.jobData.currency,
                                   payoutFee = Nothing,
                                   merchantId = person.merchantId.getId,
                                   merchantOpCityId = person.merchantOperatingCityId.getId,
@@ -107,10 +106,14 @@ executeCashRideCashbackPayoutJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.
                           PayoutRequest.PayoutInitiated pr _ ->
                             logInfo $
                               "Cashback payout initiated for variant=" <> show vehicleCategory
-                                <> " person=" <> person.id.getId
-                                <> " payoutRequestId=" <> pr.id.getId
-                                <> " entries=" <> show (length entryIds)
-                                <> " amount=" <> show groupAmount
+                                <> " person="
+                                <> person.id.getId
+                                <> " payoutRequestId="
+                                <> pr.id.getId
+                                <> " entries="
+                                <> show (length entryIds)
+                                <> " amount="
+                                <> show groupAmount
                           PayoutRequest.PayoutFailed _ err ->
                             logError $ "Cashback payout submission failed for variant=" <> show vehicleCategory <> " refs=" <> show groupRefIds <> ": " <> err
           pure Complete
