@@ -1080,6 +1080,7 @@ listDomainOffers merchantId merchantOperatingCityId orderAmount _currency mbDoma
               cashbackAmount = computedOfferAmount.payoutAmount,
               benefitType = show offer.offerType,
               offerCode = offer.offerCode,
+              uiConfigs = Nothing,
               productDiscounts = Nothing
             }
 

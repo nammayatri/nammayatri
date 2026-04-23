@@ -109,7 +109,7 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             -- Use ledger entry IDs from Redis if available, otherwise no existing order
             let mbExistingOrderId = mbOrderId
             -- ledgerInfo uses ride fare only (without tip) — tip has its own ledger entry via createTipLedger
-            let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId booking.merchantOperatingCityId.getId fare.currency person.id.getId rideId.getId Nothing Nothing
+            let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId booking.merchantOperatingCityId.getId fare.currency True person.id.getId rideId.getId Nothing Nothing
                 ledgerInfo =
                   Just $
                     SPayment.RidePaymentLedgerInfo

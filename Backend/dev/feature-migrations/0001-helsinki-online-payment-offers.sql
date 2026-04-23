@@ -36,7 +36,7 @@ BEGIN
     'Your first ride is on us! 100% off up to €10.',
     'BRIDGE_FINLAND',
     'Valid for first ride only. Maximum discount €10. Cannot be combined with other offers.',
-    '{"and":[{">=":[{"var":"personStats.completedRides"},1]},{"==":[{"var":"personOfferStats"},[]]}]}',  -- eligible if completed >= 1 ride AND no previous offer usage
+    '{"and":[{">=":[{"var":"personStats.completedRides"},0]},{"==":[{"var":"personOfferStats"},[]]}]}',  -- eligible from first ride AND no previous offer usage
     'EUR',
     true,
     v_merchant_id,
@@ -51,4 +51,14 @@ BEGIN
     updated_at = now();
 
   RAISE NOTICE 'Helsinki online payment 10%% discount offer created: %', v_offer_id;
+
+  -- Enable useDomainOffers in Payment_Stripe, Payment_StripeTest, Payment_Juspay for Helsinki
+  UPDATE atlas_app.merchant_service_config
+  SET config_json = config_json::jsonb || '{"useDomainOffers": true}'::jsonb,
+      updated_at = now()
+  WHERE merchant_id = v_merchant_id
+    AND merchant_operating_city_id = v_city_id
+    AND service_name IN ('Payment_Stripe', 'Payment_StripeTest', 'Payment_Juspay');
+
+  RAISE NOTICE 'Helsinki: useDomainOffers set to true for Stripe/StripeTest/Juspay';
 END $$;

@@ -255,7 +255,8 @@ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city = d
                 scheduledAt = Nothing,
                 payoutType = Nothing,
                 coverageFrom = Nothing,
-                coverageTo = Nothing
+                coverageTo = Nothing,
+                ledgerEntryIds = []
               }
 
       logInfo $ "Initiating registration refund for order " <> orderId.getId <> " | amount: " <> show order.amount <> " | vpa: " <> vpa

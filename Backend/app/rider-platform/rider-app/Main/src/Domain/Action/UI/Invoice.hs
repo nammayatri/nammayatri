@@ -1,4 +1,8 @@
-module Domain.Action.UI.Invoice where
+module Domain.Action.UI.Invoice
+  ( getInvoice,
+    getInvoiceList,
+  )
+where
 
 import qualified API.Types.UI.Invoice as DTInvoice
 import qualified Domain.Types.Merchant as DM
@@ -8,6 +12,10 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
+import qualified Lib.Finance.Invoice.Service as InvoiceSvc
+import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
+import Storage.Beam.Payment ()
 import qualified Storage.Clickhouse.Booking as CHB
 import qualified Storage.Clickhouse.FareBreakup as CHFB
 import qualified Storage.Clickhouse.Location as CHL
@@ -81,3 +89,59 @@ getInvoice (mbPersonId, merchantId) from to = do
         Just breakup -> return . Just $ DTInvoice.FareBreakup {price = maybe notAvailableText show breakup.amount, title}
         Nothing -> return Nothing
     notAvailableText = "N/A"
+
+-- | List finance-kernel invoices (Ride, RideCancellation) for the authenticated rider.
+--   Optional 'mbReferenceId' narrows results to a specific ride: we look up all
+--   ledger entries with that reference_id and keep only invoices linked to them
+--   via 'finance_invoice_ledger_link'.
+getInvoiceList ::
+  (Maybe (Id DP.Person), Id DM.Merchant) ->
+  Maybe FinanceInvoice.InvoiceType ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Flow DTInvoice.FinanceInvoiceListRes
+getInvoiceList (mbPersonId, _) mbInvoiceType mbLimit mbOffset mbReferenceId = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  let riderIdText = personId.getId
+      limit = min 20 . fromMaybe 10 $ mbLimit
+      offset = fromMaybe 0 mbOffset
+  allInvoices <- InvoiceSvc.findByIssuedTo "RIDER" riderIdText
+  filteredByRef <- case mbReferenceId of
+    Nothing -> pure allInvoices
+    Just refId -> do
+      entries <- RidePaymentFinance.findRidePaymentEntries refId
+      linkedInvoices <- catMaybes <$> mapM (InvoiceSvc.getInvoiceForEntry . (.id)) entries
+      let linkedIds = [inv.id | inv <- linkedInvoices]
+      pure $ Kernel.Prelude.filter (\i -> i.id `Kernel.Prelude.elem` linkedIds) allInvoices
+  let invoices = Kernel.Prelude.take limit . Kernel.Prelude.drop offset $
+        case mbInvoiceType of
+          Just invType -> Kernel.Prelude.filter (\i -> i.invoiceType == invType) filteredByRef
+          Nothing -> filteredByRef
+  let items = Kernel.Prelude.map buildInvoiceItem invoices
+  pure $
+    DTInvoice.FinanceInvoiceListRes
+      { invoices = items,
+        totalItems = Kernel.Prelude.length items
+      }
+  where
+    buildInvoiceItem :: FinanceInvoice.Invoice -> DTInvoice.FinanceInvoiceItem
+    buildInvoiceItem inv =
+      let taxAmount = inv.totalAmount - inv.subtotal
+       in DTInvoice.FinanceInvoiceItem
+            { invoiceNumber = inv.invoiceNumber,
+              invoiceType = inv.invoiceType,
+              invoiceStatus = inv.status,
+              invoiceDate = inv.issuedAt,
+              totalAmount = inv.totalAmount,
+              subtotal = inv.subtotal,
+              taxAmount = taxAmount,
+              lineItems = Just inv.lineItems,
+              issuedToName = inv.issuedToName,
+              issuedToAddress = inv.issuedToAddress,
+              issuedByName = inv.issuedByName,
+              issuedByAddress = inv.issuedByAddress,
+              taxRate = Nothing,
+              issuedToTaxNo = Nothing,
+              issuedByTaxNo = Nothing
+            }

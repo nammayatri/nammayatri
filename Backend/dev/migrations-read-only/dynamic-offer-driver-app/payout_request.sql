@@ -40,3 +40,8 @@ ALTER TABLE atlas_driver_offer_bpp.payout_request ADD COLUMN payout_fee double p
 ALTER TABLE atlas_driver_offer_bpp.payout_request ADD COLUMN payout_type text ;
 ALTER TABLE atlas_driver_offer_bpp.payout_request ADD COLUMN coverage_to timestamp with time zone ;
 ALTER TABLE atlas_driver_offer_bpp.payout_request ADD COLUMN coverage_from timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.payout_request ADD COLUMN ledger_entry_ids text[] ;

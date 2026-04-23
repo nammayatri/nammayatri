@@ -35,7 +35,6 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.CacheFlow
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -707,31 +706,15 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
               }
       -- Create or update PENDING core ride ledger entries (RideFare, GST, PlatformFee) after successful payment creation.
       -- Tip and cancellation entries are managed separately — not touched here.
-      whenJust mbLedgerInfo $ \ledgerInfo -> do
-        existingEntries <- RidePaymentFinance.findRidePaymentEntries ledgerInfo.financeCtx.referenceId
-        let coreEntries = filter (\e -> e.referenceType `elem` RidePaymentFinance.coreRidePaymentRefTypes) existingEntries
-            pendingCoreEntries = filter (\e -> e.status == LE.PENDING) coreEntries
-            newTotal = ledgerInfo.rideFare + ledgerInfo.gstAmount + ledgerInfo.platformFee
-            oldTotal = sum $ map (.amount) pendingCoreEntries
-        if null coreEntries
-          then do
-            -- First time: create core ride ledger entries
-            result <- RidePaymentFinance.createRidePaymentLedger ledgerInfo.financeCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.platformFee ledgerInfo.offerDiscountAmount ledgerInfo.cashbackPayoutAmount
-            case result of
-              Right _ -> logInfo $ "Created PENDING ride payment ledger entries for order: " <> resp.orderId.getId
-              Left err -> logError $ "Failed to create ride payment ledger entries: " <> show err
-          else
-            if not (null pendingCoreEntries) && newTotal /= oldTotal
-              then do
-                -- Fare recomputed: void old PENDING core entries, create new ones with updated amounts
-                let entryIds = map (.id) pendingCoreEntries
-                RidePaymentFinance.voidRidePaymentLedger entryIds
-                logInfo $ "Voided " <> show (length entryIds) <> " stale PENDING entries (old=" <> show oldTotal <> " new=" <> show newTotal <> ") for ride: " <> ledgerInfo.financeCtx.referenceId
-                result <- RidePaymentFinance.createRidePaymentLedger ledgerInfo.financeCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.platformFee ledgerInfo.offerDiscountAmount ledgerInfo.cashbackPayoutAmount
-                case result of
-                  Right _ -> logInfo $ "Created updated PENDING ledger entries for recomputed fare"
-                  Left err -> logError $ "Failed to create updated ledger entries: " <> show err
-              else logInfo $ "Skipping ledger creation — core entries already exist for ride: " <> ledgerInfo.financeCtx.referenceId
+      whenJust mbLedgerInfo $ \ledgerInfo ->
+        void $
+          RidePaymentFinance.upsertCoreRidePaymentLedger
+            ledgerInfo.financeCtx
+            ledgerInfo.rideFare
+            ledgerInfo.gstAmount
+            ledgerInfo.platformFee
+            ledgerInfo.offerDiscountAmount
+            ledgerInfo.cashbackPayoutAmount
       pure (Just resp)
 
 cancelPaymentIntent ::
@@ -799,6 +782,7 @@ chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType p
                 merchantId.getId
                 merchantOpCityId.getId
                 (Kernel.Prelude.head unsettledEntries).currency
+                True
                 ""
                 rideId.getId
                 Nothing

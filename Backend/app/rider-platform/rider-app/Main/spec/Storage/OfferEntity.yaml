@@ -16,6 +16,8 @@ OfferEntity:
     offerDescription: Maybe Text
     offerTnc: Maybe Text
     offerSponsoredBy: Maybe Text
+    autoApply: Bool
+    isHidden: Bool
     discountAmount: HighPrecMoney
     payoutAmount: HighPrecMoney
     amountSaved: HighPrecMoney
@@ -24,6 +26,18 @@ OfferEntity:
     merchantOperatingCityId: Id MerchantOperatingCity
     createdAt: UTCTime
     updatedAt: UTCTime
+
+  beamType:
+    autoApply: Maybe Bool
+    isHidden: Maybe Bool
+
+  fromTType:
+    autoApply: (Kernel.Prelude.fromMaybe False autoApply)|E
+    isHidden: (Kernel.Prelude.fromMaybe True isHidden)|E
+
+  toTType:
+    autoApply: (Kernel.Prelude.Just autoApply)|E
+    isHidden: (Kernel.Prelude.Just isHidden)|E
 
   constraints:
     id: PrimaryKey

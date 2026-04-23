@@ -95,6 +95,10 @@ data FinanceCtx = FinanceCtx
   { merchantId :: Text,
     merchantOpCityId :: Text,
     currency :: Currency,
+    -- | True for online (card / platform wallet) payments, False for cash.
+    --   Selects the account pair used by rider-app transfers; not persisted
+    --   on ledger entries.
+    isOnline :: Bool,
     counterpartyType :: CounterpartyType,
     counterpartyId :: Text,
     referenceId :: Text,
@@ -149,23 +153,23 @@ data AccountRole
   = -- Wallet flow accounts
     BuyerAsset
   | BuyerExternal
+  | BuyerControl
+  | BuyerExpense
   | OwnerLiability
   | OwnerExpense
+  | OwnerControl
   | GovtIndirect
   | GovtDirect
   | PlatformAsset
-  | -- Prepaid flow accounts
-    PrepaidOwner
+  | PrepaidOwner
   | SellerAsset
   | SellerLiability
   | SellerRideCredit
   | SellerRevenue
   | GovtDirectAsset
   | GovtDirectExpense
-  | -- One per (merchant, city): parking fee recipient (e.g. airport entry, toll)
-    ParkingFeeRecipient
-  | -- PG fee accounts
-    PGPaymentExpense
+  | ParkingFeeRecipient
+  | PGPaymentExpense
   | PGPaymentLiability
   | PGPayoutExpense
   | PGPayoutLiability
@@ -254,9 +258,36 @@ roleToInput ctx = \case
         merchantId = ctx.merchantId,
         merchantOperatingCityId = ctx.merchantOpCityId
       }
+  BuyerExpense ->
+    AccountInput
+      { accountType = Expense,
+        counterpartyType = Just BUYER,
+        counterpartyId = Just ctx.merchantId,
+        currency = ctx.currency,
+        merchantId = ctx.merchantId,
+        merchantOperatingCityId = ctx.merchantOpCityId
+      }
+  BuyerControl ->
+    AccountInput
+      { accountType = Control,
+        counterpartyType = Just BUYER,
+        counterpartyId = Just ctx.merchantId,
+        currency = ctx.currency,
+        merchantId = ctx.merchantId,
+        merchantOperatingCityId = ctx.merchantOpCityId
+      }
   OwnerLiability ->
     AccountInput
       { accountType = Liability,
+        counterpartyType = Just ctx.counterpartyType,
+        counterpartyId = Just ctx.counterpartyId,
+        currency = ctx.currency,
+        merchantId = ctx.merchantId,
+        merchantOperatingCityId = ctx.merchantOpCityId
+      }
+  OwnerControl ->
+    AccountInput
+      { accountType = Control,
         counterpartyType = Just ctx.counterpartyType,
         counterpartyId = Just ctx.counterpartyId,
         currency = ctx.currency,
@@ -583,46 +614,43 @@ invoice :: (BeamFlow.BeamFlow m r) => InvoiceConfig -> FinanceM m (Maybe (Id Inv
 invoice config = do
   ctx <- ask
   ids <- getEntryIds
-  if null ids
-    then pure Nothing
-    else do
-      let invoiceInput =
-            InvoiceInput
-              { invoiceType = config.invoiceType,
-                paymentOrderId = Nothing,
-                issuedToType = config.issuedToType,
-                issuedToId = config.issuedToId,
-                issuedToName = config.issuedToName,
-                issuedToAddress = config.issuedToAddress,
-                issuedByType = "BUYER",
-                issuedById = ctx.merchantId,
-                issuedByName = ctx.merchantName,
-                issuedByAddress = ctx.issuedByAddress,
-                supplierName = ctx.supplierName,
-                supplierAddress = if config.isVat then ctx.supplierAddress <|> ctx.issuedByAddress else ctx.issuedByAddress,
-                supplierGSTIN = ctx.supplierGSTIN,
-                supplierTaxNo = if config.isVat then ctx.supplierVatNumber else ctx.supplierGSTIN,
-                supplierId = ctx.supplierId,
-                gstinOfParty = Nothing,
-                panOfParty = ctx.panOfParty,
-                panType = ctx.panType,
-                counterpartyId = ctx.counterpartyId,
-                tdsRateReason = ctx.tdsRateReason,
-                tanOfDeductee = Nothing,
-                lineItems = config.lineItems,
-                gstBreakdown = config.gstBreakdown,
-                currency = ctx.currency,
-                dueAt = Nothing,
-                merchantId = ctx.merchantId,
-                merchantOperatingCityId = ctx.merchantOpCityId,
-                merchantShortId = fromMaybe ctx.merchantId ctx.merchantShortId,
-                -- VAT integration fields
-                isVat = config.isVat,
-                issuedToTaxNo = config.issuedToTaxNo,
-                issuedByTaxNo = if config.isVat then ctx.merchantVatNumber else ctx.merchantGstin
-              }
-      inv <- liftFinanceM (createInvoice invoiceInput ids)
-      pure (Just inv.id)
+  let invoiceInput =
+        InvoiceInput
+          { invoiceType = config.invoiceType,
+            paymentOrderId = Nothing,
+            issuedToType = config.issuedToType,
+            issuedToId = config.issuedToId,
+            issuedToName = config.issuedToName,
+            issuedToAddress = config.issuedToAddress,
+            issuedByType = "BUYER",
+            issuedById = ctx.merchantId,
+            issuedByName = ctx.merchantName,
+            issuedByAddress = ctx.issuedByAddress,
+            supplierName = ctx.supplierName,
+            supplierAddress = if config.isVat then ctx.supplierAddress <|> ctx.issuedByAddress else ctx.issuedByAddress,
+            supplierGSTIN = ctx.supplierGSTIN,
+            supplierTaxNo = if config.isVat then ctx.supplierVatNumber else ctx.supplierGSTIN,
+            supplierId = ctx.supplierId,
+            gstinOfParty = Nothing,
+            panOfParty = ctx.panOfParty,
+            panType = ctx.panType,
+            counterpartyId = ctx.counterpartyId,
+            tdsRateReason = ctx.tdsRateReason,
+            tanOfDeductee = Nothing,
+            lineItems = config.lineItems,
+            gstBreakdown = config.gstBreakdown,
+            currency = ctx.currency,
+            dueAt = Nothing,
+            merchantId = ctx.merchantId,
+            merchantOperatingCityId = ctx.merchantOpCityId,
+            merchantShortId = fromMaybe ctx.merchantId ctx.merchantShortId,
+            -- VAT integration fields
+            isVat = config.isVat,
+            issuedToTaxNo = config.issuedToTaxNo,
+            issuedByTaxNo = if config.isVat then ctx.merchantVatNumber else ctx.merchantGstin
+          }
+  inv <- liftFinanceM (createInvoice invoiceInput ids)
+  pure (Just inv.id)
 
 -- | Caller-provided config for recording a standalone indirect tax (GST/VAT) entry.
 --   merchantId and merchantOperatingCityId come from FinanceCtx.

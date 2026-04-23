@@ -80,7 +80,6 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Finance.Ledger.Service
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -773,16 +772,30 @@ stripeWebhookAction merchantOperatingCityId resp respDump = do
           withRideIdFromOrderObj order $ \rideId -> do
             let status = orderTxn.transactionStatus
             pendingEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries rideId
-            unless (null pendingEntries) $ do
-              let entryIds = map (.id) pendingEntries
-              case status of
-                KPayment.CHARGED -> do
-                  forM_ entryIds $ \entryId -> Lib.Finance.Ledger.Service.settleEntry entryId
-                  logInfo $ "Settled " <> show (length entryIds) <> " pending ledger entries via webhook for ride: " <> rideId
-                KPayment.CANCELLED -> do
-                  RidePaymentFinance.voidRidePaymentLedger entryIds
-                  logInfo $ "Voided " <> show (length entryIds) <> " pending ledger entries via webhook for ride: " <> rideId
-                _ -> pure ()
+            case pendingEntries of
+              [] -> pure ()
+              (firstEntry : _) -> do
+                let entryIds = map (.id) pendingEntries
+                case status of
+                  KPayment.CHARGED -> do
+                    let ctx =
+                          RidePaymentFinance.buildRiderFinanceCtx
+                            order.merchantId.getId
+                            (maybe "" (.getId) order.merchantOperatingCityId)
+                            firstEntry.currency
+                            True
+                            order.personId.getId
+                            rideId
+                            Nothing
+                            Nothing
+                    RidePaymentFinance.settleRidePaymentLedger ctx entryIds RidePaymentFinance.settledReasonRidePayment
+                      >>= \case
+                        Right () -> logInfo $ "Settled " <> show (length entryIds) <> " pending ledger entries via webhook for ride: " <> rideId
+                        Left err -> logError $ "Webhook failed to settle ledger entries for ride " <> rideId <> ": " <> show err
+                  KPayment.CANCELLED -> do
+                    RidePaymentFinance.voidRidePaymentLedger entryIds
+                    logInfo $ "Voided " <> show (length entryIds) <> " pending ledger entries via webhook for ride: " <> rideId
+                  _ -> pure ()
       pure ackResp
     _ -> DPayment.stripeWebhookService commonMerchantOperatingCityId resp respDump stripeWebhookData
 

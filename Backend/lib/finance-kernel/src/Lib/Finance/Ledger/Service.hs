@@ -245,14 +245,49 @@ updateEntryStatus ::
 updateEntryStatus entryId newStatus = do
   QLedger.updateStatus newStatus entryId
 
--- | Settle an entry (mark as SETTLED with timestamp)
+-- | Settle an entry (mark as SETTLED with timestamp).
+-- Idempotently posts balance deltas to from/to accounts the first time an
+-- entry transitions out of PENDING/DUE, using the same Asset/Expense rule as
+-- 'createEntryWithBalanceUpdate'. Writes the resulting balance snapshots onto
+-- the entry. If the entry is already SETTLED (or not found / VOIDED), no-op.
 settleEntry ::
   (BeamFlow.BeamFlow m r) =>
   Id LedgerEntry ->
   m ()
 settleEntry entryId = do
-  now <- getCurrentTime
-  QLedger.updateSettled SETTLED (Just now) entryId
+  mbEntry <- QLedger.findById entryId
+  forM_ mbEntry $ \entry ->
+    when (entry.status == PENDING || entry.status == DUE) $ do
+      mbFrom <- QAccount.findById entry.fromAccountId
+      mbTo <- QAccount.findById entry.toAccountId
+      case (mbFrom, mbTo) of
+        (Just fromAccount, Just toAccount) -> do
+          now <- getCurrentTime
+          let amount = entry.amount
+              isAssetOrExpenseAccount acc = acc.accountType == Account.Asset || acc.accountType == Account.Expense
+              fromStartBal = fromAccount.balance
+              toStartBal = toAccount.balance
+              fromEndBal =
+                if isAssetOrExpenseAccount fromAccount
+                  then fromStartBal + amount
+                  else fromStartBal - amount
+              toEndBal =
+                if isAssetOrExpenseAccount toAccount
+                  then toStartBal - amount
+                  else toStartBal + amount
+          _ <- QAccount.updateBalance fromEndBal entry.fromAccountId
+          _ <- QAccount.updateBalance toEndBal entry.toAccountId
+          let updatedEntry =
+                entry
+                  { status = SETTLED,
+                    settledAt = Just now,
+                    fromStartingBalance = Just fromStartBal,
+                    fromEndingBalance = Just fromEndBal,
+                    toStartingBalance = Just toStartBal,
+                    toEndingBalance = Just toEndBal
+                  }
+          QLedger.updateByPrimaryKey updatedEntry
+        _ -> pure ()
 
 -- | Settle an entry, update its amount, AND write balance snapshots.
 -- Use when the final settled amount differs from the original hold amount (e.g., fare recalculation).

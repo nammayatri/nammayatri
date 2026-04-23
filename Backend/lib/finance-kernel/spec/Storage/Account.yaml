@@ -12,7 +12,7 @@ Account:
 
   types:
     AccountType:
-      enum: "Asset,Liability,Revenue,Expense,External,RideCredit"
+      enum: "Asset,Liability,Revenue,Expense,External,RideCredit,Control"
       derive: "ToParamSchema"
 
     CounterpartyType:

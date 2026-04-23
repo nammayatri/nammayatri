@@ -2,21 +2,30 @@
 """
 NammayYatri Config Transfer
 
-Two-step workflow:
+Three-step workflow, all file-based:
+
   1. export — read from source DB table-by-table, validate dims, write each
-     table as a separate JSON file to tmp, then promote to assets/data/<env>/
-  2. import — read table files one-by-one from assets/data/<env>/, apply patches,
-     validate against target, generate SQL, execute
+     table as a separate JSON file to tmp, then promote to assets/data/<env>/.
+  2. patch  — apply overrides (URL replacements, re-encryption, merge_json).
+              Writes to assets/data/<from>_to_<to>/ locally. Pass --s3 to
+              additionally zip that directory and upload it to S3 as
+              <prefix>/<from>_to_<to>.zip for CloudFront consumers.
+  3. import — read patched JSON from assets/data/<from>_to_<to>/, generate SQL,
+              execute. Pass --fetch to download the zip from the public
+              CloudFront URL and extract it locally if the directory is
+              missing.
+
+Storage layout:
+  assets/data/<env>/<schema>/<table>.json            # raw export
+  assets/data/<from>_to_<to>/<schema>/<table>.json   # patched
+  assets/data/tmp/<schema>/<table>.json              # promoted on successful export
 
 Usage:
   python config_transfer.py export --from master
+  python config_transfer.py patch  --from master --to local
+  python config_transfer.py patch  --from master --to local --s3
+  python config_transfer.py import --from master --to local --fetch
   python config_transfer.py import --from master --to local --dry-run
-  python config_transfer.py import --from master --to local
-
-Storage:
-  DEV=true  -> local files under assets/data/<env>/<schema>/<table>.json
-  Otherwise -> S3 at <prefix>/<env>/<schema>/<table>.json
-  Tmp during export: assets/data/tmp/<schema>/<table>.json (promoted on success)
 """
 
 import argparse
@@ -49,13 +58,19 @@ TMP_DIR = DATA_DIR / "tmp"
 
 _RE_ENCRYPT = re.compile(r'0\.1\.0\|[0-9]+\|[A-Za-z0-9+/=]{16,}')
 
-VALID_ENVS = {"prod", "master", "env", "local"}
+VALID_ENVS = {"prod", "prod_international", "master", "env", "local"}
 ALLOWED_TRANSFERS = {
     ("prod", "local"), ("prod", "master"),
+    ("prod_international", "local"), ("prod_international", "master"),
     ("master", "local"), ("env", "local"),
 }
 
-IS_DEV = os.getenv("DEV", "").lower() in ("true", "1", "yes")
+DEFAULT_S3_BUCKET = os.getenv("CONFIG_SYNC_S3_BUCKET", "")
+DEFAULT_S3_PREFIX = os.getenv("CONFIG_SYNC_S3_PREFIX", "config-sync")
+DEFAULT_CLOUDFRONT_URL = os.getenv(
+    "CONFIG_SYNC_CLOUDFRONT_URL",
+    "",
+)
 
 
 # ── Loaders ──────────────────────────────────────────────────────────────────
@@ -338,7 +353,29 @@ def json_serializer(obj):
     raise TypeError(f"Type {type(obj).__name__} not serializable")
 
 
-def escape_sql_value(val):
+def _pg_array_literal(vals):
+    """Render a Python list as a Postgres array literal: '{...}'.
+
+    Works for text[], int[], bool[] etc. Strings are double-quoted with
+    backslash/quote escaping; numbers and booleans are emitted bare.
+    Empty list returns '{}'.
+    """
+    parts = []
+    for v in vals:
+        if v is None:
+            parts.append("NULL")
+        elif isinstance(v, bool):
+            parts.append("t" if v else "f")
+        elif isinstance(v, (int, float, Decimal)):
+            parts.append(str(v))
+        else:
+            s = str(v).replace("\\", "\\\\").replace('"', '\\"')
+            parts.append(f'"{s}"')
+    inner = ",".join(parts)
+    return "'{" + inner.replace("'", "''") + "}'"
+
+
+def escape_sql_value(val, col_type=None):
     if val is None:
         return "NULL"
     if isinstance(val, bool):
@@ -349,7 +386,13 @@ def escape_sql_value(val):
         if val.startswith("\\x"):
             return f"'{val}'"
         return "'" + val.replace("'", "''") + "'"
-    if isinstance(val, (dict, list)):
+    if isinstance(val, list):
+        # Postgres array column (text[], int[], etc.) — use {} literal, not JSON.
+        if col_type == "ARRAY":
+            return _pg_array_literal(val)
+        # jsonb/json column — keep JSON literal.
+        return "'" + json.dumps(val).replace("'", "''") + "'::jsonb"
+    if isinstance(val, dict):
         return "'" + json.dumps(val).replace("'", "''") + "'::jsonb"
     return "'" + str(val).replace("'", "''") + "'"
 
@@ -489,7 +532,11 @@ def list_table_files(base_dir, env_name, schema):
     return sorted(names)
 
 
-# ── S3 ───────────────────────────────────────────────────────────────────────
+# ── S3 / CloudFront ─────────────────────────────────────────────────────────
+#
+# Patch → S3 push and Import → CloudFront fetch transfer the *whole*
+# `assets/data/<direction>/` directory as a single zip at
+# `<prefix>/<direction>.zip` on S3 (and CloudFront).
 
 
 def s3_client():
@@ -497,17 +544,80 @@ def s3_client():
     return boto3.client("s3", region_name=os.getenv("AWS_REGION", "ap-south-1"))
 
 
-def push_table_s3(data, bucket, prefix, env_name, schema, table):
-    key = f"{prefix}/{env_name}/{schema}/{table}.json"
-    payload = json.dumps(data, default=json_serializer, indent=2)
-    s3_client().put_object(Bucket=bucket, Key=key, Body=payload.encode(), ContentType="application/json")
-    return key
+def _zip_dir(local_dir: Path, zip_path: Path) -> int:
+    """Zip every file under local_dir into zip_path, preserving paths relative
+    to local_dir. Returns the number of files archived.
+    """
+    import zipfile
+
+    count = 0
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        for p in sorted(local_dir.rglob("*")):
+            if p.is_file():
+                zf.write(p, arcname=str(p.relative_to(local_dir)))
+                count += 1
+    return count
 
 
-def pull_table_s3(bucket, prefix, env_name, schema, table):
-    key = f"{prefix}/{env_name}/{schema}/{table}.json"
-    resp = s3_client().get_object(Bucket=bucket, Key=key)
-    return json.loads(resp["Body"].read().decode("utf-8"))
+def push_patch_zip_to_s3(local_dir: Path, direction: str, bucket: str, prefix: str):
+    """Zip local_dir and upload to s3://<bucket>/<prefix>/<direction>.zip."""
+    import tempfile
+
+    if not local_dir.exists() or not any(local_dir.iterdir()):
+        print(f"  [s3] {local_dir} is empty, nothing to push")
+        return
+
+    key = f"{prefix.rstrip('/')}/{direction}.zip"
+    with tempfile.TemporaryDirectory() as tmp:
+        zip_path = Path(tmp) / f"{direction}.zip"
+        file_count = _zip_dir(local_dir, zip_path)
+        size_mb = zip_path.stat().st_size / (1024 * 1024)
+        s3_client().put_object(
+            Bucket=bucket,
+            Key=key,
+            Body=zip_path.read_bytes(),
+            ContentType="application/zip",
+        )
+    print(f"  [s3] Pushed {file_count} files ({size_mb:.2f} MB zip) to s3://{bucket}/{key}")
+
+
+def fetch_patch_zip_from_cloudfront(direction: str, cloudfront_url: str, dest_dir: Path):
+    """Download <cloudfront_url>/<direction>.zip and unzip into dest_dir."""
+    import tempfile
+    import urllib.error
+    import urllib.request
+    import zipfile
+
+    zip_url = f"{cloudfront_url.rstrip('/')}/{direction}.zip"
+    print(f"  [fetch] {zip_url}")
+    try:
+        with urllib.request.urlopen(zip_url, timeout=120) as resp:
+            zip_bytes = resp.read()
+    except urllib.error.HTTPError as e:
+        sys.exit(f"Zip not found at {zip_url}: HTTP {e.code}")
+    except urllib.error.URLError as e:
+        sys.exit(f"Cannot reach {zip_url}: {e.reason}")
+
+    size_mb = len(zip_bytes) / (1024 * 1024)
+
+    # Write to a temp file first so ZipFile gets a seekable handle, then extract.
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
+        tmp.write(zip_bytes)
+        tmp_path = Path(tmp.name)
+    try:
+        with zipfile.ZipFile(tmp_path) as zf:
+            # Guard against zip-slip: reject any entry that escapes dest_dir.
+            resolved_dest = dest_dir.resolve()
+            for name in zf.namelist():
+                target = (dest_dir / name).resolve()
+                if resolved_dest not in target.parents and target != resolved_dest:
+                    sys.exit(f"Refusing to extract entry outside dest: {name}")
+            zf.extractall(dest_dir)
+            extracted = len(zf.namelist())
+    finally:
+        tmp_path.unlink(missing_ok=True)
+    print(f"  [fetch] Downloaded {size_mb:.2f} MB, extracted {extracted} files to {dest_dir}")
 
 
 # ── Patches ──────────────────────────────────────────────────────────────────
@@ -655,8 +765,8 @@ def _encrypt_via_obj(plaintext):
 
 
 def fetch_target_table_columns(cursor, db_schema, table):
-    """Returns ([column_names], {col: data_type}, set_of_not_null_cols)."""
-    cursor.execute("""SELECT column_name, data_type, is_nullable FROM information_schema.columns
+    """Returns ([column_names], {col: data_type}, set_of_not_null_cols, set_of_cols_with_default)."""
+    cursor.execute("""SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns
         WHERE table_schema = %s AND table_name = %s ORDER BY ordinal_position""",
         (db_schema, table))
     rows = cursor.fetchall()
@@ -664,11 +774,13 @@ def fetch_target_table_columns(cursor, db_schema, table):
         cols = [r["column_name"] for r in rows]
         types = {r["column_name"]: r["data_type"] for r in rows}
         not_null = {r["column_name"] for r in rows if r["is_nullable"] == "NO"}
+        has_default = {r["column_name"] for r in rows if r["column_default"] is not None}
     else:
         cols = [r[0] for r in rows]
         types = {r[0]: r[1] for r in rows}
         not_null = {r[0] for r in rows if r[2] == "NO"}
-    return cols, types, not_null
+        has_default = {r[0] for r in rows if r[3] is not None}
+    return cols, types, not_null, has_default
 
 
 def fetch_target_table_head(cursor, db_schema, table):
@@ -715,29 +827,73 @@ def generate_delete_sql(schema, table, dim_cols, dim_values, total_rows):
     return "\n".join(lines) + "\n"
 
 
-def generate_insert_sql(schema, table, rows, src_columns, target_cols, head_row, not_null_cols=None, col_types=None):
+def _zero_value_for_type(col_type):
+    """Return a type-safe SQL literal for a NOT-NULL column that has no DEFAULT.
+
+    Used when the source dump is missing a column that the target requires
+    — we must supply *some* value or the INSERT fails.
+    """
+    t = (col_type or "").lower()
+    if t in {"text", "character varying", "character", "citext", "name"}:
+        return "''"
+    if t in {"integer", "bigint", "smallint", "numeric", "decimal", "real", "double precision"}:
+        return "0"
+    if t == "boolean":
+        return "FALSE"
+    if t in {"timestamp without time zone", "timestamp with time zone", "timestamp", "date"}:
+        return "CURRENT_TIMESTAMP"
+    if t == "time without time zone" or t == "time with time zone" or t == "time":
+        return "CURRENT_TIME"
+    if t in {"json", "jsonb"}:
+        return "'{}'" + ("::jsonb" if t == "jsonb" else "")
+    if t == "array":
+        return "'{}'"
+    if t == "uuid":
+        return "'00000000-0000-0000-0000-000000000000'"
+    return "''"
+
+
+def generate_insert_sql(schema, table, rows, src_columns, target_cols, head_row,
+                        not_null_cols=None, col_types=None, has_default_cols=None):
     """Generate INSERT statements for a batch of rows.
 
     CSV COPY exports NULL as empty string. Convert empty strings back to NULL,
     except for NOT NULL text columns where empty string is kept as-is.
     For non-text NOT NULL columns (integer, etc.), empty strings become DEFAULT.
+
+    For columns present in the *target* but missing from the source export:
+      - if NOT NULL with no DEFAULT: include the column, supply a type-safe zero
+        value (so the INSERT doesn't fail).
+      - if it has a DEFAULT (or is nullable): skip the column, let Postgres
+        fill in the default / NULL.
     """
     if not rows:
         return ""
 
     not_null_cols = not_null_cols or set()
     col_types = col_types or {}
+    has_default_cols = has_default_cols or set()
     _text_types = {"text", "character", "character varying", "json", "jsonb"}
     # Only include columns that exist in the target schema.
     # Source may have extra columns (deprecated in local, still in prod).
     if target_cols is not None:
         tgt_set = set(target_cols)
-        insert_cols = [c for c in target_cols if c in src_columns or c in head_row]
+        src_set = set(src_columns) | set(head_row.keys())
+        # target-only columns we must supply a value for (NOT NULL, no DEFAULT)
+        must_supply = [
+            c for c in target_cols
+            if c not in src_set and c in not_null_cols and c not in has_default_cols
+        ]
+        insert_cols = [c for c in target_cols if c in src_columns or c in head_row or c in must_supply]
         skipped = [c for c in src_columns if c not in tgt_set]
         if skipped:
             print(f"    [info] {schema}.{table}: dropping {len(skipped)} source-only columns: {skipped}", flush=True)
+        if must_supply:
+            print(f"    [info] {schema}.{table}: supplying zero-value for {len(must_supply)} NOT-NULL-no-default target-only columns: {must_supply}", flush=True)
     else:
         insert_cols = list(src_columns)
+        must_supply = []
+    must_supply_set = set(must_supply)
     col_list = ", ".join(f'"{c}"' for c in insert_cols)
 
     lines = []
@@ -753,11 +909,13 @@ def generate_insert_sql(schema, table, rows, src_columns, target_cols, head_row,
                         # NOT NULL non-text column (e.g., integer): empty string is invalid, use DEFAULT
                         vals.append("DEFAULT")
                     else:
-                        vals.append(escape_sql_value(val))
+                        vals.append(escape_sql_value(val, col_types.get(c)))
                 else:
-                    vals.append(escape_sql_value(val))
+                    vals.append(escape_sql_value(val, col_types.get(c)))
             elif c in head_row:
-                vals.append(escape_sql_value(head_row[c]))
+                vals.append(escape_sql_value(head_row[c], col_types.get(c)))
+            elif c in must_supply_set:
+                vals.append(_zero_value_for_type(col_types.get(c)))
             else:
                 vals.append("NULL")
         lines.append(f'INSERT INTO "{schema}"."{table}" ({col_list}) VALUES ({", ".join(vals)});')
@@ -770,7 +928,7 @@ def generate_insert_sql(schema, table, rows, src_columns, target_cols, head_row,
 def cmd_export(args):
     """Export: read source DB table-by-table -> tmp -> promote to data/<env>/."""
     from_env = args.source_env
-    print(f"Exporting from {from_env} {'(DEV)' if IS_DEV else '(S3)'}\n")
+    print(f"Exporting from {from_env}\n")
 
     env_config = load_environments()
     config_tables = load_config_tables()
@@ -913,45 +1071,31 @@ def cmd_export(args):
                     print(f"    [FAIL] {db_schema}.{tbl}: {e}", file=sys.stderr, flush=True)
                     export_errors.append(tbl)
 
-        # Promote tmp -> data (or push to S3)
+        # Promote tmp -> data
         tmp_schema_dir = TMP_DIR / from_env / schema
         if not tmp_schema_dir.exists() or not any(tmp_schema_dir.iterdir()):
             print(f"  No tables exported for {schema}, skipping promote", flush=True)
             results[schema] = {"status": "ok", "tables": 0, "rows": 0}
             continue
 
-        if IS_DEV:
-            dest = DATA_DIR / from_env / schema
-            if table_filter and dest.exists():
-                # Merge: only replace exported tables, keep others
-                for item in tmp_schema_dir.iterdir():
-                    target = dest / item.name
-                    if target.exists():
-                        if target.is_dir():
-                            shutil.rmtree(target)
-                        else:
-                            target.unlink()
-                    shutil.move(str(item), str(target))
-                shutil.rmtree(tmp_schema_dir)
-            else:
-                if dest.exists():
-                    shutil.rmtree(dest)
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                shutil.move(str(tmp_schema_dir), str(dest))
-            print(f"  Promoted to {dest}")
-        else:
-            if not args.s3_bucket:
-                sys.exit("--s3-bucket required when DEV is not set")
-            # Push all files (single JSON + batched dirs)
-            for item in tmp_schema_dir.rglob("*.json"):
-                rel = item.relative_to(tmp_schema_dir)
-                key = f"{args.s3_prefix}/{from_env}/{schema}/{rel}"
-                s3_client().put_object(
-                    Bucket=args.s3_bucket, Key=key,
-                    Body=item.read_bytes(), ContentType="application/json",
-                )
-            print(f"    Pushed {schema} to S3")
+        dest = DATA_DIR / from_env / schema
+        if table_filter and dest.exists():
+            # Merge: only replace exported tables, keep others
+            for item in tmp_schema_dir.iterdir():
+                target = dest / item.name
+                if target.exists():
+                    if target.is_dir():
+                        shutil.rmtree(target)
+                    else:
+                        target.unlink()
+                shutil.move(str(item), str(target))
             shutil.rmtree(tmp_schema_dir)
+        else:
+            if dest.exists():
+                shutil.rmtree(dest)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(tmp_schema_dir), str(dest))
+        print(f"  Promoted to {dest}")
 
         warns = dim_warnings + export_errors
         if warns:
@@ -1104,7 +1248,18 @@ def cmd_patch(args):
         print()
 
     print(f"Patched data written to {dst_base}/")
-    print(f"Run: DEV=true python config_transfer.py import --from {from_env} --to {to_env}")
+
+    if getattr(args, "s3", False):
+        bucket = args.s3_bucket or DEFAULT_S3_BUCKET
+        if not bucket:
+            sys.exit(
+                "--s3 was requested but no bucket configured. "
+                "Pass --s3-bucket or set CONFIG_SYNC_S3_BUCKET."
+            )
+        prefix = args.s3_prefix or DEFAULT_S3_PREFIX
+        push_patch_zip_to_s3(dst_base, direction, bucket, prefix)
+
+    print(f"Run: python config_transfer.py import --from {from_env} --to {to_env}")
 
 
 # ── Post-patch audit ───────────────────────────────────────────────────
@@ -1268,14 +1423,14 @@ def cmd_import(args):
     from_env = args.source_env
     to_env = args.target_env
 
-    if to_env == "prod":
-        sys.exit("FATAL: Importing into prod is NEVER allowed.")
+    if to_env in ("prod", "prod_international"):
+        sys.exit(f"FATAL: Importing into {to_env} is NEVER allowed.")
     if (from_env, to_env) not in ALLOWED_TRANSFERS:
         allowed = ", ".join(f"{s}->{t}" for s, t in sorted(ALLOWED_TRANSFERS))
         sys.exit(f"Transfer {from_env}->{to_env} not allowed.\nAllowed: {allowed}")
 
     direction = f"{from_env}_to_{to_env}"
-    print(f"Import: {from_env} -> {to_env} {'(DEV)' if IS_DEV else '(S3)'}\n")
+    print(f"Import: {from_env} -> {to_env}\n")
 
     env_config = load_environments()
     config_tables = load_config_tables()
@@ -1285,8 +1440,21 @@ def cmd_import(args):
     # Read from patched data directory
     patched_base = DATA_DIR / direction
     if not patched_base.exists():
-        sys.exit(f"Patched data not found at {patched_base}\n"
-                 f"Run: DEV=true python config_transfer.py patch --from {from_env} --to {to_env}")
+        if getattr(args, "fetch", False):
+            fetch_url = args.fetch_url or DEFAULT_CLOUDFRONT_URL
+            if not fetch_url:
+                sys.exit(
+                    "--fetch was requested but no CloudFront URL configured. "
+                    "Pass --fetch-url or set CONFIG_SYNC_CLOUDFRONT_URL."
+                )
+            print(f"Patched data missing locally; fetching from {fetch_url}")
+            fetch_patch_zip_from_cloudfront(direction, fetch_url, patched_base)
+        else:
+            sys.exit(
+                f"Patched data not found at {patched_base}\n"
+                f"Run: python config_transfer.py patch --from {from_env} --to {to_env}\n"
+                f"Or re-run import with --fetch to pull from CloudFront."
+            )
 
     # SQL output directory
     sql_dir = SCRIPT_DIR / f"{direction}_sql"
@@ -1302,13 +1470,8 @@ def cmd_import(args):
             continue
         schema_config = config_tables[schema]
 
-        if IS_DEV or args.local_dir:
-            base = Path(args.local_dir) if args.local_dir else patched_base
-            available = list_table_files(base, "", schema)
-        else:
-            # S3 mode — list from config, fetch on demand
-            base = patched_base
-            available = table_names_for_schema(schema_config)
+        base = Path(args.local_dir) if args.local_dir else patched_base
+        available = list_table_files(base, "", schema)
 
         if not available:
             print(f"[skip] No data for {schema}")
@@ -1346,11 +1509,12 @@ def cmd_import(args):
 
             tgt_cols = None
             not_null_cols = set()
+            has_default_cols = set()
             col_types = {}
             head_row = {}
             if target_cursor:
                 try:
-                    cols_result, col_types, not_null_cols = fetch_target_table_columns(target_cursor, target_db_schema, table)
+                    cols_result, col_types, not_null_cols, has_default_cols = fetch_target_table_columns(target_cursor, target_db_schema, table)
                     tgt_cols = cols_result if cols_result else None
                     if not tgt_cols:
                         print(f"    [WARN] {table}: target table has no columns (doesn't exist in local?) — INSERT will use source columns as-is", flush=True)
@@ -1395,7 +1559,8 @@ def cmd_import(args):
             for _, batch_rows in iter_table_rows(base, "", schema, table):
                 insert_sql = generate_insert_sql(
                     target_db_schema, table, batch_rows, columns,
-                    tgt_cols, head_row, not_null_cols=not_null_cols, col_types=col_types
+                    tgt_cols, head_row, not_null_cols=not_null_cols, col_types=col_types,
+                    has_default_cols=has_default_cols
                 )
                 insert_file = schema_sql_dir / f"{table}_insert_{batch_idx:04d}.sql"
                 insert_file.write_text(insert_sql)
@@ -1645,14 +1810,19 @@ def main():
         epilog="""
 Three-step workflow:
   1. export — reads source DB table-by-table, stores raw JSON
-  2. patch  — applies overrides (URL replacements, re-encryption, merge_json)
-  3. import — reads patched JSON, generates SQL, executes
+  2. patch  — applies overrides (URL replacements, re-encryption, merge_json).
+              Pass --s3 to zip the patched directory and upload it to S3 as
+              <prefix>/<from>_to_<to>.zip.
+  3. import — reads patched JSON, generates SQL, executes.
+              Pass --fetch to download <from>_to_<to>.zip from the public
+              CloudFront URL and extract it if the directory is missing.
 
 Examples:
-  DEV=true python config_transfer.py export --from master --parallel 10
-  DEV=true python config_transfer.py patch --from master --to local
-  DEV=true python config_transfer.py import --from master --to local --dry-run
-  DEV=true python config_transfer.py import --from master --to local
+  python config_transfer.py export --from master --parallel 10
+  python config_transfer.py patch  --from master --to local
+  python config_transfer.py patch  --from master --to local --s3
+  python config_transfer.py import --from master --to local --dry-run
+  python config_transfer.py import --from master --to local --fetch
         """,
     )
     sub = parser.add_subparsers(dest="command", required=True)
@@ -1662,13 +1832,17 @@ Examples:
     p_exp.add_argument("--schema", dest="schemas", action="append")
     p_exp.add_argument("--table", dest="tables", action="append", help="Export only specific tables (e.g. --table fare_policy --table fare_product)")
     p_exp.add_argument("--parallel", type=int, default=4, help="Number of parallel table exports")
-    p_exp.add_argument("--s3-bucket")
-    p_exp.add_argument("--s3-prefix", default="config-sync")
 
     p_pat = sub.add_parser("patch", help="Apply overrides to exported data")
     p_pat.add_argument("--from", dest="source_env", required=True, choices=VALID_ENVS)
     p_pat.add_argument("--to", dest="target_env", required=True, choices=VALID_ENVS)
     p_pat.add_argument("--schema", dest="schemas", action="append")
+    p_pat.add_argument("--s3", action="store_true",
+                       help="Zip assets/data/<from>_to_<to>/ and upload it to s3://<bucket>/<prefix>/<from>_to_<to>.zip")
+    p_pat.add_argument("--s3-bucket", default=None,
+                       help=f"S3 bucket for --s3 upload (default: $CONFIG_SYNC_S3_BUCKET = {DEFAULT_S3_BUCKET!r})")
+    p_pat.add_argument("--s3-prefix", default=None,
+                       help=f"S3 key prefix for --s3 upload (default: $CONFIG_SYNC_S3_PREFIX = {DEFAULT_S3_PREFIX!r})")
 
     p_imp = sub.add_parser("import", help="Import patched config into target DB")
     p_imp.add_argument("--from", dest="source_env", required=True, choices=VALID_ENVS)
@@ -1676,8 +1850,10 @@ Examples:
     p_imp.add_argument("--schema", dest="schemas", action="append")
     p_imp.add_argument("--dry-run", action="store_true")
     p_imp.add_argument("--local-dir", help="Read from custom dir instead of patched data")
-    p_imp.add_argument("--s3-bucket")
-    p_imp.add_argument("--s3-prefix", default="config-sync")
+    p_imp.add_argument("--fetch", action="store_true",
+                       help="If the patched directory is missing locally, download <from>_to_<to>.zip from the public CloudFront URL and extract it")
+    p_imp.add_argument("--fetch-url", default=None,
+                       help=f"CloudFront base URL for --fetch (default: $CONFIG_SYNC_CLOUDFRONT_URL = {DEFAULT_CLOUDFRONT_URL!r})")
 
     p_list = sub.add_parser("list", help="List config tables")
     p_list.add_argument("--schema", dest="schemas", action="append")

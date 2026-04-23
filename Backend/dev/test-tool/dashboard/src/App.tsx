@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { ConfigBar } from './components/ConfigBar';
 import { RideFlowTree } from './components/RideFlowTree';
 import { CollectionRunner } from './components/CollectionRunner';
+import { FinanceViewer } from './components/FinanceViewer';
 import { LogPanel } from './components/LogPanel';
 import axios from 'axios';
 import { callStep, startLocationPinger, stopLocationPinger, setGlobalLog } from './services/api';
@@ -539,7 +540,7 @@ function App() {
   const [config, setConfig] = useState<Config>(loadConfig);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [appMode, setAppMode] = useState<'collections' | 'custom'>('collections');
+  const [appMode, setAppMode] = useState<'collections' | 'custom' | 'finance'>('collections');
   const [activeFlowId, setActiveFlowId] = useState('ride-flow');
   const [selectedOutcome, setSelectedOutcome] = useState('fulfillment');
   const [runningNodeId, setRunningNodeId] = useState<string | null>(null);
@@ -964,6 +965,9 @@ function App() {
           <button className={`mode-tab ${appMode === 'custom' ? 'active' : ''}`} onClick={() => setAppMode('custom')}>
             Custom Flows
           </button>
+          <button className={`mode-tab ${appMode === 'finance' ? 'active' : ''}`} onClick={() => setAppMode('finance')}>
+            Finance Visualization
+          </button>
           <span className="mode-tabs-spacer" />
           <a className="tool-link" href="http://localhost:8432" target="_blank" rel="noopener noreferrer" title="PostgreSQL Web UI — query all databases">
             DB Explorer
@@ -976,6 +980,8 @@ function App() {
           <div className="content">
             {appMode === 'collections' ? (
               <CollectionRunner onLog={log} />
+            ) : appMode === 'finance' ? (
+              <FinanceViewer />
             ) : (
             <>
             <ConfigBar config={config} onChange={setConfig} onRun={runAll} onStop={stop} isRunning={isRunning}

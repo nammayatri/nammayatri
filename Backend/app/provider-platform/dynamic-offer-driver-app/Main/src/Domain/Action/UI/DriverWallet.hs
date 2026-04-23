@@ -452,7 +452,8 @@ initiateWalletPayout ctx vpa payoutableBalance payoutType coverageFrom coverageT
             scheduledAt = Nothing,
             payoutType = Just payoutType,
             coverageFrom = coverageFrom,
-            coverageTo = coverageTo
+            coverageTo = coverageTo,
+            ledgerEntryIds = [] -- driver side keeps Redis stash flow unchanged
           }
       payoutCall = Payout.createPayoutOrder ctx.person.merchantId ctx.person.merchantOperatingCityId payoutServiceName (Just ctx.person.id.getId)
 
@@ -542,6 +543,7 @@ mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId = do
       { merchantId = merchantId.getId,
         merchantOpCityId = mocId.getId,
         currency = currency,
+        isOnline = True,
         counterpartyType = FAccount.DRIVER,
         counterpartyId = driverId.getId,
         referenceId = referenceId,

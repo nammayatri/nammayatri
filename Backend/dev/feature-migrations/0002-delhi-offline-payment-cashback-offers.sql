@@ -83,4 +83,14 @@ BEGIN
   ) ON CONFLICT DO NOTHING;
 
   RAISE NOTICE 'Delhi cumulative offer policy logic and rollout created';
+
+  -- Enable useDomainOffers in Payment_Stripe, Payment_StripeTest, Payment_Juspay for Bharat Taxi
+  UPDATE atlas_app.merchant_service_config
+  SET config_json = config_json::jsonb || '{"useDomainOffers": true}'::jsonb,
+      updated_at = now()
+  WHERE merchant_id = v_merchant_id
+    AND merchant_operating_city_id = v_city_id
+    AND service_name IN ('Payment_Stripe', 'Payment_StripeTest', 'Payment_Juspay');
+
+  RAISE NOTICE 'Bharat Taxi Delhi: useDomainOffers set to true for Stripe/StripeTest/Juspay';
 END $$;

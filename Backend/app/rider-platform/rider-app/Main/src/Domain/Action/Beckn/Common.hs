@@ -516,7 +516,7 @@ rideAssignedReqHandler req = do
                   }
           -- Lookup existing order for retry handling via Redis-stored ledger entry IDs
           mbExistingOrderId <- SPayment.getOrderIdForRide ride.id
-          let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId merchantOperatingCityId.getId booking.estimatedFare.currency booking.riderId.getId ride.id.getId Nothing Nothing
+          let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId merchantOperatingCityId.getId booking.estimatedFare.currency True booking.riderId.getId ride.id.getId Nothing Nothing
               ledgerInfo =
                 Just $
                   SPayment.RidePaymentLedgerInfo
@@ -553,7 +553,8 @@ rideAssignedReqHandler req = do
           pure mbPaymentResp
         Nothing -> do
           -- For offline/cash rides we still create PENDING ride payment entries at assignment time.
-          let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId booking.estimatedFare.currency booking.riderId.getId ride.id.getId Nothing Nothing
+          -- Cash/offline ride at assignment → isOnline=False (Control pair).
+          let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId booking.estimatedFare.currency False booking.riderId.getId ride.id.getId Nothing Nothing
               rideFareAmount = booking.estimatedFare.amount - applicationFeeAmount - bookingDiscountAmount
           ledgerCreationResult <-
             RidePaymentFinance.createRidePaymentLedger
@@ -834,6 +835,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
                     offerDescription = offerDetails.offerDescription,
                     offerTnc = offerDetails.offerTnc,
                     offerSponsoredBy = offerDetails.offerSponsoredBy,
+                    autoApply = offerDetails.autoApply,
+                    isHidden = offerDetails.isHidden,
                     discountAmount = computed.discountAmount,
                     payoutAmount = computed.payoutAmount,
                     amountSaved = computed.amountSaved,
@@ -893,7 +896,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
 
   if not onlinePayment
     then do
-      let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency person.id.getId ride.id.getId Nothing Nothing
+      let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency False person.id.getId ride.id.getId Nothing Nothing
       whenJust booking.selectedOfferId $ \offerId -> do
         useDomainOffers <- TPayment.useDomainOffers booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing
         let applyOfferCall = TPayment.offerApply booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing Nothing person.clientSdkVersion
@@ -901,16 +904,22 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         void $
           withTryCatch "applyOfferWithoutPayment:cashRide" $
             DPayment.applyOfferWithoutPaymentService ride.id.getId offerId offerStatsInput (Just rideDiscountAmount) (Just ridePayoutAmount) totalFare.amount totalFare.currency person.merchantId.getId person.merchantOperatingCityId.getId useDomainOffers applyOfferCall
-      unsettledEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries ride.id.getId
-      unless (null unsettledEntries) $ do
-        let customerMoneyAmount = max 0 (totalFare.amount - rideDiscountAmount)
-            entryIds = map (.id) unsettledEntries
-        settlementResult <- RidePaymentFinance.settleCashRidePaymentLedger ledgerCtx customerMoneyAmount entryIds
-        case settlementResult of
-          Left err -> logError $ "Failed to settle cash ride ledger entries for ride " <> ride.id.getId <> ": " <> show err
-          Right () -> logInfo $ "Settled cash ride ledger entries for ride: " <> ride.id.getId
+      let cashRideFare = totalFare.amount - applicationFeeAmount' - rideDiscountAmount
+      upsertRes <-
+        RidePaymentFinance.upsertCoreRidePaymentLedger
+          ledgerCtx
+          cashRideFare
+          0
+          applicationFeeAmount'
+          rideDiscountAmount
+          ridePayoutAmount
+      unless (null upsertRes.coreEntryIds) $ do
+        settleResult <- RidePaymentFinance.settleRidePaymentLedger ledgerCtx upsertRes.coreEntryIds RidePaymentFinance.settledReasonRidePayment
+        case settleResult of
+          Right () -> logInfo $ "Cash ride BAP ledger settled for ride: " <> ride.id.getId
+          Left err -> logError $ "Cash ride settle failed: " <> show err
     else do
-      let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency person.id.getId ride.id.getId Nothing Nothing
+      let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing
           ledgerInfo =
             Just $
               SPayment.RidePaymentLedgerInfo
@@ -955,8 +964,13 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
     let cashbackPayoutJobData =
           ExecuteCashRideCashbackPayoutJobData
             { personId = person.id,
-              rideId = ride.id,
-              cashbackAmount = ridePayoutAmount, -- should we take this amount or finance account balance?
+              vehicleReferences =
+                [ VehicleReference
+                    { referenceId = ride.id.getId,
+                      vehicleVariant = ride.vehicleVariant,
+                      amount = ridePayoutAmount
+                    }
+                ],
               currency = totalFare.currency
             }
         scheduleAfter = 120 -- schedule cashback payout 2 minutes after ride completion

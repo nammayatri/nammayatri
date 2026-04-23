@@ -36,6 +36,7 @@ data PayoutRequest = PayoutRequest
     expectedCreditTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     failureReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest,
+    ledgerEntryIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Text,
     orderType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

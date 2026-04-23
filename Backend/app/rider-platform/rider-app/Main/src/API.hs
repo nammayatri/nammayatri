@@ -15,6 +15,7 @@
 module API
   ( API,
     handler,
+    riderAPI
   )
 where
 
@@ -92,6 +93,9 @@ type MainAPI =
     :<|> Conductor.API
     :<|> Depot.API
     :<|> FRFSMetrics.API
+
+riderAPI :: Proxy API
+riderAPI = Proxy
 
 handler :: FlowServer API
 handler =

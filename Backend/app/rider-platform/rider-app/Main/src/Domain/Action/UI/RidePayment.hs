@@ -286,7 +286,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         mbTipPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just tipDomainRideId) Nothing DOrder.RideHailing createPaymentIntentServiceReq Nothing
         whenJust mbTipPaymentIntentResp $ \tipPaymentIntentResp -> do
           -- Create separate PENDING tip ledger entry
-          let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency person.id.getId rideId.getId Nothing Nothing
+          let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing
           void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
           -- Capture tip — settlement happens automatically inside chargePaymentIntent
           offerStatsInput <- SPayment.buildOfferStatsInput person
@@ -320,7 +320,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq Nothing
         case mbPaymentIntentResp of
           Nothing -> do
-            let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency person.id.getId ride.id.getId Nothing Nothing
+            let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing
                 ledgerInfo =
                   Just $
                     SPayment.RidePaymentLedgerInfo
@@ -332,13 +332,13 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
                         financeCtx = ledgerCtx
                       }
             -- Create separate PENDING tip ledger entry via dedicated function
-            let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency person.id.getId rideId.getId Nothing Nothing
+            let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing
             void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
             when (ride.status == Domain.Types.RideStatus.COMPLETED) $ do
               SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId rideId person booking.selectedOfferId fareWithTip.currency ledgerInfo
           Just paymentIntentResp -> do
             -- Create separate PENDING tip ledger entry via dedicated function
-            let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency person.id.getId rideId.getId Nothing Nothing
+            let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing
             void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
             -- Capture immediately — old auth was cancelled, new PI needs fresh capture
             when (ride.status == Domain.Types.RideStatus.COMPLETED) $ do
@@ -728,7 +728,7 @@ postPaymentClearDues (mbPersonId, merchantId) req = do
               driverAccountId
             }
 
-    let debtLedgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId currency person.id.getId rideId.getId Nothing Nothing
+    let debtLedgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId currency True person.id.getId rideId.getId Nothing Nothing
         debtLedgerInfo =
           Just $
             SPayment.RidePaymentLedgerInfo
