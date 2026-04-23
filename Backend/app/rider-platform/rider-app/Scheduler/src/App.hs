@@ -52,6 +52,7 @@ import "rider-app" SharedLogic.Scheduler.Jobs.CheckMultimodalConfirmFail
 import "rider-app" SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
 import "rider-app" SharedLogic.Scheduler.Jobs.CheckRefundStatus
 import "rider-app" SharedLogic.Scheduler.Jobs.CrisRecon
+import "rider-app" SharedLogic.Scheduler.Jobs.ExecuteCashRideCashbackPayout
 import "rider-app" SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
 import "rider-app" SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper
 import "rider-app" SharedLogic.Scheduler.Jobs.MetroBusinessHour
@@ -102,6 +103,7 @@ schedulerHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledRidePopupToRider)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . executePaymentIntentJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . cancelExecutePaymentIntentJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . executeCashRideCashbackPayoutJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . postRideSafetyNotification)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runDailyJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runWeeklyJob)

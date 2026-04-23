@@ -70,6 +70,7 @@ library
       API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
       API.Types.Dashboard.AppManagement.OrphanInstances.TicketDashboard
       API.Types.Dashboard.AppManagement.OrphanInstances.TransitOperator
+      API.Types.UI.FinanceInvoice
       API.Types.UI.PartnerBookingStatementExtra
       API.Types.UI.Payment
       API.UI
@@ -84,6 +85,7 @@ library
       API.UI.Confirm
       API.UI.Disability
       API.UI.FeedbackForm
+      API.UI.FinanceInvoice
       API.UI.Frontend
       API.UI.GoogleTranslate
       API.UI.HotSpot
@@ -260,6 +262,7 @@ library
       Domain.Action.UI.FavouriteDriver
       Domain.Action.UI.Feedback
       Domain.Action.UI.FeedbackForm
+      Domain.Action.UI.FinanceInvoice
       Domain.Action.UI.FollowRide
       Domain.Action.UI.FRFSTicketService
       Domain.Action.UI.Frontend
@@ -503,6 +506,7 @@ library
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
       SharedLogic.Scheduler.Jobs.CheckRefundStatus
       SharedLogic.Scheduler.Jobs.CrisRecon
+      SharedLogic.Scheduler.Jobs.ExecuteCashRideCashbackPayout
       SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
       SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper
       SharedLogic.Scheduler.Jobs.MetroBusinessHour

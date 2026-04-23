@@ -81,6 +81,7 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Kernel.Utils.Time as KUT
+import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
@@ -436,7 +437,8 @@ rideAssignedReqHandler ::
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasKafkaProducer r,
     HasFlowEnv m r '["isMetroTestTransaction" ::: Bool],
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    FinanceBeamFlow.BeamFlow m r
   ) =>
   ValidatedRideAssignedReq ->
   m ()
@@ -482,7 +484,8 @@ rideAssignedReqHandler req = do
         HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
         HasKafkaProducer r,
         HasFlowEnv m r '["isMetroTestTransaction" ::: Bool],
-        HasField "blackListedJobs" r [Text]
+        HasField "blackListedJobs" r [Text],
+        FinanceBeamFlow.BeamFlow m r
       ) =>
       ValidatedRideAssignedReq ->
       Maybe DMerchant.Merchant ->
@@ -548,8 +551,23 @@ rideAssignedReqHandler req = do
                 SPayment.paymentErrorHandler booking paymentError
                 throwError $ InvalidRequest "Payment non-capturable, booking cancelled"
           pure mbPaymentResp
-        Nothing -> pure Nothing
-      -- Ledger entries are now created inside makePaymentIntent when RidePaymentLedgerInfo is provided
+        Nothing -> do
+          -- For offline/cash rides we still create PENDING ride payment entries at assignment time.
+          let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId booking.estimatedFare.currency booking.riderId.getId ride.id.getId Nothing Nothing
+              rideFareAmount = booking.estimatedFare.amount - applicationFeeAmount - bookingDiscountAmount
+          ledgerCreationResult <-
+            RidePaymentFinance.createRidePaymentLedger
+              ledgerCtx
+              rideFareAmount
+              0
+              applicationFeeAmount
+              bookingDiscountAmount
+              bookingPayoutAmount
+          case ledgerCreationResult of
+            Left err -> logError $ "Failed to create offline ride payment ledger entries on rideAssigned for ride " <> ride.id.getId <> ": " <> show err
+            Right _ -> logInfo $ "Created offline PENDING ride payment ledger entries on rideAssigned for ride: " <> ride.id.getId
+          pure Nothing
+      -- Ledger entries are created inside makePaymentIntent for online rides, and directly for offline rides.
       triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
       let category = case booking.specialLocationTag of
             Just _ -> "specialLocation"
@@ -775,7 +793,8 @@ rideCompletedReqHandler ::
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    FinanceBeamFlow.BeamFlow m r
   ) =>
   ValidatedRideCompletedReq ->
   m ()
@@ -874,6 +893,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
 
   if not onlinePayment
     then do
+      let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency person.id.getId ride.id.getId Nothing Nothing
       whenJust booking.selectedOfferId $ \offerId -> do
         useDomainOffers <- TPayment.useDomainOffers booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing
         let applyOfferCall = TPayment.offerApply booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing Nothing person.clientSdkVersion
@@ -881,6 +901,14 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         void $
           withTryCatch "applyOfferWithoutPayment:cashRide" $
             DPayment.applyOfferWithoutPaymentService ride.id.getId offerId offerStatsInput (Just rideDiscountAmount) (Just ridePayoutAmount) totalFare.amount totalFare.currency person.merchantId.getId person.merchantOperatingCityId.getId useDomainOffers applyOfferCall
+      unsettledEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries ride.id.getId
+      unless (null unsettledEntries) $ do
+        let customerMoneyAmount = max 0 (totalFare.amount - rideDiscountAmount)
+            entryIds = map (.id) unsettledEntries
+        settlementResult <- RidePaymentFinance.settleCashRidePaymentLedger ledgerCtx customerMoneyAmount entryIds
+        case settlementResult of
+          Left err -> logError $ "Failed to settle cash ride ledger entries for ride " <> ride.id.getId <> ": " <> show err
+          Right () -> logInfo $ "Settled cash ride ledger entries for ride: " <> ride.id.getId
     else do
       let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency person.id.getId ride.id.getId Nothing Nothing
           ledgerInfo =
@@ -922,6 +950,17 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         Right (Just _paymentIntentResp) -> do
           logDebug $ "Scheduling execute payment intent job for order: " <> show scheduleAfter
           createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)
+
+  when (ridePayoutAmount > 0) $ do
+    let cashbackPayoutJobData =
+          ExecuteCashRideCashbackPayoutJobData
+            { personId = person.id,
+              rideId = ride.id,
+              cashbackAmount = ridePayoutAmount, -- should we take this amount or finance account balance?
+              currency = totalFare.currency
+            }
+        scheduleAfter = 120 -- schedule cashback payout 2 minutes after ride completion
+    createJobIn @_ @'ExecuteCashRideCashbackPayout (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter cashbackPayoutJobData
 
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
