@@ -140,14 +140,18 @@ findById (Id id) = findOneWithKVScheduler [Se.Is BeamST.id $ Se.Eq id]
 getTasksById :: forall m r t. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) => [Id AnyJob] -> m [AnyJob t]
 getTasksById ids = findAllWithKVScheduler [Se.Is BeamST.id $ Se.In $ getId <$> ids]
 
-getPendingStuckJobs :: forall m r t. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) => UTCTime -> m [AnyJob t]
-getPendingStuckJobs newtime = do
-  findAllWithKVScheduler
+getPendingStuckJobs :: forall m r t. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) => UTCTime -> UTCTime -> Maybe Int -> Maybe Int -> m [AnyJob t]
+getPendingStuckJobs fromTime toTime mbLimit mbOffset = do
+  findAllWithOptionsKVScheduler
     [ Se.And
         [ Se.Is BeamST.status $ Se.Eq Pending,
-          Se.Is BeamST.scheduledAt $ Se.LessThanOrEq (T.utcToLocalTime T.utc newtime)
+          Se.Is BeamST.scheduledAt $ Se.LessThanOrEq (T.utcToLocalTime T.utc toTime),
+          Se.Is BeamST.scheduledAt $ Se.GreaterThanOrEq (T.utcToLocalTime T.utc fromTime)
         ]
     ]
+    (Se.Desc BeamST.scheduledAt)
+    mbLimit
+    mbOffset
 
 getJobByTypeAndScheduleTime :: forall m r t. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) => Text -> UTCTime -> UTCTime -> m [AnyJob t]
 getJobByTypeAndScheduleTime jobType minScheduleTime maxScheduleTime = do
