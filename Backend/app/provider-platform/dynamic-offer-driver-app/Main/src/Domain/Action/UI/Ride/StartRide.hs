@@ -61,7 +61,7 @@ import qualified Lib.Payment.Payout.Request as PayoutRequest
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.Allocator (AllocatorJobType (..), SpecialZonePayoutJobData (..))
-import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
+import SharedLogic.CallBAP (sendDriverArrivalUpdateToBAP, sendRideStartedUpdateToBAP)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculatorV2 as FCV2
@@ -105,6 +105,7 @@ data ServiceHandle m = ServiceHandle
     findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     startRideAndUpdateLocation :: Id DP.Person -> DRide.Ride -> Id SRB.Booking -> LatLong -> Id DM.Merchant -> Maybe DRide.OdometerReading -> DTConf.TransporterConfig -> DDI.DriverInformation -> m (),
     notifyBAPRideStarted :: SRB.Booking -> DRide.Ride -> Maybe LatLong -> m (),
+    notifyBAPDriverArrived :: SRB.Booking -> DRide.Ride -> Maybe UTCTime -> m (),
     rateLimitStartRide :: Id DP.Person -> Id DRide.Ride -> m (),
     initializeDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m ()
@@ -119,6 +120,7 @@ buildStartRideHandle merchantId merchantOpCityId rideId = do
         findBookingById = QRB.findById,
         startRideAndUpdateLocation = SInternal.startRideTransaction,
         notifyBAPRideStarted = sendRideStartedUpdateToBAP,
+        notifyBAPDriverArrived = sendDriverArrivalUpdateToBAP,
         rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId'),
         initializeDistanceCalculation = LocUpd.initializeDistanceCalculation defaultRideInterpolationHandler,
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock
@@ -223,6 +225,11 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
         withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer transporterConfig driverInfo
         when booking.isScheduled $
           void $ QDI.updateLatestScheduledBookingAndPickup Nothing Nothing (cast driverId)
+
+      when (isNothing ride.driverArrivalTime) $ do
+        QRide.updateArrival ride.id now
+        fork "notify customer for driver arrival (pre start-ride back-fill)" $
+          notifyBAPDriverArrived booking updatedRide {DRide.driverArrivalTime = Just now} (Just now)
 
       fork "notify customer for ride start" $ notifyBAPRideStarted booking updatedRide (Just point)
       fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride booking

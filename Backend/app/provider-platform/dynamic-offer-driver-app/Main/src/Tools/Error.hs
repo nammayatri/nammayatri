@@ -37,17 +37,12 @@ instance IsAPIError RatingError
 
 instanceExceptionWithParent 'HTTPException ''RatingError
 
-data LocationServiceabilityError
-  = LocationUnserviceable
-  deriving (Eq, Show, IsBecknAPIError)
-
-instance IsBaseError LocationServiceabilityError
-
-instance IsHTTPError LocationServiceabilityError where
-  toErrorCode LocationUnserviceable = "LOCATION_UNSERVICEABLE"
-  toHttpCode LocationUnserviceable = E400
-
-instance IsAPIError LocationServiceabilityError
+-- NOTE: ServiceabilityError (including the UnserviceableTripCategory
+-- constructor and the ONDC 90201 "Route Serviceability error" mapping via
+-- IsBecknAPIError.toOndcErrorCode) lives in Kernel.Types.Error and is
+-- re-exported through the `import Kernel.Types.Error as Tools.Error` above.
+-- Call sites throw `UnserviceableTripCategory "..."` directly without an extra
+-- wrapper type — the kernel already handles the NACK format and HTTP code.
 
 data FarePolicyError
   = NoFarePolicy

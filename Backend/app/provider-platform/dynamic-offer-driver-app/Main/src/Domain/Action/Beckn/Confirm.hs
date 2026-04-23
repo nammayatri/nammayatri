@@ -282,7 +282,7 @@ validateRequest subscriber transporterId req now = do
         CrossCity OneWayOnDemandDynamicOffer _ -> True
         _ -> False
   when (not isValueAddNP && not isAllowedForNonValueAddNP) $
-    throwError (InvalidRequest $ "Unserviceable trip category:-" <> show booking.tripCategory)
+    throwError (UnserviceableTripCategory $ show booking.tripCategory)
   case booking.tripCategory of
     OneWay OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
     OneWay OneWayRideOtp -> getRideOtpQuoteDetails booking transporter

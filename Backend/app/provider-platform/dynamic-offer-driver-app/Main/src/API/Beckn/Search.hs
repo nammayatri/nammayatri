@@ -20,10 +20,11 @@ import qualified Beckn.OnDemand.Utils.Callback as Callback
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
+import qualified BecknV2.OnDemand.Enums as BEnums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Data.Aeson.Text as A
-import Data.List.Extra (notNull)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Domain.Action.Beckn.Search as DSearch
@@ -117,21 +118,36 @@ search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAP
           bppUri <- Utils.mkBppUri transporterId.getId
           fork "search request processing" $
             Redis.whenWithLockRedis (searchProcessingLockKey dSearchReq.messageId transporterId.getId) 60 $ do
-              dSearchResWithQuotes <- DSearch.handler validatedSReq dSearchReq
               internalEndPointHashMap <- asks (.internalEndPointHashMap)
-
-              isValueAddNP <- VNP.isValueAddNP dSearchReq.bapId
-              let dSearchResWihoutQuotes = dSearchResWithQuotes {DSearch.quotes = []}
-              -- in case of non value-add-np transactions, when quotes are present, setting them empty to avoid sending quotes to BAP.
-              let dSearchRes = bool dSearchResWihoutQuotes dSearchResWithQuotes isValueAddNP
-
-              when ((notNull dSearchRes.quotes && isValueAddNP) || null dSearchRes.quotes) $ do
+              let sendOnSearchServiceabilityError reason = do
+                    logError $ "on_search serviceability error for transactionId: " <> transactionId <> " — " <> reason
+                    ctx <- ContextV2.buildContextV2 Context.ON_SEARCH Context.MOBILITY msgId txnId dSearchReq.bapId bapUri (Just bppId) (Just bppUri) city country Nothing
+                    let onSearchReq = mkOnSearchServiceabilityErrorReq ctx
+                    logTagInfo "SearchV2 API Flow" $ "Sending OnSearch(error):-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
+                    void $
+                      Callback.withCallback merchant "on_search" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler ctx) $
+                        pure onSearchReq
+              eResult <- try $ do
+                dSearchResWithQuotes <- DSearch.handler validatedSReq dSearchReq
+                isValueAddNP <- VNP.isValueAddNP dSearchReq.bapId
+                let dSearchRes =
+                      if isValueAddNP
+                        then dSearchResWithQuotes
+                        -- Non value-add NPs never receive quotes, only estimates.
+                        else dSearchResWithQuotes {DSearch.quotes = []}
+                when (null dSearchRes.estimates && null dSearchRes.quotes) $
+                  throwError (InternalError "search handler produced no estimates or quotes")
                 onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapUri (Just bppId) (Just bppUri) city country isValueAddNP
-                let context' = onSearchReq.onSearchReqContext
-                logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
-                void $
-                  Callback.withCallback dSearchRes.provider "on_search" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ do
-                    pure onSearchReq
+                pure (dSearchRes.provider, onSearchReq)
+              case eResult of
+                Left (e :: SomeException) ->
+                  sendOnSearchServiceabilityError $ "exception during search handler: " <> T.pack (show e)
+                Right (provider, onSearchReq) -> do
+                  let context' = onSearchReq.onSearchReqContext
+                  logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
+                  void $
+                    Callback.withCallback provider "on_search" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ do
+                      pure onSearchReq
         pure Ack
 
 searchLockKey :: Text -> Text -> Text
@@ -154,3 +170,17 @@ errHandler context (BecknAPIError err) =
           errorMessage = err.message >>= \m -> Just $ encodeToText err._type <> " " <> m,
           errorPaths = err.path
         }
+
+mkOnSearchServiceabilityErrorReq :: Spec.Context -> Spec.OnSearchReq
+mkOnSearchServiceabilityErrorReq context =
+  Spec.OnSearchReq
+    { onSearchReqContext = context,
+      onSearchReqError =
+        Just
+          Spec.Error
+            { errorCode = Just (show BEnums.ROUTE_SERVICEABILITY_ERROR),
+              errorMessage = Just (BEnums.becknErrorCodeMessage BEnums.ROUTE_SERVICEABILITY_ERROR),
+              errorPaths = Nothing
+            },
+      onSearchReqMessage = Nothing
+    }

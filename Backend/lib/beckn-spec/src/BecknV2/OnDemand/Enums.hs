@@ -303,17 +303,26 @@ instance ToJSON TLMethod where
 
 -- | ONDC v2.1.0 standard error codes (from protocol drafts)
 data BecknErrorCode
-  = DRIVER_NOT_ASSIGNED -- 90203 (v2.1.0)
+  = ROUTE_SERVICEABILITY_ERROR -- 90201
+  | DRIVER_NOT_ASSIGNED -- 90203 (v2.1.0)
   deriving (Eq, Generic)
 
 instance Show BecknErrorCode where
+  show ROUTE_SERVICEABILITY_ERROR = "90201"
   show DRIVER_NOT_ASSIGNED = "90203"
 
+becknErrorCodeMessage :: BecknErrorCode -> Text
+becknErrorCodeMessage = \case
+  ROUTE_SERVICEABILITY_ERROR -> "Route Serviceability error"
+  DRIVER_NOT_ASSIGNED -> "Driver not assigned"
+
 instance FromJSON BecknErrorCode where
+  parseJSON (String "90201") = return ROUTE_SERVICEABILITY_ERROR
   parseJSON (String "90203") = return DRIVER_NOT_ASSIGNED
   parseJSON wrongVal = typeMismatch "Invalid BecknErrorCode" wrongVal
 
 instance ToJSON BecknErrorCode where
+  toJSON ROUTE_SERVICEABILITY_ERROR = String "90201"
   toJSON DRIVER_NOT_ASSIGNED = String "90203"
 
 -- | Vehicle energy type as per ONDC v2.1.0 spec

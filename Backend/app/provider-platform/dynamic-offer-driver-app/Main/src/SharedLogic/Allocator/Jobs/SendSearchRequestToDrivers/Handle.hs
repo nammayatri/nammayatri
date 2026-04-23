@@ -53,6 +53,7 @@ data Handle m r = Handle
     initiateDriverSearchBatch :: m DST.SearchTry,
     cancelSearchTry :: m (),
     cancelBookingIfApplies :: m (),
+    sendOnSelectErrorToBAP :: m (),
     isScheduledBooking :: Bool
   }
 
@@ -90,6 +91,7 @@ processRequestSending Handle {..} goHomeCfg transactionId = do
           appBackendBapInternal <- asks (.appBackendBapInternal)
           let request = CallBAPInternal.RideSearchExpiredReq {transactionId = transactionId}
           void $ CallBAPInternal.rideSearchExpired appBackendBapInternal.apiKey appBackendBapInternal.url request
+          sendOnSelectErrorToBAP
           cancelSearchTry
           cancelBookingIfApplies
           return (Complete, NormalPool, Nothing)

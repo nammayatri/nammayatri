@@ -28,6 +28,7 @@ data OnStatusBuildReq
   = NewBookingBuildReq DNewBookingBuildReq
   | BookingReallocationBuildReq DBookingReallocationBuildReq
   | RideAssignedReq Common.DRideAssignedReq
+  | DriverArrivedReq Common.DDriverArrivedReq
   | RideStartedReq Common.DRideStartedReq
   | RideCompletedReq Common.DRideCompletedReq
   | BookingCancelledReq Common.DBookingCancelledReq
