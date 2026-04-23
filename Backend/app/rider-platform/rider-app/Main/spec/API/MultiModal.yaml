@@ -49,6 +49,7 @@ imports:
   PaymentStatusResp: Lib.Payment.Domain.Action
   CumulativeOfferResp: SharedLogic.Offer
   BusStopETA: Storage.CachedQueries.Merchant.MultiModalBus
+  WaybillStatus: SharedLogic.External.Nandi.Types
 
 module: MultimodalConfirm
 
@@ -275,6 +276,9 @@ types:
     rsm: [TransportRouteStopMapping]
     ptcv: Text
     eligiblePassIds: Maybe [Text]
+    isHistoric: Bool
+    scheduleBasedActiveTrip: Bool
+    waybillStatus: Maybe WaybillStatus
     derive': "Generic, ToSchema"
 
   UpdatePaymentOrderReq:
