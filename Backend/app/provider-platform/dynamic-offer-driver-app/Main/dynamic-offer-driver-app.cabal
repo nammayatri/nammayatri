@@ -257,6 +257,7 @@ library
       Domain.Action.UI.CancellationReasonLookup
       Domain.Action.UI.City
       Domain.Action.UI.DemandHotspots
+      Domain.Action.UI.Discount
       Domain.Action.UI.Driver
       Domain.Action.UI.DriverCoin
       Domain.Action.UI.DriverGoHomeRequest
@@ -680,6 +681,7 @@ library
       Storage.Queries.CommunicationExtra
       Storage.Queries.DailyStatsExtra
       Storage.Queries.DigilockerVerificationExtra
+      Storage.Queries.DiscountExtra
       Storage.Queries.DocumentVerificationConfigExtra
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal
       Storage.Queries.DriverBankAccountExtra
@@ -936,6 +938,7 @@ library
       API.Action.UI.CallFeedback
       API.Action.UI.CancellationReasonLookup
       API.Action.UI.DemandHotspots
+      API.Action.UI.Discount
       API.Action.UI.DriverOnboardingV2
       API.Action.UI.DriverProfile
       API.Action.UI.DriverProfileQuestions
@@ -1012,6 +1015,7 @@ library
       API.Types.UI.CallFeedback
       API.Types.UI.CancellationReasonLookup
       API.Types.UI.DemandHotspots
+      API.Types.UI.Discount
       API.Types.UI.DriverOnboardingV2
       API.Types.UI.DriverProfile
       API.Types.UI.DriverProfileQuestions
@@ -1086,6 +1090,10 @@ library
       Domain.Types.ConditionalCharges
       Domain.Types.DailyStats
       Domain.Types.DigilockerVerification
+      Domain.Types.Discount
+      Domain.Types.DiscountTier
+      Domain.Types.DiscountTierTranslation
+      Domain.Types.DiscountTranslation
       Domain.Types.DocumentReminderHistory
       Domain.Types.DocumentVerificationConfig
       Domain.Types.DomainDiscountConfig
@@ -1268,6 +1276,10 @@ library
       Storage.Beam.ConditionalCharges
       Storage.Beam.DailyStats
       Storage.Beam.DigilockerVerification
+      Storage.Beam.Discount
+      Storage.Beam.DiscountTier
+      Storage.Beam.DiscountTierTranslation
+      Storage.Beam.DiscountTranslation
       Storage.Beam.DocumentReminderHistory
       Storage.Beam.DocumentVerificationConfig
       Storage.Beam.DomainDiscountConfig
@@ -1422,6 +1434,10 @@ library
       Storage.Beam.Volunteer
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.CancellationFarePolicy
+      Storage.CachedQueries.Discount
+      Storage.CachedQueries.DiscountTier
+      Storage.CachedQueries.DiscountTierTranslation
+      Storage.CachedQueries.DiscountTranslation
       Storage.CachedQueries.FeedbackForm
       Storage.CachedQueries.FleetBadgeAssociation
       Storage.CachedQueries.Plan
@@ -1455,6 +1471,10 @@ library
       Storage.Queries.ConditionalCharges
       Storage.Queries.DailyStats
       Storage.Queries.DigilockerVerification
+      Storage.Queries.Discount
+      Storage.Queries.DiscountTier
+      Storage.Queries.DiscountTierTranslation
+      Storage.Queries.DiscountTranslation
       Storage.Queries.DocumentReminderHistory
       Storage.Queries.DocumentVerificationConfig
       Storage.Queries.DomainDiscountConfig
@@ -1559,6 +1579,8 @@ library
       Storage.Queries.OrphanInstances.CommunicationDelivery
       Storage.Queries.OrphanInstances.DailyStats
       Storage.Queries.OrphanInstances.DigilockerVerification
+      Storage.Queries.OrphanInstances.Discount
+      Storage.Queries.OrphanInstances.DiscountTier
       Storage.Queries.OrphanInstances.DocumentVerificationConfig
       Storage.Queries.OrphanInstances.DriverBankAccount
       Storage.Queries.OrphanInstances.DriverBlockReason
