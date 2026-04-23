@@ -53,10 +53,20 @@ generateEInvoiceForInvoice ::
   FInvoice.Invoice ->
   m ()
 generateEInvoiceForInvoice invoice = do
+  let ctx =
+        " invoiceId=" <> invoice.id.getId
+          <> " invoiceNumber="
+          <> invoice.invoiceNumber
+          <> " issuedToId="
+          <> invoice.issuedToId
+          <> " merchantOpCityId="
+          <> invoice.merchantOperatingCityId
+  logInfo $ "GSTEInvoice: starting e-invoice flow." <> ctx
   mbDriverGstin <- QDriverGstin.findByDriverId (Id invoice.issuedToId :: Id Person.Person)
   case mbDriverGstin of
-    Nothing -> pure ()
+    Nothing -> logInfo $ "GSTEInvoice: no DriverGstin for driver — treating as B2C, skipping e-invoice." <> ctx
     Just dg -> do
+      logInfo $ "GSTEInvoice: found DriverGstin record gstinId=" <> dg.id.getId <> ctx
       mbServiceConfig <-
         CQMSC.findByServiceAndCity
           (DMSC.GSTEInvoiceService GSTEInvoiceTypes.CharteredInfo)
@@ -67,21 +77,49 @@ generateEInvoiceForInvoice invoice = do
               DMSC.GSTEInvoiceServiceConfig cfg -> Just cfg
               _ -> Nothing
       case mbCfg of
-        Nothing -> pure ()
+        Nothing ->
+          logInfo $
+            "GSTEInvoice: no GSTEInvoice service config for operating city — skipping e-invoice. hasRawServiceConfig="
+              <> show (isJust mbServiceConfig)
+              <> ctx
         Just cfg -> do
-          logInfo "GSTEInvoice: B2B transaction detected, generating e-invoice"
+          logInfo $ "GSTEInvoice: B2B transaction detected, generating e-invoice." <> ctx
           eResult <- try @_ @SomeException $ case cfg of
             CharteredInfoEInvoiceConfig ciCfg -> do
+              logDebug $ "GSTEInvoice: using Chartered Info GSP sellerGstin=" <> ciCfg.gstin <> ctx
               decryptedGstin <- decrypt dg.gstin
+              logDebug $ "GSTEInvoice: decrypted buyer GSTIN, stateCode=" <> gstinStateCode decryptedGstin <> ctx
+              logDebug $ "GSTEInvoice: fetching auth token." <> ctx
               authToken <- getOrRefreshAuthToken cfg
+              logDebug $
+                "GSTEInvoice: auth token obtained, tokenLength="
+                  <> show (T.length authToken)
+                  <> ctx
               mbIndirectTax <- listToMaybe <$> QIndirectTax.findByInvoiceNumber invoice.invoiceNumber
+              logInfo $
+                "GSTEInvoice: indirect-tax lookup result hasRecord="
+                  <> show (isJust mbIndirectTax)
+                  <> maybe "" (\t -> " taxRate=" <> show t.taxRate <> " taxableValue=" <> show t.taxableValue) mbIndirectTax
+                  <> ctx
               let payload = buildEInvoicePayload invoice dg decryptedGstin mbIndirectTax ciCfg
+              logDebug $ "GSTEInvoice: built payload, calling GSP generateEInvoice." <> ctx
               eInvResp <- GSTEInvoice.generateEInvoice cfg authToken payload
+              logInfo $
+                "GSTEInvoice: GSP responded status="
+                  <> eInvResp.status
+                  <> " irn="
+                  <> fromMaybe "<no IRN in response>" eInvResp.irn
+                  <> " ackNo="
+                  <> fromMaybe "<none>" eInvResp.ackNo
+                  <> " ackDt="
+                  <> fromMaybe "<none>" eInvResp.ackDt
+                  <> ctx
               logError $ "GSTEInvoice: IRN generated: " <> fromMaybe "<no IRN in response>" eInvResp.irn
               QFInvoice.updateIrnByInvoiceId eInvResp.irn invoice.id
+              logInfo $ "GSTEInvoice: invoice row updated with IRN." <> ctx
           case eResult of
-            Right _ -> pure ()
-            Left err -> logError $ "GSTEInvoice: e-invoice generation failed: " <> show err
+            Right _ -> logInfo $ "GSTEInvoice: e-invoice flow completed successfully." <> ctx
+            Left err -> logError $ "GSTEInvoice: e-invoice generation failed: " <> show err <> ctx
 
 -- | Build the e-invoice payload from an Invoice plus the buyer's DriverGstin record.
 --   buyerDtls is populated entirely from DriverGstin; the platform (seller)
@@ -181,6 +219,8 @@ formatInvoiceDate t =
 
 -- | Get a cached GST e-invoice auth token from Redis, or authenticate and cache a new one.
 --   TTL is set to (tokenExpiry - 60) seconds for safety.
+--   The Redis key is scoped per-config (aspId + gstin + userName) so that
+--   different merchant credential sets that share a GSTIN do not collide.
 getOrRefreshAuthToken ::
   ( Redis.HedisFlow m r,
     EncFlow m r,
@@ -191,8 +231,8 @@ getOrRefreshAuthToken ::
   GSTEInvoiceConfig ->
   m Text
 getOrRefreshAuthToken config = do
-  let gstin = gstinFromConfig config
-      redisKey = "GSTEInvoice:authToken:" <> gstin
+  let (gstin, scopeKey) = configScope config
+      redisKey = "GSTEInvoice:authToken:" <> scopeKey
   cached <- Redis.get redisKey
   case cached of
     Just token -> do
@@ -201,10 +241,26 @@ getOrRefreshAuthToken config = do
     Nothing -> do
       logInfo $ "GSTEInvoice: Fetching new auth token for GSTIN " <> gstin
       authResp <- GSTEInvoice.authenticateEInvoice config
-      let expirySeconds = fromMaybe 3600 (readMaybe (T.unpack authResp.tokenExpiry))
-          ttl = max 60 (expirySeconds - 60)
+      let fallbackTtl = 3000 :: Int
+      expirySeconds <- case readMaybe (T.unpack authResp.tokenExpiry) of
+        Just s -> pure s
+        Nothing -> do
+          logWarning $
+            "GSTEInvoice: failed to parse tokenExpiry="
+              <> show authResp.tokenExpiry
+              <> " for scope="
+              <> scopeKey
+              <> " (gstin="
+              <> gstin
+              <> "); falling back to "
+              <> show fallbackTtl
+              <> "s"
+          pure fallbackTtl
+      let ttl = max 3000 (expirySeconds - 60)
       Redis.setExp redisKey authResp.authToken ttl
       pure authResp.authToken
   where
-    gstinFromConfig :: GSTEInvoiceConfig -> Text
-    gstinFromConfig (CharteredInfoEInvoiceConfig cfg) = cfg.gstin
+    -- Returns (gstin-for-logging, per-config unique scope key for Redis).
+    configScope :: GSTEInvoiceConfig -> (Text, Text)
+    configScope (CharteredInfoEInvoiceConfig cfg) =
+      (cfg.gstin, cfg.aspId <> ":" <> cfg.gstin <> ":" <> cfg.userName)
