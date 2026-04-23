@@ -37,6 +37,7 @@ import qualified Lib.JourneyModule.Types
 import qualified Lib.JourneyModule.Utils
 import qualified Lib.Payment.Domain.Types.PaymentOrder
 import Servant
+import qualified SharedLogic.External.Nandi.Types
 import qualified SharedLogic.Offer
 import qualified Storage.CachedQueries.Merchant.MultiModalBus
 import Tools.Auth
@@ -291,7 +292,16 @@ data PaymentOrder = PaymentOrder {sdkPayload :: Kernel.Prelude.Maybe Kernel.Exte
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PublicTransportData = PublicTransportData {eligiblePassIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text], ptcv :: Kernel.Prelude.Text, rs :: [TransportRoute], rsm :: [TransportRouteStopMapping], ss :: [TransportStation]}
+data PublicTransportData = PublicTransportData
+  { eligiblePassIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    isHistoric :: Kernel.Prelude.Bool,
+    ptcv :: Kernel.Prelude.Text,
+    rs :: [TransportRoute],
+    rsm :: [TransportRouteStopMapping],
+    scheduleBasedActiveTrip :: Kernel.Prelude.Bool,
+    ss :: [TransportStation],
+    waybillStatus :: Kernel.Prelude.Maybe SharedLogic.External.Nandi.Types.WaybillStatus
+  }
   deriving stock (Generic)
   deriving anyclass (ToSchema)
 
