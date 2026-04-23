@@ -44,6 +44,7 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RiderDetails
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.VehicleVariant as Veh
 import qualified Domain.Types.Yudhishthira as TY
 import EulerHS.Prelude hiding (whenJust)
 import Kernel.External.Maps
@@ -82,7 +83,6 @@ import SharedLogic.GoogleTranslate (TranslateFlow)
 import SharedLogic.Ride (releaseLien, updateOnRideStatusWithAdvancedRideCheck)
 import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
-import qualified Domain.Types.VehicleVariant as Veh
 import qualified SharedLogic.UserCancellationDues as UserCancellationDues
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR

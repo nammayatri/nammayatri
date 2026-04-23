@@ -45,6 +45,14 @@ apis:
       response:
         type: DriverQueuePositionRes
 
+  - GET:
+      endpoint: /driverWalletBalance
+      auth: ApiAuthV2
+      mandatoryQuery:
+        driverId: Text
+      response:
+        type: DriverWalletBalanceRes
+
 types:
   TriggerSpecialZoneQueueNotifyReq:
     - gateId: Text
@@ -94,3 +102,6 @@ types:
   DriverQueuePositionRes:
     - queuePosition: Maybe Int
     - queueSize: Int
+
+  DriverWalletBalanceRes:
+    - walletBalance: Maybe HighPrecMoney

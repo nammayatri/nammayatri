@@ -6,6 +6,7 @@ module Domain.Action.ProviderPlatform.Management.SpecialZoneQueue
     postSpecialZoneQueueManualQueueAdd,
     postSpecialZoneQueueManualQueueRemove,
     getSpecialZoneQueueDriverQueuePosition,
+    getSpecialZoneQueueDriverWalletBalance,
   )
 where
 
@@ -52,3 +53,8 @@ getSpecialZoneQueueDriverQueuePosition :: (Kernel.Types.Id.ShortId Domain.Types.
 getSpecialZoneQueueDriverQueuePosition merchantShortId opCity apiTokenInfo driverId specialLocationId vehicleType = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.specialZoneQueueDSL.getSpecialZoneQueueDriverQueuePosition) driverId specialLocationId vehicleType
+
+getSpecialZoneQueueDriverWalletBalance :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Management.SpecialZoneQueue.DriverWalletBalanceRes)
+getSpecialZoneQueueDriverWalletBalance merchantShortId opCity apiTokenInfo driverId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.specialZoneQueueDSL.getSpecialZoneQueueDriverWalletBalance) driverId

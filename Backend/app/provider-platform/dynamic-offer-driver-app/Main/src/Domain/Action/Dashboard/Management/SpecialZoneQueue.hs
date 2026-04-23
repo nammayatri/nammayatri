@@ -6,6 +6,7 @@ module Domain.Action.Dashboard.Management.SpecialZoneQueue
     postSpecialZoneQueueManualQueueAdd,
     postSpecialZoneQueueManualQueueRemove,
     getSpecialZoneQueueDriverQueuePosition,
+    getSpecialZoneQueueDriverWalletBalance,
   )
 where
 
@@ -28,6 +29,7 @@ import Kernel.Utils.Common
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Types.GateInfo as DGI
+import qualified Domain.Action.UI.DriverWallet as DriverWalletAction
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
@@ -167,3 +169,11 @@ getSpecialZoneQueueDriverQueuePosition merchantShortId opCity driverIdText speci
       { queuePosition = mbPos,
         queueSize = posResp.queueSize
       }
+
+getSpecialZoneQueueDriverWalletBalance :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Environment.Flow SZQT.DriverWalletBalanceRes)
+getSpecialZoneQueueDriverWalletBalance merchantShortId opCity driverIdText = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let driverId = Kernel.Types.Id.Id driverIdText :: Kernel.Types.Id.Id DP.Person
+  balanceResp <- DriverWalletAction.getWalletBalance (Just driverId, merchant.id, merchantOpCity.id)
+  pure SZQT.DriverWalletBalanceRes {walletBalance = Just balanceResp.currentBalance}
