@@ -75,6 +75,8 @@ data OfferRespAPIEntity = OfferRespAPIEntity
     offerTnc :: Maybe Text,
     offerSponsoredBy :: Maybe Text,
     offerCode :: Text,
+    autoApply :: Maybe Bool,
+    isHidden :: Maybe Bool,
     amountSaved :: HighPrecMoney,
     postOfferAmount :: HighPrecMoney
   }
@@ -212,6 +214,8 @@ mkOfferRespAPIEntity Payment.OfferResp {..} = do
       offerTnc = offerDescription.tnc,
       offerSponsoredBy = offerDescription.sponsoredBy,
       offerCode = offerCode,
+      autoApply = uiConfigs >>= (.autoApply),
+      isHidden = uiConfigs >>= (.isHidden),
       amountSaved = discountAmount + cashbackAmount,
       postOfferAmount = finalOrderAmount
     }

@@ -65,6 +65,7 @@ import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Confirm as Confirm
 import qualified API.UI.Disability as Disability
 import qualified API.UI.FeedbackForm as FeedbackForm
+import qualified API.UI.FinanceInvoice as FinanceInvoice
 import qualified API.UI.Frontend as Frontend
 import qualified API.UI.GoogleTranslate as GoogleTranslateProxy
 import qualified API.UI.HotSpot as HotSpot
@@ -118,6 +119,7 @@ type API =
            :<|> Serviceability.API
            :<|> Rating.API
            :<|> FeedbackForm.API
+           :<|> FinanceInvoice.API
            :<|> MapsProxy.API
            :<|> GoogleTranslateProxy.API
            :<|> CancellationReason.API
@@ -195,6 +197,7 @@ handler =
     :<|> Serviceability.handler
     :<|> Rating.handler
     :<|> FeedbackForm.handler
+    :<|> FinanceInvoice.handler
     :<|> MapsProxy.handler
     :<|> GoogleTranslateProxy.handler
     :<|> CancellationReason.handler
