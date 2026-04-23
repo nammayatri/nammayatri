@@ -26,17 +26,15 @@ import Servant
 import Tools.Auth
 
 run :: Env -> Application
-run = withModifiedEnv' appAPI $ \modifiedEnv ->
-  -- withLocalModifications modifiedEnv' appAPI (\modifiedEnv ->
-  BU.run appAPI API.handler context modifiedEnv
+run = withModifiedEnv' riderAPI $ \modifiedEnv ->
+  -- withLocalModifications modifiedEnv' riderAPI (\modifiedEnv ->
+  BU.run riderAPI API.handler context modifiedEnv
     & logRequestAndResponse' modifiedEnv
     -- & logBecknRequest modifiedEnv
-    & addServantInfo modifiedEnv.appEnv.version appAPI
+    & addServantInfo modifiedEnv.appEnv.version riderAPI
     & hashBodyForSignature
     & supportProxyAuthorization
   where
-    appAPI = Proxy @API.API
-
     -- EXAMPLE for quickly modifying some config at top level without shared-kernel changes
     -- withLocalModifications ::
     --   SanitizedUrl a =>

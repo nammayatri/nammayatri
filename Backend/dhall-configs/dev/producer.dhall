@@ -91,7 +91,7 @@ in  { hedisCfg
         //  { logFilePath = "/tmp/producer.log"
             , prettyPrinting = True
             , logToConsole = False
-            , logToFile = False
+            , logToFile = True
             }
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True

@@ -1,7 +1,7 @@
 {
 	"info": {
-		"name": "Online Ride Booking Offers (10% First Ride Discount)",
-		"description": "End-to-end online ride with domain offer: search \u2192 see discount offer \u2192 select with offer \u2192 ride \u2192 verify discounted payment",
+		"name": "No Show Cancellation (Stripe Payment)",
+		"description": "End-to-end no-show cancellation: search → assign → driver arrives at pickup → wait no-show window → rider cancels → verify cancellation invoice with fee",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"event": [
@@ -13,7 +13,7 @@
 					"    // Finnish mobile: 04X XXXXXXX (10 digits starting with 04)",
 					"    var dNum = '04' + Math.floor(10000000 + Math.random() * 89999999);",
 					"    var rNum = '04' + Math.floor(10000000 + Math.random() * 89999999);",
-					"    // Finnish plate: ABC123 (no hyphen \u2014 API requires ^[0-9A-Z]*$)",
+					"    // Finnish plate: ABC123 (no hyphen — API requires ^[0-9A-Z]*$)",
 					"    var regNo = String.fromCharCode(65+Math.floor(Math.random()*26)) + String.fromCharCode(65+Math.floor(Math.random()*26)) + String.fromCharCode(65+Math.floor(Math.random()*26)) + String(Math.floor(100+Math.random()*899));",
 					"    pm.collectionVariables.set('_test_driver_number', dNum);",
 					"    pm.collectionVariables.set('_test_rider_number', rNum);",
@@ -66,154 +66,6 @@
 						"user",
 						"switchMerchantAndCity"
 					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Switch City for BAP (Rider Dashboard)",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"var d = pm.response.json();",
-							"pm.environment.set('bap_dashboard_token', d.authToken);",
-							"pm.test('BAP switch OK', function () { pm.response.to.have.status(200); });"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					},
-					{
-						"key": "token",
-						"value": "{{bap_dashboard_token}}"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\"merchantId\": \"{{bap_short_id}}\", \"city\": \"{{city}}\"}"
-				},
-				"url": {
-					"raw": "{{bap_dashboard_url}}/user/switchMerchantAndCity",
-					"host": [
-						"{{bap_dashboard_url}}"
-					],
-					"path": [
-						"user",
-						"switchMerchantAndCity"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Create Cumulative Offer Logic (BAP)",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"var d = pm.response.json();",
-							"console.log('Logic version:', d.version, 'updated:', d.isRuleUpdated);",
-							"if (d.version) { pm.environment.set('offer_logic_version', d.version); }",
-							"pm.test('Logic created', function () { pm.response.to.have.status(200); });"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					},
-					{
-						"key": "token",
-						"value": "{{bap_dashboard_token}}"
-					}
-				],
-				"url": {
-					"raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/nammaTag/appDynamicLogic/verify",
-					"host": [
-						"{{bap_dashboard_url}}"
-					],
-					"path": [
-						"bap",
-						"{{bap_short_id}}",
-						"{{city}}",
-						"nammaTag",
-						"appDynamicLogic",
-						"verify"
-					]
-				},
-				"body": {
-					"mode": "raw",
-					"raw": "{\"domain\":{\"tag\":\"CUMULATIVE_OFFER_POLICY\"},\"shouldUpdateRule\":true,\"updatePassword\":\"dummy-password\",\"description\":\"First Ride Free - Helsinki\",\"inputData\":[{\"offerListResp\":{\"bestOfferCombination\":null,\"offerResp\":[]},\"extraParams\":[]}],\"rules\":[{\"cat\":[{\"var\":\"\"},{\"offerTitle\":\"First Ride Free\"},{\"offerDescription\":\"Your first ride is on us! 100% off up to \\u20ac10.\"},{\"offerSponsoredBy\":[\"BRIDGE_FINLAND\"]},{\"offerIds\":[\"offer-hel-disc-10pct-first-ride\"]}]}]}"
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Rollout Offer Logic (BAP)",
-			"event": [
-				{
-					"listen": "prerequest",
-					"script": {
-						"exec": [
-							"const start = Date.now(); while (Date.now() - start < 20000) {}"
-						],
-						"type": "text/javascript"
-					}
-				},
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"pm.test('Rollout success', function () { pm.response.to.have.status(200); });"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					},
-					{
-						"key": "token",
-						"value": "{{bap_dashboard_token}}"
-					}
-				],
-				"url": {
-					"raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/nammaTag/appDynamicLogic/upsertLogicRollout",
-					"host": [
-						"{{bap_dashboard_url}}"
-					],
-					"path": [
-						"bap",
-						"{{bap_short_id}}",
-						"{{city}}",
-						"nammaTag",
-						"appDynamicLogic",
-						"upsertLogicRollout"
-					]
-				},
-				"body": {
-					"mode": "raw",
-					"raw": "[{\"domain\":{\"tag\":\"CUMULATIVE_OFFER_POLICY\"},\"timeBounds\":\"Unbounded\",\"rollout\":[{\"rolloutPercentage\":100,\"version\":{{offer_logic_version}},\"versionDescription\":\"First Ride Offer\"}]}]"
 				}
 			},
 			"response": []
@@ -340,6 +192,108 @@
 						"user",
 						"switchMerchantAndCity"
 					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create User Cancellation Dues Logic (BPP)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('UserCancellationDues logic version:', d.version, 'updated:', d.isRuleUpdated);",
+							"if (d.version) { pm.environment.set('cancellation_logic_version', d.version); }",
+							"pm.test('Logic created', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/verify",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"nammaTag",
+						"appDynamicLogic",
+						"verify"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\"domain\":{\"tag\":\"USER_CANCELLATION_DUES\"},\"shouldUpdateRule\":true,\"updatePassword\":\"98979\",\"description\":\"Helsinki flat cancellation charge after no-show window\",\"inputData\":[{\"cancelledBy\":\"CancellationByCustomer\",\"timeOfDriverCancellation\":0,\"timeOfCustomerCancellation\":45,\"isArrivedAtPickup\":false,\"driverWaitingTime\":0,\"callAttemptByDriver\":false,\"actualCoveredDistance\":0,\"expectedCoveredDistance\":0,\"cancellationDues\":0,\"cancelledRides\":0,\"totalBookings\":0,\"estimatedBookingFare\":25,\"completedRides\":0,\"validCancellations\":0,\"cancellationDueRides\":0,\"serviceTier\":\"COMFY\",\"tripCategory\":{\"tag\":\"OneWay\",\"contents\":\"OneWayOnDemandDynamicOffer\"},\"cancellationReasonSelected\":null,\"userSdkVersion\":null}],\"rules\":[{\"cat\":[{\"var\":\"\"},{\"cancellationCharges\":5.0}]}]}"
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Rollout User Cancellation Dues Logic (BPP)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const start = Date.now(); while (Date.now() - start < 2000) {}"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Rollout success', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/upsertLogicRollout",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"nammaTag",
+						"appDynamicLogic",
+						"upsertLogicRollout"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "[{\"domain\":{\"tag\":\"USER_CANCELLATION_DUES\"},\"timeBounds\":\"Unbounded\",\"rollout\":[{\"rolloutPercentage\":100,\"version\":{{cancellation_logic_version}},\"versionDescription\":\"User cancellation dues - Helsinki\"}]}]"
 				}
 			},
 			"response": []
@@ -1114,7 +1068,7 @@
 			"response": []
 		},
 		{
-			"name": "Get Search Results (with Offers)",
+			"name": "Get Search Results",
 			"event": [
 				{
 					"listen": "prerequest",
@@ -1131,16 +1085,11 @@
 						"exec": [
 							"var d = pm.response.json();",
 							"if (d.estimates && d.estimates.length > 0) {",
-							"    var est = d.estimates.find(e => e.vehicleServiceTierType === 'SUV') || d.estimates[0];",
+							"    var est = d.estimates.find(e => e.vehicleServiceTierType === 'SUV')",
+							"           || d.estimates.find(e => e.vehicleServiceTierType === 'COMFY')",
+							"           || d.estimates[0];",
 							"    pm.environment.set('estimateId', est.id);",
 							"    console.log('Estimate:', est.id, est.vehicleServiceTierType, est.estimatedFare);",
-							"    if (est.offer) {",
-							"        console.log('Offer found:', est.offer.offerTitle, 'IDs:', est.offer.offerIds);",
-							"        pm.collectionVariables.set('selected_offer_id', est.offer.offerIds[0]);",
-							"        pm.test('Estimate has discount offer', function () {",
-							"            pm.expect(est.offer).to.have.property('offerTitle');",
-							"        });",
-							"    } else { console.log('No offer found on estimate'); }",
 							"}",
 							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
 							"pm.test('Has estimates', function () { pm.expect(d.estimates).to.be.an('array').that.is.not.empty; });"
@@ -1176,13 +1125,14 @@
 			"response": []
 		},
 		{
-			"name": "Select Estimate with Offer (Card Payment)",
+			"name": "Select Estimate (Card Payment)",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"// Wait for async select processing before next step\nconst _sel_delay = 8000; const _sel_start = Date.now(); while (Date.now() - _sel_start < _sel_delay) {}"
 						],
 						"type": "text/javascript"
 					}
@@ -1213,7 +1163,7 @@
 				},
 				"body": {
 					"mode": "raw",
-					"raw": "{\"autoAssignEnabled\": true, \"autoAssignEnabledV2\": true, \"paymentMethodId\": \"{{payment_method_id}}\", \"paymentInstrument\": {\"instrumentType\": \"Card\", \"instrumentName\": \"DefaultCardType\"}, \"selectedOfferId\": \"{{selected_offer_id}}\"}"
+					"raw": "{\"autoAssignEnabled\": true, \"autoAssignEnabledV2\": true, \"paymentMethodId\": \"{{payment_method_id}}\", \"paymentInstrument\": {\"instrumentType\": \"Card\", \"instrumentName\": \"DefaultCardType\"}}"
 				}
 			},
 			"response": []
@@ -1225,9 +1175,9 @@
 					"listen": "prerequest",
 					"script": {
 						"exec": [
-							"const delay = pm.environment.get('search_wait_ms') || 5000;",
+							"// Wait briefly before checking nearby requests",
 							"const start = Date.now();",
-							"while (Date.now() - start < delay) { /* busy wait */ }"
+							"while (Date.now() - start < 1000) { /* busy wait */ }"
 						],
 						"type": "text/javascript"
 					}
@@ -1337,19 +1287,10 @@
 						"exec": [
 							"var d = pm.response.json();",
 							"if (d.list && d.list.length > 0) {",
-							"    var booking = d.list[0];",
-							"    pm.environment.set('customer_bookingId', booking.id);",
-							"    pm.environment.set('ride_otp', booking.rideList[0].rideOtp);",
-							"    console.log('Booking:', booking.id, 'status:', booking.status, 'RideOTP:', booking.rideList[0].rideOtp);",
-							"    var ride = booking.rideList && booking.rideList[0];",
-							"    if (ride && ride.selectedOffers) {",
-							"        var firstOffer = ride.selectedOffers.offers && ride.selectedOffers.offers[0];",
-							"        if (firstOffer) { console.log('Ride has offer:', firstOffer.offerTitle, 'saved:', ride.selectedOffers.totalAmountSaved); }",
-							"        pm.test('Active ride has selectedOffers', function () {",
-							"            pm.expect(ride.selectedOffers).to.have.property('offers');",
-							"            pm.expect(ride.selectedOffers).to.have.property('totalAmountSaved');",
-							"        });",
-							"    }",
+							"    var b = d.list[0];",
+							"    pm.environment.set('customer_bookingId', b.id);",
+							"    pm.environment.set('ride_otp', b.rideList[0].rideOtp);",
+							"    console.log('Booking:', b.id, 'Status:', b.status, 'RideOTP:', b.rideList[0].rideOtp);",
 							"}",
 							"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
 						],
@@ -1451,14 +1392,14 @@
 			"response": []
 		},
 		{
-			"name": "Start Ride",
+			"name": "Driver Arrived at Pickup",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
 							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-							"console.log('Ride started!');"
+							"console.log('Driver arrived at pickup — driver_arrival_time is now set');"
 						],
 						"type": "text/javascript"
 					}
@@ -1477,7 +1418,7 @@
 					}
 				],
 				"url": {
-					"raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/start",
+					"raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/arrived/pickup",
 					"host": [
 						"{{baseURL_namma_P}}"
 					],
@@ -1485,71 +1426,32 @@
 						"driver",
 						"ride",
 						"{{driver_ride_id}}",
-						"start"
+						"arrived",
+						"pickup"
 					]
 				},
 				"body": {
 					"mode": "raw",
-					"raw": "{\"rideOtp\": \"{{ride_otp}}\", \"point\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}"
+					"raw": "{\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}"
 				}
 			},
 			"response": []
 		},
 		{
-			"name": "End Ride",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-							"console.log('Ride ended!');"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					},
-					{
-						"key": "token",
-						"value": "{{driver_token}}"
-					}
-				],
-				"url": {
-					"raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/end",
-					"host": [
-						"{{baseURL_namma_P}}"
-					],
-					"path": [
-						"driver",
-						"ride",
-						"{{driver_ride_id}}",
-						"end"
-					]
-				},
-				"body": {
-					"mode": "raw",
-					"raw": "{\"point\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}"
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Get Driver Ride Invoices",
+			"name": "Wait For No-Show Window",
 			"event": [
 				{
 					"listen": "prerequest",
 					"script": {
 						"exec": [
-							"// Wait for invoice generation after ride end",
+							"// cancellation_fare_policy.free_cancellation_time_seconds is overridden to 30s locally",
+							"// via migration 0800-reduce-free-cancellation-time-for-local.sql.",
+							"// Cancelling after this threshold triggers cancellation charges on the driver ledger.",
+							"// Busy-wait ~35s to cross the window reliably.",
+							"console.log('Waiting 35s for no-show / free-cancellation window to elapse...');",
 							"const start = Date.now();",
-							"while (Date.now() - start < 2000) { /* busy wait */ }"
+							"while (Date.now() - start < 35000) { /* busy wait */ }",
+							"console.log('No-show window elapsed, proceeding to cancel.');"
 						],
 						"type": "text/javascript"
 					}
@@ -1558,16 +1460,7 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"var d = pm.response.json();",
-							"console.log('Driver Ride Invoices - totalItems:', d.totalItems);",
-							"if (d.invoices && d.invoices.length > 0) {",
-							"    d.invoices.forEach(function(inv, i) {",
-							"        console.log('Invoice ' + i + ': number=' + inv.invoiceNumber + ' type=' + inv.invoiceType + ' amount=' + inv.totalAmountPayable);",
-							"    });",
-							"}",
-							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
-							"pm.test('Response has invoices array', function () { pm.expect(d.invoices).to.be.an('array'); });",
-							"pm.test('Response has totalItems', function () { pm.expect(d.totalItems).to.be.a('number'); });"
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
 						],
 						"type": "text/javascript"
 					}
@@ -1577,27 +1470,31 @@
 				"method": "GET",
 				"header": [
 					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
 						"key": "token",
-						"value": "{{driver_token}}"
+						"value": "{{rider_token}}"
 					}
 				],
 				"url": {
-					"raw": "{{baseURL_namma_P}}/subscription/invoices?invoiceType=%22Ride%22&limit=10&offset=0",
+					"raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
 					"host": [
-						"{{baseURL_namma_P}}"
+						"{{baseUrl_app}}"
 					],
 					"path": [
-						"subscription",
-						"invoices"
+						"rideBooking",
+						"list"
 					],
 					"query": [
 						{
-							"key": "invoiceType",
-							"value": "%22Ride%22"
+							"key": "limit",
+							"value": "1"
 						},
 						{
-							"key": "limit",
-							"value": "10"
+							"key": "onlyActive",
+							"value": "true"
 						},
 						{
 							"key": "offset",
@@ -1609,7 +1506,60 @@
 			"response": []
 		},
 		{
-			"name": "Verify Booking Completed with Offer",
+			"name": "Cancel Ride (Rider)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const start = Date.now(); while (Date.now() - start < 1000) {}"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"console.log('Ride cancelled by rider after no-show window — charges should apply');"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{rider_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl_app}}/rideBooking/{{customer_bookingId}}/cancel",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"rideBooking",
+						"{{customer_bookingId}}",
+						"cancel"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\"reasonCode\": \"OTHER\", \"reasonStage\": \"OnAssign\"}"
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Verify Booking Cancelled",
 			"event": [
 				{
 					"listen": "prerequest",
@@ -1625,23 +1575,16 @@
 					"script": {
 						"exec": [
 							"var d = pm.response.json();",
-							"var b = d.list && d.list[0];",
-							"var ride = b && b.rideList && b.rideList[0];",
-							"if (b) { console.log('Final booking:', b.id, 'Status:', b.status); }",
-							"if (ride) { console.log('Ride offers:', JSON.stringify(ride.selectedOffers)); }",
 							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-							"pm.test('Ride completed', function () { pm.expect(b.status).to.equal('COMPLETED'); });",
-							"if (ride && ride.selectedOffers) {",
-							"    pm.test('Selected offers has offers array', function () { pm.expect(ride.selectedOffers).to.have.property('offers'); });",
-							"    pm.test('Selected offers has totalAmountSaved', function () { pm.expect(ride.selectedOffers).to.have.property('totalAmountSaved'); });",
-							"    pm.test('Selected offers has totalPostOfferAmount', function () { pm.expect(ride.selectedOffers).to.have.property('totalPostOfferAmount'); });",
-							"    if (ride.selectedOffers.offers && ride.selectedOffers.offers.length > 0) {",
-							"        var offer = ride.selectedOffers.offers[0];",
-							"        pm.test('First offer has offerId', function () { pm.expect(offer).to.have.property('offerId'); });",
-							"        pm.test('First offer has offerTitle', function () { pm.expect(offer).to.have.property('offerTitle'); });",
-							"        pm.test('First offer has amountSaved', function () { pm.expect(offer).to.have.property('amountSaved'); });",
-							"        console.log('Selected offer:', offer.offerTitle, 'saved:', ride.selectedOffers.totalAmountSaved);",
-							"    }",
+							"if (d.list && d.list.length > 0) {",
+							"    var booking = d.list[0];",
+							"    console.log('Latest booking:', booking.id, 'Status:', booking.status);",
+							"    pm.test('Booking is cancelled', function () {",
+							"        pm.expect(booking.status).to.equal('CANCELLED');",
+							"    });",
+							"} else {",
+							"    console.log('No bookings found');",
+							"    pm.test('Has bookings', function () { pm.expect.fail('No bookings'); });",
 							"}"
 						],
 						"type": "text/javascript"
@@ -1651,10 +1594,6 @@
 			"request": {
 				"method": "GET",
 				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					},
 					{
 						"key": "token",
 						"value": "{{rider_token}}"
@@ -1686,12 +1625,132 @@
 				}
 			},
 			"response": []
+		},
+		{
+			"name": "Get Cancellation Invoices",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Wait for cancellation invoice generation",
+							"const start = Date.now();",
+							"while (Date.now() - start < 3000) { /* busy wait */ }"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('Cancellation Invoices - totalItems:', d.totalItems);",
+							"if (d.invoices && d.invoices.length > 0) {",
+							"    d.invoices.forEach(function(inv, i) {",
+							"        console.log('Invoice ' + i + ': number=' + inv.invoiceNumber + ' type=' + inv.invoiceType + ' amount=' + inv.totalAmountPayable);",
+							"    });",
+							"}",
+							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+							"pm.test('Response has invoices array', function () { pm.expect(d.invoices).to.be.an('array'); });",
+							"pm.test('Response has totalItems', function () { pm.expect(d.totalItems).to.be.a('number'); });",
+							"pm.test('At least one cancellation invoice exists', function () { pm.expect(d.invoices.length).to.be.greaterThan(0); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_namma_P}}/subscription/invoices?invoiceType=%22RideCancellation%22&limit=10&offset=0",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"subscription",
+						"invoices"
+					],
+					"query": [
+						{
+							"key": "invoiceType",
+							"value": "%22RideCancellation%22"
+						},
+						{
+							"key": "limit",
+							"value": "10"
+						},
+						{
+							"key": "offset",
+							"value": "0"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Driver Wallet Transactions",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Give the ledger time to post wallet entries after cancellation",
+							"const start = Date.now(); while (Date.now() - start < 1500) { /* wait */ }"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('Driver wallet balance:', d.currentBalance);",
+							"console.log('Period additions total:', d.additions && d.additions.totalAmount);",
+							"console.log('Period deductions total:', d.deductions && d.deductions.totalAmount);",
+							"if (d.additions && d.additions.items) {",
+							"    d.additions.items.forEach(function(it) { console.log('  + ' + it.itemName + ' [' + it.itemReference + ']: ' + it.itemValue); });",
+							"}",
+							"if (d.deductions && d.deductions.items) {",
+							"    d.deductions.items.forEach(function(it) { console.log('  - ' + it.itemName + ' [' + it.itemReference + ']: ' + it.itemValue); });",
+							"}",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"pm.test('Response has additions group', function () { pm.expect(d.additions).to.be.an('object'); });",
+							"pm.test('Response has deductions group', function () { pm.expect(d.deductions).to.be.an('object'); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_namma_P}}/wallet/transactions",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"wallet",
+						"transactions"
+					]
+				}
+			},
+			"response": []
 		}
 	],
-	"variable": [
-		{
-			"key": "selected_offer_id",
-			"value": ""
-		}
-	]
+	"variable": []
 }

@@ -12,7 +12,7 @@ let schedulerConfig =
           //  { logRawSql = True
               , logFilePath = "/tmp/rider-app-scheduler-internal.log"
               , logToConsole = False
-              , logToFile = False
+              , logToFile = True
               , prettyPrinting = True
               }
       , esqDBCfg = appCfg.esqDBCfg

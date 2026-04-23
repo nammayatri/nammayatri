@@ -26,6 +26,94 @@ interface StepState {
   durationMs?: number;
 }
 
+// ── JSON Viewer Modal ──────────────────────────────────────────────
+function JsonViewerModal({ data, onClose }: { data: any; onClose: () => void }) {
+  const [search, setSearch] = useState('');
+  const [copied, setCopied] = useState(false);
+  const raw = JSON.stringify(data, null, 2);
+
+  const copyJson = () => {
+    navigator.clipboard.writeText(raw).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
+  return (
+    <div className="jv-overlay" onClick={onClose}>
+      <div className="jv-modal" onClick={e => e.stopPropagation()}>
+        <div className="jv-toolbar">
+          <input
+            className="jv-search"
+            type="text"
+            placeholder="Search keys or values..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            autoFocus
+          />
+          <button className="jv-copy-btn" onClick={copyJson}>
+            {copied ? '\u2713 Copied' : '\u2398 Copy JSON'}
+          </button>
+          <button className="jv-close-btn" onClick={onClose}>\u2715</button>
+        </div>
+        <div className="jv-tree">
+          <JsonNode data={data} path="" search={search.toLowerCase()} depth={0} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function JsonNode({ data, path, search, depth }: { data: any; path: string; search: string; depth: number }) {
+  const [collapsed, setCollapsed] = useState(depth > 2);
+
+  if (data === null) return <span className="jv-null">null</span>;
+  if (typeof data === 'boolean') return <span className="jv-bool">{String(data)}</span>;
+  if (typeof data === 'number') return <span className="jv-num">{data}</span>;
+  if (typeof data === 'string') {
+    const highlighted = search && data.toLowerCase().includes(search);
+    return <span className={`jv-str ${highlighted ? 'jv-highlight' : ''}`}>"{data}"</span>;
+  }
+
+  const isArray = Array.isArray(data);
+  const entries: [string, any][] = isArray ? data.map((v: any, i: number) => [String(i), v] as [string, any]) : Object.entries(data);
+  const bracketOpen = isArray ? '[' : '{';
+  const bracketClose = isArray ? ']' : '}';
+
+  // Auto-expand if search matches a child
+  const matchesSearch = search && JSON.stringify(data).toLowerCase().includes(search);
+  const isOpen = matchesSearch ? true : !collapsed;
+
+  return (
+    <span>
+      <span className="jv-bracket" onClick={() => setCollapsed(!collapsed)} style={{ cursor: 'pointer' }}>
+        {isOpen ? '\u25BE' : '\u25B8'} {bracketOpen}
+      </span>
+      {!isOpen && <span className="jv-collapsed" onClick={() => setCollapsed(false)}> ...{entries.length} items {bracketClose}</span>}
+      {isOpen && (
+        <>
+          <div className="jv-indent">
+            {entries.map((entry, i) => {
+              const key = entry[0];
+              const val = entry[1];
+              const keyHighlighted = search && key.toLowerCase().includes(search);
+              return (
+                <div key={key + i} className="jv-entry">
+                  {!isArray && <span className={`jv-key ${keyHighlighted ? 'jv-highlight' : ''}`}>"{key}"</span>}
+                  {!isArray && <span className="jv-colon">: </span>}
+                  <JsonNode data={val} path={`${path}.${key}`} search={search} depth={depth + 1} />
+                  {i < entries.length - 1 && <span className="jv-comma">,</span>}
+                </div>
+              );
+            })}
+          </div>
+          <span className="jv-bracket">{bracketClose}</span>
+        </>
+      )}
+    </span>
+  );
+}
+
 export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   // Selection state
   const [groups, setGroups] = useState<CollectionGroup[]>([]);
@@ -47,6 +135,9 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   // Expanded steps for viewing details
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
+
+  // JSON viewer modal state
+  const [modalData, setModalData] = useState<any>(null);
 
   // Load collection groups on mount
   useEffect(() => {
@@ -109,6 +200,30 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     });
   }, [selectedDir, selectedSuite, selectedEnv, currentEnv]);
 
+  // Re-run collection-level prerequest script (generates random phone numbers, reg nos, etc.)
+  const reinitStores = useCallback(() => {
+    if (!currentEnv || !selectedDir || !selectedSuite) return;
+    // Reset stores to fresh env (discard prior run's random values)
+    const freshStores: VariableStores = {
+      environment: { ...currentEnv.variables },
+      collection: {},
+    };
+    // Re-run collection prerequest script to regenerate random vars
+    fetchCollection(selectedDir, selectedSuite).then(raw => {
+      if (!raw) return;
+      const parsed = parseCollection(raw as PostmanCollection, currentEnv.variables);
+      freshStores.collection = { ...parsed.collectionVars };
+      if (raw.event) {
+        for (const ev of raw.event) {
+          if (ev.listen === 'prerequest' && ev.script?.exec) {
+            executePrereqScript(ev.script.exec.join('\n'), freshStores);
+          }
+        }
+      }
+      storesRef.current = freshStores;
+    });
+  }, [currentEnv, selectedDir, selectedSuite]);
+
   // Run all steps sequentially
   const runAll = useCallback(async () => {
     if (isRunning || steps.length === 0) return;
@@ -116,10 +231,25 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     setIsRunning(true);
     setStepStates({});
 
-    // Re-init stores from env
-    if (currentEnv) {
-      storesRef.current.environment = { ...currentEnv.variables, ...storesRef.current.environment };
+    // Reset stores and re-run collection prerequest to regenerate random vars
+    const freshStores: VariableStores = {
+      environment: { ...currentEnv!.variables },
+      collection: {},
+    };
+    // Fetch raw collection to re-run prerequest scripts
+    const raw = await fetchCollection(selectedDir, selectedSuite);
+    if (raw) {
+      const parsed = parseCollection(raw as PostmanCollection, currentEnv!.variables);
+      freshStores.collection = { ...parsed.collectionVars };
+      if (raw.event) {
+        for (const ev of raw.event) {
+          if (ev.listen === 'prerequest' && ev.script?.exec) {
+            executePrereqScript(ev.script.exec.join('\n'), freshStores);
+          }
+        }
+      }
     }
+    storesRef.current = freshStores;
 
     onLog('info', `-- Running ${currentSuite?.name || selectedSuite} (${currentEnv?.city || selectedEnv}) --`);
 
@@ -170,7 +300,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     setIsRunning(false);
     setRunningStepId(null);
     onLog('info', '-- Collection run complete --');
-  }, [isRunning, steps, currentEnv, currentSuite, selectedSuite, selectedEnv, onLog]);
+  }, [isRunning, steps, currentEnv, currentSuite, selectedDir, selectedSuite, selectedEnv, onLog]);
 
   const stop = useCallback(() => { abortRef.current = true; }, []);
 
@@ -322,6 +452,16 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
                           ))}
                         </div>
                       )}
+                      <div className="cr-response-actions">
+                        <button className="cr-view-btn" onClick={() => setModalData(state.result!.data)} title="View JSON">
+                          &#128065; View
+                        </button>
+                        <button className="cr-copy-btn" onClick={() => {
+                          navigator.clipboard.writeText(JSON.stringify(state.result!.data, null, 2));
+                        }} title="Copy JSON">
+                          &#128203; Copy
+                        </button>
+                      </div>
                       <pre className="cr-response-body">{JSON.stringify(state.result.data, null, 2)}</pre>
                     </div>
                   )}
@@ -335,6 +475,9 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         ))}
         {steps.length === 0 && <div className="cr-empty">Select a collection, environment, and suite to load steps.</div>}
       </div>
+
+      {/* JSON Viewer Modal */}
+      {modalData !== null && <JsonViewerModal data={modalData} onClose={() => setModalData(null)} />}
     </div>
   );
 };

@@ -97,7 +97,10 @@ in
                   common
                   (haskellProcessFor name)
                 ];
-                depends_on."nammayatri-init".condition = "process_completed_successfully";
+                depends_on = {
+                  "nammayatri-init".condition = "process_completed_successfully";
+                  "mock-registry".condition = "process_healthy";
+                };
                 shutdown.signal = 9;
               };
             })
@@ -125,10 +128,28 @@ in
     in
     {
       settings = {
+
         # Local Haskell processes
         imports = [ haskellProcesses ];
 
         processes = {
+          # Rider producer: same binary as producer-exe, different env vars
+          rider-producer-exe = {
+            imports = [
+              common
+              (haskellProcessFor "producer-exe")
+            ];
+            environment.PRODUCER_TYPE = "Rider";
+            environment.GET_MY_SCHEMA = "atlas_app";
+            depends_on = {
+              "nammayatri-init".condition = "process_completed_successfully";
+              "rider-app-exe".condition = "process_healthy";
+              "dynamic-offer-driver-app-exe".condition = "process_healthy";
+              "mock-registry".condition = "process_healthy";
+            };
+            shutdown.signal = 9;
+          };
+
           # Sync config from master to local DB after infra is ready
           config-sync = {
             imports = [ common ];
@@ -139,6 +160,9 @@ in
               "passetto-service".condition = "process_started";
               "rider-app-exe".condition = "process_healthy";
               "dynamic-offer-driver-app-exe".condition = "process_healthy";
+              "mock-registry".condition = "process_healthy";
+              "rider-dashboard-exe".condition = "process_healthy";
+              "provider-dashboard-exe".condition = "process_healthy";
             };
             command = pkgs.writeShellApplication {
               name = "config-sync";
@@ -153,14 +177,37 @@ in
               ];
               text = ''
                 set -x
+                export PYTHONUNBUFFERED=1
                 cd dev/config-sync
-                if [ -d "assets/data/prod_to_local" ] && [ "$(ls -A assets/data/prod_to_local 2>/dev/null)" ]; then
+                if [ -d "assets/data/prod_international_to_local" ] && [ "$(ls -A assets/data/prod_international_to_local 2>/dev/null)" ]; then
+                  echo "Found prod_international_to_local data, importing from prod_international"
+                  python3 -u config_transfer.py import --from prod_international --to local 2>&1
+                elif [ -d "assets/data/prod_to_local" ] && [ "$(ls -A assets/data/prod_to_local 2>/dev/null)" ]; then
                   echo "Found prod_to_local data, importing from prod"
-                  DEV=true python3 config_transfer.py import --from prod --to local
-                else
+                  python3 -u config_transfer.py import --from prod --to local 2>&1
+                elif [ -d "assets/data/master_to_local" ] && [ "$(ls -A assets/data/master_to_local 2>/dev/null)" ]; then
                   echo "Using master_to_local data"
-                  DEV=true python3 config_transfer.py import --from master --to local
+                  python3 -u config_transfer.py import --from master --to local 2>&1
                 fi
+
+                # Restart primary services so they re-read boot-time config from DB.
+                # Kill the actual Haskell binaries; process-compose auto-restarts them.
+                # Match by dist-newstyle path to scope to this project only.
+                echo "Restarting primary services to pick up synced config..."
+                PROJ_DIR="$(cd ../.. && pwd)"
+                for exe in rider-app-exe dynamic-offer-driver-app-exe; do
+                  pid=$(pgrep -f "$PROJ_DIR.*$exe" | head -1 || true)
+                  if [ -n "$pid" ]; then
+                    kill "$pid" 2>/dev/null && echo "Killed $exe (PID $pid) — process-compose will restart"
+                  fi
+                done
+                # mock-registry: find by its listening port (8020) — inherently isolated per instance
+                pid=$(lsof -ti :8020 | head -1 || true)
+                if [ -n "$pid" ]; then
+                  kill "$pid" 2>/dev/null && echo "Killed mock-registry (PID $pid, port 8020) — process-compose will restart"
+                fi
+                sleep 3
+                echo "Primary services restarted."
               '';
             };
           };
@@ -200,6 +247,24 @@ in
             };
           };
 
+          # Periodic log cleaner: truncates .log files exceeding 1GB
+          # Covers process-compose logs (./*.log) and dhall/app logs (/tmp/*.log)
+          log-cleaner = {
+            imports = [ common ];
+            command = pkgs.writeShellApplication {
+              name = "log-cleaner";
+              runtimeInputs = with pkgs; [ coreutils findutils ];
+              text = ''
+                while true; do
+                  find . -maxdepth 1 -name '*.log' -size +1G -exec truncate -s 0 {} \;
+                  find /tmp -maxdepth 1 -name '*.log' -size +1G -exec truncate -s 0 {} \;
+                  sleep 300
+                done
+              '';
+            };
+            shutdown.signal = 9;
+          };
+
           # Run 'cabal build' for all local Haskel processes
           cabal-build = {
             imports = [ common ];
@@ -221,8 +286,15 @@ in
           mock-registry = {
             imports = [ common ];
             command = ny.config.haskellProjects.default.outputs.finalPackages.mock-registry;
+            readiness_probe = {
+              http_get = {
+                host = "127.0.0.1";
+                port = 8020;
+                path = "/";
+              };
+            };
             availability = {
-              restart = "on_failure";
+              restart = "always";
               backoff_seconds = 2;
               max_restarts = 5;
             };
@@ -366,7 +438,7 @@ in
               };
             };
             availability = {
-              restart = "on_failure";
+              restart = "always";
               backoff_seconds = 2;
               max_restarts = 5;
             };
@@ -381,8 +453,46 @@ in
               };
             };
             availability = {
-              restart = "on_failure";
+              restart = "always";
               backoff_seconds = 2;
+              max_restarts = 5;
+            };
+          };
+
+          rider-dashboard-exe = {
+            readiness_probe = {
+              http_get = {
+                host = "127.0.0.1";
+                port = 8017;
+                path = "/";
+              };
+              initial_delay_seconds = 15;
+              period_seconds = 5;
+              failure_threshold = 30;
+              timeout_seconds = 3;
+            };
+            availability = {
+              restart = "on_failure";
+              backoff_seconds = 30;
+              max_restarts = 5;
+            };
+          };
+
+          provider-dashboard-exe = {
+            readiness_probe = {
+              http_get = {
+                host = "127.0.0.1";
+                port = 8018;
+                path = "/";
+              };
+              initial_delay_seconds = 15;
+              period_seconds = 5;
+              failure_threshold = 30;
+              timeout_seconds = 3;
+            };
+            availability = {
+              restart = "on_failure";
+              backoff_seconds = 30;
               max_restarts = 5;
             };
           };
@@ -469,6 +579,18 @@ in
         };
         package = inputs'.passetto.packages.passetto-service;
       };
+
+      # Override passetto-service startup: skip passetto-init (keys are seeded via passetto-seed.sql).
+      # The upstream process-compose.nix runs `passetto-init $password $keys` on every boot,
+      # which unconditionally appends keys — causing pool growth across restarts.
+      settings.processes.passetto-service.command = lib.mkForce (pkgs.writeShellApplication {
+        name = "passetto-service";
+        runtimeInputs = [ inputs'.passetto.packages.passetto-service ];
+        text = ''
+          set -x
+          MASTER_PASSWORD=1 passetto-server
+        '';
+      });
 
       services.clickhouse."clickhouse-db" = {
         enable = true;

@@ -579,6 +579,8 @@ buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) DRide.Ride {..} = d
                           offerTnc = offerEntity.offerTnc,
                           offerSponsoredBy = offerEntity.offerSponsoredBy,
                           offerCode = offerEntity.offerCode,
+                          autoApply = offerEntity.autoApply,
+                          isHidden = offerEntity.isHidden,
                           amountSaved = offerEntity.amountSaved + offerEntity.payoutAmount,
                           postOfferAmount = offerEntity.postOfferAmount
                         }

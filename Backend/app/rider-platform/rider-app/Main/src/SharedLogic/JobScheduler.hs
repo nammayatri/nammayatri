@@ -29,6 +29,7 @@ import Domain.Types.Person
 import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
+import qualified Domain.Types.VehicleVariant as DV
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Price
@@ -325,10 +326,16 @@ instance JobInfoProcessor 'CancelExecutePaymentIntent
 
 type instance JobContent 'CancelExecutePaymentIntent = CancelExecutePaymentIntentJobData
 
+data VehicleReference = VehicleReference
+  { referenceId :: Text,
+    vehicleVariant :: DV.VehicleVariant,
+    amount :: HighPrecMoney
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
 data ExecuteCashRideCashbackPayoutJobData = ExecuteCashRideCashbackPayoutJobData
-  { rideId :: Id DRide.Ride,
-    personId :: Id Person,
-    cashbackAmount :: HighPrecMoney,
+  { personId :: Id Person,
+    vehicleReferences :: [VehicleReference],
     currency :: Currency
   }
   deriving (Generic, Show, FromJSON, ToJSON)

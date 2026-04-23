@@ -2,15 +2,41 @@
 
 module API.Types.UI.Invoice where
 
+import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.Finance.Domain.Types.Invoice
 import Servant
 import Tools.Auth
 
 data FareBreakup = FareBreakup {price :: Data.Text.Text, title :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FinanceInvoiceItem = FinanceInvoiceItem
+  { invoiceDate :: Kernel.Prelude.UTCTime,
+    invoiceNumber :: Data.Text.Text,
+    invoiceStatus :: Lib.Finance.Domain.Types.Invoice.InvoiceStatus,
+    invoiceType :: Lib.Finance.Domain.Types.Invoice.InvoiceType,
+    issuedByAddress :: Kernel.Prelude.Maybe Data.Text.Text,
+    issuedByName :: Kernel.Prelude.Maybe Data.Text.Text,
+    issuedByTaxNo :: Kernel.Prelude.Maybe Data.Text.Text,
+    issuedToAddress :: Kernel.Prelude.Maybe Data.Text.Text,
+    issuedToName :: Kernel.Prelude.Maybe Data.Text.Text,
+    issuedToTaxNo :: Kernel.Prelude.Maybe Data.Text.Text,
+    lineItems :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    subtotal :: Kernel.Types.Common.HighPrecMoney,
+    taxAmount :: Kernel.Types.Common.HighPrecMoney,
+    taxRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    totalAmount :: Kernel.Types.Common.HighPrecMoney
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FinanceInvoiceListRes = FinanceInvoiceListRes {invoices :: [FinanceInvoiceItem], totalItems :: Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

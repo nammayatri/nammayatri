@@ -8,89 +8,120 @@ copyright: "2023 Juspay Technologies Private Limited"
 
 description: NammaYatri HUnit tests
 
+flags:
+  Local:
+    description: Enable this flag for faster compile times
+    manual: true
+    default: false
+
 dependencies:
-- base >= 4.7 && < 5
-- aeson
-- bytestring
-- containers
-- data-default-class
-- dashboard-helper-api
-- directory
-- dynamic-offer-driver-app
-- euler-hs
-- http-conduit
-- http-types
-- HUnit
-- hspec
-- hspec-core
-- lens
-- lib-dashboard
-- mobility-core
-- mock-sms
-- provider-dashboard
-- record-dot-preprocessor
-- record-hasfield
-- rider-app
-- string-conversions
-- tasty
-- tasty-hspec
-- tasty-hunit
-- text
-- time
-- unix
-- uuid
-- vector
-- unordered-containers
-- mtl
-- transformers
-- yudhishthira
-- beckn-spec
+  - base >= 4.7 && < 5
+  - aeson
+  - bytestring
+  - containers
+  - data-default-class
+  - dashboard-helper-api
+  - directory
+  - dynamic-offer-driver-app
+  - euler-hs
+  - http-conduit
+  - http-types
+  - HUnit
+  - hspec
+  - hspec-core
+  - lens
+  - lib-dashboard
+  - mobility-core
+  - mock-sms
+  - provider-dashboard
+  - record-dot-preprocessor
+  - record-hasfield
+  - rider-app
+  - string-conversions
+  - tasty
+  - tasty-hspec
+  - tasty-hunit
+  - text
+  - time
+  - unix
+  - uuid
+  - vector
+  - unordered-containers
+  - mtl
+  - transformers
+  - yudhishthira
+  - beckn-spec
 
 default-extensions:
-- ConstraintKinds
-- DataKinds
-- DefaultSignatures
-- DeriveAnyClass
-- DeriveFunctor
-- DeriveGeneric
-- DuplicateRecordFields
-- FlexibleContexts
-- FlexibleInstances
-- FunctionalDependencies
-- GADTs
-- LambdaCase
-- MultiParamTypeClasses
-- MultiWayIf
-- NamedFieldPuns
-- NoImplicitPrelude
-- OverloadedStrings
-- PackageImports
-- PatternSynonyms
-- PolyKinds
-- RankNTypes
-- RecordWildCards
-- ScopedTypeVariables
-- TupleSections
-- TypeApplications
-- TypeFamilies
-- TypeOperators
-- ViewPatterns
+  - ConstraintKinds
+  - DataKinds
+  - DefaultSignatures
+  - DeriveAnyClass
+  - DeriveFunctor
+  - DeriveGeneric
+  - DuplicateRecordFields
+  - FlexibleContexts
+  - FlexibleInstances
+  - FunctionalDependencies
+  - GADTs
+  - LambdaCase
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NamedFieldPuns
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - PackageImports
+  - PatternSynonyms
+  - PolyKinds
+  - RankNTypes
+  - RecordWildCards
+  - ScopedTypeVariables
+  - TupleSections
+  - TypeApplications
+  - TypeFamilies
+  - TypeOperators
+  - ViewPatterns
 
 library:
   source-dirs: src
   exposed-modules:
-  - Dashboard
+    - Dashboard
   other-modules:
-  - RegistrationUnitTests
-  - VehicleAssociationUnitTests
-  - DriverDocumentUploadUnitTests
-  - AddVehicleUnitTests
-  - DriverOperationHubUnitTests
-  - CreateRequestUnitTests
+    - RegistrationUnitTests
+    - VehicleAssociationUnitTests
+    - DriverDocumentUploadUnitTests
+    - AddVehicleUnitTests
+    - DriverOperationHubUnitTests
+    - CreateRequestUnitTests
 
 executables:
   hunit-tests:
     main: Main.hs
     source-dirs: app
     dependencies:
-    - hunit-tests
+      - hunit-tests
+      # On macOS the Xcode 11-era ld64 (in this nix toolchain) asserts
+      # "bad binding during dead stripping" when linking this test binary —
+      # GHC emits weird bindings for `undefined` placeholders and partial
+      # records used throughout the hunit fixtures, which the old ld64 can't
+      # classify. Build with -O0 on darwin so GHC produces simpler symbol
+      # bindings the dead-strip pass can reason about. Scoped to hunit-tests;
+      # no runtime / optimisation impact on the rest of the tree.
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - "\"-with-rtsopts=-N -T\""
+    when:
+      - condition: flag(Local)
+        then:
+          ghc-options:
+            - -O0
+            - -funfolding-use-threshold20
+            - -fno-cse
+            - -fmax-simplifier-iterations1
+            - -fno-specialise-aggressively
+            - -j4
+        else:
+          ghc-options:
+            - -O2
+            - -j4

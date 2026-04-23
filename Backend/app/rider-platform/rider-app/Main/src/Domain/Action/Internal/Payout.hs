@@ -29,7 +29,9 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
+import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Servant (BasicAuthData)
+import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.Merchant
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -111,6 +113,32 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
               QPersonStats.updateBacklogAndReferredByPayoutStatusAndAmountPaid mbStatus mbStatus (personStats.referralAmountPaid + payoutOrder.amount.amount) personId
             fork "Update Payout Status and Transactions for Referred By And Backlog Award" $ do
               callPayoutService payoutOrder payoutConfig person
+          Just DPayment.RIDE_OFFER_CASHBACK -> do
+            -- Drain OwnerLiability → BuyerExternal for the sum of unsettled
+            -- cashback entries, and flag them PAID_OUT with the PayoutRequest id.
+            -- Entry IDs live on payout_request.ledger_entry_ids (stashed by the
+            -- scheduler job right after submitPayoutRequest returned).
+            when (isPayoutStatusSuccess payoutStatus) $ do
+              let mbPayoutRequestId = listToMaybe (fromMaybe [] payoutOrder.entityIds)
+              whenJust mbPayoutRequestId $ \prId -> do
+                mbPayoutReq <- QPR.findById (Id prId)
+                whenJust mbPayoutReq $ \payoutReq -> do
+                  let entryIds = map Id (fromMaybe [] payoutReq.ledgerEntryIds)
+                  when (null entryIds) $ do
+                    logError $ "No stashed entry IDs found for payoutRequest " <> payoutReq.id.getId
+                  let ctx =
+                        RidePaymentFinance.buildRiderFinanceCtx
+                          merchantId.getId
+                          merchanOperatingCityId.getId
+                          payoutOrder.amount.currency
+                          True
+                          payoutOrder.customerId
+                          ""
+                          Nothing
+                          Nothing
+                  void $ RidePaymentFinance.markCashbackEntriesAsPaidOut ctx entryIds payoutReq.id.getId
+              fork "Update Payout Status and Transactions for RideOfferCashback" $ do
+                callPayoutService payoutOrder payoutConfig person
           _ -> logTagError "Webhook Handler Error" $ "Unsupported Payout Entity:" <> show payoutOrder.entityName
     IPayout.BadStatusResp -> pure ()
   pure Ack

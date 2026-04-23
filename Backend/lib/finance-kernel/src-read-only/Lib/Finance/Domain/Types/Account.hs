@@ -27,7 +27,7 @@ data Account = Account
 
 data AccountStatus = Active | Suspended | Closed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data AccountType = Asset | Liability | Revenue | Expense | External | RideCredit deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data AccountType = Asset | Liability | Revenue | Expense | External | RideCredit | Control deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data CounterpartyType
   = BUYER

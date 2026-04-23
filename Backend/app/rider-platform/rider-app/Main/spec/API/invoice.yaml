@@ -5,6 +5,10 @@ imports:
   UTCTime: Kernel.Prelude
   APISuccess: Kernel.Types.APISuccess
   HighPrecMeters: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
+  InvoiceType: Lib.Finance.Domain.Types.Invoice
+  InvoiceStatus: Lib.Finance.Domain.Types.Invoice
+  Value: Data.Aeson
 
 module: Invoice
 types:
@@ -26,6 +30,26 @@ types:
     title: Text
     price: Text
 
+  FinanceInvoiceItem:
+    invoiceNumber: Text
+    invoiceType: InvoiceType
+    invoiceStatus: InvoiceStatus
+    invoiceDate: UTCTime
+    totalAmount: HighPrecMoney
+    subtotal: HighPrecMoney
+    taxAmount: HighPrecMoney
+    lineItems: Maybe Value
+    issuedToName: Maybe Text
+    issuedToAddress: Maybe Text
+    issuedByName: Maybe Text
+    issuedByAddress: Maybe Text
+    taxRate: Maybe Double
+    issuedToTaxNo: Maybe Text
+    issuedByTaxNo: Maybe Text
+  FinanceInvoiceListRes:
+    invoices: "[FinanceInvoiceItem]"
+    totalItems: Int
+
 apis:
   # GET /invoice
   - GET:
@@ -36,3 +60,14 @@ apis:
         to: UTCTime
       response:
         type: "[API.Types.UI.Invoice.InvoiceRes]"
+  # GET /invoice/list — finance-kernel invoices (Ride, RideCancellation)
+  - GET:
+      endpoint: /invoice/list
+      auth: TokenAuth
+      query:
+        invoiceType: InvoiceType
+        referenceId: Text
+        limit: Int
+        offset: Int
+      response:
+        type: FinanceInvoiceListRes

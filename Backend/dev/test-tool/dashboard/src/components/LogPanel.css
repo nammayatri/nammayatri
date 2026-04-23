@@ -32,7 +32,7 @@
   gap: 6px;
 }
 .log-search {
-  width: 140px;
+  width: 280px;
   padding: 3px 8px;
   background: #161b22;
   border: 1px solid #30363d;
@@ -44,9 +44,36 @@
 }
 .log-search:focus {
   border-color: #1f6feb;
+  width: 360px;
 }
 .log-search::placeholder {
   color: #484f58;
+}
+.log-search-clear {
+  background: transparent;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  color: #8b949e;
+  font-size: 10px;
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.log-search-clear:hover { background: #21262d; color: #f85149; }
+.log-match-count {
+  color: #d29922;
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.svc-log-matches {
+  color: #d29922;
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 4px;
 }
 .log-clear-btn {
   padding: 3px 10px;

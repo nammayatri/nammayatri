@@ -176,7 +176,9 @@ data DriverRideRes = DriverRideRes
     pickupZoneEntryFeeAmount :: Maybe Double,
     specialLocationName :: Maybe Text,
     specialLocationCategory :: Maybe Text,
-    isValidRide :: Maybe Bool
+    isValidRide :: Maybe Bool,
+    amountToCollectInCash :: Maybe HighPrecMoney,
+    amountToBeSettledOnline :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -316,7 +318,19 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         pickupZoneEntryFeeAmount = mbGateInfo >>= (.entryFeeAmount),
         specialLocationName = mbSpecialLoc <&> (.locationName),
         specialLocationCategory = mbSpecialLoc <&> (.category),
-        isValidRide = Just $ Tools.isValidRide ride
+        isValidRide = Just $ Tools.isValidRide ride,
+        amountToCollectInCash =
+          case (booking.paymentInstrument, ride.fare) of
+            (Just DMPM.Cash, Just fareAmt) ->
+              Just $ case ride.discountAmount of
+                Just disc | disc > 0 -> max 0 (fareAmt - disc)
+                _ -> fareAmt
+            _ -> Nothing,
+        amountToBeSettledOnline =
+          case (booking.paymentInstrument, ride.fare, ride.discountAmount) of
+            (Just DMPM.Cash, _, Just disc) | disc > 0 -> Just disc
+            (_, Just fareAmt, _) -> Just fareAmt
+            _ -> Nothing
       }
 
 -- calculateLocations moved from UI.Ride

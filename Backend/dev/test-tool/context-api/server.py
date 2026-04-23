@@ -42,13 +42,16 @@ import urllib.error
 
 def redis_cmd(*args):
     """Run a redis-cli command against the cluster, fallback to single-node."""
-    cluster_cmd = ["redis-cli", "--cluster", "call", "localhost:30001"] + list(args)
+    cluster_cmd = ["redis-cli", "--cluster",
+                   "call", "localhost:30001"] + list(args)
     r = subprocess.run(cluster_cmd, capture_output=True, text=True, timeout=10)
     if r.returncode == 0:
         return True, r.stdout
     # fallback single-node
-    r2 = subprocess.run(["redis-cli"] + list(args), capture_output=True, text=True, timeout=10)
+    r2 = subprocess.run(["redis-cli"] + list(args),
+                        capture_output=True, text=True, timeout=10)
     return r2.returncode == 0, r2.stdout
+
 
 PORT = 7082
 
@@ -198,8 +201,10 @@ def scan_collections():
             if f.name.startswith("Local_") and f.name.endswith(".postman_environment.json"):
                 try:
                     env_data = json.loads(f.read_text())
-                    vals = {v["key"]: v["value"] for v in env_data.get("values", []) if v.get("enabled", True)}
-                    env_name = f.name.replace("Local_", "").replace(".postman_environment.json", "")
+                    vals = {v["key"]: v["value"] for v in env_data.get(
+                        "values", []) if v.get("enabled", True)}
+                    env_name = f.name.replace("Local_", "").replace(
+                        ".postman_environment.json", "")
                     group["environments"].append({
                         "filename": f.name,
                         "envName": env_name,
@@ -270,7 +275,8 @@ def start_log_tails():
                 text=True, bufsize=1
             )
             lines = []
-            t = threading.Thread(target=_reader_thread, args=(lines, proc), daemon=True)
+            t = threading.Thread(target=_reader_thread,
+                                 args=(lines, proc), daemon=True)
             t.start()
             session[svc] = {"proc": proc, "lines": lines}
         except OSError:
@@ -336,6 +342,352 @@ def get_full_context():
     }
 
 
+# ── Finance Visualization Queries ──
+
+def get_finance_accounts(schema):
+    """Get all finance accounts with balances."""
+    return query(f"""
+        SELECT a.id, a.account_type, a.counterparty_type, a.counterparty_id,
+               a.balance, a.currency, a.status
+        FROM {schema}.finance_account a
+        ORDER BY a.account_type, a.counterparty_type
+    """)
+
+
+def get_finance_ledger_entries(schema, reference_type=None, reference_id=None, counterparty_id=None, limit=50, offset=0):
+    """Get finance ledger entries with optional filters."""
+    conditions = []
+    params = []
+    if reference_type:
+        conditions.append("le.reference_type = %s")
+        params.append(reference_type)
+    if reference_id:
+        conditions.append("le.reference_id = %s")
+        params.append(reference_id)
+    if counterparty_id:
+        conditions.append(
+            "(fa_from.counterparty_id = %s OR fa_to.counterparty_id = %s)")
+        params.extend([counterparty_id, counterparty_id])
+    where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
+    params.extend([limit, offset])
+    return query(f"""
+        SELECT le.id, le.reference_type, le.reference_id, le.amount, le.currency,
+               le.status, le.entry_type, le.created_at,
+               fa_from.account_type as from_account_type, fa_from.counterparty_type as from_counterparty,
+               fa_to.account_type as to_account_type, fa_to.counterparty_type as to_counterparty
+        FROM {schema}.finance_ledger_entry le
+        LEFT JOIN {schema}.finance_account fa_from ON fa_from.id = le.from_account_id
+        LEFT JOIN {schema}.finance_account fa_to ON fa_to.id = le.to_account_id
+        {where}
+        ORDER BY le.created_at DESC
+        LIMIT %s OFFSET %s
+    """, tuple(params))
+
+
+def get_finance_invoices(schema, issued_to_id=None, invoice_type=None, limit=20, offset=0):
+    """Get finance invoices with optional filters."""
+    conditions = []
+    params = []
+    if issued_to_id:
+        conditions.append("fi.issued_to_id = %s")
+        params.append(issued_to_id)
+    if invoice_type:
+        conditions.append("fi.invoice_type = %s")
+        params.append(invoice_type)
+    where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
+    params.extend([limit, offset])
+    return query(f"""
+        SELECT fi.id, fi.invoice_number, fi.invoice_type, fi.status,
+               fi.total_amount, fi.subtotal, fi.currency,
+               fi.issued_to_type, fi.issued_to_id, fi.issued_to_name,
+               fi.issued_by_name, fi.line_items::text as line_items,
+               fi.created_at, fi.tax_breakdown
+        FROM {schema}.finance_invoice fi
+        {where}
+        ORDER BY fi.created_at DESC
+        LIMIT %s OFFSET %s
+    """, tuple(params))
+
+
+def get_finance_earnings(schema, counterparty_id=None):
+    """Wallet-style earnings summary for BPP drivers, matching the shape
+    returned by the driver-app /wallet/transactions endpoint.
+
+    Entries where a DRIVER Asset account is the `to` side are additions
+    (credits to the driver's wallet); where DRIVER Asset is the `from` side
+    are deductions. If counterparty_id is given, scope to that driver;
+    otherwise aggregate platform-wide across every DRIVER wallet.
+    """
+    # Friendly labels — mirror referenceTypeToItemName in
+    # Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/Domain/Action/UI/DriverWallet.hs
+    LABELS = {
+        "BaseRide": "Ride Earnings",
+        "Tips": "Tips",
+        "TollCharges": "Toll Charges",
+        "ParkingCharges": "Parking Charges",
+        "Topup": "Wallet Top-up",
+        "GSTOnline": "GST (Online)",
+        "GSTCash": "GST (Cash)",
+        "VATOnline": "VAT (Online)",
+        "VATCash": "VAT (Cash)",
+        "TDSDeductionOnline": "TDS (Online)",
+        "TDSDeductionCash": "TDS (Cash)",
+        "TDSDeductionCancellation": "TDS (Cancellation)",
+        "Payout": "Withdrawal",
+        "AirportCashRecharge": "Airport cash recharge (booth)",
+        "AirportEntryFee": "Airport Entry Fee",
+        "AirportEntryFeeGST": "Airport Entry Fee GST",
+        "CommissionOnline": "Platform Commission (Online)",
+        "CommissionCash": "Platform Commission (Cash)",
+        "DriverCancellationCharges": "Driver Cancellation Charges",
+        "CustomerCancellationCharges": "Customer Cancellation Charges",
+        "CustomerCancellationGST": "Customer Cancellation GST",
+        "WalletIncentive": "Incentive",
+        "D2DReferral": "Referral Bonus",
+        "DiscountsOnline": "Discounts (Online)",
+        "DiscountsCash": "Discounts (Cash)",
+        "RideVatOnDiscount": "VAT on Discount",
+        "VATAbsorbedOnDiscount": "VAT Absorbed on Discount",
+        "VATInput": "VAT Input",
+        "CancellationVATInput": "Cancellation VAT Input",
+    }
+
+    driver_filter = ""
+    params: list = []
+    if counterparty_id:
+        driver_filter = "AND fa.counterparty_id = %s"
+        params = [counterparty_id]
+
+    def grouped(direction_col: str):
+        # direction_col is either 'to_account_id' (credits/additions)
+        # or 'from_account_id' (debits/deductions).
+        sql = f"""
+            SELECT le.reference_type,
+                   COALESCE(SUM(le.amount), 0) AS total,
+                   COUNT(*) AS cnt,
+                   MAX(le.currency) AS currency
+            FROM {schema}.finance_ledger_entry le
+            JOIN {schema}.finance_account fa ON fa.id = le.{direction_col}
+            WHERE fa.counterparty_type IN ('DRIVER', 'FLEET_OWNER')
+              AND fa.account_type IN ('Liability', 'Control')
+              AND le.status = 'SETTLED'
+              {driver_filter}
+            GROUP BY le.reference_type
+            ORDER BY total DESC
+        """
+        rows = query(sql, tuple(params))
+        return [] if isinstance(rows, dict) else rows
+
+    add_rows = grouped("to_account_id")
+    ded_rows = grouped("from_account_id")
+
+    def to_items(rows):
+        out = []
+        for r in rows:
+            amt = float(r["total"]) if r["total"] is not None else 0.0
+            out.append({
+                "refType": r["reference_type"],
+                "itemName": LABELS.get(r["reference_type"], r["reference_type"]),
+                "amount": amt,
+                "entries": r["cnt"],
+                "currency": r.get("currency"),
+            })
+        return out
+
+    additions = to_items(add_rows)
+    deductions = to_items(ded_rows)
+    add_total = sum(i["amount"] for i in additions)
+    ded_total = sum(i["amount"] for i in deductions)
+    currency = (add_rows[0]["currency"] if add_rows
+                else (ded_rows[0]["currency"] if ded_rows else None))
+
+    # Wallet balance (real platform-owed-to-driver): Liability only.
+    # Cash-earnings tracker: Control account (no real platform obligation,
+    # just cumulative memo of direct rider→driver cash).
+    balance = None
+    cash_earnings_tracked = None
+    if counterparty_id:
+        bal_rows = query(
+            f"""
+            SELECT account_type, balance FROM {schema}.finance_account
+            WHERE counterparty_type IN ('DRIVER', 'FLEET_OWNER')
+              AND counterparty_id = %s
+              AND account_type IN ('Liability', 'Control')
+            """,
+            (counterparty_id,),
+        )
+        if bal_rows and not isinstance(bal_rows, dict):
+            for row in bal_rows:
+                if row["account_type"] == "Liability":
+                    balance = float(row["balance"])
+                elif row["account_type"] == "Control":
+                    cash_earnings_tracked = float(row["balance"])
+
+    return {
+        "counterpartyId": counterparty_id,
+        "balance": balance,
+        "cashEarningsTracked": cash_earnings_tracked,
+        "currency": currency,
+        "additions": {"totalAmount": add_total, "items": additions},
+        "deductions": {"totalAmount": ded_total, "items": deductions},
+        "net": add_total - ded_total,
+    }
+
+
+def get_finance_reference_types(schema):
+    """Get distinct reference types from ledger entries."""
+    return query(f"""
+        SELECT DISTINCT reference_type FROM {schema}.finance_ledger_entry ORDER BY reference_type
+    """)
+
+
+def get_finance_dashboard(schema):
+    """Full finance dashboard data: accounts, timeline grouped by reference_id, summary stats."""
+    accounts = query(f"""
+        SELECT a.id, a.account_type, a.counterparty_type, a.counterparty_id,
+               a.balance, a.currency, a.status,
+               COALESCE((SELECT SUM(le.amount) FROM {schema}.finance_ledger_entry le WHERE le.to_account_id = a.id AND le.amount > 0), 0) as total_credits,
+               COALESCE((SELECT SUM(ABS(le.amount)) FROM {schema}.finance_ledger_entry le WHERE le.from_account_id = a.id AND le.amount > 0), 0) as total_debits
+        FROM {schema}.finance_account a
+        ORDER BY a.account_type, a.counterparty_type
+    """)
+
+    # Ledger entries with account info, ordered by time
+    entries = query(f"""
+        SELECT le.id, le.reference_type, le.reference_id, le.amount, le.currency,
+               le.status, le.entry_type, le.created_at,
+               le.from_account_id, le.to_account_id,
+               COALESCE(fa_from.account_type, 'Unknown') as from_type,
+               COALESCE(fa_from.counterparty_type, '') as from_counterparty,
+               COALESCE(fa_to.account_type, 'Unknown') as to_type,
+               COALESCE(fa_to.counterparty_type, '') as to_counterparty
+        FROM {schema}.finance_ledger_entry le
+        LEFT JOIN {schema}.finance_account fa_from ON fa_from.id = le.from_account_id
+        LEFT JOIN {schema}.finance_account fa_to ON fa_to.id = le.to_account_id
+        ORDER BY le.created_at DESC
+        LIMIT 500
+    """)
+
+    # Invoices
+    invoices = query(f"""
+        SELECT fi.id, fi.invoice_number, fi.invoice_type, fi.status,
+               fi.total_amount, fi.subtotal, fi.currency,
+               fi.issued_to_type, fi.issued_to_id, fi.issued_to_name,
+               fi.issued_by_name, fi.line_items::text as line_items,
+               fi.created_at, fi.tax_breakdown
+        FROM {schema}.finance_invoice fi
+        ORDER BY fi.created_at DESC
+        LIMIT 100
+    """)
+
+    # Invoice-to-entry links
+    links = query(f"""
+        SELECT l.invoice_id, l.ledger_entry_id
+        FROM {schema}.finance_invoice_ledger_link l
+    """)
+
+    if isinstance(entries, dict) and "error" in entries:
+        entries = []
+    if isinstance(invoices, dict) and "error" in invoices:
+        invoices = []
+    if isinstance(links, dict) and "error" in links:
+        links = []
+    if isinstance(accounts, dict) and "error" in accounts:
+        accounts = []
+
+    # Build invoice lookup by entry_id AND by reference_id
+    entry_to_invoice = {}
+    ref_to_invoice = {}
+    invoice_map = {inv["id"]: inv for inv in invoices}
+    for lnk in links:
+        inv = invoice_map.get(lnk["invoice_id"])
+        if inv:
+            entry_to_invoice[lnk["ledger_entry_id"]] = inv
+    # Also map invoices by issued_to_id for fallback matching
+    for inv in invoices:
+        ref_to_invoice.setdefault(inv.get("issued_to_id"), []).append(inv)
+
+    # Group entries by reference_id
+    from collections import OrderedDict
+    groups = OrderedDict()
+    for le in entries:
+        rid = le["reference_id"] or "unknown"
+        if rid not in groups:
+            groups[rid] = {"reference_id": rid, "entries": [
+            ], "primary_type": None, "earliest": le["created_at"], "invoice": None}
+        groups[rid]["entries"].append(le)
+        if not groups[rid]["primary_type"]:
+            groups[rid]["primary_type"] = le["reference_type"]
+        if le["created_at"] and (not groups[rid]["earliest"] or le["created_at"] < groups[rid]["earliest"]):
+            groups[rid]["earliest"] = le["created_at"]
+        # Attach invoice if linked (via entry link or by reference_id match)
+        inv = entry_to_invoice.get(le["id"])
+        if inv and not groups[rid]["invoice"]:
+            groups[rid]["invoice"] = inv
+
+    timeline = list(groups.values())
+
+    # Summary stats
+    active_inv = sum(1 for i in invoices if i.get(
+        "status") not in ("Voided", "Cancelled"))
+    voided_inv = sum(1 for i in invoices if i.get("status") == "Voided")
+
+    return {
+        "accounts": accounts,
+        "timeline": timeline,
+        "summary": {
+            "totalEntries": len(entries),
+            "totalInvoices": len(invoices),
+            "activeInvoices": active_inv,
+            "voidedInvoices": voided_inv,
+        },
+    }
+
+
+def clear_finance_data(schema):
+    """Truncate every finance-module table in the given schema for a clean slate.
+    Uses TRUNCATE ... RESTART IDENTITY CASCADE so FK deps are handled and any
+    sequences reset. Tables that don't exist in this schema are skipped."""
+    # Every table owned by the finance-kernel storage specs. Keep in sync with
+    # Backend/lib/finance-kernel/spec/Storage/*.yaml `tableName` values.
+    FINANCE_TABLES = [
+        "finance_account",
+        "finance_audit_entry",
+        "finance_current_state",
+        "finance_invoice",
+        "finance_invoice_ledger_link",
+        "finance_ledger_entry",
+        "finance_reconciliation_entry",
+        "finance_reconciliation_summary",
+        "finance_state_transition",
+        "direct_tax_transaction",
+        "indirect_tax_transaction",
+        "pg_payment_settlement_report",
+        "pg_payout_settlement_report",
+    ]
+    try:
+        conn = get_conn()
+        conn.autocommit = True
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT table_name FROM information_schema.tables
+            WHERE table_schema = %s AND table_name = ANY(%s)
+            """,
+            (schema, FINANCE_TABLES),
+        )
+        present = [r[0] for r in cur.fetchall()]
+        if not present:
+            conn.close()
+            return {"result": "Success", "message": f"No finance tables in {schema}", "tables": []}
+        qualified = ", ".join(f"{schema}.{t}" for t in present)
+        cur.execute(f"TRUNCATE TABLE {qualified} RESTART IDENTITY CASCADE")
+        conn.close()
+        return {"result": "Success", "message": f"Truncated finance tables in {schema}", "tables": present}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 class ContextHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         print(f"  \033[93m[Context API]\033[0m {args[0]}")
@@ -348,7 +700,8 @@ class ContextHandler(BaseHTTPRequestHandler):
 
     def _cors_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods",
+                         "GET, POST, PUT, DELETE, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "*")
 
     def _send_json(self, data, status=200):
@@ -372,10 +725,14 @@ class ContextHandler(BaseHTTPRequestHandler):
 
         # Determine target — rider uses /v2 prefix, driver uses /ui prefix, lts direct, fleet direct
         LTS_URL = os.environ.get("LTS_URL", "http://localhost:8081")
-        PROVIDER_DASHBOARD_URL = os.environ.get("PROVIDER_DASHBOARD_URL", "http://localhost:8018")
-        MOCK_IDFY_URL = os.environ.get("MOCK_IDFY_URL", "http://localhost:6235")
-        MOCK_SERVER_URL = os.environ.get("MOCK_SERVER_URL", "http://localhost:8080")
-        RIDER_DASHBOARD_URL = os.environ.get("RIDER_DASHBOARD_URL", "http://localhost:8017")
+        PROVIDER_DASHBOARD_URL = os.environ.get(
+            "PROVIDER_DASHBOARD_URL", "http://localhost:8018")
+        MOCK_IDFY_URL = os.environ.get(
+            "MOCK_IDFY_URL", "http://localhost:6235")
+        MOCK_SERVER_URL = os.environ.get(
+            "MOCK_SERVER_URL", "http://localhost:8080")
+        RIDER_DASHBOARD_URL = os.environ.get(
+            "RIDER_DASHBOARD_URL", "http://localhost:8017")
         if path.startswith("/proxy/rider-dashboard/"):
             target_base = RIDER_DASHBOARD_URL
             target_path = path[len("/proxy/rider-dashboard"):]
@@ -424,11 +781,13 @@ class ContextHandler(BaseHTTPRequestHandler):
                 fwd_headers[key] = self.headers[key]
 
         try:
-            req = urllib.request.Request(target_url, data=body, headers=fwd_headers, method=method)
+            req = urllib.request.Request(
+                target_url, data=body, headers=fwd_headers, method=method)
             with urllib.request.urlopen(req, timeout=30) as resp:
                 resp_body = resp.read()
                 self.send_response(resp.status)
-                self.send_header("Content-Type", resp.headers.get("Content-Type", "application/json"))
+                self.send_header(
+                    "Content-Type", resp.headers.get("Content-Type", "application/json"))
                 self._cors_headers()
                 self.end_headers()
                 self.wfile.write(resp_body)
@@ -475,11 +834,13 @@ class ContextHandler(BaseHTTPRequestHandler):
             try:
                 import subprocess
                 result = subprocess.run(
-                    ["redis-cli", "--cluster", "call", "localhost:30001", "flushall"],
+                    ["redis-cli", "--cluster", "call",
+                        "localhost:30001", "flushall"],
                     capture_output=True, text=True, timeout=10
                 )
                 if result.returncode == 0:
-                    self._send_json({"result": "ok", "output": result.stdout.strip()})
+                    self._send_json(
+                        {"result": "ok", "output": result.stdout.strip()})
                 else:
                     # Fallback to single-node flush (non-cluster local setup)
                     result2 = subprocess.run(
@@ -487,11 +848,20 @@ class ContextHandler(BaseHTTPRequestHandler):
                         capture_output=True, text=True, timeout=10
                     )
                     if result2.returncode == 0:
-                        self._send_json({"result": "ok", "output": result2.stdout.strip(), "mode": "single-node"})
+                        self._send_json(
+                            {"result": "ok", "output": result2.stdout.strip(), "mode": "single-node"})
                     else:
-                        self._send_json({"error": result.stderr.strip() or result2.stderr.strip()}, 500)
+                        self._send_json(
+                            {"error": result.stderr.strip() or result2.stderr.strip()}, 500)
             except Exception as e:
                 self._send_json({"error": str(e)}, 500)
+
+        if method == "POST" and path == "/api/finance/clear-all":
+            body = self._read_json_body()
+            side = body.get("side", "bpp")
+            schema = "atlas_app" if side == "bap" else "atlas_driver_offer_bpp"
+            result = clear_finance_data(schema)
+            self._send_json(result)
             return True
 
         if method == "POST" and path == "/api/inflate-distance":
@@ -515,9 +885,11 @@ class ContextHandler(BaseHTTPRequestHandler):
                 rows = cur.rowcount
                 conn.close()
                 if rows > 0:
-                    self._send_json({"result": "Success", "rowsUpdated": rows, "multiplier": multiplier})
+                    self._send_json(
+                        {"result": "Success", "rowsUpdated": rows, "multiplier": multiplier})
                 else:
-                    self._send_json({"error": f"No ride found with id {ride_id}"}, 404)
+                    self._send_json(
+                        {"error": f"No ride found with id {ride_id}"}, 404)
             except Exception as e:
                 self._send_json({"error": str(e)}, 500)
             return True
@@ -552,9 +924,63 @@ class ContextHandler(BaseHTTPRequestHandler):
                 else:
                     self._send_json({"error": "collection not found"}, 404)
             else:
-                self._send_json({"error": "usage: /api/collection/<dir>/<file>"}, 400)
+                self._send_json(
+                    {"error": "usage: /api/collection/<dir>/<file>"}, 400)
         elif path == "/api/health":
             self._send_json({"status": "ok"})
+        # ── Finance Dashboard ──
+        elif path == "/api/finance/dashboard":
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            side = qs.get("side", ["bpp"])[0]
+            schema = "atlas_app" if side == "bap" else "atlas_driver_offer_bpp"
+            self._send_json(get_finance_dashboard(schema))
+        # ── Finance Visualization (granular) ──
+        elif path == "/api/finance/accounts":
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            side = qs.get("side", ["bpp"])[0]
+            schema = "atlas_app" if side == "bap" else "atlas_driver_offer_bpp"
+            self._send_json(get_finance_accounts(schema))
+        elif path == "/api/finance/ledger":
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            side = qs.get("side", ["bpp"])[0]
+            schema = "atlas_app" if side == "bap" else "atlas_driver_offer_bpp"
+            self._send_json(get_finance_ledger_entries(
+                schema,
+                reference_type=qs.get("referenceType", [None])[0],
+                reference_id=qs.get("referenceId", [None])[0],
+                counterparty_id=qs.get("counterpartyId", [None])[0],
+                limit=int(qs.get("limit", [50])[0]),
+                offset=int(qs.get("offset", [0])[0]),
+            ))
+        elif path == "/api/finance/invoices":
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            side = qs.get("side", ["bpp"])[0]
+            schema = "atlas_app" if side == "bap" else "atlas_driver_offer_bpp"
+            self._send_json(get_finance_invoices(
+                schema,
+                issued_to_id=qs.get("issuedToId", [None])[0],
+                invoice_type=qs.get("invoiceType", [None])[0],
+                limit=int(qs.get("limit", [20])[0]),
+                offset=int(qs.get("offset", [0])[0]),
+            ))
+        elif path == "/api/finance/earnings":
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            schema = "atlas_driver_offer_bpp"  # earnings only on BPP
+            self._send_json(get_finance_earnings(
+                schema,
+                counterparty_id=qs.get("counterpartyId", [None])[0],
+            ))
+        elif path == "/api/finance/reference-types":
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            side = qs.get("side", ["bpp"])[0]
+            schema = "atlas_app" if side == "bap" else "atlas_driver_offer_bpp"
+            self._send_json(get_finance_reference_types(schema))
         else:
             self._send_json({"error": "not found"}, 404)
         return True
@@ -579,8 +1005,10 @@ def main():
             port = int(sys.argv[i + 1])
 
     server = HTTPServer(("0.0.0.0", port), ContextHandler)
-    print(f"\n  \033[93m📋 Context API + CORS Proxy on http://localhost:{port}\033[0m")
-    print(f"  DB: {DB_CONFIG['user']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['dbname']}")
+    print(
+        f"\n  \033[93m📋 Context API + CORS Proxy on http://localhost:{port}\033[0m")
+    print(
+        f"  DB: {DB_CONFIG['user']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['dbname']}")
     print(f"  Proxy: /proxy/rider/* → {RIDER_URL}")
     print(f"  Proxy: /proxy/driver/* → {DRIVER_URL}\n")
 
