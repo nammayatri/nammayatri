@@ -289,31 +289,75 @@ verifyGstFlow person merchantOpCityId checkExtraction gstNumber imageId1 = do
 
 onVerifyGst :: VerificationReqRecord -> VT.GstVerificationResponse -> VT.VerificationService -> Flow AckResponse
 onVerifyGst verificationReq output serviceName = do
-  logDebug $ "onVerifyGst: verificationReqId: " <> verificationReq.id <> ", driverId: " <> verificationReq.driverId.getId <> ", docType: " <> show verificationReq.docType <> ", status: " <> verificationReq.status
-  logDebug $ "output: " <> show output
-  logDebug $ "serviceName: " <> show serviceName
+  logInfo $
+    "onVerifyGst: ENTRY verificationReqId=" <> verificationReq.id
+      <> " requestId="
+      <> verificationReq.requestId
+      <> " driverId="
+      <> verificationReq.driverId.getId
+      <> " docType="
+      <> show verificationReq.docType
+      <> " status="
+      <> verificationReq.status
+      <> " imageExtractionValidation="
+      <> show verificationReq.imageExtractionValidation
+      <> " serviceName="
+      <> show serviceName
+  logInfo $
+    "onVerifyGst: output gstin=" <> show output.gstin
+      <> " gstinStatus="
+      <> show output.gstinStatus
+      <> " legalName="
+      <> show output.legalName
+      <> " tradeName="
+      <> show output.tradeName
+  logDebug $ "onVerifyGst: full output: " <> show output
   person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
+  logInfo $ "onVerifyGst: person found driverId=" <> verificationReq.driverId.getId <> " merchantId=" <> person.merchantId.getId
   if verificationReq.imageExtractionValidation == Domain.Skipped
     && (output.gstinStatus /= Just "Active")
     then do
-      logDebug $ "onVerifyGst: imageExtractionValidation == Domain.Skipped && output.gstinStatus /= Just \"Active\""
+      logInfo $
+        "onVerifyGst: INVALID branch (Skipped + gstinStatus != Active) requestId="
+          <> verificationReq.requestId
+          <> " gstinStatus="
+          <> show output.gstinStatus
       case serviceName of
         VT.Idfy -> do
           IVQuery.updateExtractValidationStatus Domain.Failed verificationReq.requestId
           DGQuery.updateVerificationStatus Documents.INVALID verificationReq.driverId
+          logInfo $ "onVerifyGst: marked INVALID and updated extract validation Failed requestId=" <> verificationReq.requestId
         _ -> throwError $ InternalError ("Unknown Service provider webhook encountered in onVerifyGst. Name of provider : " <> show serviceName)
       pure Ack
     else do
+      logInfo $ "onVerifyGst: proceeding to onVerifyGstHandler requestId=" <> verificationReq.requestId
       onVerifyGstHandler person verificationReq.documentImageId1 verificationReq.documentImageId2 output
+      logInfo $ "onVerifyGst: EXIT Ack requestId=" <> verificationReq.requestId
       pure Ack
 
 onVerifyGstHandler :: Person.Person -> Id Image.Image -> Maybe (Id Image.Image) -> VT.GstVerificationResponse -> Flow ()
 onVerifyGstHandler person imageId1 imageId2 output = do
-  logDebug $ "onVerifyGstHandler: " <> show output
+  logInfo $
+    "onVerifyGstHandler: ENTRY personId=" <> person.id.getId
+      <> " imageId1="
+      <> imageId1.getId
+      <> " hasImageId2="
+      <> show (isJust imageId2)
+      <> " gstinStatus="
+      <> show output.gstinStatus
+  logDebug $ "onVerifyGstHandler: full output: " <> show output
   mEncryptedGstinNumber <- encrypt `mapM` output.gstin
   let isValidGst = output.gstinStatus == Just "Active"
       verificationStatus = if isValidGst then Documents.VALID else Documents.INVALID
       mbPrincipalAddr = output.principalPlaceOfBusinessFields
+  logInfo $
+    "onVerifyGstHandler: computed verificationStatus=" <> show verificationStatus
+      <> " isValidGst="
+      <> show isValidGst
+      <> " personId="
+      <> person.id.getId
+      <> " hasPrincipalAddr="
+      <> show (isJust mbPrincipalAddr)
   DGQueryExtra.updateVerificationStatusWithPlaceDetails verificationStatus (mbPrincipalAddr >>= (.pincode)) (mbPrincipalAddr >>= (.stateName)) person.id
   when (DCommon.checkFleetOwnerRole person.role) $ do
     QFOI.updateGstImage mEncryptedGstinNumber (Just imageId1.getId) person.id

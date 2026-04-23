@@ -66,6 +66,7 @@ oldIdfyWebhookHandler ::
   Value ->
   Flow AckResponse
 oldIdfyWebhookHandler secret val = do
+  logInfo $ "IdfyWebhook.oldIdfyWebhookHandler: received webhook hasSecret=" <> show (isJust secret)
   merchantServiceConfig <-
     CQMSC.findOne (DMSC.VerificationService Verification.Idfy)
       >>= fromMaybeM (InternalError "No verification service provider configured")
@@ -89,6 +90,10 @@ idfyWebhookHandler ::
   Value ->
   Flow AckResponse
 idfyWebhookHandler merchantShortId secret val = do
+  logInfo $
+    "IdfyWebhook.idfyWebhookHandler: received webhook merchantShortId=" <> merchantShortId.getShortId
+      <> " hasSecret="
+      <> show (isJust secret)
   merchant <- findMerchantByShortId merchantShortId
   let merchantId = merchant.id
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant Nothing
@@ -119,6 +124,12 @@ idfyWebhookV2Handler ::
   Value ->
   Flow AckResponse
 idfyWebhookV2Handler merchantShortId opCity secret val = do
+  logInfo $
+    "IdfyWebhook.idfyWebhookV2Handler: received webhook merchantShortId=" <> merchantShortId.getShortId
+      <> " opCity="
+      <> show opCity
+      <> " hasSecret="
+      <> show (isJust secret)
   merchant <- findMerchantByShortId merchantShortId
   let merchantId = merchant.id
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -144,20 +155,26 @@ idfyWebhookV2Handler merchantShortId opCity secret val = do
 
 onVerify :: Idfy.VerificationResponse -> Text -> Flow AckResponse
 onVerify (Idfy.VerificationResponse rsp) respDump = do
+  logInfo $ "IdfyWebhook.onVerify: received webhook rsp=" <> show rsp <> " respDump=" <> respDump
   verificationReq <- IVQuery.findByRequestId rsp.request_id >>= fromMaybeM (InternalError "Verification request not found")
   person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
+  logInfo $ "IdfyWebhook.onVerify: looked up verificationReq=" <> show verificationReq
   IVQuery.updateResponse rsp.status (Just respDump) rsp.request_id
   let resultStatus = getResultStatus rsp.result
+  logInfo $ "IdfyWebhook.onVerify: parsed resultStatus=" <> show resultStatus
   if resultStatus == Just "source_down"
     then do
+      logInfo $ "IdfyWebhook.onVerify: source_down path requestId=" <> rsp.request_id
       handleIdfySourceDown person scheduleRetryVerificationJob verificationReq
       return Ack
     else do
       mbRemPriorityList <- CQO.getVerificationPriorityList verificationReq.driverId
+      logInfo $ "IdfyWebhook.onVerify: routing to verifyDocument mbRemPriorityList=" <> show mbRemPriorityList
       ack_ <- maybe (pure Ack) (flip (verifyDocument person verificationReq) mbRemPriorityList) rsp.result
       -- running statusHandler to enable Driver
       let onlyMandatoryDocs = Just True
       void $ Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) (Just True) Nothing Nothing (Just False) onlyMandatoryDocs Nothing
+      logInfo $ "IdfyWebhook.onVerify: completed requestId=" <> rsp.request_id
       return ack_
   where
     getResultStatus :: Maybe Idfy.IdfyResult -> Maybe Text
@@ -195,6 +212,12 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
             (Idfy.convertPanOutputToPanVerification resSrcOp.source_output)
             VT.Idfy
         Idfy.GstResult resSrcOp -> do
+          logInfo $
+            "IdfyWebhook.verifyDocument: GstResult branch requestId=" <> verificationReq.requestId
+              <> " driverId="
+              <> verificationReq.driverId.getId
+              <> " sourceOutputStatus="
+              <> show (resSrcOp.source_output.status)
           GstCard.onVerifyGst
             (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
             (Idfy.convertGstOutputToGstVerification resSrcOp.source_output)
