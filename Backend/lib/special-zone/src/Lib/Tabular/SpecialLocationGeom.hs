@@ -42,6 +42,8 @@ mkPersist
       geom Text Maybe
       priority Int
       enabled Bool
+      isOpenMarketEnabled Bool Maybe
+      isQueueEnabled Bool Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
@@ -56,5 +58,6 @@ instance ToTType SpecialLocationGeomT Domain.SpecialLocation where
         linkedLocationsIds = PostgresList $ map (.getId) linkedLocationsIds,
         merchantOperatingCityId = getId <$> merchantOperatingCityId,
         merchantId = getId <$> merchantId,
+        isOpenMarketEnabled = Just isOpenMarketEnabled,
         ..
       }

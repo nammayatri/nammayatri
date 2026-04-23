@@ -374,6 +374,8 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
         SL.SpecialLocation
           { gates = [],
             enabled = True,
+            isOpenMarketEnabled = maybe True (.isOpenMarketEnabled) mbExistingSpLoc,
+            isQueueEnabled = mbExistingSpLoc >>= (.isQueueEnabled),
             createdAt = maybe now (.createdAt) mbExistingSpLoc,
             updatedAt = now,
             merchantOperatingCityId = Just merchantOperatingCityId,
@@ -1517,6 +1519,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
             DSL.SpecialLocation
               { id = Id locationName,
                 enabled = enabled,
+                isOpenMarketEnabled = True,
+                isQueueEnabled = Nothing,
                 locationName = locationName,
                 category = category,
                 merchantId = Just (cast merchantOpCity.merchantId),
@@ -1583,17 +1587,20 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
         (\(_, _, (_, gateInfo), _) -> runTransaction $ QGIG.create $ gateInfo {DGI.specialLocationId = specialLocationId})
         specialLocationAndGates
 
-getMerchantConfigSpecialLocationList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe SL.SpecialLocationType -> Flow [Common.SpecialLocationWithPlatform]
-getMerchantConfigSpecialLocationList merchantShortId opCity mbLimit mbOffset mbSpecialLocationType = do
+getMerchantConfigSpecialLocationList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe SL.SpecialLocationType -> Maybe [SL.SpecialLocationType] -> Flow [Common.SpecialLocationWithPlatform]
+getMerchantConfigSpecialLocationList merchantShortId opCity mbLimit mbOffset mbSpecialLocationType mbSpecialLocationTypes = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
 
+  let finalSpecialLocationTypes = case mbSpecialLocationType of
+        Just slType -> Just [slType]
+        Nothing -> mbSpecialLocationTypes
   -- Fetch rider special locations
-  riderLocations <- QSL.findAllSpecialLocationsWithGeoJSON merchantOpCity.id.getId mbLimit mbOffset mbSpecialLocationType
+  riderLocations <- QSL.findAllSpecialLocationsWithGeoJSON merchantOpCity.id.getId mbLimit mbOffset finalSpecialLocationTypes
   let riderLocationsWithPlatform = map (\loc -> Common.SpecialLocationWithPlatform {location = loc, platform = Common.Rider}) riderLocations
 
   -- Fetch driver special locations via internal API
-  mbDriverLocations <- CallBPPInternal.getSpecialLocationList merchant opCity mbLimit mbOffset mbSpecialLocationType
+  mbDriverLocations <- CallBPPInternal.getSpecialLocationList merchant opCity mbLimit mbOffset finalSpecialLocationTypes
   let driverLocationsWithPlatform = maybe [] (map (\loc -> Common.SpecialLocationWithPlatform {location = loc, platform = Common.Driver})) mbDriverLocations
 
   return $ riderLocationsWithPlatform <> driverLocationsWithPlatform
