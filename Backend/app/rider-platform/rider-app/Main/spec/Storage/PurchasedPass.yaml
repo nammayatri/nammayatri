@@ -86,6 +86,11 @@ PurchasedPass:
       params: [deviceSwitchCount]
       where: id
 
+    updatePersonIdById:
+      kvFunction: updateOneWithKV
+      params: [personId]
+      where: id
+
     findByPassNumber:
       kvFunction: findOneWithKV
       where: passNumber
@@ -131,11 +136,17 @@ PurchasedPassPayment:
     id: PrimaryKey
     orderId: SecondaryKey
     purchasedPassId: SecondaryKey
+    personId: "!SecondaryKey"
 
   queries:
     findOneByPaymentOrderId:
         kvFunction: findOneWithKV
         where: orderId
+
+    updatePersonIdByPurchasedPassId:
+      kvFunction: updateWithKV
+      params: [personId]
+      where: purchasedPassId
 
     findAllByPurchasedPassId:
       kvFunction: findAllWithKV
@@ -209,6 +220,16 @@ PurchasedPassPayment:
           - purchasedPassId
           - in:
             - status
+
+    findAllByPersonIdWithFilters:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - personId
+          - merchantId
+          - in:
+            - status
+          - passCode
 
   extraOperations:
     - EXTRA_QUERY_FILE

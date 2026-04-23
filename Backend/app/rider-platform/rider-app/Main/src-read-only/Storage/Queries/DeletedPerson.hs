@@ -9,6 +9,7 @@ import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -20,6 +21,9 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DeletedPerson.DeletedPerson] -> m ())
 createMany = traverse_ create
+
+findAllByStaticPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.DeletedPerson.DeletedPerson])
+findAllByStaticPersonId limit offset staticPersonId = do findAllWithOptionsKV [Se.Is Beam.staticPersonId $ Se.Eq staticPersonId] (Se.Desc Beam.createdAt) limit offset
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DeletedPerson.DeletedPerson))
 findByPrimaryKey personId = do findOneWithKV [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]]
@@ -33,6 +37,7 @@ updateByPrimaryKey (Domain.Types.DeletedPerson.DeletedPerson {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.reasonToDelete reasonToDelete,
+      Se.Set Beam.staticPersonId staticPersonId,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]]
@@ -49,6 +54,7 @@ instance FromTType' Beam.DeletedPerson Domain.Types.DeletedPerson.DeletedPerson 
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             personId = Kernel.Types.Id.Id personId,
             reasonToDelete = reasonToDelete,
+            staticPersonId = staticPersonId,
             updatedAt = updatedAt
           }
 
@@ -62,5 +68,6 @@ instance ToTType' Beam.DeletedPerson Domain.Types.DeletedPerson.DeletedPerson wh
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.reasonToDelete = reasonToDelete,
+        Beam.staticPersonId = staticPersonId,
         Beam.updatedAt = updatedAt
       }

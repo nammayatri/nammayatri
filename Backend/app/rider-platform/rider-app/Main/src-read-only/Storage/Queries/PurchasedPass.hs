@@ -4,6 +4,7 @@
 
 module Storage.Queries.PurchasedPass (module Storage.Queries.PurchasedPass, module ReExport) where
 
+import qualified Domain.Types.Person
 import qualified Domain.Types.PurchasedPass
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -29,6 +30,11 @@ updateDeviceSwitchCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kerne
 updateDeviceSwitchCount deviceSwitchCount id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.deviceSwitchCount (Just deviceSwitchCount), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updatePersonIdById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> m ())
+updatePersonIdById personId id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.personId (Kernel.Types.Id.getId personId), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updatePrefSrcAndDestById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

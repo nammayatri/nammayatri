@@ -7,6 +7,7 @@ module Domain.Action.Dashboard.AppManagement.Pass
     getPassCustomerPaymentStatus,
     postPassCustomerPassResetDeviceSwitchCount,
     postPassCustomerPassUpdateProfilePicture,
+    postPassCustomerPassRestore,
   )
 where
 
@@ -19,8 +20,10 @@ import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Pass
 import qualified "this" Domain.Types.Person
 import qualified "this" Domain.Types.PurchasedPass
+import qualified Domain.Types.PurchasedPassPayment
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Types
 import qualified Kernel.External.Types as Lang
 import qualified Kernel.Prelude
@@ -31,7 +34,9 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Error
 import qualified Lib.Payment.Domain.Action
 import qualified Lib.Payment.Domain.Types.PaymentOrder
+import qualified SharedLogic.PassRestore as PassRestore
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.Queries.Person as QP
 
 getPassCustomerAvailablePasses :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Lang.Language -> Environment.Flow [API.Types.UI.Pass.PassInfoAPIEntity])
 getPassCustomerAvailablePasses merchantShortId _opCity personId language = do
@@ -48,10 +53,10 @@ getPassCustomerTransactions merchantShortId _opCity personId limit offset = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   DPass.getMultimodalPassTransactions (Just personId, merchant.id) limit offset
 
-postPassCustomerActivateToday :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Data.Time.Day) -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postPassCustomerActivateToday merchantShortId _opCity personId passNumber startDay = do
+postPassCustomerActivateToday :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment) -> Kernel.Prelude.Maybe (Data.Time.Day) -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postPassCustomerActivateToday merchantShortId _opCity personId passNumber mbPurchasedPassPaymentId startDay = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  DPass.postMultimodalPassActivateTodayUtil True (Just personId, merchant.id) passNumber startDay
+  DPass.postMultimodalPassActivateTodayUtil True (Just personId, merchant.id) passNumber startDay mbPurchasedPassPaymentId
 
 postPassCustomerPassSelect :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Pass.Pass -> API.Types.Dashboard.AppManagement.Pass.PurchasedPassSelectReq -> Environment.Flow API.Types.UI.Pass.PassSelectionAPIEntity)
 postPassCustomerPassSelect merchantShortId _opCity personId passId req = do
@@ -72,3 +77,14 @@ postPassCustomerPassUpdateProfilePicture :: (Kernel.Types.Id.ShortId Domain.Type
 postPassCustomerPassUpdateProfilePicture merchantShortId _opCity personId purchasedPassId req = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   DPass.postMultimodalPassUpdateProfilePictureUtil personId merchant.id purchasedPassId req.profilePicture
+
+postPassCustomerPassRestore :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postPassCustomerPassRestore merchantShortId _opCity personId = do
+  _ <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mbMobileNumber <- mapM decrypt person.mobileNumber
+  case mbMobileNumber of
+    Just mobileNumber -> do
+      PassRestore.restorePurchasedPassesIfNeeded person mobileNumber
+      pure Kernel.Types.APISuccess.Success
+    Nothing -> throwError $ InvalidRequest "Person has no mobile number, cannot restore passes"

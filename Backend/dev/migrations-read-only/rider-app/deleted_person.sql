@@ -12,3 +12,9 @@ ALTER TABLE atlas_app.deleted_person ADD PRIMARY KEY ( person_id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.deleted_person ADD COLUMN reason_to_delete text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.deleted_person ADD COLUMN static_person_id text ;

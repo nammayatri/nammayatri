@@ -17,18 +17,18 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.PurchasedPassPayment as Beam
 import Storage.Queries.OrphanInstances.PurchasedPassPayment
 
-expireOlderActivePaymentsByPurchasedPassId ::
+expireOlderPaymentsByPurchasedPassId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DPurchasedPass.PurchasedPass ->
   Day ->
   m ()
-expireOlderActivePaymentsByPurchasedPassId purchasedPassId endDate = do
+expireOlderPaymentsByPurchasedPassId purchasedPassId endDate = do
   _now <- getCurrentTime
   updateWithKV
     [Se.Set Beam.status DPurchasedPass.Expired, Se.Set Beam.updatedAt _now]
     [ Se.And
         [ Se.Is Beam.purchasedPassId $ Se.Eq purchasedPassId.getId,
-          Se.Is Beam.status $ Se.Eq DPurchasedPass.Active,
+          Se.Is Beam.status $ Se.In [DPurchasedPass.Active, DPurchasedPass.PreBooked],
           Se.Is Beam.endDate $ Se.LessThanOrEq endDate
         ]
     ]
@@ -75,3 +75,21 @@ updatePurchasedPassIdByOldPurchasedPassId newPurchasedPassId oldPurchasedPassId 
   updateWithKV
     [Se.Set Beam.purchasedPassId (getId newPurchasedPassId), Se.Set Beam.updatedAt _now]
     [Se.Is Beam.purchasedPassId $ Se.Eq (getId oldPurchasedPassId)]
+
+updateStatusByPurchasedPassIdAndStatusAndStartDate ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  DPurchasedPass.StatusType ->
+  Id DPurchasedPass.PurchasedPass ->
+  DPurchasedPass.StatusType ->
+  Day ->
+  m ()
+updateStatusByPurchasedPassIdAndStatusAndStartDate newStatus purchasedPassId oldStatus startDate = do
+  _now <- getCurrentTime
+  updateWithKV
+    [Se.Set Beam.status newStatus, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.purchasedPassId $ Se.Eq purchasedPassId.getId,
+          Se.Is Beam.status $ Se.Eq oldStatus,
+          Se.Is Beam.startDate $ Se.Eq startDate
+        ]
+    ]
