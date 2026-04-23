@@ -60,6 +60,7 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
+import qualified Data.UUID as UUID
 import Data.Default.Class
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.List as DL
@@ -109,6 +110,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
+import Kernel.Utils.InternalAPICallLogging as ApiCallLogger
 import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import Kernel.Utils.Servant.SignatureAuth
 import Network.URI (parseURI, uriQuery)
@@ -169,7 +171,10 @@ callOnSelectV2 transporter searchRequest srfd searchTry content = do
   ttl <- bppConfig.onSelectTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) (Just ttl)
   logDebug $ "on_selectV2 request bpp: " <> show content
-  void $ withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap (Spec.OnSelectReq context Nothing (Just content))
+  let onSelectReq = Spec.OnSelectReq context Nothing (Just content)
+  res <- withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap onSelectReq
+  fork ("Logging Internal API Call") $ do
+    ApiCallLogger.pushInternalApiCallDataToKafka "callOnSelectV2" "BPP" (Just searchRequest.transactionId) (Just onSelectReq) res
   where
     getMsgIdByTxnId :: CacheFlow m r => Text -> m Text
     getMsgIdByTxnId txnId = do
@@ -199,7 +204,9 @@ callOnUpdateV2 req retryConfig merchantId = do
   bapUri <- parseBaseUrl bapUri'
   bppSubscriberId <- req.onUpdateReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  void $ withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_UPDATE) API.onUpdateAPIV2 bapUri internalEndPointHashMap req
+  res <- withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_UPDATE) API.onUpdateAPIV2 bapUri internalEndPointHashMap req
+  fork ("Logging Internal API Call") $ do
+    ApiCallLogger.pushInternalApiCallDataToKafka "callOnUpdateV2" "BPP" (req.onUpdateReqContext.contextTransactionId <&> UUID.toText) (Just req) res
 
 callOnStatusV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -220,7 +227,9 @@ callOnStatusV2 req retryConfig merchantId = do
   bapUri <- parseBaseUrl bapUri'
   bppSubscriberId <- req.onStatusReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  void $ withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_STATUS) API.onStatusAPIV2 bapUri internalEndPointHashMap req
+  res <- withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_STATUS) API.onStatusAPIV2 bapUri internalEndPointHashMap req
+  fork ("Logging Internal API Call") $ do
+    ApiCallLogger.pushInternalApiCallDataToKafka "callOnStatusV2" "BPP" (req.onStatusReqContext.contextTransactionId <&> UUID.toText) (Just req) res
 
 callOnCancelV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -241,7 +250,9 @@ callOnCancelV2 req retryConfig merchantId = do
   bapUri <- parseBaseUrl bapUri'
   bppSubscriberId <- req.onCancelReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  void $ withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_CANCEL) API.onCancelAPIV2 bapUri internalEndPointHashMap req
+  res <- withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_CANCEL) API.onCancelAPIV2 bapUri internalEndPointHashMap req
+  fork ("Logging Internal API Call") $ do
+    ApiCallLogger.pushInternalApiCallDataToKafka "callOnCancelV2" "BPP" (req.onCancelReqContext.contextTransactionId <&> UUID.toText) (Just req) res
 
 callOnConfirmV2 ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -271,7 +282,10 @@ callOnConfirmV2 transporter context content bppConfig = do
   txnId <- Utils.getTransactionId context
   ttl <- bppConfig.onConfirmTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context_ <- ContextV2.buildContextV2 Context.ON_CONFIRM Context.MOBILITY msgId (Just txnId) bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
-  void $ withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap (Spec.OnConfirmReq {onConfirmReqContext = context_, onConfirmReqError = Nothing, onConfirmReqMessage = Just content})
+  let onConfirmReq = Spec.OnConfirmReq {onConfirmReqContext = context_, onConfirmReqError = Nothing, onConfirmReqMessage = Just content}
+  res <- withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap onConfirmReq
+  fork ("Logging Internal API Call") $ do
+    ApiCallLogger.pushInternalApiCallDataToKafka "callOnConfirmV2" "BPP" (Just txnId) (Just onConfirmReq) res
 
 buildBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl]
