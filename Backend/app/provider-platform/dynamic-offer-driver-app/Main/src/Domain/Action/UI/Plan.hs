@@ -1517,7 +1517,7 @@ getCancellationPenalties driverId serviceName = do
   let rPenalties = filter (\billedDriverFee -> billedDriverFee.feeType == DF.RECURRING_INVOICE) billedDriverFees
       rEPenaltiesSplitOfDriverFeeIds = mapMaybe (.splitOfDriverFeeId) $ filter (\billedDriverFee -> billedDriverFee.feeType == DF.RECURRING_EXECUTION_INVOICE && billedDriverFee.splitOfDriverFeeId /= Nothing) billedDriverFees
   parentRecurringExecution <- QDF.findParentRecurringExecutionBySplitOfDriverFeeIds rEPenaltiesSplitOfDriverFeeIds
-  let allManualFeeIds = nub $ (.id) <$> rPenalties
+  let allManualFeeIds = nub $ ((.id) <$> rPenalties) <> mapMaybe (.splitOfDriverFeeId) rPenalties
       allExecutionFeeIds = nub $ (.id) <$> parentRecurringExecution
   let allSubscriptionFeeIds = allManualFeeIds <> allExecutionFeeIds
   originalPenalties <- nub <$> QDF.findOriginalCancellationPenaltiesForSubscriptionFee allSubscriptionFeeIds

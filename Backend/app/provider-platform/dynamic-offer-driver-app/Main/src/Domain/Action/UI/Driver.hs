@@ -2659,7 +2659,7 @@ mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId' transporterConfig
             }
     Nothing -> return Nothing
   where
-    mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf dueDfee.currency (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
+    mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf dueDfee.currency (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst + fromMaybe 0 dueDfee.cancellationPenaltyAmount))
 
 mkAutoPayPaymentEntity :: MonadFlow m => Map (Id DDF.DriverFee) DDF.DriverFee -> TransporterConfig -> INV.Invoice -> m (Maybe AutoPayInvoiceHistory)
 mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId' transporterConfig autoInvoice = do
@@ -2768,7 +2768,7 @@ getHistoryEntryDetailsEntityV2 (driverId, _, merchantOpCityId) invoiceShortId se
   driverFeeInfo' <- mkDriverFeeInfoEntity allDriverFeeForInvoice (listToMaybe allEntiresByInvoiceId <&> (.invoiceStatus)) transporterConfig serviceName
   return $ HistoryEntryDetailsEntityV2 {invoiceId = invoiceShortId, amount, amountWithCurrency = PriceAPIEntity amount currency, createdAt, executionAt, feeType, driverFeeInfo = driverFeeInfo'}
   where
-    mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf dueDfee.currency (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
+    mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf dueDfee.currency (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst + fromMaybe 0 dueDfee.cancellationPenaltyAmount))
 
 mkDriverFeeInfoEntity ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -2786,7 +2786,15 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig serviceName = d
             driverFeeAmount =
               if driverFee.status == DDF.CLEARED_BY_YATRI_COINS
                 then 0.0
-                else SLDriverFee.roundToHalf driverFee.currency (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst)
+                else
+                  SLDriverFee.roundToHalf
+                    driverFee.currency
+                    ( driverFee.govtCharges
+                        + driverFee.platformFee.fee
+                        + driverFee.platformFee.cgst
+                        + driverFee.platformFee.sgst
+                        + fromMaybe 0 driverFee.cancellationPenaltyAmount
+                    )
             cgst = maybe 0.0 (.cgstPercentage) mbPlan
             sgst = maybe 0.0 (.sgstPercentage) mbPlan
             gst = (driverFeeAmount + fromMaybe 0.0 driverFee.amountPaidByCoin) * (cgst + sgst)
