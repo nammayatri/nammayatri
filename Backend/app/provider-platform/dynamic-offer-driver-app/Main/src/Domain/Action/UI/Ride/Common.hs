@@ -235,7 +235,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         estimatedDuration = booking.estimatedDuration,
         actualDuration = roundToIntegral <$> (diffUTCTime <$> ride.tripEndTime <*> ride.tripStartTime),
         estimatedBaseFare = roundToIntegral estimatedBaseFare,
-        estimatedBaseFareWithCurrency = PriceAPIEntity estimatedBaseFare ride.currency,
+        estimatedBaseFareWithCurrency = PriceAPIEntity (fromIntegral (round estimatedBaseFare :: Integer)) ride.currency,
         estimatedDistance = booking.estimatedDistance,
         estimatedDistanceWithUnit = convertMetersToDistance booking.distanceUnit <$> booking.estimatedDistance,
         driverSelectedFare = roundToIntegral $ fromMaybe 0.0 fareParams.driverSelectedFare,
