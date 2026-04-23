@@ -687,7 +687,6 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
               <> ", purchasedPassId: " <> purchasedPass.id.getId
               <> ", existing active paymentId: " <> existingActive.id.getId
               <> ". Marking this payment as RefundPending for auto-refund."
-          QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundPending paymentOrderId
           return (DPayment.FulfillmentRefundPending, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
         Nothing -> do
           -- Don't re-activate this payment if it's already in a refund flow — a late CHARGED
