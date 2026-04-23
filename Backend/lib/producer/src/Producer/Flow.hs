@@ -94,7 +94,7 @@ runReviver' producerType = do
   logDebug "Reviver is Running "
   case producerType of
     Driver -> do
-      pendingJobs :: [AnyJob AllocatorJobType] <- getAllPendingJobs
+      pendingJobs :: [AnyJob AllocatorJobType] <- getFirst100PendingStuckJobs
       let jobsIds = map @_ @(Id AnyJob, Id AnyJob) (\(AnyJob Job {..}) -> (id, parentJobId)) pendingJobs
       filteredPendingJobs <- filterM (\(AnyJob Job {..}) -> Hedis.withCrossAppRedis $ Hedis.tryLockRedis (mkRunningJobKey id.getId) 1800) pendingJobs
       logDebug $ "Total number of pendingJobs in DB : " <> show (length filteredPendingJobs) <> " Pending (JobsIDs, ParentJobIds) : " <> show jobsIds
@@ -130,7 +130,7 @@ runReviver' producerType = do
       result <- insertIntoStream newJobsToExecute_
       logDebug $ "Job Revived and inserted into stream with timestamp" <> show result
     Rider -> do
-      pendingJobs :: [AnyJob RiderJobType] <- getAllPendingJobs
+      pendingJobs :: [AnyJob RiderJobType] <- getFirst100PendingStuckJobs
       let jobsIds = map @_ @(Id AnyJob, Id AnyJob) (\(AnyJob Job {..}) -> (id, parentJobId)) pendingJobs
       filteredPendingJobs <- filterM (\(AnyJob Job {..}) -> Hedis.withCrossAppRedis $ Hedis.tryLockRedis (mkRunningJobKey id.getId) 1800) pendingJobs
       logDebug $ "Total number of pendingJobs in DB : " <> show (length filteredPendingJobs) <> " Pending (JobsIDs, ParentJobIds) : " <> show jobsIds
@@ -191,12 +191,13 @@ getTime producerTimestampKey = do
     Just lastTime -> lastTime
     Nothing -> begTime
 
-getAllPendingJobs :: (JobProcessor t, HasField "blackListedJobs" AppEnv [Text]) => Flow [AnyJob t]
-getAllPendingJobs = do
+getFirst100PendingStuckJobs :: (JobProcessor t, HasField "blackListedJobs" AppEnv [Text]) => Flow [AnyJob t]
+getFirst100PendingStuckJobs = do
   reviveThreshold <- asks (.reviveThreshold)
   currentTime <- getCurrentTime
-  let newtime = T.addUTCTime ((-1) * fromIntegral reviveThreshold) currentTime
-  pendingJobs <- getPendingStuckJobs newtime
+  let toTime = T.addUTCTime ((-1) * fromIntegral reviveThreshold) currentTime
+  let fromTime = T.addUTCTime ((-1) * (86400 + fromIntegral reviveThreshold)) currentTime
+  pendingJobs <- getPendingStuckJobs fromTime toTime (Just 0) (Just 100)
   blacklist <- asks (.blackListedJobs)
   return $ filter (\(AnyJob Job {..}) -> (show $ fromSing jobInfo.jobType) `notElem` blacklist) pendingJobs
 
