@@ -23,6 +23,8 @@ module SharedLogic.Finance.RidePayment
     ridePaymentRefCancellationGST,
     ridePaymentRefOfferDiscount,
     ridePaymentRefCashbackPayout,
+    ridePaymentRefCustomerMoney,
+    ridePaymentRefPayout,
 
     -- * Settlement reason constants
     settledReasonRidePayment,
@@ -36,6 +38,8 @@ module SharedLogic.Finance.RidePayment
     createRidePaymentLedger,
     createFullyDiscountedRidePaymentLedger,
     settleRidePaymentLedger,
+    settleCashRidePaymentLedger,
+    createCashbackPayoutLedger,
     voidRidePaymentLedger,
     createTipLedger,
     createCancellationFeeLedger,
@@ -90,6 +94,12 @@ ridePaymentRefOfferDiscount = "OfferDiscount"
 
 ridePaymentRefCashbackPayout :: Text
 ridePaymentRefCashbackPayout = "CashbackPayout"
+
+ridePaymentRefCustomerMoney :: Text
+ridePaymentRefCustomerMoney = "CustomerMoney"
+
+ridePaymentRefPayout :: Text
+ridePaymentRefPayout = "RidePayout"
 
 -- ---------------------------------------------------------------------------
 -- Settlement reason constants
@@ -157,7 +167,7 @@ buildRiderFinanceCtx merchantId merchantOpCityId currency riderId referenceId me
 -- | Create PENDING ledger entries after successful payment order creation.
 --   Flow: Liability(RIDER) → Asset(BUYER) for each line item.
 --   Returns entry IDs for later settlement + invoice ID.
-createRidePaymentLedger ::
+createRidePaymentLedger :: -- RIDE ASSIGNED
   (BeamFlow.BeamFlow m r, MonadFlow m) =>
   FinanceCtx ->
   HighPrecMoney -> -- rideFare (without GST)
@@ -180,7 +190,7 @@ createRidePaymentLedger ctx rideFare gstAmount platformFee offerDiscountAmount c
 
     -- Cashback payout: Liability(BUYER) → Asset(RIDER) — marketplace owes rider a cashback
     when (cashbackPayoutAmount > 0) $ do
-      _ <- transferPending OwnerLiability BuyerAsset cashbackPayoutAmount ridePaymentRefCashbackPayout
+      _ <- transferPending BuyerAsset OwnerLiability cashbackPayoutAmount ridePaymentRefCashbackPayout
       pure ()
 
     -- Create Draft invoice with line items
@@ -370,6 +380,45 @@ settleRidePaymentLedger ctx entryIds settledReason = do
       pure $ Left err
     Right _ -> pure $ Right ()
 
+-- | Settle cash/offline ride ledger entries.
+--   1. Create a settled customer-money movement: BuyerAsset -> OwnerLiability.
+--   2. Mark all ride payment pending entries as SETTLED.
+settleCashRidePaymentLedger ::
+  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  FinanceCtx ->
+  HighPrecMoney -> -- customerMoneyAmount actually collected from rider
+  [Id LE.LedgerEntry] ->
+  m (Either FinanceError ())
+settleCashRidePaymentLedger ctx customerMoneyAmount entryIds = do
+  transferResult <- runFinance ctx $ do
+    transfer BuyerAsset OwnerLiability customerMoneyAmount ridePaymentRefCustomerMoney
+  case transferResult of
+    Left err -> do
+      logError $ "Failed to create customer-money settlement leg for cash ride: " <> show err
+      pure $ Left err
+    Right _ -> do
+      forM_ entryIds settleEntry
+      logInfo $
+        "Settled "
+          <> show (length entryIds)
+          <> " cash ride ledger entries; customer money="
+          <> show customerMoneyAmount
+      pure $ Right ()
+
+createCashbackPayoutLedger ::
+  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  FinanceCtx ->
+  HighPrecMoney ->
+  m (Either FinanceError ())
+createCashbackPayoutLedger ctx payoutAmount = do
+  result <- runFinance ctx $ do
+    transfer OwnerLiability BuyerAsset payoutAmount ridePaymentRefPayout
+  case result of
+    Left err -> do
+      logError $ "Failed to create cashback payout ledger transfer: " <> show err
+      pure $ Left err
+    Right _ -> pure $ Right ()
+
 -- ---------------------------------------------------------------------------
 -- 3. Void ledger entries when payment intent is cancelled
 -- ---------------------------------------------------------------------------
@@ -486,6 +535,8 @@ allRidePaymentRefTypes =
     ridePaymentRefPlatformFee,
     ridePaymentRefOfferDiscount,
     ridePaymentRefCashbackPayout,
+    ridePaymentRefCustomerMoney,
+    ridePaymentRefPayout,
     ridePaymentRefTip,
     ridePaymentRefCancellationFee,
     ridePaymentRefCancellationGST

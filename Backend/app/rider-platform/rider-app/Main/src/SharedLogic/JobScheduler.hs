@@ -46,6 +46,7 @@ data RiderJobType
   | SafetyCSAlert
   | ExecutePaymentIntent
   | CancelExecutePaymentIntent
+  | ExecuteCashRideCashbackPayout
   | OtherJobTypes
   | MetroIncentivePayout
   | ScheduledRidePopupToRider
@@ -91,6 +92,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SScheduledRidePopupToRider jobData = AnyJobInfo <$> restoreJobInfo SScheduledRidePopupToRider jobData
   restoreAnyJobInfo SExecutePaymentIntent jobData = AnyJobInfo <$> restoreJobInfo SExecutePaymentIntent jobData
   restoreAnyJobInfo SCancelExecutePaymentIntent jobData = AnyJobInfo <$> restoreJobInfo SCancelExecutePaymentIntent jobData
+  restoreAnyJobInfo SExecuteCashRideCashbackPayout jobData = AnyJobInfo <$> restoreJobInfo SExecuteCashRideCashbackPayout jobData
   restoreAnyJobInfo SDaily jobData = AnyJobInfo <$> restoreJobInfo SDaily jobData
   restoreAnyJobInfo SWeekly jobData = AnyJobInfo <$> restoreJobInfo SWeekly jobData
   restoreAnyJobInfo SMonthly jobData = AnyJobInfo <$> restoreJobInfo SMonthly jobData
@@ -322,6 +324,18 @@ data CancelExecutePaymentIntentJobData = CancelExecutePaymentIntentJobData
 instance JobInfoProcessor 'CancelExecutePaymentIntent
 
 type instance JobContent 'CancelExecutePaymentIntent = CancelExecutePaymentIntentJobData
+
+data ExecuteCashRideCashbackPayoutJobData = ExecuteCashRideCashbackPayoutJobData
+  { rideId :: Id DRide.Ride,
+    personId :: Id Person,
+    cashbackAmount :: HighPrecMoney,
+    currency :: Currency
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'ExecuteCashRideCashbackPayout
+
+type instance JobContent 'ExecuteCashRideCashbackPayout = ExecuteCashRideCashbackPayoutJobData
 
 data PostRideSafetyNotificationJobData = PostRideSafetyNotificationJobData
   { rideId :: Id DRide.Ride,
