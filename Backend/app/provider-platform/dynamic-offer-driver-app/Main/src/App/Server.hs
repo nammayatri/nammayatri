@@ -26,7 +26,7 @@ import Servant
 import Tools.Auth
 
 run :: Env -> Application
-run = withModifiedEnv' $ \modifiedEnv ->
+run = withModifiedEnv' appAPI $ \modifiedEnv ->
   BU.run driverOfferAPI driverOfferServer context modifiedEnv
     & logRequestAndResponse' modifiedEnv
     -- & logBecknRequest modifiedEnv

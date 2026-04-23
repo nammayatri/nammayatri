@@ -21,13 +21,13 @@ import EulerHS.Prelude
 import Kernel.Tools.Metrics.Init
 import Kernel.Types.Flow
 import Kernel.Utils.App
-import Kernel.Utils.Monitoring.Prometheus.Servant ()
 import qualified Kernel.Utils.Servant.Server as BU
 import Servant
 import Tools.Auth
 
 run :: Env -> Application
-run = withModifiedEnv' $ \modifiedEnv ->
+run = withModifiedEnv' appAPI $ \modifiedEnv ->
+  -- withLocalModifications modifiedEnv' appAPI (\modifiedEnv ->
   BU.run appAPI API.handler context modifiedEnv
     & logRequestAndResponse' modifiedEnv
     -- & logBecknRequest modifiedEnv
@@ -36,6 +36,23 @@ run = withModifiedEnv' $ \modifiedEnv ->
     & supportProxyAuthorization
   where
     appAPI = Proxy @API.API
+
+    -- EXAMPLE for quickly modifying some config at top level without shared-kernel changes
+    -- withLocalModifications ::
+    --   SanitizedUrl a =>
+    --   Env ->
+    --   Proxy a ->
+    --   (Env -> Application) ->
+    --   Application
+    -- withLocalModifications modifiedEnv proxy f req res = do
+    --   let sanitizedURL = getSanitizedUrl proxy (Just req)
+    --   void $ runFlowR modifiedEnv.flowRuntime modifiedEnv.appEnv $ L.setOptionLocal ApiTag (fromMaybe "" sanitizedURL)
+    --   let appEnv = modifiedEnv.appEnv
+    --       modifiedAppEnv = appEnv { url = sanitizedURL <|> appEnv.url }
+    --       modifiedEnv' = modifiedEnv { appEnv = modifiedAppEnv }
+    --   let app = f modifiedEnv'
+    --   app req res
+
     context =
       verifyPersonAction @(FlowR AppEnv)
         :. verifyDashboardAction @(FlowR AppEnv)
