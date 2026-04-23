@@ -95,7 +95,8 @@ data PassVerifyReq = PassVerifyReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data PurchasedPassAPIEntity = PurchasedPassAPIEntity
-  { daysToExpire :: Kernel.Prelude.Int,
+  { createdAt :: Kernel.Prelude.UTCTime,
+    daysToExpire :: Kernel.Prelude.Int,
     deviceMismatch :: Kernel.Prelude.Bool,
     deviceSwitchAllowed :: Kernel.Prelude.Bool,
     expiryDate :: Data.Time.Day,

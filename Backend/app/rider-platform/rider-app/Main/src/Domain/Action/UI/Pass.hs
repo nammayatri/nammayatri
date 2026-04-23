@@ -634,6 +634,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         deviceSwitchAllowed = purchasedPass.deviceSwitchCount < maxSwitchCount,
         profilePicture = purchasedPass.profilePicture <|> person.profilePicture,
         daysToExpire = daysToExpire,
+        createdAt = purchasedPass.createdAt,
         purchaseDate = DT.utctDay purchasedPass.createdAt,
         expiryDate = purchasedPass.endDate,
         isPreferredSourceAndDestinationSet = isJust purchasedPass.preferredDestination && isJust purchasedPass.preferredSource,
