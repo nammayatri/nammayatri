@@ -116,6 +116,27 @@ incrementVehicleNoEtaCounter merchantName merchantOperatingCityId source = do
   let vehicleNoEtaCounter = bmContainer.vehicleNoEtaCounter
   liftIO $ P.withLabel vehicleNoEtaCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId, source) P.incCounter
 
+incrementVehicleHistoricCounter :: HasBAPMetrics m r => Text -> Text -> m ()
+incrementVehicleHistoricCounter merchantName merchantOperatingCityId = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  let vehicleHistoricCounter = bmContainer.vehicleHistoricCounter
+  liftIO $ P.withLabel vehicleHistoricCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId) P.incCounter
+
+incrementVehicleScheduleBasedActiveTripCounter :: HasBAPMetrics m r => Text -> Text -> m ()
+incrementVehicleScheduleBasedActiveTripCounter merchantName merchantOperatingCityId = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  let vehicleScheduleBasedActiveTripCounter = bmContainer.vehicleScheduleBasedActiveTripCounter
+  liftIO $ P.withLabel vehicleScheduleBasedActiveTripCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId) P.incCounter
+
+incrementVehicleWaybillStatusCounter :: HasBAPMetrics m r => Text -> Text -> Text -> m ()
+incrementVehicleWaybillStatusCounter merchantName merchantOperatingCityId waybillStatus = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  let vehicleWaybillStatusCounter = bmContainer.vehicleWaybillStatusCounter
+  liftIO $ P.withLabel vehicleWaybillStatusCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId, waybillStatus) P.incCounter
+
 putSearchDuration :: MonadIO m => P.Vector P.Label2 P.Histogram -> Text -> DeploymentVersion -> Double -> m ()
 putSearchDuration searchDurationHistogram merchantName version duration = liftIO $ P.withLabel searchDurationHistogram (merchantName, version.getDeploymentVersion) (`P.observe` duration)
 

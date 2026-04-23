@@ -43,7 +43,10 @@ data BAPMetricsContainer = BAPMetricsContainer
     confirmDuration :: DurationMetric,
     busScannerCounter :: BusScannetCounterMetric,
     fleetRouteMapMissingCounter :: FleetRouteMapMissingCounterMetric,
-    vehicleNoEtaCounter :: VehicleNoEtaCounterMetric
+    vehicleNoEtaCounter :: VehicleNoEtaCounterMetric,
+    vehicleHistoricCounter :: VehicleHistoricCounterMetric,
+    vehicleScheduleBasedActiveTripCounter :: VehicleScheduleBasedActiveTripCounterMetric,
+    vehicleWaybillStatusCounter :: VehicleWaybillStatusCounterMetric
   }
 
 type SearchRequestCounterMetric = P.Vector P.Label3 P.Counter
@@ -62,6 +65,12 @@ type VehicleNoEtaCounterMetric = P.Vector P.Label4 P.Counter
 
 type BusScanSearchRequestCounterMetric = P.Vector P.Label3 P.Counter
 
+type VehicleHistoricCounterMetric = P.Vector P.Label3 P.Counter
+
+type VehicleScheduleBasedActiveTripCounterMetric = P.Vector P.Label3 P.Counter
+
+type VehicleWaybillStatusCounterMetric = P.Vector P.Label4 P.Counter
+
 registerBAPMetricsContainer :: Seconds -> IO BAPMetricsContainer
 registerBAPMetricsContainer searchDurationTimeout = do
   searchRequestCounter <- registerSearchRequestCounterMetric
@@ -70,6 +79,9 @@ registerBAPMetricsContainer searchDurationTimeout = do
   vehicleNoEtaCounter <- registerVehicleNoEtaCounterMetric
   busScanSearchRequestCounter <- registerBusScanSearchRequestCounterMetric
   rideCreatedCounter <- registerRideCreatedCounterMetric
+  vehicleHistoricCounter <- registerVehicleHistoricCounterMetric
+  vehicleScheduleBasedActiveTripCounter <- registerVehicleScheduleBasedActiveTripCounterMetric
+  vehicleWaybillStatusCounter <- registerVehicleWaybillStatusCounterMetric
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
   searchDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_search_frfs_round_trip" "beckn_search_frfs_round_trip_failure_counter"
   selectDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_select_frfs_round_trip" "beckn_select_frfs_round_trip_failure_counter"
@@ -98,6 +110,15 @@ registerBusScanSearchRequestCounterMetric = P.register $ P.vector ("merchant_nam
 
 registerRideCreatedCounterMetric :: IO RideCreatedCounterMetric
 registerRideCreatedCounterMetric = P.register $ P.vector ("merchant_id", "version", "category", "merchantOperatingCityId") $ P.counter $ P.Info "ride_created_count" ""
+
+registerVehicleHistoricCounterMetric :: IO VehicleHistoricCounterMetric
+registerVehicleHistoricCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId") $ P.counter $ P.Info "vehicle_historic_count" ""
+
+registerVehicleScheduleBasedActiveTripCounterMetric :: IO VehicleScheduleBasedActiveTripCounterMetric
+registerVehicleScheduleBasedActiveTripCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId") $ P.counter $ P.Info "vehicle_schedule_based_active_trip_count" ""
+
+registerVehicleWaybillStatusCounterMetric :: IO VehicleWaybillStatusCounterMetric
+registerVehicleWaybillStatusCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId", "waybill_status") $ P.counter $ P.Info "vehicle_waybill_status_count" ""
 
 registerSearchDurationMetric :: Seconds -> IO SearchDurationMetric
 registerSearchDurationMetric searchDurationTimeout = do

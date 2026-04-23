@@ -949,6 +949,13 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
           Nothing -> getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
       Nothing -> return Nothing
 
+  -- Increment metrics for vehicle data fields
+  fork "incrementVehicleDataMetrics" $
+    whenJust mbVehicleLiveRouteInfo $ \(_, vehicleInfo) -> do
+      when (fromMaybe False vehicleInfo.isHistoric) $ Metrics.incrementVehicleHistoricCounter merchant.shortId.getShortId merchantOperatingCityId.getId
+      when (fromMaybe False vehicleInfo.scheduleBasedActiveTrip) $ Metrics.incrementVehicleScheduleBasedActiveTripCounter merchant.shortId.getShortId merchantOperatingCityId.getId
+      whenJust vehicleInfo.waybillStatus $ \status -> Metrics.incrementVehicleWaybillStatusCounter merchant.shortId.getShortId merchantOperatingCityId.getId (show status)
+
   -- eligiblePassIds are vehicle-level data.
   -- They must be present only when live vehicle info exists.
   let mbEligiblePassIds =
@@ -1038,7 +1045,10 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
                   )
                   routeStops,
               ptcv = gtfsVersion,
-              eligiblePassIds = Nothing
+              eligiblePassIds = Nothing,
+              isHistoric = False,
+              scheduleBasedActiveTrip = False,
+              waybillStatus = Nothing
             }
 
   let fetchData mbRouteCodeAndServiceType bppConfig = do
@@ -1113,7 +1123,10 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
             rs = filteredRoutes,
             rsm = concatMap (.rsm) transportDataList,
             ptcv = T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) (riderConfig >>= (.domainPublicTransportDataVersion))),
-            eligiblePassIds = mbEligiblePassIds
+            eligiblePassIds = mbEligiblePassIds,
+            isHistoric = fromMaybe False $ mbVehicleLiveRouteInfo >>= (JMU.isHistoric . snd),
+            scheduleBasedActiveTrip = fromMaybe False $ mbVehicleLiveRouteInfo >>= (JMU.scheduleBasedActiveTrip . snd),
+            waybillStatus = mbVehicleLiveRouteInfo >>= (JMU.waybillStatus . snd)
           }
   return transportData
   where

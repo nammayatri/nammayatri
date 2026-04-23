@@ -742,7 +742,10 @@ data VehicleServiceTypeResponse = VehicleServiceTypeResponse
     conductor_id :: Maybe Text,
     busTagNumber :: Maybe Text,
     eligible_pass_ids :: Maybe [Text],
-    seatLayoutId :: Maybe Text
+    seatLayoutId :: Maybe Text,
+    is_historic :: Maybe Bool,
+    schedule_based_active_trip :: Maybe Bool,
+    waybill_status :: Maybe WaybillStatus
   }
   deriving (Generic, ToJSON, ToSchema, Show)
 
@@ -768,6 +771,9 @@ instance FromJSON VehicleServiceTypeResponse where
     busTagNumber <- v .:? "busTagNumber"
     eligible_pass_ids <- v .:? "eligible_pass_ids"
     seatLayoutId <- v .:? "seatLayoutId"
+    is_historic <- v .:? "is_historic"
+    schedule_based_active_trip <- v .:? "schedule_based_active_trip"
+    waybill_status <- v .:? "waybill_status"
     return VehicleServiceTypeResponse {..}
 
 data VehicleMetadataResponse = VehicleMetadataResponse
