@@ -959,6 +959,7 @@ castDVehicleClassCheckType = \case
   DVC.Infix -> Common.Infix
   DVC.Prefix -> Common.Prefix
   DVC.Suffix -> Common.Suffix
+  DVC.Exact -> Common.Exact
 
 castDocumentFlowGrouping :: DVC.DocumentFlowGrouping -> Common.DocumentFlowGrouping
 castDocumentFlowGrouping = \case
@@ -1066,6 +1067,7 @@ castVehicleClassCheckType = \case
   Common.Infix -> DVC.Infix
   Common.Prefix -> DVC.Prefix
   Common.Suffix -> DVC.Suffix
+  Common.Exact -> DVC.Exact
 
 castDocumentType :: Common.DocumentType -> DVC.DocumentType
 castDocumentType = \case

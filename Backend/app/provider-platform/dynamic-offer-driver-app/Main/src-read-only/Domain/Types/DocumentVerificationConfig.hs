@@ -122,7 +122,7 @@ data SupportedVehicleClasses
   | RCValidClasses [Domain.Types.DocumentVerificationConfig.VehicleClassVariantMap]
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data VehicleClassCheckType = Infix | Prefix | Suffix deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data VehicleClassCheckType = Infix | Prefix | Suffix | Exact deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data VehicleClassVariantMap = VehicleClassVariantMap
   { bodyType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

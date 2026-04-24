@@ -515,8 +515,8 @@ isValidCOVRC mbAirConditioned mbOxygen mbVentilator mVehicleCategory capacity ma
       let classMatched = classCheckFunction validCOVsCheck (T.toUpper obj.vehicleClass) (T.toUpper cov)
       let categoryMatched = maybe False (classCheckFunction validCOVsCheck (T.toUpper obj.vehicleClass) . T.toUpper) mVehicleCategory
       let capacityMatched = capacityCheckFunction obj.vehicleCapacity capacity
-      let manufacturerMatched = manufacturerCheckFunction obj.manufacturer manufacturer
-      let manufacturerModelMatched = manufacturerModelCheckFunction obj.manufacturerModel manufacturerModel
+      let manufacturerMatched = manufacturerCheckFunction validCOVsCheck obj.manufacturer manufacturer
+      let manufacturerModelMatched = manufacturerModelCheckFunction validCOVsCheck obj.manufacturerModel manufacturerModel
       let bodyTypeMatched = bodyTypeCheckFunction obj.bodyType bodyType
       let ambulanceMatched = if obj.vehicleVariant `elem` ambulanceVariants then checkAmbulanceVariant obj.vehicleVariant else ensureNonAmbulance bodyType manufacturerModel
       (classMatched || categoryMatched) && capacityMatched && manufacturerMatched && manufacturerModelMatched && bodyTypeMatched && ambulanceMatched
@@ -534,8 +534,8 @@ isValidCOVRC mbAirConditioned mbOxygen mbVentilator mVehicleCategory capacity ma
       case (bodyType_, manufacturerModel_) of
         (Nothing, Nothing) -> True
         (Just bt, Nothing) -> not $ bodyTypeCheckFunction checkerLiteral (Just bt)
-        (Nothing, Just mfg) -> not $ manufacturerModelCheckFunction checkerLiteral (Just mfg)
-        (Just bt, Just mfg) -> not (bodyTypeCheckFunction checkerLiteral (Just bt) || manufacturerModelCheckFunction checkerLiteral (Just mfg))
+        (Nothing, Just mfg) -> not $ manufacturerModelCheckFunction DVC.Infix checkerLiteral (Just mfg)
+        (Just bt, Just mfg) -> not (bodyTypeCheckFunction checkerLiteral (Just bt) || manufacturerModelCheckFunction DVC.Infix checkerLiteral (Just mfg))
 
 -- capacityCheckFunction validCapacity rcCapacity
 capacityCheckFunction :: Maybe Int -> Maybe Int -> Bool
@@ -544,17 +544,17 @@ capacityCheckFunction Nothing (Just _) = True
 capacityCheckFunction Nothing Nothing = True
 capacityCheckFunction _ _ = False
 
-manufacturerCheckFunction :: Maybe Text -> Maybe Text -> Bool
-manufacturerCheckFunction (Just a) (Just b) = T.isInfixOf (T.toUpper a) (T.toUpper b)
-manufacturerCheckFunction Nothing (Just _) = True
-manufacturerCheckFunction Nothing Nothing = True
-manufacturerCheckFunction _ _ = False
+manufacturerCheckFunction :: DVC.VehicleClassCheckType -> Maybe Text -> Maybe Text -> Bool
+manufacturerCheckFunction validCOVsCheck (Just a) (Just b) = textFieldCheckFunction validCOVsCheck (T.toUpper a) (T.toUpper b)
+manufacturerCheckFunction _ Nothing (Just _) = True
+manufacturerCheckFunction _ Nothing Nothing = True
+manufacturerCheckFunction _ _ _ = False
 
-manufacturerModelCheckFunction :: Maybe Text -> Maybe Text -> Bool
-manufacturerModelCheckFunction (Just a) (Just b) = T.isInfixOf (T.toUpper a) (T.toUpper b)
-manufacturerModelCheckFunction Nothing (Just _) = True
-manufacturerModelCheckFunction Nothing Nothing = True
-manufacturerModelCheckFunction _ _ = False
+manufacturerModelCheckFunction :: DVC.VehicleClassCheckType -> Maybe Text -> Maybe Text -> Bool
+manufacturerModelCheckFunction validCOVsCheck (Just a) (Just b) = textFieldCheckFunction validCOVsCheck (T.toUpper a) (T.toUpper b)
+manufacturerModelCheckFunction _ Nothing (Just _) = True
+manufacturerModelCheckFunction _ Nothing Nothing = True
+manufacturerModelCheckFunction _ _ _ = False
 
 bodyTypeCheckFunction :: Maybe Text -> Maybe Text -> Bool
 bodyTypeCheckFunction (Just a) (Just b) = T.isInfixOf (T.toUpper a) (T.toUpper b)
@@ -562,12 +562,19 @@ bodyTypeCheckFunction Nothing (Just _) = True
 bodyTypeCheckFunction Nothing Nothing = True
 bodyTypeCheckFunction _ _ = False
 
+textFieldCheckFunction :: DVC.VehicleClassCheckType -> Text -> Text -> Bool
+textFieldCheckFunction validCOVsCheck =
+  case validCOVsCheck of
+    DVC.Exact -> (==)
+    _ -> T.isInfixOf
+
 classCheckFunction :: DVC.VehicleClassCheckType -> Text -> Text -> Bool
 classCheckFunction validCOVsCheck =
   case validCOVsCheck of
     DVC.Infix -> T.isInfixOf
     DVC.Prefix -> T.isPrefixOf
     DVC.Suffix -> T.isSuffixOf
+    DVC.Exact -> (==)
 
 compareMaybe :: Ord a => Maybe a -> Maybe a -> Ordering
 compareMaybe Nothing Nothing = EQ
