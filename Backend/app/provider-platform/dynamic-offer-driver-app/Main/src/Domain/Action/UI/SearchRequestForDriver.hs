@@ -143,7 +143,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           distanceToPickupWithUnit = convertMetersToDistance nearbyReq.distanceUnit nearbyReq.actualDistanceToPickup,
           durationToPickup = nearbyReq.durationToPickup,
           baseFare = roundToIntegral $ fromMaybe searchTry.baseFare nearbyReq.baseFare, -- short term, later remove searchTry.baseFare
-          baseFareWithCurrency = PriceAPIEntity (fromMaybe searchTry.baseFare nearbyReq.baseFare) nearbyReq.currency,
+          baseFareWithCurrency = PriceAPIEntity (fromIntegral (round (fromMaybe searchTry.baseFare nearbyReq.baseFare) :: Integer)) nearbyReq.currency,
           customerExtraFee = roundToIntegral <$> searchTry.customerExtraFee,
           customerExtraFeeWithCurrency = flip PriceAPIEntity searchTry.currency <$> searchTry.customerExtraFee,
           fromLocation = convertDomainType searchRequest.fromLocation,
