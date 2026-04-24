@@ -229,6 +229,7 @@ mkOfferListReq person price = do
   staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
   let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = price.amount, currency = price.currency, basket = Nothing}
       customerReq = Payment.OfferCustomer {customerId = person.id.getId, email = email, mobile = Just personPhone}
+  decryptedImeiNumber <- mapM decrypt person.imeiNumber
   return
     Payment.OfferListReq
       { order = offerOrder,
@@ -239,7 +240,9 @@ mkOfferListReq person price = do
         registrationDate = addUTCTime 19800 now,
         dutyDate = addUTCTime 19800 now,
         numOfRides = 0,
-        offerListingMetric = Nothing
+        offerListingMetric = Nothing,
+        staticCustomerId = Just staticCustomerId,
+        deviceImei = decryptedImeiNumber
       }
 
 -------------------------------------------------------------------------------------------------------
@@ -316,7 +319,9 @@ mkOfferListReqWithBasket person totalAmount currency basketItems = do
         registrationDate = addUTCTime 19800 now,
         dutyDate = addUTCTime 19800 now,
         numOfRides = 0,
-        offerListingMetric = Nothing
+        offerListingMetric = Nothing,
+        staticCustomerId = Just staticCustomerId,
+        deviceImei = deviceIdentifier
       }
 
 getDeviceIdentifier :: (MonadFlow m, EncFlow m r) => Person.Person -> m (Maybe Text)
