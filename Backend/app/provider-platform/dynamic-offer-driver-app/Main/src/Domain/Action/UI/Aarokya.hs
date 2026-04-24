@@ -3,21 +3,18 @@ module Domain.Action.UI.Aarokya where
 import qualified Data.Aeson as A
 import qualified Data.Map as M
 import qualified Data.Text as T
-import qualified Domain.Action.External.Aarokya as ExtAarokya
-import Domain.Types.External.Aarokya (AarokyaTokenRequest (..))
-import qualified Domain.Types.Extra.MerchantServiceConfig as ExtraMSC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.PartnerSdk.Interface.Types as PartnerSdk
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.Person as QP
+import qualified Tools.PartnerSdk as TPartnerSdk
 import Tools.Metrics (CoreMetrics)
 import qualified Web.JWT as JWT
 
@@ -48,7 +45,6 @@ generateToken ::
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   m AarokyaTokenRes
 generateToken (personId, _merchantId, merchantOpCityId) = do
-  aarokyaCfg <- getAarokyaSdkConfig merchantOpCityId
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mobileNumber <-
     mapM decrypt person.mobileNumber
@@ -57,14 +53,13 @@ generateToken (personId, _merchantId, merchantOpCityId) = do
   mbDriverLicense <- QDL.findByDriverId personId
   mbDlNumber <- mapM (\dl -> decrypt dl.licenseNumber) mbDriverLicense
   let req =
-        AarokyaTokenRequest
-          { phone_country_code = countryCode,
-            phone_number = mobileNumber,
-            platform_id = aarokyaCfg.platformId,
-            dl_number = mbDlNumber
+        PartnerSdk.GenerateTokenReq
+          { phoneCountryCode = countryCode,
+            phoneNumber = mobileNumber,
+            dlNumber = mbDlNumber
           }
-  res <- ExtAarokya.callAarokyaGenerateToken aarokyaCfg req
-  let mbStatus = extractStatusFromToken res.access_token
+  res <- TPartnerSdk.generateToken merchantOpCityId req
+  let mbStatus = extractStatusFromToken res.accessToken
   let personDetails =
         if mbStatus == Just "ONBOARDING"
           then
@@ -82,7 +77,7 @@ generateToken (personId, _merchantId, merchantOpCityId) = do
           else Nothing
   pure $
     AarokyaTokenRes
-      { token = res.access_token,
+      { token = res.accessToken,
         personDetails = personDetails
       }
 
@@ -93,15 +88,3 @@ extractStatusFromToken token = do
   case M.lookup "status" claimsMap of
     Just (A.String s) -> Just (T.toUpper s)
     _ -> Nothing
-
-getAarokyaSdkConfig ::
-  (EsqDBFlow m r, CacheFlow m r) =>
-  Id DMOC.MerchantOperatingCity ->
-  m ExtraMSC.AarokyaSdkConfig
-getAarokyaSdkConfig merchantOpCityId = do
-  msc <-
-    CQMSC.findByServiceAndCity (ExtraMSC.InsuranceSdkService ExtraMSC.Aarokya) merchantOpCityId
-      >>= fromMaybeM (InternalError $ "Aarokya SDK service config not found for merchantOpCityId: " <> merchantOpCityId.getId)
-  case (msc :: DMSC.MerchantServiceConfig).serviceConfig of
-    ExtraMSC.InsuranceSdkServiceConfig cfg -> pure cfg
-    _ -> throwError $ InternalError "Unexpected service config shape for InsuranceSdkService Aarokya"
