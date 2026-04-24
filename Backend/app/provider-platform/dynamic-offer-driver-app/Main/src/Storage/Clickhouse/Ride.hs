@@ -39,7 +39,8 @@ data RideT f = RideT
     createdAt :: C f UTCTime,
     updatedAt :: C f UTCTime,
     tripEndTime :: C f (Maybe UTCTime),
-    tripStartTime :: C f (Maybe UTCTime)
+    tripStartTime :: C f (Maybe UTCTime),
+    payoutRequestId :: C f (Maybe Text)
   }
   deriving (Generic)
 
@@ -60,7 +61,8 @@ rideTTable =
       createdAt = "created_at",
       updatedAt = "updated_at",
       tripEndTime = "trip_end_time",
-      tripStartTime = "trip_start_time"
+      tripStartTime = "trip_start_time",
+      payoutRequestId = "payout_request_id"
     }
 
 type Ride = RideT Identity

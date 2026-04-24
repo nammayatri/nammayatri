@@ -198,6 +198,11 @@ PayoutRequest:
       kvFunction: findOneWithKV
       where:
         and: [entityId, entityName]
+    findManyByEntityIds:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [entityId]
     updateStatusById:
       kvFunction: updateOneWithKV
       params: [status]

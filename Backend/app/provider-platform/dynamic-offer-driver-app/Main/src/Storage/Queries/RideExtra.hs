@@ -46,12 +46,15 @@ import Kernel.Types.Id
 import Kernel.Types.SlidingWindowCounters (PeriodType (Days), SlidingWindowOptions (SlidingWindowOptions))
 import Kernel.Utils.Common hiding (Days)
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
+import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
+import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverInformation as BeamDI
+import qualified Storage.Beam.Payment ()
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Ride as BeamR
 import qualified Storage.Beam.RideDetails as BeamRD
@@ -517,7 +520,8 @@ data RideItem = RideItem
     bookingStatus :: Common.BookingStatus,
     tripCategory :: DTC.TripCategory,
     customerPickupLocation :: Maybe DLoc.Location,
-    customerDropLocation :: Maybe DLoc.Location
+    customerDropLocation :: Maybe DLoc.Location,
+    payoutRequestId :: Maybe (Id DPR.PayoutRequest)
   }
 
 data RideItemV2 = RideItemV2
@@ -597,7 +601,8 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
       let fareDiff = mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare
           fare = mkPrice (Just ride.currency) <$> ride.fare
           estimatedFare = Just $ mkPrice (Just booking.currency) booking.estimatedFare
-      pure $ mkRideItem <$> [(rideShortId, ride.createdAt, rideDetails, riderDetails, booking, fareDiff, fare, estimatedFare, booking.paymentInstrument, mkBookingStatus now ride)]
+      payoutRequest <- QPR.findByEntity (getId ride.id) Nothing
+      pure $ [(mkRideItem (rideShortId, ride.createdAt, rideDetails, riderDetails, booking, fareDiff, fare, estimatedFare, booking.paymentInstrument, mkBookingStatus now ride)) {payoutRequestId = (.id) <$> payoutRequest}]
     Nothing -> do
       zippedRides <- case mbTo of
         Just toDate | roundToMidnightUTCToDate toDate >= now -> do
@@ -710,10 +715,15 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
           pure []
 
       let rideIds = HS.fromList $ map getRideId zippedRides
-          results = mkRideItem <$> res'
-          uniqueResults = filter (\item -> not $ HS.member (getRideId item) rideIds) results
 
-      pure $ zippedRides <> uniqueResults
+      let results = mkRideItem <$> res'
+          uniqueResults = filter (\item -> not $ HS.member (getRideId item) rideIds) results
+          allRides = zippedRides <> uniqueResults
+
+      payoutRequests <- QPR.findManyByEntityIds (map (getId . getRideId) allRides)
+      let payoutRequestMap = HMS.fromList [(pr.entityId, pr.id) | pr <- payoutRequests]
+
+      pure $ map (\item -> item {payoutRequestId = HMS.lookup (getId $ getRideId item) payoutRequestMap}) allRides
   where
     mkBookingStatusVal ride =
       B.ifThenElse_ (ride.status B.==. B.val_ Ride.COMPLETED) (B.val_ Common.COMPLETED) $
@@ -761,6 +771,7 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
           displayBookingId = booking.displayBookingId,
           customerPickupLocation = Just booking.fromLocation,
           customerDropLocation = booking.toLocation,
+          payoutRequestId = Nothing,
           ..
         }
 

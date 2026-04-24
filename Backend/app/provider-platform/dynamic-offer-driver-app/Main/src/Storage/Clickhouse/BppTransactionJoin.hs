@@ -98,7 +98,8 @@ data BppTransactionJoinT f = BppTransactionJoinT
     rideFleetOwnerId :: C f (Maybe Text),
     rideDriverId :: C f Text,
     rideStatus :: C f RideStatus,
-    rideTripStartTime :: C f (Maybe UTCTime)
+    rideTripStartTime :: C f (Maybe UTCTime),
+    ridePayoutRequestId :: C f (Maybe Text)
   }
   deriving (Generic)
 
@@ -167,7 +168,8 @@ bppTransactionJoinTTable =
       rideFleetOwnerId = "ride_fleet_owner_id",
       rideDriverId = "ride_driver_id",
       rideTripStartTime = "ride_trip_start_time",
-      rideStatus = "ride_status"
+      rideStatus = "ride_status",
+      ridePayoutRequestId = "ride_payout_request_id"
     }
 
 type BppTransactionJoin = BppTransactionJoinT Identity
@@ -315,6 +317,7 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
           displayBookingId = bppTxn.bookingDisplayBookingId,
           customerPickupLocation = Nothing,
           customerDropLocation = Nothing,
+          payoutRequestId = Id <$> bppTxn.ridePayoutRequestId,
           ..
         }
 
