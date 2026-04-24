@@ -479,12 +479,11 @@ postRegistrationV2RegisterBankAccountLink _merchantShortId _opCity mbFleetOwnerI
   let fetchPersonStripeInfo = do
         fleetOwnerInfo <- runInReplica (QFOI.findByPrimaryKey fleetOwner.id) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
         stripeAddress <- fleetOwnerInfo.stripeAddress & fromMaybeM (InvalidRequest "Stripe address is required for opening a bank account")
-        stripeIdNumber <- fleetOwnerInfo.stripeIdNumber & fromMaybeM (InvalidRequest "Stripe idNumber is required for opening a bank account")
         pure
           SPBA.PersonStripeInfo
             { personDob = fleetOwnerInfo.fleetDob,
               address = Just stripeAddress,
-              idNumber = Just stripeIdNumber
+              idNumber = fleetOwnerInfo.stripeIdNumber
             }
   let fleetRegisterBankAccountLinkHandle = SPBA.PersonRegisterBankAccountLinkHandle {fetchPersonStripeInfo}
   castFleetBankAccountLinkResp <$> SPBA.getPersonRegisterBankAccountLink fleetRegisterBankAccountLinkHandle paymentMode fleetOwner
