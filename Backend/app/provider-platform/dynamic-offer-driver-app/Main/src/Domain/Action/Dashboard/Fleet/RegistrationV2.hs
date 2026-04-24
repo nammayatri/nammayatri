@@ -156,7 +156,11 @@ fleetOwnerRegister merchantShortId opCity mbRequestorId req = do
       unlessM (isNothing <$> QP.findByEmailAndMerchantIdAndRole (Just reqEmail) person.merchantId DP.FLEET_OWNER) $
         throwError (EmailAlreadyLinked reqEmail)
 
-  let updPerson = person{firstName = req.firstName, lastName = Just req.lastName, email = req.email <|> person.email}
+  let newRole = case req.fleetType of
+        Just Common.BUSINESS_FLEET -> DP.FLEET_BUSINESS
+        Just Common.NORMAL_FLEET -> DP.FLEET_OWNER
+        _ -> person.role
+  let updPerson = person{firstName = req.firstName, lastName = Just req.lastName, email = req.email <|> person.email, role = newRole}
   void $ QP.updateByPrimaryKey updPerson
   void $ updateFleetOwnerInfo fleetOwnerInfo req
   transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
