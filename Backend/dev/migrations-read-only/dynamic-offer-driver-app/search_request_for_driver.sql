@@ -214,3 +214,9 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN react_bu
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN commission_charges double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN vehicle_number text ;
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN fleet_owner_id character varying(36) ;

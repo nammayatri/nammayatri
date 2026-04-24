@@ -123,6 +123,7 @@ dependencies:
   - casing
   - postgresql-simple
   - random
+  - regex-posix
   - JuicyPixels
   - JuicyPixels-extra
   - base64-bytestring

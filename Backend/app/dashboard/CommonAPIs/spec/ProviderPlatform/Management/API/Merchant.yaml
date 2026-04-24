@@ -622,6 +622,7 @@ types:
     - onboardingTryLimit: Int
     - onboardingRetryTimeInHours: Int
     - checkImageExtractionForDashboard: Bool
+    - regexValidationInDocumentVerification: Maybe Bool
     - searchRepeatLimit: Int
     - actualRideDistanceDiffThreshold: HighPrecMeters
     - upwardsRecomputeBuffer: HighPrecMeters
@@ -648,6 +649,7 @@ types:
     - onboardingTryLimit: Maybe (MandatoryValue Int)
     - onboardingRetryTimeInHours: Maybe (MandatoryValue Int)
     - checkImageExtractionForDashboard: Maybe (MandatoryValue Bool)
+    - regexValidationInDocumentVerification: Maybe (OptionalValue Bool)
     - searchRepeatLimit: Maybe (MandatoryValue Int)
     - driverPaymentCycleBuffer: Maybe (MandatoryValue NominalDiffTime) # TODO : Add in validation if reqd
     - driverPaymentCycleDuration: Maybe (MandatoryValue NominalDiffTime)

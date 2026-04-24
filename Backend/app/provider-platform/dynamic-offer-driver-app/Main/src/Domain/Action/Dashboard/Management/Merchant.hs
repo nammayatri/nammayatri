@@ -338,6 +338,7 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
                onboardingTryLimit = maybe config.onboardingTryLimit (.value) req.onboardingTryLimit,
                onboardingRetryTimeInHours = maybe config.onboardingRetryTimeInHours (.value) req.onboardingRetryTimeInHours,
                checkImageExtractionForDashboard = maybe config.checkImageExtractionForDashboard (.value) req.checkImageExtractionForDashboard,
+               regexValidationInDocumentVerification = maybe config.regexValidationInDocumentVerification (.value) req.regexValidationInDocumentVerification,
                searchRepeatLimit = maybe config.searchRepeatLimit (.value) req.searchRepeatLimit,
                driverPaymentCycleBuffer = maybe config.driverPaymentCycleBuffer (.value) req.driverPaymentCycleBuffer,
                driverPaymentCycleDuration = maybe config.driverPaymentCycleDuration (.value) req.driverPaymentCycleDuration,

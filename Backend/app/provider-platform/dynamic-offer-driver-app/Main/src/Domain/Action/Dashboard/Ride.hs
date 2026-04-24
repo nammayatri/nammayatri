@@ -335,6 +335,7 @@ buildRideListItem QRide.RideItem {..} = do
         fareDiffWithCurrency = mkPriceAPIEntity <$> fareDiff,
         fareWithCurrency = mkPriceAPIEntity <$> fare,
         estimatedFareWithCurrency = mkPriceAPIEntity <$> estimatedFare,
+        estimatedDistance = estimatedDistance,
         paymentInstrument = BecknACL.castDPaymentInstrument <$> paymentInstrument,
         bookingStatus,
         rideCreatedAt = rideCreatedAt,

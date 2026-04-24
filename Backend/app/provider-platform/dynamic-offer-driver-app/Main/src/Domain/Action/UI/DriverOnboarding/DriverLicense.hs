@@ -109,6 +109,10 @@ validateDriverDLReq now DriverDLReq {..} =
     t60YearsAgo = yearsAgo 80
     yearsAgo i = negate (nominalDay * 365 * i) `addUTCTime` now
 
+isDLNumberFormatValid :: DTO.DocumentVerificationConfig -> Text -> Flow Bool
+isDLNumberFormatValid documentVerificationConfig normalizedDLNumber =
+  VC.validateByRegex "DL" documentVerificationConfig normalizedDLNumber (pure True)
+
 verifyDL ::
   DPan.VerifiedBy ->
   Maybe DM.Merchant ->
@@ -128,6 +132,11 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverInfo.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId DTO.DriverLicense (fromMaybe CAR req.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.DriverLicense))
+  when (fromMaybe False transporterConfig.regexValidationInDocumentVerification) $ do
+    let normalizedDLNumber = VC.normalizeDocumentNumber driverLicenseNumber
+    checkDLFormat <- isDLNumberFormatValid documentVerificationConfig normalizedDLNumber
+    unless checkDLFormat $
+      throwError (InvalidRequest "DL number format is not valid")
   (nameOnTheCard, dateOfBirth) <-
     if isJust nameOnCardFromSdk
       then return (nameOnCardFromSdk, Nothing)

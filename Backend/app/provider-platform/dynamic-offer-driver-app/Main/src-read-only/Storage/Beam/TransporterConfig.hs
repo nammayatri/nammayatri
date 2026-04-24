@@ -251,6 +251,7 @@ data TransporterConfigT f = TransporterConfigT
     reconciliationSchedulerTime :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     referralLinkPassword :: B.C f Kernel.Prelude.Text,
     refillVehicleModel :: B.C f Kernel.Prelude.Bool,
+    regexValidationInDocumentVerification :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     reminderSystemEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     requireFleetOwnerRegistrationForEnablement :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     requireRouteMappingInVehicle :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

@@ -54,6 +54,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     driverTags :: Kernel.Prelude.Maybe Data.Aeson.Value,
     durationToPickup :: Kernel.Types.Common.Seconds,
     estimateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fleetOwnerId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     fromLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     goHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest),
     id :: Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver,
@@ -95,6 +96,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     upgradeCabRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     vehicleAge :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
     vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
+    vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleServiceTier :: Domain.Types.Common.ServiceTierType,
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant

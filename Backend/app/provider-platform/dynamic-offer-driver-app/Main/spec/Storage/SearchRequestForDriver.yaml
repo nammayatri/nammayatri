@@ -46,6 +46,8 @@ SearchRequestForDriver:
     vehicleAge : Maybe Months
     vehicleCategory: Maybe VehicleCategory
     driverId : Id Person
+    fleetOwnerId: Maybe (Id Person)
+    vehicleNumber: Maybe Text
     fromLocGeohash : Maybe Text
     actualDistanceToPickup : Meters
     straightLineDistanceToPickup : Meters

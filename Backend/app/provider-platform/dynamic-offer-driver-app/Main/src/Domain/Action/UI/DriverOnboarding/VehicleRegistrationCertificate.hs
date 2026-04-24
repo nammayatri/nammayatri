@@ -50,6 +50,10 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     getDocumentImage,
     isNameComparePercentageValid,
     imageS3Lock,
+    getRegexRulesFromDocumentConfig,
+    matchesRegexSafely,
+    normalizeDocumentNumber,
+    validateByRegex,
   )
 where
 
@@ -57,6 +61,7 @@ import AWS.S3 as S3
 import Control.Applicative ((<|>))
 import Control.Monad.Extra hiding (fromMaybeM, whenJust)
 import Data.Aeson hiding (Success)
+import qualified Data.Char as Char
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import qualified Data.Text as T hiding (elem, find, map, zip)
@@ -96,7 +101,6 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Common
-import Kernel.Utils.Predicates
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
@@ -129,6 +133,7 @@ import qualified Storage.Queries.Vehicle as VQuery
 import qualified Storage.Queries.VehicleDetails as CQVD
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCExtra
+import Text.Regex.Posix ((=~))
 import Tools.Error
 import qualified Tools.Verification as Verification
 import Utils.Common.Cac.KeyNameConstants
@@ -204,10 +209,48 @@ validateDriverRCReq DriverRCReq {..} =
   sequenceA_
     [validateField "vehicleRegistrationCertNumber" vehicleRegistrationCertNumber certNum]
   where
-    certNum = LengthInRange 5 12 `And` star (latinUC \/ digit \/ ",")
+    certNum = LengthInRange 5 20
 
 prefixMatchedResult :: Text -> [Text] -> Bool
 prefixMatchedResult rcNumber = DL.any (`T.isPrefixOf` rcNumber)
+
+normalizeDocumentNumber :: Text -> Text
+normalizeDocumentNumber = T.toUpper . removeSpaceAndDash
+
+isValidNormalizedRCNumber :: Text -> Bool
+isValidNormalizedRCNumber rcNumber =
+  let len = T.length rcNumber
+   in len >= 5 && len <= 20 && T.all (\c -> Char.isAsciiUpper c || Char.isDigit c || c == ',') rcNumber
+
+getRegexRulesFromDocumentConfig :: ODC.DocumentVerificationConfig -> [Text]
+getRegexRulesFromDocumentConfig config = maybe [] (mapMaybe (.regexValidation)) config.documentFields
+
+matchesRegexSafely :: Text -> Text -> Text -> Flow Bool
+matchesRegexSafely documentType input regexPattern = do
+  result <- try @_ @SomeException $ do
+    let matched = (T.unpack input =~ T.unpack regexPattern :: Bool)
+    matched `seq` pure matched
+  case result of
+    Right matched -> pure matched
+    Left err -> do
+      logError $ "Invalid regex in DocumentVerificationConfig for " <> documentType <> " validation: " <> regexPattern <> ", error: " <> show err
+      pure False
+
+validateByRegex :: Text -> ODC.DocumentVerificationConfig -> Text -> Flow Bool -> Flow Bool
+validateByRegex documentType config input fallback = do
+  let regexRules = getRegexRulesFromDocumentConfig config
+  if null regexRules
+    then fallback
+    else anyM (matchesRegexSafely documentType input) regexRules
+
+isRCNumberFormatValid :: DTC.TransporterConfig -> ODC.DocumentVerificationConfig -> Text -> Flow Bool
+isRCNumberFormatValid transporterConfig documentVerificationConfig normalizedRCNumber = do
+  let normalizedPrefixList = normalizeDocumentNumber <$> documentVerificationConfig.rcNumberPrefixList
+      regexValidationEnabled = fromMaybe False transporterConfig.regexValidationInDocumentVerification
+      prefixCheck = pure $ null normalizedPrefixList || prefixMatchedResult normalizedRCNumber normalizedPrefixList
+  if regexValidationEnabled
+    then validateByRegex "RC" documentVerificationConfig normalizedRCNumber prefixCheck
+    else prefixCheck
 
 -- Define a common function to handle role-based decryption
 getDriverDocumentInfo :: Person.Person -> Flow (Bool, DriverDocument)
@@ -242,16 +285,22 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
 
   let isTtenCertificate = isJust req.udinNumber
   documentVerificationConfig <- SCO.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId ODC.VehicleRegistrationCertificate (fromMaybe DVC.CAR req.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.VehicleRegistrationCertificate))
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless isTtenCertificate $ do
-    let checkPrefixOfRCNumber = null documentVerificationConfig.rcNumberPrefixList || prefixMatchedResult req.vehicleRegistrationCertNumber documentVerificationConfig.rcNumberPrefixList
-    unless checkPrefixOfRCNumber $ throwError (InvalidRequest "RC number prefix is not valid")
     runRequestValidation validateDriverRCReq req
+    let normalizedRCNumber = normalizeDocumentNumber req.vehicleRegistrationCertNumber
+    unless (isValidNormalizedRCNumber normalizedRCNumber) $
+      throwError (InvalidRequest "RC number format is not valid")
+    checkRCFormat <- isRCNumberFormatValid transporterConfig documentVerificationConfig normalizedRCNumber
+    unless checkRCFormat $ do
+      if fromMaybe False transporterConfig.regexValidationInDocumentVerification
+        then throwError (InvalidRequest "RC number format is not valid")
+        else throwError (InvalidRequest "RC number prefix is not valid")
 
   (blocked, _) <- getDriverDocumentInfo person
   when blocked $ throwError AccountBlocked
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (person.role == Person.DRIVER) $ do
     allLinkedRCs <- DAQuery.findAllLinkedByDriverId personId
     rcs <- RCQuery.findAllById (map (.rcId) allLinkedRCs)

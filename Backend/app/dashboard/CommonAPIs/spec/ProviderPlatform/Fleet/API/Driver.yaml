@@ -646,6 +646,7 @@ apis:
         - mbServiceTier: Text
         - enabled: Bool
         - approved: Bool
+        - driverId: Text
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
@@ -1915,6 +1916,7 @@ types:
     - isRcAssociated: Bool
     - verificationDocsStatus: Maybe VerificationDocsStatus
     - upcomingRouteCode: Maybe Text
+    - createdAt: Maybe UTCTime
   DriveVehicleAssociationListItemT:
     - driverId: Maybe Text
     - vehicleNo: Maybe Text
@@ -1944,6 +1946,7 @@ types:
     - requestReason: Maybe Text
     - responseReason: Maybe Text
     - associatedOn: Maybe UTCTime
+    - createdAt: Maybe UTCTime
     - enabled: Maybe Bool
     - selectedServiceTiers: [Text]
     - driverDob: Maybe UTCTime

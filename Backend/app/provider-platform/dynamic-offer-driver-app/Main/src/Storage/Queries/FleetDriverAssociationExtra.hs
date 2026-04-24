@@ -527,8 +527,8 @@ findAllDriverByFleetOwnerIds fleetOwnerIds mbLimit mbOffset mbMobileNumberSearch
 
 --------------------------------- multi fleet owner queries ----------------------------------
 
-findAllActiveDriverByFleetOwnerIdWithDriverInfoMF :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => [Text] -> Text -> Text -> Int -> Int -> Maybe DbHash -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe DI.DriverMode -> Maybe Bool -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Bool -> m [(FleetDriverAssociation, Person, DriverInformation)]
-findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds merchantId merchantOperatingCityId limit offset mbMobileNumberSearchStringHash mbName mbSearchString mbIsActive mbMode mbHasRequestReason mbEnabled mbFrom mbTo mbApproved = do
+findAllActiveDriverByFleetOwnerIdWithDriverInfoMF :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => [Text] -> Text -> Text -> Int -> Int -> Maybe DbHash -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe DI.DriverMode -> Maybe Bool -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Bool -> m [(FleetDriverAssociation, Person, DriverInformation)]
+findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds merchantId merchantOperatingCityId limit offset mbMobileNumberSearchStringHash mbName mbSearchString mbDriverId mbIsActive mbMode mbHasRequestReason mbEnabled mbFrom mbTo mbApproved = do
   now <- getCurrentTime
   dbConf <- getReplicaBeamConfig
   encryptedMobileNumberHash <- mapM getDbHash mbSearchString
@@ -550,6 +550,7 @@ findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds merchantId merch
                         B.&&?. driver.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
                         B.&&?. driverInformation.merchantId B.==?. B.val_ (Just merchantId)
                         B.&&?. driverInformation.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverId -> driver.id B.==?. B.val_ driverId) mbDriverId
                         B.&&?. B.sqlBool_ (fleetDriverAssociation.associatedTill B.>=. B.val_ (Just now))
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\from -> B.sqlBool_ (fleetDriverAssociation.associatedOn B.>=. B.val_ (Just from))) mbFrom
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\to -> B.sqlBool_ (fleetDriverAssociation.associatedOn B.<=. B.val_ (Just to))) mbTo

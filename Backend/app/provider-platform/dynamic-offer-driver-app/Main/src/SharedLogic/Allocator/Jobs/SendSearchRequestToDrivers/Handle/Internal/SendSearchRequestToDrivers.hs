@@ -321,6 +321,8 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
                 merchantOperatingCityId = searchReq.merchantOperatingCityId,
                 searchRequestValidTill = if dpwRes.pickupZone then addUTCTime (fromIntegral dpwRes.keepHiddenForSeconds) defaultValidTill else defaultValidTill,
                 driverId = cast dpRes.driverId,
+                fleetOwnerId = dpRes.fleetOwnerId,
+                vehicleNumber = dpRes.vehicleNumber,
                 vehicleVariant = dpRes.variant,
                 vehicleServiceTier = tripQuoteDetail.vehicleServiceTier,
                 vehicleServiceTierName = Just tripQuoteDetail.vehicleServiceTierName,

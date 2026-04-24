@@ -62,9 +62,11 @@ types:
     dependencyDocumentType: '[DocumentType]'
     checkExtraction: Bool
     checkExpiry: Bool
+    # Legacy fallback for RC format checks when regexValidation is unavailable.
     rcNumberPrefixList: '[Text]'
     filterForOldApks: Maybe Bool
     applicableTo: DocumentApplicableType
+    # For RC: regex should be supplied via FieldInfo.regexValidation.
     documentFields: Maybe [FieldInfo]
     verificationProvidersPriorityList: Maybe [VerificationService]
     isReminderSupported: Maybe Bool

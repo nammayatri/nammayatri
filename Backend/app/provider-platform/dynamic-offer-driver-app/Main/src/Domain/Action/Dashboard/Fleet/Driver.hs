@@ -1445,6 +1445,7 @@ getDriverFleetDriverVehicleAssociation merchantShortId _opCity fleetOwnerId mbLi
                     { vehicleNo = Just decryptedVehicleRC,
                       status = Just $ castDriverStatus driverInfo'.mode,
                       driverId = Just driverId.getId,
+                      createdAt = (.createdAt) <$> rcAssociation,
                       verificationDocsStatus = Nothing,
                       isDriverOnRide = Nothing,
                       isDriverOnPickup = Nothing,
@@ -1493,8 +1494,8 @@ buildFleetOwnerNameMap currentMap ownerIds = do
 
 ---------------------------------------------------------------------
 
-getDriverFleetDriverAssociation :: ShortId DM.Merchant -> Context.City -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Bool -> Maybe Bool -> Flow Common.DrivertoVehicleAssociationResT
-getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode mbName mbSearchString mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner mbHasRequestReason mbServiceTier mbEnabled mbApproved = do
+getDriverFleetDriverAssociation :: ShortId DM.Merchant -> Context.City -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Text -> Flow Common.DrivertoVehicleAssociationResT
+getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode mbName mbSearchString mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner mbHasRequestReason mbServiceTier mbEnabled mbApproved mbDriverId = do
   requestorId <- mbRequestorId & fromMaybeM (InvalidRequest "Requestor ID is required")
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
@@ -1507,16 +1508,8 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
   when (hasFleetMemberHierarchy == Just False && not (null fleetOwnerIds)) $ mapM_ (FleetAccess.checkRequestorAccessToFleet False mbRequestorId . (.fleetOwnerId)) fleetOwnersInfo
   when (fromMaybe False merchant.fleetOwnerEnabledCheck && not (null fleetOwnerIds)) $ mapM_ (\info -> DCommon.checkFleetOwnerVerification info.fleetOwnerId merchant.fleetOwnerEnabledCheck) fleetOwnersInfo
   let fleetOwnerNameMapFromRequest = Map.fromList $ map (\info -> (info.fleetOwnerId, (info.fleetOwnerName, info.fleetName))) fleetOwnersInfo
-  listOfAllDrivers <- getListOfDriversMultiFleet mbCountryCode mbDriverPhNo fleetOwnerIds merchant.id merchantOpCity.id mbIsActive mbLimit mbOffset mbMode mbName mbSearchString mbHasRequestReason mbEnabled mbFrom mbTo mbApproved
-  filteredDrivers <- case mbServiceTier of
-    Nothing -> pure listOfAllDrivers
-    Just tierText -> do
-      let (fdaList, personList, driverInfoList) = listOfAllDrivers
-      vehicles <- QVehicle.findAllByDriverIds (map (.id) personList)
-      let vehicleMap = Map.fromList [(v.driverId, v) | v <- vehicles]
-      let keepFunc (_fda, person, _info) = maybe False (\v -> any (\st -> show st == tierText) v.selectedServiceTiers) (Map.lookup person.id vehicleMap)
-      let filteredTriples = filter keepFunc (zip3 fdaList personList driverInfoList)
-      pure $ unzip3 filteredTriples
+  listOfAllDrivers <- getListOfDriversMultiFleet mbCountryCode mbDriverPhNo fleetOwnerIds merchant.id merchantOpCity.id mbDriverId mbIsActive mbLimit mbOffset mbMode mbName mbSearchString mbHasRequestReason mbEnabled mbFrom mbTo mbApproved
+  filteredDrivers <- filterDriversByServiceTier mbServiceTier listOfAllDrivers
   let (filteredFdaList, _, _) = filteredDrivers
       fleetOwnerIdsFromResponse = nub $ map (.fleetOwnerId) filteredFdaList
   fleetOwnerNameMap <- buildFleetOwnerNameMap fleetOwnerNameMapFromRequest fleetOwnerIdsFromResponse
@@ -1529,6 +1522,18 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
         summary = summary
       }
   where
+    filterDriversByServiceTier ::
+      Maybe Text ->
+      ([FleetDriverAssociation], [DP.Person], [DI.DriverInformation]) ->
+      Flow ([FleetDriverAssociation], [DP.Person], [DI.DriverInformation])
+    filterDriversByServiceTier Nothing drivers = pure drivers
+    filterDriversByServiceTier (Just tierText) (fdaList, personList, driverInfoList) = do
+      vehicles <- QVehicle.findAllByDriverIds (map (.id) personList)
+      let vehicleMap = Map.fromList [(v.driverId, v) | v <- vehicles]
+          keepFunc (_fda, person, _info) = maybe False (\v -> any (\st -> show st == tierText) v.selectedServiceTiers) (Map.lookup person.id vehicleMap)
+          filteredTriples = filter keepFunc (zip3 fdaList personList driverInfoList)
+      pure $ unzip3 filteredTriples
+
     createFleetDriverAssociationListItem :: Map.Map Text (Text, Maybe Text) -> ([FleetDriverAssociation], [DP.Person], [DI.DriverInformation]) -> Flow [Common.DriveVehicleAssociationListItemT]
     createFleetDriverAssociationListItem fleetOwnerNameMap (fdaList, personList, driverInfoList) = do
       let driverListWithInfo = zip personList driverInfoList
@@ -1617,6 +1622,7 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
                   isDriverOnRide = Just isDriverOnRide,
                   isDriverOnPickup = Just isDriverOnPickup,
                   associatedOn = fda.associatedOn,
+                  createdAt = Just fda.createdAt,
                   upcomingRouteCode = routeCode,
                   verificationDocsStatus =
                     Just
@@ -1795,6 +1801,7 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
                   requestReason = Nothing,
                   responseReason = Nothing,
                   associatedOn = mbAssociatedOn,
+                  createdAt = Just vrc.createdAt,
                   selectedServiceTiers = selectedServiceTiers,
                   enabled = enabled,
                   driverId = driverId,
@@ -3613,8 +3620,8 @@ getListOfVehiclesMultiFleet mbVehicleNo fleetOwnerIds mbLimit mbOffset mbStatus 
         Just Common.Pending -> RCQuery.findAllRCByStatusForFleetMF fleetOwnerIds (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId merchantOperatingCityId.getId statusAwareVehicleNo mbApproved mbFrom mbTo
         Nothing -> RCQuery.findAllRCByStatusForFleetMF fleetOwnerIds Nothing limit offset merchantId merchantOperatingCityId.getId statusAwareVehicleNo mbApproved mbFrom mbTo
 
-getListOfDriversMultiFleet :: Maybe Text -> Maybe Text -> [Text] -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Bool -> Flow ([FleetDriverAssociation], [DP.Person], [DI.DriverInformation])
-getListOfDriversMultiFleet _ mbDriverPhNo fleetOwnerIds merchantId merchantOperatingCityId mbIsActive mbLimit mbOffset mbMode mbName mbSearchString mbHasRequestReason mbEnabled mbFrom mbTo mbApproved = do
+getListOfDriversMultiFleet :: Maybe Text -> Maybe Text -> [Text] -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Bool -> Flow ([FleetDriverAssociation], [DP.Person], [DI.DriverInformation])
+getListOfDriversMultiFleet _ mbDriverPhNo fleetOwnerIds merchantId merchantOperatingCityId mbDriverId mbIsActive mbLimit mbOffset mbMode mbName mbSearchString mbHasRequestReason mbEnabled mbFrom mbTo mbApproved = do
   let limit = min 10 $ fromMaybe 5 mbLimit -- can we increase this limit later?
       offset = fromMaybe 0 mbOffset
 
@@ -3625,7 +3632,7 @@ getListOfDriversMultiFleet _ mbDriverPhNo fleetOwnerIds merchantId merchantOpera
       Nothing -> pure Nothing
 
   let mode = castDashboardDriverStatus <$> mbMode
-  driverAssociationAndInfo <- FDV.findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds merchantId.getId merchantOperatingCityId.getId limit offset mobileNumberHash mbName mbSearchString mbIsActive mode mbHasRequestReason mbEnabled mbFrom mbTo mbApproved
+  driverAssociationAndInfo <- FDV.findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds merchantId.getId merchantOperatingCityId.getId limit offset mobileNumberHash mbName mbSearchString mbDriverId mbIsActive mode mbHasRequestReason mbEnabled mbFrom mbTo mbApproved
   let (fleetDriverAssociation, person, driverInformation) = unzip3 driverAssociationAndInfo
   return (fleetDriverAssociation, person, driverInformation)
 
