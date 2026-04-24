@@ -15,7 +15,6 @@
 module SharedLogic.AirportEntryFee
   ( checkAirportEntryFeeBalanceBeforeStartRide,
     deductAirportEntryFeeAtEndRide,
-    entryFeeForGateId,
     requiredEntryFeeForBooking,
   )
 where
@@ -27,7 +26,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromEitherM, fromMaybeM, throwError)
+import Kernel.Utils.Common (CacheFlow, fromEitherM, fromMaybeM, throwError)
 import Lib.Finance
   ( AccountRole (GovtIndirect, OwnerLiability, ParkingFeeRecipient),
     CounterpartyType (DRIVER),
@@ -36,22 +35,10 @@ import Lib.Finance
     transfer,
   )
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
-import qualified Lib.Queries.GateInfo as QGI
-import qualified Lib.Types.GateInfo as DGI
 import qualified SharedLogic.FareCalculator as FareCalculator
 import qualified SharedLogic.Finance.Wallet as Wallet
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import Tools.Error
-
--- | Entry fee for a single gate. Use when API sends gateId (e.g. SearchRequest/Booking.pickupGateId).
---   Returns 0 if gate not found or no fee configured.
-entryFeeForGateId ::
-  (Esq.EsqDBFlow m r, MonadFlow m) =>
-  Id DGI.GateInfo ->
-  m HighPrecMoney
-entryFeeForGateId gateId = do
-  mbGate <- QGI.findById gateId
-  pure $ maybe 0 (fromMaybe 0 . fmap realToFrac . (.entryFeeAmount)) mbGate
 
 -- | Required airport entry fee for this booking. Uses booking.pickupGateId (gate where customer is).
 --   Returns 0 if no gateId or no fee configured.
@@ -60,7 +47,7 @@ requiredEntryFeeForBooking ::
   SRB.Booking ->
   m HighPrecMoney
 requiredEntryFeeForBooking booking =
-  maybe (pure 0) (entryFeeForGateId . Id) booking.pickupGateId
+  maybe (pure 0) (FareCalculator.entryFeeForGateId . Id) booking.pickupGateId
 
 -- | Run balance check before StartRide for airport inner-zone.
 --   If feature flag is off or required amount is 0, does nothing.
@@ -84,7 +71,7 @@ checkAirportEntryFeeBalanceBeforeStartRide enabled driverId booking =
 -- | At EndRide, for airport inner-zone: two transfers via FinanceM — GST to GovtIndirect, net to ParkingFeeRecipient (one per city).
 --   Allows negative balance; does nothing if feature off or required fee 0.
 deductAirportEntryFeeAtEndRide ::
-  (BeamFlow m r, Esq.EsqDBFlow m r, MonadFlow m) =>
+  (BeamFlow m r, CacheFlow m r, Esq.EsqDBFlow m r, MonadFlow m) =>
   DRide.Ride ->
   SRB.Booking ->
   m ()
@@ -94,6 +81,8 @@ deductAirportEntryFeeAtEndRide ride booking = do
     transporterConfig <-
       findByMerchantOpCityId booking.merchantOperatingCityId Nothing
         >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+    -- Derive the mode from the booking's payment method rather than hardcoding.
+    isOnline <- Wallet.resolveIsOnlineFromBooking booking
     let gstBreakup =
           fromMaybe transporterConfig.taxConfig.rideGst transporterConfig.taxConfig.airportEntryFeeGst
         gstRate = fromMaybe 0 (FareCalculator.computeTotalGstRate gstBreakup)
@@ -104,7 +93,7 @@ deductAirportEntryFeeAtEndRide ride booking = do
             { merchantId = booking.providerId.getId,
               merchantOpCityId = booking.merchantOperatingCityId.getId,
               currency = booking.currency,
-              isOnline = True,
+              isOnline = isOnline,
               counterpartyType = DRIVER,
               counterpartyId = ride.driverId.getId,
               referenceId = ride.id.getId,
@@ -120,7 +109,8 @@ deductAirportEntryFeeAtEndRide ride booking = do
               supplierId = Nothing,
               panOfParty = Nothing,
               panType = Nothing,
-              tdsRateReason = Nothing
+              tdsRateReason = Nothing,
+              emitLedgerEntries = maybe True (.emitLedgerEntries) transporterConfig.invoiceConfig
             }
     result <-
       runFinance ctx $

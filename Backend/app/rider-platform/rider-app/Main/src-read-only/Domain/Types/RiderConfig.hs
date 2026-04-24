@@ -92,6 +92,7 @@ data RiderConfig = RiderConfig
     includeVehiclesWithNoEta :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     initiateFirstMultimodalJourney :: Kernel.Prelude.Bool,
     intercitySearchLocations :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.IntercitySearchLocation],
+    invoiceConfig :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.RiderInvoiceConfig,
     invoiceLogoUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     isAvoidToll :: Kernel.Prelude.Bool,
     isDeviceIdCheckDisabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -224,6 +225,8 @@ data ExternalSOSConfig = ExternalSOSConfig
 data ExternalSOSFlow = ERSS | GJ112 | Trinity deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data ExternalSOSTriggerSource = FRONTEND | DASHBOARD deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data RiderInvoiceConfig = RiderInvoiceConfig {ledgerEmitEnabled :: Kernel.Prelude.Bool} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Read)
 
 data RingBucketCfg = RingBucketCfg {radiusInMeters :: Kernel.Types.Common.Meters, size :: Kernel.Prelude.Int, vehVariant :: Domain.Types.VehicleVariant.VehicleVariant}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)

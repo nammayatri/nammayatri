@@ -9,7 +9,6 @@
 module Lib.Finance.Invoice.Interface
   ( InvoiceInput (..),
     InvoiceLineItem (..),
-    InvoiceLineItemType (..),
     GstAmountBreakdown (..),
     IndirectTaxInput (..),
     DirectTaxInput (..),
@@ -24,42 +23,12 @@ import Lib.Finance.Domain.Types.IndirectTaxTransaction (GstCreditType)
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import Lib.Finance.Domain.Types.Invoice (InvoiceType)
 
--- | Typed classification for invoice line items. Mirrors the description
---   strings used historically across the backend (subscription, ride, cancellation,
---   wallet top-up) so downstream consumers can dispatch on a closed set of cases
---   instead of matching raw text.
-data InvoiceLineItemType
-  = SubscriptionPlanFee
-  | GST
-  | WalletTopUp
-  | BaseFare
-  | Tax
-  | TollCharges
-  | TollChargesTax
-  | ParkingCharges
-  | PlatformCommission
-  | CustomerCancellationFee
-  | DriverCancellationPenalty
-  | GSTOnCancellationFee
-  | RideFareType
-  | RideGST
-  | RideTip
-  | PlatformFee
-  | OfferDiscount
-  | CashbackPayout
-  | CancellationFee
-  | CancellationGST
-  | AirportCashRecharge
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)
-
 -- | Single line item in an invoice
 data InvoiceLineItem = InvoiceLineItem
   { description :: Text,
     quantity :: Int,
     unitPrice :: HighPrecMoney,
     lineTotal :: HighPrecMoney,
-    invoiceLineItemType :: InvoiceLineItemType,
-    -- | True for pass-through charges (toll, parking) excluded from taxable value
     isExternalCharge :: Bool
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON)

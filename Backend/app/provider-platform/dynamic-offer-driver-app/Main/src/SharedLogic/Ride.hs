@@ -51,7 +51,7 @@ import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import qualified SharedLogic.FareCalculatorV2 as FCV2
+import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
 import SharedLogic.Finance.Prepaid
 import qualified SharedLogic.ScheduledNotifications as SN
@@ -143,7 +143,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   now <- getCurrentTime
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
-  commission <- FCV2.calculateCommission booking.fareParams mbFarePolicy
+  commission <- FC.calculateCommission booking.fareParams mbFarePolicy
   ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId commission
   rideDetails <- buildRideDetails booking ride driver vehicle
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED

@@ -6,6 +6,7 @@ import qualified BecknV2.FRFS.Utils as Utils
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Cancel as DCancel
+import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as Booking
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
@@ -13,6 +14,7 @@ import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FRFSRecon as Recon
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ParkingTransaction as DPT
@@ -577,13 +579,101 @@ syncOrderStatus fulfillmentHandler merchantId personId paymentOrder = do
 -- | Optional ledger info for ride payments. When provided, ledger entries are
 --   created/settled/voided alongside the payment intent operations.
 data RidePaymentLedgerInfo = RidePaymentLedgerInfo
-  { rideFare :: HighPrecMoney, -- fare without GST
-    gstAmount :: HighPrecMoney,
+  { rideFare :: HighPrecMoney, -- base ride fare without tax (post-discount when discount applied)
+    gstAmount :: HighPrecMoney, -- GST/VAT on ride fare (post-discount when discount applied)
+    tollFare :: HighPrecMoney, -- toll charges without tax
+    tollVatAmount :: HighPrecMoney, -- VAT on toll charges
+    parkingCharge :: HighPrecMoney, -- parking charges without tax
+    parkingChargeVat :: HighPrecMoney, -- VAT on parking charges
     platformFee :: HighPrecMoney, -- application fee / platform commission
     offerDiscountAmount :: HighPrecMoney, -- discount absorbed by marketplace (0 for CASHBACK or no offer)
     cashbackPayoutAmount :: HighPrecMoney, -- cashback to pay rider (0 for DISCOUNT or no offer)
+
+    -- | Platform-absorbed VAT on the discount portion. Funded on BAP via
+    --   BuyerExpense → BuyerAsset; paid across to BPP via buyer-external
+    --   where it is credited to the driver as part of BaseRide.
+    rideVatAbsorbedOnDiscount :: HighPrecMoney,
     financeCtx :: FinanceCtx
   }
+  deriving (Show, Generic)
+
+-- | Smart constructor for RidePaymentLedgerInfo from numeric fields.
+--   Call sites that can project into [FareBreakup] (ride-completed,
+--   ride-assigned, scheduled PI execution) go through
+--   'buildLedgerInfoFromBreakups' which uses this internally; call sites
+--   where only pre-aggregated dues are available (debt settlement) build
+--   the numeric fields themselves and pass them here directly.
+mkRidePaymentLedgerInfo ::
+  HighPrecMoney -> -- rideFare (tax-exclusive)
+  HighPrecMoney -> -- gstAmount
+  HighPrecMoney -> -- tollFare (tax-exclusive)
+  HighPrecMoney -> -- tollVatAmount
+  HighPrecMoney -> -- parkingCharge (tax-exclusive)
+  HighPrecMoney -> -- parkingChargeVat
+  HighPrecMoney -> -- platformFee
+  HighPrecMoney -> -- offerDiscountAmount
+  HighPrecMoney -> -- cashbackPayoutAmount
+  HighPrecMoney -> -- rideVatAbsorbedOnDiscount
+  FinanceCtx ->
+  RidePaymentLedgerInfo
+mkRidePaymentLedgerInfo rideFare gstAmount tollFare tollVatAmount parkingCharge parkingChargeVat platformFee offerDiscountAmount cashbackPayoutAmount rideVatAbsorbedOnDiscount financeCtx =
+  RidePaymentLedgerInfo
+    { rideFare,
+      gstAmount,
+      tollFare,
+      tollVatAmount,
+      parkingCharge,
+      parkingChargeVat,
+      platformFee,
+      offerDiscountAmount,
+      cashbackPayoutAmount,
+      rideVatAbsorbedOnDiscount,
+      financeCtx
+    }
+
+-- | Build RidePaymentLedgerInfo from raw fare breakups + customer offer
+--   discount. Delegates to 'RD.parseProjectFareParamsBreakup' +
+--   'RD.applyRideDiscount' — the canonical discount + VAT algorithm
+--   from 'Domain.SharedLogic.RideDiscount'.
+--
+--   Returns 'Nothing' when the BPP breakup doesn't include the ten-tag
+--   summary (legacy ON_SEARCH / non-compliant BPP). Callers fall back to
+--   a domain-side constructed ledger info for backward compatibility.
+buildLedgerInfoFromBreakups ::
+  (MonadFlow m) =>
+  [DFareBreakup.FareBreakup] ->
+  HighPrecMoney -> -- requestedDiscount (bookingDiscountAmount)
+  HighPrecMoney -> -- cashbackPayoutAmount (0 for DISCOUNT or no offer)
+  HighPrecMoney -> -- applicationFeeAmount (platform commission)
+  HighPrecMoney -> -- tipAmount (0 when tip is a separate PI add-on)
+  FinanceCtx ->
+  m (Maybe RidePaymentLedgerInfo)
+buildLedgerInfoFromBreakups breakups discount cashback appFee _tip ctx =
+  case RD.parseProjectFareParamsBreakup (breakupToPair <$> breakups) of
+    Nothing -> pure Nothing
+    Just b -> do
+      let r = RD.applyRideDiscount b discount
+          breakupPostDiscount =
+            b
+              { RD.discountApplicableRideFareTaxExclusive = r.postDiscountApplicableTaxExclusive,
+                RD.discountApplicableRideFareTax = r.postDiscountApplicableTax
+              }
+          info =
+            mkRidePaymentLedgerInfo
+              (breakupPostDiscount.discountApplicableRideFareTaxExclusive + breakupPostDiscount.nonDiscountApplicableRideFareTaxExclusive - appFee)
+              (breakupPostDiscount.discountApplicableRideFareTax + breakupPostDiscount.nonDiscountApplicableRideFareTax)
+              breakupPostDiscount.tollFareTaxExclusive
+              breakupPostDiscount.tollFareTax
+              breakupPostDiscount.parkingChargeTaxExclusive
+              breakupPostDiscount.parkingChargeTax
+              appFee
+              r.clampedDiscount
+              cashback
+              r.rideVatAbsorbedOnDiscount
+              ctx
+      pure (Just info)
+  where
+    breakupToPair fb = (fb.description, fb.amount.amount)
 
 -- | Build offer stats input from a person. Resolves staticCustomerId from phone
 --   and passes raw identifiers to the payment library for entity resolution.
@@ -650,6 +740,7 @@ makePaymentIntent ::
   Maybe RidePaymentLedgerInfo ->
   m (Maybe DPayment.CreatePaymentIntentServiceResp)
 makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbExistingOrderId paymentServiceType req mbLedgerInfo = do
+  logDebug $ "makePaymentIntent: rideId=" <> show ((.getId) <$> mbRideId) <> " existingOrderId=" <> show ((.getId) <$> mbExistingOrderId) <> " mbLedgerInfo=" <> show mbLedgerInfo
   let effectiveAmount = req.amount - req.discountAmount
   -- If offer fully covers the fare, skip payment service (treat as cash/free ride flow)
   if effectiveAmount <= 0
@@ -717,9 +808,12 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
             ledgerInfo.financeCtx
             ledgerInfo.rideFare
             ledgerInfo.gstAmount
+            ledgerInfo.tollFare
+            ledgerInfo.tollVatAmount
             ledgerInfo.platformFee
             ledgerInfo.offerDiscountAmount
             ledgerInfo.cashbackPayoutAmount
+            ledgerInfo.rideVatAbsorbedOnDiscount
       pure (Just resp)
 
 cancelPaymentIntent ::
@@ -768,7 +862,7 @@ chargePaymentIntent ::
   Id Person.Person ->
   DPayment.OfferStatsInput -> -- callback to build stats input (called only on success)
   m Bool
-chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType paymentIntentId rideId settledReason _personId offerStatsInput = do
+chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType paymentIntentId rideId settledReason personId offerStatsInput = do
   let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId paymentMode
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId paymentMode
       commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
@@ -782,14 +876,15 @@ chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType p
     let entryIds = map (.id) unsettledEntries
     if charged
       then do
-        -- Settle all unsettled entries on successful capture
+        -- Settle all unsettled entries on successful capture.
+        -- chargePaymentIntent fires only on the online (Stripe) capture path → isOnline=True.
         let ctx =
               RidePaymentFinance.buildRiderFinanceCtx
                 merchantId.getId
                 merchantOpCityId.getId
                 (Kernel.Prelude.head unsettledEntries).currency
                 True
-                ""
+                personId.getId
                 rideId.getId
                 Nothing
                 Nothing
@@ -1006,37 +1101,39 @@ zeroEffectivePaymentDueToOffer ::
   Person.Person ->
   Maybe Text ->
   Currency ->
-  Maybe RidePaymentLedgerInfo ->
+  HighPrecMoney -> -- discountApplicableFareAmountTaxIncl: discount-applicable ride fare inclusive of its VAT (same basis offer was applied against)
+  HighPrecMoney -> -- discountAmount (from ride/booking; matches what's persisted)
+  RidePaymentLedgerInfo ->
   Booking.Booking ->
   m ()
-zeroEffectivePaymentDueToOffer merchantId merchantOperatingCityId rideId person mbOfferId currency ledgerInfo booking = do
+zeroEffectivePaymentDueToOffer merchantId merchantOperatingCityId rideId person mbOfferId currency discountApplicableFareAmountTaxIncl discountAmount li booking = do
   -- Offer fully covers fare, no payment needed — create SETTLED ledger entries
   logInfo $ "Post-offer amount <= 0, skipping charge for ride: " <> rideId.getId
+  logDebug $ "zeroEffectivePaymentDueToOffer: rideId=" <> rideId.getId <> " mbOfferId=" <> show mbOfferId <> " ledgerInfo=" <> show li
   whenJust mbOfferId $ \offerId -> do
-    whenJust ledgerInfo $ \li -> do
-      result <-
-        RidePaymentFinance.createFullyDiscountedRidePaymentLedger
-          li.financeCtx
-          li.rideFare
-          li.gstAmount
-          li.platformFee
-          li.offerDiscountAmount
-      case result of
-        Right _ -> logInfo $ "Created SETTLED ledger for fully discounted ride: " <> rideId.getId
-        Left err -> logError $ "Failed to create fully discounted ledger: " <> show err
-      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
-      let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
-      when enableRideHailingOffers $ do
-        mbRideOfferEntity <- QOfferEntity.findByEntityIdAndEntityType rideId.getId DOfferEntity.RIDE
-        whenJust mbRideOfferEntity $ \rideOfferEntity -> do
-          useDomainOffers <- TPayment.useDomainOffers merchantId merchantOperatingCityId Nothing DOrder.RideHailing
-          let applyOfferCall = TPayment.offerApply merchantId merchantOperatingCityId Nothing DOrder.RideHailing Nothing person.clientSdkVersion
-          offerStatsInput <- buildOfferStatsInput person
-          let discountAmount = li.offerDiscountAmount
-          void $
-            withTryCatch "applyOfferWithoutPayment:zeroEffective" $ do
-              let fareAmount = li.rideFare + li.gstAmount + li.platformFee + li.offerDiscountAmount
-              ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-              let mbProduct = Just (show booking.vehicleServiceTierType, fareAmount)
-              DPayment.applyOfferWithoutPaymentService rideId.getId offerId rideOfferEntity.offerCode offerStatsInput (Just discountAmount) Nothing fareAmount currency merchantId.getId merchantOperatingCityId.getId useDomainOffers applyOfferCall ride.createdAt mbProduct
+    result <-
+      RidePaymentFinance.createFullyDiscountedRidePaymentLedger
+        li.financeCtx
+        li.rideFare
+        li.gstAmount
+        li.tollFare
+        li.tollVatAmount
+        li.platformFee
+        discountAmount
+        li.rideVatAbsorbedOnDiscount
+    case result of
+      Right _ -> logInfo $ "Created SETTLED ledger for fully discounted ride: " <> rideId.getId
+      Left err -> logError $ "Failed to create fully discounted ledger: " <> show err
+    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+    let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
+    when enableRideHailingOffers $ do
+      mbRideOfferEntity <- QOfferEntity.findByEntityIdAndEntityType rideId.getId DOfferEntity.RIDE
+      whenJust mbRideOfferEntity $ \rideOfferEntity -> do
+        useDomainOffers <- TPayment.useDomainOffers merchantId merchantOperatingCityId Nothing DOrder.RideHailing
+        let applyOfferCall = TPayment.offerApply merchantId merchantOperatingCityId Nothing DOrder.RideHailing Nothing person.clientSdkVersion
+        offerStatsInput <- buildOfferStatsInput person
+        void $
+          withTryCatch "applyOfferWithoutPayment:zeroEffective" $ do
+            let mbProduct = Just (show booking.vehicleServiceTierType, discountApplicableFareAmountTaxIncl)
+            DPayment.applyOfferWithoutPaymentService rideId.getId offerId rideOfferEntity.offerCode offerStatsInput (Just discountAmount) Nothing discountApplicableFareAmountTaxIncl currency merchantId.getId merchantOperatingCityId.getId useDomainOffers applyOfferCall booking.createdAt mbProduct
   QRide.markPaymentStatus Ride.Completed rideId

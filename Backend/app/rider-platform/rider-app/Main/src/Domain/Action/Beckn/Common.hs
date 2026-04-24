@@ -32,6 +32,7 @@ import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Domain.Action.UI.Cancel (makeCustomerBlockingKey)
 import Domain.Action.UI.HotSpot
 import Domain.Action.UI.RidePayment as Reexport
+import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.BookingStatus as BT
@@ -517,22 +518,32 @@ rideAssignedReqHandler req = do
                   }
           -- Lookup existing order for retry handling via Redis-stored ledger entry IDs
           mbExistingOrderId <- SPayment.getOrderIdForRide ride.id
+          estimatedBreakups <- traverse (buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) (fromMaybe [] req'.fareBreakups)
+          -- Online Ride Assigned branch (inside Just OnlinePaymentParameters case) → isOnline=True.
           let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId merchantOperatingCityId.getId booking.estimatedFare.currency True booking.riderId.getId ride.id.getId Nothing Nothing
-              ledgerInfo =
-                Just $
+          mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount 0 ledgerCtx
+          let ledgerInfo =
+                fromMaybe
                   SPayment.RidePaymentLedgerInfo
                     { rideFare = booking.estimatedFare.amount - applicationFeeAmount - bookingDiscountAmount,
-                      gstAmount = 0, -- TODO: extract GST from fare breakup
+                      gstAmount = 0,
+                      tollFare = 0,
+                      tollVatAmount = 0,
+                      parkingCharge = 0,
+                      parkingChargeVat = 0,
                       offerDiscountAmount = bookingDiscountAmount,
                       cashbackPayoutAmount = bookingPayoutAmount,
                       platformFee = applicationFeeAmount,
+                      rideVatAbsorbedOnDiscount = 0,
                       financeCtx = ledgerCtx
                     }
+                  mbLedgerInfo
+          logDebug $ "makePaymentIntent (ride-assigned): breakups=" <> show estimatedBreakups <> " discount=" <> show bookingDiscountAmount <> " payout=" <> show bookingPayoutAmount <> " platformFee=" <> show applicationFeeAmount <> " -> ledgerInfo=" <> show ledgerInfo
           -- Wrap makePaymentIntent in retry, capture result for orderId
           mbPaymentResp <-
             handle (\e -> SPayment.paymentErrorHandler booking e >> throwError (InvalidRequest "Payment failed, booking cancelled")) $
               withShortRetry $
-                SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode booking.riderId (Just ride.id) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq ledgerInfo
+                SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode booking.riderId (Just ride.id) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq (Just ledgerInfo)
           -- Check if PI is in a capturable state — only STARTED (requires_capture) and CHARGED (already captured) are valid
           whenJust mbPaymentResp $ \paymentResp -> do
             mbOrder <- QPaymentOrder.findById paymentResp.orderId
@@ -553,23 +564,30 @@ rideAssignedReqHandler req = do
                 throwError $ InvalidRequest "Payment non-capturable, booking cancelled"
           pure mbPaymentResp
         Nothing -> do
-          -- For offline/cash rides we still create PENDING ride payment entries at assignment time.
-          -- Cash/offline ride at assignment → isOnline=False (Control pair).
           let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId booking.estimatedFare.currency False booking.riderId.getId ride.id.getId Nothing Nothing
-              rideFareAmount = booking.estimatedFare.amount - applicationFeeAmount - bookingDiscountAmount
-          ledgerCreationResult <-
-            RidePaymentFinance.createRidePaymentLedger
-              ledgerCtx
-              rideFareAmount
-              0
-              applicationFeeAmount
-              bookingDiscountAmount
-              bookingPayoutAmount
-          case ledgerCreationResult of
-            Left err -> logError $ "Failed to create offline ride payment ledger entries on rideAssigned for ride " <> ride.id.getId <> ": " <> show err
-            Right _ -> logInfo $ "Created offline PENDING ride payment ledger entries on rideAssigned for ride: " <> ride.id.getId
+          estimatedBreakups <- traverse (buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) (fromMaybe [] req'.fareBreakups)
+          mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount 0 ledgerCtx
+          let ledgerInfo =
+                fromMaybe
+                  SPayment.RidePaymentLedgerInfo
+                    { rideFare = booking.estimatedFare.amount - applicationFeeAmount - bookingDiscountAmount,
+                      gstAmount = 0,
+                      tollFare = 0,
+                      tollVatAmount = 0,
+                      parkingCharge = 0,
+                      parkingChargeVat = 0,
+                      offerDiscountAmount = bookingDiscountAmount,
+                      cashbackPayoutAmount = bookingPayoutAmount,
+                      platformFee = applicationFeeAmount,
+                      rideVatAbsorbedOnDiscount = 0,
+                      financeCtx = ledgerCtx
+                    }
+                  mbLedgerInfo
+          result <- RidePaymentFinance.createRidePaymentLedger ledgerCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.tollFare ledgerInfo.tollVatAmount ledgerInfo.platformFee ledgerInfo.offerDiscountAmount ledgerInfo.cashbackPayoutAmount ledgerInfo.rideVatAbsorbedOnDiscount
+          case result of
+            Right _ -> logInfo $ "Cash ride assigned: created PENDING BAP ledger + invoice for ride: " <> ride.id.getId
+            Left err -> logError $ "Cash ride ledger create failed at assign: " <> show err
           pure Nothing
-      -- Ledger entries are created inside makePaymentIntent for online rides, and directly for offline rides.
       triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
       let category = case booking.specialLocationTag of
             Just _ -> "specialLocation"
@@ -815,22 +833,21 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   mbMerchant <- CQM.findById booking.merchantId
   whenJust mbAdvRide $ do \advRide -> when (advRide.id /= ride.id) $ QRide.updateshowDriversPreviousRideDropLoc False advRide.id
   let distanceUnit = ride.distanceUnit
+  breakups <- traverse (buildFareBreakup ride.id) fareBreakups
+  -- Offer is applied against the discount-applicable ride fare inclusive of
+  -- its VAT (same basis as /getOfferDiscount and the quote-list offer
+  -- basket). Fall back to the aggregate totalFare when the BPP didn't emit
+  -- the ten-tag summary.
+  let fareCtx = RD.parseProjectFareParamsBreakup $ (\fb -> (fb.description, fb.amount.amount)) <$> breakups
+      discountApplicableFareAmountTaxIncl = case fareCtx of
+        Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
+        Nothing -> totalFare.amount
+      offerBasePrice = mkPrice (Just totalFare.currency) discountApplicableFareAmountTaxIncl
   -- Persist offer details in Ride OfferEntity table for fast lookup in rideList
   mbRideOfferEntity <-
     case booking.selectedOfferId of
       Just offerId -> do
-        mbOfferDetails <-
-          SOffer.getSelectedOfferDetailsWithBasket
-            booking.merchantId
-            person.id
-            booking.merchantOperatingCityId
-            DOrder.RideHailing
-            (show booking.vehicleServiceTierType)
-            totalFare
-            offerId
-            (Just ride)
-            (Just booking)
-            Nothing
+        mbOfferDetails <- SOffer.getSelectedOfferDetailsWithBasket booking.merchantId person.id booking.merchantOperatingCityId DOrder.RideHailing (show booking.vehicleServiceTierType) offerBasePrice offerId fareCtx (Just ride) (Just booking) Nothing
         case mbOfferDetails of
           Just (offerDetails, computed) -> do
             rideOfferId <- generateGUID
@@ -877,7 +894,6 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
              endOdometerReading,
              commission = rideCommission
             }
-  breakups <- traverse (buildFareBreakup ride.id) fareBreakups
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
   let shouldUpdateRideComplete =
         case minTripDistanceForReferralCfg of
@@ -908,7 +924,6 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
 
   if not onlinePayment
     then do
-      let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency False person.id.getId ride.id.getId Nothing Nothing
       whenJust booking.selectedOfferId $ \offerId -> whenJust mbRideOfferEntity $ \rideOfferEntity -> when riderConfig.enableRideHailingOffers $ do
         useDomainOffers <- TPayment.useDomainOffers booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing
         let applyOfferCall = TPayment.offerApply booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing Nothing person.clientSdkVersion
@@ -917,32 +932,61 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         void $
           withTryCatch "applyOfferWithoutPayment:cashRide" $
             DPayment.applyOfferWithoutPaymentService ride.id.getId offerId rideOfferEntity.offerCode offerStatsInput (Just rideDiscountAmount) (Just ridePayoutAmount) totalFare.amount totalFare.currency person.merchantId.getId person.merchantOperatingCityId.getId useDomainOffers applyOfferCall ride.createdAt mbProduct
-      let cashRideFare = totalFare.amount - applicationFeeAmount' - rideDiscountAmount
-      upsertRes <-
-        RidePaymentFinance.upsertCoreRidePaymentLedger
-          ledgerCtx
-          cashRideFare
-          0
-          applicationFeeAmount'
-          rideDiscountAmount
-          ridePayoutAmount
-      unless (null upsertRes.coreEntryIds) $ do
-        settleResult <- RidePaymentFinance.settleRidePaymentLedger ledgerCtx upsertRes.coreEntryIds RidePaymentFinance.settledReasonRidePayment
-        case settleResult of
-          Right () -> logInfo $ "Cash ride BAP ledger settled for ride: " <> ride.id.getId
-          Left err -> logError $ "Cash ride settle failed: " <> show err
-    else do
-      let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing
-          ledgerInfo =
-            Just $
+      let cashLedgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency False person.id.getId ride.id.getId Nothing Nothing
+      mbCashLedgerInfo <- SPayment.buildLedgerInfoFromBreakups breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' 0 cashLedgerCtx
+      let cashLedgerInfo =
+            fromMaybe
               SPayment.RidePaymentLedgerInfo
                 { rideFare = totalFare.amount - applicationFeeAmount' - rideDiscountAmount,
-                  gstAmount = 0, -- TODO: extract GST from fare breakup
+                  gstAmount = 0,
+                  tollFare = 0,
+                  tollVatAmount = 0,
+                  parkingCharge = 0,
+                  parkingChargeVat = 0,
                   platformFee = applicationFeeAmount',
                   offerDiscountAmount = rideDiscountAmount,
                   cashbackPayoutAmount = ridePayoutAmount,
+                  rideVatAbsorbedOnDiscount = 0,
+                  financeCtx = cashLedgerCtx
+                }
+              mbCashLedgerInfo
+      upsertRes <-
+        RidePaymentFinance.upsertCoreRidePaymentLedger
+          cashLedgerCtx
+          cashLedgerInfo.rideFare
+          cashLedgerInfo.gstAmount
+          cashLedgerInfo.tollFare
+          cashLedgerInfo.tollVatAmount
+          cashLedgerInfo.platformFee
+          cashLedgerInfo.offerDiscountAmount
+          cashLedgerInfo.cashbackPayoutAmount
+          cashLedgerInfo.rideVatAbsorbedOnDiscount
+      unless (null upsertRes.coreEntryIds) $ do
+        settleResult <- RidePaymentFinance.settleRidePaymentLedger cashLedgerCtx upsertRes.coreEntryIds RidePaymentFinance.settledReasonRidePayment
+        case settleResult of
+          Right () -> logInfo $ "Cash ride BAP ledger settled for ride: " <> ride.id.getId <> " invoiceId=" <> show upsertRes.invoiceId
+          Left err -> logError $ "Cash ride settle failed: " <> show err
+    else do
+      -- Online Ride End branch → isOnline=True.
+      let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing
+      mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' 0 ledgerCtx
+      let ledgerInfo =
+            fromMaybe
+              SPayment.RidePaymentLedgerInfo
+                { rideFare = totalFare.amount - applicationFeeAmount' - rideDiscountAmount,
+                  gstAmount = 0,
+                  tollFare = 0,
+                  tollVatAmount = 0,
+                  parkingCharge = 0,
+                  parkingChargeVat = 0,
+                  platformFee = applicationFeeAmount',
+                  offerDiscountAmount = rideDiscountAmount,
+                  cashbackPayoutAmount = ridePayoutAmount,
+                  rideVatAbsorbedOnDiscount = 0,
                   financeCtx = ledgerCtx
                 }
+              mbLedgerInfo
+      logDebug $ "makePaymentIntent (ride-completed): breakups=" <> show breakups <> " discount=" <> show rideDiscountAmount <> " payout=" <> show ridePayoutAmount <> " platformFee=" <> show applicationFeeAmount' <> " -> ledgerInfo=" <> show ledgerInfo
       let scheduleAfter = riderConfig.executePaymentDelay
           executePaymentIntentJobData = ExecutePaymentIntentJobData {personId = person.id, rideId = ride.id, fare = totalFare, applicationFeeAmount = applicationFeeAmount'}
       logDebug $ "Update payment intent for order: " <> ride.id.getId
@@ -963,12 +1007,12 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
               }
       -- Lookup existing order for retry handling via Redis ledger entry IDs
       mbExistingOrderId <- SPayment.getOrderIdForRide ride.id
-      eitherResp <- withTryCatch "makePaymentIntent:rideCompleted" $ withShortRetry (SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just ride.id) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq ledgerInfo)
+      eitherResp <- withTryCatch "makePaymentIntent:rideCompleted" $ withShortRetry (SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just ride.id) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq (Just ledgerInfo))
       case eitherResp of
         Left err -> do
           logError $ "makePaymentIntent failed, scheduling job so that it can mark this as Dues: " <> show err
           createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)
-        Right Nothing -> SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId ride.id person booking.selectedOfferId totalFare.currency ledgerInfo booking
+        Right Nothing -> SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId ride.id person booking.selectedOfferId totalFare.currency discountApplicableFareAmountTaxIncl rideDiscountAmount ledgerInfo booking
         Right (Just _paymentIntentResp) -> do
           logDebug $ "Scheduling execute payment intent job for order: " <> show scheduleAfter
           createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)

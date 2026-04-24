@@ -78,7 +78,8 @@ data DConfirmReq = DConfirmReq
     enableFrequentLocationUpdates :: Bool,
     paymentId :: Maybe Text,
     enableOtpLessRide :: Bool,
-    driverPreference :: Maybe [Text]
+    driverPreference :: Maybe [Text],
+    customerDiscountAmount :: Maybe HighPrecMoney
   }
 
 data ValidatedQuote = DriverQuote DPerson.Person DDQ.DriverQuote | StaticQuote DQ.Quote | RideOtpQuote DQ.Quote | MeterRideQuote DPerson.Person DQ.Quote
@@ -213,6 +214,7 @@ handler merchant req validatedQuote = do
         whenJust req.toAddress $ \toAddress -> QL.updateAddress toLocation.id toAddress
       whenJust req.mbRiderName $ QRB.updateRiderName booking.id
       whenJust req.paymentId $ QRB.updatePaymentId booking.id
+      whenJust req.customerDiscountAmount $ QRB.updateDiscountAmount booking.id
       QBE.logRideConfirmedEvent booking.id booking.distanceUnit
 
     mkDConfirmResp mbRideInfo uBooking riderDetails = do

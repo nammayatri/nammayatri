@@ -132,7 +132,7 @@ Merchant:
     registryUrl: "'http://localhost:8020'"
     uniqueKeyId: "'FIXME'"
     onlinePayment: "false"
-    gatewayAndRegistryPriorityList: '''{"NY"}'''
+    gatewayAndRegistryPriorityList: "'{\"NY\"}'"
     fleetOwnerEnabledCheck: "false"
     overwriteAssociation: "false"
     mediaFileDocumentLinkExpires: 3600
@@ -165,9 +165,11 @@ Merchant:
     mediaFileDocumentLinkExpires: Kernel.Prelude.Just|I
 
   fromTType:
-    geofencingConfig: Kernel.Types.Geofencing.GeofencingConfig originRestriction destinationRestriction|E
+    geofencingConfig: Kernel.Types.Geofencing.GeofencingConfig originRestriction
+      destinationRestriction|E
     registryUrl: Kernel.Prelude.parseBaseUrl|IM
-    gatewayAndRegistryPriorityList: fromMaybe [Domain.Types.ONDC, Domain.Types.NY] gatewayAndRegistryPriorityList|E
+    gatewayAndRegistryPriorityList: fromMaybe [Domain.Types.ONDC, Domain.Types.NY]
+      gatewayAndRegistryPriorityList|E
     mediaFileDocumentLinkExpires: Kernel.Prelude.fromMaybe 3600|I
 
   queries:
@@ -183,7 +185,7 @@ Merchant:
     updateGatewayAndRegistryPriorityList:
       kvFunction: updateWithKV
       where: id
-      params: [gatewayAndRegistryPriorityList]
+      params: [ gatewayAndRegistryPriorityList ]
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -238,16 +240,18 @@ MerchantMessage:
 
   fromTType:
     templateId: fromMaybe "" templateId|E
-    jsonData: fromMaybe Data.Default.Class.def (Storage.Queries.Transformers.MerchantMessage.valueToJsonData =<< jsonData)|E
+    jsonData: fromMaybe Data.Default.Class.def
+      (Storage.Queries.Transformers.MerchantMessage.valueToJsonData =<<
+      jsonData)|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
     messageKey: PrimaryKey
 
   extraIndexes:
-    - columns: [merchantOperatingCityId, domain, channel]
+    - columns: [ merchantOperatingCityId, domain, channel ]
       unique: true
-    - columns: [merchantOperatingCityId, messageKey, vehicleCategory]
+    - columns: [ merchantOperatingCityId, messageKey, vehicleCategory ]
       unique: true
 
   excludedDefaultQueries:
@@ -259,11 +263,11 @@ MerchantMessage:
     findByMerchantOpCityIdAndMessageKeyVehicleCategory:
       kvFunction: findOneWithKV
       where:
-        and: [merchantOperatingCityId, messageKey, vehicleCategory]
+        and: [ merchantOperatingCityId, messageKey, vehicleCategory ]
     findByMerchantOpCityIdDomainAndChannel:
       kvFunction: findOneWithKV
       where:
-        and: [merchantOperatingCityId, domain, channel]
+        and: [ merchantOperatingCityId, domain, channel ]
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
@@ -272,7 +276,8 @@ LlmPrompt:
   derives: Generic,Show,'UsageSafety
   types:
     PromptKey:
-      enum: AzureOpenAI_DriverProfileGen_1, AzureOpenAI_DLExtraction_1, AzureOpenAI_RCExtraction_1
+      enum: AzureOpenAI_DriverProfileGen_1, AzureOpenAI_DLExtraction_1,
+        AzureOpenAI_RCExtraction_1
     UseCase:
       enum: DriverProfileGen, DriverSupport, DLExtraction, RCExtraction
   fields:
@@ -303,7 +308,7 @@ LlmPrompt:
     findByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey:
       kvFunction: findOneWithKV
       where:
-        and: [merchantOperatingCityId, serviceName, useCase, promptKey]
+        and: [ merchantOperatingCityId, serviceName, useCase, promptKey ]
 
 MerchantOperatingCity:
   derives: Generic, FromJSON, ToJSON, Show, Eq, ToSchema
@@ -369,15 +374,15 @@ MerchantOperatingCity:
     findByMerchantIdAndCity:
       kvFunction: findOneWithKV
       where:
-        and: [merchantId, city]
+        and: [ merchantId, city ]
     findAllByMerchantIdAndState:
       kvFunction: findAllWithKV
       where:
-        and: [merchantId, state]
+        and: [ merchantId, state ]
     findByMerchantShortIdAndCity:
       kvFunction: findOneWithKV
       where:
-        and: [merchantShortId, city]
+        and: [ merchantShortId, city ]
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -412,7 +417,9 @@ Overlay:
   derives: "Generic,Show,'UsageSafety"
   types:
     OverlayCondition:
-      enum: PaymentOverdueGreaterThan Int,PaymentOverdueBetween Int Int,FreeTrialDaysLeft Int,InvoiceGenerated PaymentMode,BlockedDrivers,InactiveAutopay
+      enum: PaymentOverdueGreaterThan Int,PaymentOverdueBetween Int
+        Int,FreeTrialDaysLeft Int,InvoiceGenerated
+        PaymentMode,BlockedDrivers,InactiveAutopay
   fields:
     id: Id Overlay
     merchantId: Id Merchant
@@ -486,36 +493,35 @@ Overlay:
     deleteByOverlayKeyMerchantOpCityIdUdf:
       kvFunction: deleteWithKV
       where:
-        and: [merchantOperatingCityId, overlayKey, udf1]
+        and: [ merchantOperatingCityId, overlayKey, udf1 ]
     findAllByLanguage:
       kvFunction: findAllWithKV
       where:
-        and: [merchantOperatingCityId, language]
+        and: [ merchantOperatingCityId, language ]
     findAllByOverlayKeyUdf:
       kvFunction: findAllWithKV
       where:
-        and: [merchantOperatingCityId, overlayKey, udf1]
+        and: [ merchantOperatingCityId, overlayKey, udf1 ]
     findByMerchantOpCityIdPNKeyLangaugeUdf:
       kvFunction: findOneWithKV
       where:
-        and: [merchantOperatingCityId, overlayKey, language, udf1]
+        and: [ merchantOperatingCityId, overlayKey, language, udf1 ]
     deleteByOverlayKeyMerchantOpCityIdUdfMbVehicleCategory:
       kvFunction: deleteWithKV
       where:
-        and: [merchantOperatingCityId, overlayKey, udf1, vehicleCategory]
+        and: [ merchantOperatingCityId, overlayKey, udf1, vehicleCategory ]
     findAllByLanguageVehicleCategory:
       kvFunction: findAllWithKV
       where:
-        and: [merchantOperatingCityId, language, vehicleCategory]
+        and: [ merchantOperatingCityId, language, vehicleCategory ]
     findAllByOverlayKeyUdfVehicleCategory:
       kvFunction: findAllWithKV
       where:
-        and: [merchantOperatingCityId, overlayKey, udf1, vehicleCategory]
+        and: [ merchantOperatingCityId, overlayKey, udf1, vehicleCategory ]
     findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory:
       kvFunction: findOneWithKV
       where:
-        and:
-          [merchantOperatingCityId, overlayKey, language, udf1, vehicleCategory]
+        and: [ merchantOperatingCityId, overlayKey, language, udf1, vehicleCategory ]
 
 # LeaderBoardConfigs:
 #   derives: "Generic,ToJSON,FromJSON,ToSchema"
@@ -560,7 +566,8 @@ MerchantServiceUsageConfig:
   derives: Generic,Show,'UsageSafety
   types:
     ProviderLookUpKey:
-      enum: "TOTO_UDIN,TOTO,CAR,AUTO_CATEGORY,MOTORCYCLE,TRUCK,BOAT,AMBULANCE,BUS,TRAIN,FLIGHT"
+      enum: "TOTO_UDIN,TOTO,CAR,AUTO_CATEGORY,MOTORCYCLE,TRUCK,BOAT,AMBULANCE,BUS,TRA\
+        IN,FLIGHT"
       derive': "Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema"
   fields:
     merchantId: Id Merchant
@@ -665,9 +672,15 @@ MerchantServiceUsageConfig:
     getTripRoutes: "'Google'"
     issueTicketService: "'Kapture'"
     getExophone: "'Exotel'"
-    snapToRoadProvidersList: '''{"OSRM", "Google"}'''
-    verificationProvidersPriorityList: '''{"Idfy"}'''
-    categoryBasedVerificationPriorityList: '''{"TOTO_UDIN":["Tten"],"TOTO":["Idfy"],"CAR":["Idfy","HyperVergeRCDL"],"AUTO_CATEGORY":["Idfy","HyperVergeRCDL"],"MOTORCYCLE":["Idfy","HyperVergeRCDL"],"TRUCK":["Idfy","HyperVergeRCDL"],"BOAT":["Idfy","HyperVergeRCDL"],"AMBULANCE":["Idfy","HyperVergeRCDL"],"BUS":["Idfy","HyperVergeRCDL"],"TRAIN":["Idfy","HyperVergeRCDL"],"FLIGHT":["Idfy","HyperVergeRCDL"]}'''
+    snapToRoadProvidersList: "'{\"OSRM\", \"Google\"}'"
+    verificationProvidersPriorityList: "'{\"Idfy\"}'"
+    categoryBasedVerificationPriorityList: "'{\"TOTO_UDIN\":[\"Tten\"],\"TOTO\":[\"\
+      Idfy\"],\"CAR\":[\"Idfy\",\"HyperVergeRCDL\"],\"AUTO_CATEGORY\":[\"Idfy\",\
+      \"HyperVergeRCDL\"],\"MOTORCYCLE\":[\"Idfy\",\"HyperVergeRCDL\"],\"TRUCK\
+      \":[\"Idfy\",\"HyperVergeRCDL\"],\"BOAT\":[\"Idfy\",\"HyperVergeRCDL\"],\
+      \"AMBULANCE\":[\"Idfy\",\"HyperVergeRCDL\"],\"BUS\":[\"Idfy\",\"HyperVerg\
+      eRCDL\"],\"TRAIN\":[\"Idfy\",\"HyperVergeRCDL\"],\"FLIGHT\":[\"Idfy\",\"H\
+      yperVergeRCDL\"]}'"
     rectifyDistantPointsFailure: "'OSRM'"
     createBankAccount: "'Stripe'"
     retryBankAccountLink: "'Stripe'"
@@ -699,15 +712,15 @@ MerchantServiceUsageConfig:
     updateSmsProvidersPriorityList:
       kvFunction: updateWithKV
       where: merchantOperatingCityId
-      params: [smsProvidersPriorityList]
+      params: [ smsProvidersPriorityList ]
     updateWhatsappProvidersPriorityList:
       kvFunction: updateWithKV
       where: merchantOperatingCityId
-      params: [whatsappProvidersPriorityList]
+      params: [ whatsappProvidersPriorityList ]
     updateSnapToRoadProvidersPriorityList:
       kvFunction: updateWithKV
       where: merchantOperatingCityId
-      params: [snapToRoadProvidersList]
+      params: [ snapToRoadProvidersList ]
 
 DriverIntelligentPoolConfig:
   derives: Generic,Show,'UsageSafety
@@ -806,7 +819,7 @@ DriverIntelligentPoolConfig:
     actualPickupDistanceWeightage: "0"
     numRidesWeightage: "2"
     maxNumRides: "336"
-    cancellationAndRideFrequencyRatioWindowOption: '''{"period":7, "periodType":"Days"}'''
+    cancellationAndRideFrequencyRatioWindowOption: "'{\"period\":7, \"periodType\":\"Days\"}'"
 
 TransporterConfig:
   derives: Generic,Show,'UsageSafety,Eq
@@ -816,8 +829,8 @@ TransporterConfig:
       suspensionTimeInHours: Int
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     SlabType:
-      minBookingsRange : "[Int]"
-      penalityForCancellation : CancellationRateSlab
+      minBookingsRange: "[Int]"
+      penalityForCancellation: CancellationRateSlab
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     CancellationRateSlabConfig:
       dailySlabs: "[SlabType]"
@@ -834,7 +847,7 @@ TransporterConfig:
       weeklyOffenceSuspensionTimeHours: Int
       dailyConditionCooldownTimeHours: Int
       weeklyConditionCooldownTimeHours: Int
-      cancellationRateSlabConfig : Maybe CancellationRateSlabConfig
+      cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     DemandHotspotsConfig:
       enableDemandHotspots: Bool
@@ -931,6 +944,11 @@ TransporterConfig:
       defaultTdsRate: Maybe Double
       subscriptionTdsRate: Maybe Double
       invalidPanTdsRate: Double
+      serviceVatPercentage: Maybe Double
+      derive': Generic, Show, ToJSON, FromJSON, Read, Eq
+    InvoiceConfig:
+      driverInvoiceLineItemsVatInclusive: Bool
+      emitLedgerEntries: Bool
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     FeedbackNotificationConfig:
       enableFeedbackNotification: Bool
@@ -944,7 +962,8 @@ TransporterConfig:
       whatsappBodyLimit: Maybe Int
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
   beamInstance:
-    - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")]
+    - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff",
+      "automatic_r_c_activation_cut_off")]
     - Custom Domain.Types.UtilsTH.mkCacParseInstance
   fields:
     merchantId: Id Merchant
@@ -961,9 +980,9 @@ TransporterConfig:
     thresholdCancellationScore: Maybe Int
     minRidesForCancellationScore: Maybe Int
     thresholdCancellationPercentageToUnlist: Maybe Int
-    qarCalRadiusInKm : Maybe Double
-    isDynamicPricingQARCalEnabled : Maybe Bool
-    recomputeCongestionChargeOnEndRide : Maybe Bool
+    qarCalRadiusInKm: Maybe Double
+    isDynamicPricingQARCalEnabled: Maybe Bool
+    recomputeCongestionChargeOnEndRide: Maybe Bool
     minRidesToUnlist: Maybe Int
     mediaFileUrlPattern: Text
     mediaFileSizeUpperLimit: Int
@@ -1156,8 +1175,8 @@ TransporterConfig:
     maxAllowedDocSizeInMB: Maybe Int
     maxAllowedVideoDocSizeInMB: Maybe Int
     maxNumberOfLuggages: Maybe Int
-    bulkWaiveOffLimit : Int
-    rcExpiryChecks : Maybe Bool
+    bulkWaiveOffLimit: Int
+    rcExpiryChecks: Maybe Bool
     requireRouteMappingInVehicle: Bool
     enableExistingVehicleInBulkUpload: Bool
     isDriverNameMandatoryInBulkUpload: Bool
@@ -1167,15 +1186,15 @@ TransporterConfig:
     safetyTeamNumbers: Maybe [Text]
     liveEKD: Maybe Bool
     deactivateRCOnUnlink: Maybe Bool
-    aaEnabledClientSdkVersion : Text
-    isAAEnabledForRecurring : Maybe Bool
-    disableDriverWhenUnlinkingVehicle : Maybe Bool
-    validNameComparePercentage : Maybe Int
-    allowDuplicatePan : Maybe Bool
+    aaEnabledClientSdkVersion: Text
+    isAAEnabledForRecurring: Maybe Bool
+    disableDriverWhenUnlinkingVehicle: Maybe Bool
+    validNameComparePercentage: Maybe Int
+    allowDuplicatePan: Maybe Bool
     allowDuplicateGst: Maybe Bool
-    allowDuplicateAadhaar : Maybe Bool
+    allowDuplicateAadhaar: Maybe Bool
     allowDuplicateUdyam: Maybe Bool
-    allowPanAadhaarLinkage : Maybe Bool
+    allowPanAadhaarLinkage: Maybe Bool
     cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
     distanceWeightage: Maybe Int
     driverCallingOption: "Maybe CallingOption"
@@ -1229,6 +1248,7 @@ TransporterConfig:
     allowAadhaarReupload: Maybe Bool
     allowDlReupload: Maybe Bool
     allowGstReupload: Maybe Bool
+    invoiceConfig: Maybe InvoiceConfig
 
   beamType:
     currency: Maybe Currency
@@ -1285,7 +1305,7 @@ TransporterConfig:
     meterRideBulkLocUpdateBatchSize: Maybe Integer
     dynamicReferralCodeValidForMinutes: Maybe Integer
     dynamicReferralCodeEnabled: Maybe Bool
-    bulkWaiveOffLimit : Maybe Int
+    bulkWaiveOffLimit: Maybe Int
     requireRouteMappingInVehicle: Maybe Bool
     enableExistingVehicleInBulkUpload: Maybe Bool
     isDriverNameMandatoryInBulkUpload: Maybe Bool
@@ -1311,6 +1331,8 @@ TransporterConfig:
       subscriptionConfig: Maybe Value
     taxConfig:
       taxConfig: Maybe Value
+    invoiceConfig:
+      invoiceConfig: Maybe Value
     knowledgeCenterSopTypes:
       knowledgeCenterSopTypes: Maybe Value
 
@@ -1329,7 +1351,8 @@ TransporterConfig:
     mandateNotificationRescheduleInterval: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     mandateExecutionRescheduleInterval: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     driverFeeCalculationTime: Kernel.Utils.Common.nominalDiffTimeToSeconds <$> driverFeeCalculationTime|E
-    driverFeeCalculatorBatchGap: Kernel.Utils.Common.nominalDiffTimeToSeconds <$> driverFeeCalculatorBatchGap|E
+    driverFeeCalculatorBatchGap: Kernel.Utils.Common.nominalDiffTimeToSeconds <$>
+      driverFeeCalculatorBatchGap|E
     bankErrorExpiry: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     canSuvDowngradeToHatchback: Just canSuvDowngradeToHatchback|E
     aadhaarImageResizeConfig: Kernel.Prelude.toJSON <$> aadhaarImageResizeConfig|E
@@ -1353,11 +1376,13 @@ TransporterConfig:
     minmRentalAndScheduledBookingLeadTimeHours: Kernel.Prelude.Just $ Kernel.Types.Common.getHours|I
     scheduledRideFilterExclusionThresholdHours: Kernel.Prelude.Just $ Kernel.Types.Common.getHours|I
     exotelStatusCheckSchedulerDelay: Just $ Kernel.Types.Common.Seconds exotelStatusCheckSchedulerDelay|E
-    cachedDevicesOSForSearchRequest: Just (Data.Text.pack . Kernel.Prelude.show <$> cachedDevicesOSForSearchRequest)|E
+    cachedDevicesOSForSearchRequest: Just (Data.Text.pack . Kernel.Prelude.show <$>
+      cachedDevicesOSForSearchRequest)|E
     arrivalTimeBufferOfVehicle: Kernel.Prelude.toJSON <$> arrivalTimeBufferOfVehicle|E
     demandHotspotsConfig: Kernel.Prelude.toJSON <$> demandHotspotsConfig|E
     scheduledRideSearchRepeatLimit: Just scheduledRideSearchRepeatLimit|E
-    driverDrivenSearchReqExpiry: Kernel.Utils.Common.nominalDiffTimeToSeconds <$> driverDrivenSearchReqExpiry|E
+    driverDrivenSearchReqExpiry: Kernel.Utils.Common.nominalDiffTimeToSeconds <$>
+      driverDrivenSearchReqExpiry|E
     disableListScheduledBookingAPI: Just disableListScheduledBookingAPI|E
     enableOverchargingBlocker: Just enableOverchargingBlocker|E
     normalRideBulkLocUpdateBatchSize: Just normalRideBulkLocUpdateBatchSize|E
@@ -1372,7 +1397,7 @@ TransporterConfig:
     recomputeDistanceThresholds: Kernel.Prelude.toJSON <$> recomputeDistanceThresholds|E
     minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
     allowedReferralEntities: Just (Data.Text.pack . Kernel.Prelude.show <$> allowedReferralEntities)|E
-    bulkWaiveOffLimit : Just bulkWaiveOffLimit|E
+    bulkWaiveOffLimit: Just bulkWaiveOffLimit|E
     requireRouteMappingInVehicle: Just requireRouteMappingInVehicle|E
     enableExistingVehicleInBulkUpload: Just enableExistingVehicleInBulkUpload|E
     isDriverNameMandatoryInBulkUpload: Just isDriverNameMandatoryInBulkUpload|E
@@ -1383,9 +1408,11 @@ TransporterConfig:
     driverWalletConfig: Just . Data.Aeson.toJSON|I
     subscriptionConfig: Just . Data.Aeson.toJSON|I
     taxConfig: Just . Data.Aeson.toJSON|I
+    invoiceConfig: Data.Aeson.toJSON <$> invoiceConfig|E
     knowledgeCenterSopTypes: Just . Data.Aeson.toJSON|I
     feedbackNotificationConfig: Data.Aeson.toJSON <$> feedbackNotificationConfig|E
-    vehicleCategoryExcludedFromVerification: (Data.Text.pack . Kernel.Prelude.show <$>) <$> vehicleCategoryExcludedFromVerification|E
+    vehicleCategoryExcludedFromVerification: (Data.Text.pack . Kernel.Prelude.show
+      <$>) <$> vehicleCategoryExcludedFromVerification|E
     sameRiderDriverRideCountLookbackDays: Just sameRiderDriverRideCountLookbackDays|E
     sameRiderDriverRideCountThreshold: Just sameRiderDriverRideCountThreshold|E
     communicationChannelCharLimits: Data.Aeson.toJSON <$> communicationChannelCharLimits|E
@@ -1397,7 +1424,9 @@ TransporterConfig:
   fromTType:
     currency: fromMaybe Kernel.Types.Common.INR currency|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
-    fcmConfig: Kernel.External.Notification.FCM.Types.FCMConfig {fcmUrl = fcmUrl', fcmServiceAccount = fcmServiceAccount, fcmTokenKeyPrefix = fcmTokenKeyPrefix, fcmNotificationObj = Nothing }|E
+    fcmConfig: Kernel.External.Notification.FCM.Types.FCMConfig {fcmUrl = fcmUrl',
+      fcmServiceAccount = fcmServiceAccount, fcmTokenKeyPrefix =
+      fcmTokenKeyPrefix, fcmNotificationObj = Nothing }|E
     feedbackNotificationConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< feedbackNotificationConfig|E
     driverPaymentCycleBuffer: Kernel.Utils.Common.secondsToNominalDiffTime|I
@@ -1409,7 +1438,8 @@ TransporterConfig:
     mandateNotificationRescheduleInterval: Kernel.Utils.Common.secondsToNominalDiffTime|I
     mandateExecutionRescheduleInterval: Kernel.Utils.Common.secondsToNominalDiffTime|I
     driverFeeCalculationTime: Kernel.Utils.Common.secondsToNominalDiffTime <$> driverFeeCalculationTime|E
-    driverFeeCalculatorBatchGap: Kernel.Utils.Common.secondsToNominalDiffTime <$> driverFeeCalculatorBatchGap|E
+    driverFeeCalculatorBatchGap: Kernel.Utils.Common.secondsToNominalDiffTime <$>
+      driverFeeCalculatorBatchGap|E
     bankErrorExpiry: Kernel.Utils.Common.secondsToNominalDiffTime|I
     canSuvDowngradeToHatchback: fromMaybe False canSuvDowngradeToHatchback|E
     aadhaarImageResizeConfig: |-
@@ -1433,25 +1463,37 @@ TransporterConfig:
     dummyToLocation: |-
       fromMaybe Domain.Types.Location.dummyToLocationData ((\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< dummyToLocation)|E
     scheduleRideBufferTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
-    scheduledRideJobRescheduleTime: Kernel.Prelude.fromMaybe 300 (Kernel.Utils.Common.secondsToNominalDiffTime <$> scheduledRideJobRescheduleTime)|E
-    graceTimeForScheduledRidePickup: Kernel.Prelude.fromMaybe 300 (Kernel.Utils.Common.secondsToNominalDiffTime <$> graceTimeForScheduledRidePickup)|E
-    minmRentalAndScheduledBookingLeadTimeHours: fromMaybe 24 (Kernel.Types.Common.Hours <$> minmRentalAndScheduledBookingLeadTimeHours)|E
-    scheduledRideFilterExclusionThresholdHours: fromMaybe 2 (Kernel.Types.Common.Hours <$> scheduledRideFilterExclusionThresholdHours)|E
+    scheduledRideJobRescheduleTime: Kernel.Prelude.fromMaybe 300
+      (Kernel.Utils.Common.secondsToNominalDiffTime <$>
+      scheduledRideJobRescheduleTime)|E
+    graceTimeForScheduledRidePickup: Kernel.Prelude.fromMaybe 300
+      (Kernel.Utils.Common.secondsToNominalDiffTime <$>
+      graceTimeForScheduledRidePickup)|E
+    minmRentalAndScheduledBookingLeadTimeHours: fromMaybe 24
+      (Kernel.Types.Common.Hours <$>
+      minmRentalAndScheduledBookingLeadTimeHours)|E
+    scheduledRideFilterExclusionThresholdHours: fromMaybe 2
+      (Kernel.Types.Common.Hours <$>
+      scheduledRideFilterExclusionThresholdHours)|E
     exotelStatusCheckSchedulerDelay: maybe 120 (.getSeconds) exotelStatusCheckSchedulerDelay|E|E
-    cachedDevicesOSForSearchRequest: maybe [] (mapMaybe (readMaybe . Data.Text.unpack)) cachedDevicesOSForSearchRequest|E
+    cachedDevicesOSForSearchRequest: maybe [] (mapMaybe (readMaybe .
+      Data.Text.unpack)) cachedDevicesOSForSearchRequest|E
     arrivalTimeBufferOfVehicle: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< arrivalTimeBufferOfVehicle|E
     demandHotspotsConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< demandHotspotsConfig|E
     scheduledRideSearchRepeatLimit: fromMaybe 10 scheduledRideSearchRepeatLimit|E
-    driverDrivenSearchReqExpiry: Kernel.Utils.Common.secondsToNominalDiffTime <$> driverDrivenSearchReqExpiry|E
+    driverDrivenSearchReqExpiry: Kernel.Utils.Common.secondsToNominalDiffTime <$>
+      driverDrivenSearchReqExpiry|E
     disableListScheduledBookingAPI: fromMaybe False disableListScheduledBookingAPI|E
     enableOverchargingBlocker: fromMaybe False enableOverchargingBlocker|E
     normalRideBulkLocUpdateBatchSize: fromMaybe 98 normalRideBulkLocUpdateBatchSize|E
     meterRideBulkLocUpdateBatchSize: fromMaybe 4 meterRideBulkLocUpdateBatchSize|E
     dynamicReferralCodeValidForMinutes: fromMaybe 60 dynamicReferralCodeValidForMinutes|E
     dynamicReferralCodeEnabled: fromMaybe False dynamicReferralCodeEnabled|E
-    aaEnabledClientSdkVersion: fromMaybe Storage.Queries.Transformers.TransporterConfig.fallBackVersionInText aaEnabledClientSdkVersion|E
+    aaEnabledClientSdkVersion: fromMaybe
+      Storage.Queries.Transformers.TransporterConfig.fallBackVersionInText
+      aaEnabledClientSdkVersion|E
     issueBreachConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachConfig|E
     gpsTollBehaviorWindowDays: gpsTollBehaviorWindowDays|E
@@ -1461,22 +1503,35 @@ TransporterConfig:
     recomputeDistanceThresholds: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< recomputeDistanceThresholds|E
     minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
-    allowedReferralEntities:  maybe [] (mapMaybe (readMaybe . Data.Text.unpack)) allowedReferralEntities|E
-    bulkWaiveOffLimit : fromMaybe 200 bulkWaiveOffLimit|E
+    allowedReferralEntities: maybe [] (mapMaybe (readMaybe . Data.Text.unpack))
+      allowedReferralEntities|E
+    bulkWaiveOffLimit: fromMaybe 200 bulkWaiveOffLimit|E
     requireRouteMappingInVehicle: fromMaybe False requireRouteMappingInVehicle|E
     enableExistingVehicleInBulkUpload: fromMaybe False enableExistingVehicleInBulkUpload|E
     isDriverNameMandatoryInBulkUpload: fromMaybe True isDriverNameMandatoryInBulkUpload|E
-    cancellationRateSlabConfig: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< cancellationRateSlabConfig|E
+    cancellationRateSlabConfig: (\val -> case Data.Aeson.fromJSON val of
+      Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<<
+      cancellationRateSlabConfig|E
     isMLBasedDynamicPricingEnabled: fromMaybe False isMLBasedDynamicPricingEnabled|E
-    analyticsConfig: Storage.Queries.Transformers.TransporterConfig.parseAnalyticsConfig merchantOperatingCityId|IM
-    driverWalletConfig: Storage.Queries.Transformers.TransporterConfig.parseDriverWalletConfig merchantOperatingCityId|IM
-    subscriptionConfig: Storage.Queries.Transformers.TransporterConfig.parseSubscriptionConfig merchantOperatingCityId|IM
-    taxConfig: Storage.Queries.Transformers.TransporterConfig.parseTaxConfig merchantOperatingCityId|IM
-    knowledgeCenterSopTypes: Storage.Queries.Transformers.TransporterConfig.parseKnowledgeCenterSopTypesConfig merchantOperatingCityId|IM
-    vehicleCategoryExcludedFromVerification: (mapMaybe (readMaybe . Data.Text.unpack)) <$> vehicleCategoryExcludedFromVerification|E
+    analyticsConfig: Storage.Queries.Transformers.TransporterConfig.parseAnalyticsConfig
+      merchantOperatingCityId|IM
+    driverWalletConfig: Storage.Queries.Transformers.TransporterConfig.parseDriverWalletConfig
+      merchantOperatingCityId|IM
+    subscriptionConfig: Storage.Queries.Transformers.TransporterConfig.parseSubscriptionConfig
+      merchantOperatingCityId|IM
+    taxConfig: Storage.Queries.Transformers.TransporterConfig.parseTaxConfig
+      merchantOperatingCityId|IM
+    invoiceConfig: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x ->
+      Just x; Data.Aeson.Error _ -> Nothing) =<< invoiceConfig|E
+    knowledgeCenterSopTypes: Storage.Queries.Transformers.TransporterConfig.parseKnowledgeCenterSopTypesConfig
+      merchantOperatingCityId|IM
+    vehicleCategoryExcludedFromVerification: (mapMaybe (readMaybe .
+      Data.Text.unpack)) <$> vehicleCategoryExcludedFromVerification|E
     sameRiderDriverRideCountLookbackDays: fromMaybe 7 sameRiderDriverRideCountLookbackDays|E
     sameRiderDriverRideCountThreshold: fromMaybe 2 sameRiderDriverRideCountThreshold|E
-    communicationChannelCharLimits: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< communicationChannelCharLimits|E
+    communicationChannelCharLimits: (\val -> case Data.Aeson.fromJSON val of
+      Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<<
+      communicationChannelCharLimits|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -1544,6 +1599,7 @@ TransporterConfig:
     subscriptionConfig: json
     feedbackNotificationConfig: json
     taxConfig: json
+    invoiceConfig: json
     knowledgeCenterSopTypes: json
     vehicleCategoryExcludedFromVerification: "text[]"
     minBaseFare: double precision
@@ -1681,7 +1737,13 @@ TransporterConfig:
     recentScheduledBookingsSafeLimit: "50"
     minDistanceForStopFcm: "100"
     allowedReferralEntities: "'{DRIVER}'"
-    recomputeDistanceThresholds: '''[{"estimatedDistanceUpper": 5000,"minThresholdPercentage": 40,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 10000,"minThresholdPercentage": 30,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 15000,"minThresholdPercentage": 20,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 9999999,"minThresholdPercentage": 10,"minThresholdDistance": 1000}]'' :: json'
+    recomputeDistanceThresholds: "'[{\"estimatedDistanceUpper\":
+      5000,\"minThresholdPercentage\": 40,\"minThresholdDistance\":
+      1000},{\"estimatedDistanceUpper\": 10000,\"minThresholdPercentage\":
+      30,\"minThresholdDistance\": 1000},{\"estimatedDistanceUpper\":
+      15000,\"minThresholdPercentage\": 20,\"minThresholdDistance\":
+      1000},{\"estimatedDistanceUpper\": 9999999,\"minThresholdPercentage\":
+      10,\"minThresholdDistance\": 1000}]' :: json"
     minThreshildForPassThroughDestination: "1000"
     enableOverchargingBlocker: "false"
     generateReferralCodeForFleet: "false"
@@ -1692,14 +1754,23 @@ TransporterConfig:
     onboardingDocsCountLimit: "50"
     liveEKD: "false"
     deactivateRCOnUnlink: "true"
-    aaEnabledClientSdkVersion : "'999.999.999'"
-    isAAEnabledForRecurring : "false"
-    disableDriverWhenUnlinkingVehicle : "true"
+    aaEnabledClientSdkVersion: "'999.999.999'"
+    isAAEnabledForRecurring: "false"
+    disableDriverWhenUnlinkingVehicle: "true"
     distanceWeightage: "20"
     driverCallingOption: "'AnonymousCall'"
-    driverWalletConfig:  '''{"enableDriverWallet": false, "driverWalletPayoutThreshold": 0, "gstPercentage": 0.0, "enableWalletPayout": false, "enableWalletTopup": false, "maxWalletPayoutsPerDay": null, "minWalletAmountForCashRides": null, "minimumWalletPayoutAmount": 0, "payoutCutOffDays": 7}'' :: json'
-    analyticsConfig: '''{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "enableFleetOperatorDashboardAnalytics": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null, "useDbForEarningAndMetrics": false}'' :: json'
-    subscriptionConfig:  '''{"prepaidSubscriptionThreshold": null,"fleetPrepaidSubscriptionThreshold": null}'' :: json'
+    driverWalletConfig: "'{\"enableDriverWallet\": false,
+      \"driverWalletPayoutThreshold\": 0, \"gstPercentage\": 0.0,
+      \"enableWalletPayout\": false, \"enableWalletTopup\": false,
+      \"maxWalletPayoutsPerDay\": null, \"minWalletAmountForCashRides\": null,
+      \"minimumWalletPayoutAmount\": 0, \"payoutCutOffDays\": 7}' :: json"
+    analyticsConfig: "'{\"weekStartMode\": 3, \"earningsWindowSize\": 7,
+      \"allowCacheDriverFlowStatus\": false,
+      \"enableFleetOperatorDashboardAnalytics\": false,
+      \"maxOnlineDurationDays\": 10, \"onlineDurationCalculateFrom\": null,
+      \"useDbForEarningAndMetrics\": false}' :: json"
+    subscriptionConfig: "'{\"prepaidSubscriptionThreshold\":
+      null,\"fleetPrepaidSubscriptionThreshold\": null}' :: json"
     enableMobileNumberValidation: "false"
     allowRcUnlinkWhenDriverOffline: "false"
     vehicleCategoryExcludedFromVerification: "'{TOTO}'"
@@ -1707,7 +1778,7 @@ TransporterConfig:
     enableSupportForSafety: "false"
     trackingShortUrlPattern: "'https://nammayatri.in/p/?vp={#vp#}&rideId='"
     dashboardMediaFileUrlPattern: "'https://nammayatri.in/p/<FILE_PATH>'"
-    knowledgeCenterSopTypes: '''[]'' :: json'
+    knowledgeCenterSopTypes: "'[]' :: json"
     allowFarePolicyUpdateBelowMinBaseFare: "true"
     driverSearchBlacklistDurationSeconds: "3600"
     driverRiderBlacklistDurationSeconds: "3600"
@@ -1799,7 +1870,8 @@ MerchantServiceConfig:
     serviceName: getServiceName
     configJSON: getConfigJSON
   fromTType:
-    serviceConfig: Storage.Queries.Transformers.MerchantServiceConfig.mkServiceConfig configJSON serviceName|EM
+    serviceConfig: Storage.Queries.Transformers.MerchantServiceConfig.mkServiceConfig
+      configJSON serviceName|EM
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
     - EXTRA_QUERY_FILE
@@ -1831,7 +1903,8 @@ MerchantClientConfig:
     serviceName: getServiceName
     configJSON: getConfigJSON
   fromTType:
-    clientServiceConfig: Storage.Queries.Transformers.MerchantClientConfig.mkServiceConfig configJSON serviceName|EM
+    clientServiceConfig: Storage.Queries.Transformers.MerchantClientConfig.mkServiceConfig
+      configJSON serviceName|EM
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
     - EXTRA_QUERY_FILE
@@ -1854,11 +1927,6 @@ MerchantPushNotification:
     id: "md5(random()::text || clock_timestamp()::text)::uuid"
   constraints:
     id: PrimaryKey
-    # key: PrimaryKey
-    # merchantOperatingCityId: PrimaryKey
-    # language: PrimaryKey
-    # tripCategory: PrimaryKey
-    # fcmSubCategory: PrimaryKey
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
@@ -1866,11 +1934,11 @@ MerchantPushNotification:
     findAllByMerchantOpCityIdAndMessageKey:
       kvFunction: findAllWithKV
       where:
-        and: [merchantOperatingCityId, key]
+        and: [ merchantOperatingCityId, key ]
     findAllByMerchantOpCityIdAndMessageKeyAndTripCategory:
       kvFunction: findAllWithKV
       where:
-        and: [merchantOperatingCityId, key, tripCategory]
+        and: [ merchantOperatingCityId, key, tripCategory ]
 
 RideRelatedNotificationConfig:
   tableName: ride_related_notification_config
@@ -1910,7 +1978,7 @@ RideRelatedNotificationConfig:
     findAllByMerchantOperatingCityIdAndTimeDiffEvent:
       kvFunction: findAllWithKV
       where:
-        and: [merchantOperatingCityId, timeDiffEvent]
+        and: [ merchantOperatingCityId, timeDiffEvent ]
 
 PayoutConfig:
   tableName: payout_config
@@ -1973,7 +2041,7 @@ PayoutConfig:
     findByMerchantOpCityIdAndIsPayoutEnabled:
       kvFunction: findAllWithKV
       where:
-        and: [merchantOperatingCityId, isPayoutEnabled]
+        and: [ merchantOperatingCityId, isPayoutEnabled ]
   types:
     D2DPayoutTypeEnum:
       enum: "WALLET,DIRECT_PAYOUT,NO_PAYOUT"
@@ -2023,11 +2091,11 @@ ScheduledPayoutConfig:
     findByMerchantOpCityIdAndCategory:
       kvFunction: findOneWithKV
       where:
-        and: [merchantOperatingCityId, payoutCategory]
+        and: [ merchantOperatingCityId, payoutCategory ]
     findAllByMerchantOpCityIdAndIsEnabled:
       kvFunction: findAllWithKV
       where:
-        and: [merchantOperatingCityId, isEnabled]
+        and: [ merchantOperatingCityId, isEnabled ]
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
       where: merchantOperatingCityId

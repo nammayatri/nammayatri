@@ -38,6 +38,7 @@ import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Location as DL
 import qualified Domain.Action.UI.MerchantPaymentMethod as DMPM
+import qualified Domain.SharedLogic.RideDiscount as RD
 import Domain.Types.Booking
 import Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -298,10 +299,21 @@ getEstimates :: Id DM.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingC
 getEstimates merchantId personId mocId searchRequestId isReferredRide = do
   mbSearchReq <- runInReplica $ QSR.findById searchRequestId
   estimateList <- runInReplica $ QEstimate.findAllBySRId searchRequestId
-  let sortedEstimates = sortByEstimatedFare estimateList
-      products = map (\e -> (show e.vehicleServiceTierType, e.estimatedFare)) sortedEstimates
+  let sortedEstimates = sortByEstimatedFare estimateList      
   riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = mocId.getId})
   let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
+      estimatesWithCtx =
+        map
+          ( \e ->
+              let mbBreakup = RD.parseProjectFareParamsBreakup $ (\eb -> (eb.title, eb.price.value.amount)) <$> e.estimateBreakupList
+                  offerBaseAmount = case mbBreakup of
+                    Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
+                    Nothing -> e.estimatedFare.amount
+                  offerBasePrice = mkPrice (Just e.estimatedFare.currency) offerBaseAmount
+               in (e, mbBreakup, offerBasePrice)
+          )
+          sortedEstimates
+      products = map (\(e, _, price) -> (show e.vehicleServiceTierType, price)) estimatesWithCtx
   productOffers <-
     if enableRideHailingOffers
       then
@@ -313,11 +325,13 @@ getEstimates merchantId personId mocId searchRequestId isReferredRide = do
             Right r -> pure r
       else pure []
   let offerMap = Map.fromList productOffers
-  estimates <- forM sortedEstimates $ \estimate -> do
+  estimates <- forM estimatesWithCtx $ \(estimate, mbBreakup, _) -> do
     let mbOfferResp = Map.lookup (show estimate.vehicleServiceTierType) offerMap
     mbOffer <- case mbOfferResp of
       Nothing -> pure Nothing
-      Just resp -> SOffer.mkCumulativeOfferResp mocId resp []
+      -- Pass the parsed breakup so the offer-response post-offer amount
+      -- reflects VAT redistribution via applyRideDiscount.
+      Just resp -> SOffer.mkCumulativeOfferResp mocId resp [] mbBreakup
     UEstimate.mkEstimateAPIEntity isReferredRide mbOffer estimate
   return . sortBy (compare `on` (.createdAt)) $ estimates
 

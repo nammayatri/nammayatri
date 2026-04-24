@@ -211,6 +211,20 @@ data QuoteBreakupTitle
   | NIGHT_CHARGES -- v2.1.0: night shift charges (spec name)
   | WAITING_CHARGES -- v2.1.0: waiting charges (spec name)
   | PARKING_CHARGES -- v2.1.0: parking charges (spec name)
+  | TOLL_FARE_TAX_EXCLUSIVE
+  | -- Canonical nine-tag fare-breakup contract: every BPP fare sum partitions
+    -- into three categories × {tax-exclusive, tax}. The ride portion is
+    -- split by whether the customer offer discount applies. Sum of the 6
+    -- must equal the BPP fare sum.
+    RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE
+  | RIDE_FARE_DISCOUNT_APPLICABLE_TAX
+  | RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE
+  | RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX
+  | TOLL_FARE_TAX
+  | CANCELLATION_FEE_TAX_EXCLUSIVE
+  | CANCELLATION_TAX
+  | PARKING_CHARGE_TAX_EXCLUSIVE
+  | PARKING_CHARGE_TAX
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data CancellationReasonId

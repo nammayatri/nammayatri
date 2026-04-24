@@ -42,9 +42,9 @@ import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
-import qualified Storage.Cac.TransporterConfig as SCT
 import qualified SharedLogic.Finance.EInvoice
 import SharedLogic.Finance.Wallet (computeTdsRateReason)
+import qualified Storage.Cac.TransporterConfig as SCT
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.SubscriptionPurchase as QSP
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
@@ -601,7 +601,6 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                                         quantity = 1,
                                         unitPrice = lineItemNetAmount,
                                         lineTotal = lineItemNetAmount,
-                                        invoiceLineItemType = SubscriptionPlanFee,
                                         isExternalCharge = False
                                       }
                                 else Nothing,
@@ -613,7 +612,6 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                                         quantity = 1,
                                         unitPrice = lineItemGstAmount,
                                         lineTotal = lineItemGstAmount,
-                                        invoiceLineItemType = GST,
                                         isExternalCharge = False
                                       }
                                 else Nothing
@@ -638,8 +636,9 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
               -- swallowed so the process is never crashed by a GSP failure.
               fork "generate B2B e-invoice" $
                 SharedLogic.Finance.EInvoice.generateEInvoiceForInvoice inv
-                  `catch` (\(e :: SomeException) ->
-                             logError $ "GSTEInvoice: background fork failed: " <> show e)
+                  `catch` ( \(e :: SomeException) ->
+                              logError $ "GSTEInvoice: background fork failed: " <> show e
+                          )
               pure (Just inv.id)
             Left _err -> pure Nothing
         _ -> pure Nothing

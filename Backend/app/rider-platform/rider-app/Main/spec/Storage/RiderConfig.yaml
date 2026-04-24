@@ -68,6 +68,9 @@ RiderConfig:
       trackingLinkRequired: Bool
       tracePollingIntervalSeconds: Maybe Seconds
       stateCode: Maybe Text
+    RiderInvoiceConfig:
+      derive: "Eq, Read"
+      ledgerEmitEnabled: Bool
 
   tableName: rider_config
 
@@ -238,6 +241,7 @@ RiderConfig:
     maxLiveVehiclesPerRoute: Int
     maxAlternateRouteVehicles: Int
     includeVehiclesWithNoEta: Maybe Bool
+    invoiceConfig: Maybe RiderInvoiceConfig
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -295,6 +299,7 @@ RiderConfig:
     staticCustomerIdThresholdDay: Maybe Day
     duesExcludedPaymentPurposes: "Maybe [Text]"
     externalSOSConfig: Maybe Value
+    invoiceConfig: Maybe Value
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -359,6 +364,7 @@ RiderConfig:
     kafkaTopicName: fromMaybe "gps-data" kafkaTopicName|E
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
     externalSOSConfig: externalSOSConfig >>= Kernel.Utils.JSON.valueToMaybe|E
+    invoiceConfig: invoiceConfig >>= Kernel.Utils.JSON.valueToMaybe|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -415,6 +421,7 @@ RiderConfig:
     kafkaTopicName: Just kafkaTopicName|E
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
     externalSOSConfig: (externalSOSConfig >>= Just . Data.Aeson.toJSON)|E
+    invoiceConfig: (invoiceConfig >>= Just . Data.Aeson.toJSON)|E
 
 
   default:
@@ -516,6 +523,7 @@ RiderConfig:
     staticCustomerIdThresholdDay: date
     duesExcludedPaymentPurposes: text []
     externalSOSConfig: "json"
+    invoiceConfig: "json"
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE

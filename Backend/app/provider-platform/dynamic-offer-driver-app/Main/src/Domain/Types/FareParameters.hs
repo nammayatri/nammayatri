@@ -69,13 +69,23 @@ data FareParameters = FareParameters
     -- | Payment processing fee (blended or method-specific)
     -- TODO: Will be enhanced when payment context is available
     paymentProcessingFee :: Maybe HighPrecMoney,
-    -- | Whether this ride uses VAT tax model (instead of GST).
-    -- Set by calculateFareParametersV2: Just True when fare_policy.vatChargeConfig is present.
-    -- Nothing or Just False = GST (default). Used downstream (EndRide, invoicing).
     isVatTaxType :: Maybe Bool,
-    -- | VAT on toll charges calculated based on toll_tax_charge_config in fare_policy
-    -- Populated by calculateFareParametersV2. Included in pureFareSum.
-    tollVat :: Maybe HighPrecMoney
+    -- | Canonical eight-slot fare-breakup partition, populated by
+    --   'SharedLogic.FareCalculator.calculateFareParameters'. Sum of
+    --   the 10 equals the fare sum. Ride is split by whether the
+    --   customer offer discount applies; toll and cancellation are
+    --   separate buckets. Each slot is 'Maybe' so pure GST mode
+    --   (no V2 classification) can leave them 'Nothing'.
+    discountApplicableRideFareTaxExclusive :: Maybe HighPrecMoney,
+    discountApplicableRideFareTax :: Maybe HighPrecMoney,
+    nonDiscountApplicableRideFareTaxExclusive :: Maybe HighPrecMoney,
+    nonDiscountApplicableRideFareTax :: Maybe HighPrecMoney,
+    tollFareTaxExclusive :: Maybe HighPrecMoney,
+    tollFareTax :: Maybe HighPrecMoney,
+    cancellationFeeTaxExclusive :: Maybe HighPrecMoney,
+    cancellationTax :: Maybe HighPrecMoney,
+    parkingChargeTaxExclusive :: Maybe HighPrecMoney,
+    parkingChargeTax :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 

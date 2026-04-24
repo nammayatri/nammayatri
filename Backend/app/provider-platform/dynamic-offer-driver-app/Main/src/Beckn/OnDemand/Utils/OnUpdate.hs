@@ -141,7 +141,17 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.RETURN_FEE),
                      Just (show Enums.BOOTH_CHARGE),
                      Just (show Enums.RIDE_VAT),
-                     Just (show Enums.TOLL_VAT)
+                     Just (show Enums.TOLL_VAT),
+                     Just (show Enums.TOLL_FARE_TAX_EXCLUSIVE),
+                     Just (show Enums.TOLL_FARE_TAX),
+                     Just (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE),
+                     Just (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX),
+                     Just (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE),
+                     Just (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX),
+                     Just (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE),
+                     Just (show Enums.CANCELLATION_TAX),
+                     Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE),
+                     Just (show Enums.PARKING_CHARGE_TAX)
                    ]
         DFParams.Slab ->
           title
@@ -169,7 +179,17 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.RETURN_FEE),
                      Just (show Enums.BOOTH_CHARGE),
                      Just (show Enums.RIDE_VAT),
-                     Just (show Enums.TOLL_VAT)
+                     Just (show Enums.TOLL_VAT),
+                     Just (show Enums.TOLL_FARE_TAX_EXCLUSIVE),
+                     Just (show Enums.TOLL_FARE_TAX),
+                     Just (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE),
+                     Just (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX),
+                     Just (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE),
+                     Just (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX),
+                     Just (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE),
+                     Just (show Enums.CANCELLATION_TAX),
+                     Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE),
+                     Just (show Enums.PARKING_CHARGE_TAX)
                    ]
         DFParams.Rental ->
           title
@@ -195,7 +215,17 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.RETURN_FEE),
                      Just (show Enums.BOOTH_CHARGE),
                      Just (show Enums.RIDE_VAT),
-                     Just (show Enums.TOLL_VAT)
+                     Just (show Enums.TOLL_VAT),
+                     Just (show Enums.TOLL_FARE_TAX_EXCLUSIVE),
+                     Just (show Enums.TOLL_FARE_TAX),
+                     Just (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE),
+                     Just (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX),
+                     Just (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE),
+                     Just (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX),
+                     Just (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE),
+                     Just (show Enums.CANCELLATION_TAX),
+                     Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE),
+                     Just (show Enums.PARKING_CHARGE_TAX)
                    ]
         DFParams.InterCity ->
           title
@@ -222,7 +252,17 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.PERSONAL_DISCOUNT),
                      Just (show Enums.PARKING_CHARGE),
                      Just (show Enums.RIDE_VAT),
-                     Just (show Enums.TOLL_VAT)
+                     Just (show Enums.TOLL_VAT),
+                     Just (show Enums.TOLL_FARE_TAX_EXCLUSIVE),
+                     Just (show Enums.TOLL_FARE_TAX),
+                     Just (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE),
+                     Just (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX),
+                     Just (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE),
+                     Just (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX),
+                     Just (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE),
+                     Just (show Enums.CANCELLATION_TAX),
+                     Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE),
+                     Just (show Enums.PARKING_CHARGE_TAX)
                    ]
         _ -> True
 

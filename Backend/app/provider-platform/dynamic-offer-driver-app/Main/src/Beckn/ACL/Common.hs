@@ -127,7 +127,17 @@ filterRequiredBreakups fParamsType breakup = do
                  "DRIVER_ALLOWANCE",
                  "AIRPORT_CONVENIENCE_FEE",
                  "RIDE_VAT",
-                 "TOLL_VAT"
+                 "TOLL_VAT",
+                 "TOLL_FARE_TAX_EXCLUSIVE",
+                 "TOLL_FARE_TAX",
+                 "RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE",
+                 "RIDE_FARE_DISCOUNT_APPLICABLE_TAX",
+                 "RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE",
+                 "RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX",
+                 "CANCELLATION_FEE_TAX_EXCLUSIVE",
+                 "CANCELLATION_TAX",
+                 "PARKING_CHARGE_TAX_EXCLUSIVE",
+                 "PARKING_CHARGE_TAX"
                ]
     DFParams.Slab ->
       title
@@ -150,7 +160,17 @@ filterRequiredBreakups fParamsType breakup = do
                  "RETURN_FEE",
                  "BOOTH_CHARGE",
                  "RIDE_VAT",
-                 "TOLL_VAT"
+                 "TOLL_VAT",
+                 "TOLL_FARE_TAX_EXCLUSIVE",
+                 "TOLL_FARE_TAX",
+                 "RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE",
+                 "RIDE_FARE_DISCOUNT_APPLICABLE_TAX",
+                 "RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE",
+                 "RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX",
+                 "CANCELLATION_FEE_TAX_EXCLUSIVE",
+                 "CANCELLATION_TAX",
+                 "PARKING_CHARGE_TAX_EXCLUSIVE",
+                 "PARKING_CHARGE_TAX"
                ]
     DFParams.Rental ->
       title
@@ -173,7 +193,17 @@ filterRequiredBreakups fParamsType breakup = do
                  "RETURN_FEE",
                  "BOOTH_CHARGE",
                  "RIDE_VAT",
-                 "TOLL_VAT"
+                 "TOLL_VAT",
+                 "TOLL_FARE_TAX_EXCLUSIVE",
+                 "TOLL_FARE_TAX",
+                 "RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE",
+                 "RIDE_FARE_DISCOUNT_APPLICABLE_TAX",
+                 "RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE",
+                 "RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX",
+                 "CANCELLATION_FEE_TAX_EXCLUSIVE",
+                 "CANCELLATION_TAX",
+                 "PARKING_CHARGE_TAX_EXCLUSIVE",
+                 "PARKING_CHARGE_TAX"
                ]
     DFParams.InterCity ->
       title
@@ -197,7 +227,17 @@ filterRequiredBreakups fParamsType breakup = do
                  "RETURN_FEE",
                  "BOOTH_CHARGE",
                  "RIDE_VAT",
-                 "TOLL_VAT"
+                 "TOLL_VAT",
+                 "TOLL_FARE_TAX_EXCLUSIVE",
+                 "TOLL_FARE_TAX",
+                 "RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE",
+                 "RIDE_FARE_DISCOUNT_APPLICABLE_TAX",
+                 "RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE",
+                 "RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX",
+                 "CANCELLATION_FEE_TAX_EXCLUSIVE",
+                 "CANCELLATION_TAX",
+                 "PARKING_CHARGE_TAX_EXCLUSIVE",
+                 "PARKING_CHARGE_TAX"
                ]
     _ -> True
 

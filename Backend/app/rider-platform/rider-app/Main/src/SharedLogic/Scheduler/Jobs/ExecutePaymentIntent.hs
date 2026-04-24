@@ -15,6 +15,8 @@
 module SharedLogic.Scheduler.Jobs.ExecutePaymentIntent where
 
 import qualified Data.HashMap.Strict as HM
+import qualified Domain.SharedLogic.RideDiscount as RD
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.OfferEntity as DOfferEntity
 import qualified Domain.Types.Ride as DRide
 import Kernel.Beam.Functions
@@ -39,6 +41,7 @@ import SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.OfferEntity as QOfferEntity
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
@@ -109,20 +112,33 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             -- Use ledger entry IDs from Redis if available, otherwise no existing order
             let mbExistingOrderId = mbOrderId
             -- ledgerInfo uses ride fare only (without tip) — tip has its own ledger entry via createTipLedger
+            rideFareBreakups <- QFareBreakup.findAllByEntityIdAndEntityType rideId.getId DFareBreakup.RIDE
+            -- ExecutePaymentIntent is the online-payment scheduler path → isOnline=True.
             let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId booking.merchantOperatingCityId.getId fare.currency True person.id.getId rideId.getId Nothing Nothing
-                ledgerInfo =
-                  Just $
+            mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups rideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount 0 ledgerCtx
+            let ledgerInfo =
+                  fromMaybe
                     SPayment.RidePaymentLedgerInfo
                       { rideFare = fare.amount - applicationFeeAmount - rideDiscountAmount,
-                        gstAmount = 0, -- TODO: extract GST from fare breakup
+                        gstAmount = 0,
+                        tollFare = 0,
+                        tollVatAmount = 0,
+                        parkingCharge = 0,
+                        parkingChargeVat = 0,
                         platformFee = applicationFeeAmount,
                         offerDiscountAmount = rideDiscountAmount,
                         cashbackPayoutAmount = ridePayoutAmount,
+                        rideVatAbsorbedOnDiscount = 0,
                         financeCtx = ledgerCtx
                       }
-            mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId booking.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq ledgerInfo
+                    mbLedgerInfo
+            logDebug $ "makePaymentIntent (execute-payment-intent): breakups=" <> show rideFareBreakups <> " discount=" <> show rideDiscountAmount <> " payout=" <> show ridePayoutAmount <> " platformFee=" <> show applicationFeeAmount <> " -> ledgerInfo=" <> show ledgerInfo
+            mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId booking.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq (Just ledgerInfo)
+            let discountApplicableFareAmountTaxIncl = case RD.parseProjectFareParamsBreakup $ (\fb -> (fb.description, fb.amount.amount)) <$> rideFareBreakups of
+                  Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
+                  Nothing -> fareWithTip.amount
             case mbPaymentIntentResp of
-              Nothing -> SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId ride.id person booking.selectedOfferId fareWithTip.currency ledgerInfo booking
+              Nothing -> SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId ride.id person booking.selectedOfferId fareWithTip.currency discountApplicableFareAmountTaxIncl rideDiscountAmount ledgerInfo booking
               Just paymentIntentResp -> do
                 offerStatsInput <- buildOfferStatsInput person
                 paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.RideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment booking.riderId offerStatsInput

@@ -168,7 +168,7 @@ accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterC
           then do
             mbPanCard <- QPanCard.findByDriverId ride.driverId
             mbDriverInfo <- QDI.findById (cast ride.driverId)
-            ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig
+            ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True
             result <- runFinance ctx $ do
               _ <- transfer OwnerLiability OwnerExpense penaltyAmount walletReferenceDriverCancellationCharges
               invoice
@@ -180,7 +180,7 @@ accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterC
                     issuedToAddress = Nothing,
                     gstBreakdown = Nothing,
                     lineItems =
-                      [ InvoiceLineItem {description = "Driver Cancellation Penalty", quantity = 1, unitPrice = penaltyAmount, lineTotal = penaltyAmount, isExternalCharge = False, invoiceLineItemType = DriverCancellationPenalty}
+                      [ InvoiceLineItem {description = "Driver Cancellation Penalty", quantity = 1, unitPrice = penaltyAmount, lineTotal = penaltyAmount, isExternalCharge = False}
                       ],
                     isVat = False,
                     issuedToTaxNo = Nothing,

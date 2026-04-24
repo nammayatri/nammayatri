@@ -167,6 +167,7 @@ data FareChargeComponent
   | LuggageChargeComponent
   | PlatformFeeComponent
   | CustomerCancellationChargeComponent
+  | CustomerExtraFeeComponent
   | -- Progressive details
     DeadKmFareComponent
   | ExtraKmFareComponent

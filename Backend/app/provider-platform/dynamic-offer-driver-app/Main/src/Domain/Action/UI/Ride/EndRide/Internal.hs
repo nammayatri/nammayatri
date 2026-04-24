@@ -54,6 +54,7 @@ import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.Plan as Plan
+import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.CancellationCharges as DCC
 import qualified Domain.Types.CancellationDuesDetails as DCDD
@@ -77,7 +78,7 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.RiderDetails as RD
 import Domain.Types.SubscriptionConfig as DSC
 import qualified Domain.Types.SubscriptionPurchase as DSP
-import Domain.Types.TransporterConfig
+import Domain.Types.TransporterConfig hiding (InvoiceConfig)
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Variant
 import qualified Domain.Types.VendorFee as DVF
@@ -103,7 +104,7 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), InvoiceLineItemType (..), invoice, runFinance, transfer, transfer_)
+import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), invoice, runFinance, transfer, transfer_)
 import qualified Lib.Finance.Domain.Types.Invoice as Invoice
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler.Environment (JobCreatorEnv)
@@ -120,6 +121,7 @@ import SharedLogic.DriverFee (calculatePlatformFeeAttr)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
+import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
 import SharedLogic.Finance.Prepaid
 import SharedLogic.Finance.Wallet
@@ -473,12 +475,47 @@ createDriverWalletTransaction ::
 createDriverWalletTransaction ride booking fareParams driverInfo transporterConfig mbDriver = do
   let isVat = fromMaybe False fareParams.isVatTaxType
       totalFare = fromMaybe 0 ride.fare
-      taxAmount = fromMaybe 0 fareParams.govtCharges -- GST or VAT (merged by FareCalculatorV2)
+      rawTaxAmount = fromMaybe 0 fareParams.govtCharges -- GST or VAT (merged by FareCalculatorV2), pre-discount
       tollAmount = fromMaybe 0 fareParams.tollCharges
-      tollVatAmount = fromMaybe 0 fareParams.tollVat
+      tollVatAmount = fromMaybe 0 fareParams.tollFareTax -- discount does NOT apply to toll, so not scaled
       parkingAmount = fromMaybe 0 fareParams.parkingCharge
+      parkingVatAmount = fromMaybe 0 fareParams.parkingChargeTax
       commissionAmount = fromMaybe 0 (ride.commission <|> booking.commission)
-      baseFare = totalFare - taxAmount - tollAmount - tollVatAmount - parkingAmount
+      mbProjectedBreakup = FC.projectFareParamsBreakup fareParams
+      rawBaseFare = case mbProjectedBreakup of
+        Just b -> b.discountApplicableRideFareTaxExclusive + b.nonDiscountApplicableRideFareTaxExclusive
+        Nothing -> totalFare - rawTaxAmount - tollAmount - tollVatAmount - parkingAmount - parkingVatAmount
+      customerDiscountAmount = fromMaybe 0 ride.discountAmount
+      tipAmount = fromMaybe 0 ride.tipAmount
+      -- ServiceVAT (international): platform-service VAT input credit. The base
+      -- is the driver's NET taxable earning routed through the platform,
+      -- which differs by payment mode:
+      --   * online: full pre-discount fare flows BAP → BPP → driver; base is
+      --     totalFare − commission.
+      --   * cash + discount: only the BAP-subsidised discount amount actually
+      --     flows through BPP (the rider's cash stays with the driver), so
+      --     base is customerDiscountAmount − commission.
+      --   * cash, no discount: nothing flows through BPP, so VATInput is gated
+      --     off at post time ('isOnline || discount > 0'); base is effectively 0.
+      -- taxAmount = VAT the customer actually paid (post-discount only), used
+      -- for the VATOnline ledger leg. absorbedVat = VAT share inside the
+      -- discount that BAP absorbs on the driver's behalf; posted under its
+      -- own ref so it doesn't inflate the VATOnline cash path.
+      (taxAmount, baseFare, absorbedVat) = case mbProjectedBreakup of
+        Just b ->
+          let r = RD.applyRideDiscount b customerDiscountAmount
+              newBaseFare = r.postDiscountApplicableTaxExclusive + b.nonDiscountApplicableRideFareTaxExclusive
+           in (r.postDiscountApplicableTax, newBaseFare, r.rideVatAbsorbedOnDiscount)
+        Nothing ->
+          -- Legacy GST-mode fallback: preserve exact numerical behavior
+          -- (ratio on rawTaxAmount, no V2 split).
+          let inclusive = rawBaseFare + rawTaxAmount
+              ratio
+                | customerDiscountAmount <= 0 || inclusive <= 0 = 1
+                | otherwise = toRational (max 0 (inclusive - customerDiscountAmount)) / toRational inclusive
+              postTax = fromRational (toRational rawTaxAmount * ratio)
+              vatAbsorbed = rawTaxAmount - postTax
+           in (postTax, max 0 (rawBaseFare - customerDiscountAmount), vatAbsorbed)
 
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
     isOnline <- do
@@ -527,11 +564,23 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
           let amount = baseFareForTds * realToFrac rate -- tdsRate is already decimal (0.01 = 1%)
           if amount > 0 then Just amount else Nothing
 
-    merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist booking.merchantOperatingCityId.getId)
-    ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig
-    -- Toll line item includes tollVat (toll + tollVat combined as one external charge)
-    let tollWithVat = tollAmount + tollVatAmount
+    let serviceVatAmount =
+          case transporterConfig.taxConfig.serviceVatPercentage of
+            Just pct
+              | isVat ->
+                let baseForServiceVat =
+                      if isOnline
+                        then case mbProjectedBreakup of
+                          Just b -> RD.projectFareParamsBreakupTotal b - commissionAmount
+                          Nothing -> totalFare - commissionAmount
+                        else max 0 (customerDiscountAmount - commissionAmount)
+                 in HighPrecMoney (baseForServiceVat.getHighPrecMoney * (toRational pct / 100))
+            _ -> HighPrecMoney 0.0
 
+    merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist booking.merchantOperatingCityId.getId)
+    ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig isOnline
+    let tollWithVat = tollAmount + tollVatAmount
+    let parkingWithVat = parkingAmount + parkingVatAmount
     let invoiceConfig =
           InvoiceConfig
             { invoiceType = Invoice.Ride,
@@ -540,26 +589,32 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               issuedToName = booking.riderName,
               issuedToAddress = booking.fromLocation.address.fullAddress,
               lineItems =
-                catMaybes
-                  [ if baseFare > 0
-                      then Just InvoiceLineItem {description = "Base Fare", quantity = 1, unitPrice = baseFare, lineTotal = baseFare, invoiceLineItemType = BaseFare, isExternalCharge = False}
-                      else Nothing,
-                    if taxAmount > 0
-                      then Just InvoiceLineItem {description = "Tax", quantity = 1, unitPrice = taxAmount, lineTotal = taxAmount, invoiceLineItemType = Tax, isExternalCharge = False}
-                      else Nothing,
-                    if tollAmount > 0
-                      then Just InvoiceLineItem {description = "Toll Charges", quantity = 1, unitPrice = tollAmount, lineTotal = tollAmount, invoiceLineItemType = TollCharges, isExternalCharge = True}
-                      else Nothing,
-                    if tollVatAmount > 0
-                      then Just InvoiceLineItem {description = "Toll Charges Tax", quantity = 1, unitPrice = tollVatAmount, lineTotal = tollVatAmount, invoiceLineItemType = TollChargesTax, isExternalCharge = True}
-                      else Nothing,
-                    if parkingAmount > 0
-                      then Just InvoiceLineItem {description = "Parking Charges", quantity = 1, unitPrice = parkingAmount, lineTotal = parkingAmount, invoiceLineItemType = ParkingCharges, isExternalCharge = True}
-                      else Nothing,
-                    if commissionAmount > 0
-                      then Just InvoiceLineItem {description = "Platform Commission", quantity = 1, unitPrice = commissionAmount, lineTotal = commissionAmount, invoiceLineItemType = PlatformCommission, isExternalCharge = False}
-                      else Nothing
-                  ],
+                let clubVatInclusive = maybe False (.driverInvoiceLineItemsVatInclusive) transporterConfig.invoiceConfig
+                    rideInclusiveLine = rawBaseFare + rawTaxAmount
+                    tollInclusiveLine = tollAmount + tollVatAmount
+                    parkingInclusiveLine = parkingAmount + parkingVatAmount
+                    mkLine desc amt isExt = if amt > 0 then Just InvoiceLineItem {description = desc, quantity = 1, unitPrice = amt, lineTotal = amt, isExternalCharge = isExt} else Nothing
+                    mkDeductionLine desc amt = if amt > 0 then Just InvoiceLineItem {description = desc, quantity = 1, unitPrice = negate amt, lineTotal = negate amt, isExternalCharge = False} else Nothing
+                    rideAndTollLines =
+                      if clubVatInclusive
+                        then
+                          [ mkLine "Ride Fare (Incl. VAT)" rideInclusiveLine False,
+                            mkLine "Toll Fare (Incl. VAT)" tollInclusiveLine True,
+                            mkLine "Parking Charges (Incl. VAT)" parkingInclusiveLine True
+                          ]
+                        else
+                          [ mkLine "Base Fare" rawBaseFare False,
+                            mkLine "Tax" rawTaxAmount False,
+                            mkLine "Toll Charges" tollAmount True,
+                            mkLine "Toll Charges Tax" tollVatAmount True,
+                            mkLine "Parking Charges" parkingAmount True,
+                            mkLine "Parking Charges Tax" parkingVatAmount True
+                          ]
+                    commonLines =
+                      [ mkLine "Tip" tipAmount False,
+                        mkDeductionLine "Platform Commission" commissionAmount
+                      ]
+                 in catMaybes (rideAndTollLines <> commonLines),
               gstBreakdown =
                 computeGstBreakdownByPlace
                   transporterConfig.taxConfig.rideGst
@@ -567,40 +622,79 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                   booking.fromLocation.address.state
                   (Just $ show merchantOperatingCity.city)
                   booking.fromLocation.address.city
-                  taxAmount,
+                  (taxAmount + absorbedVat),
               isVat = isVat,
               issuedToTaxNo = Nothing, -- Ride invoice: Nothing. Commission/Subscription invoice: fleet's VAT/GST number
               issuedByTaxNo = Nothing -- populated from Merchant.gstin via FinanceCtx.merchantGstin in invoice()
             }
     let taxRefOnline = if isVat then walletReferenceVATOnline else walletReferenceGSTOnline
         taxRefCash = if isVat then walletReferenceVATCash else walletReferenceGSTCash
+        tdsRef = if isOnline then walletReferenceTDSDeductionOnline else walletReferenceTDSDeductionCash
+    -- Uniform accounting model — same ledger entries are posted regardless of
+    -- payment mode; for cash rides, the ride-earning + Tips entries are
+    -- immediately reversed so the net balance lands at 0 (driver got the
+    -- money from the rider directly; BPP's books didn't hold it). See the
+    -- module-level table at the top of this file for the full matrix.
     result <- runFinance ctx $ do
-      if isOnline
+      -- Ride-earning components. Online: 2-leg pass-through (BAP cash in via
+      -- BuyerExternal, then credited to driver wallet). Cash: single leg
+      -- BuyerControl → OwnerControl — dedicated tracking accounts so A/R and
+      -- driver wallet stay untouched for cash that flowed rider → driver
+      -- directly.
+      let postEarning (amt, ref) =
+            if isOnline
+              then do
+                transfer_ BuyerAsset BuyerExternal amt ref
+                void $ transfer BuyerExternal OwnerLiability amt ref
+              else void $ transfer BuyerControl OwnerControl amt ref
+      if isVat
         then do
-          -- Online: Asset(BUYER) -> External(BUYER) -> destination for each component
-          -- tollWithVat goes to driver wallet as one combined toll transfer
-          let taxDest = if isVat then OwnerLiability else GovtIndirect
-              onlineComponents =
-                [ (baseFare, walletReferenceBaseRide, OwnerLiability),
-                  (taxAmount, taxRefOnline, taxDest),
-                  (tollWithVat, walletReferenceTollCharges, OwnerLiability),
-                  (parkingAmount, walletReferenceParkingCharges, OwnerLiability)
+          let rideEarningComponents =
+                [ (baseFare, walletReferenceBaseRide),
+                  (taxAmount, if isOnline then taxRefOnline else taxRefCash),
+                  (tollWithVat, walletReferenceTollCharges),
+                  (parkingWithVat, walletReferenceParkingCharges)
                 ]
-          forM_ onlineComponents $ \(amt, ref, dest) -> do
-            transfer_ BuyerAsset BuyerExternal amt ref
-            transfer BuyerExternal dest amt ref
-          -- TDS: Liability(DRIVER/FLEET_OWNER) -> Liability(GOVERNMENT_DIRECT)
-          whenJust mbTdsAmount $ \tdsAmount ->
-            void $ transfer OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionOnline
+          forM_ rideEarningComponents postEarning
         else do
-          -- Cash: GST deducted from wallet to govt, VAT stays in driver wallet (no deduction)
-          unless isVat $
-            void $ transfer OwnerLiability GovtIndirect taxAmount taxRefCash
-          whenJust mbTdsAmount $ \tdsAmount ->
-            void $ transfer OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCash
-      -- Commission: Liability(DRIVER) -> Revenue(SELLER)
+          let rideEarningComponents =
+                [ (baseFare, walletReferenceBaseRide),
+                  (tollWithVat, walletReferenceTollCharges),
+                  (parkingWithVat, walletReferenceParkingCharges)
+                ]
+          forM_ rideEarningComponents postEarning
+          -- GST tax: online → BAP routes customer's GST to govt via BPP (2-leg);
+          --          cash   → driver remits cash-collected GST from wallet.
+          if isOnline
+            then do
+              transfer_ BuyerAsset BuyerExternal taxAmount taxRefOnline
+              void $ transfer BuyerExternal GovtIndirect taxAmount taxRefOnline
+            else void $ transfer OwnerLiability GovtIndirect taxAmount taxRefCash
+      -- TDS — driver wallet reduces in both modes (cash driver owes platform).
+      whenJust mbTdsAmount $ \tdsAmount ->
+        void $ transfer OwnerLiability GovtDirect tdsAmount tdsRef
+      -- Commission — same direction in both modes; ref split for reporting.
+      let commissionRef = if isOnline then walletReferenceCommissionOnline else walletReferenceCommissionCash
       when (commissionAmount > 0) $
-        void $ transfer OwnerLiability SellerRevenue commissionAmount walletReferenceCommission
+        void $ transfer OwnerLiability SellerRevenue commissionAmount commissionRef
+      -- VATInput — credits driver wallet, gated to online OR cash-with-discount.
+      when (isVat && serviceVatAmount > 0 && (isOnline || customerDiscountAmount > 0)) $
+        void $ transfer GovtExpense OwnerLiability serviceVatAmount walletReferenceVATInput
+      -- BAP subsidy — BAP remits to BPP in both modes (2-leg pass-through); credits driver wallet.
+      let discountsRef = if isOnline then walletReferenceDiscountsOnline else walletReferenceDiscountsCash
+      when (customerDiscountAmount > 0) $ do
+        let discountBase = max 0 (customerDiscountAmount - absorbedVat)
+        when (discountBase > 0) $ do
+          transfer_ BuyerAsset BuyerExternal discountBase discountsRef
+          void $ transfer BuyerExternal OwnerLiability discountBase discountsRef
+        when (absorbedVat > 0) $ do
+          transfer_ BuyerAsset BuyerExternal absorbedVat walletReferenceVATAbsorbedOnDiscount
+          void $ transfer BuyerExternal OwnerLiability absorbedVat walletReferenceVATAbsorbedOnDiscount
+      -- Tip — online: BuyerAsset → OwnerLiability (1 leg). Cash: Control.
+      when (tipAmount > 0) $
+        if isOnline
+          then void $ transfer BuyerAsset OwnerLiability tipAmount walletReferenceTips
+          else void $ transfer BuyerControl OwnerControl tipAmount walletReferenceTips
       -- Invoice is created inside FinanceM using auto-collected entry IDs
       invoice invoiceConfig
     case result of
