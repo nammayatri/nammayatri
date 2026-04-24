@@ -3,7 +3,6 @@
 module Domain.Action.Dashboard.Sos where
 
 import qualified API.Types.RiderPlatform.Management.Sos
-import qualified API.Types.UI.Sos as UISos
 import qualified Dashboard.Common
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
@@ -12,8 +11,9 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
-import Domain.Action.UI.Profile () -- HasEmergencyContactHandle instance
-import qualified Safety.Domain.Action.UI.PersonDefaultEmergencyNumber as EmergencyLib
+import Domain.Action.UI.Profile ()
+-- HasEmergencyContactHandle instance
+
 import qualified Domain.Action.UI.Sos as Sos
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -35,6 +35,8 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import qualified Safety.API.Types.UI.Sos as UISos
+import qualified Safety.Domain.Action.UI.PersonDefaultEmergencyNumber as EmergencyLib
 import qualified Safety.Domain.Action.UI.Sos as SafetySos
 import qualified Safety.Domain.Types.Common as SafetyDCommon
 import qualified Safety.Domain.Types.Sos as SafetyDSos
@@ -60,7 +62,7 @@ getSosTracking _merchantShortId _opCity sosId = do
   sosTrackingRateLimitOptions <- asks (.sosTrackingRateLimitOptions)
   checkSlidingWindowLimitWithOptions (sosDashboardHitsCountKey sosId) sosTrackingRateLimitOptions
   let sosId' = Kernel.Types.Id.cast @Dashboard.Common.Sos @SafetyDSos.Sos sosId
-  res <- Sos.getSosTracking sosId'
+  res <- SafetySos.sosTracking sosId'
   pure $ convertToApiRes res
 
 getSosDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Sos -> Environment.Flow API.Types.RiderPlatform.Management.Sos.SosDetailsMaybeRes)
@@ -188,7 +190,8 @@ callExternalSOS sosId mbComments = do
           customerLocation <- getCustomerLocation rideIdForLoc mbRide
           emergencyContacts <- EmergencyLib.getEmergencyContacts (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId, merchantId)
           merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-          externalSOSDetails <- Sos.buildExternalSOSDetails (mkSosReq sos customerLocation) person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig mbComments (Just sos.id)
+          personData <- Sos.riderGetPersonData sos.personId
+          externalSOSDetails <- Sos.buildExternalSOSDetails (mkSosReq sos customerLocation) person personData sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity mbComments (Just sos.id)
           initialRes <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
           unless initialRes.success $
             throwError $ InternalError (fromMaybe "External SOS call failed" initialRes.errorMessage)
@@ -254,7 +257,7 @@ callExternalSOS sosId mbComments = do
     mkSosReq sos customerLoc =
       UISos.SosReq
         { flow = sos.flow,
-          rideId = Kernel.Types.Id.cast @SafetyDCommon.Ride @DRide.Ride <$> sos.rideId,
+          rideId = sos.rideId,
           isRideEnded = Nothing,
           sendPNOnPostRideSOS = Nothing,
           notifyAllContacts = Nothing,
@@ -283,8 +286,8 @@ postSosErssStatusUpdate _merchantShortId _opCity req = do
       >>= fromMaybeM (InvalidRequest $ "No SOS found for signal ID: " <> req.idErss)
 
   let newStatus = req.currentStatus
-      newEntry = Sos.ExternalStatusEntry {status = newStatus, idErss = req.idErss, lastUpdatedTime = req.lastUpdatedTime}
-      existingHistory = maybe [] (\h -> fromMaybe [] (A.decode (LBS.fromStrict $ TE.encodeUtf8 h))) sosDetails.externalStatusHistory :: [Sos.ExternalStatusEntry]
+      newEntry = SafetySos.ExternalStatusEntry {status = newStatus, idErss = req.idErss, lastUpdatedTime = req.lastUpdatedTime}
+      existingHistory = maybe [] (\h -> fromMaybe [] (A.decode (LBS.fromStrict $ TE.encodeUtf8 h))) sosDetails.externalStatusHistory :: [SafetySos.ExternalStatusEntry]
       updatedHistory = existingHistory <> [newEntry]
       updatedHistoryJson = Just $ TE.decodeUtf8 $ LBS.toStrict $ A.encode updatedHistory
 

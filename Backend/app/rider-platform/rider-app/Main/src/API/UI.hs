@@ -49,7 +49,6 @@ import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.RiderLocation as RiderLocation
 import qualified API.Action.UI.SocialLogin as SocialLogin
-import qualified API.Action.UI.Sos as SosApi
 import qualified API.Action.UI.TicketKapture as TicketKapture
 import qualified API.Action.UI.TicketService as TicketService
 import qualified API.Action.UI.TrackRoute as TrackRoute
@@ -141,7 +140,6 @@ type API =
            :<|> Invoice.API
            :<|> PriceBreakup.API
            :<|> FollowRide.API
-           :<|> SosApi.API
            :<|> FRFSTicketService.API
            :<|> Cac.API
            :<|> CustomerReferral.API
@@ -220,7 +218,6 @@ handler =
     :<|> Invoice.handler
     :<|> PriceBreakup.handler
     :<|> FollowRide.handler
-    :<|> SosApi.handler
     :<|> FRFSTicketService.handler
     :<|> Cac.handler
     :<|> CustomerReferral.handler

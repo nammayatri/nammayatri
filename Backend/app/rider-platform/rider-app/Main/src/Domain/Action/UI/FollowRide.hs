@@ -2,8 +2,9 @@ module Domain.Action.UI.FollowRide where
 
 import API.Types.UI.FollowRide
 import qualified Domain.Action.UI.Booking as DAB
-import Domain.Action.UI.Profile () -- HasEmergencyContactHandle instance
-import qualified Safety.Domain.Action.UI.PersonDefaultEmergencyNumber as EmergencyLib
+import Domain.Action.UI.Profile ()
+-- HasEmergencyContactHandle instance
+
 import Domain.Types.Booking
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
@@ -18,6 +19,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Safety.Domain.Action.UI.PersonDefaultEmergencyNumber as EmergencyLib
 import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SLPEN

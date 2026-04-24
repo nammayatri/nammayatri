@@ -966,7 +966,6 @@ library
       API.Action.UI.Reels
       API.Action.UI.ReferralPayout
       API.Action.UI.SocialLogin
-      API.Action.UI.Sos
       API.Action.UI.SpecialLocation
       API.Action.UI.SpecialLocationWarrior
       API.Action.UI.SpecialZoneQueue
@@ -1038,7 +1037,6 @@ library
       API.Types.UI.Reels
       API.Types.UI.ReferralPayout
       API.Types.UI.SocialLogin
-      API.Types.UI.Sos
       API.Types.UI.SpecialLocationWarrior
       API.Types.UI.SpecialZoneQueue
       API.Types.UI.StclMembership

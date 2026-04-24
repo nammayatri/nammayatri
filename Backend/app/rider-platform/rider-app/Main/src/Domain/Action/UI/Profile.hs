@@ -620,18 +620,18 @@ riderHandleAfterPut personId newList oldList =
     decOld <- mapM decrypt oldList
     let oldMobileNumbers = (.mobileNumber) <$> decOld
         newAPIList = flip map decNew $ \personEN ->
-              EmergencyAPI.EmergencyContact
-                { name = personEN.name,
-                  mobileCountryCode = personEN.mobileCountryCode,
-                  mobileNumber = personEN.mobileNumber,
-                  priority = personEN.priority,
-                  contactPersonId = cast <$> personEN.contactPersonId,
-                  merchantId = cast <$> personEN.merchantId,
-                  enableForFollowing = personEN.enableForFollowing,
-                  enableForShareRide = personEN.enableForShareRide,
-                  shareTripWithEmergencyContactOption = personEN.shareTripWithEmergencyContactOption,
-                  onRide = Nothing
-                }
+          EmergencyAPI.EmergencyContact
+            { name = personEN.name,
+              mobileCountryCode = personEN.mobileCountryCode,
+              mobileNumber = personEN.mobileNumber,
+              priority = personEN.priority,
+              contactPersonId = cast <$> personEN.contactPersonId,
+              merchantId = cast <$> personEN.merchantId,
+              enableForFollowing = personEN.enableForFollowing,
+              enableForShareRide = personEN.enableForShareRide,
+              shareTripWithEmergencyContactOption = personEN.shareTripWithEmergencyContactOption,
+              onRide = Nothing
+            }
     person <- runInReplica $ QPerson.findById (cast personId) >>= fromMaybeM (PersonNotFound (personId.getId))
     riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
     buildSmsReq <-

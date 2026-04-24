@@ -15,7 +15,6 @@
 
 module SharedLogic.PersonDefaultEmergencyNumber where
 
-import qualified Safety.API.Types.UI.PersonDefaultEmergencyNumber as EmergencyAPI
 import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.MerchantOperatingCity as MerchantOperatingCity
 import qualified Domain.Types.Person as Person
@@ -25,6 +24,7 @@ import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Safety.API.Types.UI.PersonDefaultEmergencyNumber as EmergencyAPI
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.NotificationSoundsConfig as SQNSC

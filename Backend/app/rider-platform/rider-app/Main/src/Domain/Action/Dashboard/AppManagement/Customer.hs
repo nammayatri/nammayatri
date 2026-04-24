@@ -4,10 +4,10 @@ module Domain.Action.Dashboard.AppManagement.Customer (postCustomerSosCreate, po
 
 import qualified API.Types.Dashboard.AppManagement.Endpoints.Customer as Customer
 import qualified API.Types.UI.DeletedPerson
-import qualified "this" API.Types.UI.Sos
 import qualified Domain.Action.UI.DeletedPerson
 import qualified Domain.Action.UI.SavedReqLocation as DSavedReqLocation
-import qualified Domain.Action.UI.Sos
+import Domain.Action.UI.Sos () -- HasSosHandle instance
+import qualified Safety.Domain.Action.UI.Sos as SharedSos
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
 import Domain.Types.SavedReqLocation (SavedReqLocationAPIEntity (..))
@@ -19,13 +19,14 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
+import qualified "shared-services" Safety.API.Types.UI.Sos
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Queries.SavedReqLocation as QSavedReqLocation
 
-postCustomerSosCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.UI.Sos.SosReq -> Environment.Flow API.Types.UI.Sos.SosRes)
+postCustomerSosCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Safety.API.Types.UI.Sos.SosReq -> Environment.Flow Safety.API.Types.UI.Sos.SosRes)
 postCustomerSosCreate merchantShortId _opCity personId req = do
   m <- findMerchantByShortId merchantShortId
-  Domain.Action.UI.Sos.postSosCreate (Just personId, m.id) req
+  SharedSos.sosCreate (personId, m.id) req
 
 postCustomerDeletedPerson :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.UI.DeletedPerson.DeletedPersonReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postCustomerDeletedPerson merchantShortId _opCity personId req = do
@@ -84,7 +85,7 @@ deleteCustomerSavedLocations merchantShortId _opCity personId tag = do
   _m <- findMerchantByShortId merchantShortId
   DSavedReqLocation.deleteSavedReqLocation personId tag
 
-instance Kernel.Types.HideSecrets.HideSecrets API.Types.UI.Sos.SosReq where
+instance Kernel.Types.HideSecrets.HideSecrets Safety.API.Types.UI.Sos.SosReq where
   hideSecrets = Kernel.Prelude.identity
 
 instance Kernel.Types.HideSecrets.HideSecrets API.Types.UI.DeletedPerson.DeletedPersonReq where

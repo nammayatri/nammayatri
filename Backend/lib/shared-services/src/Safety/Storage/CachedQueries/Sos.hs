@@ -13,6 +13,12 @@ module Safety.Storage.CachedQueries.Sos
     clearAllCacheKeys,
     cacheSosIdByRideId,
     updateStatusToNotResolvedIfPendingByRideId,
+    mockSosKey,
+    clearMockDrill,
+    setMockDrill,
+    sosTrackingHitsCountKey,
+    erssStatusUpdateHitsCountKey,
+    mkExternalSOSTraceKey,
   )
 where
 
@@ -71,3 +77,28 @@ updateStatusToNotResolvedIfPendingByRideId rideId = do
           ]
       ]
     clearAllCacheKeys sos
+
+-- | Redis key for the mock safety drill entity owned by a person.
+-- Value stored at this key is 'Safety.Domain.Types.Sos.SosMockDrill'.
+mockSosKey :: Id Common.Person -> Text
+mockSosKey personId = "mock-sos-" <> personId.getId
+
+-- | Delete the mock drill Redis entry (used on real SOS create, etc.).
+clearMockDrill :: (CacheFlow m r) => Id Common.Person -> m ()
+clearMockDrill personId = Hedis.del (mockSosKey personId)
+
+-- | Set / refresh the mock drill Redis entry. TTL matches rider's existing value (13400s ~ 3h 43m).
+setMockDrill :: (CacheFlow m r) => Id Common.Person -> DSos.SosMockDrill -> m ()
+setMockDrill personId drill = Hedis.setExp (mockSosKey personId) drill 13400
+
+-- | Rate-limit key for the /sos/{sosId}/tracking GET endpoint.
+sosTrackingHitsCountKey :: Id DSos.Sos -> Text
+sosTrackingHitsCountKey sosId = "SosTrackingHits:" <> sosId.getId <> ":hitsCount"
+
+-- | Rate-limit key for the /sos/erss/statusUpdate webhook (global, not per-SOS).
+erssStatusUpdateHitsCountKey :: Text
+erssStatusUpdateHitsCountKey = "ErssStatusUpdateHits:hitsCount"
+
+-- | Cache key for dedup/polling of external SOS trace pings.
+mkExternalSOSTraceKey :: Id DSos.Sos -> Text
+mkExternalSOSTraceKey sosId = "SOS:ExternalTrace:" <> sosId.getId
