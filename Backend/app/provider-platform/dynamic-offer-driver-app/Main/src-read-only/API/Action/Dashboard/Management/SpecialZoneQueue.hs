@@ -21,7 +21,7 @@ import Servant
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.ProviderPlatform.Management.SpecialZoneQueue.API)
-handler merchantId city = postSpecialZoneQueueTriggerNotify merchantId city :<|> getSpecialZoneQueueQueueStats merchantId city :<|> postSpecialZoneQueueManualQueueAdd merchantId city :<|> postSpecialZoneQueueManualQueueRemove merchantId city :<|> getSpecialZoneQueueDriverQueuePosition merchantId city
+handler merchantId city = postSpecialZoneQueueTriggerNotify merchantId city :<|> getSpecialZoneQueueQueueStats merchantId city :<|> postSpecialZoneQueueManualQueueAdd merchantId city :<|> postSpecialZoneQueueManualQueueRemove merchantId city :<|> getSpecialZoneQueueDriverQueuePosition merchantId city :<|> getSpecialZoneQueueDriverWalletBalance merchantId city
 
 postSpecialZoneQueueTriggerNotify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.SpecialZoneQueue.TriggerSpecialZoneQueueNotifyReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postSpecialZoneQueueTriggerNotify a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.SpecialZoneQueue.postSpecialZoneQueueTriggerNotify a3 a2 a1
@@ -37,3 +37,6 @@ postSpecialZoneQueueManualQueueRemove a3 a2 a1 = withDashboardFlowHandlerAPI $ D
 
 getSpecialZoneQueueDriverQueuePosition :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.SpecialZoneQueue.DriverQueuePositionRes)
 getSpecialZoneQueueDriverQueuePosition a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.SpecialZoneQueue.getSpecialZoneQueueDriverQueuePosition a5 a4 a3 a2 a1
+
+getSpecialZoneQueueDriverWalletBalance :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.SpecialZoneQueue.DriverWalletBalanceRes)
+getSpecialZoneQueueDriverWalletBalance a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.SpecialZoneQueue.getSpecialZoneQueueDriverWalletBalance a3 a2 a1

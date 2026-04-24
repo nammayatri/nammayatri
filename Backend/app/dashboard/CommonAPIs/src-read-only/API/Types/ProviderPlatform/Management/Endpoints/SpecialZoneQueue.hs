@@ -10,11 +10,16 @@ import qualified EulerHS.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import Servant
 import Servant.Client
 
 data DriverQueuePositionRes = DriverQueuePositionRes {queuePosition :: Kernel.Prelude.Maybe Kernel.Prelude.Int, queueSize :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DriverWalletBalanceRes = DriverWalletBalanceRes {walletBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -75,7 +80,7 @@ data VehicleQueueStats = VehicleQueueStats
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("specialZoneQueue" :> (PostSpecialZoneQueueTriggerNotify :<|> GetSpecialZoneQueueQueueStats :<|> PostSpecialZoneQueueManualQueueAdd :<|> PostSpecialZoneQueueManualQueueRemove :<|> GetSpecialZoneQueueDriverQueuePosition))
+type API = ("specialZoneQueue" :> (PostSpecialZoneQueueTriggerNotify :<|> GetSpecialZoneQueueQueueStats :<|> PostSpecialZoneQueueManualQueueAdd :<|> PostSpecialZoneQueueManualQueueRemove :<|> GetSpecialZoneQueueDriverQueuePosition :<|> GetSpecialZoneQueueDriverWalletBalance))
 
 type PostSpecialZoneQueueTriggerNotify = ("triggerNotify" :> ReqBody ('[JSON]) TriggerSpecialZoneQueueNotifyReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
@@ -94,18 +99,21 @@ type GetSpecialZoneQueueDriverQueuePosition =
       :> Get ('[JSON]) DriverQueuePositionRes
   )
 
+type GetSpecialZoneQueueDriverWalletBalance = ("driverWalletBalance" :> MandatoryQueryParam "driverId" Kernel.Prelude.Text :> Get ('[JSON]) DriverWalletBalanceRes)
+
 data SpecialZoneQueueAPIs = SpecialZoneQueueAPIs
   { postSpecialZoneQueueTriggerNotify :: (TriggerSpecialZoneQueueNotifyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     getSpecialZoneQueueQueueStats :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient SpecialZoneQueueStatsRes),
     postSpecialZoneQueueManualQueueAdd :: (ManualQueueAddReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     postSpecialZoneQueueManualQueueRemove :: (ManualQueueRemoveReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getSpecialZoneQueueDriverQueuePosition :: (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverQueuePositionRes)
+    getSpecialZoneQueueDriverQueuePosition :: (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverQueuePositionRes),
+    getSpecialZoneQueueDriverWalletBalance :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverWalletBalanceRes)
   }
 
 mkSpecialZoneQueueAPIs :: (Client EulerHS.Types.EulerClient API -> SpecialZoneQueueAPIs)
 mkSpecialZoneQueueAPIs specialZoneQueueClient = (SpecialZoneQueueAPIs {..})
   where
-    postSpecialZoneQueueTriggerNotify :<|> getSpecialZoneQueueQueueStats :<|> postSpecialZoneQueueManualQueueAdd :<|> postSpecialZoneQueueManualQueueRemove :<|> getSpecialZoneQueueDriverQueuePosition = specialZoneQueueClient
+    postSpecialZoneQueueTriggerNotify :<|> getSpecialZoneQueueQueueStats :<|> postSpecialZoneQueueManualQueueAdd :<|> postSpecialZoneQueueManualQueueRemove :<|> getSpecialZoneQueueDriverQueuePosition :<|> getSpecialZoneQueueDriverWalletBalance = specialZoneQueueClient
 
 data SpecialZoneQueueUserActionType
   = POST_SPECIAL_ZONE_QUEUE_TRIGGER_NOTIFY
@@ -113,6 +121,7 @@ data SpecialZoneQueueUserActionType
   | POST_SPECIAL_ZONE_QUEUE_MANUAL_QUEUE_ADD
   | POST_SPECIAL_ZONE_QUEUE_MANUAL_QUEUE_REMOVE
   | GET_SPECIAL_ZONE_QUEUE_DRIVER_QUEUE_POSITION
+  | GET_SPECIAL_ZONE_QUEUE_DRIVER_WALLET_BALANCE
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
