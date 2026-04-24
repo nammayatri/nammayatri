@@ -138,6 +138,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
@@ -1892,7 +1893,10 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                 mapConcurrently
                   (JMRouteServiceability.enrichBusStopETA ctx.integratedBPPConfig)
                   (fromMaybe [] singleBus.busData.eta_data)
-              let vehicleInfo =
+              mbSeatLayoutMapping <-
+                CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vno ctx.integratedBPPConfig.feedKey
+              let seatSelType = mbSeatLayoutMapping >>= (.seatSelectionType)
+                  vehicleInfo =
                     API.Types.UI.MultimodalConfirm.LiveVehicleInfo
                       { eta = Just enrichedEta,
                         number = vno,
@@ -1901,7 +1905,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                         serviceTierType = serviceTier,
                         serviceTierName = (.shortName) <$> frfsServiceTier,
                         serviceSubTypes = mbServiceSubTypes,
-                        vehicleTagNumber = mbVehicleTagNumber
+                        vehicleTagNumber = mbVehicleTagNumber,
+                        seatSelectionType = seatSelType
                       }
               pure $
                 ApiTypes.RouteServiceabilityResp

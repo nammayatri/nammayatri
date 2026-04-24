@@ -25,12 +25,12 @@ createMany = traverse_ create
 deleteByVehicleNoAndGtfsId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
 deleteByVehicleNoAndGtfsId vehicleNo gtfsId = do deleteWithKV [Se.And [Se.Is Beam.vehicleNo $ Se.Eq vehicleNo, Se.Is Beam.gtfsId $ Se.Eq gtfsId]]
 
-findAllByGtfsId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> m ([Domain.Types.VehicleSeatLayoutMapping.VehicleSeatLayoutMapping]))
+findAllByGtfsId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> m [Domain.Types.VehicleSeatLayoutMapping.VehicleSeatLayoutMapping])
 findAllByGtfsId limit offset gtfsId = do findAllWithOptionsKV [Se.Is Beam.gtfsId $ Se.Eq gtfsId] (Se.Desc Beam.createdAt) limit offset
 
 findAllBySeatLayoutId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout -> m ([Domain.Types.VehicleSeatLayoutMapping.VehicleSeatLayoutMapping]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout -> m [Domain.Types.VehicleSeatLayoutMapping.VehicleSeatLayoutMapping])
 findAllBySeatLayoutId limit offset seatLayoutId = do findAllWithOptionsKV [Se.Is Beam.seatLayoutId $ Se.Eq (Kernel.Types.Id.getId seatLayoutId)] (Se.Desc Beam.createdAt) limit offset
 
 findByVehicleNoAndGtfsId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.VehicleSeatLayoutMapping.VehicleSeatLayoutMapping))
@@ -54,6 +54,7 @@ updateByPrimaryKey (Domain.Types.VehicleSeatLayoutMapping.VehicleSeatLayoutMappi
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.seatLayoutId (Kernel.Types.Id.getId seatLayoutId),
+      Se.Set Beam.seatSelectionType seatSelectionType,
       Se.Set Beam.vehicleNo vehicleNo,
       Se.Set Beam.updatedAt _now
     ]
@@ -69,6 +70,7 @@ instance FromTType' Beam.VehicleSeatLayoutMapping Domain.Types.VehicleSeatLayout
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             seatLayoutId = Kernel.Types.Id.Id seatLayoutId,
+            seatSelectionType = seatSelectionType,
             vehicleNo = vehicleNo,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -82,6 +84,7 @@ instance ToTType' Beam.VehicleSeatLayoutMapping Domain.Types.VehicleSeatLayoutMa
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.seatLayoutId = Kernel.Types.Id.getId seatLayoutId,
+        Beam.seatSelectionType = seatSelectionType,
         Beam.vehicleNo = vehicleNo,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

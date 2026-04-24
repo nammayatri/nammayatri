@@ -730,8 +730,9 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId) quoteId mbIsMockPayment req = do
   -- Apply rate limit if non-empty seatIds are present in the request
   let hasNonEmptySeatIds =
         any (maybe False (not . null) . (.seatIds)) selectedQuoteCategories
-  when hasNonEmptySeatIds $ do
-    whenJust req.tripId $ \tripId -> do
+  let isBusTripFlow = quote.vehicleType == Spec.BUS && isJust req.tripId
+  when (hasNonEmptySeatIds || isBusTripFlow) $
+    whenJust req.tripId $ \tripId ->
       checkRateLimitSeatBooking (rateLimitKey personId.getId tripId)
 
   case integratedBppConfig.providerConfig of
