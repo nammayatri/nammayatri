@@ -233,7 +233,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         vehicleVariant = fromMaybe DVeh.SEDAN rideDetails.vehicleVariant,
         vehicleModel = fromMaybe initial rideDetails.vehicleModel,
         computedFare = roundToIntegral <$> ride.fare,
-        computedFareWithCurrency = flip PriceAPIEntity ride.currency <$> ride.fare,
+        computedFareWithCurrency = (\fare -> PriceAPIEntity (fromIntegral (round fare :: Integer)) ride.currency) <$> ride.fare,
         estimatedDuration = booking.estimatedDuration,
         actualDuration = roundToIntegral <$> (diffUTCTime <$> ride.tripEndTime <*> ride.tripStartTime),
         estimatedBaseFare = roundToIntegral estimatedBaseFare,
