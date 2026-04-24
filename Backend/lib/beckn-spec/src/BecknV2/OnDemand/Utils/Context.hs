@@ -179,7 +179,12 @@ validateCoreVersion :: (HasFlowEnv m r '["_version" ::: Text], Log m) => Spec.Co
 validateCoreVersion context = do
   supportedVersion <- asks (._version)
   version <- context.contextVersion & fromMaybeM (Error.InvalidRequest "Missing contextVersion")
-  unless (version == supportedVersion || version `elem` ["2.0.0", "2.1.0"]) $
+  unless (version == supportedVersion || version `elem` ["2.0.0", "2.1.0"]) $ do
+    logError $
+      "Unsupported core version in Beckn context. received="
+        <> version
+        <> ", supported="
+        <> supportedVersion
     throwError Error.UnsupportedCoreVer
 
 validateTTL :: (MonadFlow m, Log m) => Spec.Context -> m ()
