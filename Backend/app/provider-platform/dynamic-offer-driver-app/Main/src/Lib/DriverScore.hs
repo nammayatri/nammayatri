@@ -39,6 +39,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.BehaviorEngine.Orchestrator as BEOrch
+import qualified Lib.BehaviorTracker.BlockTracker as BT
 import qualified Lib.BehaviorTracker.Recorder as BTRecorder
 import qualified Lib.BehaviorTracker.Snapshot as BTSnap
 import qualified Lib.BehaviorTracker.Types as BTT
@@ -154,7 +155,11 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
   -- mbDriverStats <- DSQ.findById (cast driverId)
   driverStats <- getDriverStats currency distanceUnit mbDriverStats driverId rideFare
   cancellationRateExceeded <- overallCancellationRate driverStats merchantConfig
-  when (driverStats.totalRidesAssigned > merchantConfig.minRidesToUnlist && cancellationRateExceeded) $ do
+  -- Guard overall block with cooldown check to prevent re-blocking during cooldown period
+  dailyCooldownActive <- BT.isEntityInCooldown BTT.DRIVER driverId.getId "CancellationRateDaily"
+  weeklyCooldownActive <- BT.isEntityInCooldown BTT.DRIVER driverId.getId "CancellationRateWeekly"
+  let inCooldown = dailyCooldownActive || weeklyCooldownActive
+  when (not inCooldown && driverStats.totalRidesAssigned > merchantConfig.minRidesToUnlist && cancellationRateExceeded) $ do
     logDebug $ "Blocking Driver: " <> driverId.getId
     QDI.updateBlockedState (cast driverId) True (Just "AUTOMATICALLY_BLOCKED_DUE_TO_CANCELLATIONS") merchantId merchantOpCityId DTDBT.Application
   DP.incrementCancellationCount merchantOpCityId driverId
