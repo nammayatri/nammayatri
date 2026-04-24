@@ -10,6 +10,7 @@ module Domain.Action.Dashboard.AppManagement.Subscription
     postSubscriptionSubscribePlanV2,
     getSubscriptionCurrentPlanV2,
     getSubscriptionOrderStatus,
+    getSubscriptionSyncMandateStatus,
     getSubscriptionDriverPaymentHistoryAPIV2,
     getSubscriptionDriverPaymentHistoryEntityDetailsV2,
     postSubscriptionCollectManualPayments,
@@ -248,3 +249,14 @@ getSubscriptionPurchaseList merchantShortId opCity driverId limit offset status 
   m <- findMerchantByShortId merchantShortId
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   Domain.Action.UI.Plan.subscriptionPurchaseList (Kernel.Types.Id.cast driverId, m.id, mOCityId) limit offset status
+
+getSubscriptionSyncMandateStatus ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
+  Kernel.Prelude.Maybe Domain.Types.Plan.ServiceNames ->
+  Environment.Flow Domain.Action.UI.Payment.PaymentStatusResp
+getSubscriptionSyncMandateStatus merchantShortId opCity driverId mbServiceName = do
+  m <- findMerchantByShortId merchantShortId
+  mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
+  Domain.Action.UI.Payment.syncMandateStatus (Kernel.Types.Id.cast driverId, m.id, mOCityId) mbServiceName

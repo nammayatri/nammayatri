@@ -58,6 +58,9 @@ mandateNotificationStatus = runWithUnWrap Payment.mandateNotificationStatus
 mandateExecution :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> Payment.MandateExecutionReq -> m Payment.MandateExecutionRes
 mandateExecution = runWithUnWrap Payment.mandateExecution
 
+getMandateStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> Payment.MandateStatusReq -> m Payment.OrderStatusResp
+getMandateStatus = runWithUnWrap Payment.getMandateStatus
+
 verifyVpa :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> Payment.VerifyVPAReq -> m Payment.VerifyVPAResp
 verifyVpa = runWithUnWrap Payment.verifyVPA
 

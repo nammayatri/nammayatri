@@ -3626,17 +3626,14 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1776579311,
-        "narHash": "sha256-hwTyVMaz6s8OjHKQQG/vVdB7PnsSMm4rbHOLfb/oTUk=",
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "rev": "f1a5009e5f01d2586ca858db4c923d255b27c45f",
-        "type": "github"
+        "lastModified": 1777012954,
+        "narHash": "sha256-ML/MWzx+WQmmya9oIgf8nleqX64bvcOyOnkljzCPYjQ=",
+        "path": "/Users/dushyantsingh/Desktop/Shared-Kernel/shared-kernel",
+        "type": "path"
       },
       "original": {
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "type": "github"
+        "path": "/Users/dushyantsingh/Desktop/Shared-Kernel/shared-kernel",
+        "type": "path"
       }
     },
     "systems": {

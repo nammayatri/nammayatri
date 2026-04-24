@@ -154,6 +154,16 @@ apis:
         type: PaymentStatusResp
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION PAYMENT_STATUS
+  - GET: # SyncMandateStatus
+      endpoint: /{driverId}/mandate/status/sync
+      name: GetSubscriptionSyncMandateStatus
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      query:
+        - serviceName: ServiceNames
+      response:
+        type: PaymentStatusResp
   - GET: # DriverPaymentHistoryAPIV2
       endpoint: /{driverId}/payments/history/v2/{serviceName}
       name: GetSubscriptionDriverPaymentHistoryAPIV2

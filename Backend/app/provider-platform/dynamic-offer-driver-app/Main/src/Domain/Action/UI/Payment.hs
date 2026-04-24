@@ -22,6 +22,7 @@ module Domain.Action.UI.Payment
     pdnNotificationStatus,
     postWalletRecharge,
     getWalletBalance,
+    syncMandateStatus,
   )
 where
 
@@ -324,6 +325,79 @@ getStatusV2 tokenDetails orderIdText = do
           DStclMembership.stclMemberShipOrderStatusHandler paymentStatusResp paymentOrder.id
         _ -> pure () -- No payment service type, skip domain-specific handling
   return paymentStatusResp
+
+-- mandate status sync -----------------------------------------------
+
+syncMandateStatus ::
+  ( ServiceFlow m r,
+    EncFlow m r,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    EventStreamFlow m r,
+    MonadFlow m,
+    JobCreatorEnv r,
+    HasField "schedulerType" r SchedulerType
+  ) =>
+  (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Maybe DP.ServiceNames ->
+  m DPayment.PaymentStatusResp
+syncMandateStatus (driverId, merchantId, merchantOpCityId) mbServiceName = do
+  let serviceName = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName
+
+  -- Get DriverPlan and mandateId
+  mbDriverPlan <- findByDriverIdWithServiceName driverId serviceName
+  mandateId' <- case mbDriverPlan >>= (.mandateId) of
+    Just mId -> pure mId
+    Nothing -> throwError (PlanNotFound $ "DriverPlan or mandate not found for driverId: " <> driverId.getId <> " and serviceName: " <> show serviceName)
+
+  -- Get subscription config
+  serviceConfig <-
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
+      >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
+
+  -- Get driver details
+  driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+
+  -- Get payment service name
+  let defaultPaymentServiceName = serviceConfig.paymentServiceName
+  paymentServiceName <- Payment.decidePaymentService defaultPaymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
+
+  -- Call mandateStatus API from shared-kernel via Tools.Payment
+  let mandateStatusReq = Payment.MandateStatusReq {mandateId = mandateId'.getId}
+  orderStatusResp <- Payment.getMandateStatus merchantId merchantOpCityId paymentServiceName (Just driverId.getId) mandateStatusReq
+
+  -- Process mandate update based on response
+  now <- getCurrentTime
+  case orderStatusResp of
+    Payment.MandateStatusResp {..} -> do
+      let payerVpa = upi >>= (.payerVpa)
+      processMandate
+        (serviceName, serviceConfig)
+        (driverId, merchantId, merchantOpCityId)
+        status
+        mandateStartDate
+        mandateEndDate
+        (Id mandateId)
+        mandateMaxAmount
+        payerVpa
+        upi
+        orderShortId
+      -- Create a MandatePaymentStatus response to return
+      return $
+        DPayment.MandatePaymentStatus
+          { status = Payment.CHARGED,
+            mandateStatus = status,
+            mandateStartDate = fromMaybe now mandateStartDate,
+            mandateEndDate = fromMaybe now mandateEndDate,
+            mandateId = mandateId,
+            mandateMaxAmount = mandateMaxAmount,
+            payerVpa = payerVpa,
+            bankErrorCode = Nothing,
+            bankErrorMessage = Nothing,
+            upi = upi
+          }
+    _ -> throwError $ InternalError "Unexpected response type from mandate status API"
 
 -- webhook ----------------------------------------------------------
 
