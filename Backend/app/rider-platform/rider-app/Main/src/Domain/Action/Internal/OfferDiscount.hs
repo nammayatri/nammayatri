@@ -1,5 +1,4 @@
 module Domain.Action.Internal.OfferDiscount where
-
 import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
@@ -11,9 +10,11 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified SharedLogic.Offer as SOffer
 import Storage.Beam.Payment ()
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.Ride as QRide
 
 data OfferDiscountResp = OfferDiscountResp
   { discountAmount :: Maybe HighPrecMoney
@@ -26,7 +27,8 @@ getOfferDiscount ::
     EsqDBFlow m r,
     EncFlow m r,
     ServiceFlow m r,
-    EsqDBReplicaFlow m r
+    EsqDBReplicaFlow m r,
+    BeamFlow m r
   ) =>
   Maybe Text ->
   Text ->
@@ -38,7 +40,8 @@ getOfferDiscount _token bppBookingId mbFareAmount = do
     (Just offerId, Just fareAmount) -> do
       let productId = show booking.vehicleServiceTierType
           price = mkPrice (Just booking.estimatedTotalFare.currency) fareAmount
-      productOffers <- SOffer.offerListWithBasket booking.merchantId booking.riderId booking.merchantOperatingCityId DOrder.RideHailing [(productId, price)]
+      mbRide <- B.runInReplica $ QRide.findByRBId booking.id
+      productOffers <- SOffer.offerListWithBasket booking.merchantId booking.riderId booking.merchantOperatingCityId DOrder.RideHailing [(productId, price)] mbRide (Just booking) Nothing
       case snd <$> find (\(pid, _) -> pid == productId) productOffers of
         Nothing -> throwError $ InternalError "No product offer found"
         Just resp -> do

@@ -972,7 +972,9 @@ triggerPendingCashRideCashbackPayoutJob person = do
               unsettledCashbackEntries
       refsToProcess <-
         catMaybes
-          <$> forM (Map.toList amountByRef) (\(refId, totalAmount) -> do
+          <$> forM
+            (Map.toList amountByRef)
+            ( \(refId, totalAmount) -> do
                 mbRide <- runInReplica $ QRide.findByRBId (Id refId :: Id Domain.Types.Booking.Booking)
                 case mbRide of
                   Nothing -> do

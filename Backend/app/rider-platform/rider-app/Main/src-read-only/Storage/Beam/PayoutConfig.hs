@@ -29,6 +29,7 @@ data PayoutConfigT f = PayoutConfigT
     referralRewardAmountPerRide :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     referredByRewardAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     remark :: B.C f Kernel.Prelude.Text,
+    scheduleCashbackPayoutAfter :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     thresholdPayoutAmountPerPerson :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     timeDiff :: B.C f Kernel.Types.Common.Seconds,
     vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),

@@ -267,12 +267,13 @@ updateForCXCancelPaymentIntentService ::
   OfferStatsInput ->
   Bool -> -- useDomainOffers
   (PInterface.OfferApplyReq -> m PInterface.OfferApplyResp) ->
+  UTCTime ->
   m Bool
-updateForCXCancelPaymentIntentService merchantOpCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancelTransactionAmount offerStatsInput useDomainOffers applyOfferCall = do
+updateForCXCancelPaymentIntentService merchantOpCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancelTransactionAmount offerStatsInput useDomainOffers applyOfferCall rideCreatedAt = do
   transaction <- HQTransaction.findByTxnId paymentIntentId >>= fromMaybeM (InternalError $ "No transaction found while update payment intent: " <> paymentIntentId)
   let newApplicationFeeAmount = transaction.applicationFeeAmount -- not changing application fee amount
   updateOldTransaction newApplicationFeeAmount transaction
-  chargePaymentIntentService merchantOpCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall offerStatsInput useDomainOffers applyOfferCall
+  chargePaymentIntentService merchantOpCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall offerStatsInput useDomainOffers applyOfferCall rideCreatedAt
   where
     updateOldTransaction newApplicationFeeAmount transaction = do
       let newOrderAmount = cancelTransactionAmount -- changing whole amount with cancellation
@@ -295,8 +296,9 @@ chargePaymentIntentService ::
   OfferStatsInput ->
   Bool -> -- useDomainOffers
   (PInterface.OfferApplyReq -> m PInterface.OfferApplyResp) ->
+  UTCTime ->
   m Bool
-chargePaymentIntentService merchantOpCityId _paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall offerStatsInput useDomainOffers applyOfferCall = do
+chargePaymentIntentService merchantOpCityId _paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall offerStatsInput useDomainOffers applyOfferCall rideCreatedAt = do
   transaction <- HQTransaction.findByTxnId paymentIntentId >>= fromMaybeM (InternalError $ "No transaction found while charge payment intent: " <> paymentIntentId)
   if transaction.status `notElem` [Payment.CHARGED, Payment.CANCELLED, Payment.AUTO_REFUNDED]
     then do
@@ -319,7 +321,7 @@ chargePaymentIntentService merchantOpCityId _paymentServiceType paymentIntentId 
           let updStatus = Payment.castToTransactionStatus paymentIntentResp.status
           HQTransaction.updateStatusAndError merchantOpCityId transaction updStatus Nothing Nothing (Just "charge payment intent service")
           QOrder.updateStatus transaction.orderId paymentIntentId updStatus
-          applyOfferService transaction.orderId offerStatsInput useDomainOffers applyOfferCall
+          applyOfferService transaction.orderId offerStatsInput useDomainOffers applyOfferCall rideCreatedAt
           pure True
     else pure False
 
@@ -1245,8 +1247,9 @@ applyOfferService ::
   OfferStatsInput ->
   Bool -> -- useDomainOffers
   (PInterface.OfferApplyReq -> m PInterface.OfferApplyResp) ->
+  UTCTime ->
   m ()
-applyOfferService paymentOrderId offerStatsInput useDomainOffers applyOfferCall = do
+applyOfferService paymentOrderId offerStatsInput useDomainOffers applyOfferCall rideCreatedAt = do
   existingOffers <- QPaymentOrderOffer.findByPaymentOrder paymentOrderId
   let offerInitiatedPaymentOrderOffer = filter (\offer -> offer.status == PInterface.OFFER_INITIATED) existingOffers
   unless (null offerInitiatedPaymentOrderOffer) $ do
@@ -1265,7 +1268,7 @@ applyOfferService paymentOrderId offerStatsInput useDomainOffers applyOfferCall 
               amount = order.amount,
               currency = order.currency,
               planId = "dummy-not-required",
-              registrationDate = addUTCTime 19800 now,        -- should this be ist?
+              registrationDate = addUTCTime 19800 rideCreatedAt, -- ist time
               dutyDate = now,
               paymentMode = "dummy-not-required",
               numOfRides = 0,
@@ -1293,8 +1296,9 @@ applyOfferWithoutPaymentService ::
   Text -> -- merchantOperatingCityId
   Bool -> -- useDomainOffers
   (PInterface.OfferApplyReq -> m PInterface.OfferApplyResp) ->
+  UTCTime ->
   m ()
-applyOfferWithoutPaymentService referenceId offerId offerStatsInput discountAmount payoutAmount orderAmount currency merchantId merchantOperatingCityId useDomainOffers applyOfferCall = do
+applyOfferWithoutPaymentService referenceId offerId offerStatsInput discountAmount payoutAmount orderAmount currency merchantId merchantOperatingCityId useDomainOffers applyOfferCall rideCreatedAt = do
   existingOffers <- QOfflineOffer.findByReferenceId referenceId
   when (null existingOffers) $ do
     mbOffer <- QOffer.findById (Id offerId)
@@ -1312,7 +1316,7 @@ applyOfferWithoutPaymentService referenceId offerId offerStatsInput discountAmou
                 amount = orderAmount,
                 currency = currency,
                 planId = "dummy-not-required",
-                registrationDate = addUTCTime 19800 now,
+                registrationDate = addUTCTime 19800 rideCreatedAt, -- ist time
                 dutyDate = now,
                 paymentMode = "dummy-not-required",
                 numOfRides = 0,

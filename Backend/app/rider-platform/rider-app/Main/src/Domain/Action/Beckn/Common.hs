@@ -818,7 +818,18 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   mbRideOfferEntity <-
     case booking.selectedOfferId of
       Just offerId -> do
-        mbOfferDetails <- SOffer.getSelectedOfferDetailsWithBasket booking.merchantId person.id booking.merchantOperatingCityId DOrder.RideHailing (show booking.vehicleServiceTierType) totalFare offerId
+        mbOfferDetails <-
+          SOffer.getSelectedOfferDetailsWithBasket
+            booking.merchantId
+            person.id
+            booking.merchantOperatingCityId
+            DOrder.RideHailing
+            (show booking.vehicleServiceTierType)
+            totalFare
+            offerId
+            (Just ride)
+            (Just booking)
+            Nothing
         case mbOfferDetails of
           Just (offerDetails, computed) -> do
             rideOfferId <- generateGUID
@@ -903,7 +914,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         offerStatsInput <- SPayment.buildOfferStatsInput person
         void $
           withTryCatch "applyOfferWithoutPayment:cashRide" $
-            DPayment.applyOfferWithoutPaymentService ride.id.getId offerId offerStatsInput (Just rideDiscountAmount) (Just ridePayoutAmount) totalFare.amount totalFare.currency person.merchantId.getId person.merchantOperatingCityId.getId useDomainOffers applyOfferCall
+            DPayment.applyOfferWithoutPaymentService ride.id.getId offerId offerStatsInput (Just rideDiscountAmount) (Just ridePayoutAmount) totalFare.amount totalFare.currency person.merchantId.getId person.merchantOperatingCityId.getId useDomainOffers applyOfferCall ride.createdAt
       let cashRideFare = totalFare.amount - applicationFeeAmount' - rideDiscountAmount
       upsertRes <-
         RidePaymentFinance.upsertCoreRidePaymentLedger
@@ -960,6 +971,11 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
           logDebug $ "Scheduling execute payment intent job for order: " <> show scheduleAfter
           createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)
 
+  let vehicleCategory = DV.castVehicleVariantToVehicleCategory ride.vehicleVariant
+  payoutConfig <-
+    getOneConfig
+      (PayoutDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing})
+      >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) booking.merchantOperatingCityId.getId)
   when (ridePayoutAmount > 0) $ do
     let cashbackPayoutJobData =
           ExecuteCashRideCashbackPayoutJobData
@@ -973,7 +989,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
                 ],
               currency = totalFare.currency
             }
-        scheduleAfter = 120 -- schedule cashback payout 2 minutes after ride completion
+        scheduleAfter = Kernel.Utils.Common.secondsToNominalDiffTime (fromIntegral payoutConfig.scheduleCashbackPayoutAfter)
     createJobIn @_ @'ExecuteCashRideCashbackPayout (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter cashbackPayoutJobData
 
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}

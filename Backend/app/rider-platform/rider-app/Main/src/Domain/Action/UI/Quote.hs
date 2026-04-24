@@ -296,13 +296,23 @@ getOffers searchRequest = do
 
 getEstimates :: Id DM.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> Id SSR.SearchRequest -> Bool -> Flow [UEstimate.EstimateAPIEntity]
 getEstimates merchantId personId mocId searchRequestId isReferredRide = do
+  mbSearchReq <- runInReplica $ QSR.findById searchRequestId
   estimateList <- runInReplica $ QEstimate.findAllBySRId searchRequestId
   let sortedEstimates = sortByEstimatedFare estimateList
       products = map (\e -> (show e.vehicleServiceTierType, e.estimatedFare)) sortedEstimates
   productOffers <-
     withTryCatch
       "getEstimates:offerListWithBasket"
-      (SOffer.offerListWithBasket merchantId personId mocId DOrder.RideHailing products)
+      ( SOffer.offerListWithBasket
+          merchantId
+          personId
+          mocId
+          DOrder.RideHailing
+          products
+          Nothing
+          Nothing
+          mbSearchReq
+      )
       >>= \case
         Left _ -> pure []
         Right r -> pure r

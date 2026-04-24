@@ -89,16 +89,16 @@ data SearchRequest = SearchRequest
     validTill :: Kernel.Prelude.UTCTime,
     vehicleCategory :: Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory
   }
-  deriving (Generic, (Show))
+  deriving (Generic, Show, ToJSON, FromJSON)
 
 data SearchMode = NORMAL | RESERVE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SearchMode))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SearchMode)
 
-$(mkHttpInstancesForEnum (''SearchMode))
+$(mkHttpInstancesForEnum ''SearchMode)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SearchRequestStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SearchRequestStatus)
 
-$(mkHttpInstancesForEnum (''SearchRequestStatus))
+$(mkHttpInstancesForEnum ''SearchRequestStatus)

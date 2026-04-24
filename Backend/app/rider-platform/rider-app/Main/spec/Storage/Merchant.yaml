@@ -631,24 +631,28 @@ PayoutConfig:
     thresholdPayoutAmountPerPerson: HighPrecMoney
     referredByRewardAmount: HighPrecMoney
     maxPayoutReferralForADay: Int
+    scheduleCashbackPayoutAfter: Int
   beamType:
     timeDiff: Seconds
     referralRewardAmountPerRide: Maybe HighPrecMoney
     thresholdPayoutAmountPerPerson: Maybe HighPrecMoney
     referredByRewardAmount: Maybe HighPrecMoney
     maxPayoutReferralForADay: Maybe Int
+    scheduleCashbackPayoutAfter: Maybe Int
   toTType:
     timeDiff: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     referralRewardAmountPerRide: Just referralRewardAmountPerRide|E
     thresholdPayoutAmountPerPerson: Just thresholdPayoutAmountPerPerson|E
     referredByRewardAmount: Just referredByRewardAmount|E
     maxPayoutReferralForADay: Just maxPayoutReferralForADay|E
+    scheduleCashbackPayoutAfter: Just scheduleCashbackPayoutAfter|E
   fromTType:
     timeDiff: Kernel.Utils.Common.secondsToNominalDiffTime|I
     referralRewardAmountPerRide: fromMaybe 0 referralRewardAmountPerRide|E
     thresholdPayoutAmountPerPerson:  fromMaybe 0 thresholdPayoutAmountPerPerson|E
     referredByRewardAmount:  fromMaybe 0 referredByRewardAmount|E
     maxPayoutReferralForADay: fromMaybe 10 maxPayoutReferralForADay|E
+    scheduleCashbackPayoutAfter: fromMaybe 86400 scheduleCashbackPayoutAfter|E
 
   default:
     timeDiff: "86400"

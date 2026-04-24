@@ -27,6 +27,7 @@ data PayoutConfig = PayoutConfig
     referralRewardAmountPerRide :: Kernel.Types.Common.HighPrecMoney,
     referredByRewardAmount :: Kernel.Types.Common.HighPrecMoney,
     remark :: Kernel.Prelude.Text,
+    scheduleCashbackPayoutAfter :: Kernel.Prelude.Int,
     thresholdPayoutAmountPerPerson :: Kernel.Types.Common.HighPrecMoney,
     timeDiff :: Kernel.Prelude.NominalDiffTime,
     vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,

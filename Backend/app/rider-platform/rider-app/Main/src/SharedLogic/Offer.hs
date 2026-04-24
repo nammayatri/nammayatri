@@ -6,11 +6,14 @@ import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import Data.Time (utctDay)
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PersonStats as DPS
-import Domain.Types.Yudhishthira ()
+import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.SearchRequest as SSR
+import qualified Domain.Types.Yudhishthira as Y
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (ServiceFlow)
@@ -30,6 +33,7 @@ import qualified Lib.Payment.Storage.Queries.OfferStats as QOfferStats
 import qualified Lib.Payment.Storage.Queries.PersonDailyOfferStats as QPersonDailyOfferStats
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
+import qualified Lib.Yudhishthira.Tools.Utils as LYTUtils
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.TypesTH as YTH
 import qualified SharedLogic.Utils as SLUtils
@@ -67,6 +71,23 @@ data CumulativeOfferReq = CumulativeOfferReq
     extraParams :: [JL.LegInfo]
   }
   deriving (Generic, Show, FromJSON, ToJSON)
+
+data OffersFraudChecksReq = OffersFraudChecksReq
+  { offerListResp :: Payment.OfferListResp,
+    ride :: Maybe Y.RideData,
+    booking :: Maybe Y.BookingData,
+    searchReq :: Maybe Y.SearchRequestData,
+    personOfferStats :: [DOfferStats.OfferStats],
+    personStats :: Maybe DPS.PersonStats
+  }
+  deriving (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON)
+
+newtype OffersFraudChecksResp = OffersFraudChecksResp
+  { offerListResp :: Payment.OfferListResp
+  }
+  deriving (Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
 
 data OfferRespAPIEntity = OfferRespAPIEntity
   { offerId :: Text,
@@ -159,9 +180,9 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
       let offerListCall = TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType (Just customerId) person.clientSdkVersion
       DPayment.offerListService customerId version paymentServiceType (31 * 86400) True offerListCall req
 
-getSelectedOfferDetailsWithBasket :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Text -> Price -> Text -> m (Maybe (OfferRespAPIEntity, DPayment.ComputedOfferAmount))
-getSelectedOfferDetailsWithBasket merchantId personId merchantOperatingCityId paymentServiceType productId price offerId = do
-  productOffers <- offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceType [(productId, price)]
+getSelectedOfferDetailsWithBasket :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, BeamFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Text -> Price -> Text -> Maybe DRide.Ride -> Maybe DRB.Booking -> Maybe SSR.SearchRequest -> m (Maybe (OfferRespAPIEntity, DPayment.ComputedOfferAmount))
+getSelectedOfferDetailsWithBasket merchantId personId merchantOperatingCityId paymentServiceType productId price offerId mbRide mbBooking mbSearchReq = do
+  productOffers <- offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceType [(productId, price)] mbRide mbBooking mbSearchReq
   case lookup productId productOffers of
     Nothing -> pure Nothing
     Just resp -> do
@@ -250,20 +271,24 @@ mkOfferListReq person price = do
 -------------------------------------------------------------------------------------------------------
 
 offerListWithBasket ::
-  (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, BeamFlow m r) =>
   Id Merchant.Merchant ->
   Id Person.Person ->
   Id DMOC.MerchantOperatingCity ->
   DOrder.PaymentServiceType ->
   [(Text, Price)] -> -- [(productId, price)]
+  Maybe DRide.Ride ->
+  Maybe DRB.Booking ->
+  Maybe SSR.SearchRequest ->
   m [(Text, Payment.OfferListResp)]
-offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceType products = do
+offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceType products mbRide mbBooking mbSearchReq = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  personOfferStats <- QOfferStats.findAllByEntityIdAndEntityType personId.getId DOfferStats.Person
+  mbPersonStats <- QPersonStats.findByPersonId personId
   useDomainOffers <- TPayment.useDomainOffers merchantId merchantOperatingCityId Nothing paymentServiceType
   if useDomainOffers
     then do
       let productsWithAmount = map (\(pid, p) -> (pid, p.amount)) products
-      personOfferStats <- QOfferStats.findAllByEntityIdAndEntityType personId.getId DOfferStats.Person
       staticPersonOfferStats <- do
         personPhone <- mapM decrypt person.mobileNumber
         case personPhone of
@@ -278,7 +303,6 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
         _ -> pure []
       today <- utctDay <$> getCurrentTime
       mbPersonDailyOfferStats <- QPersonDailyOfferStats.findByPersonIdAndDate personId.getId today
-      mbPersonStats <- QPersonStats.findByPersonId personId
       let domainContext =
             Just $
               A.toJSON
@@ -291,7 +315,13 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
                     serviceTierType = Nothing
                   }
           currency = maybe INR ((.currency) . snd) (listToMaybe products)
-      DPayment.listDomainOffersWithBasket merchantId.getId merchantOperatingCityId.getId productsWithAmount currency domainContext
+      offersByProduct <- DPayment.listDomainOffersWithBasket merchantId.getId merchantOperatingCityId.getId productsWithAmount currency domainContext
+      let mbRideData = mkRideData <$> mbRide
+          mbBookingData = mkBookingData <$> mbBooking
+          mbSearchReqData = mkSearchRequestData <$> mbSearchReq
+      forM offersByProduct $ \(productId, offersForProduct) -> do
+        filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRideData mbBookingData mbSearchReqData personOfferStats mbPersonStats
+        pure (productId, filteredOffers)
     else do
       let totalAmount = sum $ map ((.amount) . snd) products
           currency = maybe INR ((.currency) . snd) (listToMaybe products)
@@ -299,7 +329,64 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
           productsWithAmount = map (\(pid, p) -> (pid, p.amount)) products
       req <- mkOfferListReqWithBasket person totalAmount currency basketItems
       resp <- TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType Nothing person.clientSdkVersion req
-      pure $ DPayment.splitOfferRespByProduct productsWithAmount resp
+      let offersByProduct = DPayment.splitOfferRespByProduct productsWithAmount resp
+          mbRideData = mkRideData <$> mbRide
+          mbBookingData = mkBookingData <$> mbBooking
+          mbSearchReqData = mkSearchRequestData <$> mbSearchReq
+      forM offersByProduct $ \(productId, offersForProduct) -> do
+        filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRideData mbBookingData mbSearchReqData personOfferStats mbPersonStats
+        pure (productId, filteredOffers)
+
+applyOffersFraudChecks :: (MonadFlow m, CacheFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> Maybe Y.RideData -> Maybe Y.BookingData -> Maybe Y.SearchRequestData -> [DOfferStats.OfferStats] -> Maybe DPS.PersonStats -> m Payment.OfferListResp
+applyOffersFraudChecks merchantOperatingCityId offerListResp mbRide mbBooking mbSearchReq personOfferStats mbPersonStats = do
+  now <- getCurrentTime
+  (logics, _) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) LYT.OFFERS_FRAUD_CHECKS now Nothing Nothing
+  if null logics
+    then pure offerListResp
+    else do
+      result <- LYTUtils.runLogics logics (OffersFraudChecksReq offerListResp mbRide mbBooking mbSearchReq personOfferStats mbPersonStats)
+      case A.fromJSON result.result :: A.Result OffersFraudChecksResp of
+        A.Success logicResult -> pure logicResult.offerListResp
+        A.Error err -> do
+          logError $ "Failed to parse OFFERS_FRAUD_CHECKS result: " <> show err
+          pure offerListResp
+
+mkRideData :: DRide.Ride -> Y.RideData
+mkRideData DRide.Ride {updatedAt = updatedAt', ..} = Y.RideData {updatedAt = updatedAt', ..}
+
+mkBookingData :: DRB.Booking -> Y.BookingData
+mkBookingData DRB.Booking {fromLocation, initialPickupLocation, paymentMethodId = paymentMethodId', ..} =
+  Y.BookingData
+    { fromLocationId = fromLocation.id.getId,
+      initialPickupLocationId = initialPickupLocation.id.getId,
+      paymentMethodId = show <$> paymentMethodId',
+      ..
+    }
+
+mkSearchRequestData :: SSR.SearchRequest -> Y.SearchRequestData
+mkSearchRequestData SSR.SearchRequest {..} =
+  Y.SearchRequestData
+    { id = id.getId,
+      riderId = riderId.getId,
+      clientId = fmap (.getId) clientId,
+      merchantId = merchantId.getId,
+      merchantOperatingCityId = merchantOperatingCityId.getId,
+      riderPreferredOption = show riderPreferredOption,
+      fromLocationId = fromLocation.id.getId,
+      toLocationId = (.id.getId) <$> toLocation,
+      stopsCount = length stops,
+      selectedPaymentMethodId = show <$> selectedPaymentMethodId,
+      selectedPaymentInstrument = show <$> selectedPaymentInstrument,
+      clientBundleVersion = show <$> clientBundleVersion,
+      clientSdkVersion = show <$> clientSdkVersion,
+      clientConfigVersion = show <$> clientConfigVersion,
+      cloudType = show <$> cloudType,
+      backendConfigVersion = show <$> backendConfigVersion,
+      initiatedBy = show <$> initiatedBy,
+      vehicleCategory = show <$> vehicleCategory,
+      searchMode = show <$> searchMode,
+      ..
+    }
 
 mkOfferListReqWithBasket :: (MonadFlow m, EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Person.Person -> HighPrecMoney -> Currency -> [Payment.Basket] -> m Payment.OfferListReq
 mkOfferListReqWithBasket person totalAmount currency basketItems = do

@@ -2,22 +2,35 @@
 
 module Domain.Types.Yudhishthira where
 
+import qualified BecknV2.OnDemand.Enums
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.BookingStatus as DBookingStatus
+import qualified Domain.Types.Common as DCommon
 import Domain.Types.Client
+import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import Domain.Types.Person
+import Domain.Types.Person (Person)
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Quote as DQuote
+import qualified Domain.Types.RecentLocation as DRecentLocation
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.ServiceTierType as DServiceTierType
+import qualified Domain.Types.Trip as DTrip
+import qualified Domain.Types.TripTerms as DTripTerms
+import qualified Domain.Types.Extra.Booking as DEBooking
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Version
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types.Application as YA
 import qualified Lib.Yudhishthira.Types.Common as YTC
 import qualified Lib.Yudhishthira.TypesTH as YTH
+import qualified SharedLogic.Type as SLT
 
 data LoginTagData = LoginTagData
   { id :: Id Person,
@@ -95,6 +108,144 @@ data CustomerData = CustomerData
 data EndRideOffersTagData = EndRideOffersTagData
   { customerData :: CustomerData,
     rideData :: RideData
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+data SearchRequestData = SearchRequestData
+  { id :: Text,
+    startTime :: UTCTime,
+    returnTime :: Maybe UTCTime,
+    roundTrip :: Maybe Bool,
+    validTill :: UTCTime,
+    hasStops :: Maybe Bool,
+    riderId :: Text,
+    clientId :: Maybe Text,
+    fromLocationId :: Text,
+    toLocationId :: Maybe Text,
+    stopsCount :: Int,
+    distance :: Maybe Distance,
+    maxDistance :: Maybe Distance,
+    distanceUnit :: DistanceUnit,
+    estimatedRideDuration :: Maybe Seconds,
+    estimatedRideStaticDuration :: Maybe Seconds,
+    device :: Maybe Text,
+    merchantId :: Text,
+    merchantOperatingCityId :: Text,
+    disabilityTag :: Maybe Text,
+    customerExtraFee :: Maybe Price,
+    isPetRide :: Maybe Bool,
+    autoAssignEnabled :: Maybe Bool,
+    autoAssignEnabledV2 :: Maybe Bool,
+    selectedPaymentMethodId :: Maybe Text,
+    selectedPaymentInstrument :: Maybe Text,
+    riderPreferredOption :: Text,
+    createdAt :: UTCTime,
+    clientBundleVersion :: Maybe Text,
+    clientSdkVersion :: Maybe Text,
+    clientConfigVersion :: Maybe Text,
+    cloudType :: Maybe Text,
+    clientReactNativeVersion :: Maybe Text,
+    backendConfigVersion :: Maybe Text,
+    backendAppVersion :: Maybe Text,
+    totalRidesCount :: Maybe Int,
+    isAdvanceBookingEnabled :: Maybe Bool,
+    isMeterRideSearch :: Maybe Bool,
+    isDashboardRequest :: Maybe Bool,
+    placeNameSource :: Maybe Text,
+    initiatedBy :: Maybe Text,
+    onSearchFailed :: Maybe Bool,
+    hasMultimodalSearch :: Maybe Bool,
+    routeCode :: Maybe Text,
+    originStopCode :: Maybe Text,
+    destinationStopCode :: Maybe Text,
+    vehicleCategory :: Maybe Text,
+    allJourneysLoaded :: Maybe Bool,
+    searchMode :: Maybe Text,
+    isMultimodalSearch :: Maybe Bool,
+    multimodalSearchRequestId :: Maybe Text,
+    fromSpecialLocationId :: Maybe Text,
+    toSpecialLocationId :: Maybe Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+-- Mirrors `DRB.Booking` for dynamic logic (e.g. OFFERS_FRAUD_CHECKS). Omits `bookingDetails`; replaces
+-- `fromLocation` / `initialPickupLocation` with ids and `paymentMethodId` with `Text` (YTH.genDef).
+data BookingData = BookingData
+  { backendAppVersion :: Maybe Text,
+    backendConfigVersion :: Maybe Version,
+    billingCategory :: SLT.BillingCategory,
+    bppBookingId :: Maybe (Id DRB.BPPBooking),
+    bppEstimateId :: Text,
+    clientBundleVersion :: Maybe Version,
+    clientConfigVersion :: Maybe Version,
+    clientDevice :: Maybe Device,
+    clientId :: Maybe (Id Client),
+    clientSdkVersion :: Maybe Version,
+    commission :: Maybe HighPrecMoney,
+    configInExperimentVersions :: [LYT.ConfigVersionMap],
+    createdAt :: UTCTime,
+    dashboardAgentId :: Maybe Text,
+    disabilityTag :: Maybe Text,
+    discount :: Maybe Price,
+    displayBookingId :: Maybe Text,
+    distanceUnit :: DistanceUnit,
+    driverInsuredAmount :: Maybe Text,
+    driverPreference :: Maybe [Text],
+    estimatedDistance :: Maybe Distance,
+    estimatedDuration :: Maybe Seconds,
+    estimatedFare :: Price,
+    estimatedStaticDuration :: Maybe Seconds,
+    estimatedTotalFare :: Price,
+    fromLocationId :: Text,
+    fulfillmentId :: Maybe Text,
+    hasStops :: Maybe Bool,
+    id :: Id DRB.Booking,
+    initialPickupLocationId :: Text,
+    initiatedBy :: Maybe DTrip.TripParty,
+    insuredAmount :: Maybe Text,
+    isAirConditioned :: Maybe Bool,
+    isBookingUpdated :: Bool,
+    isDashboardRequest :: Maybe Bool,
+    isInsured :: Bool,
+    isMultimodalSearch :: Maybe Bool,
+    isPetRide :: Bool,
+    isReferredRide :: Maybe Bool,
+    isScheduled :: Bool,
+    merchantId :: Id DMerchant.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    multimodalSearchRequestId :: Maybe Text,
+    paymentInstrument :: Maybe DMPM.PaymentInstrument,
+    paymentMethodId :: Maybe Text,
+    paymentMode :: Maybe DMPM.PaymentMode,
+    paymentStatus :: Maybe DEBooking.PaymentStatus,
+    paymentUrl :: Maybe Text,
+    preferSafetyPlus :: Bool,
+    primaryExophone :: Text,
+    providerId :: Text,
+    providerUrl :: BaseUrl,
+    quoteId :: Maybe (Id DQuote.Quote),
+    recentLocationId :: Maybe (Id DRecentLocation.RecentLocation),
+    requiresPaymentBeforeConfirm :: Bool,
+    returnTime :: Maybe UTCTime,
+    riderId :: Id SP.Person,
+    roundTrip :: Maybe Bool,
+    selectedOfferId :: Maybe Text,
+    serviceTierName :: Maybe Text,
+    serviceTierShortDesc :: Maybe Text,
+    specialLocationName :: Maybe Text,
+    specialLocationSupportNumber :: Maybe Text,
+    specialLocationTag :: Maybe Text,
+    startTime :: UTCTime,
+    status :: DBookingStatus.BookingStatus,
+    transactionId :: Text,
+    tripCategory :: Maybe DCommon.TripCategory,
+    tripTerms :: Maybe DTripTerms.TripTerms,
+    updatedAt :: UTCTime,
+    vehicleCategory :: Maybe BecknV2.OnDemand.Enums.VehicleCategory,
+    vehicleIconUrl :: Maybe BaseUrl,
+    vehicleServiceTierAirConditioned :: Maybe Double,
+    vehicleServiceTierSeatingCapacity :: Maybe Int,
+    vehicleServiceTierType :: DServiceTierType.ServiceTierType
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -196,6 +347,8 @@ instance ToJSON DRide.Ride where
 
 $(YTH.generateGenericDefault ''LoginTagData)
 $(YTH.generateGenericDefault ''RideData)
+$(YTH.generateGenericDefault ''SearchRequestData)
+$(YTH.generateGenericDefault ''BookingData)
 $(YTH.generateGenericDefault ''CustomerData)
 $(YTH.generateGenericDefault ''EndRideOffersTagData)
 
