@@ -177,7 +177,8 @@ data IssueCategoryRes = IssueCategoryRes
     isRideRequired :: Bool,
     isTicketRequired :: Bool,
     maxAllowedRideAge :: Maybe Seconds,
-    allowedRideStatuses :: Maybe [RideStatus]
+    allowedRideStatuses :: Maybe [RideStatus],
+    enableKapture :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, ToSchema)
 

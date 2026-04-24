@@ -40,7 +40,8 @@ data IssueCategoryRes = IssueCategoryRes
     isRideRequired :: Bool,
     isTicketRequired :: Bool,
     maxAllowedRideAge :: Maybe Seconds,
-    allowedRideStatuses :: Maybe [RideStatus]
+    allowedRideStatuses :: Maybe [RideStatus],
+    enableKapture :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -232,7 +233,8 @@ data CreateIssueCategoryReq = CreateIssueCategoryReq
     translations :: [Translation],
     messages :: [CreateIssueMessageReq],
     label :: Maybe Text,
-    igmCategory :: Maybe Text
+    igmCategory :: Maybe Text,
+    enableKapture :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -293,7 +295,8 @@ data UpdateIssueCategoryReq = UpdateIssueCategoryReq
     isActive :: Maybe Bool,
     translations :: [Translation],
     label :: Maybe Text,
-    igmCategory :: Maybe Text
+    igmCategory :: Maybe Text,
+    enableKapture :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
