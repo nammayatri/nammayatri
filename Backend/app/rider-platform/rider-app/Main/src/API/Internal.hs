@@ -10,6 +10,7 @@ import qualified API.Action.UI.MeterRideInternal as MeterRideInternal
 import qualified API.Internal.Auth as Auth
 import qualified API.Internal.Cac as Cac
 import qualified API.Internal.DriverArrivalNotf as DriverArrivalNotf
+import qualified API.Internal.InMemManagement as InMemManagement
 import qualified API.Internal.EKDLiveCallFeedback as EKDLiveCallFeedback
 import qualified API.Internal.FRFS as FRFS
 import qualified API.Internal.FrequentLocUser as FrequentLocUser
@@ -44,6 +45,7 @@ type API =
            :<|> Sos.API
            :<|> UpdateCancellationFeeStatus.API
            :<|> OfferDiscount.API
+           :<|> InMemManagement.API
        )
 
 handler :: FlowServer API
@@ -65,3 +67,4 @@ handler =
     :<|> Sos.handler
     :<|> UpdateCancellationFeeStatus.handler
     :<|> OfferDiscount.handler
+    :<|> InMemManagement.handler

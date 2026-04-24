@@ -60,6 +60,7 @@ library
       API.Internal.FrequentLocUser
       API.Internal.FRFS
       API.Internal.GetPickupInstructions
+      API.Internal.InMemManagement
       API.Internal.OfferDiscount
       API.Internal.Rating
       API.Internal.RideSearchExpired

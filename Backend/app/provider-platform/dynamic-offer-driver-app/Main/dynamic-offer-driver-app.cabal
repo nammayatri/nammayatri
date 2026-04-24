@@ -65,6 +65,7 @@ library
       API.Internal.FleetVehiclesAssociation
       API.Internal.GeometryList
       API.Internal.GeometryUpdate
+      API.Internal.InMemManagement
       API.Internal.KnowYourDriver
       API.Internal.Multimodal
       API.Internal.PickupInstruction
