@@ -20,6 +20,7 @@ import Kernel.Types.Common
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
+import qualified Lib.Payment.Domain.Types.PayoutRequest
 import Servant
 import Servant.Client
 
@@ -393,7 +394,8 @@ data RideListItem = RideListItem
     bookingStatus :: BookingStatus,
     rideCreatedAt :: Kernel.Prelude.UTCTime,
     customerPickupLocation :: Kernel.Prelude.Maybe LocationAPIEntity,
-    customerDropLocation :: Kernel.Prelude.Maybe LocationAPIEntity
+    customerDropLocation :: Kernel.Prelude.Maybe LocationAPIEntity,
+    payoutRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest)
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -339,7 +339,8 @@ buildRideListItem QRide.RideItem {..} = do
         bookingStatus,
         rideCreatedAt = rideCreatedAt,
         customerPickupLocation = mkLocationAPIEntity <$> customerPickupLocation,
-        customerDropLocation = mkLocationAPIEntity <$> customerDropLocation
+        customerDropLocation = mkLocationAPIEntity <$> customerDropLocation,
+        payoutRequestId = cast <$> payoutRequestId
       }
 
 buildRideListItemV2 :: EncFlow m r => QRide.RideItemV2 -> m Common.RideListItemV2

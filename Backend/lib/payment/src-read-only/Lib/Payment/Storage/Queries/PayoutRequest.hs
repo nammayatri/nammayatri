@@ -33,6 +33,9 @@ findById ::
   (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> m (Maybe Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+findManyByEntityIds :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => ([Kernel.Prelude.Text] -> m [Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest])
+findManyByEntityIds entityId = do findAllWithKV [Se.And [Se.Is Beam.entityId $ Se.In entityId]]
+
 updateCashDetailsById ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> m ())
