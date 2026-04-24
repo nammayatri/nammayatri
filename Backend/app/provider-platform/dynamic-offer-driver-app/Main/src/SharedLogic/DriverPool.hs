@@ -692,7 +692,6 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           maxRideDistance = Nothing,
           maxPickupDistance = Nothing,
           vehicleNumber,
-          fleetOwnerId,
           ..
         }
 
@@ -748,7 +747,6 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           maxRideDistance = Nothing,
           maxPickupDistance = Nothing,
           vehicleNumber,
-          fleetOwnerId,
           ..
         }
 
@@ -843,7 +841,6 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
           maxRideDistance = tripDistanceMaxThreshold,
           driverGender = Just driverGender,
           vehicleNumber,
-          fleetOwnerId,
           ..
         }
 
@@ -1081,7 +1078,6 @@ calculateDriverPoolCurrentlyOnRide CalculateDriverPoolReq {..} mbBatchNum = do
           minRideDistance = tripDistanceMinThreshold,
           maxRideDistance = tripDistanceMaxThreshold,
           vehicleNumber,
-          fleetOwnerId,
           ..
         }
 

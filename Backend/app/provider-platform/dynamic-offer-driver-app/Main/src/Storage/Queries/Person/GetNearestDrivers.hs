@@ -82,8 +82,7 @@ data NearestDriversResult = NearestDriversResult
     maxPickupDistance :: Maybe Meters,
     isTollRouteEligible :: Bool, -- True if tollRouteBlockedTill is Nothing or < now
     driverGender :: Person.Gender,
-    vehicleNumber :: Maybe Text,
-    fleetOwnerId :: Maybe (Id Person.Person)
+    vehicleNumber :: Maybe Text
   }
   deriving (Generic, Show, HasCoordinates)
 
@@ -123,7 +122,6 @@ getNearestDrivers NearestDriversReq {..} = do
   driverInfos_ <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) True False isRental isInterCity
   driverInfosPrepaid <- filterDriversBySufficientBalance merchant rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_
   driverInfos <- filterDriversByMinWalletBalance merchant minWalletAmountForCashRides paymentInstrument rideFare govtCharges tollCharges parkingCharge taxConfig driverInfosPrepaid
-  fleetAssociations <- QFDA.findAllByDriverIds (driverInfos <&> (.driverId))
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle
   -- driverStats <- QDriverStats.findAllByDriverIds drivers
@@ -134,27 +132,25 @@ getNearestDrivers NearestDriversReq {..} = do
       else return []
 
   logDebug $ "GetNearestDriver - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos_) <> " Vehicles:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)
-  let fleetOwnerIdByDriverId = HashMap.fromList $ map (\association -> (association.driverId, Id association.fleetOwnerId)) fleetAssociations
-  let res = linkArrayList driverLocs driverInfos vehicle drivers driverBankAccounts fleetOwnerIdByDriverId
+  let res = linkArrayList driverLocs driverInfos vehicle drivers driverBankAccounts
   logDebug $ "GetNearestDrivers Result:- " <> show (length res)
   logDebug $ "MetroWarriorDebugging Result:- getNearestDrivers --------person tags res----" <> show res
   return res
   where
-    linkArrayList driverLocations driverInformations vehicles persons driverBankAccounts fleetOwnerIdByDriverId =
+    linkArrayList driverLocations driverInformations vehicles persons driverBankAccounts =
       let personHashMap = HashMap.fromList $ (\p -> (p.id, p)) <$> persons
           -- driverStatsHashMap = HashMap.fromList $ (\stats -> (stats.driverId, stats)) <$> driverStats
           driverInfoHashMap = HashMap.fromList $ (\info -> (info.driverId, info)) <$> driverInformations
           vehicleHashMap = HashMap.fromList $ (\v -> (v.driverId, v)) <$> vehicles
           driverBankAccountHashMap = HashMap.fromList $ mapMaybe (\(personId, dba) -> if dba.chargesEnabled then Just (personId, dba.accountId) else Nothing) driverBankAccounts
-       in concat $ mapMaybe (buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap driverBankAccountHashMap fleetOwnerIdByDriverId) driverLocations
+       in concat $ mapMaybe (buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap driverBankAccountHashMap) driverLocations
 
-    buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap driverBankAccountHashMap fleetOwnerIdByDriverId location = do
+    buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap driverBankAccountHashMap location = do
       let driverId' = location.driverId
       person <- HashMap.lookup driverId' personHashMap
       -- driverStats <- HashMap.lookup driverId' driverStatsHashMap
       vehicle <- HashMap.lookup driverId' vehicleHashMap
       info <- HashMap.lookup driverId' driverInfoHashMap
-      let mbFleetOwnerId = HashMap.lookup driverId' fleetOwnerIdByDriverId
       when onlinePayment $ do
         guard (isJust $ HashMap.lookup driverId' driverBankAccountHashMap)
       let dist = (realToFrac $ distanceBetweenInMeters fromLocLatLong $ LatLong {lat = location.lat, lon = location.lon}) :: Double
@@ -176,18 +172,18 @@ getNearestDrivers NearestDriversReq {..} = do
                   else do
                     DL.intersect vehicle.selectedServiceTiers ((.serviceTierType) <$> (map fst $ filter (not . snd) availableTiersWithUsageRestriction))
       if null serviceTiers
-        then Just $ mapMaybe (mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap mbFleetOwnerId) selectedDriverServiceTiers
+        then Just $ mapMaybe (mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap) selectedDriverServiceTiers
         else do
           Just $
             mapMaybe
               ( \serviceTier -> do
                   if serviceTier `elem` selectedDriverServiceTiers
-                    then mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap mbFleetOwnerId serviceTier
+                    then mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap serviceTier
                     else Nothing
               )
               serviceTiers
       where
-        mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap mbFleetOwnerId serviceTier = do
+        mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap serviceTier = do
           serviceTierInfo <- HashMap.lookup serviceTier cityServiceTiersHashMap
           -- Driver is eligible for toll routes if not blocked or block has expired
           let tollRouteEligible = case info.tollRouteBlockedTill of
@@ -224,8 +220,7 @@ getNearestDrivers NearestDriversReq {..} = do
                 maxPickupDistance = info.maxPickupRadius,
                 isTollRouteEligible = tollRouteEligible,
                 driverGender = person.gender,
-                vehicleNumber = Just vehicle.registrationNo,
-                fleetOwnerId = mbFleetOwnerId
+                vehicleNumber = Just vehicle.registrationNo
               }
 
 hasSufficientBalance ::
