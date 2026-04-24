@@ -123,7 +123,8 @@ import Data.Time.Calendar.WeekDate
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Data.Tuple.Extra as DTE
 import Domain.Action.Beckn.Search
-import Domain.Action.Dashboard.Driver.Notification as DriverNotify (DummyRideRequestRes (..), triggerDummyRideRequest)
+import "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver (DummyRideRequestRes (..))
+import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummyRideRequest)
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.Internal.ProcessingChangeOnline as DOnlineDuration
 import qualified Domain.Action.UI.DriverGoHomeRequest as DDGR
@@ -2910,6 +2911,7 @@ getDummyRideRequest ::
     CacheFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
+    HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasKafkaProducer r,
