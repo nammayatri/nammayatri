@@ -2,6 +2,8 @@
 
 module Domain.Action.ProviderPlatform.Management.Payout
   ( getPayoutPayout,
+    getPayoutPayoutHistory,
+    getPayoutPayoutReferralHistory,
     postPayoutPayoutRetry,
     postPayoutPayoutCancel,
     postPayoutPayoutCash,
@@ -52,6 +54,39 @@ getPayoutPayout ::
 getPayoutPayout merchantShortId opCity apiTokenInfo payoutRequestId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayout) payoutRequestId
+
+getPayoutPayoutHistory ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Maybe Bool ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe UTCTime ->
+  Environment.Flow PayoutTypes.PayoutHistoryRes
+getPayoutPayoutHistory merchantShortId opCity apiTokenInfo driverId driverPhoneNo from isFailedOnly limit offset to = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayoutHistory) driverId driverPhoneNo from isFailedOnly limit offset to
+
+getPayoutPayoutReferralHistory ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  Maybe Bool ->
+  Maybe Text ->
+  Maybe (Kernel.Types.Id.Id Common.Driver) ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe UTCTime ->
+  Environment.Flow ApiPayout.PayoutReferralHistoryRes
+getPayoutPayoutReferralHistory merchantShortId opCity apiTokenInfo areActivatedRidesOnly customerPhoneNo driverId driverPhoneNo from limit offset to = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayoutReferralHistory) areActivatedRidesOnly customerPhoneNo driverId driverPhoneNo from limit offset to
 
 postPayoutPayoutRetry ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
