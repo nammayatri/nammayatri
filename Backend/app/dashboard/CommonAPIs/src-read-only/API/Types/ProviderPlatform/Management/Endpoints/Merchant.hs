@@ -667,6 +667,7 @@ data VehicleClassCheckType
   = Infix
   | Prefix
   | Suffix
+  | Exact
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
