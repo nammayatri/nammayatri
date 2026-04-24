@@ -1,0 +1,324 @@
+{
+  "info": {
+    "name": "Fleet Association failedRules Field",
+    "description": "Verify that failedRules field is present in driver and vehicle association list responses. Flow: fleet login → add driver → add vehicle → check association lists.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+          "      pm.execution.skipRequest();",
+          "    }",
+          "  }",
+          "})();",
+          "",
+          "if (!pm.collectionVariables.get('_test_fleet_number')) {",
+          "    var fNum = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    pm.collectionVariables.set('_test_fleet_number', fNum);",
+          "    console.log('Test fleet number:', fNum);",
+          "}",
+          "if (!pm.collectionVariables.get('_test_driver_number')) {",
+          "    var dNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    pm.collectionVariables.set('_test_driver_number', dNum);",
+          "    console.log('Test driver number:', dNum);",
+          "}",
+          "if (!pm.collectionVariables.get('_test_vehicle_reg')) {",
+          "    var vReg = 'KA01T' + Math.floor(1000 + Math.random() * 8999);",
+          "    pm.collectionVariables.set('_test_vehicle_reg', vReg);",
+          "    console.log('Test vehicle reg:', vReg);",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Fleet Owner Login OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobileNumber\": \"{{_test_fleet_number}}\",\n  \"mobileCountryCode\": \"+91\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/login/otp?enabled=true",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "fleet", "v2", "login", "otp"],
+          "query": [{ "key": "enabled", "value": "true" }]
+        }
+      }
+    },
+    {
+      "name": "Fleet Owner Verify OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.environment.set('fleet_auth_token', d.authToken);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobileNumber\": \"{{_test_fleet_number}}\",\n  \"mobileCountryCode\": \"+91\",\n  \"otp\": \"{{login_otp}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/verify/otp",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "fleet", "v2", "verify", "otp"]
+        }
+      }
+    },
+    {
+      "name": "Send Joining OTP to Driver",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.collectionVariables.set('_driver_auth_id', d.authId);",
+              "console.log('Driver authId:', d.authId, 'attempts:', d.attempts);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{fleet_auth_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobileNumber\": \"{{_test_driver_number}}\",\n  \"mobileCountryCode\": \"+91\",\n  \"name\": \"TestDriver\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/sendJoiningOtp",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "sendJoiningOtp"]
+        }
+      }
+    },
+    {
+      "name": "Verify Joining OTP for Driver",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Driver joined fleet successfully');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{fleet_auth_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobileNumber\": \"{{_test_driver_number}}\",\n  \"mobileCountryCode\": \"+91\",\n  \"otp\": \"{{login_otp}}\",\n  \"deviceToken\": \"test-device-token\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/verifyJoiningOtp?authId={{_driver_auth_id}}",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "verifyJoiningOtp"],
+          "query": [{ "key": "authId", "value": "{{_driver_auth_id}}" }]
+        }
+      }
+    },
+    {
+      "name": "Add Vehicle for Driver",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code !== 200) { console.log('Add vehicle error:', pm.response.text()); }",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Vehicle added for driver');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{fleet_auth_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"registrationNo\": \"{{_test_vehicle_reg}}\",\n  \"vehicleClass\": \"SUV\",\n  \"colour\": \"White\",\n  \"model\": \"Innova\",\n  \"make\": \"Toyota\",\n  \"vehicleCategory\": \"AUTO_CATEGORY\",\n  \"skipFleetChecks\": true\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{_test_driver_number}}/fleet/addVehicle",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{_test_driver_number}}", "fleet", "addVehicle"]
+        }
+      }
+    },
+    {
+      "name": "Get Driver Association List",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "",
+              "pm.test('Response has correct structure', function () {",
+              "  var d = pm.response.json();",
+              "  pm.expect(d).to.have.property('fleetOwnerId');",
+              "  pm.expect(d).to.have.property('listItem');",
+              "  pm.expect(d).to.have.property('summary');",
+              "  pm.expect(d.listItem).to.be.an('array');",
+              "});",
+              "",
+              "pm.test('listItem is not empty', function () {",
+              "  var d = pm.response.json();",
+              "  pm.expect(d.listItem.length).to.be.above(0);",
+              "});",
+              "",
+              "pm.test('listItem entries contain failedRules field', function () {",
+              "  var d = pm.response.json();",
+              "  d.listItem.forEach(function (item) {",
+              "    pm.expect(item).to.have.property('failedRules');",
+              "    if (item.failedRules !== null) {",
+              "      pm.expect(item.failedRules).to.be.an('array');",
+              "    }",
+              "  });",
+              "});",
+              "console.log('Driver association items:', pm.response.json().listItem.length);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{fleet_auth_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/driverAssociation?Limit=10&Offset=0",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "driverAssociation"],
+          "query": [
+            { "key": "Limit", "value": "10" },
+            { "key": "Offset", "value": "0" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Vehicle Association List",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait for mock-idfy callback (500ms) to create the RC in DB",
+              "var start = new Date().getTime();",
+              "while (new Date().getTime() - start < 2000) { /* busy-wait 2s */ }"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "",
+              "pm.test('Response has correct structure', function () {",
+              "  var d = pm.response.json();",
+              "  pm.expect(d).to.have.property('fleetOwnerId');",
+              "  pm.expect(d).to.have.property('listItem');",
+              "  pm.expect(d).to.have.property('summary');",
+              "  pm.expect(d.listItem).to.be.an('array');",
+              "});",
+              "",
+              "pm.test('listItem is not empty', function () {",
+              "  var d = pm.response.json();",
+              "  pm.expect(d.listItem.length).to.be.above(0);",
+              "});",
+              "",
+              "pm.test('listItem entries contain failedRules field', function () {",
+              "  var d = pm.response.json();",
+              "  d.listItem.forEach(function (item) {",
+              "    pm.expect(item).to.have.property('failedRules');",
+              "    if (item.failedRules !== null) {",
+              "      pm.expect(item.failedRules).to.be.an('array');",
+              "    }",
+              "  });",
+              "});",
+              "console.log('Vehicle association items:', pm.response.json().listItem);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{fleet_auth_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/vehicleAssociation?Limit=10&Offset=0",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "vehicleAssociation"],
+          "query": [
+            { "key": "Limit", "value": "10" },
+            { "key": "Offset", "value": "0" }
+          ]
+        }
+      }
+    }
+  ]
+}

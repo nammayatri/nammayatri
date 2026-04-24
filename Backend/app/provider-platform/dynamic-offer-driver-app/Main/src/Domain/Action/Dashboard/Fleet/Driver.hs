@@ -1640,8 +1640,8 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
         let (fleetOwnerName, fleetName) = fromMaybe ("", Nothing) (Map.lookup fleetOwnerId fleetOwnerNameMap)
         driverRCAssociation <- QRCAssociation.findAllActiveAndInactiveAssociationsByDriverId driver.id
         let rcAssociatedWithFleet = filter (\(_, rc) -> rc.fleetOwnerId == Just fleetOwnerId) driverRCAssociation
-        (vehicleNo, vehicleType, rcId, vehicleColor, vehicleMake, vehicleModel, vehicleYear, vehicleDocsVerificationStatus) <- case rcAssociatedWithFleet of ---- so the logic is if it have active association with the fleet vehicle return that otherwise return the latest one
-          [] -> pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+        (vehicleNo, vehicleType, rcId, vehicleColor, vehicleMake, vehicleModel, vehicleYear, vehicleDocsVerificationStatus, failedRules) <- case rcAssociatedWithFleet of ---- so the logic is if it have active association with the fleet vehicle return that otherwise return the latest one
+          [] -> pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
           associations -> do
             let activeAssociation = find (\(assoc, _) -> assoc.isRcActive) associations
             case activeAssociation of
@@ -1778,18 +1778,19 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
                   fleetName = fleetName,
                   requestReason = requestReason,
                   responseReason = responseReason,
-                  driverDob = driverDob
+                  driverDob = driverDob,
+                  failedRules = failedRules
                 }
         pure ls
     getVehicleDetails ::
       (CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
       DVRC.VehicleRegistrationCertificate ->
-      m (Maybe Text, Maybe Common.VehicleVariant, Maybe Text, Maybe Text, Maybe Text, Maybe Text, Maybe Int, Maybe Common.DocsVerificationStatus)
+      m (Maybe Text, Maybe Common.VehicleVariant, Maybe Text, Maybe Text, Maybe Text, Maybe Text, Maybe Int, Maybe Common.DocsVerificationStatus, Maybe [Text])
     getVehicleDetails vrc = do
       decryptedVehicleRC <- decrypt vrc.certificateNumber
       let vehicleType = DCommon.castVehicleVariantDashboard vrc.vehicleVariant
           vehicleYear = vrc.vehicleModelYear <|> ((\(y, _, _) -> fromInteger y) <$> (toGregorian <$> vrc.mYManufacturing))
-      pure (Just decryptedVehicleRC, vehicleType, Just vrc.id.getId, vrc.vehicleColor, vrc.vehicleManufacturer, vrc.vehicleModel, vehicleYear, castDocsVerificationStatus <$> vrc.docsVerificationStatus)
+      pure (Just decryptedVehicleRC, vehicleType, Just vrc.id.getId, vrc.vehicleColor, vrc.vehicleManufacturer, vrc.vehicleModel, vehicleYear, castDocsVerificationStatus <$> vrc.docsVerificationStatus, Just vrc.failedRules)
 
 ---------------------------------------------------------------------
 getDriverFleetVehicleAssociation :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.FleetVehicleStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Common.DocsVerificationStatus -> Flow Common.DrivertoVehicleAssociationResT
@@ -1993,7 +1994,8 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
                   fleetName = fleetName,
                   driverMobileCountryCode = driverMobileCountryCodeValue,
                   driverEmail = driverEmailValue,
-                  driverDob = Nothing
+                  driverDob = Nothing,
+                  failedRules = Just vrc.failedRules
                 }
         pure ls
 

@@ -245,7 +245,8 @@ data DriveVehicleAssociationListItemT = DriveVehicleAssociationListItemT
     createdAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     enabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     selectedServiceTiers :: [Kernel.Prelude.Text],
-    driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
+    driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    failedRules :: Kernel.Prelude.Maybe [Kernel.Prelude.Text]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
