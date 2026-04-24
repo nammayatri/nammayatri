@@ -15,6 +15,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.GSTEInvoice.Interface.Types as GSTEInvoice
 import qualified Kernel.External.GSTEInvoice.Types as GSTEInvoice
 import qualified Kernel.External.IncidentReport.Interface.Types as IncidentReport
+import qualified Kernel.External.PartnerSdk.Interface.Types as PartnerSdk
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Interface.Types
 import qualified Kernel.External.Notification as Notification
@@ -55,6 +56,10 @@ data InsuranceProvider = IffcoTokio
   deriving stock (Eq, Ord, Show, Read, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
+data PartnerSdkProvider = Aarokya
+  deriving stock (Eq, Ord, Show, Read, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
 data ServiceName
   = MapsService Maps.MapsService
   | SmsService Sms.SmsService
@@ -80,6 +85,7 @@ data ServiceName
   | JuspayWalletService Payment.PaymentService
   | PlasmaService Plasma.PlasmaService
   | InsuranceDeclarationService InsuranceProvider
+  | PartnerSdkService PartnerSdkProvider
   | SettlementService Settlement.SettlementService
   | GSTEInvoiceService GSTEInvoice.GSTEInvoiceService
   deriving stock (Eq, Ord, Generic)
@@ -112,6 +118,7 @@ instance Show ServiceName where
   show (JuspayWalletService s) = "JuspayWalletService_" <> show s
   show (PlasmaService s) = "Plasma_" <> show s
   show (InsuranceDeclarationService s) = "InsuranceDeclaration_" <> show s
+  show (PartnerSdkService s) = "PartnerSdk_" <> show s
   show (SettlementService s) = "Settlement_" <> show s
   show (GSTEInvoiceService s) = "GSTEInvoice_" <> show s
 
@@ -216,6 +223,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "InsuranceDeclaration_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (PartnerSdkService v1, r2)
+                 | r1 <- stripPrefix "PartnerSdk_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
             ++ [ (SettlementService v1, r2)
                  | r1 <- stripPrefix "Settlement_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
@@ -254,6 +265,7 @@ data ServiceConfigD (s :: UsageSafety)
   | JuspayWalletServiceConfig !PaymentServiceConfig
   | PlasmaServiceConfig !Plasma.PlasmaServiceConfig
   | InsuranceDeclarationServiceConfig !IffcoTokioConfig
+  | PartnerSdkServiceConfig !PartnerSdk.PartnerSdkConfig
   | SettlementServiceConfig !Settlement.SettlementServiceConfig
   | GSTEInvoiceServiceConfig !GSTEInvoice.GSTEInvoiceConfig
   deriving (Generic, Eq, Show)
