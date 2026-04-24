@@ -55,6 +55,7 @@ import qualified API.Action.UI.TicketKapture as TicketKapture
 import qualified API.Action.UI.Tokenization as Tokenization
 import qualified API.Action.UI.VehicleDetails as VehicleDetails
 import qualified API.Action.UI.WMB as WMB
+import qualified API.UI.Aarokya as Aarokya
 import qualified API.UI.Call as Call
 import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.CancellationReason as CancellationReason
@@ -164,6 +165,7 @@ type API =
            :<|> PersonDefaultEmergencyContact.API
            :<|> CancellationReasonLookup.API
            :<|> QueueRank.API
+           :<|> Aarokya.API
        )
 
 handler :: FlowServer API
@@ -237,3 +239,4 @@ handler =
     :<|> PersonDefaultEmergencyContact.handler
     :<|> CancellationReasonLookup.handler
     :<|> QueueRank.handler
+    :<|> Aarokya.handler
