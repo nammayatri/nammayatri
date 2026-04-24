@@ -1947,6 +1947,7 @@ types:
     - enabled: Maybe Bool
     - selectedServiceTiers: [Text]
     - driverDob: Maybe UTCTime
+    - failedRules: Maybe [Text]
   EditVehicleReq:
     - manufacturer: Maybe Text
     - model: Maybe Text
