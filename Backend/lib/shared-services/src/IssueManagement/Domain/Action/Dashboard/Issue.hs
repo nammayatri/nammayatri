@@ -111,7 +111,8 @@ issueCategoryList merchantShortId city issueHandle identifier = do
           isRideRequired = issueCategory.isRideRequired,
           isTicketRequired = issueCategory.isTicketRequired,
           maxAllowedRideAge = issueCategory.maxAllowedRideAge,
-          allowedRideStatuses = issueCategory.allowedRideStatuses
+          allowedRideStatuses = issueCategory.allowedRideStatuses,
+          enableKapture = issueCategory.enableKapture
         }
 
 -- Helper function to safely create or get issue chat, preventing race conditions
@@ -722,6 +723,7 @@ updateIssueCategory merchantShortId city issueCategoryId req issueHandle identif
             allowedRideStatuses = req.allowedRideStatuses <|> allowedRideStatuses,
             label = req.label <|> label,
             igmCategory = req.igmCategory <|> igmCategory,
+            enableKapture = req.enableKapture <|> enableKapture,
             updatedAt = now,
             ..
           }
@@ -1161,7 +1163,8 @@ getCategoryDetail merchantShortId city categoryId mbLanguage issueHandle identif
           isRideRequired = issueCategory.isRideRequired,
           isTicketRequired = issueCategory.isTicketRequired,
           maxAllowedRideAge = issueCategory.maxAllowedRideAge,
-          allowedRideStatuses = issueCategory.allowedRideStatuses
+          allowedRideStatuses = issueCategory.allowedRideStatuses,
+          enableKapture = issueCategory.enableKapture
         }
 
     mkTranslation :: DIT.IssueTranslation -> Translation
@@ -1392,7 +1395,8 @@ previewCategoryFlow merchantShortId city categoryId mbLanguage issueHandle ident
           isRideRequired = issueCategory.isRideRequired,
           isTicketRequired = issueCategory.isTicketRequired,
           maxAllowedRideAge = issueCategory.maxAllowedRideAge,
-          allowedRideStatuses = issueCategory.allowedRideStatuses
+          allowedRideStatuses = issueCategory.allowedRideStatuses,
+          enableKapture = issueCategory.enableKapture
         }
 
 buildFlowNodes ::

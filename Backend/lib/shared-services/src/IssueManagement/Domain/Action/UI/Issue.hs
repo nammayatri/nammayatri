@@ -124,7 +124,8 @@ getIssueCategory (personId, _, merchantOpCityId) mbLanguage issueHandle identifi
           isRideRequired = issueCategory.isRideRequired,
           isTicketRequired = issueCategory.isTicketRequired,
           maxAllowedRideAge = issueCategory.maxAllowedRideAge,
-          allowedRideStatuses = issueCategory.allowedRideStatuses
+          allowedRideStatuses = issueCategory.allowedRideStatuses,
+          enableKapture = issueCategory.enableKapture
         }
 
     shortId = case identifier of

@@ -31,6 +31,7 @@ updateByPrimaryKey IssueCategory {..} =
       Set BeamIC.allowedRideStatuses allowedRideStatuses,
       Set BeamIC.label label,
       Set BeamIC.igmCategory igmCategory,
+      Set BeamIC.enableKapture enableKapture,
       Set BeamIC.createdAt createdAt,
       Set BeamIC.updatedAt updatedAt
     ]
@@ -123,5 +124,6 @@ instance ToTType' BeamIC.IssueCategory IssueCategory where
         BeamIC.isActive = isActive,
         BeamIC.createdAt = createdAt,
         BeamIC.updatedAt = updatedAt,
-        BeamIC.igmCategory = igmCategory
+        BeamIC.igmCategory = igmCategory,
+        BeamIC.enableKapture = enableKapture
       }
