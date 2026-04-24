@@ -152,28 +152,36 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       (REJECTED, _) ->
         Kernel.Utils.Common.throwError (InvalidRequest "Request has already been rejected; rejection is terminal")
       _ -> do
-        personId <- opHubReq.driverId & fromMaybeM (InvalidRequest "driverId is required for driver inspection")
         (merchantOpCity, transporterConfig) <- getMerchantInfo merchantShortId opCity
         -- Handle rejection based on request type
         when (req.status == API.Types.ProviderPlatform.Operator.Driver.REJECTED) $ do
           void $ SQOHR.updateStatusWithDetails reqDomainStatus (Just req.remarks) (Just now) (Just (Kernel.Types.Id.Id req.operatorId)) (Kernel.Types.Id.Id req.operationHubRequestId)
           when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
+            let analyticsDriverId = maybe req.operatorId (.getId) opHubReq.driverId
             case opHubReq.requestType of
               ONBOARDING_INSPECTION -> void $ withTryCatch "incrementRejectedVehicleRequestsDaily" $
-                FleetOpStats.incrementRejectedVehicleRequestsDaily req.operatorId personId.getId transporterConfig False
+                FleetOpStats.incrementRejectedVehicleRequestsDaily req.operatorId analyticsDriverId transporterConfig False
               REGULAR_INSPECTION -> void $ withTryCatch "incrementRejectedVehicleRequestsDaily" $
-                FleetOpStats.incrementRejectedVehicleRequestsDaily req.operatorId personId.getId transporterConfig False
-              DRIVER_ONBOARDING_INSPECTION -> void $ withTryCatch "incrementRejectedDriverRequestsDaily" $
-                FleetOpStats.incrementRejectedDriverRequestsDaily req.operatorId personId.getId transporterConfig False
-              DRIVER_REGULAR_INSPECTION -> void $ withTryCatch "incrementRejectedDriverRequestsDaily" $
-                FleetOpStats.incrementRejectedDriverRequestsDaily req.operatorId personId.getId transporterConfig False
+                FleetOpStats.incrementRejectedVehicleRequestsDaily req.operatorId analyticsDriverId transporterConfig False
+              DRIVER_ONBOARDING_INSPECTION -> do
+                personId <- opHubReq.driverId & fromMaybeM (InvalidRequest "driverId is required for driver inspection")
+                void $ withTryCatch "incrementRejectedDriverRequestsDaily" $
+                  FleetOpStats.incrementRejectedDriverRequestsDaily req.operatorId personId.getId transporterConfig False
+              DRIVER_REGULAR_INSPECTION -> do
+                personId <- opHubReq.driverId & fromMaybeM (InvalidRequest "driverId is required for driver inspection")
+                void $ withTryCatch "incrementRejectedDriverRequestsDaily" $
+                  FleetOpStats.incrementRejectedDriverRequestsDaily req.operatorId personId.getId transporterConfig False
 
         when (req.status == API.Types.ProviderPlatform.Operator.Driver.APPROVED) $ do
           case opHubReq.requestType of
             ONBOARDING_INSPECTION -> handleVehicleInspectionApproval req opHubReq merchantOpCity transporterConfig now
             REGULAR_INSPECTION -> handleVehicleInspectionApproval req opHubReq merchantOpCity transporterConfig now
-            DRIVER_ONBOARDING_INSPECTION -> handleDriverInspectionApproval merchantShortId opCity req now personId merchantOpCity transporterConfig
-            DRIVER_REGULAR_INSPECTION -> handleDriverInspectionApproval merchantShortId opCity req now personId merchantOpCity transporterConfig
+            DRIVER_ONBOARDING_INSPECTION -> do
+              personId <- opHubReq.driverId & fromMaybeM (InvalidRequest "driverId is required for driver inspection")
+              handleDriverInspectionApproval merchantShortId opCity req now personId merchantOpCity transporterConfig
+            DRIVER_REGULAR_INSPECTION -> do
+              personId <- opHubReq.driverId & fromMaybeM (InvalidRequest "driverId is required for driver inspection")
+              handleDriverInspectionApproval merchantShortId opCity req now personId merchantOpCity transporterConfig
   pure Success
   where
     handleVehicleInspectionApproval request opHubReq merchantOpCity transporterConfig now = do
