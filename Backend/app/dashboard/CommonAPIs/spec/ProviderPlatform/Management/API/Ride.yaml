@@ -234,7 +234,10 @@ types:
     - fareDiffWithCurrency: Maybe PriceAPIEntity
     - fareWithCurrency: Maybe PriceAPIEntity
     - estimatedFareWithCurrency: Maybe PriceAPIEntity
-    - estimatedDistance: Maybe Meters
+    - rideDistanceEstimated: Maybe Meters
+    - rideDistanceActual: Maybe Meters
+    - rideDistanceEstimatedWithUnit: Maybe Distance
+    - rideDistanceActualWithUnit: Maybe Distance
     - paymentInstrument: Maybe PaymentInstrument
     - bookingStatus: BookingStatus
     - rideCreatedAt: UTCTime
