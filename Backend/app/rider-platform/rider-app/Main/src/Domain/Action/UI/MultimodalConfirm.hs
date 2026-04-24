@@ -138,6 +138,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
@@ -1906,6 +1907,9 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
             tNum <- activeDetail.trip_number
             return $ JMU.makeTripIdFromWaybillNoAndTripNo waybill tNum
       -- Build schedules for all trips (always included)
+      mbSeatLayoutMapping <-
+        CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vno ctx.integratedBPPConfig.feedKey
+      let seatSelType = mbSeatLayoutMapping >>= (.seatSelectionType)
       let buildScheduleInfo detail =
             let thisTripId = do
                   waybill <- detail.waybill_no
@@ -1922,7 +1926,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                     isActiveTrip = detail.is_active_trip,
                     serviceSubTypes = mbServiceSubTypes,
                     vehicleTagNumber = mbVehicleTagNumber,
-                    availableSeats = Nothing
+                    availableSeats = Nothing,
+                    seatSelectionType = seatSelType
                   }
       let allSchedules = map buildScheduleInfo busScheduleDetails
       -- Build live vehicle info if live data exists
@@ -1949,7 +1954,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                       serviceTierName = frfsServiceTierName,
                       currentTripId = mbCurrentTripId,
                       serviceSubTypes = mbServiceSubTypes,
-                      vehicleTagNumber = mbVehicleTagNumber
+                      vehicleTagNumber = mbVehicleTagNumber,
+                      seatSelectionType = seatSelType
                     }
       -- Return response with schedules (always) and live vehicle (if available)
       pure $

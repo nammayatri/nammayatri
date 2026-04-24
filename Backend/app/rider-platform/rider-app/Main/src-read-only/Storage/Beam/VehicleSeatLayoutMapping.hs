@@ -5,20 +5,22 @@ module Storage.Beam.VehicleSeatLayoutMapping where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.VehicleSeatLayoutMapping
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data VehicleSeatLayoutMappingT f = VehicleSeatLayoutMappingT
-  { gtfsId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    seatLayoutId :: (B.C f Kernel.Prelude.Text),
-    vehicleNo :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { gtfsId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    seatLayoutId :: B.C f Kernel.Prelude.Text,
+    seatSelectionType :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleSeatLayoutMapping.SeatSelectionType),
+    vehicleNo :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -28,6 +30,6 @@ instance B.Table VehicleSeatLayoutMappingT where
 
 type VehicleSeatLayoutMapping = VehicleSeatLayoutMappingT Identity
 
-$(enableKVPG (''VehicleSeatLayoutMappingT) [('id)] [])
+$(enableKVPG ''VehicleSeatLayoutMappingT ['id] [])
 
-$(mkTableInstances (''VehicleSeatLayoutMappingT) "vehicle_seat_layout_mapping")
+$(mkTableInstances ''VehicleSeatLayoutMappingT "vehicle_seat_layout_mapping")

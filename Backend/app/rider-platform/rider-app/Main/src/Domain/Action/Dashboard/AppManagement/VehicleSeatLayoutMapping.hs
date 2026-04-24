@@ -63,6 +63,7 @@ upsertVehicleSeatLayoutMapping merchantShortId opCity req = do
                 vehicleNo = req.vehicleNo,
                 gtfsId = req.gtfsId,
                 seatLayoutId = req.seatLayoutId,
+                seatSelectionType = req.seatSelectionType,
                 merchantId = merchant.id,
                 merchantOperatingCityId = merchantOperatingCity.id,
                 createdAt = now,

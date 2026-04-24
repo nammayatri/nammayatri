@@ -3,6 +3,7 @@ imports:
   APISuccess: Kernel.Types.APISuccess
   SeatLayout: Domain.Types.SeatLayout
   VehicleSeatLayoutMapping: Domain.Types.VehicleSeatLayoutMapping
+  SeatSelectionType: Domain.Types.VehicleSeatLayoutMapping
 
 importPackageOverrides:
   Domain.Types.SeatLayout: "rider-app"
@@ -16,6 +17,7 @@ types:
     vehicleNo: Text
     gtfsId: Text
     seatLayoutId: Id SeatLayout
+    seatSelectionType: Maybe SeatSelectionType
     derive: "'HideSecrets"
 
   VehicleSeatLayoutMappingItem:

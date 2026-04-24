@@ -5,6 +5,7 @@ import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import Control.Monad.Extra hiding (fromMaybeM)
+import qualified Data.Hashable as Hashable
 import Data.List (nub)
 import qualified Data.List.NonEmpty as NonEmpty hiding (groupBy, map, nub, nubBy)
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
@@ -22,9 +23,11 @@ import qualified Domain.Types.LocationAddress as DLA
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person
+import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.RouteDetails as DRD
 import qualified Domain.Types.Seat as Seat
 import qualified Domain.Types.Trip as DTrip
+import qualified Domain.Types.VehicleSeatLayoutMapping as DVSLM
 import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, minimumBy, null, readMaybe, toList, whenJust)
 import qualified ExternalBPP.CallAPI.Init as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Types as CallExternalBPP
@@ -55,6 +58,7 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Seat as QSeat
+import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
@@ -70,6 +74,13 @@ import qualified Storage.Queries.RouteDetails as QRouteDetails
 import Tools.Error
 import Tools.Maps as Maps
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
+
+data SeatHoldParams = SeatHoldParams
+  { shpFromIdx :: Int,
+    shpToIdx :: Int,
+    shpDefaultTtl :: Int,
+    shpSeatBitMapTtl :: Int
+  }
 
 confirmAndUpsertBooking :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "cloudType" r (Maybe CloudType)) => Id Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking, FRFSUtils.FRFSFareParameters, [FRFSQuoteCategory.FRFSQuoteCategory], Bool)
 confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse isSingleMode mbIsMockPayment integratedBppConfig mbTripId = do
@@ -89,64 +100,125 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 && booking.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
           _ -> return $ booking.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
       Nothing -> return True
-
-  let allSeatIds = nub $ concatMap (\categoryReq -> fromMaybe [] categoryReq.seatIds) selectedQuoteCategories
-      firstTripId = mbTripId
-
-  mbHoldCtxForAll <-
-    if not (null allSeatIds)
-      then case firstTripId of
-        Just tripId -> do
-          logInfo $ "FRFSConfirm:confirmAndUpsertBooking seatHold flow personId=" <> personId.getId <> " tripId=" <> tripId <> " seatCount=" <> show (length allSeatIds)
-          let routeStations :: Maybe [FRFSTicketService.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
-              mbRouteCode = listToMaybe (fromMaybe [] routeStations) <&> (.code)
-          case mbRouteCode of
-            Nothing -> do
-              logWarning $ "FRFSConfirm:confirmAndUpsertBooking skipping hold, routeCode not found for quoteId=" <> quote.id.getId
-              pure Nothing
-            Just routeCode -> do
-              mIndices <- JourneyUtils.getRouteStopIndices routeCode quote.fromStationCode quote.toStationCode integratedBppConfig
-              case mIndices of
-                Just (fromIdx, toIdx) -> do
+  mbSeatLayoutMapping <- case quote.vehicleNumber of
+    Just vNo -> CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vNo integratedBppConfig.feedKey
+    Nothing -> pure Nothing
+  let seatSelectionType = mbSeatLayoutMapping >>= (.seatSelectionType)
+      shouldAutoAssignBusSeats = quote.vehicleType == Spec.BUS && isJust mbTripId && seatSelectionType == Just DVSLM.AUTO_ASSIGNED
+  (selectedQuoteCategoriesFinal, mbHoldCtxForAll) <-
+    if shouldAutoAssignBusSeats
+      then do
+        tripId <- mbTripId & fromMaybeM (InvalidRequest "TripId not found for bus auto-seat flow")
+        let requiredSeatCount = Kernel.Prelude.sum ((.quantity) <$> selectedQuoteCategories)
+        if requiredSeatCount <= 0
+          then pure (clearSeatIds selectedQuoteCategories, Nothing)
+          else do
+            logInfo $ "FRFSConfirm:confirmAndUpsertBooking bus auto-seat flow personId=" <> personId.getId <> " tripId=" <> tripId <> " requiredSeatCount=" <> show requiredSeatCount
+            mbSeatHoldParams <- getSeatHoldParams tripId riderConfig
+            case mbSeatHoldParams of
+              Nothing -> pure (clearSeatIds selectedQuoteCategories, Nothing)
+              Just params -> do
+                let maxAttempts = 3
+                orderedSeatIds <- getOrderedSeatIds tripId params.shpFromIdx params.shpToIdx mbSeatLayoutMapping
+                (chosenSeatIds, holdId) <- selectAndHoldWithRetries tripId orderedSeatIds params.shpFromIdx params.shpToIdx params.shpDefaultTtl params.shpSeatBitMapTtl requiredSeatCount maxAttempts
+                let selectedQuoteCategories' = assignSeatsToCategories chosenSeatIds selectedQuoteCategories
+                pure (selectedQuoteCategories', Just (holdId, params.shpFromIdx, params.shpToIdx))
+      else do
+        let allSeatIds = nub $ concatMap (\categoryReq -> fromMaybe [] categoryReq.seatIds) selectedQuoteCategories
+        mbHoldCtx <-
+          case (mbTripId, allSeatIds) of
+            (Just tripId, _ : _) -> do
+              logInfo $
+                "FRFSConfirm:confirmAndUpsertBooking seatHold flow personId=" <> personId.getId <> " tripId=" <> tripId <> " seatCount=" <> show (length allSeatIds)
+              mbSeatHoldParams <- getSeatHoldParams tripId riderConfig
+              case mbSeatHoldParams of
+                Nothing -> pure Nothing
+                Just params -> do
                   holdId <- generateGUID
-                  let defaultTtl = fromMaybe 600 riderConfig.seatBookingTtl
-                      bufferTime = fromMaybe 172800 riderConfig.busTripTtl
-                  -- Calculate dynamic TTL based on trip start time
-                  seatBitMapTtl <- calculateDynamicSeatHoldTTL tripId routeCode integratedBppConfig bufferTime
-                  -- validate seat quota
                   seats <- mapM QSeat.findById allSeatIds
-                  case mapM_ (validateQuota fromIdx toIdx) seats of
+                  case mapM_ (validateQuota params.shpFromIdx params.shpToIdx) seats of
                     Left err -> throwError err
                     Right () -> pure ()
-                  success <- SeatBooking.holdSeats tripId allSeatIds fromIdx toIdx holdId defaultTtl seatBitMapTtl
-                  unless success $
-                    throwError (SeatsNotFound (map (.getId) allSeatIds))
-                  pure $ Just (holdId, fromIdx, toIdx)
-                Nothing -> do
-                  logWarning $ "FRFSConfirm:confirmAndUpsertBooking skipping hold, stop indices not found for routeCode=" <> routeCode <> " from=" <> quote.fromStationCode <> " to=" <> quote.toStationCode
-                  pure Nothing
-        _ -> pure Nothing
-      else pure Nothing
-
+                  success <- SeatBooking.holdSeats tripId allSeatIds params.shpFromIdx params.shpToIdx holdId params.shpDefaultTtl params.shpSeatBitMapTtl
+                  unless success $ throwError (SeatsNotFound (map (.getId) allSeatIds))
+                  pure $ Just (holdId, params.shpFromIdx, params.shpToIdx)
+            _ -> pure Nothing
+        pure (selectedQuoteCategories, mbHoldCtx)
   quoteCategorySelections <-
     if isMultiInitAllowed
-      then mapM processCategorySelection selectedQuoteCategories
+      then mapM processCategorySelection selectedQuoteCategoriesFinal
       else return $ quoteCategories <&> (\qc -> FRFSUtils.QuoteCategorySelection qc.id qc.selectedQuantity Nothing Nothing)
   let mbHoldId = mbHoldCtxForAll <&> (\(h, _, _) -> h)
   updatedQuoteCategories <-
     if isMultiInitAllowed
       then FRFSUtils.updateQuoteCategoriesWithSelections mbHoldId quoteCategorySelections quoteCategories
       else return quoteCategories
-
   let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories)
-  (rider, dConfirmRes) <- confirm isMultiInitAllowed fareParameters mbBooking mbHoldCtxForAll firstTripId
-
+  (rider, dConfirmRes) <- confirm isMultiInitAllowed fareParameters mbBooking mbHoldCtxForAll mbTripId
   whenJust mbHoldCtxForAll $ \(holdId, _, _) -> do
     logInfo $ "FRFSConfirm:confirmAndUpsertBooking tracking hold bookingId=" <> dConfirmRes.id.getId <> " holdId=" <> holdId
     SeatBooking.trackHoldForBooking dConfirmRes.id.getId holdId (fromMaybe 600 riderConfig.seatBookingTtl)
-
   return (rider, dConfirmRes, fareParameters, updatedQuoteCategories, isMultiInitAllowed)
   where
+    clearSeatIds :: [FRFSCategorySelectionReq] -> [FRFSCategorySelectionReq]
+    clearSeatIds = map (\FRFSCategorySelectionReq {quantity, quoteCategoryId} -> FRFSCategorySelectionReq {quantity, quoteCategoryId, seatIds = Nothing})
+
+    getSeatHoldParams :: (CallExternalBPP.FRFSConfirmFlow m r c) => Text -> DRC.RiderConfig -> m (Maybe SeatHoldParams)
+    getSeatHoldParams tripId riderCfg = do
+      let routeStations :: Maybe [FRFSTicketService.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
+      let mbRouteCode = listToMaybe (fromMaybe [] routeStations) <&> (.code)
+      case mbRouteCode of
+        Nothing -> do
+          logWarning $ "FRFSConfirm:confirmAndUpsertBooking skipping hold, routeCode not found for quoteId=" <> quote.id.getId
+          pure Nothing
+        Just routeCode -> do
+          mIndices <- JourneyUtils.getRouteStopIndices routeCode quote.fromStationCode quote.toStationCode integratedBppConfig
+          case mIndices of
+            Nothing -> do
+              logWarning $ "FRFSConfirm:confirmAndUpsertBooking skipping hold, stop indices not found for routeCode=" <> routeCode <> " from=" <> quote.fromStationCode <> " to=" <> quote.toStationCode
+              pure Nothing
+            Just (fromIdx, toIdx) -> do
+              let defaultTtl = fromMaybe 600 riderCfg.seatBookingTtl
+                  bufferTime = fromMaybe 172800 riderCfg.busTripTtl
+              seatBitMapTtl <- calculateDynamicSeatHoldTTL tripId routeCode integratedBppConfig bufferTime
+              pure $ Just (SeatHoldParams fromIdx toIdx defaultTtl seatBitMapTtl)
+
+    assignSeatsToCategories :: [Id Seat.Seat] -> [FRFSCategorySelectionReq] -> [FRFSCategorySelectionReq]
+    assignSeatsToCategories seatIds categories =
+      let step :: [Id Seat.Seat] -> FRFSCategorySelectionReq -> ([Id Seat.Seat], FRFSCategorySelectionReq)
+          step remaining FRFSCategorySelectionReq {quantity, quoteCategoryId} =
+            let q = max 0 quantity
+                (taken, rest) = splitAt q remaining
+                updatedSeatIds =
+                  if q <= 0
+                    then Nothing
+                    else Just taken
+             in (rest, FRFSCategorySelectionReq {quantity, quoteCategoryId, seatIds = updatedSeatIds})
+       in snd (mapAccumL step seatIds categories)
+
+    selectAndHoldWithRetries :: (CallExternalBPP.FRFSConfirmFlow m r c) => Text -> [Id Seat.Seat] -> Int -> Int -> Int -> Int -> Int -> Int -> m ([Id Seat.Seat], Text)
+    selectAndHoldWithRetries tripId orderedSeatIds fromIdx toIdx defaultTtl seatBitMapTtl requiredSeatCount maxAttempts =
+      go 0
+      where
+        go attempt = do
+          let offset = attempt * requiredSeatCount
+              chosen = take requiredSeatCount (drop offset orderedSeatIds)
+          when (length chosen < requiredSeatCount) $
+            throwError (InvalidRequest "Not enough seats available.")
+          holdId <- generateGUID
+          logInfo $ "FRFSConfirm:confirmAndUpsertBooking auto-seat attempt=" <> show (attempt + 1) <> "/" <> show maxAttempts <> " tripId=" <> tripId <> " seatCount=" <> show requiredSeatCount
+          success <- SeatBooking.holdSeats tripId chosen fromIdx toIdx holdId defaultTtl seatBitMapTtl
+          if success
+            then do
+              logInfo $ "FRFSConfirm:confirmAndUpsertBooking auto-seat SUCCESS tripId=" <> tripId <> " holdId=" <> holdId <> " seatIds=" <> show (map (.getId) chosen)
+              pure (chosen, holdId)
+            else
+              if attempt + 1 >= maxAttempts
+                then do
+                  logWarning $ "FRFSConfirm:confirmAndUpsertBooking auto-seat FAILED tripId=" <> tripId <> " attempts=" <> show maxAttempts
+                  throwError (SeatsNotFound (map (.getId) chosen))
+                else go (attempt + 1)
+
     processCategorySelection :: CallExternalBPP.FRFSConfirmFlow m r c => FRFSCategorySelectionReq -> m FRFSUtils.QuoteCategorySelection
     processCategorySelection categoryReq = do
       mbLabels <- case categoryReq.seatIds of
@@ -163,6 +235,33 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
             qcSeatIds = categoryReq.seatIds,
             qcSeatLabels = mbLabels
           }
+
+    getOrderedSeatIds ::
+      (CallExternalBPP.FRFSConfirmFlow m r c) =>
+      Text -> -- tripId
+      Int -> -- fromIdx
+      Int -> -- toIdx
+      Maybe DVSLM.VehicleSeatLayoutMapping ->
+      m [Id Seat.Seat]
+    getOrderedSeatIds tripId fromIdx toIdx mbSeatLayoutMapping' = do
+      seatLayoutMapping <- mbSeatLayoutMapping' & fromMaybeM (InvalidRequest "Seat layout mapping not found for vehicle")
+      let seatLayoutId = seatLayoutMapping.seatLayoutId
+      seats <- QSeat.findAllByLayoutId seatLayoutId
+      rawSeatsWithStatus <- SeatBooking.getTripAvailability tripId fromIdx toIdx seats
+      seed <- generateGUID
+      let candidates =
+            filter
+              ( \s ->
+                  s.status == FRFSTicketService.AVAILABLE
+                    && JourneyUtils.meetsSeatQuota fromIdx toIdx s.seat
+              )
+              rawSeatsWithStatus
+      let orderedCandidates =
+            sortOn
+              (\s -> Hashable.hash (seed <> s.seat.id.getId))
+              candidates
+      let orderedSeatIds = map (\s -> s.seat.id) orderedCandidates
+      pure orderedSeatIds
 
     confirm :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "cloudType" r (Maybe CloudType)) => Bool -> FRFSUtils.FRFSFareParameters -> Maybe DFRFSTicketBooking.FRFSTicketBooking -> Maybe (Text, Int, Int) -> Maybe Text -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
     confirm isMultiInitAllowed fareParameters mbBooking mbHoldCtxForAll firstTripId = do
