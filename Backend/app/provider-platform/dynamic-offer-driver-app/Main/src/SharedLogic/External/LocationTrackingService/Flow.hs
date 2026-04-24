@@ -27,6 +27,7 @@ import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.API.DriverBlockTill as DriverBlockTill
 import qualified SharedLogic.External.LocationTrackingService.API.DriverLocation as DriverLocationAPI
@@ -236,3 +237,19 @@ getQueueDrivers specialLocationId vehicleType = do
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_QUEUE_DRIVERS_API") url)
   logDebug $ "lts getQueueDrivers: " <> show queueDriversRes
   return queueDriversRes
+
+driversLocationByCloudType :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => [Id DP.Person] -> Maybe CloudType -> m [DriverLocation]
+driversLocationByCloudType driverIds mbCloudType = do
+  ltsCfg <- asks (.ltsCfg)
+  cloudType <- asks (.cloudType)
+  let url = if cloudType == mbCloudType then ltsCfg.url else fromMaybe ltsCfg.url ltsCfg.secondaryUrl
+  let req =
+        DriversLocationReq
+          { driverIds
+          }
+  driversLocationRes <-
+    withShortRetry $
+      callAPI url (DriversLocationAPI.driversLocation req) "driversLocation" DriversLocationAPI.locationTrackingServiceAPI
+        >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVERS_LOCATION_API") url)
+  logDebug $ "lts driversLocation: " <> show driversLocationRes
+  return driversLocationRes
