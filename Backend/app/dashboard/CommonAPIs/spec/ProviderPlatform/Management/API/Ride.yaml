@@ -10,6 +10,8 @@ imports:
   Classification: Kernel.External.Ticket.Interface.Types
   TripCategory: Domain.Types
   PaymentInstrument: Beckn.Types.Core.Taxi.Common.PaymentInstrument
+  PayoutRequest: Lib.Payment.Domain.Types.PayoutRequest
+  Lib.Payment.Domain.Types.PayoutRequest: payment
 
 module: Ride
 
@@ -239,6 +241,7 @@ types:
     - rideCreatedAt: UTCTime
     - customerPickupLocation: Maybe LocationAPIEntity
     - customerDropLocation: Maybe LocationAPIEntity
+    - payoutRequestId: Maybe (Id PayoutRequest)
   RideListItemV2:
     - rideId: Id Ride
     - rideShortId: ShortId Ride
