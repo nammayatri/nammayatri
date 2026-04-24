@@ -50,6 +50,7 @@ import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
 import SharedLogic.FareCalculator (fareSum)
 import SharedLogic.Type (BillingCategory)
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.LocationMapping as QLM
@@ -200,8 +201,10 @@ mkDriverRideRes ::
   Maybe Text ->
   m DriverRideRes
 mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo mbRiderMobileNumber = do
+  mbTransporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing
   let fareParams = booking.fareParams
       estimatedBaseFare = fareSum (fareParams{driverSelectedFare = Nothing}) Nothing -- it should not be part of estimatedBaseFare
+      shouldRound = fromMaybe True (mbTransporterConfig >>= (.shouldRoundOffFare))
   let initial = "" :: Text
   (nextStopLocation, lastStopLocation) <- case booking.tripCategory of
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
@@ -233,11 +236,11 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         vehicleVariant = fromMaybe DVeh.SEDAN rideDetails.vehicleVariant,
         vehicleModel = fromMaybe initial rideDetails.vehicleModel,
         computedFare = roundToIntegral <$> ride.fare,
-        computedFareWithCurrency = (\fare -> PriceAPIEntity (fromIntegral (round fare :: Integer)) ride.currency) <$> ride.fare,
+        computedFareWithCurrency = (\fare -> if shouldRound then PriceAPIEntity (fromIntegral (round fare :: Integer)) ride.currency else PriceAPIEntity fare ride.currency) <$> ride.fare,
         estimatedDuration = booking.estimatedDuration,
         actualDuration = roundToIntegral <$> (diffUTCTime <$> ride.tripEndTime <*> ride.tripStartTime),
         estimatedBaseFare = roundToIntegral estimatedBaseFare,
-        estimatedBaseFareWithCurrency = PriceAPIEntity (fromIntegral (round estimatedBaseFare :: Integer)) ride.currency,
+        estimatedBaseFareWithCurrency = if shouldRound then PriceAPIEntity (fromIntegral (round estimatedBaseFare :: Integer)) ride.currency else PriceAPIEntity estimatedBaseFare ride.currency,
         estimatedDistance = booking.estimatedDistance,
         estimatedDistanceWithUnit = convertMetersToDistance booking.distanceUnit <$> booking.estimatedDistance,
         driverSelectedFare = roundToIntegral $ fromMaybe 0.0 fareParams.driverSelectedFare,

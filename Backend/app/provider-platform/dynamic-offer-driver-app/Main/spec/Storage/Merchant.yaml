@@ -1229,6 +1229,7 @@ TransporterConfig:
     allowAadhaarReupload: Maybe Bool
     allowDlReupload: Maybe Bool
     allowGstReupload: Maybe Bool
+    shouldRoundOffFare: Maybe Bool
 
   beamType:
     currency: Maybe Currency
