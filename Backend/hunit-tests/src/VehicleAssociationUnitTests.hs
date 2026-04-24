@@ -361,6 +361,91 @@ testErrorHandlingWithRealFunctions =
     ]
 
 -- =============================================================================
+-- FAILED RULES FIELD TESTS
+-- =============================================================================
+
+testFailedRulesField :: TestTree
+testFailedRulesField =
+  testGroup
+    "failedRules field in DriveVehicleAssociationListItemT"
+    [ testCase "failedRules present in JSON serialization" $ do
+        let item = mkAssociationItem (Just ["RULE_1", "RULE_2"])
+            json = Aeson.toJSON item
+        case json of
+          Aeson.Object obj -> do
+            isJust (KeyMap.lookup "failedRules" obj) @? "failedRules key should be present in JSON"
+          _ -> assertFailure "Expected JSON object",
+      testCase "failedRules Nothing roundtrips correctly" $ do
+        let item = mkAssociationItem Nothing
+            decoded = Aeson.decode (Aeson.encode item) :: Maybe Common.DriveVehicleAssociationListItemT
+        isJust decoded @? "Should decode back from JSON"
+        case decoded of
+          Just d -> getFailedRules d @?= Nothing
+          Nothing -> assertFailure "Decode returned Nothing",
+      testCase "failedRules Just [] roundtrips correctly" $ do
+        let item = mkAssociationItem (Just [])
+            decoded = Aeson.decode (Aeson.encode item) :: Maybe Common.DriveVehicleAssociationListItemT
+        case decoded of
+          Just d -> getFailedRules d @?= Just []
+          Nothing -> assertFailure "Decode returned Nothing",
+      testCase "failedRules Just [rules] roundtrips correctly" $ do
+        let rules = ["AADHAAR_NOT_LINKED", "PAN_NOT_UPLOADED", "DL_EXPIRED"]
+            item = mkAssociationItem (Just rules)
+            decoded = Aeson.decode (Aeson.encode item) :: Maybe Common.DriveVehicleAssociationListItemT
+        case decoded of
+          Just d -> getFailedRules d @?= Just rules
+          Nothing -> assertFailure "Decode returned Nothing",
+      testCase "failedRules field is accessible on the type" $ do
+        let item = mkAssociationItem (Just ["RULE_A"])
+        getFailedRules item @?= Just ["RULE_A"]
+    ]
+
+getFailedRules :: Common.DriveVehicleAssociationListItemT -> Maybe [T.Text]
+getFailedRules = Common.failedRules
+
+mkAssociationItem :: Maybe [T.Text] -> Common.DriveVehicleAssociationListItemT
+mkAssociationItem rules =
+  Common.DriveVehicleAssociationListItemT
+    { driverId = Nothing,
+      vehicleNo = Nothing,
+      rcId = Nothing,
+      profilePhotoImageId = Nothing,
+      vehicleIconURL = Nothing,
+      vehicleColor = Nothing,
+      vehicleMake = Nothing,
+      vehicleModel = Nothing,
+      vehicleYear = Nothing,
+      driverName = Nothing,
+      conductorName = Nothing,
+      status = Nothing,
+      driverPhoneNo = Nothing,
+      driverMobileCountryCode = Nothing,
+      driverEmail = Nothing,
+      completedRides = 0,
+      vehicleType = Nothing,
+      earning = 0,
+      isDriverOnRide = Nothing,
+      isDriverOnPickup = Nothing,
+      isDriverActive = False,
+      isRcAssociated = False,
+      driverDocsVerificationStatus = Nothing,
+      vehicleDocsVerificationStatus = Nothing,
+      verificationDocsStatus = Nothing,
+      upcomingRouteCode = Nothing,
+      fleetOwnerId = "test-fleet-owner",
+      fleetOwnerName = "Test Fleet",
+      fleetName = Nothing,
+      requestReason = Nothing,
+      responseReason = Nothing,
+      associatedOn = Nothing,
+      createdAt = Nothing,
+      enabled = Nothing,
+      selectedServiceTiers = [],
+      driverDob = Nothing,
+      failedRules = rules
+    }
+
+-- =============================================================================
 -- MAIN TEST SUITE
 -- =============================================================================
 
@@ -372,5 +457,6 @@ vehicleAssociationUnitTests =
       testGetDriverFleetDriverVehicleAssociationWithRealExecution,
       testDataTypeValidation,
       testComplexScenariosWithRealFunctions,
-      testErrorHandlingWithRealFunctions
+      testErrorHandlingWithRealFunctions,
+      testFailedRulesField
     ]
