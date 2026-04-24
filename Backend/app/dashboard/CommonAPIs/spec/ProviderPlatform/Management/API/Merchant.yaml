@@ -201,6 +201,13 @@ apis:
         endpoint: MerchantAPI DocumentVerificationConfigCreateEndpoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT ONBOARDING_DOCUMENT_CONFIG_CREATE
+  - POST: # DocumentVerificationConfigReplicateAPI
+      endpoint: /config/onboardingDocument/replicate
+      auth: ApiAuthV2
+      request:
+        type: DocumentVerificationConfigReplicateReq
+      response:
+        type: APISuccess
   - GET: # ServiceUsageConfigAPI
       endpoint: /serviceUsageConfig
       auth: ApiAuthV2
@@ -858,9 +865,23 @@ types:
     - checkExpiry: Bool
     - supportedVehicleClasses: SupportedVehicleClasses
     - vehicleClassCheckType: VehicleClassCheckType
-    - documentFlowGrouping: DocumentFlowGrouping
     - rcNumberPrefixList: Maybe [Text]
     - maxRetryCount: Int
+    - filterForOldApks: Maybe Bool
+    - documentCategory: Maybe DocumentCategory
+    - documentFlowGrouping: Maybe DocumentFlowGrouping
+    - title: Text
+    - description: Maybe Text
+    - isMandatory: Bool
+    - isDisabled: Bool
+    - disableWarning: Maybe Text
+    - isHidden: Bool
+    - dependencyDocumentType: [DocumentType]
+    - order: Int
+    - isDefaultEnabledOnManualVerification: Maybe Bool
+    - isImageValidationRequired: Maybe Bool
+    - doStrictVerifcation: Maybe Bool
+    - allowLicenseTransfer: Maybe Bool
     - createdAt: UTCTime
     - updatedAt: UTCTime
   VehicleClassCheckType:
@@ -884,24 +905,31 @@ types:
     - checkExtraction: Bool
     - checkExpiry: Bool
     - supportedVehicleClasses: SupportedVehicleClasses
-    - rcNumberPrefix: Text
     - rcNumberPrefixList: Maybe [Text]
     - maxRetryCount: Int
     - vehicleClassCheckType: VehicleClassCheckType
     - isDefaultEnabledOnManualVerification: Maybe Bool
     - isImageValidationRequired: Maybe Bool
     - doStrictVerifcation: Maybe Bool
-    - minFee: Money
-    - maxFee: Money
-    - stepFee: Money
-    - defaultStepFee: Money
-    - minFeeWithCurrency: Maybe PriceAPIEntity
-    - maxFeeWithCurrency: Maybe PriceAPIEntity
-    - stepFeeWithCurrency: Maybe PriceAPIEntity
-    - defaultStepFeeWithCurrency: Maybe PriceAPIEntity
     - filterForOldApks: Maybe Bool
     - documentCategory: Maybe DocumentCategory
     - documentFlowGrouping: Maybe DocumentFlowGrouping
+    - title: Text
+    - description: Maybe Text
+    - isMandatory: Bool
+    - isDisabled: Bool
+    - allowLicenseTransfer: Maybe Bool
+    - disableWarning: Maybe Text
+    - isHidden: Bool
+    - dependencyDocumentType: [DocumentType]
+    - order: Int
+    - derive: "'HideSecrets"
+  DocumentVerificationConfigReplicateReq:
+    - fromMerchantShortId: Text
+    - fromCity: City
+    - toMerchantShortId: Text
+    - toCity: City
+    - vehicleCategory: Maybe VehicleCategory
     - derive: "'HideSecrets"
   CreateFPDriverExtraFeeReq:
     - minFee: Money
