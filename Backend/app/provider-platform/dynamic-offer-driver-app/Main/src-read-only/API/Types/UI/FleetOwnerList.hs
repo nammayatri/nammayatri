@@ -28,7 +28,8 @@ data FleetOwnerListItem = FleetOwnerListItem
     fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

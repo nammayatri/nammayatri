@@ -3509,7 +3509,8 @@ getDriverFleetOwnerList merchantShortId opCity mbBlocked mbFleetTypeReg mbFromDa
           fleetName = fleetName,
           email = email,
           mobileNumber = mobileNumber,
-          mobileCountryCode = mobileCountryCode
+          mobileCountryCode = mobileCountryCode,
+          createdAt = createdAt
         }
 
 postDriverFleetAccessSelect :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Bool -> Bool -> Flow APISuccess

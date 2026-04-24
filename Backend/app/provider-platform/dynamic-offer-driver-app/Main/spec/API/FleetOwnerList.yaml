@@ -22,6 +22,7 @@ types:
     - email: Maybe Text
     - mobileNumber: Maybe Text
     - mobileCountryCode: Maybe Text
+    - createdAt: Maybe UTCTime
 
 apis:
   - GET:
