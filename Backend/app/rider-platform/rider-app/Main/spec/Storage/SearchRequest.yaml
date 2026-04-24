@@ -39,7 +39,7 @@ imports:
 SearchRequest:
   tableName: search_request
 
-  derives: "Generic, Show"
+  derives: "Generic, Show, ToJSON, FromJSON"
 
   fields:
     id: Id SearchRequest

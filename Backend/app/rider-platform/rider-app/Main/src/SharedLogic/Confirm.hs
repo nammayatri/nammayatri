@@ -188,7 +188,18 @@ confirm DConfirmReq {..} = do
   mbBookingOfferEntity <-
     case booking.selectedOfferId of
       Just offerId -> do
-        mbOfferDetails <- SOffer.getSelectedOfferDetailsWithBasket searchRequest.merchantId person.id merchantOperatingCityId DOrder.RideHailing (show quote.vehicleServiceTierType) booking.estimatedTotalFare offerId
+        mbOfferDetails <-
+          SOffer.getSelectedOfferDetailsWithBasket
+            searchRequest.merchantId
+            person.id
+            merchantOperatingCityId
+            DOrder.RideHailing
+            (show quote.vehicleServiceTierType)
+            booking.estimatedTotalFare
+            offerId
+            Nothing
+            (Just booking)
+            (Just searchRequest)
         case mbOfferDetails of
           Just (offerDetails, computed) -> do
             bookingOfferId <- generateGUID

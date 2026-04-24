@@ -175,7 +175,7 @@ cancelExecutePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
   when (isNothing ride.cancellationFeeIfCancelled) $ do
     QRide.updateCancellationFeeIfCancelledField (Just cancellationAmount.amount) rideId
   offerStatsInput <- SPayment.buildOfferStatsInput person
-  paymentCharged <- SPayment.makeCxCancellationPayment booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.RideHailing order.paymentServiceOrderId cancellationAmount.amount booking.riderId offerStatsInput
+  paymentCharged <- SPayment.makeCxCancellationPayment booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.RideHailing order.paymentServiceOrderId cancellationAmount.amount booking.riderId offerStatsInput ride.createdAt
   when paymentCharged $ QRide.markPaymentStatus DRide.Completed rideId
   void $
     CallBPPInternal.customerCancellationDuesSync

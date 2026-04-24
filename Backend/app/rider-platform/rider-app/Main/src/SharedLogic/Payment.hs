@@ -769,7 +769,8 @@ chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType p
       commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
       applyOfferCall = TPayment.offerApply merchantId merchantOpCityId Nothing paymentServiceType Nothing Nothing
   useDomainOffers <- TPayment.useDomainOffers merchantId merchantOpCityId Nothing paymentServiceType
-  charged <- DPayment.chargePaymentIntentService commonMerchantOperatingCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall offerStatsInput useDomainOffers applyOfferCall
+  ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  charged <- DPayment.chargePaymentIntentService commonMerchantOperatingCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall offerStatsInput useDomainOffers applyOfferCall ride.createdAt
   -- Find all unsettled ledger entries (PENDING or DUE) for this ride
   unsettledEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries rideId.getId
   unless (null unsettledEntries) $ do
@@ -882,14 +883,15 @@ makeCxCancellationPayment ::
   HighPrecMoney ->
   Id Person.Person ->
   DPayment.OfferStatsInput ->
+  UTCTime ->
   m Bool
-makeCxCancellationPayment merchantId merchantOpCityId paymentMode paymentServiceType paymentIntentId cancellationAmount _personId offerStatsInput = do
+makeCxCancellationPayment merchantId merchantOpCityId paymentMode paymentServiceType paymentIntentId cancellationAmount _personId offerStatsInput rideCreatedAt = do
   let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId paymentMode
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId paymentMode
       commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
       applyOfferCall = TPayment.offerApply merchantId merchantOpCityId Nothing paymentServiceType Nothing Nothing
   useDomainOffers <- TPayment.useDomainOffers merchantId merchantOpCityId Nothing paymentServiceType
-  DPayment.updateForCXCancelPaymentIntentService commonMerchantOperatingCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancellationAmount offerStatsInput useDomainOffers applyOfferCall
+  DPayment.updateForCXCancelPaymentIntentService commonMerchantOperatingCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancellationAmount offerStatsInput useDomainOffers applyOfferCall rideCreatedAt
 
 validatePaymentInstrument :: (MonadThrow m, Log m) => Merchant.Merchant -> Maybe DMPM.PaymentInstrument -> Maybe Payment.PaymentMethodId -> m ()
 validatePaymentInstrument merchant mbPaymentInstrument mbPaymentMethodId = do
@@ -1023,5 +1025,6 @@ zeroEffectivePaymentDueToOffer merchantId merchantOperatingCityId rideId person 
       void $
         withTryCatch "applyOfferWithoutPayment:zeroEffective" $ do
           let fareAmount = li.rideFare + li.gstAmount + li.platformFee + li.offerDiscountAmount
-          DPayment.applyOfferWithoutPaymentService rideId.getId offerId offerStatsInput (Just discountAmount) Nothing fareAmount currency merchantId.getId merchantOperatingCityId.getId useDomainOffers applyOfferCall
+          ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+          DPayment.applyOfferWithoutPaymentService rideId.getId offerId offerStatsInput (Just discountAmount) Nothing fareAmount currency merchantId.getId merchantOperatingCityId.getId useDomainOffers applyOfferCall ride.createdAt
   QRide.markPaymentStatus Ride.Completed rideId

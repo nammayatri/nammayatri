@@ -139,6 +139,7 @@ import Tools.Error
 
 $(YTH.generateGenericDefault ''DTR.RiderConfig)
 $(YTH.generateGenericDefault ''CumulativeOfferReq)
+$(YTH.generateGenericDefault ''OffersFraudChecksReq)
 $(YTH.generateGenericDefault ''DTP.PayoutConfig)
 $(YTH.generateGenericDefault ''DTRN.RideRelatedNotificationConfig)
 $(YTH.generateGenericDefault ''DTM.MerchantConfig)
@@ -149,6 +150,7 @@ $(YTH.generateGenericDefault ''DTE.Exophone)
 
 $(genToSchema ''DTR.RiderConfig)
 $(genToSchema ''CumulativeOfferReq)
+$(genToSchema ''OffersFraudChecksReq)
 $(genToSchema ''DTP.PayoutConfig)
 $(genToSchema ''DTRN.RideRelatedNotificationConfig)
 $(genToSchema ''DTM.MerchantConfig)
@@ -270,6 +272,10 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       defaultVal <- fromMaybeM (InvalidRequest "CumulativeOfferReq not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @CumulativeOfferReq))
       logicData :: CumulativeOfferReq <- YudhishthiraFlow.createLogicData defaultVal (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy CumulativeOfferRespI) _riderConfig.dynamicLogicUpdatePassword req logicData
+    LYTU.OFFERS_FRAUD_CHECKS -> do
+      defaultVal <- fromMaybeM (InvalidRequest "OffersFraudChecksReq not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @OffersFraudChecksReq))
+      logicData :: OffersFraudChecksReq <- YudhishthiraFlow.createLogicData defaultVal (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy OffersFraudChecksResp) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.PICKUP_ETA_CALCULATION -> do
       logicData :: PickupETA.PickupETAInput <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy PickupETA.PickupETAResult) _riderConfig.dynamicLogicUpdatePassword req logicData
@@ -444,6 +450,13 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
         LYTU.DomainSchemaResp
           { LYTU.defaultValue = A.toJSON defaultVal,
             LYTU.schema = toInlinedSchemaValue (Proxy @CumulativeOfferReq)
+          }
+    LYTU.OFFERS_FRAUD_CHECKS -> do
+      defaultVal <- fromMaybeM (InvalidRequest "OffersFraudChecksReq not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @OffersFraudChecksReq))
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON defaultVal,
+            LYTU.schema = toInlinedSchemaValue (Proxy @OffersFraudChecksReq)
           }
     LYTU.PICKUP_ETA_CALCULATION ->
       return $
