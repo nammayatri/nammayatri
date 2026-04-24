@@ -94,3 +94,33 @@ instance HideSecrets RefundRegAmountReq where
   hideSecrets = Kernel.Prelude.identity
 
 type PayoutSuccess = APISuccess.APISuccess
+
+data PayoutHistorySummary = PayoutHistorySummary
+  { totalCount :: Int,
+    count :: Int
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PayoutHistoryItem = PayoutHistoryItem
+  { driverName :: Text,
+    driverPhoneNo :: Text,
+    driverId :: Text,
+    payoutAmount :: Common.HighPrecMoney,
+    payoutStatus :: Text,
+    payoutTime :: LocalTime,
+    payoutEntity :: Maybe EntityName,
+    payoutOrderId :: Text,
+    responseMessage :: Maybe Text,
+    responseCode :: Maybe Text,
+    payoutRetriedOrderId :: Maybe Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PayoutHistoryRes = PayoutHistoryRes
+  { history :: [PayoutHistoryItem],
+    summary :: PayoutHistorySummary
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

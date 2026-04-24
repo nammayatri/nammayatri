@@ -7,8 +7,13 @@ imports:
   UpdateVpaReq: Lib.Payment.API.Payout.Types
   RefundRegAmountReq: Lib.Payment.API.Payout.Types
   PayoutSuccess: Lib.Payment.API.Payout.Types
+  PayoutHistoryRes: Lib.Payment.API.Payout.Types
   EntityName: Lib.Payment.Domain.Types.Common
   VehicleCategory: Domain.Types.VehicleCategory
+  Driver: Dashboard.Common
+  Ride: Dashboard.Common
+  Summary: Dashboard.Common
+  LocalTime: Data.Time
 
 importPackageOverrides:
   Lib.Payment.Domain.Types.PayoutRequest: payment
@@ -18,6 +23,35 @@ importPackageOverrides:
 module: Payout
 
 apis:
+  - GET:
+      endpoint: /payout/history
+      auth: ApiAuthV2
+      query:
+        limit: Int
+        offset: Int
+        driverId: Text
+        driverPhoneNo: Text
+        isFailedOnly: Bool
+        from: UTCTime
+        to: UTCTime
+      response:
+        type: PayoutHistoryRes
+
+  - GET:
+      endpoint: /payout/referral/history
+      auth: ApiAuthV2
+      query:
+        limit: Int
+        offset: Int
+        areActivatedRidesOnly: Bool
+        customerPhoneNo: Text
+        driverPhoneNo: Text
+        driverId: (Id Driver)
+        from: UTCTime
+        to: UTCTime
+      response:
+        type: PayoutReferralHistoryRes
+
   - GET:
       endpoint: /payout/{payoutRequestId}
       auth: ApiAuthV2
@@ -87,6 +121,21 @@ apis:
         type: APISuccess
 
 types:
+  PayoutReferralHistoryRes:
+    - history: [ReferralHistoryItem]
+    - summary: Summary
+  ReferralHistoryItem:
+    - referralDate: UTCTime
+    - customerPhone: Maybe Text
+    - riderDetailsId: Text
+    - hasTakenValidActivatedRide: Bool
+    - dateOfActivation: Maybe LocalTime
+    - fraudFlaggedReason: Maybe PayoutFlagReason
+    - rideId: Maybe (Id Ride)
+    - driverId: Maybe (Id Driver)
+    - isReviewed: Bool
+  PayoutFlagReason:
+    - enum: "ExceededMaxReferral,MinRideDistanceInvalid,MinPickupDistanceInvalid,CustomerExistAsDriver,MultipleDeviceIdExists,RideConstraintInvalid"
   UpdateScheduledPayoutConfigReq:
     - payoutCategory: EntityName
     - isEnabled: Maybe Bool

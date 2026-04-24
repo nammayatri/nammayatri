@@ -12,8 +12,10 @@ module Lib.Payment.API.Payout
 where
 
 import qualified Data.Text as T
+import Kernel.External.Encryption (EncFlow, getDbHash)
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error (GenericError (InvalidRequest))
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common (fromMaybeM, throwError)
@@ -21,10 +23,12 @@ import qualified Lib.Finance.Domain.Types.StateTransition as ST
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import Lib.Payment.API.Payout.Types
 import Lib.Payment.Domain.Types.Common (EntityName)
+import qualified Lib.Payment.Domain.Types.PayoutOrder as PayoutOrder
 import Lib.Payment.Domain.Types.PayoutRequest (PayoutRequest (..), PayoutRequestStatus (..))
 import qualified Lib.Payment.Payout.History as PayoutHistory
 import qualified Lib.Payment.Payout.Request as PayoutRequest
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
+import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Servant hiding (throwError)
 
@@ -37,7 +41,16 @@ type UIAPI =
 
 type DashboardAPI =
   "payout"
-    :> ( Capture "payoutRequestId" (Id.Id PayoutRequest)
+    :> ("history"
+           :> QueryParam "driverId" Text
+           :> QueryParam "driverPhoneNo" Text
+           :> QueryParam "from" UTCTime
+           :> QueryParam "isFailedOnly" Bool
+           :> QueryParam "limit" Int
+           :> QueryParam "offset" Int
+           :> QueryParam "to" UTCTime
+           :> Get '[JSON] PayoutHistoryRes
+           :<|> Capture "payoutRequestId" (Id.Id PayoutRequest)
            :> Get '[JSON] PayoutRequestResp
            :<|> Capture "payoutRequestId" (Id.Id PayoutRequest)
            :> "retry"
@@ -73,7 +86,11 @@ data PayoutDashboardHandlerConfig m = PayoutDashboardHandlerConfig
     executePayoutRetry :: PayoutRequest -> m (),
     handleDeleteVpa :: DeleteVpaReq -> m PayoutSuccess,
     handleUpdateVpa :: UpdateVpaReq -> m PayoutSuccess,
-    handleRefundRegistrationAmount :: RefundRegAmountReq -> m PayoutSuccess
+    handleRefundRegistrationAmount :: RefundRegAmountReq -> m PayoutSuccess,
+    merchantCity :: Context.City,
+    -- | Run once per request; returns a per-row enricher that closes over
+    -- request-level constants (merchant / operating city / transporter tz).
+    mkHistoryItemEnricher :: m (PayoutOrder.PayoutOrder -> m PayoutHistoryItem)
   }
 
 class VerifyVpaFlow m where
@@ -92,11 +109,12 @@ payoutUIHandler cfg =
       buildPayoutResp refreshed
 
 payoutDashboardHandler ::
-  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r, VerifyVpaFlow m) =>
+  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r, EncFlow m r, VerifyVpaFlow m) =>
   PayoutDashboardHandlerConfig m ->
   ServerT DashboardAPI m
-payoutDashboardHandler cfg =
-  getPayoutById
+payoutDashboardHandler cfg@PayoutDashboardHandlerConfig {mkHistoryItemEnricher = mkEnricher} =
+  getPayoutHistory
+    :<|> getPayoutById
     :<|> retryPayout
     :<|> cancelPayout
     :<|> markCash
@@ -108,6 +126,21 @@ payoutDashboardHandler cfg =
       payoutRequest <- QPR.findById payoutRequestId >>= fromMaybeM (InvalidRequest "Payout request not found")
       refreshed <- cfg.refreshPayoutRequest payoutRequest
       buildPayoutResp refreshed
+
+    getPayoutHistory mbDriverId mbDriverPhoneNo mbFrom mbIsFailedOnly mbLimit mbOffset mbTo = do
+      let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
+          offset = fromMaybe 0 mbOffset
+          isFailedOnly = fromMaybe False mbIsFailedOnly
+      mbMobileNumberHash <- mapM getDbHash mbDriverPhoneNo
+      payoutOrders <- QPayoutOrder.findAllWithOptions limit offset mbDriverId mbMobileNumberHash mbFrom mbTo isFailedOnly cfg.merchantCity
+      enrich <- mkEnricher
+      history <- mapM enrich payoutOrders
+      let count = length history
+          summary = PayoutHistorySummary {totalCount = count, count}
+      pure PayoutHistoryRes {history, summary}
+      where
+        maxLimit = 20
+        defaultLimit = 10
 
     retryPayout payoutRequestId = do
       payoutRequest <- QPR.findById payoutRequestId >>= fromMaybeM (InvalidRequest "Payout request not found")
