@@ -181,6 +181,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     gpsTollBehaviorWindowDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     graceTimeForScheduledRidePickup :: Kernel.Prelude.NominalDiffTime,
     includeDriverCurrentlyOnRide :: Kernel.Prelude.Bool,
+    invoiceConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.InvoiceConfig,
     isAAEnabledForRecurring :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isAvoidToll :: Kernel.Prelude.Bool,
     isDeviceIdChecksRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -425,6 +426,9 @@ data GstBreakup = GstBreakup
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
+data InvoiceConfig = InvoiceConfig {driverInvoiceLineItemsVatInclusive :: Kernel.Prelude.Bool, emitLedgerEntries :: Kernel.Prelude.Bool}
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
 data PayoutFeeConfig = PayoutFeeConfig {feeType :: Domain.Types.TransporterConfig.PayoutFeeType, feeValue :: Kernel.Types.Common.HighPrecMoney}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Read, Eq)
 
@@ -445,6 +449,7 @@ data TaxConfig = TaxConfig
     invalidPanTdsRate :: Kernel.Prelude.Double,
     rideGst :: Domain.Types.TransporterConfig.GstBreakup,
     securityDepositGst :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.GstBreakup,
+    serviceVatPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     subscriptionTdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)

@@ -7,6 +7,7 @@ import qualified Data.Aeson as A
 import qualified Data.Text as T
 import Data.Time (utctDay)
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
@@ -186,8 +187,58 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
       let offerListCall = TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType (Just customerId) person.clientSdkVersion
       DPayment.offerListService customerId version paymentServiceType (31 * 86400) True offerListCall req
 
-getSelectedOfferDetailsWithBasket :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, BeamFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Text -> Price -> Text -> Maybe DRide.Ride -> Maybe DRB.Booking -> Maybe SSR.SearchRequest -> m (Maybe (OfferRespAPIEntity, DPayment.ComputedOfferAmount))
-getSelectedOfferDetailsWithBasket merchantId personId merchantOperatingCityId paymentServiceType productId price offerId mbRide mbBooking mbSearchReq = do
+-- | Optional fare context — when provided, postOfferAmount is recomputed
+--   via the shared 'Domain.SharedLogic.RideDiscount.applyRideDiscount'
+--   algorithm so the VAT portion is scaled with the discount. When omitted,
+--   offer.finalOrderAmount is used as-is (FRFS / pass flows etc.).
+type OfferFareCtx = Maybe RD.ProjectFareParamsBreakup
+
+-- | Recompute the post-offer amount: VAT-aware when fare context + discount
+--   are both present, falls back to the payment-library's
+--   finalOrderAmount otherwise.
+--
+--   When @offer.discountAmount > 0@ but no fare context was threaded
+--   through, we emit a warning — that path produces a stale figure that
+--   doesn't reflect VAT redistribution, and should be fixed by threading
+--   the ctx from the caller.
+recomputePostOfferAmount ::
+  (MonadFlow m) =>
+  OfferFareCtx ->
+  Payment.OfferResp ->
+  m HighPrecMoney
+recomputePostOfferAmount mbCtx offer = case mbCtx of
+  Just b
+    | offer.discountAmount > 0 ->
+      let r = RD.applyRideDiscount b offer.discountAmount
+          updatedBreakup =
+            b
+              { RD.discountApplicableRideFareTaxExclusive = r.postDiscountApplicableTaxExclusive,
+                RD.discountApplicableRideFareTax = r.postDiscountApplicableTax
+              }
+       in pure $ RD.projectFareParamsBreakupTotal updatedBreakup
+  Nothing | offer.discountAmount > 0 -> do
+    logWarning $
+      "recomputePostOfferAmount: offer " <> offer.offerId
+        <> " has discountAmount > 0 but no fare context was provided; "
+        <> "falling back to finalOrderAmount (no VAT recompute)"
+    pure offer.finalOrderAmount
+  _ -> pure offer.finalOrderAmount
+
+getSelectedOfferDetailsWithBasket ::
+  (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) =>
+  Id Merchant.Merchant ->
+  Id Person.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  DOrder.PaymentServiceType ->
+  Text ->
+  Price ->
+  Text ->
+  OfferFareCtx ->
+  Maybe DRide.Ride ->
+  Maybe DRB.Booking ->
+  Maybe SSR.SearchRequest ->
+  m (Maybe (OfferRespAPIEntity, DPayment.ComputedOfferAmount))
+getSelectedOfferDetailsWithBasket merchantId personId merchantOperatingCityId paymentServiceType productId price offerId mbFareCtx mbRide mbBooking mbSearchReq = do
   productOffers <- offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceType [(productId, price)] mbRide mbBooking mbSearchReq
   case lookup productId productOffers of
     Nothing -> pure Nothing
@@ -195,19 +246,34 @@ getSelectedOfferDetailsWithBasket merchantId personId merchantOperatingCityId pa
       let filteredOffers = filter (\o -> o.offerId == offerId) resp.offerResp
       case listToMaybe filteredOffers of
         Nothing -> pure Nothing
-        Just offer -> pure $ Just (mkOfferRespAPIEntity offer, deriveComputedOfferAmount offer)
+        Just offer -> do
+          entity <- mkOfferRespAPIEntity mbFareCtx offer
+          computed <- deriveComputedOfferAmount mbFareCtx offer
+          pure $ Just (entity, computed)
 
-deriveComputedOfferAmount :: Payment.OfferResp -> DPayment.ComputedOfferAmount
-deriveComputedOfferAmount offer =
-  DPayment.ComputedOfferAmount
-    { discountAmount = offer.discountAmount,
-      payoutAmount = offer.cashbackAmount,
-      postOfferAmount = offer.finalOrderAmount,
-      amountSaved = offer.discountAmount + offer.cashbackAmount
-    }
+deriveComputedOfferAmount ::
+  (MonadFlow m) =>
+  OfferFareCtx ->
+  Payment.OfferResp ->
+  m DPayment.ComputedOfferAmount
+deriveComputedOfferAmount mbFareCtx offer = do
+  postOfferAmount <- recomputePostOfferAmount mbFareCtx offer
+  pure
+    DPayment.ComputedOfferAmount
+      { discountAmount = offer.discountAmount,
+        payoutAmount = offer.cashbackAmount,
+        postOfferAmount = postOfferAmount,
+        amountSaved = offer.discountAmount + offer.cashbackAmount
+      }
 
-mkCumulativeOfferResp :: (MonadFlow m, EncFlow m r, BeamFlow m r, ClickhouseFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> [JL.LegInfo] -> m (Maybe CumulativeOfferResp)
-mkCumulativeOfferResp merchantOperatingCityId offerListRes legInfos = do
+mkCumulativeOfferResp ::
+  (MonadFlow m, EncFlow m r, BeamFlow m r, ClickhouseFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Payment.OfferListResp ->
+  [JL.LegInfo] ->
+  OfferFareCtx ->
+  m (Maybe CumulativeOfferResp)
+mkCumulativeOfferResp merchantOperatingCityId offerListRes legInfos mbFareCtx = do
   now <- getCurrentTime
   (logics, _) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) LYT.CUMULATIVE_OFFER_POLICY now Nothing Nothing
   if null logics
@@ -220,32 +286,40 @@ mkCumulativeOfferResp merchantOperatingCityId offerListRes legInfos = do
       case A.fromJSON result.result :: A.Result CumulativeOfferRespI of
         A.Success logicResult -> do
           logInfo $ "Cumulative offer logic result: " <> show logicResult
-          pure $ Just $ mkCumulativeOfferRespFromI logicResult
+          resp <- mkCumulativeOfferRespFromI logicResult
+          pure (Just resp)
         A.Error err -> do
           logError $ "Failed to parse cumulative offer logic result: " <> show err
           pure Nothing
   where
-    mkCumulativeOfferRespFromI :: CumulativeOfferRespI -> CumulativeOfferResp
     mkCumulativeOfferRespFromI CumulativeOfferRespI {..} = do
-      CumulativeOfferResp
-        { offerListResp = map mkOfferRespAPIEntity offerListResp.offerResp,
-          ..
-        }
+      offerListResp' <- traverse (mkOfferRespAPIEntity mbFareCtx) offerListResp.offerResp
+      pure
+        CumulativeOfferResp
+          { offerListResp = offerListResp',
+            ..
+          }
 
-mkOfferRespAPIEntity :: Payment.OfferResp -> OfferRespAPIEntity
-mkOfferRespAPIEntity Payment.OfferResp {..} = do
-  OfferRespAPIEntity
-    { offerId = offerId,
-      offerTitle = offerDescription.title,
-      offerDescription = offerDescription.description,
-      offerTnc = offerDescription.tnc,
-      offerSponsoredBy = offerDescription.sponsoredBy,
-      offerCode = offerCode,
-      autoApply = fromMaybe False (uiConfigs >>= (.autoApply)),
-      isHidden = fromMaybe True (uiConfigs >>= (.isHidden)),
-      amountSaved = discountAmount + cashbackAmount,
-      postOfferAmount = finalOrderAmount
-    }
+mkOfferRespAPIEntity ::
+  (MonadFlow m) =>
+  OfferFareCtx ->
+  Payment.OfferResp ->
+  m OfferRespAPIEntity
+mkOfferRespAPIEntity mbFareCtx offer@Payment.OfferResp {..} = do
+  postOfferAmount <- recomputePostOfferAmount mbFareCtx offer
+  pure
+    OfferRespAPIEntity
+      { offerId = offerId,
+        offerTitle = offerDescription.title,
+        offerDescription = offerDescription.description,
+        offerTnc = offerDescription.tnc,
+        offerSponsoredBy = offerDescription.sponsoredBy,
+        offerCode = offerCode,
+        autoApply = fromMaybe False (uiConfigs >>= (.autoApply)),
+        isHidden = fromMaybe True (uiConfigs >>= (.isHidden)),
+        amountSaved = discountAmount + cashbackAmount,
+        postOfferAmount = postOfferAmount
+      }
 
 mkOfferListReq :: (MonadFlow m, EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Price -> m Payment.OfferListReq
 mkOfferListReq person price = do

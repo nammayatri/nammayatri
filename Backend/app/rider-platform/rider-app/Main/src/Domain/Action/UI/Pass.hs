@@ -487,7 +487,7 @@ buildPassAPIEntity mbLanguage person pass = do
     withTryCatch "getMultimodalPassAvailablePasses:offerListCache" (SOffer.offerListCache person.merchantId person.id person.merchantOperatingCityId DOrder.FRFSPassPurchase (mkPrice (Just INR) pass.amount) (case pass.applicableVehicleServiceTiers of [] -> Nothing; tiers -> Just $ T.intercalate "-" $ EHS.sort $ map show tiers))
       >>= \case
         Left _ -> return Nothing
-        Right offersResp -> SOffer.mkCumulativeOfferResp person.merchantOperatingCityId offersResp []
+        Right offersResp -> SOffer.mkCumulativeOfferResp person.merchantOperatingCityId offersResp [] Nothing
 
   let originalAmount = case pass.benefit of
         Just DPass.FullSaving -> pass.amount
@@ -684,8 +684,10 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
         Just existingActive -> do
           logInfo $
             "Duplicate overlapping active pass payment detected for paymentOrderId: " <> paymentOrderId.getId
-              <> ", purchasedPassId: " <> purchasedPass.id.getId
-              <> ", existing active paymentId: " <> existingActive.id.getId
+              <> ", purchasedPassId: "
+              <> purchasedPass.id.getId
+              <> ", existing active paymentId: "
+              <> existingActive.id.getId
               <> ". Marking this payment as RefundPending for auto-refund."
           return (DPayment.FulfillmentRefundPending, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
         Nothing -> do
@@ -797,9 +799,7 @@ updatePurchasedPass purchasedPass today now = do
               hasChanged =
                 purchasedPass.status /= newStatus
                   || firstPreBookedPayment.status /= newStatus
-
            in return (newPass, Just newPassPayment, hasChanged)
-
         Nothing ->
           let newPass =
                 purchasedPass
@@ -863,7 +863,6 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
         (_, Just firstPreBookedPayment) -> do
           QPurchasedPassPayment.updateStatusByOrderId updatedPass.status firstPreBookedPayment.orderId
           QPurchasedPass.updatePurchaseData purchasedPass.id updatedPass.startDate updatedPass.endDate updatedPass.status updatedPass.benefitDescription updatedPass.benefitType updatedPass.benefitValue updatedPass.passAmount
-
         _ -> return ()
 
     return updatedPass
@@ -1085,7 +1084,7 @@ postMultimodalPassResetDeviceSwitchCount (mbCallerPersonId, merchantId) purchase
   purchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId (Just [DPurchasedPass.Active]) Nothing Nothing
   case purchasedPasses of
     [_] -> return ()
-    _   -> throwError $ InvalidRequest "Only one active pass is allowed"
+    _ -> throwError $ InvalidRequest "Only one active pass is allowed"
   QPurchasedPass.updateDeviceIdById purchasedPass.deviceId 0 purchasedPass.id
   return APISuccess.Success
 

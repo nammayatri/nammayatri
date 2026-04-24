@@ -44,6 +44,7 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RiderDetails
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.VehicleVariant as Veh
 import qualified Domain.Types.Yudhishthira as TY
 import EulerHS.Prelude hiding (whenJust)
 import Kernel.External.Maps
@@ -62,7 +63,7 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), InvoiceLineItemType (..), invoice, runFinance, transfer, transfer_)
+import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), invoice, runFinance, transfer, transfer_)
 import qualified Lib.Finance.Domain.Types.Invoice as Invoice
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
@@ -77,12 +78,12 @@ import SharedLogic.Cancel
 import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.Finance.Wallet
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import SharedLogic.Ride (releaseLien, updateOnRideStatusWithAdvancedRideCheck)
 import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
-import qualified Domain.Types.VehicleVariant as Veh
 import qualified SharedLogic.UserCancellationDues as UserCancellationDues
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -307,7 +308,19 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
         merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist booking.merchantOperatingCityId.getId)
         let rideGst = transporterConfig.taxConfig.rideGst
             gstPct = fromMaybe 0 rideGst.cgstPercentage + fromMaybe 0 rideGst.sgstPercentage + fromMaybe 0 rideGst.igstPercentage
-            gstOnCancellation = if gstPct > 0 then fee.amount * gstPct / (1 + gstPct) else 0
+            -- Fall back to the ride's own effective VAT rate (derived from
+            -- projectFareParamsBreakup: tax / taxExclusive) when GST is zero
+            -- (international/VAT regime). Removes the need for a separate
+            -- customerVatPercentage config.
+            mbProjectedBreakup = FC.projectFareParamsBreakup booking.fareParams
+            rideEffectiveVatPct :: HighPrecMoney = case mbProjectedBreakup of
+              Just b ->
+                let taxable = b.discountApplicableRideFareTaxExclusive + b.nonDiscountApplicableRideFareTaxExclusive
+                    tax = b.discountApplicableRideFareTax + b.nonDiscountApplicableRideFareTax
+                 in if taxable > 0 then tax / taxable else 0
+              Nothing -> 0
+            effectivePct = if gstPct > 0 then gstPct else rideEffectiveVatPct
+            gstOnCancellation = if effectivePct > 0 then fee.amount * effectivePct / (1 + effectivePct) else 0
             baseCancellation = fee.amount - gstOnCancellation
             cancellationComponents =
               [ (baseCancellation, walletReferenceCustomerCancellationCharges, OwnerLiability),
@@ -321,7 +334,7 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
               if amount > 0 then Just amount else Nothing
         mbPanCard <- QPanCard.findByDriverId ride.driverId
         mbDriverInfo <- QDI.findById (cast ride.driverId)
-        ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig
+        ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True
         result <- runFinance ctx $ do
           mapM_
             ( \(amt, ref, dest) -> do
@@ -332,6 +345,14 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
           -- TDS: Liability(DRIVER/FLEET_OWNER) -> Liability(GOVERNMENT_DIRECT)
           whenJust mbTdsAmount $ \tdsAmount ->
             void $ transfer OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCancellation
+          -- ServiceVAT on cancellation: Government Asset -> Driver Liability (international VAT regime)
+          let cancelServiceVatPct = transporterConfig.taxConfig.serviceVatPercentage
+              cancelInclusive = baseCancellation + gstOnCancellation
+              cancelServiceVatAmount = case cancelServiceVatPct of
+                Just pct -> HighPrecMoney (cancelInclusive.getHighPrecMoney * (toRational pct / 100))
+                Nothing -> 0
+          when (cancelServiceVatAmount > 0) $
+            void $ transfer GovtIndirect OwnerLiability cancelServiceVatAmount walletReferenceCancellationVATInput
           invoice
             InvoiceConfig
               { invoiceType = Invoice.RideCancellation,
@@ -348,14 +369,24 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
                     booking.fromLocation.address.city
                     gstOnCancellation,
                 lineItems =
-                  catMaybes
-                    [ if baseCancellation > 0
-                        then Just InvoiceLineItem {description = "Customer Cancellation Fee", quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, invoiceLineItemType = CustomerCancellationFee, isExternalCharge = False}
-                        else Nothing,
-                      if gstOnCancellation > 0
-                        then Just InvoiceLineItem {description = "GST on Cancellation Fee", quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, invoiceLineItemType = GSTOnCancellationFee, isExternalCharge = False}
-                        else Nothing
-                    ],
+                  let clubVatInclusive = maybe False (.driverInvoiceLineItemsVatInclusive) transporterConfig.invoiceConfig
+                      inclusiveCancellation = baseCancellation + gstOnCancellation
+                   in if clubVatInclusive
+                        then
+                          catMaybes
+                            [ if inclusiveCancellation > 0
+                                then Just InvoiceLineItem {description = "Cancellation Fee (Incl. VAT)", quantity = 1, unitPrice = inclusiveCancellation, lineTotal = inclusiveCancellation, isExternalCharge = False}
+                                else Nothing
+                            ]
+                        else
+                          catMaybes
+                            [ if baseCancellation > 0
+                                then Just InvoiceLineItem {description = "Customer Cancellation Fee", quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, isExternalCharge = False}
+                                else Nothing,
+                              if gstOnCancellation > 0
+                                then Just InvoiceLineItem {description = "GST on Cancellation Fee", quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, isExternalCharge = False}
+                                else Nothing
+                            ],
                 isVat = False,
                 issuedToTaxNo = Nothing,
                 issuedByTaxNo = Nothing

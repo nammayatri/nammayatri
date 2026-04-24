@@ -1385,7 +1385,7 @@ generateJourneyInfoResponse journey legs = do
     withTryCatch "generateJourneyInfoResponse:offerListCache" (SOffer.offerListCache journey.merchantId journey.riderId journey.merchantOperatingCityId DOrder.FRFSMultiModalBooking (mkPrice mbCurrency estimatedMinFareAmount) Nothing)
       >>= \case
         Left _ -> return Nothing
-        Right offersResp -> SOffer.mkCumulativeOfferResp journey.merchantOperatingCityId offersResp legs
+        Right offersResp -> SOffer.mkCumulativeOfferResp journey.merchantOperatingCityId offersResp legs Nothing
   pure $
     APITypes.JourneyInfoResp
       { estimatedDuration = journey.estimatedDuration,

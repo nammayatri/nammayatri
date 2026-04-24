@@ -46,7 +46,16 @@ data DueAmountRide = DueAmountRide {amount :: Kernel.Types.Common.HighPrecMoney,
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data GetDueAmountResp = GetDueAmountResp {currency :: Kernel.Prelude.Maybe Kernel.Types.Common.Currency, rides :: [DueAmountRide], totalDueAmount :: Kernel.Types.Common.HighPrecMoney}
+data GetDueAmountResp = GetDueAmountResp
+  { currency :: Kernel.Prelude.Maybe Kernel.Types.Common.Currency,
+    gstDue :: Kernel.Types.Common.HighPrecMoney,
+    platformFeeDue :: Kernel.Types.Common.HighPrecMoney,
+    rideFareDue :: Kernel.Types.Common.HighPrecMoney,
+    rides :: [DueAmountRide],
+    tollFareDue :: Kernel.Types.Common.HighPrecMoney,
+    tollVatDue :: Kernel.Types.Common.HighPrecMoney,
+    totalDueAmount :: Kernel.Types.Common.HighPrecMoney
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -65,7 +65,6 @@ import Lib.Finance
     FinanceCtx (..),
     InvoiceConfig (..),
     InvoiceLineItem (..),
-    InvoiceLineItemType (..),
     findByAccountWithFilters,
     getEntriesByReference,
     invoice,
@@ -144,12 +143,13 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate = do
       toDate = fromMaybe now mbToDate
       cutOffDays = transporterConfig.driverWalletConfig.payoutCutOffDays
       cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
-  mbAccount <- getWalletAccountByOwner counterparty driverId.getId
-  case mbAccount of
-    Nothing -> pure emptyWalletSummary
-    Just acc -> do
+  (mbWalletAcc, mbControlAcc) <- getWalletAndControlAccountsByOwner counterparty driverId.getId
+  case (mbWalletAcc, mbControlAcc) of
+    (Nothing, Nothing) -> pure emptyWalletSummary
+    _ -> do
       currentBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty driverId.getId
-      (additions, deductions, nonRedeemableBalance) <- classifyEntries acc.id fromDate toDate cutoff
+      let accountIds = catMaybes [(.id) <$> mbWalletAcc, (.id) <$> mbControlAcc]
+      (additions, deductions, nonRedeemableBalance) <- classifyEntries accountIds fromDate toDate cutoff
       let redeemableBalance = max 0 (currentBalance - nonRedeemableBalance)
       pure $
         DriverWallet.WalletSummaryResponse
@@ -173,18 +173,24 @@ emptyWalletSummary =
 -- | Fetch entries in a date range, partition into additions/deductions,
 --   group by reference type, and compute per-item redeemable/nonRedeemable.
 --   Also returns the top-level nonRedeemableBalance (sum of additions after cutoff).
+--   Takes multiple account IDs (wallet Liability + Control cash-earnings tracker)
+--   and merges entries so the driver's feed shows both online wallet movements
+--   and cash-mode earnings in a single timeline.
 classifyEntries ::
   (BeamFlow m r) =>
-  Id Account ->
+  [Id Account] ->
   UTCTime ->
   UTCTime ->
   UTCTime -> -- payout cutoff time
   m (DriverWallet.WalletItemGroup, DriverWallet.WalletItemGroup, HighPrecMoney)
-classifyEntries accountId fromDate toDate cutoff = do
+classifyEntries accountIds fromDate toDate cutoff = do
   -- Use walletCreditRefs (single source of truth) + debit-only refs for full picture
   let allRefs = walletCreditRefs ++ [walletReferencePayout]
-  entries <- findByAccountWithFilters accountId (Just fromDate) (Just toDate) Nothing Nothing Nothing (Just allRefs)
-  let (addEntries, dedEntries) = partition (\e -> e.toAccountId == accountId) entries
+      accountIdSet = accountIds
+  entriesPerAccount <- forM accountIds $ \accountId ->
+    findByAccountWithFilters accountId (Just fromDate) (Just toDate) Nothing Nothing Nothing (Just allRefs)
+  let entries = concat entriesPerAccount
+      (addEntries, dedEntries) = partition (\e -> e.toAccountId `elem` accountIdSet) entries
 
       -- For additions: compute total and non-redeemable (after cutoff) per reference type
       addRefMap = foldl' (\acc e -> Map.insertWith (\(a1, b1) (a2, b2) -> (a1 + a2, b1 + b2)) e.referenceType (e.amount, if e.timestamp >= cutoff then e.amount else 0) acc) Map.empty addEntries
@@ -235,6 +241,11 @@ referenceTypeToItemName ref
   | ref == walletReferenceTDSDeductionCash = "TDS (Cash)"
   | ref == walletReferencePayout = "Withdrawal"
   | ref == walletReferenceAirportCashRecharge = "Airport cash recharge (booth)"
+  | ref == walletReferenceDiscountsOnline = "Discounts (Online)"
+  | ref == walletReferenceDiscountsCash = "Discounts (Cash)"
+  | ref == walletReferenceCommissionOnline = "Commission (Online)"
+  | ref == walletReferenceCommissionCash = "Commission (Cash)"
+  | ref == walletReferenceVATAbsorbedOnDiscount = "VAT Absorbed on Discount"
   | otherwise = ref
 
 --------------------------------------------------------------------------------
@@ -559,7 +570,8 @@ mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId = do
         supplierId = supplierId,
         panOfParty = Nothing,
         panType = Nothing,
-        tdsRateReason = Nothing
+        tdsRateReason = Nothing,
+        emitLedgerEntries = True
       }
 
 -- | Record airport booth cash recharge: credit driver wallet (PlatformAsset → OwnerLiability)
@@ -588,7 +600,7 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
               issuedToId = driverId.getId,
               issuedToName = Nothing,
               issuedToAddress = Nothing,
-              lineItems = [InvoiceLineItem {description = "Airport Cash Recharge", quantity = 1, unitPrice = amount, lineTotal = amount, isExternalCharge = False, invoiceLineItemType = AirportCashRecharge }],
+              lineItems = [InvoiceLineItem {description = "Airport Cash Recharge", quantity = 1, unitPrice = amount, lineTotal = amount, isExternalCharge = False}],
               gstBreakdown = Nothing,
               isVat = False,
               issuedToTaxNo = Nothing,

@@ -74,8 +74,17 @@ data FareParametersT f = FareParametersT
     merchantOperatingCityId :: B.C f (Maybe Text),
     paymentProcessingFee :: B.C f (Maybe HighPrecMoney),
     isVatTaxType :: B.C f (Maybe Bool),
+    commission :: B.C f (Maybe HighPrecMoney),
+    discountApplicableRideFareTaxExclusive :: B.C f (Maybe HighPrecMoney),
+    discountApplicableRideFareTax :: B.C f (Maybe HighPrecMoney),
+    nonDiscountApplicableRideFareTaxExclusive :: B.C f (Maybe HighPrecMoney),
+    nonDiscountApplicableRideFareTax :: B.C f (Maybe HighPrecMoney),
+    tollFareTaxExclusive :: B.C f (Maybe HighPrecMoney),
     tollVat :: B.C f (Maybe HighPrecMoney),
-    commission :: B.C f (Maybe HighPrecMoney)
+    cancellationFeeTaxExclusive :: B.C f (Maybe HighPrecMoney),
+    cancellationTax :: B.C f (Maybe HighPrecMoney),
+    parkingChargeTaxExclusive :: B.C f (Maybe HighPrecMoney),
+    parkingChargeTax :: B.C f (Maybe HighPrecMoney)
   }
   deriving (Generic, B.Beamable)
 

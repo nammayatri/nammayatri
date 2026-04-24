@@ -648,3 +648,6 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN sos_tracking_link text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN enable_ride_hailing_offers boolean ;
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN invoice_config json ;

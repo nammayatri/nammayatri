@@ -1255,8 +1255,6 @@ applyOfferService paymentOrderId offerStatsInput useDomainOffers applyOfferCall 
   unless (null offerInitiatedPaymentOrderOffer) $ do
     now <- getCurrentTime
     order <- QOrder.findById paymentOrderId >>= fromMaybeM (PaymentOrderDoesNotExist paymentOrderId.getId)
-    let staticCustomerId = offerStatsInput.staticPersonId
-        deviceImei = offerStatsInput.deviceId
     unless useDomainOffers $ do
       let offerIds = map (.offer_id) offerInitiatedPaymentOrderOffer
           customer =
@@ -1279,8 +1277,8 @@ applyOfferService paymentOrderId offerStatsInput useDomainOffers applyOfferCall 
               paymentMode = "dummy-not-required",
               numOfRides = 0,
               basket = Nothing,
-              staticCustomerId,
-              deviceImei
+              staticCustomerId = offerStatsInput.staticPersonId,
+              deviceImei = offerStatsInput.deviceId
             }
     forM_ offerInitiatedPaymentOrderOffer $ \paymentOffer -> do
       QPaymentOrderOffer.updateByPrimaryKey paymentOffer {DPaymentOrderOffer.status = PInterface.OFFER_AVAILED, DPaymentOrderOffer.updatedAt = now}
@@ -1334,8 +1332,8 @@ applyOfferWithoutPaymentService referenceId offerId offerCode offerStatsInput di
               paymentMode = "dummy-not-required",
               numOfRides = 0,
               basket = basket,
-              staticCustomerId = staticCustomerId,
-              deviceImei = deviceImei
+              staticCustomerId = offerStatsInput.staticPersonId,
+              deviceImei = offerStatsInput.deviceId
             }
     offlineOfferId <- generateGUID
     let offlineOffer =
@@ -1362,8 +1360,8 @@ data OfferStatsInput = OfferStatsInput
   { personId :: Text,
     staticPersonId :: Maybe Text, -- static customer UUID (Nothing or same as personId means skip)
     deviceId :: Maybe Text, -- device IMEI (Nothing or empty means skip)
-    email :: Maybe Text, -- customer email for OfferApplyReq.customer (BAP ride flow); Nothing for driver
-    mobile :: Maybe Text -- customer mobile for OfferApplyReq.customer (BAP ride flow); Nothing for driver
+    email :: Maybe Text,
+    mobile :: Maybe Text
   }
   deriving (Show)
 

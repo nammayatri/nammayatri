@@ -1,3 +1,74 @@
+{-
+  BPP (Seller App / Driver-side) finance — reference-type constants + helpers.
+  The ledger-posting logic that consumes these refs lives in
+  Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/Domain/Action/UI/Ride/EndRide/Internal.hs
+  (inside 'createDriverWalletTransaction').
+
+  ┌──────────────────────────────────────────────────────────────────────────────────────┐
+  │ BPP — ledger model (VAT regime). Online and cash diverge on ride-earning and         │
+  │ Tips; platform-level flows (subsidy, commission, VATInput, TDS) are identical.       │
+  ├──────────────────────────────────┬────────────────────────┬──────────────────────────┤
+  │ Ref type                         │ Online                 │ Cash                     │
+  ├──────────────────────────────────┼────────────────────────┼──────────────────────────┤
+  │ Ride-earning                     │ 2-leg pass-through:    │ 1-leg tracking:          │
+  │   (BaseRide, VATOnline/VATCash,  │   BuyerAsset →         │   BuyerControl →         │
+  │    TollCharges, ParkingCharges)  │     BuyerExternal      │     OwnerControl         │
+  │                                  │   BuyerExternal →      │ (Dr Asset ↑,             │
+  │                                  │     OwnerLiability     │  Cr Liability ↑)         │
+  │                                  │ end: BuyerAsset ↑,     │ Rider paid driver        │
+  │                                  │      OwnerLiability ↑  │ directly — doesn't touch │
+  │                                  │ (BPP holds cash,       │ A/R or driver wallet.    │
+  │                                  │  owes driver)          │                          │
+  ├──────────────────────────────────┼────────────────────────┼──────────────────────────┤
+  │ BAP subsidy                      │ 2-leg pass-through:    │ same as online           │
+  │   (Discounts,                    │   BuyerAsset →         │ (BAP actually remits     │
+  │    VATAbsorbedOnDiscount)        │     BuyerExternal →    │  the subsidy to BPP in   │
+  │                                  │     OwnerLiability     │  both modes; driver      │
+  │                                  │                        │  wallet is credited)     │
+  ├──────────────────────────────────┼────────────────────────┼──────────────────────────┤
+  │ Commission                       │ OwnerLiability →       │ same (driver owes        │
+  │   (driver pays BPP platform fee) │   SellerRevenue        │  regardless; wallet      │
+  │                                  │                        │  reduces — may go -ve    │
+  │                                  │                        │  for cash when wallet    │
+  │                                  │                        │  credits < deductions)   │
+  ├──────────────────────────────────┼────────────────────────┼──────────────────────────┤
+  │ VATInput                         │ GovtIndirect →         │ same                     │
+  │   (VAT input credit on driver's  │   OwnerLiability       │                          │
+  │    taxable service; base:        │                        │                          │
+  │      online: totalFare - comm    │                        │                          │
+  │      cash + discount:            │                        │                          │
+  │        discount - commission     │                        │                          │
+  │      cash no-discount: gated off)│                        │                          │
+  ├──────────────────────────────────┼────────────────────────┼──────────────────────────┤
+  │ TDS                              │ OwnerLiability →       │ same                     │
+  │   (TDSDeductionOnline/Cash)      │   GovtDirect           │                          │
+  ├──────────────────────────────────┼────────────────────────┼──────────────────────────┤
+  │ Tips                             │ BuyerAsset →           │ BuyerControl →           │
+  │                                  │   OwnerLiability       │   OwnerControl           │
+  │                                  │ (customer paid via     │ (tip paid directly to    │
+  │                                  │  platform)             │  driver)                 │
+  └──────────────────────────────────┴────────────────────────┴──────────────────────────┘
+
+  Semantics legend:
+    from → to  = Dr from, Cr to (standard double-entry).
+    Asset/Expense as `from` raises its balance; as `to` lowers it.
+    Liability/Revenue/External as `from` lowers; as `to` raises.
+
+  Account-role glossary (cash side):
+    * 'BuyerControl'  — Asset,  BUYER counterparty. Tracks rider-side cash-flow amounts.
+    * 'OwnerControl'  — Liability, ride counterparty. Tracks driver-side cash-flow.
+    * No reversal hack: cash rides post a single clean leg through Control
+      accounts. Recon and earnings query Control balances directly.
+
+  GST regime (non-VAT, legacy India): ride-earning + tip behave the same as VAT;
+  only the tax-component differs. Online GST is routed via BPP (
+  'BuyerAsset → BuyerExternal → GovtIndirect'); cash GST flows from the driver's
+  wallet ('OwnerLiability → GovtIndirect') since the driver collected it in cash
+  and owes it to govt. VATInput does not apply in GST regime.
+
+  Invoice: created inside 'createDriverWalletTransaction' (EndRide/Internal.hs) using
+  FinanceM's auto-collected entry IDs — analogous to BAP's model.
+-}
 {-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module SharedLogic.Finance.Wallet
@@ -17,7 +88,10 @@ module SharedLogic.Finance.Wallet
     walletReferenceWalletIncentive,
     walletCreditRefs,
     getWalletAccountByOwner,
+    getControlAccountByOwner,
+    getWalletAndControlAccountsByOwner,
     getWalletBalanceByOwner,
+    getControlBalanceByOwner,
     createWalletEntryDelta,
     utcToLocalDay,
     payoutCutoffTimeUTC,
@@ -27,13 +101,21 @@ module SharedLogic.Finance.Wallet
     computeGstBreakdownByPlace,
     financeCtxFromRide,
     buildFinanceCtx,
-    walletReferenceCommission,
+    resolveIsOnlineFromBooking,
+    walletReferenceCommissionOnline,
+    walletReferenceCommissionCash,
     walletReferenceVATOnline,
     walletReferenceVATCash,
     walletReferenceD2DReferral,
     walletReferenceAirportCashRecharge,
     walletReferenceAirportEntryFeeGST,
     walletReferenceAirportEntryFee,
+    walletReferenceVATInput,
+    walletReferenceCancellationVATInput,
+    walletReferenceTips,
+    walletReferenceDiscountsOnline,
+    walletReferenceDiscountsCash,
+    walletReferenceVATAbsorbedOnDiscount,
     getRedeemableEntryIds,
     settleWalletEntries,
     getPayoutEligibilityData,
@@ -49,6 +131,7 @@ import qualified Data.Time as Time
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.DriverPanCard as DPanCard
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
@@ -64,7 +147,9 @@ import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import Storage.Queries.FleetOwnerInformation as QFOI
+import Tools.Error (MerchantPaymentMethodError (..))
 
 -- Reference type constants (PascalCase, abbreviations in all caps)
 
@@ -107,14 +192,41 @@ walletReferenceCustomerCancellationGST = "CustomerCancellationGST"
 walletReferenceTDSDeductionCancellation :: Text
 walletReferenceTDSDeductionCancellation = "TDSDeductionCancellation"
 
-walletReferenceCommission :: Text
-walletReferenceCommission = "Commission"
+walletReferenceCommissionOnline :: Text
+walletReferenceCommissionOnline = "CommissionOnline"
+
+walletReferenceCommissionCash :: Text
+walletReferenceCommissionCash = "CommissionCash"
 
 walletReferenceVATOnline :: Text
 walletReferenceVATOnline = "VATOnline"
 
 walletReferenceVATCash :: Text
 walletReferenceVATCash = "VATCash"
+
+walletReferenceVATInput :: Text
+walletReferenceVATInput = "VATInput"
+
+walletReferenceCancellationVATInput :: Text
+walletReferenceCancellationVATInput = "CancellationVATInput"
+
+walletReferenceTips :: Text
+walletReferenceTips = "Tips"
+
+-- | BAP-absorbed customer-visible discount (subsidy paid to driver by BAP).
+--   Split by payment mode so reporting can separate the two flows.
+walletReferenceDiscountsOnline :: Text
+walletReferenceDiscountsOnline = "DiscountsOnline"
+
+walletReferenceDiscountsCash :: Text
+walletReferenceDiscountsCash = "DiscountsCash"
+
+-- | VAT share inside a customer-visible discount that BAP absorbs on the
+--   driver's behalf. Together with the matching 'walletReferenceDiscounts*'
+--   ref (Online or Cash) the sum equals
+--   the total discount shown to the rider.
+walletReferenceVATAbsorbedOnDiscount :: Text
+walletReferenceVATAbsorbedOnDiscount = "VATAbsorbedOnDiscount"
 
 walletReferenceD2DReferral :: Text
 walletReferenceD2DReferral = "D2DReferral"
@@ -154,10 +266,17 @@ walletCreditRefs =
     walletReferenceCustomerCancellationCharges,
     walletReferenceDriverCancellationCharges,
     walletReferenceCustomerCancellationGST,
-    walletReferenceCommission,
+    walletReferenceCommissionOnline,
+    walletReferenceCommissionCash,
     walletReferenceWalletIncentive,
     walletReferenceVATOnline,
-    walletReferenceVATCash
+    walletReferenceVATCash,
+    walletReferenceVATInput,
+    walletReferenceCancellationVATInput,
+    walletReferenceTips,
+    walletReferenceDiscountsOnline,
+    walletReferenceDiscountsCash,
+    walletReferenceVATAbsorbedOnDiscount
   ]
 
 -- Time helpers (shared across getWalletTransactions, postWalletPayout, postWalletTopup)
@@ -208,6 +327,34 @@ getWalletAccountByOwner counterpartyType ownerId = do
   accounts <- findAccountsByCounterparty (Just counterpartyType) (Just ownerId)
   pure $ find (\acc -> acc.accountType == Liability) accounts
 
+-- | Returns the driver's Control (cash-earnings memo) account, if any. Distinct
+--   from the Liability wallet account — Control tracks cumulative cash ride
+--   earnings (direct rider → driver), while Liability tracks what the platform
+--   actually owes the driver.
+getControlAccountByOwner ::
+  (BeamFlow m r) =>
+  CounterpartyType ->
+  Text -> -- Owner ID
+  m (Maybe Account)
+getControlAccountByOwner counterpartyType ownerId = do
+  accounts <- findAccountsByCounterparty (Just counterpartyType) (Just ownerId)
+  pure $ find (\acc -> acc.accountType == Control) accounts
+
+-- | Fetch both Liability (real wallet) and Control (cash-earnings memo)
+--   accounts for an owner. Used by the driver wallet transactions feed which
+--   merges entries across both so cash rides surface alongside online earnings.
+getWalletAndControlAccountsByOwner ::
+  (BeamFlow m r) =>
+  CounterpartyType ->
+  Text ->
+  m (Maybe Account, Maybe Account)
+getWalletAndControlAccountsByOwner counterpartyType ownerId = do
+  accounts <- findAccountsByCounterparty (Just counterpartyType) (Just ownerId)
+  pure
+    ( find (\acc -> acc.accountType == Liability) accounts,
+      find (\acc -> acc.accountType == Control) accounts
+    )
+
 getWalletBalanceByOwner ::
   (BeamFlow m r) =>
   CounterpartyType ->
@@ -215,6 +362,16 @@ getWalletBalanceByOwner ::
   m (Maybe HighPrecMoney)
 getWalletBalanceByOwner counterpartyType ownerId = do
   mbAcc <- getWalletAccountByOwner counterpartyType ownerId
+  pure $ mbAcc <&> (.balance)
+
+-- | Balance of the Control (cash-earnings memo) account.
+getControlBalanceByOwner ::
+  (BeamFlow m r) =>
+  CounterpartyType ->
+  Text ->
+  m (Maybe HighPrecMoney)
+getControlBalanceByOwner counterpartyType ownerId = do
+  mbAcc <- getControlAccountByOwner counterpartyType ownerId
   pure $ mbAcc <&> (.balance)
 
 -- | Build a FinanceCtx from booking + ride data.
@@ -228,8 +385,9 @@ buildFinanceCtx ::
   Maybe DPanCard.DriverPanCard ->
   Maybe DDI.DriverInformation ->
   DTC.TransporterConfig ->
+  Bool -> -- isOnline (True = online/card/platform-wallet, False = cash)
   m FinanceCtx
-buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig = do
+buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig isOnline = do
   let merchantId = fromMaybe booking.providerId ride.merchantId
       mid = merchantId.getId
       mocid = booking.merchantOperatingCityId.getId
@@ -281,7 +439,7 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig =
       { merchantId = mid,
         merchantOpCityId = mocid,
         currency = booking.currency,
-        isOnline = True,
+        isOnline = isOnline,
         counterpartyType = cType,
         counterpartyId = cId,
         referenceId = booking.id.getId,
@@ -297,7 +455,8 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig =
         supplierId = sId,
         panOfParty = panDecrypted,
         panType = panTypeText,
-        tdsRateReason = rateReason
+        tdsRateReason = rateReason,
+        emitLedgerEntries = maybe True (\DTC.InvoiceConfig {emitLedgerEntries = e} -> e) transporterConfig.invoiceConfig
       }
 
 -- | Pure helper to compute TDS rate reason from PAN card data and LDC status.
@@ -321,10 +480,30 @@ formatStripeAddress :: Stripe.Address -> Text
 formatStripeAddress addr =
   T.intercalate ", " $ catMaybes [addr.line1, addr.line2, addr.city, addr.state, addr.postal_code, addr.country]
 
+-- | Resolve online-vs-cash for a booking from its attached payment method.
+--   Cash / BoothOnline → False; any other instrument (Card / Wallet / UPI /
+--   NetBanking) → True. Returns False when no payment method is attached
+--   (treated as offline). Independent of the ride-end 'forceOnlineLedger'
+--   override — that override lives at the ride-end call site.
+resolveIsOnlineFromBooking ::
+  (BeamFlow m r, CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
+  SRB.Booking ->
+  m Bool
+resolveIsOnlineFromBooking booking = do
+  mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId ->
+    CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+      >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+  pure $ case mbPaymentMethod of
+    Nothing -> False
+    Just paymentMethod -> case paymentMethod.paymentInstrument of
+      DMPM.Cash -> False
+      DMPM.BoothOnline -> False
+      _ -> True
+
 -- | Build a minimal FinanceCtx without invoice fields (for callers that
 --   only need transfers, not invoices).
-financeCtxFromRide :: (EncFlow m r, MonadFlow m) => SRB.Booking -> DRide.Ride -> Maybe DPanCard.DriverPanCard -> m FinanceCtx
-financeCtxFromRide booking ride mbPanCard = do
+financeCtxFromRide :: (EncFlow m r, MonadFlow m) => SRB.Booking -> DRide.Ride -> Maybe DPanCard.DriverPanCard -> Bool -> m FinanceCtx
+financeCtxFromRide booking ride mbPanCard isOnline = do
   let merchantId = fromMaybe booking.providerId ride.merchantId
       (cType, cId) = case ride.fleetOwnerId of
         Just fleetOwnerId -> (FLEET_OWNER, fleetOwnerId.getId)
@@ -337,7 +516,7 @@ financeCtxFromRide booking ride mbPanCard = do
       { merchantId = merchantId.getId,
         merchantOpCityId = booking.merchantOperatingCityId.getId,
         currency = booking.currency,
-        isOnline = True,
+        isOnline = isOnline,
         counterpartyType = cType,
         counterpartyId = cId,
         referenceId = booking.id.getId,
@@ -353,7 +532,8 @@ financeCtxFromRide booking ride mbPanCard = do
         supplierId = Nothing,
         panOfParty = panDecrypted,
         panType = panTypeText,
-        tdsRateReason = rateReason
+        tdsRateReason = rateReason,
+        emitLedgerEntries = True
       }
 
 -- Wallet entry delta (for topup/payout)

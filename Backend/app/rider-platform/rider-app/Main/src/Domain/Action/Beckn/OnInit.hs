@@ -86,7 +86,8 @@ data OnInitRes = OnInitRes
     tripCategory :: Maybe TripCategory,
     paymentMode :: Maybe DMPM.PaymentMode,
     paymentInstrument :: Maybe DMPM.PaymentInstrument,
-    driverPreference :: Maybe [Text]
+    driverPreference :: Maybe [Text],
+    discount :: Maybe Price
   }
   deriving (Generic, Show)
 
@@ -153,6 +154,7 @@ onInit req = do
             tripCategory = booking.tripCategory,
             paymentMode = booking.paymentMode,
             driverPreference = booking.driverPreference,
+            discount = booking.discount,
             ..
           }
   Metrics.finishMetricsBap Metrics.INIT merchant.name booking.transactionId booking.merchantOperatingCityId.getId
@@ -232,7 +234,8 @@ buildOnInitResFromBooking bookingId = do
         tripCategory = booking.tripCategory,
         paymentMode = booking.paymentMode,
         paymentInstrument = booking.paymentInstrument,
-        driverPreference = booking.driverPreference
+        driverPreference = booking.driverPreference,
+        discount = booking.discount
       }
   where
     convertToPersonRideShareOptions :: SafetyCommon.RideShareOptions -> Person.RideShareOptions

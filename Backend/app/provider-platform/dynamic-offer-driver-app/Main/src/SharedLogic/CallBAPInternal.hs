@@ -18,6 +18,7 @@ import API.Types.UI.MeterRide
 import qualified API.Types.UI.PickupInstructions as PickupInstructions
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text
+import qualified Domain.SharedLogic.RideDiscount as RD
 import Domain.Types.Ride as DRide
 import EulerHS.Types (EulerClient, client)
 import Kernel.External.Slack.Types
@@ -354,8 +355,9 @@ type OfferDiscountAPI =
     :> ReqBody '[JSON] OfferDiscountReq
     :> Post '[JSON] OfferDiscountResp
 
-newtype OfferDiscountReq = OfferDiscountReq
-  { fareAmount :: Maybe HighPrecMoney
+data OfferDiscountReq = OfferDiscountReq
+  { fareAmount :: Maybe HighPrecMoney,
+    projectFareParamsBreakup :: Maybe RD.ProjectFareParamsBreakup
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 

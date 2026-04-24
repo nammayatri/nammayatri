@@ -7,6 +7,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as Text
 import Data.Time.Format.ISO8601 (iso8601Show)
+import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking
 import qualified Domain.Types.FareBreakup
 import qualified Domain.Types.Merchant
@@ -324,26 +325,61 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
                 }
         -- Lookup existing order for retry handling
         mbExistingOrderId <- SPayment.getOrderIdForRide rideId
-        -- Update the PI amount to include tip — pass Nothing for ledgerInfo so core ride entries aren't touched
-        mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq Nothing
+        -- Update the PI amount to include tip. We still pass the current
+        -- ledger info here — the core-entries guard inside makePaymentIntent
+        -- compares newTotal vs. oldTotal, and since tip is not part of
+        -- ledger core (handled separately via createTipLedger), the
+        -- existing core entries won't be disturbed.
+        tipRideFareBreakups <- QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE
+        let tipLedgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing
+        mbTipLedgerInfo <- SPayment.buildLedgerInfoFromBreakups tipRideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount 0 tipLedgerCtx
+        let tipLedgerInfo =
+              fromMaybe
+                SPayment.RidePaymentLedgerInfo
+                  { rideFare = totalFare.amount - applicationFeeAmount - rideDiscountAmount,
+                    gstAmount = 0,
+                    tollFare = 0,
+                    tollVatAmount = 0,
+                    parkingCharge = 0,
+                    parkingChargeVat = 0,
+                    platformFee = applicationFeeAmount,
+                    offerDiscountAmount = rideDiscountAmount,
+                    cashbackPayoutAmount = ridePayoutAmount,
+                    rideVatAbsorbedOnDiscount = 0,
+                    financeCtx = tipLedgerCtx
+                  }
+                mbTipLedgerInfo
+        mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq (Just tipLedgerInfo)
         case mbPaymentIntentResp of
           Nothing -> do
+            bookingFareBreakup <- QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.BOOKING
             let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing
-                ledgerInfo =
-                  Just $
+            mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups bookingFareBreakup rideDiscountAmount ridePayoutAmount applicationFeeAmount 0 ledgerCtx
+            let ledgerInfo =
+                  fromMaybe
                     SPayment.RidePaymentLedgerInfo
                       { rideFare = totalFare.amount - applicationFeeAmount - rideDiscountAmount,
-                        gstAmount = 0, -- TODO: extract GST from fare breakup
+                        gstAmount = 0,
+                        tollFare = 0,
+                        tollVatAmount = 0,
+                        parkingCharge = 0,
+                        parkingChargeVat = 0,
                         platformFee = applicationFeeAmount,
                         offerDiscountAmount = rideDiscountAmount,
                         cashbackPayoutAmount = ridePayoutAmount,
+                        rideVatAbsorbedOnDiscount = 0,
                         financeCtx = ledgerCtx
                       }
+                    mbLedgerInfo
+            logDebug $ "makePaymentIntent (tip-applied): breakups=" <> show bookingFareBreakup <> " discount=" <> show rideDiscountAmount <> " payout=" <> show ridePayoutAmount <> " platformFee=" <> show applicationFeeAmount <> " -> ledgerInfo=" <> show ledgerInfo
             -- Create separate PENDING tip ledger entry via dedicated function
             let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing
             void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
             when (ride.status == Domain.Types.RideStatus.COMPLETED) $ do
-              SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId rideId person booking.selectedOfferId fareWithTip.currency ledgerInfo booking
+              let discountApplicableFareAmountTaxIncl = case RD.parseProjectFareParamsBreakup $ (\fb -> (fb.description, fb.amount.amount)) <$> bookingFareBreakup of
+                    Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
+                    Nothing -> fareWithTip.amount
+              SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId rideId person booking.selectedOfferId fareWithTip.currency discountApplicableFareAmountTaxIncl rideDiscountAmount ledgerInfo booking
           Just paymentIntentResp -> do
             -- Create separate PENDING tip ledger entry via dedicated function
             let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing
@@ -663,15 +699,24 @@ getPaymentGetDueAmount (mbPersonId, _) = do
             API.Types.UI.RidePayment.GetDueAmountResp
               { rides = [API.Types.UI.RidePayment.DueAmountRide {rideId = ride.id, amount = totalAmount}],
                 totalDueAmount = totalAmount,
+                rideFareDue = RidePaymentFinance.sumByRefType RidePaymentFinance.ridePaymentRefRideFare filteredEntries,
+                gstDue = RidePaymentFinance.sumByRefType RidePaymentFinance.ridePaymentRefGST filteredEntries,
+                tollFareDue = RidePaymentFinance.sumByRefType RidePaymentFinance.ridePaymentRefTollFare filteredEntries,
+                tollVatDue = RidePaymentFinance.sumByRefType RidePaymentFinance.ridePaymentRefTollVAT filteredEntries,
+                platformFeeDue = RidePaymentFinance.sumByRefType RidePaymentFinance.ridePaymentRefPlatformFee filteredEntries,
                 currency = Just currency
               }
   where
     returnNoDues _ = do
-      -- No currency when no dues (avoids sending a wrong default like INR)
       pure $
         API.Types.UI.RidePayment.GetDueAmountResp
           { rides = [],
             totalDueAmount = 0,
+            rideFareDue = 0,
+            gstDue = 0,
+            tollFareDue = 0,
+            tollVatDue = 0,
+            platformFeeDue = 0,
             currency = Nothing
           }
 
@@ -738,20 +783,23 @@ postPaymentClearDues (mbPersonId, merchantId) req = do
 
     let debtLedgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId currency True person.id.getId rideId.getId Nothing Nothing
         debtLedgerInfo =
-          Just $
-            SPayment.RidePaymentLedgerInfo
-              { rideFare = duesResp.totalDueAmount - debtApplicationFeeAmount - debtDiscountAmount,
-                gstAmount = 0,
-                platformFee = debtApplicationFeeAmount,
-                offerDiscountAmount = debtDiscountAmount,
-                cashbackPayoutAmount = 0, -- debt settlement doesn't have cashback
-                financeCtx = debtLedgerCtx
-              }
+          SPayment.mkRidePaymentLedgerInfo
+            (duesResp.rideFareDue - duesResp.platformFeeDue)
+            duesResp.gstDue
+            duesResp.tollFareDue
+            duesResp.tollVatDue
+            0 -- parkingCharge (debt settlement: no parking tracked separately)
+            0 -- parkingChargeVat
+            duesResp.platformFeeDue
+            debtDiscountAmount
+            0 -- debt settlement doesn't have cashback
+            0 -- rideVatAbsorbedOnDiscount (debt settlement: no absorbed VAT split)
+            debtLedgerCtx
 
     paymentIntentResp <-
       SPayment.makePaymentIntent
         person.merchantId booking.merchantOperatingCityId booking.paymentMode
-        person.id (Just rideId) Nothing DOrder.RideHailing createPaymentIntentServiceReq debtLedgerInfo
+        person.id (Just rideId) Nothing DOrder.RideHailing createPaymentIntentServiceReq (Just debtLedgerInfo)
         >>= fromMaybeM (InternalError "Payment order expired, please try again")
 
     -- 5. Debt settlement is now simply: capture pending entries

@@ -116,7 +116,8 @@ data FinanceCtx = FinanceCtx
     supplierId :: Maybe Text,
     panOfParty :: Maybe Text,
     panType :: Maybe Text,
-    tdsRateReason :: Maybe TdsRateReason
+    tdsRateReason :: Maybe TdsRateReason,
+    emitLedgerEntries :: Bool
   }
   deriving (Eq, Show, Generic)
 
@@ -161,6 +162,7 @@ data AccountRole
   | OwnerControl
   | GovtIndirect
   | GovtDirect
+  | GovtExpense
   | PlatformAsset
   | PrepaidOwner
   | SellerAsset
@@ -322,6 +324,15 @@ roleToInput ctx = \case
         merchantId = ctx.merchantId,
         merchantOperatingCityId = ctx.merchantOpCityId
       }
+  GovtExpense ->
+    AccountInput
+      { accountType = Expense,
+        counterpartyType = Just GOVERNMENT_INDIRECT,
+        counterpartyId = Just ctx.merchantId,
+        currency = ctx.currency,
+        merchantId = ctx.merchantId,
+        merchantOperatingCityId = ctx.merchantOpCityId
+      }
   PlatformAsset ->
     AccountInput
       { accountType = Asset,
@@ -465,10 +476,10 @@ transfer ::
   Text -> -- Reference type
   FinanceM m (Maybe (Id LE.LedgerEntry))
 transfer fromRole toRole amount refType = do
-  if amount <= 0
+  ctx <- ask
+  if amount <= 0 || not ctx.emitLedgerEntries
     then pure Nothing
     else do
-      ctx <- ask
       fromAcc <- account fromRole
       toAcc <- account toRole
       let entryInput =
@@ -501,8 +512,8 @@ transfer_ ::
   Text -> -- Reference type
   FinanceM m ()
 transfer_ fromRole toRole amount refType = do
-  when (amount > 0) $ do
-    ctx <- ask
+  ctx <- ask
+  when (amount > 0 && ctx.emitLedgerEntries) $ do
     fromAcc <- account fromRole
     toAcc <- account toRole
     let entryInput =
@@ -535,10 +546,10 @@ transferPending ::
   Text -> -- Reference type
   FinanceM m (Maybe (Id LE.LedgerEntry))
 transferPending fromRole toRole amount refType = do
-  if amount <= 0
+  ctx <- ask
+  if amount <= 0 || not ctx.emitLedgerEntries
     then pure Nothing
     else do
-      ctx <- ask
       fromAcc <- account fromRole
       toAcc <- account toRole
       let entryInput =
@@ -570,10 +581,10 @@ transferAllowZero ::
   Text -> -- Reference type
   FinanceM m (Maybe (Id LE.LedgerEntry))
 transferAllowZero fromRole toRole amount refType = do
-  if amount < 0
+  ctx <- ask
+  if amount < 0 || not ctx.emitLedgerEntries
     then pure Nothing
     else do
-      ctx <- ask
       fromAcc <- account fromRole
       toAcc <- account toRole
       let entryInput =
@@ -620,6 +631,19 @@ invoice ::
   FinanceM m (Maybe (Id Invoice))
 invoice config = do
   ctx <- ask
+  if not ctx.emitLedgerEntries
+    then pure Nothing
+    else invoiceInner ctx config
+
+invoiceInner ::
+  ( BeamFlow.BeamFlow m r,
+    Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
+  FinanceCtx ->
+  InvoiceConfig ->
+  FinanceM m (Maybe (Id Invoice))
+invoiceInner ctx config = do
   ids <- getEntryIds
   let invoiceInput =
         InvoiceInput

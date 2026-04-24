@@ -1,6 +1,7 @@
 module Domain.Action.Internal.OfferDiscount where
 import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
+import qualified Domain.SharedLogic.RideDiscount as RD
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
 import Kernel.External.Types (ServiceFlow)
@@ -18,8 +19,13 @@ import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 
-newtype OfferDiscountReq = OfferDiscountReq
-  { fareAmount :: Maybe HighPrecMoney
+-- | Request body for the BPP → BAP internal offer-discount lookup.
+--   BPP sends the post-EndRide eight-slot breakup ('projectFareParamsBreakup');
+--   BAP applies the offer against the discount-applicable ride fare
+--   inclusive of its VAT. 'fareAmount' is a legacy fallback.
+data OfferDiscountReq = OfferDiscountReq
+  { fareAmount :: Maybe HighPrecMoney,
+    projectFareParamsBreakup :: Maybe RD.ProjectFareParamsBreakup
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -43,10 +49,13 @@ getOfferDiscount ::
   m OfferDiscountResp
 getOfferDiscount _token bppBookingId req = do
   booking <- B.runInReplica $ QBooking.findByBPPBookingId (Id bppBookingId) >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId)
-  case (booking.selectedOfferId, req.fareAmount) of
-    (Just offerId, Just fareAmount) -> do
+  let mbOfferBase = case req.projectFareParamsBreakup of
+        Just b -> Just (b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax)
+        Nothing -> req.fareAmount
+  case (booking.selectedOfferId, mbOfferBase) of
+    (Just offerId, Just offerBase) -> do
       let productId = show booking.vehicleServiceTierType
-          price = mkPrice (Just booking.estimatedTotalFare.currency) fareAmount
+          price = mkPrice (Just booking.estimatedTotalFare.currency) offerBase
       riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
       let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
       unless enableRideHailingOffers $ throwError $ InternalError "RideHailing offers disabled"

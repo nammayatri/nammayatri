@@ -262,7 +262,7 @@ import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
-import qualified SharedLogic.FareCalculatorV2 as FCV2
+import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
 import qualified SharedLogic.Finance.Wallet as FWallet
 import qualified SharedLogic.Merchant as SMerchant
@@ -1929,7 +1929,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               } ::
               DFarePolicy.FullFarePolicy
       fareParams <- do
-        FCV2.calculateFareParametersV2
+        FC.calculateFareParameters
           CalculateFareParametersParams
             { farePolicy = farePolicy',
               actualDistance = searchReq.estimatedDistance,

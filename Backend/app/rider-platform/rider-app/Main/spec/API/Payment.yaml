@@ -57,6 +57,11 @@ types:
   GetDueAmountResp:
     rides: "[DueAmountRide]"
     totalDueAmount: HighPrecMoney
+    rideFareDue: HighPrecMoney
+    gstDue: HighPrecMoney
+    tollFareDue: HighPrecMoney
+    tollVatDue: HighPrecMoney
+    platformFeeDue: HighPrecMoney
     currency: Maybe Currency
   ClearDuesStatus:
     enum: "SUCCESS,FAILED"

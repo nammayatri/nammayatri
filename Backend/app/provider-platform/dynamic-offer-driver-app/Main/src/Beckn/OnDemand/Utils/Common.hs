@@ -791,6 +791,16 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.BOOTH_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_VAT)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_VAT)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_FARE_TAX_EXCLUSIVE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_FARE_TAX)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_TAX)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX)
         DFParams.Slab ->
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
@@ -813,6 +823,16 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.BOOTH_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_VAT)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_VAT)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_FARE_TAX_EXCLUSIVE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_FARE_TAX)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_TAX)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX)
         DFParams.Rental ->
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
@@ -834,6 +854,16 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.BOOTH_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_VAT)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_VAT)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_FARE_TAX_EXCLUSIVE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_FARE_TAX)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_TAX)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX)
         _ -> True
 
 type MerchantShortId = Text
@@ -1002,12 +1032,13 @@ mkGeneralInfoTagGroup pricing isValueAddNP =
 mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe Bool -> Maybe Params.FareParameters -> Maybe Double -> Maybe [Spec.TagGroup]
 mkRateCardTag estimatedDistance mbCancellationCharge tollCharges estimatedFare congestionChargeViaDp farePolicy fareParametersInRateCard fareParams mbGovtChargesRate = do
   let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance mbCancellationCharge tollCharges estimatedFare congestionChargeViaDp mbGovtChargesRate) farePolicy
-      fareParamsBreakups =
+      displayFareParamsBreakups =
         case fareParametersInRateCard of
-          Just True -> maybe [] (mkFareParamsBreakups (\price -> show price) mkRateCardFareParamsBreakupItem) fareParams
+          Just True -> maybe [] (mkFareParamsDisplayBreakups (\price -> show price) mkRateCardFareParamsBreakupItem) fareParams
           _ -> []
-      filteredFareParamsBreakups = filter (not . findDup farePolicyBreakups) fareParamsBreakups
-      combainedParams = farePolicyBreakups <> filteredFareParamsBreakups
+      filteredDisplayBreakups = filter (not . findDup farePolicyBreakups) displayFareParamsBreakups
+      summaryBreakups = maybe [] (mkProjectFareParamsTagBreakupItems (\price -> show price) mkRateCardBreakupItem) fareParams
+      combainedParams = farePolicyBreakups <> filteredDisplayBreakups <> summaryBreakups
       farePolicyBreakupsTags = buildRateCardTags <$> combainedParams
   Just [Tags.getFullTagGroup Tags.FARE_POLICY farePolicyBreakupsTags]
   where

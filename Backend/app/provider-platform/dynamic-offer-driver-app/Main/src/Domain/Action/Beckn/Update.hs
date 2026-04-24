@@ -53,7 +53,7 @@ import Lib.LocationUpdates.Internal
 import SharedLogic.CallBAP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.FareCalculator
-import qualified SharedLogic.FareCalculatorV2 as FCV2
+import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
 import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
@@ -294,7 +294,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     } ::
                     DFP.FullFarePolicy
             fareParameters <-
-              FCV2.calculateFareParametersV2
+              FC.calculateFareParameters
                 CalculateFareParametersParams
                   { farePolicy = farePolicy',
                     actualDistance = Just estimatedDistance,

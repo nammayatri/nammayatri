@@ -17,9 +17,11 @@ module Beckn.ACL.Update (buildUpdateReq) where
 import qualified Beckn.OnDemand.Utils.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import qualified BecknV2.Utils as Utils
 import Data.Text (toLower)
 import qualified Domain.Action.Beckn.Update as DUpdate
 import qualified Domain.Types.Merchant as DM
@@ -127,11 +129,15 @@ mkPaymentMethodInfo :: (MonadFlow m) => Spec.Payment -> m DMPM.PaymentMethodInfo
 mkPaymentMethodInfo Spec.Payment {..} = do
   collectedBy <- Common.castPaymentCollector (fromMaybe "" paymentCollectedBy)
   paymentType' <- Common.castPaymentType (fromMaybe "" paymentType)
+  let paymentInstrument' = case Utils.getTagV2 Tag.SETTLEMENT_TERMS Tag.PAYMENT_INSTRUMENT paymentTags of
+        Just "Cash" -> DMPM.Cash
+        Just _ -> DMPM.UPI
+        Nothing -> DMPM.Cash
   return $
     DMPM.PaymentMethodInfo
       { collectedBy = collectedBy,
         paymentType = paymentType',
-        paymentInstrument = DMPM.Cash
+        paymentInstrument = paymentInstrument'
       }
 
 castPaymentStatus :: Maybe Text -> DUpdate.PaymentStatus

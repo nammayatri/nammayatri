@@ -72,8 +72,19 @@ tfOrder res bapConfig = do
       Spec.orderItems = tfItems res,
       Spec.orderPayments = tfPayments res bapConfig,
       Spec.orderProvider = tfProvider res,
-      Spec.orderQuote = tfQuotation res
+      Spec.orderQuote = tfQuotation res,
+      Spec.orderTags = tfOrderTags res
     }
+
+tfOrderTags :: DOnInit.OnInitRes -> Maybe [Spec.TagGroup]
+tfOrderTags res =
+  case res.discount of
+    Just discountPrice
+      | discountPrice.amount > 0 ->
+        Tags.buildTagGroups
+          [ Tags.DISCOUNT_AMOUNT Tags.~= encodeToText discountPrice.amount
+          ]
+    _ -> Nothing
 
 tfFulfillments :: DOnInit.OnInitRes -> Maybe [Spec.Fulfillment]
 tfFulfillments res =

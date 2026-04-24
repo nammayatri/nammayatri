@@ -45,7 +45,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Booking
 import SharedLogic.Cancel
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
-import qualified SharedLogic.FareCalculatorV2 as FCV2
+import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.RiderDetails as SRD
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
@@ -229,7 +229,7 @@ handler merchantId req validatedReq = do
       exophone <- findRandomExophone searchRequest.merchantOperatingCityId searchRequest DExophone.CALL_RIDE
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId configInExperimentVersions >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
       mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback quoteId
-      commission <- FCV2.calculateCommission driverQuote.fareParams mbFarePolicy
+      commission <- FC.calculateCommission driverQuote.fareParams mbFarePolicy
       let bapUri = showBaseUrl searchRequest.bapUri
           displayBookingId = req.displayBookingId
       (initiatedAs, senderDetails, receiverDetails) <- do
@@ -307,7 +307,7 @@ handler merchantId req validatedReq = do
             pickupGateId = searchRequest.pickupGateId,
             ledgerWriteMode = Nothing,
             financeInvoiceId = Nothing,
-            discountAmount = req.discountAmount,
+            discountAmount = FC.clampDiscountToDiscountable driverQuote.fareParams req.discountAmount,
             ..
           }
     makeBookingDeliveryDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DSR.SearchRequest -> DTDD.DeliveryDetails -> Id DM.Merchant -> m (Maybe TripParty, Maybe DTDPD.DeliveryPersonDetails, Maybe DTDPD.DeliveryPersonDetails)

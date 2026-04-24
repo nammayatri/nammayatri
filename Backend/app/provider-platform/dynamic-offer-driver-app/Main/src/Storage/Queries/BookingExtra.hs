@@ -235,6 +235,13 @@ updatePaymentId bookingId paymentId = do
     [Se.Set BeamB.paymentId $ Just paymentId, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
+updateDiscountAmount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> HighPrecMoney -> m ()
+updateDiscountAmount bookingId discount = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamB.discountAmount $ Just discount, Se.Set BeamB.updatedAt now]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
 findBookingsFromDB :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Id Booking] -> m [Booking]
 findBookingsFromDB bookingIds = findAllWithKV [Se.Is BeamB.id $ Se.In (getId <$> bookingIds)]
 

@@ -66,7 +66,6 @@ import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
 import Kernel.Prelude (roundToIntegral)
 import Kernel.Storage.Clickhouse.Config
-import Lib.Scheduler.Environment (JobCreator)
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
@@ -87,6 +86,7 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.LocationUpdates as LocUpd
 import qualified Lib.LocationUpdates.Internal as LocUpdInternal
+import Lib.Scheduler.Environment (JobCreator)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
@@ -97,7 +97,6 @@ import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
-import qualified SharedLogic.FareCalculatorV2 as FareV2
 import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.RuleBasedTierUpgrade
@@ -208,7 +207,7 @@ buildEndRideHandle merchantId merchantOpCityId rideId = do
         endRideTransaction = RideEndInt.endRideTransaction,
         getFarePolicyByEstOrQuoteId = FarePolicy.getFarePolicyByEstOrQuoteId,
         getFarePolicyOnEndRide = FarePolicy.getFarePolicyOnEndRide,
-        calculateFareParameters = FareV2.calculateFareParametersV2,
+        calculateFareParameters = Fare.calculateFareParameters,
         putDiffMetric = RideEndInt.putDiffMetric,
         isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed defaultRideInterpolationHandler,
         finalDistanceCalculation = LocUpd.finalDistanceCalculation defaultRideInterpolationHandler,
@@ -550,12 +549,16 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                         then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig
                         else calculateFinalValuesForCorrectDistanceCalculations handle booking ride booking.maxEstimatedDistance pickupDropOutsideOfThreshold thresholdConfig tripEndPoint
                 pure (chargeableDistance, finalFare, mbUpdatedFareParams, ride, Just pickupDropOutsideOfThreshold, Just distanceCalculationFailed)
-    discountAmount <-
-      -- Update discount amount from BAP if fare was recomputed and offer exists
+    let baseFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
+    rawDiscountAmount <-
       if (isJust booking.discountAmount && finalFare /= booking.estimatedFare)
         then do
           appBackendBapInternal <- asks (.appBackendBapInternal)
-          let reqBody = CallBAPInternal.OfferDiscountReq {fareAmount = Just finalFare}
+          let reqBody =
+                CallBAPInternal.OfferDiscountReq
+                  { fareAmount = Just finalFare,
+                    projectFareParamsBreakup = Fare.projectFareParamsBreakup baseFareParams
+                  }
           result <-
             withTryCatch "getOfferDiscount:endRideTransaction" $
               CallBAPInternal.getOfferDiscount appBackendBapInternal.internalKey appBackendBapInternal.url booking.id.getId reqBody
@@ -565,10 +568,10 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
               logError $ "Error getting offer discount, falling back to booking discount amount: " <> show err
               pure booking.discountAmount
         else pure Nothing
-    let baseFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
+    let discountAmount = Fare.clampDiscountToDiscountable baseFareParams rawDiscountAmount
     -- Airport/parking charge is already in fareParams and finalFare from estimate/quote.
     mbFarePolicy <- FarePolicy.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
-    finalCommission <- FareV2.calculateCommission baseFareParams mbFarePolicy
+    finalCommission <- Fare.calculateCommission baseFareParams mbFarePolicy
     clearEditDestinationWayAndSnappedPointsFork <- awaitableFork "endRide->clearEditDestinationWayAndSnappedPoints" $ withTimeAPI "endRide" "clearEditDestinationWayAndSnappedPoints" $ clearEditDestinationWayAndSnappedPoints driverId
     clearReachedStopLocationsFork <- awaitableFork "endRide->clearReachedStopLocations" $ withTimeAPI "endRide" "clearReachedStopLocations" $ clearReachedStopLocations rideOld.id
     let updRide' =

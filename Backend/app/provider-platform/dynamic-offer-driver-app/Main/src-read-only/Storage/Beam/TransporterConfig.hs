@@ -177,6 +177,7 @@ data TransporterConfigT f = TransporterConfigT
     gpsTollBehaviorWindowDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     graceTimeForScheduledRidePickup :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     includeDriverCurrentlyOnRide :: B.C f Kernel.Prelude.Bool,
+    invoiceConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     isAAEnabledForRecurring :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isAvoidToll :: B.C f Kernel.Prelude.Bool,
     isDeviceIdChecksRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

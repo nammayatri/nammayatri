@@ -21,6 +21,7 @@ import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Quote as DQuote
+import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingPartiesLink as DBPL
 import qualified Domain.Types.BookingStatus as DRB
@@ -188,18 +189,12 @@ confirm DConfirmReq {..} = do
   mbBookingOfferEntity <-
     case booking.selectedOfferId of
       Just offerId -> do
-        mbOfferDetails <-
-          SOffer.getSelectedOfferDetailsWithBasket
-            searchRequest.merchantId
-            person.id
-            merchantOperatingCityId
-            DOrder.RideHailing
-            (show quote.vehicleServiceTierType)
-            booking.estimatedTotalFare
-            offerId
-            Nothing
-            (Just booking)
-            (Just searchRequest)
+        let fareCtx = RD.parseProjectFareParamsBreakup $ (\qb -> (qb.title, qb.price.amount)) <$> quote.quoteBreakupList
+            offerBaseAmount = case fareCtx of
+              Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
+              Nothing -> booking.estimatedTotalFare.amount
+            offerBasePrice = mkPrice (Just booking.estimatedTotalFare.currency) offerBaseAmount
+        mbOfferDetails <- SOffer.getSelectedOfferDetailsWithBasket searchRequest.merchantId person.id merchantOperatingCityId DOrder.RideHailing (show quote.vehicleServiceTierType) offerBasePrice offerId fareCtx Nothing (Just booking) (Just searchRequest)
         case mbOfferDetails of
           Just (offerDetails, computed) -> do
             bookingOfferId <- generateGUID

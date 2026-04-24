@@ -207,6 +207,16 @@ mkQuoteBreakupInner quote = do
         || breakup.quotationBreakupInnerTitle == Just (show Enums.BOOTH_CHARGE)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_VAT)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_VAT)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_FARE_TAX_EXCLUSIVE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_FARE_TAX)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_TAX)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX)
 
 mkQuotationPrice :: DQuote.DriverQuote -> Maybe Spec.Price
 mkQuotationPrice quote =

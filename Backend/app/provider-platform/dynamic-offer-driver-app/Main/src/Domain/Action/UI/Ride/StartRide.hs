@@ -38,6 +38,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.TransporterConfig as DTConf
 import Domain.Types.Trip
+import qualified Domain.Types.VehicleVariant as Veh
 import Environment (Flow)
 import EulerHS.Prelude
 import Kernel.External.Encryption (decrypt)
@@ -64,13 +65,12 @@ import SharedLogic.Allocator (AllocatorJobType (..), SpecialZonePayoutJobData (.
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import qualified SharedLogic.FareCalculatorV2 as FCV2
+import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.IffcoTokioInsurance as IffcoInsurance
 import SharedLogic.Ride (calculateEstimatedEndTimeRange, getPayoutVpaForRide, isKaaliPeeliBooking)
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
-import qualified Domain.Types.VehicleVariant as Veh
 import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -246,7 +246,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
             existingScheduledPayout <- QSP.findByRideId ride.id.getId
             when (isNothing existingPayout && isNothing existingScheduledPayout) $ do
               mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
-              commission <- FCV2.calculateCommission booking.fareParams mbFarePolicy
+              commission <- FC.calculateCommission booking.fareParams mbFarePolicy
               let payoutAmountBase = maybe booking.estimatedFare (\c -> booking.estimatedFare - c) commission
                   payoutAmount =
                     toHighPrecMoney

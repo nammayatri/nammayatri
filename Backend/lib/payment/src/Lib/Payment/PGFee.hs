@@ -89,7 +89,8 @@ recordPGFeeLedgerEntries feeType config merchantId merchantOpCityId referenceId 
             supplierId = Nothing,
             panOfParty = Nothing,
             panType = Nothing,
-            tdsRateReason = Nothing
+            tdsRateReason = Nothing,
+            emitLedgerEntries = True
           }
   result <- runFinance ctx $ do
     -- 1. Base fee: Liability → Expense (DR Expense, CR Liability)
