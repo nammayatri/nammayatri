@@ -15,7 +15,6 @@
 module Domain.Action.Dashboard.Driver.Notification
   ( sendDummyRideRequestToDriver,
     triggerDummyRideRequest,
-    DummyRideRequestRes (..),
   )
 where
 
@@ -39,9 +38,9 @@ import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
-import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -58,13 +57,7 @@ import Utils.Common.Cac.KeyNameConstants
 
 --------------------------------------------------------------------------------------------------
 
-data DummyRideRequestRes = DummyRideRequestRes
-  { result :: Text,
-    reason :: Maybe Text
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
-
-sendDummyRideRequestToDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
+sendDummyRideRequestToDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.DummyRideRequestRes
 sendDummyRideRequestToDriver merchantShortId opCity driverId = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityDoesNotExist $ "merchantShortId: " <> merchantShortId.getShortId <> ", opCity: " <> show opCity)
 
@@ -73,8 +66,11 @@ sendDummyRideRequestToDriver merchantShortId opCity driverId = do
   -- merchant access check
   unless (merchantOperatingCity.id == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
-  void $ triggerDummyRideRequest driver merchantOperatingCity.id True
-  pure Success
+  dummyRideRequestRes <- triggerDummyRideRequest driver merchantOperatingCity.id True
+  case dummyRideRequestRes.result of
+    "SUCCESS" -> pure $ Common.DummyRideRequestRes {result = "SUCCESS", reason = Nothing}
+    "SKIPPED" -> pure $ Common.DummyRideRequestRes {result = "SKIPPED", reason = dummyRideRequestRes.reason}
+    _ -> pure $ Common.DummyRideRequestRes {result = "ERROR", reason = Just "Unknown error"}
 
 triggerDummyRideRequest ::
   ( EsqDBReplicaFlow m r,
@@ -83,6 +79,7 @@ triggerDummyRideRequest ::
     CacheFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
+    HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasKafkaProducer r,
@@ -91,7 +88,7 @@ triggerDummyRideRequest ::
   DP.Person ->
   Id DMOC.MerchantOperatingCity ->
   Bool ->
-  m DummyRideRequestRes
+  m Common.DummyRideRequestRes
 triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
   driverInfo <- B.runInReplica $ QDI.findById driver.id >>= fromMaybeM DriverInfoNotFound
   let mbStaticSkipReason
@@ -104,7 +101,7 @@ triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
     Just skipReason -> skipWithLog skipReason Nothing
     Nothing -> do
       now <- getCurrentTime
-      driverLocationResult <- withTryCatch "driversLocation:triggerDummyRideRequest" $ LF.driversLocation [driver.id]
+      driverLocationResult <- withTryCatch "driversLocation:triggerDummyRideRequest" $ LF.driversLocationByCloudType [driver.id] driver.cloudType
       let mbDriverLocation = case driverLocationResult of
             Left _          -> Nothing
             Right locations -> safeLast locations
@@ -129,11 +126,11 @@ triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
           let otherMerchantIds = ["840327a8-f17c-4d7c-8199-a583cfaadc5f", "7e6a2982-f8b5-4c67-b8af-bf41f1b4a2c9", "8c91f173-a0e3-4c5b-b3a1-2a58d00f29b2"] -- Array Contents are : [Dev/Master , UAT , Prod]
               fallBackCity = bool (TN.getNewMerchantOpCityId driver.clientSdkVersion merchantOperatingCityId) (TN.cityFallback driver.clientSdkVersion merchantOperatingCityId) (driver.merchantId `elem` otherMerchantIds) -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
           void $ TN.sendSearchRequestToDriverNotification driver.merchantId fallBackCity driver.id notificationData
-          pure $ DummyRideRequestRes {result = "SUCCESS", reason = Nothing}
+          pure $ Common.DummyRideRequestRes {result = "SUCCESS", reason = Nothing}
   where
     skipWithLog skipReason mbExtra = do
       logInfo $ "Skipping dummy ride notification for driver:-" <> show driver.id <> ",reason:-" <> skipReason <> maybe "" (\e -> "," <> e) mbExtra <> ",triggeredByDashboard:-" <> show isDashboardTrigger
-      pure $ DummyRideRequestRes {result = "SKIPPED", reason = Just skipReason}
+      pure $ Common.DummyRideRequestRes {result = "SKIPPED", reason = Just skipReason}
 
 mkDummyNotificationEntityData ::
   Maybe (Id DM.Merchant) ->

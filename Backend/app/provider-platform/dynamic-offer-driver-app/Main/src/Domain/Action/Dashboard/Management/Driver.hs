@@ -172,6 +172,7 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Tools.Auth as Auth
 import Tools.Error
 
+
 getDriverDocumentsInfo :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverDocumentsInfoRes
 getDriverDocumentsInfo merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
@@ -710,7 +711,7 @@ getDriverClearStuckOnRide merchantShortId _ dbSyncTime = do
   return Common.ClearOnRideStuckDriversRes {driverIds = driverIds}
 
 ---------------------------------------------------------------------
-postDriverSendDummyNotification :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
+postDriverSendDummyNotification :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.DummyRideRequestRes
 postDriverSendDummyNotification = DDN.sendDummyRideRequestToDriver
 
 ---------------------------------------------------------------------

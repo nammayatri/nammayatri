@@ -331,7 +331,7 @@ apis:
       params:
         driverId: Id Driver
       response:
-        type: APISuccess
+        type: DummyRideRequestRes
       migrate:
         endpoint: DriverAPI SendDummyRideRequestToDriverViaDashboardEndPoint
         endpointV2:
@@ -602,6 +602,9 @@ types:
     - totalItems: Int # for backward compatibility
     - summary: Summary
     - drivers: [DriverListItem]
+  DummyRideRequestRes:
+    - result: Text
+    - reason: Maybe Text
   DriverListItem:
     - driverId: Id Driver
     - firstName: Text
