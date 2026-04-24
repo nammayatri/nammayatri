@@ -8,6 +8,7 @@ import qualified API.Internal.Auth as Auth
 import qualified API.Internal.BulkLocUpdate as BulkLocUpdate
 import qualified API.Internal.Cac as Cac
 import qualified API.Internal.CallCustomerFCM as CallCustomerFCM
+import qualified API.Internal.InMemManagement as InMemManagement
 import qualified API.Internal.CancellationDues as CancellationDues
 import qualified API.Internal.CustomerCancellationDues as CustomerCancellationDues
 import qualified API.Internal.DriverCoordinates as DriverCoordinates
@@ -74,6 +75,7 @@ type API =
            :<|> GeometryList.API
            :<|> GeometryUpdate.API
            :<|> SendSMS.API
+           :<|> InMemManagement.API
        )
 
 handler :: FlowServer API
@@ -110,3 +112,4 @@ handler =
     :<|> GeometryList.handler
     :<|> GeometryUpdate.handler
     :<|> SendSMS.handler
+    :<|> InMemManagement.handler
