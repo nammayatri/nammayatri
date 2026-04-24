@@ -17,6 +17,7 @@ import EulerHS.Types (OptionEntity)
 import Kernel.Prelude
 import Kernel.Randomizer
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Tools.Metrics.CoreMetrics.Types (CoreMetrics)
 import Kernel.Types.CacheFlow (HasInMemEnv)
 import Kernel.Types.Id
@@ -27,7 +28,6 @@ import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType)
 import Storage.Beam.Yudhishthira ()
-import qualified Kernel.Storage.InMem as IM
 import Storage.ConfigPilot.Interface.Types (ConfigDimensions (..))
 import Tools.Error
 

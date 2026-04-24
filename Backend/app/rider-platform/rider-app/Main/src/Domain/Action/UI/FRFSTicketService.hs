@@ -99,6 +99,7 @@ import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.CachedQueries.Seat as CQSeat
 import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
+import qualified Domain.Types.VehicleSeatLayoutMapping as DVSLM
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
@@ -727,11 +728,17 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId) quoteId mbIsMockPayment req = do
   quote <- B.runInReplica $ QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
 
-  -- Apply rate limit if non-empty seatIds are present in the request
+  -- Apply rate limit only when seats will actually be held (manual selection or auto-assign)
   let hasNonEmptySeatIds =
         any (maybe False (not . null) . (.seatIds)) selectedQuoteCategories
-  when hasNonEmptySeatIds $ do
-    whenJust req.tripId $ \tripId -> do
+  mbSeatSelectionType <- case quote.vehicleNumber of
+    Just vNo -> do
+      mbMapping <- CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vNo integratedBppConfig.feedKey
+      pure $ mbMapping >>= (.seatSelectionType)
+    Nothing -> pure Nothing
+  let hasAutoAssignFlow = quote.vehicleType == Spec.BUS && isJust req.tripId && mbSeatSelectionType == Just DVSLM.AUTO_ASSIGNED
+  when (hasNonEmptySeatIds || hasAutoAssignFlow) $
+    whenJust req.tripId $ \tripId ->
       checkRateLimitSeatBooking (rateLimitKey personId.getId tripId)
 
   case integratedBppConfig.providerConfig of

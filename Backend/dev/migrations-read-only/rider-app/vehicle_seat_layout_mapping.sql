@@ -10,3 +10,8 @@ ALTER TABLE atlas_app.vehicle_seat_layout_mapping ADD COLUMN created_at timestam
 ALTER TABLE atlas_app.vehicle_seat_layout_mapping ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.vehicle_seat_layout_mapping ADD PRIMARY KEY ( id);
 ALTER TABLE atlas_app.vehicle_seat_layout_mapping ADD CONSTRAINT vehicle_seat_layout_mapping_unique_idx_gtfs_id_vehicle_no UNIQUE (gtfs_id, vehicle_no);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.vehicle_seat_layout_mapping ADD COLUMN seat_selection_type text ;

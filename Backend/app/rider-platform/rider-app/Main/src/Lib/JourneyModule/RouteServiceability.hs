@@ -110,12 +110,13 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                         waybill <- detail.waybill_no
                         tNum <- detail.trip_number
                         return $ waybill <> "-" <> show tNum
-                  mbSeatLayoutId <-
+                  mbSeatLayoutMapping <-
                     JMU.measureLatency
                       ( CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached detail.vehicle_no integratedBPPConfig.feedKey
-                          <&> fmap (.seatLayoutId)
                       )
                       ("getBusScheduleInfo: findByVehicleNoAndGtfsIdCached vehicle=" <> detail.vehicle_no)
+                  let mbSeatLayoutId = (.seatLayoutId) <$> mbSeatLayoutMapping
+                      seatSelType = mbSeatLayoutMapping >>= (.seatSelectionType)
                   (isAvailable, availableSeatsCount) <- case mbSeatLayoutId of
                     Just layoutId -> case combinedTripId of
                       Nothing -> return (False, Nothing)
@@ -144,7 +145,8 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                             isActiveTrip = Nothing,
                             serviceSubTypes = mbServiceSubTypes,
                             vehicleTagNumber = mbVehicleTagNumber,
-                            availableSeats = availableSeatsCount
+                            availableSeats = availableSeatsCount,
+                            seatSelectionType = seatSelType
                           }
                 Nothing -> do
                   logError $ "Vehicle info not found for bus: " <> detail.vehicle_no
@@ -177,6 +179,9 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                               ("getLiveVehicles: enrichBusStopETA stopCode=" <> etaBus.stopCode)
                         )
                         (fromMaybe [] bus.busData.eta_data)
+                    mbSeatLayoutMapping <-
+                      CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached bus.vehicleNumber integratedBPPConfig'.feedKey
+                    let seatSelType = mbSeatLayoutMapping >>= (.seatSelectionType)
                     return . Just $
                       API.Types.UI.MultimodalConfirm.LiveVehicleInfo
                         { eta = Just enrichedEta,
@@ -187,7 +192,8 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                           serviceTierName = (.shortName) <$> frfsServiceTier,
                           currentTripId = Nothing,
                           serviceSubTypes = mbServiceSubTypes,
-                          vehicleTagNumber = mbVehicleTagNumber
+                          vehicleTagNumber = mbVehicleTagNumber,
+                          seatSelectionType = seatSelType
                         }
                   Nothing -> do
                     logError $ "Vehicle info not found for bus: " <> bus.vehicleNumber
