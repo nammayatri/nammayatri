@@ -107,10 +107,14 @@ executeCashRideCashbackPayoutJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.
                           PayoutRequest.PayoutInitiated pr _ ->
                             logInfo $
                               "Cashback payout initiated for variant=" <> show vehicleCategory
-                                <> " person=" <> person.id.getId
-                                <> " payoutRequestId=" <> pr.id.getId
-                                <> " entries=" <> show (length entryIds)
-                                <> " amount=" <> show groupAmount
+                                <> " person="
+                                <> person.id.getId
+                                <> " payoutRequestId="
+                                <> pr.id.getId
+                                <> " entries="
+                                <> show (length entryIds)
+                                <> " amount="
+                                <> show groupAmount
                           PayoutRequest.PayoutFailed _ err ->
                             logError $ "Cashback payout submission failed for variant=" <> show vehicleCategory <> " refs=" <> show groupRefIds <> ": " <> err
           pure Complete

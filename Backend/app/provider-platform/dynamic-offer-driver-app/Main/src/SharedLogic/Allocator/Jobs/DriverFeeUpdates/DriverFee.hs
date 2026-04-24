@@ -397,19 +397,21 @@ processRestFee paymentMode DriverFee {..} vendorFees subscriptionConfig _ _ tran
   updateSerialOrderForInvoicesInWindow driverFee.id merchantOperatingCityId startTime endTime driverFee.serviceName
 
 makeOfferReq :: HighPrecMoney -> Person -> Plan -> UTCTime -> UTCTime -> Int -> TransporterConfig -> Payment.OfferListReq
-makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides transporterConfig = do
+makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides transporterConfig =
   let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = totalFee, currency = transporterConfig.currency, basket = Nothing} -- add UDFs
       customerReq = Payment.OfferCustomer {customerId = driver.id.getId, email = driver.email, mobile = Nothing}
-  Payment.OfferListReq
-    { order = offerOrder,
-      customer = Just customerReq,
-      planId = plan.id.getId,
-      registrationDate,
-      paymentMode = getPaymentModeAndVehicleCategoryKey plan,
-      dutyDate,
-      numOfRides,
-      offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payment.IS_APPLICABLE else Nothing
-    }
+   in Payment.OfferListReq
+        { order = offerOrder,
+          customer = Just customerReq,
+          planId = plan.id.getId,
+          registrationDate,
+          paymentMode = getPaymentModeAndVehicleCategoryKey plan,
+          dutyDate,
+          numOfRides,
+          offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payment.IS_APPLICABLE else Nothing,
+          staticCustomerId = Nothing,
+          deviceImei = Nothing
+        }
 
 getFinalOrderAmount ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>

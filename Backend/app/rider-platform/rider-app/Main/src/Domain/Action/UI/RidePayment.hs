@@ -2,6 +2,8 @@ module Domain.Action.UI.RidePayment where
 
 import qualified API.Types.UI.RidePayment
 import AWS.S3 as S3
+import Data.List (nub)
+import qualified Data.Map.Strict as Map
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as Text
 import Data.Time.Format.ISO8601 (iso8601Show)
@@ -29,7 +31,11 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Account.Service as AccountService
+import Lib.Finance.Domain.Types.Account (Account, AccountType (Liability), CounterpartyType (RIDER))
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
+import qualified Lib.Finance.Ledger.Service as LedgerService
+import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
@@ -37,8 +43,10 @@ import qualified Lib.Payment.Domain.Types.PaymentTransaction as DPaymentTransact
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
+import SharedLogic.JobScheduler
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
@@ -903,6 +911,8 @@ postPaymentVerifyVpa (mbPersonId, merchantId) vpa = do
         then do
           let updatedPerson = person{payoutVpa = Just vpa}
           QPerson.updateByPrimaryKey updatedPerson
+          when (isNothing person.payoutVpa) $
+            triggerPendingCashRideCashbackPayoutJob updatedPerson
           pure Success
         else throwError $ InvalidRequest $ "VPA Verification Failed with status: " <> response.status
 
@@ -934,6 +944,100 @@ getPaymentVpaFromNumber (mbPersonId, merchantId) = do
           then do
             let updatedPerson = person{payoutVpa = Just response.vpa}
             QPerson.updateByPrimaryKey updatedPerson
+            when (isNothing person.payoutVpa) $
+              triggerPendingCashRideCashbackPayoutJob updatedPerson
             pure response.vpa
           else throwError $ InvalidRequest $ "VPA Verification Failed with status: " <> response.status
   pure $ API.Types.UI.RidePayment.VpaFromNumberResp {vpa = vpa}
+
+triggerPendingCashRideCashbackPayoutJob ::
+  Domain.Types.Person.Person ->
+  Environment.Flow ()
+triggerPendingCashRideCashbackPayoutJob person = do
+  let lockKey = "CashRideCashbackPayout:CreateJob:" <> person.id.getId
+  Redis.whenWithLockRedisAndReturnValue lockKey 60 (schedulePayoutJob person) >>= \case
+    Left _ ->
+      logInfo $
+        "Skipped cashback payout job trigger; lock already held for person: "
+          <> person.id.getId
+    Right _ -> pure ()
+  where
+    schedulePayoutJob person' = do
+      (_walletBalance, redeemableReferenceIds) <- getPayoutEligibilityData RIDER person'.id
+      unsettledCashbackEntries <- RidePaymentFinance.findUnsettledCashbackEntriesForRefs redeemableReferenceIds
+      let amountByRef =
+            foldl'
+              (\acc entry -> Map.insertWith (+) entry.referenceId entry.amount acc)
+              Map.empty
+              unsettledCashbackEntries
+      refsToProcess <-
+        catMaybes
+          <$> forM (Map.toList amountByRef) (\(refId, totalAmount) -> do
+                mbRide <- runInReplica $ QRide.findByRBId (Id refId :: Id Domain.Types.Booking.Booking)
+                case mbRide of
+                  Nothing -> do
+                    logError $ "Unable to build cashback payout ref (ride not found) for bookingRefId: " <> refId
+                    pure Nothing
+                  Just ride ->
+                    pure $
+                      Just
+                        VehicleReference
+                          { referenceId = refId,
+                            vehicleVariant = ride.vehicleVariant,
+                            amount = totalAmount
+                          }
+            )
+      if not (null refsToProcess)
+        then do
+          let cashbackPayoutJobData =
+                ExecuteCashRideCashbackPayoutJobData
+                  { personId = person'.id,
+                    vehicleReferences = refsToProcess,
+                    currency = INR
+                  }
+          createJobIn @_ @'ExecuteCashRideCashbackPayout
+            (Just person'.merchantId)
+            (Just person'.merchantOperatingCityId)
+            5
+            cashbackPayoutJobData
+          logInfo $
+            "Scheduled cashback payout catch-up job after VPA update for person: "
+              <> person'.id.getId
+              <> " refs="
+              <> show (length refsToProcess)
+        else logInfo $ "No eligible cashback payout refs found from wallet/ledger for person: " <> person'.id.getId
+
+getWalletAccountByOwner ::
+  (FinanceBeamFlow.BeamFlow m r) =>
+  CounterpartyType ->
+  Text ->
+  m (Maybe Account)
+getWalletAccountByOwner counterpartyType ownerId = do
+  accounts <- AccountService.findAccountsByCounterparty (Just counterpartyType) (Just ownerId)
+  pure $ find (\acc -> acc.accountType == Liability) accounts
+
+getWalletBalanceByOwner ::
+  (FinanceBeamFlow.BeamFlow m r) =>
+  CounterpartyType ->
+  Text ->
+  m (Maybe HighPrecMoney)
+getWalletBalanceByOwner counterpartyType ownerId = do
+  mbAcc <- getWalletAccountByOwner counterpartyType ownerId
+  pure $ mbAcc <&> (.balance)
+
+getPayoutEligibilityData ::
+  (FinanceBeamFlow.BeamFlow m r) =>
+  CounterpartyType ->
+  Id Domain.Types.Person.Person ->
+  m (HighPrecMoney, [Text])
+getPayoutEligibilityData counterparty personId = do
+  now <- getCurrentTime
+  mbAccount <- getWalletAccountByOwner counterparty personId.getId
+  let mbAccountId = (.id) <$> mbAccount
+  case mbAccountId of
+    Nothing -> pure (0, [])
+    Just accountId -> do
+      walletBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty personId.getId
+      unsettledEntries <- LedgerService.findUnsettledByAccountBeforeTime accountId now
+      let redeemableReferenceIds = nub $ map (.referenceId) unsettledEntries
+      pure (walletBalance, redeemableReferenceIds)

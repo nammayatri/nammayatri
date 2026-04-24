@@ -5,7 +5,7 @@ module Storage.Queries.BBPSExtra where
 
 import Domain.Types.BBPS
 import Domain.Types.Merchant
-import Domain.Types.Person
+import Domain.Types.Person (Person)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude

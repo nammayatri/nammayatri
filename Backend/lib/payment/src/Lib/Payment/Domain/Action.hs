@@ -1252,6 +1252,8 @@ applyOfferService paymentOrderId offerStatsInput useDomainOffers applyOfferCall 
   unless (null offerInitiatedPaymentOrderOffer) $ do
     now <- getCurrentTime
     order <- QOrder.findById paymentOrderId >>= fromMaybeM (PaymentOrderDoesNotExist paymentOrderId.getId)
+    let staticCustomerId = offerStatsInput.staticPersonId
+        deviceImei = offerStatsInput.deviceId
     unless useDomainOffers $ do
       let offerIds = map (.offer_id) offerInitiatedPaymentOrderOffer
       void $
@@ -1263,11 +1265,13 @@ applyOfferService paymentOrderId offerStatsInput useDomainOffers applyOfferCall 
               amount = order.amount,
               currency = order.currency,
               planId = "dummy-not-required",
-              registrationDate = now,
+              registrationDate = addUTCTime 19800 now,        -- should this be ist?
               dutyDate = now,
               paymentMode = "dummy-not-required",
               numOfRides = 0,
-              basket = Nothing
+              basket = Nothing,
+              staticCustomerId,
+              deviceImei
             }
     forM_ offerInitiatedPaymentOrderOffer $ \paymentOffer -> do
       QPaymentOrderOffer.updateByPrimaryKey paymentOffer {DPaymentOrderOffer.status = PInterface.OFFER_AVAILED, DPaymentOrderOffer.updatedAt = now}
@@ -1297,6 +1301,8 @@ applyOfferWithoutPaymentService referenceId offerId offerStatsInput discountAmou
     whenJust mbOffer $ \offer -> do
       now <- getCurrentTime
       unless useDomainOffers $ do
+        let staticCustomerId = offerStatsInput.staticPersonId
+            deviceImei = offerStatsInput.deviceId
         void $
           applyOfferCall
             PInterface.OfferApplyReq
@@ -1306,11 +1312,13 @@ applyOfferWithoutPaymentService referenceId offerId offerStatsInput discountAmou
                 amount = orderAmount,
                 currency = currency,
                 planId = "dummy-not-required",
-                registrationDate = now,
+                registrationDate = addUTCTime 19800 now,
                 dutyDate = now,
                 paymentMode = "dummy-not-required",
                 numOfRides = 0,
-                basket = Nothing
+                basket = Nothing,
+                staticCustomerId = staticCustomerId,
+                deviceImei = deviceImei
               }
       offlineOfferId <- generateGUID
       let offlineOffer =

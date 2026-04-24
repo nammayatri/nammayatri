@@ -1264,7 +1264,6 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
       let baseAmount = getPlanAmount plan.planBaseAmount
       driver <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
       now <- getCurrentTime
-
       let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = baseAmount, currency = paymentCurrency, basket = Nothing}
           customerReq = Payment.OfferCustomer {customerId = driverId.getId, email = driver.email, mobile = Nothing}
       return
@@ -1276,7 +1275,9 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
             dutyDate = addUTCTime (fromIntegral transporterConfig.timeDiffFromUtc) now,
             paymentMode = getPaymentModeAndVehicleCategoryKey plan,
             numOfRides = if paymentMode_ == AUTOPAY then 0 else -1,
-            offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payment.IS_VISIBLE else Nothing
+            offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payment.IS_VISIBLE else Nothing,
+            staticCustomerId = Nothing,
+            deviceImei = Nothing
           }
     mkPlanFareBreakup currency offers now = do
       let baseAmount = getPlanAmount plan.planBaseAmount
