@@ -158,7 +158,7 @@ executable driver-offer-allocator-exe
       UndecidableInstances
       StandaloneDeriving
       PackageImports
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts=all "-with-rtsopts=-N -T"
   extra-libraries:
       cac_client
   build-depends:

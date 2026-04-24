@@ -138,7 +138,9 @@ executables:
     source-dirs: server
     ghc-options:
       - -threaded
-      - -rtsopts
+      # [leak-repro] -rtsopts=all allows all RTS flags (e.g. -hT, -L, -i, -po)
+      # to be passed via GHCRTS at runtime without a profiling build.
+      - -rtsopts=all
       - '"-with-rtsopts=-N -T"'
     when:
       - condition: flag(Local)
