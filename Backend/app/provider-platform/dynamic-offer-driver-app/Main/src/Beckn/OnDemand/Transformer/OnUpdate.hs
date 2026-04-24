@@ -43,7 +43,7 @@ import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.Queries.FareParameters as QFP
 
 buildOnUpdateReqV2 ::
-  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, HasFlowEnv m r '["_version" ::: Text], EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   Context.Action ->
   Context.Domain ->
   Text ->

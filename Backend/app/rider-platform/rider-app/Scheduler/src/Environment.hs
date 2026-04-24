@@ -138,7 +138,8 @@ data HandlerEnv = HandlerEnv
     isMetroTestTransaction :: Bool,
     blackListedJobs :: [Text],
     cloudType :: Maybe CloudType,
-    sftpConfig :: SFTPConfig
+    sftpConfig :: SFTPConfig,
+    _version :: Text
   }
   deriving (Generic)
 

@@ -157,7 +157,8 @@ editLocation ::
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["_version" ::: Text]
   ) =>
   Id SRide.Ride ->
   (Id SPerson.Person, Id DM.Merchant) ->

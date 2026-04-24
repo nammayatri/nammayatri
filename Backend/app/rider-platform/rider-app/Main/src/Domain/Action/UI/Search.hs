@@ -111,6 +111,7 @@ type SearchRequestFlow m r =
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
     HasFlowEnv m r '["collectRouteData" ::: Bool],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["_version" ::: Text],
     HasField "hotSpotExpiry" r Seconds
   )
 

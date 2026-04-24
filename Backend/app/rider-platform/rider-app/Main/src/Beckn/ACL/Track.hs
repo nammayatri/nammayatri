@@ -74,6 +74,7 @@ buildTrackReqV2 ::
   ( MonadFlow m,
     HedisFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["_version" ::: Text],
     CacheFlow m r,
     EsqDBFlow m r
   ) =>

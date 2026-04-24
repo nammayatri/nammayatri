@@ -40,6 +40,7 @@ buildOnUpdateMessageV2 ::
     EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["_version" ::: Text],
     CacheFlow m r
   ) =>
   DM.Merchant ->
@@ -60,6 +61,7 @@ buildOnUpdateError ::
     EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["_version" ::: Text],
     CacheFlow m r
   ) =>
   DM.Merchant ->

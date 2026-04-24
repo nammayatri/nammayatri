@@ -34,7 +34,7 @@ import Storage.ConfigPilot.Interface.Types (getConfig)
 import Tools.Error
 
 buildInitReqV2 ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasFlowEnv m r '["_version" ::: Text], EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   SConfirm.DConfirmRes ->
   m Spec.InitReq
 buildInitReqV2 res = do

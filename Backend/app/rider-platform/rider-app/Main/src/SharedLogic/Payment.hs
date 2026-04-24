@@ -843,6 +843,7 @@ paymentErrorHandler ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["_version" ::: Text],
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r
   ) =>

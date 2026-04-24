@@ -15,8 +15,6 @@
 module BecknV2.OnDemand.Utils.Context
   ( buildContextV2,
     buildContextV2',
-    buildContextV2_1,
-    buildContextV2_1',
     mapToCbAction,
     validateContext,
   )
@@ -59,8 +57,8 @@ buildContextLocation city country = do
         locationState = Nothing
       }
 
-buildContextV2' :: UTCTime -> Context.Action -> Context.Domain -> Text -> Maybe Text -> Text -> KP.BaseUrl -> Maybe Text -> Maybe KP.BaseUrl -> Context.City -> Context.Country -> Maybe Text -> Spec.Context
-buildContextV2' now action domain messageId transactionId bapId bapUri bppId bppUri city country ttl = do
+buildContextV2' :: Text -> UTCTime -> Context.Action -> Context.Domain -> Text -> Maybe Text -> Text -> KP.BaseUrl -> Maybe Text -> Maybe KP.BaseUrl -> Context.City -> Context.Country -> Maybe Text -> Spec.Context
+buildContextV2' supportedVersion now action domain messageId transactionId bapId bapUri bppId bppUri city country ttl = do
   Spec.Context
     { contextAction = showContextAction action,
       contextBapId = Just bapId,
@@ -74,30 +72,14 @@ buildContextV2' now action domain messageId transactionId bapId bapUri bppId bpp
       contextTimestamp = Just $ UTCTimeRFC3339 now,
       contextTransactionId = UUID.fromText =<< transactionId,
       contextTtl = ttl,
-      contextVersion = Just "2.1.0"
+      contextVersion = Just supportedVersion
     }
 
-buildContextV2_1' :: UTCTime -> Context.Action -> Context.Domain -> Text -> Maybe Text -> Text -> KP.BaseUrl -> Maybe Text -> Maybe KP.BaseUrl -> Context.City -> Context.Country -> Maybe Text -> Spec.Context
-buildContextV2_1' now action domain messageId transactionId bapId bapUri bppId bppUri city country ttl = do
-  Spec.Context
-    { contextAction = showContextAction action,
-      contextBapId = Just bapId,
-      contextBapUri = Just $ KP.showBaseUrl bapUri,
-      contextBppId = bppId,
-      contextBppUri = KP.showBaseUrl <$> bppUri,
-      contextDomain = showContextDomain domain,
-      contextKey = Nothing,
-      contextLocation = buildContextLocation city country,
-      contextMessageId = UUID.fromText messageId,
-      contextTimestamp = Just $ UTCTimeRFC3339 now,
-      contextTransactionId = UUID.fromText =<< transactionId,
-      contextTtl = ttl,
-      contextVersion = Just "2.1.0"
-    }
 
-buildContextV2 :: (MonadFlow m) => Context.Action -> Context.Domain -> Text -> Maybe Text -> Text -> KP.BaseUrl -> Maybe Text -> Maybe KP.BaseUrl -> Context.City -> Context.Country -> Maybe Text -> m Spec.Context
+buildContextV2 :: (MonadFlow m, HasFlowEnv m r '["_version" ::: Text]) => Context.Action -> Context.Domain -> Text -> Maybe Text -> Text -> KP.BaseUrl -> Maybe Text -> Maybe KP.BaseUrl -> Context.City -> Context.Country -> Maybe Text -> m Spec.Context
 buildContextV2 action domain messageId transactionId bapId bapUri bppId bppUri city country ttl = do
   now <- getCurrentTime <&> Just
+  supportedVersion <- asks (._version)
   pure $
     Spec.Context
       { contextAction = showContextAction action,
@@ -112,28 +94,9 @@ buildContextV2 action domain messageId transactionId bapId bapUri bppId bppUri c
         contextTimestamp = UTCTimeRFC3339 <$> now,
         contextTransactionId = UUID.fromText =<< transactionId,
         contextTtl = ttl,
-        contextVersion = Just "2.1.0"
+        contextVersion = Just supportedVersion
       }
 
-buildContextV2_1 :: (MonadFlow m) => Context.Action -> Context.Domain -> Text -> Maybe Text -> Text -> KP.BaseUrl -> Maybe Text -> Maybe KP.BaseUrl -> Context.City -> Context.Country -> Maybe Text -> m Spec.Context
-buildContextV2_1 action domain messageId transactionId bapId bapUri bppId bppUri city country ttl = do
-  now <- getCurrentTime <&> Just
-  pure $
-    Spec.Context
-      { contextAction = showContextAction action,
-        contextBapId = Just bapId,
-        contextBapUri = Just $ KP.showBaseUrl bapUri,
-        contextBppId = bppId,
-        contextBppUri = KP.showBaseUrl <$> bppUri,
-        contextDomain = showContextDomain domain,
-        contextKey = Nothing,
-        contextLocation = buildContextLocation city country,
-        contextMessageId = UUID.fromText messageId,
-        contextTimestamp = UTCTimeRFC3339 <$> now,
-        contextTransactionId = UUID.fromText =<< transactionId,
-        contextTtl = ttl,
-        contextVersion = Just "2.1.0"
-      }
 
 mapToCbAction :: Text -> Maybe Text
 mapToCbAction = \case

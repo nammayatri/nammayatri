@@ -32,7 +32,7 @@ import Storage.ConfigPilot.Interface.Types (getConfig)
 import Tools.Error
 
 buildRatingReqV2 ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasFlowEnv m r '["_version" ::: Text], CacheFlow m r, EsqDBFlow m r) =>
   DFeedback.FeedbackRes ->
   m Spec.RatingReq
 buildRatingReqV2 res@DFeedback.FeedbackRes {..} = do

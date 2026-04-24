@@ -53,7 +53,8 @@ runNyRegularInstanceJob ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["cloudType" ::: Maybe CloudType]
+    HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
+    HasFlowEnv m r '["_version" ::: Text]
   ) =>
   Job 'NyRegularInstance ->
   m ExecutionResult

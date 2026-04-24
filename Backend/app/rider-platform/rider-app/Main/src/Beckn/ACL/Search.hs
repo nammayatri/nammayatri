@@ -31,14 +31,15 @@ import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
 
 buildSearchReqV2 ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasFlowEnv m r '["_version" ::: Text]) =>
   SLS.SearchRes ->
   m Spec.SearchReq
 buildSearchReqV2 res@SLS.SearchRes {..} = do
   bapUri <- Utils.mkBapUri merchant.id
   bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = res.merchantOperatingCityId.getId, merchantId = merchant.id.getId, domain = Just "MOBILITY", vehicleCategory = Nothing})) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show merchant.id.getId <> "merchantOperatingCityId:-" <> show merchantOperatingCityId.getId)
   messageId <- generateGUIDText
-  let eBecknSearchReq = Search.buildBecknSearchReqV2 res bapConfig bapUri messageId
+  supportedVersion <- asks (._version)
+  let eBecknSearchReq = Search.buildBecknSearchReqV2 res bapConfig bapUri messageId supportedVersion
   case eBecknSearchReq of
     Left err -> throwError $ InternalError err
     Right becknSearchReq -> pure becknSearchReq

@@ -87,6 +87,7 @@ sendScheduledRideAssignedOnUpdate ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
+    HasFlowEnv m r '["_version" ::: Text],
     CH.ClickhouseFlow m r
   ) =>
   Job 'ScheduledRideAssignedOnUpdate ->
@@ -294,6 +295,7 @@ cancelOrReallocate ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
+    HasFlowEnv m r '["_version" ::: Text],
     CH.ClickhouseFlow m r
   ) =>
   DRide.Ride ->

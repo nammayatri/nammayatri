@@ -155,6 +155,7 @@ buildOnStatusReqV2 ::
     EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["_version" ::: Text],
     CacheFlow m r
   ) =>
   DM.Merchant ->
@@ -173,7 +174,7 @@ buildOnStatusReqV2 merchant booking req mbMessageId = do
   buildOnStatusReqV2' Context.ON_STATUS Context.MOBILITY msgId bppId bppUri city country booking req farePolicy bppConfig
 
 buildOnStatusReqV2' ::
-  (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["_version" ::: Text]) =>
   Context.Action ->
   Context.Domain ->
   Text ->
