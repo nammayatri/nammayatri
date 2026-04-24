@@ -6,7 +6,9 @@ import Domain.Action.Beckn.FRFS.Common
 import Domain.Action.Beckn.FRFS.OnInit
 import Domain.Action.Beckn.FRFS.OnSearch
 import Domain.Types
+import qualified Domain.Types.Beckn.FRFS.OnCancel as DOnCancel
 import Domain.Types.BecknConfig
+import qualified Domain.Types.FRFSCancellationConfig as DFRFSCancellationConfig
 import Domain.Types.FRFSConfig
 import Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
@@ -28,6 +30,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JMU
 import SharedLogic.FRFSUtils
+import qualified Storage.CachedQueries.FRFSCancellationConfig as CQFRFSCancellationConfig
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
@@ -289,3 +292,56 @@ verifyTicket :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlo
 verifyTicket _merchantId _merchantOperatingCity integratedBPPConfig _bapConfig encryptedQrData = do
   TicketPayload {..} <- CallAPI.verifyTicket integratedBPPConfig encryptedQrData
   return DTicketPayload {..}
+
+cancel :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Spec.CancellationType -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnCancel.DOnCancel
+cancel _merchant merchantOperatingCity integratedBPPConfig bapConfig cancellationType booking = do
+  bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "BPP Order Id Not Found")
+  let orderStatus = case cancellationType of
+        Spec.SOFT_CANCEL -> Spec.SOFT_CANCELLED
+        Spec.CONFIRM_CANCEL -> Spec.CANCELLED
+  let baseFare = booking.totalPrice.amount
+  (charges, refund) <- case cancellationType of
+    Spec.CONFIRM_CANCEL ->
+      -- Use amounts already stored from SOFT_CANCEL step
+      case (booking.cancellationCharges, booking.refundAmount) of
+        (Just cc, Just ra) -> return (cc, ra)
+        _ -> calculateCancellationCharges merchantOperatingCity.id booking.vehicleType baseFare booking.validTill
+    _ -> calculateCancellationCharges merchantOperatingCity.id booking.vehicleType baseFare booking.validTill
+  return $
+    DOnCancel.DOnCancel
+      { providerId = bapConfig.uniqueKeyId,
+        totalPrice = booking.totalPrice.amount,
+        bppOrderId = bppOrderId,
+        bppItemId = CallAPI.getProviderName integratedBPPConfig,
+        transactionId = booking.searchId.getId,
+        messageId = booking.id.getId,
+        orderStatus = orderStatus,
+        refundAmount = Just refund,
+        baseFare = baseFare,
+        cancellationCharges = Just charges
+      }
+
+calculateCancellationCharges ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id MerchantOperatingCity ->
+  Spec.VehicleCategory ->
+  HighPrecMoney ->
+  UTCTime ->
+  m (HighPrecMoney, HighPrecMoney)
+calculateCancellationCharges merchantOpCityId vehicleCategory baseFare departureTime = do
+  configs <- CQFRFSCancellationConfig.findAllByMerchantOpCityAndVehicleCategory merchantOpCityId vehicleCategory
+  now <- getCurrentTime
+  let minutesBefore = floor (diffUTCTime departureTime now / 60) :: Int
+      mbMatchingTier = find (matchesTier minutesBefore) configs
+  case mbMatchingTier of
+    Nothing -> return (0, baseFare) -- no config → full refund
+    Just tier -> do
+      let charges = case tier.cancellationChargeType of
+            DFRFSCancellationConfig.PERCENTAGE -> baseFare * tier.cancellationChargeValue / 100
+            DFRFSCancellationConfig.FLAT -> tier.cancellationChargeValue
+          refund = max 0 (baseFare - charges)
+      return (charges, refund)
+  where
+    matchesTier mins tier =
+      mins >= tier.minMinutesBeforeDeparture
+        && maybe True (mins <) tier.maxMinutesBeforeDeparture

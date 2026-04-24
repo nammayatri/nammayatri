@@ -16,14 +16,15 @@ import qualified Domain.Types.PartnerOrgConfig as DPOC
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
+import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.JourneyLeg.Types as JL
-import qualified Lib.JourneyModule.Base as JM
-import qualified Lib.JourneyModule.State.Types as JMState
+import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -37,27 +38,40 @@ import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QTBP
-import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QPS
 import Tools.Error
+import qualified Tools.Metrics as Metrics
 import qualified Tools.SMS as Sms
+import qualified UrlShortner.Common as UrlShortner
 import qualified Utils.Common.JWT.Config as GW
 import qualified Utils.Common.JWT.TransitClaim as TC
 
-cancelJourney :: DFRFSTicketBooking.FRFSTicketBooking -> Flow ()
-cancelJourney booking = do
-  mbJourneyId <- getJourneyIdFromBooking booking
-  now <- getCurrentTime
-  whenJust mbJourneyId $ \journeyId -> do
-    legs <- QJourneyLeg.getJourneyLegs journeyId
-    forM_ legs $ \journeyLeg -> do
-      mapM_ (\rd -> JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLeg rd.subLegOrder now) journeyLeg.routeDetails
-    journey <- JM.getJourney journeyId
-    updatedLegStatus <- JM.getAllLegsStatus journey Nothing
-    JM.checkAndMarkTerminalJourneyStatus journey updatedLegStatus
-
-handleCancelledStatus :: Merchant.Merchant -> DFRFSTicketBooking.FRFSTicketBooking -> HighPrecMoney -> HighPrecMoney -> Text -> Bool -> Flow ()
+handleCancelledStatus ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    SchedulerFlow r,
+    CallFRFSBPP.BecknAPICallFlow m r,
+    Metrics.HasBAPMetrics m r,
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["googleSAPrivateKey" ::: String],
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "blackListedJobs" r [Text],
+    HasShortDurationRetryCfg r c,
+    HasLongDurationRetryCfg r c
+  ) =>
+  Merchant.Merchant ->
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  HighPrecMoney ->
+  HighPrecMoney ->
+  Text ->
+  Bool ->
+  m (Maybe Text, Maybe Text, FRFSUtils.FRFSFareParameters)
 handleCancelledStatus _merchant booking refundAmount cancellationCharges messageId counterCancellationPossible = do
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   paymentBooking <- QTBP.findTicketBookingPayment booking >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
@@ -79,18 +93,23 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges message
       void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
       void $ Redis.del (FRFSUtils.makecancelledTtlKey booking.id)
       void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
-      cancelJourney booking
   releaseSeatsIfHeld booking quoteCategories
   void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (fareParameters.totalQuantity))
   void $ CQP.clearPSCache booking.riderId
-  void $ sendTicketCancelSMS mRiderNumber person.mobileCountryCode booking fareParameters
-  handleGoogleWalletStatusUpdate booking
   bapConfig <-
     getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)})
       >>= fromMaybeM (InternalError "Beckn Config not found")
   updateTotalOrderValueAndSettlementAmount booking quoteCategories bapConfig
+  return (mRiderNumber, person.mobileCountryCode, fareParameters)
 
-releaseSeatsIfHeld :: DFRFSTicketBooking.FRFSTicketBooking -> [FRFSQuoteCategory.FRFSQuoteCategory] -> Flow ()
+-- | Side effects (SMS + Google Wallet) that require concrete Flow due to generic-lens constraints.
+-- Call this after handleCancelledStatus from a Flow context.
+handleCancelledSideEffects :: DFRFSTicketBooking.FRFSTicketBooking -> Maybe Text -> Maybe Text -> FRFSUtils.FRFSFareParameters -> Flow ()
+handleCancelledSideEffects booking mRiderNumber mRiderMobileCountryCode fareParameters = do
+  sendTicketCancelSMS mRiderNumber mRiderMobileCountryCode booking fareParameters
+  handleGoogleWalletStatusUpdate booking
+
+releaseSeatsIfHeld :: (MonadFlow m, Redis.HedisFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> [FRFSQuoteCategory.FRFSQuoteCategory] -> m ()
 releaseSeatsIfHeld booking quoteCategories = do
   let allSeatIds = nub $ concatMap (fromMaybe [] . (.seatIds)) quoteCategories
   case (booking.tripId, booking.fromStopIdx, booking.toStopIdx) of
@@ -99,7 +118,7 @@ releaseSeatsIfHeld booking quoteCategories = do
       SeatBooking.releaseConfirmedSeats tripId allSeatIds fromIdx toIdx
     _ -> pure ()
 
-checkRefundAndCancellationCharges :: Id DFRFSTicketBooking.FRFSTicketBooking -> HighPrecMoney -> HighPrecMoney -> Flow ()
+checkRefundAndCancellationCharges :: (MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => Id DFRFSTicketBooking.FRFSTicketBooking -> HighPrecMoney -> HighPrecMoney -> m ()
 checkRefundAndCancellationCharges bookingId refundAmount cancellationCharges = do
   booking <- runInReplica $ QTBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   case booking of
