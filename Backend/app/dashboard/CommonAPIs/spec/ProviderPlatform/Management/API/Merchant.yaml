@@ -929,7 +929,7 @@ types:
     - fromCity: City
     - toMerchantShortId: Text
     - toCity: City
-    - vehicleCategory: Maybe VehicleCategory
+    - vehicleCategory: VehicleCategory
     - derive: "'HideSecrets"
   CreateFPDriverExtraFeeReq:
     - minFee: Money

@@ -1232,7 +1232,6 @@ postMerchantConfigOnboardingDocumentReplicate ::
   Common.DocumentVerificationConfigReplicateReq ->
   Flow APISuccess
 postMerchantConfigOnboardingDocumentReplicate merchantShortId opCity req = do
-
   merchant <- findMerchantByShortId merchantShortId
   _ <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   -- Ensure the destination merchant in the request body matches the authenticated merchant.
@@ -1246,13 +1245,9 @@ postMerchantConfigOnboardingDocumentReplicate merchantShortId opCity req = do
   toMerchant <- findMerchantByShortId (ShortId req.toMerchantShortId)
   toOpCity <- CQMOC.getMerchantOpCityId Nothing toMerchant (Just req.toCity)
 
-  configs <- case req.vehicleCategory of
-    Just vc -> CQDVC.findByMerchantOpCityIdAndCategory fromOpCity vc (Just [])
-    Nothing -> CQDVC.findAllByMerchantOpCityId fromOpCity (Just [])
+  configs <- CQDVC.findByMerchantOpCityIdAndCategory fromOpCity req.vehicleCategory (Just [])
 
-  existingDestConfigs <- case req.vehicleCategory of
-    Just vc -> CQDVC.findByMerchantOpCityIdAndCategory toOpCity vc (Just [])
-    Nothing -> CQDVC.findAllByMerchantOpCityId toOpCity (Just [])
+  existingDestConfigs <- CQDVC.findByMerchantOpCityIdAndCategory toOpCity req.vehicleCategory (Just [])
   unless (null existingDestConfigs) $
     throwError $
       InvalidRequest $
@@ -1263,12 +1258,11 @@ postMerchantConfigOnboardingDocumentReplicate merchantShortId opCity req = do
   now <- getCurrentTime
   forM_ configs $ \cfg -> do
     let newCfg =
-          cfg
-            { DVC.merchantId = toMerchant.id,
+          cfg{DVC.merchantId = toMerchant.id,
               DVC.merchantOperatingCityId = toOpCity,
               DVC.createdAt = now,
               DVC.updatedAt = now
-            }
+             }
     CQDVC.create newCfg
 
   CQDVC.clearCache toOpCity

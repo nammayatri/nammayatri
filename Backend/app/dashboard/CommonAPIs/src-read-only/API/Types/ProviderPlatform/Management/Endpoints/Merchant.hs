@@ -218,7 +218,7 @@ data DocumentVerificationConfigReplicateReq = DocumentVerificationConfigReplicat
     fromCity :: Kernel.Types.Beckn.Context.City,
     toMerchantShortId :: Kernel.Prelude.Text,
     toCity :: Kernel.Types.Beckn.Context.City,
-    vehicleCategory :: Kernel.Prelude.Maybe Dashboard.Common.VehicleCategory
+    vehicleCategory :: Dashboard.Common.VehicleCategory
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
