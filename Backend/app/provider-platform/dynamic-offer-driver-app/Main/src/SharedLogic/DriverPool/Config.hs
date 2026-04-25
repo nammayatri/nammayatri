@@ -53,7 +53,6 @@ import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import Lib.Yudhishthira.Tools.Utils (convertTags)
 import qualified Lib.Yudhishthira.Types as LYT
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (PoolSortingType (..))
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as CTC
 import Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
@@ -123,7 +122,6 @@ instance Default DriverPoolConfig where
         driverToDestinationDistanceThreshold = Common.Meters 1000,
         driverToDestinationDuration = Common.Seconds 900,
         enableForwardBatching = True,
-        enableUnifiedPooling = Just False,
         id = Id "default-driver-pool-config-id",
         maxDriverQuotesRequired = 5,
         maxNumberOfBatches = 4,
@@ -135,7 +133,6 @@ instance Default DriverPoolConfig where
         minRadiusOfSearch = Common.Meters 500,
         onRideBatchSplitConfig = [], -- Define default value
         onRideRadiusConfig = [], -- Define default value
-        poolSortingType = Tagged, -- Example, replace with the actual default value
         radiusShrinkValueForDriversOnRide = Common.Meters 200,
         radiusStepSize = Common.Meters 50,
         scheduleTryTimes = [1, 2, 3],

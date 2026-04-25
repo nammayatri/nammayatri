@@ -54,10 +54,6 @@ DriverGoHomeRequest:
       kvFunction: findOneWithKV
       where: id
 
-    finishWithStatus:
-      kvFunction: updateOneWithKV
-      params: [status, mbReachedHome]
-      where: id
 
     updateCancellationCount:
       kvFunction: updateOneWithKV

@@ -486,6 +486,9 @@ library
       SharedLogic.DriverOnboarding.Status
       SharedLogic.DriverPool
       SharedLogic.DriverPool.Config
+      SharedLogic.DriverPool.DriverPoolData
+      SharedLogic.DriverPool.DriverPoolDataBuilder
+      SharedLogic.DriverPool.LTSDataSync
       SharedLogic.DriverPool.Types
       SharedLogic.DynamicPricing
       SharedLogic.EventTracking
@@ -771,8 +774,6 @@ library
       Storage.Queries.OperationHubRequestsExtra
       Storage.Queries.PayoutConfigExtra
       Storage.Queries.Person.GetNearestDrivers
-      Storage.Queries.Person.GetNearestDriversCurrentlyOnRide
-      Storage.Queries.Person.GetNearestGoHomeDrivers
       Storage.Queries.Person.Internal
       Storage.Queries.PersonExtra
       Storage.Queries.PlanExtra

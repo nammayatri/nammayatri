@@ -160,7 +160,7 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as DebugLog
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
 import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, ReconciliationJobData, ScheduledBatchPayoutJobData, SupplyDemandRequestJobData)
-import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
+import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool -- still needed for BatchSplitByPickupDistance, OnRideRadiusConfig
 import qualified SharedLogic.DriverFee as SDF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
@@ -475,7 +475,7 @@ getMerchantConfigDriverPool merchantShortId opCity reqTripDistance reqTripDistan
 mkDriverPoolConfigRes :: DDPC.DriverPoolConfig -> Common.DriverPoolConfigItem
 mkDriverPoolConfigRes DDPC.DriverPoolConfig {..} =
   Common.DriverPoolConfigItem
-    { poolSortingType = castDPoolSortingType poolSortingType,
+    { poolSortingType = Common.Tagged,
       minRadiusOfSearchWithUnit = convertMetersToDistance distanceUnit minRadiusOfSearch,
       maxRadiusOfSearchWithUnit = convertMetersToDistance distanceUnit maxRadiusOfSearch,
       radiusStepSizeWithUnit = convertMetersToDistance distanceUnit radiusStepSize,
@@ -486,12 +486,6 @@ mkDriverPoolConfigRes DDPC.DriverPoolConfig {..} =
       actualDistanceThresholdOnRideWithUnit = convertMetersToDistance distanceUnit <$> actualDistanceThresholdOnRide,
       ..
     }
-
-castDPoolSortingType :: DriverPool.PoolSortingType -> Common.PoolSortingType
-castDPoolSortingType = \case
-  DriverPool.Intelligent -> Common.Intelligent
-  DriverPool.Random -> Common.Random
-  DriverPool.Tagged -> Common.Tagged
 
 ---------------------------------------------------------------------
 getMerchantConfigDriverPoolList :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverPoolConfigListRes
@@ -504,7 +498,8 @@ getMerchantConfigDriverPoolList merchantShortId opCity = do
 mkDriverPoolConfigListItem :: DDPC.DriverPoolConfig -> Common.DriverPoolConfigListItem
 mkDriverPoolConfigListItem DDPC.DriverPoolConfig {..} =
   Common.DriverPoolConfigListItem
-    { poolSortingType = castDPoolSortingType poolSortingType,
+    { poolSortingType = Common.Tagged,
+      enableUnifiedPooling = Just True,
       distanceBasedBatchSplit = mkBatchSplitByPickupDistance <$> distanceBasedBatchSplit,
       onRideBatchSplitConfig = mkBatchSplitByPickupDistanceOnRide <$> onRideBatchSplitConfig,
       onRideRadiusConfig = mkOnRideRadiusConfig distanceUnit <$> onRideRadiusConfig,
@@ -561,7 +556,6 @@ postMerchantConfigDriverPoolUpdate merchantShortId opCity reqTripDistanceValue r
                maxNumberOfBatches = maybe config.maxNumberOfBatches (.value) req.maxNumberOfBatches,
                maxParallelSearchRequests = maybe config.maxParallelSearchRequests (.value) req.maxParallelSearchRequests,
                maxParallelSearchRequestsOnRide = maybe config.maxParallelSearchRequestsOnRide (.value) req.maxParallelSearchRequestsOnRide,
-               poolSortingType = maybe config.poolSortingType (castPoolSortingType . (.value)) req.poolSortingType,
                singleBatchProcessTime = maybe config.singleBatchProcessTime (.value) req.singleBatchProcessTime,
                distanceBasedBatchSplit = maybe config.distanceBasedBatchSplit (map castBatchSplitByPickupDistance . (.value)) req.distanceBasedBatchSplit
               }
@@ -569,12 +563,6 @@ postMerchantConfigDriverPoolUpdate merchantShortId opCity reqTripDistanceValue r
   CQDPC.clearCache merchantOpCityId
   logTagInfo "dashboard -> postMerchantConfigDriverPoolUpdate : " $ show merchant.id <> "tripDistance : " <> show tripDistance
   pure Success
-
-castPoolSortingType :: Common.PoolSortingType -> DriverPool.PoolSortingType
-castPoolSortingType = \case
-  Common.Intelligent -> DriverPool.Intelligent
-  Common.Random -> DriverPool.Random
-  Common.Tagged -> DriverPool.Tagged
 
 castBatchSplitByPickupDistance :: Common.BatchSplitByPickupDistance -> DriverPool.BatchSplitByPickupDistance
 castBatchSplitByPickupDistance Common.BatchSplitByPickupDistance {..} = DriverPool.BatchSplitByPickupDistance {..}
@@ -632,7 +620,6 @@ buildDriverPoolConfig merchantId merchantOpCityId tripDistance distanceUnit area
     DDPC.DriverPoolConfig
       { merchantId,
         merchantOperatingCityId = merchantOpCityId,
-        poolSortingType = castPoolSortingType poolSortingType,
         distanceBasedBatchSplit = map castBatchSplitByPickupDistance distanceBasedBatchSplit,
         scheduleTryTimes = [],
         updatedAt = now,
@@ -707,7 +694,6 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
       maxNumberOfBatches :: Int <- readCSVField idx row.maxNumberOfBatches "Max Number Of Batches"
       maxParallelSearchRequests :: Int <- readCSVField idx row.maxParallelSearchRequests "Max Parallel Search Requests"
       maxParallelSearchRequestsOnRide :: Int <- readCSVField idx row.maxParallelSearchRequestsOnRide "Max Parallel Search Requests On Ride"
-      poolSortingType :: DriverPool.PoolSortingType <- readCSVField idx row.poolSortingType "Pool Sorting Type"
       singleBatchProcessTime :: Seconds <- readCSVField idx row.singleBatchProcessTime "Single Batch Process Time"
       radiusShrinkValueForDriversOnRide :: Meters <- readCSVField idx row.radiusShrinkValueForDriversOnRide "Radius Shrink Value For Drivers On Ride"
       driverToDestinationDistanceThreshold :: Meters <- readCSVField idx row.driverToDestinationDistanceThreshold "Driver To Destination Distance Threshold"
@@ -720,7 +706,6 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
       actualDistanceThresholdOnRide :: Maybe Meters <- readCSVField idx row.actualDistanceThresholdOnRide "Actual Distance Threshold On Ride"
       enableForwardBatching :: Bool <- readCSVField idx row.enableForwardBatching "Enable Forward Batching"
       batchSizeOnRide :: Int <- readCSVField idx row.batchSizeOnRide "Batch Size On Ride"
-      enableUnifiedPooling :: Maybe Bool <- readCSVField idx row.enableUnifiedPooling "Enable Unified Pooling"
       thresholdToIgnoreActualDistanceThreshold :: Maybe Meters <- readCSVField idx row.thresholdToIgnoreActualDistanceThreshold "Threshold To Ignore Actual Distance Threshold"
       selfRequestIfRiderIsDriver :: Bool <- readCSVField idx row.selfRequestIfRiderIsDriver "Self Request If Rider Is Driver"
       batchSizeOnRideWithStraightLineDistance :: Maybe Int <- readCSVField idx row.batchSizeOnRideWithStraightLineDistance "Batch Size On Ride With Straight Line Distance"
@@ -749,7 +734,6 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
             maxNumberOfBatches,
             maxParallelSearchRequests,
             maxParallelSearchRequestsOnRide,
-            poolSortingType,
             singleBatchProcessTime,
             radiusShrinkValueForDriversOnRide,
             driverToDestinationDistanceThreshold,
@@ -762,7 +746,6 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
             actualDistanceThresholdOnRide,
             enableForwardBatching,
             batchSizeOnRide,
-            enableUnifiedPooling,
             distanceUnit,
             distanceBasedBatchSplit,
             scheduleTryTimes,
@@ -801,7 +784,6 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
                     DDPC.maxNumberOfBatches = config.maxNumberOfBatches,
                     DDPC.maxParallelSearchRequests = config.maxParallelSearchRequests,
                     DDPC.maxParallelSearchRequestsOnRide = config.maxParallelSearchRequestsOnRide,
-                    DDPC.poolSortingType = config.poolSortingType,
                     DDPC.singleBatchProcessTime = config.singleBatchProcessTime,
                     DDPC.radiusShrinkValueForDriversOnRide = config.radiusShrinkValueForDriversOnRide,
                     DDPC.driverToDestinationDistanceThreshold = config.driverToDestinationDistanceThreshold,
@@ -814,7 +796,6 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
                     DDPC.actualDistanceThresholdOnRide = config.actualDistanceThresholdOnRide,
                     DDPC.enableForwardBatching = config.enableForwardBatching,
                     DDPC.batchSizeOnRide = config.batchSizeOnRide,
-                    DDPC.enableUnifiedPooling = config.enableUnifiedPooling,
                     DDPC.distanceBasedBatchSplit = config.distanceBasedBatchSplit,
                     DDPC.scheduleTryTimes = config.scheduleTryTimes,
                     DDPC.onRideBatchSplitConfig = config.onRideBatchSplitConfig,
@@ -844,7 +825,6 @@ data DriverPoolConfigCSVRow = DriverPoolConfigCSVRow
     maxNumberOfBatches :: Text,
     maxParallelSearchRequests :: Text,
     maxParallelSearchRequestsOnRide :: Text,
-    poolSortingType :: Text,
     singleBatchProcessTime :: Text,
     radiusShrinkValueForDriversOnRide :: Text,
     driverToDestinationDistanceThreshold :: Text,
@@ -857,7 +837,6 @@ data DriverPoolConfigCSVRow = DriverPoolConfigCSVRow
     actualDistanceThresholdOnRide :: Text,
     enableForwardBatching :: Text,
     batchSizeOnRide :: Text,
-    enableUnifiedPooling :: Text,
     thresholdToIgnoreActualDistanceThreshold :: Text,
     selfRequestIfRiderIsDriver :: Text,
     batchSizeOnRideWithStraightLineDistance :: Text,

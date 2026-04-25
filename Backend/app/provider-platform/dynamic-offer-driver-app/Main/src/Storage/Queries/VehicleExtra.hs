@@ -18,6 +18,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Sequelize as Se
+import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Vehicle as BeamV
 import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
@@ -27,6 +28,16 @@ create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Vehicle -> m ())
 create vehicle = do
   createWithKV vehicle
   whenJust vehicle.category $ \category -> QDriverInfoInternal.updateOnboardingVehicleCategory (Just category) vehicle.driverId
+  LTSSync.syncDriverPoolDataToLTS (cast vehicle.driverId) $
+    LTSSync.emptyUpdate
+      { LTSSync.variant = LTSSync.Set vehicle.variant,
+        LTSSync.selectedServiceTiers = LTSSync.Set vehicle.selectedServiceTiers,
+        LTSSync.vehicleTags = LTSSync.Set vehicle.vehicleTags,
+        LTSSync.mYManufacturing = LTSSync.Set vehicle.mYManufacturing,
+        LTSSync.airConditioned = LTSSync.Set vehicle.airConditioned,
+        LTSSync.luggageCapacity = LTSSync.Set vehicle.luggageCapacity,
+        LTSSync.vehicleRating = LTSSync.Set vehicle.vehicleRating
+      }
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Vehicle] -> m ())
 createMany = traverse_ create
@@ -59,6 +70,12 @@ upsert a@Vehicle {..} = do
     else do
       createWithKV a
   whenJust category $ \category' -> QDriverInfoInternal.updateOnboardingVehicleCategory (Just category') driverId
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate
+      { LTSSync.variant = LTSSync.Set variant,
+        LTSSync.selectedServiceTiers = LTSSync.Set selectedServiceTiers,
+        LTSSync.mYManufacturing = LTSSync.Set mYManufacturing
+      }
 
 updateVehicleVariant ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -67,6 +84,8 @@ updateVehicleVariant variant category driverId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set BeamV.variant variant, Se.Set BeamV.category category, Se.Set BeamV.updatedAt _now] [Se.Is BeamV.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
   whenJust category $ \category' -> QDriverInfoInternal.updateOnboardingVehicleCategory (Just category') driverId
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.variant = LTSSync.Set variant}
 
 updateVariantAndServiceTiers ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -81,6 +100,11 @@ updateVariantAndServiceTiers variant selectedServiceTiers category driverId = do
     ]
     [Se.Is BeamV.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
   whenJust category $ \category' -> QDriverInfoInternal.updateOnboardingVehicleCategory (Just category') driverId
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate
+      { LTSSync.variant = LTSSync.Set variant,
+        LTSSync.selectedServiceTiers = LTSSync.Set selectedServiceTiers
+      }
 
 deleteById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
 deleteById (Id driverId) = deleteWithKV [Se.Is BeamV.driverId (Se.Eq driverId)]
@@ -122,6 +146,22 @@ findAllByDriverIds driverIds =
   if null driverIds
     then pure []
     else findAllWithKV [Se.Is BeamV.driverId $ Se.In (getId <$> driverIds)]
+
+-- Wrapper for src-read-only function with LTS sync
+
+updateSelectedServiceTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [ServiceTierType] -> Id Person -> m ()
+updateSelectedServiceTiers tiers driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set BeamV.selectedServiceTiers tiers, Se.Set BeamV.updatedAt _now] [Se.Is BeamV.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.selectedServiceTiers = LTSSync.Set tiers}
+
+updateManufacturing :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Days.Day -> Id Person -> m ()
+updateManufacturing mYManufacturing driverId = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set BeamV.mYManufacturing mYManufacturing, Se.Set BeamV.updatedAt _now] [Se.Is BeamV.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.mYManufacturing = LTSSync.Set mYManufacturing}
 
 findByDriverIdAndRegistrationNo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Text -> m (Maybe Vehicle)
 findByDriverIdAndRegistrationNo driverId registrationNo = do
@@ -165,6 +205,8 @@ updateVehicleFromRcEdit oldRegistrationNo newRegistrationNo mbMake mbModel mbCol
         Se.Set BeamV.updatedAt now
       ]
       [Se.Is BeamV.registrationNo $ Se.Eq oldRegistrationNo]
+    LTSSync.syncDriverPoolDataToLTS (cast veh.driverId) $
+      LTSSync.emptyUpdate {LTSSync.mYManufacturing = LTSSync.Set mYManufacturing}
 
 -- | When the driver's vehicle row still matches the old RC registration number, sync fields from optional dashboard edits.
 updateFleetVehicleFromDashboardRcEdit ::
@@ -197,3 +239,5 @@ updateFleetVehicleFromDashboardRcEdit driverId oldRegistrationNo newRegistration
       [ Se.Is BeamV.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
         Se.Is BeamV.registrationNo $ Se.Eq oldRegistrationNo
       ]
+    LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+      LTSSync.emptyUpdate {LTSSync.mYManufacturing = LTSSync.Set mYManufacturing}

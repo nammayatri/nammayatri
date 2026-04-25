@@ -222,10 +222,6 @@ Person:
       params: [firstName]
       where: id
 
-    updateDeviceToken:
-      kvFunction: updateOneWithKV
-      params: [deviceToken]
-      where: id
 
     updateClientId:
       kvFunction: updateOneWithKV
@@ -256,10 +252,6 @@ Person:
       params: [usedCoins]
       where: id
 
-    updateDriverTag:
-      kvFunction: updateOneWithKV
-      params: [driverTag]
-      where: id
 
     updateNyClubConsent:
       kvFunction: updateOneWithKV

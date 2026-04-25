@@ -98,10 +98,6 @@ Vehicle:
       kvFunction: updateWithKV
       params: [model]
       where: driverId
-    updateSelectedServiceTiers:
-      kvFunction: updateOneWithKV
-      params: [selectedServiceTiers]
-      where: driverId
     updateAirConditioned:
       kvFunction: updateWithKV
       params: [airConditioned, downgradeReason]
@@ -113,10 +109,6 @@ Vehicle:
     updateVentilator:
       kvFunction: updateWithKV
       params: [ventilator]
-      where: driverId
-    updateManufacturing:
-      kvFunction: updateWithKV
-      params: [mYManufacturing]
       where: driverId
     deleteByDriverid:
       kvFunction: deleteWithKV

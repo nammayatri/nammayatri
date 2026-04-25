@@ -29,6 +29,7 @@ import qualified Mobility.ARDU.Fixtures as Fixtures
 import qualified "dynamic-offer-driver-app" Storage.Cac.TransporterConfig as SCTC
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformation as QDI
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person as Q
+import qualified "dynamic-offer-driver-app" SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person.GetNearestDrivers as S
 import Test.Hspec
 import "dynamic-offer-driver-app" Tools.Error (DriverInformationError (..))
@@ -81,6 +82,7 @@ createNearestDriverReq nearestRadius now =
             serviceVatPercentage = Nothing
           },
       minWalletAmountForCashRides = Nothing,
+      currentRideTripCategoryValidForForwardBatching = [],
       ..
     }
 
@@ -89,7 +91,7 @@ testOrder = do
   now <- getCurrentTime
   res <-
     runARDUFlow "Test ordering" $
-      (S.getNearestDrivers (createNearestDriverReq 5000 now) <&> getIds)
+      (S.getNearestDrivers (createNearestDriverReq 5000 now) DPDBuilder.getOrBuildDriverPoolDataBatch <&> getIds)
   res `shouldSatisfy` equals [closestDriver, furthestDriver]
 
 testInRadius :: IO ()
@@ -97,7 +99,7 @@ testInRadius = do
   now <- getCurrentTime
   res <-
     runARDUFlow "Test radius filtration" $
-      (S.getNearestDrivers (createNearestDriverReq 800 now) <&> getIds)
+      (S.getNearestDrivers (createNearestDriverReq 800 now) DPDBuilder.getOrBuildDriverPoolDataBatch <&> getIds)
   res `shouldSatisfy` equals [closestDriver]
 
 testNotInRadius :: IO ()
@@ -105,7 +107,7 @@ testNotInRadius = do
   now <- getCurrentTime
   res <-
     runARDUFlow "Test outside radius filtration" $
-      (S.getNearestDrivers (createNearestDriverReq 10 now) <&> getIds)
+      (S.getNearestDrivers (createNearestDriverReq 10 now) DPDBuilder.getOrBuildDriverPoolDataBatch <&> getIds)
   res `shouldSatisfy` equals []
 
 getIds :: [Q.NearestDriversResult] -> [Text]

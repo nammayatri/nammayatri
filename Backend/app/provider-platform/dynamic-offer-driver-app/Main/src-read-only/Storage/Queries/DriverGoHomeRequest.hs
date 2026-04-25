@@ -22,13 +22,6 @@ create = createWithKV
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest -> m (Maybe Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-finishWithStatus ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.DriverGoHomeRequest.DriverGoHomeRequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest -> m ())
-finishWithStatus status mbReachedHome id = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.reachedHome mbReachedHome, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
 updateCancellationCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest -> m ())
 updateCancellationCount numCancellation id = do
   _now <- getCurrentTime

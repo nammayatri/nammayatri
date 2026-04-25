@@ -4,7 +4,6 @@ imports:
   BatchSplitByPickupDistance: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   BatchSplitByPickupDistanceOnRide: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   OnRideRadiusConfig: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
-  PoolSortingType: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   Seconds: Kernel.Types.Common
   IndianState: Kernel.Types.Beckn.Context
   ServiceTierType: Domain.Types.Common
@@ -37,7 +36,6 @@ DriverPoolConfig:
     distanceBasedBatchSplit: "[BatchSplitByPickupDistance]"
     maxNumberOfBatches: Int
     maxParallelSearchRequests: Int
-    poolSortingType: PoolSortingType
     singleBatchProcessTime: Seconds
     tripDistance: Meters
     radiusShrinkValueForDriversOnRide: Meters
@@ -61,7 +59,6 @@ DriverPoolConfig:
     actualDistanceThresholdOnRide: Maybe Meters
     currentRideTripCategoryValidForForwardBatching : "[Text]"
     distanceUnit: DistanceUnit
-    enableUnifiedPooling: Maybe Bool
     dynamicBatchSize: Vector Int
     selfRequestIfRiderIsDriver: Bool
 
