@@ -622,22 +622,26 @@ postDriverUpdateTagBulk merchantShortId opCity req = do
       let tagValue = LYT.TextValue row.tagValue
       let tagNameValue = Yudhishthira.mkTagNameValue tagName tagValue
 
-      -- Check if tag already exists
-      when (maybe False (Yudhishthira.elemTagNameValue tagNameValue) driver.driverTag) $
-        logInfo "Tag already exists, updating expiry"
-
-      -- Verify tag
-      mbNammTag <- Yudhishthira.verifyTag (cast merchantOpCityId) tagNameValue
       now <- getCurrentTime
-
-      -- Update tag (always add/replace)
-      let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry tagNameValue (mbNammTag >>= (.validity)) now
-      let tag = Yudhishthira.replaceTagNameValue driver.driverTag reqDriverTagWithExpiry
+      tag <-
+        case row.operation of
+          Dashboard.Common.ADD -> do
+            when (maybe False (Yudhishthira.elemTagName tagNameValue) driver.driverTag) $
+              throwError $ InvalidRequest ("Tag name " <> row.tagName <> " already exists for driver " <> row.driverId)
+            mbNammTag <- Yudhishthira.verifyTag (cast merchantOpCityId) tagNameValue
+            let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry tagNameValue (mbNammTag >>= (.validity)) now
+            pure $ Yudhishthira.replaceTagNameValue driver.driverTag reqDriverTagWithExpiry
+          Dashboard.Common.UPDATE -> do
+            mbNammTag <- Yudhishthira.verifyTag (cast merchantOpCityId) tagNameValue
+            let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry tagNameValue (mbNammTag >>= (.validity)) now
+            pure $ Yudhishthira.replaceTagNameValue driver.driverTag reqDriverTagWithExpiry
+          Dashboard.Common.REMOVE ->
+            pure $ Yudhishthira.removeTagName driver.driverTag tagNameValue
 
       -- Update database if tag changed
       unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> driver.driverTag)) $ do
         QPerson.updateDriverTag (Just tag) personId
-        logInfo $ "Updated tag for driver " <> row.driverId <> ": " <> show tagNameValue
+        logInfo $ "Updated tag for driver " <> row.driverId <> " with operation " <> show row.operation <> ": " <> show tagNameValue
 
 ---------------------------------------------------------------------
 postDriverUpdateByPhoneNumber :: ShortId DM.Merchant -> Context.City -> Text -> Common.UpdateDriverDataReq -> Flow APISuccess
