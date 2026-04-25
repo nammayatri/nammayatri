@@ -11,12 +11,12 @@ type API =
   "offerDiscount"
     :> Header "token" Text
     :> Capture "bppBookingId" Text
-    :> QueryParam "fareAmount" HighPrecMoney
-    :> Get '[JSON] Domain.OfferDiscountResp
+    :> ReqBody '[JSON] Domain.OfferDiscountReq
+    :> Post '[JSON] Domain.OfferDiscountResp
 
 handler :: FlowServer API
 handler =
   getOfferDiscount
 
-getOfferDiscount :: Maybe Text -> Text -> Maybe HighPrecMoney -> FlowHandler Domain.OfferDiscountResp
-getOfferDiscount token bppBookingId mbFareAmount = withFlowHandlerAPI $ Domain.getOfferDiscount token bppBookingId mbFareAmount
+getOfferDiscount :: Maybe Text -> Text -> Domain.OfferDiscountReq -> FlowHandler Domain.OfferDiscountResp
+getOfferDiscount token bppBookingId req = withFlowHandlerAPI $ Domain.getOfferDiscount token bppBookingId req

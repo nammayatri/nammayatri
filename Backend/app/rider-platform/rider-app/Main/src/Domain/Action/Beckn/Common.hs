@@ -908,13 +908,14 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   if not onlinePayment
     then do
       let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency False person.id.getId ride.id.getId Nothing Nothing
-      whenJust booking.selectedOfferId $ \offerId -> do
+      whenJust booking.selectedOfferId $ \offerId -> whenJust mbRideOfferEntity $ \rideOfferEntity -> when riderConfig.enableRideHailingOffers $ do
         useDomainOffers <- TPayment.useDomainOffers booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing
         let applyOfferCall = TPayment.offerApply booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing Nothing person.clientSdkVersion
         offerStatsInput <- SPayment.buildOfferStatsInput person
+        let mbProduct = Just (show booking.vehicleServiceTierType, totalFare.amount)
         void $
           withTryCatch "applyOfferWithoutPayment:cashRide" $
-            DPayment.applyOfferWithoutPaymentService ride.id.getId offerId offerStatsInput (Just rideDiscountAmount) (Just ridePayoutAmount) totalFare.amount totalFare.currency person.merchantId.getId person.merchantOperatingCityId.getId useDomainOffers applyOfferCall ride.createdAt
+            DPayment.applyOfferWithoutPaymentService ride.id.getId offerId rideOfferEntity.offerCode offerStatsInput (Just rideDiscountAmount) (Just ridePayoutAmount) totalFare.amount totalFare.currency person.merchantId.getId person.merchantOperatingCityId.getId useDomainOffers applyOfferCall ride.createdAt mbProduct
       let cashRideFare = totalFare.amount - applicationFeeAmount' - rideDiscountAmount
       upsertRes <-
         RidePaymentFinance.upsertCoreRidePaymentLedger
@@ -966,7 +967,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         Left err -> do
           logError $ "makePaymentIntent failed, scheduling job so that it can mark this as Dues: " <> show err
           createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)
-        Right Nothing -> SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId ride.id person booking.selectedOfferId totalFare.currency ledgerInfo
+        Right Nothing -> SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId ride.id person booking.selectedOfferId totalFare.currency ledgerInfo booking
         Right (Just _paymentIntentResp) -> do
           logDebug $ "Scheduling execute payment intent job for order: " <> show scheduleAfter
           createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)

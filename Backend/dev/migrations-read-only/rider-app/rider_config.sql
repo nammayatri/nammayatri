@@ -642,3 +642,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN bus_trip_ttl integer ;
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN sos_tracking_link text ;
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_ride_hailing_offers boolean ;

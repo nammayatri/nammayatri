@@ -581,11 +581,11 @@ buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) DRide.Ride {..} = d
                           offerCode = offerEntity.offerCode,
                           autoApply = offerEntity.autoApply,
                           isHidden = offerEntity.isHidden,
-                          amountSaved = offerEntity.amountSaved + offerEntity.payoutAmount,
+                          amountSaved = offerEntity.amountSaved,
                           postOfferAmount = offerEntity.postOfferAmount
                         }
                     ],
-                  totalAmountSaved = offerEntity.amountSaved + offerEntity.payoutAmount,
+                  totalAmountSaved = offerEntity.amountSaved,
                   totalPostOfferAmount = offerEntity.postOfferAmount
                 }
         Nothing -> return Nothing

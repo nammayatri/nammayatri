@@ -1287,6 +1287,7 @@ applyOfferWithoutPaymentService ::
   (EncFlow m r, PaymentBeamFlow.BeamFlow m r) =>
   Text -> -- referenceId (bookingId)
   Text -> -- offerId
+  Text -> -- offerCode
   OfferStatsInput ->
   Maybe HighPrecMoney -> -- discount amount
   Maybe HighPrecMoney -> -- payout amount
@@ -1297,51 +1298,51 @@ applyOfferWithoutPaymentService ::
   Bool -> -- useDomainOffers
   (PInterface.OfferApplyReq -> m PInterface.OfferApplyResp) ->
   UTCTime ->
+  Maybe (Text, HighPrecMoney) -> -- mbProduct: (serviceTierType, amount) for basket
   m ()
-applyOfferWithoutPaymentService referenceId offerId offerStatsInput discountAmount payoutAmount orderAmount currency merchantId merchantOperatingCityId useDomainOffers applyOfferCall rideCreatedAt = do
+applyOfferWithoutPaymentService referenceId offerId offerCode offerStatsInput discountAmount payoutAmount orderAmount currency merchantId merchantOperatingCityId useDomainOffers applyOfferCall rideCreatedAt mbProduct = do
   existingOffers <- QOfflineOffer.findByReferenceId referenceId
   when (null existingOffers) $ do
-    mbOffer <- QOffer.findById (Id offerId)
-    whenJust mbOffer $ \offer -> do
-      now <- getCurrentTime
-      unless useDomainOffers $ do
-        let staticCustomerId = offerStatsInput.staticPersonId
-            deviceImei = offerStatsInput.deviceId
-        void $
-          applyOfferCall
-            PInterface.OfferApplyReq
-              { txnId = referenceId,
-                offers = [offerId],
-                customerId = offerStatsInput.personId,
-                amount = orderAmount,
-                currency = currency,
-                planId = "dummy-not-required",
-                registrationDate = addUTCTime 19800 rideCreatedAt, -- ist time
-                dutyDate = now,
-                paymentMode = "dummy-not-required",
-                numOfRides = 0,
-                basket = Nothing,
-                staticCustomerId = staticCustomerId,
-                deviceImei = deviceImei
-              }
-      offlineOfferId <- generateGUID
-      let offlineOffer =
-            DOfflineOffer.OfflineOffer
-              { id = offlineOfferId,
-                referenceId = referenceId,
-                offerId = offer.id.getId,
-                offerCode = offer.offerCode,
-                status = PInterface.OFFER_AVAILED,
-                discountAmount = discountAmount,
-                payoutAmount = payoutAmount,
-                merchantId = merchantId,
-                merchantOperatingCityId = merchantOperatingCityId,
-                createdAt = now,
-                updatedAt = now
-              }
-      QOfflineOffer.create offlineOffer
-      upsertOfferStats offer.id offerStatsInput discountAmount payoutAmount currency merchantId merchantOperatingCityId now
-      logInfo $ "Applied offline offer: referenceId=" <> referenceId <> " offerId=" <> offerId <> " discount=" <> show discountAmount <> " cashback=" <> show payoutAmount
+    now <- getCurrentTime
+    unless useDomainOffers $ do
+      let staticCustomerId = offerStatsInput.staticPersonId
+          deviceImei = offerStatsInput.deviceId
+          basket = mbProduct <&> \(productId, amount) -> [Payment.Basket {id = productId, unitPrice = amount, quantity = 1}]
+      void $
+        applyOfferCall
+          PInterface.OfferApplyReq
+            { txnId = referenceId,
+              offers = [offerId],
+              customerId = offerStatsInput.personId,
+              amount = orderAmount,
+              currency = currency,
+              planId = "dummy-not-required",
+              registrationDate = addUTCTime 19800 rideCreatedAt, -- ist time
+              dutyDate = now,
+              paymentMode = "dummy-not-required",
+              numOfRides = 0,
+              basket = basket,
+              staticCustomerId = staticCustomerId,
+              deviceImei = deviceImei
+            }
+    offlineOfferId <- generateGUID
+    let offlineOffer =
+          DOfflineOffer.OfflineOffer
+            { id = offlineOfferId,
+              referenceId = referenceId,
+              offerId = offerId,
+              offerCode = offerCode,
+              status = PInterface.OFFER_AVAILED,
+              discountAmount = discountAmount,
+              payoutAmount = payoutAmount,
+              merchantId = merchantId,
+              merchantOperatingCityId = merchantOperatingCityId,
+              createdAt = now,
+              updatedAt = now
+            }
+    QOfflineOffer.create offlineOffer
+    upsertOfferStats (Id offerId) offerStatsInput discountAmount payoutAmount currency merchantId merchantOperatingCityId now
+    logInfo $ "Applied offline offer: referenceId=" <> referenceId <> " offerId=" <> offerId <> " discount=" <> show discountAmount <> " cashback=" <> show payoutAmount
 
 -- | Raw identifiers for offer stats upsert. The payment library builds the
 --   entity list internally from these fields.

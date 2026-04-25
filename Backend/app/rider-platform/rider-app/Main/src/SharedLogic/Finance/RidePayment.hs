@@ -31,6 +31,7 @@ module SharedLogic.Finance.RidePayment
     ridePaymentRefCancellationGST,
     ridePaymentRefOfferDiscount,
     ridePaymentRefCashbackPayout,
+    ridePaymentRefCashbackPayoutTransfer,
 
     -- * Settlement reason constants
     settledReasonRidePayment,
@@ -47,6 +48,8 @@ module SharedLogic.Finance.RidePayment
     UpsertCoreLedgerResult (..),
     settleRidePaymentLedger,
     findUnsettledCashbackEntriesForRefs,
+    createPendingCashbackPayoutTransfer,
+    markCashbackPayoutTransferAsDue,
     markCashbackEntriesAsPaidOut,
     voidRidePaymentLedger,
     createTipLedger,
@@ -105,6 +108,9 @@ ridePaymentRefOfferDiscount = "OfferDiscount"
 
 ridePaymentRefCashbackPayout :: Text
 ridePaymentRefCashbackPayout = "CashbackPayout"
+
+ridePaymentRefCashbackPayoutTransfer :: Text
+ridePaymentRefCashbackPayoutTransfer = "CashbackPayoutTransfer"
 
 -- ---------------------------------------------------------------------------
 -- Settlement reason constants
@@ -453,15 +459,49 @@ findUnsettledCashbackEntriesForRefs refIds = do
   entries <- concat <$> mapM (getEntriesByReference ridePaymentRefCashbackPayout) refIds
   pure $ filter (\e -> e.settlementStatus /= Just LE.PAID_OUT) entries
 
+-- | Create a PENDING drain transfer entry (OwnerLiability → BuyerExternal)
+--   for a cashback payout, before calling the external payout service.
+--   The entry stays PENDING while the payout is in flight; it is settled
+--   by 'markCashbackEntriesAsPaidOut' on webhook success, or flipped to
+--   DUE by 'markCashbackPayoutTransferAsDue' if the submission fails.
+createPendingCashbackPayoutTransfer ::
+  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  FinanceCtx ->
+  HighPrecMoney -> -- payout amount
+  m (Either FinanceError [Id LE.LedgerEntry])
+createPendingCashbackPayoutTransfer ctx amount = do
+  result <-
+    runFinance ctx $
+      void $ transferPending OwnerLiability BuyerExternal amount ridePaymentRefCashbackPayoutTransfer
+  case result of
+    Left err -> do
+      logError $ "Failed to create PENDING cashback payout transfer entry: " <> show err
+      pure $ Left err
+    Right (_, entryIds) -> pure $ Right entryIds
+
+-- | Mark cashback payout transfer entries as DUE after a failed payout
+--   submission. Only flips PENDING/DUE entries; SETTLED entries are
+--   untouched (guarded by 'updateEntryStatus' callers).
+markCashbackPayoutTransferAsDue ::
+  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  [Id LE.LedgerEntry] ->
+  m ()
+markCashbackPayoutTransferAsDue entryIds = do
+  mbEntries <- forM entryIds getEntry
+  let duable = [e | Just e <- mbEntries, e.status == LE.PENDING]
+  forM_ duable $ \e -> Lib.Finance.Ledger.Service.updateEntryStatus e.id LE.DUE
+  logInfo $ "Marked " <> show (length duable) <> " cashback payout transfer entries as DUE"
+
 -- | Called on successful Juspay payout webhook for a RIDE_OFFER_CASHBACK
---   payout. Drains the OwnerLiability that accrued for the rider's
---   cashback (OwnerLiability → BuyerExternal for the sum of the still-
---   unsettled cashback entries), then flags those entries PAID_OUT with
---   the PayoutRequest id.
+--   payout. Settles any PENDING/DUE payout transfer entries (which posts
+--   the OwnerLiability → BuyerExternal drain via 'settleEntry'), then
+--   flags all supplied entries PAID_OUT with the PayoutRequest id.
 --
---   Semantics mirror the driver-side pair
---   'createWalletEntryDelta (negate amount)' + 'settleWalletEntries'.
---   Idempotent: replaying the webhook finds nothing to drain and no
+--   Entry IDs are the union of (a) the original SETTLED cashback accrual
+--   entries (refType=CashbackPayout) and (b) the PENDING/DUE drain
+--   transfer entries (refType=CashbackPayoutTransfer) created by the
+--   scheduler job before 'submitPayoutRequest'.
+--   Idempotent: replaying the webhook finds nothing PENDING/DUE and no
 --   entries to flag.
 markCashbackEntriesAsPaidOut ::
   (BeamFlow.BeamFlow m r, MonadFlow m) =>
@@ -469,34 +509,26 @@ markCashbackEntriesAsPaidOut ::
   [Id LE.LedgerEntry] -> -- entry IDs (from PayoutRequest.ledgerEntryIds)
   Text -> -- PayoutRequest id → settlementId on the row
   m (Either FinanceError ())
-markCashbackEntriesAsPaidOut ctx entryIds payoutRequestId = do
+markCashbackEntriesAsPaidOut _ctx entryIds payoutRequestId = do
   mbEntries <- forM entryIds getEntry
   let entries = catMaybes mbEntries
       eligible = filter (\e -> e.settlementStatus /= Just LE.PAID_OUT) entries
-      totalAmount = sum (map (.amount) eligible)
   if null eligible
     then do
       logInfo $ "markCashbackEntriesAsPaidOut: nothing eligible (payoutRequestId=" <> payoutRequestId <> ")"
       pure $ Right ()
     else do
-      drainResult <-
-        runFinance ctx $
-          when (totalAmount > 0) $
-            transfer_ OwnerLiability BuyerExternal totalAmount ridePaymentRefCashbackPayout
-      case drainResult of
-        Left err -> do
-          logError $ "Cashback payout drain leg failed: " <> show err
-          pure $ Left err
-        Right _ -> do
-          Lib.Finance.Ledger.Service.markEntriesAsPaidOut (map (.id) eligible) payoutRequestId
-          logInfo $
-            "Cashback payout settled — " <> show (length eligible)
-              <> " entries → PAID_OUT (payoutRequestId="
-              <> payoutRequestId
-              <> ", drainAmount="
-              <> show totalAmount
-              <> ")"
-          pure $ Right ()
+      let pendingOrDue = filter (\e -> e.status == LE.PENDING || e.status == LE.DUE) eligible
+      forM_ pendingOrDue $ \e -> Lib.Finance.Ledger.Service.settleEntry e.id
+      Lib.Finance.Ledger.Service.markEntriesAsPaidOut (map (.id) eligible) payoutRequestId
+      logInfo $
+        "Cashback payout settled — " <> show (length eligible)
+          <> " entries → PAID_OUT (payoutRequestId="
+          <> payoutRequestId
+          <> ", settledDrainEntries="
+          <> show (length pendingOrDue)
+          <> ")"
+      pure $ Right ()
 
 -- ---------------------------------------------------------------------------
 -- 3. Void ledger entries when payment intent is cancelled
