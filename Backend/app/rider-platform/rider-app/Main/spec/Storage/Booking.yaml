@@ -256,6 +256,7 @@ Booking:
     dashboardAgentId: Maybe Text
     displayBookingId: Maybe Text
     selectedOfferId: Maybe Text
+    offersFraudCheckFailureReason: Maybe Text
     requiresPaymentBeforeConfirm: Bool
 
   beamFields:

@@ -99,3 +99,11 @@ updateStartTime (Id searchRequestId) startTime = do
   updateOneWithKV
     [Se.Set BeamSR.startTime startTime]
     [Se.Is BeamSR.id (Se.Eq searchRequestId)]
+
+updateOffersFraudCheckFailureReason :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Text -> m ()
+updateOffersFraudCheckFailureReason (Id searchRequestId) failureReason = do
+  updateOneWithKV
+    [Se.Set BeamSR.offersFraudCheckFailureReason (Just failureReason)]
+    [ Se.Is BeamSR.id (Se.Eq searchRequestId),
+      Se.Is BeamSR.offersFraudCheckFailureReason (Se.Eq Nothing)
+    ]

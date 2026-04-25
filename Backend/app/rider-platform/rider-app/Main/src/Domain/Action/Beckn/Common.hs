@@ -320,7 +320,7 @@ data ValidatedDriverArrivedReq = ValidatedDriverArrivedReq
     booking :: DRB.Booking
   }
 
-buildRide :: (MonadFlow m, EncFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion], HasFlowEnv m r '["isMetroTestTransaction" ::: Bool], HasFlowEnv m r '["cloudType" ::: Maybe CloudType]) => ValidatedRideAssignedReq -> Maybe DMerchant.Merchant -> UTCTime -> DRide.RideStatus -> m DRide.Ride
+buildRide :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion], HasFlowEnv m r '["isMetroTestTransaction" ::: Bool], HasFlowEnv m r '["cloudType" ::: Maybe CloudType]) => ValidatedRideAssignedReq -> Maybe DMerchant.Merchant -> UTCTime -> DRide.RideStatus -> m DRide.Ride
 buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
   let BookingDetails {..} = bookingDetails
   guid <- generateGUID
@@ -407,6 +407,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         pickupRouteCallCount = Just 0,
         talkedWithDriver = Nothing,
         isSafetyPlus = isSafetyPlus,
+        offersFraudCheckFailureReason = Nothing,
         isInsured = booking.isInsured,
         insuredAmount = booking.insuredAmount,
         cancellationChargesOnCancel = Nothing,

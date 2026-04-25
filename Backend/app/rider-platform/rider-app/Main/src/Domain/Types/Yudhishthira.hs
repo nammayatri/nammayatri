@@ -8,8 +8,10 @@ import qualified Data.Text as T
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.BookingStatus as DBookingStatus
-import qualified Domain.Types.Common as DCommon
 import Domain.Types.Client
+import qualified Domain.Types.Common as DCommon
+import qualified Domain.Types.Extra.Booking as DEBooking
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
@@ -20,8 +22,6 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.ServiceTierType as DServiceTierType
 import qualified Domain.Types.Trip as DTrip
 import qualified Domain.Types.TripTerms as DTripTerms
-import qualified Domain.Types.Extra.Booking as DEBooking
-import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id

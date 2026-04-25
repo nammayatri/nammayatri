@@ -131,6 +131,7 @@ Ride:
     pickupRouteCallCount: Maybe Int
     talkedWithDriver: Maybe Bool
     isSafetyPlus : Bool
+    offersFraudCheckFailureReason: Maybe Text
     isInsured : Bool
     insuredAmount: Maybe Text
     pickupEtaLogicVersion: Maybe Int

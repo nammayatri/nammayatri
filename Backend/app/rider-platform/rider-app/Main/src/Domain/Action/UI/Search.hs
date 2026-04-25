@@ -746,6 +746,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         searchMode = searchMode,
         isMultimodalSearch = Just justMultimodalSearch,
         onSearchFailed = Nothing,
+        offersFraudCheckFailureReason = Nothing,
         cloudType = cloudType,
         ..
       }

@@ -519,3 +519,11 @@ ALTER TABLE atlas_app.booking ADD COLUMN discount_amount double precision ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN special_location_support_number text ;
+
+
+------- SQL updates -------
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN offers_fraud_check_failure_reason text ;

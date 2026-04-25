@@ -77,6 +77,7 @@ data RideE e = Ride
     isSafetyPlus :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
+    offersFraudCheckFailureReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     onlinePayment :: Kernel.Prelude.Bool,
     otp :: Kernel.Prelude.Text,
     paymentStatus :: Domain.Types.Ride.PaymentStatus,
@@ -113,9 +114,9 @@ data RideE e = Ride
   }
   deriving (Generic)
 
-type Ride = RideE ('AsEncrypted)
+type Ride = RideE 'AsEncrypted
 
-type DecryptedRide = RideE ('AsUnencrypted)
+type DecryptedRide = RideE 'AsUnencrypted
 
 instance EncryptedItem Ride where
   type Unencrypted Ride = (DecryptedRide, HashSalt)
@@ -173,6 +174,7 @@ instance EncryptedItem Ride where
           isSafetyPlus = isSafetyPlus entity,
           merchantId = merchantId entity,
           merchantOperatingCityId = merchantOperatingCityId entity,
+          offersFraudCheckFailureReason = offersFraudCheckFailureReason entity,
           onlinePayment = onlinePayment entity,
           otp = otp entity,
           paymentStatus = paymentStatus entity,
@@ -261,6 +263,7 @@ instance EncryptedItem Ride where
             isSafetyPlus = isSafetyPlus entity,
             merchantId = merchantId entity,
             merchantOperatingCityId = merchantOperatingCityId entity,
+            offersFraudCheckFailureReason = offersFraudCheckFailureReason entity,
             onlinePayment = onlinePayment entity,
             otp = otp entity,
             paymentStatus = paymentStatus entity,
@@ -321,12 +324,12 @@ data SosJourneyStatus
 
 data UnexpectedConditionStage = DriverDeviated | UnusualStop | UnsafeArea deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CancellationFeeStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancellationFeeStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SosJourneyStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosJourneyStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''UnexpectedConditionStage))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''UnexpectedConditionStage)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''PaymentStatus))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PaymentStatus)

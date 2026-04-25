@@ -69,6 +69,7 @@ data SearchRequest = SearchRequest
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     multimodalSearchRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    offersFraudCheckFailureReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     onSearchFailed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     originStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     placeNameSource :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

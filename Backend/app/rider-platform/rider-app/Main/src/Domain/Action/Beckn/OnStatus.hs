@@ -363,6 +363,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       pickupSpeedInMPS = Nothing
       refundRequestStatus = Nothing
       sosId = Nothing
+      offersFraudCheckFailureReason = booking.offersFraudCheckFailureReason
   pure $ DRide.Ride {cloudType = cloudType, ..}
 
 mkBookingCancellationReason ::
