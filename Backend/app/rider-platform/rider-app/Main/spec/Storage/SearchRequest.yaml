@@ -96,6 +96,7 @@ SearchRequest:
     vehicleCategory: Maybe VehicleCategory
     configInExperimentVersions: "[ConfigVersionMap]"
     allJourneysLoaded: Maybe Bool
+    offersFraudCheckFailureReason: Maybe Text
     searchMode: Maybe SearchMode
     isMultimodalSearch: Maybe Bool
     multimodalSearchRequestId: Maybe Text

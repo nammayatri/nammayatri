@@ -158,6 +158,17 @@ updateSafetyCheckStatus rideId status = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateOffersFraudCheckFailureReason :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Text -> m ()
+updateOffersFraudCheckFailureReason rideId failureReason = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.offersFraudCheckFailureReason (Just failureReason),
+      Se.Set BeamR.updatedAt now
+    ]
+    [ Se.Is BeamR.id (Se.Eq $ getId rideId),
+      Se.Is BeamR.offersFraudCheckFailureReason (Se.Eq Nothing)
+    ]
+
 data StuckRideItem = StuckRideItem
   { rideId :: Id Ride,
     bookingId :: Id Booking,

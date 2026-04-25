@@ -467,6 +467,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           -- If commission is needed on BAP, it should flow from BPP via Beckn protocol extension.
           commission = Nothing,
           selectedOfferId = quote.selectedOfferId,
+          offersFraudCheckFailureReason = Nothing,
           ..
         },
       bookingParties

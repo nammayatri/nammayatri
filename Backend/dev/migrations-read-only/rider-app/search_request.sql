@@ -493,3 +493,9 @@ ALTER TABLE atlas_app.search_request ADD COLUMN cloud_type text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN offers_fraud_check_failure_reason text ;

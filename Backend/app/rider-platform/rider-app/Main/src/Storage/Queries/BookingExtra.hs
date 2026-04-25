@@ -111,6 +111,17 @@ updateOtpCodeBookingId rbId otp = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
+updateOffersFraudCheckFailureReason :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Text -> m ()
+updateOffersFraudCheckFailureReason rbId failureReason = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamB.offersFraudCheckFailureReason (Just failureReason),
+      Se.Set BeamB.updatedAt now
+    ]
+    [ Se.Is BeamB.id (Se.Eq $ getId rbId),
+      Se.Is BeamB.offersFraudCheckFailureReason (Se.Eq Nothing)
+    ]
+
 findLatestSelfAndPartyBookingByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Booking)
 findLatestSelfAndPartyBookingByRiderId (Id riderId) =
   do

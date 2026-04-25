@@ -40,8 +40,11 @@ import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.Queries.BookingExtra as QBooking
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QPersonStats
+import qualified Storage.Queries.RideExtra as QRide
+import qualified Storage.Queries.SearchRequestExtra as QSearchRequest
 import qualified Tools.DynamicLogic as TDL
 import Tools.Error
 import qualified Tools.Payment as TPayment
@@ -77,14 +80,17 @@ data OffersFraudChecksReq = OffersFraudChecksReq
     ride :: Maybe Y.RideData,
     booking :: Maybe Y.BookingData,
     searchReq :: Maybe Y.SearchRequestData,
+    isMultipleOrNoDeviceIdExist :: Maybe Bool,
+    isDriverNumberSameAsCustomer :: Bool,
     personOfferStats :: [DOfferStats.OfferStats],
     personStats :: Maybe DPS.PersonStats
   }
   deriving (Generic, Show)
   deriving anyclass (ToJSON, FromJSON)
 
-newtype OffersFraudChecksResp = OffersFraudChecksResp
-  { offerListResp :: Payment.OfferListResp
+data OffersFraudChecksResp = OffersFraudChecksResp
+  { offerListResp :: Payment.OfferListResp,
+    failureReason :: Maybe Text
   }
   deriving (Generic, Show)
   deriving anyclass (FromJSON, ToJSON)
@@ -271,7 +277,7 @@ mkOfferListReq person price = do
 -------------------------------------------------------------------------------------------------------
 
 offerListWithBasket ::
-  (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, BeamFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, BeamFlow m r) =>
   Id Merchant.Merchant ->
   Id Person.Person ->
   Id DMOC.MerchantOperatingCity ->
@@ -285,6 +291,8 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   personOfferStats <- QOfferStats.findAllByEntityIdAndEntityType personId.getId DOfferStats.Person
   mbPersonStats <- QPersonStats.findByPersonId personId
+  isMultipleOrNoDeviceIdExist <- mkIsMultipleOrNoDeviceIdExist person
+  let isDriverNumberSameAsCustomer = mkIsDriverNumberSameAsCustomer person mbRide
   useDomainOffers <- TPayment.useDomainOffers merchantId merchantOperatingCityId Nothing paymentServiceType
   if useDomainOffers
     then do
@@ -320,7 +328,7 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
           mbBookingData = mkBookingData <$> mbBooking
           mbSearchReqData = mkSearchRequestData <$> mbSearchReq
       forM offersByProduct $ \(productId, offersForProduct) -> do
-        filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRideData mbBookingData mbSearchReqData personOfferStats mbPersonStats
+        filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats
         pure (productId, filteredOffers)
     else do
       let totalAmount = sum $ map ((.amount) . snd) products
@@ -334,25 +342,49 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
           mbBookingData = mkBookingData <$> mbBooking
           mbSearchReqData = mkSearchRequestData <$> mbSearchReq
       forM offersByProduct $ \(productId, offersForProduct) -> do
-        filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRideData mbBookingData mbSearchReqData personOfferStats mbPersonStats
+        filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats
         pure (productId, filteredOffers)
 
-applyOffersFraudChecks :: (MonadFlow m, CacheFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> Maybe Y.RideData -> Maybe Y.BookingData -> Maybe Y.SearchRequestData -> [DOfferStats.OfferStats] -> Maybe DPS.PersonStats -> m Payment.OfferListResp
-applyOffersFraudChecks merchantOperatingCityId offerListResp mbRide mbBooking mbSearchReq personOfferStats mbPersonStats = do
+applyOffersFraudChecks :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> Maybe DRide.Ride -> Maybe DRB.Booking -> Maybe SSR.SearchRequest -> Maybe Y.RideData -> Maybe Y.BookingData -> Maybe Y.SearchRequestData -> Maybe Bool -> Bool -> [DOfferStats.OfferStats] -> Maybe DPS.PersonStats -> m Payment.OfferListResp
+applyOffersFraudChecks merchantOperatingCityId offerListResp mbRideEntity mbBookingEntity mbSearchReqEntity mbRide mbBooking mbSearchReq isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats = do
   now <- getCurrentTime
   (logics, _) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) LYT.OFFERS_FRAUD_CHECKS now Nothing Nothing
   if null logics
     then pure offerListResp
     else do
-      result <- LYTUtils.runLogics logics (OffersFraudChecksReq offerListResp mbRide mbBooking mbSearchReq personOfferStats mbPersonStats)
+      result <- LYTUtils.runLogics logics (OffersFraudChecksReq offerListResp mbRide mbBooking mbSearchReq isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats)
       case A.fromJSON result.result :: A.Result OffersFraudChecksResp of
-        A.Success logicResult -> pure logicResult.offerListResp
+        A.Success logicResult -> do
+          let mbFailureReason = (T.strip <$> logicResult.failureReason) >>= (\reason -> if T.null reason then Nothing else Just reason)
+          whenJust mbFailureReason $ \failureReason -> do
+            whenJust (mbRideEntity <&> (.id)) $ \rideId -> QRide.updateOffersFraudCheckFailureReason rideId failureReason
+            whenJust (mbBookingEntity <&> (.id)) $ \bookingId -> QBooking.updateOffersFraudCheckFailureReason bookingId failureReason
+            whenJust (mbSearchReqEntity <&> (.id)) $ \searchReqId -> QSearchRequest.updateOffersFraudCheckFailureReason searchReqId failureReason
+          pure logicResult.offerListResp
         A.Error err -> do
           logError $ "Failed to parse OFFERS_FRAUD_CHECKS result: " <> show err
           pure offerListResp
 
 mkRideData :: DRide.Ride -> Y.RideData
-mkRideData DRide.Ride {updatedAt = updatedAt', ..} = Y.RideData {updatedAt = updatedAt', ..}
+mkRideData DRide.Ride {updatedAt = updatedAt', ..} =
+  Y.RideData
+    { updatedAt = updatedAt',
+      ..
+    }
+
+mkIsMultipleOrNoDeviceIdExist :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Person.Person -> m (Maybe Bool)
+mkIsMultipleOrNoDeviceIdExist person =
+  case person.deviceId of
+    Nothing -> pure Nothing
+    Just deviceId -> do
+      personsWithSameDeviceId <- QPerson.findAllByDeviceId (Just deviceId)
+      pure $ Just (length personsWithSameDeviceId > 1)
+
+mkIsDriverNumberSameAsCustomer :: Person.Person -> Maybe DRide.Ride -> Bool
+mkIsDriverNumberSameAsCustomer person mbRide =
+  let mbDriverMobileHash = mbRide >>= (.driverPhoneNumber) <&> (.hash)
+      mbRiderMobileHash = person.mobileNumber <&> (.hash)
+   in isJust mbDriverMobileHash && isJust mbRiderMobileHash && mbDriverMobileHash == mbRiderMobileHash
 
 mkBookingData :: DRB.Booking -> Y.BookingData
 mkBookingData DRB.Booking {fromLocation, initialPickupLocation, paymentMethodId = paymentMethodId', ..} =
