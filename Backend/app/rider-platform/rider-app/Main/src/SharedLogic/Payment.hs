@@ -63,6 +63,8 @@ import qualified Storage.Queries.PaymentCustomer as QPaymentCustomer
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
+import qualified Domain.Types.OfferEntity as DOfferEntity
+import qualified Storage.Queries.OfferEntity as QOfferEntity
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.TicketBooking as QTB
 import Tools.Error
@@ -1002,8 +1004,9 @@ zeroEffectivePaymentDueToOffer ::
   Maybe Text ->
   Currency ->
   Maybe RidePaymentLedgerInfo ->
+  Booking.Booking ->
   m ()
-zeroEffectivePaymentDueToOffer merchantId merchantOperatingCityId rideId person mbOfferId currency ledgerInfo = do
+zeroEffectivePaymentDueToOffer merchantId merchantOperatingCityId rideId person mbOfferId currency ledgerInfo booking = do
   -- Offer fully covers fare, no payment needed — create SETTLED ledger entries
   logInfo $ "Post-offer amount <= 0, skipping charge for ride: " <> rideId.getId
   whenJust mbOfferId $ \offerId -> do
@@ -1018,13 +1021,19 @@ zeroEffectivePaymentDueToOffer merchantId merchantOperatingCityId rideId person 
       case result of
         Right _ -> logInfo $ "Created SETTLED ledger for fully discounted ride: " <> rideId.getId
         Left err -> logError $ "Failed to create fully discounted ledger: " <> show err
-      useDomainOffers <- TPayment.useDomainOffers merchantId merchantOperatingCityId Nothing DOrder.RideHailing
-      let applyOfferCall = TPayment.offerApply merchantId merchantOperatingCityId Nothing DOrder.RideHailing Nothing person.clientSdkVersion
-      offerStatsInput <- buildOfferStatsInput person
-      let discountAmount = li.offerDiscountAmount
-      void $
-        withTryCatch "applyOfferWithoutPayment:zeroEffective" $ do
-          let fareAmount = li.rideFare + li.gstAmount + li.platformFee + li.offerDiscountAmount
-          ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-          DPayment.applyOfferWithoutPaymentService rideId.getId offerId offerStatsInput (Just discountAmount) Nothing fareAmount currency merchantId.getId merchantOperatingCityId.getId useDomainOffers applyOfferCall ride.createdAt
+      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+      let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
+      when enableRideHailingOffers $ do
+        mbRideOfferEntity <- QOfferEntity.findByEntityIdAndEntityType rideId.getId DOfferEntity.RIDE
+        whenJust mbRideOfferEntity $ \rideOfferEntity -> do
+          useDomainOffers <- TPayment.useDomainOffers merchantId merchantOperatingCityId Nothing DOrder.RideHailing
+          let applyOfferCall = TPayment.offerApply merchantId merchantOperatingCityId Nothing DOrder.RideHailing Nothing person.clientSdkVersion
+          offerStatsInput <- buildOfferStatsInput person
+          let discountAmount = li.offerDiscountAmount
+          void $
+            withTryCatch "applyOfferWithoutPayment:zeroEffective" $ do
+              let fareAmount = li.rideFare + li.gstAmount + li.platformFee + li.offerDiscountAmount
+              ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+              let mbProduct = Just (show booking.vehicleServiceTierType, fareAmount)
+              DPayment.applyOfferWithoutPaymentService rideId.getId offerId rideOfferEntity.offerCode offerStatsInput (Just discountAmount) Nothing fareAmount currency merchantId.getId merchantOperatingCityId.getId useDomainOffers applyOfferCall ride.createdAt mbProduct
   QRide.markPaymentStatus Ride.Completed rideId

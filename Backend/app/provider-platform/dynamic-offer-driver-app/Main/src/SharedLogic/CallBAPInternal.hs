@@ -351,15 +351,20 @@ type OfferDiscountAPI =
     :> "offerDiscount"
     :> Header "token" Text
     :> Capture "bppBookingId" Text
-    :> QueryParam "fareAmount" HighPrecMoney
-    :> Get '[JSON] OfferDiscountResp
+    :> ReqBody '[JSON] OfferDiscountReq
+    :> Post '[JSON] OfferDiscountResp
+
+newtype OfferDiscountReq = OfferDiscountReq
+  { fareAmount :: Maybe HighPrecMoney
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
 
 newtype OfferDiscountResp = OfferDiscountResp
   { discountAmount :: Maybe HighPrecMoney
   }
   deriving (Generic, ToJSON, FromJSON)
 
-offerDiscountClient :: Maybe Text -> Text -> Maybe HighPrecMoney -> EulerClient OfferDiscountResp
+offerDiscountClient :: Maybe Text -> Text -> OfferDiscountReq -> EulerClient OfferDiscountResp
 offerDiscountClient = client (Proxy @OfferDiscountAPI)
 
 offerDiscountAPI :: Proxy OfferDiscountAPI
@@ -374,9 +379,9 @@ getOfferDiscount ::
   Text ->
   BaseUrl ->
   Text ->
-  HighPrecMoney ->
+  OfferDiscountReq ->
   m OfferDiscountResp
-getOfferDiscount apiKey internalUrl bppBookingId fareAmount = do
+getOfferDiscount apiKey internalUrl bppBookingId req = do
   logInfo $ "CallBAPInternal: Getting offer discount for bppBookingId: " <> bppBookingId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (offerDiscountClient (Just apiKey) bppBookingId (Just fareAmount)) "GetOfferDiscount" offerDiscountAPI
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (offerDiscountClient (Just apiKey) bppBookingId req) "GetOfferDiscount" offerDiscountAPI

@@ -122,7 +122,7 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
                       }
             mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId booking.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq ledgerInfo
             case mbPaymentIntentResp of
-              Nothing -> SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId ride.id person booking.selectedOfferId fareWithTip.currency ledgerInfo
+              Nothing -> SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId ride.id person booking.selectedOfferId fareWithTip.currency ledgerInfo booking
               Just paymentIntentResp -> do
                 offerStatsInput <- buildOfferStatsInput person
                 paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.RideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment booking.riderId offerStatsInput

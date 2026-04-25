@@ -13,8 +13,15 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified SharedLogic.Offer as SOffer
 import Storage.Beam.Payment ()
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
+
+newtype OfferDiscountReq = OfferDiscountReq
+  { fareAmount :: Maybe HighPrecMoney
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data OfferDiscountResp = OfferDiscountResp
   { discountAmount :: Maybe HighPrecMoney
@@ -32,14 +39,17 @@ getOfferDiscount ::
   ) =>
   Maybe Text ->
   Text ->
-  Maybe HighPrecMoney ->
+  OfferDiscountReq ->
   m OfferDiscountResp
-getOfferDiscount _token bppBookingId mbFareAmount = do
+getOfferDiscount _token bppBookingId req = do
   booking <- B.runInReplica $ QBooking.findByBPPBookingId (Id bppBookingId) >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId)
-  case (booking.selectedOfferId, mbFareAmount) of
+  case (booking.selectedOfferId, req.fareAmount) of
     (Just offerId, Just fareAmount) -> do
       let productId = show booking.vehicleServiceTierType
           price = mkPrice (Just booking.estimatedTotalFare.currency) fareAmount
+      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
+      let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
+      unless enableRideHailingOffers $ throwError $ InternalError "RideHailing offers disabled"
       mbRide <- B.runInReplica $ QRide.findByRBId booking.id
       productOffers <- SOffer.offerListWithBasket booking.merchantId booking.riderId booking.merchantOperatingCityId DOrder.RideHailing [(productId, price)] mbRide (Just booking) Nothing
       case snd <$> find (\(pid, _) -> pid == productId) productOffers of

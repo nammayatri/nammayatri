@@ -300,22 +300,18 @@ getEstimates merchantId personId mocId searchRequestId isReferredRide = do
   estimateList <- runInReplica $ QEstimate.findAllBySRId searchRequestId
   let sortedEstimates = sortByEstimatedFare estimateList
       products = map (\e -> (show e.vehicleServiceTierType, e.estimatedFare)) sortedEstimates
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = mocId.getId})
+  let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
   productOffers <-
-    withTryCatch
-      "getEstimates:offerListWithBasket"
-      ( SOffer.offerListWithBasket
-          merchantId
-          personId
-          mocId
-          DOrder.RideHailing
-          products
-          Nothing
-          Nothing
-          mbSearchReq
-      )
-      >>= \case
-        Left _ -> pure []
-        Right r -> pure r
+    if enableRideHailingOffers
+      then
+        withTryCatch
+          "getEstimates:offerListWithBasket"
+          (SOffer.offerListWithBasket merchantId personId mocId DOrder.RideHailing products Nothing Nothing mbSearchReq)
+          >>= \case
+            Left _ -> pure []
+            Right r -> pure r
+      else pure []
   let offerMap = Map.fromList productOffers
   estimates <- forM sortedEstimates $ \estimate -> do
     let mbOfferResp = Map.lookup (show estimate.vehicleServiceTierType) offerMap

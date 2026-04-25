@@ -78,43 +78,61 @@ executeCashRideCashbackPayoutJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.
                     if null unsettled
                       then logInfo $ "No UNSETTLED cashback entries for refs=" <> show groupRefIds <> " — skipping payout (already paid out or never created)"
                       else do
-                        let entryIds = map (\e -> e.id.getId) unsettled
-                            submission =
-                              PayoutRequest.PayoutSubmission
-                                { beneficiaryId = person.id.getId,
-                                  entityName = DLP.RIDE_OFFER_CASHBACK,
-                                  entityId = person.id.getId,
-                                  entityRefId = Nothing,
-                                  amount = groupAmount,
-                                  payoutFee = Nothing,
-                                  merchantId = person.merchantId.getId,
-                                  merchantOpCityId = person.merchantOperatingCityId.getId,
-                                  city = show merchantOperatingCity.city,
-                                  vpa = payoutVpa,
-                                  customerName = person.firstName,
-                                  customerPhone = phoneNo,
-                                  customerEmail = emailId,
-                                  remark = payoutConfig.remark,
-                                  orderType = payoutConfig.orderType,
-                                  scheduledAt = Nothing,
-                                  payoutType = Just DPR.INSTANT,
-                                  coverageFrom = Nothing,
-                                  coverageTo = Nothing,
-                                  ledgerEntryIds = entryIds
-                                }
-                        result <- PayoutRequest.submitPayoutRequest submission payoutCall
-                        case result of
-                          PayoutRequest.PayoutInitiated pr _ ->
-                            logInfo $
-                              "Cashback payout initiated for variant=" <> show vehicleCategory
-                                <> " person="
-                                <> person.id.getId
-                                <> " payoutRequestId="
-                                <> pr.id.getId
-                                <> " entries="
-                                <> show (length entryIds)
-                                <> " amount="
-                                <> show groupAmount
-                          PayoutRequest.PayoutFailed _ err ->
-                            logError $ "Cashback payout submission failed for variant=" <> show vehicleCategory <> " refs=" <> show groupRefIds <> ": " <> err
+                        let currency = (head unsettled).currency
+                            ledgerCtx =
+                              RidePaymentFinance.buildRiderFinanceCtx
+                                person.merchantId.getId
+                                person.merchantOperatingCityId.getId
+                                currency
+                                True
+                                person.id.getId
+                                ""
+                                Nothing
+                                Nothing
+                        transferResult <- RidePaymentFinance.createPendingCashbackPayoutTransfer ledgerCtx groupAmount
+                        case transferResult of
+                          Left err ->
+                            logError $ "Skipping payout for variant=" <> show vehicleCategory <> " refs=" <> show groupRefIds <> ": failed to create PENDING payout transfer entry: " <> show err
+                          Right transferEntryIds -> do
+                            let originalEntryIds = map (.id) unsettled
+                                allEntryIds = map (.getId) originalEntryIds <> map (.getId) transferEntryIds
+                                submission =
+                                  PayoutRequest.PayoutSubmission
+                                    { beneficiaryId = person.id.getId,
+                                      entityName = DLP.RIDE_OFFER_CASHBACK,
+                                      entityId = person.id.getId,
+                                      entityRefId = Nothing,
+                                      amount = groupAmount,
+                                      payoutFee = Nothing,
+                                      merchantId = person.merchantId.getId,
+                                      merchantOpCityId = person.merchantOperatingCityId.getId,
+                                      city = show merchantOperatingCity.city,
+                                      vpa = payoutVpa,
+                                      customerName = person.firstName,
+                                      customerPhone = phoneNo,
+                                      customerEmail = emailId,
+                                      remark = payoutConfig.remark,
+                                      orderType = payoutConfig.orderType,
+                                      scheduledAt = Nothing,
+                                      payoutType = Just DPR.INSTANT,
+                                      coverageFrom = Nothing,
+                                      coverageTo = Nothing,
+                                      ledgerEntryIds = allEntryIds
+                                    }
+                            result <- PayoutRequest.submitPayoutRequest submission payoutCall
+                            case result of
+                              PayoutRequest.PayoutInitiated pr _ ->
+                                logInfo $
+                                  "Cashback payout initiated for variant=" <> show vehicleCategory
+                                    <> " person="
+                                    <> person.id.getId
+                                    <> " payoutRequestId="
+                                    <> pr.id.getId
+                                    <> " entries="
+                                    <> show (length allEntryIds)
+                                    <> " amount="
+                                    <> show groupAmount
+                              PayoutRequest.PayoutFailed _ err -> do
+                                RidePaymentFinance.markCashbackPayoutTransferAsDue transferEntryIds
+                                logError $ "Cashback payout submission failed for variant=" <> show vehicleCategory <> " refs=" <> show groupRefIds <> ": " <> err
           pure Complete

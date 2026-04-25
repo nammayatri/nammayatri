@@ -555,9 +555,10 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
       if (isJust booking.discountAmount && finalFare /= booking.estimatedFare)
         then do
           appBackendBapInternal <- asks (.appBackendBapInternal)
+          let reqBody = CallBAPInternal.OfferDiscountReq {fareAmount = Just finalFare}
           result <-
             withTryCatch "getOfferDiscount:endRideTransaction" $
-              CallBAPInternal.getOfferDiscount appBackendBapInternal.internalKey appBackendBapInternal.url booking.id.getId finalFare
+              CallBAPInternal.getOfferDiscount appBackendBapInternal.internalKey appBackendBapInternal.url booking.id.getId reqBody
           case result of
             Right resp -> pure resp.discountAmount
             Left err -> do

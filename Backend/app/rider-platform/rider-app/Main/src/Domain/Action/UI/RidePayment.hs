@@ -343,7 +343,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
             let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing
             void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
             when (ride.status == Domain.Types.RideStatus.COMPLETED) $ do
-              SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId rideId person booking.selectedOfferId fareWithTip.currency ledgerInfo
+              SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId rideId person booking.selectedOfferId fareWithTip.currency ledgerInfo booking
           Just paymentIntentResp -> do
             -- Create separate PENDING tip ledger entry via dedicated function
             let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing
