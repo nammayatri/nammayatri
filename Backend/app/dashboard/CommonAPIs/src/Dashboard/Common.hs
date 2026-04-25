@@ -207,14 +207,28 @@ instance Csv.FromNamedRecord PersonIdsCsvRow where
 
 data DriverTagBulkCSVRow = DriverTagBulkCSVRow
   { driverId :: Text,
+    operation :: DriverTagBulkOperation,
     tagName :: Text,
     tagValue :: Text
   }
+
+data DriverTagBulkOperation = ADD | UPDATE | REMOVE
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Csv.FromField DriverTagBulkOperation where
+  parseField field =
+    case T.toUpper . T.strip . DT.decodeUtf8 $ field of
+      "ADD" -> pure ADD
+      "UPDATE" -> pure UPDATE
+      "REMOVE" -> pure REMOVE
+      opTxt -> fail $ "Unsupported operation: " <> T.unpack opTxt
 
 instance Csv.FromNamedRecord DriverTagBulkCSVRow where
   parseNamedRecord r =
     DriverTagBulkCSVRow
       <$> r Csv..: "driverId"
+      <*> r Csv..: "operation"
       <*> r Csv..: "tagName"
       <*> r Csv..: "tagValue"
 
