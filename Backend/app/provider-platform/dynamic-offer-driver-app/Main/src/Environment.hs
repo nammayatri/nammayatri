@@ -80,6 +80,7 @@ data AppCfg = AppCfg
     hedisCfg :: HedisCfg,
     hedisClusterCfg :: HedisCfg,
     hedisSecondaryClusterCfg :: HedisCfg,
+    ltsRedisCfg :: HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
     kafkaClickhouseCfg :: ClickhouseCfg,
@@ -200,6 +201,7 @@ data AppEnv = AppEnv
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     hedisEnv :: HedisEnv,
+    ltsHedisEnv :: HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
@@ -330,6 +332,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   eventRequestCounter <- registerEventRequestCounterMetric
   let modifierFunc = ("dynamic-offer-driver-app:" <>)
   hedisEnv <- connectHedis hedisCfg modifierFunc -- will be depreciated once data is migrated to cluster
+  ltsHedisEnv <- connectHedis ltsRedisCfg ("dynamic-offer-driver-app-lts:" <>)
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg modifierFunc
   hedisClusterEnv <-
     if cutOffHedisCluster
@@ -373,6 +376,7 @@ releaseAppEnv AppEnv {..} = do
   -- FIXME: disconnect database?
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
+  disconnectHedis ltsHedisEnv
   disconnectHedis hedisClusterEnv
   maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
 

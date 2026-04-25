@@ -246,6 +246,7 @@
           newman
           config.mission-control.wrapper
           gtfstidy
+          (python3.withPackages (ps: with ps; [ psycopg2 boto3 python-dotenv requests rich websockets ]))
         ] ++ (lib.optionals pkgs.stdenv.isLinux [
           # TODO: Use wkhtmltopdf  (with macOS support) after updating common/nixpkgs-latest
           # common/nixpkgs-latest update requires https://github.com/NixOS/nixpkgs/pull/465567

@@ -20,6 +20,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
 import qualified Sequelize as Se
+import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.FleetDriverAssociation as BeamFDVA
@@ -67,6 +68,8 @@ createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorI
               responseReason = Nothing,
               ..
             }
+        LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+          LTSSync.emptyUpdate {LTSSync.fleetOwnerId = LTSSync.Set (Just fleetOwnerId.getId)}
   where
     driverFleetLockKey :: Text -> Text -> Text
     driverFleetLockKey dId fId = "fleet_driver_association:driver:" <> dId <> ":fleet_owner:" <> fId
@@ -361,6 +364,8 @@ endFleetDriverAssociation fleetOwnerId (Id driverId) = do
   updateWithKV
     [Se.Set BeamFDVA.associatedTill $ Just now, Se.Set BeamFDVA.isActive False]
     [Se.And [Se.Is BeamFDVA.fleetOwnerId (Se.Eq fleetOwnerId), Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now), Se.Is BeamFDVA.driverId (Se.Eq driverId)]]
+  LTSSync.syncDriverPoolDataToLTS (Id driverId) $
+    LTSSync.emptyUpdate {LTSSync.fleetOwnerId = LTSSync.Set Nothing}
 
 findAllDriversByFleetOwnerIdByMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DI.DriverMode -> Maybe Bool -> Integer -> Integer -> m [FleetDriverAssociation]
 findAllDriversByFleetOwnerIdByMode fleetOwnerId mode mbIsActive limitVal offsetVal = do
@@ -623,3 +628,5 @@ revokeFleetDriverAssociation driverId fleetOwnerId = do
       Se.Set BeamFDVA.updatedAt now
     ]
     [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId]]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.fleetOwnerId = LTSSync.Set Nothing}

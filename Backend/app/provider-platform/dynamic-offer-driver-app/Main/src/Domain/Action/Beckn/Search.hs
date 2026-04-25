@@ -550,10 +550,12 @@ selectDriversAndMatchFarePolicies :: DM.Merchant -> Id DMOC.MerchantOperatingCit
 selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocation transporterConfig isScheduled area farePolicies now isValueAddNP sreq paymentMode = do
   driverPoolCfg <- CDP.getSearchDriverPoolConfig merchantOpCityId mbDistance area sreq
   cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow merchantOpCityId sreq.configInExperimentVersions
-  let calculateDriverPoolReq =
+  let driverPoolCfg' = fromJust driverPoolCfg
+      currentRideTripCategoryValidForForwardBatching = driverPoolCfg'.currentRideTripCategoryValidForForwardBatching
+      calculateDriverPoolReq =
         CalculateDriverPoolReq
           { poolStage = Estimate,
-            driverPoolCfg = fromJust driverPoolCfg,
+            driverPoolCfg = driverPoolCfg',
             serviceTiers = [],
             pickup = fromLocation,
             merchantOperatingCityId = merchantOpCityId,
@@ -569,18 +571,8 @@ selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocat
             paymentInstrument = Nothing,
             ..
           }
-  (driverPoolNotOnRide, _) <- calculateDriverPool calculateDriverPoolReq
-  logDebug $ "Driver Pool not on ride " <> show driverPoolNotOnRide
-  driverPoolCurrentlyOnRide <-
-    if null driverPoolNotOnRide
-      then do
-        if transporterConfig.includeDriverCurrentlyOnRide && (fromJust driverPoolCfg).enableForwardBatching
-          then snd <$> calculateDriverPoolCurrentlyOnRide calculateDriverPoolReq Nothing
-          else pure []
-      else pure []
-  let driverPool =
-        driverPoolNotOnRide
-          <> map (\DriverPoolResultCurrentlyOnRide {..} -> DriverPoolResult {customerTags = Nothing, ..}) driverPoolCurrentlyOnRide
+  (offRidePool, onRidePool, _) <- calculateDriverPool calculateDriverPoolReq
+  let driverPool = offRidePool <> onRidePool
   logDebug $ "Search handler: driver pool " <> show driverPool
   let onlyFPWithDrivers = filter (\fp -> (isScheduled || (skipDriverPoolCheck fp.tripCategory) || isJust (find (\dp -> dp.serviceTier == fp.vehicleServiceTier) driverPool)) && (isValueAddNP || fp.vehicleServiceTier `elem` offUsVariants)) farePolicies
   return (driverPool, onlyFPWithDrivers)

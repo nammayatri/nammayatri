@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module MockData.Directions (mkDirectionsResp) where
+module MockData.Directions (mkDirectionsResp, mkAdvancedDirectionsResp) where
 
 import Kernel.External.Maps.Google.MapsClient.Types as GoogleMaps
 import Kernel.External.Maps.Google.PolyLinePoints (encode)
@@ -81,4 +81,68 @@ mkStep origin destination distance duration =
       polyline = GoogleMaps.EncodedPointObject {points = encode [mkLatLong origin, mkLatLong destination]},
       start_location = origin,
       travel_mode = GoogleMaps.DRIVING
+    }
+
+-- Advanced Directions (v2 computeRoutes) mock response
+mkAdvancedDirectionsResp :: GoogleMaps.LatLngV2 -> GoogleMaps.LatLngV2 -> GoogleMaps.AdvancedDirectionsResp
+mkAdvancedDirectionsResp origin destination =
+  GoogleMaps.AdvancedDirectionsResp
+    { routes = [mkRouteV2 origin destination]
+    }
+
+mkRouteV2 :: GoogleMaps.LatLngV2 -> GoogleMaps.LatLngV2 -> GoogleMaps.RouteV2
+mkRouteV2 origin destination =
+  let dist = highPrecMetersToMeters $ distanceBetweenInMeters (mkLatLongV2 origin) (mkLatLongV2 destination)
+      speed = 10 -- meters per second
+      durationSecs = dist.getMeters `div` speed
+   in GoogleMaps.RouteV2
+        { legs = [mkLegV2 origin destination dist durationSecs],
+          viewport = mkViewPort origin destination,
+          distanceMeters = dist.getMeters,
+          duration = show durationSecs <> "s",
+          staticDuration = Just $ show durationSecs <> "s"
+        }
+
+mkViewPort :: GoogleMaps.LatLngV2 -> GoogleMaps.LatLngV2 -> GoogleMaps.ViewPort
+mkViewPort origin destination =
+  GoogleMaps.ViewPort
+    { low =
+        GoogleMaps.LatLngV2
+          { latitude = min origin.latitude destination.latitude,
+            longitude = min origin.longitude destination.longitude
+          },
+      high =
+        GoogleMaps.LatLngV2
+          { latitude = max origin.latitude destination.latitude,
+            longitude = max origin.longitude destination.longitude
+          }
+    }
+
+mkLegV2 :: GoogleMaps.LatLngV2 -> GoogleMaps.LatLngV2 -> Meters -> Int -> GoogleMaps.LegV2
+mkLegV2 origin destination dist durationSecs =
+  GoogleMaps.LegV2
+    { distanceMeters = dist.getMeters,
+      duration = show durationSecs <> "s",
+      startLocation = GoogleMaps.LocationV2 {latLng = origin},
+      endLocation = GoogleMaps.LocationV2 {latLng = destination},
+      steps = [mkStepV2 origin destination dist durationSecs]
+    }
+
+mkStepV2 :: GoogleMaps.LatLngV2 -> GoogleMaps.LatLngV2 -> Meters -> Int -> GoogleMaps.StepV2
+mkStepV2 origin destination dist durationSecs =
+  GoogleMaps.StepV2
+    { distanceMeters = dist.getMeters,
+      staticDuration = show durationSecs <> "s",
+      startLocation = GoogleMaps.LocationV2 {latLng = origin},
+      endLocation = GoogleMaps.LocationV2 {latLng = destination},
+      polyline = GoogleMaps.Polyline {encodedPolyline = encode [mkLatLongV2 origin, mkLatLongV2 destination]},
+      travelMode = GoogleMaps.DRIVE,
+      transitDetails = Nothing
+    }
+
+mkLatLongV2 :: GoogleMaps.LatLngV2 -> Maps.LatLong
+mkLatLongV2 loc =
+  Maps.LatLong
+    { lat = loc.latitude,
+      lon = loc.longitude
     }

@@ -12,6 +12,7 @@ import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person as Person
 import Domain.Types.Plan as P
+import qualified Domain.Types.ServiceTierType as DVST
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (find, foldl, foldl', id, map, null)
 import Kernel.Beam.Functions
@@ -22,6 +23,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
+import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Common as SBC
 import qualified Storage.Beam.DriverInformation as BeamDI
@@ -31,7 +33,7 @@ import Storage.Queries.OrphanInstances.DriverInformation ()
 import Storage.Queries.OrphanInstances.Person ()
 import qualified Storage.Queries.Transformers.FleetOwnerInformation as Transformers
 import Tools.Error
-
+import qualified Lib.Types.SpecialLocation as SL
 -- Extra code goes here --
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)
 findById (Id driverInformationId) = findOneWithKV [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
@@ -134,6 +136,11 @@ updateActivityWithDriverFlowStatus active mode driverFlowStatus mbHasRideStarted
         <> [Se.Set BeamDI.lastOfflineTime lastOfflineTime | isJust lastOfflineTime]
     )
     [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate
+      { LTSSync.active = LTSSync.Set active,
+        LTSSync.mode = LTSSync.Set mode
+      }
 
 updateDynamicBlockedStateWithActivity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Text -> Id Merchant -> Text -> Id DMOC.MerchantOperatingCity -> DTDBT.BlockedBy -> Bool -> Maybe Bool -> Maybe Common.DriverMode -> BlockReasonFlag -> m ()
 updateDynamicBlockedStateWithActivity driverId blockedReason blockedExpiryTime dashboardUserName merchantId reasonCode merchantOperatingCityId blockedBy isBlocked mbActive mbMode blockReasonFlag = do
@@ -180,6 +187,12 @@ updateDynamicBlockedStateWithActivity driverId blockedReason blockedExpiryTime d
         <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])
     )
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate
+      { LTSSync.blocked = LTSSync.Set isBlocked,
+        LTSSync.active = LTSSync.Set $ fromMaybe True (mbActive <|> activeState),
+        LTSSync.mode = LTSSync.Set $ mbMode <|> modeState
+      }
 
 updateBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> Maybe Text -> Id Merchant -> Id DMOC.MerchantOperatingCity -> DTDBT.BlockedBy -> m ()
 updateBlockedState driverId isBlocked blockStateModifier merchantId merchantOperatingCityId blockedBy = do
@@ -219,6 +232,8 @@ updateBlockedState driverId isBlocked blockStateModifier merchantId merchantOper
         <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])
     )
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.blocked = LTSSync.Set isBlocked}
 
 findByDriverIdActiveRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)
 findByDriverIdActiveRide (Id driverId) = findOneWithKV [Se.And [Se.Is BeamDI.driverId $ Se.Eq driverId, Se.Is BeamDI.onRide $ Se.Eq True]]
@@ -231,6 +246,7 @@ updateNotOnRideMultiple driverIds = do
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.In (getId <$> driverIds))]
+  Kernel.Prelude.mapM_ (\did -> LTSSync.syncDriverPoolDataToLTS (cast did) $ LTSSync.emptyUpdate {LTSSync.onRide = LTSSync.Set False}) driverIds
 
 deleteById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m ()
 deleteById (Id driverId) = deleteWithKV [Se.Is BeamDI.driverId (Se.Eq driverId)]
@@ -332,6 +348,8 @@ updateHasAdvancedRide (Id driverId) isOnAdvancedRide = do
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
+  LTSSync.syncDriverPoolDataToLTS (Id driverId) $
+    LTSSync.emptyUpdate {LTSSync.hasAdvanceBooking = LTSSync.Set (Just isOnAdvancedRide)}
 
 updatePayoutVpaAndStatusByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe PayoutVpaStatus -> [Id Person.Driver] -> m ()
 updatePayoutVpaAndStatusByDriverIds payoutVpa payoutVpaStatus driverIds = do
@@ -354,6 +372,8 @@ updateTripCategoryAndTripEndLocationByDriverId driverId tripCategory tripEndLoca
            ]
     )
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.onRideTripCategory = LTSSync.Set (show <$> tripCategory)}
 
 updateOnRideAndTripEndLocationByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> Maybe Maps.LatLong -> m ()
 updateOnRideAndTripEndLocationByDriverId driverId onRide tripEndLocation = do
@@ -366,6 +386,8 @@ updateOnRideAndTripEndLocationByDriverId driverId onRide tripEndLocation = do
            ]
     )
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.onRide = LTSSync.Set onRide}
 
 updateHasRideStarted :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> m ()
 updateHasRideStarted driverId hasRideStarted = do
@@ -375,6 +397,8 @@ updateHasRideStarted driverId hasRideStarted = do
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.hasRideStarted = LTSSync.Set (Just hasRideStarted)}
 
 updateIsBlockedForReferralPayout :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person.Driver] -> Bool -> m ()
 updateIsBlockedForReferralPayout driverIds isBlocked = do
@@ -397,6 +421,9 @@ updateForwardBatchingEnabledOrIsInteroperable driverId isAdvancedBookingEnabled 
             <> [Se.Set BeamDI.isInteroperable isInteroperable | isJust isInteroperable]
         )
         [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+      Kernel.Prelude.whenJust isAdvancedBookingEnabled $ \fbe ->
+        LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+          LTSSync.emptyUpdate {LTSSync.forwardBatchingEnabled = LTSSync.Set fbe}
 
 updateServicesEnabled :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> [P.ServiceNames] -> m ()
 updateServicesEnabled driverIds services = do
@@ -564,3 +591,195 @@ findOnRideDriversWithRideStartedByMerchantOpCityIds merchantOpCityIds limitVal o
     (Se.Asc BeamDI.driverId)
     (Just limitVal)
     (Just offsetVal)
+
+-- Wrappers for src-read-only functions with LTS sync
+
+updateOnRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> Id Person.Person -> m ()
+updateOnRide onRide driverId = do
+  now <- getCurrentTime
+  LTSSync.runPoolFieldUpdate (cast driverId) $
+    LTSSync.mkPoolFieldUpdate
+      (updateOneWithKV [Se.Set BeamDI.onRide onRide, Se.Set BeamDI.updatedAt now] [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)])
+      (LTSSync.emptyUpdate {LTSSync.onRide = LTSSync.Set onRide})
+
+updateOnRideAndLatestScheduledBookingAndPickup ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Bool ->
+  Maybe UTCTime ->
+  Maybe Maps.LatLong ->
+  Id Person.Person ->
+  m ()
+updateOnRideAndLatestScheduledBookingAndPickup onRide latestScheduledBooking latestScheduledPickup driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.onRide onRide,
+      Se.Set BeamDI.latestScheduledBooking latestScheduledBooking,
+      Se.Set BeamDI.latestScheduledPickupLat (fmap (.lat) latestScheduledPickup),
+      Se.Set BeamDI.latestScheduledPickupLon (fmap (.lon) latestScheduledPickup),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate
+      { LTSSync.onRide = LTSSync.Set onRide,
+        LTSSync.latestScheduledBooking = LTSSync.Set latestScheduledBooking,
+        LTSSync.latestScheduledPickup = LTSSync.Set latestScheduledPickup
+      }
+
+-- Class 1 wrappers for src-read-only functions with LTS sync
+
+updateDriverInformation ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Bool ->
+  Bool ->
+  Bool ->
+  Bool ->
+  Bool ->
+  Bool ->
+  Maybe Text ->
+  Bool ->
+  Maybe Meters ->
+  Maybe Meters ->
+  Maybe Meters ->
+  Maybe Bool ->
+  Maybe Int ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Maybe DriverInfo.OnboardingAs ->
+  Maybe Text ->
+  Maybe DriverInfo.AddressDocumentType ->
+  Maybe Text ->
+  Maybe Text ->
+  Id Person.Person ->
+  m ()
+updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled isHighAccuracyLocationEnabled rideRequestVolumeEnabled onboardingAs address addressDocumentType nomineeName nomineeRelationship driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.canDowngradeToSedan canDowngradeToSedan,
+      Se.Set BeamDI.canDowngradeToHatchback canDowngradeToHatchback,
+      Se.Set BeamDI.canDowngradeToTaxi canDowngradeToTaxi,
+      Se.Set BeamDI.canSwitchToRental (Just canSwitchToRental),
+      Se.Set BeamDI.canSwitchToInterCity (Just canSwitchToInterCity),
+      Se.Set BeamDI.canSwitchToIntraCity (Just canSwitchToIntraCity),
+      Se.Set BeamDI.availableUpiApps availableUpiApps,
+      Se.Set BeamDI.isPetModeEnabled (Just isPetModeEnabled),
+      Se.Set BeamDI.tripDistanceMaxThreshold tripDistanceMaxThreshold,
+      Se.Set BeamDI.tripDistanceMinThreshold tripDistanceMinThreshold,
+      Se.Set BeamDI.maxPickupRadius maxPickupRadius,
+      Se.Set BeamDI.isSilentModeEnabled isSilentModeEnabled,
+      Se.Set BeamDI.rideRequestVolume rideRequestVolume,
+      Se.Set BeamDI.isTTSEnabled isTTSEnabled,
+      Se.Set BeamDI.isHighAccuracyLocationEnabled isHighAccuracyLocationEnabled,
+      Se.Set BeamDI.rideRequestVolumeEnabled rideRequestVolumeEnabled,
+      Se.Set BeamDI.onboardingAs onboardingAs,
+      Se.Set BeamDI.address address,
+      Se.Set BeamDI.addressDocumentType addressDocumentType,
+      Se.Set BeamDI.nomineeName nomineeName,
+      Se.Set BeamDI.nomineeRelationship nomineeRelationship,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate
+      { LTSSync.canSwitchToRental = LTSSync.Set canSwitchToRental,
+        LTSSync.canSwitchToInterCity = LTSSync.Set canSwitchToInterCity,
+        LTSSync.canSwitchToIntraCity = LTSSync.Set canSwitchToIntraCity,
+        LTSSync.isPetModeEnabled = LTSSync.Set isPetModeEnabled,
+        LTSSync.tripDistanceMaxThreshold = LTSSync.Set tripDistanceMaxThreshold,
+        LTSSync.tripDistanceMinThreshold = LTSSync.Set tripDistanceMinThreshold,
+        LTSSync.maxPickupRadius = LTSSync.Set maxPickupRadius
+      }
+
+updateSubscription :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> Id Person.Person -> m ()
+updateSubscription subscribed driverId = do
+  now <- getCurrentTime
+  updateOneWithKV [Se.Set BeamDI.subscribed subscribed, Se.Set BeamDI.updatedAt now] [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.subscribed = LTSSync.Set subscribed}
+
+updateSoftBlock :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe [DVST.ServiceTierType] -> Maybe UTCTime -> Maybe Text -> Id Person.Person -> m ()
+updateSoftBlock softBlockStiers softBlockExpiryTime softBlockReasonFlag driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.softBlockStiers softBlockStiers,
+      Se.Set BeamDI.softBlockExpiryTime softBlockExpiryTime,
+      Se.Set BeamDI.softBlockReasonFlag softBlockReasonFlag,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.softBlockStiers = LTSSync.Set softBlockStiers}
+
+updateSpecialLocWarriorInfo :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> Maybe (Id SL.SpecialLocation) -> [Id SL.SpecialLocation] -> Maybe UTCTime -> Id Person.Person -> m ()
+updateSpecialLocWarriorInfo isSpecialLocWarrior preferredPrimarySpecialLocId preferredSecondarySpecialLocIds specialLocWarriorEnabledAt driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.isSpecialLocWarrior (Just isSpecialLocWarrior),
+      Se.Set BeamDI.preferredPrimarySpecialLocId (getId <$> preferredPrimarySpecialLocId),
+      Se.Set BeamDI.preferredSecondarySpecialLocIds (Just (map getId preferredSecondarySpecialLocIds)),
+      Se.Set BeamDI.specialLocWarriorEnabledAt specialLocWarriorEnabledAt,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.isSpecialLocWarrior = LTSSync.Set isSpecialLocWarrior}
+
+updateTollRouteBlockedTill :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe UTCTime -> Id Person.Person -> m ()
+updateTollRouteBlockedTill tollRouteBlockedTill driverId = do
+  now <- getCurrentTime
+  updateOneWithKV [Se.Set BeamDI.tollRouteBlockedTill tollRouteBlockedTill, Se.Set BeamDI.updatedAt now] [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.tollRouteBlockedTill = LTSSync.Set tollRouteBlockedTill}
+
+removeAcUsageRestriction :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Double -> DriverInfo.AirConditionedRestrictionType -> Int -> Id Person.Person -> m ()
+removeAcUsageRestriction airConditionScore acUsageRestrictionType acRestrictionLiftCount driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.airConditionScore airConditionScore,
+      Se.Set BeamDI.acUsageRestrictionType (Just acUsageRestrictionType),
+      Se.Set BeamDI.acRestrictionLiftCount acRestrictionLiftCount,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate
+      { LTSSync.acUsageRestrictionType = LTSSync.Set (Just $ show acUsageRestrictionType),
+        LTSSync.acRestrictionLiftCount = LTSSync.Set acRestrictionLiftCount
+      }
+
+updateAcUsageRestrictionAndScore :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DriverInfo.AirConditionedRestrictionType -> Maybe Double -> Id Person.Person -> m ()
+updateAcUsageRestrictionAndScore acUsageRestrictionType airConditionScore driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.acUsageRestrictionType (Just acUsageRestrictionType),
+      Se.Set BeamDI.airConditionScore airConditionScore,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.acUsageRestrictionType = LTSSync.Set (Just $ show acUsageRestrictionType)}
+
+updateRentalInterCityAndIntraCitySwitch :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> Bool -> Bool -> Id Person.Person -> m ()
+updateRentalInterCityAndIntraCitySwitch canSwitchToRental canSwitchToInterCity canSwitchToIntraCity driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.canSwitchToRental (Just canSwitchToRental),
+      Se.Set BeamDI.canSwitchToInterCity (Just canSwitchToInterCity),
+      Se.Set BeamDI.canSwitchToIntraCity (Just canSwitchToIntraCity),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate
+      { LTSSync.canSwitchToRental = LTSSync.Set canSwitchToRental,
+        LTSSync.canSwitchToInterCity = LTSSync.Set canSwitchToInterCity,
+        LTSSync.canSwitchToIntraCity = LTSSync.Set canSwitchToIntraCity
+      }
+
+updateForwardBatchingEnabled :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> Id Person.Person -> m ()
+updateForwardBatchingEnabled forwardBatchingEnabled driverId = do
+  now <- getCurrentTime
+  updateOneWithKV [Se.Set BeamDI.forwardBatchingEnabled (Just forwardBatchingEnabled), Se.Set BeamDI.updatedAt now] [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.forwardBatchingEnabled = LTSSync.Set forwardBatchingEnabled}

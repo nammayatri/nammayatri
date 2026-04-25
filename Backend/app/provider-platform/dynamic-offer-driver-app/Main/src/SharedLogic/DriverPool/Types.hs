@@ -54,6 +54,39 @@ data PoolCalculationStage = Estimate | DriverSelection
 
 data PoolType = NormalPool | GoHomePool | SpecialDriversPool | SpecialZoneQueuePool | SkipPool deriving (Ord, Eq, Show)
 
+data NearestGoHomeDriversResult = NearestGoHomeDriversResult
+  { driverId :: Id Driver,
+    driverDeviceToken :: Maybe FCM.FCMRecipientToken,
+    language :: Maybe Maps.Language,
+    onRide :: Bool,
+    distanceToDriver :: Meters,
+    driverGender :: Maybe Person.Gender,
+    variant :: Vehicle.VehicleVariant,
+    serviceTier :: DVST.ServiceTierType,
+    serviceTierDowngradeLevel :: Int,
+    isAirConditioned :: Maybe Bool,
+    isSpecialLocWarrior :: Bool,
+    lat :: Double,
+    lon :: Double,
+    mode :: Maybe DI.DriverMode,
+    clientSdkVersion :: Maybe Version,
+    clientBundleVersion :: Maybe Version,
+    reactBundleVersion :: Maybe Text,
+    clientConfigVersion :: Maybe Version,
+    clientDevice :: Maybe Device,
+    vehicleAge :: Maybe Months,
+    backendConfigVersion :: Maybe Version,
+    backendAppVersion :: Maybe Text,
+    latestScheduledBooking :: Maybe UTCTime,
+    latestScheduledPickup :: Maybe Maps.LatLong,
+    driverTags :: A.Value,
+    score :: Maybe A.Value,
+    tripDistanceMinThreshold :: Maybe Meters,
+    tripDistanceMaxThreshold :: Maybe Meters,
+    isTollRouteEligible :: Bool
+  }
+  deriving (Generic, Show, HasCoordinates)
+
 data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
   { poolStage :: PoolCalculationStage,
     driverPoolCfg :: DriverPoolConfig,
@@ -115,7 +148,12 @@ data DriverPoolResult = DriverPoolResult
     maxPickupDistance :: Maybe Meters,
     isTollRouteEligible :: Bool, -- True if driver is not blocked for toll routes
     driverGender :: Maybe Person.Gender,
-    vehicleNumber :: Maybe Text
+    vehicleNumber :: Maybe Text,
+    -- On-ride forward batching fields (Nothing for non-on-ride drivers)
+    onRide :: Maybe Bool,
+    previousRideDropLat :: Maybe Double,
+    previousRideDropLon :: Maybe Double,
+    distanceFromDriverToDestination :: Maybe Meters
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 
@@ -152,7 +190,11 @@ instance Default DriverPoolResult where
         maxPickupDistance = Nothing,
         isTollRouteEligible = True,
         driverGender = Nothing,
-        vehicleNumber = Nothing
+        vehicleNumber = Nothing,
+        onRide = Nothing,
+        previousRideDropLat = Nothing,
+        previousRideDropLon = Nothing,
+        distanceFromDriverToDestination = Nothing
       }
 
 data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide

@@ -78,3 +78,16 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN dynamic_batch_s
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN self_request_if_rider_is_driver boolean NOT NULL default false;
+
+
+------- SQL updates -------
+
+
+--- Now DSL don't allow dropping tables instead we will drop not null constraint if any .Please be careful while running ---
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ALTER COLUMN pool_sorting_type DROP NOT NULL;
+--- Drop section ends. Please check before running ---
+
+
+
+------- SQL updates -------
+

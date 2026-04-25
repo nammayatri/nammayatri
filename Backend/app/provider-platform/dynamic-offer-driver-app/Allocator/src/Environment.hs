@@ -80,6 +80,7 @@ data HandlerEnv = HandlerEnv
     esqDBReplicaEnv :: EsqDBEnv,
     encTools :: EncTools,
     hedisEnv :: HedisEnv,
+    ltsHedisEnv :: HedisEnv,
     kafkaProducerTools :: KafkaProducerTools,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
@@ -157,6 +158,7 @@ buildHandlerEnv HandlerCfg {..} = do
   kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg appCfg.secondaryKafkaProducerCfg
   passettoContext <- uncurry mkDefPassettoContext encTools.service
   hedisEnv <- connectHedis appCfg.hedisCfg ("dynamic-offer-driver-app:" <>)
+  ltsHedisEnv <- connectHedis appCfg.ltsRedisCfg identity
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("doa:n_c:" <>)
   serviceClickhouseEnv <- createConn driverClickhouseCfg
   let internalEndPointHashMap = HMS.fromList $ MS.toList internalEndPointMap
@@ -197,6 +199,7 @@ releaseHandlerEnv :: HandlerEnv -> IO ()
 releaseHandlerEnv HandlerEnv {..} = do
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
+  disconnectHedis ltsHedisEnv
   disconnectHedis hedisClusterEnv
   maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
 

@@ -9,8 +9,9 @@ import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
+import Kernel.Utils.Common
 import Sequelize as Se
+import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified Storage.Beam.DriverBankAccount as Beam
 import qualified Storage.Queries.FleetDriverAssociation as QFOA
 import Storage.Queries.OrphanInstances.DriverBankAccount ()
@@ -52,3 +53,12 @@ getDriverOrFleetBankAccounts mbPaymentMode driverIds = do
           guard (paymentMode == paymentMode')
           pure (driverId, personBankAccount)
   pure $ catMaybes personBankAccountsMbList
+
+-- Wrapper for src-read-only function with LTS sync
+
+updateAccountStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> Bool -> Id DP.Person -> m ()
+updateAccountStatus chargesEnabled detailsSubmitted driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.chargesEnabled chargesEnabled, Se.Set Beam.detailsSubmitted detailsSubmitted, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.chargesEnabled = LTSSync.Set chargesEnabled}

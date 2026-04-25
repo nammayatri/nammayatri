@@ -168,7 +168,8 @@ parseLogicOutput resp = do
 blockDriverForTollRoutes ::
   ( MonadFlow m,
     EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   Id DP.Person ->
   Int -> -- Block duration in hours

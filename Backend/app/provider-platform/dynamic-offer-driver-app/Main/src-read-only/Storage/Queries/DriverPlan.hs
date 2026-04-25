@@ -51,17 +51,6 @@ findByMandateIdAndServiceName mandateId serviceName = do
         ]
     ]
 
-updateEnableServiceUsageChargeByDriverIdAndServiceName ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Extra.Plan.ServiceNames -> m ())
-updateEnableServiceUsageChargeByDriverIdAndServiceName enableServiceUsageCharge driverId serviceName = do
-  _now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set Beam.enableServiceUsageCharge (Kernel.Prelude.Just enableServiceUsageCharge),
-      Se.Set Beam.updatedAt _now
-    ]
-    [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.serviceName $ Se.Eq (Kernel.Prelude.Just serviceName)]]
-
 updateFreeTrialByDriverIdAndServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Extra.Plan.ServiceNames -> m ())
