@@ -1259,12 +1259,18 @@ applyOfferService paymentOrderId offerStatsInput useDomainOffers applyOfferCall 
         deviceImei = offerStatsInput.deviceId
     unless useDomainOffers $ do
       let offerIds = map (.offer_id) offerInitiatedPaymentOrderOffer
+          customer =
+            PInterface.OfferCustomer
+              { customerId = order.personId.getId,
+                email = offerStatsInput.email,
+                mobile = offerStatsInput.mobile
+              }
       void $
         applyOfferCall
           PInterface.OfferApplyReq
             { txnId = order.shortId.getShortId,
               offers = offerIds,
-              customerId = order.personId.getId,
+              customer = customer,
               amount = order.amount,
               currency = order.currency,
               planId = "dummy-not-required",
@@ -1308,12 +1314,18 @@ applyOfferWithoutPaymentService referenceId offerId offerCode offerStatsInput di
       let staticCustomerId = offerStatsInput.staticPersonId
           deviceImei = offerStatsInput.deviceId
           basket = mbProduct <&> \(productId, amount) -> [Payment.Basket {id = productId, unitPrice = amount, quantity = 1}]
+          customer =
+            PInterface.OfferCustomer
+              { customerId = offerStatsInput.personId,
+                email = offerStatsInput.email,
+                mobile = offerStatsInput.mobile
+              }
       void $
         applyOfferCall
           PInterface.OfferApplyReq
             { txnId = referenceId,
               offers = [offerId],
-              customerId = offerStatsInput.personId,
+              customer = customer,
               amount = orderAmount,
               currency = currency,
               planId = "dummy-not-required",
@@ -1349,7 +1361,9 @@ applyOfferWithoutPaymentService referenceId offerId offerCode offerStatsInput di
 data OfferStatsInput = OfferStatsInput
   { personId :: Text,
     staticPersonId :: Maybe Text, -- static customer UUID (Nothing or same as personId means skip)
-    deviceId :: Maybe Text -- device IMEI (Nothing or empty means skip)
+    deviceId :: Maybe Text, -- device IMEI (Nothing or empty means skip)
+    email :: Maybe Text, -- customer email for OfferApplyReq.customer (BAP ride flow); Nothing for driver
+    mobile :: Maybe Text -- customer mobile for OfferApplyReq.customer (BAP ride flow); Nothing for driver
   }
   deriving (Show)
 
