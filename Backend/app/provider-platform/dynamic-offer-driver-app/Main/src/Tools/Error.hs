@@ -1779,6 +1779,8 @@ data WMBErrors
   | FleetBadgeAlreadyLinked Text
   | AlreadyOnActiveTripWithAnotherBadge Text
   | VehicleBelongsToFleet
+  | DLAlreadyExistsInFleet
+  | DLLinkedToAnotherFleet
   | InvalidRequesterRole Text
   | InvalidRoleForVehicleAdd Text
   | DriverHasActiveLink Text
@@ -1834,6 +1836,8 @@ instance IsBaseError WMBErrors where
     FleetBadgeAlreadyLinked driverId -> Just $ "Fleet Badge already linked to driver id : " <> driverId
     AlreadyOnActiveTripWithAnotherBadge driverName -> Just $ "Driver is already on an Active trip with another badge : " <> driverName
     VehicleBelongsToFleet -> Just "Vehicle already belongs to a fleet."
+    DLAlreadyExistsInFleet -> Just "This license number is already in use by a driver in this fleet."
+    DLLinkedToAnotherFleet -> Just "This license number is already in use by a driver in another fleet."
     InvalidRequesterRole role -> Just $ "Requester has invalid role: " <> show role
     InvalidRoleForVehicleAdd role -> Just $ "Invalid role for adding vehicle: " <> show role
     DriverHasActiveLink driverId ->
@@ -1888,6 +1892,8 @@ instance IsHTTPError WMBErrors where
     FleetBadgeAlreadyLinked _ -> "FLEET_BADGE_ALREADY_LINKED"
     AlreadyOnActiveTripWithAnotherBadge _ -> "ALREADY_ON_ACTIVE_TRIP_WITH_ANOTHER_BADGE"
     VehicleBelongsToFleet -> "VEHICLE_BELONGS_TO_FLEET"
+    DLAlreadyExistsInFleet -> "DL_ALREADY_EXISTS_IN_FLEET"
+    DLLinkedToAnotherFleet -> "DL_LINKED_TO_ANOTHER_FLEET"
     InvalidRequesterRole _ -> "INVALID_REQUESTER_ROLE"
     InvalidRoleForVehicleAdd _ -> "INVALID_ROLE_FOR_VEHICLE_ADD"
     DriverHasActiveLink _ -> "DRIVER_HAS_ACTIVE_LINK"
@@ -1938,6 +1944,8 @@ instance IsHTTPError WMBErrors where
     FleetBadgeAlreadyLinked _ -> E400
     AlreadyOnActiveTripWithAnotherBadge _ -> E400
     VehicleBelongsToFleet -> E400
+    DLAlreadyExistsInFleet -> E400
+    DLLinkedToAnotherFleet -> E400
     InvalidRequesterRole _ -> E400
     InvalidRoleForVehicleAdd _ -> E400
     DriverHasActiveLink _ -> E400
