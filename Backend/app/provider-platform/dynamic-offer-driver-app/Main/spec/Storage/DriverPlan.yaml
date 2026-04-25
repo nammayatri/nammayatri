@@ -126,11 +126,6 @@ DriverPlan:
       where:
         and: [driverId, serviceName]
 
-    updateEnableServiceUsageChargeByDriverIdAndServiceName:
-      kvFunction: updateOneWithKV
-      params: [enableServiceUsageCharge, updatedAt]
-      where:
-        and: [driverId, serviceName]
 
     # updatePlanIdByDriverIdAndServiceName:
     #   kvFunction: updateOneWithKV

@@ -290,6 +290,8 @@ in
               "kafka".condition = "process_healthy";
               "passetto-service".condition = "process_started";
               "rider-app-exe".condition = "process_healthy";
+              "rider-dashboard-exe".condition = "process_healthy";
+              "provider-dashboard-exe".condition = "process_healthy";
               "dynamic-offer-driver-app-exe".condition = "process_healthy";
               "mock-registry".condition = "process_healthy";
             };

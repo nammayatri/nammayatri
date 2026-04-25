@@ -18,6 +18,7 @@ module API
   )
 where
 
+import qualified API.AdvancedDirections as AdvancedDirections
 import qualified API.Directions as Directions
 import qualified API.DistanceMatrix as DistanceMatrix
 import qualified API.PlaceName as PlaceName
@@ -32,6 +33,7 @@ type API =
   Get '[JSON] Text
     :<|> Maps.DistanceMatrixAPI
     :<|> Maps.DirectionsAPI
+    :<|> Maps.AdvancedDirectionsAPI
     :<|> Maps.PlaceNameAPI
     :<|> Roads.SnapToRoadAPI
 
@@ -40,5 +42,6 @@ handler =
   pure "MockGoogle is UP"
     :<|> DistanceMatrix.handler
     :<|> Directions.handler
+    :<|> AdvancedDirections.handler
     :<|> PlaceName.handler
     :<|> SnapToRoad.handler

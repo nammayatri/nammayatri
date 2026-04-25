@@ -4,8 +4,6 @@
 
 module Storage.Queries.Vehicle (module Storage.Queries.Vehicle, module ReExport) where
 
-import qualified Data.Time.Calendar
-import qualified Domain.Types.Common
 import qualified Domain.Types.Person
 import qualified Domain.Types.UpgradedTier
 import qualified Domain.Types.Vehicle
@@ -37,11 +35,6 @@ updateAirConditioned airConditioned downgradeReason driverId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.airConditioned airConditioned, Se.Set Beam.downgradeReason downgradeReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateManufacturing :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateManufacturing mYManufacturing driverId = do
-  _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.mYManufacturing mYManufacturing, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
-
 updateOxygen :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateOxygen oxygen driverId = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.oxygen oxygen, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
@@ -49,11 +42,6 @@ updateRuleBasedUpgradeTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (K
 updateRuleBasedUpgradeTiers ruleBasedUpgradeTiers driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.ruleBasedUpgradeTiers (Kernel.Prelude.toJSON <$> ruleBasedUpgradeTiers), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
-
-updateSelectedServiceTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Common.ServiceTierType] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateSelectedServiceTiers selectedServiceTiers driverId = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.selectedServiceTiers selectedServiceTiers, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateVehicleImageId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

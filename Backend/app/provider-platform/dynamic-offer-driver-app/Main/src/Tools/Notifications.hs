@@ -69,7 +69,7 @@ import qualified Storage.Queries.MerchantClientConfig as QMCC
 import qualified Storage.Queries.Person as QPerson
 import Utils.Common.Cac.KeyNameConstants
 
-clearDeviceToken :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
+clearDeviceToken :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
 clearDeviceToken = QPerson.clearDeviceTokenByPersonId
 
 templateText :: Text -> Text

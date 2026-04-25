@@ -280,10 +280,6 @@ DriverInformation:
     - EXTRA_QUERY_FILE
 
   queries:
-    updateSubscription:
-      kvFunction: updateOneWithKV
-      params: [subscribed]
-      where: driverId
     updateAadhaarVerifiedState:
       kvFunction: updateOneWithKV
       params: [aadhaarVerified]
@@ -308,44 +304,9 @@ DriverInformation:
       kvFunction: updateOneWithKV
       params: [canDowngradeToHatchback, canDowngradeToTaxi]
       where: driverId
-    updateDriverInformation: #check
-      kvFunction: updateOneWithKV
-      params:
-        [
-          canDowngradeToSedan,
-          canDowngradeToHatchback,
-          canDowngradeToTaxi,
-          canSwitchToRental,
-          canSwitchToInterCity,
-          canSwitchToIntraCity,
-          availableUpiApps,
-          isPetModeEnabled,
-          tripDistanceMaxThreshold,
-          tripDistanceMinThreshold,
-          maxPickupRadius,
-          isSilentModeEnabled,
-          rideRequestVolume,
-          isTTSEnabled,
-          isHighAccuracyLocationEnabled,
-          rideRequestVolumeEnabled,
-          onboardingAs,
-          address,
-          addressDocumentType,
-          nomineeName,
-          nomineeRelationship,
-        ]
-      where: driverId
-    updateRentalInterCityAndIntraCitySwitch:
-      kvFunction: updateOneWithKV
-      params: [canSwitchToRental, canSwitchToInterCity, canSwitchToIntraCity]
-      where: driverId
     updateAirConditionScore:
       kvFunction: updateOneWithKV
       params: [airConditionScore]
-      where: driverId
-    updateAcUsageRestrictionAndScore:
-      kvFunction: updateOneWithKV
-      params: [acUsageRestrictionType, airConditionScore]
       where: driverId
     updateDriverAddress:
       kvFunction: updateOneWithKV
@@ -354,15 +315,6 @@ DriverInformation:
     updateDriverDobAndAddress:
       kvFunction: updateOneWithKV
       params: [driverDob, address, addressDocumentType]
-      where: driverId
-    removeAcUsageRestriction:
-      kvFunction: updateOneWithKV
-      params:
-        [airConditionScore, acUsageRestrictionType, acRestrictionLiftCount]
-      where: driverId
-    updateOnRide:
-      kvFunction: updateOneWithKV
-      params: [onRide]
       where: driverId
     addReferralCode: #check
       kvFunction: updateOneWithKV
@@ -384,10 +336,6 @@ DriverInformation:
       kvFunction: updateOneWithKV
       params: [extraFareMitigationFlag]
       where: driverId
-    updateForwardBatchingEnabled:
-      kvFunction: updateOneWithKV
-      params: [forwardBatchingEnabled]
-      where: driverId
     updatePayoutVpaAndStatus:
       kvFunction: updateOneWithKV
       params: [payoutVpa, payoutVpaStatus]
@@ -404,10 +352,6 @@ DriverInformation:
       kvFunction: updateOneWithKV
       params: [latestScheduledBooking, latestScheduledPickup]
       where: driverId
-    updateOnRideAndLatestScheduledBookingAndPickup:
-      kvFunction: updateOneWithKV
-      params: [onRide, latestScheduledBooking, latestScheduledPickup]
-      where: driverId
     updatePayoutVpaStatus:
       kvFunction: updateOneWithKV
       params: [payoutVpaStatus]
@@ -419,10 +363,6 @@ DriverInformation:
     updateWeeklyCancellationRateBlockingCooldown:
       kvFunction: updateOneWithKV
       params: [weeklyCancellationRateBlockingCooldown]
-      where: driverId
-    updateTollRouteBlockedTill:
-      kvFunction: updateOneWithKV
-      params: [tollRouteBlockedTill]
       where: driverId
     updateDailyAndWeeklyCancellationRateBlockingCooldown:
       kvFunction: updateOneWithKV
@@ -436,16 +376,6 @@ DriverInformation:
       kvFunction: updateOneWithKV
       params: [payoutRegAmountRefunded]
       where: driverId
-    updateSpecialLocWarriorInfo:
-      kvFunction: updateOneWithKV
-      params:
-        [
-          isSpecialLocWarrior,
-          preferredPrimarySpecialLocId,
-          preferredSecondarySpecialLocIds,
-          specialLocWarriorEnabledAt,
-        ]
-      where: driverId
     updateTripEndLocation:
       kvFunction: updateOneWithKV
       params: [driverTripEndLocation]
@@ -453,10 +383,6 @@ DriverInformation:
     updateIssueBreachCooldownTimes:
       kvFunction: updateOneWithKV
       params: [issueBreachCooldownTimes]
-      where: driverId
-    updateSoftBlock:
-      kvFunction: updateOneWithKV
-      params: [softBlockStiers, softBlockExpiryTime, softBlockReasonFlag]
       where: driverId
     updateServicesEnabledForSubscription:
       kvFunction: updateOneWithKV

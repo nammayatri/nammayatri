@@ -1078,10 +1078,6 @@ DriverBankAccount:
       kvFunction: updateOneWithKV
       params: [currentAccountLink, currentAccountLinkExpiry]
       where: driverId
-    updateAccountStatus:
-      kvFunction: updateOneWithKV
-      params: [chargesEnabled, detailsSubmitted]
-      where: driverId
     deleteById:
       kvFunction: deleteWithKV
       where: driverId

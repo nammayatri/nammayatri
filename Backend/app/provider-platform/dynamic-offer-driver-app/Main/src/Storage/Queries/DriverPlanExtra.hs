@@ -4,6 +4,7 @@ import qualified Data.Aeson as A
 import Data.Time (UTCTime (..), addDays)
 import Domain.Types.DriverInformation (DriverAutoPayStatus)
 import Domain.Types.DriverPlan as Domain
+import qualified Domain.Types.Extra.Plan as DExtraPlan
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as MOC
 import Domain.Types.Person
@@ -16,6 +17,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
+import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified Storage.Beam.DriverPlan as BeamDF
 import Storage.Queries.OrphanInstances.DriverPlan ()
 
@@ -207,3 +209,16 @@ updateWaiveOffPercantageAndType waiveOffEntity = do
           Se.Is BeamDF.serviceName $ Se.Eq (Just waiveOffEntity.serviceName)
         ]
     ]
+
+-- Wrapper for src-read-only function with LTS sync
+
+updateEnableServiceUsageChargeByDriverIdAndServiceName :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> Id Person -> DExtraPlan.ServiceNames -> m ()
+updateEnableServiceUsageChargeByDriverIdAndServiceName enableServiceUsageCharge driverId serviceName = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDF.enableServiceUsageCharge (Just enableServiceUsageCharge),
+      Se.Set BeamDF.updatedAt _now
+    ]
+    [Se.And [Se.Is BeamDF.driverId $ Se.Eq (getId driverId), Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)]]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.safetyPlusEnabled = LTSSync.Set enableServiceUsageCharge}

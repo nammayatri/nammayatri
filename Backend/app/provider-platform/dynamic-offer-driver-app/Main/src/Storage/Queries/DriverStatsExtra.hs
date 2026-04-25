@@ -16,6 +16,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import SharedLogic.DriverFee (mkCachedKeyTotalRidesByDriverId)
+import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified Storage.Beam.DriverStats as BeamDS
 import Storage.Queries.OrphanInstances.DriverStats ()
 import Storage.Queries.Person (DriverWithRidesCount (..), fetchDriverInfo)
@@ -104,6 +105,8 @@ incrementTotalRidesAndTotalDistAndIdleTime (Id driverId') rideDist = do
         Nothing -> Redis.setExp (mkCachedKeyTotalRidesByDriverId (Id driverId')) (rides + 1) 86400
         Just _ -> void $ Redis.incr (mkCachedKeyTotalRidesByDriverId (Id driverId'))
       pure (rides + 1)
+  LTSSync.syncDriverPoolDataToLTS (Id driverId') $
+    LTSSync.emptyUpdate {LTSSync.totalRides = LTSSync.Set newTotalRides}
   pure newTotalRides
 
 findTotalRides :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Int, Meters)

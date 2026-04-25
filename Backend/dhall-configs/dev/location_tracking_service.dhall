@@ -679,8 +679,8 @@ in  { logger_cfg
     , detection_violation_config
     , detection_anti_violation_config
     , google_compute_route_url =
-        "https://routes.googleapis.com/directions/v2:computeRoutes"
-    , google_api_key = "ADD_GOOGLE_API_KEY_HERE"
+        "http://localhost:8019/directions/v2/:computeRoutes"
+    , google_api_key = "mock-dev-key"
     , route_geo_json_config = { bucket = "route-geojson", prefix = "" }
     , trigger_fcm_callback_url_bap =
         "http://127.0.0.1:8013/internal/driverArrivalNotification"
