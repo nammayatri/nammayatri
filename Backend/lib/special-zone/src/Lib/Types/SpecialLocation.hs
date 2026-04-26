@@ -17,10 +17,13 @@ module Lib.Types.SpecialLocation where
 
 import Control.Lens.Operators
 import Data.Aeson
+import qualified Data.Bifunctor as BF
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as List
 import Data.OpenApi hiding (name)
 import Data.Text (unpack)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TEnc
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Maps (LatLong)
 import Kernel.Prelude hiding (show)
@@ -45,6 +48,8 @@ data SpecialLocation = SpecialLocation
     linkedLocationsIds :: [Id SpecialLocation],
     locationType :: SpecialLocationType,
     enabled :: Bool,
+    isOpenMarketEnabled :: Bool,
+    isQueueEnabled :: Maybe Bool,
     priority :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
@@ -67,6 +72,16 @@ data SpecialLocationType
   deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''SpecialLocationType)
+
+instance FromHttpApiData [SpecialLocationType] where
+  parseUrlPiece = parseHeader . TEnc.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader bs = BF.first T.pack . eitherDecode . LBS.fromStrict $ bs
+
+instance ToHttpApiData [SpecialLocationType] where
+  toUrlPiece = TEnc.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = LBS.toStrict . encode
 
 data Area
   = Pickup (Id SpecialLocation)
