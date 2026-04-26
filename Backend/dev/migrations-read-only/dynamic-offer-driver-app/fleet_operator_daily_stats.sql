@@ -30,5 +30,5 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN updated
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD PRIMARY KEY ( fleet_driver_id, fleet_operator_id, merchant_local_date);
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN approved_driver_requests integer;
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN approved_vehicle_requests integer ;
-ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ALTER COLUMN rejected_vehicle_requests TYPE integer;
-ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ALTER COLUMN rejected_driver_requests TYPE integer;
+ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN rejected_vehicle_requests integer ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN rejected_driver_requests integer ;
