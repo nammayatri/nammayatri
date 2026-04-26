@@ -19,6 +19,7 @@ import Kernel.Prelude hiding (isNothing)
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Esqueleto.Functions as F
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Queries.GateInfo as QGI
@@ -129,14 +130,16 @@ fullSpecialLocationRedisKey city = "SpecialLocation:Full:" <> city
 specialLocationWarriorRedisKey :: Text -> Text -> Text
 specialLocationWarriorRedisKey category mocId = "SpecialLocation:Warrior:" <> category <> ":" <> mocId
 
-findFullSpecialLocationsByMerchantOperatingCityId :: (Transactionable m, CacheFlow m r) => Text -> m [SpecialLocationFull]
+findFullSpecialLocationsByMerchantOperatingCityId :: (Transactionable m, CacheFlow m r, MonadFlow m) => Text -> m [SpecialLocationFull]
 findFullSpecialLocationsByMerchantOperatingCityId mocId = do
-  Hedis.safeGet (fullSpecialLocationRedisKey mocId) >>= \case
-    Just a -> pure a
-    Nothing -> do
-      specialLocations <- findFullSpecialLocationsByMerchantOperatingCityId' mocId
-      Hedis.set (fullSpecialLocationRedisKey mocId) specialLocations
-      pure specialLocations
+  let cacheKey = fullSpecialLocationRedisKey mocId
+  IM.withInMemCache [cacheKey] 3600 $
+    Hedis.safeGet cacheKey >>= \case
+      Just a -> pure a
+      Nothing -> do
+        specialLocations <- findFullSpecialLocationsByMerchantOperatingCityId' mocId
+        Hedis.set cacheKey specialLocations
+        pure specialLocations
 
 findFullSpecialLocationsByMerchantOperatingCityId' :: (Transactionable m, CacheFlow m r) => Text -> m [SpecialLocationFull]
 findFullSpecialLocationsByMerchantOperatingCityId' mocId = do
