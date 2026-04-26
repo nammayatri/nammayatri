@@ -35,6 +35,7 @@ import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideCompletedOrder as Ride
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideStartedOrder as RideStartedOS
 import qualified BecknV2.OnDemand.Enums as EventEnum
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified Domain.Types.Ride as DRide
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601, mapServiceTierToCategory)
 import qualified BecknV2.OnDemand.Utils.Context as CU
 import Domain.Types.Beckn.Status as DStatus
@@ -69,6 +70,21 @@ buildOnStatusMessage (DStatus.NewBookingBuildReq (DNewBookingBuildReq bookingId)
       }
 buildOnStatusMessage (DStatus.RideAssignedReq Common.DRideAssignedReq {..}) = do
   let Common.BookingDetails {..} = bookingDetails
+  let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
+  fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0 booking.isSafetyPlus
+  return $
+    OnStatus.OnStatusMessage
+      { order =
+          OnStatus.RideAssigned $
+            RideAssignedOS.RideAssignedOrder
+              { id = booking.id.getId,
+                state = RideAssignedOS.orderState,
+                ..
+              }
+      }
+buildOnStatusMessage (DStatus.DriverArrivedReq Common.DDriverArrivedReq {..}) = do
+  let Common.BookingDetails {..} = bookingDetails
+  let image = Nothing
   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
   fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0 booking.isSafetyPlus
   return $
@@ -229,7 +245,14 @@ tfOrder (DStatus.NewBookingBuildReq DNewBookingBuildReq {bookingId}) _ becknConf
         orderCreatedAt = Nothing,
         orderUpdatedAt = Nothing --------To do keep booking created and updated time
       }
-tfOrder (DStatus.RideAssignedReq req) mbFarePolicy becknConfig = Common.tfAssignedReqToOrder req mbFarePolicy becknConfig EventEnum.RIDE_ASSIGNED
+tfOrder (DStatus.RideAssignedReq req) mbFarePolicy becknConfig =
+  let ride = req.bookingDetails.ride
+      fulfillmentState =
+        if ride.status == DRide.NEW && isJust ride.driverArrivalTime
+          then EventEnum.RIDE_ARRIVED_PICKUP
+          else EventEnum.RIDE_ASSIGNED
+   in Common.tfAssignedReqToOrder req mbFarePolicy becknConfig fulfillmentState
+tfOrder (DStatus.DriverArrivedReq req) mbFarePolicy becknConfig = Common.tfArrivedReqToOrder req mbFarePolicy becknConfig
 tfOrder (DStatus.RideStartedReq req) mbFarePolicy becknConfig = Common.tfStartReqToOrder req mbFarePolicy becknConfig
 tfOrder (DStatus.RideCompletedReq req) mbFarePolicy becknConfig = Common.tfCompleteReqToOrder req mbFarePolicy becknConfig
 tfOrder (DStatus.BookingCancelledReq req) _ becknConfig = Common.tfCancelReqToOrder req becknConfig

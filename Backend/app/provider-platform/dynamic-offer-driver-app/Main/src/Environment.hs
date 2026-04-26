@@ -102,6 +102,7 @@ data AppCfg = AppCfg
     encTools :: EncTools,
     authTokenCacheExpiry :: Seconds,
     disableSignatureAuth :: Bool,
+    becknResponseWrapped :: Bool,
     smsCfg :: SmsConfig,
     slackCfg :: SlackConfig,
     apiRateLimitOptions :: APIRateLimitOptions,
@@ -192,6 +193,9 @@ data AppEnv = AppEnv
     s3PublicConfig :: S3Config,
     graceTerminationPeriod :: Seconds,
     disableSignatureAuth :: Bool,
+    -- | See AppCfg.becknResponseWrapped. Read at request time by the response-wrapper
+    -- middleware to decide whether to rewrap outgoing Beckn response bodies.
+    becknResponseWrapped :: Bool,
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
     kafkaClickhouseEnv :: ClickhouseEnv,

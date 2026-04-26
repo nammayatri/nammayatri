@@ -29,6 +29,7 @@ module SharedLogic.CallBAP
     sendUpdateEditDestErrToBAP,
     sendNewMessageToBAP,
     sendDriverOffer,
+    sendOnSelectErrorToBAP,
     callOnConfirmV2,
     callOnStatusV2,
     buildBppUrl,
@@ -179,6 +180,65 @@ callOnSelectV2 transporter searchRequest srfd searchTry content = do
 
 mkTxnIdKey :: Text -> Text
 mkTxnIdKey txnId = "driver-offer:CachedQueries:Select:transactionId-" <> txnId
+
+-- | Send an ONDC on_select callback with an error payload (no message body) when no driver
+-- accepted a search after all batches were exhausted. Prior to this, the BPP silently
+-- dropped the select for third-party BAPs (~47% drop-off) because on_select was only
+-- emitted via 'sendDriverOffer' on a successful driver acceptance. Uses ONDC error code
+-- 90203 (DRIVER_NOT_ASSIGNED) per the v2.1.0 protocol draft.
+sendOnSelectErrorToBAP ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    CoreMetrics m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DM.Merchant ->
+  DSR.SearchRequest ->
+  DST.SearchTry ->
+  m ()
+sendOnSelectErrorToBAP transporter searchRequest searchTry = do
+  let bapId = searchRequest.bapId
+      bapUri = searchRequest.bapUri
+      bppSubscriberId = getShortId $ transporter.subscriberId
+  bppUri <- buildBppUrl transporter.id
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  msgId <-
+    Hedis.safeGet (mkTxnIdKey searchRequest.transactionId) >>= \case
+      Nothing -> pure searchTry.estimateId
+      Just a -> pure a
+  bppConfig <-
+    QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" (Utils.mapServiceTierToCategory searchTry.vehicleServiceTier)
+      >>= fromMaybeM (InternalError "Beckn Config not found")
+  ttl <- bppConfig.onSelectTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+  context <-
+    ContextV2.buildContextV2
+      Context.ON_SELECT
+      Context.MOBILITY
+      msgId
+      (Just searchRequest.transactionId)
+      bapId
+      bapUri
+      (Just bppSubscriberId)
+      (Just bppUri)
+      (fromMaybe transporter.city searchRequest.bapCity)
+      (fromMaybe Context.India searchRequest.bapCountry)
+      (Just ttl)
+  let err =
+        Spec.Error
+          { errorCode = Just (show Enums.DRIVER_NOT_ASSIGNED),
+            errorMessage = Just (Enums.becknErrorCodeMessage Enums.DRIVER_NOT_ASSIGNED),
+            errorPaths = Nothing
+          }
+      req = Spec.OnSelectReq context (Just err) Nothing
+  logInfo $ "Sending on_select(error) DRIVER_NOT_ASSIGNED for transactionId=" <> searchRequest.transactionId
+  void $
+    withShortRetry $
+      callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap req
 
 callOnUpdateV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -785,10 +845,13 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
       paymentUrl = Nothing
       bookingDetails = ACL.BookingDetails {..}
       estimateId = booking.estimateId <&> (.getId)
-      driverArrivedBuildReq = ACL.DriverArrivedBuildReq ACL.DDriverArrivedReq {..}
+      driverArrivedReq = ACL.DDriverArrivedReq {..}
   retryConfig <- asks (.shortDurationRetryCfg)
-  driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing driverArrivedBuildReq
+  driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing (ACL.DriverArrivedBuildReq driverArrivedReq)
   void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig merchant.id
+  unless isValueAddNP $ do
+    driverArrivedStatusMsgV2 <- ACL.buildOnStatusReqV2 merchant booking (ACL.DriverArrivedReq driverArrivedReq) Nothing
+    void $ callOnStatusV2 driverArrivedStatusMsgV2 retryConfig merchant.id
 
 sendPhoneCallRequestUpdateToBAP ::
   ( CacheFlow m r,
