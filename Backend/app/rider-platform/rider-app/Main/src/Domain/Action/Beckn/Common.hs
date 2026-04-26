@@ -974,25 +974,27 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
           createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)
 
   let vehicleCategory = DV.castVehicleVariantToVehicleCategory ride.vehicleVariant
-  payoutConfig <-
-    getOneConfig
-      (PayoutDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing})
-      >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) booking.merchantOperatingCityId.getId)
   when (ridePayoutAmount > 0) $ do
-    let cashbackPayoutJobData =
-          ExecuteCashRideCashbackPayoutJobData
-            { personId = person.id,
-              vehicleReferences =
-                [ VehicleReference
-                    { referenceId = ride.id.getId,
-                      vehicleVariant = ride.vehicleVariant,
-                      amount = ridePayoutAmount
-                    }
-                ],
-              currency = totalFare.currency
-            }
-        scheduleAfter = Kernel.Utils.Common.secondsToNominalDiffTime (fromIntegral payoutConfig.scheduleCashbackPayoutAfter)
-    createJobIn @_ @'ExecuteCashRideCashbackPayout (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter cashbackPayoutJobData
+    payoutCfg <- getOneConfig (PayoutDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing})
+    case payoutCfg of
+      Just payoutConfig -> do
+        let cashbackPayoutJobData =
+              ExecuteCashRideCashbackPayoutJobData
+                { personId = person.id,
+                  vehicleReferences =
+                    [ VehicleReference
+                        { referenceId = ride.id.getId,
+                          vehicleVariant = ride.vehicleVariant,
+                          amount = ridePayoutAmount
+                        }
+                    ],
+                  currency = totalFare.currency
+                }
+            scheduleAfter = Kernel.Utils.Common.secondsToNominalDiffTime (fromIntegral payoutConfig.scheduleCashbackPayoutAfter)
+        createJobIn @_ @'ExecuteCashRideCashbackPayout (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter cashbackPayoutJobData
+      Nothing -> do
+        logError $ "No payout config found for vehicle category - for offers: " <> show vehicleCategory <> " merchant operating city: " <> booking.merchantOperatingCityId.getId
+        pure ()
 
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
