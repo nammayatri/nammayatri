@@ -35,8 +35,8 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.OperationHub as DOH
 import Domain.Types.OperationHubRequests
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.RegistrationToken as SR
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import Environment
 import EulerHS.Prelude (whenNothing_, (<|>))
 import Kernel.Beam.Functions as B
@@ -53,8 +53,8 @@ import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
-import qualified SharedLogic.FleetOperatorStats as FleetOpStats
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.FleetOperatorStats as FleetOpStats
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Reminder.Helper (cancelRemindersForDriverByDocumentType, cancelRemindersForRCByDocumentType, recordDocumentCompletion)
@@ -145,8 +145,9 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
     opHubReq <- SQOHR.findByPrimaryKey (Kernel.Types.Id.Id req.operationHubRequestId) >>= fromMaybeM (InvalidRequest "Invalid operation hub request id")
     let reqDomainStatus = castReqStatusToDomain req.status
     case (opHubReq.requestStatus, reqDomainStatus) of
-      (existing, target) | existing == target ->
-        logInfo $ "Hub request already in status " <> show existing <> "; returning idempotent success"
+      (existing, target)
+        | existing == target ->
+          logInfo $ "Hub request already in status " <> show existing <> "; returning idempotent success"
       (APPROVED, _) ->
         Kernel.Utils.Common.throwError (InvalidRequest "Request has already been approved; approval is terminal")
       (REJECTED, _) ->
@@ -159,18 +160,24 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
           when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
             let analyticsDriverId = maybe req.operatorId (.getId) opHubReq.driverId
             case opHubReq.requestType of
-              ONBOARDING_INSPECTION -> void $ withTryCatch "incrementRejectedVehicleRequestsDaily" $
-                FleetOpStats.incrementRejectedVehicleRequestsDaily req.operatorId analyticsDriverId transporterConfig False
-              REGULAR_INSPECTION -> void $ withTryCatch "incrementRejectedVehicleRequestsDaily" $
-                FleetOpStats.incrementRejectedVehicleRequestsDaily req.operatorId analyticsDriverId transporterConfig False
+              ONBOARDING_INSPECTION ->
+                void $
+                  withTryCatch "incrementRejectedVehicleRequestsDaily" $
+                    FleetOpStats.incrementRejectedVehicleRequestsDaily req.operatorId analyticsDriverId transporterConfig False
+              REGULAR_INSPECTION ->
+                void $
+                  withTryCatch "incrementRejectedVehicleRequestsDaily" $
+                    FleetOpStats.incrementRejectedVehicleRequestsDaily req.operatorId analyticsDriverId transporterConfig False
               DRIVER_ONBOARDING_INSPECTION -> do
                 personId <- opHubReq.driverId & fromMaybeM (InvalidRequest "driverId is required for driver inspection")
-                void $ withTryCatch "incrementRejectedDriverRequestsDaily" $
-                  FleetOpStats.incrementRejectedDriverRequestsDaily req.operatorId personId.getId transporterConfig False
+                void $
+                  withTryCatch "incrementRejectedDriverRequestsDaily" $
+                    FleetOpStats.incrementRejectedDriverRequestsDaily req.operatorId personId.getId transporterConfig False
               DRIVER_REGULAR_INSPECTION -> do
                 personId <- opHubReq.driverId & fromMaybeM (InvalidRequest "driverId is required for driver inspection")
-                void $ withTryCatch "incrementRejectedDriverRequestsDaily" $
-                  FleetOpStats.incrementRejectedDriverRequestsDaily req.operatorId personId.getId transporterConfig False
+                void $
+                  withTryCatch "incrementRejectedDriverRequestsDaily" $
+                    FleetOpStats.incrementRejectedDriverRequestsDaily req.operatorId personId.getId transporterConfig False
 
         when (req.status == API.Types.ProviderPlatform.Operator.Driver.APPROVED) $ do
           case opHubReq.requestType of
@@ -207,8 +214,9 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         -- Record inspection completion for auto-trigger monitoring (per RC, not per driver)
         recordDocumentCompletion DVC.InspectionHub rc.id.getId DRH.RC Nothing merchantOpCity.merchantId merchantOpCity.id
         when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
-          void $ withTryCatch "incrementApprovedVehicleRequests" $
-            FleetOpStats.incrementApprovedVehicleRequests request.operatorId analyticsDriverId transporterConfig False
+          void $
+            withTryCatch "incrementApprovedVehicleRequests" $
+              FleetOpStats.incrementApprovedVehicleRequests request.operatorId analyticsDriverId transporterConfig False
       let reqUpdatedStatus = if allVehicleDocsVerified then castReqStatusToDomain request.status else PENDING
       void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
 
@@ -229,8 +237,9 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         recordDocumentCompletion DVC.DriverInspectionHub personId.getId DRH.DRIVER (Just personId) merchantOpCity.merchantId merchantOpCity.id
         void $ postDriverEnable mShortId city $ cast @DP.Person @Common.Driver personId
         when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
-          void $ withTryCatch "incrementApprovedDriverRequestsDaily" $
-            FleetOpStats.incrementApprovedDriverRequestsDaily request.operatorId personId.getId transporterConfig False
+          void $
+            withTryCatch "incrementApprovedDriverRequestsDaily" $
+              FleetOpStats.incrementApprovedDriverRequestsDaily request.operatorId personId.getId transporterConfig False
       let reqUpdatedStatus = if allDriverDocsVerified then castReqStatusToDomain request.status else PENDING
       void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
 

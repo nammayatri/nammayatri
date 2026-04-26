@@ -22,6 +22,7 @@ import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.TransporterConfig as TC
 import Environment
 import Kernel.Prelude
@@ -30,17 +31,16 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.AnalyticsExtra
 import qualified SharedLogic.DriverFlowStatus as SDFStatus
 import qualified SharedLogic.FleetOperatorStats as SFleetOperatorStats
 import qualified Storage.Clickhouse.DriverInformation as CDI
-import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Storage.Clickhouse.FleetOperatorDailyStats as CFleetOpDailyStats
 import qualified Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.FleetOperatorDailyStatsExtra as QFleetOpsDailyExtra
-import SharedLogic.AnalyticsExtra
+import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
 import Tools.Error
 
 -- | Update analytics and driver stats counters for a cancelled ride.
@@ -127,6 +127,7 @@ data PeriodRes = PeriodRes
     rejectedVehicleInspection :: Int
   }
   deriving (Show, Eq)
+
 -- | Update the operator analytics cancel count for a driver
 updateOperatorAnalyticsCancelCount ::
   ( MonadFlow m,
@@ -476,9 +477,10 @@ computePeriodOperatorAnalytics transporterConfig operatorId fromDay toDay = do
   -- gt10 <- CDaily.countDriversWithNumRidesGreaterThan10Between driverIds fromDay toDay
   -- gt50 <- CDaily.countDriversWithNumRidesGreaterThan50Between driverIds fromDay toDay
 
-  (approvedDriverInspection, approvedVehicleInspection, rejectedDriverInspection, rejectedVehicleInspection) <- if useDBForAnalytics
-    then QFleetOpsDailyExtra.sumApprovedVehicleAndDriverRequestsByFleetOperatorIdsAndDateRangeDB operatorId fromDay toDay
-    else CFleetOpDailyStats.sumApprovedDriverAndVehicleRequestsByFleetOperatorIdsAndDateRange operatorId fromDay toDay
+  (approvedDriverInspection, approvedVehicleInspection, rejectedDriverInspection, rejectedVehicleInspection) <-
+    if useDBForAnalytics
+      then QFleetOpsDailyExtra.sumApprovedVehicleAndDriverRequestsByFleetOperatorIdsAndDateRangeDB operatorId fromDay toDay
+      else CFleetOpDailyStats.sumApprovedDriverAndVehicleRequestsByFleetOperatorIdsAndDateRange operatorId fromDay toDay
 
   pure PeriodRes {activeDriver, driverEnabled = enabledCount, greaterThanOneRide = 0 :: Int, greaterThanTenRide = 0 :: Int, greaterThanFiftyRide = 0 :: Int, approvedDriverInspection, approvedVehicleInspection, rejectedDriverInspection, rejectedVehicleInspection}
 

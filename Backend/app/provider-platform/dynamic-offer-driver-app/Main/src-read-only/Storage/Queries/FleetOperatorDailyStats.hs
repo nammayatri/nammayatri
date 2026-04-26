@@ -105,19 +105,6 @@ updateDriverCancellationCountByFleetOperatorIdAndDate driverCancellationCount fl
         ]
     ]
 
-updateRejectedDriverRequestsByFleetOperatorIdAndDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-                                                        (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
-updateRejectedDriverRequestsByFleetOperatorIdAndDate rejectedDriverRequests fleetOperatorId fleetDriverId merchantLocalDate = do {_now <- getCurrentTime;
-                                                                                                                                  updateOneWithKV [Se.Set Beam.rejectedDriverRequests rejectedDriverRequests, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
-                                                                                                                                                                                                                                                   Se.Is Beam.fleetDriverId $ Se.Eq fleetDriverId,
-                                                                                                                                                                                                                                                   Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]}
-updateRejectedVehicleRequestsByFleetOperatorIdAndDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-                                                         (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
-updateRejectedVehicleRequestsByFleetOperatorIdAndDate rejectedVehicleRequests fleetOperatorId fleetDriverId merchantLocalDate = do {_now <- getCurrentTime;
-                                                                                                                                    updateOneWithKV [Se.Set Beam.rejectedVehicleRequests rejectedVehicleRequests, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
-                                                                                                                                                                                                                                                       Se.Is Beam.fleetDriverId $ Se.Eq fleetDriverId,
-                                                                                                                                                                                                                                                       Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]}
-
 updateDriverFirstSubscriptionByFleetOperatorIdAndDate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
@@ -153,6 +140,34 @@ updateOnlineDurationByFleetOperatorIdAndDate onlineDuration fleetOperatorId flee
   _now <- getCurrentTime
   updateOneWithKV
     [Se.Set Beam.onlineDuration onlineDuration, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
+          Se.Is Beam.fleetDriverId $ Se.Eq fleetDriverId,
+          Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
+        ]
+    ]
+
+updateRejectedDriverRequestsByFleetOperatorIdAndDate ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
+updateRejectedDriverRequestsByFleetOperatorIdAndDate rejectedDriverRequests fleetOperatorId fleetDriverId merchantLocalDate = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.rejectedDriverRequests rejectedDriverRequests, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
+          Se.Is Beam.fleetDriverId $ Se.Eq fleetDriverId,
+          Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
+        ]
+    ]
+
+updateRejectedVehicleRequestsByFleetOperatorIdAndDate ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
+updateRejectedVehicleRequestsByFleetOperatorIdAndDate rejectedVehicleRequests fleetOperatorId fleetDriverId merchantLocalDate = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.rejectedVehicleRequests rejectedVehicleRequests, Se.Set Beam.updatedAt _now]
     [ Se.And
         [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
           Se.Is Beam.fleetDriverId $ Se.Eq fleetDriverId,
@@ -227,7 +242,9 @@ updateByPrimaryKey (Domain.Types.FleetOperatorDailyStats.FleetOperatorDailyStats
       Se.Set Beam.onlinePlatformFees onlinePlatformFees,
       Se.Set Beam.onlineTotalEarning onlineTotalEarning,
       Se.Set Beam.pulledRequestCount pulledRequestCount,
+      Se.Set Beam.rejectedDriverRequests rejectedDriverRequests,
       Se.Set Beam.rejectedRequestCount rejectedRequestCount,
+      Se.Set Beam.rejectedVehicleRequests rejectedVehicleRequests,
       Se.Set Beam.rideDuration rideDuration,
       Se.Set Beam.totalCompletedRides totalCompletedRides,
       Se.Set Beam.totalDistance (getTotalDistance totalDistance),
@@ -253,8 +270,6 @@ instance FromTType' Beam.FleetOperatorDailyStats Domain.Types.FleetOperatorDaily
           { acceptationRequestCount = acceptationRequestCount,
             approvedDriverRequests = approvedDriverRequests,
             approvedVehicleRequests = approvedVehicleRequests,
-            rejectedDriverRequests = rejectedDriverRequests,
-            rejectedVehicleRequests = rejectedVehicleRequests,
             cashPlatformFees = cashPlatformFees,
             cashTotalEarning = cashTotalEarning,
             currency = currency,
@@ -270,7 +285,9 @@ instance FromTType' Beam.FleetOperatorDailyStats Domain.Types.FleetOperatorDaily
             onlinePlatformFees = onlinePlatformFees,
             onlineTotalEarning = onlineTotalEarning,
             pulledRequestCount = pulledRequestCount,
+            rejectedDriverRequests = rejectedDriverRequests,
             rejectedRequestCount = rejectedRequestCount,
+            rejectedVehicleRequests = rejectedVehicleRequests,
             rideDuration = rideDuration,
             totalCompletedRides = totalCompletedRides,
             totalDistance = Kernel.Prelude.fmap (Kernel.Types.Common.Meters . GHC.Float.double2Int) totalDistance,
@@ -289,8 +306,6 @@ instance ToTType' Beam.FleetOperatorDailyStats Domain.Types.FleetOperatorDailySt
       { Beam.acceptationRequestCount = acceptationRequestCount,
         Beam.approvedDriverRequests = approvedDriverRequests,
         Beam.approvedVehicleRequests = approvedVehicleRequests,
-        Beam.rejectedDriverRequests = rejectedDriverRequests,
-        Beam.rejectedVehicleRequests = rejectedVehicleRequests,
         Beam.cashPlatformFees = cashPlatformFees,
         Beam.cashTotalEarning = cashTotalEarning,
         Beam.currency = currency,
@@ -306,7 +321,9 @@ instance ToTType' Beam.FleetOperatorDailyStats Domain.Types.FleetOperatorDailySt
         Beam.onlinePlatformFees = onlinePlatformFees,
         Beam.onlineTotalEarning = onlineTotalEarning,
         Beam.pulledRequestCount = pulledRequestCount,
+        Beam.rejectedDriverRequests = rejectedDriverRequests,
         Beam.rejectedRequestCount = rejectedRequestCount,
+        Beam.rejectedVehicleRequests = rejectedVehicleRequests,
         Beam.rideDuration = rideDuration,
         Beam.totalCompletedRides = totalCompletedRides,
         Beam.totalDistance = getTotalDistance totalDistance,
