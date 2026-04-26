@@ -1309,9 +1309,7 @@ applyOfferWithoutPaymentService referenceId offerId offerCode offerStatsInput di
   when (null existingOffers) $ do
     now <- getCurrentTime
     unless useDomainOffers $ do
-      let staticCustomerId = offerStatsInput.staticPersonId
-          deviceImei = offerStatsInput.deviceId
-          basket = mbProduct <&> \(productId, amount) -> [Payment.Basket {id = productId, unitPrice = amount, quantity = 1}]
+      let basket = mbProduct <&> \(productId, amount) -> [Payment.Basket {id = productId, unitPrice = amount, quantity = 1}]
           customer =
             PInterface.OfferCustomer
               { customerId = offerStatsInput.personId,
