@@ -299,7 +299,7 @@ getEstimates :: Id DM.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingC
 getEstimates merchantId personId mocId searchRequestId isReferredRide = do
   mbSearchReq <- runInReplica $ QSR.findById searchRequestId
   estimateList <- runInReplica $ QEstimate.findAllBySRId searchRequestId
-  let sortedEstimates = sortByEstimatedFare estimateList      
+  let sortedEstimates = sortByEstimatedFare estimateList
   riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = mocId.getId})
   let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
       estimatesWithCtx =
