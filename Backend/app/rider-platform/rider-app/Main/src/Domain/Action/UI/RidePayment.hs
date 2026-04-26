@@ -975,10 +975,14 @@ triggerPendingCashRideCashbackPayoutJob person = do
           <$> forM
             (Map.toList amountByRef)
             ( \(refId, totalAmount) -> do
-                mbRide <- runInReplica $ QRide.findByRBId (Id refId :: Id Domain.Types.Booking.Booking)
+                mbRide <- runInReplica $ do
+                  mbRideByBookingId <- QRide.findByRBId (Id refId :: Id Domain.Types.Booking.Booking)
+                  case mbRideByBookingId of
+                    Just ride -> pure (Just ride)
+                    Nothing -> QRide.findById (Id refId :: Id Domain.Types.Ride.Ride)
                 case mbRide of
                   Nothing -> do
-                    logError $ "Unable to build cashback payout ref (ride not found) for bookingRefId: " <> refId
+                    logError $ "Unable to build cashback payout ref (ride not found) for refId: " <> refId <> " as bookingId/rideId"
                     pure Nothing
                   Just ride ->
                     pure $
