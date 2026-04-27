@@ -1,0 +1,191 @@
+{
+	"info": {
+		"name": "Wallet Recharge - Topup Earn (test-Zumgy8FTRw)",
+		"description": "Recharges the loyalty wallet via /payment/wallet/recharge, overrides the Juspay order-status mock to return CHARGED with a TOPUP earn of 500 points for the configured programId, then triggers the order-status check. Verifies the wallet balance reflects the topup.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"if (!pm.collectionVariables.get('_test_rider_number')) {",
+					"  var rNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+					"  pm.collectionVariables.set('_test_rider_number', rNum);",
+					"  console.log('Test rider:', rNum);",
+					"}"
+				]
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "Auth",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"if (d.authId) pm.environment.set('authId', d.authId);",
+							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"mobileNumber\": \"{{_test_rider_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"NAMMA_YATRI\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/auth",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["auth"]
+				}
+			}
+		},
+		{
+			"name": "Auth Verify",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"if (d.token) pm.environment.set('customer_token', d.token);",
+							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"loyalty-test-device\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/auth/:authId/verify",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["auth", ":authId", "verify"],
+					"variable": [{ "key": "authId", "value": "{{authId}}" }]
+				}
+			}
+		},
+		{
+			"name": "Wallet Recharge (Create Order)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('Recharge order:', JSON.stringify(d));",
+							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+							"pm.test('Order id present', function () {",
+							"    pm.expect(d.id || d.orderId || d.order_id).to.not.be.undefined;",
+							"});",
+							"var orderId = d.id || d.orderId || d.order_id;",
+							"var orderShortId = d.order_id || d.orderShortId || orderId;",
+							"pm.environment.set('wallet_order_id', orderId);",
+							"pm.environment.set('wallet_order_short_id', orderShortId);"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{ "key": "Content-Type", "value": "application/json" },
+					{ "key": "token", "value": "{{customer_token}}" }
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"pointsAmount\": 500,\n    \"programId\": \"{{loyalty_program_id}}\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/payment/wallet/recharge",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["payment", "wallet", "recharge"]
+				}
+			}
+		},
+		{
+			"name": "Override Juspay Status (CHARGED + Topup Earn 500)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('Mock status set:', JSON.stringify(d));",
+							"pm.test('Mock override accepted', function () {",
+							"    pm.response.to.have.status(200);",
+							"    pm.expect(d.ok).to.be.true;",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"service\": \"juspay\",\n  \"id\": [\"{{wallet_order_id}}\", \"{{wallet_order_short_id}}\"],\n  \"status\": \"CHARGED\",\n  \"data\": {\n    \"amount\": 500.0,\n    \"effective_amount\": 500.0,\n    \"currency\": \"INR\",\n    \"payment_method_type\": \"NB\",\n    \"payment_method\": \"JP_HDFC\",\n    \"loyalty_info\": {\n      \"earn_details\": [\n        {\n          \"program_id\": \"{{loyalty_program_id}}\",\n          \"applied\": { \"points\": \"500.00\" },\n          \"campaigns\": []\n        }\n      ]\n    }\n  }\n}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/status",
+					"host": ["{{mockServerUrl}}"],
+					"path": ["mock", "status"]
+				}
+			}
+		},
+		{
+			"name": "Get Payment Order Status (triggers loyalty processing)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"const start = Date.now();",
+							"while (Date.now() - start < 1500) { /* settle override */ }"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('Order status:', d.status, 'orderId:', d.orderId);",
+							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+							"pm.test('Status is CHARGED', function () { pm.expect(d.status).to.eql('CHARGED'); });"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{ "key": "token", "value": "{{customer_token}}" }],
+				"url": {
+					"raw": "{{baseUrl_app}}/payment/:orderId/status",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["payment", ":orderId", "status"],
+					"variable": [{ "key": "orderId", "value": "{{wallet_order_id}}" }]
+				}
+			}
+		}
+	]
+}

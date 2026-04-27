@@ -297,25 +297,27 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
 
   case (finalPaymentStatusResponse, updatedPaymentOrder.merchantOperatingCityId) of
     (DPayment.PaymentStatus {orderLoyaltyInfo = Just loyalty}, Just commonMerchantOperatingCityId) -> do
-      let personId = cast @DPayment.Person @Person.Person updatedPaymentOrder.personId
-          merchantId = cast @DPayment.Merchant @Merchant.Merchant updatedPaymentOrder.merchantId
-          merchantOperatingCityId = cast @DPayment.MerchantOperatingCity @DMOC.MerchantOperatingCity commonMerchantOperatingCityId
-          burnRefId = fromMaybe updatedPaymentOrder.id.getId finalPaymentStatusResponse.domainEntityId
-          fetchFullInfo = getLoyaltyInfo personId.getId merchantId merchantOperatingCityId
-      mbProgramMap <- loadLoyaltyProgramMap merchantId merchantOperatingCityId
-      let resolveProgram pid = pure $ (Map.lookup pid) =<< mbProgramMap
-      res <-
-        withTryCatch "processLoyaltyInfoFromOrderStatus" $
-          LoyaltyWalletSvc.processLoyaltyInfoFromOrderStatus
-            personId.getId
-            updatedPaymentOrder
-            burnRefId
-            loyalty
-            resolveProgram
-            fetchFullInfo
-      case res of
-        Left err -> logError $ "loyalty processing failed for order " <> updatedPaymentOrder.id.getId <> ": " <> show err
-        Right () -> pure ()
+      whenJust paymentOrder.paymentFulfillmentStatus $ \oldPaymentFulfillmentStatus -> do
+        when (finalPaymentStatusResponse.paymentFulfillmentStatus /= Just oldPaymentFulfillmentStatus) $ do
+          let personId = cast @DPayment.Person @Person.Person updatedPaymentOrder.personId
+              merchantId = cast @DPayment.Merchant @Merchant.Merchant updatedPaymentOrder.merchantId
+              merchantOperatingCityId = cast @DPayment.MerchantOperatingCity @DMOC.MerchantOperatingCity commonMerchantOperatingCityId
+              burnRefId = fromMaybe updatedPaymentOrder.id.getId finalPaymentStatusResponse.domainEntityId
+              fetchFullInfo = getLoyaltyInfo personId.getId merchantId merchantOperatingCityId
+          mbProgramMap <- loadLoyaltyProgramMap merchantId merchantOperatingCityId
+          let resolveProgram pid = pure $ (Map.lookup pid) =<< mbProgramMap
+          res <-
+            withTryCatch "processLoyaltyInfoFromOrderStatus" $
+              LoyaltyWalletSvc.processLoyaltyInfoFromOrderStatus
+                personId.getId
+                updatedPaymentOrder
+                burnRefId
+                loyalty
+                resolveProgram
+                fetchFullInfo
+          case res of
+            Left err -> logError $ "loyalty processing failed for order " <> updatedPaymentOrder.id.getId <> ": " <> show err
+            Right () -> pure ()
     (DPayment.PaymentStatus {orderLoyaltyInfo = Just _}, Nothing) ->
       logInfo $ "loyalty processing skipped: order " <> updatedPaymentOrder.id.getId <> " has no merchantOperatingCityId"
     _ -> pure ()

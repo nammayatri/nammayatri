@@ -45,6 +45,10 @@ def handle(handler, path, body):
         except (json.JSONDecodeError, AttributeError):
             pass
 
+    # ── Loyalty: POST /loyalty/programs (must match before "order" check) ──
+    if "loyalty" in path_lower:
+        return _loyalty_info(handler, body)
+
     # ── Offers (must match before "order" since path contains /juspay/) ──
     if "offer" in path_lower:
         return _offer(handler, path_lower, body)
@@ -247,3 +251,85 @@ def _order_data(handler, order_id):
         base = deep_merge(base, extra)
 
     handler._json(base)
+
+
+_DEFAULT_LOYALTY_INFO = {
+    "customer_id": "mock-customer",
+    "programs": [
+        {
+            "id": "019d9617-abeb-7a92-ac58-0d58052508c4",
+            "code": "LOYALTYOS7",
+            "burn": {
+                "options": [
+                    {
+                        "id": "019d9be5-75cc-7fe1-949d-9edbc5d2374d",
+                        "type": "ORDER_DISCOUNT",
+                        "status": "ELIGIBLE",
+                        "increment": "1.00",
+                        "partial_allowed": False,
+                        "applicable": {
+                            "label": "Redeem Points",
+                            "max_points": "10000.00",
+                            "max_value": "10000.00",
+                            "min_points": "10000.00",
+                            "rate": {"points": "1", "value": "1"}
+                        }
+                    }
+                ]
+            },
+            "earn": {
+                "status": "ELIGIBLE",
+                "applicable": {"label": "Earn 100 points from this order", "points": "100.00"}
+            },
+            "campaigns": [],
+            "membership": {"enroll_on": "AUTO", "enrolled_date": "2026-04-16T11:42:19Z", "status": "ACTIVE"},
+            "topup": {"status": "ELIGIBLE"},
+            "ui_label": {
+                "asset": {"code": "POINTS", "name": "Points"},
+                "description": "Earn and redeem points at 1:1 ratio",
+                "title": "Loyalty Points Program",
+                "tnc": "Points are valid for 12 months from date of credit",
+                "tnc_url": "https://example.com/tnc"
+            },
+            "wallet": {
+                "available_points": "15872.00",
+                "lifetime_earned": "23120.00",
+                "lifetime_redeemed": "8348.00",
+                "expiring": {
+                    "points": "200.00",
+                    "schedule": [
+                        {"date": "2027-04-20T13:18:51+00:00", "points": "100.00"},
+                        {"date": "2027-04-20T13:20:26+00:00", "points": "100.00"}
+                    ]
+                },
+                "pending_release": {"points": "-1100.00", "schedule": []},
+                "pockets": [
+                    {"label": "REWARD Points", "available_points": "1400.00",  "lifetime_earned": "4400.00",  "lifetime_redeemed": "1000.00"},
+                    {"label": "TOPUP Points",  "available_points": "11372.00", "lifetime_earned": "18720.00", "lifetime_redeemed": "7348.00"}
+                ]
+            }
+        }
+    ]
+}
+
+
+def _loyalty_info(handler, body):
+    """Handle POST /loyalty/programs.
+    Returns the default LoyaltyInfoResponse, deep-merged with any override data
+    set via /mock/status with id="loyalty" or service-level extract rules."""
+    customer_id = None
+    if body:
+        try:
+            req = json.loads(body)
+            customer_id = req.get("customer_id") or req.get("customerId")
+        except (json.JSONDecodeError, AttributeError):
+            pass
+
+    _, extra = handler._get_override("juspay", "loyalty", customer_id)
+
+    resp = json.loads(json.dumps(_DEFAULT_LOYALTY_INFO))  # deep copy
+    if customer_id:
+        resp["customer_id"] = customer_id
+    if extra:
+        resp = deep_merge(resp, extra)
+    handler._json(resp)
