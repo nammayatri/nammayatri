@@ -37,6 +37,7 @@ import qualified Beckn.ACL.Confirm as ACL
 import Control.Applicative ((<|>))
 -- import Data.Aeson (defaultOptions, withObject, (.:?))
 import Data.Aeson.Types ()
+import qualified Data.Map.Strict as Map
 import Data.OpenApi ()
 import qualified Data.Text
 import qualified Domain.Action.Beckn.OnInit as DOnInit
@@ -86,8 +87,10 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PersonWallet as DPersonWallet
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
+import qualified Lib.Payment.Domain.Types.WalletPayments as DWP
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PersonWallet as QPersonWallet
+import qualified Lib.Payment.Wallet.Service as Wallet
 import Servant (BasicAuthData)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
@@ -704,6 +707,7 @@ mkFulfillmentHandler paymentServiceType merchantId orderId paymentStatusResp = c
     paymentFulfillStatus <- BBPS.bbpsOrderStatusHandler merchantId paymentStatusResp
     pure (paymentFulfillStatus, Nothing, Nothing)
   DOrder.RideBooking -> rideBookingOrderStatusHandler orderId merchantId paymentStatusResp
+  DOrder.Wallet -> SPayment.walletOrderStatusHandler orderId merchantId paymentStatusResp
   _ -> pure (DPayment.FulfillmentPending, Nothing, Nothing)
 
 mkOrderStatusCheckKey :: Text -> Payment.TransactionStatus -> Text
@@ -875,7 +879,25 @@ postWalletRecharge (personId, merchantId) req = do
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId person.merchantOperatingCityId Nothing DOrder.Wallet
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   mbOrderResp <- DPayment.createOrderService commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing DOrder.Wallet isMetroTestTransaction createOrderReq createOrderCall Nothing False Nothing
-  mbOrderResp & fromMaybeM (InternalError "Failed to create payment order")
+  orderResp <- mbOrderResp & fromMaybeM (InternalError "Failed to create payment order")
+  whenJust req.programId $ \programId -> do
+    mbProgramMap <- SPayment.loadLoyaltyProgramMap merchantId person.merchantOperatingCityId
+    case mbProgramMap >>= Map.lookup programId of
+      Nothing ->
+        logInfo $ "postWalletRecharge: programId " <> programId <> " not in loyaltyProgramMap for merchant " <> merchantId.getId <> "; skipping wallet_payments row"
+      Just programType ->
+        void $
+          Wallet.createTopupWalletPaymentRow
+            personId.getId
+            (Id walletRewardPostingId)
+            programId
+            programType
+            (fromIntegral req.pointsAmount)
+            INR
+            merchantId.getId
+            (Just person.merchantOperatingCityId.getId)
+  pure orderResp
+
 
 getWalletBalance ::
   (Id DP.Person, Id DM.Merchant) ->

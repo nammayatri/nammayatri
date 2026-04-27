@@ -161,4 +161,5 @@ processRefundStatus refundEntry person paymentOrder = do
       Payment.BBPS -> do
         paymentFulfillStatus <- BBPS.bbpsOrderStatusHandler merchantId paymentStatusResp
         pure (paymentFulfillStatus, Nothing, Nothing)
+      Payment.Wallet -> SPayment.walletOrderStatusHandler orderId merchantId paymentStatusResp
       _ -> pure (DPayment.FulfillmentPending, Nothing, Nothing)

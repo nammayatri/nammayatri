@@ -150,4 +150,5 @@ processPaymentOrder merchantId merchantOperatingCityId paymentOrder = do
       Payment.BBPS -> do
         paymentFulfillStatus <- BBPS.bbpsOrderStatusHandler mId paymentStatusResp
         pure (paymentFulfillStatus, Nothing, Nothing)
+      Payment.Wallet -> SPayment.walletOrderStatusHandler orderId mId paymentStatusResp
       _ -> pure (DPayment.FulfillmentPending, Nothing, Nothing)
