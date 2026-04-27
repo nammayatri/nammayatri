@@ -1,6 +1,7 @@
 imports:
   DashboardAccessType: API.Types.ProviderPlatform.Management.Endpoints.Account
   Driver: Dashboard.Common
+  Person: Dashboard.Common
   Summary: Dashboard.Common
   Image: Dashboard.Common
   VehicleVariant: Dashboard.Common
@@ -580,7 +581,11 @@ types:
     enum: "HyperVerge,Idfy"
     derive: "HttpInstance"
   ApproveDetails:
-    - enum: "RC RCApproveDetails, DL DLApproveDetails, UploadProfile (Id Image), SSNApprove Text, ProfilePhoto (Id Image), VehiclePermit VPermitApproveDetails, VehiclePUC VPUCApproveDetails, VehicleInsurance VInsuranceApproveDetails, VehicleFitnessCertificate FitnessApproveDetails, VehicleInspectionForm VInspectionApproveDetails, Pan PanApproveDetails, NOC NOCApproveDetails, BusinessLicenseImg BusinessLicenseApproveDetails, CommonDocument CommonDocumentApproveDetails, Aadhaar AadhaarApproveDetails, VehicleFrontImg (Id Image), VehicleBackImg (Id Image), VehicleRightImg (Id Image), VehicleLeftImg (Id Image), VehicleFrontInteriorImg (Id Image), VehicleBackInteriorImg (Id Image), OdometerImg (Id Image), LocalResidenceProofImg (Id Image), PoliceVerificationCertificateImg (Id Image)"
-
+    - enum: "RC RCApproveDetails, DL DLApproveDetails, UploadProfile (Id Image), SSNApprove Text, ProfilePhoto (Id Image), VehiclePermit VPermitApproveDetails, VehiclePUC VPUCApproveDetails, VehicleInsurance VInsuranceApproveDetails, VehicleFitnessCertificate FitnessApproveDetails, VehicleInspectionForm VInspectionApproveDetails, Pan PanApproveDetails, NOC NOCApproveDetails, BusinessLicenseImg BusinessLicenseApproveDetails, CommonDocument CommonDocumentApproveDetails, Aadhaar AadhaarApproveDetails, VehicleFrontImg (Id Image), VehicleBackImg (Id Image), VehicleRightImg (Id Image), VehicleLeftImg (Id Image), VehicleFrontInteriorImg (Id Image), VehicleBackInteriorImg (Id Image), OdometerImg (Id Image), LocalResidenceProofImg (Id Image), PoliceVerificationCertificateImg (Id Image), GSTApprove GSTApproveDetails"
+  GSTApproveDetails:
+    - fleetOwnerId: Id Person
+    - documentImageId: Id Image
+    - gstNumber: Text
+    - derive: "'HideSecrets"
 extraOperations:
   - EXTRA_API_TYPES_FILE

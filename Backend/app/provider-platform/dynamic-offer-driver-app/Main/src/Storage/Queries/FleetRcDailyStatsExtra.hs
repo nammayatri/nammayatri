@@ -45,14 +45,14 @@ mkFleetRcDailyStatsAggregated fleetOwnerId' rcId totalEarnings totalCompletedRid
 
 sumVehicleStatsByFleetOwnerIdAndDateRange ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) =>
-  Text ->
+  Maybe Text ->
   Maybe Text ->
   Int ->
   Int ->
   Day ->
   Day ->
   m [FleetRcDailyStatsAggregated]
-sumVehicleStatsByFleetOwnerIdAndDateRange fleetOwnerId mbRcId limit offset fromDay toDay = do
+sumVehicleStatsByFleetOwnerIdAndDateRange mbFleetOwnerId mbRcId limit offset fromDay toDay = do
   dbConf <- getReplicaBeamConfig
 
   res <-
@@ -73,7 +73,10 @@ sumVehicleStatsByFleetOwnerIdAndDateRange fleetOwnerId mbRcId limit offset fromD
                 )
                 $ B.filter_'
                   ( \stats ->
-                      B.sqlBool_ (Beam.fleetOwnerId stats B.==. B.val_ fleetOwnerId)
+                      ( case mbFleetOwnerId of
+                          Nothing -> B.sqlBool_ $ B.val_ True
+                          Just fo -> B.sqlBool_ (Beam.fleetOwnerId stats B.==. B.val_ fo)
+                      )
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rcId -> B.sqlBool_ (Beam.rcId stats B.==. B.val_ rcId)) mbRcId
                         B.&&?. B.sqlBool_ (Beam.merchantLocalDate stats B.>=. B.val_ fromDay)
                         B.&&?. B.sqlBool_ (Beam.merchantLocalDate stats B.<=. B.val_ toDay)
