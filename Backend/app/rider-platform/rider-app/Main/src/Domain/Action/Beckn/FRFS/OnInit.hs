@@ -32,6 +32,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JourneyUtils
+import qualified Lib.Payment.Domain.Action as DPayment
 import Lib.Payment.Storage.Beam.BeamFlow
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -170,9 +171,6 @@ createPayments bookings merchantOperatingCityId merchantId amount person payment
       void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id
       whenJust mbJourneyId $ \journeyId -> do
         isTestTransaction <- asks (.isMetroTestTransaction)
-        let updatedOrderShortId =
-              if isTestTransaction
-                then "test-" <> paymentOrder.shortId.getShortId
-                else paymentOrder.shortId.getShortId
+        let updatedOrderShortId = DPayment.updateShortId (Just paymentType) isTestTransaction paymentOrder.shortId.getShortId
         void $ QJourney.updatePaymentOrderShortId (Just $ ShortId updatedOrderShortId) Nothing journeyId
     markBookingFailed booking = void $ QFRFSTicketBooking.updateStatusById FTBooking.FAILED booking.id

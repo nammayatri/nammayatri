@@ -355,7 +355,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
     DRide.Ride
       { id = guid,
         bookingId = booking.id,
-        shortId = bool shortId (ShortId $ "test-" <> shortId.getShortId) isMetroTestTransaction,
+        shortId = ShortId $ DPayment.updateShortId Nothing isMetroTestTransaction shortId.getShortId,
         merchantId = Just booking.merchantId,
         merchantOperatingCityId = Just booking.merchantOperatingCityId,
         clientId = booking.clientId,
