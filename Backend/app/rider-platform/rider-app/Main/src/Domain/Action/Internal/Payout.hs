@@ -118,9 +118,9 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
             -- cashback entries, and flag them PAID_OUT with the PayoutRequest id.
             -- Entry IDs live on payout_request.ledger_entry_ids (stashed by the
             -- scheduler job right after submitPayoutRequest returned).
-            when (isPayoutStatusSuccess payoutStatus) $ do
-              let mbPayoutRequestId = listToMaybe (fromMaybe [] payoutOrder.entityIds)
-              whenJust mbPayoutRequestId $ \prId -> do
+            let mbPayoutRequestId = listToMaybe (fromMaybe [] payoutOrder.entityIds)
+            if isPayoutStatusSuccess payoutStatus
+              then whenJust mbPayoutRequestId $ \prId -> do
                 mbPayoutReq <- QPR.findById (Id prId)
                 whenJust mbPayoutReq $ \payoutReq -> do
                   let entryIds = map Id (fromMaybe [] payoutReq.ledgerEntryIds)
@@ -136,14 +136,26 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
                           ""
                           Nothing
                           Nothing
-                  void $ RidePaymentFinance.markCashbackEntriesAsPaidOut ctx entryIds payoutReq.id.getId
-              fork "Update Payout Status and Transactions for RideOfferCashback" $ do
-                callPayoutService payoutOrder payoutConfig person
+                  void $ RidePaymentFinance.markCashbackEntriesAsPaidOut ctx entryIds payoutOrder.amount.amount payoutReq.id.getId
+              else when (isPayoutStatusFailed payoutStatus) $
+                -- Webhook reported a terminal failure. Release the PROCESSING
+                -- reservation that the scheduler job set so the entries are
+                -- picked up again on a future payout attempt.
+                whenJust mbPayoutRequestId $ \prId -> do
+                  mbPayoutReq <- QPR.findById (Id prId)
+                  whenJust mbPayoutReq $ \payoutReq -> do
+                    let entryIds = map Id (fromMaybe [] payoutReq.ledgerEntryIds)
+                    RidePaymentFinance.releaseCashbackEntriesReservation entryIds
+                    logInfo $ "Released cashback reservation after webhook failure for payoutRequest " <> payoutReq.id.getId
+            fork "Update Payout Status and Transactions for RideOfferCashback" $ do
+              callPayoutService payoutOrder payoutConfig person
           _ -> logTagError "Webhook Handler Error" $ "Unsupported Payout Entity:" <> show payoutOrder.entityName
     IPayout.BadStatusResp -> pure ()
   pure Ack
   where
     isPayoutStatusSuccess status = status `elem` [Payout.SUCCESS, Payout.FULFILLMENTS_SUCCESSFUL]
+
+    isPayoutStatusFailed status = status `elem` [Payout.FAILURE, Payout.FULFILLMENTS_FAILURE, Payout.FULFILLMENTS_CANCELLED]
 
     callPayoutService payoutOrder payoutConfig person = do
       payoutServiceName <- Payout.decidePayoutService (DEMSC.PayoutService TPayout.Juspay) person.clientSdkVersion

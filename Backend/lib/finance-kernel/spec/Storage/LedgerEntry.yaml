@@ -22,7 +22,7 @@ LedgerEntry:
       derive: "HttpInstance"
 
     SettlementStatus:
-      enum: "UNSETTLED,PAID_OUT"
+      enum: "UNSETTLED,PROCESSING,PAID_OUT"
       derive: "HttpInstance"
 
   fields:

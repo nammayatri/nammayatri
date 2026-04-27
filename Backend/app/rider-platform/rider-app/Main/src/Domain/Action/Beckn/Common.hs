@@ -978,18 +978,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
     payoutCfg <- getOneConfig (PayoutDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing})
     case payoutCfg of
       Just payoutConfig -> do
-        let cashbackPayoutJobData =
-              ExecuteCashRideCashbackPayoutJobData
-                { personId = person.id,
-                  vehicleReferences =
-                    [ VehicleReference
-                        { referenceId = ride.id.getId,
-                          vehicleVariant = ride.vehicleVariant,
-                          amount = ridePayoutAmount
-                        }
-                    ],
-                  currency = totalFare.currency
-                }
+        let cashbackPayoutJobData = ExecuteCashRideCashbackPayoutJobData {personId = person.id}
             scheduleAfter = Kernel.Utils.Common.secondsToNominalDiffTime (fromIntegral payoutConfig.scheduleCashbackPayoutAfter)
         createJobIn @_ @'ExecuteCashRideCashbackPayout (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter cashbackPayoutJobData
       Nothing -> do
