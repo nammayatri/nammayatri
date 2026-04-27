@@ -88,7 +88,6 @@ import qualified Storage.Queries.DriverRCAssociation as DRAQuery
 import qualified Storage.Queries.DriverSSN as QDSSN
 import qualified Storage.Queries.DriverUdyam as QUDYAM
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
-import qualified Storage.Queries.FleetRCAssociationExtra as FRCAQuery
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as IQuery
@@ -803,31 +802,18 @@ fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationCon
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
   processedVehicles <- case entityImagesInfo.entity of
     IQuery.PersonEntity person -> do
-      if isFleetRole person.role
-        then case mbReqRegistrationNo of
-          Nothing -> pure []
-          Just reqRegistrationNo -> do
-            rcHash <- getDbHash reqRegistrationNo
-            mbRc <- RCQuery.findByCertificateNumberHash rcHash
-            let mbOwnedRc = mbRc >>= \rc -> if rc.fleetOwnerId == Just person.id.getId then Just rc else Nothing
-            case mbOwnedRc of
-              Nothing -> pure []
-              Just ownedRc -> do
-                mbActiveAssoc <- FRCAQuery.findLinkedByRCIdAndFleetOwnerId person.id ownedRc.id entityImagesInfo.now
-                pure [(isJust mbActiveAssoc, ownedRc.id, ownedRc)]
-        else do
-          associations <- DRAQuery.findAllLinkedByDriverId person.id
-          (catMaybes <$>) $
-            forM associations $ \assoc -> do
-              mbRc <- RCQuery.findById assoc.rcId
-              -- filter by rcNo if required
-              mbFilteredRc <- case mbRc of
-                Just rc -> do
-                  rcCertificateNumber <- decrypt rc.certificateNumber
-                  let wrongRcNo = isJust mbReqRegistrationNo && Just rcCertificateNumber /= mbReqRegistrationNo
-                  return $ if wrongRcNo then Nothing else Just rc
-                Nothing -> return Nothing
-              return $ (assoc.isRcActive,assoc.rcId,) <$> mbFilteredRc
+      associations <- DRAQuery.findAllLinkedByDriverId person.id
+      (catMaybes <$>) $
+        forM associations $ \assoc -> do
+          mbRc <- RCQuery.findById assoc.rcId
+          -- filter by rcNo if required
+          mbFilteredRc <- case mbRc of
+            Just rc -> do
+              rcCertificateNumber <- decrypt rc.certificateNumber
+              let wrongRcNo = isJust mbReqRegistrationNo && Just rcCertificateNumber /= mbReqRegistrationNo
+              return $ if wrongRcNo then Nothing else Just rc
+            Nothing -> return Nothing
+          return $ (assoc.isRcActive,assoc.rcId,) <$> mbFilteredRc
     IQuery.VehicleRCEntity rc -> do
       mbAssoc <- DRAQuery.findLatestLinkedByRCId rc.id entityImagesInfo.now
       pure [(maybe False (.isRcActive) mbAssoc, rc.id, rc)]
