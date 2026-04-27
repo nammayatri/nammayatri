@@ -197,7 +197,7 @@ getFirst100PendingStuckJobs = do
   currentTime <- getCurrentTime
   let toTime = T.addUTCTime ((-1) * fromIntegral reviveThreshold) currentTime
   let fromTime = T.addUTCTime ((-1) * (86400 + fromIntegral reviveThreshold)) currentTime
-  pendingJobs <- getPendingStuckJobs fromTime toTime (Just 0) (Just 100)
+  pendingJobs <- getPendingStuckJobs fromTime toTime (Just 300) (Just 0)
   blacklist <- asks (.blackListedJobs)
   return $ filter (\(AnyJob Job {..}) -> (show $ fromSing jobInfo.jobType) `notElem` blacklist) pendingJobs
 
