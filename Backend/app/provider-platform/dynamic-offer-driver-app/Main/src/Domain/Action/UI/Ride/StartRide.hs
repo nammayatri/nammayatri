@@ -222,7 +222,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
         withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation updatedRide.id driverId point
         withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer transporterConfig driverInfo
         when booking.isScheduled $
-          void $ QDI.updateLatestScheduledBookingAndPickup Nothing Nothing (cast driverId)
+          void $ QDI.updateOnRideAndLatestScheduledBookingAndPickup True Nothing Nothing (cast driverId)
 
       fork "notify customer for ride start" $ notifyBAPRideStarted booking updatedRide (Just point)
       fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride booking
