@@ -12,6 +12,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.Account as DA
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
@@ -20,7 +21,6 @@ import qualified Lib.Payment.Domain.Types.Common as DLP
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Payment.Payout.Request as PayoutRequest
 import Lib.Scheduler
-import Kernel.Types.Id
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.JobScheduler
 import Storage.Beam.Payment ()
@@ -162,9 +162,12 @@ submitCashbackPayout person payoutVpa payoutConfig cashbackEntries totalAmount =
       RidePaymentFinance.reserveCashbackEntriesForPayout originalEntryIds (Just pr.id.getId)
       logInfo $
         "Cashback payout initiated person=" <> person.id.getId
-          <> " payoutRequestId=" <> pr.id.getId
-          <> " entries=" <> show (length originalEntryIds)
-          <> " amount=" <> show totalAmount
+          <> " payoutRequestId="
+          <> pr.id.getId
+          <> " entries="
+          <> show (length originalEntryIds)
+          <> " amount="
+          <> show totalAmount
     PayoutRequest.PayoutFailed _ err -> do
       RidePaymentFinance.releaseCashbackEntriesReservation originalEntryIds
       RidePaymentFinance.markCashbackEntriesAsDue originalEntryIds

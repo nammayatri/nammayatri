@@ -31,13 +31,6 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Scheduler.Environment
-import Lib.Scheduler.JobStorageType.SchedulerType as JC
-import SharedLogic.Allocator
-import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
-import SharedLogic.External.LocationTrackingService.Types
-import Storage.Beam.SchedulerJob ()
-import Tools.Metrics (CoreMetrics)
 import qualified Lib.BehaviorTracker.BlockTracker as BT
 import qualified Lib.BehaviorTracker.Recorder as BTRecorder
 import qualified Lib.BehaviorTracker.Types as BTT
@@ -45,10 +38,17 @@ import qualified Lib.CommunicationEngine.Parser as CMParser
 import qualified Lib.CommunicationEngine.Types as CMT
 import qualified Lib.ConsequenceEngine.Parser as CEParser
 import qualified Lib.ConsequenceEngine.Types as CET
+import Lib.Scheduler.Environment
+import Lib.Scheduler.JobStorageType.SchedulerType as JC
+import SharedLogic.Allocator
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
+import SharedLogic.External.LocationTrackingService.Types
+import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error (BlockReasonFlag (..))
+import Tools.Metrics (CoreMetrics)
 import qualified Tools.Notifications as Notify
 
 -- | App-level context needed by consequence handlers.

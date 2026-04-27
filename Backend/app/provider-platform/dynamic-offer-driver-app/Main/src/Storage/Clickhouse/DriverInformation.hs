@@ -72,7 +72,6 @@ getOnlineDriverCountByDriverIds driverIds = do
         CH.filter_ (\info -> info.driverId `CH.in_` driverIds CH.&&. info.driverFlowStatus CH.==. Just DDF.ONLINE) (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
   pure $ fromMaybe 0 (listToMaybe res)
 
-
 countEnabledByDriverIds ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   [Id DP.Person] ->

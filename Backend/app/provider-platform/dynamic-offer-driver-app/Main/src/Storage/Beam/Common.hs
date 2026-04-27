@@ -19,8 +19,8 @@ import Kernel.Prelude (Generic)
 import Storage.Beam.Booking
 import Storage.Beam.BookingCancellationReason
 import Storage.Beam.CallStatus
-import Storage.Beam.Communication
 import Storage.Beam.CommonDriverOnboardingDocuments
+import Storage.Beam.Communication
 import Storage.Beam.DriverFee
 import Storage.Beam.DriverGoHomeRequest
 import Storage.Beam.DriverInformation

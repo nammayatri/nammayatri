@@ -15,7 +15,7 @@
 module API
   ( API,
     handler,
-    riderAPI
+    riderAPI,
   )
 where
 

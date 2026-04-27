@@ -1,4 +1,5 @@
 module Domain.Action.Internal.OfferDiscount where
+
 import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Domain.SharedLogic.RideDiscount as RD

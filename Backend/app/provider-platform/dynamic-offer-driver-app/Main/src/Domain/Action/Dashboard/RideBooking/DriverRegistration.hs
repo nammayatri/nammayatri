@@ -91,7 +91,8 @@ verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
       res.person.id
       Nothing
       ( \_ -> do
-          Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just fleetOwnerId) res.person.id)
+          Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just fleetOwnerId) res.person.id
+      )
       ( \driverInfo -> do
           DDriverMode.incrementFleetOperatorStatusKeyForDriver SP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
       )

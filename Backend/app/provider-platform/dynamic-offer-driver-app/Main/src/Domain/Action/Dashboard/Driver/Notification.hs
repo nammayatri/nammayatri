@@ -103,7 +103,7 @@ triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
       now <- getCurrentTime
       driverLocationResult <- withTryCatch "driversLocation:triggerDummyRideRequest" $ LF.driversLocationByCloudType [driver.id] driver.cloudType
       let mbDriverLocation = case driverLocationResult of
-            Left _          -> Nothing
+            Left _ -> Nothing
             Right locations -> safeLast locations
       intelligentPoolConfig <- CDIP.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast driver.id)))
       let locationUpdateSampleTime = maybe 3 (.locationUpdateSampleTime) intelligentPoolConfig

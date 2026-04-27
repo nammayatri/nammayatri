@@ -41,7 +41,7 @@ type UIAPI =
 
 type DashboardAPI =
   "payout"
-    :> ("history"
+    :> ( "history"
            :> QueryParam "driverId" Text
            :> QueryParam "driverPhoneNo" Text
            :> QueryParam "from" UTCTime

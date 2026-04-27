@@ -14,8 +14,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.Person as QP
-import qualified Tools.PartnerSdk as TPartnerSdk
 import Tools.Metrics (CoreMetrics)
+import qualified Tools.PartnerSdk as TPartnerSdk
 import qualified Web.JWT as JWT
 
 data AarokyaPersonDetails = AarokyaPersonDetails
