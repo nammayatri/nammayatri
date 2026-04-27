@@ -1,5 +1,6 @@
 module Domain.Action.Dashboard.AppManagement.DriverWallet
-  ( getDriverWalletWalletTransactions,
+  ( getDriverWalletWalletBalance,
+    getDriverWalletWalletTransactions,
     postDriverWalletWalletPayout,
     postDriverWalletWalletTopup,
     postDriverWalletWalletAirportCashRecharge,
@@ -21,6 +22,16 @@ import qualified Kernel.Types.Id
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+
+getDriverWalletWalletBalance ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id DP.Person ->
+  Environment.Flow DriverWallet.WalletBalanceResponse
+getDriverWalletWalletBalance merchantShortId opCity driverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Kernel.Prelude.Nothing merchant (Kernel.Prelude.Just opCity)
+  DDriverWallet.getWalletBalance (Kernel.Prelude.Just driverId, merchant.id, merchantOpCityId)
 
 getDriverWalletWalletTransactions ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

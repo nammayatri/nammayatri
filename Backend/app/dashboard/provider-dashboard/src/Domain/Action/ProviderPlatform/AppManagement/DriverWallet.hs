@@ -1,7 +1,8 @@
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
 module Domain.Action.ProviderPlatform.AppManagement.DriverWallet
-  ( getDriverWalletWalletTransactions,
+  ( getDriverWalletWalletBalance,
+    getDriverWalletWalletTransactions,
     postDriverWalletWalletPayout,
     postDriverWalletWalletTopup,
     postDriverWalletWalletAirportCashRecharge,
@@ -28,6 +29,11 @@ import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 import Tools.Auth.Merchant
+
+getDriverWalletWalletBalance :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Environment.Flow API.Types.UI.DriverWallet.WalletBalanceResponse)
+getDriverWalletWalletBalance merchantShortId opCity apiTokenInfo driverId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.driverWalletDSL.getDriverWalletWalletBalance) driverId
 
 getDriverWalletWalletTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.Flow API.Types.UI.DriverWallet.WalletSummaryResponse)
 getDriverWalletWalletTransactions merchantShortId opCity apiTokenInfo driverId fromDate toDate = do
