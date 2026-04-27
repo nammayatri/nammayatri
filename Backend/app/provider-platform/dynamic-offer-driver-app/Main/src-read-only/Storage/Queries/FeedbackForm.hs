@@ -6,6 +6,7 @@ module Storage.Queries.FeedbackForm (module Storage.Queries.FeedbackForm, module
 
 import qualified Data.Aeson
 import qualified Domain.Types.FeedbackForm
+import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -24,14 +25,37 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FeedbackForm.FeedbackForm] -> m ())
 createMany = traverse_ create
 
+findAllFeedbackByMerchantIdAndMerchantOperatingCityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> m [Domain.Types.FeedbackForm.FeedbackForm])
+findAllFeedbackByMerchantIdAndMerchantOperatingCityId merchantId merchantOperatingCityId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId),
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)
+        ]
+    ]
+
+findAllFeedbackByMerchantIdAndMerchantOperatingCityIdAndRating ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> m [Domain.Types.FeedbackForm.FeedbackForm])
+findAllFeedbackByMerchantIdAndMerchantOperatingCityIdAndRating merchantId merchantOperatingCityId rating = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId),
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+          Se.Is Beam.rating $ Se.Eq rating
+        ]
+    ]
+
 findAllFeedbackByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> m ([Domain.Types.FeedbackForm.FeedbackForm]))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> m [Domain.Types.FeedbackForm.FeedbackForm])
 findAllFeedbackByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)]
 
 findAllFeedbackByMerchantOpCityIdAndRating ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> m ([Domain.Types.FeedbackForm.FeedbackForm]))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> m [Domain.Types.FeedbackForm.FeedbackForm])
 findAllFeedbackByMerchantOpCityIdAndRating merchantOperatingCityId rating = do
   findAllWithKV
     [ Se.And
