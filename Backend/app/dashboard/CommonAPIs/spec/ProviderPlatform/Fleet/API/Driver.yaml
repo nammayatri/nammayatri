@@ -1264,15 +1264,15 @@ apis:
         type: FleetAnalyticsRes
       helperApi:
         - GET:
-            endpoint: /{fleetOwnerId}/fleet/dashboard/analytics
+            endpoint: /{requestorId}/fleet/dashboard/analytics
             auth: ApiAuthV2
             params:
-              fleetOwnerId: Text
+              requestorId: Text
             mandatoryQuery:
               - from: Day
               - to: Day
             query:
-              - requestorId: Text
+              - fleetOwnerId: Text
               - responseType: FleetAnalyticsResponseType
             response:
               type: FleetAnalyticsRes
@@ -1390,15 +1390,15 @@ apis:
         type: FleetVehicleStatsRes
       helperApi:
         - GET:
-            endpoint: /{fleetOwnerId}/fleet/vehicle/list/stats
+            endpoint: /{requestorId}/fleet/vehicle/list/stats
             auth: ApiAuthV2
             params:
-              fleetOwnerId: Text
+              requestorId: Text
             mandatoryQuery:
               - from: Day
               - to: Day
             query:
-              - requestorId: Text
+              - fleetOwnerId: Text
               - vehicleNo: Text
               - limit: Int
               - offset: Int

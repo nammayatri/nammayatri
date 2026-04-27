@@ -141,7 +141,7 @@ data TotalInspectionCompletedRes = TotalInspectionCompletedRes
     rejectedVehicleInspection :: Kernel.Prelude.Int,
     rejectedDriverInspection :: Kernel.Prelude.Int
   }
-  deriving stock Generic
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data VerifyOperatorJoiningOtpReq = VerifyOperatorJoiningOtpReq

@@ -2294,9 +2294,9 @@ type GetDriverFleetDashboardAnalytics =
   )
 
 type GetDriverFleetDashboardAnalyticsHelper =
-  ( Capture "fleetOwnerId" Kernel.Prelude.Text :> "fleet" :> "dashboard" :> "analytics"
+  ( Capture "requestorId" Kernel.Prelude.Text :> "fleet" :> "dashboard" :> "analytics"
       :> QueryParam
-           "requestorId"
+           "fleetOwnerId"
            Kernel.Prelude.Text
       :> QueryParam "responseType" FleetAnalyticsResponseType
       :> MandatoryQueryParam "from" Data.Time.Day
@@ -2414,9 +2414,9 @@ type GetDriverFleetVehicleListStats =
   )
 
 type GetDriverFleetVehicleListStatsHelper =
-  ( Capture "fleetOwnerId" Kernel.Prelude.Text :> "fleet" :> "vehicle" :> "list" :> "stats"
+  ( Capture "requestorId" Kernel.Prelude.Text :> "fleet" :> "vehicle" :> "list" :> "stats"
       :> QueryParam
-           "requestorId"
+           "fleetOwnerId"
            Kernel.Prelude.Text
       :> QueryParam "vehicleNo" Kernel.Prelude.Text
       :> QueryParam "limit" Kernel.Prelude.Int
