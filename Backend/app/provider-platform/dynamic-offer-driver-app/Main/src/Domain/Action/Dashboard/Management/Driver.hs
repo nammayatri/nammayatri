@@ -172,7 +172,6 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Tools.Auth as Auth
 import Tools.Error
 
-
 getDriverDocumentsInfo :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverDocumentsInfoRes
 getDriverDocumentsInfo merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId

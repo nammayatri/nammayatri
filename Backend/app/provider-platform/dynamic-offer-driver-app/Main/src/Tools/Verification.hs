@@ -79,6 +79,7 @@ import Kernel.External.Verification as Reexport hiding
 import qualified Kernel.External.Verification as Verification
 import qualified Kernel.External.Verification.Digilocker.Types as DigiTypes
 import Kernel.External.Verification.Interface.InternalScripts
+import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
@@ -88,7 +89,6 @@ import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
-import qualified Kernel.External.Verification.Types as VT
 
 verifyDL ::
   ServiceFlow m r =>

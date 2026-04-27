@@ -96,6 +96,7 @@ module Domain.Action.UI.Driver
   )
 where
 
+import "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver (DummyRideRequestRes (..))
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as DCommon
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Message as Common
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
@@ -123,7 +124,6 @@ import Data.Time.Calendar.WeekDate
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Data.Tuple.Extra as DTE
 import Domain.Action.Beckn.Search
-import "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver (DummyRideRequestRes (..))
 import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummyRideRequest)
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.Internal.ProcessingChangeOnline as DOnlineDuration

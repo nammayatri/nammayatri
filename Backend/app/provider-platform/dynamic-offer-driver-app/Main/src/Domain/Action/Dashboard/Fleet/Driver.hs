@@ -155,6 +155,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as TR
 import qualified Domain.Types.Route as DRoute
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.TransporterConfig as DTCConfig
 import Domain.Types.TripTransaction
 import qualified Domain.Types.TripTransaction as DTT
@@ -255,9 +256,8 @@ import qualified Storage.Queries.RideExtra as QRideExtra
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteTripStopMapping as QRTSM
 import qualified Storage.Queries.SearchRequest as QSR
-import qualified Storage.Queries.TripAlertRequest as QTAR
-import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
+import qualified Storage.Queries.TripAlertRequest as QTAR
 import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleExtra as QVehicleExtra
@@ -1125,7 +1125,8 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
           personId
           Nothing
           ( \_ -> do
-              Analytics.decrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just entityId) personId)
+              Analytics.decrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just entityId) personId
+          )
           ( \driverInfo -> do
               DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER entityId driverInfo.driverFlowStatus
           )
@@ -2551,7 +2552,8 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
         person.id
         Nothing
         ( \_ -> do
-            Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just fleetOwnerId) person.id)
+            Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just fleetOwnerId) person.id
+        )
         ( \driverInfo -> do
             DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
         )
@@ -4139,7 +4141,8 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
         driverId
         Nothing
         ( \_ -> do
-            Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just fleetOwnerId) driverId)
+            Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just fleetOwnerId) driverId
+        )
         ( \driverInfo ->
             DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
         )

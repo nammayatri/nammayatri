@@ -134,7 +134,7 @@ import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id (Id (..))
-import Kernel.Utils.Common (MonadFlow, logError, logInfo, throwError, getCurrentTime)
+import Kernel.Utils.Common (MonadFlow, getCurrentTime, logError, logInfo, throwError)
 import Lib.Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
@@ -589,9 +589,12 @@ getPayoutEligibilityData counterparty personId = do
       when (walletBalance < totalNet) $ do
         logError $
           "Wallet balance less than net amount for person: " <> personId.getId
-            <> " wallet balance: " <> show walletBalance
-            <> " unsettled due entries net amount: " <> show totalNet
-            <> " unsettled due entries: " <> show (map (\e -> (e.id, e.amount)) unsettledDueEntries)
+            <> " wallet balance: "
+            <> show walletBalance
+            <> " unsettled due entries net amount: "
+            <> show totalNet
+            <> " unsettled due entries: "
+            <> show (map (\e -> (e.id, e.amount)) unsettledDueEntries)
         throwError $ InvalidRequest "Wallet balance less than net amount"
       pure (walletBalance, entriesWithNet)
 

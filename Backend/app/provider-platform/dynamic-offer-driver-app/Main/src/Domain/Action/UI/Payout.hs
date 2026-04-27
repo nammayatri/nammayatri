@@ -33,6 +33,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Plan as DP
+import qualified Domain.Types.ScheduledPayout as DSP
 import qualified Domain.Types.VehicleCategory as DVC
 import Environment
 import Kernel.Beam.Functions as B (runInReplica)
@@ -59,8 +60,8 @@ import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.Finance.Wallet
-import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Merchant
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Finance ()
 import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig as SCTC
@@ -74,10 +75,9 @@ import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Vehicle as QV
-import qualified Domain.Types.ScheduledPayout as DSP
 import qualified Storage.Queries.ScheduledPayout as QSP
 import qualified Storage.Queries.ScheduledPayoutExtra as QSPE
+import qualified Storage.Queries.Vehicle as QV
 import Tools.Error
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as Payout

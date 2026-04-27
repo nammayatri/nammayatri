@@ -25,14 +25,12 @@ import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverReferral as DR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import Domain.Types.TransporterConfig
 import Environment
 import qualified Kernel.Beam.Functions as B
-import qualified Domain.Types.SubscriptionPurchase as DSP
 import Kernel.Prelude
-import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Types.Predicate
@@ -40,6 +38,7 @@ import Kernel.Types.Validation (Validate)
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation, validateField)
 import SharedLogic.Analytics as Analytics
+import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified Storage.Cac.TransporterConfig as CCT
@@ -49,6 +48,7 @@ import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
 import Tools.Error
 
 data ReferralReq = ReferralReq

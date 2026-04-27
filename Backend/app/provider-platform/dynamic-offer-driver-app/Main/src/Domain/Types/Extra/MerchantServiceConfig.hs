@@ -15,11 +15,11 @@ import Kernel.External.Encryption
 import qualified Kernel.External.GSTEInvoice.Interface.Types as GSTEInvoice
 import qualified Kernel.External.GSTEInvoice.Types as GSTEInvoice
 import qualified Kernel.External.IncidentReport.Interface.Types as IncidentReport
-import qualified Kernel.External.PartnerSdk.Interface.Types as PartnerSdk
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Interface.Types
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types
+import qualified Kernel.External.PartnerSdk.Interface.Types as PartnerSdk
 import Kernel.External.Payment.Interface as Payment
 import Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.Plasma as Plasma

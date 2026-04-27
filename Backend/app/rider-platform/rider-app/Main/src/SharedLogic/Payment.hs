@@ -17,6 +17,7 @@ import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.OfferEntity as DOfferEntity
 import qualified Domain.Types.ParkingTransaction as DPT
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
@@ -60,13 +61,12 @@ import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.FRFSRecon as QRecon
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
+import qualified Storage.Queries.OfferEntity as QOfferEntity
 import qualified Storage.Queries.ParkingTransaction as QPT
 import qualified Storage.Queries.PaymentCustomer as QPaymentCustomer
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
-import qualified Domain.Types.OfferEntity as DOfferEntity
-import qualified Storage.Queries.OfferEntity as QOfferEntity
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.TicketBooking as QTB
 import Tools.Error

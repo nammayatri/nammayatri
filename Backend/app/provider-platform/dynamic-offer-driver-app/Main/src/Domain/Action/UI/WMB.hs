@@ -500,7 +500,8 @@ postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
     fleetDriverAssociation.driverId
     Nothing
     ( \_ -> do
-        Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just fleetDriverAssociation.fleetOwnerId) driver.id)
+        Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just fleetDriverAssociation.fleetOwnerId) driver.id
+    )
     ( \driverInfo -> do
         DDriverMode.incrementFleetOperatorStatusKeyForDriver FLEET_OWNER fleetDriverAssociation.fleetOwnerId driverInfo.driverFlowStatus
     )

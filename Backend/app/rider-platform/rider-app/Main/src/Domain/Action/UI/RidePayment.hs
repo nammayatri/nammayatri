@@ -16,6 +16,7 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.RefundRequest as DRefundRequest
 import qualified Domain.Types.Ride
 import qualified Domain.Types.RideStatus
+import Domain.Types.VehicleCategory as DV
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
@@ -55,7 +56,6 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
-import Domain.Types.VehicleCategory as DV
 import qualified Tools.Payment as TPayment
 
 data DFareBreakup = DFareBreakup
@@ -1020,4 +1020,3 @@ triggerPendingCashRideCashbackPayoutJob person = do
             scheduleAfter
             cashbackPayoutJobData
           logInfo $ "Scheduled cashback payout catch-up job after VPA update for person: " <> person.id.getId
-

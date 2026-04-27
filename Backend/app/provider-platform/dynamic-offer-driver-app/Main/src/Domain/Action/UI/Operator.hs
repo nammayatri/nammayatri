@@ -7,6 +7,7 @@ import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess
@@ -14,17 +15,16 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Analytics as Analytics
+import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCT
-import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
 import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperatorAssociation
-import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
-import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
 import Tools.Error
 import qualified Tools.Notifications as TN
 import Utils.Common.Cac.KeyNameConstants

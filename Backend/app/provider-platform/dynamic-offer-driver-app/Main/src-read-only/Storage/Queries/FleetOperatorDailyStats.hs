@@ -105,18 +105,33 @@ updateDriverCancellationCountByFleetOperatorIdAndDate driverCancellationCount fl
         ]
     ]
 
-updateRejectedDriverRequestsByFleetOperatorIdAndDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-                                                        (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
-updateRejectedDriverRequestsByFleetOperatorIdAndDate rejectedDriverRequests fleetOperatorId fleetDriverId merchantLocalDate = do {_now <- getCurrentTime;
-                                                                                                                                  updateOneWithKV [Se.Set Beam.rejectedDriverRequests rejectedDriverRequests, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
-                                                                                                                                                                                                                                                   Se.Is Beam.fleetDriverId $ Se.Eq fleetDriverId,
-                                                                                                                                                                                                                                                   Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]}
-updateRejectedVehicleRequestsByFleetOperatorIdAndDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-                                                         (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
-updateRejectedVehicleRequestsByFleetOperatorIdAndDate rejectedVehicleRequests fleetOperatorId fleetDriverId merchantLocalDate = do {_now <- getCurrentTime;
-                                                                                                                                    updateOneWithKV [Se.Set Beam.rejectedVehicleRequests rejectedVehicleRequests, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
-                                                                                                                                                                                                                                                       Se.Is Beam.fleetDriverId $ Se.Eq fleetDriverId,
-                                                                                                                                                                                                                                                       Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]}
+updateRejectedDriverRequestsByFleetOperatorIdAndDate ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
+updateRejectedDriverRequestsByFleetOperatorIdAndDate rejectedDriverRequests fleetOperatorId fleetDriverId merchantLocalDate = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.rejectedDriverRequests rejectedDriverRequests, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
+          Se.Is Beam.fleetDriverId $ Se.Eq fleetDriverId,
+          Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
+        ]
+    ]
+
+updateRejectedVehicleRequestsByFleetOperatorIdAndDate ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
+updateRejectedVehicleRequestsByFleetOperatorIdAndDate rejectedVehicleRequests fleetOperatorId fleetDriverId merchantLocalDate = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.rejectedVehicleRequests rejectedVehicleRequests, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
+          Se.Is Beam.fleetDriverId $ Se.Eq fleetDriverId,
+          Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
+        ]
+    ]
 
 updateDriverFirstSubscriptionByFleetOperatorIdAndDate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
