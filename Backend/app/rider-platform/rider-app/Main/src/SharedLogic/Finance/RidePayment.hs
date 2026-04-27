@@ -501,7 +501,7 @@ getPayoutEligibilityData counterparty personId = do
         Lib.Finance.Ledger.Service.findUnsettledByAccountBeforeTimeByStatuses accountId now [LE.DUE, LE.SETTLED]
       let entriesWithNet = map (\e -> (e, netAmountForAccount accountId e)) unsettledDueEntries
           totalNet = sum (map snd entriesWithNet)
-      when (walletBalance > totalNet) $ do
+      when (walletBalance < totalNet) $ do
         logError $
           "Wallet balance less than net amount for person: " <> personId.getId
             <> " wallet balance: " <> show walletBalance
