@@ -1,0 +1,112 @@
+imports:
+  Sos: Safety.Domain.Types.Sos
+  SosType: Safety.Domain.Types.Sos
+  SosStatus: Safety.Domain.Types.Sos
+  SosState: Safety.Domain.Types.Sos
+  Ride: Safety.Domain.Types.Common
+  Person: Safety.Domain.Types.Common
+  ExternalSOSConfig: Safety.Domain.Types.Common
+  LatLong: Kernel.External.Maps.Types
+  Integer: EulerHS.Prelude
+  VehicleVariant: Domain.Types.VehicleVariant
+  APISuccess: Kernel.Types.APISuccess
+
+module: Sos
+types:
+  TriggerApi:
+    enum: "POLICE,KAPTURE"
+    derive: "HttpInstance"
+
+  SosRes:
+    sosId: Id Sos
+    externalSOSSuccess: Maybe Bool
+    kaptureTicketId: Maybe Text
+
+  SosDetailsRes:
+    sos: Maybe Sos
+    externalSOSConfig: Maybe ExternalSOSConfig
+
+  SosReq:
+    flow: SosType
+    rideId: Maybe (Id Ride)
+    isRideEnded: Maybe Bool
+    sendPNOnPostRideSOS: Maybe Bool
+    notifyAllContacts: Maybe Bool
+    customerLocation: Maybe LatLong
+    triggerApiList: Maybe [TriggerApi]
+
+  SosUpdateReq:
+    status: SosStatus
+    comment: Maybe Text
+
+  MockSosReq:
+    onRide: Maybe Bool
+    startDrill: Maybe Bool
+
+  MarkAsSafeReq:
+    isMock: Maybe Bool
+    isRideEnded: Maybe Bool
+    isEndLiveTracking: Maybe Bool
+    contacts: Maybe [Text]
+
+  CallPoliceAPI:
+    rideId: Id Ride
+
+  SosLocationUpdateReq:
+    lat: Double
+    lon: Double
+    accuracy: Maybe Double
+
+  SosLocationRes:
+    lat: Double
+    lon: Double
+    accuracy: Maybe Double
+
+  SosTrackingRes:
+    currentLocation: Maybe SosLocationRes
+    sosState: Maybe SosState
+    status: SosStatus
+
+  StartTrackingReq:
+    contacts: "[Text]"
+    durationInMinutes: Int
+    customerLocation: Maybe LatLong
+    sosId: Maybe (Id Sos)
+    externalReferenceId: Maybe Text
+
+  StartTrackingRes:
+    sosId: Id Sos
+    trackingUrl: Text
+
+  UpdateStateReq:
+    sosState: SosState
+
+  UpdateToRideReq:
+    rideId: Id Ride
+
+  SosTrackingDetailsRes:
+    personName: Text
+    mobileNumber: Text
+
+  ErssStatusUpdateReq:
+    - idSource: Maybe Text
+    - idErss: Text
+    - currentStatus: Text
+    - statusDesc: Maybe Text
+    - comments: Maybe Text
+    - lastUpdatedTime: Maybe Integer
+
+  ErssStatusUpdateRes:
+    - resultCode: Text
+    - resultString: Maybe Text
+    - errorMsg: Maybe Text
+    - message: Maybe Text
+    - payLoad: Maybe Text
+
+  RideDetailsForDriverRes:
+    trackingUrl: Text
+    driverName: Text
+    tripStartPos: Maybe LatLong
+    tripEndPos: Maybe LatLong
+    vehicleNumber: Text
+    vehicleVariant: Maybe Text

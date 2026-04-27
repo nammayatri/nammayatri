@@ -10,7 +10,6 @@ where
 import qualified API.Types.Dashboard.AppManagement
 import qualified "rider-app" API.Types.Dashboard.AppManagement.Customer
 import qualified "rider-app" API.Types.UI.DeletedPerson
-import qualified "rider-app" API.Types.UI.Sos
 import qualified Domain.Action.RiderPlatform.AppManagement.Customer
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "rider-app" Domain.Types.Person
@@ -21,6 +20,7 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified "shared-services" Safety.API.Types.UI.Sos
 import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
@@ -70,7 +70,7 @@ type DeleteCustomerSavedLocations =
       :> API.Types.Dashboard.AppManagement.Customer.DeleteCustomerSavedLocations
   )
 
-postCustomerSosCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.UI.Sos.SosReq -> Environment.FlowHandler API.Types.UI.Sos.SosRes)
+postCustomerSosCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Safety.API.Types.UI.Sos.SosReq -> Environment.FlowHandler Safety.API.Types.UI.Sos.SosRes)
 postCustomerSosCreate merchantShortId opCity apiTokenInfo customerId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Customer.postCustomerSosCreate merchantShortId opCity apiTokenInfo customerId req
 
 postCustomerDeletedPerson :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.UI.DeletedPerson.DeletedPersonReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

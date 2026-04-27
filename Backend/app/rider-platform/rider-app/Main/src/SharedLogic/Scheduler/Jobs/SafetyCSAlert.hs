@@ -17,7 +17,6 @@
 -- for SOS creation; ticket and job scheduling remain app-specific.
 module SharedLogic.Scheduler.Jobs.SafetyCSAlert where
 
-import API.Types.UI.Sos
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Domain.Types.Person as DP
@@ -30,6 +29,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
+import Safety.API.Types.UI.Sos
 import qualified Safety.Domain.Action.UI.Sos as SafetySos
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import SharedLogic.JobScheduler

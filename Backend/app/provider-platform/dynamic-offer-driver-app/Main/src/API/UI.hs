@@ -25,7 +25,6 @@ import qualified API.Action.UI.DemandHotspots as DemandHotspots
 import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
 import qualified API.Action.UI.DriverProfile as DriverProfile
 import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
-import qualified API.Action.UI.DriverSafetySettings as DriverSafetySettings
 import qualified API.Action.UI.DriverWallet as DriverWallet
 import qualified API.Action.UI.EditBooking as EditBooking
 import qualified API.Action.UI.FareCalculator as FareCalculator
@@ -40,7 +39,6 @@ import qualified API.Action.UI.OperationHub as OH
 import qualified API.Action.UI.Operator as Operator
 import qualified API.Action.UI.PayoutDriverStatus as PayoutDriverStatus
 import qualified API.Action.UI.Penalty as Penalty
-import qualified API.Action.UI.PersonDefaultEmergencyContact as PersonDefaultEmergencyContact
 import qualified API.Action.UI.PickupInstructions as PickupInstructions
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.Reels as Reels
@@ -76,6 +74,7 @@ import qualified API.UI.OnMessage as OnMessage
 import qualified API.UI.OrgAdmin as OrgAdmin
 import qualified API.UI.Payment as Payment
 import qualified API.UI.Performance as Performance
+import qualified API.UI.PersonDefaultEmergencyContact as PersonDefaultEmergencyContact
 import qualified API.UI.Plan as Plan
 import qualified API.UI.QueueRank as QueueRank
 import qualified API.UI.Rating as Rating
@@ -84,6 +83,7 @@ import qualified API.UI.Ride as Ride
 import qualified API.UI.RideRoute as RideRoute
 import qualified API.UI.RideSummary as RideSummary
 import qualified API.UI.Route as Route
+import qualified API.UI.SafetySettings as SafetySettings
 import qualified API.UI.Sos as Sos
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Whatsapp as Whatsapp
@@ -161,7 +161,7 @@ type API =
            :<|> FleetOwnerList.API
            :<|> PayoutDriverStatus.API
            :<|> StclMembership.API
-           :<|> DriverSafetySettings.API
+           :<|> SafetySettings.API
            :<|> PersonDefaultEmergencyContact.API
            :<|> CancellationReasonLookup.API
            :<|> QueueRank.API
@@ -235,7 +235,7 @@ handler =
     :<|> FleetOwnerList.handler
     :<|> PayoutDriverStatus.handler
     :<|> StclMembership.handler
-    :<|> DriverSafetySettings.handler
+    :<|> SafetySettings.handler
     :<|> PersonDefaultEmergencyContact.handler
     :<|> CancellationReasonLookup.handler
     :<|> QueueRank.handler

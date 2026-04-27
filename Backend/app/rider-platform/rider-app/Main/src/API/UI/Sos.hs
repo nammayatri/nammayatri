@@ -18,30 +18,36 @@ module API.UI.Sos
   )
 where
 
-import qualified Domain.Action.UI.Sos as DSos
-import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.Person as Person
+import Domain.Action.UI.Sos ()
+-- HasSosHandle + BuildSosCtx instances
 import Environment
-import EulerHS.Prelude
-import Kernel.ServantMultipart
-import Kernel.Types.Id
+import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Common
-import qualified Safety.Domain.Types.Sos as Sos
+import qualified Safety.API.UI.Sos as SosRoutes
+import qualified Safety.Domain.Action.UI.Sos as SharedSos
 import Servant
+import Storage.Beam.Sos ()
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
-import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
-type API =
-  "sos"
-    :> Capture "sosId" (Id Sos.Sos)
-    :> "upload"
-    :> TokenAuth
-    :> MultipartForm Tmp DSos.SOSVideoUploadReq
-    :> Post '[JSON] DSos.AddSosVideoRes
+type API = SosRoutes.SosAPI TokenAuth
 
 handler :: FlowServer API
-handler = uploadMedia
-
-uploadMedia :: Id Sos.Sos -> (Id Person.Person, Id Merchant.Merchant) -> DSos.SOSVideoUploadReq -> FlowHandler DSos.AddSosVideoRes
-uploadMedia sosId (personId, _) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId . DSos.uploadMedia sosId personId
+handler =
+  (\auth rideId -> withFlowHandlerAPI $ SharedSos.sosGetDetails auth rideId)
+    :<|> (\a b c d -> withFlowHandlerAPI $ SharedSos.sosIvrOutcome a b c d)
+    :<|> (\auth req -> withFlowHandlerAPI $ SharedSos.sosCreate auth req)
+    :<|> (\auth sosId req -> withFlowHandlerAPI $ SharedSos.sosStatus auth sosId req)
+    :<|> (\auth sosId req -> withFlowHandlerAPI $ SharedSos.sosMarkRideAsSafe auth sosId req)
+    :<|> (\auth req -> withFlowHandlerAPI $ SharedSos.sosCreateMockSos auth req)
+    :<|> (\auth req -> withFlowHandlerAPI $ SharedSos.sosCallPolice auth req)
+    :<|> (\auth sosId req -> withFlowHandlerAPI $ SharedSos.sosUpdateLocation auth sosId req)
+    :<|> (\sosId -> withFlowHandlerAPI $ SharedSos.sosTracking sosId)
+    :<|> (\auth req -> withFlowHandlerAPI $ SharedSos.sosStartTracking auth req)
+    :<|> (\auth sosId req -> withFlowHandlerAPI $ SharedSos.sosUpdateState auth sosId req)
+    :<|> (\auth sosId -> withFlowHandlerAPI $ SharedSos.sosTrackingDetails auth sosId)
+    :<|> (\auth sosId req -> withFlowHandlerAPI $ SharedSos.sosUpdateToRide auth sosId req)
+    :<|> (\auth sosStatus' -> withFlowHandlerAPI $ SharedSos.sosGetDetailsByPerson auth sosStatus')
+    :<|> (\req -> withFlowHandlerAPI $ SharedSos.sosErssStatusUpdate req)
+    :<|> (\rideShortId -> withFlowHandlerAPI $ SharedSos.sosRideDetails rideShortId)
+    :<|> (\auth sosId req -> withFlowHandlerAPI $ SharedSos.sosUploadMedia auth sosId req)

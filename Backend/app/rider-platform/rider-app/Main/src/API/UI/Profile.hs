@@ -15,13 +15,7 @@
 module API.UI.Profile
   ( DProfile.ProfileRes,
     DProfile.UpdateProfileReq (..),
-    DProfile.UpdateEmergencySettingsReq (..),
-    DProfile.UpdateEmergencySettingsResp,
     DProfile.UpdateProfileResp,
-    DProfile.UpdateProfileDefaultEmergencyNumbersReq (..),
-    DProfile.PersonDefaultEmergencyNumber (..),
-    DProfile.UpdateProfileDefaultEmergencyNumbersResp,
-    DProfile.GetProfileDefaultEmergencyNumbersResp (..),
     DProfile.TriggerUpdateAuthOTPReq (..),
     DProfile.VerifyUpdateAuthOTPReq (..),
     API,
@@ -70,21 +64,6 @@ type API =
              :> Header "x-device" Text
              :> Header "x-package" Text
              :> Post '[JSON] APISuccess.APISuccess
-           :<|> "updateEmergencySettings"
-             :> ( TokenAuth
-                    :> ReqBody '[JSON] DProfile.UpdateEmergencySettingsReq
-                    :> Put '[JSON] APISuccess.APISuccess
-                )
-           :<|> "getEmergencySettings"
-             :> TokenAuth
-             :> Get '[JSON] DProfile.EmergencySettingsRes
-           :<|> "defaultEmergencyNumbers"
-             :> ( TokenAuth
-                    :> ReqBody '[JSON] DProfile.UpdateProfileDefaultEmergencyNumbersReq
-                    :> Post '[JSON] DProfile.UpdateProfileDefaultEmergencyNumbersResp
-                      :<|> TokenAuth
-                    :> Get '[JSON] DProfile.GetProfileDefaultEmergencyNumbersResp
-                )
            :<|> "marketing"
              :> ( "events"
                     :> ReqBody '[JSON] DProfile.MarketEventReq
@@ -106,9 +85,6 @@ handler :: FlowServer API
 handler =
   getPersonDetails
     :<|> updatePerson
-    :<|> updateEmergencySettings
-    :<|> getEmergencySettings
-    :<|> (updateDefaultEmergencyNumbers :<|> getDefaultEmergencyNumbers)
     :<|> marketingEvents
     :<|> (triggerOTP :<|> verifyOTP)
 
@@ -123,18 +99,6 @@ updatePerson (personId, merchantId) req mbBundleVersion mbRnVersion mbClientVers
 
 updatePerson' :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileReq -> Maybe Version -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Flow APISuccess.APISuccess
 updatePerson' (personId, merchantId) req mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice mbClientId = withPersonIdLogTag personId $ DProfile.updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbClientId
-
-updateDefaultEmergencyNumbers :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileDefaultEmergencyNumbersReq -> FlowHandler DProfile.UpdateProfileDefaultEmergencyNumbersResp
-updateDefaultEmergencyNumbers (personId, merchantId) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId . DProfile.updateDefaultEmergencyNumbers personId merchantId
-
-getDefaultEmergencyNumbers :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DProfile.GetProfileDefaultEmergencyNumbersResp
-getDefaultEmergencyNumbers (personId, merchantId) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DProfile.getDefaultEmergencyNumbers (personId, merchantId)
-
-updateEmergencySettings :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateEmergencySettingsReq -> FlowHandler DProfile.UpdateEmergencySettingsResp
-updateEmergencySettings (personId, _) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId . DProfile.updateEmergencySettings personId
-
-getEmergencySettings :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DProfile.EmergencySettingsRes
-getEmergencySettings (personId, _) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DProfile.getEmergencySettings personId
 
 marketingEvents' :: DProfile.MarketEventReq -> Flow APISuccess.APISuccess
 marketingEvents' req = DProfile.marketingEvents req

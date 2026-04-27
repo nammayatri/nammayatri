@@ -1,0 +1,35 @@
+imports:
+  RideShareOptions: Safety.Domain.Types.Common
+  Person: Safety.Domain.Types.Common
+  Merchant: Safety.Domain.Types.Common
+  APISuccess: Kernel.Types.APISuccess
+
+module: PersonDefaultEmergencyNumber
+
+types:
+  EmergencyContactReq:
+    name: Text
+    mobileCountryCode: Text
+    mobileNumber: Text
+    priority: Maybe Int
+    enableForFollowing: Maybe Bool
+    enableForShareRide: Maybe Bool
+    shareTripWithEmergencyContactOption: Maybe RideShareOptions
+
+  EmergencyContact:
+    name: Text
+    mobileCountryCode: Text
+    mobileNumber: Text
+    priority: Int
+    contactPersonId: Maybe (Id Person)
+    merchantId: Maybe (Id Merchant)
+    enableForFollowing: Bool
+    enableForShareRide: Bool
+    shareTripWithEmergencyContactOption: Maybe RideShareOptions
+    onRide: Maybe Bool
+
+  UpdateEmergencyContactsReq:
+    defaultEmergencyNumbers: "[EmergencyContactReq]"
+
+  GetEmergencyContactsRes:
+    defaultEmergencyNumbers: "[EmergencyContact]"

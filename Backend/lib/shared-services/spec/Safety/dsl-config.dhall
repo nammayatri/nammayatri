@@ -121,7 +121,7 @@ let sqlMapper =
 
 let defaultImports =
       [ { _simpleImports =
-          [ "EulerHS.Prelude", "Servant", "Tools.Auth", "Kernel.Utils.Common" ]
+          [ "EulerHS.Prelude", "Servant", "Kernel.Utils.Common" ]
         , _qualifiedImports =
           [ "Kernel.Prelude", "Control.Lens", "Environment", "Kernel.Types.Id" ]
         , _packageImports = [] : List PackageImport
@@ -130,7 +130,6 @@ let defaultImports =
       , { _simpleImports =
           [ "EulerHS.Prelude hiding (id)"
           , "Servant"
-          , "Tools.Auth"
           , "Data.OpenApi (ToSchema)"
           ]
         , _qualifiedImports =
@@ -141,7 +140,6 @@ let defaultImports =
       , { _simpleImports =
           [ "EulerHS.Prelude hiding (id)"
           , "Servant"
-          , "Tools.Auth"
           , "Data.OpenApi (ToSchema)"
           ]
         , _qualifiedImports =
@@ -199,8 +197,6 @@ in  { _output = outputPath
       [ GeneratorType.DOMAIN_TYPE
       , GeneratorType.BEAM_TABLE
       , GeneratorType.BEAM_QUERIES
-      , GeneratorType.DOMAIN_HANDLER
-      , GeneratorType.SERVANT_API
       , GeneratorType.API_TYPES
       , GeneratorType.SQL
       , GeneratorType.CACHED_QUERIES

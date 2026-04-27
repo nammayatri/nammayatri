@@ -97,11 +97,16 @@ library
       Registry.Beckn.Interface.Types
       Registry.Beckn.Nammayatri.Flow
       Registry.Beckn.Nammayatri.Types
+      Safety.API.UI.PersonDefaultEmergencyNumber
+      Safety.API.UI.SafetySettings
+      Safety.API.UI.Sos
       Safety.Domain.Action.UI.PersonDefaultEmergencyNumber
+      Safety.Domain.Action.UI.SafetySettings
       Safety.Domain.Action.UI.Sos
       Safety.Domain.Types.Common
       Safety.Storage.BeamFlow
       Safety.Storage.CachedQueries.Sos
+      Safety.Storage.CachedQueries.SosLocation
       Safety.Storage.Queries.PersonDefaultEmergencyNumberExtra
       Safety.Storage.Queries.SafetySettingsExtra
       Safety.Tools.Error
@@ -115,6 +120,9 @@ library
       API.Types.RiderPlatform.IssueManagement.Endpoints.IssueList
       API.Types.RiderPlatform.IssueManagement.Issue
       API.Types.RiderPlatform.IssueManagement.IssueList
+      Safety.API.Types.UI.PersonDefaultEmergencyNumber
+      Safety.API.Types.UI.SafetySettings
+      Safety.API.Types.UI.Sos
       Safety.Domain.Types.PersonDefaultEmergencyNumber
       Safety.Domain.Types.SafetySettings
       Safety.Domain.Types.Sos

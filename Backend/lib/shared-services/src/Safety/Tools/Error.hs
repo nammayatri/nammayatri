@@ -19,6 +19,7 @@ data SosError
   | SosNotAuthorized Text
   | SosSafetySettingsNotFound Text
   | SosNoActionRequired Text
+  | FileSizeExceeded Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''SosError
@@ -30,6 +31,7 @@ instance IsBaseError SosError where
     SosNotAuthorized sosId -> Just $ "SOS with id " <> sosId <> " does not belong to the specified person."
     SosSafetySettingsNotFound personId -> Just $ "SafetySettings not found for personId: " <> personId
     SosNoActionRequired sosId -> Just $ "SOS with id " <> sosId <> " is already in LiveTracking state or request is a no-op."
+    FileSizeExceeded size -> Just $ "Uploaded file size " <> size <> " exceeds the permitted limit."
 
 instance IsHTTPError SosError where
   toErrorCode (SosNotFound _) = "SOS_NOT_FOUND"
@@ -37,10 +39,12 @@ instance IsHTTPError SosError where
   toErrorCode (SosNotAuthorized _) = "SOS_NOT_AUTHORIZED"
   toErrorCode (SosSafetySettingsNotFound _) = "SOS_SAFETY_SETTINGS_NOT_FOUND"
   toErrorCode (SosNoActionRequired _) = "SOS_NO_ACTION_REQUIRED"
+  toErrorCode (FileSizeExceeded _) = "FILE_SIZE_EXCEEDED"
   toHttpCode (SosNotFound _) = E400
   toHttpCode (SosAlreadyResolved _) = E400
   toHttpCode (SosNotAuthorized _) = E403
   toHttpCode (SosSafetySettingsNotFound _) = E400
   toHttpCode (SosNoActionRequired _) = E400
+  toHttpCode (FileSizeExceeded _) = E400
 
 instance IsAPIError SosError

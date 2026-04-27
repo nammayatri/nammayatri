@@ -20,12 +20,18 @@ module Safety.Domain.Types.Common
     Ride,
     MerchantOperatingCity,
     Booking,
+    ExternalSOSFlow (..),
+    ExternalSOSTriggerSource (..),
+    ExternalSOSConfig (..),
+    flowToSOSService,
   )
 where
 
 import Data.Aeson
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnumAndList)
+import qualified Kernel.External.SOS.Types as SOS
 import Kernel.Prelude
+import Kernel.Types.Common (Seconds)
 import Kernel.Utils.TH (mkFromHttpInstanceForEnum)
 
 data RideShareOptions
@@ -43,6 +49,39 @@ data Ride
 data MerchantOperatingCity
 
 data Booking
+
+-- | External SOS flow — mirrors rider's `Domain.Types.RiderConfig.ExternalSOSFlow`.
+-- Lives here so shared-services' generated `SosDetailsRes` (which references
+-- `externalSOSConfig`) can compile without pulling rider-app types.
+data ExternalSOSFlow = ERSS | GJ112 | Trinity
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | External SOS trigger source — mirrors rider's
+-- `Domain.Types.RiderConfig.ExternalSOSTriggerSource`.
+data ExternalSOSTriggerSource = FRONTEND | DASHBOARD
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | External SOS configuration — mirrors rider's
+-- `Domain.Types.RiderConfig.ExternalSOSConfig`. Rider's callbacks convert
+-- between the two field-by-field; driver populates `Nothing`.
+data ExternalSOSConfig = ExternalSOSConfig
+  { flow :: ExternalSOSFlow,
+    latLonRequired :: Bool,
+    mediaRequired :: Bool,
+    stateCode :: Maybe Text,
+    tracePollingIntervalSeconds :: Maybe Seconds,
+    trackingLinkRequired :: Bool,
+    triggerSource :: ExternalSOSTriggerSource
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
+
+-- | Map a safety-domain ExternalSOSFlow to the Kernel SOS service enum.
+-- Colocated with the ExternalSOSFlow type so they stay in sync.
+flowToSOSService :: ExternalSOSFlow -> SOS.SOSService
+flowToSOSService = \case
+  ERSS -> SOS.ERSS
+  GJ112 -> SOS.GJ112
+  Trinity -> SOS.Trinity
 
 $(mkBeamInstancesForEnumAndList ''RideShareOptions)
 
