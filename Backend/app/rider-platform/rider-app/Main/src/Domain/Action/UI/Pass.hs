@@ -1016,6 +1016,15 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
       when (count >= 4) $
         throwError (InvalidRequest "Pass activation limit reached for this pass type")
       void $ Hedis.incr countKey
+      -- Set TTL so the key expires at midnight IST, resetting the daily count.
+      -- istTime is already in local IST (offset 19800s), so tomorrow midnight in UTC
+      -- is: (utctDay istTime + 1 day) at 00:00 IST = (utctDay istTime + 1 day) shifted back by 19800s.
+      let istOffset = 19800 :: NominalDiffTime
+          tomorrowMidnightIST = DT.UTCTime (DT.addDays 1 (DT.utctDay istTime)) 0
+          tomorrowMidnightUTC = DT.addUTCTime (negate istOffset) tomorrowMidnightIST
+      now <- getCurrentTime
+      let secsUntilMidnight = max 1 (round (DT.diffUTCTime tomorrowMidnightUTC now) :: Int)
+      void $ Hedis.expire countKey secsUntilMidnight
   routeStopMapping <-
     case vehicleInfo.routeCode of
       Just routeCode ->
