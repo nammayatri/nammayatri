@@ -110,6 +110,21 @@ validateDriverDLReq now DriverDLReq {..} =
     t60YearsAgo = yearsAgo 80
     yearsAgo i = negate (nominalDay * 365 * i) `addUTCTime` now
 
+validateDriverDLReqRegexFlow :: UTCTime -> Validate DriverDLReq
+validateDriverDLReqRegexFlow now DriverDLReq {..} =
+  sequenceA_
+    [ validateField "driverLicenseNumber" driverLicenseNumber (MinLength 1),
+      validateField "driverDateOfBirth" driverDateOfBirth $ InRange @UTCTime t60YearsAgo t18YearsAgo
+    ]
+  where
+    t18YearsAgo = yearsAgo 18
+    t60YearsAgo = yearsAgo 80
+    yearsAgo i = negate (nominalDay * 365 * i) `addUTCTime` now
+
+isDLNumberFormatValid :: DTO.DocumentVerificationConfig -> Text -> Flow Bool
+isDLNumberFormatValid documentVerificationConfig normalizedDLNumber =
+  VC.validateByRegex "DL" documentVerificationConfig normalizedDLNumber (pure True)
+
 verifyDL ::
   DPan.VerifiedBy ->
   Maybe DM.Merchant ->
@@ -121,14 +136,22 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeVerifyDLHitsCountKey req.driverLicenseNumber) externalServiceRateLimitOptions
   now <- getCurrentTime
-  runRequestValidation (validateDriverDLReq now) req
+  documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId DTO.DriverLicense (fromMaybe CAR req.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.DriverLicense))
+  let regexRules = VC.getRegexRulesFromDocumentConfig documentVerificationConfig
+      hasRegexRules = not (null regexRules)
+  if hasRegexRules
+    then runRequestValidation (validateDriverDLReqRegexFlow now) req
+    else runRequestValidation (validateDriverDLReq now) req
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   when driverInfo.blocked $ throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverInfo.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId DTO.DriverLicense (fromMaybe CAR req.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.DriverLicense))
+  let normalizedDLNumber = VC.normalizeDocumentNumber driverLicenseNumber
+  checkDLFormat <- isDLNumberFormatValid documentVerificationConfig normalizedDLNumber
+  unless checkDLFormat $
+    throwError (InvalidRequest "DL number format is not valid")
   (nameOnTheCard, dateOfBirth) <-
     if isJust nameOnCardFromSdk
       then return (nameOnCardFromSdk, Nothing)

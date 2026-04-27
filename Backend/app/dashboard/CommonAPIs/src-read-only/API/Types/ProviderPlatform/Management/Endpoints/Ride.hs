@@ -390,6 +390,8 @@ data RideListItem = RideListItem
     fareDiffWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     fareWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     estimatedFareWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    rideDistanceEstimatedWithUnit :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
+    rideDistanceActualWithUnit :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     paymentInstrument :: Kernel.Prelude.Maybe Beckn.Types.Core.Taxi.Common.PaymentInstrument.PaymentInstrument,
     bookingStatus :: BookingStatus,
     rideCreatedAt :: Kernel.Prelude.UTCTime,

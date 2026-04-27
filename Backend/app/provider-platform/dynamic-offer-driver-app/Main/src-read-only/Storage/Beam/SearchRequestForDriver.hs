@@ -60,6 +60,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     driverTags :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     durationToPickup :: B.C f Kernel.Types.Common.Seconds,
     estimateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    fleetOwnerId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromLocGeohash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     goHomeRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
@@ -101,6 +102,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     upgradeCabRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     vehicleAge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Months),
     vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
+    vehicleNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType),
     vehicleServiceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleVariant :: B.C f Domain.Types.VehicleVariant.VehicleVariant

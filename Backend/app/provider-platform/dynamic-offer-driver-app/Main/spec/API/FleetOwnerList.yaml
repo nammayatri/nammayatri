@@ -24,6 +24,7 @@ types:
     - mobileNumber: Maybe Text
     - docsVerificationStatus: Maybe DocsVerificationStatus
     - mobileCountryCode: Maybe Text
+    - createdAt: Maybe UTCTime
 
 apis:
   - GET:

@@ -71,7 +71,8 @@ getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbBlocked mbDocsVerification
                   mobileNumber = mobileNumber,
                   mobileCountryCode = person.mobileCountryCode,
                   email = person.email,
-                  docsVerificationStatus = fleetOwnerInfo.docsVerificationStatus
+                  docsVerificationStatus = fleetOwnerInfo.docsVerificationStatus,
+                  createdAt = Just fleetOwnerInfo.createdAt
                 }
 
     personName person@Person.Person {..} =

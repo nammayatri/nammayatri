@@ -648,6 +648,7 @@ apis:
         - enabled: Bool
         - approved: Bool
         - driverDocsVerificationStatus: DocsVerificationStatus
+        - driverId: Text
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
@@ -1647,6 +1648,7 @@ types:
     - mobileNumber: Maybe Text
     - docsVerificationStatus: Maybe DocsVerificationStatus
     - mobileCountryCode: Maybe Text
+    - createdAt: Maybe UTCTime
   FleetGroup:
     - level: Int
     - parentGroupCode: Maybe Text # At Initial Level, this will be Nothing
@@ -1925,6 +1927,7 @@ types:
     - vehicleDocsVerificationStatus: Maybe DocsVerificationStatus
     - verificationDocsStatus: Maybe VerificationDocsStatus
     - upcomingRouteCode: Maybe Text
+    - createdAt: Maybe UTCTime
   DriveVehicleAssociationListItemT:
     - driverId: Maybe Text
     - vehicleNo: Maybe Text
@@ -1956,6 +1959,7 @@ types:
     - requestReason: Maybe Text
     - responseReason: Maybe Text
     - associatedOn: Maybe UTCTime
+    - createdAt: Maybe UTCTime
     - enabled: Maybe Bool
     - selectedServiceTiers: [Text]
     - driverDob: Maybe UTCTime
