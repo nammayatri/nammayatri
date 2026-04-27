@@ -33,9 +33,9 @@ getRoutesByRouteIds :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDur
 getRoutesByRouteIds baseUrl gtfsId routeIds = do
   withShortRetry $ callAPI baseUrl (NandiAPI.getNandiRoutesByRouteIds gtfsId routeIds) "getRoutesByRouteIds" NandiAPI.nandiRoutesByRouteIdsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ROUTES_BY_ROUTE_IDS_API") baseUrl)
 
-getRouteBusSchedule :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> m BusScheduleDetails
-getRouteBusSchedule baseUrl gtfsId routeId = do
-  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiBusRouteSchedule gtfsId routeId) "getRouteBusSchedule" NandiAPI.nandiBusRouteScheduleAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_BUS_ROUTE_SCHEDULE_API") baseUrl)
+getRouteBusSchedule :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> Maybe Text -> m BusScheduleDetails
+getRouteBusSchedule baseUrl gtfsId routeId mbVehicleNumber = do
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiBusRouteSchedule gtfsId routeId mbVehicleNumber) "getRouteBusSchedule" NandiAPI.nandiBusRouteScheduleAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_BUS_ROUTE_SCHEDULE_API") baseUrl)
 
 getBusTripSchedule :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> Int -> Text -> m BusScheduleDetails
 getBusTripSchedule baseUrl gtfsId waybillNo tripNumber routeId = do

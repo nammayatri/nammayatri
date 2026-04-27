@@ -900,7 +900,8 @@ data BusScheduleDetail = BusScheduleDetail
     vehicle_no :: Text,
     service_tier :: BecknV2.FRFS.Enums.ServiceTierType,
     trip_number :: Maybe Int,
-    waybill_no :: Maybe Text
+    waybill_no :: Maybe Text,
+    is_active_trip :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
