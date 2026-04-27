@@ -44,6 +44,8 @@ import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamT
 import qualified Lib.Payment.Storage.Beam.PersonDailyOfferStats as BeamPDOS
 import qualified Lib.Payment.Storage.Beam.PersonWallet as BeamPW
 import qualified Lib.Payment.Storage.Beam.Refunds as BeamRF
+import qualified Lib.Payment.Storage.Beam.Wallet as BeamWallet
+import qualified Lib.Payment.Storage.Beam.WalletPayments as BeamWP
 import qualified Lib.Payment.Storage.Beam.WalletRewardPosting as BeamWRP
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 
@@ -75,6 +77,12 @@ instance HasSchemaName BeamWRP.WalletRewardPostingT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamPW.PersonWalletT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamWallet.WalletT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamWP.WalletPaymentsT where
   schemaName _ = T.pack currentSchemaName
 
 -- Finance-kernel beam orphan instances

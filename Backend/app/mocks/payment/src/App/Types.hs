@@ -24,6 +24,8 @@ import Lib.Payment.Storage.Beam.PayoutOrder ()
 import Lib.Payment.Storage.Beam.PayoutTransaction ()
 import Lib.Payment.Storage.Beam.PersonWallet ()
 import Lib.Payment.Storage.Beam.Refunds ()
+import Lib.Payment.Storage.Beam.Wallet ()
+import Lib.Payment.Storage.Beam.WalletPayments ()
 import Lib.Payment.Storage.Beam.WalletRewardPosting ()
 import System.Environment (lookupEnv)
 

@@ -53,6 +53,6 @@ instance B.Table FleetOperatorDailyStatsT where
 
 type FleetOperatorDailyStats = FleetOperatorDailyStatsT Identity
 
-$(enableKVPG (''FleetOperatorDailyStatsT) [('fleetDriverId), ('fleetOperatorId), ('merchantLocalDate)] [])
+$(enableKVPG ''FleetOperatorDailyStatsT ['fleetDriverId, 'fleetOperatorId, 'merchantLocalDate] [])
 
 $(mkTableInstances (''FleetOperatorDailyStatsT) "fleet_operator_daily_stats")

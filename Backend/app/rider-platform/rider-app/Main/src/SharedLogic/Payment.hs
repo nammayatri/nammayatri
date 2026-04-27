@@ -4,6 +4,7 @@ import qualified Beckn.ACL.Cancel as ACL
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.SharedLogic.RideDiscount as RD
@@ -17,6 +18,7 @@ import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.OfferEntity as DOfferEntity
 import qualified Domain.Types.ParkingTransaction as DPT
 import qualified Domain.Types.Person as Person
@@ -38,6 +40,8 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.CacheFlow
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Domain.Types.Account
+import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -46,6 +50,8 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified Lib.Payment.Storage.Queries.WalletPayments as QWP
+import qualified Lib.Payment.Wallet.Service as LoyaltyWalletSvc
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
@@ -56,6 +62,7 @@ import SharedLogic.Offer
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.FRFSRecon as QRecon
@@ -95,11 +102,57 @@ getLoyaltyInfo ::
 getLoyaltyInfo customerId merchantId merchantOperatingCityId =
   LoyaltyWallet.loyaltyInfo customerId merchantId merchantOperatingCityId -- need to write the storing logic
 
+loadLoyaltyProgramMap ::
+  (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  m (Maybe (Map.Map Text Lib.Finance.Domain.Types.Account.CounterpartyType))
+loadLoyaltyProgramMap merchantId merchantOperatingCityId = do
+  mbCfg <-
+    getOneConfig
+      ( MerchantServiceConfigDimensions
+          { merchantOperatingCityId = merchantOperatingCityId.getId,
+            merchantId = merchantId.getId,
+            serviceName = Just (DMSC.JuspayWalletService Payment.Juspay)
+          }
+      )
+  pure $ case mbCfg of
+    Just cfg -> case cfg.serviceConfig of
+      DMSC.JuspayWalletServiceConfig (Payment.JuspayConfig jcfg) ->
+        (Map.mapMaybe (readMaybe . T.unpack)) <$> jcfg.loyaltyProgramMap
+      _ -> Nothing
+    Nothing -> Nothing
+
 -- | Type alias for fulfillment status handler function
 -- This allows callers to pass the appropriate handler for their payment service type
 type FulfillmentStatusHandler m =
   DPayment.PaymentStatusResp ->
   m (DPayment.PaymentFulfillmentStatus, Maybe Text, Maybe Text)
+
+walletOrderStatusHandler ::
+  (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
+  Id DOrder.PaymentOrder ->
+  Id Merchant.Merchant ->
+  DPayment.PaymentStatusResp ->
+  m (DPayment.PaymentFulfillmentStatus, Maybe Text, Maybe Text)
+walletOrderStatusHandler orderId _merchantId paymentStatusResp = do
+  status <- DPayment.getTransactionStatus paymentStatusResp
+  let fulfillment = case status of
+        Payment.CHARGED -> DPayment.FulfillmentSucceeded
+        Payment.AUTHENTICATION_FAILED -> DPayment.FulfillmentFailed
+        Payment.AUTHORIZATION_FAILED -> DPayment.FulfillmentFailed
+        Payment.CANCELLED -> DPayment.FulfillmentFailed
+        Payment.JUSPAY_DECLINED -> DPayment.FulfillmentFailed
+        Payment.CLIENT_AUTH_TOKEN_EXPIRED -> DPayment.FulfillmentFailed
+        Payment.AUTO_REFUNDED -> DPayment.FulfillmentRefunded
+        Payment.NEW -> DPayment.FulfillmentPending
+        Payment.PENDING_VBV -> DPayment.FulfillmentPending
+        Payment.AUTHORIZING -> DPayment.FulfillmentPending
+        Payment.COD_INITIATED -> DPayment.FulfillmentPending
+        Payment.STARTED -> DPayment.FulfillmentPending
+  mbWp <- listToMaybe <$> QWP.findByOrderId orderId
+  let entityId = (.id.getId) <$> mbWp
+  pure (fulfillment, entityId, entityId)
 
 orderStatusHandler ::
   ( CacheFlow m r,
@@ -240,6 +293,31 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
   case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of
     Right (_, _, domainTransactionId) -> do
       QPaymentOrder.updatePaymentFulfillmentStatus paymentOrder.id finalPaymentStatusResponse.paymentFulfillmentStatus finalPaymentStatusResponse.domainEntityId domainTransactionId
+    _ -> pure ()
+
+  case (finalPaymentStatusResponse, updatedPaymentOrder.merchantOperatingCityId) of
+    (DPayment.PaymentStatus {orderLoyaltyInfo = Just loyalty}, Just commonMerchantOperatingCityId) -> do
+      let personId = cast @DPayment.Person @Person.Person updatedPaymentOrder.personId
+          merchantId = cast @DPayment.Merchant @Merchant.Merchant updatedPaymentOrder.merchantId
+          merchantOperatingCityId = cast @DPayment.MerchantOperatingCity @DMOC.MerchantOperatingCity commonMerchantOperatingCityId
+          burnRefId = fromMaybe updatedPaymentOrder.id.getId finalPaymentStatusResponse.domainEntityId
+          fetchFullInfo = getLoyaltyInfo personId.getId merchantId merchantOperatingCityId
+      mbProgramMap <- loadLoyaltyProgramMap merchantId merchantOperatingCityId
+      let resolveProgram pid = pure $ (Map.lookup pid) =<< mbProgramMap
+      res <-
+        withTryCatch "processLoyaltyInfoFromOrderStatus" $
+          LoyaltyWalletSvc.processLoyaltyInfoFromOrderStatus
+            personId.getId
+            updatedPaymentOrder
+            burnRefId
+            loyalty
+            resolveProgram
+            fetchFullInfo
+      case res of
+        Left err -> logError $ "loyalty processing failed for order " <> updatedPaymentOrder.id.getId <> ": " <> show err
+        Right () -> pure ()
+    (DPayment.PaymentStatus {orderLoyaltyInfo = Just _}, Nothing) ->
+      logInfo $ "loyalty processing skipped: order " <> updatedPaymentOrder.id.getId <> " has no merchantOperatingCityId"
     _ -> pure ()
   return finalPaymentStatusResponse
   where

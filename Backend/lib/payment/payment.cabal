@@ -52,6 +52,7 @@ library
       Lib.Payment.Storage.Queries.PayoutOrderExtra
       Lib.Payment.Storage.Queries.PayoutRequestExtra
       Lib.Payment.Storage.Queries.RefundsExtra
+      Lib.Payment.Wallet.Service
       Tools.Beam.UtilsTH
       Lib.Payment.Domain.Types.Offer
       Lib.Payment.Domain.Types.OfferStats
@@ -64,6 +65,8 @@ library
       Lib.Payment.Domain.Types.PersonDailyOfferStats
       Lib.Payment.Domain.Types.PersonWallet
       Lib.Payment.Domain.Types.Refunds
+      Lib.Payment.Domain.Types.Wallet
+      Lib.Payment.Domain.Types.WalletPayments
       Lib.Payment.Domain.Types.WalletRewardPosting
       Lib.Payment.Storage.Beam.Offer
       Lib.Payment.Storage.Beam.OfferStats
@@ -76,6 +79,8 @@ library
       Lib.Payment.Storage.Beam.PersonDailyOfferStats
       Lib.Payment.Storage.Beam.PersonWallet
       Lib.Payment.Storage.Beam.Refunds
+      Lib.Payment.Storage.Beam.Wallet
+      Lib.Payment.Storage.Beam.WalletPayments
       Lib.Payment.Storage.Beam.WalletRewardPosting
       Lib.Payment.Storage.Queries.Offer
       Lib.Payment.Storage.Queries.OfferStats
@@ -90,6 +95,8 @@ library
       Lib.Payment.Storage.Queries.PersonDailyOfferStats
       Lib.Payment.Storage.Queries.PersonWallet
       Lib.Payment.Storage.Queries.Refunds
+      Lib.Payment.Storage.Queries.Wallet
+      Lib.Payment.Storage.Queries.WalletPayments
       Lib.Payment.Storage.Queries.WalletRewardPosting
   other-modules:
       Paths_payment

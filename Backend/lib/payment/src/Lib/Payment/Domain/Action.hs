@@ -154,7 +154,8 @@ data PaymentStatusResp
         paymentFulfillmentStatus :: Maybe PaymentFulfillmentStatus,
         domainEntityId :: Maybe Text,
         amount :: HighPrecMoney,
-        validTill :: Maybe UTCTime
+        validTill :: Maybe UTCTime,
+        orderLoyaltyInfo :: Maybe Payment.LoyaltyInfo
       }
   | MandatePaymentStatus
       { status :: Payment.TransactionStatus,
@@ -1661,6 +1662,7 @@ orderStatusService merchantOpCityId personId orderId orderStatusCall = do
             validTill = order.validTill,
             paymentFulfillmentStatus = order.paymentFulfillmentStatus,
             domainEntityId = order.domainEntityId, -- To be filled by Domain
+            orderLoyaltyInfo = loyaltyInfo,
             ..
           }
     _ -> throwError $ InternalError "Unexpected Order Status Response."
