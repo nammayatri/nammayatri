@@ -818,7 +818,7 @@ fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationCon
       mbAssoc <- DRAQuery.findLatestLinkedByRCId rc.id entityImagesInfo.now
       pure [(maybe False (.isRcActive) mbAssoc, rc.id, rc)]
   processedVehicles `forM` \(isActive, rcId, processedVehicle) -> do
-    rcImagesInfo <- IQuery.getRcImagesInfoFromEntityImagesInfo entityImagesInfo rcId vehicleDocsByRcIdList
+    rcImagesInfo <- IQuery.getRcImagesInfoFromEntityImagesInfo entityImagesInfo rcId vehicleDocsLoadedByRcId
     registrationNo <- decrypt processedVehicle.certificateNumber
     let dateOfUpload = processedVehicle.createdAt
     let verifiedVehicleCategory = DV.castVehicleVariantToVehicleCategory <$> processedVehicle.vehicleVariant
@@ -942,7 +942,7 @@ fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs 
                   pure (iu, Just rc_.id)
                 Nothing -> pure ([], Nothing)
               mbRcImagesInfo <- forM mbRcId $ \rcId -> do
-                IQuery.getRcImagesInfoFromEntityImagesInfo entityImagesInfo rcId vehicleDocsByRcIdList
+                IQuery.getRcImagesInfoFromEntityImagesInfo entityImagesInfo rcId vehicleDocsLoadedByRcId
               if isJust (find (\doc -> doc.registrationNo == registrationNo) processedVehicleDocuments) || not (null isUnlinked)
                 then return []
                 else do
@@ -1443,6 +1443,16 @@ vehicleDocsByRcIdList =
     DVC.Odometer
   ]
 
+vehicleDocsLoadedByRcId :: [DVC.DocumentType]
+vehicleDocsLoadedByRcId =
+  vehicleDocsByRcIdList
+    <> [ DVC.VehiclePermit,
+         DVC.VehicleFitnessCertificate,
+         DVC.VehicleInsurance,
+         DVC.VehiclePUC,
+         DVC.VehicleNOC
+       ]
+
 getInProgressVehicleDocuments :: IQuery.EntityImagesInfo -> Maybe IQuery.RcImagesInfo -> DVC.DocumentType -> [DVC.DocumentVerificationConfig] -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text)
 getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType docVerificationConfigs = do
   let onlyImageLookup = maybe False (fromMaybe False . (.onlyImageVerificationStatusLookupRequired)) $ find (\c -> c.documentType == docType) docVerificationConfigs
@@ -1455,12 +1465,12 @@ getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType docVerific
   (status, mbReason, mbUrl) <- case docType of
     DVC.VehicleRegistrationCertificate -> checkIfUnderProgress entityImagesInfo DVC.VehicleRegistrationCertificate
     DVC.SubscriptionPlan -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
-    DVC.VehiclePermit -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehiclePermit onlyImageLookup (Right docVerificationConfigs)
-    DVC.VehicleFitnessCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehicleFitnessCertificate onlyImageLookup (Right docVerificationConfigs)
-    DVC.VehicleInsurance -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehicleInsurance onlyImageLookup (Right docVerificationConfigs)
-    DVC.VehiclePUC -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehiclePUC onlyImageLookup (Right docVerificationConfigs)
+    DVC.VehiclePermit -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo DVC.VehiclePermit onlyImageLookup
+    DVC.VehicleFitnessCertificate -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo DVC.VehicleFitnessCertificate onlyImageLookup
+    DVC.VehicleInsurance -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo DVC.VehicleInsurance onlyImageLookup
+    DVC.VehiclePUC -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo DVC.VehiclePUC onlyImageLookup
     DVC.VehicleInspectionForm -> checkVehiclePhotosStatusByRC mbRcImagesInfo
-    DVC.VehicleNOC -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehicleNOC onlyImageLookup (Right docVerificationConfigs)
+    DVC.VehicleNOC -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo DVC.VehicleNOC onlyImageLookup
     DVC.InspectionHub -> do
       mbRegistrationNo <- case mbRcImagesInfo of
         Just rcImagesInfo -> do
