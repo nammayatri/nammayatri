@@ -45,7 +45,7 @@ data EntryStatus = PENDING | DUE | SETTLED | VOIDED deriving (Eq, Ord, Show, Rea
 
 data EntryType = Expense | Revenue | LiabilityCreated | LiabilitySettled | Reversal deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data SettlementStatus = UNSETTLED | PAID_OUT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data SettlementStatus = UNSETTLED | PROCESSING | PAID_OUT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EntryStatus))
 

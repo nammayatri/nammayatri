@@ -44,6 +44,11 @@ module Lib.Finance.Ledger.Service
     -- * Payout-specific queries (efficient DB-level filtering)
     findCreditsByAccountAfterTime,
     findUnsettledByAccountBeforeTime,
+    findUnsettledByAccountBeforeTimeByStatuses,
+
+    -- * Settlement reservation (Option A — DB-level in-flight guard)
+    markEntriesAsProcessing,
+    revertProcessingEntriesToUnsettled,
 
     -- * Input types (re-export from Interface)
     module Lib.Finance.Ledger.Interface,
@@ -456,7 +461,7 @@ findCreditsByAccountAfterTime accountId from to =
     ]
 
 -- | Find unsettled entries (both credits and debits) for an account before a given time.
---   Returns entries where settlementStatus = UNSETTLED OR settlementStatus IS NULL.
+--   Returns entries where settlementStatus = UNSETTLED OR settlementStatus IS NULL,
 --   Used for collecting redeemable entry IDs for payout settlement.
 findUnsettledByAccountBeforeTime ::
   (BeamFlow.BeamFlow m r) =>
@@ -471,6 +476,31 @@ findUnsettledByAccountBeforeTime accountId before =
               Se.Is BeamLE.fromAccountId $ Se.Eq (getId accountId)
             ],
           Se.Is BeamLE.timestamp $ Se.LessThan before,
+          Se.Or
+            [ Se.Is BeamLE.settlementStatus $ Se.Eq (Just UNSETTLED),
+              Se.Is BeamLE.settlementStatus $ Se.Eq Nothing
+            ]
+        ]
+    ]
+
+-- | Find unsettled entries (both credits and debits) for an account before a given time based on Status.
+--   Returns entries where settlementStatus = UNSETTLED OR settlementStatus IS NULL,
+--   Used for collecting redeemable entry IDs for payout settlement.
+findUnsettledByAccountBeforeTimeByStatuses ::
+  (BeamFlow.BeamFlow m r) =>
+  Id Account ->
+  UTCTime -> -- before (cutoff)
+  [EntryStatus] -> -- statuses
+  m [LedgerEntry]
+findUnsettledByAccountBeforeTimeByStatuses accountId before statuses =
+  findAllWithKV
+    [ Se.And
+        [ Se.Or
+            [ Se.Is BeamLE.toAccountId $ Se.Eq (getId accountId),
+              Se.Is BeamLE.fromAccountId $ Se.Eq (getId accountId)
+            ],
+          Se.Is BeamLE.timestamp $ Se.LessThan before,
+          Se.Is BeamLE.status $ Se.In statuses,
           Se.Or
             [ Se.Is BeamLE.settlementStatus $ Se.Eq (Just UNSETTLED),
               Se.Is BeamLE.settlementStatus $ Se.Eq Nothing
@@ -500,3 +530,57 @@ markEntriesAsPaidOut entryIds payoutRequestId = do
       Se.Set BeamLE.updatedAt now
     ]
     [Se.Is BeamLE.id $ Se.In (map (.getId) entryIds)]
+
+-- | Reserve a batch of ledger entries for an in-flight payout.
+--   Sets settlementStatus = PROCESSING (so subsequent eligibility queries
+--   skip them) and stamps the optional settlementId. Only flips entries
+--   that are still UNSETTLED / NULL — already-PAID_OUT or already-PROCESSING
+--   entries are left untouched.
+markEntriesAsProcessing ::
+  (BeamFlow.BeamFlow m r) =>
+  [Id LedgerEntry] ->
+  Maybe Text -> -- optional settlementId (PayoutRequest id once known)
+  m ()
+markEntriesAsProcessing [] _ = pure ()
+markEntriesAsProcessing entryIds mbSettlementId = do
+  now <- getCurrentTime
+  updateWithKV
+    ( [ Se.Set BeamLE.settlementStatus (Just PROCESSING),
+        Se.Set BeamLE.updatedAt now
+      ]
+        <> maybe [] (\sid -> [Se.Set BeamLE.settlementId (Just sid)]) mbSettlementId
+    )
+    [ Se.And
+        [ Se.Is BeamLE.id $ Se.In (map (.getId) entryIds),
+          Se.Or
+            [ Se.Is BeamLE.settlementStatus $ Se.Eq Nothing,
+              Se.Is BeamLE.settlementStatus $ Se.Eq (Just UNSETTLED),
+              -- already-PROCESSING entries are allowed so callers can
+              -- idempotently stamp the PayoutRequest id once it's known.
+              Se.Is BeamLE.settlementStatus $ Se.Eq (Just PROCESSING)
+            ]
+        ]
+    ]
+
+-- | Revert a batch of PROCESSING ledger entries back to UNSETTLED.
+--   Used when a payout submission fails (sync or via webhook) to release
+--   the reservation so the entries become eligible again.
+--   Only flips PROCESSING entries — PAID_OUT entries are not touched.
+revertProcessingEntriesToUnsettled ::
+  (BeamFlow.BeamFlow m r) =>
+  [Id LedgerEntry] ->
+  m ()
+revertProcessingEntriesToUnsettled [] = pure ()
+revertProcessingEntriesToUnsettled entryIds = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamLE.settlementStatus (Just UNSETTLED),
+      Se.Set BeamLE.settlementId Nothing,
+      Se.Set BeamLE.settlementTimestamp Nothing,
+      Se.Set BeamLE.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamLE.id $ Se.In (map (.getId) entryIds),
+          Se.Is BeamLE.settlementStatus $ Se.Eq (Just PROCESSING)
+        ]
+    ]
