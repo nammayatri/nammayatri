@@ -50,13 +50,15 @@ generateToken (personId, _merchantId, merchantOpCityId) = do
     mapM decrypt person.mobileNumber
       >>= fromMaybeM (InvalidRequest "Person is not linked with any mobile number")
   let countryCode = fromMaybe "" person.mobileCountryCode
-  mbDriverLicense <- QDL.findByDriverId personId
-  mbDlNumber <- mapM (\dl -> decrypt dl.licenseNumber) mbDriverLicense
+  driverLicense <-
+    QDL.findByDriverId personId
+      >>= fromMaybeM (InvalidRequest "Driver license is required for Aarokya token generation")
+  dlNumber <- decrypt driverLicense.licenseNumber
   let req =
         PartnerSdk.GenerateTokenReq
           { phoneCountryCode = countryCode,
             phoneNumber = mobileNumber,
-            dlNumber = mbDlNumber
+            idProof = PartnerSdk.IdProof {proofType = "DRIVING_LICENSE", number = dlNumber}
           }
   res <- TPartnerSdk.generateToken merchantOpCityId req
   let mbStatus = extractStatusFromToken res.accessToken
