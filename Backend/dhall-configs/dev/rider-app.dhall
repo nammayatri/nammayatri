@@ -462,7 +462,7 @@ in  { esqDBCfg
     , enablePrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
     , kvConfigUpdateFrequency
-    , incomingAPIResponseTimeout = +15
+    , incomingAPIResponseTimeout = +600
     , maxShards = +5
     , jobInfoMapx
     , internalEndPointMap = common.internalEndPointMap

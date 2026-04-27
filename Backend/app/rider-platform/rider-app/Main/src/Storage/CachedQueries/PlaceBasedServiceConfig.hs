@@ -146,7 +146,4 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
     SOSInterface.ERSSConfig _ -> SOSService SOS.ERSS
     SOSInterface.GJ112Config _ -> SOSService SOS.GJ112
     SOSInterface.TrinityConfig _ -> SOSService SOS.Trinity
-  SettlementServiceConfig settlementCfg -> case settlementCfg of
-    Settlement.HyperPGConfig _ -> SettlementService Settlement.HyperPG
-    Settlement.BillDeskConfig _ -> SettlementService Settlement.BillDesk
-    Settlement.YesBizConfig _ -> SettlementService Settlement.YesBiz
+  SettlementServiceConfig cfg -> SettlementService cfg.settlementService

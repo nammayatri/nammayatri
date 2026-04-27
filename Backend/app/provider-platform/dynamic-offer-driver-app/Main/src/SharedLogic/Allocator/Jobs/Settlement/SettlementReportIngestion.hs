@@ -23,13 +23,16 @@ import Data.Time.Clock (UTCTime (UTCTime), secondsToDiffTime, utctDay)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MerchantServiceConfig as DMSC
+import qualified EulerHS.Language as L
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.External.Encryption ()
-import Kernel.External.Settlement.Types (SettlementService (..), SettlementServiceConfig (..), SettlementSourceConfig)
+import Kernel.External.Settlement.Types (SettlementService (..), SettlementServiceConfig)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import Kernel.Utils.Servant.Client (HasRequestId)
 import Lib.Finance.Settlement.Ingestion (ingestPaymentSettlementReport)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
@@ -50,6 +53,10 @@ runSettlementReportIngestionJob ::
     EncFlow m r,
     MonadFlow m,
     MonadIO m,
+    CoreMetrics m,
+    L.MonadFlow m,
+    HasRequestId r,
+    MonadReader r m,
     HasShortDurationRetryCfg r c,
     HasField "maxShards" r Int,
     HasField "schedulerSetName" r Text,
@@ -79,20 +86,20 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
         pure True -- success, nothing to do
       else do
         -- Process each service independently, catch errors per-service to avoid one failure blocking others
-        results <- forM settlementConfigs $ \(service, sourceConfig) -> do
-          logInfo $ "Processing settlement service: " <> show service
+        results <- forM settlementConfigs $ \settlementSvcCfg -> do
+          logInfo $ "Processing settlement service: " <> show settlementSvcCfg.settlementService
           serviceResult <-
             try @_ @SomeException $
-              ingestPaymentSettlementReport sourceConfig service merchantId.getId merchantOperatingCityId.getId
+              ingestPaymentSettlementReport settlementSvcCfg merchantId.getId merchantOperatingCityId.getId
           case serviceResult of
             Left err -> do
-              logError $ "Settlement ingestion for " <> show service <> " threw exception: " <> show err
+              logError $ "Settlement ingestion for " <> show settlementSvcCfg.settlementService <> " threw exception: " <> show err
               pure False
             Right result -> do
-              logInfo $ "Ingestion result for " <> show service <> ": " <> show result
+              logInfo $ "Ingestion result for " <> show settlementSvcCfg.settlementService <> ": " <> show result
               when (result.totalFailed > 0) $
                 logError $
-                  "Settlement ingestion for " <> show service <> " had " <> show result.totalFailed
+                  "Settlement ingestion for " <> show settlementSvcCfg.settlementService <> " had " <> show result.totalFailed
                     <> " failures out of "
                     <> show result.totalParsed
                     <> " rows"
@@ -116,17 +123,14 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
       (BeamFlow m r, CacheFlow m r, EsqDBFlow m r) =>
       Id DM.Merchant ->
       Id DMOC.MerchantOperatingCity ->
-      m [(SettlementService, SettlementSourceConfig)]
+      m [SettlementServiceConfig]
     getSettlementConfigs _mId mOpCityId = do
       let allSettlementServices = [minBound .. maxBound] :: [SettlementService]
       configs <- forM allSettlementServices $ \service -> do
         mbConfig <- CQMSC.findByServiceAndCity (DMSC.SettlementService service) mOpCityId
         pure $ case mbConfig of
           Just cfg -> case cfg.serviceConfig of
-            DMSC.SettlementServiceConfig settlementCfg -> case settlementCfg of
-              HyperPGConfig srcCfg -> Just (service, srcCfg)
-              BillDeskConfig srcCfg -> Just (service, srcCfg)
-              YesBizConfig srcCfg -> Just (service, srcCfg)
+            DMSC.SettlementServiceConfig settlementCfg -> Just settlementCfg
             _ -> Nothing
           Nothing -> Nothing
       pure $ catMaybes configs

@@ -120,10 +120,7 @@ getConfigJSON = \case
   Domain.PlasmaServiceConfig plasmaCfg -> case plasmaCfg of
     Plasma.LMSConfig cfg -> toJSON cfg
   Domain.InsuranceDeclarationServiceConfig iffcoTokioCfg -> toJSON iffcoTokioCfg
-  Domain.SettlementServiceConfig settlementCfg -> case settlementCfg of
-    Settlement.HyperPGConfig srcCfg -> toJSON srcCfg
-    Settlement.BillDeskConfig srcCfg -> toJSON srcCfg
-    Settlement.YesBizConfig srcCfg -> toJSON srcCfg
+  Domain.SettlementServiceConfig settlementCfg -> toJSON settlementCfg
 
 getServiceName :: Domain.ServiceConfig -> Domain.ServiceName
 getServiceName = \case
@@ -201,10 +198,7 @@ getServiceName = \case
   Domain.PlasmaServiceConfig plasmaCfg -> case plasmaCfg of
     Plasma.LMSConfig _ -> Domain.PlasmaService Plasma.LMS
   Domain.InsuranceDeclarationServiceConfig _ -> Domain.InsuranceDeclarationService Domain.IffcoTokio
-  Domain.SettlementServiceConfig settlementCfg -> case settlementCfg of
-    Settlement.HyperPGConfig _ -> Domain.SettlementService Settlement.HyperPG
-    Settlement.BillDeskConfig _ -> Domain.SettlementService Settlement.BillDesk
-    Settlement.YesBizConfig _ -> Domain.SettlementService Settlement.YesBiz
+  Domain.SettlementServiceConfig settlementCfg -> Domain.SettlementService settlementCfg.settlementService
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> Payment.PaymentService
 getPaymentServiceConfigJson = \case
@@ -277,9 +271,18 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.JuspayWalletService paymentServiceName -> Domain.JuspayWalletServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
   Domain.PlasmaService Plasma.LMS -> Domain.PlasmaServiceConfig . Plasma.LMSConfig <$> eitherValue configJSON
   Domain.InsuranceDeclarationService Domain.IffcoTokio -> Domain.InsuranceDeclarationServiceConfig <$> eitherValue configJSON
-  Domain.SettlementService Settlement.HyperPG -> Domain.SettlementServiceConfig . Settlement.HyperPGConfig <$> eitherValue configJSON
-  Domain.SettlementService Settlement.BillDesk -> Domain.SettlementServiceConfig . Settlement.BillDeskConfig <$> eitherValue configJSON
-  Domain.SettlementService Settlement.YesBiz -> Domain.SettlementServiceConfig . Settlement.YesBizConfig <$> eitherValue configJSON
+  Domain.SettlementService svc ->
+    case eitherValue configJSON of
+      Right cfg
+        | cfg.settlementService == svc -> Right $ Domain.SettlementServiceConfig cfg
+        | otherwise ->
+          Left $
+            "settlementService in JSON ("
+              <> show cfg.settlementService
+              <> ") does not match merchant_service_config row ("
+              <> show svc
+              <> ")"
+      Left err -> Left err
 
 eitherValue :: FromJSON a => A.Value -> Either Text a
 eitherValue value = case A.fromJSON value of

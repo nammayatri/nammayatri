@@ -17,6 +17,7 @@ import qualified API.Internal.GetPickupInstructions as GetPickupInstructions
 import qualified API.Internal.OfferDiscount as OfferDiscount
 import qualified API.Internal.Rating as Rating
 import qualified API.Internal.RideSearchExpired as RideSearchExpired
+import qualified API.Internal.SettlementIngestDebug as SettlementIngestDebug
 import qualified API.Internal.Sos as Sos
 import qualified API.Internal.StopEvents as StopEvents
 import qualified API.Internal.UpdateCancellationFeeStatus as UpdateCancellationFeeStatus
@@ -38,6 +39,7 @@ type API =
            :<|> InsuranceInternal.API
            :<|> ViolationDetection.API
            :<|> RideSearchExpired.API
+           :<|> SettlementIngestDebug.API
            :<|> GetPickupInstructions.API
            :<|> AlertWebhook.API
            :<|> EKDLiveCallFeedback.API
@@ -59,6 +61,7 @@ handler =
     :<|> InsuranceInternal.handler
     :<|> ViolationDetection.handler
     :<|> RideSearchExpired.handler
+    :<|> SettlementIngestDebug.handler
     :<|> GetPickupInstructions.handler
     :<|> AlertWebhook.handler
     :<|> EKDLiveCallFeedback.handler

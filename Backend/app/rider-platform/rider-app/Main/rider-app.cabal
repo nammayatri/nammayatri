@@ -63,6 +63,7 @@ library
       API.Internal.OfferDiscount
       API.Internal.Rating
       API.Internal.RideSearchExpired
+      API.Internal.SettlementIngestDebug
       API.Internal.Sos
       API.Internal.StopEvents
       API.Internal.UpdateCancellationFeeStatus
@@ -225,6 +226,7 @@ library
       Domain.Action.Internal.PickupInstructionHandler
       Domain.Action.Internal.Rating
       Domain.Action.Internal.RideSearchExpired
+      Domain.Action.Internal.SettlementIngestDebug
       Domain.Action.Internal.Sos
       Domain.Action.Internal.StopEvents
       Domain.Action.Internal.UpdateCancellationFeeStatus
@@ -342,6 +344,7 @@ library
       Domain.Types.Extra.RentalDetails
       Domain.Types.Extra.Ride
       Domain.Types.Extra.RiderConfig
+      Domain.Types.Extra.SettlementOpenApi
       Domain.Types.Extra.TicketBooking
       Domain.Types.Extra.VendorSplitDetails
       Domain.Types.FarePolicy.FareProductType
