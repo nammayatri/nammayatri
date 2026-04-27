@@ -43,14 +43,14 @@ $(TH.mkClickhouseInstances ''FleetRcDailyStatsT 'SELECT_FINAL_MODIFIER)
 
 aggerateVehicleStatsByFleetOwnerIdAndDateRange ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
-  Text ->
+  Maybe Text ->
   Maybe Text ->
   Int ->
   Int ->
   Day ->
   Day ->
   m [QFRDSExtra.FleetRcDailyStatsAggregated]
-aggerateVehicleStatsByFleetOwnerIdAndDateRange fleetOwnerId mbRcId limit offset fromDay toDay = do
+aggerateVehicleStatsByFleetOwnerIdAndDateRange mbFleetOwnerId mbRcId limit offset fromDay toDay = do
   rows <-
     CH.findAll $
       CH.select_
@@ -76,7 +76,7 @@ aggerateVehicleStatsByFleetOwnerIdAndDateRange fleetOwnerId mbRcId limit offset 
           CH.offset_ offset $
             CH.filter_
               ( \fleetRcDailyStats ->
-                  fleetRcDailyStats.fleetOwnerId CH.==. fleetOwnerId
+                  CH.whenJust_ mbFleetOwnerId (\fo -> fleetRcDailyStats.fleetOwnerId CH.==. fo)
                     CH.&&. CH.whenJust_ mbRcId (\rcId -> fleetRcDailyStats.rcId CH.==. rcId)
                     CH.&&. fleetRcDailyStats.merchantLocalDate CH.>=. fromDay
                     CH.&&. fleetRcDailyStats.merchantLocalDate CH.<=. toDay
