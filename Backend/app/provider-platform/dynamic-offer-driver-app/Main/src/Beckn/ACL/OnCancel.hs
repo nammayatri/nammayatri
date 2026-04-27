@@ -61,7 +61,8 @@ buildOnCancelMessageV2 ::
     CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["_version" ::: Text]
   ) =>
   DM.Merchant ->
   Maybe Context.City ->
@@ -91,7 +92,7 @@ buildOnCancelMessageV2 merchant mbBapCity mbBapCountry cancelStatus (OC.BookingC
   buildOnCancelReq Context.ON_CANCEL Context.MOBILITY msgId bppId bppUri city country cancelStatus merchant driverName driverGender customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) (mbRide <&> (.status)) becknConfig mbVehicle mbFarePolicy driverPhone
 
 buildOnCancelReq ::
-  (MonadFlow m, EncFlow m r) =>
+  (MonadFlow m, EncFlow m r, HasFlowEnv m r '["_version" ::: Text]) =>
   Context.Action ->
   Context.Domain ->
   Text ->

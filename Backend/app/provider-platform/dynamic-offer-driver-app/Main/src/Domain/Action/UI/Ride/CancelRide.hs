@@ -113,7 +113,8 @@ cancelRideHandle ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     HasField "blackListedJobs" r [Text],
-    CH.ClickhouseFlow m r
+    CH.ClickhouseFlow m r,
+    HasFlowEnv m r '["_version" ::: Text]
   ) =>
   ServiceHandle m
 cancelRideHandle =

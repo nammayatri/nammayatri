@@ -118,7 +118,8 @@ type SearchRequestFlow m r c =
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
-    HasFlowEnv m r '["cloudType" ::: Maybe CloudType]
+    HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
+    HasFlowEnv m r '["_version" ::: Text]
   )
 
 type ConfirmFlow m r c =

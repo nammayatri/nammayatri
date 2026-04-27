@@ -51,6 +51,7 @@ cancelBooking ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["_version" ::: Text],
     HasShortDurationRetryCfg r c
   ) =>
   DRB.Booking ->

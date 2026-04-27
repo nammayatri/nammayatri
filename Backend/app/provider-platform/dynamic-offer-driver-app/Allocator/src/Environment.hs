@@ -141,7 +141,8 @@ data HandlerEnv = HandlerEnv
     dashboardClickhouseEnv :: ClickhouseEnv,
     kafkaClickhouseEnv :: ClickhouseEnv,
     ttenTokenCacheExpiry :: Seconds,
-    emailServiceConfig :: EmailServiceConfig
+    emailServiceConfig :: EmailServiceConfig,
+    _version :: Text
   }
   deriving (Generic)
 

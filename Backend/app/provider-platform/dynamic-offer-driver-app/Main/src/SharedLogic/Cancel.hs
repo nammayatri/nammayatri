@@ -101,6 +101,7 @@ reAllocateBookingIfPossible ::
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
+    HasFlowEnv m r '["_version" ::: Text],
     HasField "blackListedJobs" r [Text],
     ClickhouseFlow m r
   ) =>

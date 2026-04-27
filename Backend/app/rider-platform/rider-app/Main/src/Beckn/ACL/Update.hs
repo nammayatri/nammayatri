@@ -87,7 +87,7 @@ newtype EditStopBuildReqDetails = EditStopBuildReqDetails
   }
 
 buildUpdateReq ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl],HasFlowEnv m r '["_version" ::: Text]) =>
   UpdateBuildReq ->
   m Spec.UpdateReq
 buildUpdateReq res = do

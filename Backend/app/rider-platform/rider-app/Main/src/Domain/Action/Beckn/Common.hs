@@ -439,6 +439,7 @@ rideAssignedReqHandler ::
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasKafkaProducer r,
     HasFlowEnv m r '["isMetroTestTransaction" ::: Bool],
+    HasFlowEnv m r '["_version" ::: Text],
     HasField "blackListedJobs" r [Text],
     FinanceBeamFlow.BeamFlow m r
   ) =>
@@ -484,6 +485,7 @@ rideAssignedReqHandler req = do
         HasBAPMetrics m r,
         EventStreamFlow m r,
         HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+        HasFlowEnv m r '["_version" ::: Text],
         HasKafkaProducer r,
         HasFlowEnv m r '["isMetroTestTransaction" ::: Bool],
         HasField "blackListedJobs" r [Text],

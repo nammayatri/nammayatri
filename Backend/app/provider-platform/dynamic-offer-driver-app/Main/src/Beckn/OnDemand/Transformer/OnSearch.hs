@@ -14,6 +14,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context
+import Kernel.Types.Field ((:::))
 import qualified Kernel.Types.Price
 
 buildOnSearchMessage :: Domain.Action.Beckn.Search.DSearchRes -> DBC.BecknConfig -> Bool -> Maybe BecknV2.OnDemand.Types.OnSearchReqMessage
@@ -25,7 +26,7 @@ buildOnSearchMessage res bppConfig isValueAddNP = do
     then Nothing
     else Just returnData
 
-buildOnSearchRideReq :: (Monad m, Kernel.Types.App.MonadFlow m) => Kernel.Prelude.Text -> DBC.BecknConfig -> Domain.Action.Beckn.Search.DSearchRes -> Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Data.Text.Text -> Maybe Data.Text.Text -> Data.Text.Text -> Kernel.Prelude.BaseUrl -> Maybe Data.Text.Text -> Maybe Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Beckn.Context.Country -> Bool -> m BecknV2.OnDemand.Types.OnSearchReq
+buildOnSearchRideReq :: (Monad m, Kernel.Types.App.MonadFlow m, Kernel.Types.App.HasFlowEnv m r '["_version" ::: Text]) => Kernel.Prelude.Text -> DBC.BecknConfig -> Domain.Action.Beckn.Search.DSearchRes -> Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Data.Text.Text -> Maybe Data.Text.Text -> Data.Text.Text -> Kernel.Prelude.BaseUrl -> Maybe Data.Text.Text -> Maybe Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Beckn.Context.Country -> Bool -> m BecknV2.OnDemand.Types.OnSearchReq
 buildOnSearchRideReq onSearchTtl bppConfig res action domain messageId transactionId bapId bapUri bppId bppUri city country isValueAddNP = do
   let onSearchReqError_ = Nothing
   onSearchReqContext_ <- BecknV2.OnDemand.Utils.Context.buildContextV2 action domain messageId transactionId bapId bapUri bppId bppUri city country (Just onSearchTtl)

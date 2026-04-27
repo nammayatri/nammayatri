@@ -116,6 +116,7 @@ onConfirm ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    HasFlowEnv m r '["_version" ::: Text],
     HasField "storeRidesTimeLimit" r Int,
     HasBAPMetrics m r,
     EventStreamFlow m r,

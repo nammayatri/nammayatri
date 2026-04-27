@@ -17,11 +17,12 @@ import qualified Domain.Types.Trip as Trip
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
+import Kernel.Types.Field ((:::))
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Utils.Text
 import qualified SharedLogic.Confirm
 
-buildInitReq :: (Kernel.Types.App.MonadFlow m) => SharedLogic.Confirm.DConfirmRes -> Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Bool -> DBC.BecknConfig -> DRC.RiderConfig -> Text -> m BecknV2.OnDemand.Types.InitReq
+buildInitReq :: (Kernel.Types.App.MonadFlow m, Kernel.Types.App.HasFlowEnv m r '["_version" ::: Text]) => SharedLogic.Confirm.DConfirmRes -> Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Bool -> DBC.BecknConfig -> DRC.RiderConfig -> Text -> m BecknV2.OnDemand.Types.InitReq
 buildInitReq uiConfirm bapUrl action domain isValueAddNP bapConfig riderConfig initTtl = do
   initReqContext_ <- BecknV2.OnDemand.Utils.Context.buildContextV2 action domain uiConfirm.booking.id.getId (Just uiConfirm.searchRequestId.getId) uiConfirm.merchant.bapId bapUrl (Just uiConfirm.providerId) (Just uiConfirm.providerUrl) uiConfirm.city uiConfirm.merchant.country (Just initTtl)
   let initReqMessage_ = buildInitReqMessage uiConfirm isValueAddNP bapConfig riderConfig
