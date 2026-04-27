@@ -1336,7 +1336,7 @@ postFrfsRouteServiceability (mbPersonId, _merchantId) routeId req = do
 
   schedulesForRoutes <-
     mapConcurrently
-      (\routeCode -> OTPRest.getRouteBusSchedule routeCode integratedBPPConfig)
+      (\routeCode -> OTPRest.getRouteBusSchedule routeCode Nothing integratedBPPConfig)
       [routeId]
 
   frfsTierMap <- map (\t -> (t._type, t)) <$> CQFRFSVehicleServiceTier.findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId cityId integratedBPPConfig.id

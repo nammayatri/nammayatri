@@ -1882,56 +1882,92 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
           >>= fromMaybeM (InvalidRequest $ "Route not found with id: " <> routeId)
       routeWithBuses <- CQMMB.getRoutesBuses routeId ctx.integratedBPPConfig
       let maybeBus = find (\b -> b.vehicleNumber == vno) routeWithBuses.buses
-      case maybeBus of
-        Nothing -> do
-          logDebug $ "handleSingleVehicleRoute: no live data for vehicle=" <> vno <> " routeId=" <> routeId
-          pure $ ApiTypes.RouteServiceabilityResp Nothing Nothing []
+      -- Always fetch schedules from bus-route-schedule API (for tripId)
+      busScheduleDetails <- OTPRest.getRouteBusSchedule routeId (Just vno) ctx.integratedBPPConfig
+      -- Get vehicle metadata for service tier (shared)
+      mbVehicleMetadata <- JMU.getVehicleMetadataFromInMem [ctx.integratedBPPConfig] vno
+      let mbServiceTier = mbVehicleMetadata <&> (\(_, metadata) -> metadata.serviceType)
+          mbServiceSubTypes = mbVehicleMetadata >>= (\(_, metadata) -> metadata.serviceSubTypes)
+          mbVehicleTagNumber = mbVehicleMetadata >>= (\(_, metadata) -> metadata.busTagNumber)
+      -- Get service tier name from FRFS config (shared)
+      frfsServiceTierName <- case mbServiceTier of
+        Just serviceTier -> do
+          mbTier <-
+            CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId
+              serviceTier
+              ctx.merchantOperatingCityId
+              ctx.integratedBPPConfig.id
+          return $ (.shortName) <$> mbTier
+        Nothing -> return Nothing
+      -- Find the current trip ID from the active trip
+      let mbCurrentTripId = do
+            activeDetail <- find (\d -> d.is_active_trip == Just True) busScheduleDetails
+            waybill <- activeDetail.waybill_no
+            tNum <- activeDetail.trip_number
+            return $ JMU.makeTripIdFromWaybillNoAndTripNo waybill tNum
+      -- Build schedules for all trips (always included)
+      let buildScheduleInfo detail =
+            let thisTripId = do
+                  waybill <- detail.waybill_no
+                  tNum <- detail.trip_number
+                  return $ JMU.makeTripIdFromWaybillNoAndTripNo waybill tNum
+             in API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo
+                  { eta = Just detail.eta,
+                    position = Nothing,
+                    locationUTCTimestamp = Nothing,
+                    serviceTierType = detail.service_tier,
+                    serviceTierName = frfsServiceTierName,
+                    vehicleNumber = vno,
+                    tripId = thisTripId,
+                    isActiveTrip = detail.is_active_trip,
+                    serviceSubTypes = mbServiceSubTypes,
+                    vehicleTagNumber = mbVehicleTagNumber,
+                    availableSeats = Nothing
+                  }
+      let allSchedules = map buildScheduleInfo busScheduleDetails
+      -- Build live vehicle info if live data exists
+      mbLiveVehicle <- case maybeBus of
+        Nothing -> return Nothing
         Just singleBus -> do
-          mbVehicleMetadata <- JMU.getVehicleMetadataFromInMem [ctx.integratedBPPConfig] vno
-          let mbServiceTier = mbVehicleMetadata <&> (\(_, metadata) -> metadata.serviceType)
           case mbServiceTier of
             Nothing -> do
               logError $ "handleSingleVehicleRoute: vehicle service type not found for vehicle=" <> vno
-              pure $ ApiTypes.RouteServiceabilityResp Nothing Nothing []
+              return Nothing
             Just serviceTier -> do
-              frfsServiceTier <-
-                CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId
-                  serviceTier
-                  ctx.merchantOperatingCityId
-                  ctx.integratedBPPConfig.id
-              let mbServiceSubTypes = mbVehicleMetadata >>= (\(_, metadata) -> metadata.serviceSubTypes)
-                  mbVehicleTagNumber = mbVehicleMetadata >>= (\(_, metadata) -> metadata.busTagNumber)
               enrichedEta <-
                 mapConcurrently
                   (JMRouteServiceability.enrichBusStopETA ctx.integratedBPPConfig)
                   (fromMaybe [] singleBus.busData.eta_data)
-              let vehicleInfo =
-                    API.Types.UI.MultimodalConfirm.LiveVehicleInfo
-                      { eta = Just enrichedEta,
-                        number = vno,
-                        position = LatLong singleBus.busData.latitude singleBus.busData.longitude,
-                        locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral singleBus.busData.timestamp,
-                        serviceTierType = serviceTier,
-                        serviceTierName = (.shortName) <$> frfsServiceTier,
-                        serviceSubTypes = mbServiceSubTypes,
-                        vehicleTagNumber = mbVehicleTagNumber
-                      }
-              pure $
-                ApiTypes.RouteServiceabilityResp
-                  Nothing
-                  Nothing
-                  [ ApiTypes.LegRouteWithLiveVehicle
-                      { legOrder = 0,
-                        routeWithLiveVehicles =
-                          [ API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
-                              { routeCode = routeId,
-                                routeShortName = route.shortName,
-                                liveVehicles = [vehicleInfo],
-                                schedules = []
-                              }
-                          ]
+              return $
+                Just $
+                  API.Types.UI.MultimodalConfirm.LiveVehicleInfo
+                    { eta = Just enrichedEta,
+                      number = vno,
+                      position = LatLong singleBus.busData.latitude singleBus.busData.longitude,
+                      locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral singleBus.busData.timestamp,
+                      serviceTierType = serviceTier,
+                      serviceTierName = frfsServiceTierName,
+                      currentTripId = mbCurrentTripId,
+                      serviceSubTypes = mbServiceSubTypes,
+                      vehicleTagNumber = mbVehicleTagNumber
+                    }
+      -- Return response with schedules (always) and live vehicle (if available)
+      pure $
+        ApiTypes.RouteServiceabilityResp
+          Nothing
+          Nothing
+          [ ApiTypes.LegRouteWithLiveVehicle
+              { legOrder = 0,
+                routeWithLiveVehicles =
+                  [ API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
+                      { routeCode = routeId,
+                        routeShortName = route.shortName,
+                        liveVehicles = maybeToList mbLiveVehicle,
+                        schedules = allSchedules
                       }
                   ]
+              }
+          ]
 
     extractSourceDestLatLng :: Text -> Text -> RouteServiceabilityContext -> Environment.Flow (LatLngV2, LatLngV2)
     extractSourceDestLatLng srcCode destCode routeServiceabilityContext = do
@@ -2115,7 +2151,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
             mapConcurrently
               ( \routeCode ->
                   JMU.measureLatency
-                    (OTPRest.getRouteBusSchedule routeCode ctx.integratedBPPConfig)
+                    (OTPRest.getRouteBusSchedule routeCode Nothing ctx.integratedBPPConfig)
                     ("enrichResolvedLegs: getRouteBusSchedule route=" <> routeCode)
               )
               rlRouteCodes
