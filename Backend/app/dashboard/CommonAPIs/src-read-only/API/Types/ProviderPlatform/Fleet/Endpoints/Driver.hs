@@ -803,7 +803,7 @@ data FleetVehicleStatsItem = FleetVehicleStatsItem
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FleetVehicleStatsRes = FleetVehicleStatsRes {fleetOwnerId :: Kernel.Prelude.Text, listItem :: [FleetVehicleStatsItem], summary :: Dashboard.Common.Summary}
+data FleetVehicleStatsRes = FleetVehicleStatsRes {fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text, listItem :: [FleetVehicleStatsItem], summary :: Dashboard.Common.Summary}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

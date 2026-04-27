@@ -89,3 +89,53 @@ aggerateVehicleStatsByFleetOwnerIdAndDateRange fleetOwnerId mbRcId limit offset 
           QFRDSExtra.mkFleetRcDailyStatsAggregated fleetOwnerId' rcId totalEarnings totalCompletedRides totalDistance totalDuration
       )
       rows
+
+aggerateVehicleStatsByFleetOwnerIdsAndDateRange ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  [Text] ->
+  Maybe Text ->
+  Int ->
+  Int ->
+  Day ->
+  Day ->
+  m [QFRDSExtra.FleetRcDailyStatsAggregated]
+aggerateVehicleStatsByFleetOwnerIdsAndDateRange fleetOwnerIds mbRcId limit offset fromDay toDay = do
+  rows <-
+    CH.findAll $
+      CH.select_
+        ( \fleetRcDailyStats ->
+            let totalEarnings = CH.sum_ fleetRcDailyStats.totalEarnings
+                totalCompletedRides = CH.sum_ fleetRcDailyStats.totalCompletedRides
+                totalDistance = CH.sum_ fleetRcDailyStats.rideDistance
+                totalDuration = CH.sum_ fleetRcDailyStats.rideDuration
+             in CH.groupBy
+                  ( fleetRcDailyStats.fleetOwnerId,
+                    fleetRcDailyStats.rcId
+                  )
+                  $ \(fleetOwnerId', rcId') ->
+                    ( fleetOwnerId',
+                      rcId',
+                      totalEarnings,
+                      totalCompletedRides,
+                      totalDistance,
+                      totalDuration
+                    )
+        )
+        $ CH.orderBy_ (\_fleetRcDailyStats (_, _, _, totalCompletedRides, _, _) -> CH.desc totalCompletedRides) $
+          CH.limit_ limit $
+            CH.offset_ offset $
+              CH.filter_
+              ( \fleetRcDailyStats ->
+                  fleetRcDailyStats.fleetOwnerId `CH.in_` fleetOwnerIds
+                    CH.&&. CH.whenJust_ mbRcId (\rcId -> fleetRcDailyStats.rcId CH.==. rcId)
+                    CH.&&. fleetRcDailyStats.merchantLocalDate CH.>=. fromDay
+                    CH.&&. fleetRcDailyStats.merchantLocalDate CH.<=. toDay
+              )
+              (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetRcDailyStatsTTable)
+
+  pure $
+    fmap
+      ( \(fleetOwnerId', rcId, totalEarnings, totalCompletedRides, totalDistance, totalDuration) ->
+          QFRDSExtra.mkFleetRcDailyStatsAggregated fleetOwnerId' rcId totalEarnings totalCompletedRides totalDistance totalDuration
+      )
+      rows

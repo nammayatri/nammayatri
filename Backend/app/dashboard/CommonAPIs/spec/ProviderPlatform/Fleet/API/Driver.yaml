@@ -2250,7 +2250,7 @@ types:
   FleetAnalyticsRes:
     - enum: "Filtered FilteredFleetAnalyticsRes | Earnings EarningFleetAnalyticsRes"
   FleetVehicleStatsRes:
-    - fleetOwnerId: Text
+    - fleetOwnerId: Maybe Text
     - listItem: [FleetVehicleStatsItem]
     - summary: Summary
   FleetVehicleStatsItem:
