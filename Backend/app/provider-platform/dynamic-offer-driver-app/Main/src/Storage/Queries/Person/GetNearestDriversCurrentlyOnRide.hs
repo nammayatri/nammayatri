@@ -71,7 +71,8 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
     tripDistanceMinThreshold :: Maybe Meters,
     tripDistanceMaxThreshold :: Maybe Meters,
     maxPickupDistance :: Maybe Meters,
-    isTollRouteEligible :: Bool -- True if driver is not blocked for toll routes
+    isTollRouteEligible :: Bool, -- True if driver is not blocked for toll routes
+    vehicleNumber :: Maybe Text
   }
   deriving (Generic, Show, HasCoordinates)
 
@@ -223,5 +224,6 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
                 tripDistanceMinThreshold = info.tripDistanceMinThreshold,
                 tripDistanceMaxThreshold = info.tripDistanceMaxThreshold,
                 maxPickupDistance = info.maxPickupRadius,
-                isTollRouteEligible = tollRouteEligible
+                isTollRouteEligible = tollRouteEligible,
+                vehicleNumber = Just vehicle.registrationNo
               }

@@ -95,7 +95,8 @@ data NearestGoHomeDriversResult = NearestGoHomeDriversResult
     score :: Maybe A.Value,
     tripDistanceMinThreshold :: Maybe Meters,
     tripDistanceMaxThreshold :: Maybe Meters,
-    isTollRouteEligible :: Bool -- True if driver is not blocked for toll routes
+    isTollRouteEligible :: Bool, -- True if driver is not blocked for toll routes
+    vehicleNumber :: Maybe Text
   }
   deriving (Generic, Show, HasCoordinates)
 
@@ -210,5 +211,6 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
                 score = Nothing,
                 tripDistanceMinThreshold = Nothing,
                 tripDistanceMaxThreshold = Nothing,
-                isTollRouteEligible = tollRouteEligible
+                isTollRouteEligible = tollRouteEligible,
+                vehicleNumber = Just vehicle.registrationNo
               }

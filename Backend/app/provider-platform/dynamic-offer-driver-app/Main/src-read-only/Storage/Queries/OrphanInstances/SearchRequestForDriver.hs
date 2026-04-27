@@ -61,6 +61,7 @@ instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDri
             driverTags = driverTags,
             durationToPickup = durationToPickup,
             estimateId = estimateId,
+            fleetOwnerId = Kernel.Types.Id.Id <$> fleetOwnerId,
             fromLocGeohash = fromLocGeohash,
             goHomeRequestId = Kernel.Types.Id.Id <$> goHomeRequestId,
             id = Kernel.Types.Id.Id id,
@@ -102,6 +103,7 @@ instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDri
             upgradeCabRequest = upgradeCabRequest,
             vehicleAge = vehicleAge,
             vehicleCategory = vehicleCategory,
+            vehicleNumber = vehicleNumber,
             vehicleServiceTier = Kernel.Prelude.fromMaybe (Domain.Types.VehicleVariant.castVariantToServiceTier vehicleVariant) vehicleServiceTier,
             vehicleServiceTierName = vehicleServiceTierName,
             vehicleVariant = vehicleVariant
@@ -149,6 +151,7 @@ instance ToTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDrive
         Beam.driverTags = driverTags,
         Beam.durationToPickup = durationToPickup,
         Beam.estimateId = estimateId,
+        Beam.fleetOwnerId = Kernel.Types.Id.getId <$> fleetOwnerId,
         Beam.fromLocGeohash = fromLocGeohash,
         Beam.goHomeRequestId = Kernel.Types.Id.getId <$> goHomeRequestId,
         Beam.id = Kernel.Types.Id.getId id,
@@ -190,6 +193,7 @@ instance ToTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDrive
         Beam.upgradeCabRequest = upgradeCabRequest,
         Beam.vehicleAge = vehicleAge,
         Beam.vehicleCategory = vehicleCategory,
+        Beam.vehicleNumber = vehicleNumber,
         Beam.vehicleServiceTier = Kernel.Prelude.Just vehicleServiceTier,
         Beam.vehicleServiceTierName = vehicleServiceTierName,
         Beam.vehicleVariant = vehicleVariant
