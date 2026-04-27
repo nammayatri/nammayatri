@@ -452,7 +452,7 @@ createTicketBooking personId merchantOperatingCityId ticketBookingId placeId sub
   return $
     Domain.Types.TicketBooking.TicketBooking
       { id = ticketBookingId,
-        shortId = bool shortId (ShortId $ "test-" <> shortId.getShortId) isMetroTestTransaction,
+        shortId = ShortId $ DPayment.updateShortId Nothing isMetroTestTransaction shortId.getShortId,
         ticketPlaceId = placeId,
         ticketSubPlaceId = subPlaceId,
         personId = Kernel.Types.Id.cast personId,

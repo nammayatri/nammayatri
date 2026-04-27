@@ -67,6 +67,7 @@ module Lib.Payment.Domain.Action
     OfferStatsInput (..),
     applyOfferService,
     applyOfferWithoutPaymentService,
+    updateShortId,
   )
 where
 
@@ -717,6 +718,12 @@ getRefundStatusService orderId merchantOpCityId getRefundStatusCall = do
 
 -- create order -----------------------------------------------------
 
+updateShortId :: Maybe DOrder.PaymentServiceType -> Bool -> Text -> Text
+updateShortId mbPaymentServiceType isTestTransaction shortId =
+  let shortId' = if mbPaymentServiceType == Just DOrder.FRFSPassPurchase then "P-" <> shortId else shortId
+      shortId'' = if isTestTransaction then "test-" <> shortId' else shortId'
+   in shortId''
+
 createOrderService ::
   ( EncFlow m r,
     BeamFlow m r
@@ -736,11 +743,7 @@ createOrderService ::
   m (Maybe Payment.CreateOrderResp)
 createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType isTestTransaction createOrderRequest createOrderCall _mbCreateWalletCall _isMockPayment mbGroupId = do
   logInfo $ "CreateOrderService: "
-  -- Apply test- prefix if isTestTransaction is True and not already prefixed (idempotent)
-  let updatedOrderShortId =
-        if isTestTransaction
-          then "test-" <> createOrderRequest.orderShortId
-          else createOrderRequest.orderShortId
+  let updatedOrderShortId = updateShortId (Just paymentServiceType) isTestTransaction createOrderRequest.orderShortId
       createOrderReq = (createOrderRequest :: Payment.CreateOrderReq) {Payment.orderShortId = updatedOrderShortId}
   when (paymentServiceType == DOrder.Wallet) $ do handleWalletOrder createOrderReq
   mbExistingOrder <- QOrder.findById (Id createOrderReq.orderId)
