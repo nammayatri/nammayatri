@@ -23,7 +23,6 @@ import qualified Kernel.External.Payment.Stripe.Config as Stripe
 import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.Plasma as Plasma
 import qualified Kernel.External.SMS.Interface as Sms
-import qualified Kernel.External.Settlement.Types as Settlement
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Verification.Interface as Verification
@@ -125,10 +124,7 @@ getConfigJSON = \case
   Domain.InsuranceDeclarationServiceConfig iffcoTokioCfg -> toJSON iffcoTokioCfg
   Domain.PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig cfg -> toJSON cfg
-  Domain.SettlementServiceConfig settlementCfg -> case settlementCfg of
-    Settlement.HyperPGConfig srcCfg -> toJSON srcCfg
-    Settlement.BillDeskConfig srcCfg -> toJSON srcCfg
-    Settlement.YesBizConfig srcCfg -> toJSON srcCfg
+  Domain.SettlementServiceConfig settlementCfg -> toJSON settlementCfg
   Domain.GSTEInvoiceServiceConfig eInvCfg -> case eInvCfg of
     GSTEInvoice.CharteredInfoEInvoiceConfig cfg -> toJSON cfg
 
@@ -210,10 +206,7 @@ getServiceName = \case
   Domain.InsuranceDeclarationServiceConfig _ -> Domain.InsuranceDeclarationService Domain.IffcoTokio
   Domain.PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig _ -> Domain.PartnerSdkService Domain.Aarokya
-  Domain.SettlementServiceConfig settlementCfg -> case settlementCfg of
-    Settlement.HyperPGConfig _ -> Domain.SettlementService Settlement.HyperPG
-    Settlement.BillDeskConfig _ -> Domain.SettlementService Settlement.BillDesk
-    Settlement.YesBizConfig _ -> Domain.SettlementService Settlement.YesBiz
+  Domain.SettlementServiceConfig settlementCfg -> Domain.SettlementService settlementCfg.settlementService
   Domain.GSTEInvoiceServiceConfig eInvCfg -> case eInvCfg of
     GSTEInvoice.CharteredInfoEInvoiceConfig _ -> Domain.GSTEInvoiceService GSTEInvoice.CharteredInfo
 
@@ -289,9 +282,18 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.PlasmaService Plasma.LMS -> Domain.PlasmaServiceConfig . Plasma.LMSConfig <$> eitherValue configJSON
   Domain.InsuranceDeclarationService Domain.IffcoTokio -> Domain.InsuranceDeclarationServiceConfig <$> eitherValue configJSON
   Domain.PartnerSdkService Domain.Aarokya -> Domain.PartnerSdkServiceConfig . PartnerSdk.AarokyaPartnerSdkConfig <$> eitherValue configJSON
-  Domain.SettlementService Settlement.HyperPG -> Domain.SettlementServiceConfig . Settlement.HyperPGConfig <$> eitherValue configJSON
-  Domain.SettlementService Settlement.BillDesk -> Domain.SettlementServiceConfig . Settlement.BillDeskConfig <$> eitherValue configJSON
-  Domain.SettlementService Settlement.YesBiz -> Domain.SettlementServiceConfig . Settlement.YesBizConfig <$> eitherValue configJSON
+  Domain.SettlementService svc ->
+    case eitherValue configJSON of
+      Right cfg
+        | cfg.settlementService == svc -> Right $ Domain.SettlementServiceConfig cfg
+        | otherwise ->
+          Left $
+            "settlementService in JSON ("
+              <> show cfg.settlementService
+              <> ") does not match merchant_service_config row ("
+              <> show svc
+              <> ")"
+      Left err -> Left err
   Domain.GSTEInvoiceService GSTEInvoice.CharteredInfo -> Domain.GSTEInvoiceServiceConfig . GSTEInvoice.CharteredInfoEInvoiceConfig <$> eitherValue configJSON
 
 eitherValue :: FromJSON a => A.Value -> Either Text a

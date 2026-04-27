@@ -135,6 +135,7 @@
           amazonka-ses.source = inputs.amazonka-git + /lib/services/amazonka-ses;
           streamly.source = "0.8.3";
           unicode-data.source = "0.3.1";
+          zip-archive.source = inputs.zip-archive-hs;
           namma-dsl.source = inputs.namma-dsl + /lib/namma-dsl;
           json-logic-hs.source = inputs.json-logic-hs;
           google-cloud-pubsub.source = inputs.google-cloud-haskell + /lib/google-cloud-pubsub;
@@ -184,6 +185,8 @@
           base32.jailbreak = true;
           amazonka-core.check = false;
           cryptostore.check = false;
+          # Test suite shells out to `which` / infozip; not on PATH in darwin Nix sandbox.
+          zip-archive.check = false;
           google-cloud-pubsub.check = false;
           google-cloud-common.check = false;
         };

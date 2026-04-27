@@ -88,6 +88,10 @@
 
     json-logic-hs.url = "github:nammayatri/json-logic-hs";
     json-logic-hs.flake = false;
+
+    # Hackage version pins use all-cabal-hashes; 0.4.3.2 is missing from our snapshot.
+    zip-archive-hs.url = "github:jgm/zip-archive?ref=0.4.3.2";
+    zip-archive-hs.flake = false;
   };
 
   outputs = inputs:
