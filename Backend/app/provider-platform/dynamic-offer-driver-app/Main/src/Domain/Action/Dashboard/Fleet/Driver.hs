@@ -245,6 +245,7 @@ import qualified Storage.Queries.FleetDriverAssociationExtra as QFDAExtra
 import qualified Storage.Queries.FleetMemberAssociation as FMA
 import qualified Storage.Queries.FleetOperatorAssociation as FOV
 import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperatorAssociation
+import qualified Storage.Queries.FleetOperatorAssociationExtra as QFOAExtra
 import qualified Storage.Queries.FleetOperatorDailyStatsExtra as QFODSExtra
 import qualified Storage.Queries.FleetOperatorStats as QFleetOperatorStats
 import qualified Storage.Queries.FleetOwnerInformation as FOI
@@ -275,7 +276,6 @@ import Tools.Error
 import qualified Tools.Maps as Maps
 import qualified Tools.Notifications as Notification
 import Tools.SMS as Sms hiding (Success)
-import qualified Storage.Queries.FleetOperatorAssociationExtra as QFOAExtra
 
 postDriverFleetAddVehicle ::
   ShortId DM.Merchant ->
@@ -4169,6 +4169,22 @@ postDriverFleetGetNearbyDriversV2 merchantShortId _ fleetOwnerId req = do
 
 ---------------------------------------------------------------------
 
+resolveFleetOwnerIdsForAnalytics :: Text -> Maybe Text -> Flow () -> Flow (Maybe DP.Role, [Text])
+resolveFleetOwnerIdsForAnalytics requestorId mbFleetOwnerId onFleetOwnerIdAccessCheck = do
+  mbRequestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person)
+  let mbRole = (.role) <$> mbRequestor
+  fleetOwnerIds <- case (mbRole, mbFleetOwnerId) of
+    (Just DP.OPERATOR, Nothing) -> do
+      associations <- QFOAExtra.findAllActiveByOperatorId requestorId
+      pure $ map (.fleetOwnerId) associations
+    (_, Just foId) -> do
+      onFleetOwnerIdAccessCheck
+      pure [foId]
+    (_, Nothing) -> do
+      void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) requestorId
+      pure [requestorId]
+  pure (mbRole, fleetOwnerIds)
+
 getDriverFleetDashboardAnalyticsAllTime :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Flow Common.AllTimeFleetAnalyticsRes
 getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity fleetOwnerId mbRequestorId = do
   -- Ensure requestor has access to this fleet owner (similar to VerifyJoiningOtp flow)
@@ -4217,19 +4233,9 @@ getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity fleetOwnerId mbRe
 
 getDriverFleetDashboardAnalytics :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Common.FleetAnalyticsResponseType -> Data.Time.Day -> Data.Time.Day -> Flow Common.FleetAnalyticsRes
 getDriverFleetDashboardAnalytics merchantShortId opCity requestorId mbFleetOwnerId mbResponseType fromDay toDay = do
-  mbRequestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person)
-  let mbRole = (.role) <$> mbRequestor
-  fleetOwnerIds <-
-    case (mbRole, mbFleetOwnerId) of
-      (Just DP.OPERATOR, Nothing) -> do
-        associations <- QFOAExtra.findAllActiveByOperatorId requestorId
-        pure $ map (.fleetOwnerId) associations
-      (_, Just foId) -> do
-        void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) foId
-        pure [foId]
-      (_, Nothing) -> do
-        void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) requestorId
-        pure [requestorId]
+  (_mbRole, fleetOwnerIds) <-
+    resolveFleetOwnerIdsForAnalytics requestorId mbFleetOwnerId $
+      void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) (fromMaybe requestorId mbFleetOwnerId)
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -4237,11 +4243,16 @@ getDriverFleetDashboardAnalytics merchantShortId opCity requestorId mbFleetOwner
   let useDBForAnalytics = transporterConfig.analyticsConfig.useDbForEarningAndMetrics
   case mbResponseType of
     Just Common.EARNINGS -> do
-      earningsAggs <- forM fleetOwnerIds $ \foId ->
-        if useDBForAnalytics
-          then QFODSExtra.sumFleetEarningsByFleetOwnerIdAndDateRangeDB foId fromDay toDay
-          else CFODS.sumFleetEarningsByFleetOwnerIdAndDateRange foId fromDay toDay
-      let earningsAgg = mergeEarningsAggregates earningsAggs
+      earningsAgg <- case fleetOwnerIds of
+        [] -> pure $ QFODSExtra.DailyFleetEarningsAggregated Nothing Nothing Nothing Nothing
+        [singleFoId] ->
+          if useDBForAnalytics
+            then QFODSExtra.sumFleetEarningsByFleetOwnerIdAndDateRangeDB singleFoId fromDay toDay
+            else CFODS.sumFleetEarningsByFleetOwnerIdAndDateRange singleFoId fromDay toDay
+        multipleIds ->
+          if useDBForAnalytics
+            then QFODSExtra.sumFleetEarningsByFleetOwnerIdsAndDateRangeDB multipleIds fromDay toDay
+            else CFODS.sumFleetEarningsByFleetOwnerIdsAndDateRange multipleIds fromDay toDay
       let grossEarningsAmount = earningsAgg.totalEarningSum
           cashPlatformFeesAmount = earningsAgg.cashPlatformFeesSum
           onlinePlatformFeesAmount = earningsAgg.onlinePlatformFeesSum
@@ -4269,11 +4280,11 @@ getDriverFleetDashboardAnalytics merchantShortId opCity requestorId mbFleetOwner
               netEarningsPerHour = fmap (`PriceAPIEntity` transporterConfig.currency) netEarningsPerHourAmount
             }
     _ -> do
-      metricsAggs <- forM fleetOwnerIds $ \foId ->
+      let fleetOwnerId = fromMaybe requestorId (listToMaybe fleetOwnerIds)
+      agg <-
         if useDBForAnalytics
-          then QFODSExtra.sumFleetMetricsByFleetOwnerIdAndDateRangeDB foId fromDay toDay
-          else CFODS.sumFleetMetricsByFleetOwnerIdAndDateRange foId fromDay toDay
-      let agg = mergeMetricsAggregates metricsAggs
+          then QFODSExtra.sumFleetMetricsByFleetOwnerIdAndDateRangeDB fleetOwnerId fromDay toDay
+          else CFODS.sumFleetMetricsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay
       let totalEarnings = fmap (`PriceAPIEntity` transporterConfig.currency) agg.totalEarningSum
           totalDistance = agg.totalDistanceSum
           completedRides = agg.totalCompletedRidesSum
@@ -4567,59 +4578,50 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
 
 getDriverFleetVehicleListStats :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Day -> Day -> Flow Common.FleetVehicleStatsRes
 getDriverFleetVehicleListStats merchantShortId opCity requestorId mbFleetOwnerId mbVehicleNo mbLimit mbOffset fromDay toDay = do
-  mbRequestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person)
-  let mbRole = (.role) <$> mbRequestor
-  fleetOwnerIds <-
-    case (mbRole, mbFleetOwnerId) of
-      (Just DP.OPERATOR, Nothing) -> do
-        associations <- QFOAExtra.findAllActiveByOperatorId requestorId
-        pure $ map (.fleetOwnerId) associations
-      (_, Just foId) -> do
-        when (isNothing mbVehicleNo) $ void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) foId
-        pure [foId]
-      (_, Nothing) -> do
-        void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) requestorId
-        pure [requestorId]
-  whenJust mbVehicleNo $ \vehicleNo -> do
-      mbRc <- VRCQuery.findLastVehicleRCWrapper vehicleNo
-      case mbRc of
-        Just rc -> case rc.fleetOwnerId of
-          Just rcFleetOwnerId -> validateOperatorToFleetAssoc requestorId rcFleetOwnerId
-          Nothing -> throwError (InvalidRequest "Vehicle is not associated with any fleet")
-        Nothing -> throwError (InvalidRequest "Vehicle not found")
+  (mbRole, fleetOwnerIds) <-
+    resolveFleetOwnerIdsForAnalytics requestorId mbFleetOwnerId $
+      when (isNothing mbVehicleNo) $ void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) (fromMaybe requestorId mbFleetOwnerId)
+  mbRc <- mapM VRCQuery.findLastVehicleRCWrapper mbVehicleNo <&> join
+  whenJust mbVehicleNo $ \_ -> do
+    case mbRc of
+      Just rc -> case rc.fleetOwnerId of
+        Just rcFleetOwnerId -> when (mbRole == Just DP.OPERATOR) $ validateOperatorToFleetAssoc requestorId rcFleetOwnerId
+        Nothing -> throwError (InvalidRequest "Vehicle is not associated with any fleet")
+      Nothing -> throwError (InvalidRequest "Vehicle not found")
+  let mbRcId = (.id.getId) <$> mbRc
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (not transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $ throwError (InvalidRequest "Analytics is not allowed for this merchant")
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
-  allAgg <- fmap concat $
-    forM fleetOwnerIds $ \foId -> do
-      mbRcId <- case mbVehicleNo of
-        Just vehicleNo -> do
-          mbRc <- VRCQuery.findLastVehicleRCWrapper vehicleNo
-          pure $ (.id.getId) <$> mbRc
-        Nothing -> pure Nothing
+      useDb = transporterConfig.analyticsConfig.useDbForEarningAndMetrics
+  agg <- case fleetOwnerIds of
+    [] -> pure []
+    [singleFoId] -> do
       let mbMerchantId = Just merchant.id.getId
       case mbVehicleNo of
         Just _ ->
           if isNothing mbRcId
             then pure []
-            else case transporterConfig.analyticsConfig.useDbForEarningAndMetrics of
-              True -> QFRDSExtra.sumVehicleStatsByFleetOwnerIdAndDateRange Nothing mbRcId maxLimit 0 fromDay toDay mbMerchantId
-              _ -> CFRDSExtra.aggerateVehicleStatsByFleetOwnerIdAndDateRange Nothing mbRcId maxLimit 0 fromDay toDay mbMerchantId
+            else
+              if useDb
+                then QFRDSExtra.sumVehicleStatsByFleetOwnerIdAndDateRange Nothing mbRcId limit offset fromDay toDay mbMerchantId
+                else CFRDSExtra.aggerateVehicleStatsByFleetOwnerIdAndDateRange Nothing mbRcId limit offset fromDay toDay mbMerchantId
         Nothing ->
-          case transporterConfig.analyticsConfig.useDbForEarningAndMetrics of
-            True -> QFRDSExtra.sumVehicleStatsByFleetOwnerIdAndDateRange foId Nothing maxLimit 0 fromDay toDay mbMerchantId
-            _ -> CFRDSExtra.aggerateVehicleStatsByFleetOwnerIdAndDateRange foId Nothing maxLimit 0 fromDay toDay mbMerchantId      
-  let agg = take limit $ drop offset allAgg
+          if useDb
+            then QFRDSExtra.sumVehicleStatsByFleetOwnerIdAndDateRange (Just singleFoId) Nothing limit offset fromDay toDay mbMerchantId
+            else CFRDSExtra.aggerateVehicleStatsByFleetOwnerIdAndDateRange (Just singleFoId) Nothing limit offset fromDay toDay mbMerchantId
+    multipleIds ->
+      if useDb
+        then QFRDSExtra.sumVehicleStatsByFleetOwnerIdsAndDateRange multipleIds mbRcId limit offset fromDay toDay
+        else CFRDSExtra.aggerateVehicleStatsByFleetOwnerIdsAndDateRange multipleIds mbRcId limit offset fromDay toDay
   let rcIds = map (\vehicleStat -> Id vehicleStat.rcId) agg
   vehicleRegistrationCertificates <- VRCQuery.findAllById rcIds
   let vehicleMap = Map.fromList $ map (\rc -> (rc.id.getId, rc)) vehicleRegistrationCertificates
   let agg' = convertToFleetVehicleStatsItem transporterConfig agg vehicleMap
-  let effectiveFleetOwnerId = fromMaybe requestorId mbFleetOwnerId
 
-  pure $ Common.FleetVehicleStatsRes {fleetOwnerId = effectiveFleetOwnerId, listItem = agg', summary = Common.Summary {totalCount = length allAgg, count = length agg}}
+  pure $ Common.FleetVehicleStatsRes {fleetOwnerId = mbFleetOwnerId, listItem = agg', summary = Common.Summary {totalCount = 10000, count = length agg'}}
   where
     maxLimit = 10
     defaultLimit = 5
@@ -4653,47 +4655,6 @@ convertToFleetVehicleStatsItem transporterConfig agg vehicleMap =
               rideDuration = stats.totalDuration,
               earningPerKm = mbEarningsPerKm
             }
-
-addMaybe :: Num a => Maybe a -> Maybe a -> Maybe a
-addMaybe (Just a) (Just b) = Just (a + b)
-addMaybe a Nothing = a
-addMaybe Nothing b = b
-
-mergeEarningsAggregates :: [QFODSExtra.DailyFleetEarningsAggregated] -> QFODSExtra.DailyFleetEarningsAggregated
-mergeEarningsAggregates [] = QFODSExtra.DailyFleetEarningsAggregated Nothing Nothing Nothing Nothing
-mergeEarningsAggregates aggs =
-  QFODSExtra.DailyFleetEarningsAggregated
-    { totalEarningSum = foldl' addMaybe Nothing (map (.totalEarningSum) aggs),
-      cashPlatformFeesSum = foldl' addMaybe Nothing (map (.cashPlatformFeesSum) aggs),
-      onlinePlatformFeesSum = foldl' addMaybe Nothing (map (.onlinePlatformFeesSum) aggs),
-      onlineDurationSum = foldl' addMaybe Nothing (map (.onlineDurationSum) aggs)
-    }
-
-mergeMetricsAggregates :: [QFODSExtra.DailyFleetMetricsAggregated] -> QFODSExtra.DailyFleetMetricsAggregated
-mergeMetricsAggregates [] =
-  QFODSExtra.DailyFleetMetricsAggregated
-    { totalEarningSum = Nothing,
-      totalCompletedRidesSum = Nothing,
-      totalDistanceSum = Nothing,
-      totalRequestCountSum = Nothing,
-      rejectedRequestCountSum = Nothing,
-      pulledRequestCountSum = Nothing,
-      acceptationRequestCountSum = Nothing,
-      driverCancellationCountSum = Nothing,
-      customerCancellationCountSum = Nothing
-    }
-mergeMetricsAggregates aggs =
-  QFODSExtra.DailyFleetMetricsAggregated
-    { totalEarningSum = foldl' addMaybe Nothing (map (.totalEarningSum) aggs),
-      totalCompletedRidesSum = foldl' addMaybe Nothing (map (.totalCompletedRidesSum) aggs),
-      totalDistanceSum = foldl' addMaybe Nothing (map (.totalDistanceSum) aggs),
-      totalRequestCountSum = foldl' addMaybe Nothing (map (.totalRequestCountSum) aggs),
-      rejectedRequestCountSum = foldl' addMaybe Nothing (map (.rejectedRequestCountSum) aggs),
-      pulledRequestCountSum = foldl' addMaybe Nothing (map (.pulledRequestCountSum) aggs),
-      acceptationRequestCountSum = foldl' addMaybe Nothing (map (.acceptationRequestCountSum) aggs),
-      driverCancellationCountSum = foldl' addMaybe Nothing (map (.driverCancellationCountSum) aggs),
-      customerCancellationCountSum = foldl' addMaybe Nothing (map (.customerCancellationCountSum) aggs)
-    }
 
 getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Flow Common.OnboardedDriversAndUnlinkedVehiclesRes
 getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles merchantShortId opCity fleetOwnerId mbLimit mbOffset = do

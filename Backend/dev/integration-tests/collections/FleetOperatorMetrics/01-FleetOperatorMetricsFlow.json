@@ -1,0 +1,1026 @@
+{
+  "info": {
+    "_postman_id": "fleet-operator-metrics-flow",
+    "name": "Fleet Operator Metrics - Dashboard Analytics & Vehicle Stats",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Tests fleet dashboard analytics and vehicle list stats with multiple drivers and vehicles per fleet owner. Seeds 3 driver summary rows in fleet_operator_daily_stats and 3 vehicle rows in fleet_rc_daily_stats, then verifies that the API returns correctly aggregated earnings, rides, and per-vehicle stats."
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('_test_fleet_mobile')) {",
+          "  var r = Math.floor(Math.random() * 900000000) + 100000000;",
+          "  pm.collectionVariables.set('_test_fleet_mobile', String(r));",
+          "  pm.environment.set('fleet_owner_mobile', String(r));",
+          "",
+          "  pm.collectionVariables.set('_test_driver1', 'drv1-' + r);",
+          "  pm.collectionVariables.set('_test_driver2', 'drv2-' + r);",
+          "  pm.collectionVariables.set('_test_driver3', 'drv3-' + r);",
+          "",
+          "  pm.collectionVariables.set('_test_rc1', 'rc1-' + r);",
+          "  pm.collectionVariables.set('_test_rc2', 'rc2-' + r);",
+          "  pm.collectionVariables.set('_test_rc3', 'rc3-' + r);",
+          "",
+          "  var today = new Date();",
+          "  var d1 = new Date(today); d1.setDate(today.getDate() - 3);",
+          "  var d2 = new Date(today); d2.setDate(today.getDate() - 2);",
+          "  var d3 = new Date(today); d3.setDate(today.getDate() - 1);",
+          "  var fromDate = new Date(today); fromDate.setDate(today.getDate() - 7);",
+          "  pm.collectionVariables.set('_test_date1', d1.toISOString().split('T')[0]);",
+          "  pm.collectionVariables.set('_test_date2', d2.toISOString().split('T')[0]);",
+          "  pm.collectionVariables.set('_test_date3', d3.toISOString().split('T')[0]);",
+          "  pm.collectionVariables.set('_test_from_date', fromDate.toISOString().split('T')[0]);",
+          "  pm.collectionVariables.set('_test_to_date', today.toISOString().split('T')[0]);",
+          "",
+          "  console.log('Generated: mobile=' + r);",
+          "  console.log('Drivers: ' + pm.collectionVariables.get('_test_driver1') + ', ' + pm.collectionVariables.get('_test_driver2') + ', ' + pm.collectionVariables.get('_test_driver3'));",
+          "  console.log('Vehicles: ' + pm.collectionVariables.get('_test_rc1') + ', ' + pm.collectionVariables.get('_test_rc2') + ', ' + pm.collectionVariables.get('_test_rc3'));",
+          "}",
+          "",
+          "var envType = pm.environment.get('envType') || 'Local';",
+          "var url = pm.request.url.toString();",
+          "if (envType !== 'Local' && (url.indexOf(pm.environment.get('mockServerUrl')) !== -1)) {",
+          "  postman.setNextRequest(null); return;",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00a - SQL: Enable fleet operator dashboard analytics (before BPP caches config)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.request.body.raw = JSON.stringify({",
+              "  db_name: 'atlas_dev', db_schema: 'atlas_driver_offer_bpp',",
+              "  table_name: 'transporter_config',",
+              "  set: { analytics_config: JSON.stringify({ enableFleetOperatorDashboardAnalytics: true, weekStartMode: 3, earningsWindowSize: 7, maxOnlineDurationDays: 10, useDbForEarningAndMetrics: true, allowCacheDriverFlowStatus: false, onlineDurationCalculateFrom: null }) },",
+              "  where_clause: [{ column_name: 'merchant_operating_city_id', val: pm.environment.get('merchant_operating_city_id') || 'f067bccf-5b34-fb51-a5a3-9d6fa6baac26', op: '=' }]",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": ["pm.test('Enable analytics config', () => pm.response.to.have.status(200));"],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "host": ["{{mockServerUrl}}"],
+          "path": ["mock", "sql", "update"]
+        }
+      }
+    },
+    {
+      "name": "00b - SQL: Disable transporter_config from KV cache (local only)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var body = {",
+              "  db_name: 'atlas_dev',",
+              "  db_schema: 'atlas_driver_offer_bpp',",
+              "  table_name: 'system_configs',",
+              "  select: ['id', 'config_value'],",
+              "  where_clause: [{ column_name: 'id', val: 'kv_configs', op: '=' }]",
+              "};",
+              "pm.request.body.raw = JSON.stringify(body);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Read system_configs', () => pm.response.to.have.status(200));",
+              "var d = pm.response.json();",
+              "if (d.rows && d.rows.length > 0) {",
+              "  var cfg = d.rows[0].config_value;",
+              "  if (typeof cfg === 'string') cfg = JSON.parse(cfg);",
+              "  var disabled = cfg.disableForKV || [];",
+              "  if (disabled.indexOf('transporter_config') === -1) {",
+              "    disabled.push('transporter_config');",
+              "    cfg.disableForKV = disabled;",
+              "    pm.collectionVariables.set('_kv_config_needs_update', JSON.stringify(cfg));",
+              "  } else {",
+              "    pm.collectionVariables.set('_kv_config_needs_update', '');",
+              "  }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": ["{{mockServerUrl}}"],
+          "path": ["mock", "sql", "select"]
+        }
+      }
+    },
+    {
+      "name": "00c - SQL: Update system_configs to disable transporter_config KV (local only)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var newCfg = pm.collectionVariables.get('_kv_config_needs_update');",
+              "if (!newCfg) { pm.collectionVariables.set('_skip_00c', 'true'); return; }",
+              "pm.collectionVariables.set('_skip_00c', '');",
+              "pm.request.body.raw = JSON.stringify({",
+              "  db_name: 'atlas_dev', db_schema: 'atlas_driver_offer_bpp',",
+              "  table_name: 'system_configs',",
+              "  set: { config_value: newCfg },",
+              "  where_clause: [{ column_name: 'id', val: 'kv_configs', op: '=' }]",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var skipped = pm.collectionVariables.get('_skip_00c');",
+              "if (skipped) {",
+              "  pm.test('transporter_config already disabled in KV (no update needed)', () => true);",
+              "} else {",
+              "  pm.test('Update system_configs', () => pm.response.to.have.status(200));",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "host": ["{{mockServerUrl}}"],
+          "path": ["mock", "sql", "update"]
+        }
+      }
+    },
+    {
+      "name": "01 - Fleet Owner Login OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Login OTP returns 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{fleet_owner_mobile}}\", \"mobileCountryCode\": \"{{country_code}}\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/login/otp",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "fleet", "v2", "login", "otp"]
+        }
+      }
+    },
+    {
+      "name": "02 - Fleet Owner Verify OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Verify OTP returns 200', () => pm.response.to.have.status(200));",
+              "const d = pm.response.json();",
+              "pm.expect(d.authToken, 'authToken').to.be.a('string');",
+              "pm.environment.set('fleet_owner_token', d.authToken);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{fleet_owner_mobile}}\", \"mobileCountryCode\": \"{{country_code}}\", \"otp\": \"{{login_otp}}\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/verify/otp",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "fleet", "v2", "verify", "otp"]
+        }
+      }
+    },
+    {
+      "name": "03 - SQL: Resolve fleet_owner_id",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('SQL select returns 200', () => pm.response.to.have.status(200));",
+              "const d = pm.response.json();",
+              "let rows = (d && d.rows) || [];",
+              "pm.test('Found fleet owner rows', () => pm.expect(rows.length).to.be.above(0));",
+              "if (rows.length) {",
+              "  rows.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));",
+              "  pm.environment.set('fleet_owner_id', rows[0].id);",
+              "  pm.collectionVariables.set('_test_fo_id', rows[0].id);",
+              "  console.log('fleet_owner_id =', rows[0].id);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"person\", \"select\": [\"id\", \"role\", \"created_at\"], \"where_clause\": [{\"column_name\": \"role\", \"val\": \"FLEET_OWNER\", \"op\": \"=\"}], \"limit\": 50}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": ["{{mockServerUrl}}"],
+          "path": ["mock", "sql", "select"]
+        }
+      }
+    },
+    {
+      "name": "04 - SQL: Seed fleet_operator_daily_stats — summary row date1",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var foId = pm.collectionVariables.get('_test_fo_id');",
+              "pm.request.body.raw = JSON.stringify({",
+              "  db_name: 'atlas_dev', db_schema: 'atlas_driver_offer_bpp',",
+              "  table_name: 'fleet_operator_daily_stats',",
+              "  touch_timestamps: false, on_conflict_do_nothing: true,",
+              "  values: {",
+              "    fleet_operator_id: foId, fleet_driver_id: foId,",
+              "    merchant_local_date: pm.collectionVariables.get('_test_date1'),",
+              "    total_completed_rides: 8, online_total_earning: 1200.0, cash_total_earning: 800.0,",
+              "    cash_platform_fees: 80.0, online_platform_fees: 120.0,",
+              "    online_duration: 7200, ride_duration: 5400, total_distance: 40000.0,",
+              "    currency: 'INR', distance_unit: 'Meter'",
+              "  }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": ["pm.test('Insert summary row date1', () => pm.response.to.have.status(200));"],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/insert",
+          "host": ["{{mockServerUrl}}"],
+          "path": ["mock", "sql", "insert"]
+        }
+      }
+    },
+    {
+      "name": "05 - SQL: Seed fleet_operator_daily_stats — summary row date2",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var foId = pm.collectionVariables.get('_test_fo_id');",
+              "pm.request.body.raw = JSON.stringify({",
+              "  db_name: 'atlas_dev', db_schema: 'atlas_driver_offer_bpp',",
+              "  table_name: 'fleet_operator_daily_stats',",
+              "  touch_timestamps: false, on_conflict_do_nothing: true,",
+              "  values: {",
+              "    fleet_operator_id: foId, fleet_driver_id: foId,",
+              "    merchant_local_date: pm.collectionVariables.get('_test_date2'),",
+              "    total_completed_rides: 12, online_total_earning: 2000.0, cash_total_earning: 1000.0,",
+              "    cash_platform_fees: 100.0, online_platform_fees: 200.0,",
+              "    online_duration: 10800, ride_duration: 7200, total_distance: 60000.0,",
+              "    currency: 'INR', distance_unit: 'Meter'",
+              "  }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": ["pm.test('Insert summary row date2', () => pm.response.to.have.status(200));"],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/insert",
+          "host": ["{{mockServerUrl}}"],
+          "path": ["mock", "sql", "insert"]
+        }
+      }
+    },
+    {
+      "name": "06 - SQL: Seed fleet_operator_daily_stats — summary row date3",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var foId = pm.collectionVariables.get('_test_fo_id');",
+              "pm.request.body.raw = JSON.stringify({",
+              "  db_name: 'atlas_dev', db_schema: 'atlas_driver_offer_bpp',",
+              "  table_name: 'fleet_operator_daily_stats',",
+              "  touch_timestamps: false, on_conflict_do_nothing: true,",
+              "  values: {",
+              "    fleet_operator_id: foId, fleet_driver_id: foId,",
+              "    merchant_local_date: pm.collectionVariables.get('_test_date3'),",
+              "    total_completed_rides: 5, online_total_earning: 800.0, cash_total_earning: 200.0,",
+              "    cash_platform_fees: 20.0, online_platform_fees: 80.0,",
+              "    online_duration: 3600, ride_duration: 2700, total_distance: 25000.0,",
+              "    currency: 'INR', distance_unit: 'Meter'",
+              "  }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": ["pm.test('Insert summary row date3', () => pm.response.to.have.status(200));"],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/insert",
+          "host": ["{{mockServerUrl}}"],
+          "path": ["mock", "sql", "insert"]
+        }
+      }
+    },
+    {
+      "name": "07 - SQL: Seed fleet_rc_daily_stats — Vehicle 1 (rc1) date1",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var foId = pm.collectionVariables.get('_test_fo_id');",
+              "pm.request.body.raw = JSON.stringify({",
+              "  db_name: 'atlas_dev', db_schema: 'atlas_driver_offer_bpp',",
+              "  table_name: 'fleet_rc_daily_stats',",
+              "  touch_timestamps: false, on_conflict_do_nothing: true,",
+              "  values: {",
+              "    fleet_owner_id: foId, rc_id: pm.collectionVariables.get('_test_rc1'),",
+              "    merchant_local_date: pm.collectionVariables.get('_test_date1'),",
+              "    total_completed_rides: 5, total_earnings: 2500.0,",
+              "    ride_distance: 20000.0, ride_duration: 3600, currency: 'INR',",
+              "    merchant_id: pm.environment.get('driver_merchant_id')",
+              "  }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": ["pm.test('Insert rc1 date1', () => pm.response.to.have.status(200));"],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/insert",
+          "host": ["{{mockServerUrl}}"],
+          "path": ["mock", "sql", "insert"]
+        }
+      }
+    },
+    {
+      "name": "08 - SQL: Seed fleet_rc_daily_stats — Vehicle 1 (rc1) date2",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var foId = pm.collectionVariables.get('_test_fo_id');",
+              "pm.request.body.raw = JSON.stringify({",
+              "  db_name: 'atlas_dev', db_schema: 'atlas_driver_offer_bpp',",
+              "  table_name: 'fleet_rc_daily_stats',",
+              "  touch_timestamps: false, on_conflict_do_nothing: true,",
+              "  values: {",
+              "    fleet_owner_id: foId, rc_id: pm.collectionVariables.get('_test_rc1'),",
+              "    merchant_local_date: pm.collectionVariables.get('_test_date2'),",
+              "    total_completed_rides: 7, total_earnings: 3500.0,",
+              "    ride_distance: 28000.0, ride_duration: 5400, currency: 'INR',",
+              "    merchant_id: pm.environment.get('driver_merchant_id')",
+              "  }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": ["pm.test('Insert rc1 date2', () => pm.response.to.have.status(200));"],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/insert",
+          "host": ["{{mockServerUrl}}"],
+          "path": ["mock", "sql", "insert"]
+        }
+      }
+    },
+    {
+      "name": "09 - SQL: Seed fleet_rc_daily_stats — Vehicle 2 (rc2) date1",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var foId = pm.collectionVariables.get('_test_fo_id');",
+              "pm.request.body.raw = JSON.stringify({",
+              "  db_name: 'atlas_dev', db_schema: 'atlas_driver_offer_bpp',",
+              "  table_name: 'fleet_rc_daily_stats',",
+              "  touch_timestamps: false, on_conflict_do_nothing: true,",
+              "  values: {",
+              "    fleet_owner_id: foId, rc_id: pm.collectionVariables.get('_test_rc2'),",
+              "    merchant_local_date: pm.collectionVariables.get('_test_date1'),",
+              "    total_completed_rides: 3, total_earnings: 1500.0,",
+              "    ride_distance: 12000.0, ride_duration: 2400, currency: 'INR',",
+              "    merchant_id: pm.environment.get('driver_merchant_id')",
+              "  }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": ["pm.test('Insert rc2 date1', () => pm.response.to.have.status(200));"],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/insert",
+          "host": ["{{mockServerUrl}}"],
+          "path": ["mock", "sql", "insert"]
+        }
+      }
+    },
+    {
+      "name": "10 - SQL: Seed fleet_rc_daily_stats — Vehicle 2 (rc2) date2",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var foId = pm.collectionVariables.get('_test_fo_id');",
+              "pm.request.body.raw = JSON.stringify({",
+              "  db_name: 'atlas_dev', db_schema: 'atlas_driver_offer_bpp',",
+              "  table_name: 'fleet_rc_daily_stats',",
+              "  touch_timestamps: false, on_conflict_do_nothing: true,",
+              "  values: {",
+              "    fleet_owner_id: foId, rc_id: pm.collectionVariables.get('_test_rc2'),",
+              "    merchant_local_date: pm.collectionVariables.get('_test_date2'),",
+              "    total_completed_rides: 4, total_earnings: 2000.0,",
+              "    ride_distance: 16000.0, ride_duration: 3000, currency: 'INR',",
+              "    merchant_id: pm.environment.get('driver_merchant_id')",
+              "  }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": ["pm.test('Insert rc2 date2', () => pm.response.to.have.status(200));"],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/insert",
+          "host": ["{{mockServerUrl}}"],
+          "path": ["mock", "sql", "insert"]
+        }
+      }
+    },
+    {
+      "name": "11 - SQL: Seed fleet_rc_daily_stats — Vehicle 3 (rc3) date3",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var foId = pm.collectionVariables.get('_test_fo_id');",
+              "pm.request.body.raw = JSON.stringify({",
+              "  db_name: 'atlas_dev', db_schema: 'atlas_driver_offer_bpp',",
+              "  table_name: 'fleet_rc_daily_stats',",
+              "  touch_timestamps: false, on_conflict_do_nothing: true,",
+              "  values: {",
+              "    fleet_owner_id: foId, rc_id: pm.collectionVariables.get('_test_rc3'),",
+              "    merchant_local_date: pm.collectionVariables.get('_test_date3'),",
+              "    total_completed_rides: 2, total_earnings: 1000.0,",
+              "    ride_distance: 8000.0, ride_duration: 1500, currency: 'INR',",
+              "    merchant_id: pm.environment.get('driver_merchant_id')",
+              "  }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": ["pm.test('Insert rc3 date3', () => pm.response.to.have.status(200));"],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/insert",
+          "host": ["{{mockServerUrl}}"],
+          "path": ["mock", "sql", "insert"]
+        }
+      }
+    },
+    {
+      "name": "11b - SQL: Grant fleet analytics access_matrix permissions",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var perms = [",
+              "  'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_DASHBOARD_ANALYTICS',",
+              "  'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_DASHBOARD_ANALYTICS_ALL_TIME',",
+              "  'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_VEHICLE_LIST_STATS',",
+              "  'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_DASHBOARD_ANALYTICS_CACHE'",
+              "];",
+              "pm.request.body.raw = JSON.stringify({",
+              "  db_name: 'atlas_dev', db_schema: 'atlas_bpp_dashboard',",
+              "  sql: \"INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type, created_at, updated_at) SELECT gen_random_uuid(), r.id, 'DSL', 'USER_FULL_ACCESS', perm.action, now(), now() FROM atlas_bpp_dashboard.role r CROSS JOIN (VALUES ('\" + perms.join(\"'),('\") + \"')) AS perm(action) WHERE r.dashboard_access_type IN ('FLEET_OWNER','DASHBOARD_OPERATOR') ON CONFLICT DO NOTHING\"",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": ["pm.test('Grant access_matrix permissions', () => pm.response.to.have.status(200));"],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/raw",
+          "host": ["{{mockServerUrl}}"],
+          "path": ["mock", "sql", "raw"]
+        }
+      }
+    },
+    {
+      "name": "12 - GET Dashboard Analytics (EARNINGS) — verify aggregated sums",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const code = pm.response.code;",
+              "pm.test('EARNINGS returns 200', () => pm.expect(code).to.eql(200));",
+              "",
+              "if (code === 200) {",
+              "  const d = pm.response.json();",
+              "  console.log('EARNINGS response:', JSON.stringify(d));",
+              "",
+              "  pm.test('tag is Earnings', () => pm.expect(d.tag).to.eql('Earnings'));",
+              "",
+              "  if (d.contents) {",
+              "    pm.test('grossEarnings = 6000', () => {",
+              "      pm.expect(d.contents.grossEarnings).to.not.be.null;",
+              "      pm.expect(d.contents.grossEarnings.amount).to.eql(6000);",
+              "    });",
+              "",
+              "    pm.test('platformFees = 600', () => {",
+              "      pm.expect(d.contents.platformFees).to.not.be.null;",
+              "      pm.expect(d.contents.platformFees.amount).to.eql(600);",
+              "    });",
+              "",
+              "    pm.test('netEarnings = 5400', () => {",
+              "      pm.expect(d.contents.netEarnings).to.not.be.null;",
+              "      pm.expect(d.contents.netEarnings.amount).to.eql(5400);",
+              "    });",
+              "",
+              "    pm.test('grossEarningsPerHour = 1000', () => {",
+              "      pm.expect(d.contents.grossEarningsPerHour).to.not.be.null;",
+              "      pm.expect(d.contents.grossEarningsPerHour.amount).to.eql(1000);",
+              "    });",
+              "",
+              "    pm.test('netEarningsPerHour = 900', () => {",
+              "      pm.expect(d.contents.netEarningsPerHour).to.not.be.null;",
+              "      pm.expect(d.contents.netEarningsPerHour.amount).to.eql(900);",
+              "    });",
+              "  }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "token", "value": "{{fleet_owner_token}}" }],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/dashboard/analytics?responseType=%22EARNINGS%22&from={{_test_from_date}}&to={{_test_to_date}}",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "dashboard", "analytics"],
+          "query": [
+            { "key": "responseType", "value": "%22EARNINGS%22" },
+            { "key": "from", "value": "{{_test_from_date}}" },
+            { "key": "to", "value": "{{_test_to_date}}" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "13 - GET Dashboard Analytics (FILTERED) — verify aggregated metrics",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const code = pm.response.code;",
+              "pm.test('FILTERED returns 200', () => pm.expect(code).to.eql(200));",
+              "",
+              "if (code === 200) {",
+              "  const d = pm.response.json();",
+              "  console.log('FILTERED response:', JSON.stringify(d));",
+              "",
+              "  pm.test('tag is Filtered', () => pm.expect(d.tag).to.eql('Filtered'));",
+              "",
+              "  if (d.contents) {",
+              "    pm.test('completedRides = 25', () => {",
+              "      pm.expect(d.contents.completedRides).to.eql(25);",
+              "    });",
+              "",
+              "    pm.test('totalDistance = 125000 meters', () => {",
+              "      pm.expect(d.contents.totalDistance).to.eql(125000);",
+              "    });",
+              "",
+              "    pm.test('totalEarnings.amount = 6000', () => {",
+              "      pm.expect(d.contents.totalEarnings).to.not.be.null;",
+              "      pm.expect(d.contents.totalEarnings.amount).to.eql(6000);",
+              "    });",
+              "  }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "token", "value": "{{fleet_owner_token}}" }],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/dashboard/analytics?responseType=%22FILTERED%22&from={{_test_from_date}}&to={{_test_to_date}}",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "dashboard", "analytics"],
+          "query": [
+            { "key": "responseType", "value": "%22FILTERED%22" },
+            { "key": "from", "value": "{{_test_from_date}}" },
+            { "key": "to", "value": "{{_test_to_date}}" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "14 - GET Vehicle List Stats — verify per-vehicle aggregation",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const code = pm.response.code;",
+              "pm.test('Vehicle List Stats returns 200', () => pm.expect(code).to.eql(200));",
+              "",
+              "if (code === 200) {",
+              "  const d = pm.response.json();",
+              "  console.log('Vehicle Stats response:', JSON.stringify(d));",
+              "",
+              "  pm.test('listItem has 3 vehicles', () => {",
+              "    pm.expect(d.listItem).to.be.an('array');",
+              "    pm.expect(d.listItem.length).to.eql(3);",
+              "  });",
+              "",
+              "  if (d.listItem && d.listItem.length === 3) {",
+              "    var rc1Id = pm.collectionVariables.get('_test_rc1');",
+              "    var rc2Id = pm.collectionVariables.get('_test_rc2');",
+              "    var rc3Id = pm.collectionVariables.get('_test_rc3');",
+              "",
+              "    var v1 = d.listItem.find(i => i.rcId === rc1Id);",
+              "    var v2 = d.listItem.find(i => i.rcId === rc2Id);",
+              "    var v3 = d.listItem.find(i => i.rcId === rc3Id);",
+              "",
+              "    if (v1) {",
+              "      pm.test('rc1: completedRides = 12', () => pm.expect(v1.completedRides).to.eql(12));",
+              "      pm.test('rc1: totalEarnings = 6000', () => pm.expect(v1.totalEarnings).to.eql(6000));",
+              "      pm.test('rc1: rideDistance = 48000', () => pm.expect(v1.rideDistance).to.eql(48000));",
+              "      pm.test('rc1: rideDuration = 9000', () => pm.expect(v1.rideDuration).to.eql(9000));",
+              "    }",
+              "",
+              "    if (v2) {",
+              "      pm.test('rc2: completedRides = 7', () => pm.expect(v2.completedRides).to.eql(7));",
+              "      pm.test('rc2: totalEarnings = 3500', () => pm.expect(v2.totalEarnings).to.eql(3500));",
+              "      pm.test('rc2: rideDistance = 28000', () => pm.expect(v2.rideDistance).to.eql(28000));",
+              "      pm.test('rc2: rideDuration = 5400', () => pm.expect(v2.rideDuration).to.eql(5400));",
+              "    }",
+              "",
+              "    if (v3) {",
+              "      pm.test('rc3: completedRides = 2', () => pm.expect(v3.completedRides).to.eql(2));",
+              "      pm.test('rc3: totalEarnings = 1000', () => pm.expect(v3.totalEarnings).to.eql(1000));",
+              "      pm.test('rc3: rideDistance = 8000', () => pm.expect(v3.rideDistance).to.eql(8000));",
+              "      pm.test('rc3: rideDuration = 1500', () => pm.expect(v3.rideDuration).to.eql(1500));",
+              "    }",
+              "",
+              "    pm.test('vehicles ordered by rides desc', () => {",
+              "      var rides = d.listItem.map(i => i.completedRides);",
+              "      for (var i = 1; i < rides.length; i++) {",
+              "        pm.expect(rides[i]).to.be.at.most(rides[i-1]);",
+              "      }",
+              "    });",
+              "  }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "token", "value": "{{fleet_owner_token}}" }],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/vehicle/list/stats?from={{_test_from_date}}&to={{_test_to_date}}&limit=10&offset=0",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "vehicle", "list", "stats"],
+          "query": [
+            { "key": "from", "value": "{{_test_from_date}}" },
+            { "key": "to", "value": "{{_test_to_date}}" },
+            { "key": "limit", "value": "10" },
+            { "key": "offset", "value": "0" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "15 - GET Vehicle List Stats (limit=2) — verify pagination",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const code = pm.response.code;",
+              "pm.test('Paginated returns 200', () => pm.expect(code).to.eql(200));",
+              "",
+              "if (code === 200) {",
+              "  const d = pm.response.json();",
+              "  pm.test('listItem has at most 2 vehicles', () => {",
+              "    pm.expect(d.listItem.length).to.be.at.most(2);",
+              "  });",
+              "  if (d.listItem.length === 2) {",
+              "    pm.test('first vehicle has more rides than second', () => {",
+              "      pm.expect(d.listItem[0].completedRides).to.be.at.least(d.listItem[1].completedRides);",
+              "    });",
+              "  }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "token", "value": "{{fleet_owner_token}}" }],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/vehicle/list/stats?from={{_test_from_date}}&to={{_test_to_date}}&limit=2&offset=0",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "vehicle", "list", "stats"],
+          "query": [
+            { "key": "from", "value": "{{_test_from_date}}" },
+            { "key": "to", "value": "{{_test_to_date}}" },
+            { "key": "limit", "value": "2" },
+            { "key": "offset", "value": "0" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "16 - GET Vehicle List Stats (future dates) — verify empty",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const code = pm.response.code;",
+              "pm.test('Future dates returns 200', () => pm.expect(code).to.eql(200));",
+              "",
+              "if (code === 200) {",
+              "  const d = pm.response.json();",
+              "  pm.test('no vehicles for future dates', () => {",
+              "    pm.expect(d.listItem).to.be.an('array');",
+              "    pm.expect(d.listItem.length).to.eql(0);",
+              "  });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "token", "value": "{{fleet_owner_token}}" }],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/vehicle/list/stats?from=2099-01-01&to=2099-12-31&limit=10&offset=0",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "vehicle", "list", "stats"],
+          "query": [
+            { "key": "from", "value": "2099-01-01" },
+            { "key": "to", "value": "2099-12-31" },
+            { "key": "limit", "value": "10" },
+            { "key": "offset", "value": "0" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "17 - GET Dashboard Analytics (EARNINGS, future dates) — verify zero earnings",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const code = pm.response.code;",
+              "pm.test('Future EARNINGS returns 200', () => pm.expect(code).to.eql(200));",
+              "",
+              "if (code === 200) {",
+              "  const d = pm.response.json();",
+              "  pm.test('tag is Earnings', () => pm.expect(d.tag).to.eql('Earnings'));",
+              "  pm.test('no earnings for future dates', () => {",
+              "    if (d.contents.grossEarnings !== null) {",
+              "      pm.expect(d.contents.grossEarnings.amount).to.eql(0);",
+              "    }",
+              "  });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "token", "value": "{{fleet_owner_token}}" }],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/dashboard/analytics?responseType=%22EARNINGS%22&from=2099-01-01&to=2099-12-31",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "dashboard", "analytics"],
+          "query": [
+            { "key": "responseType", "value": "%22EARNINGS%22" },
+            { "key": "from", "value": "2099-01-01" },
+            { "key": "to", "value": "2099-12-31" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "18 - GET Dashboard Analytics without auth — verify rejection",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('No-auth returns 4xx', () => {",
+              "  pm.expect([400, 401, 403]).to.include(pm.response.code);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/dashboard/analytics?responseType=%22EARNINGS%22&from={{_test_from_date}}&to={{_test_to_date}}",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "dashboard", "analytics"],
+          "query": [
+            { "key": "responseType", "value": "%22EARNINGS%22" },
+            { "key": "from", "value": "{{_test_from_date}}" },
+            { "key": "to", "value": "{{_test_to_date}}" }
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    { "key": "_test_fleet_mobile", "value": "" },
+    { "key": "_test_fo_id", "value": "" },
+    { "key": "_test_driver1", "value": "" },
+    { "key": "_test_driver2", "value": "" },
+    { "key": "_test_driver3", "value": "" },
+    { "key": "_test_rc1", "value": "" },
+    { "key": "_test_rc2", "value": "" },
+    { "key": "_test_rc3", "value": "" },
+    { "key": "_test_date1", "value": "" },
+    { "key": "_test_date2", "value": "" },
+    { "key": "_test_date3", "value": "" },
+    { "key": "_test_from_date", "value": "" },
+    { "key": "_test_to_date", "value": "" },
+    { "key": "_kv_config_needs_update", "value": "" }
+  ]
+}
