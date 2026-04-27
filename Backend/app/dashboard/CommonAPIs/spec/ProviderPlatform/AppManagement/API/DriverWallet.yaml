@@ -1,5 +1,6 @@
 imports:
   Driver: Domain.Types.Person
+  WalletBalanceResponse: API.Types.UI.DriverWallet
   WalletSummaryResponse: API.Types.UI.DriverWallet
   TopUpRequest: API.Types.UI.DriverWallet
   PayoutHistoryResponse: API.Types.UI.DriverWallet
@@ -17,6 +18,13 @@ importPackageOverrides:
 module: DriverWallet
 
 apis:
+  - GET:
+      endpoint: /wallet/{driverId}/balance
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: WalletBalanceResponse
   - GET:
       endpoint: /wallet/{driverId}/transactions
       auth: ApiAuthV2
@@ -68,5 +76,6 @@ apis:
 
 types:
   AirportCashRechargeRequest:
-    amount: HighPrecMoney
-    referenceId: Text
+    - amount: HighPrecMoney
+    - referenceId: Text
+    - derive: "'HideSecrets"
