@@ -2,6 +2,7 @@ module Storage.Queries.FleetOwnerInformationExtra where
 
 import Data.Text (toLower)
 import qualified Database.Beam as B
+import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.FleetOwnerInformation
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -25,6 +26,7 @@ findFleetOwners ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   Maybe Domain.Types.FleetOwnerInformation.FleetType ->
+  Maybe DDVS.DocsVerificationStatus ->
   Maybe UTCTime ->
   Maybe Text ->
   Maybe Bool ->
@@ -33,7 +35,7 @@ findFleetOwners ::
   Maybe Int ->
   Maybe Int ->
   m [Domain.Types.FleetOwnerInformation.FleetOwnerInformation]
-findFleetOwners merchantOperatingCityId mbFleetType mbFromDate mbSearchString mbOnlyEnabled mbBlocked mbToDate mbLimit mbOffset = do
+findFleetOwners merchantOperatingCityId mbFleetType mbDocsVerificationStatus mbFromDate mbSearchString mbOnlyEnabled mbBlocked mbToDate mbLimit mbOffset = do
   searchHash <- mapM getDbHash mbSearchString
   dbConf <- getReplicaBeamConfig
   res <-
@@ -47,6 +49,7 @@ findFleetOwners merchantOperatingCityId mbFleetType mbFromDate mbSearchString mb
                   ( \(fleetOwnerInfo, person) ->
                       fleetOwnerInfo.merchantOperatingCityId B.==?. B.val_ (Just $ getId merchantOperatingCityId)
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fleetType -> fleetOwnerInfo.fleetType B.==?. B.val_ fleetType) mbFleetType
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\docsVerificationStatus -> fleetOwnerInfo.docsVerificationStatus B.==?. B.val_ (Just docsVerificationStatus)) mbDocsVerificationStatus
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\enabled -> fleetOwnerInfo.enabled B.==?. B.val_ enabled) mbOnlyEnabled
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\blocked -> fleetOwnerInfo.blocked B.==?. B.val_ blocked) mbBlocked
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fromDate -> B.sqlBool_ $ fleetOwnerInfo.createdAt B.>=. B.val_ fromDate) mbFromDate
@@ -240,6 +243,7 @@ updateByPrimaryKey fleetOwnerInfo = do
           Se.Set Beam.referredByOperatorId referredByOperatorId,
           Se.Set Beam.registeredAt registeredAt,
           Se.Set Beam.verified verified,
+          Se.Set Beam.docsVerificationStatus docsVerificationStatus,
           Se.Set Beam.createdAt createdAt,
           Se.Set Beam.updatedAt _now
         ]

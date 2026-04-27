@@ -4,6 +4,7 @@ module Domain.Types.Driver.DriverInformation where
 
 import Data.Aeson
 import qualified Domain.Types.Common
+import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.Merchant
@@ -41,6 +42,7 @@ data DriverInfoAPIEntity = DriverInfoAPIEntity
     canSwitchToRental :: Kernel.Prelude.Bool,
     compAadhaarImagePath :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dailyCancellationRateBlockingCooldown :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    docsVerificationStatus :: Kernel.Prelude.Maybe DDVS.DocsVerificationStatus,
     driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     driverTripEndLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,

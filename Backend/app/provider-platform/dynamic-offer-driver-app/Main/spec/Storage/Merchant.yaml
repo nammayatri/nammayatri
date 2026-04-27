@@ -1249,6 +1249,7 @@ TransporterConfig:
     allowDlReupload: Maybe Bool
     allowGstReupload: Maybe Bool
     invoiceConfig: Maybe InvoiceConfig
+    enableManualDocumentStatusCheck: Maybe Bool
 
   beamType:
     currency: Maybe Currency

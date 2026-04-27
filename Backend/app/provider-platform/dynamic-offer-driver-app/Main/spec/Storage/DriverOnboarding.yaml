@@ -270,6 +270,10 @@ DriverLicense:
 
 VehicleRegistrationCertificate:
   tableName: vehicle_registration_certificate
+  types:
+    DocsVerificationStatus:
+      enum: "ADMIN_PENDING,ADMIN_APPROVED,ADMIN_REJECTED"
+      derive: "ToParamSchema"
   fields:
     id: Id VehicleRegistrationCertificate
     documentImageId: Id Image
@@ -305,6 +309,7 @@ VehicleRegistrationCertificate:
     dateOfRegistration: Maybe UTCTime
     rejectReason: Maybe Text
     approved: Maybe Bool
+    docsVerificationStatus: Maybe DocsVerificationStatus
     vehicleImageId: Maybe (Id MediaFile)
   default:
     approved: "false"
@@ -368,6 +373,8 @@ VehicleRegistrationCertificate:
       where: id
   extraOperations:
     - EXTRA_QUERY_FILE
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <DocsVerificationStatus>
 
 DriverRCAssociation:
   tableName: driver_rc_association
@@ -1449,6 +1456,7 @@ CommonDriverOnboardingDocuments:
     updateRejectReason:
       kvFunction: updateWithKV
       params: [rejectReason, verificationStatus, updatedAt]
+      where: id
 
 MorthVerification:
   tableName: morth_verification

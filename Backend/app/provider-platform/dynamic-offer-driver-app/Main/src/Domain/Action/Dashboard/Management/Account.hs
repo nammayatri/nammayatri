@@ -8,6 +8,7 @@ where
 import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified Dashboard.Common
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DRegistrationV2
+import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import qualified Environment
@@ -68,7 +69,11 @@ putAccountUpdateRole _merchantShortId _opCity personId' accessType = do
   mbFleetOwnerInfo <- QFOI.findByPrimaryKey personId
   when (accessType == Common.FLEET_OWNER && isNothing mbFleetOwnerInfo) $ do
     transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
-    DRegistrationV2.createFleetOwnerInfo personId person.merchantId (Just False) (Just person.merchantOperatingCityId) transporterConfig.taxConfig.defaultTdsRate
+    let defaultDocsVerificationStatus =
+          if transporterConfig.enableManualDocumentStatusCheck == Just True
+            then Just DDVS.ADMIN_PENDING
+            else Nothing
+    DRegistrationV2.createFleetOwnerInfo personId person.merchantId (Just False) (Just person.merchantOperatingCityId) transporterConfig.taxConfig.defaultTdsRate defaultDocsVerificationStatus
   updatePersonRole personId =<< castRole accessType
   pure Kernel.Types.APISuccess.Success
   where

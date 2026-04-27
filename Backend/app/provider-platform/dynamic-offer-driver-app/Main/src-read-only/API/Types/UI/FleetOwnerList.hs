@@ -3,6 +3,7 @@
 module API.Types.UI.FleetOwnerList where
 
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.DocsVerificationStatus
 import qualified Domain.Types.FleetOwnerInformation
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -28,6 +29,7 @@ data FleetOwnerListItem = FleetOwnerListItem
     fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    docsVerificationStatus :: Kernel.Prelude.Maybe Domain.Types.DocsVerificationStatus.DocsVerificationStatus,
     mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)

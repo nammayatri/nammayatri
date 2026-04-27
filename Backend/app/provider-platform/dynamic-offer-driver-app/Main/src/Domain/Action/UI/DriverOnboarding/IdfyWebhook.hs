@@ -25,7 +25,6 @@ import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DL
 import qualified Domain.Action.UI.DriverOnboarding.GstVerification as GstCard
 import qualified Domain.Action.UI.DriverOnboarding.PanVerification as PanCard
-import qualified Domain.Action.UI.DriverOnboarding.Status as Status
 import qualified Domain.Action.UI.DriverOnboarding.UdyamVerification as UdyamCard
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as RC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
@@ -49,6 +48,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import qualified SharedLogic.DriverOnboarding as SLogicOnboarding
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
@@ -180,10 +180,8 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
       mbRemPriorityList <- CQO.getVerificationPriorityList verificationReq.driverId
       logInfo $ "IdfyWebhook.onVerify: routing to verifyDocument mbRemPriorityList=" <> show mbRemPriorityList
       ack_ <- maybe (pure Ack) (flip (verifyDocument person verificationReq) mbRemPriorityList) rsp.result
-      -- running statusHandler to enable Driver
-      let onlyMandatoryDocs = Just True
-      void $ Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) (Just True) Nothing Nothing (Just False) onlyMandatoryDocs Nothing
       logInfo $ "IdfyWebhook.onVerify: completed requestId=" <> rsp.request_id
+      void $ SStatus.processStatusEvent (Just person) Nothing (SStatus.PersonDocChangedEvent verificationReq.driverId)
       return ack_
   where
     getResultStatus :: Maybe Idfy.IdfyResult -> Maybe Text

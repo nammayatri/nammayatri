@@ -4,7 +4,6 @@ import Data.Aeson
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DDL
-import qualified Domain.Action.UI.DriverOnboarding.Status as Status
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DRC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
@@ -16,6 +15,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Utils.Common hiding (Error)
 import Servant hiding (throwError)
 import qualified SharedLogic.DriverOnboarding as SLogicOnboarding
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
@@ -63,6 +63,10 @@ hyperVergeResultWebhookHandler payload = do
     DVC.ProfilePhoto ->
       logInfo $ "Profile Photo Validation Status Updated for Driver: " <> show imageEntity.personId <> " to: " <> show vstatus
     _ -> throwError $ InvalidImageType "HyperVerge" (show imageEntity.imageType) -- This should never happen as worlflowTransactionId is present only for above 3 doc types.
+  void $
+    withTryCatch
+      "hyperVergeResultWebhookHandler:refreshDocsVerificationStatuses"
+      (void $ SStatus.processStatusEvent Nothing Nothing (SStatus.PersonDocChangedEvent imageEntity.personId))
   return Ack
   where
     convertHVStatusToPanValidationStatus :: (MonadFlow m) => Text -> m Documents.VerificationStatus
@@ -121,9 +125,7 @@ hyperVergeVerificaitonWebhookHandler authData payload = do
         KEV.RCResp resp -> do
           logDebug $ "RC: getTask api response for request id : " <> reqId <> " is : " <> show resp
           ack_ <- DRC.onVerifyRC person (Just $ SLogicOnboarding.makeHVVerificationReqRecord verificationReq) (resp {Verification.registrationNumber = Just regNum}) mbRemPriorityList Nothing Nothing verificationReq.documentImageId1 verificationReq.retryCount (Just verificationReq.status) (Just KEV.HyperVergeRCDL) Nothing
-          -- running statusHandler to enable Driver
-          let onlyMandatoryDocs = Just True
-          void $ Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) (Just True) Nothing Nothing (Just False) onlyMandatoryDocs Nothing
+          void $ SStatus.processStatusEvent (Just person) Nothing (SStatus.PersonDocChangedEvent verificationReq.driverId)
           return ack_
         _ -> throwError $ InternalError "Document and apiEndpoint mismatch occurred !!!!!!!!"
     "checkDL" -> do
@@ -132,9 +134,7 @@ hyperVergeVerificaitonWebhookHandler authData payload = do
         KEV.DLResp resp -> do
           logDebug $ "DL: getTask api response for request id : " <> reqId <> " is : " <> show resp
           ack_ <- DDL.onVerifyDL (SLogicOnboarding.makeHVVerificationReqRecord verificationReq) resp KEV.HyperVergeRCDL
-          -- running statusHandler to enable Driver
-          let onlyMandatoryDocs = Just True
-          void $ Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) (Just True) Nothing Nothing (Just False) onlyMandatoryDocs Nothing
+          void $ SStatus.processStatusEvent (Just person) Nothing (SStatus.PersonDocChangedEvent verificationReq.driverId)
           return ack_
         _ -> throwError $ InternalError "Document and apiEndpoint mismatch occurred !!!!!!!!"
     _ -> throwError $ InvalidWebhookPayload "HyperVerge" ("Payload contains invalid endpoint parameter value. Payload : " <> show parsedPayload)

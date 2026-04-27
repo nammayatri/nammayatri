@@ -18,6 +18,11 @@ module SharedLogic.DriverOnboarding.Status
     checkInspectionHubRequestCreated,
     getInspectionHubStatusForResponseStatus,
     checkLMSTrainingStatus,
+    StatusEvent (..),
+    processStatusEvent,
+    processStatusEventForReminder,
+    markDocsVerificationStatusRejectedForPerson,
+    markDocsVerificationStatusRejectedForRC,
   )
 where
 
@@ -31,10 +36,13 @@ import qualified Domain.Action.UI.Plan as DAPlan
 import qualified Domain.Types.AadhaarCard as DAadhaarCard
 import qualified Domain.Types.CommonDriverOnboardingDocuments as DCDOD
 import qualified Domain.Types.DocStatus as DocStatus
+import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLicense as DL
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as FODVC
+import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.HyperVergeVerification as HV
 import qualified Domain.Types.IdfyVerification as IV
 import qualified Domain.Types.Merchant as DM
@@ -53,6 +61,8 @@ import Kernel.External.Encryption
 import Kernel.External.Types (Language, ServiceFlow)
 import qualified Kernel.External.Verification as KEV
 import Kernel.Prelude hiding (HasField)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error hiding (Unauthorized)
 import Kernel.Types.Id
@@ -61,8 +71,10 @@ import qualified SharedLogic.DriverOnboarding as SDO
 import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Beam.IssueManagement ()
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as BVQuery
 import qualified Storage.Queries.CommonDriverOnboardingDocumentsExtra as QCommonDocExtra
@@ -76,6 +88,7 @@ import qualified Storage.Queries.DriverRCAssociation as DRAQuery
 import qualified Storage.Queries.DriverSSN as QDSSN
 import qualified Storage.Queries.DriverUdyam as QUDYAM
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
+import qualified Storage.Queries.FleetRCAssociationExtra as FRCAQuery
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as IQuery
@@ -96,6 +109,26 @@ import qualified Tools.SMS as Sms
 import qualified Tools.Verification as Verification
 
 type DocVerificationConfigs = Either [FODVC.FleetOwnerDocumentVerificationConfig] [DVC.DocumentVerificationConfig]
+
+data PersonStatusContext = PersonStatusContext
+  { statusPerson :: DP.Person,
+    statusEntityImagesInfo :: IQuery.EntityImagesInfo
+  }
+
+data VehicleDocsContext = VehicleDocsContext
+  { allDocVerificationConfigs :: DocVerificationConfigs,
+    driverDocConfigs :: [DVC.DocumentVerificationConfig],
+    vehicleDocumentsUnverified :: [VehicleDocumentItem]
+  }
+
+data StatusEvent
+  = PersonDocChangedEvent (Id DP.Person)
+  | VehicleDocChangedEvent (Id RC.VehicleRegistrationCertificate)
+  | DocumentUnlinkedEvent (Id DP.Person)
+  | PersonDocumentExpiredEvent (Id DP.Person)
+  | RCDocumentExpiredEvent (Id RC.VehicleRegistrationCertificate)
+  | PersonReminderProcessedEvent (Id DP.Person)
+  | RCReminderProcessedEvent (Id RC.VehicleRegistrationCertificate)
 
 -- PENDING means "pending verification"
 -- FAILED is used when verification is failed
@@ -231,16 +264,9 @@ checkAllDriverDocsVerifiedForDriver person merchantOperatingCity transporterConf
   entityImages <- IQuery.findAllByEntityId transporterConfig entity
   now <- getCurrentTime
   let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now}
-  allDocVerificationConfigs <-
-    if isFleetRole person.role
-      then Left <$> CQFODVC.findAllByMerchantOpCityId merchantOperatingCity.id Nothing
-      else Right <$> CQDVC.findAllByMerchantOpCityId merchantOperatingCity.id Nothing
-  let driverDocConfigs = fromRight [] allDocVerificationConfigs :: [DVC.DocumentVerificationConfig]
   let skipMessages = True -- Skip translations, only need status check for inspection
-  vehicleDocumentsUnverified <-
-    if isFleetRole person.role
-      then pure []
-      else fetchVehicleDocuments entityImagesInfo driverDocConfigs language Nothing onlyMandatoryDocs skipMessages
+  VehicleDocsContext {allDocVerificationConfigs, vehicleDocumentsUnverified} <-
+    buildVehicleDocsContext person entityImagesInfo language onlyMandatoryDocs skipMessages Nothing
   let possibleVehicleCategoriesRaw = nub $ do
         vehicleDocumentsUnverified <&> \vehicleDoc -> do
           fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory
@@ -251,6 +277,168 @@ checkAllDriverDocsVerifiedForDriver person merchantOperatingCity transporterConf
         (doc : _) -> fromMaybe doc.userSelectedVehicleCategory doc.verifiedVehicleCategory
         [] -> DVC.CAR
   pure $ checkAllDriverDocsVerified allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
+
+refreshVehicleDocsVerificationStatusForRC ::
+  Maybe DTC.TransporterConfig ->
+  Id RC.VehicleRegistrationCertificate ->
+  Flow ()
+refreshVehicleDocsVerificationStatusForRC mbTransporterConfig rcId = do
+  rc <- runInReplica $ RCQuery.findById rcId >>= fromMaybeM (InternalError $ "RC not found by id " <> rcId.getId)
+  merchantOpCityId <- rc.merchantOperatingCityId & fromMaybeM (InternalError $ "merchantOperatingCityId missing for RC " <> rc.id.getId)
+  transporterConfig <-
+    maybe
+      (SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId))
+      pure
+      mbTransporterConfig
+  when (transporterConfig.enableManualDocumentStatusCheck == Just True) $ do
+    merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+    registrationNo <- decrypt rc.certificateNumber
+    let entity = IQuery.VehicleRCEntity rc
+    entityImages <- IQuery.findAllByEntityId transporterConfig entity
+    now <- getCurrentTime
+    let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now}
+        language = merchantOperatingCity.language
+        onlyMandatoryDocs = Just True
+        skipMessages = True
+    allDocumentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId merchantOperatingCity.id Nothing
+    vehicleDocuments <- fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language (Just registrationNo) onlyMandatoryDocs skipMessages
+    let newVehicleStatus =
+          Just $
+            case find (\vehicleDoc -> vehicleDoc.registrationNo == registrationNo) vehicleDocuments of
+              Just vehicleDoc -> computeAdminDocsVerificationStatus vehicleDoc.documents
+              Nothing -> computeAdminDocsVerificationStatus []
+    rcHash <- getDbHash registrationNo
+    RCQuery.updateDocsVerificationStatusByCertificateNumberHash newVehicleStatus rcHash
+
+processStatusEvent ::
+  Maybe DP.Person ->
+  Maybe DTC.TransporterConfig ->
+  StatusEvent ->
+  Flow (Maybe Bool)
+processStatusEvent mbPerson mbTransporterConfig = \case
+  PersonDocChangedEvent personId -> runPersonRefresh personId
+  VehicleDocChangedEvent rcId -> runRCRefresh rcId
+  DocumentUnlinkedEvent personId -> runPersonRefresh personId
+  PersonDocumentExpiredEvent personId -> runPersonRefresh personId
+  RCDocumentExpiredEvent rcId -> runRCRefresh rcId
+  PersonReminderProcessedEvent personId -> runPersonRefresh personId
+  RCReminderProcessedEvent rcId -> runRCRefresh rcId
+  where
+    lockTTLSeconds = 30
+    mkPersonDocsStatusKey personId = "DocsStatus:Person:" <> personId.getId
+    mkRCDocsStatusKey rcId = "DocsStatus:RC:" <> rcId.getId
+    withPersonDocsStatusLock personId action =
+      Hedis.withLockRedisAndReturnValue (mkPersonDocsStatusKey personId) lockTTLSeconds action
+    withRCDocsStatusLock rcId action =
+      Hedis.withLockRedisAndReturnValue (mkRCDocsStatusKey rcId) lockTTLSeconds action
+    runPersonRefresh personId = do
+      statusRes <- withPersonDocsStatusLock personId $ refreshDocsVerificationStatusesWithStatus mbPerson mbTransporterConfig personId
+      pure $ Just statusRes.enabled
+    runRCRefresh rcId = do
+      withRCDocsStatusLock rcId $ refreshVehicleDocsVerificationStatusForRC mbTransporterConfig rcId
+      pure Nothing
+
+processStatusEventForReminder ::
+  ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    EncFlow m r,
+    MonadFlow m
+  ) =>
+  StatusEvent ->
+  m ()
+processStatusEventForReminder = \case
+  PersonReminderProcessedEvent personId -> markDocsVerificationStatusRejectedForPerson personId
+  PersonDocumentExpiredEvent personId -> markDocsVerificationStatusRejectedForPerson personId
+  RCReminderProcessedEvent rcId -> markDocsVerificationStatusRejectedForRC rcId
+  RCDocumentExpiredEvent rcId -> markDocsVerificationStatusRejectedForRC rcId
+  _ -> pure ()
+
+markDocsVerificationStatusRejectedForPerson ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    EncFlow m r,
+    MonadFlow m
+  ) =>
+  Id DP.Person ->
+  m ()
+markDocsVerificationStatusRejectedForPerson personId = do
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let targetStatus = Just DDVS.ADMIN_REJECTED
+  if isFleetRole person.role
+    then do
+      fleetOwnerInfo <- QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
+      when (fleetOwnerInfo.docsVerificationStatus /= targetStatus) $
+        QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.docsVerificationStatus = targetStatus}
+    else do
+      driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+      when (driverInfo.docsVerificationStatus /= targetStatus) $
+        DIQuery.updateByPrimaryKey driverInfo {DI.docsVerificationStatus = targetStatus}
+
+markDocsVerificationStatusRejectedForRC ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    MonadFlow m
+  ) =>
+  Id RC.VehicleRegistrationCertificate ->
+  m ()
+markDocsVerificationStatusRejectedForRC rcId = do
+  rc <- RCQuery.findById rcId >>= fromMaybeM (InternalError $ "RC not found by id: " <> rcId.getId)
+  let targetStatus = Just DDVS.ADMIN_REJECTED
+  when (rc.docsVerificationStatus /= targetStatus) $
+    RCQuery.updateByPrimaryKey rc {RC.docsVerificationStatus = targetStatus}
+
+refreshDocsVerificationStatusesWithStatus ::
+  Maybe DP.Person ->
+  Maybe DTC.TransporterConfig ->
+  Id DP.Person ->
+  Flow StatusRes'
+refreshDocsVerificationStatusesWithStatus mbPerson mbTransporterConfig personId = do
+  PersonStatusContext {statusPerson, statusEntityImagesInfo} <- loadPersonStatusContext mbPerson mbTransporterConfig personId
+  let onlyMandatoryDocs = Just True
+      shouldActivateRc = False
+      skipMessages = True
+  statusHandler' statusPerson statusEntityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
+
+loadPersonStatusContext ::
+  Maybe DP.Person ->
+  Maybe DTC.TransporterConfig ->
+  Id DP.Person ->
+  Flow PersonStatusContext
+loadPersonStatusContext mbPerson mbTransporterConfig personId = do
+  person <- maybe (runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)) pure mbPerson
+  transporterConfig <-
+    maybe
+      (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId))
+      pure
+      mbTransporterConfig
+  merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
+  let entity = IQuery.PersonEntity person
+  entityImages <- IQuery.findAllByEntityId transporterConfig entity
+  now <- getCurrentTime
+  let statusEntityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now}
+  pure PersonStatusContext {statusPerson = person, statusEntityImagesInfo}
+
+buildVehicleDocsContext ::
+  DP.Person ->
+  IQuery.EntityImagesInfo ->
+  Language ->
+  Maybe Bool ->
+  Bool ->
+  Maybe Text ->
+  Flow VehicleDocsContext
+buildVehicleDocsContext person entityImagesInfo language onlyMandatoryDocs skipMessages mbReqRegistrationNo = do
+  let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
+  allDocVerificationConfigs <-
+    if isFleetRole person.role
+      then Left <$> CQFODVC.findAllByMerchantOpCityId merchantOpCityId Nothing
+      else Right <$> CQDVC.findAllByMerchantOpCityId merchantOpCityId Nothing
+  let driverDocConfigs = fromRight [] allDocVerificationConfigs :: [DVC.DocumentVerificationConfig]
+  vehicleDocumentsUnverified <-
+    if isFleetRole person.role
+      then pure []
+      else fetchVehicleDocuments entityImagesInfo driverDocConfigs language mbReqRegistrationNo onlyMandatoryDocs skipMessages
+  pure VehicleDocsContext {allDocVerificationConfigs, driverDocConfigs, vehicleDocumentsUnverified}
 
 statusHandler' ::
   DP.Person ->
@@ -272,16 +460,8 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
       personId = person.id
   let language = fromMaybe merchantOperatingCity.language person.language
 
-  allDocVerificationConfigs <-
-    if isFleetRole person.role
-      then Left <$> CQFODVC.findAllByMerchantOpCityId merchantOpCityId Nothing
-      else Right <$> CQDVC.findAllByMerchantOpCityId merchantOpCityId Nothing
-  let driverDocConfigs = fromRight [] allDocVerificationConfigs :: [DVC.DocumentVerificationConfig]
-  let mbReqRegistrationNo = Nothing
-  vehicleDocumentsUnverified <-
-    if isFleetRole person.role
-      then pure []
-      else fetchVehicleDocuments entityImagesInfo driverDocConfigs language mbReqRegistrationNo onlyMandatoryDocs skipMessages
+  VehicleDocsContext {allDocVerificationConfigs, driverDocConfigs, vehicleDocumentsUnverified} <-
+    buildVehicleDocsContext person entityImagesInfo language onlyMandatoryDocs skipMessages Nothing
 
   let vehicleCategoryWithoutMandatoryConfigs = case onboardingVehicleCategory <|> (mDL >>= (.vehicleCategory)) of
         Just vehicleCategory -> do
@@ -353,6 +533,22 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
         allRCDetails <- mapM convertRCToRCDetails allRCImgs
         return (Just allDLDetails, Just allRCDetails)
       _ -> return (Nothing, Nothing)
+
+  when (transporterConfig.enableManualDocumentStatusCheck == Just True) $ do
+    (driverDocsForPersist, vehicleDocsForPersist) <-
+      if onlyMandatoryDocs == Just True
+        then pure (driverDocuments, vehicleDocuments)
+        else do
+          mandatoryDriverDocTypes <-
+            getDriverDocTypes merchantOpCityId allDocVerificationConfigs possibleVehicleCategories person.role (Just True)
+          let driverDocumentsMandatory =
+                filter (\d -> d.documentType `elem` mandatoryDriverDocTypes) driverDocuments
+          vehicleDocumentsMandatory <- forM vehicleDocuments $ \v -> do
+            mandatoryTypesForVehicle <-
+              getVehicleDocTypes merchantOpCityId driverDocConfigs v.verifiedVehicleCategory v.userSelectedVehicleCategory (Just True)
+            pure $ v {documents = filter (\d -> d.documentType `elem` mandatoryTypesForVehicle) v.documents}
+          pure (driverDocumentsMandatory, vehicleDocumentsMandatory)
+    persistDocsVerificationStatuses person driverDocsForPersist vehicleDocsForPersist
 
   enabled <-
     if isFleetRole person.role
@@ -564,13 +760,12 @@ getVehicleDocTypes merchantOpCityId allDocumentVerificationConfigs verifiedVehic
     else pure SDO.defaultVehicleDocumentTypes
 
 getDriverDocTypes ::
-  (Monad m, Log m) =>
   Id DMOC.MerchantOperatingCity ->
   DocVerificationConfigs ->
   [DVC.VehicleCategory] ->
   DP.Role ->
   Maybe Bool ->
-  m [DVC.DocumentType]
+  Flow [DVC.DocumentType]
 getDriverDocTypes merchantOpCityId allDocVerificationConfigs possibleVehicleCategories role onlyMandatoryDocs = do
   case allDocVerificationConfigs of
     Left fleetConfigs -> do
@@ -608,18 +803,31 @@ fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationCon
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
   processedVehicles <- case entityImagesInfo.entity of
     IQuery.PersonEntity person -> do
-      associations <- DRAQuery.findAllLinkedByDriverId person.id
-      (catMaybes <$>) $
-        forM associations $ \assoc -> do
-          mbRc <- RCQuery.findById assoc.rcId
-          -- filter by rcNo if required
-          mbFilteredRc <- case mbRc of
-            Just rc -> do
-              rcCertificateNumber <- decrypt rc.certificateNumber
-              let wrongRcNo = isJust mbReqRegistrationNo && Just rcCertificateNumber /= mbReqRegistrationNo
-              return if wrongRcNo then Nothing else Just rc
-            Nothing -> return Nothing
-          return $ (assoc.isRcActive,assoc.rcId,) <$> mbFilteredRc
+      if isFleetRole person.role
+        then case mbReqRegistrationNo of
+          Nothing -> pure []
+          Just reqRegistrationNo -> do
+            rcHash <- getDbHash reqRegistrationNo
+            mbRc <- RCQuery.findByCertificateNumberHash rcHash
+            let mbOwnedRc = mbRc >>= \rc -> if rc.fleetOwnerId == Just person.id.getId then Just rc else Nothing
+            case mbOwnedRc of
+              Nothing -> pure []
+              Just ownedRc -> do
+                mbActiveAssoc <- FRCAQuery.findLinkedByRCIdAndFleetOwnerId person.id ownedRc.id entityImagesInfo.now
+                pure [(isJust mbActiveAssoc, ownedRc.id, ownedRc)]
+        else do
+          associations <- DRAQuery.findAllLinkedByDriverId person.id
+          (catMaybes <$>) $
+            forM associations $ \assoc -> do
+              mbRc <- RCQuery.findById assoc.rcId
+              -- filter by rcNo if required
+              mbFilteredRc <- case mbRc of
+                Just rc -> do
+                  rcCertificateNumber <- decrypt rc.certificateNumber
+                  let wrongRcNo = isJust mbReqRegistrationNo && Just rcCertificateNumber /= mbReqRegistrationNo
+                  return $ if wrongRcNo then Nothing else Just rc
+                Nothing -> return Nothing
+              return $ (assoc.isRcActive,assoc.rcId,) <$> mbFilteredRc
     IQuery.VehicleRCEntity rc -> do
       mbAssoc <- DRAQuery.findLatestLinkedByRCId rc.id entityImagesInfo.now
       pure [(maybe False (.isRcActive) mbAssoc, rc.id, rc)]
@@ -833,6 +1041,85 @@ sendEnablementSms merchantOpCityId personId transporterConfig merchantId =
           MessageBuilder.BuildOnboardingMessageReq {}
       Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId messageType) >>= Sms.checkSmsResult
 
+computeAdminDocsVerificationStatus :: [DocumentStatusItem] -> DDVS.DocsVerificationStatus
+computeAdminDocsVerificationStatus docs
+  | null docs = DDVS.ADMIN_PENDING
+  | any ((`elem` [INVALID, UNAUTHORIZED]) . (.verificationStatus)) docs = DDVS.ADMIN_REJECTED
+  | all ((== VALID) . (.verificationStatus)) docs = DDVS.ADMIN_APPROVED
+  | otherwise = DDVS.ADMIN_PENDING
+
+persistDocsVerificationStatuses ::
+  DP.Person ->
+  [DocumentStatusItem] ->
+  [VehicleDocumentItem] ->
+  Flow ()
+persistDocsVerificationStatuses person driverDocuments vehicleDocuments = do
+  let mandatoryDriverDocuments = driverDocuments
+      mandatoryVehicleDocuments = vehicleDocuments
+
+  if isFleetRole person.role
+    then do
+      fleetOwnerInfo <- runInReplica $ QFOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
+      let newStatus = Just $ computeAdminDocsVerificationStatus mandatoryDriverDocuments
+          docSummary =
+            T.intercalate
+              ", "
+              (map (\d -> show d.documentType <> ":" <> show d.verificationStatus) mandatoryDriverDocuments)
+      logInfo $
+        "persistDocsVerificationStatuses(fleet): personId="
+          <> person.id.getId
+          <> ", oldStatus="
+          <> show fleetOwnerInfo.docsVerificationStatus
+          <> ", newStatus="
+          <> show newStatus
+          <> ", mandatoryDocs="
+          <> docSummary
+      when (fleetOwnerInfo.docsVerificationStatus /= newStatus) $
+        QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.docsVerificationStatus = newStatus}
+      persistVehicleDocsVerificationStatuses person.id mandatoryVehicleDocuments "fleet"
+    else do
+      driverInfo <- runInReplica $ DIQuery.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
+      let newDriverStatus = Just $ computeAdminDocsVerificationStatus mandatoryDriverDocuments
+          driverDocSummary =
+            T.intercalate
+              ", "
+              (map (\d -> show d.documentType <> ":" <> show d.verificationStatus) mandatoryDriverDocuments)
+      logInfo $
+        "persistDocsVerificationStatuses(driver): personId="
+          <> person.id.getId
+          <> ", oldStatus="
+          <> show driverInfo.docsVerificationStatus
+          <> ", newStatus="
+          <> show newDriverStatus
+          <> ", mandatoryDriverDocs="
+          <> driverDocSummary
+      when (driverInfo.docsVerificationStatus /= newDriverStatus) $
+        DIQuery.updateByPrimaryKey driverInfo {DI.docsVerificationStatus = newDriverStatus}
+      persistVehicleDocsVerificationStatuses person.id mandatoryVehicleDocuments "driver"
+
+persistVehicleDocsVerificationStatuses :: Id DP.Person -> [VehicleDocumentItem] -> Text -> Flow ()
+persistVehicleDocsVerificationStatuses personId mandatoryVehicleDocuments roleTag = do
+  forM_ mandatoryVehicleDocuments $ \vehicleDoc -> do
+    let vehicleDocSummary =
+          T.intercalate
+            ", "
+            (map (\d -> show d.documentType <> ":" <> show d.verificationStatus) vehicleDoc.documents)
+        newVehicleStatus =
+          Just $ computeAdminDocsVerificationStatus vehicleDoc.documents
+    rcHash <- getDbHash vehicleDoc.registrationNo
+    logInfo $
+      "persistDocsVerificationStatuses(vehicle:"
+        <> roleTag
+        <> "): personId="
+        <> personId.getId
+        <> ", registrationNo="
+        <> vehicleDoc.registrationNo
+        <> ", newStatus="
+        <> show newVehicleStatus
+        <> ", mandatoryVehicleDocs="
+        <> vehicleDocSummary
+    RCQuery.updateDocsVerificationStatusByCertificateNumberHash newVehicleStatus rcHash
+
 activateRCAutomatically :: Id DP.Person -> DMOC.MerchantOperatingCity -> Text -> Flow ()
 activateRCAutomatically personId merchantOpCity rcNumber = do
   let rcStatusReq =
@@ -877,11 +1164,9 @@ getProcessedDriverDocuments driverId entityImagesInfo docType useHVSdkForDL = do
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
       mbS3Path = getS3PathFromLatestImage entityImagesInfo docType
       commonDocStatus dt = do
-        commonDocs <- QCommonDocExtra.findLatestByDriverIdAndDocumentType (Just driverId) dt
+        mbDoc <- listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndDocumentType (Just driverId) dt
         let (status, reason, url) = checkImageValidity entityImagesInfo dt
-            -- Select the most recent document (first in list since sorted by updatedAt DESC)
-            bestDoc = listToMaybe commonDocs
-        case bestDoc of
+        case mbDoc of
           Just doc -> return (Just (mapStatus doc.verificationStatus), doc.rejectReason <|> reason, url, Nothing, mbS3Path)
           Nothing -> return (status, reason, url, Nothing, mbS3Path)
   case docType of

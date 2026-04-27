@@ -36,11 +36,9 @@ import SharedLogic.DriverOnboarding (VerificationReqRecord)
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverUdyam as DUQuery
 import qualified Storage.Queries.DriverUdyamExtra as DUQueryExtra
 import qualified Storage.Queries.IdfyVerification as IVQuery
-import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.Person as PersonQuery
 import Tools.Error
 import qualified Tools.Verification as Verification
@@ -85,18 +83,8 @@ verifyUdyam (personId, merchantOpCityId) req = do
   verifyUdyamFlow person merchantOpCityId documentVerificationConfig req.uamNumber req.imageId1
   res <- case person.role of
     Person.DRIVER -> do
-      now <- getCurrentTime
       fork "enabling driver if all the mandatory document is verified" $ do
-        merchantOpCity <-
-          CQMOC.findById merchantOpCityId
-            >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-        let entity = IQuery.PersonEntity person
-        entityImages <- IQuery.findAllByEntityId transporterConfig entity
-        let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
-        let onlyMandatoryDocs = Just True
-            shouldActivateRc = False
-            skipMessages = True -- Skip translations, result is ignored (void)
-        void $ SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
+        void $ SStatus.processStatusEvent (Just person) (Just transporterConfig) (SStatus.PersonDocChangedEvent person.id)
       pure False
     role
       | DCommon.checkFleetOwnerRole role ->

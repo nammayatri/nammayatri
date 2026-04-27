@@ -27,7 +27,6 @@ import qualified Data.Text.Encoding as TE
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DFR
 import qualified Domain.Action.UI.DriverOnboarding.PanVerification as PanVerification
-import qualified Domain.Action.UI.DriverOnboarding.Status as Status
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Types.AadhaarCard as DAadhaarCard
 import qualified Domain.Types.AadhaarCard as VDomain
@@ -55,7 +54,6 @@ import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.DriverImage as CQDI
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AadhaarOtpReq as QueryAR
 import qualified Storage.Queries.AadhaarOtpVerify as QueryAV
@@ -63,7 +61,6 @@ import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverInformation as DriverInfo
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
-import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.Person as Person
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error
@@ -177,8 +174,7 @@ verifyAadhaarOtp mbMerchant personId merchantOpCityId req = do
               aadhaarCard <- QAadhaarCard.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
               mbAadhaarNumber <- traverse decrypt aadhaarCard.aadhaarNumber
               PanVerification.triggerPanAadhaarLinkageWhenPanAndAadhaarExist person merchantOpCityId mbAadhaarNumber
-              let onlyMandatoryDocs = Just True
-              void $ Status.statusHandler (person.id, person.merchantId, merchantOpCityId) (Just True) Nothing Nothing (Just False) onlyMandatoryDocs Nothing
+              void $ SStatus.processStatusEvent (Just person) Nothing (SStatus.PersonDocChangedEvent person.id)
               uploadCompressedAadhaarImage person merchantOpCityId res.image imageType >> pure ()
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
       pure res
@@ -476,19 +472,10 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
   res <- case person.role of
     Person.DRIVER -> do
       fork "enabling driver if all the mandatory document is verified" $ do
-        now <- getCurrentTime
-        merchantOpCity <-
-          CQMOC.findById merchantOpCityId
-            >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-        let entity = IQuery.PersonEntity person
-        entityImages <- IQuery.findAllByEntityId transporterConfig entity
-        let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
-        let onlyMandatoryDocs = Just True
-            shouldActivateRc = False
-            skipMessages = True -- Skip translations, result is ignored (void)
-        void $ SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
+        void $ SStatus.processStatusEvent (Just person) (Just transporterConfig) (SStatus.PersonDocChangedEvent person.id)
       pure False
-    role | DCommon.checkFleetOwnerRole role -> DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId (Just transporterConfig)
+    role
+      | DCommon.checkFleetOwnerRole role -> DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId (Just transporterConfig)
     _ -> pure False
   pure res
   where
