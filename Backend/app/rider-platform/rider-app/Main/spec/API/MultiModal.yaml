@@ -328,6 +328,7 @@ types:
     vehicleNumber: Text
     vehicleTagNumber: Maybe Text
     tripId: Maybe Text
+    isActiveTrip: Maybe Bool
     serviceTierType: ServiceTierType
     serviceTierName: Maybe Text
     locationUTCTimestamp: Maybe UTCTime
@@ -339,6 +340,7 @@ types:
   LiveVehicleInfo:
     number: Text
     vehicleTagNumber: Maybe Text
+    currentTripId: Maybe Text
     serviceTierType: ServiceTierType
     serviceTierName: Maybe Text
     locationUTCTimestamp: UTCTime

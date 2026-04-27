@@ -47,11 +47,12 @@ getRouteByRouteId integratedBPPConfig routeId = IM.withInMemCache ["RouteByRoute
 getRouteBusSchedule ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   Text ->
+  Maybe Text ->
   IntegratedBPPConfig ->
   m BusScheduleDetails
-getRouteBusSchedule routeId integratedBPPConfig = IM.withInMemCache ["getRouteBusSchedule", integratedBPPConfig.id.getId, routeId] 7200 $ do
+getRouteBusSchedule routeId mbVehicleNumber integratedBPPConfig = IM.withInMemCache ["getRouteBusSchedule", integratedBPPConfig.id.getId, routeId, fromMaybe "" mbVehicleNumber] 7200 $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  schedules <- Flow.getRouteBusSchedule baseUrl integratedBPPConfig.feedKey routeId
+  schedules <- Flow.getRouteBusSchedule baseUrl integratedBPPConfig.feedKey routeId mbVehicleNumber
   pure schedules
 
 getBusTripSchedule ::

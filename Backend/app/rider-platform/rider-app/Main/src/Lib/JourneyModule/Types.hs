@@ -459,6 +459,7 @@ data BusLegExtraInfo = BusLegExtraInfo
     busConductorId :: Maybe Text,
     busDriverId :: Maybe Text,
     busTagNumber :: Maybe Text,
+    tripId :: Maybe Text,
     tripStartTime :: Maybe [UTCTime],
     bookedStopETA :: Maybe [UTCTime]
   }
@@ -1007,6 +1008,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                           },
                   categories = categories,
                   categoryBookingDetails = Just categoryBookingDetails,
+                  tripId = booking.tripId,
                   tripStartTime = fmap pure mTripStartTime,
                   bookedStopETA = fmap pure mBookedStopETA
                 }
@@ -1272,6 +1274,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
                           },
                   categories = categories,
                   categoryBookingDetails = Nothing,
+                  tripId = Nothing,
                   tripStartTime = Nothing,
                   bookedStopETA = Nothing
                 }

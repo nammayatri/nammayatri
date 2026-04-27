@@ -14,7 +14,7 @@ type RouteByRouteIdAPI = "route" :> Capture "gtfs_id" Text :> Capture "route_id"
 
 type RoutesByRouteIdsAPI = "getRoutesByIds" :> Capture "gtfs_id" Text :> ReqBody '[JSON] [Text] :> Post '[JSON] [RouteInfoNandi]
 
-type BusRouteScheduleAPI = "bus-route-schedule" :> Capture "gtfs_id" Text :> Capture "route_id" Text :> Get '[JSON] BusScheduleDetails
+type BusRouteScheduleAPI = "bus-route-schedule" :> Capture "gtfs_id" Text :> Capture "route_id" Text :> QueryParam "vehicleNumber" Text :> Get '[JSON] BusScheduleDetails
 
 type BusTripScheduleAPI = "bus-trip-schedule" :> Capture "gtfs_id" Text :> Capture "waybill_no" Text :> Capture "trip_number" Int :> Capture "route_id" Text :> Get '[JSON] BusScheduleDetails
 
@@ -163,7 +163,7 @@ getNandiRouteByRouteId = ET.client nandiRouteByRouteIdAPI
 getNandiRoutesByRouteIds :: Text -> [Text] -> ET.EulerClient [RouteInfoNandi]
 getNandiRoutesByRouteIds = ET.client nandiRoutesByRouteIdsAPI
 
-getNandiBusRouteSchedule :: Text -> Text -> ET.EulerClient BusScheduleDetails
+getNandiBusRouteSchedule :: Text -> Text -> Maybe Text -> ET.EulerClient BusScheduleDetails
 getNandiBusRouteSchedule = ET.client nandiBusRouteScheduleAPI
 
 getNandiBusTripSchedule :: Text -> Text -> Int -> Text -> ET.EulerClient BusScheduleDetails

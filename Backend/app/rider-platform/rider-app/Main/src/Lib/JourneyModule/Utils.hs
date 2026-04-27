@@ -294,7 +294,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime currentTimeIST integratedBpp
 
     -- Fetches static schedules for all fallback routes concurrently then converts using the shared tier map
     fetchStaticTimings frfsServiceTierMap routeIds = do
-      allSchedules <- mapConcurrently (\routeId -> (routeId,) <$> OTPRest.getRouteBusSchedule routeId integratedBppConfig) routeIds
+      allSchedules <- mapConcurrently (\routeId -> (routeId,) <$> OTPRest.getRouteBusSchedule routeId Nothing integratedBppConfig) routeIds
       return $ concatMap (\(routeId, details) -> concatMap (convertStaticSchedule routeId frfsServiceTierMap) details) allSchedules
 
     convertStaticSchedule routeId frfsServiceTierMap busScheduleDetail =
