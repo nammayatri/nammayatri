@@ -43,6 +43,7 @@ imports:
   Gate: Domain.Types.Station
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
   Seat: Domain.Types.Seat
+  SeatSelectionType: Domain.Types.VehicleSeatLayoutMapping
   SourceType: Domain.Types.RouteStopTimeTable
   FRFSCategorySelectionReq: API.Types.UI.FRFSTicketService
   FRFSQuoteCategoryType: Domain.Types.FRFSQuoteCategoryType
@@ -335,6 +336,7 @@ types:
     position: Maybe LatLong
     serviceSubTypes: "Maybe [ServiceSubType]"
     availableSeats: Maybe Int
+    seatSelectionType: Maybe SeatSelectionType
 
   LiveVehicleInfo:
     number: Text
@@ -345,6 +347,7 @@ types:
     eta: "Maybe [BusStopETA]"
     position: LatLong
     serviceSubTypes: "Maybe [ServiceSubType]"
+    seatSelectionType: Maybe SeatSelectionType
 
   AlternateRouteDetails:
     routeCode: Text

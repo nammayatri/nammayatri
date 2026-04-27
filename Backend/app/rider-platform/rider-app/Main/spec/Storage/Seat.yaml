@@ -71,11 +71,17 @@ VehicleSeatLayoutMapping:
 
   derives: "Show, Generic, ToJSON, FromJSON, Eq, ToSchema"
 
+  types:
+    SeatSelectionType:
+      enum: "UNRESERVED, AUTO_ASSIGNED, USER_SELECTED"
+      derive: "HttpInstance"
+
   fields:
     id: Id VehicleSeatLayoutMapping
     vehicleNo: Text
     gtfsId: Text
     seatLayoutId: Id SeatLayout
+    seatSelectionType: Maybe SeatSelectionType
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
 
