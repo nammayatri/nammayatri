@@ -250,7 +250,9 @@ data JourneyLegStateData = JourneyLegStateData
     subLegOrder :: Int,
     legOrder :: Int,
     mode :: DTrip.MultimodalTravelMode,
-    fleetNo :: Maybe Text
+    fleetNo :: Maybe Text,
+    serviceTierType :: Maybe Spec.ServiceTierType,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

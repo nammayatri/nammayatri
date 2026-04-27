@@ -43,7 +43,8 @@ data BAPMetricsContainer = BAPMetricsContainer
     confirmDuration :: DurationMetric,
     busScannerCounter :: BusScannetCounterMetric,
     fleetRouteMapMissingCounter :: FleetRouteMapMissingCounterMetric,
-    vehicleNoEtaCounter :: VehicleNoEtaCounterMetric
+    vehicleNoEtaCounter :: VehicleNoEtaCounterMetric,
+    emptyVehiclesCounter :: EmptyVehiclesCounterMetric
   }
 
 type SearchRequestCounterMetric = P.Vector P.Label3 P.Counter
@@ -62,6 +63,8 @@ type VehicleNoEtaCounterMetric = P.Vector P.Label4 P.Counter
 
 type BusScanSearchRequestCounterMetric = P.Vector P.Label3 P.Counter
 
+type EmptyVehiclesCounterMetric = P.Vector P.Label4 P.Counter
+
 registerBAPMetricsContainer :: Seconds -> IO BAPMetricsContainer
 registerBAPMetricsContainer searchDurationTimeout = do
   searchRequestCounter <- registerSearchRequestCounterMetric
@@ -70,6 +73,7 @@ registerBAPMetricsContainer searchDurationTimeout = do
   vehicleNoEtaCounter <- registerVehicleNoEtaCounterMetric
   busScanSearchRequestCounter <- registerBusScanSearchRequestCounterMetric
   rideCreatedCounter <- registerRideCreatedCounterMetric
+  emptyVehiclesCounter <- registerEmptyVehiclesCounterMetric
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
   searchDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_search_frfs_round_trip" "beckn_search_frfs_round_trip_failure_counter"
   selectDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_select_frfs_round_trip" "beckn_select_frfs_round_trip_failure_counter"
@@ -95,6 +99,9 @@ registerVehicleNoEtaCounterMetric = P.register $ P.vector ("merchant_name", "ver
 
 registerBusScanSearchRequestCounterMetric :: IO BusScanSearchRequestCounterMetric
 registerBusScanSearchRequestCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId") $ P.counter $ P.Info "bus_scan_search_request_count" ""
+
+registerEmptyVehiclesCounterMetric :: IO EmptyVehiclesCounterMetric
+registerEmptyVehiclesCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId", "service_tier") $ P.counter $ P.Info "empty_vehicles_count" ""
 
 registerRideCreatedCounterMetric :: IO RideCreatedCounterMetric
 registerRideCreatedCounterMetric = P.register $ P.vector ("merchant_id", "version", "category", "merchantOperatingCityId") $ P.counter $ P.Info "ride_created_count" ""
