@@ -8,6 +8,7 @@ imports:
   Address: Kernel.External.Payment.Stripe.Types
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   BlockReasonFlag: Tools.Error
+  DocsVerificationStatus: Domain.Types.DocsVerificationStatus
 
 FleetOwnerInformation:
   tableName: fleet_owner_information
@@ -56,6 +57,7 @@ FleetOwnerInformation:
     tollRouteBlockedTill: Maybe UTCTime
     isBlockedForReferralPayout: Maybe Bool
     payoutRegistrationOrderId: Maybe Text
+    docsVerificationStatus: Maybe DocsVerificationStatus
 
   excludedFields: [merchantOperatingCityId]
   default:

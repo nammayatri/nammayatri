@@ -407,6 +407,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.dailyExtraKms dailyExtraKms,
       Se.Set Beam.dlNumberEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted dlNumber),
       Se.Set Beam.dlNumberHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash dlNumber),
+      Se.Set Beam.docsVerificationStatus docsVerificationStatus,
       Se.Set Beam.driverBankAccountDetails (Kernel.Prelude.toJSON <$> driverBankAccountDetails),
       Se.Set Beam.driverDob driverDob,
       Se.Set Beam.driverFlowStatus driverFlowStatus,

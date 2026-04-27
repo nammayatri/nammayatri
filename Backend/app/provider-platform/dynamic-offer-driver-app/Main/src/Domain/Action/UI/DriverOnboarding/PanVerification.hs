@@ -66,12 +66,10 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverPanCard as DPQuery
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.IdfyVerification as IVQuery
-import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as Person
 import Tools.Error
@@ -116,7 +114,6 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
   checkSlidingWindowLimitWithOptions (makeVerifyPanHitsCountKey req.panNumber) externalServiceRateLimitOptions
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   (blocked, driverDocument) <- DVRC.getDriverDocumentInfo person
-  now <- getCurrentTime
   when blocked $ throwError AccountBlocked
   transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   case transporterConfig.allowDuplicatePan of
@@ -171,16 +168,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
   res <- case person.role of
     Person.DRIVER -> do
       fork "enabling driver if all the mandatory document is verified" $ do
-        merchantOpCity <-
-          CQMOC.findById merchantOpCityId
-            >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-        let entity = IQuery.PersonEntity person
-        entityImages <- IQuery.findAllByEntityId transporterConfig entity
-        let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
-        let onlyMandatoryDocs = Just True
-            shouldActivateRc = False
-            skipMessages = True -- Skip translations, result is ignored (void)
-        void $ SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
+        void $ SStatus.processStatusEvent (Just person) (Just transporterConfig) (SStatus.PersonDocChangedEvent person.id)
       pure False
     role
       | DCommon.checkFleetOwnerRole role ->

@@ -885,3 +885,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN communication_c
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN invoice_config json ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_manual_document_status_check boolean ;

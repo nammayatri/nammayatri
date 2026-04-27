@@ -15,6 +15,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Documents
 import qualified Kernel.Types.Id
+import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
@@ -22,6 +23,7 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     certificateNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     dateOfRegistration :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    docsVerificationStatus :: Kernel.Prelude.Maybe Domain.Types.VehicleRegistrationCertificate.DocsVerificationStatus,
     documentImageId :: Kernel.Types.Id.Id Domain.Types.Image.Image,
     failedRules :: [Kernel.Prelude.Text],
     fitnessExpiry :: Kernel.Prelude.UTCTime,
@@ -60,9 +62,9 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
   }
   deriving (Generic)
 
-type VehicleRegistrationCertificate = VehicleRegistrationCertificateE ('AsEncrypted)
+type VehicleRegistrationCertificate = VehicleRegistrationCertificateE 'AsEncrypted
 
-type DecryptedVehicleRegistrationCertificate = VehicleRegistrationCertificateE ('AsUnencrypted)
+type DecryptedVehicleRegistrationCertificate = VehicleRegistrationCertificateE 'AsUnencrypted
 
 instance EncryptedItem VehicleRegistrationCertificate where
   type Unencrypted VehicleRegistrationCertificate = (DecryptedVehicleRegistrationCertificate, HashSalt)
@@ -74,6 +76,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
           approved = approved entity,
           certificateNumber = certificateNumber_,
           dateOfRegistration = dateOfRegistration entity,
+          docsVerificationStatus = docsVerificationStatus entity,
           documentImageId = documentImageId entity,
           failedRules = failedRules entity,
           fitnessExpiry = fitnessExpiry entity,
@@ -118,6 +121,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
             approved = approved entity,
             certificateNumber = certificateNumber_,
             dateOfRegistration = dateOfRegistration entity,
+            docsVerificationStatus = docsVerificationStatus entity,
             documentImageId = documentImageId entity,
             failedRules = failedRules entity,
             fitnessExpiry = fitnessExpiry entity,
@@ -161,3 +165,9 @@ instance EncryptedItem' VehicleRegistrationCertificate where
   type UnencryptedItem VehicleRegistrationCertificate = DecryptedVehicleRegistrationCertificate
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
+
+data DocsVerificationStatus = ADMIN_PENDING | ADMIN_APPROVED | ADMIN_REJECTED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocsVerificationStatus)
+
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''DocsVerificationStatus)

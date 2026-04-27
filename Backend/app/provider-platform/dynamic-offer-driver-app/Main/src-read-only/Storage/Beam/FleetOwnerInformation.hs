@@ -6,6 +6,7 @@ module Storage.Beam.FleetOwnerInformation where
 import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.DocsVerificationStatus
 import qualified Domain.Types.FleetOwnerInformation
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
@@ -29,6 +30,7 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     businessLicenseNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     businessLicenseNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     dailyCancellationRateBlockingCooldown :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    docsVerificationStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.DocsVerificationStatus.DocsVerificationStatus),
     enabled :: B.C f Kernel.Prelude.Bool,
     fleetDob :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     fleetName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
