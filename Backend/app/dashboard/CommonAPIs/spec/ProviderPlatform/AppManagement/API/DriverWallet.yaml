@@ -1,6 +1,5 @@
 imports:
   Driver: Domain.Types.Person
-  WalletBalanceResponse: API.Types.UI.DriverWallet
   WalletSummaryResponse: API.Types.UI.DriverWallet
   TopUpRequest: API.Types.UI.DriverWallet
   PayoutHistoryResponse: API.Types.UI.DriverWallet
