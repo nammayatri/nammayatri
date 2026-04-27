@@ -25,7 +25,8 @@ import qualified Tools.Payment as TPayment
 data PersonStripeInfo = PersonStripeInfo
   { personDob :: Maybe UTCTime,
     address :: Maybe Payment.Address,
-    idNumber :: Maybe (EncryptedHashed Text)
+    idNumber :: Maybe (EncryptedHashed Text),
+    businessType :: Payment.BusinessType
   }
 
 newtype PersonRegisterBankAccountLinkHandle = PersonRegisterBankAccountLinkHandle
@@ -97,9 +98,8 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
             ssnNumber <- decrypt driverSSN.ssn
             return $ Just $ T.takeEnd 4 ssnNumber
           else return Nothing
-
       let createAccountReq =
-            Payment.IndividualConnectAccountReq
+            Payment.CreateConnectAccountReq
               { country = merchantOpCity.country,
                 email = person.email,
                 dateOfBirth = DT.utctDay personDob,
@@ -108,9 +108,10 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
                 address = personStripeInfo.address,
                 ssnLast4 = ssnLast4,
                 idNumber,
-                mobileNumber = mobileCountryCode <> mobileNumber
+                mobileNumber = mobileCountryCode <> mobileNumber,
+                businessType = personStripeInfo.businessType
               }
-      resp <- TPayment.createIndividualConnectAccount person.merchantId person.merchantOperatingCityId (Just paymentMode) createAccountReq
+      resp <- TPayment.createConnectAccount person.merchantId person.merchantOperatingCityId (Just paymentMode) createAccountReq
       accountUrl <- Kernel.Prelude.parseBaseUrl resp.accountUrl
       let driverBankAccount =
             DDBA.DriverBankAccount
