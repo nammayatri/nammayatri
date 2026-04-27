@@ -141,6 +141,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                             serviceTierName = (.shortName) <$> frfsServiceTier,
                             vehicleNumber = detail.vehicle_no,
                             tripId = combinedTripId,
+                            isActiveTrip = Nothing,
                             serviceSubTypes = mbServiceSubTypes,
                             vehicleTagNumber = mbVehicleTagNumber,
                             availableSeats = availableSeatsCount
@@ -184,6 +185,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                           locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral bus.busData.timestamp,
                           serviceTierType = serviceTier,
                           serviceTierName = (.shortName) <$> frfsServiceTier,
+                          currentTripId = Nothing,
                           serviceSubTypes = mbServiceSubTypes,
                           vehicleTagNumber = mbVehicleTagNumber
                         }
