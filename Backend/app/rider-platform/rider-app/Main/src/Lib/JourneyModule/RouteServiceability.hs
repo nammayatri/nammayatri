@@ -19,7 +19,6 @@ import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
 
 -- | Shared function to build RouteWithLiveVehicle for a single route.
 --   Used by both FRFSTicketService and MultimodalConfirm.
@@ -111,11 +110,11 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                         tNum <- detail.trip_number
                         return $ waybill <> "-" <> show tNum
                   mbSeatLayoutId <-
-                    JMU.measureLatency
-                      ( CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached detail.vehicle_no integratedBPPConfig.feedKey
-                          <&> fmap (.seatLayoutId)
-                      )
-                      ("getBusScheduleInfo: findByVehicleNoAndGtfsIdCached vehicle=" <> detail.vehicle_no)
+                    JMU.getLiveRouteInfo
+                      integratedBPPConfig'
+                      detail.vehicle_no
+                      routeId'
+                      <&> (>>= (.seatLayoutId))
                   (isAvailable, availableSeatsCount) <- case mbSeatLayoutId of
                     Just layoutId -> case combinedTripId of
                       Nothing -> return (False, Nothing)

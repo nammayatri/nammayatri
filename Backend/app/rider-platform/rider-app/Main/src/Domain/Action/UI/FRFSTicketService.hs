@@ -98,7 +98,6 @@ import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.CachedQueries.Seat as CQSeat
-import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
@@ -1263,11 +1262,16 @@ getFrfsTripRouteSeats (mbPersonId, _merchantId) tripId routeId mbFromStopCode mb
   let cityId = personCityInfo.merchantOperatingCityId
   integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig cityId Enums.BUS DIBC.MULTIMODAL
 
-  vehicleNo <- vehicleNumber & fromMaybeM (InvalidRequest "Vehicle number not found")
+  vehicle <-
+    maybe
+      (pure Nothing)
+      (\vehicleNumber' -> JMU.getLiveRouteInfo integratedBPPConfig vehicleNumber' routeId)
+      vehicleNumber
   seatLayoutId <-
-    CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vehicleNo integratedBPPConfig.feedKey
-      >>= fromMaybeM (InvalidRequest "Seat layout mapping not found for vehicle")
+    vehicle
+      & fromMaybeM (InvalidRequest "Vehicle not found")
       <&> (.seatLayoutId)
+      >>= fromMaybeM (InvalidRequest "Seat layout ID not found for vehicle")
   seats <- CQSeat.findAllByLayoutId seatLayoutId
 
   fromToStops <- case (mbFromStopCode, mbToStopCode) of
@@ -1306,11 +1310,19 @@ getFrfsRouteSeatLayout (mbPersonId, _merchantId) routeId mbVehicleNumber = do
   let cityId = personCityInfo.merchantOperatingCityId
   integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig cityId Enums.BUS DIBC.MULTIMODAL
 
-  vehicleNo <- mbVehicleNumber & fromMaybeM (InvalidRequest "Vehicle number not found")
+  vehicle <-
+    maybe
+      (pure Nothing)
+      (\vehicleNumber' -> JMU.getLiveRouteInfo integratedBPPConfig vehicleNumber' routeId)
+      mbVehicleNumber
+
+  vehicleInfo <-
+    vehicle
+      & fromMaybeM (InvalidRequest "Vehicle not found")
+
   seatLayoutId <-
-    CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vehicleNo integratedBPPConfig.feedKey
-      >>= fromMaybeM (InvalidRequest "Seat layout mapping not found for vehicle")
-      <&> (.seatLayoutId)
+    vehicleInfo.seatLayoutId
+      & fromMaybeM (InvalidRequest "Seat layout ID not found for this service tier")
 
   seats <- CQSeat.findAllByLayoutId seatLayoutId
   seatLayout <- QSeatLayout.findById seatLayoutId >>= fromMaybeM (InvalidRequest "SeatLayout not found")
