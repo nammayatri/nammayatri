@@ -342,10 +342,6 @@ getDriverInfo ::
   Maybe Text ->
   Flow Common.DriverInfoRes
 getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber mbEmail mbPersonId mbWalletId = do
-  when mbFleet $ do
-    when (isNothing mbVehicleNumber) $ throwError $ InvalidRequest "Fleet Owner can only search with vehicle Number"
-    vehicleInfo <- RCQuery.findLastVehicleRCFleet' (fromMaybe " " mbVehicleNumber) fleetOwnerId
-    when (isNothing vehicleInfo) $ throwError $ InvalidRequest "Fleet Owner does not have a vehicle linked with this vehicle number"
   when (isJust mbMobileCountryCode && isNothing mbMobileNumber) $
     throwError $ InvalidRequest "\"mobileCountryCode\" can be used only with \"mobileNumber\""
   merchant <- findMerchantByShortId merchantShortId
@@ -358,6 +354,15 @@ getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mbMobileNumber mbMobil
     pure (Id counterpartyId)
 
   let mbPersonId' = cast @Common.Driver @DP.Person <$> mbPersonId <|> mbPersonIdFromWallet
+  when mbFleet $ do
+    case (mbPersonId', mbVehicleNumber) of
+      (Just personId, _) -> do
+        fda <- B.runInReplica $ QFleetDriver.findByDriverIdAndFleetOwnerId personId fleetOwnerId True
+        when (isNothing fda) $ throwError $ InvalidRequest "Fleet Owner does not have an association with this driver"
+      (_, Just vehicleNumber) -> do
+        vehicleInfo <- RCQuery.findLastVehicleRCFleet' vehicleNumber fleetOwnerId
+        when (isNothing vehicleInfo) $ throwError $ InvalidRequest "Fleet Owner does not have a vehicle linked with this vehicle number"
+      _ -> throwError $ InvalidRequest "Fleet Owner can only search with vehicle Number, personId or walletId"
   driverWithRidesCount <- case (mbMobileNumber, mbVehicleNumber, mbDlNumber, mbRcNumber, mbEmail, mbPersonId') of
     (Just mobileNumber, Nothing, Nothing, Nothing, Nothing, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
