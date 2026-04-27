@@ -3,6 +3,7 @@ module SharedLogic.Scheduler.Jobs.ExecuteCashRideCashbackPayout where
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import Domain.Types.PayoutConfig (PayoutConfig)
 import Domain.Types.Person (Person)
+import Domain.Types.VehicleCategory as DV
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payout.Types as PT
@@ -25,7 +26,7 @@ import SharedLogic.JobScheduler
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.Payout as TP
@@ -87,16 +88,7 @@ runPayoutForPerson personId = do
           if totalAmount <= 0
             then logInfo $ "Cashback net total non-positive (" <> show totalAmount <> ") for person=" <> personId.getId <> " — skipping"
             else do
-              mbPayoutConfig <-
-                listToMaybe
-                  <$> getConfig
-                    ( PayoutDimensions
-                        { merchantOperatingCityId = person.merchantOperatingCityId.getId,
-                          vehicleCategory = Nothing,
-                          isPayoutEnabled = Just True,
-                          payoutEntity = Nothing
-                        }
-                    )
+              mbPayoutConfig <- getOneConfig (PayoutDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just DV.CAR, isPayoutEnabled = Nothing, payoutEntity = Nothing})
               case mbPayoutConfig of
                 Nothing ->
                   logError $ "PayoutConfig not found for city=" <> person.merchantOperatingCityId.getId <> " — skipping payout for person=" <> personId.getId
