@@ -123,6 +123,20 @@ incrementEmptyVehiclesCounter merchantName merchantOperatingCityId serviceTier =
   let emptyVehiclesCounter = bmContainer.emptyVehiclesCounter
   liftIO $ P.withLabel emptyVehiclesCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId, serviceTier) P.incCounter
 
+incrementTicketInitializedCounter :: HasBAPMetrics m r => Text -> Text -> Text -> Text -> m ()
+incrementTicketInitializedCounter merchantName merchantOperatingCityId vehicleType serviceTierType = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  let ticketInitializedCounter = bmContainer.ticketInitializedCounter
+  liftIO $ P.withLabel ticketInitializedCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId, vehicleType, serviceTierType) P.incCounter
+
+incrementTicketConfirmedCounter :: HasBAPMetrics m r => Text -> Text -> Text -> Text -> m ()
+incrementTicketConfirmedCounter merchantName merchantOperatingCityId vehicleType serviceTierType = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  let ticketConfirmedCounter = bmContainer.ticketConfirmedCounter
+  liftIO $ P.withLabel ticketConfirmedCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId, vehicleType, serviceTierType) P.incCounter
+
 incrementVehicleHistoricCounter :: HasBAPMetrics m r => Text -> Text -> m ()
 incrementVehicleHistoricCounter merchantName merchantOperatingCityId = do
   bmContainer <- asks (.bapMetrics)
