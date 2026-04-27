@@ -21,6 +21,7 @@ import qualified Data.Foldable as Foldable
 import qualified Data.List as L
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.Time.Format (defaultTimeLocale, formatTime)
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude (withFile)
@@ -34,6 +35,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.Notification as Notification
+import qualified Kernel.External.SOS as PoliceSOS
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
@@ -746,6 +748,119 @@ data SosServiceHandle m = SosServiceHandle
 class HasSosHandle r m | m -> r where
   getSosHandle :: m (SosServiceHandle m)
 
+-- | Wrap a raw Kapture create HTTP call with `withTryCatch` + ticketId
+-- extraction. Each app's callback invokes this, passing its own underlying
+-- `Tools.Ticket.createTicket` action.
+wrapKaptureCreateTicket ::
+  (MonadFlow m, Log m) =>
+  m Ticket.CreateTicketResp ->
+  m (Maybe Text)
+wrapKaptureCreateTicket action = do
+  result <- withTryCatch "createTicket:sos" action
+  pure $ case result of
+    Right r -> Just r.ticketId
+    Left _ -> Nothing
+
+-- | Wrap a raw Kapture update HTTP call with a `fork` so the caller doesn't
+-- wait on the Kapture round-trip. Preserves the original "updateTicket:sos"
+-- fork label for log continuity.
+wrapKaptureUpdateTicket ::
+  (MonadFlow m) =>
+  m Ticket.UpdateTicketResp ->
+  m ()
+wrapKaptureUpdateTicket action =
+  fork "updateTicket:sos" $ void action
+
+-- | Cached external-SOS trace state. Stored under @CQSos.mkExternalSOSTraceKey@.
+-- Tuple: (lastTraceEpochSec, shouldCall, resolvedServiceConfig). The
+-- @shouldCall@ flag is sticky for the cache TTL (3600s) so we don't re-resolve
+-- the SOSServiceConfig on every location ping.
+type ExternalSosTraceCache = (Integer, Bool, Maybe SOSInterface.SOSServiceConfig)
+
+-- | Issue one SOS trace (location ping) to the configured external provider.
+-- Pure plumbing — builds the request, dispatches via @PoliceSOS.sendSOSTrace@,
+-- and throws on failure. No app-specific types involved.
+callSosTraceApi ::
+  ( EncFlow m r,
+    CoreMetrics m,
+    Redis.HedisFlow m r,
+    MonadFlow m,
+    HasRequestId r,
+    MonadReader r m
+  ) =>
+  Text ->
+  SOSInterface.SOSServiceConfig ->
+  Text ->
+  API.SosLocationUpdateReq ->
+  Seconds ->
+  m ()
+callSosTraceApi trackingId specificConfig mobileNo req timeDiff = do
+  now <- getCurrentTime
+  let localNow = addUTCTime (secondsToNominalDiffTime timeDiff) now
+  let dateTimeStr = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" localNow
+      traceReq =
+        SOSInterface.SOSTraceReq
+          { SOSInterface.trackingId = trackingId,
+            SOSInterface.mobileNo = mobileNo,
+            SOSInterface.dateTime = dateTimeStr,
+            SOSInterface.latitude = req.lat,
+            SOSInterface.longitude = req.lon,
+            SOSInterface.speed = Nothing,
+            SOSInterface.gpsAccuracy = req.accuracy
+          }
+  traceRes <- PoliceSOS.sendSOSTrace specificConfig traceReq
+  unless traceRes.success $
+    throwError $ InternalError (fromMaybe "SOS Trace failed" traceRes.errorMessage)
+
+-- | Generic external-SOS trace polling skeleton. The polling cadence,
+-- person-mobile lookup, and service-config resolution are app-specific —
+-- everything else (cache check, ttl, dispatch decision, trace dispatch)
+-- lives here so each app's @sendExternalSosTrace@ callback shrinks to a
+-- 3-line wiring of these three readers.
+runExternalSosTrace ::
+  ( EncFlow m r,
+    CoreMetrics m,
+    Redis.HedisFlow m r,
+    MonadFlow m,
+    HasRequestId r,
+    MonadReader r m
+  ) =>
+  -- | Polling config reader: returns @(pollingIntervalSec, timeDiffFromUtc)@
+  (Maybe (Id Common.MerchantOperatingCity) -> m (Int, Seconds)) ->
+  -- | Person mobile number lookup (decrypted)
+  (Id Common.Person -> m (Maybe Text)) ->
+  -- | Service config resolver (returns Nothing if external SOS is not configured for this SOS)
+  (DSos.Sos -> m (Maybe SOSInterface.SOSServiceConfig)) ->
+  DSos.Sos ->
+  API.SosLocationUpdateReq ->
+  m ()
+runExternalSosTrace getPollingConfig getPersonMobile resolveConfig sosDetails req = do
+  let sosId = sosDetails.id
+  (pollingIntervalSec, timeDiff) <- getPollingConfig sosDetails.merchantOperatingCityId
+  cached :: Maybe ExternalSosTraceCache <- Redis.safeGet (CQSos.mkExternalSOSTraceKey sosId)
+  now <- getCurrentTime
+  let nowSec = round $ utcTimeToPOSIXSeconds now
+      ttl = 3600 :: Int -- TODO: drive from per-config TTL once available (see govt requirement)
+  case cached of
+    Just (_, False, _) -> pure ()
+    Just (_, True, Nothing) -> pure ()
+    Just (lastTraceSec, True, Just specificConfig) ->
+      when (nowSec - lastTraceSec >= fromIntegral pollingIntervalSec) $
+        whenJust sosDetails.externalReferenceId $ \trackingId -> do
+          mbMobile <- getPersonMobile sosDetails.personId
+          whenJust mbMobile $ \mobileNo -> do
+            callSosTraceApi trackingId specificConfig mobileNo req timeDiff
+            Redis.setExp (CQSos.mkExternalSOSTraceKey sosId) (nowSec, True, Just specificConfig) ttl
+    Nothing -> do
+      mbConfig <- resolveConfig sosDetails
+      let shouldCall = isJust mbConfig
+      Redis.setExp (CQSos.mkExternalSOSTraceKey sosId) (nowSec, shouldCall, mbConfig) ttl
+      whenJust mbConfig $ \specificConfig ->
+        whenJust sosDetails.externalReferenceId $ \trackingId -> do
+          mbMobile <- getPersonMobile sosDetails.personId
+          whenJust mbMobile $ \mobileNo ->
+            callSosTraceApi trackingId specificConfig mobileNo req timeDiff
+
 ----------------------------------------------------------------------
 -- Pure helpers absorbed into shared-services (Step 1, per plan)
 ----------------------------------------------------------------------
@@ -958,124 +1073,151 @@ sosCreate authToken req = do
       pure (Just ctx)
     Nothing -> pure Nothing
 
-  -- Look up any existing SOS for this ride — we reuse its externalReferenceId
-  -- (if any) and reactivate rather than creating a new row.
-  mbExistingSos <- case req.rideId of
-    Just rId -> CQSos.findByRideId rId
-    Nothing -> pure Nothing
-  let existingExternalRef = mbExistingSos >>= (.externalReferenceId)
+  -- Per-person active-SOS lookup. Done BEFORE any external API call so that
+  -- we don't fire Trinity / Kapture only to discover the resulting refs have
+  -- nowhere to land:
+  --   * Same-ride re-trigger → short-circuit return (no externals, no DB writes).
+  --   * Different-ride or non-ride leftover → resolve it before dispatch so the
+  --     fresh caseId / ticketId land on a brand-new row.
+  mbActiveSos <- findActiveSosByPersonId personId
+  let mbSameRideActive = case (req.rideId, mbActiveSos) of
+        (Just rId, Just active) | active.rideId == Just rId -> Just active
+        _ -> Nothing
 
-  -- Dispatch triggers (POLICE + KAPTURE)
-  (mbExternalReferenceId, mbTrigTicketId, mbSosIdFromTriggers, mbSosServiceConfig, externalApiCalledStatus) <-
-    dispatchSosTriggersShared h personData req mbRideCtx mbExistingSos existingExternalRef
+  case mbSameRideActive of
+    Just active ->
+      pure
+        API.SosRes
+          { sosId = active.id,
+            externalSOSSuccess = if isJust active.externalReferenceId then Just True else Nothing,
+            kaptureTicketId = active.ticketId
+          }
+    Nothing -> do
+      -- Resolve any active SOS that doesn't match the current request
+      -- (different-ride OR non-ride leftover). This prevents stale rows
+      -- from absorbing a freshly-fetched Trinity caseId / Kapture ticket.
+      whenJust mbActiveSos $ \active -> do
+        void $ updateSosStatus DSos.Resolved active.id
+        whenJust active.rideId CQSos.clearCache
 
-  -- Decide the final (sosId, ticketId, trackLink, rideEndTime) based on which
-  -- path produced the SOS row
-  (sosId, mbFinalTicketId, trackLink, mbRideEndTime) <- case (mbRideCtx, mbSosIdFromTriggers) of
-    (Just rideCtx, Just sId) -> do
-      let trackLink' = h.buildSosTrackingUrl personData (Just rideCtx) sId
-          localEnd = addUTCTime (secondsToNominalDiffTime personData.timeDiffFromUtc) <$> rideCtx.rideEndTime
-      pure (sId, mbTrigTicketId, trackLink', localEnd)
-    (Just rideCtx, Nothing) -> do
-      -- Ride exists but no trigger created the SOS (e.g. KAPTURE disabled).
-      -- Create one directly via the shared helper.
-      result <-
-        createRideBasedSos
-          personId
-          rideCtx.rideId
-          personData.merchantOperatingCityId
-          personData.merchantId
-          req.flow
-          mbExistingSos
-          (mbExistingSos >>= (.ticketId))
-          mbExternalReferenceId
-      let sId = result.sosId
-          trackLink' = h.buildSosTrackingUrl personData (Just rideCtx) sId
-          localEnd = addUTCTime (secondsToNominalDiffTime personData.timeDiffFromUtc) <$> rideCtx.rideEndTime
-      pure (sId, result.sosDetails.ticketId, trackLink', localEnd)
-    (Nothing, _) -> do
-      -- Non-ride SOS flow: create, optionally open a Kapture ticket, stash
-      -- location if provided on the request.
-      now <- getCurrentTime
-      let eightHoursInSeconds = 8 * 60 * 60 :: Int
-      let trackingExpiresAt = addUTCTime (fromIntegral eightHoursInSeconds) now
-      sosDetails <-
-        createNonRideSos
-          personId
-          (Just personData.merchantId)
-          (Just personData.merchantOperatingCityId)
-          (Just trackingExpiresAt)
-          mbExternalReferenceId
-          req.flow
-          DSos.SosActive
-      whenJust req.customerLocation $ \location ->
-        CQSosLocation.updateSosLocation sosDetails.id location Nothing (Just trackingExpiresAt)
-      mbNonRideTicketId <-
-        if personData.enableSupportForSafety
-          && triggerListIncludesKapture req.triggerApiList
-          && isNothing mbTrigTicketId
-          && isNothing sosDetails.ticketId
-          then createNonRideKaptureTicketShared h personData personId sosDetails.id req.flow
-          else pure Nothing
-      let finalTicketId = mbTrigTicketId <|> mbNonRideTicketId <|> sosDetails.ticketId
-      whenJust finalTicketId $ \tId -> void $ updateSosTicketId sosDetails (Just tId)
-      let finalTrackLink = h.buildSosTrackingUrl personData Nothing sosDetails.id
-      pure (sosDetails.id, finalTicketId, finalTrackLink, Nothing)
+      -- Look up any existing SOS for this ride — used by the ride-scoped
+      -- reuse path (update existing Kapture ticket instead of opening a new one).
+      mbExistingSos <- case req.rideId of
+        Just rId -> CQSos.findByRideId rId
+        Nothing -> pure Nothing
+      let existingExternalRef = mbExistingSos >>= (.externalReferenceId)
 
-  -- Register SOS with LTS (broadcaster config is built inside the callback
-  -- from the externalReferenceId + service config we pass in).
-  h.registerSosWithLts sosId personData mbExternalReferenceId mbSosServiceConfig
+      -- Dispatch triggers (POLICE + KAPTURE)
+      (mbExternalReferenceId, mbTrigTicketId, mbSosIdFromTriggers, mbSosServiceConfig, externalApiCalledStatus) <-
+        dispatchSosTriggersShared h personData req mbRideCtx mbExistingSos existingExternalRef
 
-  -- Notify contacts in a fork so the HTTP response doesn't wait on SMS/push
-  fork "postSosCreate:notifyEmergencyContacts" $ do
-    let alertParams =
-          SosAlertParams
-            { userName = personData.personDisplayName,
-              rideLink = trackLink,
-              rideEndTime = T.pack . formatTime defaultTimeLocale "%e-%-m-%Y %-I:%M%P" <$> mbRideEndTime,
-              isRideEnded = fromMaybe False req.isRideEnded
-            }
-    case req.rideId of
-      Just _ ->
-        when (triggerShareRideAndNotify safetySettings) $ do
-          emergencyContacts <- getSosEmergencyContactsShared personId
-          when (req.isRideEnded /= Just True) $ do
-            when h.getPlatformConfig.enableShareRide $
-              SafetyQPDEN.updateShareRideForAll personId True
-            when h.getPlatformConfig.enableFollowRide $
-              h.enableFollowRideForContacts personId emergencyContacts
-          let sosType =
-                if req.isRideEnded == Just True
-                  then Notification.POST_RIDE_SOS_ALERT
-                  else Notification.SOS_TRIGGERED
-          when shouldNotifyPostRide $
+      -- Decide the final (sosId, ticketId, trackLink, rideEndTime) based on which
+      -- path produced the SOS row
+      (sosId, mbFinalTicketId, trackLink, mbRideEndTime) <- case (mbRideCtx, mbSosIdFromTriggers) of
+        (Just rideCtx, Just sId) -> do
+          let trackLink' = h.buildSosTrackingUrl personData (Just rideCtx) sId
+              localEnd = addUTCTime (secondsToNominalDiffTime personData.timeDiffFromUtc) <$> rideCtx.rideEndTime
+          pure (sId, mbTrigTicketId, trackLink', localEnd)
+        (Just rideCtx, Nothing) -> do
+          -- Ride exists but no trigger created the SOS (e.g. KAPTURE disabled).
+          -- Create one directly via the shared helper.
+          result <-
+            createRideBasedSos
+              personId
+              rideCtx.rideId
+              personData.merchantOperatingCityId
+              personData.merchantId
+              req.flow
+              mbExistingSos
+              (mbExistingSos >>= (.ticketId))
+              mbExternalReferenceId
+          let sId = result.sosId
+              trackLink' = h.buildSosTrackingUrl personData (Just rideCtx) sId
+              localEnd = addUTCTime (secondsToNominalDiffTime personData.timeDiffFromUtc) <$> rideCtx.rideEndTime
+          pure (sId, result.sosDetails.ticketId, trackLink', localEnd)
+        (Nothing, _) -> do
+          -- Non-ride SOS flow: create, optionally open a Kapture ticket, stash
+          -- location if provided on the request.
+          now <- getCurrentTime
+          let eightHoursInSeconds = 8 * 60 * 60 :: Int
+          let trackingExpiresAt = addUTCTime (fromIntegral eightHoursInSeconds) now
+          sosDetails <-
+            createNonRideSos
+              personId
+              (Just personData.merchantId)
+              (Just personData.merchantOperatingCityId)
+              (Just trackingExpiresAt)
+              mbExternalReferenceId
+              req.flow
+              DSos.SosActive
+          whenJust req.customerLocation $ \location ->
+            CQSosLocation.updateSosLocation sosDetails.id location Nothing (Just trackingExpiresAt)
+          mbNonRideTicketId <-
+            if personData.enableSupportForSafety
+              && triggerListIncludesKapture req.triggerApiList
+              && isNothing mbTrigTicketId
+              && isNothing sosDetails.ticketId
+              then createNonRideKaptureTicketShared h personData personId sosDetails.id req.flow
+              else pure Nothing
+          let finalTicketId = mbTrigTicketId <|> mbNonRideTicketId <|> sosDetails.ticketId
+          whenJust finalTicketId $ \tId -> void $ updateSosTicketId sosDetails (Just tId)
+          let finalTrackLink = h.buildSosTrackingUrl personData Nothing sosDetails.id
+          pure (sosDetails.id, finalTicketId, finalTrackLink, Nothing)
+
+      -- Register SOS with LTS (broadcaster config is built inside the callback
+      -- from the externalReferenceId + service config we pass in).
+      h.registerSosWithLts sosId personData mbExternalReferenceId mbSosServiceConfig
+
+      -- Notify contacts in a fork so the HTTP response doesn't wait on SMS/push
+      fork "postSosCreate:notifyEmergencyContacts" $ do
+        let alertParams =
+              SosAlertParams
+                { userName = personData.personDisplayName,
+                  rideLink = trackLink,
+                  rideEndTime = T.pack . formatTime defaultTimeLocale "%e-%-m-%Y %-I:%M%P" <$> mbRideEndTime,
+                  isRideEnded = fromMaybe False req.isRideEnded
+                }
+        case req.rideId of
+          Just _ ->
+            when (triggerShareRideAndNotify safetySettings) $ do
+              emergencyContacts <- getSosEmergencyContactsShared personId
+              when (req.isRideEnded /= Just True) $ do
+                when h.getPlatformConfig.enableShareRide $
+                  SafetyQPDEN.updateShareRideForAll personId True
+                when h.getPlatformConfig.enableFollowRide $
+                  h.enableFollowRideForContacts personId emergencyContacts
+              let sosType =
+                    if req.isRideEnded == Just True
+                      then Notification.POST_RIDE_SOS_ALERT
+                      else Notification.SOS_TRIGGERED
+              when shouldNotifyPostRide $
+                h.sendSosNotification
+                  personData
+                  (Left "SOS_ALERT")
+                  sosType
+                  [("userName", personData.personDisplayName)]
+                  (Just alertParams)
+                  True
+                  emergencyContacts
+                  Nothing
+          Nothing -> do
+            emergencyContacts <- getSosEmergencyContactsShared personId
             h.sendSosNotification
               personData
               (Left "SOS_ALERT")
-              sosType
+              Notification.SOS_TRIGGERED
               [("userName", personData.personDisplayName)]
               (Just alertParams)
               True
               emergencyContacts
-              Nothing
-      Nothing -> do
-        emergencyContacts <- getSosEmergencyContactsShared personId
-        h.sendSosNotification
-          personData
-          (Left "SOS_ALERT")
-          Notification.SOS_TRIGGERED
-          [("userName", personData.personDisplayName)]
-          (Just alertParams)
-          True
-          emergencyContacts
-          (Just sosId)
+              (Just sosId)
 
-  pure
-    API.SosRes
-      { sosId = sosId,
-        externalSOSSuccess = externalApiCalledStatus,
-        kaptureTicketId = mbFinalTicketId
-      }
+      pure
+        API.SosRes
+          { sosId = sosId,
+            externalSOSSuccess = externalApiCalledStatus,
+            kaptureTicketId = mbFinalTicketId
+          }
   where
     triggerShareRideAndNotify safetySettings =
       fromMaybe safetySettings.notifySosWithEmergencyContacts req.notifyAllContacts

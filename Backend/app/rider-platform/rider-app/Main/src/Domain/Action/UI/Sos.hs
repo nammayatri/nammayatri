@@ -34,6 +34,7 @@ import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.SOS as PoliceSOS
 import qualified Kernel.External.SOS.ERSS.Auth as ERSSAuth
+import qualified Kernel.External.SOS.ERSS.Config as ERSSConfig
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
 import Kernel.External.Ticket.Interface.Types as Ticket
@@ -74,17 +75,11 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Tools.Call as Call
 import Tools.Error
 import Tools.Ticket as Ticket
--- | Local DRC-typed flow → Kernel SOSService. Kept because handleExternalSOS +
--- resolveExternalSOSTraceConfig still take DRC.ExternalSOSConfig. Shared-services
--- has the SafetyCommon-typed equivalent (Safety.Domain.Types.Common.flowToSOSService).
-flowToSOSService :: DRC.ExternalSOSFlow -> SOS.SOSService
-flowToSOSService DRC.ERSS = SOS.ERSS
-flowToSOSService DRC.GJ112 = SOS.GJ112
-flowToSOSService DRC.Trinity = SOS.Trinity
 
 -- | Convert rider-local DRC.ExternalSOSConfig to the shared SafetyCommon.ExternalSOSConfig
--- that the unified API types use. Field-by-field mirror. To be absorbed into
--- riderGetPersonData in Step 9 of the SOS unification.
+-- that the unified API types use. Single boundary conversion — applied at every
+-- read of @riderConfig.externalSOSConfig@ so the rest of the rider code (and
+-- shared-services) speaks SafetyCommon types end-to-end.
 toSafetyExternalSOSConfig :: DRC.ExternalSOSConfig -> SafetyCommon.ExternalSOSConfig
 toSafetyExternalSOSConfig cfg =
   SafetyCommon.ExternalSOSConfig
@@ -193,38 +188,15 @@ sendUnattendedSosTicketAlert ticketId = do
 
     mkUnattendedSosAlertKey :: Text
     mkUnattendedSosAlertKey = "Unattended:SOS:Alert:TicketId-" <> ticketId
-type ExternalSOSTraceCache = (Integer, Bool, Maybe SOSInterface.SOSServiceConfig)
-
+-- | Wires rider's app-specific config readers into the shared trace-polling
+-- skeleton. Cache key, dispatch decision, and trace-API call all live in
+-- 'SafetySos.runExternalSosTrace'.
 sendExternalSOSTrace :: SafetyDSos.Sos -> SosLocationUpdateReq -> Flow ()
-sendExternalSOSTrace sosDetails req = do
-  let sosId = sosDetails.id
-  (pollingIntervalSec, timeDiff) <- getExternalSOSTracePollingConfig (cast <$> sosDetails.merchantOperatingCityId)
-  cached :: Maybe ExternalSOSTraceCache <- Redis.safeGet (mkExternalSOSTraceKey sosId)
-  now <- getCurrentTime
-  let nowSec = round $ utcTimeToPOSIXSeconds now
-      ttl = 3600 :: Int -- TODO: Remove this once we have a proper config for ttl as per govt requirements
-      -- case sosDetails.trackingExpiresAt of
-      --   Just exp' -> max 60 (round (diffUTCTime exp' now))
-      --   Nothing -> 3600 :: Int
-  case cached of
-    Just (_, False, _) -> pure ()
-    Just (_, True, Nothing) -> pure ()
-    Just (lastTraceSec, True, Just specificConfig) ->
-      when (nowSec - lastTraceSec >= fromIntegral pollingIntervalSec) $
-        whenJust sosDetails.externalReferenceId $ \trackingId -> do
-          mbMobile <- getPersonMobileNo (cast sosDetails.personId)
-          whenJust mbMobile $ \mobileNo -> do
-            callSOSTraceAPI trackingId specificConfig mobileNo req timeDiff
-            Redis.setExp (mkExternalSOSTraceKey sosId) (nowSec, True, Just specificConfig) ttl
-    Nothing -> do
-      mbConfig <- resolveExternalSOSTraceConfig sosDetails
-      let shouldCall = isJust mbConfig
-      Redis.setExp (mkExternalSOSTraceKey sosId) (nowSec, shouldCall, mbConfig) ttl
-      whenJust mbConfig $ \specificConfig ->
-        whenJust sosDetails.externalReferenceId $ \trackingId -> do
-          mbMobile <- getPersonMobileNo (cast sosDetails.personId)
-          whenJust mbMobile $ \mobileNo ->
-            callSOSTraceAPI trackingId specificConfig mobileNo req timeDiff
+sendExternalSOSTrace =
+  SafetySos.runExternalSosTrace
+    (\mbMocId -> getExternalSOSTracePollingConfig (cast <$> mbMocId))
+    (\sharedPersonId -> getPersonMobileNo (cast sharedPersonId))
+    resolveExternalSOSTraceConfig
 
 getExternalSOSTracePollingConfig :: Maybe (Id DMOC.MerchantOperatingCity) -> Flow (Int, Seconds)
 getExternalSOSTracePollingConfig = \case
@@ -245,15 +217,9 @@ resolveExternalSOSTraceConfig sosDetails = do
   case (sosDetails.externalReferenceId, sosDetails.merchantId, sosDetails.merchantOperatingCityId) of
     (Just _, Just merchantId, Just merchantOpCityId) -> do
       mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityId.getId})
-      case mbRiderConfig >>= (.externalSOSConfig) of
-        Just sosConfig | sosConfig.latLonRequired -> do
-          let sosServiceType = flowToSOSService sosConfig.flow
-          mbMerchantSvcCfg <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.SOSService sosServiceType)})
-          pure $ case mbMerchantSvcCfg of
-            Just cfg -> case cfg.serviceConfig of
-              DMSC.SOSServiceConfig specificConfig -> Just specificConfig
-              _ -> Nothing
-            Nothing -> Nothing
+      case toSafetyExternalSOSConfig <$> (mbRiderConfig >>= (.externalSOSConfig)) of
+        Just sosConfig | sosConfig.latLonRequired ->
+          getSosSpecificConfig (cast merchantId) (cast merchantOpCityId) (SafetyCommon.flowToSOSService sosConfig.flow)
         _ -> pure Nothing
     _ -> pure Nothing
 
@@ -263,59 +229,101 @@ getPersonMobileNo personId =
     QP.findById personId >>= \mbPerson ->
       maybe (pure Nothing) (\p -> mapM decrypt p.mobileNumber) mbPerson
 
-callSOSTraceAPI :: Text -> SOSInterface.SOSServiceConfig -> Text -> SosLocationUpdateReq -> Seconds -> Flow ()
-callSOSTraceAPI trackingId specificConfig mobileNo req timeDiff = do
-  now <- getCurrentTime
-  let localNow = addUTCTime (secondsToNominalDiffTime timeDiff) now
-  let dateTimeStr = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" localNow
-      traceReq =
-        SOSInterface.SOSTraceReq
-          { SOSInterface.trackingId = trackingId,
-            SOSInterface.mobileNo = mobileNo,
-            SOSInterface.dateTime = dateTimeStr,
-            SOSInterface.latitude = req.lat,
-            SOSInterface.longitude = req.lon,
-            SOSInterface.speed = Nothing,
-            SOSInterface.gpsAccuracy = req.accuracy
+-- | Look up the resolved external-SOS service config (police/ERSS/etc.) for a
+-- merchant + city + flow combination. Returns 'Nothing' when the merchant
+-- service config is absent or stored as a non-SOS variant. Used at every
+-- external-SOS entry point so callers don't repeat the @getOneConfig@ +
+-- @SOSServiceConfig@ unwrap.
+getSosSpecificConfig ::
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  SOS.SOSService ->
+  Flow (Maybe SOSInterface.SOSServiceConfig)
+getSosSpecificConfig mId mocId sosServiceType = do
+  mbMerchantSvcCfg <-
+    getOneConfig
+      ( MerchantServiceConfigDimensions
+          { merchantOperatingCityId = mocId.getId,
+            merchantId = mId.getId,
+            serviceName = Just (DMSC.SOSService sosServiceType)
           }
-  traceRes <- PoliceSOS.sendSOSTrace specificConfig traceReq
-  unless traceRes.success $
-    throwError $ InternalError (fromMaybe "SOS Trace failed" traceRes.errorMessage)
+      )
+  pure $ case mbMerchantSvcCfg of
+    Just cfg -> case cfg.serviceConfig of
+      DMSC.SOSServiceConfig specificConfig -> Just specificConfig
+      _ -> Nothing
+    Nothing -> Nothing
 
-mkExternalSOSTraceKey :: Id SafetyDSos.Sos -> Text
-mkExternalSOSTraceKey sosId = "SOS:ExternalTrace:" <> sosId.getId
-handleExternalSOS :: Person.Person -> SafetySos.SosPersonData -> DRC.ExternalSOSConfig -> SosReq -> Flow (Maybe Text, Maybe SOSInterface.SOSServiceConfig)
+-- | Build the LTS broadcaster config (ERSS-only). Centralizes the ERSS token
+-- fetch + AppEnv lookups (selfBaseUrl, locationTrackingServiceKey) so the
+-- trigger handler ('riderRegisterSosWithLts') and the dashboard re-trigger
+-- ('Dashboard.Sos.callExternalSOS') don't reproduce the same 25-line record
+-- assembly.
+buildSosErssConfigReq ::
+  Text ->
+  ERSSConfig.ERSSCfg ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe Seconds ->
+  Seconds ->
+  Text ->
+  Flow LTSTypes.SosErssConfigReq
+buildSosErssConfigReq refId erssCfg mocId mbPollingInterval timeDiffFromUtc mobileNo = do
+  erssToken <- ERSSAuth.getERSSToken erssCfg
+  selfBaseUrl <- asks (.selfBaseUrl)
+  locationTrackingServiceKey <- asks (.locationTrackingServiceKey)
+  let nyReauthUrl = showBaseUrl selfBaseUrl <> "/internal/sos/erss-reauth"
+      tokenExpiresAt = round (utcTimeToPOSIXSeconds erssToken.accessExpiresAt) :: Int
+      pollingInterval = maybe 60 (.getSeconds) mbPollingInterval
+  pure
+    LTSTypes.SosErssConfigReq
+      { externalReferenceId = refId,
+        baseUrl = showBaseUrl erssCfg.baseUrl,
+        accessToken = erssToken.accessToken,
+        tokenExpiresAt = tokenExpiresAt,
+        nyReauthUrl = nyReauthUrl,
+        nyApiKey = locationTrackingServiceKey,
+        merchantOperatingCityId = mocId.getId,
+        pollingIntervalSecs = pollingInterval,
+        timeDiffSecs = timeDiffFromUtc.getSeconds,
+        expiresAt = Nothing,
+        provider =
+          LTSTypes.SosTraceProvider
+            { providerKind = LTSTypes.ERSS,
+              authId = erssCfg.authId,
+              authCode = erssCfg.authCode,
+              mobileNo = mobileNo,
+              traceUrlSuffix = "/public/api/sos/trace"
+            }
+      }
+
+handleExternalSOS :: Person.Person -> SafetySos.SosPersonData -> SafetyCommon.ExternalSOSConfig -> SosReq -> Flow (Maybe Text, Maybe SOSInterface.SOSServiceConfig)
 handleExternalSOS person personData sosConfig req = do
-  let sosServiceType = flowToSOSService sosConfig.flow
+  let sosServiceType = SafetyCommon.flowToSOSService sosConfig.flow
       appMerchantOpCityId = person.merchantOperatingCityId
       appMerchantId = person.merchantId
       appPersonId = person.id
-  mbMerchantSvcCfg <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = appMerchantOpCityId.getId, merchantId = appMerchantId.getId, serviceName = Just (DMSC.SOSService sosServiceType)})
-  case mbMerchantSvcCfg of
+  mbSpecificConfig <- getSosSpecificConfig appMerchantId appMerchantOpCityId sosServiceType
+  case mbSpecificConfig of
     Nothing -> do
-      logError $ "handleExternalSOS: MerchantServiceConfig not found for SOS service " <> show sosServiceType
+      logError $ "handleExternalSOS: SOS service config not configured for service " <> show sosServiceType
       return (Nothing, Nothing)
-    Just merchantSvcCfg -> case merchantSvcCfg.serviceConfig of
-      DMSC.SOSServiceConfig specificConfig -> do
-        mbRide <- maybe (pure Nothing) (\rideId -> QRide.findById (cast @SafetyCommon.Ride @DRide.Ride rideId)) req.rideId
-        emergencyContacts <- EmergencyLib.getEmergencyContacts (appPersonId, appMerchantId)
-        merchantOpCity <- CQMOC.findById appMerchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound appMerchantOpCityId.getId)
-        externalSOSDetails <- buildExternalSOSDetails req person personData sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity Nothing Nothing
-        initialRes <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
-        if initialRes.success
-          then return (initialRes.trackingId, Just specificConfig)
-          else do
-            logError $ "handleExternalSOS: External SOS call failed: " <> fromMaybe "Unknown error" initialRes.errorMessage
-            return (Nothing, Nothing)
-      _ -> do
-        logError "handleExternalSOS: Invalid SOS Service Config for provider"
-        return (Nothing, Nothing)
+    Just specificConfig -> do
+      mbRide <- maybe (pure Nothing) (\rideId -> QRide.findById (cast @SafetyCommon.Ride @DRide.Ride rideId)) req.rideId
+      emergencyContacts <- EmergencyLib.getEmergencyContacts (appPersonId, appMerchantId)
+      merchantOpCity <- CQMOC.findById appMerchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound appMerchantOpCityId.getId)
+      externalSOSDetails <- buildExternalSOSDetails req person personData sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity Nothing Nothing
+      initialRes <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
+      if initialRes.success
+        then return (initialRes.trackingId, Just specificConfig)
+        else do
+          logError $ "handleExternalSOS: External SOS call failed: " <> fromMaybe "Unknown error" initialRes.errorMessage
+          return (Nothing, Nothing)
 
 buildExternalSOSDetails ::
   SosReq ->
   Person.Person ->
   SafetySos.SosPersonData ->
-  DRC.ExternalSOSConfig ->
+  SafetyCommon.ExternalSOSConfig ->
   SOSInterface.SOSServiceConfig ->
   Maybe DRide.Ride ->
   [EmergencyAPI.EmergencyContact] ->
@@ -416,26 +424,6 @@ resolveLocation mbCustomerLoc person mbRide =
 -- The old handler functions above become dead code (shell routes to
 -- shared-services handlers). Step 11 of the plan deletes them.
 ----------------------------------------------------------------------
-
--- | Inverse of `toSafetyExternalSOSConfig`. Lets rider-local helpers
--- (handleExternalSOS / buildExternalSOSDetails) keep their DRC-typed
--- signatures while the shared handler passes a SafetyCommon-typed config.
-fromSafetyExternalSOSConfig :: SafetyCommon.ExternalSOSConfig -> DRC.ExternalSOSConfig
-fromSafetyExternalSOSConfig cfg =
-  DRC.ExternalSOSConfig
-    { flow = case cfg.flow of
-        SafetyCommon.ERSS -> DRC.ERSS
-        SafetyCommon.GJ112 -> DRC.GJ112
-        SafetyCommon.Trinity -> DRC.Trinity,
-      latLonRequired = cfg.latLonRequired,
-      mediaRequired = cfg.mediaRequired,
-      stateCode = cfg.stateCode,
-      tracePollingIntervalSeconds = cfg.tracePollingIntervalSeconds,
-      trackingLinkRequired = cfg.trackingLinkRequired,
-      triggerSource = case cfg.triggerSource of
-        SafetyCommon.FRONTEND -> DRC.FRONTEND
-        SafetyCommon.DASHBOARD -> DRC.DASHBOARD
-    }
 
 instance SafetySos.HasSosHandle AppEnv Environment.Flow where
   getSosHandle = do
@@ -634,31 +622,23 @@ riderSendSosNotification personData keyOrBodyTitle notificationType templateVars
           merchantId = Just personData.merchantId
         }
 
--- | Thin wrapper over Tools.Ticket.createTicket with withTryCatch around the call.
 riderCallKaptureCreateTicket ::
   Id SafetyCommon.Merchant ->
   Id SafetyCommon.MerchantOperatingCity ->
   Ticket.CreateTicketReq ->
   Environment.Flow (Maybe Text)
-riderCallKaptureCreateTicket sharedMId sharedMocId req = do
-  let mId = cast @SafetyCommon.Merchant @Merchant.Merchant sharedMId
-      mocId = cast @SafetyCommon.MerchantOperatingCity @DMOC.MerchantOperatingCity sharedMocId
-  result <- withTryCatch "createTicket:sos" $ Ticket.createTicket mId mocId req
-  pure $ case result of
-    Right r -> Just r.ticketId
-    Left _ -> Nothing
+riderCallKaptureCreateTicket sharedMId sharedMocId req =
+  SafetySos.wrapKaptureCreateTicket $
+    Ticket.createTicket (cast @SafetyCommon.Merchant @Merchant.Merchant sharedMId) (cast @SafetyCommon.MerchantOperatingCity @DMOC.MerchantOperatingCity sharedMocId) req
 
--- | Thin wrapper over Tools.Ticket.updateTicket with fork (so the HTTP
--- response doesn't wait on the Kapture API).
 riderCallKaptureUpdateTicket ::
   Id SafetyCommon.Merchant ->
   Id SafetyCommon.MerchantOperatingCity ->
   Ticket.UpdateTicketReq ->
   Environment.Flow ()
-riderCallKaptureUpdateTicket sharedMId sharedMocId req = do
-  let mId = cast @SafetyCommon.Merchant @Merchant.Merchant sharedMId
-      mocId = cast @SafetyCommon.MerchantOperatingCity @DMOC.MerchantOperatingCity sharedMocId
-  fork "updateTicket:sos" $ void $ Ticket.updateTicket mId mocId req
+riderCallKaptureUpdateTicket sharedMId sharedMocId req =
+  SafetySos.wrapKaptureUpdateTicket $
+    Ticket.updateTicket (cast @SafetyCommon.Merchant @Merchant.Merchant sharedMId) (cast @SafetyCommon.MerchantOperatingCity @DMOC.MerchantOperatingCity sharedMocId) req
 
 -- | Wraps rider's existing handleExternalSOS. The shared handler already
 -- checks triggerSource == FRONTEND before calling this.
@@ -673,8 +653,7 @@ riderTriggerExternalSos personData req _mbRideCtx = do
     Just safetyCfg -> do
       let appPersonId = cast @SafetyCommon.Person @Person.Person personData.personId
       person <- QP.findById appPersonId >>= fromMaybeM (PersonDoesNotExist appPersonId.getId)
-      let drcCfg = fromSafetyExternalSOSConfig safetyCfg
-      (mbRef, mbSvcCfg) <- handleExternalSOS person personData drcCfg req
+      (mbRef, mbSvcCfg) <- handleExternalSOS person personData safetyCfg req
       pure $
         SafetySos.ExternalSosResult
           { externalReferenceId = mbRef,
@@ -702,23 +681,12 @@ riderUploadExternalSosMedia personData sosId phoneNo payload fileName = do
       let sosServiceType = SafetyCommon.flowToSOSService sosCfg.flow
           appMId = cast @SafetyCommon.Merchant @Merchant.Merchant personData.merchantId
           appMocId = cast @SafetyCommon.MerchantOperatingCity @DMOC.MerchantOperatingCity personData.merchantOperatingCityId
-      mbMerchantSvcCfg <-
-        getOneConfig
-          ( MerchantServiceConfigDimensions
-              { merchantOperatingCityId = appMocId.getId,
-                merchantId = appMId.getId,
-                serviceName = Just (DMSC.SOSService sosServiceType)
-              }
-          )
-      case mbMerchantSvcCfg of
-        Just cfg -> case cfg.serviceConfig of
-          DMSC.SOSServiceConfig specificConfig -> do
-            uploadMediaRes <- PoliceSOS.uploadMedia specificConfig phoneNo fileName payload
-            if uploadMediaRes.success
-              then logInfo $ "PoliceSOS:uploadMedia success; sosId=" <> sosId.getId <> ", fileName=" <> fileName
-              else logError $ "PoliceSOS:uploadMedia failure; sosId=" <> sosId.getId <> ", fileName=" <> fileName <> ", errorMessage=" <> show uploadMediaRes.errorMessage
-          _ -> pure ()
-        Nothing -> pure ()
+      mbSpecificConfig <- getSosSpecificConfig appMId appMocId sosServiceType
+      whenJust mbSpecificConfig $ \specificConfig -> do
+        uploadMediaRes <- PoliceSOS.uploadMedia specificConfig phoneNo fileName payload
+        if uploadMediaRes.success
+          then logInfo $ "PoliceSOS:uploadMedia success; sosId=" <> sosId.getId <> ", fileName=" <> fileName
+          else logError $ "PoliceSOS:uploadMedia failure; sosId=" <> sosId.getId <> ", fileName=" <> fileName <> ", errorMessage=" <> show uploadMediaRes.errorMessage
 
 -- | Build the LTS broadcaster config (ERSS-specific) from AppEnv + args, then
 -- fork LTS.entityUpsertForSos. If no external SOS is active, still fork the
@@ -732,40 +700,10 @@ riderRegisterSosWithLts ::
 riderRegisterSosWithLts sosId personData mbExternalRef mbSvcCfg = do
   let appPersonId = cast @SafetyCommon.Person @Person.Person personData.personId
       appMerchantId = cast @SafetyCommon.Merchant @Merchant.Merchant personData.merchantId
-  mbBroadcasterConfig <- case (mbExternalRef, mbSvcCfg) of
-    (Just refId, Just (SOSInterface.ERSSConfig erssCfg)) ->
-      case personData.personMobile of
-        Just mobileNo -> do
-          erssToken <- ERSSAuth.getERSSToken erssCfg
-          selfBaseUrl <- asks (.selfBaseUrl)
-          locationTrackingServiceKey <- asks (.locationTrackingServiceKey)
-          let nyReauthUrl = showBaseUrl selfBaseUrl <> "/internal/sos/erss-reauth"
-              tokenExpiresAt = round (utcTimeToPOSIXSeconds erssToken.accessExpiresAt) :: Int
-              pollingInterval =
-                maybe 60 (.getSeconds)
-                  (personData.externalSOSConfig >>= (.tracePollingIntervalSeconds))
-          pure . Just $
-            LTSTypes.SosErssConfigReq
-              { externalReferenceId = refId,
-                baseUrl = showBaseUrl erssCfg.baseUrl,
-                accessToken = erssToken.accessToken,
-                tokenExpiresAt = tokenExpiresAt,
-                nyReauthUrl = nyReauthUrl,
-                nyApiKey = locationTrackingServiceKey,
-                merchantOperatingCityId = personData.merchantOperatingCityId.getId,
-                pollingIntervalSecs = pollingInterval,
-                timeDiffSecs = personData.timeDiffFromUtc.getSeconds,
-                expiresAt = Nothing,
-                provider =
-                  LTSTypes.SosTraceProvider
-                    { providerKind = LTSTypes.ERSS,
-                      authId = erssCfg.authId,
-                      authCode = erssCfg.authCode,
-                      mobileNo = mobileNo,
-                      traceUrlSuffix = "/public/api/sos/trace"
-                    }
-              }
-        Nothing -> pure Nothing
+      appMocId = cast @SafetyCommon.MerchantOperatingCity @DMOC.MerchantOperatingCity personData.merchantOperatingCityId
+  mbBroadcasterConfig <- case (mbExternalRef, mbSvcCfg, personData.personMobile) of
+    (Just refId, Just (SOSInterface.ERSSConfig erssCfg), Just mobileNo) ->
+      Just <$> buildSosErssConfigReq refId erssCfg appMocId (personData.externalSOSConfig >>= (.tracePollingIntervalSeconds)) personData.timeDiffFromUtc mobileNo
     _ -> pure Nothing
   fork "ltsSosEntityUpsert" $
     LTS.entityUpsertForSos sosId.getId appPersonId.getId appMerchantId.getId mbBroadcasterConfig

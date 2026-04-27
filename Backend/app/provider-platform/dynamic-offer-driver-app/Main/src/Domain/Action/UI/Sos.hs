@@ -305,23 +305,18 @@ driverCallKaptureCreateTicket ::
   Id SafetyCommon.MerchantOperatingCity ->
   Ticket.CreateTicketReq ->
   Environment.Flow (Maybe Text)
-driverCallKaptureCreateTicket sharedMId sharedMocId req = do
-  let mId = cast @SafetyCommon.Merchant @Domain.Types.Merchant.Merchant sharedMId
-      mocId = cast @SafetyCommon.MerchantOperatingCity @Domain.Types.MerchantOperatingCity.MerchantOperatingCity sharedMocId
-  result <- withTryCatch "createTicket:sos" $ TicketTools.createTicket mId mocId req
-  pure $ case result of
-    Right r -> Just r.ticketId
-    Left _ -> Nothing
+driverCallKaptureCreateTicket sharedMId sharedMocId req =
+  SafetySos.wrapKaptureCreateTicket $
+    TicketTools.createTicket (cast @SafetyCommon.Merchant @Domain.Types.Merchant.Merchant sharedMId) (cast @SafetyCommon.MerchantOperatingCity @Domain.Types.MerchantOperatingCity.MerchantOperatingCity sharedMocId) req
 
 driverCallKaptureUpdateTicket ::
   Id SafetyCommon.Merchant ->
   Id SafetyCommon.MerchantOperatingCity ->
   Ticket.UpdateTicketReq ->
   Environment.Flow ()
-driverCallKaptureUpdateTicket sharedMId sharedMocId req = do
-  let mId = cast @SafetyCommon.Merchant @Domain.Types.Merchant.Merchant sharedMId
-      mocId = cast @SafetyCommon.MerchantOperatingCity @Domain.Types.MerchantOperatingCity.MerchantOperatingCity sharedMocId
-  fork "updateTicket:sos" $ void $ TicketTools.updateTicket mId mocId req
+driverCallKaptureUpdateTicket sharedMId sharedMocId req =
+  SafetySos.wrapKaptureUpdateTicket $
+    TicketTools.updateTicket (cast @SafetyCommon.Merchant @Domain.Types.Merchant.Merchant sharedMId) (cast @SafetyCommon.MerchantOperatingCity @Domain.Types.MerchantOperatingCity.MerchantOperatingCity sharedMocId) req
 
 -- | Driver's tracking URL uses the ride's shortId (not UUID rideId).
 -- Falls back to the hardcoded nammayatri URL when transporterConfig has no
