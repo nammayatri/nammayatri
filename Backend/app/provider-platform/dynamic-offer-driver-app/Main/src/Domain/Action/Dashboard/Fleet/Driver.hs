@@ -1841,7 +1841,17 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
                 }
         pure ls
 
----------------------------------------------------------------------
+getFleetOwnerIdForDriverListStats :: Id DP.Person -> Flow Text
+getFleetOwnerIdForDriverListStats driverId = do
+  mbFleetDriverAssoc <- B.runInReplica $ QFDAExtra.findByDriverId driverId True
+  case mbFleetDriverAssoc of
+    Just fda -> pure fda.fleetOwnerId
+    Nothing -> do
+      mbDriverOpAssoc <- B.runInReplica $ QDOAExtra.findByDriverId driverId True
+      case mbDriverOpAssoc of
+        Just doa -> pure doa.operatorId;
+        Nothing -> throwError $ InvalidRequest "No active fleet association or operator link found for this driver"
+
 getDriverFleetDriverListStats ::
   ShortId DM.Merchant ->
   Context.City ->
@@ -1850,13 +1860,14 @@ getDriverFleetDriverListStats ::
   Maybe Day ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Maybe Int ->
   Maybe Int ->
   Maybe Bool ->
   Maybe Common.FleetDriverListStatsSortOn ->
   Maybe Common.FleetDriverStatsResponseType ->
   Flow Common.FleetDriverStatsListRes
-getDriverFleetDriverListStats merchantShortId opCity requestorId mbFrom mbTo mbFleetOwnerId mbSearch mbLimit mbOffset sortDesc sortOnField mbResponseType = do
+getDriverFleetDriverListStats merchantShortId opCity requestorId mbFrom mbTo mbFleetOwnerId mbSearch mbDriverNumber mbLimit mbOffset sortDesc sortOnField mbResponseType = do
   mbRequestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person)
   let mbRole = (.role) <$> mbRequestor
   merchant <- findMerchantByShortId merchantShortId
@@ -1871,34 +1882,51 @@ getDriverFleetDriverListStats merchantShortId opCity requestorId mbFrom mbTo mbF
       limit = max 0 $ min 10 . fromMaybe 10 $ mbLimit
       offset = max 0 $ fromMaybe 0 mbOffset
       responseType = fromMaybe Common.METRICS_LIST mbResponseType
+      mbDriverNumberTrimmed = do
+        raw <- mbDriverNumber
+        let trimmed = T.strip raw
+        guard (not $ T.null trimmed)
+        pure trimmed
 
-  -- Fetch driver ids from ClickHouse association
   (driverIdObjs, fleetOwnerId) <-
-    case (mbRole, mbFleetOwnerId) of
-      (Just DP.OPERATOR, Nothing) -> do
-        ids <-
-          if useDBForAnalytics
-            then QDOAExtra.getActiveDriverIdsByOperatorId requestorId
-            else CDOA.getDriverIdsByOperatorId requestorId
-        pure (ids, requestorId)
-      (_, Just foId) -> do
-        void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) foId
-        ids <-
-          if useDBForAnalytics
-            then QFDAExtra.getActiveDriverIdsByFleetOwnerId foId
-            else do
-              maybeDriverIds <- CFDA.getDriverIdsByFleetOwnerId foId
-              pure $ fromMaybe [] maybeDriverIds
-        pure (ids, foId)
-      (_, Nothing) -> do
-        void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) requestorId
-        ids <-
-          if useDBForAnalytics
-            then QFDAExtra.getActiveDriverIdsByFleetOwnerId requestorId
-            else do
-              maybeDriverIds <- CFDA.getDriverIdsByFleetOwnerId requestorId
-              pure $ fromMaybe [] maybeDriverIds
-        pure (ids, requestorId)
+    case mbDriverNumberTrimmed of
+      Just driverNumber -> do
+        driverNumberHash <- getDbHash driverNumber
+        mbPerson <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole "+91" driverNumberHash merchant.id DP.DRIVER
+        case mbPerson of
+          Just person -> do
+            validateDriverAssociationWithOperator person.id (Id requestorId)
+            foId <- case mbFleetOwnerId of
+              Just fo -> pure fo
+              Nothing -> getFleetOwnerIdForDriverListStats person.id
+            pure ([person.id], foId)
+          Nothing -> pure ([], requestorId)
+      Nothing ->
+        case (mbRole, mbFleetOwnerId) of
+          (Just DP.OPERATOR, Nothing) -> do
+            ids <-
+              if useDBForAnalytics
+                then QDOAExtra.getActiveDriverIdsByOperatorId requestorId
+                else CDOA.getDriverIdsByOperatorId requestorId
+            pure (ids, requestorId)
+          (_, Just foId) -> do
+            void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) foId
+            ids <-
+              if useDBForAnalytics
+                then QFDAExtra.getActiveDriverIdsByFleetOwnerId foId
+                else do
+                  maybeDriverIds <- CFDA.getDriverIdsByFleetOwnerId foId
+                  pure $ fromMaybe [] maybeDriverIds
+            pure (ids, foId)
+          (_, Nothing) -> do
+            void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) requestorId
+            ids <-
+              if useDBForAnalytics
+                then QFDAExtra.getActiveDriverIdsByFleetOwnerId requestorId
+                else do
+                  maybeDriverIds <- CFDA.getDriverIdsByFleetOwnerId requestorId
+                  pure $ fromMaybe [] maybeDriverIds
+            pure (ids, requestorId)
   let driverIdTexts = map (.getId) driverIdObjs
       mbSearchTerm = do
         raw <- mbSearch
@@ -2082,7 +2110,24 @@ getDriverFleetDriverListStats merchantShortId opCity requestorId mbFrom mbTo mbF
           lastNameValue = person.lastName
         }
 
----------------------------------------------------------------------
+validateDriverAssociationWithOperator ::
+  Id DP.Person ->
+  Id DP.Person ->
+  Flow ()
+validateDriverAssociationWithOperator driverId operatorId = do
+  mbDirectAssoc <- B.runInReplica $ QDOAExtra.findByDriverIdAndOperatorId driverId operatorId True
+  case mbDirectAssoc of
+    Just _ -> pure ()
+    Nothing -> do
+      fleetAssocs <- B.runInReplica $ QFDAExtra.findAllByDriverId driverId True
+      let fleetOwnerIds = map (.fleetOwnerId) fleetAssocs
+      results <- mapM (checkFleetOperatorLink operatorId) fleetOwnerIds
+      unless (or results) $
+        throwError (InvalidRequest "Driver is not associated with this operator directly or through any fleet")
+  where
+    checkFleetOperatorLink opId foId = do
+      mbFOA <- B.runInReplica $ QFleetOperatorAssociation.findByFleetOwnerIdAndOperatorId (Id foId) opId True
+      pure $ isJust mbFOA
 
 getFleetDriverInfo :: Text -> Id DP.Person -> Bool -> Flow (Maybe Text, Maybe Text, Maybe Text, Maybe Text, Maybe DrInfo.DriverMode, Maybe Bool, Maybe Bool, Maybe Text, Maybe Bool, Maybe DDVS.DocsVerificationStatus)
 getFleetDriverInfo fleetOwnerId driverId isDriver = do
@@ -4298,9 +4343,15 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
       Common.Passport -> DI.Passport
 
 getDriverFleetVehicleListStats :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Day -> Day -> Flow Common.FleetVehicleStatsRes
-getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId mbRequestorId mbVehicleNo mbLimit mbOffset fromDay toDay = do
-  -- Ensure requestor has access to this fleet owner (similar to VerifyJoiningOtp flow)
-  void $ FleetAccess.checkRequestorAccessToFleet False mbRequestorId fleetOwnerId
+getDriverFleetVehicleListStats merchantShortId opCity requestorId mbFleetOwnerId mbVehicleNo mbLimit mbOffset fromDay toDay = do
+  whenJust mbFleetOwnerId $ \fleetOwnerId -> validateOperatorToFleetAssoc requestorId fleetOwnerId
+  whenJust mbVehicleNo $ \vehicleNo -> do
+    mbRc <- VRCQuery.findLastVehicleRCWrapper vehicleNo
+    case mbRc of
+      Just rc -> case rc.fleetOwnerId of
+        Just rcFleetOwnerId -> validateOperatorToFleetAssoc requestorId rcFleetOwnerId
+        Nothing -> throwError (InvalidRequest "Vehicle is not associated with any fleet")
+      Nothing -> throwError (InvalidRequest "Vehicle not found")
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -4308,19 +4359,26 @@ getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId mbRequestorId
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
   mbRcId <- case mbVehicleNo of
-    Just vehicleNo -> do
-      mbRc <- VRCQuery.findLastVehicleRCFleet' vehicleNo fleetOwnerId
-      pure $ (.id.getId) <$> mbRc
+    Just vehicleNo -> case mbFleetOwnerId of
+      Just fleetOwnerId -> do
+        mbRc <- VRCQuery.findLastVehicleRCFleet' vehicleNo fleetOwnerId
+        pure $ (.id.getId) <$> mbRc
+      Nothing -> do
+        mbRc <- VRCQuery.findLastVehicleRCWrapper vehicleNo
+        pure $ (.id.getId) <$> mbRc
     Nothing -> pure Nothing
-  agg <- case transporterConfig.analyticsConfig.useDbForEarningAndMetrics of
-    True -> QFRDSExtra.sumVehicleStatsByFleetOwnerIdAndDateRange fleetOwnerId mbRcId limit offset fromDay toDay
-    _ -> CFRDSExtra.aggerateVehicleStatsByFleetOwnerIdAndDateRange fleetOwnerId mbRcId limit offset fromDay toDay
+  agg <-
+    if isNothing mbFleetOwnerId && isNothing mbRcId
+      then pure []
+      else case transporterConfig.analyticsConfig.useDbForEarningAndMetrics of
+        True -> QFRDSExtra.sumVehicleStatsByFleetOwnerIdAndDateRange mbFleetOwnerId mbRcId limit offset fromDay toDay
+        _ -> CFRDSExtra.aggerateVehicleStatsByFleetOwnerIdAndDateRange mbFleetOwnerId mbRcId limit offset fromDay toDay
   let rcIds = map (\vehicleStat -> Id vehicleStat.rcId) agg
   vehicleRegistrationCertificates <- VRCQuery.findAllById rcIds
   let vehicleMap = Map.fromList $ map (\rc -> (rc.id.getId, rc)) vehicleRegistrationCertificates
   let agg' = convertToFleetVehicleStatsItem transporterConfig agg vehicleMap
 
-  pure $ Common.FleetVehicleStatsRes {fleetOwnerId = fleetOwnerId, listItem = agg', summary = Common.Summary {totalCount = 10000, count = length agg}}
+  pure $ Common.FleetVehicleStatsRes {fleetOwnerId = fromMaybe "" mbFleetOwnerId, listItem = agg', summary = Common.Summary {totalCount = 10000, count = length agg}}
   where
     maxLimit = 10
     defaultLimit = 5

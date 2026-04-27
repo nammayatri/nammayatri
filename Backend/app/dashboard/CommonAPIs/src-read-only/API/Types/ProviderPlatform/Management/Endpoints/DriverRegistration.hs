@@ -52,32 +52,33 @@ instance Kernel.Types.HideSecrets.HideSecrets AadhaarCardReq where
   hideSecrets = Kernel.Prelude.identity
 
 data ApproveDetails
-  = RC RCApproveDetails
-  | DL DLApproveDetails
-  | UploadProfile (Kernel.Types.Id.Id Dashboard.Common.Image)
-  | SSNApprove Kernel.Prelude.Text
-  | ProfilePhoto (Kernel.Types.Id.Id Dashboard.Common.Image)
-  | VehiclePermit VPermitApproveDetails
-  | VehiclePUC VPUCApproveDetails
-  | VehicleInsurance VInsuranceApproveDetails
-  | VehicleFitnessCertificate FitnessApproveDetails
-  | VehicleInspectionForm VInspectionApproveDetails
-  | Pan PanApproveDetails
-  | NOC NOCApproveDetails
-  | BusinessLicenseImg BusinessLicenseApproveDetails
-  | CommonDocument CommonDocumentApproveDetails
-  | Aadhaar AadhaarApproveDetails
-  | VehicleFrontImg (Kernel.Types.Id.Id Dashboard.Common.Image)
-  | VehicleBackImg (Kernel.Types.Id.Id Dashboard.Common.Image)
-  | VehicleRightImg (Kernel.Types.Id.Id Dashboard.Common.Image)
-  | VehicleLeftImg (Kernel.Types.Id.Id Dashboard.Common.Image)
-  | VehicleFrontInteriorImg (Kernel.Types.Id.Id Dashboard.Common.Image)
-  | VehicleBackInteriorImg (Kernel.Types.Id.Id Dashboard.Common.Image)
-  | OdometerImg (Kernel.Types.Id.Id Dashboard.Common.Image)
-  | LocalResidenceProofImg (Kernel.Types.Id.Id Dashboard.Common.Image)
-  | PoliceVerificationCertificateImg (Kernel.Types.Id.Id Dashboard.Common.Image)
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+    = RC RCApproveDetails
+    | DL DLApproveDetails
+    | UploadProfile (Kernel.Types.Id.Id Dashboard.Common.Image)
+    | SSNApprove Kernel.Prelude.Text
+    | ProfilePhoto (Kernel.Types.Id.Id Dashboard.Common.Image)
+    | VehiclePermit VPermitApproveDetails
+    | VehiclePUC VPUCApproveDetails
+    | VehicleInsurance VInsuranceApproveDetails
+    | VehicleFitnessCertificate FitnessApproveDetails
+    | VehicleInspectionForm VInspectionApproveDetails
+    | Pan PanApproveDetails
+    | NOC NOCApproveDetails
+    | BusinessLicenseImg BusinessLicenseApproveDetails
+    | CommonDocument CommonDocumentApproveDetails
+    | Aadhaar AadhaarApproveDetails
+    | VehicleFrontImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+    | VehicleBackImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+    | VehicleRightImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+    | VehicleLeftImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+    | VehicleFrontInteriorImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+    | VehicleBackInteriorImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+    | OdometerImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+    | LocalResidenceProofImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+    | PoliceVerificationCertificateImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+    | GSTApprove GSTApproveDetails
+    deriving stock Generic
+    deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data BusinessLicenseApproveDetails = BusinessLicenseApproveDetails {documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image, businessLicenseNumber :: Kernel.Prelude.Text, licenseExpiry :: Kernel.Prelude.UTCTime}
   deriving stock (Generic)
@@ -278,6 +279,13 @@ data FitnessApproveDetails = FitnessApproveDetails
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data GSTApproveDetails
+    = GSTApproveDetails {fleetOwnerId :: Kernel.Types.Id.Id Dashboard.Common.Person, documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image, gstNumber :: Kernel.Prelude.Text}
+    deriving stock Generic
+    deriving anyclass (ToJSON, FromJSON, ToSchema)
+instance Kernel.Types.HideSecrets.HideSecrets GSTApproveDetails
+    where hideSecrets = Kernel.Prelude.identity
 
 data GenerateAadhaarOtpReq = GenerateAadhaarOtpReq {aadhaarNumber :: Kernel.Prelude.Text, consent :: Kernel.Prelude.Text}
   deriving stock (Generic)
