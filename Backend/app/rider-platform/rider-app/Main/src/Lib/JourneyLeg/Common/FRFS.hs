@@ -457,4 +457,4 @@ cancel searchId cancellationType = do
     merchant <- CQM.findById metroBooking.merchantId >>= fromMaybeM (MerchantDoesNotExist metroBooking.merchantId.getId)
     merchantOperatingCity <- CQMOC.findById metroBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound metroBooking.merchantOperatingCityId.getId)
     bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory metroBooking.vehicleType)}) >>= fromMaybeM (InternalError "Beckn Config not found")
-    CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType metroBooking
+    void $ CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType metroBooking
