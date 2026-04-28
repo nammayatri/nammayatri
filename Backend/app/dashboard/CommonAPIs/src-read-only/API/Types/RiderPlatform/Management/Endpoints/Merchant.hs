@@ -39,6 +39,7 @@ type GeometryResp = [GeometryAPIEntity]
 data JobName
   = NyRegularMasterTrigger
   | PartnerInvoiceDataExportTrigger
+  | DailyPassStatusUpdateTrigger
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
