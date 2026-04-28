@@ -1149,6 +1149,9 @@ getProcessedDriverDocuments :: Id DP.Person -> IQuery.EntityImagesInfo -> DVC.Do
 getProcessedDriverDocuments driverId entityImagesInfo docType useHVSdkForDL = do
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
       mbS3Path = getS3PathFromLatestImage entityImagesInfo docType
+      lookupS3 imgId = (find (\img -> img.id == imgId) entityImagesInfo.entityImages <&> (.s3Path)) <|> mbS3Path
+      s3FromVerified :: (a -> Maybe Text) -> Maybe a -> Maybe Text
+      s3FromVerified getS3 = maybe mbS3Path getS3
       commonDocStatus dt = do
         mbDoc <- listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndDocumentType (Just driverId) dt
         let (status, reason, url) = checkImageValidity entityImagesInfo dt
@@ -1163,11 +1166,13 @@ getProcessedDriverDocuments driverId entityImagesInfo docType useHVSdkForDL = do
           void $ withTryCatch "callGetDLGetStatus:getProcessedDriverDocuments" $ callGetDLGetStatus driverId merchantOpCityId
           mbDL' <- DLQuery.findByDriverId driverId
           -- Expiry from DL table's licenseExpiry field (not from Image table)
-          return (mapStatus <$> (mbDL' <&> (.verificationStatus)), mbDL' >>= (.rejectReason), Nothing, mbDL' <&> (.licenseExpiry), mbS3Path)
-        else return (mapStatus <$> (mbDL <&> (.verificationStatus)), mbDL >>= (.rejectReason), Nothing, mbDL <&> (.licenseExpiry), mbS3Path)
+          return (mapStatus <$> (mbDL' <&> (.verificationStatus)), mbDL' >>= (.rejectReason), Nothing, mbDL' <&> (.licenseExpiry), s3FromVerified (lookupS3 . (.documentImageId1)) mbDL')
+        else
+          return (mapStatus <$> (mbDL <&> (.verificationStatus)), mbDL >>= (.rejectReason), Nothing, mbDL <&> (.licenseExpiry), s3FromVerified (lookupS3 . (.documentImageId1)) mbDL)
     DVC.AadhaarCard -> do
       mbAadhaarCard <- QAadhaarCard.findByPrimaryKey driverId
-      return (mapStatus . (.verificationStatus) <$> mbAadhaarCard, Nothing, Nothing, Nothing, mbS3Path)
+      let s3 = maybe mbS3Path lookupS3 (mbAadhaarCard >>= (.aadhaarFrontImageId))
+      return (mapStatus . (.verificationStatus) <$> mbAadhaarCard, Nothing, Nothing, Nothing, s3)
     DVC.Permissions -> return (Just VALID, Nothing, Nothing, Nothing, mbS3Path)
     DVC.SocialSecurityNumber -> do
       mbSSN <- QDSSN.findByDriverId driverId
@@ -1180,10 +1185,10 @@ getProcessedDriverDocuments driverId entityImagesInfo docType useHVSdkForDL = do
       return (status, reason, url, Nothing, mbS3Path)
     DVC.PanCard -> do
       mbPanCard <- QDPC.findByDriverId driverId
-      return (mapStatus . (.verificationStatus) <$> mbPanCard, Nothing, Nothing, Nothing, mbS3Path)
+      return (mapStatus . (.verificationStatus) <$> mbPanCard, Nothing, Nothing, Nothing, s3FromVerified (lookupS3 . (.documentImageId1)) mbPanCard)
     DVC.GSTCertificate -> do
       mbGSTCertificate <- QDGST.findByDriverId driverId
-      return (mapStatus . (.verificationStatus) <$> mbGSTCertificate, Nothing, Nothing, Nothing, mbS3Path)
+      return (mapStatus . (.verificationStatus) <$> mbGSTCertificate, Nothing, Nothing, Nothing, s3FromVerified (lookupS3 . (.documentImageId1)) mbGSTCertificate)
     DVC.BackgroundVerification -> do
       mbBackgroundVerification <- BVQuery.findByDriverId driverId
       -- Expiry from BackgroundVerification table's expiresAt field (not from Image table)
@@ -1233,28 +1238,31 @@ getProcessedVehicleDocuments :: IQuery.EntityImagesInfo -> DVC.DocumentType -> R
 getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo = do
   let entity = entityImagesInfo.entity
       mbS3Path = getS3PathFromVehicleImage entityImagesInfo docType mbRcImagesInfo
+      lookupS3 imgId = (find (\img -> img.id == imgId) entityImagesInfo.entityImages <&> (.s3Path)) <|> mbS3Path
+      s3FromVerified :: (a -> Maybe Text) -> Maybe a -> Maybe Text
+      s3FromVerified getS3 = maybe mbS3Path getS3
   case docType of
     DVC.VehicleRegistrationCertificate -> do
       let status = mapStatus vehicleRC.verificationStatus
           reason
             | status == INVALID && not (null vehicleRC.failedRules) = Just $ T.intercalate ", " vehicleRC.failedRules
             | otherwise = vehicleRC.rejectReason
-      return (Just status, reason, Nothing, Just vehicleRC.fitnessExpiry, mbS3Path)
+      return (Just status, reason, Nothing, Just vehicleRC.fitnessExpiry, lookupS3 vehicleRC.documentImageId)
     DVC.VehiclePermit -> do
       mbDoc <- listToMaybe <$> VPQuery.findByRcId (Just 1) Nothing vehicleRC.id
-      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.permitExpiry, mbS3Path)
+      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.permitExpiry, s3FromVerified (lookupS3 . (.documentImageId)) mbDoc)
     DVC.VehicleFitnessCertificate -> do
       mbDoc <- listToMaybe <$> VFCQuery.findByRcId (Just 1) Nothing vehicleRC.id
-      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, Just vehicleRC.fitnessExpiry, mbS3Path)
+      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, Just vehicleRC.fitnessExpiry, s3FromVerified (lookupS3 . (.documentImageId)) mbDoc)
     DVC.VehicleInsurance -> do
       mbDoc <- listToMaybe <$> VIQuery.findByRcId (Just 1) Nothing vehicleRC.id
-      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), (mbDoc >>= (.rejectReason)), Nothing, vehicleRC.insuranceValidity, mbS3Path)
+      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), (mbDoc >>= (.rejectReason)), Nothing, vehicleRC.insuranceValidity, s3FromVerified (lookupS3 . (.documentImageId)) mbDoc)
     DVC.VehiclePUC -> do
       mbDoc <- listToMaybe <$> VPUCQuery.findByRcId (Just 1) Nothing vehicleRC.id
-      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.pucExpiry, mbS3Path)
+      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.pucExpiry, s3FromVerified (lookupS3 . (.documentImageId)) mbDoc)
     DVC.VehicleNOC -> do
       mbDoc <- listToMaybe <$> VNOCQuery.findByRcId (Just 1) Nothing vehicleRC.id
-      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, mbDoc <&> (.nocExpiry), mbS3Path)
+      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, mbDoc <&> (.nocExpiry), s3FromVerified (lookupS3 . (.documentImageId)) mbDoc)
     DVC.VehicleInspectionForm -> do
       -- Check all vehicle photos based on RC, not driver
       (status, reason, url) <- checkVehiclePhotosStatusByRC mbRcImagesInfo
