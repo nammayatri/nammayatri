@@ -1475,6 +1475,9 @@ approveAndUpdateCommonDocument req _mId _mOpCityId = do
         Nothing -> document {DCommonDoc.verificationStatus = VALID}
 
   QCommonDriverOnboardingDocuments.updateByPrimaryKey updatedDocument
+  -- Keep image and common-doc statuses in sync for common document approvals.
+  whenJust document.documentImageId $ \documentImageId ->
+    QImage.updateVerificationStatusOnlyById VALID (Id documentImageId.getId)
 
   -- When approving BusinessLicense or TAXDetails (used for BID/VAT in international flow),
   -- also update the fleet_owner_information table.
@@ -1558,7 +1561,9 @@ resolveRcIdFromDocument docType imageId = case docType of
   DVC.VehicleNOC -> do
     mbNoc <- QVNOC.findByImageId imageId
     pure $ (.rcId) <$> mbNoc
-  _ -> pure Nothing
+  _ -> do
+    mbImage <- QImage.findById imageId
+    pure $ Id <$> (mbImage >>= (.rcId))
 
 runStatusEventSafely ::
   Text ->
@@ -1837,15 +1842,7 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
       pure $ mkUpdateResp mbPersonId enabled
   where
     isVehicleDocType :: DVC.DocumentType -> Bool
-    isVehicleDocType docType =
-      docType
-        `elem` [ DVC.VehicleRegistrationCertificate,
-                 DVC.VehicleInsurance,
-                 DVC.VehiclePUC,
-                 DVC.VehiclePermit,
-                 DVC.VehicleFitnessCertificate,
-                 DVC.VehicleNOC
-               ]
+    isVehicleDocType docType = docType `elem` SDO.defaultVehicleDocumentTypes
 
     getApproveTargetRcId :: Common.ApproveDetails -> Flow (Maybe (Id DRC.VehicleRegistrationCertificate))
     getApproveTargetRcId = \case
@@ -1855,6 +1852,12 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
       Common.VehiclePermit req -> resolveRcIdFromDocument DVC.VehiclePermit (Id req.documentImageId.getId)
       Common.VehicleFitnessCertificate req -> resolveRcIdFromDocument DVC.VehicleFitnessCertificate (Id req.documentImageId.getId)
       Common.NOC req -> resolveRcIdFromDocument DVC.VehicleNOC (Id req.documentImageId.getId)
+      req
+        | Just imgId <- getImageIdFromApproveDetails req -> do
+            mbImage <- QImage.findById (Id imgId.getId)
+            case mbImage of
+              Just image | isVehicleDocType image.imageType -> resolveRcIdFromDocument image.imageType (Id imgId.getId)
+              _ -> pure Nothing
       _ -> pure Nothing
 
     getRejectTargetRcId :: Common.RejectDetails -> Flow (Maybe (Id DRC.VehicleRegistrationCertificate))
