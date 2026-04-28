@@ -55,9 +55,6 @@ verifyBankAccount ::
   Flow Kernel.External.Verification.Interface.Types.VerifyAsyncResp
 verifyBankAccount (personId, _merchantId, merchantOpCityId) req = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbExistingAccount <- runInReplica $ QDBA.findByPrimaryKey person.id
-  when (isJust mbExistingAccount) $
-    throwError $ InvalidRequest "Bank account already present"
   verifyRes <-
     Verification.verifyBankAccountAsync person.merchantId merchantOpCityId $
       Verification.VerifyBankAccountAsyncReq
@@ -92,8 +89,11 @@ getInfoBankAccount (personId, merchantId, merchantOpCityId) requestId = do
                 ifscCode = resp.ifscCode,
                 nameAtBank = resp.nameAtBank
               }
-      when (resp.accountExists) $
-        QDBA.create driverBankAccount
+      when (resp.accountExists) $ do
+        mbExistingAccount <- runInReplica $ QDBA.findByPrimaryKey personId
+        case mbExistingAccount of
+          Just _ -> QDBA.updateByPrimaryKey driverBankAccount
+          Nothing -> QDBA.create driverBankAccount
       let driverBankAccountDetails =
             DDI.DriverBankAccountDetails
               { accountNumber = resp.bankAccountNumber,
