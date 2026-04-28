@@ -56,6 +56,7 @@ import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
 import qualified Domain.Action.UI.DriverOnboarding.BankAccountVerification as BankAccountVerification
 import Domain.Action.UI.DriverOnboarding.DriverLicense
 import Domain.Action.UI.DriverOnboarding.Image
+import qualified Domain.Action.UI.DriverOnboarding.Status as DStatus
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
 import qualified Domain.Action.UI.ReferralPayout as ReferralPayout
@@ -792,8 +793,98 @@ postDriverRegistrationRegisterVerifyAadhaarOtp merchantShortId opCity driverId_ 
 getDriverRegistrationUnderReviewDrivers :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow Common.UnderReviewDriversListResponse
 getDriverRegistrationUnderReviewDrivers _merchantShortId _opCity _limit _offset = throwError (InternalError "Not Implemented")
 
-getDriverRegistrationDocumentsInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow [Common.DriverDocument]
-getDriverRegistrationDocumentsInfo _merchantShortId _opCity _driverId = throwError (InternalError "Not Implemented")
+getDriverRegistrationDocumentsInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.StatusRes
+getDriverRegistrationDocumentsInfo merchantShortId opCity driverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  statusRes <- DStatus.statusHandler (Id driverId.getId, merchant.id, merchantOpCity.id) Nothing Nothing Nothing Nothing Nothing Nothing
+  pure $ castToManagementStatusRes statusRes
+
+castToManagementStatusRes :: DStatus.StatusRes -> Common.StatusRes
+castToManagementStatusRes res =
+  Common.StatusRes
+    { driverDocuments = castDocStatusItem <$> res.driverDocuments,
+      driverLicenseDetails = fmap (castMgmtDLDetails <$>) res.driverLicenseDetails,
+      vehicleDocuments = castVehicleDocItem <$> res.vehicleDocuments,
+      vehicleRegistrationCertificateDetails = fmap (castMgmtRCDetails <$>) res.vehicleRegistrationCertificateDetails,
+      enabled = res.enabled,
+      manualVerificationRequired = res.manualVerificationRequired
+    }
+
+castDocStatusItem :: SStatus.DocumentStatusItem -> Common.DocumentStatusItem
+castDocStatusItem item =
+  Common.DocumentStatusItem
+    { documentType = SDO.castDocumentType item.documentType,
+      verificationStatus = castMgmtResponseStatus item.verificationStatus,
+      verificationMessage = item.verificationMessage,
+      s3Path = item.s3Path,
+      expiryDate = item.documentExpiry
+    }
+
+castMgmtDLDetails :: SStatus.DLDetails -> Common.DLDetails
+castMgmtDLDetails dl =
+  Common.DLDetails
+    { driverName = dl.driverName,
+      driverLicenseNumber = dl.driverLicenseNumber,
+      operatingCity = dl.operatingCity,
+      driverDateOfBirth = dl.driverDateOfBirth,
+      classOfVehicles = dl.classOfVehicles,
+      imageId1 = dl.imageId1,
+      imageId2 = dl.imageId2,
+      dateOfIssue = dl.dateOfIssue,
+      createdAt = dl.createdAt
+    }
+
+castMgmtRCDetails :: SStatus.RCDetails -> Common.RCDetails
+castMgmtRCDetails rc =
+  Common.RCDetails
+    { vehicleRegistrationCertNumber = rc.vehicleRegistrationCertNumber,
+      imageId = rc.imageId,
+      operatingCity = rc.operatingCity,
+      dateOfRegistration = rc.dateOfRegistration,
+      vehicleCategory = rc.vehicleCategory,
+      airConditioned = rc.airConditioned,
+      vehicleManufacturer = rc.vehicleManufacturer,
+      vehicleModel = rc.vehicleModel,
+      vehicleColor = rc.vehicleColor,
+      vehicleDoors = rc.vehicleDoors,
+      vehicleSeatBelts = rc.vehicleSeatBelts,
+      vehicleModelYear = rc.vehicleModelYear,
+      oxygen = rc.oxygen,
+      ventilator = rc.ventilator,
+      createdAt = rc.createdAt,
+      failedRules = rc.failedRules,
+      verificationStatus = DCommon.castVerificationStatus <$> rc.verificationStatus
+    }
+
+castVehicleDocItem :: SStatus.VehicleDocumentItem -> Common.VehicleDocumentItem
+castVehicleDocItem vd =
+  Common.VehicleDocumentItem
+    { registrationNo = vd.registrationNo,
+      userSelectedVehicleCategory = vd.userSelectedVehicleCategory,
+      verifiedVehicleCategory = vd.verifiedVehicleCategory,
+      isVerified = vd.isVerified,
+      isActive = vd.isActive,
+      isApproved = vd.isApproved,
+      vehicleModel = vd.vehicleModel,
+      documents = castDocStatusItem <$> vd.documents,
+      dateOfUpload = vd.dateOfUpload,
+      s3Path = vd.s3Path,
+      expiryDate = vd.documentExpiry
+    }
+
+castMgmtResponseStatus :: SStatus.ResponseStatus -> Common.VerificationStatus
+castMgmtResponseStatus = \case
+  SStatus.NO_DOC_AVAILABLE -> Common.PENDING
+  SStatus.PENDING -> Common.PENDING
+  SStatus.VALID -> Common.VALID
+  SStatus.FAILED -> Common.INVALID
+  SStatus.INVALID -> Common.INVALID
+  SStatus.LIMIT_EXCEED -> Common.INVALID
+  SStatus.MANUAL_VERIFICATION_REQUIRED -> Common.MANUAL_VERIFICATION_REQUIRED
+  SStatus.UNAUTHORIZED -> Common.UNAUTHORIZED
+  SStatus.PULL_REQUIRED -> Common.PENDING
+  SStatus.CONSENT_DENIED -> Common.INVALID
 
 approveAndUpdateRC :: Common.RCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateRC req merchantId merchantOpCityId = do
