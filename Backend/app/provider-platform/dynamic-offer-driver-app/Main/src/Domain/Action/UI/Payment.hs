@@ -376,52 +376,59 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
           when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
             unless (transactionStatus /= Payment.CHARGED) $ processSubscriptionPurchasePayment merchantId driver subscriptionPurchase
         Nothing -> do
-          (invoices, serviceName, serviceConfig, driver) <- getInvoicesAndServiceWithServiceConfigByOrderId order
           logDebug $ "Webhook Response Status: " <> show transactionStatus <> " Payer Vpa: " <> show payerVpa <> " OrderId: " <> show orderShortId
-          logDebug $ "Invoices: " <> show invoices
-          when (order.entityName == Just DPayment.PAYOUT_REGISTRATION && transactionStatus == Payment.CHARGED) do
-            let mbVpa = payerVpa <|> ((.payerVpa) =<< upi)
-            whenJust mbVpa $ \vpa -> do
-              updatePayoutVpaAndStatusByRole driver.role order.personId vpa
-            logDebug $ "Updating Payout And Process Previous Payout For Person: " <> show order.personId <> " with Vpa: " <> show mbVpa
-            -- Store VPA on PaymentOrder
-            QOrder.updateVpa order.id mbVpa
-            when (isJust mbVpa) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) mbVpa merchantOperatingCityId
-          when (order.entityName == Just DPayment.DRIVER_STCL || order.paymentServiceType == Just DOrder.STCL) $ do
-            logDebug $ "STCL order detected in juspayWebhookHandler, calling stclMemberShipOrderStatusHandler for order: " <> show orderShortId
-            let stclPaymentStatusResp =
-                  DPayment.PaymentStatus
-                    { orderId = order.id,
-                      orderShortId = order.shortId,
-                      status = transactionStatus,
-                      bankErrorMessage = bankErrorMessage,
-                      bankErrorCode = bankErrorCode,
-                      isRetried = isRetriedOrder,
-                      isRetargeted = isRetargetedOrder,
-                      retargetLink = retargetPaymentLink,
-                      refunds = refunds,
-                      payerVpa = payerVpa <|> ((.payerVpa) =<< upi),
-                      card = Nothing,
-                      paymentMethodType = paymentMethodType,
-                      authIdCode = (.authIdCode) =<< paymentGatewayResponse,
-                      txnUUID = transactionUUID,
-                      txnId = txnId,
-                      effectAmount = effectiveAmount,
-                      offers = offers,
-                      paymentServiceType = order.paymentServiceType,
-                      paymentFulfillmentStatus = order.paymentFulfillmentStatus,
-                      domainEntityId = order.domainEntityId,
-                      amount = order.amount,
-                      validTill = order.validTill
-                    }
-            DStclMembership.stclMemberShipOrderStatusHandler stclPaymentStatusResp order.id
-          when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
-            when (order.entityName == Just DPayment.DRIVER_WALLET_TOPUP) $
-              processWalletTopupAndUpdateStatus driver order transactionStatus
-            unless (transactionStatus /= Payment.CHARGED) $ do
-              processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices
-            notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName bankErrorCode True (serviceName, serviceConfig)
-            QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
+          -- PAYOUT_REGISTRATION orders have no invoice and no relationship with subscriptions,
+          -- so they must not depend on getInvoicesAndServiceWithServiceConfigByOrderId (which
+          -- throws when no SubscriptionConfig row exists for the merchant operating city).
+          if order.entityName == Just DPayment.PAYOUT_REGISTRATION
+            then do
+              when (transactionStatus == Payment.CHARGED) do
+                driver <- B.runInReplica $ QP.findById (cast order.personId) >>= fromMaybeM (PersonDoesNotExist order.personId.getId)
+                let mbVpa = payerVpa <|> ((.payerVpa) =<< upi)
+                whenJust mbVpa $ \vpa -> do
+                  updatePayoutVpaAndStatusByRole driver.role order.personId vpa
+                logDebug $ "Updating Payout And Process Previous Payout For Person: " <> show order.personId <> " with Vpa: " <> show mbVpa
+                -- Store VPA on PaymentOrder
+                QOrder.updateVpa order.id mbVpa
+                when (isJust mbVpa) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) mbVpa merchantOperatingCityId
+            else do
+              (invoices, serviceName, serviceConfig, driver) <- getInvoicesAndServiceWithServiceConfigByOrderId order
+              logDebug $ "Invoices: " <> show invoices
+              when (order.entityName == Just DPayment.DRIVER_STCL || order.paymentServiceType == Just DOrder.STCL) $ do
+                logDebug $ "STCL order detected in juspayWebhookHandler, calling stclMemberShipOrderStatusHandler for order: " <> show orderShortId
+                let stclPaymentStatusResp =
+                      DPayment.PaymentStatus
+                        { orderId = order.id,
+                          orderShortId = order.shortId,
+                          status = transactionStatus,
+                          bankErrorMessage = bankErrorMessage,
+                          bankErrorCode = bankErrorCode,
+                          isRetried = isRetriedOrder,
+                          isRetargeted = isRetargetedOrder,
+                          retargetLink = retargetPaymentLink,
+                          refunds = refunds,
+                          payerVpa = payerVpa <|> ((.payerVpa) =<< upi),
+                          card = Nothing,
+                          paymentMethodType = paymentMethodType,
+                          authIdCode = (.authIdCode) =<< paymentGatewayResponse,
+                          txnUUID = transactionUUID,
+                          txnId = txnId,
+                          effectAmount = effectiveAmount,
+                          offers = offers,
+                          paymentServiceType = order.paymentServiceType,
+                          paymentFulfillmentStatus = order.paymentFulfillmentStatus,
+                          domainEntityId = order.domainEntityId,
+                          amount = order.amount,
+                          validTill = order.validTill
+                        }
+                DStclMembership.stclMemberShipOrderStatusHandler stclPaymentStatusResp order.id
+              when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
+                when (order.entityName == Just DPayment.DRIVER_WALLET_TOPUP) $
+                  processWalletTopupAndUpdateStatus driver order transactionStatus
+                unless (transactionStatus /= Payment.CHARGED) $ do
+                  processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices
+                notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName bankErrorCode True (serviceName, serviceConfig)
+                QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
     Payment.MandateOrderStatusResp {..} -> do
       order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
       (invoices, serviceName, serviceConfig, driver) <- getInvoicesAndServiceWithServiceConfigByOrderId order
