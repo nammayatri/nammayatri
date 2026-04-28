@@ -690,6 +690,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
   now <- getCurrentTime
   rideRelatedNotificationConfigList <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, timeDiffEvent = Just DRN.START_TIME})
   forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updRideForStartReq (fromMaybe now rideStartTime))
+  void $ Redis.setNxExpire (driverHasReachedCacheKey ride.id.getId) 8000 ()
   person <- QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
   riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   fork "convert pending non-ride sos to ride sos on ride start" $ convertNonRideSosToRide person riderConfig
@@ -1781,10 +1782,9 @@ sendBookingCancelledMessageViaWhatsapp personId riderConfig = do
 
 notifyOnDriverArrived :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, ServiceFlow m r) => DRB.Booking -> DRide.Ride -> m ()
 notifyOnDriverArrived booking ride = do
-  mbHasReachedNotified <- Redis.safeGet @() driverHasReached
-  when (isNothing mbHasReachedNotified) $ do
+  acquired <- Redis.setNxExpire driverHasReached 2000 ()
+  when acquired $
     Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride.vehicleColor ride.vehicleModel ride.vehicleVariant
-    Redis.setExp driverHasReached () 1500
   where
     driverHasReached = driverHasReachedCacheKey ride.id.getId
 

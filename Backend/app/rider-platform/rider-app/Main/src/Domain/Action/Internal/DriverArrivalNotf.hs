@@ -2,6 +2,7 @@ module Domain.Action.Internal.DriverArrivalNotf where
 
 import Data.Aeson
 import Data.Text (pack)
+import qualified Domain.Action.Beckn.Common as Common
 import qualified Domain.Action.Internal.PickupInstructionHandler as PIHandler
 import Domain.Types.RideStatus
 import Environment
@@ -52,7 +53,8 @@ driverArrivalNotfHandler (DANTypeValidationReq bppRideId driverIdValue status) =
       Notify.notifyDriverReaching booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride
     DRIVER_REACHED -> do
       whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg Nothing JMState.Arrived now
-      Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride.vehicleColor ride.vehicleModel ride.vehicleVariant
+      unless (ride.status == INPROGRESS) $
+        Common.notifyOnDriverArrived booking ride
     _ -> throwError $ InvalidRequest "Unexpected ride notification status"
 
   pure Kernel.Types.APISuccess.Success
