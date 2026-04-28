@@ -1052,7 +1052,7 @@ validateAadhaarChecks personId = do
 -- | Create and store Aadhaar record
 -- Can be called independently from DigiLocker (without SDK validation)
 createAadhaarRecord ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
   Id Domain.Types.Person.Person ->
   Id Domain.Types.Merchant.Merchant ->
   Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
@@ -1062,6 +1062,7 @@ createAadhaarRecord personId merchantId merchantOperatingCityId API.Types.UI.Dri
   currTime <- getCurrentTime
   let verificationStatus = Image.convertValidationStatusToVerificationStatus validationStatus
       maskedAadhaarNumber' = maskText <$> maskedAadhaarNumber
+  encryptedAadhaarNumber <- traverse encrypt maskedAadhaarNumber
   let aadhaarCard =
         Domain.Types.AadhaarCard.AadhaarCard
           { driverId = personId,
@@ -1070,7 +1071,7 @@ createAadhaarRecord personId merchantId merchantOperatingCityId API.Types.UI.Dri
             verificationStatus = verificationStatus,
             createdAt = currTime,
             updatedAt = currTime,
-            aadhaarNumber = Nothing,
+            aadhaarNumber = encryptedAadhaarNumber,
             maskedAadhaarNumber = maskedAadhaarNumber',
             driverGender = Nothing,
             driverImage = Nothing,
