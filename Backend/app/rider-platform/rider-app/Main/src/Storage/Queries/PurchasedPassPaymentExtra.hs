@@ -33,6 +33,40 @@ expireOlderPaymentsByPurchasedPassId purchasedPassId endDate = do
         ]
     ]
 
+expireOlderPaymentsByPurchasedPassIds ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [Id DPurchasedPass.PurchasedPass] ->
+  Day ->
+  m ()
+expireOlderPaymentsByPurchasedPassIds [] _ = pure ()
+expireOlderPaymentsByPurchasedPassIds purchasedPassIds endDate = do
+  _now <- getCurrentTime
+  updateWithKV
+    [Se.Set Beam.status DPurchasedPass.Expired, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.purchasedPassId $ Se.In (map getId purchasedPassIds),
+          Se.Is Beam.status $ Se.In [DPurchasedPass.Active, DPurchasedPass.PreBooked],
+          Se.Is Beam.endDate $ Se.LessThanOrEq endDate
+        ]
+    ]
+
+activatePreBookedPaymentsByPurchasedPassIds ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [Id DPurchasedPass.PurchasedPass] ->
+  Day ->
+  m ()
+activatePreBookedPaymentsByPurchasedPassIds [] _ = pure ()
+activatePreBookedPaymentsByPurchasedPassIds purchasedPassIds today = do
+  _now <- getCurrentTime
+  updateWithKV
+    [Se.Set Beam.status DPurchasedPass.Active, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.purchasedPassId $ Se.In (map getId purchasedPassIds),
+          Se.Is Beam.status $ Se.Eq DPurchasedPass.PreBooked,
+          Se.Is Beam.endDate $ Se.GreaterThanOrEq today
+        ]
+    ]
+
 updatePurchaseDataByPurchasedPassIdAndStartEndDate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DPurchasedPass.PurchasedPass ->
