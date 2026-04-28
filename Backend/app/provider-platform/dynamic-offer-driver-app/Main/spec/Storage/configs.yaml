@@ -64,6 +64,7 @@ DriverPoolConfig:
     enableUnifiedPooling: Maybe Bool
     dynamicBatchSize: Vector Int
     selfRequestIfRiderIsDriver: Bool
+    enablePriorityTagSplit: Maybe Bool
 
   beamFields:
     dynamicBatchSize:

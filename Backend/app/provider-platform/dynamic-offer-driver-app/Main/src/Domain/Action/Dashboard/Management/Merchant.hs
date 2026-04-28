@@ -699,6 +699,7 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
       area :: SL.Area <- readCSVField idx row.area "Area"
       tripCategory :: Text <- cleanCSVField idx row.tripCategory "Trip Category"
       let vehicleVariant :: Maybe ServiceTierType = readMaybeCSVField idx row.vehicleVariant "Vehicle Variant"
+      let enablePriorityTagSplit :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.enablePriorityTagSplit) "Enable Priority Tag Split"
 
       minRadiusOfSearch :: Meters <- readCSVField idx row.minRadiusOfSearch "Min Radius Of Search"
       maxRadiusOfSearch :: Meters <- readCSVField idx row.maxRadiusOfSearch "Max Radius Of Search"
@@ -771,6 +772,7 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
             thresholdToIgnoreActualDistanceThreshold,
             timeBounds,
             selfRequestIfRiderIsDriver,
+            enablePriorityTagSplit,
             batchSizeOnRideWithStraightLineDistance,
             currentRideTripCategoryValidForForwardBatching,
             useOneToOneOsrmMapping,
@@ -822,6 +824,7 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
                     DDPC.thresholdToIgnoreActualDistanceThreshold = config.thresholdToIgnoreActualDistanceThreshold,
                     DDPC.timeBounds = config.timeBounds,
                     DDPC.selfRequestIfRiderIsDriver = config.selfRequestIfRiderIsDriver,
+                    DDPC.enablePriorityTagSplit = config.enablePriorityTagSplit,
                     DDPC.batchSizeOnRideWithStraightLineDistance = config.batchSizeOnRideWithStraightLineDistance,
                     DDPC.currentRideTripCategoryValidForForwardBatching = config.currentRideTripCategoryValidForForwardBatching,
                     DDPC.useOneToOneOsrmMapping = config.useOneToOneOsrmMapping,
@@ -860,6 +863,7 @@ data DriverPoolConfigCSVRow = DriverPoolConfigCSVRow
     enableUnifiedPooling :: Text,
     thresholdToIgnoreActualDistanceThreshold :: Text,
     selfRequestIfRiderIsDriver :: Text,
+    enablePriorityTagSplit :: Maybe Text,
     batchSizeOnRideWithStraightLineDistance :: Text,
     useOneToOneOsrmMapping :: Text,
     dynamicBatchSize :: Text,
@@ -872,7 +876,46 @@ data DriverPoolConfigCSVRow = DriverPoolConfigCSVRow
   }
   deriving (Generic, Show)
 
-instance FromNamedRecord DriverPoolConfigCSVRow
+instance FromNamedRecord DriverPoolConfigCSVRow where
+  parseNamedRecord r =
+    DriverPoolConfigCSVRow
+      <$> r .: "tripDistance"
+      <*> r .: "area"
+      <*> r .: "tripCategory"
+      <*> r .: "vehicleVariant"
+      <*> r .: "minRadiusOfSearch"
+      <*> r .: "maxRadiusOfSearch"
+      <*> r .: "radiusStepSize"
+      <*> r .: "driverBatchSize"
+      <*> r .: "maxNumberOfBatches"
+      <*> r .: "maxParallelSearchRequests"
+      <*> r .: "maxParallelSearchRequestsOnRide"
+      <*> r .: "poolSortingType"
+      <*> r .: "singleBatchProcessTime"
+      <*> r .: "radiusShrinkValueForDriversOnRide"
+      <*> r .: "driverToDestinationDistanceThreshold"
+      <*> r .: "driverToDestinationDuration"
+      <*> r .: "maxDriverQuotesRequired"
+      <*> r .: "driverQuoteLimit"
+      <*> r .: "driverRequestCountLimit"
+      <*> r .: "driverPositionInfoExpiry"
+      <*> r .: "actualDistanceThreshold"
+      <*> r .: "actualDistanceThresholdOnRide"
+      <*> r .: "enableForwardBatching"
+      <*> r .: "batchSizeOnRide"
+      <*> r .: "enableUnifiedPooling"
+      <*> r .: "thresholdToIgnoreActualDistanceThreshold"
+      <*> r .: "selfRequestIfRiderIsDriver"
+      <*> optional (r .: "enablePriorityTagSplit")
+      <*> r .: "batchSizeOnRideWithStraightLineDistance"
+      <*> r .: "useOneToOneOsrmMapping"
+      <*> r .: "dynamicBatchSize"
+      <*> r .: "distanceBasedBatchSplit"
+      <*> r .: "scheduleTryTimes"
+      <*> r .: "onRideBatchSplitConfig"
+      <*> r .: "onRideRadiusConfig"
+      <*> r .: "timeBounds"
+      <*> r .: "currentRideTripCategoryValidForForwardBatching"
 
 ---------------------------------------------------------------------
 getMerchantConfigDriverIntelligentPool :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverIntelligentPoolConfigRes

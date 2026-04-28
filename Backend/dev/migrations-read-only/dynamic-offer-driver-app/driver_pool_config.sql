@@ -78,3 +78,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN dynamic_batch_s
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN self_request_if_rider_is_driver boolean NOT NULL default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN enable_priority_tag_split boolean ;
