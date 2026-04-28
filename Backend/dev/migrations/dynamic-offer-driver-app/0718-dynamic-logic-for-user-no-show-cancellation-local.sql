@@ -30,7 +30,7 @@ VALUES
 -- If ALL conditions are true:
 -- -- Set cancellationCharges = 5
 -- If ANY condition is false:
--- -- Set cancellationCharges = 0
+-- -- Set cancellationCharges = 3
 -- Return all input data + computed cancellationCharges
 insert into
   atlas_driver_offer_bpp.app_dynamic_logic_element (
@@ -45,7 +45,7 @@ values
   (
     'User cancellation dues generic example',
     'USER-CANCELLATION-DUES',
-    '{"cat":[{"var":""},{"if":[{"and":[{">=":[{"var":"totalBookings"},3]},{">=":[{"var":"cancelledRides"},2]},{"==":[{"var":"serviceTier"},"AUTO_RICKSHAW"]}]},{"cancellationCharges":5},{"cancellationCharges":0}]}]}',
+    '{"cat":[{"var":""},{"if":[{"and":[{">=":[{"var":"totalBookings"},3]},{">=":[{"var":"cancelledRides"},2]},{"==":[{"var":"serviceTier"},"AUTO_RICKSHAW"]}]},{"cancellationCharges":5},{"cancellationCharges":3}]}]}',
     0,
     'favorit0-0000-0000-0000-00000favorit',
     1
@@ -54,7 +54,7 @@ values
 -- ONLY FOR LOCAL
 -- Check cancellation reason:
 -- If "CUSTOMER_NO_SHOW":
--- -- If driver arrived (isArrivedAtPickup = true) AND waited >=240 seconds -> set cancellationCharges = 6
+-- -- If driver arrived (isArrivedAtPickup = true) AND waited >=5 seconds -> set cancellationCharges = 100
 -- -- Else -> set cancellationCharges = 0
 -- If other reason:
 -- -- Keep existing cancellationCharges value if present
@@ -73,7 +73,7 @@ values
   (
     'Customer no show dues example',
     'USER-CANCELLATION-DUES',
-    '{"cat":[{"var":""},{"cancellationCharges":{"if":[{"and":[{"==":[{"var":"cancellationReasonSelected"},"CUSTOMER_NO_SHOW"]},{"==":[{"var":"cancelledBy"},"CancellationByDriver"]}]},{"if":[{"and":[{"==":[{"var":"isArrivedAtPickup"},true]},{">=":[{"var":"driverWaitingTime"},240]}]},6,0]},{"if":[{"var":"cancellationCharges"},{"var":"cancellationCharges"},0]}]}}]}',
+    '{"cat":[{"var":""},{"cancellationCharges":{"if":[{"and":[{"==":[{"var":"cancellationReasonSelected"},"CUSTOMER_NO_SHOW"]},{"==":[{"var":"cancelledBy"},"CancellationByDriver"]}]},{"if":[{"and":[{"==":[{"var":"isArrivedAtPickup"},true]},{">=":[{"var":"driverWaitingTime"},5]}]},100,0]},{"if":[{"var":"cancellationCharges"},{"var":"cancellationCharges"},0]}]}}]}',
     1,
     'favorit0-0000-0000-0000-00000favorit',
     1
@@ -85,7 +85,7 @@ values
 -- If "CUSTOMER_NO_SHOW", check waiting time:
 -- -- Calculate: currentTime - driverArrivalTime
 -- -- If driverArrivalTime is null -> use currentTime (waiting = 0)
--- -- If waiting time >= 240 seconds -> return "Valid"
+-- -- If waiting time >= 5 seconds -> return "Valid"
 -- -- Else -> return "Invalid"
 insert into
   atlas_driver_offer_bpp.namma_tag (
@@ -115,7 +115,7 @@ values
     null,
     null,
     '{Valid,Invalid}',
-    '{"if":[{"and":[{"==":[{"var":"cancellationReason.reasonCode"},"CUSTOMER_NO_SHOW"]},{"==":[{"var":"cancellationReason.source"},"ByDriver"]}]},{"if":[{">=":[{"-":[{"var":"currentTime"},{"if":[{"==":[{"var":"driverArrivalTime"},null]},{"var":"currentTime"},{"var":"driverArrivalTime"}]}]},240]},"Valid","Invalid"]},null]}',
+    '{"if":[{"and":[{"==":[{"var":"cancellationReason.reasonCode"},"CUSTOMER_NO_SHOW"]},{"==":[{"var":"cancellationReason.source"},"ByDriver"]}]},{"if":[{">=":[{"-":[{"var":"currentTime"},{"if":[{"==":[{"var":"driverArrivalTime"},null]},{"var":"currentTime"},{"var":"driverArrivalTime"}]}]},5]},"Valid","Invalid"]},null]}',
     now(),
     now()
   );
@@ -123,3 +123,8 @@ values
 -- ONLY FOR LOCAL
 INSERT INTO atlas_driver_offer_bpp.namma_tag_trigger (event, tag_name, created_at, updated_at)
 VALUES ('RideCancel', 'CustomerNoShowCancellation', now(), now());
+
+
+UPDATE atlas_driver_offer_bpp.transporter_config
+SET can_add_cancellation_fee = true
+WHERE merchant_operating_city_id = 'favorit0-0000-0000-0000-00000000city';

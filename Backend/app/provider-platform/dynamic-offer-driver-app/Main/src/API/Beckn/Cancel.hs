@@ -114,7 +114,8 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
                         OC.DBookingCancelledReqV2
                           { booking = booking,
                             cancellationSource = DBCR.ByUser,
-                            cancellationFee = cancellationCharge
+                            cancellationFee = cancellationCharge,
+                            cancellationReasonCode = cancelRideReq.cancellationReason
                           }
                   unless isReallocated $ do
                     buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.CANCELLED) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
@@ -131,7 +132,8 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
                     OC.DBookingCancelledReqV2
                       { booking = booking,
                         cancellationSource = DBCR.ByUser,
-                        cancellationFee = cancellationCharges
+                        cancellationFee = cancellationCharges,
+                        cancellationReasonCode = cancelRideReq.cancellationReason
                       }
               buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.SOFT_CANCEL) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
               void $
