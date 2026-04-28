@@ -127,7 +127,7 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
         Just _ -> do
           Just <$> createBasketFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType mbEnableOffer
         Nothing -> return Nothing
-      createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer mbJourneyId
+      createPayments merchant allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer mbJourneyId
   where
     key journeyId = "initJourney-" <> journeyId
 
@@ -136,8 +136,10 @@ createPayments ::
     BeamFlow m r,
     EncFlow m r,
     ServiceFlow m r,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    Metrics.HasBAPMetrics m r
   ) =>
+  Merchant.Merchant ->
   [FTBooking.FRFSTicketBooking] ->
   Id DMOC.MerchantOperatingCity ->
   Id Merchant.Merchant ->
@@ -149,7 +151,7 @@ createPayments ::
   Maybe Bool ->
   Maybe (Id DJ.Journey) ->
   m ()
-createPayments bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket mbEnableOffer mbJourneyId = do
+createPayments merchant bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket mbEnableOffer mbJourneyId = do
   ticketBookingPaymentsExist <- mapM (fmap isNothing . QFRFSTicketBookingPayment.findTicketBookingPayment) bookings
   let isMockPayment = all (\booking -> fromMaybe False booking.isMockPayment) bookings
   mbPaymentOrder <-
@@ -161,13 +163,19 @@ createPayments bookings merchantOperatingCityId merchantId amount person payment
         updatedPaymentOrder <- JourneyUtils.postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings mbEnableOffer isMockPayment
         return updatedPaymentOrder
   case mbPaymentOrder of
-    Just paymentOrder -> mapM_ (markBookingApproved paymentOrder) bookings
+    Just paymentOrder -> mapM_ (markBookingApproved merchant paymentOrder) bookings
     Nothing -> do
       markBookingFailed `mapM_` bookings
       throwError $ InternalError "Failed to create order with Euler after on_int in FRFS"
   where
-    markBookingApproved paymentOrder booking = do
+    markBookingApproved merchant' paymentOrder booking = do
       void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id
+      fork "incrementTicketInitializedCounter" $
+        Metrics.incrementTicketInitializedCounter
+          merchant'.shortId.getShortId
+          booking.merchantOperatingCityId.getId
+          (show booking.vehicleType)
+          (show booking.serviceTierType)
       whenJust mbJourneyId $ \journeyId -> do
         isTestTransaction <- asks (.isMetroTestTransaction)
         let updatedOrderShortId =
