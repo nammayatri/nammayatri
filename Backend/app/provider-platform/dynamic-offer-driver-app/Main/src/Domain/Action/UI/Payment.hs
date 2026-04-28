@@ -37,6 +37,7 @@ import qualified Domain.Action.UI.StclMembership as DStclMembership
 import qualified Domain.Action.WebhookHandler as AWebhook
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DI
+import Domain.Types.Extra.WalletTransaction (mapWalletStatus)
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Mandate as DM
@@ -126,6 +127,7 @@ import qualified Storage.Queries.SubscriptionPurchase as QSP
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
 import qualified Storage.Queries.Vehicle as QVeh
 import qualified Storage.Queries.VendorFeeExtra as QVF
+import qualified Storage.Queries.WalletTransaction as QWalletTransaction
 import Tools.Error
 import Tools.Notifications
 import qualified Tools.Payment as Payment
@@ -456,6 +458,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
     processWalletTopupAndUpdateStatus driver order transactionStatus = do
       processWalletTopupWebhook driver order transactionStatus
       QOrder.updateStatus order.id order.paymentServiceOrderId transactionStatus
+      QWalletTransaction.updateStatus (mapWalletStatus transactionStatus) order.id
 
     getInvoicesAndServiceWithServiceConfigByOrderId ::
       (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) =>

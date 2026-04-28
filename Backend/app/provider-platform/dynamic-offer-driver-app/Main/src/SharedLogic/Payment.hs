@@ -449,8 +449,9 @@ createWalletTopupOrder ::
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   HighPrecMoney ->
+  Maybe (Id DOrder.PaymentOrder) ->
   m (Payment.CreateOrderResp, Id DOrder.PaymentOrder)
-createWalletTopupOrder (driverId, merchantId, mocId) amount = do
+createWalletTopupOrder (driverId, merchantId, mocId) amount mbExistingOrderId = do
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   merchantServiceUsageConfig <-
@@ -461,7 +462,7 @@ createWalletTopupOrder (driverId, merchantId, mocId) amount = do
       (DMSC.PaymentService merchantServiceUsageConfig.createBankAccount)
       driver.clientSdkVersion
       mocId
-  orderId <- generateGUID
+  orderId <- maybe generateGUID (pure . (.getId)) mbExistingOrderId
   orderShortId <- generateShortId
   let createOrderReq =
         Payment.CreateOrderReq
@@ -502,6 +503,31 @@ createWalletTopupOrder (driverId, merchantId, mocId) amount = do
       Nothing
       False
       Nothing
-  createOrderRes <- mbResp & fromMaybeM (InternalError "Failed to create wallet topup payment order")
-  let createOrderRes' = applyPseudoClientId pseudoClientId createOrderRes
-  pure (createOrderRes', Id orderId)
+  case mbResp of
+    Just createOrderRes ->
+      pure (applyPseudoClientId pseudoClientId createOrderRes, Id orderId)
+    Nothing -> do
+      -- The existing PaymentOrder was past auth-token expiry; createOrderService just marked it
+      -- CLIENT_AUTH_TOKEN_EXPIRED. Retry once with a fresh orderId.
+      newOrderId <- generateGUID
+      newOrderShortId <- generateShortId
+      let retryReq = (createOrderReq :: Payment.CreateOrderReq) {Payment.orderId = newOrderId, Payment.orderShortId = newOrderShortId.getShortId}
+      mbRetryResp <-
+        DPayment.createOrderService
+          commonMerchantId
+          (Just $ cast mocId)
+          commonPersonId
+          Nothing
+          (Just DPayment.DRIVER_WALLET_TOPUP)
+          DOrder.Normal
+          False
+          retryReq
+          createOrderCall
+          Nothing
+          False
+          Nothing
+      case mbRetryResp of
+        Just retryRes ->
+          pure (applyPseudoClientId pseudoClientId retryRes, Id newOrderId)
+        Nothing ->
+          throwError $ InternalError "Failed to create wallet topup payment order"
