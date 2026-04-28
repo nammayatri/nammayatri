@@ -3,6 +3,7 @@ imports:
   UTCTime: Data.Time
   APISuccess: Kernel.Types.APISuccess
   LedgerEntry: Lib.Finance.Domain.Types.LedgerEntry
+  EntryStatus: Lib.Finance.Domain.Types.LedgerEntry
   Location: Domain.Types.Location
   HighPrecMoney: Kernel.Types.Common
   Ride: Domain.Types.Ride
@@ -48,6 +49,16 @@ types:
   WalletBalanceResponse:
     currentBalance: HighPrecMoney
 
+  WalletTransactionHistoryItem:
+    itemReference: Text
+    itemName: Text
+    itemValue: HighPrecMoney
+    isCredit: Bool
+    status: EntryStatus
+    date: UTCTime
+  WalletTransactionHistoryResponse:
+    items: "[WalletTransactionHistoryItem]"
+
 apis:
   - GET:
       endpoint: /wallet/balance
@@ -85,3 +96,13 @@ apis:
         - offset: Int
       response:
         type: PayoutHistoryResponse
+  - GET:
+      endpoint: /wallet/transactionHistory
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - fromDate: UTCTime
+        - toDate: UTCTime
+        - limit: Int
+        - offset: Int
+      response:
+        type: WalletTransactionHistoryResponse
