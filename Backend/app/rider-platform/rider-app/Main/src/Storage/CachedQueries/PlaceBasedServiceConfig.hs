@@ -13,6 +13,8 @@ import Domain.Types.TicketPlace
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.Call as Call
 import Kernel.External.IncidentReport.Interface.Types as IncidentReport
+import qualified Kernel.External.EventTracking as EventTracking
+import qualified Kernel.External.EventTracking.Interface.Types as EventTrackingInterface
 import qualified Kernel.External.Insurance.Interface.Types as Insurance
 import qualified Kernel.External.Insurance.Types as Insurance
 import qualified Kernel.External.Maps.Interface.Types as Maps
@@ -150,3 +152,5 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
     Settlement.HyperPGConfig _ -> SettlementService Settlement.HyperPG
     Settlement.BillDeskConfig _ -> SettlementService Settlement.BillDesk
     Settlement.YesBizConfig _ -> SettlementService Settlement.YesBiz
+  EventTrackingServiceConfig eventTrackingCfg -> case eventTrackingCfg of
+    EventTrackingInterface.MoengageConfig _ -> EventTrackingService EventTracking.Moengage

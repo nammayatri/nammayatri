@@ -48,6 +48,8 @@ import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
+import qualified Kernel.External.EventTracking as EventTracking
+import qualified Kernel.External.EventTracking.Interface.Types as EventTrackingInterface
 import qualified Kernel.External.Settlement.Types as Settlement
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
@@ -206,6 +208,8 @@ getServiceName msc = case msc.serviceConfig of
     Settlement.HyperPGConfig _ -> SettlementService Settlement.HyperPG
     Settlement.BillDeskConfig _ -> SettlementService Settlement.BillDesk
     Settlement.YesBizConfig _ -> SettlementService Settlement.YesBiz
+  EventTrackingServiceConfig eventTrackingCfg -> case eventTrackingCfg of
+    EventTrackingInterface.MoengageConfig _ -> EventTrackingService EventTracking.Moengage
 
 upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig cfg = do

@@ -22,6 +22,8 @@ import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
+import qualified Kernel.External.EventTracking as EventTracking
+import qualified Kernel.External.EventTracking.Interface.Types as EventTrackingInterface
 import qualified Kernel.External.Settlement.Types as Settlement
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
@@ -192,3 +194,5 @@ getServiceNameConfigJSON = \case
     Settlement.HyperPGConfig srcCfg -> (Domain.SettlementService Settlement.HyperPG, toJSON srcCfg)
     Settlement.BillDeskConfig srcCfg -> (Domain.SettlementService Settlement.BillDesk, toJSON srcCfg)
     Settlement.YesBizConfig srcCfg -> (Domain.SettlementService Settlement.YesBiz, toJSON srcCfg)
+  Domain.EventTrackingServiceConfig eventTrackingCfg -> case eventTrackingCfg of
+    EventTrackingInterface.MoengageConfig cfg -> (Domain.EventTrackingService EventTracking.Moengage, toJSON cfg)

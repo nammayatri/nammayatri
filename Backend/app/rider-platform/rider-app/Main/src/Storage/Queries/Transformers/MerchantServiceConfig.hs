@@ -9,6 +9,8 @@ import qualified Kernel.External.Insurance.Interface.Types as Insurance
 import qualified Kernel.External.Insurance.Types as Insurance
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
+import qualified Kernel.External.EventTracking as EventTracking
+import qualified Kernel.External.EventTracking.Interface.Types as EventTrackingInterface
 import Kernel.External.MultiModal.Interface.Types as MultiModal
 import Kernel.External.MultiModal.Types as MultiModal
 import qualified Kernel.External.Notification as Notification
@@ -89,6 +91,7 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.SettlementService Settlement.HyperPG -> Domain.SettlementServiceConfig . Settlement.HyperPGConfig <$> valueToMaybe configJSON
     Domain.SettlementService Settlement.BillDesk -> Domain.SettlementServiceConfig . Settlement.BillDeskConfig <$> valueToMaybe configJSON
     Domain.SettlementService Settlement.YesBiz -> Domain.SettlementServiceConfig . Settlement.YesBizConfig <$> valueToMaybe configJSON
+    Domain.EventTrackingService EventTracking.Moengage -> Domain.EventTrackingServiceConfig . EventTrackingInterface.MoengageConfig <$> valueToMaybe configJSON
 
 mkPaymentServiceConfig :: A.Value -> Payment.PaymentService -> Maybe Payment.PaymentServiceConfig
 mkPaymentServiceConfig configJSON = \case
@@ -175,6 +178,8 @@ getServiceNameConfigJson = \case
     Settlement.HyperPGConfig srcCfg -> (Domain.SettlementService Settlement.HyperPG, toJSON srcCfg)
     Settlement.BillDeskConfig srcCfg -> (Domain.SettlementService Settlement.BillDesk, toJSON srcCfg)
     Settlement.YesBizConfig srcCfg -> (Domain.SettlementService Settlement.YesBiz, toJSON srcCfg)
+  Domain.EventTrackingServiceConfig eventTrackingCfg -> case eventTrackingCfg of
+    EventTrackingInterface.MoengageConfig cfg -> (Domain.EventTrackingService EventTracking.Moengage, toJSON cfg)
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> (Payment.PaymentService, A.Value)
 getPaymentServiceConfigJson = \case
