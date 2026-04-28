@@ -79,3 +79,58 @@ findLatestPaidPayoutByCustomerId customerId = do
     (Just 1)
     Nothing
     <&> listToMaybe
+
+updatePostCreateFieldsSafely ::
+  BeamFlow m r =>
+  Text ->
+  Payout.PayoutOrderStatus ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Payout.AccountDetailsType ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  m ()
+updatePostCreateFieldsSafely orderId status mbResponseCode mbResponseMessage mbAccountDetailsType mbPgBaseFee mbPgGst = do
+  now <- getCurrentTime
+  -- Update non-status post-create fields regardless of current status.
+  updateWithKV
+    [ Se.Set Beam.accountDetailsType mbAccountDetailsType,
+      Se.Set Beam.pgBaseFee mbPgBaseFee,
+      Se.Set Beam.pgGst mbPgGst,
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.orderId $ Se.Eq orderId]
+
+  -- Update status only if still in initial placeholder state.
+  updateWithKV
+    [ Se.Set Beam.status status,
+      Se.Set Beam.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is Beam.orderId $ Se.Eq orderId,
+          Se.Is Beam.status $ Se.Eq Payout.INITIATED
+        ]
+    ]
+
+  -- Fill response fields only when currently null to avoid clobbering webhook writes.
+  whenJust mbResponseCode $ \responseCode ->
+    updateWithKV
+      [ Se.Set Beam.responseCode (Just responseCode),
+        Se.Set Beam.updatedAt now
+      ]
+      [ Se.And
+          [ Se.Is Beam.orderId $ Se.Eq orderId,
+            Se.Is Beam.responseCode $ Se.Eq (Nothing :: Maybe Text)
+          ]
+      ]
+
+  whenJust mbResponseMessage $ \responseMessage ->
+    updateWithKV
+      [ Se.Set Beam.responseMessage (Just responseMessage),
+        Se.Set Beam.updatedAt now
+      ]
+      [ Se.And
+          [ Se.Is Beam.orderId $ Se.Eq orderId,
+            Se.Is Beam.responseMessage $ Se.Eq (Nothing :: Maybe Text)
+          ]
+      ]
