@@ -60,6 +60,7 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     postMerchantConfigVehicleServiceTierCreate,
     getMerchantConfigVehicleServiceTierList,
     postMerchantConfigDebugLogUpdate,
+    postMerchantConfigOnboardingDocumentReplicate,
   )
 where
 
@@ -570,3 +571,9 @@ postMerchantConfigDebugLogUpdate merchantShortId opCity apiTokenInfo req = do
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigDebugLogUpdate) req
+
+postMerchantConfigOnboardingDocumentReplicate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Common.DocumentVerificationConfigReplicateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postMerchantConfigOnboardingDocumentReplicate merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigOnboardingDocumentReplicate) req

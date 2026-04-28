@@ -63,6 +63,7 @@ module Domain.Action.Dashboard.Management.Merchant
     filterUnboundedFareProducts,
     filterBoundedFareProductsFromSnapshot,
     buildFarePolicyUsageCount,
+    postMerchantConfigOnboardingDocumentReplicate,
   )
 where
 
@@ -118,7 +119,6 @@ import qualified Domain.Types.RegistryMapFallback as RMF
 import qualified Domain.Types.SubscriptionConfig as DSC
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.ValueAddNP as VNP
-import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleCategory as Enums
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
@@ -937,8 +937,26 @@ mkDocumentVerificationConfigRes DVC.DocumentVerificationConfig {..} =
       vehicleClassCheckType = castDVehicleClassCheckType vehicleClassCheckType,
       supportedVehicleClasses = castDSupportedVehicleClasses supportedVehicleClasses,
       rcNumberPrefixList = Just rcNumberPrefixList,
-      documentFlowGrouping = castDocumentFlowGrouping $ fromMaybe DVC.STANDARD documentFlowGrouping,
-      ..
+      documentFlowGrouping = castDocumentFlowGrouping <$> documentFlowGrouping,
+      documentCategory = castDDocumentCategory <$> documentCategory,
+      checkExtraction = checkExtraction,
+      checkExpiry = checkExpiry,
+      filterForOldApks = filterForOldApks,
+      maxRetryCount = maxRetryCount,
+      isDefaultEnabledOnManualVerification = Just isDefaultEnabledOnManualVerification,
+      isImageValidationRequired = Just isImageValidationRequired,
+      doStrictVerifcation = Just doStrictVerifcation,
+      allowLicenseTransfer = allowLicenseTransfer,
+      title = title,
+      description = description,
+      isMandatory = isMandatory,
+      isDisabled = isDisabled,
+      disableWarning = disableWarning,
+      isHidden = isHidden,
+      dependencyDocumentType = castDDocumentType <$> dependencyDocumentType,
+      order = order,
+      createdAt = createdAt,
+      updatedAt = updatedAt
     }
 
 castDSupportedVehicleClasses :: DVC.SupportedVehicleClasses -> Common.SupportedVehicleClasses
@@ -1020,6 +1038,13 @@ castDDocumentType = \case
   DVC.TANCertificate -> Common.TANCertificate
   DVC.UDYAMCertificate -> Common.UDYAMCertificate
   DVC.PanAadhaarLinkage -> Common.PanAadhaarLink
+
+castDDocumentCategory :: DVC.DocumentCategory -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.DocumentCategory
+castDDocumentCategory = \case
+  DVC.Driver -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Driver
+  DVC.Vehicle -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Vehicle
+  DVC.Permission -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Permission
+  DVC.Training -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Training
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentUpdate ::
@@ -1139,7 +1164,7 @@ postMerchantConfigOnboardingDocumentCreate merchantShortId opCity reqDocumentTyp
   let documentType = castDocumentType reqDocumentType
   mbConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType reqCategory (Just [])
   whenJust mbConfig $ \_ -> throwError (DocumentVerificationConfigAlreadyExists merchantOpCityId.getId $ show documentType)
-  newConfig <- buildDocumentVerificationConfig merchant.id merchantOpCityId documentType req
+  newConfig <- buildDocumentVerificationConfig merchant.id merchantOpCityId documentType reqCategory req
   _ <- CQDVC.create newConfig
   -- We should clear cache here, because cache contains list of all configs for current merchantId
   CQDVC.clearCache merchantOpCityId
@@ -1151,9 +1176,10 @@ buildDocumentVerificationConfig ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   DVC.DocumentType ->
+  Common.VehicleCategory ->
   Common.DocumentVerificationConfigCreateReq ->
   m DVC.DocumentVerificationConfig
-buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.DocumentVerificationConfigCreateReq {..} = do
+buildDocumentVerificationConfig merchantId merchantOpCityId documentType category Common.DocumentVerificationConfigCreateReq {..} = do
   now <- getCurrentTime
   pure
     DVC.DocumentVerificationConfig
@@ -1162,16 +1188,16 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         vehicleClassCheckType = castVehicleClassCheckType vehicleClassCheckType,
         supportedVehicleClasses = castSupportedVehicleClasses supportedVehicleClasses,
         rcNumberPrefixList = fromMaybe [] rcNumberPrefixList,
-        dependencyDocumentType = [],
-        description = Nothing,
-        disableWarning = Nothing,
-        isDisabled = False,
-        isHidden = False,
-        isMandatory = False,
+        dependencyDocumentType = castDocumentType <$> dependencyDocumentType,
+        description = description,
+        disableWarning = disableWarning,
+        isDisabled = isDisabled,
+        isHidden = isHidden,
+        isMandatory = isMandatory,
         isMandatoryForEnabling = Just False,
-        title = "Empty title",
-        vehicleCategory = DVC.AUTO_CATEGORY,
-        order = 0,
+        title = title,
+        vehicleCategory = category,
+        order = order,
         isDefaultEnabledOnManualVerification = fromMaybe True isDefaultEnabledOnManualVerification,
         isImageValidationRequired = fromMaybe True isImageValidationRequired,
         doStrictVerifcation = fromMaybe True doStrictVerifcation,
@@ -1181,7 +1207,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         createdAt = now,
         documentCategory = castDocumentCategory <$> documentCategory,
         documentFlowGrouping = Just $ maybe DVC.STANDARD castDocumentFlowGroupingFromReq documentFlowGrouping,
-        allowLicenseTransfer = Just False,
+        allowLicenseTransfer = allowLicenseTransfer,
         rolesAllowedToUploadDocument = Nothing,
         isApprovalSupported = Nothing,
         isReminderSupported = Nothing,
@@ -1200,6 +1226,50 @@ castDocumentFlowGroupingFromReq :: Common.DocumentFlowGrouping -> DVC.DocumentFl
 castDocumentFlowGroupingFromReq = \case
   Common.COMMON -> DVC.COMMON
   Common.STANDARD -> DVC.STANDARD
+
+---------------------------------------------------------------------
+postMerchantConfigOnboardingDocumentReplicate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.DocumentVerificationConfigReplicateReq ->
+  Flow APISuccess
+postMerchantConfigOnboardingDocumentReplicate merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  _ <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  -- Ensure the destination merchant in the request body matches the authenticated merchant.
+  -- fromMerchantShortId is intentionally unrestricted to allow cross-merchant reads.
+  unless (req.toMerchantShortId == merchantShortId.getShortId && opCity == req.toCity) $
+    throwError $ InvalidRequest "toMerchantShortId and opCity must match the authenticated merchant"
+
+  fromMerchant <- findMerchantByShortId (ShortId req.fromMerchantShortId)
+  fromOpCity <- CQMOC.getMerchantOpCityId Nothing fromMerchant (Just req.fromCity)
+
+  toMerchant <- findMerchantByShortId (ShortId req.toMerchantShortId)
+  toOpCity <- CQMOC.getMerchantOpCityId Nothing toMerchant (Just req.toCity)
+
+  configs <- CQDVC.findByMerchantOpCityIdAndCategory fromOpCity req.vehicleCategory (Just [])
+
+  existingDestConfigs <- CQDVC.findByMerchantOpCityIdAndCategory toOpCity req.vehicleCategory (Just [])
+  unless (null existingDestConfigs) $
+    throwError $
+      InvalidRequest $
+        "Destination merchant already has "
+          <> show (length existingDestConfigs)
+          <> " configs for the requested scope. Clear them first before replicating."
+
+  now <- getCurrentTime
+  forM_ configs $ \cfg -> do
+    let newCfg =
+          cfg{DVC.merchantId = toMerchant.id,
+              DVC.merchantOperatingCityId = toOpCity,
+              DVC.createdAt = now,
+              DVC.updatedAt = now
+             }
+    CQDVC.create newCfg
+
+  CQDVC.clearCache toOpCity
+  logTagInfo "dashboard -> postMerchantConfigOnboardingDocumentReplicate : " $ show fromMerchant.id <> " to " <> show toMerchant.id
+  pure Success
 
 ---------------------------------------------------------------------
 postMerchantServiceConfigMapsUpdate ::
