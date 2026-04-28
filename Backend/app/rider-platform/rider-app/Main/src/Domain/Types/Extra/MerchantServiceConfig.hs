@@ -27,6 +27,8 @@ import Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
 import qualified Text.Show as Show
 import Tools.Beam.UtilsTH
+import qualified Kernel.External.EventTracking as EventTracking
+import qualified Kernel.External.EventTracking.Interface.Types as EventTrackingInterface
 import Utils.Common.JWT.Config as GW
 
 -- Extra code goes here --
@@ -56,6 +58,7 @@ data ServiceName
   | InsuranceService Insurance.InsuranceService
   | SOSService SOS.SOSService
   | SettlementService Settlement.SettlementService
+  | EventTrackingService EventTracking.EventTrackingService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -87,6 +90,7 @@ instance Show ServiceName where
   show (InsuranceService s) = "Insurance_" <> show s
   show (SOSService s) = "SOS_" <> show s
   show (SettlementService s) = "Settlement_" <> show s
+  show (EventTrackingService s) = "EventTracking_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -193,6 +197,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Settlement_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (EventTrackingService v1, r2)
+                 | r1 <- stripPrefix "EventTracking_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -224,6 +232,7 @@ data ServiceConfigD (s :: UsageSafety)
   | InsuranceServiceConfig !Insurance.InsuranceConfig
   | SOSServiceConfig !SOSInterface.SOSServiceConfig
   | SettlementServiceConfig !Settlement.SettlementServiceConfig
+  | EventTrackingServiceConfig !EventTrackingInterface.EventTrackingServiceConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe
@@ -262,6 +271,7 @@ instance Show (ServiceConfigD 'Safe) where
   show (InsuranceServiceConfig cfg) = "InsuranceServiceConfig " <> show cfg
   show (SOSServiceConfig cfg) = "SOSServiceConfig " <> show cfg
   show (SettlementServiceConfig cfg) = "SettlementServiceConfig " <> show cfg
+  show (EventTrackingServiceConfig cfg) = "EventTrackingServiceConfig " <> show cfg
 
 instance Show (ServiceConfigD 'Unsafe) where
   show (MapsServiceConfig cfg) = "MapsServiceConfig " <> show cfg
@@ -289,3 +299,4 @@ instance Show (ServiceConfigD 'Unsafe) where
   show (InsuranceServiceConfig cfg) = "InsuranceServiceConfig " <> show cfg
   show (SOSServiceConfig cfg) = "SOSServiceConfig " <> show cfg
   show (SettlementServiceConfig cfg) = "SettlementServiceConfig " <> show cfg
+  show (EventTrackingServiceConfig cfg) = "EventTrackingServiceConfig " <> show cfg

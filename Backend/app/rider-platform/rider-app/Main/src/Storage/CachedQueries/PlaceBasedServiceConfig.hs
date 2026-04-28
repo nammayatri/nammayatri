@@ -13,6 +13,8 @@ import Domain.Types.TicketPlace
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.Call as Call
 import Kernel.External.IncidentReport.Interface.Types as IncidentReport
+import qualified Kernel.External.EventTracking as EventTracking
+import qualified Kernel.External.EventTracking.Interface.Types as EventTrackingInterface
 import qualified Kernel.External.Insurance.Interface.Types as Insurance
 import qualified Kernel.External.Insurance.Types as Insurance
 import qualified Kernel.External.Maps.Interface.Types as Maps
@@ -152,3 +154,5 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
     SOSInterface.GJ112Config _ -> SOSService SOS.GJ112
     SOSInterface.TrinityConfig _ -> SOSService SOS.Trinity
   SettlementServiceConfig cfg -> SettlementService cfg.settlementService
+  EventTrackingServiceConfig eventTrackingCfg -> case eventTrackingCfg of
+    EventTrackingInterface.MoengageConfig _ -> EventTrackingService EventTracking.Moengage

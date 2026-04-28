@@ -744,6 +744,7 @@ library
       Tools.Constants
       Tools.Error
       Tools.Event
+      Tools.EventTracking
       Tools.FlowHandling
       Tools.HTTPManager
       Tools.Insurance
