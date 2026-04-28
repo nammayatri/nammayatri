@@ -6,6 +6,7 @@ module Storage.Queries.PurchasedPassExtra where
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Extra.PurchasedPass ()
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Pass as DPass
 import qualified Domain.Types.PassType as DPassType
 import qualified Domain.Types.Person as DP
@@ -137,6 +138,22 @@ updateStatusById status purchasedPassId = do
     )
     [Se.Is Beam.id $ Se.Eq (getId purchasedPassId)]
 
+updateStatusByIds ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  DPurchasedPass.StatusType ->
+  [Id DPurchasedPass.PurchasedPass] ->
+  m ()
+updateStatusByIds _ [] = pure ()
+updateStatusByIds status purchasedPassIds = do
+  now <- getCurrentTime
+  updateWithKV
+    ( [ Se.Set Beam.status status,
+        Se.Set Beam.updatedAt now
+      ]
+        <> (if status == DPurchasedPass.Active then [Se.Set Beam.deviceSwitchCount (Just 0)] else [])
+    )
+    [Se.Is Beam.id $ Se.In (map getId purchasedPassIds)]
+
 updateDeviceIdById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Text ->
@@ -196,6 +213,42 @@ findAllByPersonIdAndPassTypeIdAndStatus personId merchantId passTypeId statuses 
           Se.Is Beam.status $ Se.In statuses
         ]
     ]
+
+findAllByStatusesAndEndDateLessThan ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  [DPurchasedPass.StatusType] ->
+  Day ->
+  Maybe Int ->
+  Maybe Int ->
+  m [DPurchasedPass.PurchasedPass]
+findAllByStatusesAndEndDateLessThan merchantOpCityId statuses endDate =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId,
+          Se.Is Beam.status $ Se.In statuses,
+          Se.Is Beam.endDate $ Se.LessThan endDate
+        ]
+    ]
+    (Se.Asc Beam.endDate)
+
+findAllPreBookedByStartDateRange ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Day ->
+  Maybe Int ->
+  Maybe Int ->
+  m [DPurchasedPass.PurchasedPass]
+findAllPreBookedByStartDateRange merchantOpCityId today =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId,
+          Se.Is Beam.status $ Se.Eq DPurchasedPass.PreBooked,
+          Se.Is Beam.startDate $ Se.LessThanOrEq today,
+          Se.Is Beam.endDate $ Se.GreaterThanOrEq today
+        ]
+    ]
+    (Se.Asc Beam.startDate)
 
 findAllActiveByPersonIdWithFiltersV2 ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
