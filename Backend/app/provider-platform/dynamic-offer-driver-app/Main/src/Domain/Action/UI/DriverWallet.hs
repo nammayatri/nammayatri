@@ -277,15 +277,24 @@ getWalletTransactionHistory (mbPersonId, _merchantId, _mocId) mbFromDate mbToDat
     Nothing -> pure DriverWallet.WalletTransactionHistoryResponse {items = []}
     Just walletAcc -> do
       entries <- QLedgerEntry.findByAccountsWithOptions [walletAcc.id] [] mbFromDate mbToDate mbLimit mbOffset
+      let topupOrderIds = [Id e.referenceId | e <- entries, e.referenceType == walletReferenceTopup]
+      walletTxns <- QWalletTransaction.findAllByPaymentOrderIds topupOrderIds
+      let statusByOrderId = Map.fromList [(wt.paymentOrderId.getId, wt.status) | wt <- walletTxns]
       let mkItem e =
-            DriverWallet.WalletTransactionHistoryItem
-              { itemReference = e.referenceType,
-                itemName = referenceTypeToItemName e.referenceType,
-                itemValue = e.amount,
-                isCredit = e.toAccountId == walletAcc.id,
-                status = e.status,
-                date = e.timestamp
-              }
+            let isTopup = e.referenceType == walletReferenceTopup
+                statusText =
+                  if isTopup
+                    then maybe (show e.status) show (Map.lookup e.referenceId statusByOrderId)
+                    else show e.status
+             in DriverWallet.WalletTransactionHistoryItem
+                  { itemReference = e.referenceType,
+                    itemName = referenceTypeToItemName e.referenceType,
+                    itemValue = e.amount,
+                    isCredit = e.toAccountId == walletAcc.id,
+                    status = statusText,
+                    paymentOrderId = if isTopup then Just (Id e.referenceId) else Nothing,
+                    date = e.timestamp
+                  }
       pure DriverWallet.WalletTransactionHistoryResponse {items = map mkItem entries}
   where
     validateInput =
@@ -549,9 +558,11 @@ postWalletTopup (mbPersonId, merchantId, mocId) = doWalletTopup mbPersonId merch
         when (r.amount <= 0) $ throwError $ InvalidRequest "Top-up amount must be greater than zero"
         Redis.whenWithLockRedisAndReturnValue (makeWalletTopupLockKey driverId.getId) 10 $ do
           mbExisting <- QWalletTransaction.findByDriverIdAndStatus driverId DWT.INITIATED
-          let mbExistingOrderId = (.paymentOrderId) <$> mbExisting
-          (createOrderResp, returnedOrderId) <- SPayment.createWalletTopupOrder (driverId, mId, mocId0) r.amount mbExistingOrderId
-          handleWalletTransaction driverId mId mocId0 r.amount mbExistingOrderId returnedOrderId
+          let mbReuseOrderId = case mbExisting of
+                Just e | e.amount == r.amount -> Just e.paymentOrderId
+                _ -> Nothing
+          (createOrderResp, returnedOrderId) <- SPayment.createWalletTopupOrder (driverId, mId, mocId0) r.amount mbReuseOrderId
+          handleWalletTransaction driverId mId mocId0 r.amount mbExisting returnedOrderId
           pure $
             PlanSubscribeRes
               { orderId = returnedOrderId,
@@ -561,13 +572,12 @@ postWalletTopup (mbPersonId, merchantId, mocId) = doWalletTopup mbPersonId merch
           Right res -> pure res
           Left _ -> throwError WalletTopupLockFailed
 
-    handleWalletTransaction driverId mId mocId0 amount mbExistingOrderId returnedOrderId =
-      case mbExistingOrderId of
-        Just existingOrderId
-          | existingOrderId == returnedOrderId ->
-            pure ()
-        Just existingOrderId -> do
-          QWalletTransaction.updateStatus DWT.EXPIRED existingOrderId
+    handleWalletTransaction driverId mId mocId0 amount mbExisting returnedOrderId =
+      case mbExisting of
+        Just existing | existing.paymentOrderId == returnedOrderId ->
+          pure ()
+        Just existing -> do
+          QWalletTransaction.updateStatus DWT.EXPIRED existing.paymentOrderId
           insertWalletTransaction driverId mId mocId0 returnedOrderId amount
         Nothing ->
           insertWalletTransaction driverId mId mocId0 returnedOrderId amount
