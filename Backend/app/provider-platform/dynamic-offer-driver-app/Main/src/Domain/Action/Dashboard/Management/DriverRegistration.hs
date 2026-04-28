@@ -1878,8 +1878,8 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
         pure $ (.driverId) <$> mbSsn
       req
         | Just imgId <- getImageIdFromApproveDetails req -> do
-            mbImage <- QImage.findById (Id imgId.getId)
-            pure $ (.personId) <$> mbImage
+          mbImage <- QImage.findById (Id imgId.getId)
+          pure $ (.personId) <$> mbImage
       _ -> pure Nothing
 
     getRejectTargetPersonId :: Common.RejectDetails -> Flow (Maybe (Id DP.Person))

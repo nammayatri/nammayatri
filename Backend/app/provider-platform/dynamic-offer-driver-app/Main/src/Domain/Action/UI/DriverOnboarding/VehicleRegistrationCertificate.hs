@@ -100,8 +100,8 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Predicate
-import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)

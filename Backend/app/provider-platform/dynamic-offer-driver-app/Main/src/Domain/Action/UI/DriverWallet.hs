@@ -17,6 +17,7 @@
 module Domain.Action.UI.DriverWallet
   ( getWalletBalance,
     getWalletTransactions,
+    getWalletTransactionHistory,
     postWalletPayout,
     postWalletTopup,
     recordAirportCashRecharge,
@@ -74,6 +75,7 @@ import Lib.Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntry
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import qualified Lib.Payment.Payout.PayoutItems as PayoutItems
@@ -247,6 +249,46 @@ referenceTypeToItemName ref
   | ref == walletReferenceCommissionCash = "Commission (Cash)"
   | ref == walletReferenceVATAbsorbedOnDiscount = "VAT Absorbed on Discount"
   | otherwise = ref
+
+--------------------------------------------------------------------------------
+-- getWalletTransactionHistory (paginated per-row ledger entries)
+--------------------------------------------------------------------------------
+
+getWalletTransactionHistory ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id DP.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Prelude.Maybe Data.Time.UTCTime ->
+    Kernel.Prelude.Maybe Data.Time.UTCTime ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Environment.Flow DriverWallet.WalletTransactionHistoryResponse
+  )
+getWalletTransactionHistory (mbPersonId, _merchantId, _mocId) mbFromDate mbToDate mbLimit mbOffset = do
+  validateInput
+  driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
+  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  let counterparty = counterpartyFromRole person.role
+  mbWalletAcc <- getWalletAccountByOwner counterparty driverId.getId
+  case mbWalletAcc of
+    Nothing -> pure DriverWallet.WalletTransactionHistoryResponse {items = []}
+    Just walletAcc -> do
+      entries <- QLedgerEntry.findByAccountsWithOptions [walletAcc.id] [] mbFromDate mbToDate mbLimit mbOffset
+      let mkItem e =
+            DriverWallet.WalletTransactionHistoryItem
+              { itemReference = e.referenceType,
+                itemName = referenceTypeToItemName e.referenceType,
+                itemValue = e.amount,
+                isCredit = e.toAccountId == walletAcc.id,
+                status = e.status,
+                date = e.timestamp
+              }
+      pure DriverWallet.WalletTransactionHistoryResponse {items = map mkItem entries}
+  where
+    validateInput =
+      unless ((isJust mbFromDate && isJust mbToDate) || (isJust mbLimit && isJust mbOffset)) $
+        throwError $ InvalidRequest "Either fromDate+toDate or limit+offset must be provided"
 
 --------------------------------------------------------------------------------
 -- getWalletPayoutHistory
