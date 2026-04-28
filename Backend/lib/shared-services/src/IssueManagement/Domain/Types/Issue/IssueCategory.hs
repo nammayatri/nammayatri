@@ -24,7 +24,8 @@ data IssueCategory = IssueCategory
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     igmCategory :: Maybe Text,
-    enableKapture :: Maybe Bool
+    enableKapture :: Maybe Bool,
+    showInDefault :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq)
 
