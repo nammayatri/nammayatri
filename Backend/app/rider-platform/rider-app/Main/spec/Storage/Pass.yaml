@@ -41,6 +41,7 @@ Pass:
     applicableVehicleServiceTiers: "[ServiceTierType]"
     purchaseEligibilityJsonLogic: "[Value]"
     redeemEligibilityJsonLogic: "[Value]"
+    pricingTiers: "Maybe Value"
     maxValidTrips: Maybe Int
     maxValidDays: Maybe Int
     verificationValidity: Seconds
@@ -55,6 +56,8 @@ Pass:
   beamFields:
     passConfig:
       maxSwitchCount: Maybe Int
+    minFare: Maybe HighPrecMoney
+    maxFare: Maybe HighPrecMoney
 
   beamType:
     verificationValidity: Maybe Seconds
@@ -77,6 +80,8 @@ Pass:
     documentsRequired: text[]
     purchaseEligibilityJsonLogic: jsonb[]
     redeemEligibilityJsonLogic: jsonb[]
+    pricingTiers: jsonb
+    priceRange: double precision[]
 
   extraOperations:
     - EXTRA_QUERY_FILE
