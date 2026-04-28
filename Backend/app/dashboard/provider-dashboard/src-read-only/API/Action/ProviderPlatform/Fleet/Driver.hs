@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.ProviderPlatform.Fleet
 import qualified API.Types.ProviderPlatform.Fleet.Driver
-import qualified API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
+import qualified API.Types.ProviderPlatform.Fleet.RegistrationV2
 import qualified Dashboard.Common
 import qualified Dashboard.ProviderPlatform.Management.DriverRegistration
 import qualified Data.Time
@@ -547,7 +547,7 @@ type PostDriverFleetScheduledBookingReassign =
 getDriverFleetAccessList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.Driver.FleetOwnerListRes)
 getDriverFleetAccessList merchantShortId opCity apiTokenInfo fleetMemberId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Fleet.Driver.getDriverFleetAccessList merchantShortId opCity apiTokenInfo fleetMemberId
 
-getDriverFleetOwnerList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Driver.DocsVerificationStatus -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler [API.Types.ProviderPlatform.Fleet.Driver.FleetOwnerListItem])
+getDriverFleetOwnerList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Driver.DocsVerificationStatus -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler [API.Types.ProviderPlatform.Fleet.Driver.FleetOwnerListItem])
 getDriverFleetOwnerList merchantShortId opCity apiTokenInfo blocked docsVerificationStatus fleetType fromDate limit mbSearchString offset onlyEnabled toDate = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Fleet.Driver.getDriverFleetOwnerList merchantShortId opCity apiTokenInfo blocked docsVerificationStatus fleetType fromDate limit mbSearchString offset onlyEnabled toDate
 
 postDriverFleetAccessSelect :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
