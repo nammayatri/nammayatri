@@ -171,7 +171,7 @@ apis:
       params:
         driverId: Id Driver
       response:
-        type: "[DriverDocument]"
+        type: StatusRes
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_DOCUMENT_INFO
   - GET: # VerificationStatusAPI
@@ -304,6 +304,31 @@ types:
     - createdAt: UTCTime
     - failedRules: [Text]
     - verificationStatus: Maybe VerificationStatus
+  StatusRes:
+    - driverDocuments: "[DocumentStatusItem]"
+    - vehicleDocuments: "[VehicleDocumentItem]"
+    - enabled: Bool
+    - manualVerificationRequired: Maybe Bool
+    - driverLicenseDetails: "Maybe [DLDetails]"
+    - vehicleRegistrationCertificateDetails: "Maybe [RCDetails]"
+  DocumentStatusItem:
+    - documentType: DocumentType
+    - verificationStatus: VerificationStatus
+    - verificationMessage: Maybe Text
+    - s3Path: Maybe Text
+    - expiryDate: Maybe UTCTime
+  VehicleDocumentItem:
+    - registrationNo: Text
+    - userSelectedVehicleCategory: VehicleCategory
+    - verifiedVehicleCategory: Maybe VehicleCategory
+    - isVerified: Bool
+    - isActive: Bool
+    - isApproved: Bool
+    - vehicleModel: Maybe Text
+    - documents: "[DocumentStatusItem]"
+    - dateOfUpload: UTCTime
+    - s3Path: Maybe Text
+    - expiryDate: Maybe UTCTime
   DocumentsListResponse:
     - driverLicense: "[[Text]]"
     - vehicleRegistrationCertificate: [Text]

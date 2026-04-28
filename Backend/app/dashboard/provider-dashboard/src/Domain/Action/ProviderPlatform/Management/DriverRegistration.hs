@@ -162,7 +162,7 @@ getDriverRegistrationUnderReviewDrivers merchantShortId opCity apiTokenInfo limi
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationUnderReviewDrivers) limit offset
 
-getDriverRegistrationDocumentsInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow [Common.DriverDocument]
+getDriverRegistrationDocumentsInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow Common.StatusRes
 getDriverRegistrationDocumentsInfo merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationDocumentsInfo) driverId
