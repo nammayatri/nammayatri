@@ -103,6 +103,7 @@ data Payload
         utmSource :: Maybe Text,
         utmTerm :: Maybe Text,
         appName :: Maybe Text,
+        deviceId :: Maybe Text,
         userType :: Maybe UserType,
         merchantId :: Id Merchant,
         merchantOperatingCityId :: Id MerchantOperatingCity,
@@ -118,6 +119,7 @@ data Payload
         utmSource :: Maybe Text,
         utmTerm :: Maybe Text,
         appName :: Maybe Text,
+        deviceId :: Maybe Text,
         userType :: Maybe UserType,
         createdAt :: UTCTime,
         updatedAt :: UTCTime
@@ -201,6 +203,7 @@ data MarketingParamsEventPreLoginData = MarketingParamsEventPreLoginData
     utmSource :: Maybe Text,
     utmTerm :: Maybe Text,
     appName :: Maybe Text,
+    deviceId :: Maybe Text,
     userType :: Maybe UserType,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
@@ -217,6 +220,7 @@ data MarketingParamsEventData = MarketingParamsEventData
     utmSource :: Maybe Text,
     utmTerm :: Maybe Text,
     appName :: Maybe Text,
+    deviceId :: Maybe Text,
     merchantId :: Id Merchant,
     merchantOperatingCityId :: Id MerchantOperatingCity,
     userType :: Maybe UserType,
