@@ -7,6 +7,7 @@ import qualified Data.Time
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.Finance.Domain.Types.LedgerEntry
 import qualified Lib.Payment.Domain.Types.Common
 import qualified Lib.Payment.Domain.Types.PayoutRequest
 import Servant
@@ -62,5 +63,20 @@ data WalletSummaryResponse = WalletSummaryResponse
     nonRedeemableBalance :: Kernel.Types.Common.HighPrecMoney,
     redeemableBalance :: Kernel.Types.Common.HighPrecMoney
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data WalletTransactionHistoryItem = WalletTransactionHistoryItem
+  { date :: Data.Time.UTCTime,
+    isCredit :: Kernel.Prelude.Bool,
+    itemName :: Kernel.Prelude.Text,
+    itemReference :: Kernel.Prelude.Text,
+    itemValue :: Kernel.Types.Common.HighPrecMoney,
+    status :: Lib.Finance.Domain.Types.LedgerEntry.EntryStatus
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data WalletTransactionHistoryResponse = WalletTransactionHistoryResponse {items :: [WalletTransactionHistoryItem]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
