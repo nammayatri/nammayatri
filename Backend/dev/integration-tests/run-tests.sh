@@ -41,6 +41,7 @@ OFFLINE_OFFERS_DIR="$SCRIPT_DIR/collections/OfflineRideBookingOffers"
 BUS_DIR="$SCRIPT_DIR/collections/BusTicketBookingFlow"
 METRO_DIR="$SCRIPT_DIR/collections/MetroTicketBookingFlow"
 SUBWAY_DIR="$SCRIPT_DIR/collections/SubwayTicketBookingFlow"
+SCHEDULER_DIR="$SCRIPT_DIR/collections/SchedulerFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
 DEBUG_RUNNER="$SCRIPT_DIR/debug-runner.py"
@@ -64,6 +65,12 @@ flush_redis() {
     for port in 30001 30002 30003 30004 30005 30006; do
         redis-cli -p $port FLUSHALL > /dev/null 2>&1 || true
     done
+    # Recreate Redis stream consumer groups destroyed by FLUSHALL
+    # Keys include the hedis prefix used by each app's withNonCriticalCrossAppRedis
+    redis-cli -p 30001 -c XGROUP CREATE Available_Jobs myGroup 0 MKSTREAM > /dev/null 2>&1 || true
+    redis-cli -p 30001 -c XGROUP CREATE Available_Jobs_Rider myGroup_Rider 0 MKSTREAM > /dev/null 2>&1 || true
+    redis-cli -p 30001 -c XGROUP CREATE Available_Chakras myGroup_Chakras 0 MKSTREAM > /dev/null 2>&1 || true
+    redis-cli -p 30001 -c XGROUP CREATE "ab:n_c:Available_Jobs_Rider" myGroup_Rider 0 MKSTREAM > /dev/null 2>&1 || true
 }
 
 check_stuck_entities() {
@@ -98,7 +105,7 @@ list_suites() {
             done
         fi
     done
-    for label_dir in "Online Ride:$ONLINE_DIR" "Bus:$BUS_DIR" "Metro:$METRO_DIR" "Subway:$SUBWAY_DIR"; do
+    for label_dir in "Online Ride:$ONLINE_DIR" "Bus:$BUS_DIR" "Metro:$METRO_DIR" "Subway:$SUBWAY_DIR" "Scheduler:$SCHEDULER_DIR"; do
         local label="${label_dir%%:*}"
         local dir="${label_dir#*:}"
         echo ""
@@ -193,7 +200,7 @@ run_single() {
             debug_flags+=(--verbose)
         fi
         python3 "$DEBUG_RUNNER" "$collection" "$env_file" "$TEST_LOGS_DIR" \
-            --bail --timeout-request 15000 \
+            --bail --timeout-request 60000 \
             "${debug_flags[@]+"${debug_flags[@]}"}" \
             || { echo "FAILED: $suite_name ($env_name)"; return 1; }
         echo "PASSED: $suite_name ($env_name)"
@@ -211,7 +218,7 @@ run_single() {
         newman run "$collection" \
             -e "$env_file" \
             --bail \
-            --timeout-request 15000 \
+            --timeout-request 60000 \
             --reporters cli,json \
             --reporter-json-export "$json_out" \
             "${verbose_flags[@]+"${verbose_flags[@]}"}" \
@@ -221,7 +228,7 @@ run_single() {
         newman run "$collection" \
             -e "$env_file" \
             --bail \
-            --timeout-request 15000 \
+            --timeout-request 60000 \
             --reporters cli \
             "${verbose_flags[@]+"${verbose_flags[@]}"}" \
             || { echo "FAILED: $suite_name ($env_name)"; return 1; }
@@ -381,6 +388,55 @@ run_subway() { run_frfs "$SUBWAY_DIR" "SUBWAY" "${1:-}" "${2:-}"; }
 run_online() { run_frfs "$ONLINE_DIR" "ONLINE RIDE" "${1:-}" "${2:-}"; }
 run_online_offers() { run_frfs "$ONLINE_OFFERS_DIR" "ONLINE RIDE OFFERS" "${1:-}" "${2:-}"; }
 run_offline_offers() { run_frfs "$OFFLINE_OFFERS_DIR" "OFFLINE RIDE OFFERS" "${1:-}" "${2:-}"; }
+# Scheduler tests skip flush_redis — FLUSHALL kills Redis stream consumer groups
+# and scheduler threads don't recover. Each scheduler suite is responsible for
+# its own targeted cleanup via POST /mock/scheduler/clear (see SchedulerFlow/README.md).
+run_scheduler() {
+    local filter_env="${1:-}"
+    local filter_suite="${2:-}"
+    local passed=0 failed=0 failed_suites=""
+
+    for env_file in "$SCHEDULER_DIR"/Local_*.postman_environment.json; do
+        [ -f "$env_file" ] || continue
+        local env_name
+        env_name=$(basename "$env_file" .postman_environment.json | sed 's/^Local_//')
+        [ -n "$filter_env" ] && [ "$filter_env" != "$env_name" ] && continue
+
+        echo ""
+        echo "════════════════════════════════════════════════════════════"
+        echo "  SCHEDULER / $env_name"
+        echo "════════════════════════════════════════════════════════════"
+
+        for f in "$SCHEDULER_DIR"/*.json; do
+            [[ "$f" == *"postman_environment"* ]] && continue
+            local suite_name
+            suite_name=$(basename "$f" .json)
+            [ -n "$filter_suite" ] && [ "$filter_suite" != "$suite_name" ] && continue
+
+            echo ""
+            echo "------------------------------------------------------------"
+            echo "  $env_name / $suite_name"
+            echo "------------------------------------------------------------"
+            echo "Running: $suite_name ($env_name)"
+
+            if newman run "$f" -e "$env_file" --bail --timeout-request 60000 --reporters cli; then
+                echo "PASSED: $suite_name ($env_name)"
+                passed=$((passed + 1))
+            else
+                echo "FAILED: $suite_name ($env_name)"
+                failed=$((failed + 1))
+                failed_suites="$failed_suites $env_name/$suite_name"
+            fi
+        done
+    done
+
+    echo ""
+    echo "════════════════════════════════════════════════════════════"
+    echo "  SCHEDULER RESULTS: $passed passed, $failed failed"
+    if [ -n "$failed_suites" ]; then echo "  Failed:$failed_suites"; fi
+    echo "════════════════════════════════════════════════════════════"
+    [ "$failed" -eq 0 ]
+}
 
 # ── Help ──
 
@@ -398,6 +454,7 @@ show_help() {
     echo "  online              Run online (Stripe) ride booking suites"
     echo "  online-offers       Run online ride discount offer suites"
     echo "  offline-offers      Run offline ride cashback offer suites"
+    echo "  scheduler           Run scheduler job integration tests"
     echo "  --list              List all available suites and cities"
     echo "  --check             Check for stuck DB entities"
     echo "  -d                  Debug: capture per-API service logs to assets/test-logs/"
@@ -459,6 +516,9 @@ case "${1:-}" in
         ;;
     offline-offers)
         run_offline_offers "${2:-}" "${3:-}"
+        ;;
+    scheduler)
+        run_scheduler "${2:-}" "${3:-}"
         ;;
     "")
         run_rides

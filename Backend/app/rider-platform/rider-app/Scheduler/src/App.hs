@@ -52,6 +52,7 @@ import "rider-app" SharedLogic.Scheduler.Jobs.CheckMultimodalConfirmFail
 import "rider-app" SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
 import "rider-app" SharedLogic.Scheduler.Jobs.CheckRefundStatus
 import "rider-app" SharedLogic.Scheduler.Jobs.CrisRecon
+import "rider-app" SharedLogic.Scheduler.Jobs.DailyPassStatusUpdate
 import "rider-app" SharedLogic.Scheduler.Jobs.ExecuteCashRideCashbackPayout
 import "rider-app" SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
 import "rider-app" SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper
@@ -125,6 +126,7 @@ schedulerHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . updateCRISRDSBalanceJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . frfsSeatHoldReaper)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . partnerInvoiceDataExportJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . dailyPassStatusUpdate)
     }
 
 runRiderAppScheduler ::
