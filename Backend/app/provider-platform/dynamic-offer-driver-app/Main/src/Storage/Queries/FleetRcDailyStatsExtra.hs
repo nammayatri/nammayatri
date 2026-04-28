@@ -85,3 +85,46 @@ sumVehicleStatsByFleetOwnerIdAndDateRange fleetOwnerId mbRcId limit offset fromD
     Left err -> do
       logTagError "FleetOperatorDailyStats" ("DB failure. Error: " <> show err)
       pure []
+
+sumVehicleStatsByFleetOwnerIdsAndDateRange ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) =>
+  [Text] ->
+  Maybe Text ->
+  Int ->
+  Int ->
+  Day ->
+  Day ->
+  m [FleetRcDailyStatsAggregated]
+sumVehicleStatsByFleetOwnerIdsAndDateRange fleetOwnerIds mbRcId limit offset fromDay toDay = do
+  dbConf <- getReplicaBeamConfig
+
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ (fromIntegral limit) $
+            B.offset_ (fromIntegral offset) $
+              B.aggregate_
+                ( \stats ->
+                    ( B.group_ (Beam.fleetOwnerId stats),
+                      B.group_ (Beam.rcId stats),
+                      B.coalesce_ [B.sum_ (Beam.totalEarnings stats)] (B.val_ (HighPrecMoney 0)),
+                      B.coalesce_ [B.sum_ (Beam.totalCompletedRides stats)] (B.val_ 0),
+                      B.coalesce_ [B.sum_ (Beam.rideDistance stats)] (B.val_ 0.0),
+                      B.coalesce_ [B.sum_ (Beam.rideDuration stats)] (B.val_ (Seconds 0))
+                    )
+                )
+                $ B.filter_'
+                  ( \stats ->
+                      B.sqlBool_ (Beam.fleetOwnerId stats `B.in_` map B.val_ fleetOwnerIds)
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rcId -> B.sqlBool_ (Beam.rcId stats B.==. B.val_ rcId)) mbRcId
+                        B.&&?. B.sqlBool_ (Beam.merchantLocalDate stats B.>=. B.val_ fromDay)
+                        B.&&?. B.sqlBool_ (Beam.merchantLocalDate stats B.<=. B.val_ toDay)
+                  )
+                  $ B.all_ (BeamCommon.fleetRcDailyStats BeamCommon.atlasDB)
+
+  case res of
+    Right result -> pure $ map (\(fleetOwnerId', rcId, totalEarnings, totalCompletedRides, totalDistance, totalDuration) -> mkFleetRcDailyStatsAggregated fleetOwnerId' rcId totalEarnings totalCompletedRides (Meters $ round totalDistance) totalDuration) result
+    Left err -> do
+      logTagError "FleetOperatorDailyStats" ("DB failure in sumVehicleStatsByFleetOwnerIdsAndDateRange. Error: " <> show err)
+      pure []

@@ -503,6 +503,55 @@ sumFleetEarningsByFleetOwnerIdAndDateRangeDB fleetOwnerId fromDay toDay = do
         )
       pure $ DailyFleetEarningsAggregated Nothing Nothing Nothing Nothing
 
+sumFleetEarningsByFleetOwnerIdsAndDateRangeDB ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [Text] ->
+  Day ->
+  Day ->
+  m DailyFleetEarningsAggregated
+sumFleetEarningsByFleetOwnerIdsAndDateRangeDB fleetOwnerIds fromDay toDay = do
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.aggregate_
+            ( \stats ->
+                ( B.as_ @(Maybe HighPrecMoney) $
+                    B.sum_ (B.coalesce_ [Beam.onlineTotalEarning stats] (B.val_ (HighPrecMoney 0.0))),
+                  B.as_ @(Maybe HighPrecMoney) $
+                    B.sum_ (B.coalesce_ [Beam.cashTotalEarning stats] (B.val_ (HighPrecMoney 0.0))),
+                  B.as_ @(Maybe HighPrecMoney) $
+                    B.sum_ (B.coalesce_ [Beam.cashPlatformFees stats] (B.val_ (HighPrecMoney 0.0))),
+                  B.as_ @(Maybe HighPrecMoney) $
+                    B.sum_ (B.coalesce_ [Beam.onlinePlatformFees stats] (B.val_ (HighPrecMoney 0.0))),
+                  B.as_ @(Maybe Seconds) $
+                    B.sum_ (B.coalesce_ [Beam.onlineDuration stats] (B.val_ (Seconds 0)))
+                )
+            )
+            $ B.filter_'
+              ( \stats ->
+                  B.sqlBool_ (Beam.fleetOperatorId stats `B.in_` map B.val_ fleetOwnerIds)
+                    B.&&?. B.sqlBool_ (Beam.fleetDriverId stats `B.in_` map B.val_ fleetOwnerIds)
+                    B.&&?. B.sqlBool_ (Beam.merchantLocalDate stats B.>=. B.val_ fromDay)
+                    B.&&?. B.sqlBool_ (Beam.merchantLocalDate stats B.<=. B.val_ toDay)
+              )
+              $ B.all_ (BeamCommon.fleetOperatorDailyStats BeamCommon.atlasDB)
+  case res of
+    Right rows ->
+      case listToMaybe rows of
+        Just (onlineTot, cashTot, cashFees, onlineFees, od) ->
+          pure $ mkDailyFleetEarningsAggregated (onlineTot, cashTot, cashFees, onlineFees, od)
+        Nothing ->
+          pure $ DailyFleetEarningsAggregated Nothing Nothing Nothing Nothing
+    Left err -> do
+      logTagError
+        "FleetOperatorDailyStats"
+        ( "DB failure in sumFleetEarningsByFleetOwnerIdsAndDateRangeDB. Error: "
+            <> show err
+        )
+      pure $ DailyFleetEarningsAggregated Nothing Nothing Nothing Nothing
+
 sumApprovedVehicleAndDriverRequestsByFleetOperatorIdsAndDateRangeDB ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Text ->
