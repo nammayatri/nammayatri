@@ -115,6 +115,20 @@ data CRISConfig = CRISConfig
 instance Show CRISConfig where
   show _ = "CRISConfig"
 
+data OSRTCConfig = OSRTCConfig
+  { baseUrl :: BaseUrl,
+    userName :: Text,
+    secretKey :: EncryptedField 'AsEncrypted Text,
+    platformId :: Int,
+    intPaymentModeId :: Int,
+    strPGType :: Text
+  }
+  deriving stock (Eq, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+instance Show OSRTCConfig where
+  show _ = "OSRTCConfig"
+
 data ProviderLevelInfo = ProviderLevelInfo
   { providerId :: Text,
     providerName :: Maybe Text,

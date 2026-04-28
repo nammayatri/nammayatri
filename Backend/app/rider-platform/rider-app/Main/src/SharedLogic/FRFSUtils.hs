@@ -140,6 +140,7 @@ getProviderName integrationBPPConfig =
     (_, DIBC.DIRECT _) -> "Direct Multimodal Services"
     (_, DIBC.ONDC _) -> "ONDC Services"
     (_, DIBC.CRIS _) -> "CRIS Subway"
+    (_, DIBC.OSRTC _) -> "Odisha State Road Transport Corporation"
 
 mkTicketAPI :: DT.FRFSTicket -> APITypes.FRFSTicketAPI
 mkTicketAPI DT.FRFSTicket {..} = APITypes.FRFSTicketAPI {..}

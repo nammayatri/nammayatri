@@ -19,6 +19,8 @@ import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
+import qualified Lib.Payment.Domain.Action as LibPayment
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.PTCircuitBreaker as CB
@@ -55,8 +57,9 @@ confirm ::
   DBooking.FRFSTicketBooking ->
   [DFRFSQuoteCategory.FRFSQuoteCategory] ->
   Maybe Bool ->
+  Maybe (DPaymentOrder.PaymentOrder, Maybe LibPayment.PaymentStatusResp) ->
   m (Either Text ())
-confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking quoteCategories mbIsSingleMode = do
+confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking quoteCategories mbIsSingleMode mbOsrtcPaymentContext = do
   Metrics.startMetrics Metrics.CONFIRM_FRFS merchant.name booking.searchId.getId merchantOperatingCity.id.getId
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   case integratedBPPConfig.providerConfig of
@@ -86,7 +89,7 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
         frfsConfig <-
           getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
             >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
-        onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories mbIsSingleMode
+        onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories mbIsSingleMode mbOsrtcPaymentContext
         processOnConfirm onConfirmReq
       case result of
         Left err -> do

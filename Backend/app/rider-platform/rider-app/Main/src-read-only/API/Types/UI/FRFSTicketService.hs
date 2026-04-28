@@ -4,6 +4,7 @@ module API.Types.UI.FRFSTicketService where
 
 import qualified API.Types.UI.RiderLocation
 import qualified BecknV2.FRFS.Enums
+import qualified Data.Aeson
 import qualified Data.Maybe
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
@@ -157,6 +158,7 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     observingFailures :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    osrtcTripDetail :: Data.Maybe.Maybe Data.Aeson.Value,
     price :: Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     quantity :: Kernel.Prelude.Int,
@@ -231,6 +233,7 @@ data FRFSRouteStationsAPI = FRFSRouteStationsAPI
 data FRFSSearchAPIReq = FRFSSearchAPIReq
   { busLocationData :: Data.Maybe.Maybe [API.Types.UI.RiderLocation.BusLocation],
     fromStationCode :: Data.Text.Text,
+    journeyDate :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
     platformType :: Data.Maybe.Maybe Domain.Types.IntegratedBPPConfig.PlatformType,
     quantity :: Kernel.Prelude.Int,
     recentLocationId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
@@ -369,6 +372,86 @@ data FleetOperatorTripActionReq = FleetOperatorTripActionReq
 
 data FleetOperatorTripActionResp = FleetOperatorTripActionResp {currentTripNumber :: Kernel.Prelude.Int, hasUpcomingTrips :: Kernel.Prelude.Bool}
   deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OSRTCCancelTicketReq = OSRTCCancelTicketReq {refundRemarks :: Data.Text.Text, seatCodes :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OSRTCCancelTicketRes = OSRTCCancelTicketRes {pnrNo :: Data.Text.Text, refundAmount :: Kernel.Types.Common.HighPrecMoney, seatCodes :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OSRTCFareCalculationReq = OSRTCFareCalculationReq
+  { email :: Data.Text.Text,
+    fromStationId :: Kernel.Prelude.Int,
+    mobileNo :: Data.Text.Text,
+    passengerName :: Data.Text.Text,
+    perSeatPassengers :: [OSRTCPerSeatPassenger],
+    seats :: [OSRTCSelectedSeat],
+    serviceTripDepartureId :: Kernel.Prelude.Int,
+    toStationId :: Kernel.Prelude.Int
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OSRTCFareCalculationRes = OSRTCFareCalculationRes
+  { fareBreakdown :: Data.Aeson.Value,
+    totalBaseFare :: Kernel.Types.Common.HighPrecMoney,
+    totalDiscount :: Kernel.Types.Common.HighPrecMoney,
+    totalFinalAmount :: Kernel.Types.Common.HighPrecMoney
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OSRTCPerSeatPassenger = OSRTCPerSeatPassenger
+  { age :: Kernel.Prelude.Int,
+    berthTypeId :: Kernel.Prelude.Int,
+    gender :: Kernel.Prelude.Int,
+    mobileNo :: Data.Text.Text,
+    passengerName :: Data.Text.Text,
+    seatTypeId :: Kernel.Prelude.Int,
+    selectedSeatCode :: Data.Text.Text,
+    selectedSeatNo :: Data.Text.Text,
+    srNo :: Kernel.Prelude.Int,
+    ticketCategoryId :: Kernel.Prelude.Int
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OSRTCRefundPreviewReq = OSRTCRefundPreviewReq {seatCodes :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OSRTCRefundPreviewRes = OSRTCRefundPreviewRes {refundAmount :: Kernel.Types.Common.HighPrecMoney}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OSRTCSeatAvailabilityReq = OSRTCSeatAvailabilityReq {fromStationId :: Kernel.Prelude.Int, serviceTripDepartureId :: Kernel.Prelude.Int, toStationId :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OSRTCSeatAvailabilityRes = OSRTCSeatAvailabilityRes
+  { availableCount :: Kernel.Prelude.Int,
+    seats :: Data.Aeson.Value,
+    serviceTripDepartureId :: Kernel.Prelude.Int,
+    singleAvailableSeats :: Kernel.Prelude.Int,
+    totalCount :: Kernel.Prelude.Int,
+    unavailableCount :: Kernel.Prelude.Int
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OSRTCSelectedSeat = OSRTCSelectedSeat {seatTypeId :: Kernel.Prelude.Int, selectedSeatCode :: Data.Text.Text, selectedSeatNo :: Data.Text.Text, srNo :: Kernel.Prelude.Int, ticketCategoryId :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OSRTCStationRes = OSRTCStationRes {intStationId :: Kernel.Prelude.Int, stationCode :: Data.Text.Text, stationName :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OSRTCTrackingRes = OSRTCTrackingRes {tracking :: Data.Aeson.Value}
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data OperatorTripInfo = OperatorTripInfo

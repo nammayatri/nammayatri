@@ -42,6 +42,7 @@ data ProviderConfig
   | CMRLV2 Domain.Types.Extra.IntegratedBPPConfig.CMRLV2Config
   | ONDC Domain.Types.Extra.IntegratedBPPConfig.ONDCBecknConfig
   | CRIS Domain.Types.Extra.IntegratedBPPConfig.CRISConfig
+  | OSRTC Domain.Types.Extra.IntegratedBPPConfig.OSRTCConfig
   deriving (Generic, FromJSON, ToJSON, Eq, Show)
 
 $(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PlatformType)
