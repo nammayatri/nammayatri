@@ -2308,6 +2308,8 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
   mbExistingPayoutOrder <- QPayoutOrder.findByOrderId createPayoutOrderReq.orderId
   case mbExistingPayoutOrder of
     Nothing -> do
+      payoutOrder <- buildInitialPayoutOrder createPayoutOrderReq
+      QPayoutOrder.create payoutOrder
       createPayoutOrderResp <- createPayoutOrderCall createPayoutOrderReq -- api call
       -- Record PG fee ledger entries if configured
       mbFeeResult <- case mbPGFeeConfig of
@@ -2318,18 +2320,25 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
             Right feeResult -> pure $ Just feeResult
             Left _err -> pure Nothing
         Nothing -> pure Nothing
-      payoutOrder <- buildPayoutOrder createPayoutOrderReq createPayoutOrderResp mbFeeResult
-      QPayoutOrder.create payoutOrder
-      return (Just createPayoutOrderResp, Just payoutOrder)
+      let txn = listToMaybe <$> sortBy (comparing (.updatedAt)) =<< ((.transactions) =<< listToMaybe =<< createPayoutOrderResp.fulfillments)
+      QPayoutOrder.updatePostCreateFieldsSafely
+        createPayoutOrderReq.orderId
+        createPayoutOrderResp.status
+        ((.responseCode) =<< txn)
+        ((.responseMessage) =<< txn)
+        ((.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< createPayoutOrderResp.fulfillments)
+        ((.pgBaseFee) <$> mbFeeResult)
+        ((.pgGst) <$> mbFeeResult)
+      latestPayoutOrder <- QPayoutOrder.findByOrderId createPayoutOrderReq.orderId
+      return (Just createPayoutOrderResp, latestPayoutOrder)
     Just existingPayoutOrder -> throwError $ PayoutOrderAlreadyExists (existingPayoutOrder.id.getId)
   where
-    buildPayoutOrder req resp mbFeeResult = do
+    buildInitialPayoutOrder req = do
       now <- getCurrentTime
       uuid <- generateGUID
       shortId <- generateShortId
       customerEmail <- encrypt req.customerEmail
       mobileNo <- encrypt req.customerPhone
-      let txn = listToMaybe <$> sortBy (comparing (.updatedAt)) =<< ((.transactions) =<< listToMaybe =<< resp.fulfillments)
       pure $
         Payment.PayoutOrder
           { id = uuid,
@@ -2342,16 +2351,16 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
             amount = mkPrice Nothing req.amount,
             entityIds = mbEntityIds,
             entityName = mbEntityName,
-            status = resp.status,
-            responseMessage = (.responseMessage) =<< txn,
-            responseCode = (.responseCode) =<< txn,
+            status = Payout.INITIATED,
+            responseMessage = Nothing,
+            responseCode = Nothing,
             retriedOrderId = Nothing,
-            accountDetailsType = (.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< resp.fulfillments, --- for now only one fullfillment supported
+            accountDetailsType = Nothing, --- for now only one fullfillment supported
             vpa = Just req.customerVpa,
             customerEmail = customerEmail,
             lastStatusCheckedAt = Nothing,
-            pgBaseFee = (.pgBaseFee) <$> mbFeeResult,
-            pgGst = (.pgGst) <$> mbFeeResult,
+            pgBaseFee = Nothing,
+            pgGst = Nothing,
             createdAt = now,
             updatedAt = now,
             merchantOperatingCityId = getId <$> mbMerchantOpCityId
