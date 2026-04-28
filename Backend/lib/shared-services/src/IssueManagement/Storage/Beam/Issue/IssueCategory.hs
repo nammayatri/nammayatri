@@ -37,7 +37,8 @@ data IssueCategoryT f = IssueCategoryT
     isActive :: B.C f Bool,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
-    enableKapture :: B.C f (Maybe Bool)
+    enableKapture :: B.C f (Maybe Bool),
+    showInDefault :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)
 
