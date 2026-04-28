@@ -63,7 +63,7 @@ getMerchantUserList tokenInfo = do
     mapM
       ( \decPerson -> do
           role <- QRole.findById decPerson.roleId >>= fromMaybeM (RoleNotFound decPerson.roleId.getId)
-          pure $ AP.makePersonAPIEntity decPerson role [merchant.shortId] Nothing
+          pure $ AP.makePersonAPIEntity decPerson role [merchant.shortId] Nothing Nothing
       )
       decryptedPersons
   return $ MerchantUserList {merchantUserList = personEntityList}
