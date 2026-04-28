@@ -651,3 +651,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_ride_hailing_offers boolean
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN invoice_config json ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN pass_expiry_reminder_days integer ;

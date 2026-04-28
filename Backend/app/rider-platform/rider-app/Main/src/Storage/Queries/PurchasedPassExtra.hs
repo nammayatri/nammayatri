@@ -3,6 +3,7 @@
 
 module Storage.Queries.PurchasedPassExtra where
 
+import Data.List.Split (chunksOf)
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Extra.PurchasedPass ()
 import qualified Domain.Types.Merchant as DM
@@ -218,3 +219,23 @@ findAllActiveByPersonIdWithFiltersV2 personId merchantId mbPassTypeIds mbFromDat
       conds = baseConds ++ passTypeConds ++ fromDateCond ++ toDateCond
 
   findAllWithOptionsKV conds (Se.Desc Beam.createdAt) mbLimit mbOffset
+
+findAllByPersonIdsAndStatusBatched ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [Id DP.Person] ->
+  DPurchasedPass.StatusType ->
+  m [DPurchasedPass.PurchasedPass]
+findAllByPersonIdsAndStatusBatched personIds status = do
+  if null personIds
+    then pure []
+    else do
+      let batchSize = 250
+          personIdBatches = chunksOf batchSize personIds
+      fmap concat $
+        forM personIdBatches $ \batch ->
+          findAllWithKV
+            [ Se.And
+                [ Se.Is Beam.personId $ Se.In (getId <$> batch),
+                  Se.Is Beam.status $ Se.Eq status
+                ]
+            ]
