@@ -105,6 +105,7 @@ import qualified Tools.DynamicLogic as DynamicLogic
 import Tools.Error
 import Tools.Event
 import qualified Tools.Metrics as Metrics
+import qualified Tools.EventTracking as ET
 
 data DOnSearchReq = DOnSearchReq
   { requestId :: Id DSearchReq.SearchRequest,
@@ -331,6 +332,8 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       let mbRequiredEstimate = listToMaybe $ sortBy (comparing ((DEstimate.minFare . DEstimate.totalFareRange) <&> (.amount)) <> comparing ((DEstimate.maxFare . DEstimate.totalFareRange) <&> (.amount))) estimates
       forM_ estimates $ \est -> do
         triggerEstimateEvent EstimateEventData {estimate = est, personId = searchRequest.riderId, merchantId = searchRequest.merchantId}
+      fork "moengage: user_request_quotes" $
+        ET.trackEvent searchRequest.merchantId searchRequest.merchantOperatingCityId (ET.UserRequestedQuotes (getId searchRequest.riderId) (length estimates))
       let lockKey = DQ.estimateBuildLockKey searchRequest.id.getId
       Redis.withLockRedis lockKey 5 $ do
         QEstimate.createMany estimates
