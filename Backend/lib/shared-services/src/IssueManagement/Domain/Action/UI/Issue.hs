@@ -109,7 +109,10 @@ getIssueCategory (personId, _, merchantOpCityId) mbLanguage issueHandle identifi
         defaultMerchantOpCityId <-
           issueHandle.findMOCityByMerchantShortIdAndCity shortId (Context.City "Bangalore")
             >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> shortId.getShortId <> "-city-" <> show (Context.City "Bangalore")) <&> (.id)
-        CQIC.findAllActiveByMerchantOpCityIdAndLanguage defaultMerchantOpCityId language identifier
+        defaults <- CQIC.findAllActiveByMerchantOpCityIdAndLanguage defaultMerchantOpCityId language identifier
+        case identifier of
+          CUSTOMER -> pure $ filter (\(c, _) -> c.showInDefault == Just True) defaults
+          _ -> pure defaults
       _ -> return categoriesWithTranslations
   pure $ Common.IssueCategoryListRes {categories = mkIssueCategory <$> issueCategoryTranslationList}
   where

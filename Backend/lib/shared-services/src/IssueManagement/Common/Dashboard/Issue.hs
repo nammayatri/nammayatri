@@ -41,7 +41,9 @@ data IssueCategoryRes = IssueCategoryRes
     isTicketRequired :: Bool,
     maxAllowedRideAge :: Maybe Seconds,
     allowedRideStatuses :: Maybe [RideStatus],
-    enableKapture :: Maybe Bool
+    enableKapture :: Maybe Bool,
+    showInDefault :: Maybe Bool,
+    priority :: Int
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -234,7 +236,8 @@ data CreateIssueCategoryReq = CreateIssueCategoryReq
     messages :: [CreateIssueMessageReq],
     label :: Maybe Text,
     igmCategory :: Maybe Text,
-    enableKapture :: Maybe Bool
+    enableKapture :: Maybe Bool,
+    showInDefault :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -296,7 +299,8 @@ data UpdateIssueCategoryReq = UpdateIssueCategoryReq
     translations :: [Translation],
     label :: Maybe Text,
     igmCategory :: Maybe Text,
-    enableKapture :: Maybe Bool
+    enableKapture :: Maybe Bool,
+    showInDefault :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -358,6 +362,7 @@ data UpsertIssueMessageReq = UpsertIssueMessageReq
     referenceCategoryId :: Maybe (Id IssueCategory),
     isActive :: Maybe Bool,
     deleteExistingFiles :: Maybe Bool,
+    messageType :: Maybe IssueMessage.IssueMessageType,
     mediaFiles :: Maybe [IssueMessageMediaFileUploadReq]
   }
   deriving stock (Eq, Show, Generic)
@@ -395,6 +400,7 @@ instance FromMultipart Tmp UpsertIssueMessageReq where
       <*> parseMaybeField "referenceCategoryId"
       <*> parseMaybeInput "isActive"
       <*> parseMaybeInput "deleteExistingFiles"
+      <*> parseMaybeInput "messageType"
       <*> pure (Just mediaFiles)
     where
       extractFile f = pure $ IssueMessageMediaFileUploadReq (fdPayload f) (fdFileCType f)
@@ -435,7 +441,8 @@ instance ToMultipart Tmp UpsertIssueMessageReq where
             fmap (Input "referenceOptionId") (getId <$> req.referenceOptionId),
             fmap (Input "referenceCategoryId") (getId <$> req.referenceCategoryId),
             fmap (Input "isActive" . T.pack . show) req.isActive,
-            fmap (Input "deleteExistingFiles" . T.pack . show) req.deleteExistingFiles
+            fmap (Input "deleteExistingFiles" . T.pack . show) req.deleteExistingFiles,
+            fmap (Input "messageType" . T.pack . show) req.messageType
           ]
       files = maybe [] (map mkFileData) req.mediaFiles
       mkFileData (IssueMessageMediaFileUploadReq filePath contType) =
