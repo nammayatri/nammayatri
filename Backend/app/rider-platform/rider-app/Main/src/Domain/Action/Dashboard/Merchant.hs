@@ -128,6 +128,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQ
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Getter (invalidateConfigInMem)
 import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.BusinessHour as SQBH
@@ -1822,6 +1823,7 @@ postMerchantRiderConfigEstimatesOrderUpdate merchantShortId city req = do
 
   QRC.updateByPrimaryKey updatedConfig
   QRC.clearCache merchantOperatingCity.id
+  invalidateConfigInMem LYT.RiderConfig
 
   logTagInfo "dashboard -> postMerchantRiderConfigEstimatesOrderUpdate : " (show merchantOperatingCity.id)
   pure Success
