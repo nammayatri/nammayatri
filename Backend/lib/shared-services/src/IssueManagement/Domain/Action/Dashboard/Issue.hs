@@ -112,7 +112,9 @@ issueCategoryList merchantShortId city issueHandle identifier = do
           isTicketRequired = issueCategory.isTicketRequired,
           maxAllowedRideAge = issueCategory.maxAllowedRideAge,
           allowedRideStatuses = issueCategory.allowedRideStatuses,
-          enableKapture = issueCategory.enableKapture
+          enableKapture = issueCategory.enableKapture,
+          showInDefault = issueCategory.showInDefault,
+          priority = issueCategory.priority
         }
 
 -- Helper function to safely create or get issue chat, preventing race conditions
@@ -620,8 +622,8 @@ createIssueCategory merchantShortId city Common.CreateIssueCategoryReq {..} issu
     issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
   newIssueCategory <- mkIssueCategory merchantOperatingCity
-  QIC.create newIssueCategory
   handleCategoryPrioriyUpdates merchantOperatingCity.id priority identifier
+  QIC.create newIssueCategory
   upsertTranslations category Nothing merchantOperatingCity translations
   CQIC.clearAllIssueCategoryByMerchantOpCityIdAndLanguageCache merchantOperatingCity.id identifier
   mapM_
@@ -724,6 +726,7 @@ updateIssueCategory merchantShortId city issueCategoryId req issueHandle identif
             label = req.label <|> label,
             igmCategory = req.igmCategory <|> igmCategory,
             enableKapture = req.enableKapture <|> enableKapture,
+            showInDefault = req.showInDefault <|> showInDefault,
             updatedAt = now,
             ..
           }
@@ -964,8 +967,8 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
 
     findIssueMessageType :: Maybe DIM.IssueMessage -> Maybe DIC.IssueCategory -> DIM.IssueMessageType
     findIssueMessageType mbIssueMessage mbParentCategory = case mbIssueMessage of
-      Just message -> message.messageType
-      Nothing -> maybe DIM.Terminal (bool DIM.Intermediate DIM.FAQ . ((== DIC.FAQ) . (.categoryType))) mbParentCategory
+      Just message -> fromMaybe message.messageType req.messageType
+      Nothing -> fromMaybe (maybe DIM.Terminal (bool DIM.Intermediate DIM.FAQ . ((== DIC.FAQ) . (.categoryType))) mbParentCategory) req.messageType
 
     uploadMessageMediaFiles :: (BeamFlow m r, Common.MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) => Id DIM.IssueMessage -> [Id DMF.MediaFile] -> MerchantOperatingCity -> DIM.IssueMessageType -> ServiceHandle m -> m [Id DMF.MediaFile]
     uploadMessageMediaFiles issueMessageId existingMediaFiles merchantOpCity messageType iHandle = do
@@ -1164,7 +1167,9 @@ getCategoryDetail merchantShortId city categoryId mbLanguage issueHandle identif
           isTicketRequired = issueCategory.isTicketRequired,
           maxAllowedRideAge = issueCategory.maxAllowedRideAge,
           allowedRideStatuses = issueCategory.allowedRideStatuses,
-          enableKapture = issueCategory.enableKapture
+          enableKapture = issueCategory.enableKapture,
+          showInDefault = issueCategory.showInDefault,
+          priority = issueCategory.priority
         }
 
     mkTranslation :: DIT.IssueTranslation -> Translation
@@ -1396,7 +1401,9 @@ previewCategoryFlow merchantShortId city categoryId mbLanguage issueHandle ident
           isTicketRequired = issueCategory.isTicketRequired,
           maxAllowedRideAge = issueCategory.maxAllowedRideAge,
           allowedRideStatuses = issueCategory.allowedRideStatuses,
-          enableKapture = issueCategory.enableKapture
+          enableKapture = issueCategory.enableKapture,
+          showInDefault = issueCategory.showInDefault,
+          priority = issueCategory.priority
         }
 
 buildFlowNodes ::
@@ -1650,6 +1657,9 @@ mkMessageDetailRes language identifier (msg, translation, _mediaFileUrls) = do
   childOptions <- CQIO.findAllActiveByMessageAndLanguage msg.id language identifier
   childOptionDetails <- mapM (mkOptionDetailResWithoutChildren language identifier) childOptions
   mediaFiles <- CQMF.findAllInForIssueReportId msg.mediaFiles (cast msg.id) identifier
+  contentTranslations <- QIT.findAllBySentence msg.message
+  titleTranslations <- maybe (pure []) QIT.findAllBySentence msg.messageTitle
+  actionTranslations <- maybe (pure []) QIT.findAllBySentence msg.messageAction
   pure $
     Common.IssueMessageDetailRes
       { messageId = cast msg.id,
@@ -1663,16 +1673,15 @@ mkMessageDetailRes language identifier (msg, translation, _mediaFileUrls) = do
         mediaFiles = mediaFiles,
         translations =
           Common.DetailedTranslationRes
-            { titleTranslation = mkTranslationList translation.titleTranslation,
-              contentTranslation = mkTranslationList translation.contentTranslation,
-              actionTranslation = mkTranslationList translation.actionTranslation
+            { titleTranslation = mkTranslation <$> titleTranslations,
+              contentTranslation = mkTranslation <$> contentTranslations,
+              actionTranslation = mkTranslation <$> actionTranslations
             },
         childOptions = childOptionDetails
       }
   where
-    mkTranslationList :: Maybe DIT.IssueTranslation -> [Translation]
-    mkTranslationList (Just t) = [Translation t.language t.translation]
-    mkTranslationList Nothing = []
+    mkTranslation :: DIT.IssueTranslation -> Translation
+    mkTranslation trans = Translation trans.language trans.translation
 
 mkOptionDetailRes ::
   ( BeamFlow m r,
