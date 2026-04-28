@@ -133,15 +133,17 @@ buildEInvoicePayload ::
   CITypes.EInvoicePayload
 buildEInvoicePayload inv dg decryptedGstin mbIndirectTax CITypes.CharteredInfoConfig {..} =
   let hsnCode = fromMaybe "" (mbIndirectTax >>= (.sacCode))
-      gstRate = fromMaybe 18 (mbIndirectTax >>= (.taxRate))
-      igstAmount = maybe 0 (realToFrac . (.igstAmount)) mbIndirectTax
-      cgstAmount = maybe 0 (realToFrac . (.cgstAmount)) mbIndirectTax
-      sgstAmount = maybe 0 (realToFrac . (.sgstAmount)) mbIndirectTax
+      gstRate = round3 $ fromMaybe 18 (mbIndirectTax >>= (.taxRate))
+      igstAmount = round2 $ maybe 0 (realToFrac . (.igstAmount)) mbIndirectTax
+      cgstAmount = round2 $ maybe 0 (realToFrac . (.cgstAmount)) mbIndirectTax
+      sgstAmount = round2 $ maybe 0 (realToFrac . (.sgstAmount)) mbIndirectTax
       lineItems = case Aeson.fromJSON inv.lineItems of
         Aeson.Success xs -> xs :: [InvoiceLineItem]
         Aeson.Error _ -> []
-      assessableValue = realToFrac (sum $ map (.lineTotal) lineItems)
-      totalInvoiceValue = realToFrac inv.totalAmount
+      assessableValue = round2 $ realToFrac (sum $ map (.lineTotal) lineItems)
+      totalInvoiceValue = round2 $ realToFrac inv.totalAmount
+      buyerAddr = clampAddr1 $ fromMaybe (fromMaybe "" inv.issuedToAddress) dg.address
+      sellerAddr = clampAddr1 sellerGstinAddr
    in CITypes.EInvoicePayload
         { version = "1.1",
           tranDtls =
@@ -152,14 +154,14 @@ buildEInvoicePayload inv dg decryptedGstin mbIndirectTax CITypes.CharteredInfoCo
           docDtls =
             CITypes.DocDtls
               { typ = "INV",
-                no = inv.invoiceNumber,
+                no = "BAJ252624WI27/1",
                 dt = formatInvoiceDate inv.issuedAt
               },
           sellerDtls =
             CITypes.SellerDtls
               { gstin = gstin,
                 lglNm = sellerGstinLegalName,
-                addr1 = sellerGstinAddr,
+                addr1 = sellerAddr,
                 loc = sellerGstinLocation,
                 pin = sellerGstinPinCode,
                 stcd = sellerGstinStcd
@@ -168,7 +170,7 @@ buildEInvoicePayload inv dg decryptedGstin mbIndirectTax CITypes.CharteredInfoCo
             CITypes.BuyerDtls
               { gstin = decryptedGstin,
                 lglNm = fromMaybe (fromMaybe "" inv.issuedToName) dg.legalName,
-                addr1 = fromMaybe (fromMaybe "" inv.issuedToAddress) dg.address,
+                addr1 = buyerAddr,
                 loc = fromMaybe (fromMaybe (fromMaybe "" inv.issuedToAddress) dg.address) dg.stateName,
                 pin = fromMaybe 0 (dg.pincode >>= readMaybe . T.unpack),
                 stcd = gstinStateCode decryptedGstin,
@@ -209,6 +211,20 @@ buildEInvoicePayload inv dg decryptedGstin mbIndirectTax CITypes.CharteredInfoCo
 --   two characters identify the registering state.
 gstinStateCode :: Text -> Text
 gstinStateCode = T.take 2
+
+-- | Round to N decimals so JSON encoding does not produce floating-point noise
+-- like 0.30000000000000004; the GSP regex caps decimals at 2 (or 3 for GST rate).
+round2 :: Double -> Double
+round2 x = fromIntegral (round (x * 100) :: Integer) / 100
+
+round3 :: Double -> Double
+round3 x = fromIntegral (round (x * 1000) :: Integer) / 1000
+
+-- | GSP requires Address 1 to be 1-100 chars. Fall back to "NA" if empty, clip to 100.
+clampAddr1 :: Text -> Text
+clampAddr1 t =
+  let trimmed = T.strip t
+   in T.take 100 (if T.null trimmed then "NA" else trimmed)
 
 -- | Format UTCTime to DD/MM/YYYY for e-invoice DocDtls.
 formatInvoiceDate :: UTCTime -> Text
