@@ -268,6 +268,43 @@ data DriverDocument = DriverDocument
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DocumentStatusItem = DocumentStatusItem
+  { documentType :: DocumentType,
+    expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    s3Path :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    verificationMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    verificationStatus :: Dashboard.Common.VerificationStatus
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data StatusRes = StatusRes
+  { driverDocuments :: [DocumentStatusItem],
+    driverLicenseDetails :: Kernel.Prelude.Maybe [DLDetails],
+    enabled :: Kernel.Prelude.Bool,
+    manualVerificationRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    vehicleDocuments :: [VehicleDocumentItem],
+    vehicleRegistrationCertificateDetails :: Kernel.Prelude.Maybe [RCDetails]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VehicleDocumentItem = VehicleDocumentItem
+  { dateOfUpload :: Kernel.Prelude.UTCTime,
+    documents :: [DocumentStatusItem],
+    expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    isActive :: Kernel.Prelude.Bool,
+    isApproved :: Kernel.Prelude.Bool,
+    isVerified :: Kernel.Prelude.Bool,
+    registrationNo :: Kernel.Prelude.Text,
+    s3Path :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    userSelectedVehicleCategory :: Dashboard.Common.VehicleCategory,
+    vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    verifiedVehicleCategory :: Kernel.Prelude.Maybe Dashboard.Common.VehicleCategory
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FitnessApproveDetails = FitnessApproveDetails
   { applicationNumber :: Kernel.Prelude.Text,
     categoryOfVehicle :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -666,7 +703,7 @@ type PostDriverRegistrationRegisterVerifyAadhaarOtp =
 
 type GetDriverRegistrationUnderReviewDrivers = ("underReviewDrivers" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get '[JSON] UnderReviewDriversListResponse)
 
-type GetDriverRegistrationDocumentsInfo = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "documents" :> "info" :> Get '[JSON] [DriverDocument])
+type GetDriverRegistrationDocumentsInfo = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "documents" :> "info" :> Get ('[JSON]) StatusRes)
 
 type GetDriverRegistrationVerificationStatus =
   ( "verificationStatus" :> MandatoryQueryParam "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
@@ -759,27 +796,27 @@ type PostDriverRegistrationTriggerReminderHelper =
   )
 
 data DriverRegistrationAPIs = DriverRegistrationAPIs
-  { getDriverRegistrationDocumentsList :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient DocumentsListResponse,
-    getDriverRegistrationGetDocument :: Kernel.Types.Id.Id Dashboard.Common.Image -> EulerHS.Types.EulerClient GetDocumentResponse,
-    postDriverRegistrationDocumentUpload :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UploadDocumentReq -> EulerHS.Types.EulerClient UploadDocumentResp,
-    postDriverRegistrationRegisterDl :: Kernel.Types.Id.Id Dashboard.Common.Driver -> RegisterDLReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverRegistrationVerifyBankAccount :: Kernel.Types.Id.Id Dashboard.Common.Driver -> VerifyBankAccountReq -> EulerHS.Types.EulerClient Kernel.External.Verification.Interface.Types.VerifyAsyncResp,
-    getDriverRegistrationInfoBankAccount :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.External.Verification.Types.BankAccountVerificationResponse,
-    getDriverRegistrationPayoutRegistration :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient PayoutRegistrationRes,
-    postDriverRegistrationDeleteBankAccount :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverRegistrationPayoutOrderStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.External.Payout.Interface.Types.PayoutOrderStatusResp,
-    postDriverRegistrationRegisterRc :: Kernel.Types.Id.Id Dashboard.Common.Driver -> RegisterRCReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverRegistrationRegisterAadhaar :: Kernel.Types.Id.Id Dashboard.Common.Driver -> AadhaarCardReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverRegistrationRegisterGenerateAadhaarOtp :: Kernel.Types.Id.Id Dashboard.Common.Driver -> GenerateAadhaarOtpReq -> EulerHS.Types.EulerClient GenerateAadhaarOtpRes,
-    postDriverRegistrationRegisterVerifyAadhaarOtp :: Kernel.Types.Id.Id Dashboard.Common.Driver -> VerifyAadhaarOtpReq -> EulerHS.Types.EulerClient VerifyAadhaarOtpRes,
-    getDriverRegistrationUnderReviewDrivers :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient UnderReviewDriversListResponse,
-    getDriverRegistrationDocumentsInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient [DriverDocument],
-    getDriverRegistrationVerificationStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> DocumentType -> ServiceType -> EulerHS.Types.EulerClient VerificationStatusListResponse,
-    getDriverRegistrationDocumentsCommonList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe [DocumentType] -> Kernel.Prelude.Maybe [Dashboard.Common.VerificationStatus] -> Kernel.Prelude.Maybe [Kernel.Types.Id.Id Dashboard.Common.Driver] -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient CommonDocumentsListRes,
-    postDriverRegistrationDocumentsUpdate :: UpdateDocumentRequest -> EulerHS.Types.EulerClient UpdateDocumentResp,
-    postDriverRegistrationDocumentsCommon :: Kernel.Types.Id.Id Dashboard.Common.Driver -> CommonDocumentCreateReq -> EulerHS.Types.EulerClient CommonDocumentCreateRes,
-    postDriverRegistrationUnlinkDocument :: Kernel.Types.Id.Id Dashboard.Common.Driver -> DocumentType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient UnlinkDocumentResp,
-    postDriverRegistrationTriggerReminder :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> TriggerReminderReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+  { getDriverRegistrationDocumentsList :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient DocumentsListResponse),
+    getDriverRegistrationGetDocument :: (Kernel.Types.Id.Id Dashboard.Common.Image -> EulerHS.Types.EulerClient GetDocumentResponse),
+    postDriverRegistrationDocumentUpload :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> UploadDocumentReq -> EulerHS.Types.EulerClient UploadDocumentResp),
+    postDriverRegistrationRegisterDl :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> RegisterDLReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postDriverRegistrationVerifyBankAccount :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> VerifyBankAccountReq -> EulerHS.Types.EulerClient Kernel.External.Verification.Interface.Types.VerifyAsyncResp),
+    getDriverRegistrationInfoBankAccount :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.External.Verification.Types.BankAccountVerificationResponse),
+    getDriverRegistrationPayoutRegistration :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient PayoutRegistrationRes),
+    postDriverRegistrationDeleteBankAccount :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    getDriverRegistrationPayoutOrderStatus :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.External.Payout.Interface.Types.PayoutOrderStatusResp),
+    postDriverRegistrationRegisterRc :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> RegisterRCReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postDriverRegistrationRegisterAadhaar :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> AadhaarCardReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postDriverRegistrationRegisterGenerateAadhaarOtp :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> GenerateAadhaarOtpReq -> EulerHS.Types.EulerClient GenerateAadhaarOtpRes),
+    postDriverRegistrationRegisterVerifyAadhaarOtp :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> VerifyAadhaarOtpReq -> EulerHS.Types.EulerClient VerifyAadhaarOtpRes),
+    getDriverRegistrationUnderReviewDrivers :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient UnderReviewDriversListResponse),
+    getDriverRegistrationDocumentsInfo :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient StatusRes),
+    getDriverRegistrationVerificationStatus :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> DocumentType -> ServiceType -> EulerHS.Types.EulerClient VerificationStatusListResponse),
+    getDriverRegistrationDocumentsCommonList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe ([DocumentType]) -> Kernel.Prelude.Maybe ([Dashboard.Common.VerificationStatus]) -> Kernel.Prelude.Maybe ([Kernel.Types.Id.Id Dashboard.Common.Driver]) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient CommonDocumentsListRes),
+    postDriverRegistrationDocumentsUpdate :: (UpdateDocumentRequest -> EulerHS.Types.EulerClient UpdateDocumentResp),
+    postDriverRegistrationDocumentsCommon :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> CommonDocumentCreateReq -> EulerHS.Types.EulerClient CommonDocumentCreateRes),
+    postDriverRegistrationUnlinkDocument :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> DocumentType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient UnlinkDocumentResp),
+    postDriverRegistrationTriggerReminder :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> TriggerReminderReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
   }
 
 mkDriverRegistrationAPIs :: (Client EulerHS.Types.EulerClient API -> DriverRegistrationAPIs)
