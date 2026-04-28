@@ -10,6 +10,7 @@ imports:
   PlanSubscribeRes: Domain.Action.UI.Plan
   PayoutRequestStatus: Lib.Payment.Domain.Types.PayoutRequest
   EntityName: Lib.Payment.Domain.Types.Common
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
 
 module: DriverWallet
 
@@ -54,7 +55,8 @@ types:
     itemName: Text
     itemValue: HighPrecMoney
     isCredit: Bool
-    status: EntryStatus
+    status: Text
+    paymentOrderId: Maybe (Id PaymentOrder)
     date: UTCTime
   WalletTransactionHistoryResponse:
     items: "[WalletTransactionHistoryItem]"

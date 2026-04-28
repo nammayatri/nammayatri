@@ -7,8 +7,9 @@ import qualified Data.Time
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Lib.Finance.Domain.Types.LedgerEntry
+import qualified Kernel.Types.Id
 import qualified Lib.Payment.Domain.Types.Common
+import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Lib.Payment.Domain.Types.PayoutRequest
 import Servant
 import Tools.Auth
@@ -72,7 +73,8 @@ data WalletTransactionHistoryItem = WalletTransactionHistoryItem
     itemName :: Kernel.Prelude.Text,
     itemReference :: Kernel.Prelude.Text,
     itemValue :: Kernel.Types.Common.HighPrecMoney,
-    status :: Lib.Finance.Domain.Types.LedgerEntry.EntryStatus
+    paymentOrderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder),
+    status :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
