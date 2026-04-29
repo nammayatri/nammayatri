@@ -19,7 +19,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
 import Tools.Error
 
@@ -72,13 +71,11 @@ postPayoutAccountStatus merchantShortId opCity requestorId req = do
     Common.BANK -> do
       bankRequestId <- req.bankRequestId & fromMaybeM (InvalidRequest "bankRequestId required for Bank status")
       bankInfoResp <- BankAccountVerification.getInfoBankAccount (personId, merchant.id, merchantOpCityId) bankRequestId
-      when (bankInfoResp.accountExists) $ do
-        mbFleetInfo <- QFOI.findByPrimaryKey personId
-        when (isNothing (mbFleetInfo >>= (.payoutVpa))) $
-          case (bankInfoResp.bankAccountNumber, bankInfoResp.ifscCode) of
-            (Just accNo, Just ifsc) ->
-              QFOIE.updatePayoutVpaAndStatus (Just (accNo <> "@" <> ifsc <> ".ifsc.npci")) (Just DFOI.MANUALLY_ADDED) personId
-            _ -> pure ()
+      when (bankInfoResp.accountExists) $
+        case (bankInfoResp.bankAccountNumber, bankInfoResp.ifscCode) of
+          (Just accNo, Just ifsc) ->
+            QFOIE.updatePayoutVpaAndStatus (Just (accNo <> "@" <> ifsc <> ".ifsc.npci")) (Just DFOI.MANUALLY_ADDED) personId
+          _ -> pure ()
       pure $
         Common.PayoutAccountStatusResp
           { accountType = Common.BANK,
