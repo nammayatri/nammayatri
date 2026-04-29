@@ -42,6 +42,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SpecialZoneQueueRequest as DSZQR
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -212,12 +213,14 @@ resetQueueSkipCount specialLocationId driverId = Redis.withCrossAppRedis $ do
 runDemandCheckForVariants ::
   ( Redis.HedisFlow m r,
     MonadFlow m,
+    ServiceFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     HasLocationService m r,
     HasShortDurationRetryCfg r c,
-    HasRequestId r
+    HasRequestId r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->
@@ -246,12 +249,14 @@ runDemandCheckForVariants merchantOpCityId merchantId pickupZoneGateId variants 
 checkAndNotifyDriverDemand ::
   ( Redis.HedisFlow m r,
     MonadFlow m,
+    ServiceFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     HasLocationService m r,
     HasShortDurationRetryCfg r c,
-    HasRequestId r
+    HasRequestId r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->
@@ -316,12 +321,14 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant = do
 forceNotifyDriverDemand ::
   ( Redis.HedisFlow m r,
     MonadFlow m,
+    ServiceFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     HasLocationService m r,
     HasShortDurationRetryCfg r c,
-    HasRequestId r
+    HasRequestId r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->
@@ -352,13 +359,15 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
       else pure 0
   pure (priorityCount + queueCount)
 
--- Common notification logic: create SpecialZoneQueueRequest entries and send FCM
+-- Common notification logic: create SpecialZoneQueueRequest entries and send FCM + GRPC
 notifyDrivers ::
   ( Redis.HedisFlow m r,
     MonadFlow m,
+    ServiceFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Esq.EsqDBReplicaFlow m r
+    Esq.EsqDBReplicaFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->

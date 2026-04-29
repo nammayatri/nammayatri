@@ -32,6 +32,7 @@ import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Trip as DTrip
 import qualified Domain.Types.VehicleVariant as Veh
 import Kernel.Beam.Functions
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto as Esq
@@ -119,14 +120,16 @@ data InitRes = InitRes
   }
 
 handler ::
-  ( CacheFlow m r,
+  ( ServiceFlow m r,
+    CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EventStreamFlow m r,
     EncFlow m r,
     HasLocationService m r,
     HasShortDurationRetryCfg r c,
-    HasRequestId r
+    HasRequestId r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Id DM.Merchant ->
   InitReq ->
