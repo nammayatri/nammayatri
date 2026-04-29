@@ -27,4 +27,4 @@ refreshHandler :: Maybe Text -> InMemRefreshRequest -> FlowHandler InMemRefreshR
 refreshHandler mbToken req = withFlowHandlerAPI $ Handler.refreshCache mbToken req
 
 serverInfoHandler :: Maybe Text -> FlowHandler InMemServerInfoResponse
-serverInfoHandler mbToken = withFlowHandlerAPI $ Handler.getServerInfo mbToken "driver-app"
+serverInfoHandler mbToken = withFlowHandlerAPI $ Handler.getServerInfo mbToken

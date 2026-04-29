@@ -95,7 +95,7 @@ buildAppEnv AppCfg {..} = do
 
   now <- getCurrentTime
   inMemHashMap <- Data.IORef.newIORef $ CF.InMemCacheInfo {cache = HM.empty, cacheSize = 0, createdAt = now}
-  let inMemEnv = CF.InMemEnv {enableInMem = True, maxInMemSize = 1024 * 1024, inMemHashMap = inMemHashMap, inMemSidecarEnv = Nothing}
+  let inMemEnv = CF.InMemEnv {enableInMem = True, maxInMemSize = 1024 * 1024, inMemHashMap = inMemHashMap, inMemSidecarEnv = Nothing, inMemManagementToken = Nothing, inMemServiceName = Just "payment-mock"}
 
   return $ AppEnv {..}
 

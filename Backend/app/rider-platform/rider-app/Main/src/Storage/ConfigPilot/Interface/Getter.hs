@@ -27,6 +27,7 @@ import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType)
 import Storage.Beam.Yudhishthira ()
+import qualified Kernel.Storage.InMem as IM
 import Storage.ConfigPilot.Interface.Types (ConfigDimensions (..))
 import Tools.Error
 
@@ -104,9 +105,11 @@ configPilotInMemKey dims = ["ConfigPilot", show (getConfigType dims), dimensions
 -- Sets a Redis key that the background cleanup thread reads to clear matching in-mem entries.
 invalidateConfigInMem :: (MonadFlow m, CacheFlow m r, CoreMetrics m, HasInMemEnv r) => ConfigType -> m ()
 invalidateConfigInMem cfgType = do
+  let keyPrefix :: Text = "ConfigPilot:" <> show cfgType
   now <- getCurrentTime
-  let val = A.object ["forceCleanupTimestamp" .= timeOfDayFromUTCTime now, "forceCleanupKeyPrefix" .= ("ConfigPilot:" <> show cfgType :: Text)]
+  let val = A.object ["forceCleanupTimestamp" .= timeOfDayFromUTCTime now, "forceCleanupKeyPrefix" .= keyPrefix]
   Hedis.setExp "inmem:force:cleanup:timeofday" val 600
+  IM.refreshInMem keyPrefix -- This one does clear using the shudhi sidecar, above is a fallback for thread running in this project for cleanup after TTL
   where
     timeOfDayFromUTCTime t =
       let dayTime = utctDayTime t
