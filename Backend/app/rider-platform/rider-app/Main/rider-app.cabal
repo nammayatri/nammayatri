@@ -175,6 +175,7 @@ library
       Domain.Action.Beckn.OnUpdate
       Domain.Action.Dashboard.AlertIncident
       Domain.Action.Dashboard.AppManagement.Customer
+      Domain.Action.Dashboard.AppManagement.DepotManager
       Domain.Action.Dashboard.AppManagement.EventManagement
       Domain.Action.Dashboard.AppManagement.EventManagement.Utils
       Domain.Action.Dashboard.AppManagement.FRFSTicketService
@@ -759,6 +760,7 @@ library
       Tools.Whatsapp
       API.Action.Dashboard.AppManagement
       API.Action.Dashboard.AppManagement.Customer
+      API.Action.Dashboard.AppManagement.DepotManager
       API.Action.Dashboard.AppManagement.EventManagement
       API.Action.Dashboard.AppManagement.FRFSTicketService
       API.Action.Dashboard.AppManagement.MerchantOnboarding
@@ -847,7 +849,9 @@ library
       API.Action.UnifiedDashboard.RideBooking.HealthCheck
       API.Types.Dashboard.AppManagement
       API.Types.Dashboard.AppManagement.Customer
+      API.Types.Dashboard.AppManagement.DepotManager
       API.Types.Dashboard.AppManagement.Endpoints.Customer
+      API.Types.Dashboard.AppManagement.Endpoints.DepotManager
       API.Types.Dashboard.AppManagement.Endpoints.EventManagement
       API.Types.Dashboard.AppManagement.Endpoints.FRFSTicketService
       API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding

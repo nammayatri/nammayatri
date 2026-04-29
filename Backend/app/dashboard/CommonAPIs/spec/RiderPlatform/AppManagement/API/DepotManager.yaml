@@ -1,0 +1,44 @@
+imports:
+  Person: Domain.Types.Person
+  Depot: Domain.Types.Depot
+
+module: DepotManager
+apiPrefix: depotManager
+
+apis:
+  - POST:
+      endpoint: /upsertOne
+      name: PostDepotManagerUpsertOne
+      auth: ApiAuthV2
+      request:
+        type: DepotManagerDetail
+      response:
+        type: UpsertDepotManagerResp
+
+  - POST:
+      endpoint: /upsertMany
+      name: PostDepotManagerUpsertMany
+      auth: ApiAuthV2
+      request:
+        type: DepotManagerDetails
+      response:
+        type: UpsertDepotManagerResp
+
+types:
+  DepotManagerDetail:
+    countryCode: Text
+    mobileNumber: Text
+    depotCode: Text
+    isAdmin: Maybe Bool
+    derive: "'HideSecrets"
+
+  DepotManagerDetails:
+    items: "[DepotManagerDetail]"
+    derive: "'HideSecrets"
+
+  UpsertDepotManagerResp:
+    success: Text
+    succeededCount: Int
+    failedCount: Int
+    succeededPhoneNumbers: "[Text]"
+    failedPhoneNumbers: "[Text]"
