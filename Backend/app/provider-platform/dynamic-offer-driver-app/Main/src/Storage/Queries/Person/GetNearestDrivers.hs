@@ -6,10 +6,10 @@ module Storage.Queries.Person.GetNearestDrivers
   )
 where
 
+import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
-import Control.Applicative ((<|>))
 import Domain.Types
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.Extra.MerchantPaymentMethod as MP
@@ -280,12 +280,18 @@ getNearestDrivers NearestDriversReq {..} fetchPoolData = do
     formatEligibilityLog :: (Int, Int, Int, Int, Int, Int, Int) -> Text
     formatEligibilityLog (total, blocked, unsubscribed, modeOff, tripType, onRideInelig, noPay) =
       "total=" <> show total
-        <> " blocked=" <> show blocked
-        <> " unsubscribed=" <> show unsubscribed
-        <> " modeOff=" <> show modeOff
-        <> " tripTypeInelig=" <> show tripType
-        <> " onRideInelig=" <> show onRideInelig
-        <> " noPayment=" <> show noPay
+        <> " blocked="
+        <> show blocked
+        <> " unsubscribed="
+        <> show unsubscribed
+        <> " modeOff="
+        <> show modeOff
+        <> " tripTypeInelig="
+        <> show tripType
+        <> " onRideInelig="
+        <> show onRideInelig
+        <> " noPayment="
+        <> show noPay
 
     -- Wallet balance filtering — still requires external service calls
     filterByWalletBalance :: (BeamFlow m r, MonadFlow m, CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r) => Bool -> [NearestDriversResult] -> m [NearestDriversResult]

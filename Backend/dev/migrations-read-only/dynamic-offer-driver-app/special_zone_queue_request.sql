@@ -21,3 +21,8 @@ ALTER TABLE atlas_driver_offer_bpp.special_zone_queue_request ADD PRIMARY KEY ( 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.special_zone_queue_request ADD COLUMN arrival_deadline_time timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.special_zone_queue_request ADD COLUMN trigger_source text ;

@@ -1854,10 +1854,10 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
       Common.NOC req -> resolveRcIdFromDocument DVC.VehicleNOC (Id req.documentImageId.getId)
       req
         | Just imgId <- getImageIdFromApproveDetails req -> do
-            mbImage <- QImage.findById (Id imgId.getId)
-            case mbImage of
-              Just image | isVehicleDocType image.imageType -> resolveRcIdFromDocument image.imageType (Id imgId.getId)
-              _ -> pure Nothing
+          mbImage <- QImage.findById (Id imgId.getId)
+          case mbImage of
+            Just image | isVehicleDocType image.imageType -> resolveRcIdFromDocument image.imageType (Id imgId.getId)
+            _ -> pure Nothing
       _ -> pure Nothing
 
     getRejectTargetRcId :: Common.RejectDetails -> Flow (Maybe (Id DRC.VehicleRegistrationCertificate))
@@ -1881,8 +1881,8 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
         pure $ (.driverId) <$> mbSsn
       req
         | Just imgId <- getImageIdFromApproveDetails req -> do
-            mbImage <- QImage.findById (Id imgId.getId)
-            pure $ (.personId) <$> mbImage
+          mbImage <- QImage.findById (Id imgId.getId)
+          pure $ (.personId) <$> mbImage
       _ -> pure Nothing
 
     getRejectTargetPersonId :: Common.RejectDetails -> Flow (Maybe (Id DP.Person))

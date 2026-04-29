@@ -29,6 +29,7 @@ instance FromTType' Beam.SpecialZoneQueueRequest Domain.Types.SpecialZoneQueueRe
             specialLocationId = specialLocationId,
             specialLocationName = specialLocationName,
             status = status,
+            triggerSource = triggerSource,
             updatedAt = updatedAt,
             validTill = validTill,
             vehicleType = vehicleType
@@ -49,6 +50,7 @@ instance ToTType' Beam.SpecialZoneQueueRequest Domain.Types.SpecialZoneQueueRequ
         Beam.specialLocationId = specialLocationId,
         Beam.specialLocationName = specialLocationName,
         Beam.status = status,
+        Beam.triggerSource = triggerSource,
         Beam.updatedAt = updatedAt,
         Beam.validTill = validTill,
         Beam.vehicleType = vehicleType
