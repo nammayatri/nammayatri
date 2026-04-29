@@ -12,13 +12,13 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Action.Beckn.FRFS.OnCancel where
+module Domain.Action.Beckn.FRFS.OnCancel (module Domain.Types.Beckn.FRFS.OnCancel, validateRequest, onCancel) where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Domain.Action.Beckn.FRFS.OnCancel.Core (onCancelCore)
+import Domain.Types.Beckn.FRFS.OnCancel
 import qualified Domain.Types.FRFSTicketBooking as Booking
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
-import qualified Domain.Types.FRFSTicketBookingStatus as FTBooking
-import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import Domain.Types.Merchant as Merchant
 import Environment
 import Kernel.Beam.Functions
@@ -27,22 +27,9 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.FRFSCancel as FRFSCancel
+import qualified SharedLogic.FRFSCancelJourney as FRFSCancelJourney
 import qualified Storage.CachedQueries.Merchant as QMerch
-import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
-
-data DOnCancel = DOnCancel
-  { providerId :: Text,
-    totalPrice :: HighPrecMoney,
-    bppOrderId :: Text,
-    bppItemId :: Text,
-    transactionId :: Text,
-    messageId :: Text,
-    orderStatus :: Spec.OrderStatus,
-    refundAmount :: Maybe HighPrecMoney,
-    baseFare :: HighPrecMoney,
-    cancellationCharges :: Maybe HighPrecMoney
-  }
 
 validateRequest :: DOnCancel -> Flow (Merchant, FTBooking.FRFSTicketBooking)
 validateRequest DOnCancel {..} = do
@@ -53,16 +40,13 @@ validateRequest DOnCancel {..} = do
   return (merchant, booking)
 
 onCancel :: Merchant -> Booking.FRFSTicketBooking -> DOnCancel -> Flow ()
-onCancel merchant booking' dOnCancel = do
-  let booking = booking' {Booking.bppOrderId = Just dOnCancel.bppOrderId}
-  let refundAmount = fromMaybe (negate dOnCancel.baseFare) dOnCancel.refundAmount
-  let cancellationCharges = fromMaybe 0 dOnCancel.cancellationCharges
-  case dOnCancel.orderStatus of
-    Spec.SOFT_CANCELLED -> do
-      void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just refundAmount) (Just cancellationCharges) (Just True) booking.id
-    Spec.CANCELLED -> FRFSCancel.handleCancelledStatus merchant booking refundAmount cancellationCharges dOnCancel.messageId True
-    Spec.CANCEL_INITIATED -> do
-      void $ QTBooking.updateStatusById FTBooking.CANCEL_INITIATED booking.id
-      void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCEL_INITIATED) booking.id
-      FRFSCancel.cancelJourney booking
-    _ -> throwError $ InvalidRequest "Unexpected orderStatus received"
+onCancel merchant booking dOnCancel = do
+  let booking' = booking {Booking.bppOrderId = Just dOnCancel.bppOrderId}
+  mbSideEffectData <- onCancelCore merchant booking dOnCancel
+  whenJust mbSideEffectData $ \(mRiderNumber, mRiderMobileCountryCode, fareParameters) ->
+    FRFSCancel.handleCancelledSideEffects booking' mRiderNumber mRiderMobileCountryCode fareParameters
+  when (isFinalCancelStatus dOnCancel.orderStatus) $
+    FRFSCancelJourney.cancelJourney booking'
+  where
+    isFinalCancelStatus status =
+      status `elem` [Spec.CANCELLED, Spec.CANCEL_INITIATED]

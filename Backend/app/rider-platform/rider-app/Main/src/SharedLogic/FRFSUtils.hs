@@ -1267,3 +1267,11 @@ getPaymentType isMultiModalBooking = \case
 
 unixToUTC :: Integer -> UTCTime
 unixToUTC = posixSecondsToUTCTime . fromIntegral
+
+getServiceTierTypeFromRouteStationsJson :: Maybe Text -> Maybe Spec.ServiceTierType
+getServiceTierTypeFromRouteStationsJson mbJson = do
+  rsJson <- mbJson
+  (routeStations :: [APITypes.FRFSRouteStationsAPI]) <- decodeFromText rsJson
+  firstRoute <- listToMaybe routeStations
+  vst <- firstRoute.vehicleServiceTier
+  Just vst._type

@@ -967,6 +967,41 @@ FRFSConfig:
     isFRFSTestingEnabled: Kernel.Prelude.Just|I
     canUpdateExistingPaymentOrder: Kernel.Prelude.Just|I
 
+FRFSCancellationConfig:
+  tableName: frfs_cancellation_config
+  derives: "Generic,Show,FromJSON,ToJSON,Eq"
+
+  fields:
+    id: Id FRFSCancellationConfig
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    vehicleCategory: BecknV2.FRFS.Enums.VehicleCategory
+    cancellationChargeType: CancellationChargeType
+    cancellationChargeValue: HighPrecMoney
+    minMinutesBeforeDeparture: Int
+    maxMinutesBeforeDeparture: Maybe Int
+    currency: Currency
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    CancellationChargeType:
+      enum: "PERCENTAGE,FLAT"
+      derive: "HttpInstance"
+
+  queries:
+    findAllByMerchantOpCityAndVehicleCategory:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, vehicleCategory]
+
+  constraints:
+    id: PrimaryKey
+    vehicleCategory: "!SecondaryKey"
+
+  extraOperations:
+    - GENERATE_INDEXES
+
 FRFSRouteFareProduct:
   tableName: frfs_route_fare_product
   fields:
@@ -1175,6 +1210,7 @@ FRFSVehicleServiceTier:
     longName: Text
     description: Text
     isAirConditioned: Maybe Bool
+    isCancellable: Maybe Bool
     merchantId: Id Merchant
     integratedBppConfigId: Id IntegratedBPPConfig
     merchantOperatingCityId: Id MerchantOperatingCity

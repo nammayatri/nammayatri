@@ -80,8 +80,10 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.PTCircuitBreaker as PTCircuitBreaker
 import qualified SharedLogic.Ride as DARide
 import qualified SharedLogic.Search as SLSearch
+import Storage.CachedQueries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Estimate as QEstimate
@@ -306,7 +308,8 @@ data LegInfo = LegInfo
     exit :: Maybe MultiModalLegGate,
     validTill :: Maybe UTCTime,
     hasApplicablePasses :: Maybe Bool,
-    observingFailures :: Maybe Bool
+    observingFailures :: Maybe Bool,
+    isCancellable :: Maybe Bool
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -677,7 +680,8 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
         exit = journeyLeg.osmExit,
         validTill = Nothing,
         hasApplicablePasses = Just False,
-        observingFailures = Nothing
+        observingFailures = Nothing,
+        isCancellable = Nothing
       }
   where
     getBookingDetailsConstructor :: DBooking.BookingDetails -> Text
@@ -757,7 +761,8 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} journeyLeg = do
         exit = journeyLeg.osmExit,
         validTill = Nothing,
         hasApplicablePasses = Just False,
-        observingFailures = Nothing
+        observingFailures = Nothing,
+        isCancellable = Nothing
       }
 
 mkWalkLegInfoFromWalkLegData :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id DP.Person -> DJL.JourneyLeg -> m LegInfo
@@ -802,7 +807,8 @@ mkWalkLegInfoFromWalkLegData personId legData@DJL.JourneyLeg {..} = do
         exit = straightLineExit,
         validTill = Nothing,
         hasApplicablePasses = Just False,
-        observingFailures = Nothing
+        observingFailures = Nothing,
+        isCancellable = Nothing
       }
   where
     mkLocation now location name =
@@ -878,6 +884,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
   (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg (Just booking)
   journeyLegInfo' <- getLegRouteInfo (zip journeyLeg.routeDetails trackingStatuses) integratedBPPConfig
   legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyLeg.routeDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters booking.totalPrice integratedBPPConfig
+  isCancellable <- computeIsCancellable booking integratedBPPConfig
   return $
     LegInfo
       { journeyLegId = journeyLeg.id,
@@ -906,7 +913,8 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
         exit = Nothing,
         validTill = (if null qrValidity then Nothing else Just $ maximum qrValidity) <|> Just booking.validTill,
         hasApplicablePasses = Nothing,
-        observingFailures = Nothing
+        observingFailures = Nothing,
+        isCancellable = isCancellable
       }
   where
     mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters totalBookingAmount integratedBPPConfig = do
@@ -1077,6 +1085,22 @@ getLegRouteInfo journeyRouteDetailsWithTrackingStatuses integratedBPPConfig = do
             allAvailableRoutes = validRoutes
           }
 
+computeIsCancellable ::
+  (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
+  DFRFSBooking.FRFSTicketBooking ->
+  DIBC.IntegratedBPPConfig ->
+  m (Maybe Bool)
+computeIsCancellable booking integratedBPPConfig = do
+  mbFrfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
+  let configCancellable = maybe True (.isCancellationAllowed) mbFrfsConfig
+  let mbServiceTierType = getServiceTierTypeFromRouteStationsJson booking.routeStationsJson
+  case mbServiceTierType of
+    Just serviceTierType -> do
+      mbVst <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTierType booking.merchantOperatingCityId integratedBPPConfig.id
+      let vstCancellable = fromMaybe True (mbVst >>= (.isCancellable))
+      return $ Just (configCancellable && vstCancellable)
+    Nothing -> return $ Just configCancellable
+
 castCategoryToMode :: Spec.VehicleCategory -> DTrip.MultimodalTravelMode
 castCategoryToMode Spec.METRO = DTrip.Metro
 castCategoryToMode Spec.SUBWAY = DTrip.Subway
@@ -1194,7 +1218,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
         exit = Nothing,
         validTill = (mbQuote <&> (.validTill)) <|> (frfsSearch.validTill),
         hasApplicablePasses = Just hasApplicablePass,
-        observingFailures = Just observingFailures
+        observingFailures = Just observingFailures,
+        isCancellable = Nothing
       }
   where
     shouldMatchDeviceId :: DPurchasedPass.PurchasedPass -> Maybe Text -> Bool

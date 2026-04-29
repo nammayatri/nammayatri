@@ -25,6 +25,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.FRFSCancel as FRFSCancel
+import qualified SharedLogic.FRFSCancelJourney as FRFSCancelJourney
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 
@@ -55,5 +56,8 @@ onUpdate merchant booking' dOnUpdate = do
   let refundAmount = fromMaybe dOnUpdate.baseFare dOnUpdate.refundAmount
   let cancellationCharges = fromMaybe 0 dOnUpdate.cancellationCharges
   case dOnUpdate.orderStatus of
-    Spec.CANCELLED -> FRFSCancel.handleCancelledStatus merchant booking refundAmount cancellationCharges dOnUpdate.messageId False
+    Spec.CANCELLED -> do
+      (mRiderNumber, mRiderMobileCountryCode, fareParameters) <- FRFSCancel.handleCancelledStatus merchant booking refundAmount cancellationCharges dOnUpdate.messageId False
+      FRFSCancel.handleCancelledSideEffects booking mRiderNumber mRiderMobileCountryCode fareParameters
+      FRFSCancelJourney.cancelJourney booking
     _ -> throwError $ InvalidRequest "Unexpected orderStatus received"
