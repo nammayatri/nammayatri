@@ -47,6 +47,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import SharedLogic.DriverFee (roundToHalf)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
@@ -462,12 +463,11 @@ createWalletTopupOrder (driverId, merchantId, mocId) amount mbExistingOrderId = 
       (DMSC.PaymentService merchantServiceUsageConfig.createBankAccount)
       driver.clientSdkVersion
       mocId
-  orderId <- maybe generateGUID (pure . (.getId)) mbExistingOrderId
-  orderShortId <- generateShortId
+  (orderId, orderShortId) <- handleExistingOrder mbExistingOrderId
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = orderId,
-            orderShortId = orderShortId.getShortId,
+            orderShortId = orderShortId,
             amount = amount,
             customerId = driver.id.getId,
             customerEmail = fromMaybe "test@juspay.in" driver.email,
@@ -531,3 +531,12 @@ createWalletTopupOrder (driverId, merchantId, mocId) amount mbExistingOrderId = 
           pure (applyPseudoClientId pseudoClientId retryRes, Id newOrderId)
         Nothing ->
           throwError $ InternalError "Failed to create wallet topup payment order"
+  where
+    handleExistingOrder mbOrderId = do
+      mbOrder <- maybe (pure Nothing) QOrder.findById mbOrderId
+      case mbOrder of
+        Just order -> pure (order.id.getId, order.shortId.getShortId)
+        Nothing -> do
+          newOrderId <- generateGUID
+          newOrderShortId <- generateShortId
+          pure (newOrderId, newOrderShortId.getShortId)

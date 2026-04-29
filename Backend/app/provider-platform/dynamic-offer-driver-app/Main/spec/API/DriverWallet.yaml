@@ -11,6 +11,7 @@ imports:
   PayoutRequestStatus: Lib.Payment.Domain.Types.PayoutRequest
   EntityName: Lib.Payment.Domain.Types.Common
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+  WalletTransactionStatus: Domain.Types.WalletTransaction
 
 module: DriverWallet
 
@@ -50,13 +51,16 @@ types:
   WalletBalanceResponse:
     currentBalance: HighPrecMoney
 
+  PaymentOrderInfo:
+    id: Id PaymentOrder
+    walletStatus: WalletTransactionStatus
   WalletTransactionHistoryItem:
     itemReference: Text
     itemName: Text
     itemValue: HighPrecMoney
     isCredit: Bool
-    status: Text
-    paymentOrderId: Maybe (Id PaymentOrder)
+    status: EntryStatus
+    paymentOrder: Maybe PaymentOrderInfo
     date: UTCTime
   WalletTransactionHistoryResponse:
     items: "[WalletTransactionHistoryItem]"

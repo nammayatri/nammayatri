@@ -7,6 +7,7 @@ module Domain.Action.ProviderPlatform.AppManagement.DriverWallet
     postDriverWalletWalletTopup,
     postDriverWalletWalletAirportCashRecharge,
     getDriverWalletWalletPayoutHistory,
+    getDriverWalletWalletTransactionHistory,
   )
 where
 
