@@ -577,7 +577,7 @@ buildJourneyAndLeg booking fareParameters = do
               legSearchId = Just booking.searchId.getId,
               legPricingId = Just booking.quoteId.getId,
               changedBusesInSequence = Nothing,
-              finalBoardedBusNumber = routeLiveInfo <&> (.vehicleNumber),
+              finalBoardedBusNumber = booking.vehicleNumber,
               finalBoardedBusNumberSource = routeLiveInfo <&> \_ -> DJL.UserSpotBooked,
               finalBoardedDepotNo = routeLiveInfo >>= (.depot),
               finalBoardedScheduleNo = routeLiveInfo >>= (.scheduleNo),
