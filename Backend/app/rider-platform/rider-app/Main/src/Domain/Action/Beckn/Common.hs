@@ -366,6 +366,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         chargeableDistance = Nothing,
         traveledDistance = Nothing,
         driverArrivalTime = Nothing,
+        driverArrivalStatus = Nothing,
         vehicleVariant = DV.castServiceTierToVariant booking.vehicleServiceTierType, -- fix later
         vehicleServiceTierType = Just booking.vehicleServiceTierType,
         createdAt = now,
@@ -1184,9 +1185,9 @@ driverArrivedReqHandler ::
   m ()
 driverArrivedReqHandler ValidatedDriverArrivedReq {..} = do
   unless (isJust ride.driverArrivalTime) $ do
-    void $ notifyOnDriverArrived booking ride
     void $ QRide.updateDriverArrival ride.id arrivalTime
     QPFS.clearCache booking.riderId
+    updateAndNotifyDriverArrivalStatus booking ride DRide.DRIVER_REACHED
 
 bookingCancelledReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
@@ -1779,17 +1780,20 @@ sendBookingCancelledMessageViaWhatsapp personId riderConfig = do
   result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [Just riderConfig.appUrl] Nothing Nothing) -- Accepts at most 7 variables using GupShup
   when (result._response.status /= "success") $ throwError (InternalError "Unable to send Dashboard Cancelled Booking Whatsapp message")
 
-notifyOnDriverArrived :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, ServiceFlow m r) => DRB.Booking -> DRide.Ride -> m ()
-notifyOnDriverArrived booking ride = do
-  mbHasReachedNotified <- Redis.safeGet @() driverHasReached
-  when (isNothing mbHasReachedNotified) $ do
-    Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride.vehicleColor ride.vehicleModel ride.vehicleVariant
-    Redis.setExp driverHasReached () 1500
-  where
-    driverHasReached = driverHasReachedCacheKey ride.id.getId
+updateAndNotifyDriverArrivalStatus :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, ServiceFlow m r) => DRB.Booking -> DRide.Ride -> DRide.DriverArrivalStatus -> m ()
+updateAndNotifyDriverArrivalStatus booking ride newStatus =
+  Redis.withWaitOnLockRedisWithExpiry (driverArrivalStatusLockKey ride.id.getId) 5 30 $ do
+    freshRide <- QRide.findById ride.id >>= fromMaybeM (RideDoesNotExist ride.id.getId)
+    let isHigherStatus = maybe True (newStatus >) freshRide.driverArrivalStatus
+    when (freshRide.status /= DRide.INPROGRESS && isHigherStatus) $ do
+      void $ QRide.updateDriverArrivalStatus (Just newStatus) ride.id
+      case newStatus of
+        DRide.DRIVER_ON_THE_WAY -> Notify.notifyDriverOnTheWay booking.riderId booking.tripCategory ride
+        DRide.DRIVER_REACHING -> Notify.notifyDriverReaching booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride
+        DRide.DRIVER_REACHED -> Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride.vehicleColor ride.vehicleModel ride.vehicleVariant
 
-driverHasReachedCacheKey :: Text -> Text
-driverHasReachedCacheKey rideId = "Ride:GetDriverLoc:DriverHasReached " <> rideId
+driverArrivalStatusLockKey :: Text -> Text
+driverArrivalStatusLockKey rideId = "Ride:DriverArrivalStatus:Lock:" <> rideId
 
 createRecentLocationForTaxi :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DRB.Booking -> m ()
 createRecentLocationForTaxi booking = do

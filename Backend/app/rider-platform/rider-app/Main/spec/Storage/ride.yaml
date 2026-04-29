@@ -50,8 +50,12 @@ Ride:
     CancellationFeeStatus:
       enum: "PENDING,CLEARED,WAIVED"
 
+    DriverArrivalStatus:
+      enum: "DRIVER_ON_THE_WAY,DRIVER_REACHING,DRIVER_REACHED"
+
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <PaymentStatus>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <DriverArrivalStatus>
 
   fields:
     id: Id Ride
@@ -90,6 +94,7 @@ Ride:
     traveledDistance: Maybe Distance
     distanceUnit: DistanceUnit
     driverArrivalTime: Maybe UTCTime
+    driverArrivalStatus: Maybe DriverArrivalStatus
     rideStartTime: Maybe UTCTime
     rideEndTime: Maybe UTCTime
     rideRating: Maybe Int

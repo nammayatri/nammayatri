@@ -596,6 +596,22 @@ updateIsSafetyPlus rideId isSafetyPlus = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateDriverArrivalStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe DriverArrivalStatus -> Id Ride -> m ()
+updateDriverArrivalStatus newStatus (Id rideId) = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamR.driverArrivalStatus newStatus, Se.Set BeamR.updatedAt _now]
+    ( [Se.Is BeamR.id $ Se.Eq rideId]
+        <> maybe [] (\s -> [Se.Is BeamR.driverArrivalStatus $ Se.In s]) possiblePredecessors
+    )
+  where
+    possiblePredecessors =
+      case newStatus of
+        Just DRIVER_ON_THE_WAY -> Just [Nothing]
+        Just DRIVER_REACHING -> Just [Nothing, Just DRIVER_ON_THE_WAY]
+        Just DRIVER_REACHED -> Just [Nothing, Just DRIVER_ON_THE_WAY, Just DRIVER_REACHING]
+        Nothing -> Nothing
+
 findCompletedRideByBookingId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Ride)
 findCompletedRideByBookingId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId, Se.Is BeamR.status $ Se.Eq Ride.COMPLETED] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
