@@ -170,6 +170,23 @@ data DriverVehicleServiceTiers = DriverVehicleServiceTiers
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data ExternalAccountObject
+  = BankAccount
+  | CardAccount
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ExternalAccountResp = ExternalAccountResp
+  { externalAccountObject :: ExternalAccountObject,
+    account :: Kernel.Prelude.Text,
+    bankName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    defaultForCurrency :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    last4 :: Kernel.Prelude.Text,
+    status :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FarePolicyHour
   = Peak
   | NonPeak
@@ -223,6 +240,25 @@ data RateCardResp = RateCardResp
     serviceTierType :: Domain.Types.Common.ServiceTierType,
     totalFare :: Kernel.Types.Common.PriceAPIEntity,
     tripCategory :: Domain.Types.Common.TripCategory
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RegisterExternalAccountReq
+  = RegisterBankAccount RegisterExternalBankAccountReq
+  | RegisterCardAccount RegisterExternalCardAccountReq
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RegisterExternalBankAccountReq = RegisterExternalBankAccountReq {accountNumber :: Kernel.Prelude.Text, routingNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RegisterExternalCardAccountReq = RegisterExternalCardAccountReq
+  { cardNumber :: Kernel.Prelude.Text,
+    expMonth :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    expYear :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    accountCvc :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -100,6 +100,44 @@ apis:
               - requestorId: Text
             response:
               type: FleetBankAccountResp
+  - POST:
+      endpoint: /register/externalAccount
+      auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
+      request:
+        type: RegisterFleetExternalAccountReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /register/externalAccount
+            auth: ApiAuthV2
+            query:
+              - fleetOwnerId: Text
+            mandatoryQuery:
+              - requestorId: Text
+            request:
+              type: RegisterFleetExternalAccountReq
+            response:
+              type: APISuccess
+  - GET:
+      endpoint: /register/externalAccount/status
+      auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
+      response:
+        type: FleetExternalAccountResp
+      helperApi:
+        - POST:
+            endpoint: /register/externalAccount/status
+            auth: ApiAuthV2
+            query:
+              - fleetOwnerId: Text
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: FleetExternalAccountResp
 
 types:
   FleetOwnerLoginReqV2:
@@ -151,6 +189,25 @@ types:
     - chargesEnabled: Bool
     - detailsSubmitted: Bool
     - paymentMode: PaymentMode
+  RegisterFleetExternalAccountReq:
+    - enum: "RegisterBankAccount RegisterFleetExternalBankAccountReq,RegisterCardAccount RegisterFleetExternalCardAccountReq"
+  RegisterFleetExternalBankAccountReq:
+    - accountNumber: Text
+    - routingNumber: Maybe Text
+  RegisterFleetExternalCardAccountReq:
+    - cardNumber: Text
+    - expMonth: Maybe Int
+    - expYear: Maybe Int
+    - accountCvc: Maybe Text
+  FleetExternalAccountResp:
+    - externalAccountObject: ExternalAccountObject
+    - account: Text
+    - bankName: Maybe Text
+    - defaultForCurrency: Maybe Bool
+    - last4: Text
+    - status: Text
+  ExternalAccountObject:
+    - enum: "BankAccount, CardAccount"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

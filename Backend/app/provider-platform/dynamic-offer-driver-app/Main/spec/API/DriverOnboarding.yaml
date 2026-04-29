@@ -152,6 +152,25 @@ types:
     chargesEnabled: Bool
     detailsSubmitted: Bool
     paymentMode: PaymentMode
+  RegisterExternalAccountReq:
+    - enum: "RegisterBankAccount RegisterExternalBankAccountReq,RegisterCardAccount RegisterExternalCardAccountReq"
+  RegisterExternalBankAccountReq:
+    - accountNumber: Text
+    - routingNumber: Maybe Text
+  RegisterExternalCardAccountReq:
+    - cardNumber: Text
+    - expMonth: Maybe Int
+    - expYear: Maybe Int
+    - accountCvc: Maybe Text
+  ExternalAccountResp:
+    - externalAccountObject: ExternalAccountObject
+    - account: Text
+    - bankName: Maybe Text
+    - defaultForCurrency: Maybe Bool
+    - last4: Text
+    - status: Text
+  ExternalAccountObject:
+    - enum: "BankAccount, CardAccount"
   HVSdkCallLogReq:
     txnId: Text
     hvFlowId: Maybe Text
@@ -330,6 +349,18 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: BankAccountResp
+  - POST:
+      endpoint: /driver/register/externalAccount
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: RegisterExternalAccountReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: driver/register/externalAccount/status
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: ExternalAccountResp
 
   # GET /driver/register/getLiveSelfie
   - GET:

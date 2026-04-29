@@ -1112,6 +1112,31 @@ getDriverRegisterBankAccountStatus (mbPersonId, _, _) = do
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   SPBA.getPersonRegisterBankAccountStatus person
 
+postDriverRegisterExternalAccount ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverOnboardingV2.RegisterExternalAccountReq ->
+    Environment.Flow Kernel.Types.APISuccess.APISuccess
+  )
+postDriverRegisterExternalAccount (mbPersonId, _, _) _req = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  _person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  error "TODO"
+
+getDriverRegisterExternalAccountStatus ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Environment.Flow API.Types.UI.DriverOnboardingV2.ExternalAccountResp
+  )
+getDriverRegisterExternalAccountStatus (mbPersonId, _, _) = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  _person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  error "TODO"
+
 -- TDS Certificate validation functions
 
 parseTDSCertificateData :: Text -> Flow API.Types.UI.DriverOnboardingV2.TDSCertificateData

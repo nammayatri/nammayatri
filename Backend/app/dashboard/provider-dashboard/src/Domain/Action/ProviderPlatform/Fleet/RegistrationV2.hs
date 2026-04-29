@@ -7,6 +7,8 @@ module Domain.Action.ProviderPlatform.Fleet.RegistrationV2
     buildFleetOwnerRegisterReqV2,
     postRegistrationV2RegisterBankAccountLink,
     getRegistrationV2RegisterBankAccountStatus,
+    postRegistrationV2RegisterExternalAccount,
+    getRegistrationV2RegisterExternalAccountStatus,
   )
 where
 
@@ -176,3 +178,27 @@ getRegistrationV2RegisterBankAccountStatus ::
 getRegistrationV2RegisterBankAccountStatus merchantShortId opCity apiTokenInfo fleetOwnerId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.getRegistrationV2RegisterBankAccountStatus) fleetOwnerId apiTokenInfo.personId.getId
+
+postRegistrationV2RegisterExternalAccount ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  Maybe Text ->
+  Common.RegisterFleetExternalAccountReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postRegistrationV2RegisterExternalAccount merchantShortId opCity apiTokenInfo fleetOwnerId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  -- WARNING: do not store request as it contains sensitive data
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2RegisterExternalAccount) fleetOwnerId apiTokenInfo.personId.getId req
+
+getRegistrationV2RegisterExternalAccountStatus ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  Maybe Text ->
+  Environment.Flow Common.FleetExternalAccountResp
+getRegistrationV2RegisterExternalAccountStatus merchantShortId opCity apiTokenInfo fleetOwnerId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.getRegistrationV2RegisterExternalAccountStatus) fleetOwnerId apiTokenInfo.personId.getId

@@ -11,6 +11,8 @@ module Domain.Action.Dashboard.Fleet.RegistrationV2
     castRoleToFleetType,
     postRegistrationV2RegisterBankAccountLink,
     getRegistrationV2RegisterBankAccountStatus,
+    postRegistrationV2RegisterExternalAccount,
+    getRegistrationV2RegisterExternalAccountStatus,
     checkRequestorAccessToFleet,
     castFleetType,
     sendFleetOnboardingSms,
@@ -516,15 +518,39 @@ getRegistrationV2RegisterBankAccountStatus _merchantShortId _opCity mbFleetOwner
 castFleetBankAccountResp :: Onboarding.BankAccountResp -> Common.FleetBankAccountResp
 castFleetBankAccountResp Onboarding.BankAccountResp {..} = Common.FleetBankAccountResp {..}
 
+postRegistrationV2RegisterExternalAccount ::
+  ShortId DMerchant.Merchant ->
+  City.City ->
+  Maybe Text ->
+  Text ->
+  Common.RegisterFleetExternalAccountReq ->
+  Flow Kernel.Types.APISuccess.APISuccess
+postRegistrationV2RegisterExternalAccount _merchantShortId _opCity mbFleetOwnerId requestorId _req = do
+  _fleetOwner <- checkRequestorAccessToFleet mbFleetOwnerId requestorId
+  error "TODO"
+
+getRegistrationV2RegisterExternalAccountStatus ::
+  ShortId DMerchant.Merchant ->
+  City.City ->
+  Maybe Text ->
+  Text ->
+  Flow Common.FleetExternalAccountResp
+getRegistrationV2RegisterExternalAccountStatus _merchantShortId _opCity mbFleetOwnerId requestorId = do
+  _fleetOwner <- checkRequestorAccessToFleet mbFleetOwnerId requestorId
+  error "TODO"
+
 checkRequestorAccessToFleet :: Maybe Text -> Text -> Flow DP.Person
 checkRequestorAccessToFleet mbFleetOwnerId requestorId = do
-  requestor <- runInReplica $ QP.findById (Id @DP.Person requestorId) >>= fromMaybeM (PersonNotFound requestorId)
-  case requestor.role of
-    DP.ADMIN -> do
-      fleetOwnerId <- mbFleetOwnerId & fromMaybeM (InvalidRequest "Fleet owner required")
-      runInReplica $ QP.findById (Id @DP.Person fleetOwnerId) >>= fromMaybeM (PersonNotFound fleetOwnerId)
-    role | role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS] -> do
+  mbRequestor <- runInReplica $ QP.findById (Id @DP.Person requestorId)
+  case mbRequestor of
+    Nothing -> getFleetOwner -- consider ADMIN if requestor is not found in db
+    Just requestor | requestor.role == DP.ADMIN -> getFleetOwner
+    Just requestor | requestor.role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS] -> do
       whenJust mbFleetOwnerId $ \fleetOwnerId -> do
         unless (fleetOwnerId == requestorId) $ throwError AccessDenied
       pure requestor
     _ -> throwError AccessDenied
+  where
+    getFleetOwner = do
+      fleetOwnerId <- mbFleetOwnerId & fromMaybeM (InvalidRequest "Fleet owner required")
+      runInReplica $ QP.findById (Id @DP.Person fleetOwnerId) >>= fromMaybeM (PersonNotFound fleetOwnerId)
