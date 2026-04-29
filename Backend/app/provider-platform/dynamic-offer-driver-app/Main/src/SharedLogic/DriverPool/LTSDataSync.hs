@@ -24,8 +24,8 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Types.Version (Device, Version)
 import Kernel.Utils.Common
-import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 
 -- | Represents an optional field update.
 --   Unchanged  = don't touch this field in LTS (default in emptyUpdate)

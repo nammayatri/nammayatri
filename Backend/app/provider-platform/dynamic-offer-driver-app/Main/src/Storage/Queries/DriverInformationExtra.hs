@@ -22,6 +22,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Types.SpecialLocation as SL
 import qualified Sequelize as Se
 import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified Storage.Beam.Common as BeamCommon
@@ -33,7 +34,7 @@ import Storage.Queries.OrphanInstances.DriverInformation ()
 import Storage.Queries.OrphanInstances.Person ()
 import qualified Storage.Queries.Transformers.FleetOwnerInformation as Transformers
 import Tools.Error
-import qualified Lib.Types.SpecialLocation as SL
+
 -- Extra code goes here --
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)
 findById (Id driverInformationId) = findOneWithKV [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]

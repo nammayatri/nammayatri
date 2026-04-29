@@ -8,7 +8,6 @@ import qualified API.Internal.Auth as Auth
 import qualified API.Internal.BulkLocUpdate as BulkLocUpdate
 import qualified API.Internal.Cac as Cac
 import qualified API.Internal.CallCustomerFCM as CallCustomerFCM
-import qualified API.Internal.InMemManagement as InMemManagement
 import qualified API.Internal.CancellationDues as CancellationDues
 import qualified API.Internal.CustomerCancellationDues as CustomerCancellationDues
 import qualified API.Internal.DriverCoordinates as DriverCoordinates
@@ -23,6 +22,7 @@ import qualified API.Internal.FleetBookingInformation as FleetBookingInformation
 import qualified API.Internal.FleetVehiclesAssociation as FleetVehiclesAssociation
 import qualified API.Internal.GeometryList as GeometryList
 import qualified API.Internal.GeometryUpdate as GeometryUpdate
+import qualified API.Internal.InMemManagement as InMemManagement
 import qualified API.Internal.KnowYourDriver as KnowYourDriver
 import qualified API.Internal.Multimodal as Multimodal
 import qualified API.Internal.PickupInstruction as PickupInstruction
