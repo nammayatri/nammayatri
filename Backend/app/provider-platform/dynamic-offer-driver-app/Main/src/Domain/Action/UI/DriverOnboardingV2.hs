@@ -701,20 +701,22 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
     whenJust mdriverPanCard $ \driverPanCard -> do
       panNumber <- decrypt driverPanCard.panCardNumber
       mbAadhaarCard <- QAadhaarCard.findByPrimaryKey person.id
-      let mbAadhaarNumber = mbAadhaarCard >>= (.maskedAadhaarNumber)
+      mbAadhaarNumber <- traverse decrypt (mbAadhaarCard >>= (.aadhaarNumber))
       when (isNothing mbAadhaarNumber) $
         logInfo $
-          "PanAadhaarLink postDriverRegisterPancard: skipped (no maskedAadhaarNumber; Aadhaar not on file or field empty) driverId="
+          "PanAadhaarLink postDriverRegisterPancard: skipped (no aadhaarNumber; Aadhaar not on file or field empty) driverId="
             <> personId.getId
             <> " hasAadhaarRow="
             <> show (isJust mbAadhaarCard)
       whenJust mbAadhaarNumber $ \aadhaarNumber -> do
+        let panAadhaarLinkReq = VI.VerifyPanAadhaarLinkAsyncReq {panNumber, aadhaarNumber, driverId = person.id.getId}
         logInfo $
           "PanAadhaarLink postDriverRegisterPancard: calling verifyPanAadhaarLinkAsync driverId="
             <> personId.getId
+            <> " req="
+            <> show panAadhaarLinkReq
         verifyRes <-
-          Verification.verifyPanAadhaarLinkAsync person.merchantId merchantOpCityId $
-            VI.VerifyPanAadhaarLinkAsyncReq {panNumber, aadhaarNumber, driverId = person.id.getId}
+          Verification.verifyPanAadhaarLinkAsync person.merchantId merchantOpCityId panAadhaarLinkReq
         logInfo $
           "PanAadhaarLink postDriverRegisterPancard: verifyPanAadhaarLinkAsync returned requestor="
             <> show verifyRes.requestor
@@ -965,10 +967,10 @@ postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) 
   -- Trigger PAN-Aadhaar linkage if PAN card already exists
   person <- PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbAadhaarCard <- QAadhaarCard.findByPrimaryKey personId
-  let mbAadhaarNumber = mbAadhaarCard >>= (.maskedAadhaarNumber)
+  mbAadhaarNumber <- traverse decrypt (mbAadhaarCard >>= (.aadhaarNumber))
   when (isNothing mbAadhaarNumber) $
     logInfo $
-      "PanAadhaarLink postDriverRegisterAadhaarCard: skipped (no maskedAadhaarNumber after upsert) driverId="
+      "PanAadhaarLink postDriverRegisterAadhaarCard: skipped (no aadhaarNumber after upsert) driverId="
         <> personId.getId
   whenJust mbAadhaarNumber $ \aadhaarNumber -> do
     transporterConfig <- CQTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
@@ -985,12 +987,14 @@ postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) 
             <> personId.getId
       whenJust mdriverPanCard $ \driverPanCard -> do
         panNumber <- decrypt driverPanCard.panCardNumber
+        let panAadhaarLinkReq = VI.VerifyPanAadhaarLinkAsyncReq {panNumber, aadhaarNumber, driverId = person.id.getId}
         logInfo $
           "PanAadhaarLink postDriverRegisterAadhaarCard: calling verifyPanAadhaarLinkAsync driverId="
             <> personId.getId
+            <> " req="
+            <> show panAadhaarLinkReq
         verifyRes <-
-          Verification.verifyPanAadhaarLinkAsync person.merchantId merchantOperatingCityId $
-            VI.VerifyPanAadhaarLinkAsyncReq {panNumber, aadhaarNumber, driverId = person.id.getId}
+          Verification.verifyPanAadhaarLinkAsync person.merchantId merchantOperatingCityId panAadhaarLinkReq
         logInfo $
           "PanAadhaarLink postDriverRegisterAadhaarCard: verifyPanAadhaarLinkAsync returned requestor="
             <> show verifyRes.requestor
@@ -1593,7 +1597,7 @@ mkIdfyVerificationEntityPanAadhaarLink person imageId1 requestId now encryptedPa
         documentNumber = encryptedPan,
         issueDateOnDoc = Nothing,
         driverDateOfBirth = Nothing,
-        docType = DTO.PanCard,
+        docType = DTO.PanAadhaarLinkage,
         status = "pending",
         idfyResponse = Nothing,
         retryCount = Just 0,
