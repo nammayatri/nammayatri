@@ -938,28 +938,27 @@ postPaymentVerifyVpa ::
     Kernel.Prelude.Text ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postPaymentVerifyVpa (mbPersonId, merchantId) vpa = do
+postPaymentVerifyVpa (mbPersonId, _merchantId) vpa = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  -- let verifyVPAReq =
+  --       VerifyVPAReq
+  --         { orderId = Nothing,
+  --           customerId = Nothing,
+  --           vpa = vpa
+  --         }
+  --     verifyVpaCall = TPayment.verifyVpa merchantId person.merchantOperatingCityId Nothing TPayment.Normal (Just person.id.getId) person.clientSdkVersion
+  -- resp <- withTryCatch "verifyVPAService:vpaVerificationForOffers" $ DPayment.verifyVPAService verifyVPAReq verifyVpaCall
+  -- case resp of
+  --   Left e -> throwError $ InvalidRequest $ "VPA Verification Failed: " <> show e
+  --   Right response -> do
+  --     if response.status == "VALID"
+  --       then do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  let verifyVPAReq =
-        VerifyVPAReq
-          { orderId = Nothing,
-            customerId = Nothing,
-            vpa = vpa
-          }
-      verifyVpaCall = TPayment.verifyVpa merchantId person.merchantOperatingCityId Nothing TPayment.Normal (Just person.id.getId) person.clientSdkVersion
-  resp <- withTryCatch "verifyVPAService:vpaVerificationForOffers" $ DPayment.verifyVPAService verifyVPAReq verifyVpaCall
-  case resp of
-    Left e -> throwError $ InvalidRequest $ "VPA Verification Failed: " <> show e
-    Right response -> do
-      if response.status == "VALID"
-        then do
-          let updatedPerson = person{payoutVpa = Just vpa}
-          QPerson.updateByPrimaryKey updatedPerson
-          when (isNothing person.payoutVpa) $
-            triggerPendingCashRideCashbackPayoutJob updatedPerson
-          pure Success
-        else throwError $ InvalidRequest $ "VPA Verification Failed with status: " <> response.status
+  QPerson.updatePayoutVpa (Just vpa) personId
+  when (isNothing person.payoutVpa) $ do
+    triggerPendingCashRideCashbackPayoutJob person{payoutVpa = Just vpa}
+  pure Success
+        -- else throwError $ InvalidRequest $ "VPA Verification Failed with status: " <> response.status
 
 getPaymentVpaFromNumber ::
   ( ( Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
