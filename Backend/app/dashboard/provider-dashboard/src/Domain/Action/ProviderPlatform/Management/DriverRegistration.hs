@@ -173,9 +173,8 @@ postDriverRegistrationDocumentsUpdate merchantShortId opCity apiTokenInfo req = 
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $ do
     res <- Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationDocumentsUpdate) req
-    when (res.enabled) $
-      whenJust res.personId $ \personId ->
-        QP.updatePersonVerifiedStatus (cast personId) True
+    whenJust res.personId $ \personId ->
+      QP.updatePersonVerifiedStatus (cast personId) res.enabled
     pure res
 
 postDriverRegistrationRegisterAadhaar :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.AadhaarCardReq -> Flow APISuccess
