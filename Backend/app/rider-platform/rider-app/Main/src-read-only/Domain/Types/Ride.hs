@@ -51,6 +51,7 @@ data RideE e = Ride
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverAccountId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.AccountId,
     driverAlternateNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
+    driverArrivalStatus :: Kernel.Prelude.Maybe Domain.Types.Ride.DriverArrivalStatus,
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverMobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -148,6 +149,7 @@ instance EncryptedItem Ride where
           distanceUnit = distanceUnit entity,
           driverAccountId = driverAccountId entity,
           driverAlternateNumber = driverAlternateNumber_,
+          driverArrivalStatus = driverArrivalStatus entity,
           driverArrivalTime = driverArrivalTime entity,
           driverImage = driverImage entity,
           driverMobileCountryCode = driverMobileCountryCode entity,
@@ -237,6 +239,7 @@ instance EncryptedItem Ride where
             distanceUnit = distanceUnit entity,
             driverAccountId = driverAccountId entity,
             driverAlternateNumber = driverAlternateNumber_,
+            driverArrivalStatus = driverArrivalStatus entity,
             driverArrivalTime = driverArrivalTime entity,
             driverImage = driverImage entity,
             driverMobileCountryCode = driverMobileCountryCode entity,
@@ -310,6 +313,8 @@ data BPPRide = BPPRide {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data CancellationFeeStatus = PENDING | CLEARED | WAIVED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+data DriverArrivalStatus = DRIVER_ON_THE_WAY | DRIVER_REACHING | DRIVER_REACHED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data EstimatedEndTimeRange = EstimatedEndTimeRange {end :: Kernel.Prelude.UTCTime, start :: Kernel.Prelude.UTCTime} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data PaymentStatus = Completed | NotInitiated | Initiated | Cancelled | Failed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -326,6 +331,8 @@ data UnexpectedConditionStage = DriverDeviated | UnusualStop | UnsafeArea derivi
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancellationFeeStatus)
 
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverArrivalStatus)
+
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentStatus)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosJourneyStatus)
@@ -333,3 +340,5 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosJourneyStatus)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''UnexpectedConditionStage)
 
 $(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PaymentStatus)
+
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''DriverArrivalStatus)

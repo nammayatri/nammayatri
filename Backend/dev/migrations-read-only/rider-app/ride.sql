@@ -429,3 +429,8 @@ ALTER TABLE atlas_app.ride ADD COLUMN discount_amount double precision ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ADD COLUMN offers_fraud_check_failure_reason text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN driver_arrival_status text ;
