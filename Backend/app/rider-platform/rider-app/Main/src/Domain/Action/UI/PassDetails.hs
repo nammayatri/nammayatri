@@ -88,19 +88,12 @@ createPassDetail req person passEnum = do
   let verificationDate = Data.Time.addUTCTime (730 * Data.Time.nominalDay) now
 
   -- Calculate applicable route IDs, route pairs, and number of stages based on src and dest stop codes
-  (applicableRouteIds, routePairs, numberOfStages) <- case (req.srcStopId, req.destStopId) of
-    (Just srcStopCode, Just destStopCode) -> do
-      routeIds <- calculateApplicableRouteIds person.merchantOperatingCityId srcStopCode destStopCode
-      stages <- calculateNumberOfStages person.merchantOperatingCityId routeIds srcStopCode destStopCode
-      let routePair =
-            DPassDetails.RoutePair
-              { srcStopName = fromMaybe srcStopCode req.srcStopName,
-                destStopName = fromMaybe destStopCode req.destStopName,
-                srcStageName = srcStopCode,
-                destStageName = destStopCode
-              }
-      pure (Just routeIds, [routePair], stages)
-    _ -> pure (Nothing, [], Nothing)
+  (applicableRouteIds, routePairs, numberOfStages) <- case (not (null req.routeDetails)) of
+    True -> do
+      (routeIds, stages) <- calculateApplicableRouteIdsStageCount person.merchantOperatingCityId req.routeDetails 0 []
+      let routePair = constructRoutePairs req.routeDetails []
+      pure (Just routeIds, routePair, Just stages)
+    False -> pure (Nothing, [], Nothing)
 
   let passDetail =
         DPassDetails.PassDetails
@@ -134,19 +127,12 @@ createPassDetail req person passEnum = do
 updatePassDetail :: PassDetailsAPI.PassDetailsUpdateReq -> DPerson.Person -> DPassType.PassEnum -> DPassDetails.PassDetails -> Environment.Flow ()
 updatePassDetail req person _passEnum passDetail = do
   -- Calculate applicable route IDs, route pairs, and number of stages based on src and dest stop codes
-  (applicableRouteIds, routePairs, numberOfStages) <- case (req.srcStopId, req.destStopId) of
-    (Just srcStopCode, Just destStopCode) -> do
-      routeIds <- calculateApplicableRouteIds person.merchantOperatingCityId srcStopCode destStopCode
-      stages <- calculateNumberOfStages person.merchantOperatingCityId routeIds srcStopCode destStopCode
-      let routePair =
-            DPassDetails.RoutePair
-              { srcStopName = fromMaybe srcStopCode req.srcStopName,
-                destStopName = fromMaybe destStopCode req.destStopName,
-                srcStageName = srcStopCode,
-                destStageName = destStopCode
-              }
-      pure (Just routeIds, [routePair], stages)
-    _ -> pure (passDetail.applicableRouteIds, passDetail.routePairs, passDetail.numberOfStages)
+  (applicableRouteIds, routePairs, numberOfStages) <- case (not (null req.routeDetails)) of
+    True -> do
+      (routeIds, stages) <- calculateApplicableRouteIdsStageCount person.merchantOperatingCityId req.routeDetails 0 []
+      let routePair = constructRoutePairs req.routeDetails []
+      pure (Just routeIds, routePair, Just stages)
+    False -> pure (Nothing, [], Nothing)
 
   let updatedPassDetails =
         passDetail
@@ -165,23 +151,42 @@ updatePassDetail req person _passEnum passDetail = do
           }
   QPassDetails.updateByPrimaryKey updatedPassDetails
 
+constructRoutePairs :: [PassDetailsAPI.RouteDetails] -> [DPassDetails.RoutePair] -> [DPassDetails.RoutePair]
+constructRoutePairs [] acc = acc
+constructRoutePairs (routeDetail : rest) acc =
+  let routePair =
+        DPassDetails.RoutePair
+          { srcStageName = routeDetail.srcStopId,
+            srcStopName = routeDetail.srcStopName,
+            destStageName = routeDetail.destStopId,
+            destStopName = routeDetail.destStopName
+          }
+   in constructRoutePairs rest (acc ++ [routePair])
+
 -- | Calculate applicable route IDs by getting routes bidirectionally (forward + reverse)
-calculateApplicableRouteIds ::
+calculateApplicableRouteIdsStageCount ::
   Id.Id DMOC.MerchantOperatingCity ->
-  Kernel.Prelude.Text ->
-  Kernel.Prelude.Text ->
-  Environment.Flow [Kernel.Prelude.Text]
-calculateApplicableRouteIds merchantOperatingCityId srcStopCode destStopCode = do
+  [PassDetailsAPI.RouteDetails] ->
+  Int ->
+  [Kernel.Prelude.Text] ->
+  Environment.Flow ([Kernel.Prelude.Text], Int)
+calculateApplicableRouteIdsStageCount _ [] currentStages acc = pure (acc, currentStages)
+calculateApplicableRouteIdsStageCount merchantOperatingCityId (routeDetail : rest) currentStages acc = do
+  let srcStopCode = routeDetail.srcStopId
+      destStopCode = routeDetail.destStopId
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
   case Kernel.Prelude.listToMaybe integratedBPPConfigs of
-    Nothing -> pure []
+    Nothing -> pure (acc, currentStages)
     Just integratedBPPConfig -> do
       -- Get routes in forward direction (src -> dest)
       forwardRoutes <- JMUtils.getRouteCodesFromTo srcStopCode destStopCode integratedBPPConfig
       -- Get routes in reverse direction (dest -> src)
       reverseRoutes <- JMUtils.getRouteCodesFromTo destStopCode srcStopCode integratedBPPConfig
       -- Combine and deduplicate
-      pure $ L.nub $ forwardRoutes <> reverseRoutes
+      let routeIds = L.nub $ forwardRoutes <> reverseRoutes
+      mbNumberOfStages <- calculateNumberOfStages merchantOperatingCityId routeIds srcStopCode destStopCode
+      numberOfStages <- fromMaybeM (InvalidRequest "Stage Calculation Failed") mbNumberOfStages
+      calculateApplicableRouteIdsStageCount merchantOperatingCityId rest (numberOfStages + currentStages) (acc ++ routeIds)
 
 -- | Calculate the number of stages between two stops using fare stage numbers
 calculateNumberOfStages ::

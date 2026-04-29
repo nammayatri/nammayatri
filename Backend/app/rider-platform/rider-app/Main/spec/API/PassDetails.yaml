@@ -9,6 +9,12 @@ imports:
 module: PassDetails
 
 types:
+  RouteDetails:
+    srcStopName: Text
+    srcStopId: Text
+    destStopName: Text
+    destStopId: Text
+
   PassDetailsUpdateReq:
     passOrganizationId: Id PassOrganization
     name: Text
@@ -17,10 +23,7 @@ types:
     age: Maybe Int
     guardianName: Maybe Text
     studentClass: Maybe Text
-    srcStopName: Maybe Text
-    srcStopId: Maybe Text
-    destStopName: Maybe Text
-    destStopId: Maybe Text
+    routeDetails: "[RouteDetails]"
     registerNo: Maybe Text
     verificationStatus: VerificationStatus
     graduationDate: Maybe UTCTime

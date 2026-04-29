@@ -37,16 +37,13 @@ data PassDetailsDataResp = PassDetailsDataResp
 data PassDetailsUpdateReq = PassDetailsUpdateReq
   { address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     age :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    destStopId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    destStopName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     graduationDate :: Kernel.Prelude.Maybe Data.Time.UTCTime,
     guardianName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     idCardPicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     name :: Kernel.Prelude.Text,
     passOrganizationId :: Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization,
     registerNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    srcStopId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    srcStopName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    routeDetails :: [RouteDetails],
     studentClass :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     verificationStatus :: Domain.Types.PassDetails.VerificationStatus
   }
@@ -54,5 +51,9 @@ data PassDetailsUpdateReq = PassDetailsUpdateReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data PassStatusResp = PassStatusResp {remark :: Kernel.Prelude.Maybe Kernel.Prelude.Text, verificationDate :: Kernel.Prelude.Maybe Data.Time.UTCTime, verificationStatus :: Domain.Types.PassDetails.VerificationStatus}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RouteDetails = RouteDetails {destStopId :: Kernel.Prelude.Text, destStopName :: Kernel.Prelude.Text, srcStopId :: Kernel.Prelude.Text, srcStopName :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
