@@ -1682,8 +1682,10 @@ data PickupZoneRequestEntityData = PickupZoneRequestEntityData
   deriving (Generic, ToJSON, FromJSON, Show)
 
 notifyPickupZoneRequest ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
@@ -1704,10 +1706,26 @@ notifyPickupZoneRequest merchantOpCityId driverId entityData = do
       ("specialLocationName", entityData.specialLocationName)
     ]
     Nothing
+  -- GRPC backstop: fire alongside FCM so the driver UI can de-dupe by requestId on FCFS.
+  -- Isolated via try so a missing/misconfigured GRPC service config never drops the FCM.
+  grpcResult <-
+    try @_ @SomeException $
+      notifyWithGRPCProvider
+        merchantOpCityId
+        Notification.PICKUP_ZONE_REQUEST
+        "PICKUP_ZONE_REQUEST"
+        ("Move to " <> entityData.gateName <> " at " <> entityData.specialLocationName)
+        driverId
+        entityData
+  case grpcResult of
+    Left e -> logWarning $ "GRPC pickup zone notification failed for driver " <> driverId.getId <> ": " <> show e
+    Right _ -> pure ()
 
 notifyPickupNoShow ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
@@ -1728,3 +1746,15 @@ notifyPickupNoShow merchantOpCityId driverId entityData = do
       ("specialLocationName", entityData.specialLocationName)
     ]
     Nothing
+  grpcResult <-
+    try @_ @SomeException $
+      notifyWithGRPCProvider
+        merchantOpCityId
+        Notification.PICKUP_ZONE_NO_SHOW
+        "PICKUP_ZONE_NO_SHOW"
+        ("No show to" <> entityData.gateName <> " at " <> entityData.specialLocationName)
+        driverId
+        entityData
+  case grpcResult of
+    Left e -> logWarning $ "GRPC pickup zone no-show notification failed for driver " <> driverId.getId <> ": " <> show e
+    Right _ -> pure ()

@@ -9,6 +9,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SpecialZoneQueueRequest as DSZQR
 import Kernel.External.Maps.Types (LatLong (..))
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -25,14 +26,16 @@ import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
 import qualified Tools.Notifications as Notify
 
 checkPickupZoneArrival ::
-  ( CacheFlow m r,
+  ( ServiceFlow m r,
+    CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     MonadFlow m,
     MonadMask m,
     HasLocationService m r,
     HasShortDurationRetryCfg r c,
-    HasRequestId r
+    HasRequestId r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Job 'CheckPickupZoneArrival ->
   m ExecutionResult
@@ -49,14 +52,16 @@ checkPickupZoneArrival Job {id = jobId, jobInfo} = withLogTag ("JobId-" <> jobId
   return Complete
 
 runArrivalCheckForRequest ::
-  ( CacheFlow m r,
+  ( ServiceFlow m r,
+    CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     MonadFlow m,
     MonadMask m,
     HasLocationService m r,
     HasShortDurationRetryCfg r c,
-    HasRequestId r
+    HasRequestId r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Id DSZQR.SpecialZoneQueueRequest ->
   Id DP.Person ->
