@@ -601,6 +601,7 @@ library
       Storage.Clickhouse.FRFSTicketBooking
       Storage.Clickhouse.Location
       Storage.Clickhouse.Person
+      Storage.Clickhouse.PurchasedPassPayment
       Storage.Clickhouse.QuoteBreakup
       Storage.Clickhouse.Ride
       Storage.Clickhouse.Sos
