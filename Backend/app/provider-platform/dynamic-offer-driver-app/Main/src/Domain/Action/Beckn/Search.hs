@@ -24,6 +24,7 @@ module Domain.Action.Beckn.Search
     validateRequest,
     buildEstimate,
     getIsInterCity,
+    isTripCategoryAllowedForNonValueAddNP,
   )
 where
 
@@ -904,8 +905,10 @@ validateRequest merchant sReq = do
   transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId (Just (TransactionId (Id sReq.transactionId))) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   (isInterCity, isCrossCity, destinationTravelCityName) <- checkForIntercityOrCrossCity transporterConfig sReq.dropLocation sReq.toSpecialLocationId sourceCity merchant
   now <- getCurrentTime
-  let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity isCrossCity destinationTravelCityName
-      isMeterRideSearch = sReq.isMeterRideSearch
+  let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity isCrossCity destinationTravelCityName isValueAddNP
+  when (not isValueAddNP && null possibleTripOption.tripCategories) $
+    throwError (UnserviceableTripCategory "no serviceable trip categories found for this BAP")
+  let isMeterRideSearch = sReq.isMeterRideSearch
       isReserveRide = sReq.isReserveRide
       reserveRideEstimate = sReq.reserveRideEstimate
       numberOfLuggages = sReq.numberOfLuggages
@@ -960,13 +963,14 @@ checkForIntercityOrCrossCity transporterConfig mbDropLocation mbToSpecialLocatio
             else throwError (RideNotServiceableInState $ show destinationCityState.state)
     _ -> pure (False, False, Nothing)
 
-getPossibleTripOption :: UTCTime -> DTMT.TransporterConfig -> DSearchReq -> Bool -> Bool -> Maybe Text -> TripOption
-getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelCityName = do
+getPossibleTripOption :: UTCTime -> DTMT.TransporterConfig -> DSearchReq -> Bool -> Bool -> Maybe Text -> Bool -> TripOption
+getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelCityName isValueAddNP = do
   let (schedule, isScheduled) =
         if maybe True not dsReq.isMultimodalSearch && tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime
           then (dsReq.pickupTime, True)
           else (now, False)
-      tripCategories =
+      applyValueAddNPFilter cats = if isValueAddNP then cats else filter isTripCategoryAllowedForNonValueAddNP cats
+      tripCategories = applyValueAddNPFilter $
         if checkIfMeterRideSearch dsReq.isMeterRideSearch
           then [OneWay MeterRide]
           else do
@@ -993,6 +997,12 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
     checkIfMeterRideSearch isMeterRideSearch = case isMeterRideSearch of
       Just isMeterRide -> isMeterRide
       Nothing -> False
+
+isTripCategoryAllowedForNonValueAddNP :: TripCategory -> Bool
+isTripCategoryAllowedForNonValueAddNP = \case
+  OneWay OneWayOnDemandDynamicOffer -> True
+  CrossCity OneWayOnDemandDynamicOffer _ -> True
+  _ -> False
 
 getDriverIdFromIdentifier :: DRL.DriverIdentifier -> Flow (Id DP.Person)
 getDriverIdFromIdentifier driverInfo =
