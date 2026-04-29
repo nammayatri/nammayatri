@@ -14,19 +14,29 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
 import qualified Storage.Clickhouse.FRFSTicketBooking as CHFRFS
 import qualified Storage.Clickhouse.Person as CHPerson
+import qualified Storage.Clickhouse.PurchasedPassPayment as CHPPP
 import qualified Storage.Queries.RiderConfig as QRiderConfig
+
+-- Request Type
+newtype DailyMetricsRequest = DailyMetricsRequest
+  { date :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 -- Response Types
 type DailyMetricsResponse = [DailyMetricRow]
 
 data DailyMetricRow = DailyMetricRow
   { date :: Text,
-    bookingCount :: Int,
-    totalPassengerCount :: Int,
-    totalRevenue :: Double,
-    vehicleType :: Text,
+    bookingCount :: Maybe Int,
+    totalPassengerCount :: Maybe Int,
+    totalRevenue :: Maybe Double,
+    vehicleType :: Maybe Text,
     newRegistrations :: Maybe Int,
-    osType :: Maybe Text
+    osType :: Maybe Text,
+    passCode :: Maybe Text,
+    passCount :: Maybe Int,
+    passRevenue :: Maybe Double
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -44,16 +54,25 @@ data RegistrationSummary = RegistrationSummary
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
+data PassSummary = PassSummary
+  { passCode :: Text,
+    passCount :: Int,
+    passRevenue :: Double
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
 -- Redis cache types
 data RedisMetricsData = RedisMetricsData
   { bookings :: [BookingSummary],
-    registrations :: [RegistrationSummary]
+    registrations :: [RegistrationSummary],
+    passes :: [PassSummary]
   }
   deriving (Generic, ToJSON, FromJSON, Show)
 
 -- Main handler with API key authentication
-getDailyMetricsWithAuth :: Maybe Text -> Maybe Text -> Text -> FlowHandler DailyMetricsResponse
-getDailyMetricsWithAuth mbApiKey mbIpAddress dateStr = withFlowHandlerAPI $ do
+getDailyMetricsWithAuth :: Maybe Text -> Maybe Text -> DailyMetricsRequest -> FlowHandler DailyMetricsResponse
+getDailyMetricsWithAuth mbApiKey mbIpAddress req = withFlowHandlerAPI $ do
+  let dateStr = req.date
   -- Validate API key and get merchant operating city ID from mapping
   merchantOpCityIdText <- validateApiKeyAndGetCityId mbApiKey
 
@@ -79,25 +98,36 @@ getDailyMetricsWithAuth mbApiKey mbIpAddress dateStr = withFlowHandlerAPI $ do
   -- Return the response
   let bookings = metricsData.bookings
   let registrations = metricsData.registrations
-  pure $ transformToFlat dateStr bookings registrations
+  let passes = metricsData.passes
+  pure $ transformToFlat dateStr bookings registrations passes
 
-transformToFlat :: Text -> [BookingSummary] -> [RegistrationSummary] -> [DailyMetricRow]
-transformToFlat dateStr bookings registrations =
-  let paddedRegistrations = map Just registrations ++ repeat Nothing
-      pairs = zip bookings paddedRegistrations
-   in map (\(b, r) -> mkRow dateStr b r) pairs
+transformToFlat :: Text -> [BookingSummary] -> [RegistrationSummary] -> [PassSummary] -> [DailyMetricRow]
+transformToFlat dateStr bookings registrations passes =
+  let rowCount = length bookings `max` length registrations `max` length passes
+      triples = zip3 (padTo rowCount bookings) (padTo rowCount registrations) (padTo rowCount passes)
+   in map (\(b, r, p) -> mkRow dateStr b r p) triples
 
-mkRow :: Text -> BookingSummary -> Maybe RegistrationSummary -> DailyMetricRow
-mkRow dateStr b r =
+padTo :: Int -> [a] -> [Maybe a]
+padTo n xs = map Just xs ++ replicate (n - length xs) Nothing
+
+mkRow :: Text -> Maybe BookingSummary -> Maybe RegistrationSummary -> Maybe PassSummary -> DailyMetricRow
+mkRow dateStr b r p =
   DailyMetricRow
     { date = dateStr,
-      bookingCount = b.bookingCount,
-      totalPassengerCount = b.totalPassengerCount,
-      totalRevenue = b.totalRevenue,
-      vehicleType = b.vehicleType,
+      bookingCount = fmap (.bookingCount) b,
+      totalPassengerCount = fmap (.totalPassengerCount) b,
+      totalRevenue = fmap (.totalRevenue) b,
+      vehicleType = fmap (remapVehicleType . (.vehicleType)) b,
       newRegistrations = fmap (.newRegistrations) r,
-      osType = fmap (.osType) r
+      osType = fmap (.osType) r,
+      passCode = fmap (.passCode) p,
+      passCount = fmap (.passCount) p,
+      passRevenue = fmap (.passRevenue) p
     }
+
+remapVehicleType :: Text -> Text
+remapVehicleType "SUBWAY" = "SUBURBAN"
+remapVehicleType v = v
 
 queryMetricsFromClickHouse :: (MonadFlow m, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Id DMOC.MerchantOperatingCity -> Text -> m RedisMetricsData
 queryMetricsFromClickHouse merchantOpCityId dateStr = do
@@ -110,11 +140,14 @@ queryMetricsFromClickHouse merchantOpCityId dateStr = do
   registrationMetrics <- CHPerson.getRegistrationMetricsByDateRange merchantOpCityId targetDate
   -- Transform to response format
   let registrationSummaries = map transformRegistrationMetrics registrationMetrics
+  passMetrics <- CHPPP.getPassPaymentMetricsByDateRange merchantOpCityId targetDate
+  let passSummaries = map transformPassMetrics passMetrics
 
   pure $
     RedisMetricsData
       { bookings = bookingSummaries,
-        registrations = registrationSummaries
+        registrations = registrationSummaries,
+        passes = passSummaries
       }
 
 -- Transform ClickHouse booking metrics to API response format
@@ -133,6 +166,16 @@ transformRegistrationMetrics metrics =
   RegistrationSummary
     { osType = fromMaybe "Unknown" metrics.metricsClientOsType,
       newRegistrations = metrics.metricsUserCount
+    }
+
+-- Transform ClickHouse pass payment metrics to API response format.
+-- Cost per pass = sum(amount) + sum(benefitValue), grouped by passCode.
+transformPassMetrics :: CHPPP.PassPaymentMetrics -> PassSummary
+transformPassMetrics metrics =
+  PassSummary
+    { passCode = metrics.metricsPassCode,
+      passCount = metrics.metricsPassCount,
+      passRevenue = realToFrac (metrics.metricsTotalAmount + metrics.metricsTotalBenefitValue)
     }
 
 -- IP-based rate limiting
