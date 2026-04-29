@@ -2407,9 +2407,6 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
       let name = fleetOwner.firstName <> maybe "" (" " <>) fleetOwner.middleName <> maybe "" (" " <>) fleetOwner.lastName
       mobileNo' <- mapM decrypt fleetOwner.mobileNumber
 
-      -- Fetch DriverInformation for upiId
-      mbDriverInfo <- QDriverInfo.findById fleetOwnerPersonId
-
       -- Fetch GSTIN details for gstinApplicableFlag and gstImageId
       mbGstin <- QDGExtra.findGSTInByDriverId fleetOwnerPersonId
       let gstinApplicableFlag = mbGstin <&> \gstin -> gstin.verificationStatus == Documents.VALID
@@ -2432,8 +2429,8 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
       let walletId' = (\acc -> acc.id.getId) <$> mbWalletAccount
       let bankVerificationStatus' = mbBankAccount <&> (\ba -> if ba.detailsSubmitted then "VERIFIED" else "PENDING")
 
-      -- upiId from DriverInformation
-      let upiId' = mbDriverInfo >>= (.payoutVpa)
+      -- upiId from FleetOwnerInformation
+      let upiId' = payoutVpa
 
       -- Fetch linked drivers
       linkedDrivers <- FDV.findAllActiveByFleetOwnerId fleetOwnerPersonId.getId
