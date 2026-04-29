@@ -271,28 +271,33 @@ getWalletTransactionHistory (mbPersonId, _merchantId, _mocId) mbFromDate mbToDat
   validateInput
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  let counterparty = counterpartyFromRole person.role
-  mbWalletAcc <- getWalletAccountByOwner counterparty driverId.getId
+  let counterParty = counterpartyFromRole person.role
+  mbWalletAcc <- getWalletAccountByOwner counterParty driverId.getId
   case mbWalletAcc of
     Nothing -> pure DriverWallet.WalletTransactionHistoryResponse {items = []}
     Just walletAcc -> do
       entries <- QLedgerEntry.findByAccountsWithOptions [walletAcc.id] [] mbFromDate mbToDate mbLimit mbOffset
       let topupOrderIds = [Id e.referenceId | e <- entries, e.referenceType == walletReferenceTopup]
       walletTxns <- QWalletTransaction.findAllByPaymentOrderIds topupOrderIds
-      let statusByOrderId = Map.fromList [(wt.paymentOrderId.getId, wt.status) | wt <- walletTxns]
+      let walletStatusByOrderId = Map.fromList [(wt.paymentOrderId.getId, wt.status) | wt <- walletTxns]
       let mkItem e =
             let isTopup = e.referenceType == walletReferenceTopup
-                statusText =
+                paymentOrder =
                   if isTopup
-                    then maybe (show e.status) show (Map.lookup e.referenceId statusByOrderId)
-                    else show e.status
+                    then
+                      Just
+                        DriverWallet.PaymentOrderInfo
+                          { id = Id e.referenceId,
+                            walletStatus = fromMaybe DWT.SUCCESS (Map.lookup e.referenceId walletStatusByOrderId)
+                          }
+                    else Nothing
              in DriverWallet.WalletTransactionHistoryItem
                   { itemReference = e.referenceType,
                     itemName = referenceTypeToItemName e.referenceType,
                     itemValue = e.amount,
                     isCredit = e.toAccountId == walletAcc.id,
-                    status = statusText,
-                    paymentOrderId = if isTopup then Just (Id e.referenceId) else Nothing,
+                    status = e.status,
+                    paymentOrder = paymentOrder,
                     date = e.timestamp
                   }
       pure DriverWallet.WalletTransactionHistoryResponse {items = map mkItem entries}
@@ -574,8 +579,9 @@ postWalletTopup (mbPersonId, merchantId, mocId) = doWalletTopup mbPersonId merch
 
     handleWalletTransaction driverId mId mocId0 amount mbExisting returnedOrderId =
       case mbExisting of
-        Just existing | existing.paymentOrderId == returnedOrderId ->
-          pure ()
+        Just existing
+          | existing.paymentOrderId == returnedOrderId ->
+            pure ()
         Just existing -> do
           QWalletTransaction.updateStatus DWT.EXPIRED existing.paymentOrderId
           insertWalletTransaction driverId mId mocId0 returnedOrderId amount
