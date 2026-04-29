@@ -41,6 +41,7 @@ import qualified Domain.Action.UI.MerchantPaymentMethod as DMPM
 import qualified Domain.SharedLogic.RideDiscount as RD
 import Domain.Types.Booking
 import Domain.Types.Booking as DBooking
+import Domain.Types.BppDetails (BppDetails)
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.CancellationReason
 import Domain.Types.FRFSRouteDetails
@@ -51,6 +52,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Quote as SQuote
+import qualified Domain.Types.QuoteBreakup as DQB
 import qualified Domain.Types.RideStatus as DRide
 import Domain.Types.RiderConfig (VehicleServiceTierOrderConfig)
 import qualified Domain.Types.RiderPreferredOption as DRPO
@@ -64,7 +66,6 @@ import Kernel.Beam.Functions
 import Kernel.External.Maps.Types
 import Kernel.Prelude hiding (whenJust)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
-import Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Streaming.Kafka.Topic.PublicTransportQuoteList
@@ -252,29 +253,73 @@ isHighPriorityBooking bookingDetails = case bookingDetails of
   DBooking.AmbulanceDetails _ -> True
   _ -> False
 
-getOffers :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m [OfferRes]
+getOffers :: SSR.SearchRequest -> Flow [OfferRes]
 getOffers searchRequest = do
   logDebug $ "search Request is : " <> show searchRequest
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
+  let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
   case searchRequest.toLocation of
     Just _ -> do
       quoteList <- sortByNearestDriverDistance <$> runInReplica (QQuote.findAllBySRId searchRequest.id)
       logDebug $ "quotes are :-" <> show quoteList
       bppDetailList <- forM ((.providerId) <$> quoteList) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
       isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
+      quoteEntities <- mkQuoteAPIEntitiesWithOffers searchRequest enableRideHailingOffers quoteList bppDetailList isValueAddNPList
       let quotes = case searchRequest.riderPreferredOption of
-            DRPO.Rental -> OnRentalCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
-            _ -> OnDemandCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
+            DRPO.Rental -> OnRentalCab <$> quoteEntities
+            _ -> OnDemandCab <$> quoteEntities
       return . sortBy (compare `on` creationTime) $ quotes
     Nothing -> do
       quoteList <- sortByEstimatedFare <$> runInReplica (QQuote.findAllBySRId searchRequest.id)
       logDebug $ "quotes are :-" <> show quoteList
       bppDetailList <- forM ((.providerId) <$> quoteList) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
       isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
+      quoteEntities <- mkQuoteAPIEntitiesWithOffers searchRequest enableRideHailingOffers quoteList bppDetailList isValueAddNPList
       let quotes = case searchRequest.isMeterRideSearch of
-            Just True -> OnMeterRide <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
-            _ -> OnRentalCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
+            Just True -> OnMeterRide <$> quoteEntities
+            _ -> OnRentalCab <$> quoteEntities
       return . sortBy (compare `on` creationTime) $ quotes
   where
+    mkQuoteAPIEntitiesWithOffers ::
+      SSR.SearchRequest ->
+      Bool ->
+      [SQuote.Quote] ->
+      [BppDetails] ->
+      [Bool] ->
+      Flow [QuoteAPIEntity]
+    mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDetailList isValueAddNPList = do
+      let quoteEntitiesWithCtx =
+            zip
+              (mkQAPIEntityList quoteList bppDetailList isValueAddNPList)
+              ( quoteList <&> \q ->
+                  let mbBreakup = RD.parseProjectFareParamsBreakup $ quoteBreakupToFareTuple <$> q.quoteBreakupList
+                      offerBaseAmount = case mbBreakup of
+                        Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
+                        Nothing -> q.estimatedFare.amount
+                      offerBasePrice = mkPrice (Just q.estimatedFare.currency) offerBaseAmount
+                   in (show q.vehicleServiceTierType, mbBreakup, offerBasePrice)
+              )
+          products = map (\(_, (productId, _, price)) -> (productId, price)) quoteEntitiesWithCtx
+      productOffers <-
+        if enableRideHailingOffers
+          then
+            withTryCatch
+              "getOffers:offerListWithBasket"
+              (SOffer.offerListWithBasket searchReq.merchantId searchReq.riderId searchReq.merchantOperatingCityId DOrder.RideHailing products Nothing Nothing (Just searchReq))
+              >>= \case
+                Left _ -> pure []
+                Right r -> pure r
+          else pure []
+      let offerMap = Map.fromList productOffers
+      forM quoteEntitiesWithCtx $ \(quoteEntity, (productId, mbBreakup, _)) -> do
+        mbOffer <- case Map.lookup productId offerMap of
+          Nothing -> pure Nothing
+          Just resp -> SOffer.mkCumulativeOfferResp searchReq.merchantOperatingCityId resp [] mbBreakup
+        pure quoteEntity {customerOffers = mbOffer}
+
+    quoteBreakupToFareTuple :: DQB.QuoteBreakup -> (Text, HighPrecMoney)
+    quoteBreakupToFareTuple qb = (qb.title, qb.price.amount)
+
     sortByNearestDriverDistance quoteList = do
       let sortFunc = compare `on` getMbDistanceToNearestDriver
       sortBy sortFunc quoteList
