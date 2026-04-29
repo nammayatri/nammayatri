@@ -866,7 +866,7 @@ instance IsHTTPError CancellationError where
     CancellationNotSupported -> "CANCELLATION_NOT_SUPPORTED"
 
   toHttpCode = \case
-    CancellationNotSupported -> E500
+    CancellationNotSupported -> E400
 
 instance IsAPIError CancellationError
 

@@ -157,6 +157,7 @@ library
       Domain.Action.Beckn.FRFS.Common
       Domain.Action.Beckn.FRFS.GWLink
       Domain.Action.Beckn.FRFS.OnCancel
+      Domain.Action.Beckn.FRFS.OnCancel.Core
       Domain.Action.Beckn.FRFS.OnConfirm
       Domain.Action.Beckn.FRFS.OnInit
       Domain.Action.Beckn.FRFS.OnSearch
@@ -320,6 +321,7 @@ library
       Domain.Action.UI.Whatsapp
       Domain.Action.UnifiedDashboard.Management.HealthCheck
       Domain.Action.UnifiedDashboard.RideBooking.HealthCheck
+      Domain.Types.Beckn.FRFS.OnCancel
       Domain.Types.Beckn.FRFS.OnSearch
       Domain.Types.Booking.API
       Domain.Types.CacType
@@ -463,6 +465,7 @@ library
       SharedLogic.External.Nandi.Types
       SharedLogic.Finance.RidePayment
       SharedLogic.FRFSCancel
+      SharedLogic.FRFSCancelJourney
       SharedLogic.FRFSConfirm
       SharedLogic.FRFSFareCalculator
       SharedLogic.FRFSSeatBooking
@@ -544,6 +547,7 @@ library
       Storage.CachedQueries.BppDetails
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FollowRide
+      Storage.CachedQueries.FRFSCancellationConfig
       Storage.CachedQueries.FRFSConfig
       Storage.CachedQueries.FRFSGtfsStageFare
       Storage.CachedQueries.HotSpotConfig
@@ -963,6 +967,7 @@ library
       Domain.Types.Feedback
       Domain.Types.FeedbackBadge
       Domain.Types.FeedbackForm
+      Domain.Types.FRFSCancellationConfig
       Domain.Types.FRFSConfig
       Domain.Types.FRFSFarePolicy
       Domain.Types.FRFSGtfsStageFare
@@ -1123,6 +1128,7 @@ library
       Storage.Beam.Feedback
       Storage.Beam.FeedbackBadge
       Storage.Beam.FeedbackForm
+      Storage.Beam.FRFSCancellationConfig
       Storage.Beam.FRFSConfig
       Storage.Beam.FRFSFarePolicy
       Storage.Beam.FRFSGtfsStageFare
@@ -1287,6 +1293,7 @@ library
       Storage.Queries.Feedback
       Storage.Queries.FeedbackBadge
       Storage.Queries.FeedbackForm
+      Storage.Queries.FRFSCancellationConfig
       Storage.Queries.FRFSConfig
       Storage.Queries.FRFSFarePolicy
       Storage.Queries.FRFSGtfsStageFare

@@ -48,6 +48,8 @@ import qualified Lib.JourneyModule.State.Utils as JMStateUtils
 import qualified Lib.JourneyModule.Types as JT
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.FRFSCancel as FRFSCancel
+import qualified SharedLogic.FRFSCancelJourney as FRFSCancelJourney
 import SharedLogic.FRFSConfirm
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -457,4 +459,7 @@ cancel searchId cancellationType = do
     merchant <- CQM.findById metroBooking.merchantId >>= fromMaybeM (MerchantDoesNotExist metroBooking.merchantId.getId)
     merchantOperatingCity <- CQMOC.findById metroBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound metroBooking.merchantOperatingCityId.getId)
     bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory metroBooking.vehicleType)}) >>= fromMaybeM (InternalError "Beckn Config not found")
-    CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType metroBooking
+    mbSideEffectData <- CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType metroBooking
+    whenJust mbSideEffectData $ \(mRiderNumber, mRiderMobileCountryCode, fareParameters, updatedBooking) -> do
+      FRFSCancel.handleCancelledSideEffects updatedBooking mRiderNumber mRiderMobileCountryCode fareParameters
+      FRFSCancelJourney.cancelJourney updatedBooking
