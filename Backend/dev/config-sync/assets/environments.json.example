@@ -1,54 +1,114 @@
 {
-  "_comment": "DB connections per environment. Master uses _v2 suffix databases. db_schema overrides Postgres schema name when it differs from config key.",
-
+  "_comment": "DB connections per environment. Master uses _v2 suffix databases.",
   "master": {
     "default": {
-      "host": "application-db.XXXX.ap-south-1.rds.amazonaws.com",
+      "host": "xxxx.ap-south-1.rds.amazonaws.com",
       "port": 5432,
       "user": "atlas_ro",
-      "password": "",
+      "password": "xxxxx",
       "database": "atlas_app_v2"
     },
     "schemas": {
-      "atlas_app":               { "database": "atlas_app_v2" },
-      "atlas_driver_offer_bpp":  { "database": "atlas_driver_offer_bpp_v2" },
-      "atlas_bap_dashboard":     { "database": "atlas_bap_dashboard_v2" },
-      "atlas_bpp_dashboard":     { "database": "atlas_bpp_dashboard_v2" },
-      "atlas_safety_dashboard":  { "database": "atlas_safety_dashboard_v2" },
-      "atlas_registry":          { "database": "atlas_mock_registry_v2", "db_schema": "atlas_mock_registry" },
-      "atlas_special_zone":      { "database": "atlas_driver_offer_bpp_v2" }
+      "atlas_app": {
+        "database": "atlas_app_v2"
+      },
+      "atlas_driver_offer_bpp": {
+        "database": "atlas_driver_offer_bpp_v2"
+      },
+      "atlas_bap_dashboard": {
+        "database": "atlas_bap_dashboard_v2"
+      },
+      "atlas_bpp_dashboard": {
+        "database": "atlas_bpp_dashboard_v2"
+      },
+      "atlas_registry": {
+        "database": "atlas_mock_registry_v2",
+        "db_schema": "atlas_mock_registry"
+      }
     }
   },
-
   "local": {
     "default": {
       "host": "localhost",
       "port": 5434,
-      "user": "postgres",
+      "user": "atlas_superuser",
       "password": "",
       "database": "atlas_dev"
     },
     "schemas": {}
   },
-
   "prod": {
+    "execPod": {
+      "_comment": "When set, export uses 'kubectl exec <pod> -- psql ...' instead of direct DB connection",
+      "pod": "beckn-apna-jump-server-64f5c866f4-q2hnw",
+      "namespace": "atlas",
+      "context": ""
+    },
     "default": {
-      "host": "prod-db.internal.example.com",
+      "host": "xxxxx.ap-south-1.rds.amazonaws.com",
       "port": 5432,
-      "user": "readonly_user",
-      "password": "",
-      "database": "atlas_prod"
+      "user": "atlas_rw",
+      "password": "xxxx",
+      "database": "atlas_app_pilot"
     },
     "schemas": {
-      "atlas_app":               { "host": "prod-rider-db.internal.example.com" },
-      "atlas_driver_offer_bpp":  { "host": "prod-driver-db.internal.example.com" },
-      "atlas_bap_dashboard":     { "host": "prod-dashboard-db.internal.example.com" },
-      "atlas_bpp_dashboard":     { "host": "prod-dashboard-db.internal.example.com" },
-      "atlas_safety_dashboard":  { "host": "prod-safety-db.internal.example.com" },
-      "atlas_registry":          { "host": "prod-registry-db.internal.example.com" }
+      "atlas_app": {
+        "database": "atlas_app_pilot"
+      },
+      "atlas_driver_offer_bpp": {
+        "_comment": "driver DB is on a separate RDS cluster — update host when known",
+        "host": "xxxxx.ap-south-1.rds.amazonaws.com",
+        "database": "atlas_driver_offer_bpp",
+        "db_schema": "atlas_driver_offer_bpp"
+      },
+      "atlas_bap_dashboard": {
+        "database": "atlas_bap_dashboard"
+      },
+      "atlas_bpp_dashboard": {
+        "database": "atlas_bpp_dashboard"
+      },
+      "atlas_registry": {
+        "database": "atlas_mock_registry",
+        "db_schema": "atlas_registry"
+      }
     }
   },
-
+  "prod_international": {
+    "execPod": {
+      "_comment": "When set, export uses 'kubectl exec <pod> -- psql ...' instead of direct DB connection",
+      "pod": "beckn-apna-jump-server-d6f678c5d-tqwcr",
+      "namespace": "atlas",
+      "context": ""
+    },
+    "default": {
+      "host": "xxxx.cluster-cn0mkoouq8e6.eu-central-1.rds.amazonaws.com",
+      "port": 5432,
+      "user": "atlas_config_sync_ro",
+      "password": "xxxxx",
+      "database": "atlas_app_pilot"
+    },
+    "schemas": {
+      "atlas_app": {
+        "database": "atlas_app_pilot"
+      },
+      "atlas_driver_offer_bpp": {
+        "_comment": "driver DB is on a separate RDS cluster — update host when known",
+        "host": "xxxx.eu-central-1.rds.amazonaws.com",
+        "database": "atlas_driver_offer_bpp",
+        "db_schema": "atlas_driver_offer_bpp"
+      },
+      "atlas_bap_dashboard": {
+        "database": "atlas_bap_dashboard"
+      },
+      "atlas_bpp_dashboard": {
+        "database": "atlas_bpp_dashboard"
+      },
+      "atlas_registry": {
+        "database": "atlas_mock_registry",
+        "db_schema": "atlas_registry"
+      }
+    }
+  },
   "env": {
     "default": {
       "host": "env-db.internal.example.com",

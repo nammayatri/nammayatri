@@ -430,9 +430,6 @@
     "fleet_route_association": {
       "dim": []
     },
-    "onboarding_document_configs": {
-      "dim": []
-    },
     "fare_policy": {
       "dim": []
     },

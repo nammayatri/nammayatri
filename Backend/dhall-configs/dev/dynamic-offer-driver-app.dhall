@@ -448,7 +448,7 @@ in  { esqDBCfg
     , migrationPath =
       [ "dev/migrations-read-only/dynamic-offer-driver-app"
       ,   env:DYNAMIC_OFFER_DRIVER_APP_MIGRATION_PATH as Text
-        ? "dev/migrations/dynamic-offer-driver-app"
+        ? "dev/ddl-migrations/dynamic-offer-driver-app"
       , "dev/migrations-after-release/dynamic-offer-driver-app"
       ]
     , autoMigrate = True

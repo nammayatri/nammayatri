@@ -36,6 +36,7 @@
   provider-dashboard = 8018;
   rider-app-scheduler = 8058;
   driver-offer-allocator = 8055;
+  location-tracking-service = 8081;
 
   # Application metrics
   rider-app-metrics = 9999;

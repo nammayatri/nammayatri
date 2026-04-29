@@ -27,17 +27,18 @@ Port: 7082
 import json
 import sys
 import os
-import glob
 import subprocess
 import threading
 import time
-import math
-import uuid
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 import urllib.request
 import urllib.error
+
+# Flush print() to the process-compose log file in real time (not at exit).
+sys.stdout.reconfigure(line_buffering=True)
+sys.stderr.reconfigure(line_buffering=True)
 
 
 def redis_cmd(*args):
@@ -80,6 +81,276 @@ MAX_LOG_DELTA_BYTES = 64 * 1024  # 64KB per service
 
 RIDER_URL = os.environ.get("RIDER_URL", "http://localhost:8013")
 DRIVER_URL = os.environ.get("DRIVER_URL", "http://localhost:8016")
+
+# ── Config-sync (replaces the standalone config-sync process) ──
+CONFIG_SYNC_DIR = PROJECT_ROOT / "Backend" / "dev" / "config-sync"
+CONFIG_SYNC_BUNDLE_URLS = {
+    "master":             "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/master_to_local/v1/master_to_local.zip",
+    "prod":               "https://beckn-ny-config-sync-prod.s3.ap-south-1.amazonaws.com/prod_to_local/v1/prod_to_local.zip",
+    "prod_international": "https://eu-ny-config-sync-prod.s3.eu-central-1.amazonaws.com/prod_international_to_local/v1/prod_international_to_local.zip",
+}
+CONFIG_SYNC_DEFAULT_FROM = os.environ.get("CONFIG_SYNC_DEFAULT_FROM", "prod")
+CONFIG_SYNC_MAX_LOG_LINES = 4000
+
+_config_sync_state = {
+    "running": False,
+    "from": None,
+    "started_at": None,
+    "finished_at": None,
+    "exit_code": None,
+    "error": None,
+    "log": [],
+}
+_config_sync_lock = threading.Lock()
+
+
+def _apply_local_testing_data():
+    """Apply Backend/dev/local-testing-data/*.sql after config-sync + feature-migrations.
+    These files seed test users/admin tokens etc. They were moved out of postgres
+    initialDatabases so dev/ddl-migrations runs against empty tables (SET NOT NULL passes).
+    Idempotent: each file is wrapped in its own transaction; failures are logged but
+    do not abort the rest of the batch (so a single broken file doesn't take down
+    everything)."""
+    ltd_dir = PROJECT_ROOT / "Backend" / "dev" / "local-testing-data"
+    if not ltd_dir.is_dir():
+        return
+    files = sorted(p for p in ltd_dir.iterdir() if p.suffix == ".sql")
+    if not files:
+        return
+    print(f"  \033[96m[local-testing-data]\033[0m applying {len(files)} file(s)")
+    import psycopg2
+    conn = psycopg2.connect(**DB_CONFIG)
+    conn.autocommit = False
+    try:
+        for f in files:
+            cur = conn.cursor()
+            try:
+                cur.execute(f.read_text())
+                conn.commit()
+                print(f"  \033[96m[local-testing-data]\033[0m ok: {f.name}")
+            except Exception as e:
+                conn.rollback()
+                print(f"  \033[96m[local-testing-data]\033[0m FAILED {f.name}: {e}")
+            finally:
+                cur.close()
+    finally:
+        conn.close()
+
+
+def _restart_haskell_services():
+    """Kill rider/driver/mock-registry so process-compose restarts them and they
+    re-read boot-time config from the freshly-synced DB."""
+    proj = str(PROJECT_ROOT)
+    for exe in ("rider-app-exe", "dynamic-offer-driver-app-exe"):
+        try:
+            r = subprocess.run(["pgrep", "-f", f"{proj}.*{exe}"],
+                               capture_output=True, text=True, timeout=5)
+            for pid in r.stdout.strip().splitlines()[:1]:
+                if pid:
+                    subprocess.run(["kill", pid], timeout=5)
+                    print(f"  \033[96m[config-sync]\033[0m killed {exe} (PID {pid}) — process-compose will restart")
+        except Exception as e:
+            print(f"  \033[96m[config-sync]\033[0m restart {exe} failed: {e}")
+    try:
+        r = subprocess.run(["lsof", "-ti", ":8020"],
+                           capture_output=True, text=True, timeout=5)
+        for pid in r.stdout.strip().splitlines()[:1]:
+            if pid:
+                subprocess.run(["kill", pid], timeout=5)
+                print(f"  \033[96m[config-sync]\033[0m killed mock-registry (PID {pid}, port 8020)")
+    except Exception as e:
+        print(f"  \033[96m[config-sync]\033[0m restart mock-registry failed: {e}")
+    time.sleep(3)
+
+
+def run_config_sync(from_env: str, restart_services: bool = True):
+    """Run `config_transfer.py import --from <env> --to local --fetch --fetch-url <URL>`.
+    Streams stdout into _config_sync_state['log']. Restarts haskell services on success."""
+    if from_env not in CONFIG_SYNC_BUNDLE_URLS:
+        msg = f"unknown env '{from_env}'. Available: {list(CONFIG_SYNC_BUNDLE_URLS)}"
+        with _config_sync_lock:
+            _config_sync_state["error"] = msg
+        return
+    url = CONFIG_SYNC_BUNDLE_URLS[from_env]
+    with _config_sync_lock:
+        if _config_sync_state["running"]:
+            return
+        _config_sync_state.update({
+            "running": True, "from": from_env,
+            "started_at": time.time(), "finished_at": None,
+            "exit_code": None, "error": None, "log": [],
+        })
+
+    def _append_log(line: str):
+        with _config_sync_lock:
+            _config_sync_state["log"].append(line)
+            if len(_config_sync_state["log"]) > CONFIG_SYNC_MAX_LOG_LINES:
+                del _config_sync_state["log"][:-CONFIG_SYNC_MAX_LOG_LINES]
+
+    try:
+        # Sequence (per design):
+        #   1. import prod data (config_transfer.py import --skip-feature-migrations)
+        #   2. apply Backend/dev/local-testing-data/*.sql
+        #   3. run dev/feature-migrations/*.sql  (config_transfer.py import --only-feature-migrations)
+        #   4. restart rider/driver/mock-registry so they re-read boot-time config
+        #
+        # Why this order:
+        #   - prod import populates merchants, vehicle configs, etc.
+        #   - local-testing-data adds fixed-UUID test persons (juspay_admin etc.)
+        #     that feature-migrations like 0001-dashboard-access-setup.sql reference
+        #     by hard-coded UUID. Without this seed, feature-migrations FK-fail.
+        #   - feature-migrations sit on top of both layers.
+
+        def _run(label, cmd_args):
+            full = ["python3", "-u", "config_transfer.py"] + cmd_args
+            _append_log(f"$ {' '.join(full)}  (cwd={CONFIG_SYNC_DIR})  [{label}]")
+            p = subprocess.Popen(
+                full, cwd=str(CONFIG_SYNC_DIR),
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, bufsize=1,
+                env={**os.environ, "PYTHONUNBUFFERED": "1"},
+            )
+            for line in p.stdout:
+                line = line.rstrip()
+                print(f"  \033[96m[config-sync {from_env} {label}]\033[0m {line}")
+                _append_log(line)
+            p.wait()
+            return p.returncode
+
+        # Step 1: prod import (no feature-migrations yet).
+        rc = _run("import", [
+            "import", "--from", from_env, "--to", "local",
+            "--fetch", "--fetch-url", url,
+            "--skip-feature-migrations",
+        ])
+        with _config_sync_lock:
+            _config_sync_state["exit_code"] = rc
+        if rc != 0:
+            with _config_sync_lock:
+                _config_sync_state["error"] = f"config_transfer.py import exited with {rc}"
+            return
+
+        # Step 2: seed test persons / tokens / etc.
+        _apply_local_testing_data()
+        _append_log("Applied Backend/dev/local-testing-data/*.sql.")
+
+        # Step 3: feature-migrations on top of imported + seeded state.
+        rc = _run("feature-migrations", [
+            "import", "--from", from_env, "--to", "local",
+            "--only-feature-migrations",
+        ])
+        with _config_sync_lock:
+            _config_sync_state["exit_code"] = rc
+        if rc != 0:
+            with _config_sync_lock:
+                _config_sync_state["error"] = f"feature-migrations exited with {rc}"
+            return
+
+        # Step 4: restart so haskell services see the new config.
+        if restart_services:
+            _restart_haskell_services()
+            _append_log("Restarted rider/driver/mock-registry to pick up synced config.")
+    except Exception as e:
+        with _config_sync_lock:
+            _config_sync_state["error"] = str(e)
+        _append_log(f"ERROR: {e}")
+    finally:
+        with _config_sync_lock:
+            _config_sync_state["running"] = False
+            _config_sync_state["finished_at"] = time.time()
+
+
+def trigger_config_sync(from_env: str):
+    """Kick off a config-sync in a daemon thread. Returns True if accepted, False if one is already running."""
+    with _config_sync_lock:
+        if _config_sync_state["running"]:
+            return False
+    threading.Thread(target=run_config_sync, args=(from_env,), daemon=True).start()
+    return True
+
+
+def _wait_for_haskell_services(timeout_seconds: int = 600) -> bool:
+    """Poll until rider-app (8013), driver-app (8016), and mock-registry (8020)
+    are all listening, AND the dynamic-offer-driver-app schema has finished
+    migrating (i.e. a recent table from ddl-migrations exists).
+
+    Returns True when ready, False on timeout. We use this instead of a
+    process-compose `process_healthy` dependency because we want the API
+    server itself to be reachable immediately for non-sync endpoints (status,
+    log tail, manual trigger) — only the auto-sync waits."""
+    import socket
+    import psycopg2
+
+    deadline = time.time() + timeout_seconds
+    ports = [("rider-app", 8013), ("driver-app", 8016), ("mock-registry", 8020)]
+    # Sentinel: a NammaDSL-generated table from migrations-read-only that is created
+    # late in the migration sweep. Picked because it's stable across rebases (no later
+    # migration drops/renames it). If it exists, driver-app-exe has applied at least
+    # its read-only migrations on top of all ddl-migrations.
+    sentinel_sql = "SELECT to_regclass('atlas_driver_offer_bpp.aadhaar_card') IS NOT NULL"
+
+    last_log = 0
+    while time.time() < deadline:
+        # 1) ports
+        port_ok = True
+        missing = []
+        for name, port in ports:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(1.0)
+                try:
+                    s.connect(("127.0.0.1", port))
+                except OSError:
+                    port_ok = False
+                    missing.append(f"{name}:{port}")
+        # 2) schema sentinel
+        schema_ok = False
+        if port_ok:
+            try:
+                conn = psycopg2.connect(**DB_CONFIG)
+                conn.autocommit = True
+                cur = conn.cursor()
+                cur.execute(sentinel_sql)
+                schema_ok = bool(cur.fetchone()[0])
+                cur.close()
+                conn.close()
+            except Exception:
+                schema_ok = False
+
+        if port_ok and schema_ok:
+            print("  \033[93m[startup]\033[0m haskell services + schema ready")
+            return True
+
+        now = time.time()
+        if now - last_log > 10:  # progress log every 10s
+            reason = ", ".join(missing) if missing else (
+                "schema not yet migrated (aadhaar_card missing)"
+            )
+            print(f"  \033[93m[startup]\033[0m waiting for: {reason}")
+            last_log = now
+        time.sleep(2)
+    print(f"  \033[93m[startup]\033[0m timeout ({timeout_seconds}s) waiting for services")
+    return False
+
+
+def run_startup_config_sync():
+    """Background-trigger the default config-sync once, on server start.
+    Disable with RUN_CONFIG_SYNC_ON_STARTUP=false.
+
+    Runs in its own daemon thread so the HTTP server is reachable immediately;
+    the thread waits for haskell services + schema before firing config-sync."""
+    if os.environ.get("RUN_CONFIG_SYNC_ON_STARTUP", "true").lower() in ("0", "false", "no"):
+        print("  \033[93m[startup]\033[0m config-sync skipped (RUN_CONFIG_SYNC_ON_STARTUP=false)")
+        return
+    from_env = CONFIG_SYNC_DEFAULT_FROM
+
+    def _delayed_trigger():
+        if not _wait_for_haskell_services():
+            print("  \033[93m[startup]\033[0m skipping auto-sync — services never became ready")
+            return
+        print(f"  \033[93m[startup]\033[0m kicking off config-sync ({from_env} → local) in background")
+        run_config_sync(from_env)  # synchronous on this thread, but the thread itself is daemon
+
+    threading.Thread(target=_delayed_trigger, daemon=True).start()
 
 DB_CONFIG = {
     "host": os.environ.get("DB_HOST", "localhost"),
@@ -179,8 +450,8 @@ def get_admin_credentials():
     """Return known admin credentials per merchant for the test dashboard.
     These are created in provider-dashboard seed migrations with known email/password."""
     return {
-        "MSIL_PARTNER": {"email": "admin@msil.test", "password": "msil1234"},
-        "LYNX_PARTNER": {"email": "admin@lynx.test", "password": "lynx1234"},
+        "MSIL_PARTNER_LOCAL": {"email": "admin@msil.test", "password": "msil1234"},
+        "LYNX_PARTNER_LOCAL": {"email": "admin@lynx.test", "password": "lynx1234"},
     }
 
 
@@ -830,6 +1101,33 @@ class ContextHandler(BaseHTTPRequestHandler):
             self._send_json({"logs": logs})
             return True
 
+        if method == "GET" and path == "/api/config-sync/envs":
+            self._send_json({
+                "envs": list(CONFIG_SYNC_BUNDLE_URLS.keys()),
+                "default": CONFIG_SYNC_DEFAULT_FROM,
+            })
+            return True
+
+        if method == "GET" and path == "/api/config-sync/status":
+            with _config_sync_lock:
+                st = dict(_config_sync_state)
+                st["log"] = st["log"][-300:]
+            self._send_json(st)
+            return True
+
+        if method == "POST" and path == "/api/config-sync/import":
+            body = self._read_json_body()
+            from_env = body.get("from", CONFIG_SYNC_DEFAULT_FROM)
+            if from_env not in CONFIG_SYNC_BUNDLE_URLS:
+                self._send_json({"error": f"unknown env '{from_env}'", "envs": list(CONFIG_SYNC_BUNDLE_URLS)}, 400)
+                return True
+            accepted = trigger_config_sync(from_env)
+            if not accepted:
+                self._send_json({"error": "another config-sync is already running"}, 409)
+                return True
+            self._send_json({"started": True, "from": from_env})
+            return True
+
         if method == "POST" and path == "/api/redis/flushall":
             try:
                 import subprocess
@@ -1010,7 +1308,10 @@ def main():
     print(
         f"  DB: {DB_CONFIG['user']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['dbname']}")
     print(f"  Proxy: /proxy/rider/* → {RIDER_URL}")
-    print(f"  Proxy: /proxy/driver/* → {DRIVER_URL}\n")
+    print(f"  Proxy: /proxy/driver/* → {DRIVER_URL}")
+    print(f"  Config-sync envs: {list(CONFIG_SYNC_BUNDLE_URLS.keys())}  (default: {CONFIG_SYNC_DEFAULT_FROM})\n")
+
+    run_startup_config_sync()
 
     try:
         server.serve_forever()

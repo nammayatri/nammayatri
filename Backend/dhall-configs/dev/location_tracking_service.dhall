@@ -654,7 +654,7 @@ in  { logger_cfg
     , location_update_interval = 60
     , driver_location_update_topic = "location-updates"
     , batch_size = 1
-    , bucket_size = 30
+    , bucket_size = 120
     , nearby_bucket_threshold = 4
     , blacklist_merchants = [] : List Text
     , request_timeout = 9000

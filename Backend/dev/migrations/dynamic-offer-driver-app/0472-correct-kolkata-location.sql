@@ -1,1 +1,0 @@
-UPDATE atlas_driver_offer_bpp.merchant_operating_city set lat = 22.5744, lon = 88.3629 where city = 'Kolkata';

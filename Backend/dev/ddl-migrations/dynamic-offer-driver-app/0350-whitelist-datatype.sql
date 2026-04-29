@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.white_list_org ALTER COLUMN subscriber_id TYPE character varying(255);

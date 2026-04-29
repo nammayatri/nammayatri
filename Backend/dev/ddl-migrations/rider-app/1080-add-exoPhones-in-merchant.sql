@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.merchant ADD COLUMN exo_phones text[] ;

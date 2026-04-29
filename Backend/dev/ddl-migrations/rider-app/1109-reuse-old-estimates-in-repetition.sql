@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.estimate ALTER COLUMN bpp_estimate_id DROP DEFAULT;

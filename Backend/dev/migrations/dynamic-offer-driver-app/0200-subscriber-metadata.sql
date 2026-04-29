@@ -1,2 +1,0 @@
-INSERT INTO atlas_driver_offer_bpp.bap_metadata VALUES ('localhost/beckn1', 'YATRI', 'https://assets.juspay.in/nammayatri/images/common/ic_lost_and_found.png');
-INSERT INTO atlas_driver_offer_bpp.bap_metadata VALUES ('localhost/beckn2', 'NAMMA YATRI', 'https://assets.juspay.in/nammayatri/images/common/ic_lost_and_found.png');

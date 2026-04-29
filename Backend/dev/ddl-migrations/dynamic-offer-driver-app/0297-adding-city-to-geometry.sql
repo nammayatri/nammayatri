@@ -1,0 +1,16 @@
+ALTER TABLE atlas_driver_offer_bpp.geometry
+ADD COLUMN city character varying(255) NULL;
+
+ALTER TABLE atlas_driver_offer_bpp.geometry
+ALTER COLUMN city SET NOT NULL;
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_special_zone
+ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_driver_offer_bpp.merchant_operating_city (id);
+
+-- Dropping indexes based on merchant_id
+DROP INDEX atlas_driver_offer_bpp.idx_fare_product;
+DROP INDEX atlas_driver_offer_bpp.idx_merchant_overlay_key;
+
+-- Creating new indexes based on merchant_operating_city_id
+CREATE INDEX idx_fare_product ON atlas_driver_offer_bpp.fare_product USING btree (merchant_operating_city_id, vehicle_variant, "area");
+CREATE INDEX idx_merchant_overlay_key ON atlas_driver_offer_bpp.merchant_overlay USING btree (merchant_operating_city_id, overlay_key);

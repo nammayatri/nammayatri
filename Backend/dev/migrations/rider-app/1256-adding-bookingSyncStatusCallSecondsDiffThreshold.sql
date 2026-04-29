@@ -1,1 +1,0 @@
-update atlas_app.rider_config set booking_sync_status_call_seconds_diff_threshold = 3600;

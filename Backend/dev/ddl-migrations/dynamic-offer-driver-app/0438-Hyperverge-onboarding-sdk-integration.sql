@@ -1,0 +1,1 @@
+CREATE INDEX idx_workflow_txn_id ON atlas_driver_offer_bpp.image USING btree (workflow_transaction_id);

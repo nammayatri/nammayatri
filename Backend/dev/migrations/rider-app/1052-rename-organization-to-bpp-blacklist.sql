@@ -1,1 +1,0 @@
-DELETE FROM atlas_app.organization;

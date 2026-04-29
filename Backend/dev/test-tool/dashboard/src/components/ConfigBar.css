@@ -72,6 +72,12 @@
 .btn-flush-done { background: #1f3d2e !important; color: #56d364 !important; border-color: #56d364 !important; }
 .btn-flush-error { background: #3d1f1f !important; color: #f85149 !important; border-color: #f85149 !important; }
 
+.config-sync-env {
+  background: #0d1117; color: #c9d1d9; border: 1px solid #30363d;
+  padding: 5px 8px; border-radius: 4px; font-size: 12px;
+}
+.config-sync-env:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .ctx-badge {
   font-size: 9px; background: #238636; color: white; padding: 1px 5px;
   border-radius: 3px; margin-left: 4px; vertical-align: middle;

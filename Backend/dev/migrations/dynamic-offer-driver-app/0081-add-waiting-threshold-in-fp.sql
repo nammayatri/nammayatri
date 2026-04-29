@@ -1,2 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN waiting_time_estimated_threshold int;
-UPDATE atlas_driver_offer_bpp.fare_policy SET waiting_time_estimated_threshold = 3;

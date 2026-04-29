@@ -612,11 +612,15 @@
 						"exec": [
 							"var d = pm.response.json();",
 							"if (d.estimates && d.estimates.length > 0) {",
-							"    pm.environment.set('estimateId', d.estimates[0].id);",
-							"    console.log('Estimate:', d.estimates[0].id, d.estimates[0].vehicleVariant, d.estimates[0].estimatedFare);",
+							"    var want = pm.environment.get('auto_vehicle_variant') || 'AUTO_RICKSHAW';",
+							"    var est = d.estimates.find(e => e.vehicleVariant === want)",
+							"           || d.estimates.find(e => e.vehicleServiceTierType === want)",
+							"           || d.estimates[0];",
+							"    pm.environment.set('estimateId', est.id);",
+							"    console.log('Estimate:', est.id, est.vehicleVariant, est.estimatedFare, '(wanted', want + ')');",
 							"}",
 							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
-							"pm.test('Has estimates', function () { pm.expect(d.estimates).to.be.an('array').with.length.above(0); });"
+							"pm.test('Has estimates', function () { pm.expect(d, 'response body').to.be.an('object'); pm.expect(d.estimates, 'estimates field').to.be.an('array'); pm.expect(d.estimates.length, 'estimate count').to.be.above(0); });"
 						],
 						"type": "text/javascript"
 					}

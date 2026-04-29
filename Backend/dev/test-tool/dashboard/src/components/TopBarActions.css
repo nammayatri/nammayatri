@@ -1,0 +1,125 @@
+/* Top-bar action controls — sit next to "DB Explorer" / "Redis Explorer" links */
+
+.tb-btn {
+  background: #161b22;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 12px;
+  margin-left: 8px;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.tb-btn:hover:not(:disabled) { background: #1f2630; color: #fff; border-color: #58a6ff; }
+.tb-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.tb-flush { color: #e3b341; border-color: #e3b341; background: #2d1f0e; }
+.tb-flush:hover:not(:disabled) { background: #e3b341; color: #0d1117; border-color: #e3b341; }
+
+.tb-sync { color: #58a6ff; border-color: #58a6ff; background: #0c1a2c; }
+.tb-sync:hover:not(:disabled) { background: #58a6ff; color: #0d1117; border-color: #58a6ff; }
+
+.tb-ok  { background: #1f3d2e !important; color: #56d364 !important; border-color: #56d364 !important; }
+.tb-err { background: #3d1f1f !important; color: #f85149 !important; border-color: #f85149 !important; }
+
+.tb-select {
+  background: #0d1117;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-left: 8px;
+  cursor: pointer;
+}
+.tb-select:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Pulsing border while a sync is in progress */
+.tb-running {
+  animation: tb-pulse 1.6s ease-in-out infinite;
+}
+@keyframes tb-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(88, 166, 255, 0.45); }
+  50%      { box-shadow: 0 0 0 6px rgba(88, 166, 255, 0); }
+}
+
+/* ── Status modal ─────────────────────────────────────────────── */
+.tb-modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(2px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+}
+.tb-modal {
+  width: min(92vw, 1100px);
+  max-height: 86vh;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.7);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.tb-modal-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid #30363d;
+  background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+}
+.tb-modal-title {
+  color: #c9d1d9;
+  font-weight: 600;
+  font-size: 14px;
+  display: inline-flex; align-items: center; gap: 10px;
+}
+.tb-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1px solid;
+}
+.tb-pill-run { color: #58a6ff; border-color: #58a6ff; background: #0c1a2c; }
+.tb-pill-ok  { color: #56d364; border-color: #56d364; background: #1f3d2e; }
+.tb-pill-err { color: #f85149; border-color: #f85149; background: #3d1f1f; }
+
+.tb-modal-close {
+  background: transparent; color: #8b949e;
+  border: 1px solid #30363d;
+  width: 28px; height: 28px;
+  border-radius: 4px; cursor: pointer;
+  font-size: 14px; line-height: 1;
+}
+.tb-modal-close:hover { color: #fff; border-color: #58a6ff; }
+
+.tb-modal-error {
+  background: #3d1f1f; color: #ffa198;
+  padding: 10px 18px;
+  font-size: 12px; font-weight: 600;
+  border-bottom: 1px solid #f85149;
+}
+
+.tb-modal-log {
+  margin: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 14px 18px;
+  background: #010409;
+  color: #c9d1d9;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre;
+}
+.tb-modal-footer {
+  padding: 10px 18px;
+  border-top: 1px solid #30363d;
+  background: #161b22;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.tb-modal-meta { color: #8b949e; font-size: 11px; }

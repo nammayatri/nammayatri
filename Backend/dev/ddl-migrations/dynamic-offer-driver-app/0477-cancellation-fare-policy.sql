@@ -1,0 +1,1 @@
+alter table atlas_driver_offer_bpp.fare_policy add column cancellation_fare_policy_id text;
