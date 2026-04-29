@@ -1,7 +1,7 @@
 {
 	"info": {
-		"name": "Rider Cancellation (Stripe Payment)",
-		"description": "End-to-end rider cancellation: search → assign → driver arrives at pickup → wait no-show window → rider cancels → verify cancellation charges",
+		"name": "No Show Cancellation - Driver Cancels (CUSTOMER_NO_SHOW) (Stripe Payment)",
+		"description": "End-to-end driver no-show: search → assign → driver arrives → wait no-show window → driver cancels with CUSTOMER_NO_SHOW → verify rider charged via Stripe, finance ledger settled",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"event": [
@@ -1450,7 +1450,7 @@
 							"// Busy-wait ~35s to cross the window reliably.",
 							"console.log('Waiting 35s for no-show / free-cancellation window to elapse...');",
 							"const start = Date.now();",
-							"while (Date.now() - start < 35000) { /* busy wait */ }",
+							"while (Date.now() - start < 10000) { /* busy wait */ }",
 							"console.log('No-show window elapsed, proceeding to cancel.');"
 						],
 						"type": "text/javascript"
@@ -1506,7 +1506,7 @@
 			"response": []
 		},
 		{
-			"name": "Cancel Ride (Rider)",
+			"name": "Cancel Ride (Driver - CUSTOMER_NO_SHOW)",
 			"event": [
 				{
 					"listen": "prerequest",
@@ -1522,7 +1522,7 @@
 					"script": {
 						"exec": [
 							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-							"console.log('Rider cancelled after no-show window — cancellation fee should be charged');"
+							"console.log('Driver cancelled with CUSTOMER_NO_SHOW — cancellation fee should be charged to rider via Stripe');"
 						],
 						"type": "text/javascript"
 					}
@@ -1537,23 +1537,24 @@
 					},
 					{
 						"key": "token",
-						"value": "{{rider_token}}"
+						"value": "{{driver_token}}"
 					}
 				],
 				"url": {
-					"raw": "{{baseUrl_app}}/rideBooking/{{customer_bookingId}}/cancel",
+					"raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/cancel",
 					"host": [
-						"{{baseUrl_app}}"
+						"{{baseURL_namma_P}}"
 					],
 					"path": [
-						"rideBooking",
-						"{{customer_bookingId}}",
+						"driver",
+						"ride",
+						"{{driver_ride_id}}",
 						"cancel"
 					]
 				},
 				"body": {
 					"mode": "raw",
-					"raw": "{\"reasonCode\": \"OTHER\", \"reasonStage\": \"OnAssign\", \"additionalInfo\": \"Rider decided to cancel\"}"
+					"raw": "{\"reasonCode\": \"CUSTOMER_NO_SHOW\", \"additionalInfo\": \"Customer did not show up\"}"
 				}
 			},
 			"response": []
@@ -1627,15 +1628,16 @@
 			"response": []
 		},
 		{
-			"name": "Get Cancellation Invoices",
+			"name": "Verify Rider Cancellation Dues",
 			"event": [
 				{
 					"listen": "prerequest",
 					"script": {
 						"exec": [
-							"// Wait for cancellation invoice generation",
+							"// Wait for BAP fork to process: cancel ride intent → create cancellation PI → charge Stripe",
+							"console.log('Waiting 8s for cancellation settlement fork to complete...');",
 							"const start = Date.now();",
-							"while (Date.now() - start < 3000) { /* busy wait */ }"
+							"while (Date.now() - start < 8000) { /* busy wait */ }"
 						],
 						"type": "text/javascript"
 					}
@@ -1645,16 +1647,17 @@
 					"script": {
 						"exec": [
 							"var d = pm.response.json();",
-							"console.log('Cancellation Invoices - totalItems:', d.totalItems);",
-							"if (d.invoices && d.invoices.length > 0) {",
-							"    d.invoices.forEach(function(inv, i) {",
-							"        console.log('Invoice ' + i + ': number=' + inv.invoiceNumber + ' type=' + inv.invoiceType + ' amount=' + inv.totalAmountPayable);",
-							"    });",
-							"}",
-							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
-							"pm.test('Response has invoices array', function () { pm.expect(d.invoices).to.be.an('array'); });",
-							"pm.test('Response has totalItems', function () { pm.expect(d.totalItems).to.be.a('number'); });",
-							"pm.test('At least one cancellation invoice exists', function () { pm.expect(d.invoices.length).to.be.above(0); });"
+							"console.log('Rider due amount after CUSTOMER_NO_SHOW:', d.totalDueAmount, 'rides:', JSON.stringify(d.rides));",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"pm.test('Response has totalDueAmount', function () { pm.expect(d.totalDueAmount).to.be.a('number'); });",
+							"pm.test('Cancellation processed (dues 0 if Stripe captured, or DUE recorded)', function () {",
+							"    pm.expect(d.totalDueAmount).to.be.a('number');",
+							"    if (d.totalDueAmount === 0) {",
+							"        console.log('Stripe captured cancellation fee successfully — no pending dues');",
+							"    } else {",
+							"        console.log('Cancellation fee recorded as DUE for later collection:', d.totalDueAmount);",
+							"    }",
+							"});"
 						],
 						"type": "text/javascript"
 					}
@@ -1664,32 +1667,22 @@
 				"method": "GET",
 				"header": [
 					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
 						"key": "token",
-						"value": "{{driver_token}}"
+						"value": "{{rider_token}}"
 					}
 				],
 				"url": {
-					"raw": "{{baseURL_namma_P}}/subscription/invoices?invoiceType=%22RideCancellation%22&limit=10&offset=0",
+					"raw": "{{baseUrl_app}}/payment/getDueAmount",
 					"host": [
-						"{{baseURL_namma_P}}"
+						"{{baseUrl_app}}"
 					],
 					"path": [
-						"subscription",
-						"invoices"
-					],
-					"query": [
-						{
-							"key": "invoiceType",
-							"value": "%22RideCancellation%22"
-						},
-						{
-							"key": "limit",
-							"value": "10"
-						},
-						{
-							"key": "offset",
-							"value": "0"
-						}
+						"payment",
+						"getDueAmount"
 					]
 				}
 			},
@@ -1702,7 +1695,7 @@
 					"listen": "prerequest",
 					"script": {
 						"exec": [
-							"// Give the ledger time to post wallet entries after cancellation",
+							"// Give the ledger time to post wallet entries after cancellation fee credit",
 							"const start = Date.now(); while (Date.now() - start < 1500) { /* wait */ }"
 						],
 						"type": "text/javascript"

@@ -256,9 +256,9 @@ in
               runtimeInputs = with pkgs; [ coreutils findutils ];
               text = ''
                 while true; do
-                  find . -maxdepth 1 -name '*.log' -size +1G -exec truncate -s 0 {} \;
-                  find /tmp -maxdepth 1 -name '*.log' -size +1G -exec truncate -s 0 {} \;
-                  sleep 300
+                  find . -maxdepth 1 -name '*.log' -size +100M -exec truncate -s 0 {} \;
+                  find /tmp -maxdepth 1 -name '*.log' -size +100M -exec truncate -s 0 {} \;
+                  sleep 5
                 done
               '';
             };
